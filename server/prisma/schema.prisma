@@ -1,0 +1,175 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum EmployeeType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  taxId     String?
+  city      String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  stores    Store[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole @default(EMPLOYEE)
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee     Employee?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  active    Boolean  @default(true)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+  shifts    ShiftType[]
+  schedules Schedule[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Employee {
+  id              String       @id @default(cuid())
+  fullName        String
+  phone           String?
+  email           String?
+  position        String?
+  type            EmployeeType @default(PERMANENT)
+  active          Boolean      @default(true)
+  maxDaysPerWeek  Int          @default(5)
+  allowSixthDay   Boolean      @default(false)
+  maxHoursPerWeek Int          @default(40)
+  storeId         String
+  store           Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId          String?      @unique
+  user            User?        @relation(fields: [userId], references: [id])
+  rules           EmployeeRule[]
+  availability    Availability[]
+  assignments     ScheduleAssignment[]
+  leaveRequests   LeaveRequest[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([storeId])
+}
+
+model ShiftType {
+  id            String   @id @default(cuid())
+  name          String
+  code          String
+  startTime     String
+  endTime       String
+  requiredCount Int      @default(1)
+  active        Boolean  @default(true)
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rules         EmployeeRule[]
+  assignments   ScheduleAssignment[]
+
+  @@unique([storeId, code])
+}
+
+model EmployeeRule {
+  id              String    @id @default(cuid())
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shiftTypeId     String?
+  shiftType       ShiftType? @relation(fields: [shiftTypeId], references: [id], onDelete: Cascade)
+  allowed         Boolean   @default(true)
+  targetPerWeek   Int?
+  fixedWeekdays   Int[]
+  priority        Int       @default(0)
+  note            String?
+}
+
+model Availability {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime
+  available  Boolean  @default(true)
+  note       String?
+
+  @@unique([employeeId, date])
+}
+
+model Schedule {
+  id          String   @id @default(cuid())
+  weekStart   DateTime
+  status      String   @default("DRAFT")
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  assignments ScheduleAssignment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([storeId, weekStart])
+}
+
+model ScheduleAssignment {
+  id          String    @id @default(cuid())
+  date        DateTime
+  scheduleId  String
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  shiftTypeId String
+  shiftType   ShiftType @relation(fields: [shiftTypeId], references: [id], onDelete: Cascade)
+  slot        Int       @default(1)
+  note        String?
+
+  @@unique([scheduleId, date, shiftTypeId, slot])
+}
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  employeeId String
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime
+  type       String
+  status     LeaveStatus @default(PENDING)
+  note       String?
+  createdAt  DateTime    @default(now())
+}
