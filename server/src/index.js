@@ -11,7 +11,7 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.5.0"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.6.0"}));
 app.use("/api/auth",authRoutes);
 app.use("/api",apiRoutes);
 
@@ -29,4 +29,4 @@ app.get("*",(req,res,next)=>{
   res.sendFile(path.join(dist,"index.html"));
 });
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.5 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.6 on port ${process.env.PORT||8080}`));

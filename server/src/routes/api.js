@@ -131,6 +131,7 @@ router.put("/employees/:id/rules",async(req,res,next)=>{
   }catch(e){next(e)}
 });
 
+
 function mondayOf(date){
   const d=new Date(date);
   const day=d.getUTCDay();
@@ -140,29 +141,152 @@ function mondayOf(date){
   return d;
 }
 function dateKey(d){return d.toISOString().slice(0,10)}
-function chooseEmployee({employees,shift,counts,assignedToday,isWeekend,currentDate}){
-  const ranked=employees.map(emp=>{
-    if(!emp.active||assignedToday.has(emp.id))return null;
-    const dayStart=new Date(currentDate); dayStart.setUTCHours(0,0,0,0);
-    const unavailable=emp.availability?.some(a=>new Date(a.date).getTime()===dayStart.getTime() && !a.available);
-    const onLeave=emp.leaveRequests?.some(l=>dayStart>=new Date(l.startDate) && dayStart<=new Date(l.endDate));
-    if(unavailable||onLeave)return null;
-    const rule=emp.rules.find(r=>r.shiftTypeId===shift.id && r.allowed);
-    if(!rule)return null;
-    const total=counts[emp.id]?.total||0;
-    const maxDays=emp.allowSixthDay?Math.max(emp.maxDaysPerWeek,6):emp.maxDaysPerWeek;
-    if(total>=maxDays)return null;
-    let score=100-total*10+(rule.priority||0);
-    if(emp.type==="TEMPORARY")score-=30;
-    const current=counts[emp.id]?.[shift.id]||0;
-    if(rule.targetPerWeek!=null){
-      if(current<rule.targetPerWeek)score+=40;
-      else score-=25;
+function hoursForShift(shift){
+  const [sh,sm]=shift.startTime.split(":").map(Number);
+  const [eh,em]=shift.endTime.split(":").map(Number);
+  let minutes=(eh*60+em)-(sh*60+sm);
+  if(minutes<=0)minutes+=24*60;
+  return minutes/60;
+}
+function dayIndex(date,weekStart){
+  return Math.round((new Date(date)-new Date(weekStart))/(24*60*60*1000));
+}
+function isUnavailable(emp,currentDate){
+  const dayStart=new Date(currentDate); dayStart.setUTCHours(0,0,0,0);
+  const unavailable=emp.availability?.some(a=>new Date(a.date).getTime()===dayStart.getTime() && !a.available);
+  const onLeave=emp.leaveRequests?.some(l=>dayStart>=new Date(l.startDate) && dayStart<=new Date(l.endDate));
+  return unavailable||onLeave;
+}
+function violatesRest(emp,shift,currentDate,history){
+  const previous=new Date(currentDate);
+  previous.setUTCDate(previous.getUTCDate()-1);
+  const prev=history[emp.id]?.[dateKey(previous)];
+  if(!prev)return false;
+  // Hard rule: no morning/delivery/manager immediately after night.
+  if(prev.code==="NIGHT" && ["MORNING","DELIVERY","MANAGER"].includes(shift.code))return true;
+  return false;
+}
+function consecutiveDays(emp,currentDate,history){
+  let count=0;
+  const d=new Date(currentDate);
+  for(let i=1;i<=7;i++){
+    d.setUTCDate(d.getUTCDate()-1);
+    if(history[emp.id]?.[dateKey(d)])count++;
+    else break;
+  }
+  return count;
+}
+function candidateScore({emp,shift,counts,assignedToday,isWeekend,currentDate,history}){
+  if(!emp.active||assignedToday.has(emp.id))return null;
+  if(isUnavailable(emp,currentDate))return null;
+  const rule=emp.rules.find(r=>r.shiftTypeId===shift.id && r.allowed);
+  if(!rule)return null;
+  if(violatesRest(emp,shift,currentDate,history))return null;
+
+  const totalDays=counts[emp.id]?.days||0;
+  const totalHours=counts[emp.id]?.hours||0;
+  const shiftHours=hoursForShift(shift);
+  const maxDays=emp.allowSixthDay?Math.max(emp.maxDaysPerWeek,6):emp.maxDaysPerWeek;
+  if(totalDays>=maxDays)return null;
+  if(totalHours+shiftHours>emp.maxHoursPerWeek)return null;
+
+  const consecutive=consecutiveDays(emp,currentDate,history);
+  if(consecutive>=6)return null;
+
+  let score=100;
+  const reasons=[];
+
+  // Fairness: fewer days/hours receive priority.
+  score-=totalDays*12;
+  score-=totalHours*0.8;
+  reasons.push(`${totalDays} ημέρες / ${totalHours} ώρες`);
+
+  // Permanent staff first; temporary only when genuinely needed.
+  if(emp.type==="TEMPORARY"){
+    score-=45;
+    reasons.push("έκτακτος");
+  }else{
+    score+=10;
+  }
+
+  // Weekly target for shift.
+  const currentShiftCount=counts[emp.id]?.byShift?.[shift.id]||0;
+  if(rule.targetPerWeek!=null){
+    if(currentShiftCount<rule.targetPerWeek){
+      score+=45;
+      reasons.push(`στόχος ${currentShiftCount}/${rule.targetPerWeek}`);
+    }else{
+      score-=35;
+      reasons.push("ο στόχος έχει καλυφθεί");
     }
-    if(isWeekend && emp.position==="Υπεύθυνος")score-=20;
-    return {emp,score};
-  }).filter(Boolean).sort((a,b)=>b.score-a.score || a.emp.fullName.localeCompare(b.emp.fullName,"el"));
-  return ranked[0]?.emp||null;
+  }
+
+  score+=(rule.priority||0);
+
+  // Avoid too many consecutive workdays.
+  score-=consecutive*8;
+  if(consecutive>=4)reasons.push(`${consecutive} συνεχόμενες ημέρες`);
+
+  // Weekend fairness.
+  if(isWeekend){
+    const weekends=counts[emp.id]?.weekendDays||0;
+    score-=weekends*18;
+    reasons.push(`${weekends} ημέρες Σ/Κ`);
+  }
+
+  // Fixed operational roles.
+  if(shift.code==="DELIVERY" && emp.position==="Delivery")score+=80;
+  if(shift.code==="MANAGER" && emp.position==="Υπεύθυνος")score+=80;
+
+  return {emp,score,reasons,rule};
+}
+function chooseEmployee(args){
+  const ranked=args.employees
+    .map(emp=>candidateScore({...args,emp}))
+    .filter(Boolean)
+    .sort((a,b)=>b.score-a.score || a.emp.fullName.localeCompare(b.emp.fullName,"el"));
+  return {chosen:ranked[0]||null,ranked};
+}
+function buildMetrics({planned,employees,shifts,counts,warnings,explanations}){
+  const totalSlots=planned.length;
+  const covered=planned.filter(p=>p.employeeId).length;
+  const temporaryAssignments=planned.filter(p=>{
+    const e=employees.find(x=>x.id===p.employeeId);
+    return e?.type==="TEMPORARY";
+  }).length;
+  const hardViolations=0;
+  const coverageScore=totalSlots?Math.round((covered/totalSlots)*55):0;
+  const hardScore=hardViolations===0?25:Math.max(0,25-hardViolations*5);
+  const assignedCounts=Object.values(counts).filter(c=>c.days>0).map(c=>c.hours);
+  const spread=assignedCounts.length?Math.max(...assignedCounts)-Math.min(...assignedCounts):0;
+  const fairnessScore=Math.max(0,15-Math.round(spread/4));
+  const tempScore=Math.max(0,5-Math.min(5,temporaryAssignments));
+  const quality=Math.max(0,Math.min(100,coverageScore+hardScore+fairnessScore+tempScore));
+  return {
+    quality,
+    totalSlots,
+    covered,
+    uncovered:totalSlots-covered,
+    coveragePercent:totalSlots?Math.round((covered/totalSlots)*100):100,
+    temporaryAssignments,
+    hardViolations,
+    hoursSpread:spread,
+    employeeSummary:employees.map(e=>({
+      employeeId:e.id,
+      fullName:e.fullName,
+      type:e.type,
+      days:counts[e.id]?.days||0,
+      hours:counts[e.id]?.hours||0,
+      morning:counts[e.id]?.byCode?.MORNING||0,
+      middle:counts[e.id]?.byCode?.MIDDLE||0,
+      afternoon:counts[e.id]?.byCode?.AFTERNOON||0,
+      night:counts[e.id]?.byCode?.NIGHT||0,
+      delivery:counts[e.id]?.byCode?.DELIVERY||0,
+      manager:counts[e.id]?.byCode?.MANAGER||0
+    })),
+    warnings,
+    explanations
+  };
 }
 
 router.post("/schedules/generate",async(req,res,next)=>{
@@ -172,14 +296,26 @@ router.post("/schedules/generate",async(req,res,next)=>{
       where:{id:body.storeId,companyId:req.user.companyId},
       include:{
         shifts:{where:{active:true}},
-        employees:{where:{active:true},include:{rules:true,availability:true,leaveRequests:{where:{status:"APPROVED"}}}}
+        employees:{
+          where:{active:true},
+          include:{rules:true,availability:true,leaveRequests:{where:{status:"APPROVED"}}}
+        }
       }
     });
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+
     const weekStart=mondayOf(body.weekStart?new Date(body.weekStart):new Date());
-    const counts=Object.fromEntries(store.employees.map(e=>[e.id,{total:0}]));
+    const counts=Object.fromEntries(store.employees.map(e=>[e.id,{
+      days:0,hours:0,weekendDays:0,byShift:{},byCode:{}
+    }]));
+    const history=Object.fromEntries(store.employees.map(e=>[e.id,{}]));
     const planned=[];
     const warnings=[];
+    const explanations=[];
+
+    // Fill specialist shifts first, then night, intermediate, afternoon, morning.
+    const order={MANAGER:0,DELIVERY:1,NIGHT:2,MIDDLE:3,AFTERNOON:4,MORNING:5};
+    const orderedShifts=[...store.shifts].sort((a,b)=>(order[a.code]??10)-(order[b.code]??10));
 
     for(let offset=0;offset<7;offset++){
       const date=new Date(weekStart);
@@ -188,21 +324,46 @@ router.post("/schedules/generate",async(req,res,next)=>{
       const isWeekend=weekday===0||weekday===6;
       const assignedToday=new Set();
 
-      for(const shift of store.shifts){
+      for(const shift of orderedShifts){
         if((shift.code==="DELIVERY"||shift.code==="MANAGER")&&isWeekend)continue;
         for(let slot=1;slot<=shift.requiredCount;slot++){
-          const emp=chooseEmployee({employees:store.employees,shift,counts,assignedToday,isWeekend,currentDate:date});
+          const {chosen,ranked}=chooseEmployee({
+            employees:store.employees,shift,counts,assignedToday,isWeekend,currentDate:date,history
+          });
+          const emp=chosen?.emp||null;
+
           if(emp){
             assignedToday.add(emp.id);
-            counts[emp.id].total++;
-            counts[emp.id][shift.id]=(counts[emp.id][shift.id]||0)+1;
+            counts[emp.id].days++;
+            const shiftHours=hoursForShift(shift);
+            counts[emp.id].hours+=shiftHours;
+            counts[emp.id].byShift[shift.id]=(counts[emp.id].byShift[shift.id]||0)+1;
+            counts[emp.id].byCode[shift.code]=(counts[emp.id].byCode[shift.code]||0)+1;
+            if(isWeekend)counts[emp.id].weekendDays++;
+            history[emp.id][dateKey(date)]={code:shift.code,shiftTypeId:shift.id};
+            explanations.push({
+              date:dateKey(date),shift:shift.name,employee:emp.fullName,
+              reason:chosen.reasons.join(" · "),score:Math.round(chosen.score)
+            });
           }else{
-            warnings.push(`${dateKey(date)} · ${shift.name}: ακάλυπτη θέση ${slot}`);
+            const possible=ranked.slice(0,3).map(x=>x.emp.fullName);
+            warnings.push({
+              type:"UNCOVERED",
+              date:dateKey(date),
+              shift:shift.name,
+              slot,
+              message:`${dateKey(date)} · ${shift.name}: ακάλυπτη θέση ${slot}`,
+              suggestions:possible
+            });
           }
           planned.push({date,shiftTypeId:shift.id,employeeId:emp?.id||null,slot});
         }
       }
     }
+
+    const metrics=buildMetrics({
+      planned,employees:store.employees,shifts:store.shifts,counts,warnings,explanations
+    });
 
     const schedule=await prisma.$transaction(async tx=>{
       const existing=await tx.schedule.findUnique({where:{storeId_weekStart:{storeId:store.id,weekStart}}});
@@ -216,7 +377,38 @@ router.post("/schedules/generate",async(req,res,next)=>{
         include:{assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{shiftType:{startTime:"asc"}},{slot:"asc"}]}}
       });
     });
-    res.json({schedule,warnings});
+    res.json({schedule,warnings,metrics});
+  }catch(e){next(e)}
+});
+
+router.get("/schedules/:id/report",async(req,res,next)=>{
+  try{
+    const schedule=await prisma.schedule.findFirst({
+      where:{id:req.params.id,store:{companyId:req.user.companyId}},
+      include:{
+        store:true,
+        assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{shiftType:{startTime:"asc"}}]}
+      }
+    });
+    if(!schedule)return res.status(404).json({error:"Δεν βρέθηκε πρόγραμμα."});
+    const map={};
+    for(const a of schedule.assignments){
+      if(!a.employee)continue;
+      const row=map[a.employee.id]??={
+        employeeId:a.employee.id,fullName:a.employee.fullName,type:a.employee.type,
+        days:new Set(),hours:0,morning:0,middle:0,afternoon:0,night:0,delivery:0,manager:0
+      };
+      row.days.add(dateKey(a.date));
+      row.hours+=hoursForShift(a.shiftType);
+      const key=a.shiftType.code.toLowerCase();
+      if(key in row)row[key]++;
+    }
+    res.json({
+      store:schedule.store.name,
+      weekStart:schedule.weekStart,
+      rows:Object.values(map).map(r=>({...r,days:r.days.size})),
+      uncovered:schedule.assignments.filter(a=>!a.employeeId).length
+    });
   }catch(e){next(e)}
 });
 

@@ -18,7 +18,7 @@ function Login({onLogin}){
 
 function App(){
  const [user,setUser]=useState(()=>JSON.parse(localStorage.getItem("user")||"null"));
- const [page,setPage]=useState("dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[leaves,setLeaves]=useState([]);
+ const [page,setPage]=useState("dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]);
  const load=async()=>{const [st,emps,strs,lvs]=await Promise.all([api("/api/dashboard"),api("/api/employees"),api("/api/stores"),api("/api/leaves")]);setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);if(strs[0]){const sc=await api(`/api/schedules/latest?storeId=${strs[0].id}`);setSchedule(sc)}};
  useEffect(()=>{if(user)load().catch(()=>logout())},[user]);
  const logout=()=>{localStorage.clear();setUser(null)};
@@ -27,10 +27,10 @@ function App(){
  <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>setPage("stores")} icon={<Building2/>}>Καταστήματα</Nav><Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
  <button className="logout" onClick={logout}><LogOut/>Έξοδος</button></aside>
  <main><header><div><h1>{({dashboard:"Αρχική",employees:"Προσωπικό",stores:"Καταστήματα",schedule:"Βάρδιες",leaves:"Άδειες & Απουσίες"})[page]}</h1><p>Καλώς ήρθες, {user.fullName}</p></div></header>
- {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.5</h2><p>Άδειες, ασθένειες, μη διαθεσιμότητα και χειροκίνητη αντικατάσταση εργαζομένου.</p><div className="notice">Η μηχανή βαρδιών εξαιρεί αυτόματα όσους έχουν άδεια, ασθένεια ή δηλωμένη μη διαθεσιμότητα.</div></section></>}
+ {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
  {page==="employees"&&<Employees rows={employees} stores={stores} reload={load}/>}
  {page==="stores"&&<Stores rows={stores}/>}
- {page==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} reload={load}/>} {page==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={load}/>} 
+ {page==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} reload={load}/>} {page==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={load}/>} 
  </main></div>
 }
 const Nav=({active,onClick,icon,children})=><button className={active?"active":""} onClick={onClick}>{icon}{children}</button>;
@@ -52,13 +52,14 @@ function Employees({rows,stores,reload}){
 }
 const Stores=({rows})=><section className="panel"><h2>Καταστήματα</h2><div className="store-grid">{rows.map(s=><article key={s.id}><Building2/><h3>{s.name}</h3><p>{s.city||"Χωρίς πόλη"}</p><small>{s.shifts?.length||0} τύποι βαρδιών</small></article>)}</div></section>;
 
-function Schedule({stores,employees,schedule,setSchedule,warnings,setWarnings,reload}){
+function Schedule({stores,employees,schedule,setSchedule,warnings,setWarnings,metrics,setMetrics,reload}){
  const [storeId,setStoreId]=useState(stores[0]?.id||""),[loading,setLoading]=useState(false);
  useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores]);
- const generate=async()=>{setLoading(true);try{const d=await api("/api/schedules/generate",{method:"POST",body:JSON.stringify({storeId})});setSchedule(d.schedule);setWarnings(d.warnings);await reload()}finally{setLoading(false)}};
+ const generate=async()=>{setLoading(true);try{const d=await api("/api/schedules/generate",{method:"POST",body:JSON.stringify({storeId})});setSchedule(d.schedule);setWarnings(d.warnings);setMetrics(d.metrics);await reload()}finally{setLoading(false)}};
  const groups=useMemo(()=>{const map={};for(const a of schedule?.assignments||[]){const d=a.date.slice(0,10);(map[d]??=[]).push(a)}return map},[schedule]);
  return <section className="panel"><div className="panel-head"><div><h2>Εβδομαδιαίο πρόγραμμα</h2><p>Αυτόματη δημιουργία με βάση τους κανόνες των εργαζομένων.</p></div><div className="schedule-controls"><select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><button onClick={generate} disabled={loading}>{loading?"Δημιουργία...":"Δημιουργία προγράμματος"}</button></div></div>
- {warnings.length>0&&<div className="warning-box"><b>{warnings.length} προειδοποιήσεις</b>{warnings.slice(0,12).map((w,i)=><div key={i}>{w}</div>)}</div>}
+ {metrics&&<div className="quality-panel"><div className="quality-score"><strong>{metrics.quality}%</strong><span>Ποιότητα προγράμματος</span></div><div><b>Κάλυψη {metrics.coveragePercent}%</b><p>{metrics.covered}/{metrics.totalSlots} θέσεις · {metrics.temporaryAssignments} αναθέσεις έκτακτων · διαφορά ωρών {metrics.hoursSpread}</p></div></div>}
+ {warnings.length>0&&<div className="warning-box"><b>{warnings.length} προειδοποιήσεις</b>{warnings.slice(0,12).map((w,i)=><div key={i}>{w.message||w}{w.suggestions?.length?` · Προτάσεις: ${w.suggestions.join(", ")}`:""}</div>)}</div>}
  {!schedule?<div className="empty">Δεν έχει δημιουργηθεί πρόγραμμα.</div>:<div className="schedule-grid">{Object.entries(groups).map(([date,items])=><article className="day" key={date}><h3>{new Date(date+"T12:00:00").toLocaleDateString("el-GR",{weekday:"long",day:"2-digit",month:"2-digit"})}</h3>{items.map(a=><AssignmentCard a={a} onChanged={async()=>{const sc=await api(`/api/schedules/latest?storeId=${storeId}`);setSchedule(sc);await reload()}}/>)}</article>)}</div>}</section>
 }
 
