@@ -1,18 +1,18 @@
 {
   "name": "myworkstation-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "MyWorkStation App - πρόγραμμα βαρδιών προσωπικού",
-  "main": "server.js",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client && npm run prisma:generate -w server",
+    "start": "npm run start -w server",
+    "seed": "npm run seed -w server"
   },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "express": "^4.21.2",
-    "nanoid": "^5.0.9"
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
