@@ -1,0 +1,18 @@
+{
+  "name": "myworkstation-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MyWorkStation App - πρόγραμμα βαρδιών προσωπικού",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "nanoid": "^5.0.9"
+  }
+}
