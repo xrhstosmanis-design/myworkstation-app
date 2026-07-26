@@ -140,9 +140,13 @@ function mondayOf(date){
   return d;
 }
 function dateKey(d){return d.toISOString().slice(0,10)}
-function chooseEmployee({employees,shift,counts,assignedToday,isWeekend}){
+function chooseEmployee({employees,shift,counts,assignedToday,isWeekend,currentDate}){
   const ranked=employees.map(emp=>{
     if(!emp.active||assignedToday.has(emp.id))return null;
+    const dayStart=new Date(currentDate); dayStart.setUTCHours(0,0,0,0);
+    const unavailable=emp.availability?.some(a=>new Date(a.date).getTime()===dayStart.getTime() && !a.available);
+    const onLeave=emp.leaveRequests?.some(l=>dayStart>=new Date(l.startDate) && dayStart<=new Date(l.endDate));
+    if(unavailable||onLeave)return null;
     const rule=emp.rules.find(r=>r.shiftTypeId===shift.id && r.allowed);
     if(!rule)return null;
     const total=counts[emp.id]?.total||0;
@@ -168,7 +172,7 @@ router.post("/schedules/generate",async(req,res,next)=>{
       where:{id:body.storeId,companyId:req.user.companyId},
       include:{
         shifts:{where:{active:true}},
-        employees:{where:{active:true},include:{rules:true}}
+        employees:{where:{active:true},include:{rules:true,availability:true,leaveRequests:{where:{status:"APPROVED"}}}}
       }
     });
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
@@ -187,7 +191,7 @@ router.post("/schedules/generate",async(req,res,next)=>{
       for(const shift of store.shifts){
         if((shift.code==="DELIVERY"||shift.code==="MANAGER")&&isWeekend)continue;
         for(let slot=1;slot<=shift.requiredCount;slot++){
-          const emp=chooseEmployee({employees:store.employees,shift,counts,assignedToday,isWeekend});
+          const emp=chooseEmployee({employees:store.employees,shift,counts,assignedToday,isWeekend,currentDate:date});
           if(emp){
             assignedToday.add(emp.id);
             counts[emp.id].total++;
@@ -226,6 +230,163 @@ router.get("/schedules/latest",async(req,res,next)=>{
       include:{assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{shiftType:{startTime:"asc"}},{slot:"asc"}]}}
     });
     res.json(schedule);
+  }catch(e){next(e)}
+});
+
+
+router.get("/availability",async(req,res,next)=>{
+  try{
+    const employeeId=String(req.query.employeeId||"");
+    const employee=await prisma.employee.findFirst({
+      where:{id:employeeId,store:{companyId:req.user.companyId}}
+    });
+    if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+    res.json(await prisma.availability.findMany({
+      where:{employeeId},
+      orderBy:{date:"asc"}
+    }));
+  }catch(e){next(e)}
+});
+
+router.post("/availability",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      employeeId:z.string(),
+      date:z.string(),
+      available:z.boolean(),
+      note:z.string().optional().nullable()
+    }).parse(req.body);
+    const employee=await prisma.employee.findFirst({
+      where:{id:body.employeeId,store:{companyId:req.user.companyId}}
+    });
+    if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+    const date=new Date(body.date+"T00:00:00.000Z");
+    res.json(await prisma.availability.upsert({
+      where:{employeeId_date:{employeeId:employee.id,date}},
+      update:{available:body.available,note:body.note||null},
+      create:{employeeId:employee.id,date,available:body.available,note:body.note||null}
+    }));
+  }catch(e){next(e)}
+});
+
+router.get("/leaves",async(req,res,next)=>{
+  try{
+    res.json(await prisma.leaveRequest.findMany({
+      where:{employee:{store:{companyId:req.user.companyId}}},
+      include:{employee:true},
+      orderBy:{startDate:"desc"}
+    }));
+  }catch(e){next(e)}
+});
+
+router.post("/leaves",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      employeeId:z.string(),
+      startDate:z.string(),
+      endDate:z.string(),
+      type:z.enum(["LEAVE","SICK","OTHER"]),
+      note:z.string().optional().nullable()
+    }).parse(req.body);
+    const employee=await prisma.employee.findFirst({
+      where:{id:body.employeeId,store:{companyId:req.user.companyId}}
+    });
+    if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+    res.status(201).json(await prisma.leaveRequest.create({
+      data:{
+        employeeId:employee.id,
+        startDate:new Date(body.startDate+"T00:00:00.000Z"),
+        endDate:new Date(body.endDate+"T23:59:59.999Z"),
+        type:body.type,
+        status:"APPROVED",
+        note:body.note||null
+      },
+      include:{employee:true}
+    }));
+  }catch(e){next(e)}
+});
+
+router.patch("/leaves/:id/status",async(req,res,next)=>{
+  try{
+    const body=z.object({status:z.enum(["PENDING","APPROVED","REJECTED"])}).parse(req.body);
+    const leave=await prisma.leaveRequest.findFirst({
+      where:{id:req.params.id,employee:{store:{companyId:req.user.companyId}}}
+    });
+    if(!leave)return res.status(404).json({error:"Δεν βρέθηκε αίτημα."});
+    res.json(await prisma.leaveRequest.update({
+      where:{id:leave.id},data:{status:body.status},include:{employee:true}
+    }));
+  }catch(e){next(e)}
+});
+
+router.patch("/assignments/:id",async(req,res,next)=>{
+  try{
+    const body=z.object({employeeId:z.string().nullable()}).parse(req.body);
+    const assignment=await prisma.scheduleAssignment.findFirst({
+      where:{id:req.params.id,schedule:{store:{companyId:req.user.companyId}}},
+      include:{schedule:true,shiftType:true}
+    });
+    if(!assignment)return res.status(404).json({error:"Δεν βρέθηκε ανάθεση."});
+    if(body.employeeId){
+      const employee=await prisma.employee.findFirst({
+        where:{
+          id:body.employeeId,
+          active:true,
+          storeId:assignment.schedule.storeId,
+          store:{companyId:req.user.companyId}
+        },
+        include:{rules:true}
+      });
+      if(!employee)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμος εργαζόμενος."});
+      const allowed=employee.rules.some(r=>r.shiftTypeId===assignment.shiftTypeId && r.allowed);
+      if(!allowed)return res.status(400).json({error:"Ο εργαζόμενος δεν επιτρέπεται σε αυτή τη βάρδια."});
+      const duplicate=await prisma.scheduleAssignment.findFirst({
+        where:{
+          scheduleId:assignment.scheduleId,
+          date:assignment.date,
+          employeeId:employee.id,
+          NOT:{id:assignment.id}
+        }
+      });
+      if(duplicate)return res.status(400).json({error:"Ο εργαζόμενος έχει ήδη βάρδια αυτή την ημέρα."});
+    }
+    res.json(await prisma.scheduleAssignment.update({
+      where:{id:assignment.id},
+      data:{employeeId:body.employeeId},
+      include:{employee:true,shiftType:true}
+    }));
+  }catch(e){next(e)}
+});
+
+router.get("/assignments/:id/candidates",async(req,res,next)=>{
+  try{
+    const assignment=await prisma.scheduleAssignment.findFirst({
+      where:{id:req.params.id,schedule:{store:{companyId:req.user.companyId}}},
+      include:{schedule:true}
+    });
+    if(!assignment)return res.status(404).json({error:"Δεν βρέθηκε ανάθεση."});
+    const employees=await prisma.employee.findMany({
+      where:{
+        storeId:assignment.schedule.storeId,
+        active:true,
+        rules:{some:{shiftTypeId:assignment.shiftTypeId,allowed:true}}
+      },
+      include:{rules:true},
+      orderBy:[{type:"asc"},{fullName:"asc"}]
+    });
+    const result=[];
+    for(const employee of employees){
+      const duplicate=await prisma.scheduleAssignment.findFirst({
+        where:{
+          scheduleId:assignment.scheduleId,
+          date:assignment.date,
+          employeeId:employee.id,
+          NOT:{id:assignment.id}
+        }
+      });
+      if(!duplicate)result.push(employee);
+    }
+    res.json(result);
   }catch(e){next(e)}
 });
 
