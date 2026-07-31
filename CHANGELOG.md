@@ -1,5 +1,11 @@
 # Changelog
 
+## GO LIVE 14.7.0C-HF1 — Pairing Code PostgreSQL Fix
+- Διορθώθηκε το PostgreSQL σφάλμα `make_interval(mins => bigint)`.
+- Η διάρκεια pairing code μετατρέπεται ρητά σε `integer`.
+- Ο 15λεπτος κωδικός μπορεί να δημιουργηθεί χωρίς αλλαγή στη δομή της βάσης.
+- Η έκδοση του Cloud Store Connector health endpoint έγινε `14.7.0C-HF1`.
+
 ## GO LIVE 14.7.0C — Cloud Store Connector
 - Ενεργή σελίδα λεπτομερειών καταστήματος.
 - Pairing code μίας χρήσης με λήξη και SHA-256 hash.

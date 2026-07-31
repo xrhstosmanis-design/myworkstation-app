@@ -188,7 +188,7 @@ async function deviceAuth(req,res,next){
 }
 
 router.get("/health",route(async(req,res)=>{
-  send(res,{ok:true,service:"Cloud Store Connector",version:"14.7.0C",time:new Date().toISOString()});
+  send(res,{ok:true,service:"Cloud Store Connector",version:"14.7.0C-HF1",time:new Date().toISOString()});
 }));
 
 router.post("/pair",route(async(req,res)=>{
@@ -326,7 +326,7 @@ router.post("/stores/:storeId/pairing-code",auth,requireCloudManager,route(async
     try{
       await prisma.$executeRaw`
         INSERT INTO "CloudPairingCode" ("id","companyId","storeId","codeHash","expiresAt","createdBy")
-        VALUES (${id},${req.user.companyId},${store.id},${codeHash(code)},NOW()+make_interval(mins => ${body.minutes}),${req.user.id})
+        VALUES (${id},${req.user.companyId},${store.id},${codeHash(code)},NOW() + (${body.minutes}::integer * INTERVAL '1 minute'),${req.user.id})
       `;
       break;
     }catch(error){
