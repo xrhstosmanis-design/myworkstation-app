@@ -5,14 +5,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
+import cloudV1Routes from "./routes/cloud-v1.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.6.0"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.6.0+14.7.0C"}));
 app.use("/api/auth",authRoutes);
+app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api",apiRoutes);
 
 app.use((err,req,res,next)=>{

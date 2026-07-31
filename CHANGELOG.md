@@ -1,5 +1,14 @@
 # Changelog
 
+## GO LIVE 14.7.0C — Cloud Store Connector
+- Ενεργή σελίδα λεπτομερειών καταστήματος.
+- Pairing code μίας χρήσης με λήξη και SHA-256 hash.
+- Ξεχωριστό STORE_DEVICE JWT token ανά συσκευή.
+- Online/offline κατάσταση, heartbeat και απομακρυσμένη ανάκληση.
+- Demo cloud catalog με ουρά αλλαγών και BIGINT cursor.
+- Device bootstrap, pull/ack αλλαγών και idempotent inbound events.
+- Additive raw-SQL cloud tables και audit ενεργειών.
+
 ## 0.6.0
 - Smart Shift Engine 2.0.
 - Κανόνας ανάπαυσης μετά από νύχτα.

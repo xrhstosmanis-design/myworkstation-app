@@ -3,6 +3,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {createRoot} from "react-dom/client";
 import {Users,CalendarDays,Building2,LayoutDashboard,LogOut,Plus,Settings2,Edit3,Power,Palmtree,UserRoundCheck} from "lucide-react";
 import "./styles.css";
+import StoreCloudPage from "./components/cloud/StoreCloudPage.jsx";
 
 const api=async(path,options={})=>{
   const token=localStorage.getItem("token");
@@ -18,18 +19,18 @@ function Login({onLogin}){
 
 function App(){
  const [user,setUser]=useState(()=>JSON.parse(localStorage.getItem("user")||"null"));
- const [page,setPage]=useState("dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]);
+ const [page,setPage]=useState("dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null);
  const load=async()=>{const [st,emps,strs,lvs]=await Promise.all([api("/api/dashboard"),api("/api/employees"),api("/api/stores"),api("/api/leaves")]);setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);if(strs[0]){const sc=await api(`/api/schedules/latest?storeId=${strs[0].id}`);setSchedule(sc)}};
  useEffect(()=>{if(user)load().catch(()=>logout())},[user]);
  const logout=()=>{localStorage.clear();setUser(null)};
  if(!user)return <Login onLogin={setUser}/>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{user.company.name}</small></div></div>
- <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>setPage("stores")} icon={<Building2/>}>Καταστήματα</Nav><Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
+ <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav><Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
  <button className="logout" onClick={logout}><LogOut/>Έξοδος</button></aside>
  <main><header><div><h1>{({dashboard:"Αρχική",employees:"Προσωπικό",stores:"Καταστήματα",schedule:"Βάρδιες",leaves:"Άδειες & Απουσίες"})[page]}</h1><p>Καλώς ήρθες, {user.fullName}</p></div></header>
  {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
  {page==="employees"&&<Employees rows={employees} stores={stores} reload={load}/>}
- {page==="stores"&&<Stores rows={stores}/>}
+ {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
  {page==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} reload={load}/>} {page==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={load}/>} 
  </main></div>
 }
@@ -50,7 +51,7 @@ function Employees({rows,stores,reload}){
  {mode==="edit"&&<div className="modal"><form onSubmit={save}><h3>{selected?"Επεξεργασία εργαζομένου":"Νέος εργαζόμενος"}</h3><input name="fullName" placeholder="Ονοματεπώνυμο" defaultValue={selected?.fullName||""} required/><input name="position" placeholder="Θέση" defaultValue={selected?.position||""}/><input name="phone" placeholder="Τηλέφωνο" defaultValue={selected?.phone||""}/><input name="email" placeholder="Email" defaultValue={selected?.email||""}/><select name="storeId" defaultValue={selected?.storeId||stores[0]?.id}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select name="type" defaultValue={selected?.type||"PERMANENT"}><option value="PERMANENT">Μόνιμος</option><option value="TEMPORARY">Έκτακτος</option></select><label>Μέγιστες ημέρες<input name="maxDaysPerWeek" type="number" min="1" max="6" defaultValue={selected?.maxDaysPerWeek||5}/></label><label>Μέγιστες ώρες<input name="maxHoursPerWeek" type="number" min="8" max="72" defaultValue={selected?.maxHoursPerWeek||40}/></label><label className="check"><input name="allowSixthDay" type="checkbox" defaultChecked={selected?.allowSixthDay||false}/> Επιτρέπεται 6η ημέρα</label><div className="actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button>Αποθήκευση</button></div></form></div>}
  {mode==="rules"&&<div className="modal"><form className="rules-form" onSubmit={saveRules}><h3>Κανόνες: {selected.fullName}</h3><p>Επίλεξε τις βάρδιες που μπορεί να κάνει και τον εβδομαδιαίο στόχο.</p>{shifts.map(s=>{const r=selected.rules.find(x=>x.shiftTypeId===s.id);return <div className="rule-row" key={s.id}><label className="check"><input name={`allowed_${s.id}`} type="checkbox" defaultChecked={!!r}/> {s.name} <small>{s.startTime}-{s.endTime}</small></label><input name={`target_${s.id}`} type="number" min="0" max="7" placeholder="Στόχος/εβδ." defaultValue={r?.targetPerWeek??""}/><input name={`priority_${s.id}`} type="number" min="-100" max="100" placeholder="Προτεραιότητα" defaultValue={r?.priority??0}/></div>})}<div className="actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button>Αποθήκευση κανόνων</button></div></form></div>}</section>
 }
-const Stores=({rows})=><section className="panel"><h2>Καταστήματα</h2><div className="store-grid">{rows.map(s=><article key={s.id}><Building2/><h3>{s.name}</h3><p>{s.city||"Χωρίς πόλη"}</p><small>{s.shifts?.length||0} τύποι βαρδιών</small></article>)}</div></section>;
+const Stores=({rows,onOpen})=><section className="panel"><div className="panel-head"><div><h2>Καταστήματα</h2><p>Άνοιξε ένα κατάστημα για Cloud Store Connector, συσκευές και συγχρονισμό.</p></div></div><div className="store-grid">{rows.map(s=><article className="store-card" key={s.id}><Building2/><h3>{s.name}</h3><p>{s.city||"Χωρίς πόλη"}</p><small>{s.shifts?.length||0} τύποι βαρδιών</small><button className="store-open" onClick={()=>onOpen(s)}>Άνοιγμα καταστήματος</button></article>)}</div></section>;
 
 function Schedule({stores,employees,schedule,setSchedule,warnings,setWarnings,metrics,setMetrics,reload}){
  const [storeId,setStoreId]=useState(stores[0]?.id||""),[loading,setLoading]=useState(false);
