@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Cloud,Copy,Link2,Monitor,PackagePlus,RefreshCw,ShieldOff,ShieldCheck,Wifi,WifiOff} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OperatorAccessPanel from "./OperatorAccessPanel.jsx";
+import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
@@ -14,6 +15,7 @@ export default function StoreCloudPage({api,store,onBack}){
   const [message,setMessage]=useState("");
   const [pairing,setPairing]=useState(null);
   const [drafts,setDrafts]=useState({});
+  const [ledgerVersion,setLedgerVersion]=useState(0);
 
   const load=async(showSpinner=true)=>{
     if(showSpinner)setLoading(true);
@@ -83,7 +85,9 @@ export default function StoreCloudPage({api,store,onBack}){
 
       <OperatorAccessPanel api={api} store={store}/>
 
-      <CashControlPanel api={api} store={store}/>
+      <StoreTransactionsPanel api={api} store={store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
+
+      <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={store}/>
 
       <div className="cloud-two-columns">
         <article className="cloud-panel">
