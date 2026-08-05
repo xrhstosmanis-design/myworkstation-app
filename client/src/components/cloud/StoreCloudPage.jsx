@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Cloud,Copy,Link2,Monitor,PackagePlus,RefreshCw,ShieldOff,ShieldCheck,Wifi,WifiOff} from "lucide-react";
+import CashControlPanel from "./CashControlPanel.jsx";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
@@ -100,6 +101,8 @@ export default function StoreCloudPage({api,store,onBack}){
             </div>})}</div>}
         </article>
       </div>
+
+      <CashControlPanel api={api} store={store}/>
 
       <article className="cloud-panel cloud-devices">
         <div className="cloud-panel-head"><div><h3><Monitor/>Συσκευές καταστήματος</h3><p>Online/offline κατάσταση, τελευταίος συγχρονισμός και απομακρυσμένη ανάκληση.</p></div></div>
