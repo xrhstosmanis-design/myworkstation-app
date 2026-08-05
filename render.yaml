@@ -2,11 +2,12 @@ services:
   - type: web
     name: myworkstation-app
     runtime: node
+    region: frankfurt
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run prisma:push -w server && npm run seed && npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
         value: 20
@@ -25,6 +26,7 @@ services:
 
 databases:
   - name: myworkstation-db
+    region: frankfurt
     plan: free
     databaseName: myworkstation
     user: myworkstation
