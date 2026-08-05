@@ -40,6 +40,8 @@ const tableStatements=[
     "closingNote" TEXT,
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
   `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
     "id" TEXT PRIMARY KEY,
     "companyId" TEXT NOT NULL,
