@@ -28,7 +28,15 @@ export default function CashControlPanel({api,store}){
           coins:String(suggested.coins||0),safe:String(suggested.safe||0)
         }));
       }else{
+        let ledgerSummary=null;
+        try{
+          const ledger=await api(`/api/transactions/stores/${store.id}/overview`);
+          ledgerSummary=ledger.summary||null;
+        }catch{}
         setCloseForm(form=>({...form,
+          cashSales:String(ledgerSummary?.cashSales??form.cashSales??0),
+          cardSales:String(ledgerSummary?.cardSales??form.cardSales??0),
+          expenses:String(ledgerSummary?.expensesTotal??form.expenses??0),
           drawer:String(result.openSession.openingDrawer||0),
           custody:String(result.openSession.openingCustody||0),
           coins:String(result.openSession.openingCoins||0),
@@ -102,7 +110,7 @@ export default function CashControlPanel({api,store}){
         <button className="cash-submit" disabled={busy}>{busy?"Αποθήκευση…":"Άνοιγμα βάρδιας"}</button>
       </form>:<form className="cash-form" onSubmit={closeShift}>
         <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
-        <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Καταχώρισε τζίρο, έξοδα και τα πραγματικά ποσά που παραδίδονται.</p></div></div>
+        <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)}/>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)}/>
         <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)}/>

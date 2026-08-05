@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BadgeEuro,ContactRound,KeyRound,LogOut,ScanLine,ShieldCheck,Store,Wifi} from "lucide-react";
 import CashControlPanel from "../cloud/CashControlPanel.jsx";
+import StoreTransactionsPanel from "./StoreTransactionsPanel.jsx";
 import "./store-operator.css";
 
 export default function StoreOperatorApp({api,storeId}){
@@ -18,6 +19,7 @@ export default function StoreOperatorApp({api,storeId}){
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
+  const [ledgerVersion,setLedgerVersion]=useState(0);
   const cardRef=useRef(null);
 
   const loadDirectory=async()=>{
@@ -68,8 +70,9 @@ export default function StoreOperatorApp({api,storeId}){
     </header>
     <div className="store-pilot-banner"><ShieldCheck/><div><b>ΕΜΠΟΡΙΚΗ ΠΙΛΟΤΙΚΗ ΔΟΚΙΜΗ — ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ</b><span>Η καταχώριση γίνεται παράλληλα. Οι αποδείξεις συνεχίζουν να εκδίδονται αποκλειστικά από το υπάρχον Kiosk Manager και την ταμειακή.</span></div></div>
     <main className="store-mode-main">
-      <div className="store-mode-title"><div><span>LIVE OPERATIONS</span><h1>Έλεγχος Ταμείου</h1><p>Άνοιγμα, κλείσιμο και παράδοση βάρδιας με προσωπικό audit.</p></div><div className="store-online"><Wifi/>Online</div></div>
-      <CashControlPanel api={api} store={session.store}/>
+      <div className="store-mode-title"><div><span>LIVE OPERATIONS</span><h1>Λειτουργία Καταστήματος</h1><p>Συναλλαγές, έλεγχος ταμείου και παράδοση βάρδιας με προσωπικό audit.</p></div><div className="store-online"><Wifi/>Online</div></div>
+      <StoreTransactionsPanel api={api} store={session.store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
+      <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={session.store}/>
     </main>
   </div>;
 
