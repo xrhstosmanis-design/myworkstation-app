@@ -15,6 +15,7 @@ const tableStatements = [
     "status" TEXT NOT NULL DEFAULT 'OPEN',
     "shiftLabel" TEXT NOT NULL DEFAULT 'Βάρδια',
     "openedBy" TEXT NOT NULL,
+    "openedByName" TEXT,
     "openedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "openingDrawer" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingCustody" NUMERIC(14,2) NOT NULL DEFAULT 0,
@@ -23,6 +24,7 @@ const tableStatements = [
     "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingNote" TEXT,
     "closedBy" TEXT,
+    "closedByName" TEXT,
     "closedAt" TIMESTAMPTZ,
     "cashSales" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "cardSales" NUMERIC(14,2) NOT NULL DEFAULT 0,
@@ -38,6 +40,8 @@ const tableStatements = [
     "closingNote" TEXT,
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_store_idx"
    ON "CashShiftSession" ("storeId") WHERE "status"='OPEN'`,
   `CREATE INDEX IF NOT EXISTS "CashShiftSession_store_opened_idx"
@@ -53,11 +57,20 @@ async function ensureTables(){
   return tablesPromise;
 }
 
-function requireManager(req,res,next){
-  if(!["OWNER","ADMIN","MANAGER"].includes(req.user?.role)){
-    return res.status(403).json({error:"Απαιτείται δικαίωμα υπευθύνου, διαχειριστή ή ιδιοκτήτη."});
+function requireCashAccess(req,res,next){
+  const backoffice=["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const storeOperator=req.user?.tokenType==="STORE_OPERATOR"&&req.user?.permissions?.includes("CASH_CONTROL");
+  if(!backoffice&&!storeOperator){
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
   }
   next();
+}
+function assertStoreAccess(req,storeId){
+  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){
+    const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");
+    error.status=403;
+    throw error;
+  }
 }
 
 async function ownedStore(storeId,companyId){
@@ -117,9 +130,10 @@ function route(handler){
   };
 }
 
-router.use(auth,requireManager);
+router.use(auth,requireCashAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const [openRows,recentRows,lastClosedRows]=await Promise.all([
     prisma.$queryRaw`
@@ -154,6 +168,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
 }));
 
 router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=openSchema.parse(req.body||{});
   const existing=await prisma.$queryRaw`
@@ -162,12 +177,13 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   `;
   if(existing[0]) return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});
   const operational=body.drawer+body.custody+body.coins;
+  const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "CashShiftSession" (
-      "id","companyId","storeId","shiftLabel","openedBy",
+      "id","companyId","storeId","shiftLabel","openedBy","openedByName",
       "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","openingNote"
     ) VALUES (
-      ${crypto.randomUUID()},${req.user.companyId},${store.id},${body.shiftLabel},${req.user.id},
+      ${crypto.randomUUID()},${req.user.companyId},${store.id},${body.shiftLabel},${req.user.id},${actorName},
       ${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${body.note||null}
     ) RETURNING *
   `;
@@ -187,12 +203,14 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   `;
   const session=normalize(found[0]);
   if(!session)return res.status(404).json({error:"Δεν βρέθηκε ανοιχτή βάρδια."});
+  assertStoreAccess(req,session.storeId);
   const expected=session.openingOperational+body.cashSales-body.expenses;
   const actual=body.drawer+body.custody+body.coins;
   const variance=actual-expected;
+  const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     UPDATE "CashShiftSession"
-    SET "status"='CLOSED',"closedBy"=${req.user.id},"closedAt"=NOW(),
+    SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
         "cashSales"=${body.cashSales},"cardSales"=${body.cardSales},"expenses"=${body.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
         "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},

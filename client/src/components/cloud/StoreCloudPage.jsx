@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Cloud,Copy,Link2,Monitor,PackagePlus,RefreshCw,ShieldOff,ShieldCheck,Wifi,WifiOff} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
+import OperatorAccessPanel from "./OperatorAccessPanel.jsx";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
@@ -80,6 +81,10 @@ export default function StoreCloudPage({api,store,onBack}){
         <article><span>Τελευταία αλλαγή</span><strong className="cloud-date">{when(data?.latestChange?.createdAt)}</strong></article>
       </div>
 
+      <OperatorAccessPanel api={api} store={store}/>
+
+      <CashControlPanel api={api} store={store}/>
+
       <div className="cloud-two-columns">
         <article className="cloud-panel">
           <div className="cloud-panel-head"><div><h3><Link2/>Σύνδεση δεύτερου υπολογιστή</h3><p>Ο κωδικός ισχύει 15 λεπτά και χρησιμοποιείται μία φορά.</p></div><button onClick={createPairing} disabled={busy==="pair"}>{busy==="pair"?"Δημιουργία…":"Νέος κωδικός"}</button></div>
@@ -101,8 +106,6 @@ export default function StoreCloudPage({api,store,onBack}){
             </div>})}</div>}
         </article>
       </div>
-
-      <CashControlPanel api={api} store={store}/>
 
       <article className="cloud-panel cloud-devices">
         <div className="cloud-panel-head"><div><h3><Monitor/>Συσκευές καταστήματος</h3><p>Online/offline κατάσταση, τελευταίος συγχρονισμός και απομακρυσμένη ανάκληση.</p></div></div>

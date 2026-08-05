@@ -101,7 +101,7 @@ export default function CashControlPanel({api,store}){
         <div className="cash-total"><span>Έναρξη επόμενης λειτουργίας</span><strong>{money(openingOperational)}</strong></div>
         <button className="cash-submit" disabled={busy}>{busy?"Αποθήκευση…":"Άνοιγμα βάρδιας"}</button>
       </form>:<form className="cash-form" onSubmit={closeShift}>
-        <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
+        <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
         <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Καταχώρισε τζίρο, έξοδα και τα πραγματικά ποσά που παραδίδονται.</p></div></div>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)}/>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)}/>
@@ -124,7 +124,7 @@ export default function CashControlPanel({api,store}){
       <div className="cash-history">
         <h4>Πρόσφατες βάρδιες</h4>
         {(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη καταχωρίσεις ταμείου.</div>:<div className="cash-history-list">{data.recent.map(row=><div className="cash-history-row" key={row.id}>
-          <div><b>{row.shiftLabel}</b><small>{when(row.openedAt)}</small></div>
+          <div><b>{row.shiftLabel}</b><small>{when(row.openedAt)} · {row.openedByName||"Χρήστης"}{row.closedByName?` → ${row.closedByName}`:""}</small></div>
           <span className={`status-pill ${row.status==="OPEN"?"active":"revoked"}`}>{row.status==="OPEN"?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</span>
           <div><span>Έναρξη</span><b>{money(row.openingOperational)}</b></div>
           <div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div>

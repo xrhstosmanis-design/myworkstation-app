@@ -12,7 +12,14 @@ router.post("/login", async (req,res,next)=>{
     const user=await prisma.user.findUnique({where:{email},include:{company:true}});
     if(!user || !(await bcrypt.compare(password,user.passwordHash)))
       return res.status(401).json({error:"Λανθασμένο email ή κωδικός."});
-    const token=jwt.sign({id:user.id,companyId:user.companyId,role:user.role},process.env.JWT_SECRET,{expiresIn:"12h"});
+    const token=jwt.sign({
+      id:user.id,
+      companyId:user.companyId,
+      role:user.role,
+      fullName:user.fullName,
+      email:user.email,
+      tokenType:"BACKOFFICE_USER"
+    },process.env.JWT_SECRET,{expiresIn:"12h"});
     res.json({token,user:{id:user.id,email:user.email,fullName:user.fullName,role:user.role,company:user.company}});
   }catch(e){next(e)}
 });

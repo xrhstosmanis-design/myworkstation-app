@@ -7,14 +7,16 @@ import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
 import cashControlRoutes from "./routes/cash-control.js";
+import storeOperatorRoutes from "./routes/store-operators.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.7.0+cash-control"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.8.0+store-operator"}));
 app.use("/api/auth",authRoutes);
+app.use("/api/operators",storeOperatorRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api/cash",cashControlRoutes);
 app.use("/api",apiRoutes);
@@ -33,4 +35,4 @@ app.get("*",(req,res,next)=>{
   res.sendFile(path.join(dist,"index.html"));
 });
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.7 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.8 on port ${process.env.PORT||8080}`));
