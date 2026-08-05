@@ -1,6 +1,6 @@
 import React from "react";
 import {createRoot} from "react-dom/client";
-import PilotReportLauncher from "./components/cloud/PilotReportLauncher.jsx";
+import PilotReportLauncherLive from "./components/cloud/PilotReportLauncherLive.jsx";
 import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import "./styles.css";
 
@@ -28,5 +28,5 @@ if(storeMatch){
 }else{
   import("./main.jsx");
   const launcherRoot=document.getElementById("pilot-report-root");
-  if(launcherRoot)createRoot(launcherRoot).render(<PilotReportLauncher/>);
+  if(launcherRoot)createRoot(launcherRoot).render(<PilotReportLauncherLive/>);
 }
