@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient, UserRole, EmployeeType } from "@prisma/client";
@@ -22,8 +21,8 @@ const people = [
 async function main() {
   const company = await prisma.company.upsert({
     where: { id: "pilot-company" },
-    update: {},
-    create: { id: "pilot-company", name: "MyWorkStation Pilot" }
+    update: { active: true, plan: "PILOT" },
+    create: { id: "pilot-company", name: "MyWorkStation Pilot", active: true, plan: "PILOT" }
   });
 
   const store = await prisma.store.upsert({
@@ -61,15 +60,17 @@ async function main() {
     }
   }
 
-  const email = process.env.INITIAL_ADMIN_EMAIL || "admin@myworkstationapp.gr";
-  const password = process.env.INITIAL_ADMIN_PASSWORD || "ChangeMe123!";
+  const email = process.env.INITIAL_ADMIN_EMAIL;
+  const password = process.env.INITIAL_ADMIN_PASSWORD;
+  if(!email || !password) throw new Error("Λείπουν τα INITIAL_ADMIN_EMAIL ή INITIAL_ADMIN_PASSWORD.");
+
   const passwordHash = await bcrypt.hash(password, 12);
   await prisma.user.upsert({
     where:{email},
-    update:{passwordHash},
-    create:{email,passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.OWNER,companyId:company.id}
+    update:{passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id},
+    create:{email,passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id}
   });
-  console.log(`Admin: ${email}`);
+  console.log(`Platform Super Admin: ${email}`);
 }
 
 main().finally(()=>prisma.$disconnect());
