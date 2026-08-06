@@ -14,10 +14,14 @@ router.post("/login", async (req,res,next)=>{
       return res.status(401).json({error:"Λανθασμένο email ή κωδικός."});
     if(!user.company.active && user.role!=="SUPER_ADMIN")
       return res.status(403).json({error:"Η συνδρομή της εταιρείας είναι ανενεργή. Επικοινωνήστε με το MyWorkStation."});
+
+    const isSuperAdmin=user.role==="SUPER_ADMIN";
     const token=jwt.sign({
       id:user.id,
       companyId:user.companyId,
-      role:user.role,
+      role:isSuperAdmin?"OWNER":user.role,
+      platformRole:user.role,
+      isSuperAdmin,
       fullName:user.fullName,
       email:user.email,
       tokenType:"BACKOFFICE_USER"
@@ -29,7 +33,7 @@ router.post("/login", async (req,res,next)=>{
         email:user.email,
         fullName:user.fullName,
         role:user.role,
-        platformAdmin:user.role==="SUPER_ADMIN",
+        platformAdmin:isSuperAdmin,
         company:user.company
       }
     });
