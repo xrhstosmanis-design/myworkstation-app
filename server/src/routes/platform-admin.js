@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import { catalogView,moduleCatalog,moduleKeys,planDefaults } from "../services/module-catalog.js";
 
 const router=Router();
 router.use(auth);
@@ -13,7 +14,17 @@ router.use((req,res,next)=>{
 });
 
 const plans=["TRIAL","PILOT","BASIC","PRO","ENTERPRISE"];
+const licenseStatuses=["TRIAL","PILOT","ACTIVE","SUSPENDED","EXPIRED"];
 const planSchema=z.enum(plans);
+const licenseStatusSchema=z.enum(licenseStatuses);
+const dateValue=z.string().trim().optional().or(z.literal(""));
+
+function parseDate(value){
+  if(!value)return null;
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime()))throw new Error("Μη έγκυρη ημερομηνία.");
+  return date;
+}
 
 function companyView(company){
   const owner=company.users.find(user=>user.role==="OWNER")||null;
@@ -28,6 +39,13 @@ function companyView(company){
     active:company.active,
     plan:company.plan,
     trialEndsAt:company.trialEndsAt,
+    licenseStatus:company.licenseStatus,
+    subscriptionStartsAt:company.subscriptionStartsAt,
+    subscriptionEndsAt:company.subscriptionEndsAt,
+    autoRenew:company.autoRenew,
+    commercialNotes:company.commercialNotes,
+    modules:catalogView(company.modules),
+    activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
     stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,active:store.active,employees:store._count?.employees||0})),
     storeCount:company.stores.length,
@@ -42,6 +60,7 @@ router.get("/overview",async(req,res,next)=>{
     const companies=await prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
+        modules:{orderBy:{moduleKey:"asc"}},
         stores:{
           select:{id:true,name:true,city:true,active:true,_count:{select:{employees:true}}},
           orderBy:{name:"asc"}
@@ -50,17 +69,23 @@ router.get("/overview",async(req,res,next)=>{
       orderBy:{createdAt:"desc"}
     });
     const rows=companies.map(companyView);
+    const now=Date.now();
+    const month=30*24*60*60*1000;
     res.json({
       stats:{
         companies:rows.length,
         activeCompanies:rows.filter(row=>row.active).length,
-        trialCompanies:rows.filter(row=>row.plan==="TRIAL").length,
+        trialCompanies:rows.filter(row=>row.licenseStatus==="TRIAL").length,
+        pilotCompanies:rows.filter(row=>row.licenseStatus==="PILOT").length,
+        expiringLicenses:rows.filter(row=>row.subscriptionEndsAt&&new Date(row.subscriptionEndsAt).getTime()>=now&&new Date(row.subscriptionEndsAt).getTime()-now<=month).length,
         stores:rows.reduce((total,row)=>total+row.storeCount,0),
         users:rows.reduce((total,row)=>total+row.userCount,0),
         employees:rows.reduce((total,row)=>total+row.employeeCount,0)
       },
       companies:rows,
-      plans
+      plans,
+      licenseStatuses,
+      moduleCatalog
     });
   }catch(error){next(error)}
 });
@@ -87,6 +112,8 @@ router.post("/companies",async(req,res,next)=>{
 
     const passwordHash=await bcrypt.hash(body.temporaryPassword,12);
     const trialEndsAt=body.plan==="TRIAL"?new Date(Date.now()+body.trialDays*24*60*60*1000):null;
+    const licenseStatus=body.plan==="TRIAL"?"TRIAL":body.plan==="PILOT"?"PILOT":"ACTIVE";
+    const defaultModules=planDefaults[body.plan]||planDefaults.TRIAL;
 
     const created=await prisma.$transaction(async tx=>{
       const company=await tx.company.create({
@@ -98,7 +125,10 @@ router.post("/companies",async(req,res,next)=>{
           phone:body.phone||null,
           active:true,
           plan:body.plan,
-          trialEndsAt
+          trialEndsAt,
+          licenseStatus,
+          subscriptionStartsAt:new Date(),
+          subscriptionEndsAt:trialEndsAt
         }
       });
       const owner=await tx.user.create({
@@ -118,11 +148,14 @@ router.post("/companies",async(req,res,next)=>{
         {storeId:store.id,code:"AFTERNOON",name:"Απόγευμα",startTime:"15:00",endTime:"23:00",requiredCount:1},
         {storeId:store.id,code:"NIGHT",name:"Βράδυ",startTime:"23:00",endTime:"07:00",requiredCount:1}
       ]});
+      await tx.companyModule.createMany({
+        data:defaultModules.map(moduleKey=>({companyId:company.id,moduleKey,active:true}))
+      });
       return {company,owner,store};
     });
 
     res.status(201).json({
-      company:{id:created.company.id,name:created.company.name,plan:created.company.plan,active:created.company.active,trialEndsAt:created.company.trialEndsAt},
+      company:{id:created.company.id,name:created.company.name,plan:created.company.plan,active:created.company.active,licenseStatus:created.company.licenseStatus,trialEndsAt:created.company.trialEndsAt},
       owner:{id:created.owner.id,fullName:created.owner.fullName,email:created.owner.email},
       store:{id:created.store.id,name:created.store.name}
     });
@@ -159,6 +192,78 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.put("/companies/:companyId/license",async(req,res,next)=>{
+  try{
+    const moduleSchema=z.object({
+      key:z.enum(moduleKeys),
+      active:z.boolean(),
+      startsAt:dateValue,
+      endsAt:dateValue,
+      notes:z.string().trim().max(500).optional().or(z.literal(""))
+    });
+    const body=z.object({
+      plan:planSchema,
+      licenseStatus:licenseStatusSchema,
+      subscriptionStartsAt:dateValue,
+      subscriptionEndsAt:dateValue,
+      autoRenew:z.boolean().default(false),
+      commercialNotes:z.string().trim().max(2000).optional().or(z.literal("")),
+      modules:z.array(moduleSchema)
+    }).parse(req.body||{});
+
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
+
+    const moduleByKey=new Map(moduleCatalog.map(module=>[module.key,module]));
+    const selectedKeys=new Set(body.modules.filter(module=>module.active).map(module=>module.key));
+    if(!selectedKeys.has("CORE"))return res.status(400).json({error:"Το MyWorkStation Core δεν μπορεί να απενεργοποιηθεί."});
+    for(const module of body.modules){
+      const catalogModule=moduleByKey.get(module.key);
+      if(module.active&&!catalogModule?.commercialReady){
+        return res.status(400).json({error:`Το module «${catalogModule?.name||module.key}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`});
+      }
+    }
+
+    const shouldBeActive=!(["SUSPENDED","EXPIRED"].includes(body.licenseStatus));
+    const updated=await prisma.$transaction(async tx=>{
+      const result=await tx.company.update({
+        where:{id:company.id},
+        data:{
+          plan:body.plan,
+          licenseStatus:body.licenseStatus,
+          active:shouldBeActive,
+          subscriptionStartsAt:parseDate(body.subscriptionStartsAt),
+          subscriptionEndsAt:parseDate(body.subscriptionEndsAt),
+          trialEndsAt:body.licenseStatus==="TRIAL"?parseDate(body.subscriptionEndsAt):null,
+          autoRenew:body.autoRenew,
+          commercialNotes:body.commercialNotes||null
+        }
+      });
+      for(const module of body.modules){
+        await tx.companyModule.upsert({
+          where:{companyId_moduleKey:{companyId:company.id,moduleKey:module.key}},
+          update:{
+            active:module.active,
+            startsAt:parseDate(module.startsAt),
+            endsAt:parseDate(module.endsAt),
+            notes:module.notes||null
+          },
+          create:{
+            companyId:company.id,
+            moduleKey:module.key,
+            active:module.active,
+            startsAt:parseDate(module.startsAt),
+            endsAt:parseDate(module.endsAt),
+            notes:module.notes||null
+          }
+        });
+      }
+      return result;
+    });
+    res.json({ok:true,company:{id:updated.id,name:updated.name,active:updated.active,plan:updated.plan,licenseStatus:updated.licenseStatus}});
+  }catch(error){next(error)}
+});
+
 router.patch("/companies/:companyId",async(req,res,next)=>{
   try{
     const body=z.object({
@@ -176,7 +281,10 @@ router.patch("/companies/:companyId",async(req,res,next)=>{
     }
     if(body.trialDays!==undefined){
       data.plan="TRIAL";
+      data.licenseStatus="TRIAL";
+      data.active=true;
       data.trialEndsAt=new Date(Date.now()+body.trialDays*24*60*60*1000);
+      data.subscriptionEndsAt=data.trialEndsAt;
     }
     res.json(await prisma.company.update({where:{id:company.id},data}));
   }catch(error){next(error)}

@@ -3,7 +3,9 @@ import {createRoot} from "react-dom/client";
 import PilotReportLauncherLive from "./components/cloud/PilotReportLauncherLive.jsx";
 import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
+import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import "./components/platform/platform-security.css";
+import "./components/platform/commercial-license.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -26,7 +28,7 @@ const storeApi=async(path,options={})=>{
 
 if(platformMatch){
   document.title="MyWorkStation Platform Admin";
-  createRoot(document.getElementById("root")).render(<PlatformAdminApp/>);
+  createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/></>);
 }else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
