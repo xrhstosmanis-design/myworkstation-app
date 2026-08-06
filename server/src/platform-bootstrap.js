@@ -24,6 +24,7 @@ export async function ensurePlatformSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "subscriptionEndsAt" TIMESTAMP(3)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "autoRenew" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "commercialNotes" TEXT`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpSecret" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpEnabled" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpRecoveryCodes" TEXT`);
@@ -109,7 +110,7 @@ export async function ensurePlatformSchema(){
   if(existingAdmin){
     await prisma.user.update({
       where:{id:existingAdmin.id},
-      data:{fullName:"Χρήστος Μάνης",role:"SUPER_ADMIN",companyId:company.id}
+      data:{fullName:"Χρήστος Μάνης",role:"SUPER_ADMIN",companyId:company.id,mustChangePassword:false}
     });
   }else{
     if(!adminPassword) throw new Error("Λείπει το INITIAL_ADMIN_PASSWORD για δημιουργία Platform Super Admin.");
@@ -117,6 +118,7 @@ export async function ensurePlatformSchema(){
       data:{
         email:adminEmail,
         passwordHash:await bcrypt.hash(adminPassword,12),
+        mustChangePassword:false,
         fullName:"Χρήστος Μάνης",
         role:"SUPER_ADMIN",
         companyId:company.id
@@ -138,6 +140,7 @@ export async function ensurePlatformSchema(){
       data:{
         email:ownerEmail,
         passwordHash:lockedPasswordHash,
+        mustChangePassword:false,
         fullName:ownerName,
         role:"OWNER",
         companyId:company.id
@@ -150,5 +153,5 @@ export async function ensurePlatformSchema(){
     data:{revokedAt:new Date()}
   }).catch(()=>{});
 
-  console.log("Platform schema, MFA, customer licenses and module entitlements bootstrap completed.");
+  console.log("Platform schema, MFA, password change, customer licenses and module entitlements bootstrap completed.");
 }
