@@ -4,10 +4,12 @@ import PilotReportLauncherLive from "./components/cloud/PilotReportLauncherLive.
 import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
+import PlatformAuditCenter from "./components/platform/PlatformAuditCenter.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
 import "./components/platform/commercial-license.css";
+import "./components/platform/platform-audit.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -30,7 +32,7 @@ const storeApi=async(path,options={})=>{
 
 if(platformMatch){
   document.title="MyWorkStation Platform Admin";
-  createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/></>);
+  createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><PlatformAuditCenter/></>);
 }else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
