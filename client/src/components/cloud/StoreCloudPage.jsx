@@ -9,6 +9,7 @@ const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
 
 export default function StoreCloudPage({api,store,onBack}){
   const [data,setData]=useState(null);
+  const [activeModules,setActiveModules]=useState(new Set());
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
@@ -21,8 +22,12 @@ export default function StoreCloudPage({api,store,onBack}){
     if(showSpinner)setLoading(true);
     setError("");
     try{
-      const result=await api(`/api/cloud/v1/stores/${store.id}/overview`);
+      const [result,license]=await Promise.all([
+        api(`/api/cloud/v1/stores/${store.id}/overview`),
+        api("/api/license/current")
+      ]);
       setData(result);
+      setActiveModules(new Set(license.activeModules||[]));
       setDrafts(Object.fromEntries((result.catalog||[]).map(item=>[item.id,{name:item.name,category:item.category,price:String(item.price),active:item.active}])));
     }catch(err){setError(err.message)}finally{if(showSpinner)setLoading(false)}
   };
@@ -83,11 +88,12 @@ export default function StoreCloudPage({api,store,onBack}){
         <article><span>Τελευταία αλλαγή</span><strong className="cloud-date">{when(data?.latestChange?.createdAt)}</strong></article>
       </div>
 
-      <OperatorAccessPanel api={api} store={store}/>
+      {activeModules.has("STORE_MODE")&&<OperatorAccessPanel api={api} store={store}/>} 
 
-      <StoreTransactionsPanel api={api} store={store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
-
-      <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={store}/>
+      {activeModules.has("CASH_CONTROL")&&<>
+        <StoreTransactionsPanel api={api} store={store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
+        <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={store}/>
+      </>}
 
       <div className="cloud-two-columns">
         <article className="cloud-panel">
