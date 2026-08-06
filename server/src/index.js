@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import ownerSecurityRoutes from "./routes/owner-security.js";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
@@ -23,7 +24,8 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.16.0+platform-commercial-audit"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.17.0+owner-account-security"}));
+app.use("/api/auth",ownerSecurityRoutes);
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
@@ -59,4 +61,4 @@ try{
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.16.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.17.0 on port ${process.env.PORT||8080}`));
