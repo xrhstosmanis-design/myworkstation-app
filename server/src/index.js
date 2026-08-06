@@ -11,6 +11,9 @@ import storeOperatorRoutes from "./routes/store-operators.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import licenseRoutes from "./routes/license.js";
+import { auth } from "./middleware/auth.js";
+import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
@@ -18,15 +21,16 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.13.0+commercial-licenses"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.14.0+module-enforcement"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",platformAdminRoutes);
-app.use("/api/operators",storeOperatorRoutes);
-app.use("/api/transactions",storeTransactionRoutes);
-app.use("/api/pilot",pilotReportRoutes);
+app.use("/api/license",licenseRoutes);
+app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
+app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTransactionRoutes);
+app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
-app.use("/api/cash",cashControlRoutes);
-app.use("/api",apiRoutes);
+app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
+app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 
 app.use((err,req,res,next)=>{
   console.error(err);
@@ -49,4 +53,4 @@ try{
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.13.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.14.0 on port ${process.env.PORT||8080}`));
