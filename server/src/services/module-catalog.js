@@ -2,7 +2,7 @@ export const moduleCatalog=[
   {key:"CORE",name:"MyWorkStation Core",description:"Βασική πλατφόρμα, χρήστες, καταστήματα και audit.",category:"CORE",commercialReady:true},
   {key:"PERSONNEL",name:"Προσωπικό",description:"Εργαζόμενοι, ρόλοι και κανόνες.",category:"CORE",commercialReady:true},
   {key:"SHIFTS",name:"Βάρδιες",description:"Πρόγραμμα και κατανομή βαρδιών.",category:"CORE",commercialReady:true},
-  {key:"LEAVES",name:"Άδειες",description:"Άδειες και διαθεσιμότητα προσωπικού.",category:"CORE",commercialReady:true},
+  {key:"LEAVES",name:"Άδειες προσωπικού",description:"Άδειες, ασθένειες, απουσίες και διαθεσιμότητα εργαζομένων.",category:"CORE",commercialReady:true},
   {key:"CASH_CONTROL",name:"Έλεγχος Ταμείου",description:"Άνοιγμα, κλείσιμο, διαφορές και παράδοση βάρδιας.",category:"CONTROL",commercialReady:true},
   {key:"STORE_MODE",name:"Store Mode",description:"Προσωπική είσοδος εργαζομένων με PIN ή κάρτα.",category:"CONTROL",commercialReady:true},
   {key:"PILOT_REPORT",name:"Αναφορά Πιλότου",description:"Ημερήσια αναφορά λειτουργίας και audit.",category:"REPORTS",commercialReady:true},
