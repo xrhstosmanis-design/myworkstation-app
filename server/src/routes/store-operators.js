@@ -107,11 +107,13 @@ async function audit({companyId,storeId,operatorId=null,actorId,eventType,detail
 async function activeStore(storeId){
   const store=await prisma.store.findFirst({where:{id:storeId,active:true},include:{company:true}});
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
+  if(!store.company.active){const error=new Error("Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.");error.status=403;throw error}
   return store;
 }
 async function ownedStore(storeId,companyId){
-  const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});
+  const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},include:{company:true}});
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
+  if(!store.company.active){const error=new Error("Η άδεια του πελάτη είναι σε αναστολή ή έχει λήξει.");error.status=403;throw error}
   return store;
 }
 
@@ -131,6 +133,7 @@ router.get("/stores/:storeId/directory",route(async(req,res)=>{
 
 router.post("/login/pin",route(async(req,res)=>{
   const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/)}).parse(req.body);
+  await activeStore(body.storeId);
   const rows=await prisma.$queryRaw`
     SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
     FROM "StoreOperatorCredential" c
@@ -138,7 +141,7 @@ router.post("/login/pin",route(async(req,res)=>{
     JOIN "Store" s ON s."id"=c."storeId"
     JOIN "Company" co ON co."id"=c."companyId"
     WHERE c."storeId"=${body.storeId} AND c."employeeId"=${body.employeeId}
-      AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE
+      AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE AND co."active"=TRUE
     LIMIT 1
   `;
   const operator=rows[0];
@@ -157,6 +160,7 @@ router.post("/login/pin",route(async(req,res)=>{
 
 router.post("/login/card",route(async(req,res)=>{
   const body=z.object({storeId:z.string().min(2),cardCode:z.string().min(3).max(120)}).parse(req.body);
+  await activeStore(body.storeId);
   const normalized=normalizeCard(body.cardCode);
   if(normalized.length<3)return res.status(400).json({error:"Η κάρτα δεν είναι έγκυρη."});
   const hash=cardHash(normalized);
@@ -167,7 +171,7 @@ router.post("/login/card",route(async(req,res)=>{
     JOIN "Store" s ON s."id"=c."storeId"
     JOIN "Company" co ON co."id"=c."companyId"
     WHERE c."storeId"=${body.storeId} AND c."cardCodeHash"=${hash}
-      AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE
+      AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE AND co."active"=TRUE
     LIMIT 1
   `;
   const operator=rows[0];
@@ -220,49 +224,28 @@ router.put("/stores/:storeId/employees/:employeeId",route(async(req,res)=>{
     WHERE "storeId"=${store.id} AND "employeeId"=${employee.id} LIMIT 1
   `;
   const existing=existingRows[0];
-  let pinHashValue=body.clearPin?null:(existing?.pinHash||null);
-  let cardHashValue=body.clearCard?null:(existing?.cardCodeHash||null);
-  let cardLast4Value=body.clearCard?null:(existing?.cardCodeLast4||null);
-  if(body.pin)pinHashValue=await bcrypt.hash(body.pin,12);
-  if(body.cardCode){cardHashValue=cardHash(body.cardCode);cardLast4Value=last4(body.cardCode)}
-  if(body.active&&!pinHashValue&&!cardHashValue)return res.status(400).json({error:"Βάλε προσωπικό PIN ή κωδικό κάρτας πριν ενεργοποιήσεις την πρόσβαση."});
+  const pinHash=body.clearPin?null:body.pin?await bcrypt.hash(body.pin,12):(existing?.pinHash||null);
+  const normalized=body.cardCode?normalizeCard(body.cardCode):"";
+  const cardCodeHash=body.clearCard?null:normalized?cardHash(normalized):(existing?.cardCodeHash||null);
+  const cardCodeLast4=body.clearCard?null:normalized?last4(normalized):(existing?.cardCodeLast4||null);
+  const id=existing?.id||crypto.randomUUID();
 
-  let rows;
-  if(existing){
-    rows=await prisma.$queryRaw`
-      UPDATE "StoreOperatorCredential"
-      SET "displayName"=${employee.fullName},"role"=${body.role},"pinHash"=${pinHashValue},
-          "cardCodeHash"=${cardHashValue},"cardCodeLast4"=${cardLast4Value},"active"=${body.active},"updatedAt"=NOW()
-      WHERE "id"=${existing.id} RETURNING *
-    `;
-  }else{
-    rows=await prisma.$queryRaw`
-      INSERT INTO "StoreOperatorCredential" (
-        "id","companyId","storeId","employeeId","displayName","role","pinHash","cardCodeHash","cardCodeLast4","active","createdBy"
-      ) VALUES (
-        ${crypto.randomUUID()},${req.user.companyId},${store.id},${employee.id},${employee.fullName},${body.role},
-        ${pinHashValue},${cardHashValue},${cardLast4Value},${body.active},${req.user.id}
-      ) RETURNING *
-    `;
-  }
-  const saved=rows[0];
-  await audit({companyId:req.user.companyId,storeId:store.id,operatorId:saved.id,actorId:req.user.id,eventType:"OPERATOR_ACCESS_UPDATED",details:{employeeId:employee.id,role:body.role,active:body.active,hasPin:Boolean(pinHashValue),hasCard:Boolean(cardHashValue)}});
-  res.json({
-    id:saved.id,employeeId:saved.employeeId,fullName:saved.displayName,role:saved.role,active:saved.active,
-    hasPin:Boolean(saved.pinHash),hasCard:Boolean(saved.cardCodeHash),cardCodeLast4:saved.cardCodeLast4,lastLoginAt:saved.lastLoginAt
-  });
-}));
-
-router.get("/stores/:storeId/audit",route(async(req,res)=>{
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const rows=await prisma.$queryRaw`
-    SELECT a.*,c."displayName"
-    FROM "StoreOperatorAudit" a
-    LEFT JOIN "StoreOperatorCredential" c ON c."id"=a."operatorId"
-    WHERE a."storeId"=${store.id} AND a."companyId"=${req.user.companyId}
-    ORDER BY a."createdAt" DESC LIMIT 50
+  await prisma.$executeRaw`
+    INSERT INTO "StoreOperatorCredential"
+      ("id","companyId","storeId","employeeId","displayName","role","pinHash","cardCodeHash","cardCodeLast4","active","createdBy","updatedAt")
+    VALUES
+      (${id},${store.companyId},${store.id},${employee.id},${employee.fullName},${body.role},${pinHash},${cardCodeHash},${cardCodeLast4},${body.active},${req.user.id},NOW())
+    ON CONFLICT ("storeId","employeeId") DO UPDATE SET
+      "displayName"=EXCLUDED."displayName",
+      "role"=EXCLUDED."role",
+      "pinHash"=EXCLUDED."pinHash",
+      "cardCodeHash"=EXCLUDED."cardCodeHash",
+      "cardCodeLast4"=EXCLUDED."cardCodeLast4",
+      "active"=EXCLUDED."active",
+      "updatedAt"=NOW()
   `;
-  res.json(rows);
+  await audit({companyId:store.companyId,storeId:store.id,operatorId:id,actorId:req.user.id,eventType:"OPERATOR_CREDENTIAL_UPDATED",details:{employeeId:employee.id,role:body.role,active:body.active,hasPin:!!pinHash,hasCard:!!cardCodeHash}});
+  res.json({ok:true,employeeId:employee.id,credentialId:id,hasPin:!!pinHash,hasCard:!!cardCodeHash,cardCodeLast4,active:body.active,role:body.role});
 }));
 
 export default router;
