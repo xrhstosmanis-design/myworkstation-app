@@ -10,6 +10,7 @@ import cashControlRoutes from "./routes/cash-control.js";
 import storeOperatorRoutes from "./routes/store-operators.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
+import commerceV1Routes from "./routes/commerce-v1.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
@@ -24,7 +25,7 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.17.0+commercial-database-v1"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.18.0+modules-v1"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
@@ -36,6 +37,7 @@ app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTrans
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
+app.use("/api/commerce",auth,commerceV1Routes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 
 app.use((err,req,res,next)=>{
@@ -61,4 +63,4 @@ try{
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.17.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.18.0 on port ${process.env.PORT||8080}`));
