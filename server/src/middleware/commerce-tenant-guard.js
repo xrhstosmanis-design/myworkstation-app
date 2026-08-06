@@ -14,6 +14,17 @@ async function employeeExists(companyId,employeeId){
   return Boolean(employee);
 }
 
+async function barcodeExistsInCompany(companyId,barcode){
+  const rows=await prisma.$queryRaw`
+    SELECT 1
+    FROM "ProductBarcode" b
+    JOIN "Product" p ON p."id"=b."productId"
+    WHERE p."companyId"=${String(companyId)} AND b."barcode"=${String(barcode)}
+    LIMIT 1
+  `;
+  return rows.length>0;
+}
+
 function bad(res,label){
   return res.status(404).json({error:`Δεν βρέθηκε ${label} για τη συγκεκριμένη εταιρεία.`,code:"TENANT_REFERENCE_REJECTED"});
 }
@@ -25,8 +36,13 @@ export async function commerceTenantGuard(req,res,next){
     const body=req.body||{};
     const path=String(req.path||"");
 
-    if(path==="/products"&&req.method==="POST"&&body.categoryId){
-      if(!await rawExists("ProductCategory",companyId,body.categoryId))return bad(res,"η κατηγορία προϊόντος");
+    if(path==="/products"&&req.method==="POST"){
+      if(body.categoryId&&!await rawExists("ProductCategory",companyId,body.categoryId))return bad(res,"η κατηγορία προϊόντος");
+      for(const barcode of [...new Set(Array.isArray(body.barcodes)?body.barcodes:[])]){
+        if(await barcodeExistsInCompany(companyId,barcode)){
+          return res.status(409).json({error:`Το barcode ${barcode} υπάρχει ήδη στον κατάλογο της εταιρείας.`,code:"DUPLICATE_COMPANY_BARCODE"});
+        }
+      }
     }
 
     if(path==="/purchases"&&req.method==="POST"){
