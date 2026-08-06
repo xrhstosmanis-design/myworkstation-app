@@ -1,0 +1,42 @@
+{
+  "id": "/",
+  "name": "MyWorkStation",
+  "short_name": "MyWorkStation",
+  "description": "Online διαχείριση καταστημάτων, εργαζομένων, βαρδιών και λειτουργίας ταμείου.",
+  "lang": "el-GR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f7fb",
+  "theme_color": "#10213d",
+  "icons": [
+    {
+      "src": "/icons/myworkstation-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/myworkstation-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Backoffice",
+      "short_name": "Backoffice",
+      "description": "Άνοιγμα του κεντρικού MyWorkStation",
+      "url": "/"
+    },
+    {
+      "name": "ΚΑΤ Store Mode",
+      "short_name": "ΚΑΤ",
+      "description": "Άνοιγμα της λειτουργίας καταστήματος ΚΑΤ",
+      "url": "/store/kat-store"
+    }
+  ]
+}
