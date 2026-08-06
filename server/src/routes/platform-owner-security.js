@@ -31,16 +31,27 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
       return res.status(400).json({error:"Για νέο ιδιοκτήτη απαιτείται προσωρινός κωδικός τουλάχιστον 8 χαρακτήρων."});
     }
 
-    const data={fullName:body.fullName,email:body.email,role:"OWNER",companyId:company.id};
-    if(body.temporaryPassword){
-      data.passwordHash=await bcrypt.hash(body.temporaryPassword,12);
-      data.mustChangePassword=true;
-      data.sessionVersion={increment:1};
+    let owner;
+    if(currentOwner){
+      const updateData={fullName:body.fullName,email:body.email,role:"OWNER",companyId:company.id};
+      if(body.temporaryPassword){
+        updateData.passwordHash=await bcrypt.hash(body.temporaryPassword,12);
+        updateData.mustChangePassword=true;
+        updateData.sessionVersion={increment:1};
+      }
+      owner=await prisma.user.update({where:{id:currentOwner.id},data:updateData});
+    }else{
+      owner=await prisma.user.create({
+        data:{
+          fullName:body.fullName,
+          email:body.email,
+          role:"OWNER",
+          companyId:company.id,
+          passwordHash:await bcrypt.hash(body.temporaryPassword,12),
+          mustChangePassword:true
+        }
+      });
     }
-
-    const owner=currentOwner
-      ?await prisma.user.update({where:{id:currentOwner.id},data})
-      :await prisma.user.create({data:{...data,passwordHash:data.passwordHash,mustChangePassword:true}});
 
     if(body.temporaryPassword){
       await prisma.userSession.updateMany({
