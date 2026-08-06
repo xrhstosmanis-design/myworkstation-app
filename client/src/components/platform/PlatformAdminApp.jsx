@@ -1,0 +1,148 @@
+import React,{useEffect,useMemo,useState} from "react";
+import {Building2,ExternalLink,KeyRound,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,X} from "lucide-react";
+import "./platform-admin.css";
+
+const plans=["TRIAL","PILOT","BASIC","PRO","ENTERPRISE"];
+const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"Basic",PRO:"Pro",ENTERPRISE:"Enterprise"};
+const when=value=>value?new Date(value).toLocaleDateString("el-GR"):"—";
+
+async function request(path,options={}){
+  const token=localStorage.getItem("token");
+  const response=await fetch(path,{
+    ...options,
+    headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}
+  });
+  const text=await response.text();
+  let data={};
+  if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
+  if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
+  return data;
+}
+
+export default function PlatformAdminApp(){
+  const [user,setUser]=useState(()=>{
+    try{return JSON.parse(localStorage.getItem("platformUser")||"null")}catch{return null}
+  });
+  const [email,setEmail]=useState("admin@myworkstationapp.gr");
+  const [password,setPassword]=useState("");
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [busy,setBusy]=useState("");
+  const [error,setError]=useState("");
+  const [message,setMessage]=useState("");
+  const [showNew,setShowNew]=useState(false);
+  const [resetCompany,setResetCompany]=useState(null);
+
+  const load=async()=>{
+    setLoading(true);setError("");
+    try{setData(await request("/api/platform/overview"))}
+    catch(err){
+      setError(err.message);
+      if(/σύνδεση|συνεδρία|Super Admin/i.test(err.message))logout(false);
+    }finally{setLoading(false)}
+  };
+  useEffect(()=>{if(user)load()},[user]);
+
+  const login=async event=>{
+    event.preventDefault();setBusy("login");setError("");
+    try{
+      const result=await request("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});
+      if(result.user.role!=="SUPER_ADMIN")throw new Error("Ο λογαριασμός δεν έχει ακόμη πρόσβαση Platform Super Admin.");
+      localStorage.setItem("token",result.token);
+      localStorage.setItem("platformUser",JSON.stringify(result.user));
+      setUser(result.user);setPassword("");
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+  const logout=(clearError=true)=>{
+    localStorage.removeItem("token");localStorage.removeItem("platformUser");
+    setUser(null);setData(null);if(clearError)setError("");
+  };
+
+  const createCompany=async event=>{
+    event.preventDefault();setBusy("create");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);
+    const body=Object.fromEntries(form.entries());
+    body.trialDays=Number(body.trialDays||14);
+    try{
+      const result=await request("/api/platform/companies",{method:"POST",body:JSON.stringify(body)});
+      setMessage(`Ο πελάτης «${result.company.name}» δημιουργήθηκε με πρώτο κατάστημα «${result.store.name}».`);
+      setShowNew(false);event.currentTarget.reset();await load();
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const updateCompany=async(companyId,body,label)=>{
+    setBusy(companyId);setError("");setMessage("");
+    try{
+      await request(`/api/platform/companies/${companyId}`,{method:"PATCH",body:JSON.stringify(body)});
+      setMessage(label);await load();
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const resetPassword=async event=>{
+    event.preventDefault();setBusy("reset");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);
+    try{
+      await request(`/api/platform/companies/${resetCompany.id}/reset-owner-password`,{method:"POST",body:JSON.stringify({temporaryPassword:form.get("temporaryPassword")})});
+      setMessage(`Ο προσωρινός κωδικός του ${resetCompany.owner?.fullName||"ιδιοκτήτη"} άλλαξε.`);
+      setResetCompany(null);
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const expiringTrials=useMemo(()=>{
+    const now=Date.now(),week=7*24*60*60*1000;
+    return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
+  },[data]);
+
+  if(!user)return <div className="platform-login-shell">
+    <section className="platform-login-info">
+      <div className="platform-logo">MW</div>
+      <span>MYWORKSTATION PLATFORM</span>
+      <h1>Κεντρική διαχείριση της εμπορικής πλατφόρμας</h1>
+      <p>Πελάτες, καταστήματα, συνδρομές και λογαριασμοί ιδιοκτητών από μία ασφαλή οθόνη.</p>
+      <div><ShieldCheck/><b>Πρόσβαση μόνο Platform Super Admin</b></div>
+    </section>
+    <form className="platform-login-card" onSubmit={login}>
+      <div className="platform-login-icon"><ShieldCheck/></div>
+      <h2>Είσοδος ιδιοκτήτη πλατφόρμας</h2>
+      <label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
+      <label>Κωδικός<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>
+      {error&&<div className="platform-error">{error}</div>}
+      <button disabled={busy==="login"}>{busy==="login"?"Έλεγχος…":"Σύνδεση"}</button>
+      <a href="/">Κανονικό Backoffice</a>
+    </form>
+  </div>;
+
+  return <div className="platform-shell">
+    <header className="platform-header">
+      <div className="platform-brand"><div className="platform-logo">MW</div><div><b>MyWorkStation Platform Admin</b><span>Κεντρική εμπορική διαχείριση</span></div></div>
+      <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><a href="/"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
+    </header>
+    <main className="platform-main">
+      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
+      {error&&<div className="platform-alert error">{error}</div>}
+      {message&&<div className="platform-alert success">{message}</div>}
+      <div className="platform-stats">
+        <article><Building2/><div><span>Εταιρείες</span><strong>{data?.stats?.companies||0}</strong><small>{data?.stats?.activeCompanies||0} ενεργές</small></div></article>
+        <article><Store/><div><span>Καταστήματα</span><strong>{data?.stats?.stores||0}</strong><small>Σε όλη την πλατφόρμα</small></div></article>
+        <article><Users/><div><span>Χρήστες</span><strong>{data?.stats?.users||0}</strong><small>{data?.stats?.employees||0} εργαζόμενοι</small></div></article>
+        <article><UsersRound/><div><span>Δοκιμές</span><strong>{data?.stats?.trialCompanies||0}</strong><small>{expiringTrials} λήγουν σύντομα</small></div></article>
+      </div>
+      <section className="platform-panel">
+        <div className="platform-panel-head"><div><h2>Εταιρείες πελατών</h2><p>Κάθε εταιρεία έχει απομονωμένα καταστήματα, χρήστες και δεδομένα.</p></div></div>
+        {loading?<div className="platform-empty">Φόρτωση πλατφόρμας…</div>:(data?.companies||[]).length===0?<div className="platform-empty">Δεν υπάρχουν ακόμη πελάτες.</div>:<div className="platform-company-list">
+          {data.companies.map(company=><article className={`platform-company ${!company.active?"inactive":""}`} key={company.id}>
+            <div className="platform-company-main"><div className="company-mark">{company.name.slice(0,2).toUpperCase()}</div><div><div className="company-name"><h3>{company.name}</h3><span className={`company-status ${company.active?"active":"inactive"}`}>{company.active?"ΕΝΕΡΓΗ":"ΑΝΕΝΕΡΓΗ"}</span></div><p>{company.city||"Χωρίς πόλη"}{company.taxId?` · ΑΦΜ ${company.taxId}`:""}</p><small>Δημιουργήθηκε {when(company.createdAt)}</small></div></div>
+            <div className="platform-company-counts"><div><Store/><span>{company.storeCount} καταστήματα</span></div><div><Users/><span>{company.userCount} χρήστες</span></div><div><UsersRound/><span>{company.employeeCount} εργαζόμενοι</span></div></div>
+            <div className="platform-company-owner"><small>Ιδιοκτήτης πελάτη</small><b>{company.owner?.fullName||"Δεν έχει οριστεί"}</b><span>{company.owner?.email||"—"}</span></div>
+            <div className="platform-company-plan"><label>Πακέτο<select value={company.plan} onChange={e=>updateCompany(company.id,{plan:e.target.value},`Το πακέτο του ${company.name} ενημερώθηκε.`)} disabled={busy===company.id}>{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><small>{company.plan==="TRIAL"?`Λήξη δοκιμής: ${when(company.trialEndsAt)}`:"Χωρίς ημερομηνία λήξης"}</small></div>
+            <div className="platform-company-actions"><button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button><button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
+          </article>)}
+        </div>}
+      </section>
+    </main>
+
+    {showNew&&<div className="platform-modal"><form onSubmit={createCompany}><button type="button" className="modal-close" onClick={()=>setShowNew(false)}><X/></button><h2>Νέος εμπορικός πελάτης</h2><p>Δημιουργούνται εταιρεία, ιδιοκτήτης και πρώτο κατάστημα.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId"/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><div></div><label>Ονοματεπώνυμο ιδιοκτήτη<input name="ownerFullName" required/></label><label>Email ιδιοκτήτη<input name="ownerEmail" type="email" required/></label><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required/></label><div></div><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setShowNew(false)}>Ακύρωση</button><button disabled={busy==="create"}>{busy==="create"?"Δημιουργία…":"Δημιουργία πελάτη"}</button></div></form></div>}
+
+    {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
+  </div>;
+}
