@@ -1,5 +1,6 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { PrismaClient, UserRole, EmployeeType } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -21,14 +22,14 @@ const people = [
 async function main() {
   const company = await prisma.company.upsert({
     where: { id: "pilot-company" },
-    update: { active: true, plan: "PILOT" },
-    create: { id: "pilot-company", name: "MyWorkStation Pilot", active: true, plan: "PILOT" }
+    update: { name:"Κυλικείο ΚΑΤ", active:true, plan:"PILOT" },
+    create: { id:"pilot-company", name:"Κυλικείο ΚΑΤ", active:true, plan:"PILOT" }
   });
 
   const store = await prisma.store.upsert({
     where: { id: "kat-store" },
-    update: {},
-    create: { id: "kat-store", name: "Κυλικείο ΚΑΤ", companyId: company.id, city: "Αθήνα" }
+    update: { name:"Κυλικείο ΚΑΤ", companyId:company.id },
+    create: { id:"kat-store", name:"Κυλικείο ΚΑΤ", companyId:company.id, city:"Αθήνα" }
   });
 
   const shiftData = [
@@ -70,7 +71,24 @@ async function main() {
     update:{passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id},
     create:{email,passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id}
   });
+
+  const katOwnerEmail=process.env.KAT_OWNER_EMAIL||"nikirazatou@hotmail.gr";
+  const katOwnerName=process.env.KAT_OWNER_NAME||"Νίκη Ραζάτου";
+  const katOwner=await prisma.user.findUnique({where:{email:katOwnerEmail}});
+  if(katOwner){
+    await prisma.user.update({
+      where:{id:katOwner.id},
+      data:{fullName:katOwnerName,role:UserRole.OWNER,companyId:company.id}
+    });
+  }else{
+    const lockedPasswordHash=await bcrypt.hash(crypto.randomBytes(32).toString("hex"),12);
+    await prisma.user.create({
+      data:{email:katOwnerEmail,passwordHash:lockedPasswordHash,fullName:katOwnerName,role:UserRole.OWNER,companyId:company.id}
+    });
+  }
+
   console.log(`Platform Super Admin: ${email}`);
+  console.log(`KAT customer owner: ${katOwnerEmail}`);
 }
 
 main().finally(()=>prisma.$disconnect());
