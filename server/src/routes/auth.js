@@ -12,6 +12,8 @@ router.post("/login", async (req,res,next)=>{
     const user=await prisma.user.findUnique({where:{email},include:{company:true}});
     if(!user || !(await bcrypt.compare(password,user.passwordHash)))
       return res.status(401).json({error:"Λανθασμένο email ή κωδικός."});
+    if(!user.company.active && user.role!=="SUPER_ADMIN")
+      return res.status(403).json({error:"Η συνδρομή της εταιρείας είναι ανενεργή. Επικοινωνήστε με το MyWorkStation."});
     const token=jwt.sign({
       id:user.id,
       companyId:user.companyId,
@@ -20,7 +22,17 @@ router.post("/login", async (req,res,next)=>{
       email:user.email,
       tokenType:"BACKOFFICE_USER"
     },process.env.JWT_SECRET,{expiresIn:"12h"});
-    res.json({token,user:{id:user.id,email:user.email,fullName:user.fullName,role:user.role,company:user.company}});
+    res.json({
+      token,
+      user:{
+        id:user.id,
+        email:user.email,
+        fullName:user.fullName,
+        role:user.role,
+        platformAdmin:user.role==="SUPER_ADMIN",
+        company:user.company
+      }
+    });
   }catch(e){next(e)}
 });
 
