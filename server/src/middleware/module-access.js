@@ -7,6 +7,13 @@ function isCurrentlyActive(row,now=new Date()){
   return true;
 }
 
+export function moduleKeyForPath(path="/"){
+  if(path.startsWith("/employees"))return "PERSONNEL";
+  if(path.startsWith("/shifts")||path.startsWith("/schedules"))return "SHIFTS";
+  if(path.startsWith("/leaves")||path.startsWith("/availability"))return "LEAVES";
+  return "CORE";
+}
+
 export async function companyModuleState(companyId){
   const company=await prisma.company.findUnique({
     where:{id:companyId},
@@ -43,13 +50,7 @@ export function requireCompanyModule(moduleKey){
 }
 
 export function requireOperationalModuleByPath(req,res,next){
-  const path=req.path||"/";
-  let moduleKey="CORE";
-  if(path.startsWith("/employees"))moduleKey="PERSONNEL";
-  else if(path.startsWith("/shifts")||path.startsWith("/schedules"))moduleKey="SHIFTS";
-  else if(path.startsWith("/leaves")||path.startsWith("/availability"))moduleKey="LEAVES";
-  else if(path.startsWith("/dashboard")||path.startsWith("/stores"))moduleKey="CORE";
-  return requireCompanyModule(moduleKey)(req,res,next);
+  return requireCompanyModule(moduleKeyForPath(req.path||"/"))(req,res,next);
 }
 
 export function requireStoreModule(moduleKey){
