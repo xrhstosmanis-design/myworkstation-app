@@ -23,6 +23,10 @@ services:
         value: admin@myworkstationapp.gr
       - key: INITIAL_ADMIN_PASSWORD
         generateValue: true
+      - key: KAT_OWNER_NAME
+        value: Νίκη Ραζάτου
+      - key: KAT_OWNER_EMAIL
+        value: nikirazatou@hotmail.gr
 
 databases:
   - name: myworkstation-db
