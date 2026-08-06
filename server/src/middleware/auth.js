@@ -18,10 +18,11 @@ export async function auth(req,res,next){
       return res.status(401).json({error:"Απαιτείται νέα ασφαλής σύνδεση με 2FA."});
     }
 
+    let currentUser=null;
     if(payload.sessionId){
       const session=await prisma.userSession.findUnique({
         where:{id:payload.sessionId},
-        include:{user:{select:{sessionVersion:true,role:true,company:{select:{active:true}}}}}
+        include:{user:{select:{sessionVersion:true,role:true,mustChangePassword:true,company:{select:{active:true}}}}}
       });
       const expired=!session||session.expiresAt.getTime()<=Date.now();
       const revoked=!!session?.revokedAt;
@@ -30,12 +31,22 @@ export async function auth(req,res,next){
       if(expired||revoked||versionChanged||inactiveCompany){
         return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
       }
+      currentUser=session.user;
       if(Date.now()-session.lastSeenAt.getTime()>5*60*1000){
         prisma.userSession.update({where:{id:session.id},data:{lastSeenAt:new Date()}}).catch(()=>{});
       }
     }
 
-    req.user=payload;
+    const passwordChangeAllowed=req.originalUrl.startsWith("/api/auth/change-password")||req.originalUrl.startsWith("/api/auth/logout");
+    const passwordChangeRequired=currentUser?.mustChangePassword===true||payload.mustChangePassword===true;
+    if(passwordChangeRequired&&!passwordChangeAllowed){
+      return res.status(403).json({
+        error:"Απαιτείται αλλαγή του προσωρινού κωδικού πριν από την πρόσβαση.",
+        code:"PASSWORD_CHANGE_REQUIRED"
+      });
+    }
+
+    req.user={...payload,mustChangePassword:passwordChangeRequired};
     next();
   }catch(error){
     console.error("Authentication validation failed",error?.message||error);

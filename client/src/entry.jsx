@@ -5,6 +5,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
+import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
 import "./components/platform/commercial-license.css";
 import "./styles.css";
@@ -35,6 +36,7 @@ if(platformMatch){
   document.title="MyWorkStation Store Mode";
   createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>);
 }else{
+  installOwnerPasswordChangeGate();
   installModuleUiEnforcement();
   import("./main.jsx");
   const launcherRoot=document.getElementById("pilot-report-root");
