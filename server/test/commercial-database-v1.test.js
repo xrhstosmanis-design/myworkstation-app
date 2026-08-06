@@ -9,6 +9,11 @@ const requiredTables=[
   "ShiftHandover","DocumentAttachment"
 ];
 
+test("Commercial Database V1 defines the expected 18 commerce tables",()=>{
+  assert.equal(requiredTables.length,18);
+  assert.equal(new Set(requiredTables).size,18);
+});
+
 test("Commercial Database V1 contains all required commerce tables",async()=>{
   const source=await fs.readFile(new URL("../src/commercial-bootstrap.js",import.meta.url),"utf8");
   for(const table of requiredTables){
