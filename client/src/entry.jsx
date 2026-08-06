@@ -2,8 +2,10 @@ import React from "react";
 import {createRoot} from "react-dom/client";
 import PilotReportLauncherLive from "./components/cloud/PilotReportLauncherLive.jsx";
 import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
+import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import "./styles.css";
 
+const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
 
 const storeApi=async(path,options={})=>{
@@ -21,7 +23,10 @@ const storeApi=async(path,options={})=>{
   return data;
 };
 
-if(storeMatch){
+if(platformMatch){
+  document.title="MyWorkStation Platform Admin";
+  createRoot(document.getElementById("root")).render(<PlatformAdminApp/>);
+}else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
   createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>);
