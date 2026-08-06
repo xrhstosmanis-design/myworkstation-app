@@ -16,7 +16,7 @@ const plans=["TRIAL","PILOT","BASIC","PRO","ENTERPRISE"];
 const planSchema=z.enum(plans);
 
 function companyView(company){
-  const owner=company.users.find(user=>user.role==="OWNER")||company.users[0]||null;
+  const owner=company.users.find(user=>user.role==="OWNER")||null;
   const employees=company.stores.reduce((total,store)=>total+(store._count?.employees||0),0);
   return {
     id:company.id,
@@ -60,7 +60,8 @@ router.get("/overview",async(req,res,next)=>{
         employees:rows.reduce((total,row)=>total+row.employeeCount,0)
       },
       companies:rows,
-      plans
+      plans,
+      platformCompanyId:req.user.companyId
     });
   }catch(error){next(error)}
 });
@@ -138,6 +139,9 @@ router.patch("/companies/:companyId",async(req,res,next)=>{
     }).refine(value=>Object.keys(value).length>0,{message:"Δεν δόθηκε αλλαγή."}).parse(req.body||{});
     const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
+    if(company.id===req.user.companyId&&body.active===false){
+      return res.status(400).json({error:"Δεν μπορείς να απενεργοποιήσεις την εταιρεία της πλατφόρμας."});
+    }
     const data={};
     if(body.active!==undefined)data.active=body.active;
     if(body.plan!==undefined){
