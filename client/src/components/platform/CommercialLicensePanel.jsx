@@ -55,21 +55,21 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
   return <form className="commercial-license-panel" onSubmit={save}>
     <div className="license-heading">
       <div className="license-icon"><PackageCheck/></div>
-      <div><h2>Άδεια και modules</h2><p>{company.name}</p></div>
+      <div><h2>Συνδρομή και modules</h2><p>{company.name}</p></div>
       <button type="button" className="modal-close" onClick={onClose}><XCircle/></button>
     </div>
 
     {error&&<div className="platform-alert error">{error}</div>}
 
     <div className="license-summary">
-      <div><small>Κατάσταση</small><b>{statusLabels[licenseStatus]}</b></div>
+      <div><small>Κατάσταση συνδρομής</small><b>{statusLabels[licenseStatus]}</b></div>
       <div><small>Πακέτο</small><b>{planLabels[plan]}</b></div>
       <div><small>Ενεργά modules</small><b>{activeCount}</b></div>
     </div>
 
     <div className="license-fields">
       <label>Πακέτο<select value={plan} onChange={e=>setPlan(e.target.value)}>{Object.entries(planLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Εμπορική κατάσταση<select value={licenseStatus} onChange={e=>setLicenseStatus(e.target.value)}>{Object.entries(statusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+      <label>Κατάσταση συνδρομής<select value={licenseStatus} onChange={e=>setLicenseStatus(e.target.value)}>{Object.entries(statusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
       <label>Έναρξη συνδρομής<input type="date" value={subscriptionStartsAt} onChange={e=>setSubscriptionStartsAt(e.target.value)}/></label>
       <label>Λήξη συνδρομής<input type="date" value={subscriptionEndsAt} onChange={e=>setSubscriptionEndsAt(e.target.value)}/></label>
       <label className="license-checkbox"><input type="checkbox" checked={autoRenew} onChange={e=>setAutoRenew(e.target.checked)}/><span>Αυτόματη ανανέωση</span></label>
@@ -93,7 +93,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
 
     <div className="platform-form-actions">
       <button type="button" className="secondary" onClick={onClose}>Ακύρωση</button>
-      <button disabled={busy}><Save/>{busy?"Αποθήκευση…":"Αποθήκευση άδειας"}</button>
+      <button disabled={busy}><Save/>{busy?"Αποθήκευση…":"Αποθήκευση συνδρομής"}</button>
     </div>
   </form>;
 }
