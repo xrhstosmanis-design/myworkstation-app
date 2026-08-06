@@ -11,6 +11,8 @@ const sectionRules=[
   {text:"Αναφορά Πιλότου",module:"PILOT_REPORT"}
 ];
 
+const normalizeText=value=>String(value||"").replace(/\s+/g," ").trim();
+
 function nearestContainer(element){
   return element.closest("section,article,.panel,.cloud-section,.store-cloud-section")||element.parentElement;
 }
@@ -28,23 +30,32 @@ function setVisibility(element,visible){
   }
 }
 
+function renamePersonnelLeaves(button){
+  const text=normalizeText(button.textContent);
+  if(text!=="Άδειες")return;
+  const textNode=[...button.childNodes].find(node=>node.nodeType===Node.TEXT_NODE&&normalizeText(node.textContent));
+  if(textNode)textNode.textContent="Άδειες προσωπικού";
+  else button.append(document.createTextNode("Άδειες προσωπικού"));
+}
+
 function applyRules(activeModules){
   const active=new Set(activeModules||[]);
   for(const button of document.querySelectorAll("aside nav button")){
-    const text=button.textContent.replace(/\s+/g," ").trim();
+    renamePersonnelLeaves(button);
+    const text=normalizeText(button.textContent);
     const rule=navRules.find(item=>text===item.label||text.startsWith(item.label));
     if(rule)setVisibility(button,active.has(rule.module));
   }
 
   const candidates=document.querySelectorAll("h1,h2,h3,h4,button,b,strong");
   for(const element of candidates){
-    const text=element.textContent.replace(/\s+/g," ").trim();
+    const text=normalizeText(element.textContent);
     const rule=sectionRules.find(item=>text===item.text||text.startsWith(item.text));
     if(rule)setVisibility(nearestContainer(element),active.has(rule.module));
   }
 
   for(const card of document.querySelectorAll(".card")){
-    const text=card.textContent.replace(/\s+/g," ").trim();
+    const text=normalizeText(card.textContent);
     if(text.startsWith("Ενεργοί εργαζόμενοι")||text.startsWith("Έκτακτοι"))setVisibility(card,active.has("PERSONNEL"));
     if(text.startsWith("Ακάλυπτες βάρδιες"))setVisibility(card,active.has("SHIFTS"));
   }
@@ -75,33 +86,40 @@ export function installModuleUiEnforcement(){
 
   const originalFetch=window.fetch.bind(window);
   let activeModules=[];
-  let activeSet=new Set();
+  try{activeModules=JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{}
+  let activeSet=new Set(activeModules);
   let loadedToken="";
+  let loadedAt=0;
   let licensePromise=null;
 
-  const loadLicense=async token=>{
+  const loadLicense=async(token,{force=false}={})=>{
     if(!token){
       activeModules=[];
       activeSet=new Set();
       loadedToken="";
+      loadedAt=0;
       localStorage.removeItem("activeModules");
+      applyRules(activeModules);
       return;
     }
-    if(token===loadedToken)return;
+    const fresh=token===loadedToken&&Date.now()-loadedAt<3000;
+    if(!force&&fresh)return;
     if(licensePromise)return licensePromise;
     licensePromise=(async()=>{
-      const response=await originalFetch("/api/license/current",{headers:{Authorization:`Bearer ${token}`}});
+      const response=await originalFetch(`/api/license/current?_=${Date.now()}`,{
+        cache:"no-store",
+        headers:{Authorization:`Bearer ${token}`,"Cache-Control":"no-cache"}
+      });
       if(!response.ok)throw new Error("license unavailable");
       const data=await response.json();
       activeModules=data.activeModules||[];
       activeSet=new Set(activeModules);
       loadedToken=token;
+      loadedAt=Date.now();
       localStorage.setItem("activeModules",JSON.stringify(activeModules));
       applyRules(activeModules);
+      window.dispatchEvent(new CustomEvent("myworkstation:modules-updated",{detail:{activeModules}}));
     })().catch(()=>{
-      activeModules=[];
-      activeSet=new Set();
-      loadedToken=token;
       applyRules(activeModules);
     }).finally(()=>{licensePromise=null});
     return licensePromise;
@@ -113,7 +131,9 @@ export function installModuleUiEnforcement(){
     const method=String(init.method||(typeof input!=="string"&&input?.method)||"GET").toUpperCase();
     const token=localStorage.getItem("token")||"";
 
-    if(url.pathname!=="/api/license/current"&&token)await loadLicense(token);
+    if(url.pathname!=="/api/license/current"&&token){
+      await loadLicense(token,{force:Date.now()-loadedAt>3000});
+    }
 
     const requiredModule=moduleForApiPath(url.pathname);
     if(method==="GET"&&requiredModule&&!activeSet.has(requiredModule)){
@@ -128,10 +148,21 @@ export function installModuleUiEnforcement(){
 
   const refresh=()=>{
     const token=localStorage.getItem("token")||"";
-    if(token!==loadedToken)loadLicense(token);
-    else applyRules(activeModules);
+    loadLicense(token,{force:true});
   };
+  const onVisible=()=>{if(document.visibilityState==="visible")refresh()};
+
+  applyRules(activeModules);
   refresh();
-  const timer=setInterval(refresh,700);
-  window.addEventListener("beforeunload",()=>{clearInterval(timer);observer.disconnect()},{once:true});
+  const timer=setInterval(refresh,5000);
+  window.addEventListener("focus",refresh);
+  window.addEventListener("pageshow",refresh);
+  document.addEventListener("visibilitychange",onVisible);
+  window.addEventListener("beforeunload",()=>{
+    clearInterval(timer);
+    observer.disconnect();
+    window.removeEventListener("focus",refresh);
+    window.removeEventListener("pageshow",refresh);
+    document.removeEventListener("visibilitychange",onVisible);
+  },{once:true});
 }
