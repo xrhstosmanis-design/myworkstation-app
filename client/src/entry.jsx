@@ -3,6 +3,7 @@ import {createRoot} from "react-dom/client";
 import PilotReportLauncherLive from "./components/cloud/PilotReportLauncherLive.jsx";
 import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
+import "./components/platform/platform-security.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);

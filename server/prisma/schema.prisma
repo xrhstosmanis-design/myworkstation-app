@@ -43,16 +43,52 @@ model Company {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  fullName     String
-  role         UserRole @default(EMPLOYEE)
-  companyId    String
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employee     Employee?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String        @id @default(cuid())
+  email             String        @unique
+  passwordHash      String
+  fullName          String
+  role              UserRole      @default(EMPLOYEE)
+  companyId         String
+  company           Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee          Employee?
+  totpSecret        String?
+  totpEnabled       Boolean       @default(false)
+  totpRecoveryCodes String?
+  sessionVersion    Int           @default(0)
+  sessions          UserSession[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthAudit {
+  id         String   @id @default(cuid())
+  userId     String?
+  email      String
+  event      String
+  success    Boolean
+  deviceName String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Store {
@@ -114,15 +150,15 @@ model ShiftType {
 }
 
 model EmployeeRule {
-  id              String     @id @default(cuid())
+  id              String    @id @default(cuid())
   employeeId      String
-  employee        Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   shiftTypeId     String?
   shiftType       ShiftType? @relation(fields: [shiftTypeId], references: [id], onDelete: Cascade)
-  allowed         Boolean    @default(true)
+  allowed         Boolean   @default(true)
   targetPerWeek   Int?
   fixedWeekdays   Int[]
-  priority        Int        @default(0)
+  priority        Int       @default(0)
   note            String?
 }
 
