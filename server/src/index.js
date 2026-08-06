@@ -17,13 +17,14 @@ import licenseRoutes from "./routes/license.js";
 import { auth } from "./middleware/auth.js";
 import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
+import { ensureCommercialSchema } from "./commercial-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.16.0+platform-commercial-audit"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.17.0+commercial-database-v1"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
@@ -54,9 +55,10 @@ app.get("*",(req,res,next)=>{
 try{
   await ensurePlatformSchema();
   await ensurePlatformAuditSchema();
+  await ensureCommercialSchema();
 }catch(error){
-  console.error("Platform schema bootstrap failed.",error);
+  console.error("Platform/commercial schema bootstrap failed.",error);
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.16.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.17.0 on port ${process.env.PORT||8080}`));
