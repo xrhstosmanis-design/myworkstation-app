@@ -5,6 +5,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import PlatformAuditCenter from "./components/platform/PlatformAuditCenter.jsx";
+import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -43,4 +44,8 @@ if(platformMatch){
   import("./main.jsx");
   const launcherRoot=document.getElementById("pilot-report-root");
   if(launcherRoot)createRoot(launcherRoot).render(<PilotReportLauncherLive/>);
+  const commerceRoot=document.createElement("div");
+  commerceRoot.id="commerce-root";
+  document.body.appendChild(commerceRoot);
+  createRoot(commerceRoot).render(<CommerceLauncher/>);
 }
