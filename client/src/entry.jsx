@@ -5,6 +5,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import PlatformAuditCenter from "./components/platform/PlatformAuditCenter.jsx";
+import {installOwnerAccountSecurity} from "./owner-account-security.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -38,6 +39,7 @@ if(platformMatch){
   document.title="MyWorkStation Store Mode";
   createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>);
 }else{
+  installOwnerAccountSecurity();
   installOwnerPasswordChangeGate();
   installModuleUiEnforcement();
   import("./main.jsx");
