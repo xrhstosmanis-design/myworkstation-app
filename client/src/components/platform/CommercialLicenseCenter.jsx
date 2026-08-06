@@ -44,18 +44,18 @@ export default function CommercialLicenseCenter(){
   if(!authenticated)return null;
 
   return <>
-    <button className="commercial-license-launcher" onClick={()=>setOpen(true)}><PackageCheck/>Άδειες & Modules</button>
+    <button className="commercial-license-launcher" onClick={()=>setOpen(true)}><PackageCheck/>Συνδρομές & Modules</button>
     {open&&<div className="platform-modal commercial-center-modal">
       {selected
         ?<CommercialLicensePanel company={selected} request={request} onSaved={async()=>{await load()}} onClose={()=>setSelected(null)}/>
         :<section className="commercial-center-panel">
           <button type="button" className="modal-close" onClick={()=>setOpen(false)}><X/></button>
           <div className="commercial-center-head">
-            <div><h2>Εμπορικές άδειες πελατών</h2><p>Συνδρομές, λήξεις και ενεργά modules ανά εταιρεία.</p></div>
+            <div><h2>Συνδρομές πελατών</h2><p>Πακέτα, ημερομηνίες και ενεργά modules ανά εταιρεία.</p></div>
             <button className="commercial-refresh" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button>
           </div>
           {error&&<div className="platform-alert error">{error}</div>}
-          {loading?<div className="platform-empty">Φόρτωση αδειών…</div>:<div className="commercial-customer-list">
+          {loading?<div className="platform-empty">Φόρτωση συνδρομών…</div>:<div className="commercial-customer-list">
             {(data?.companies||[]).map(company=><button key={company.id} onClick={()=>setSelected(company)} className={`commercial-customer-card status-${String(company.licenseStatus||"TRIAL").toLowerCase()}`}>
               <div className="commercial-customer-mark">{company.name.slice(0,2).toUpperCase()}</div>
               <div className="commercial-customer-copy"><b>{company.name}</b><span>{company.owner?.fullName||"Χωρίς ιδιοκτήτη"}</span></div>
