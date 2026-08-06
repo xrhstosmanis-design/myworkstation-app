@@ -7,7 +7,8 @@ import { auth } from "../middleware/auth.js";
 const router=Router();
 router.use(auth);
 router.use((req,res,next)=>{
-  if(req.user?.role!=="SUPER_ADMIN") return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
+  const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";
+  if(!allowed) return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
 });
 
