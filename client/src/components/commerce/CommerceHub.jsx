@@ -1,0 +1,150 @@
+import React,{useEffect,useMemo,useState} from "react";
+import {BarChart3,Boxes,ClipboardCheck,FileScan,LockKeyhole,PackagePlus,RefreshCw,ShoppingCart} from "lucide-react";
+import "./commerce-hub.css";
+
+const money=value=>`${Number(value||0).toFixed(2)} €`;
+const number=value=>Number(value||0);
+
+function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
+
+export default function CommerceHub({api,stores=[]}){
+  const [activeModules,setActiveModules]=useState(readActive);
+  const [catalog,setCatalog]=useState([]);
+  const [tab,setTab]=useState("modules");
+  const [storeId,setStoreId]=useState(stores[0]?.id||"");
+  const [overview,setOverview]=useState(null);
+  const [products,setProducts]=useState([]);
+  const [inventory,setInventory]=useState([]);
+  const [suppliers,setSuppliers]=useState([]);
+  const [purchases,setPurchases]=useState([]);
+  const [report,setReport]=useState(null);
+  const [handover,setHandover]=useState([]);
+  const [aiStatus,setAiStatus]=useState(null);
+  const [cart,setCart]=useState([]);
+  const [message,setMessage]=useState("");
+  const [error,setError]=useState("");
+  const active=new Set(activeModules);
+
+  useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores,storeId]);
+  useEffect(()=>{
+    const onModules=e=>setActiveModules(e.detail?.activeModules||readActive());
+    window.addEventListener("myworkstation:modules-updated",onModules);
+    return()=>window.removeEventListener("myworkstation:modules-updated",onModules);
+  },[]);
+
+  const loadCatalog=async()=>{
+    try{const data=await api("/api/license/current");setCatalog(data.modules||[]);setActiveModules(data.activeModules||[])}catch{}
+  };
+
+  const loadInventory=async()=>{
+    if(!active.has("INVENTORY")||!storeId)return;
+    const [o,p,i,s,d]=await Promise.all([
+      api("/api/commerce/overview"),api("/api/commerce/products"),api(`/api/commerce/inventory?storeId=${encodeURIComponent(storeId)}`),api("/api/commerce/suppliers"),api("/api/commerce/purchases")
+    ]);
+    setOverview(o);setProducts(p);setInventory(i.rows||[]);setSuppliers(s);setPurchases(d);
+  };
+
+  const loadPos=async()=>{
+    if(!storeId||!active.has("POS"))return;
+    if(active.has("INVENTORY")){const i=await api(`/api/commerce/inventory?storeId=${encodeURIComponent(storeId)}`);setInventory(i.rows||[])}
+  };
+
+  const loadAnalytics=async()=>{
+    if(!storeId||!active.has("SALES_ANALYTICS"))return;
+    setReport(await api(`/api/commerce/sales/report?storeId=${encodeURIComponent(storeId)}`));
+  };
+
+  const loadHandover=async()=>{
+    if(!storeId||!active.has("SHIFT_HANDOVER"))return;
+    setHandover(await api(`/api/commerce/handover?storeId=${encodeURIComponent(storeId)}`));
+  };
+
+  const loadAi=async()=>{if(active.has("AI_READER"))setAiStatus(await api("/api/commerce/ai-reader/status"))};
+
+  useEffect(()=>{loadCatalog()},[]);
+  useEffect(()=>{
+    setError("");setMessage("");
+    if(tab==="inventory")loadInventory().catch(e=>setError(e.message));
+    if(tab==="pos")loadPos().catch(e=>setError(e.message));
+    if(tab==="analytics")loadAnalytics().catch(e=>setError(e.message));
+    if(tab==="handover")loadHandover().catch(e=>setError(e.message));
+    if(tab==="ai")loadAi().catch(e=>setError(e.message));
+  },[tab,storeId,activeModules.join("|")]);
+
+  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
+
+  const addProduct=async event=>{
+    event.preventDefault();setError("");setMessage("");
+    const f=new FormData(event.currentTarget);
+    try{
+      await api("/api/commerce/products",{method:"POST",body:JSON.stringify({name:f.get("name"),sku:f.get("sku")||null,barcodes:f.get("barcode")?[String(f.get("barcode"))]:[],salePrice:Number(f.get("salePrice")||0),costPrice:Number(f.get("costPrice")||0),vatRate:Number(f.get("vatRate")||24),storeId,openingStock:Number(f.get("openingStock")||0),trackStock:true})});
+      event.currentTarget.reset();setMessage("Το προϊόν αποθηκεύτηκε.");await loadInventory();
+    }catch(e){setError(e.message)}
+  };
+
+  const addSupplier=async event=>{
+    event.preventDefault();setError("");
+    const f=new FormData(event.currentTarget);
+    try{await api("/api/commerce/suppliers",{method:"POST",body:JSON.stringify({name:f.get("name"),taxId:f.get("taxId")||null,phone:f.get("phone")||null})});event.currentTarget.reset();setMessage("Ο προμηθευτής αποθηκεύτηκε.");await loadInventory()}catch(e){setError(e.message)}
+  };
+
+  const adjustStock=async event=>{
+    event.preventDefault();setError("");
+    const f=new FormData(event.currentTarget);
+    try{await api("/api/commerce/stock/movement",{method:"POST",body:JSON.stringify({storeId,productId:f.get("productId"),movementType:f.get("movementType"),quantity:Number(f.get("quantity")||0),note:f.get("note")||null})});event.currentTarget.reset();setMessage("Η κίνηση αποθήκης καταγράφηκε.");await loadInventory()}catch(e){setError(e.message)}
+  };
+
+  const addCart=product=>{
+    const price=number(product.salePrice);
+    setCart(current=>{const found=current.find(x=>x.id===product.id);return found?current.map(x=>x.id===product.id?{...x,qty:x.qty+1}:x):[...current,{id:product.id,name:product.name,qty:1,price,vatRate:number(product.vatRate||24)}]});
+  };
+  const cartTotal=cart.reduce((s,x)=>s+x.qty*x.price,0);
+  const changeQty=(id,delta)=>setCart(current=>current.map(x=>x.id===id?{...x,qty:Math.max(0,x.qty+delta)}:x).filter(x=>x.qty>0));
+
+  const completeSale=async method=>{
+    if(!cart.length||!storeId)return;
+    setError("");setMessage("");
+    try{
+      const result=await api("/api/commerce/sales",{method:"POST",body:JSON.stringify({storeId,lines:cart.map(x=>({productId:x.id,description:x.name,quantity:x.qty,unitPrice:x.price,vatRate:x.vatRate})),payments:[{method,amount:cartTotal}]})});
+      setCart([]);setMessage(`Πώληση ${money(result.total)} καταγράφηκε ως ΜΗ ΦΟΡΟΛΟΓΙΚΗ.`);await loadPos();
+    }catch(e){setError(e.message)}
+  };
+
+  const createHandover=async event=>{
+    event.preventDefault();const f=new FormData(event.currentTarget);setError("");
+    try{await api("/api/commerce/handover",{method:"POST",body:JSON.stringify({storeId,priority:f.get("priority"),message:f.get("message")})});event.currentTarget.reset();setMessage("Η εκκρεμότητα παραδόθηκε στην επόμενη βάρδια.");await loadHandover()}catch(e){setError(e.message)}
+  };
+
+  const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
+
+  return <div className="commerce-hub">
+    <section className="panel">
+      <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={()=>{loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
+      <div className="commerce-module-strip">
+        <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
+        <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
+        <button disabled={!active.has("POS")} className={`${tab==="pos"?"active":""} ${!active.has("POS")?"locked":""}`} onClick={()=>setTab("pos")}><ShoppingCart/> POS</button>
+        <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
+        <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
+        <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> AI Reader</button>
+      </div>
+      <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
+    </section>
+
+    {tab==="modules"&&<section className="commerce-status-grid">{statusModules.map(module=><article key={module.key} className={`commerce-status-card ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><b>{module.name}</b><p>{module.description}</p><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ — ΑΝΕΝΕΡΓΟ":"ΥΠΟ ΑΝΑΠΤΥΞΗ / ΤΕΧΝΙΚΟ ΚΛΕΙΔΩΜΑ"}</em>{!module.commercialReady&&<LockKeyhole/>}</article>)}</section>}
+
+    {tab==="inventory"&&<>
+      <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
+      <div className="commerce-grid"><section className="commerce-box"><h3>Απόθεμα καταστήματος</h3><div className="commerce-table"><div className="commerce-row head"><span>Προϊόν</span><span>SKU</span><span>Τιμή</span><span>Απόθεμα</span><span>Κόστος</span></div>{inventory.map(row=><div className="commerce-row" key={row.id}><span><b>{row.name}</b><small>{row.categoryName||"Χωρίς κατηγορία"}</small></span><span>{row.sku||"—"}</span><span>{money(row.salePrice)}</span><span>{number(row.currentStock)}</span><span>{money(row.costPrice)}</span></div>)}</div></section><aside className="commerce-box"><h3>Νέο προϊόν</h3><form className="commerce-form" onSubmit={addProduct}><input name="name" placeholder="Όνομα προϊόντος" required/><input name="sku" placeholder="Κωδικός / SKU"/><input name="barcode" placeholder="Barcode"/><input name="salePrice" type="number" step="0.01" min="0" placeholder="Τιμή πώλησης"/><input name="costPrice" type="number" step="0.01" min="0" placeholder="Κόστος"/><input name="vatRate" type="number" step="0.01" defaultValue="24"/><input name="openingStock" type="number" step="0.001" placeholder="Αρχικό απόθεμα"/><button><PackagePlus/>Αποθήκευση προϊόντος</button></form><h3>Νέος προμηθευτής</h3><form className="commerce-form" onSubmit={addSupplier}><input name="name" placeholder="Επωνυμία" required/><input name="taxId" placeholder="ΑΦΜ"/><input name="phone" placeholder="Τηλέφωνο"/><button>Αποθήκευση προμηθευτή</button></form><h3>Κίνηση αποθήκης</h3><form className="commerce-form" onSubmit={adjustStock}><select name="productId" required><option value="">Προϊόν</option>{inventory.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><select name="movementType"><option value="ADJUSTMENT">Διόρθωση +</option><option value="PURCHASE">Παραλαβή</option><option value="WASTE">Φύρα</option><option value="TRANSFER_IN">Μεταφορά εισόδου</option><option value="TRANSFER_OUT">Μεταφορά εξόδου</option></select><input name="quantity" type="number" step="0.001" required placeholder="Ποσότητα"/><input name="note" placeholder="Σημείωση"/><button>Καταχώριση κίνησης</button></form></aside></div>
+    </>}
+
+    {tab==="pos"&&<><div className="commerce-notice"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ PILOT.</b> Η φορολογική απόδειξη συνεχίζει να εκδίδεται μόνο από Kiosk Manager/RBS μέχρι να ενεργοποιηθεί ο πιστοποιημένος Connector.</div>{!active.has("INVENTORY")&&<div className="commerce-error">Για τον κατάλογο POS ενεργοποίησε μαζί και το module Αποθήκη.</div>}<div className="commerce-pos"><section className="pos-products">{inventory.map(product=><button className="pos-product" key={product.id} onClick={()=>addCart(product)}><b>{product.name}</b><small>{product.sku||product.categoryName||""}</small><strong>{money(product.salePrice)}</strong></button>)}</section><aside className="pos-cart"><h3>Καλάθι</h3><div className="pos-cart-list">{cart.map(line=><div className="pos-cart-line" key={line.id}><span>{line.name}<small>{line.qty} × {money(line.price)}</small></span><button onClick={()=>changeQty(line.id,-1)}>−</button><button onClick={()=>changeQty(line.id,1)}>+</button></div>)}</div><div className="pos-total"><span>Σύνολο</span><strong>{money(cartTotal)}</strong></div><div className="pos-warning">Οι παρακάτω επιλογές γράφουν μόνο μη φορολογική πώληση στη βάση MyWorkStation.</div><button className="commerce-primary" disabled={!cart.length} onClick={()=>completeSale("CASH")}>Μετρητά</button><button className="commerce-primary" disabled={!cart.length} onClick={()=>completeSale("CARD")}>Κάρτα</button></aside></div></>}
+
+    {tab==="analytics"&&report&&<><div className="commerce-cards"><article className="commerce-card"><span>Πωλήσεις</span><strong>{report.summary?.sales||0}</strong></article><article className="commerce-card"><span>Τζίρος</span><strong>{money(report.summary?.total)}</strong></article><article className="commerce-card"><span>Μέση απόδειξη</span><strong>{money(report.summary?.average)}</strong></article><article className="commerce-card"><span>Περίοδος</span><strong>30 ημέρες</strong></article></div><div className="commerce-grid"><section className="commerce-box"><h3>Κορυφαία προϊόντα</h3><div className="analytics-table">{(report.topProducts||[]).map((row,i)=><div className="analytics-line" key={`${row.description}-${i}`}><span>{row.description} · {number(row.quantity)} τεμ.</span><b>{money(row.total)}</b></div>)}</div></section><section className="commerce-box"><h3>Τρόποι πληρωμής</h3><div className="analytics-table">{(report.methods||[]).map(row=><div className="analytics-line" key={row.method}><span>{row.method}</span><b>{money(row.total)}</b></div>)}</div></section></div></>}
+
+    {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
+
+    {tab==="ai"&&aiStatus&&<section className="commerce-box"><h3>AI Reader — workflow δύο σταδίων</h3><p>Πρώτα εμφανίζονται πρόχειρα αποτελέσματα χωρίς AI μαζί με confidence. Αν το confidence είναι πάνω από <b>{aiStatus.localConfidenceThreshold}%</b>, δεν καλείται αυτόματα AI.</p><p>Η κλήση AI θα γίνεται μόνο όταν ο χρήστης πατήσει <b>«Επανέλεγχος με AI»</b>.</p><div className="commerce-notice">{aiStatus.message}</div><p>Πρόχειρα παραστατικά σε αναμονή: <b>{aiStatus.drafts}</b></p></section>}
+  </div>;
+}
