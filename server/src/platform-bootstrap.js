@@ -30,6 +30,22 @@ export async function ensurePlatformSchema(){
   `);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserSession_userId_idx" ON "UserSession"("userId")`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserSession_expiresAt_idx" ON "UserSession"("expiresAt")`);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "AuthAudit" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT,
+      "email" TEXT NOT NULL,
+      "event" TEXT NOT NULL,
+      "success" BOOLEAN NOT NULL,
+      "deviceName" TEXT,
+      "userAgent" TEXT,
+      "ipAddress" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "AuthAudit_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AuthAudit_userId_idx" ON "AuthAudit"("userId")`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AuthAudit_createdAt_idx" ON "AuthAudit"("createdAt")`);
 
   const company=await prisma.company.findUnique({where:{id:"pilot-company"}});
   if(!company) throw new Error("Δεν βρέθηκε η πιλοτική εταιρεία pilot-company.");
@@ -88,5 +104,5 @@ export async function ensurePlatformSchema(){
     data:{revokedAt:new Date()}
   }).catch(()=>{});
 
-  console.log("Platform schema and MFA bootstrap completed.");
+  console.log("Platform schema, MFA sessions and audit bootstrap completed.");
 }
