@@ -60,8 +60,7 @@ router.get("/overview",async(req,res,next)=>{
         employees:rows.reduce((total,row)=>total+row.employeeCount,0)
       },
       companies:rows,
-      plans,
-      platformCompanyId:req.user.companyId
+      plans
     });
   }catch(error){next(error)}
 });
@@ -130,6 +129,36 @@ router.post("/companies",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.put("/companies/:companyId/owner",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      fullName:z.string().trim().min(2).max(160),
+      email:z.string().trim().email(),
+      temporaryPassword:z.string().min(8).max(100).optional().or(z.literal(""))
+    }).parse(req.body||{});
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
+
+    const currentOwner=await prisma.user.findFirst({where:{companyId:company.id,role:"OWNER"}});
+    const emailUser=await prisma.user.findUnique({where:{email:body.email}});
+    if(emailUser&&emailUser.id!==currentOwner?.id){
+      return res.status(409).json({error:"Το email χρησιμοποιείται ήδη από άλλον λογαριασμό."});
+    }
+    if(!currentOwner&&!body.temporaryPassword){
+      return res.status(400).json({error:"Για νέο ιδιοκτήτη απαιτείται προσωρινός κωδικός τουλάχιστον 8 χαρακτήρων."});
+    }
+
+    const data={fullName:body.fullName,email:body.email,role:"OWNER",companyId:company.id};
+    if(body.temporaryPassword)data.passwordHash=await bcrypt.hash(body.temporaryPassword,12);
+
+    const owner=currentOwner
+      ? await prisma.user.update({where:{id:currentOwner.id},data})
+      : await prisma.user.create({data:{...data,passwordHash:data.passwordHash}});
+
+    res.json({id:owner.id,fullName:owner.fullName,email:owner.email,role:owner.role,companyId:owner.companyId});
+  }catch(error){next(error)}
+});
+
 router.patch("/companies/:companyId",async(req,res,next)=>{
   try{
     const body=z.object({
@@ -139,9 +168,6 @@ router.patch("/companies/:companyId",async(req,res,next)=>{
     }).refine(value=>Object.keys(value).length>0,{message:"Δεν δόθηκε αλλαγή."}).parse(req.body||{});
     const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
-    if(company.id===req.user.companyId&&body.active===false){
-      return res.status(400).json({error:"Δεν μπορείς να απενεργοποιήσεις την εταιρεία της πλατφόρμας."});
-    }
     const data={};
     if(body.active!==undefined)data.active=body.active;
     if(body.plan!==undefined){
