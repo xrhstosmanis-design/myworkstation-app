@@ -19,6 +19,7 @@ const statusLabels={TRIAL:"Δοκιμή",PILOT:"Πιλοτικό",ACTIVE:"Ενε
 const when=value=>value?new Date(value).toLocaleDateString("el-GR"):"Χωρίς λήξη";
 
 export default function CommercialLicenseCenter(){
+  const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser")));
   const [open,setOpen]=useState(false);
   const [data,setData]=useState(null);
   const [selected,setSelected]=useState(null);
@@ -31,6 +32,16 @@ export default function CommercialLicenseCenter(){
     catch(err){setError(err.message)}finally{setLoading(false)}
   };
   useEffect(()=>{if(open&&!data)load()},[open]);
+  useEffect(()=>{
+    const timer=setInterval(()=>{
+      const next=Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser"));
+      setAuthenticated(next);
+      if(!next){setOpen(false);setSelected(null);setData(null)}
+    },500);
+    return()=>clearInterval(timer);
+  },[]);
+
+  if(!authenticated)return null;
 
   return <>
     <button className="commercial-license-launcher" onClick={()=>setOpen(true)}><PackageCheck/>Άδειες & Modules</button>
