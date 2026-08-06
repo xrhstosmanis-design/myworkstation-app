@@ -78,8 +78,8 @@ export function safeAuditDetails(req,responsePayload={}){
   const details={};
   const allowed=[
     "companyName","companyEmail","taxId","city","phone","storeName","storeCity",
-    "ownerFullName","ownerEmail","plan","licenseStatus","subscriptionStartsAt",
-    "subscriptionEndsAt","autoRenew","commercialNotes","active","trialDays"
+    "ownerFullName","ownerEmail","fullName","email","plan","licenseStatus",
+    "subscriptionStartsAt","subscriptionEndsAt","autoRenew","commercialNotes","active","trialDays"
   ];
   for(const key of allowed){
     if(body[key]!==undefined&&body[key]!=="")details[key]=body[key];
@@ -90,9 +90,15 @@ export function safeAuditDetails(req,responsePayload={}){
   }
   if(responsePayload?.owner){
     details.owner={
-      fullName:responsePayload.owner.fullName||body.ownerFullName||null,
-      email:responsePayload.owner.email||body.ownerEmail||null,
+      fullName:responsePayload.owner.fullName||body.ownerFullName||body.fullName||null,
+      email:responsePayload.owner.email||body.ownerEmail||body.email||null,
       mustChangePassword:Boolean(responsePayload.owner.mustChangePassword)
+    };
+  }else if(responsePayload?.fullName||responsePayload?.email){
+    details.owner={
+      fullName:responsePayload.fullName||body.fullName||null,
+      email:responsePayload.email||body.email||null,
+      mustChangePassword:Boolean(responsePayload.mustChangePassword)
     };
   }
   if(responsePayload?.store){
