@@ -4,11 +4,32 @@ import { prisma } from "./prisma.js";
 
 export async function ensurePlatformSchema(){
   // Existing Render databases predate Platform Admin. These idempotent changes
-  // add only the missing commercial-platform fields and preserve all data.
+  // add only missing fields/tables and preserve all operational data.
   await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "plan" TEXT NOT NULL DEFAULT 'TRIAL'`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "trialEndsAt" TIMESTAMP(3)`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpSecret" TEXT`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpEnabled" BOOLEAN NOT NULL DEFAULT false`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpRecoveryCodes" TEXT`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "sessionVersion" INTEGER NOT NULL DEFAULT 0`);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "UserSession" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "deviceName" TEXT,
+      "userAgent" TEXT,
+      "ipAddress" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "expiresAt" TIMESTAMP(3) NOT NULL,
+      "revokedAt" TIMESTAMP(3),
+      CONSTRAINT "UserSession_pkey" PRIMARY KEY ("id"),
+      CONSTRAINT "UserSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserSession_userId_idx" ON "UserSession"("userId")`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserSession_expiresAt_idx" ON "UserSession"("expiresAt")`);
 
   const company=await prisma.company.findUnique({where:{id:"pilot-company"}});
   if(!company) throw new Error("Δεν βρέθηκε η πιλοτική εταιρεία pilot-company.");
@@ -62,5 +83,10 @@ export async function ensurePlatformSchema(){
     });
   }
 
-  console.log("Platform schema bootstrap completed.");
+  await prisma.userSession.updateMany({
+    where:{expiresAt:{lt:new Date()},revokedAt:null},
+    data:{revokedAt:new Date()}
+  }).catch(()=>{});
+
+  console.log("Platform schema and MFA bootstrap completed.");
 }
