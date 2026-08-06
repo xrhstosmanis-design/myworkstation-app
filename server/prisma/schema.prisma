@@ -76,6 +76,21 @@ model UserSession {
   @@index([expiresAt])
 }
 
+model AuthAudit {
+  id         String   @id @default(cuid())
+  userId     String?
+  email      String
+  event      String
+  success    Boolean
+  deviceName String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
 model Store {
   id        String   @id @default(cuid())
   name      String
