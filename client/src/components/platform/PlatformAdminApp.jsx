@@ -31,6 +31,7 @@ export default function PlatformAdminApp(){
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
   const [showNew,setShowNew]=useState(false);
+  const [ownerCompany,setOwnerCompany]=useState(null);
   const [resetCompany,setResetCompany]=useState(null);
 
   const load=async()=>{
@@ -75,6 +76,21 @@ export default function PlatformAdminApp(){
     try{
       await request(`/api/platform/companies/${companyId}`,{method:"PATCH",body:JSON.stringify(body)});
       setMessage(label);await load();
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const saveOwner=async event=>{
+    event.preventDefault();setBusy("owner");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);
+    const body={
+      fullName:form.get("fullName"),
+      email:form.get("email"),
+      temporaryPassword:form.get("temporaryPassword")||""
+    };
+    try{
+      const result=await request(`/api/platform/companies/${ownerCompany.id}/owner`,{method:"PUT",body:JSON.stringify(body)});
+      setMessage(`Ο/Η ${result.fullName} ορίστηκε ως ιδιοκτήτης του πελάτη ${ownerCompany.name}.`);
+      setOwnerCompany(null);await load();
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
 
@@ -135,13 +151,19 @@ export default function PlatformAdminApp(){
             <div className="platform-company-counts"><div><Store/><span>{company.storeCount} καταστήματα</span></div><div><Users/><span>{company.userCount} χρήστες</span></div><div><UsersRound/><span>{company.employeeCount} εργαζόμενοι</span></div></div>
             <div className="platform-company-owner"><small>Ιδιοκτήτης πελάτη</small><b>{company.owner?.fullName||"Δεν έχει οριστεί"}</b><span>{company.owner?.email||"—"}</span></div>
             <div className="platform-company-plan"><label>Πακέτο<select value={company.plan} onChange={e=>updateCompany(company.id,{plan:e.target.value},`Το πακέτο του ${company.name} ενημερώθηκε.`)} disabled={busy===company.id}>{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><small>{company.plan==="TRIAL"?`Λήξη δοκιμής: ${when(company.trialEndsAt)}`:"Χωρίς ημερομηνία λήξης"}</small></div>
-            <div className="platform-company-actions"><button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button><button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
+            <div className="platform-company-actions">
+              <button className="secondary" onClick={()=>setOwnerCompany(company)}><Users/>{company.owner?"Στοιχεία ιδιοκτήτη":"Ορισμός ιδιοκτήτη"}</button>
+              <button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button>
+              <button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button>
+            </div>
           </article>)}
         </div>}
       </section>
     </main>
 
     {showNew&&<div className="platform-modal"><form onSubmit={createCompany}><button type="button" className="modal-close" onClick={()=>setShowNew(false)}><X/></button><h2>Νέος εμπορικός πελάτης</h2><p>Δημιουργούνται εταιρεία, ιδιοκτήτης και πρώτο κατάστημα.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId"/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><div></div><label>Ονοματεπώνυμο ιδιοκτήτη<input name="ownerFullName" required/></label><label>Email ιδιοκτήτη<input name="ownerEmail" type="email" required/></label><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required/></label><div></div><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setShowNew(false)}>Ακύρωση</button><button disabled={busy==="create"}>{busy==="create"?"Δημιουργία…":"Δημιουργία πελάτη"}</button></div></form></div>}
+
+    {ownerCompany&&<div className="platform-modal"><form className="small" onSubmit={saveOwner}><button type="button" className="modal-close" onClick={()=>setOwnerCompany(null)}><X/></button><h2>{ownerCompany.owner?"Στοιχεία ιδιοκτήτη πελάτη":"Ορισμός ιδιοκτήτη πελάτη"}</h2><p>{ownerCompany.name}</p><label>Ονοματεπώνυμο<input name="fullName" defaultValue={ownerCompany.owner?.fullName||""} required autoFocus/></label><label>Email<input name="email" type="email" defaultValue={ownerCompany.owner?.email||""} required/></label><label>{ownerCompany.owner?"Νέος προσωρινός κωδικός — προαιρετικό":"Προσωρινός κωδικός"}<input name="temporaryPassword" type="password" minLength="8" required={!ownerCompany.owner}/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner"}>{busy==="owner"?"Αποθήκευση…":"Αποθήκευση ιδιοκτήτη"}</button></div></form></div>}
 
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
   </div>;
