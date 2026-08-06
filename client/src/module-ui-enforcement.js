@@ -50,37 +50,87 @@ function applyRules(activeModules){
   }
 }
 
-export function installModuleUiEnforcement(){
-  let lastToken;
-  let modules=[];
-  let loading=false;
+function moduleForApiPath(path){
+  if(path.startsWith("/api/employees"))return "PERSONNEL";
+  if(path.startsWith("/api/shifts")||path.startsWith("/api/schedules"))return "SHIFTS";
+  if(path.startsWith("/api/leaves")||path.startsWith("/api/availability"))return "LEAVES";
+  if(path.startsWith("/api/operators"))return "STORE_MODE";
+  if(path.startsWith("/api/cash")||path.startsWith("/api/transactions"))return "CASH_CONTROL";
+  if(path.startsWith("/api/pilot"))return "PILOT_REPORT";
+  return null;
+}
 
-  const refresh=async()=>{
-    const token=localStorage.getItem("token")||"";
+function disabledReadFallback(path){
+  if(path.startsWith("/api/employees"))return [];
+  if(path.startsWith("/api/shifts"))return [];
+  if(path.startsWith("/api/schedules/latest"))return null;
+  if(path.startsWith("/api/leaves"))return [];
+  if(path.startsWith("/api/availability"))return [];
+  return null;
+}
+
+export function installModuleUiEnforcement(){
+  if(window.__myWorkStationModuleEnforcement)return;
+  window.__myWorkStationModuleEnforcement=true;
+
+  const originalFetch=window.fetch.bind(window);
+  let activeModules=[];
+  let activeSet=new Set();
+  let loadedToken="";
+  let licensePromise=null;
+
+  const loadLicense=async token=>{
     if(!token){
-      lastToken="";
-      modules=[];
-      applyRules([]);
+      activeModules=[];
+      activeSet=new Set();
+      loadedToken="";
+      localStorage.removeItem("activeModules");
       return;
     }
-    if(token===lastToken||loading)return;
-    loading=true;
-    try{
-      const response=await fetch("/api/license/current",{headers:{Authorization:`Bearer ${token}`}});
+    if(token===loadedToken)return;
+    if(licensePromise)return licensePromise;
+    licensePromise=(async()=>{
+      const response=await originalFetch("/api/license/current",{headers:{Authorization:`Bearer ${token}`}});
       if(!response.ok)throw new Error("license unavailable");
       const data=await response.json();
-      modules=data.activeModules||[];
-      lastToken=token;
-      localStorage.setItem("activeModules",JSON.stringify(modules));
-      applyRules(modules);
-    }catch{
-      modules=[];
-      applyRules(modules);
-    }finally{loading=false}
+      activeModules=data.activeModules||[];
+      activeSet=new Set(activeModules);
+      loadedToken=token;
+      localStorage.setItem("activeModules",JSON.stringify(activeModules));
+      applyRules(activeModules);
+    })().catch(()=>{
+      activeModules=[];
+      activeSet=new Set();
+      loadedToken=token;
+      applyRules(activeModules);
+    }).finally(()=>{licensePromise=null});
+    return licensePromise;
   };
 
-  const observer=new MutationObserver(()=>applyRules(modules));
+  window.fetch=async(input,init={})=>{
+    const requestUrl=typeof input==="string"?input:input?.url||"";
+    const url=new URL(requestUrl,window.location.origin);
+    const method=String(init.method||(typeof input!=="string"&&input?.method)||"GET").toUpperCase();
+    const token=localStorage.getItem("token")||"";
+
+    if(url.pathname!=="/api/license/current"&&token)await loadLicense(token);
+
+    const requiredModule=moduleForApiPath(url.pathname);
+    if(method==="GET"&&requiredModule&&!activeSet.has(requiredModule)){
+      const fallback=disabledReadFallback(url.pathname);
+      return new Response(JSON.stringify(fallback),{status:200,headers:{"Content-Type":"application/json"}});
+    }
+    return originalFetch(input,init);
+  };
+
+  const observer=new MutationObserver(()=>applyRules(activeModules));
   observer.observe(document.documentElement,{childList:true,subtree:true});
+
+  const refresh=()=>{
+    const token=localStorage.getItem("token")||"";
+    if(token!==loadedToken)loadLicense(token);
+    else applyRules(activeModules);
+  };
   refresh();
   const timer=setInterval(refresh,700);
   window.addEventListener("beforeunload",()=>{clearInterval(timer);observer.disconnect()},{once:true});
