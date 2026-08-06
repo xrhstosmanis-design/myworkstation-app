@@ -11,13 +11,14 @@ import storeOperatorRoutes from "./routes/store-operators.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import { ensurePlatformSchema } from "./platform-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
 const app=express();
 app.use(cors());
 app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.11.1+customer-owners"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.11.2+schema-bootstrap"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/operators",storeOperatorRoutes);
@@ -41,4 +42,11 @@ app.get("*",(req,res,next)=>{
   res.sendFile(path.join(dist,"index.html"));
 });
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.11.1 on port ${process.env.PORT||8080}`));
+try{
+  await ensurePlatformSchema();
+}catch(error){
+  console.error("Platform schema bootstrap failed.",error);
+  process.exit(1);
+}
+
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.11.2 on port ${process.env.PORT||8080}`));
