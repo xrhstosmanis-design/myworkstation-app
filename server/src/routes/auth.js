@@ -35,6 +35,7 @@ function publicUser(user){
     fullName:user.fullName,
     role:user.role,
     platformAdmin:user.role==="SUPER_ADMIN",
+    mustChangePassword:Boolean(user.mustChangePassword),
     company:user.company
   };
 }
@@ -73,6 +74,7 @@ async function issueSession(user,req,deviceName){
     isSuperAdmin,
     fullName:user.fullName,
     email:user.email,
+    mustChangePassword:Boolean(user.mustChangePassword),
     tokenType:"BACKOFFICE_USER",
     sessionId:session.id,
     sessionVersion:user.sessionVersion
@@ -121,9 +123,50 @@ router.post("/login", async (req,res,next)=>{
     }
 
     const result=await issueSession(user,req,deviceName);
-    await audit(req,{userId:user.id,email:user.email,event:"LOGIN_SUCCESS",success:true,deviceName});
+    await audit(req,{
+      userId:user.id,
+      email:user.email,
+      event:user.mustChangePassword?"TEMPORARY_PASSWORD_LOGIN":"LOGIN_SUCCESS",
+      success:true,
+      deviceName
+    });
     res.json(result);
   }catch(e){next(e)}
+});
+
+router.post("/change-password",auth,async(req,res,next)=>{
+  try{
+    const {newPassword,confirmPassword,deviceName}=z.object({
+      newPassword:z.string().min(10,"Ο νέος κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες.").max(100),
+      confirmPassword:z.string().min(10).max(100),
+      deviceName:z.string().max(80).optional()
+    }).parse(req.body||{});
+    if(newPassword!==confirmPassword)return res.status(400).json({error:"Οι δύο νέοι κωδικοί δεν είναι ίδιοι."});
+
+    const user=await prisma.user.findUnique({where:{id:req.user.id},include:{company:true}});
+    if(!user)return res.status(404).json({error:"Δεν βρέθηκε ο λογαριασμός."});
+    if(user.role==="SUPER_ADMIN")return res.status(403).json({error:"Η αλλαγή αυτή αφορά λογαριασμούς πελατών."});
+    if(await bcrypt.compare(newPassword,user.passwordHash)){
+      return res.status(400).json({error:"Ο νέος κωδικός πρέπει να είναι διαφορετικός από τον προσωρινό."});
+    }
+
+    const updated=await prisma.user.update({
+      where:{id:user.id},
+      data:{
+        passwordHash:await bcrypt.hash(newPassword,12),
+        mustChangePassword:false,
+        sessionVersion:{increment:1}
+      },
+      include:{company:true}
+    });
+    await prisma.userSession.updateMany({
+      where:{userId:user.id,revokedAt:null},
+      data:{revokedAt:new Date()}
+    });
+    const result=await issueSession(updated,req,deviceName||"Backoffice πελάτη");
+    await audit(req,{userId:user.id,email:user.email,event:"TEMPORARY_PASSWORD_REPLACED",success:true,deviceName});
+    res.json(result);
+  }catch(error){next(error)}
 });
 
 router.post("/2fa/enable",async(req,res,next)=>{
