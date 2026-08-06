@@ -20,6 +20,7 @@ import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule 
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
 import { ensureExtendedModulesSchema } from "./extended-modules-bootstrap.js";
+import { ensureCommerceCompatibility } from "./commerce-compatibility.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
@@ -60,6 +61,7 @@ try{
   await ensurePlatformAuditSchema();
   await ensureCommercialSchema();
   await ensureExtendedModulesSchema();
+  await ensureCommerceCompatibility();
 }catch(error){
   console.error("Platform/commercial schema bootstrap failed.",error);
   process.exit(1);
