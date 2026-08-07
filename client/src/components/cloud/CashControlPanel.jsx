@@ -13,8 +13,9 @@ export default function CashControlPanel({api,store}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
+  const [eftposReview,setEftposReview]=useState(null);
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
-  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",expenses:"0",...initialAmounts,note:""});
+  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",...initialAmounts,note:""});
 
   const load=async()=>{
     setLoading(true);setError("");
@@ -60,7 +61,7 @@ export default function CashControlPanel({api,store}){
   const updateClose=(key,value)=>setCloseForm(form=>({...form,[key]:value}));
 
   const openShift=async event=>{
-    event.preventDefault();setBusy(true);setError("");setMessage("");
+    event.preventDefault();setBusy(true);setError("");setMessage("");setEftposReview(null);
     try{
       await api(`/api/cash/stores/${store.id}/sessions/open`,{method:"POST",body:JSON.stringify({
         shiftLabel:openForm.shiftLabel,drawer:number(openForm.drawer),custody:number(openForm.custody),
@@ -74,12 +75,13 @@ export default function CashControlPanel({api,store}){
     event.preventDefault();setBusy(true);setError("");setMessage("");
     try{
       const result=await api(`/api/cash/sessions/${data.openSession.id}/close`,{method:"POST",body:JSON.stringify({
-        cashSales:number(closeForm.cashSales),cardSales:number(closeForm.cardSales),expenses:number(closeForm.expenses),
+        cashSales:number(closeForm.cashSales),cardSales:number(closeForm.cardSales),eftposTotal:number(closeForm.eftposTotal),expenses:number(closeForm.expenses),
         drawer:number(closeForm.drawer),custody:number(closeForm.custody),coins:number(closeForm.coins),
         safe:number(closeForm.safe),note:closeForm.note
       })});
       setMessage(`Η βάρδια έκλεισε. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
-      setCloseForm({cashSales:"0",cardSales:"0",expenses:"0",...initialAmounts,note:""});await load();
+      setEftposReview(result);
+      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",...initialAmounts,note:""});await load();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
 
@@ -90,6 +92,11 @@ export default function CashControlPanel({api,store}){
     </div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
+    {eftposReview&&Math.abs(number(eftposReview.cardVariance))>0.009&&<div className="cloud-alert cloud-error cash-eftpos-review">
+      <b>Έλεγχος POS–EFTPOS: διαφορά {money(eftposReview.cardVariance)}</b>
+      <span>POS {money(eftposReview.cardSales)} · EFTPOS {money(eftposReview.eftposTotal)}. Δεν έγινε αυτόματη ακύρωση ή αλλαγή συναλλαγής.</span>
+      {(eftposReview.duplicateReview||[]).length>0?<><strong>Πιθανές διαδοχικές ίδιες συναλλαγές:</strong>{eftposReview.duplicateReview.map(match=><span key={`${match.firstSaleId}-${match.secondSaleId}`}>{when(match.firstAt)} → {when(match.secondAt)} · {money(match.total)} · {match.products.join(", ")}</span>)}</>:<span>Δεν βρέθηκαν δύο ίδιες συναλλαγές η μία αμέσως μετά την άλλη μέσα στη βάρδια.</span>}
+    </div>}
     {loading?<div className="cloud-loading">Φόρτωση ελέγχου ταμείου…</div>:<>
       <div className="cash-metrics">
         <article><span>Κατάσταση</span><strong className={data?.openSession?"cash-open":"cash-closed"}>{data?.openSession?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</strong></article>
@@ -113,6 +120,7 @@ export default function CashControlPanel({api,store}){
         <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)}/>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)}/>
+        <MoneyField icon={<WalletCards/>} label="Σύνολο EFTPOS" value={closeForm.eftposTotal} onChange={value=>updateClose("eftposTotal",value)}/>
         <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)}/>
         <div className="cash-divider cash-wide">Πραγματική καταμέτρηση παράδοσης</div>
         <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={closeForm.drawer} onChange={value=>updateClose("drawer",value)}/>
@@ -137,6 +145,7 @@ export default function CashControlPanel({api,store}){
           <div><span>Έναρξη</span><b>{money(row.openingOperational)}</b></div>
           <div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div>
           <div><span>Κάρτες</span><b>{money(row.cardSales)}</b></div>
+          <div><span>EFTPOS</span><b>{row.status==="CLOSED"?money(row.eftposTotal):"—"}</b></div>
           <div><span>Διαφορά</span><b className={number(row.variance)<0?"cash-negative":"cash-positive"}>{row.status==="CLOSED"?money(row.variance):"—"}</b></div>
         </div>)}</div>}
       </div>
