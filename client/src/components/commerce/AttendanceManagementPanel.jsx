@@ -1,0 +1,32 @@
+import React,{useEffect,useMemo,useState} from "react";
+import {AlertTriangle,CheckCircle2,Clock3,RefreshCw} from "lucide-react";
+import "./attendance-management.css";
+
+const pad=value=>String(value).padStart(2,"0");
+const localInput=date=>`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const monthRange=value=>{const [year,month]=value.split("-").map(Number);return {from:new Date(year,month-1,1).toISOString(),to:new Date(year,month,1).toISOString()}};
+const duration=minutes=>`${Math.floor(Number(minutes||0)/60)}ω ${Number(minutes||0)%60}λ`;
+const dateTime=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+
+export default function AttendanceManagementPanel({api,stores=[],initialStoreId=""}){
+  const now=new Date();
+  const [storeId,setStoreId]=useState(initialStoreId||stores[0]?.id||"");
+  const [month,setMonth]=useState(`${now.getFullYear()}-${pad(now.getMonth()+1)}`);
+  const [employees,setEmployees]=useState([]),[events,setEvents]=useState([]),[summary,setSummary]=useState(null);
+  const [selectedEvent,setSelectedEvent]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+  const range=useMemo(()=>monthRange(month),[month]);
+  const query=()=>`storeId=${encodeURIComponent(storeId)}&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+  const load=async()=>{if(!storeId)return;setError("");try{const [people,eventRows,totals]=await Promise.all([api(`/api/attendance/employees?storeId=${encodeURIComponent(storeId)}`),api(`/api/attendance/events?${query()}`),api(`/api/attendance/summary?${query()}`)]);setEmployees(people);setEvents(eventRows);setSummary(totals)}catch(e){setError(e.message)}};
+  useEffect(()=>{load()},[storeId,month]);
+  const submitManual=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api("/api/attendance/events",{method:"POST",body:JSON.stringify({storeId,employeeId:form.get("employeeId"),eventType:form.get("eventType"),occurredAt:new Date(form.get("occurredAt")).toISOString(),note:form.get("note")||null})});event.currentTarget.reset();setMessage("Η χειροκίνητη καταχώριση αποθηκεύτηκε με audit.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const correct=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api(`/api/attendance/events/${selectedEvent.id}/correct`,{method:"POST",body:JSON.stringify({eventType:form.get("eventType"),occurredAt:new Date(form.get("occurredAt")).toISOString(),reason:form.get("reason"),note:form.get("note")||null})});setSelectedEvent(null);setMessage("Η διόρθωση καταγράφηκε χωρίς διαγραφή του αρχικού γεγονότος.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
+  return <section className="attendance-admin">
+    <header><div><span>ATTENDANCE V1</span><h2>Παρουσίες & πραγματικές ώρες</h2><p>Είσοδοι, έξοδοι, μηνιαία σύνολα και διορθώσεις με ιστορικό.</p></div><button onClick={load}><RefreshCw/>Ανανέωση</button></header>
+    <div className="attendance-filters"><label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label><label>Μήνας<input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></label></div>
+    {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
+    <div className="attendance-kpis"><article><span>Πραγματικός χρόνος</span><b>{duration(summary?.totals?.workedMinutes)}</b></article><article><span>Ολοκληρωμένες βάρδιες</span><b>{summary?.totals?.shifts||0}</b></article><article className={summary?.totals?.issues?"warn":""}><span>Εκκρεμότητες ελέγχου</span><b>{summary?.totals?.issues||0}</b></article></div>
+    <div className="attendance-layout"><section className="attendance-card"><h3>Μηνιαία σύνολα εργαζομένων</h3><div className="attendance-summary">{summary?.rows?.map(row=><article key={row.employeeId}><div><b>{row.employeeName}</b><small>{row.storeName}</small></div><strong>{duration(row.workedMinutes)}</strong><span>{row.shifts} βάρδιες</span>{row.issues.length?<em><AlertTriangle/>{row.issues.length} έλεγχος</em>:<em className="ok"><CheckCircle2/>Πλήρες</em>}</article>)}</div></section><aside className="attendance-card"><h3>Χειροκίνητη καταχώριση</h3><p className="attendance-note">Μόνο για πραγματικό γεγονός που δεν καταγράφηκε στο Store Mode.</p><form className="commerce-form" onSubmit={submitManual}><select name="employeeId" required><option value="">Εργαζόμενος</option>{employees.map(employee=><option value={employee.id} key={employee.id}>{employee.fullName}</option>)}</select><select name="eventType"><option value="IN">Είσοδος</option><option value="OUT">Έξοδος</option></select><input name="occurredAt" type="datetime-local" defaultValue={localInput(now)} required/><input name="note" placeholder="Αιτιολόγηση / σημείωση"/><button disabled={busy}>Αποθήκευση με audit</button></form></aside></div>
+    <section className="attendance-card"><h3>Γεγονότα μήνα</h3><div className="attendance-events">{events.map(item=><article className={item.voidedAt?"voided":""} key={item.id}><Clock3/><div><b>{item.employeeName}</b><small>{dateTime(item.occurredAt)} · {item.method}{item.note?` · ${item.note}`:""}</small></div><strong>{item.eventType==="IN"?"ΕΙΣΟΔΟΣ":"ΕΞΟΔΟΣ"}</strong>{item.voidedAt?<em>ΔΙΟΡΘΩΘΗΚΕ</em>:<button onClick={()=>setSelectedEvent(item)}>Διόρθωση</button>}</article>)}</div></section>
+    {selectedEvent&&<div className="attendance-correction"><form onSubmit={correct}><h3>Διόρθωση: {selectedEvent.employeeName}</h3><p>Το αρχικό γεγονός παραμένει στο ιστορικό ως ακυρωμένο.</p><select name="eventType" defaultValue={selectedEvent.eventType}><option value="IN">Είσοδος</option><option value="OUT">Έξοδος</option></select><input name="occurredAt" type="datetime-local" defaultValue={localInput(new Date(selectedEvent.occurredAt))} required/><input name="reason" placeholder="Υποχρεωτικός λόγος διόρθωσης" minLength="3" required/><input name="note" defaultValue={selectedEvent.note||""} placeholder="Σημείωση"/><div><button type="button" onClick={()=>setSelectedEvent(null)}>Άκυρο</button><button disabled={busy}>Καταχώριση διόρθωσης</button></div></form></div>}
+  </section>;
+}

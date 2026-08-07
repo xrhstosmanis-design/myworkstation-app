@@ -12,7 +12,7 @@ export const moduleCatalog=[
   {key:"SHIFT_HANDOVER",name:"Παράδοση Βάρδιας",description:"Εκκρεμότητες, προτεραιότητες και επιβεβαίωση από την επόμενη βάρδια.",category:"CONTROL",commercialReady:true},
   {key:"AI_READER",name:"AI Reader Τιμολογίων",description:"Τοπικό OCR χωρίς αυτόματη AI χρέωση, confidence ανά γραμμή και προαιρετικός χειροκίνητος επανέλεγχος όταν συνδεθεί provider.",category:"AI",commercialReady:true},
   {key:"DOCUMENTS",name:"Έγγραφα & Τιμολόγια",description:"Θυρίδα τιμολογίων, αρχεία ανά κατάστημα/προμηθευτή, υπεύθυνος και κατάσταση επεξεργασίας.",category:"OPERATIONS",commercialReady:true},
-  {key:"ATTENDANCE",name:"Παρουσία & Μισθοδοσία",description:"Είσοδος/έξοδος εργαζομένων, ώρες εργασίας και μηνιαία σύνολα.",category:"HR",commercialReady:false},
+  {key:"ATTENDANCE",name:"Παρουσία & Ώρες Εργασίας",description:"Προσωπική είσοδος/έξοδος, πραγματικές ώρες, μηνιαία σύνολα και ελεγχόμενες διορθώσεις.",category:"HR",commercialReady:true},
   {key:"CONNECTOR_RBS",name:"Connector RBS / CapDriver",description:"Τοπική διασύνδεση με CapDriver και φορολογική RBS.",category:"CONNECTORS",commercialReady:false,requiresTechnicalActivation:true},
   {key:"REMOTE_SUPPORT",name:"Remote Support",description:"Απομακρυσμένη υποστήριξη με audit και έγκριση χρήστη.",category:"SUPPORT",commercialReady:false,requiresTechnicalActivation:true}
 ];
@@ -23,8 +23,8 @@ export const planDefaults={
   TRIAL:["CORE","PERSONNEL","SHIFTS","LEAVES"],
   PILOT:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT"],
   BASIC:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL"],
-  PRO:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT"],
-  ENTERPRISE:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT"]
+  PRO:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT","ATTENDANCE"],
+  ENTERPRISE:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT","ATTENDANCE"]
 };
 
 export function catalogView(entitlements=[]){

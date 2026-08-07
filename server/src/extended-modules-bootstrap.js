@@ -21,6 +21,11 @@ const statements=[
 )`,
 `CREATE INDEX IF NOT EXISTS "AttendanceEvent_employee_occurredAt_idx" ON "AttendanceEvent"("employeeId","occurredAt")`,
 `CREATE INDEX IF NOT EXISTS "AttendanceEvent_company_occurredAt_idx" ON "AttendanceEvent"("companyId","occurredAt")`,
+`ALTER TABLE "AttendanceEvent" ADD COLUMN IF NOT EXISTS "voidedAt" TIMESTAMP(3)`,
+`ALTER TABLE "AttendanceEvent" ADD COLUMN IF NOT EXISTS "voidedByUserId" TEXT`,
+`ALTER TABLE "AttendanceEvent" ADD COLUMN IF NOT EXISTS "voidReason" TEXT`,
+`ALTER TABLE "AttendanceEvent" ADD COLUMN IF NOT EXISTS "supersedesEventId" TEXT`,
+`CREATE INDEX IF NOT EXISTS "AttendanceEvent_store_occurredAt_idx" ON "AttendanceEvent"("storeId","occurredAt")`,
 
 `CREATE TABLE IF NOT EXISTS "PayrollPeriod" (
   "id" TEXT NOT NULL,
