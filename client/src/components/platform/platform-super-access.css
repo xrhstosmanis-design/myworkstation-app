@@ -1,0 +1,5 @@
+.platform-store-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.platform-store-actions button{padding:8px 10px!important;font-size:12px}
+.platform-store-actions svg{width:16px;height:16px}
+.platform-toggle{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;gap:10px;margin-top:14px}
+.platform-toggle input{width:auto!important}

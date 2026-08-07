@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
@@ -47,7 +48,7 @@ function companyView(company){
     modules:catalogView(company.modules),
     activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
-    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,responsibleEmail:store.responsibleEmail,active:store.active,employees:store._count?.employees||0})),
+    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,responsibleEmail:store.responsibleEmail,cashCloseEmailEnabled:store.cashCloseEmailEnabled,active:store.active,employees:store._count?.employees||0})),
     storeCount:company.stores.length,
     userCount:company.users.length,
     employeeCount:employees,
@@ -62,7 +63,7 @@ router.get("/overview",async(req,res,next)=>{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
         stores:{
-          select:{id:true,name:true,city:true,responsibleEmail:true,active:true,_count:{select:{employees:true}}},
+          select:{id:true,name:true,city:true,responsibleEmail:true,cashCloseEmailEnabled:true,active:true,_count:{select:{employees:true}}},
           orderBy:{name:"asc"}
         }
       },
@@ -197,15 +198,29 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     const body=z.object({
       name:z.string().trim().min(2).max(160),
       city:z.string().trim().max(100).optional().or(z.literal("")),
-      responsibleEmail:z.string().trim().email().optional().or(z.literal(""))
+      responsibleEmail:z.string().trim().email().optional().or(z.literal("")),
+      cashCloseEmailEnabled:z.boolean().default(true)
     }).parse(req.body||{});
     const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
     const updated=await prisma.store.update({
       where:{id:store.id},
-      data:{name:body.name,city:body.city||null,responsibleEmail:body.responsibleEmail.toLowerCase()||null}
+      data:{name:body.name,city:body.city||null,responsibleEmail:body.responsibleEmail.toLowerCase()||null,cashCloseEmailEnabled:body.cashCloseEmailEnabled}
     });
-    res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,companyId:updated.companyId});
+    res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
+  }catch(error){next(error)}
+});
+
+router.post("/companies/:companyId/support-access",async(req,res,next)=>{
+  try{
+    const body=z.object({storeId:z.string().optional().nullable(),destination:z.enum(["ALL","SHIFTS","CASH_CONTROL"]).default("ALL")}).parse(req.body||{});
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId},select:{id:true,name:true,active:true}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε ο πελάτης."});
+    const store=body.storeId?await prisma.store.findFirst({where:{id:body.storeId,companyId:company.id},select:{id:true,name:true}}):null;
+    if(body.storeId&&!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const token=jwt.sign({id:req.user.id,companyId:company.id,role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,fullName:req.user.fullName,email:req.user.email,tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:req.user.sessionVersion,supportContext:{companyId:company.id,companyName:company.name,storeId:store?.id||null,storeName:store?.name||null,destination:body.destination}},process.env.JWT_SECRET,{expiresIn:"2h"});
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_SUPPORT_ACCESS",success:true,deviceName:`${company.name}${store?` · ${store.name}`:""}`}});
+    res.json({token,expiresInMinutes:120,user:{id:req.user.id,fullName:req.user.fullName,role:"OWNER",isSuperAdmin:true,company:{id:company.id,name:company.name}},supportContext:{companyId:company.id,companyName:company.name,storeId:store?.id||null,storeName:store?.name||null,destination:body.destination}});
   }catch(error){next(error)}
 });
 

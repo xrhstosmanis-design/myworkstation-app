@@ -1,8 +1,9 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {Building2,ExternalLink,KeyRound,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,X} from "lucide-react";
+import {Building2,CalendarDays,ExternalLink,KeyRound,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import "./platform-admin.css";
+import "./platform-super-access.css";
 
 const plans=["TRIAL","PILOT","BASIC","PRO","ENTERPRISE"];
 const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"Basic",PRO:"Pro",ENTERPRISE:"Enterprise"};
@@ -105,11 +106,23 @@ export default function PlatformAdminApp(){
     const form=new FormData(event.currentTarget);
     try{
       await request(`/api/platform/companies/${storeCompany.id}/stores/${storeEdit.id}`,{method:"PUT",body:JSON.stringify({
-        name:form.get("name"),city:form.get("city")||"",responsibleEmail:form.get("responsibleEmail")||""
+        name:form.get("name"),city:form.get("city")||"",responsibleEmail:form.get("responsibleEmail")||"",cashCloseEmailEnabled:form.get("cashCloseEmailEnabled")==="on"
       })});
       setMessage(`Το κατάστημα «${form.get("name")}» ενημερώθηκε.`);
       setStoreEdit(null);setStoreCompany(null);await load();
     }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const openCustomer=async(company,store,destination)=>{
+    setBusy(`access:${store?.id||company.id}:${destination}`);setError("");
+    try{
+      const result=await request(`/api/platform/companies/${company.id}/support-access`,{method:"POST",body:JSON.stringify({storeId:store?.id||null,destination})});
+      sessionStorage.setItem("platformToken",localStorage.getItem("token")||"");
+      localStorage.setItem("token",result.token);localStorage.setItem("user",JSON.stringify(result.user));localStorage.setItem("supportContext",JSON.stringify(result.supportContext));
+      const query=new URLSearchParams({supportPage:destination==="SHIFTS"?"schedule":"stores"});
+      if(store?.id)query.set("supportStore",store.id);
+      window.location.href=`/?${query}`;
+    }catch(err){setError(err.message);setBusy("")}
   };
 
   const expiringTrials=useMemo(()=>{
@@ -161,8 +174,8 @@ export default function PlatformAdminApp(){
 
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
 
-    {storeCompany&&!storeEdit&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"}</small></div><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button></article>)}</div></section></div>}
+    {storeCompany&&!storeEdit&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button></div></article>)}</div></section></div>}
 
-    {storeCompany&&storeEdit&&<div className="platform-modal"><form className="small" onSubmit={saveStore}><button type="button" className="modal-close" onClick={()=>setStoreEdit(null)}><X/></button><h2>Επεξεργασία καταστήματος</h2><p>{storeCompany.name}</p><label>Όνομα καταστήματος<input name="name" defaultValue={storeEdit.name} required autoFocus/></label><label>Πόλη<input name="city" defaultValue={storeEdit.city||""}/></label><label>Email υπευθύνου<input name="responsibleEmail" type="email" defaultValue={storeEdit.responsibleEmail||""} placeholder="manager@example.gr"/></label><p>Οι αναφορές κλεισίματος θα αποστέλλονται στον OWNER και σε αυτό το email.</p><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setStoreEdit(null)}>Πίσω</button><button disabled={busy==="store"}>{busy==="store"?"Αποθήκευση…":"Αποθήκευση καταστήματος"}</button></div></form></div>}
+    {storeCompany&&storeEdit&&<div className="platform-modal"><form className="small" onSubmit={saveStore}><button type="button" className="modal-close" onClick={()=>setStoreEdit(null)}><X/></button><h2>Επεξεργασία καταστήματος</h2><p>{storeCompany.name}</p><label>Όνομα καταστήματος<input name="name" defaultValue={storeEdit.name} required autoFocus/></label><label>Πόλη<input name="city" defaultValue={storeEdit.city||""}/></label><label>Email υπευθύνου<input name="responsibleEmail" type="email" defaultValue={storeEdit.responsibleEmail||""} placeholder="manager@example.gr"/></label><label className="platform-toggle"><input name="cashCloseEmailEnabled" type="checkbox" defaultChecked={storeEdit.cashCloseEmailEnabled!==false}/><span>Αποστολή email στο κλείσιμο βάρδιας</span></label><p>Όταν είναι ενεργό, η αναφορά πηγαίνει στον OWNER και στο email υπευθύνου.</p><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setStoreEdit(null)}>Πίσω</button><button disabled={busy==="store"}>{busy==="store"?"Αποθήκευση…":"Αποθήκευση καταστήματος"}</button></div></form></div>}
   </div>;
 }

@@ -118,6 +118,7 @@ model Store {
   id        String   @id @default(cuid())
   name      String
   responsibleEmail String?
+  cashCloseEmailEnabled Boolean @default(true)
   address   String?
   city      String?
   active    Boolean  @default(true)
