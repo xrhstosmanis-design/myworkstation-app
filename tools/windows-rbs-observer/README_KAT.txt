@@ -1,0 +1,21 @@
+MYWORKSTATION RBS / CAPDRIVER OBSERVER 1.0 - PC KAT
+
+SAFETY
+- READ ONLY / SHADOW MODE.
+- Does not issue, cancel or resend receipts.
+- Does not send commands to Kiosk Manager, CapDriver or RBS.
+- Does not upload/store raw fiscal content or filenames.
+- Kiosk Manager / RBS remains the only fiscal route.
+
+INSTALLATION
+1. In MyWorkStation Platform Admin, technically activate CONNECTOR_RBS for KAT.
+2. Open KAT store, create a 15-minute Cloud Store Connector pairing code.
+3. Copy this whole folder to the KAT PC.
+4. Right-click INSTALL_OBSERVER_KAT.cmd and choose Run as administrator.
+5. Enter the pairing code. No passwords, Git or Node are required.
+6. Wait for INSTALLATION COMPLETE - READ ONLY.
+7. Open desktop shortcut "MyWorkStation Observer - Katastasi".
+
+The installer first backs up existing C:\_km, C:\Kiosk Manager,
+C:\CapDriverService and C:\capture under C:\MyWorkStation_Backups.
+If backup fails, installation stops before making Observer changes.

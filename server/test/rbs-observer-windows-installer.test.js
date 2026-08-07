@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const dir=new URL("../../tools/windows-rbs-observer/",import.meta.url);
+const observer=fs.readFileSync(new URL("Observer.ps1",dir),"utf8");
+const installer=fs.readFileSync(new URL("Install-Observer.ps1",dir),"utf8");
+test("Windows observer uploads metadata only",()=>{assert.match(observer,/payloadHash=\$meta\.hash/);assert.match(observer,/byteLength=\$meta\.length/);assert.doesNotMatch(observer,/payload=/);assert.doesNotMatch(observer,/ReadAllText|ReadAllBytes/)});
+test("Windows observer never sends fiscal commands",()=>{assert.doesNotMatch(observer,/issue|cancel|receipt|print/i);assert.match(observer,/direction="OUTBOUND"/)});
+test("installer backs up protected KAT folders before installing",()=>{for(const path of ["C:\\_km","C:\\Kiosk Manager","C:\\CapDriverService","C:\\capture"])assert.ok(installer.includes(path));assert.ok(installer.indexOf("foreach($path in $protected)")<installer.indexOf("Copy-Item"))});
+test("installer needs no Node Git or user password",()=>{assert.doesNotMatch(installer,/node|npm|git|password/i);assert.match(installer,/DataProtectionScope\]::LocalMachine/)});

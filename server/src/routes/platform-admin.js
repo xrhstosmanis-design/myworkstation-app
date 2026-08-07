@@ -169,7 +169,7 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
       email:z.string().trim().email(),
       temporaryPassword:z.string().min(8).max(100).optional().or(z.literal(""))
     }).parse(req.body||{});
-    const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId},include:{modules:true}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
 
     const currentOwner=await prisma.user.findFirst({where:{companyId:company.id,role:"OWNER"}});
@@ -219,7 +219,8 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
     if(!selectedKeys.has("CORE"))return res.status(400).json({error:"Το MyWorkStation Core δεν μπορεί να απενεργοποιηθεί."});
     for(const module of body.modules){
       const catalogModule=moduleByKey.get(module.key);
-      if(module.active&&!catalogModule?.commercialReady){
+      const alreadyTechnicallyActive=company.modules.some(row=>row.moduleKey===module.key&&row.active);
+      if(module.active&&!catalogModule?.commercialReady&&!alreadyTechnicallyActive){
         return res.status(400).json({error:`Το module «${catalogModule?.name||module.key}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`});
       }
     }
@@ -261,6 +262,20 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
       return result;
     });
     res.json({ok:true,company:{id:updated.id,name:updated.name,active:updated.active,plan:updated.plan,licenseStatus:updated.licenseStatus}});
+  }catch(error){next(error)}
+});
+
+router.post("/companies/:companyId/modules/:moduleKey/technical-activation",async(req,res,next)=>{
+  try{
+    const moduleKey=z.enum(moduleKeys).parse(req.params.moduleKey);
+    const body=z.object({active:z.boolean(),reason:z.string().trim().min(10).max(500)}).parse(req.body||{});
+    const catalogModule=moduleCatalog.find(module=>module.key===moduleKey);
+    if(!catalogModule?.requiresTechnicalActivation)return res.status(400).json({error:"Το module δεν υποστηρίζει τεχνική ενεργοποίηση."});
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
+    const entitlement=await prisma.companyModule.upsert({where:{companyId_moduleKey:{companyId:company.id,moduleKey}},update:{active:body.active,notes:`TECHNICAL PILOT: ${body.reason}`},create:{companyId:company.id,moduleKey,active:body.active,notes:`TECHNICAL PILOT: ${body.reason}`}});
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`TECHNICAL_MODULE_${body.active?"ACTIVATED":"DEACTIVATED"}:${company.id}:${moduleKey}:${body.reason}`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,module:{key:moduleKey,active:entitlement.active,notes:entitlement.notes},mode:"TECHNICAL_PILOT_READ_ONLY"});
   }catch(error){next(error)}
 });
 
