@@ -5,6 +5,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import PlatformAuditCenter from "./components/platform/PlatformAuditCenter.jsx";
+import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -33,7 +34,7 @@ const storeApi=async(path,options={})=>{
 
 if(platformMatch){
   document.title="MyWorkStation Platform Admin";
-  createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><PlatformAuditCenter/></>);
+  createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><PlatformAuditCenter/><MasterCatalogCenter/></>);
 }else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
