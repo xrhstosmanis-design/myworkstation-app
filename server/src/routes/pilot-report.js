@@ -101,7 +101,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
     supplierPayments,
     otherExpenses,
     expensesTotal:supplierPayments+otherExpenses,
-    cashTransfers:sumType("CASH_TRANSFER"),
+    percentages:sumType("PERCENTAGES"),
     transactionCount:activeTransactions.length,
     reversedCount:transactions.length-activeTransactions.length,
     sessionsOpened:sessions.length,

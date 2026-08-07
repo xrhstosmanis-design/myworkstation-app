@@ -9,7 +9,7 @@ const types=[
   {id:"SALE_CARD",label:"Πώληση με κάρτα",icon:CreditCard},
   {id:"SUPPLIER_PAYMENT",label:"Πληρωμή προμηθευτή",icon:Truck},
   {id:"OTHER_EXPENSE",label:"Λοιπά έξοδα",icon:ReceiptText},
-  {id:"CASH_TRANSFER",label:"Μεταφορά ποσού",icon:ArrowRightLeft}
+  {id:"PERCENTAGES",label:"Ποσοστά",icon:ArrowRightLeft}
 ];
 const typeInfo=id=>types.find(item=>item.id===id)||types[0];
 const photoRequired=type=>type==="SUPPLIER_PAYMENT"||type==="OTHER_EXPENSE";
@@ -49,8 +49,8 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   const save=async event=>{
     event.preventDefault();setBusy(true);setError("");setMessage("");
     try{
-      await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierId,supplierName,attachment})});
-      setAmount("");setDescription("");setSupplierId("");setSupplierName("");setAttachment(null);setAttachmentName("");setMessage("Η συναλλαγή καταχωρίστηκε στη βάρδια.");
+      const saved=await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierId,supplierName,attachment})});
+      setAmount("");setDescription("");setSupplierId("");setSupplierName("");setAttachment(null);setAttachmentName("");setMessage(saved.emailNotification?.status==="FAILED"?"Η καταχώριση αποθηκεύτηκε, αλλά το email ειδοποίησης δεν στάλθηκε.":"Η συναλλαγή καταχωρίστηκε στη βάρδια.");
       await load();onChanged?.();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
@@ -64,7 +64,7 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
     {loading?<div className="cloud-loading">Φόρτωση συναλλαγών…</div>:<>
-      <div className="ledger-metrics"><article><span>Μετρητά</span><strong>{money(summary.cashSales)}</strong></article><article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article><article><span>Έξοδα</span><strong>{money(summary.expensesTotal)}</strong></article><article><span>Μεταφορές</span><strong>{money(summary.cashTransfers)}</strong></article></div>
+      <div className="ledger-metrics"><article><span>Μετρητά</span><strong>{money(summary.cashSales)}</strong></article><article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article><article><span>Έξοδα</span><strong>{money(summary.expensesTotal)}</strong></article><article><span>Ποσοστά</span><strong>{money(summary.percentages)}</strong></article></div>
       {!data?.openSession?<div className="ledger-no-shift"><b>Δεν υπάρχει ανοιχτή βάρδια.</b><span>Άνοιξε πρώτα τη βάρδια στον Έλεγχο Ταμείου.</span></div>:<form className="ledger-form" onSubmit={save}>
         <div className="ledger-session"><span>Ενεργή βάρδια</span><b>{data.openSession.shiftLabel}</b><small>{when(data.openSession.openedAt)} · {data.openSession.openedByName||"Χρήστης"}</small></div>
         <div className="ledger-types">{types.map(item=>{const Icon=item.icon;return <button type="button" className={type===item.id?"active":""} onClick={()=>{setType(item.id);setAttachment(null);setAttachmentName("")}} key={item.id}><Icon/><span>{item.label}</span></button>})}</div>

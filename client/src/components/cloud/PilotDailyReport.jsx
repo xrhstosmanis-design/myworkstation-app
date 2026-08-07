@@ -6,7 +6,7 @@ const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit"}):"—";
 const escapeCsv=value=>`"${String(value??"").replaceAll('"','""')}"`;
-const typeLabels={SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση με κάρτα",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπά έξοδα",CASH_TRANSFER:"Μεταφορά ποσού"};
+const typeLabels={SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση με κάρτα",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπά έξοδα",PERCENTAGES:"Ποσοστά"};
 
 export default function PilotDailyReport({api,store}){
   const [date,setDate]=useState(today());
@@ -28,7 +28,7 @@ export default function PilotDailyReport({api,store}){
       ["Κατάστημα",data.store.name],["Ημερομηνία",data.date],[],
       ["ΣΥΝΟΨΗ"],["Πωλήσεις μετρητών",data.summary.cashSales],["Πωλήσεις καρτών",data.summary.cardSales],
       ["Πληρωμές προμηθευτών",data.summary.supplierPayments],["Λοιπά έξοδα",data.summary.otherExpenses],
-      ["Σύνολο εξόδων",data.summary.expensesTotal],["Μεταφορές ποσού",data.summary.cashTransfers],
+      ["Σύνολο εξόδων",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
       ["Συνολική διαφορά",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
       ["Ακυρωμένες συναλλαγές",data.summary.reversedCount],[],
       ["ΒΑΡΔΙΕΣ"],["Βάρδια","Άνοιγμα","Άνοιξε","Κλείσιμο","Έκλεισε","Έναρξη","Μετρητά","Κάρτες","Έξοδα","Πραγματικό","Διαφορά"],

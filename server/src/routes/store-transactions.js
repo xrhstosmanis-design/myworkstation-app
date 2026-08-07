@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import { sendLedgerAlertEmail } from "../services/mail.js";
 
 const router=Router();
 let tablesPromise;
@@ -130,13 +131,13 @@ function totals(rows){
     supplierPayments,
     otherExpenses,
     expensesTotal:supplierPayments+otherExpenses,
-    cashTransfers:sum("CASH_TRANSFER"),
+    percentages:sum("PERCENTAGES"),
     count:active.length
   };
 }
 
 const transactionSchema=z.object({
-  type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","CASH_TRANSFER"]),
+  type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES"]),
   amount:z.coerce.number().finite().positive().max(999999999),
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
@@ -151,6 +152,23 @@ function parseAttachment(attachment){
   const bytes=Buffer.from(match[2],"base64");
   if(bytes.length<100||bytes.length>1200000){const error=new Error("Η φωτογραφία πρέπει να είναι έως 1,2 MB.");error.status=400;throw error}
   return {dataUrl:attachment.dataUrl,mimeType:match[1],filename:attachment.filename,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
+}
+
+async function alertRecipients(companyId,store){
+  const owners=await prisma.user.findMany({where:{companyId,role:"OWNER"},select:{email:true}});
+  return [...new Set([...owners.map(owner=>owner.email),store.responsibleEmail].map(value=>String(value||"").trim().toLowerCase()).filter(Boolean))];
+}
+
+async function notifyLedgerAlert({companyId,store,kind,transaction,actorName,reason}){
+  const recipients=await alertRecipients(companyId,store);
+  if(!recipients.length)return {status:"SKIPPED",recipients:[]};
+  try{
+    await sendLedgerAlertEmail({to:recipients,kind,storeName:store.name,amount:transaction.amount,actorName,occurredAt:transaction.reversedAt||transaction.occurredAt,description:transaction.description,reason,originalType:transaction.type});
+    return {status:"SENT",recipients};
+  }catch(error){
+    console.error("Store transaction email notification failed:",error?.message||error);
+    return {status:"FAILED",recipients};
+  }
 }
 
 router.use(auth,requireLedgerAccess);
@@ -210,7 +228,9 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       ${body.description||null},${body.supplierId||null},${supplierName},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
     ) RETURNING *
   `;
-  res.status(201).json(normalize(rows[0]));
+  const transaction=normalize(rows[0]);
+  const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
+  res.status(201).json({...transaction,emailNotification});
 }));
 
 router.get("/:transactionId/attachment",route(async(req,res)=>{
@@ -244,7 +264,10 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
     SET "reversedAt"=NOW(),"reversedBy"=${req.user.id},"reversedByName"=${actorName},"reversalReason"=${body.reason}
     WHERE "id"=${transaction.id} RETURNING *
   `;
-  res.json(normalize(rows[0]));
+  const reversed=normalize(rows[0]);
+  const store=await ownedStore(transaction.storeId,req.user.companyId);
+  const emailNotification=await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"REVERSAL",transaction:reversed,actorName,reason:body.reason});
+  res.json({...reversed,emailNotification});
 }));
 
 export default router;
