@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import { sendCashShiftClosedEmail } from "../services/mail.js";
 
 const router = Router();
 let tablesPromise;
@@ -271,7 +272,23 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
     WHERE "id"=${session.id} RETURNING *
   `;
-  res.json(normalize(rows[0]));
+  const closed=normalize(rows[0]);
+  const [store,owners]=await Promise.all([
+    prisma.store.findFirst({where:{id:session.storeId,companyId:req.user.companyId},select:{name:true}}),
+    prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})
+  ]);
+  const recipients=owners.map(owner=>owner.email).filter(Boolean);
+  let emailNotification={status:"SKIPPED",recipients:[]};
+  if(recipients.length){
+    try{
+      const sent=await sendCashShiftClosedEmail({to:recipients,storeName:store?.name||"Κατάστημα",session:closed});
+      emailNotification={status:"SENT",recipients:sent.recipients};
+    }catch(error){
+      console.error("Cash close email failed",error?.message||error);
+      emailNotification={status:"FAILED",recipients};
+    }
+  }
+  res.json({...closed,emailNotification});
 }));
 
 export default router;
