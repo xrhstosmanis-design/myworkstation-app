@@ -80,6 +80,8 @@ export default function CashControlPanel({api,store}){
         safe:number(closeForm.safe),note:closeForm.note
       })});
       setMessage(`Η βάρδια έκλεισε. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
+      if(result.emailNotification?.status==="SENT")setMessage(`Η βάρδια έκλεισε και η αναφορά στάλθηκε με email. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
+      if(result.emailNotification?.status==="FAILED")setError("Η βάρδια έκλεισε κανονικά, αλλά το email αναφοράς δεν στάλθηκε. Ενημέρωσε τον διαχειριστή.");
       setEftposReview(result);
       setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",...initialAmounts,note:""});await load();
     }catch(err){setError(err.message)}finally{setBusy(false)}
