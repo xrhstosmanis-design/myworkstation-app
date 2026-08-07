@@ -34,6 +34,8 @@ export default function PlatformAdminApp(){
   const [showSecurity,setShowSecurity]=useState(false);
   const [ownerCompany,setOwnerCompany]=useState(null);
   const [resetCompany,setResetCompany]=useState(null);
+  const [storeCompany,setStoreCompany]=useState(null);
+  const [storeEdit,setStoreEdit]=useState(null);
 
   const clearSession=(clearError=true)=>{
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
@@ -98,6 +100,18 @@ export default function PlatformAdminApp(){
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
 
+  const saveStore=async event=>{
+    event.preventDefault();setBusy("store");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);
+    try{
+      await request(`/api/platform/companies/${storeCompany.id}/stores/${storeEdit.id}`,{method:"PUT",body:JSON.stringify({
+        name:form.get("name"),city:form.get("city")||"",responsibleEmail:form.get("responsibleEmail")||""
+      })});
+      setMessage(`Το κατάστημα «${form.get("name")}» ενημερώθηκε.`);
+      setStoreEdit(null);setStoreCompany(null);await load();
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
   const expiringTrials=useMemo(()=>{
     const now=Date.now(),week=7*24*60*60*1000;
     return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
@@ -129,6 +143,7 @@ export default function PlatformAdminApp(){
             <div className="platform-company-owner"><small>Ιδιοκτήτης πελάτη</small><b>{company.owner?.fullName||"Δεν έχει οριστεί"}</b><span>{company.owner?.email||"—"}</span></div>
             <div className="platform-company-plan"><label>Πακέτο<select value={company.plan} onChange={e=>updateCompany(company.id,{plan:e.target.value},`Το πακέτο του ${company.name} ενημερώθηκε.`)} disabled={busy===company.id}>{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><small>{company.plan==="TRIAL"?`Λήξη δοκιμής: ${when(company.trialEndsAt)}`:"Χωρίς ημερομηνία λήξης"}</small></div>
             <div className="platform-company-actions">
+              <button className="secondary" onClick={()=>setStoreCompany(company)}><Store/>Καταστήματα</button>
               <button className="secondary" onClick={()=>setOwnerCompany(company)}><Users/>{company.owner?"Στοιχεία ιδιοκτήτη":"Ορισμός ιδιοκτήτη"}</button>
               <button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button>
               <button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button>
@@ -145,5 +160,9 @@ export default function PlatformAdminApp(){
     {ownerCompany&&<div className="platform-modal"><form className="small" onSubmit={saveOwner}><button type="button" className="modal-close" onClick={()=>setOwnerCompany(null)}><X/></button><h2>{ownerCompany.owner?"Στοιχεία ιδιοκτήτη πελάτη":"Ορισμός ιδιοκτήτη πελάτη"}</h2><p>{ownerCompany.name}</p><label>Ονοματεπώνυμο<input name="fullName" defaultValue={ownerCompany.owner?.fullName||""} required autoFocus/></label><label>Email<input name="email" type="email" defaultValue={ownerCompany.owner?.email||""} required/></label><label>{ownerCompany.owner?"Νέος προσωρινός κωδικός — προαιρετικό":"Προσωρινός κωδικός"}<input name="temporaryPassword" type="password" minLength="8" required={!ownerCompany.owner}/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner"}>{busy==="owner"?"Αποθήκευση…":"Αποθήκευση ιδιοκτήτη"}</button></div></form></div>}
 
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
+
+    {storeCompany&&!storeEdit&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"}</small></div><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button></article>)}</div></section></div>}
+
+    {storeCompany&&storeEdit&&<div className="platform-modal"><form className="small" onSubmit={saveStore}><button type="button" className="modal-close" onClick={()=>setStoreEdit(null)}><X/></button><h2>Επεξεργασία καταστήματος</h2><p>{storeCompany.name}</p><label>Όνομα καταστήματος<input name="name" defaultValue={storeEdit.name} required autoFocus/></label><label>Πόλη<input name="city" defaultValue={storeEdit.city||""}/></label><label>Email υπευθύνου<input name="responsibleEmail" type="email" defaultValue={storeEdit.responsibleEmail||""} placeholder="manager@example.gr"/></label><p>Οι αναφορές κλεισίματος θα αποστέλλονται στον OWNER και σε αυτό το email.</p><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setStoreEdit(null)}>Πίσω</button><button disabled={busy==="store"}>{busy==="store"?"Αποθήκευση…":"Αποθήκευση καταστήματος"}</button></div></form></div>}
   </div>;
 }
