@@ -31,6 +31,7 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   const [amount,setAmount]=useState("");
   const [description,setDescription]=useState("");
   const [supplierName,setSupplierName]=useState("");
+  const [supplierId,setSupplierId]=useState("");
   const [attachment,setAttachment]=useState(null);
   const [attachmentName,setAttachmentName]=useState("");
   const [loading,setLoading]=useState(true);
@@ -48,8 +49,8 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   const save=async event=>{
     event.preventDefault();setBusy(true);setError("");setMessage("");
     try{
-      await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierName,attachment})});
-      setAmount("");setDescription("");setSupplierName("");setAttachment(null);setAttachmentName("");setMessage("Η συναλλαγή καταχωρίστηκε στη βάρδια.");
+      await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierId,supplierName,attachment})});
+      setAmount("");setDescription("");setSupplierId("");setSupplierName("");setAttachment(null);setAttachmentName("");setMessage("Η συναλλαγή καταχωρίστηκε στη βάρδια.");
       await load();onChanged?.();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
@@ -68,7 +69,7 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
         <div className="ledger-session"><span>Ενεργή βάρδια</span><b>{data.openSession.shiftLabel}</b><small>{when(data.openSession.openedAt)} · {data.openSession.openedByName||"Χρήστης"}</small></div>
         <div className="ledger-types">{types.map(item=>{const Icon=item.icon;return <button type="button" className={type===item.id?"active":""} onClick={()=>{setType(item.id);setAttachment(null);setAttachmentName("")}} key={item.id}><Icon/><span>{item.label}</span></button>})}</div>
         <label>Ποσό<input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} required/></label>
-        {type==="SUPPLIER_PAYMENT"&&<label>Προμηθευτής<input value={supplierName} onChange={e=>setSupplierName(e.target.value)} required/></label>}
+        {type==="SUPPLIER_PAYMENT"&&<label>Προμηθευτής{(data?.suppliers||[]).length?<select value={supplierId} onChange={e=>{setSupplierId(e.target.value);setSupplierName(data.suppliers.find(row=>row.id===e.target.value)?.name||"")}} required><option value="">Επιλογή</option>{data.suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select>:<input value={supplierName} onChange={e=>setSupplierName(e.target.value)} required/>}</label>}
         <label>Περιγραφή<input value={description} onChange={e=>setDescription(e.target.value)} placeholder="Προαιρετική αιτιολογία"/></label>
         {photoRequired(type)&&<label className="ledger-photo"><span><Camera/>Φωτογραφία παραστατικού *</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choosePhoto} required/><small>{attachmentName||"Λήψη από κάμερα ή επιλογή αρχείου"}</small></label>}
         <button className="ledger-submit" disabled={busy||!amount||(photoRequired(type)&&!attachment)}>{busy?"Καταχώριση…":"Καταχώριση"}</button>

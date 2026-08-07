@@ -72,6 +72,8 @@ const tableStatements=[
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
+  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "supplierId" TEXT`
+  ,`CREATE INDEX IF NOT EXISTS "StoreTransaction_supplier_idx" ON "StoreTransaction" ("companyId","supplierId","occurredAt" DESC)`
 ];
 
 async function ensureTables(){
@@ -138,6 +140,7 @@ const transactionSchema=z.object({
   amount:z.coerce.number().finite().positive().max(999999999),
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
+  supplierId:z.string().optional().nullable(),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
 });
 
@@ -171,11 +174,13 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     ORDER BY "occurredAt" DESC LIMIT 80
   `;
   const recent=recentRows.map(normalize);
+  const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
   const sessionRows=openSession?recent.filter(row=>row.sessionId===openSession.id):[];
   res.json({
     store:{id:store.id,name:store.name},
     openSession,
     summary:totals(sessionRows),
+    suppliers,
     recent
   });
 }));
@@ -184,9 +189,8 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
-  if(body.type==="SUPPLIER_PAYMENT"&&!body.supplierName){
-    return res.status(400).json({error:"Γράψε τον προμηθευτή της πληρωμής."});
-  }
+  let supplierName=body.supplierName||null;
+  if(body.type==="SUPPLIER_PAYMENT"){const rows=body.supplierId?await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`:[];if(body.supplierId&&!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});supplierName=rows[0]?.name||supplierName;if(!supplierName)return res.status(400).json({error:"Επίλεξε τον προμηθευτή της πληρωμής."})}
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   if(needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
   const attachment=parseAttachment(body.attachment);
@@ -200,10 +204,10 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "StoreTransaction" (
-      "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+      "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
     ) VALUES (
       ${crypto.randomUUID()},${req.user.companyId},${store.id},${session.id},${body.type},${body.amount},
-      ${body.description||null},${body.supplierName||null},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
+      ${body.description||null},${body.supplierId||null},${supplierName},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
     ) RETURNING *
   `;
   res.status(201).json(normalize(rows[0]));

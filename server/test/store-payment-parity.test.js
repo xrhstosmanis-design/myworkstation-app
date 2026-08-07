@@ -11,6 +11,8 @@ test("supplier payments and other expenses require a protected photo",()=>{
   assert.match(route,/image\\\/\(\?:jpeg\|png\|webp\)/);
   assert.match(route,/bytes\.length>1200000/);
   assert.match(route,/attachmentChecksum/);
+  assert.match(route,/ADD COLUMN IF NOT EXISTS "supplierId"/);
+  assert.match(route,/"supplierId",\s*"supplierName"/);
 });
 
 test("store operators only receive and open their own transactions",()=>{
