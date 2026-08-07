@@ -274,10 +274,10 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   `;
   const closed=normalize(rows[0]);
   const [store,owners]=await Promise.all([
-    prisma.store.findFirst({where:{id:session.storeId,companyId:req.user.companyId},select:{name:true}}),
+    prisma.store.findFirst({where:{id:session.storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),
     prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})
   ]);
-  const recipients=owners.map(owner=>owner.email).filter(Boolean);
+  const recipients=[...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean);
   let emailNotification={status:"SKIPPED",recipients:[]};
   if(recipients.length){
     try{
