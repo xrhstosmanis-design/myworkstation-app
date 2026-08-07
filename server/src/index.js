@@ -11,6 +11,7 @@ import storeOperatorRoutes from "./routes/store-operators.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
+import attendanceRoutes from "./routes/attendance.js";
 import ownerProductRoutes from "./routes/owner-products.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
@@ -50,13 +51,14 @@ app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
+app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 
 app.use((err,req,res,next)=>{
   console.error(err);
   if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});
   if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});
-  res.status(500).json({error:"Παρουσιάστηκε εσωτερικό σφάλμα."});
+  res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."});
 });
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));

@@ -1,10 +1,11 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BarChart3,Boxes,ClipboardCheck,FileScan,Files,LockKeyhole,PackagePlus,RefreshCw,ShoppingCart} from "lucide-react";
+import {BarChart3,Boxes,ClipboardCheck,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RefreshCw,ShoppingCart} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
 import RecipeManagementPanel from "./RecipeManagementPanel.jsx";
 import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
+import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
 import "./commerce-hub.css";
 
 const money=value=>`${Number(value||0).toFixed(2)} €`;
@@ -133,6 +134,7 @@ export default function CommerceHub({api,stores=[]}){
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
         <button disabled={!active.has("DOCUMENTS")} className={`${tab==="documents"?"active":""} ${!active.has("DOCUMENTS")?"locked":""}`} onClick={()=>setTab("documents")}><Files/> Θυρίδα Τιμολογίων</button>
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> AI Reader</button>
+        <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
       </div>
       <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
@@ -156,5 +158,7 @@ export default function CommerceHub({api,stores=[]}){
     {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores}/>}
 
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi}/>}
+
+    {tab==="attendance"&&<AttendanceManagementPanel api={api} stores={stores} initialStoreId={storeId}/>}
   </div>;
 }

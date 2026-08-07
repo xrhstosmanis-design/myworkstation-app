@@ -3,6 +3,7 @@ import {BadgeEuro,ContactRound,KeyRound,LogOut,ScanLine,ShieldCheck,Store,Wifi} 
 import CashControlPanel from "../cloud/CashControlPanel.jsx";
 import StoreTransactionsPanel from "./StoreTransactionsPanel.jsx";
 import StoreHandoverPanel from "./StoreHandoverPanel.jsx";
+import StoreAttendancePanel from "./StoreAttendancePanel.jsx";
 import "./store-operator.css";
 
 export default function StoreOperatorApp({api,storeId}){
@@ -72,6 +73,7 @@ export default function StoreOperatorApp({api,storeId}){
     <div className="store-pilot-banner"><ShieldCheck/><div><b>ΕΜΠΟΡΙΚΗ ΠΙΛΟΤΙΚΗ ΔΟΚΙΜΗ — ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ</b><span>Η καταχώριση γίνεται παράλληλα. Οι αποδείξεις συνεχίζουν να εκδίδονται αποκλειστικά από το υπάρχον Kiosk Manager και την ταμειακή.</span></div></div>
     <main className="store-mode-main">
       <div className="store-mode-title"><div><span>LIVE OPERATIONS</span><h1>Λειτουργία Καταστήματος</h1><p>Συναλλαγές, έλεγχος ταμείου και παράδοση βάρδιας με προσωπικό audit.</p></div><div className="store-online"><Wifi/>Online</div></div>
+      <StoreAttendancePanel api={api} employee={session.user}/>
       <StoreTransactionsPanel api={api} store={session.store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
       <StoreHandoverPanel api={api} store={session.store}/>
       <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={session.store}/>

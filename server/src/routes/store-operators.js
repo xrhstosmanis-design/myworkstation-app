@@ -95,7 +95,7 @@ function operatorToken(row){
     role:row.role,
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
-    permissions:["CASH_CONTROL"]
+    permissions:["CASH_CONTROL","ATTENDANCE"]
   },process.env.JWT_SECRET,{expiresIn:"12h"});
 }
 async function audit({companyId,storeId,operatorId=null,actorId,eventType,details={}}){
