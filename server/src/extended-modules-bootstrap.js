@@ -124,6 +124,10 @@ const statements=[
   CONSTRAINT "ConnectorDevice_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "ConnectorDevice_store_type_key" ON "ConnectorDevice"("storeId","connectorType")`,
+`ALTER TABLE "ConnectorDevice" ADD COLUMN IF NOT EXISTS "cloudDeviceId" TEXT`,
+`ALTER TABLE "ConnectorDevice" ADD COLUMN IF NOT EXISTS "observerMode" TEXT NOT NULL DEFAULT 'READ_ONLY'`,
+`ALTER TABLE "ConnectorDevice" ADD COLUMN IF NOT EXISTS "healthJson" JSONB NOT NULL DEFAULT '{}'::jsonb`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "ConnectorDevice_cloud_device_key" ON "ConnectorDevice"("cloudDeviceId") WHERE "cloudDeviceId" IS NOT NULL`,
 
 `CREATE TABLE IF NOT EXISTS "ConnectorEvent" (
   "id" TEXT NOT NULL,
@@ -138,6 +142,12 @@ const statements=[
   CONSTRAINT "ConnectorEvent_deviceId_fkey" FOREIGN KEY ("connectorDeviceId") REFERENCES "ConnectorDevice"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `CREATE INDEX IF NOT EXISTS "ConnectorEvent_device_createdAt_idx" ON "ConnectorEvent"("connectorDeviceId","createdAt")`,
+`ALTER TABLE "ConnectorEvent" ADD COLUMN IF NOT EXISTS "eventKey" TEXT`,
+`ALTER TABLE "ConnectorEvent" ADD COLUMN IF NOT EXISTS "source" TEXT`,
+`ALTER TABLE "ConnectorEvent" ADD COLUMN IF NOT EXISTS "byteLength" INTEGER`,
+`ALTER TABLE "ConnectorEvent" ADD COLUMN IF NOT EXISTS "messageType" TEXT`,
+`ALTER TABLE "ConnectorEvent" ADD COLUMN IF NOT EXISTS "observedAt" TIMESTAMP(3)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "ConnectorEvent_device_event_key" ON "ConnectorEvent"("connectorDeviceId","eventKey") WHERE "eventKey" IS NOT NULL`,
 
 `CREATE TABLE IF NOT EXISTS "FiscalDocument" (
   "id" TEXT NOT NULL,

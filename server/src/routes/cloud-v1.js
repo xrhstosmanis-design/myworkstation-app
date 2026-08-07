@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import {companyModuleState} from "../middleware/module-access.js";
 
 const router = Router();
 const DEVICE_TOKEN_TTL = process.env.CLOUD_DEVICE_TOKEN_TTL || "180d";
@@ -186,6 +187,11 @@ async function deviceAuth(req,res,next){
     res.status(401).json({error:"Το device token έληξε ή ανακλήθηκε."});
   }
 }
+async function requireObserverModule(device){
+  const state=await companyModuleState(device.companyId);
+  if(!state?.licenseAllowed)fail(403,"Η άδεια της εταιρείας δεν είναι ενεργή.");
+  if(!state.activeModules.includes("CONNECTOR_RBS"))fail(403,"Το Read-Only Observer δεν έχει ενεργοποιηθεί τεχνικά για την εταιρεία.");
+}
 
 router.get("/health",route(async(req,res)=>{
   send(res,{ok:true,service:"Cloud Store Connector",version:"14.7.0C-HF1",time:new Date().toISOString()});
@@ -301,6 +307,40 @@ router.post("/device/events",deviceAuth,route(async(req,res)=>{
   }
   await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
   send(res,{ok:true,accepted,duplicates});
+}));
+
+router.post("/device/observer/register",deviceAuth,route(async(req,res)=>{
+  await requireObserverModule(req.device);
+  const body=z.object({version:z.string().trim().min(1).max(40),sources:z.array(z.enum(["CAPDRIVER","RBS","KIOSK_MANAGER"])).min(1).max(3)}).parse(req.body||{});
+  const connectorId=crypto.randomUUID();
+  const rows=await prisma.$queryRaw`
+    INSERT INTO "ConnectorDevice" ("id","companyId","storeId","connectorType","deviceName","version","status","lastSeenAt","cloudDeviceId","observerMode","healthJson")
+    VALUES (${connectorId},${req.device.companyId},${req.device.storeId},'RBS_READONLY_OBSERVER',${req.device.name},${body.version},'OBSERVING',CURRENT_TIMESTAMP,${req.device.id},'READ_ONLY',${JSON.stringify({sources:body.sources,commandsEnabled:false})}::jsonb)
+    ON CONFLICT ("storeId","connectorType") DO UPDATE SET "deviceName"=EXCLUDED."deviceName","version"=EXCLUDED."version","status"='OBSERVING',"lastSeenAt"=CURRENT_TIMESTAMP,"cloudDeviceId"=EXCLUDED."cloudDeviceId","observerMode"='READ_ONLY',"healthJson"=EXCLUDED."healthJson","updatedAt"=CURRENT_TIMESTAMP
+    RETURNING "id","storeId","connectorType","deviceName","version","status","observerMode"
+  `;
+  await audit({companyId:req.device.companyId,storeId:req.device.storeId,actorType:"DEVICE",actorId:req.device.id,eventType:"RBS_OBSERVER_REGISTERED",details:{connectorDeviceId:rows[0].id,version:body.version,sources:body.sources,readOnly:true}});
+  send(res,{observer:rows[0],capabilities:{readOnly:true,captureMetadataOnly:true,rawPayloadUpload:false,outboundCommands:false,fiscalIssuance:false}},201);
+}));
+
+router.post("/device/observer/heartbeat",deviceAuth,route(async(req,res)=>{
+  await requireObserverModule(req.device);
+  const body=z.object({version:z.string().trim().min(1).max(40),processRunning:z.boolean(),observedPort:z.coerce.number().int().min(1).max(65535).optional().nullable(),lastCaptureAt:z.coerce.date().optional().nullable(),sources:z.array(z.enum(["CAPDRIVER","RBS","KIOSK_MANAGER"])).max(3).optional()}).parse(req.body||{});
+  const rows=await prisma.$queryRaw`UPDATE "ConnectorDevice" SET "version"=${body.version},"status"=${body.processRunning?"OBSERVING":"DEGRADED"},"lastSeenAt"=CURRENT_TIMESTAMP,"healthJson"=${JSON.stringify({processRunning:body.processRunning,observedPort:body.observedPort||null,lastCaptureAt:body.lastCaptureAt||null,sources:body.sources||[]})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "cloudDeviceId"=${req.device.id} AND "connectorType"='RBS_READONLY_OBSERVER' AND "observerMode"='READ_ONLY' RETURNING "id","status","lastSeenAt"`;
+  if(!rows[0])fail(409,"Ο Observer δεν έχει καταχωριστεί ακόμη.");
+  send(res,{ok:true,observer:rows[0],serverTime:new Date().toISOString(),commands:[]});
+}));
+
+router.post("/device/observer/events",deviceAuth,route(async(req,res)=>{
+  await requireObserverModule(req.device);
+  const eventSchema=z.object({eventKey:z.string().trim().min(8).max(160),source:z.enum(["CAPDRIVER","RBS","KIOSK_MANAGER"]),direction:z.enum(["INBOUND","OUTBOUND"]),observedAt:z.coerce.date(),payloadHash:z.string().regex(/^[a-f0-9]{64}$/i),byteLength:z.coerce.number().int().min(0).max(10000000),messageType:z.string().trim().max(80).optional().nullable(),success:z.boolean().default(true),errorCode:z.string().trim().max(120).optional().nullable()});
+  const body=z.object({events:z.array(eventSchema).min(1).max(200)}).parse(req.body||{});
+  const devices=await prisma.$queryRaw`SELECT "id" FROM "ConnectorDevice" WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "cloudDeviceId"=${req.device.id} AND "connectorType"='RBS_READONLY_OBSERVER' AND "observerMode"='READ_ONLY' LIMIT 1`;
+  if(!devices[0])fail(409,"Ο Observer δεν έχει καταχωριστεί ακόμη.");
+  let accepted=0,duplicates=0;
+  for(const event of body.events){const result=await prisma.$executeRaw`INSERT INTO "ConnectorEvent" ("id","connectorDeviceId","eventType","direction","payloadHash","success","errorText","eventKey","source","byteLength","messageType","observedAt") VALUES (${crypto.randomUUID()},${devices[0].id},'PROTOCOL_OBSERVED',${event.direction},${event.payloadHash},${event.success},${event.errorCode||null},${event.eventKey},${event.source},${event.byteLength},${event.messageType||null},${event.observedAt}) ON CONFLICT ("connectorDeviceId","eventKey") WHERE "eventKey" IS NOT NULL DO NOTHING`;if(result===1)accepted++;else duplicates++}
+  await prisma.$executeRaw`UPDATE "ConnectorDevice" SET "lastSeenAt"=CURRENT_TIMESTAMP,"status"='OBSERVING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${devices[0].id}`;
+  send(res,{ok:true,accepted,duplicates,rawPayloadStored:false,outboundCommands:false});
 }));
 
 router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,res)=>{
