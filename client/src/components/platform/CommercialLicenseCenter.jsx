@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from "react";
+import {createPortal} from "react-dom";
 import {PackageCheck,RefreshCw,X} from "lucide-react";
 import CommercialLicensePanel from "./CommercialLicensePanel.jsx";
 
@@ -20,6 +21,7 @@ const when=value=>value?new Date(value).toLocaleDateString("el-GR"):"Χωρίς 
 
 export default function CommercialLicenseCenter(){
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser")));
+  const [toolbar,setToolbar]=useState(null);
   const [open,setOpen]=useState(false);
   const [data,setData]=useState(null);
   const [selected,setSelected]=useState(null);
@@ -33,7 +35,10 @@ export default function CommercialLicenseCenter(){
   };
   useEffect(()=>{if(open&&!data)load()},[open]);
   useEffect(()=>{
+    const resolveToolbar=()=>setToolbar(document.querySelector(".platform-title-actions"));
+    resolveToolbar();
     const timer=setInterval(()=>{
+      resolveToolbar();
       const next=Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser"));
       setAuthenticated(next);
       if(!next){setOpen(false);setSelected(null);setData(null)}
@@ -43,8 +48,13 @@ export default function CommercialLicenseCenter(){
 
   if(!authenticated)return null;
 
+  const launcher=toolbar?createPortal(
+    <button className="commercial-license-launcher" onClick={()=>setOpen(true)}><PackageCheck/>Συνδρομές & Modules</button>,
+    toolbar
+  ):null;
+
   return <>
-    <button className="commercial-license-launcher" onClick={()=>setOpen(true)}><PackageCheck/>Συνδρομές & Modules</button>
+    {launcher}
     {open&&<div className="platform-modal commercial-center-modal">
       {selected
         ?<CommercialLicensePanel company={selected} request={request} onSaved={async()=>{await load()}} onClose={()=>setSelected(null)}/>
