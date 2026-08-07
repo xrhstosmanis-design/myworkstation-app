@@ -24,7 +24,8 @@ export default function OwnerProductCenter({api,stores=[]}){
   const [editBasePrice,setEditBasePrice]=useState("");
   const [editVat,setEditVat]=useState("");
   const [editVatVerified,setEditVatVerified]=useState(false);
-  const [promotions,setPromotions]=useState([]);\n  const [promotionType,setPromotionType]=useState("PERCENT");
+  const [promotions,setPromotions]=useState([]);
+  const [promotionType,setPromotionType]=useState("PERCENT");
   const [stocktakes,setStocktakes]=useState([]);
   const [openStocktake,setOpenStocktake]=useState(null);
   const [busy,setBusy]=useState(false);
