@@ -74,6 +74,11 @@ export async function commerceTenantGuard(req,res,next){
       for(const line of Array.isArray(body.lines)?body.lines:[]){if(line?.productId&&!await rawExists("Product",companyId,line.productId))return bad(res,"το προϊόν OCR")}
     }
 
+    if(/^\/recipes\/[^/]+$/.test(path)&&req.method==="PUT"){
+      const productId=path.split("/").pop();if(!await rawExists("Product",companyId,productId))return bad(res,"το προϊόν συνταγής");
+      for(const item of Array.isArray(body.items)?body.items:[]){if(item?.ingredientProductId&&!await rawExists("Product",companyId,item.ingredientProductId))return bad(res,"το συστατικό συνταγής")}
+    }
+
     next();
   }catch(error){next(error)}
 }
