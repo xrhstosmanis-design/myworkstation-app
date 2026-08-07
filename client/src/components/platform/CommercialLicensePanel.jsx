@@ -16,6 +16,17 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
 
+  const technicalActivation=async module=>{
+    const active=!module.active;
+    if(!window.confirm(`${active?"Τεχνική ενεργοποίηση":"Απενεργοποίηση"} ${module.name} σε PILOT READ-ONLY;`))return;
+    setBusy(true);setError("");
+    try{
+      await request(`/api/platform/companies/${company.id}/modules/${module.key}/technical-activation`,{method:"POST",body:JSON.stringify({active,reason:"Πιλοτική εγκατάσταση Read-Only Observer στον PC του ΚΑΤ"})});
+      setModules(current=>current.map(row=>row.key===module.key?{...row,active}:row));
+      await onSaved();
+    }catch(err){setError(err.message)}finally{setBusy(false)}
+  };
+
   const activeCount=useMemo(()=>modules.filter(module=>module.active).length,[modules]);
   const toggleModule=key=>{
     setModules(current=>current.map(module=>{
@@ -82,12 +93,12 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
         type="button"
         key={module.key}
         className={`commercial-module ${module.active?"enabled":""} ${!module.commercialReady?"locked":""}`}
-        onClick={()=>toggleModule(module.key)}
-        disabled={module.key==="CORE"||(!module.commercialReady&&!module.active)}
+        onClick={()=>module.requiresTechnicalActivation?technicalActivation(module):toggleModule(module.key)}
+        disabled={busy||module.key==="CORE"||(!module.commercialReady&&!module.requiresTechnicalActivation&&!module.active)}
       >
         <span className="module-state">{module.active?<CheckCircle2/>:<LockKeyhole/>}</span>
         <span><b>{module.name}</b><small>{module.description}</small></span>
-        <em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΑΝΕΝΕΡΓΟ":"ΥΠΟ ΑΝΑΠΤΥΞΗ"}</em>
+        <em>{module.active?"PILOT READ-ONLY":module.commercialReady?"ΑΝΕΝΕΡΓΟ":module.requiresTechnicalActivation?"ΤΕΧΝΙΚΗ ΕΝΕΡΓΟΠΟΙΗΣΗ":"ΥΠΟ ΑΝΑΠΤΥΞΗ"}</em>
       </button>)}
     </div>
 
