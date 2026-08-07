@@ -47,7 +47,7 @@ function companyView(company){
     modules:catalogView(company.modules),
     activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
-    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,active:store.active,employees:store._count?.employees||0})),
+    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,responsibleEmail:store.responsibleEmail,active:store.active,employees:store._count?.employees||0})),
     storeCount:company.stores.length,
     userCount:company.users.length,
     employeeCount:employees,
@@ -62,7 +62,7 @@ router.get("/overview",async(req,res,next)=>{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
         stores:{
-          select:{id:true,name:true,city:true,active:true,_count:{select:{employees:true}}},
+          select:{id:true,name:true,city:true,responsibleEmail:true,active:true,_count:{select:{employees:true}}},
           orderBy:{name:"asc"}
         }
       },
@@ -189,6 +189,23 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
       : await prisma.user.create({data:{...data,passwordHash:data.passwordHash}});
 
     res.json({id:owner.id,fullName:owner.fullName,email:owner.email,role:owner.role,companyId:owner.companyId});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      name:z.string().trim().min(2).max(160),
+      city:z.string().trim().max(100).optional().or(z.literal("")),
+      responsibleEmail:z.string().trim().email().optional().or(z.literal(""))
+    }).parse(req.body||{});
+    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const updated=await prisma.store.update({
+      where:{id:store.id},
+      data:{name:body.name,city:body.city||null,responsibleEmail:body.responsibleEmail.toLowerCase()||null}
+    });
+    res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,companyId:updated.companyId});
   }catch(error){next(error)}
 });
 
