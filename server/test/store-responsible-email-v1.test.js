@@ -18,7 +18,7 @@ test("Super Admin can update only a store owned by the selected company",()=>{
   assert.match(platform,/id:req\.params\.storeId,companyId:req\.params\.companyId/);
   assert.match(platform,/responsibleEmail:z\.string\(\)\.trim\(\)\.email\(\)/);
   assert.match(ui,/Email υπευθύνου/);
-  assert.match(ui,/Οι αναφορές κλεισίματος θα αποστέλλονται στον OWNER/);
+  assert.match(ui,/η αναφορά πηγαίνει στον OWNER/);
 });
 
 test("cash close deduplicates owner and store-responsible recipients",()=>{
