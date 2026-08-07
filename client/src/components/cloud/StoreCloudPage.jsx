@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {ArrowLeft,Cloud,Copy,Link2,Monitor,PackagePlus,RefreshCw,ShieldOff,ShieldCheck,Wifi,WifiOff} from "lucide-react";
+import {ArrowLeft,Boxes,Cloud,Copy,History,Link2,Monitor,PackagePlus,ReceiptText,RefreshCw,ShieldOff,ShieldCheck,Users,WalletCards,Wifi,WifiOff} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OperatorAccessPanel from "./OperatorAccessPanel.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
@@ -68,6 +68,7 @@ export default function StoreCloudPage({api,store,onBack}){
     if(!pairing?.code)return;
     try{await navigator.clipboard.writeText(pairing.code);setMessage("Ο κωδικός αντιγράφηκε.")}catch{setMessage(`Κωδικός: ${pairing.code}`)}
   };
+  const goTo=sectionId=>document.getElementById(sectionId)?.scrollIntoView({behavior:"smooth",block:"start"});
 
   return <section className="cloud-page">
     <div className="cloud-titlebar">
@@ -78,6 +79,14 @@ export default function StoreCloudPage({api,store,onBack}){
       <div className="cloud-hero-icon"><Cloud/></div>
       <div><span className="cloud-kicker">GO LIVE 14.7.0C</span><h2>{store.name}</h2><p>Cloud Store Connector, pairing συσκευών και πρώτος ελεγχόμενος συγχρονισμός καταλόγου.</p></div>
     </div>
+    <nav className="backoffice-section-nav" aria-label="Λειτουργίες Backoffice">
+      <button type="button" onClick={()=>goTo("backoffice-operators")}><Users/>Χειριστές</button>
+      <button type="button" onClick={()=>goTo("backoffice-transactions")}><ReceiptText/>Πωλήσεις & Πληρωμές</button>
+      <button type="button" onClick={()=>goTo("backoffice-cash")}><WalletCards/>Βάρδιες & Ταμεία</button>
+      <button type="button" onClick={()=>goTo("backoffice-catalog")}><Boxes/>Προϊόντα & Απόθεμα</button>
+      <button type="button" onClick={()=>goTo("backoffice-devices")}><Monitor/>Συσκευές</button>
+      <button type="button" onClick={()=>goTo("backoffice-audit")}><History/>Ιστορικό</button>
+    </nav>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
     {loading?<div className="cloud-loading">Γίνεται έλεγχος της σύνδεσης cloud…</div>:<>
@@ -88,14 +97,14 @@ export default function StoreCloudPage({api,store,onBack}){
         <article><span>Τελευταία αλλαγή</span><strong className="cloud-date">{when(data?.latestChange?.createdAt)}</strong></article>
       </div>
 
-      {activeModules.has("STORE_MODE")&&<OperatorAccessPanel api={api} store={store}/>} 
+      {activeModules.has("STORE_MODE")&&<div id="backoffice-operators" className="backoffice-anchor"><OperatorAccessPanel api={api} store={store}/></div>}
 
       {activeModules.has("CASH_CONTROL")&&<>
-        <StoreTransactionsPanel api={api} store={store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
-        <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={store}/>
+        <div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel api={api} store={store} onChanged={()=>setLedgerVersion(v=>v+1)}/></div>
+        <div id="backoffice-cash" className="backoffice-anchor"><CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={store}/></div>
       </>}
 
-      <div className="cloud-two-columns">
+      <div id="backoffice-catalog" className="cloud-two-columns backoffice-anchor">
         <article className="cloud-panel">
           <div className="cloud-panel-head"><div><h3><Link2/>Σύνδεση δεύτερου υπολογιστή</h3><p>Ο κωδικός ισχύει 15 λεπτά και χρησιμοποιείται μία φορά.</p></div><button onClick={createPairing} disabled={busy==="pair"}>{busy==="pair"?"Δημιουργία…":"Νέος κωδικός"}</button></div>
           {pairing?<div className="pairing-box"><small>PAIRING CODE</small><div><strong>{pairing.code}</strong><button onClick={copyCode} title="Αντιγραφή"><Copy/></button></div><p>Λήγει: {when(pairing.expiresAt)}</p></div>:<div className="cloud-empty">Δεν υπάρχει ενεργός κωδικός στην οθόνη. Δημιούργησε νέο μόνο όταν βρίσκεσαι μπροστά στον δεύτερο υπολογιστή.</div>}
@@ -117,7 +126,7 @@ export default function StoreCloudPage({api,store,onBack}){
         </article>
       </div>
 
-      <article className="cloud-panel cloud-devices">
+      <article id="backoffice-devices" className="cloud-panel cloud-devices backoffice-anchor">
         <div className="cloud-panel-head"><div><h3><Monitor/>Συσκευές καταστήματος</h3><p>Online/offline κατάσταση, τελευταίος συγχρονισμός και απομακρυσμένη ανάκληση.</p></div></div>
         {(data?.devices||[]).length===0?<div className="cloud-empty">Δεν έχει συνδεθεί ακόμη συσκευή.</div>:<div className="device-list">{data.devices.map(device=><div className="device-row" key={device.id}>
           <span className={`device-state ${device.isOnline?"online":"offline"}`}>{device.isOnline?<Wifi/>:<WifiOff/>}</span>
@@ -127,7 +136,7 @@ export default function StoreCloudPage({api,store,onBack}){
         </div>)}</div>}
       </article>
 
-      <article className="cloud-panel cloud-audit">
+      <article id="backoffice-audit" className="cloud-panel cloud-audit backoffice-anchor">
         <div className="cloud-panel-head"><div><h3>Τελευταίες cloud ενέργειες</h3><p>Βασικό audit για pairing, αλλαγές καταλόγου και συσκευές.</p></div></div>
         {(data?.audit||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη cloud συμβάντα.</div>:<div className="audit-list">{data.audit.map(row=><div key={row.id}><b>{row.eventType.replaceAll("_"," ")}</b><span>{when(row.createdAt)}</span></div>)}</div>}
       </article>
