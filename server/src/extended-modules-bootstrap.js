@@ -39,6 +39,11 @@ const statements=[
   CONSTRAINT "PayrollPeriod_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `CREATE INDEX IF NOT EXISTS "PayrollPeriod_company_idx" ON "PayrollPeriod"("companyId","startDate")`,
+`ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "name" TEXT`,
+`ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "storeId" TEXT`,
+`ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "createdByUserId" TEXT`,
+`ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "lockedAt" TIMESTAMP(3)`,
+`ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "lockedByUserId" TEXT`,
 
 `CREATE TABLE IF NOT EXISTS "PayrollEntry" (
   "id" TEXT NOT NULL,
@@ -54,6 +59,10 @@ const statements=[
   CONSTRAINT "PayrollEntry_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "PayrollEntry_period_employee_key" ON "PayrollEntry"("payrollPeriodId","employeeId")`,
+`ALTER TABLE "PayrollEntry" ADD COLUMN IF NOT EXISTS "sourceIssues" INTEGER NOT NULL DEFAULT 0`,
+`ALTER TABLE "PayrollEntry" ADD COLUMN IF NOT EXISTS "storeNameSnapshot" TEXT`,
+`ALTER TABLE "PayrollEntry" ADD COLUMN IF NOT EXISTS "employeeNameSnapshot" TEXT`,
+`ALTER TABLE "PayrollEntry" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`,
 
 `CREATE TABLE IF NOT EXISTS "AiReaderJob" (
   "id" TEXT NOT NULL,
