@@ -108,9 +108,10 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const q=String(req.query.q||"").trim();
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."active",p."masterProductId",
+      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",
              c."name" AS "categoryName",
-             COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
+             COALESCE((SELECT json_agg(jsonb_build_object('barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
+             COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
       FROM "Product" p
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
@@ -118,6 +119,38 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       WHERE p."companyId"=${company} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
       GROUP BY p."id",c."name" ORDER BY p."name" LIMIT 500`;
     res.json(rows);
+  }catch(error){next(error)}
+});
+
+router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);
+    const product=await ownedProduct(company,req.params.productId);
+    if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    const body=z.object({
+      name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),
+      categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
+      vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
+      barcodes:z.array(z.object({barcode:z.string().trim().min(3).max(80),unitMultiplier:z.coerce.number().positive().max(100000)})).max(30),
+      stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0),minStock:z.coerce.number().min(0).nullable()})).max(500)
+    }).parse(req.body||{});
+    const storeIds=[...new Set(body.stores.map(row=>row.storeId))];
+    const validStores=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});
+    if(validStores.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
+    if(body.sku){const duplicate=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "sku"=${body.sku} AND "id"<>${product.id} LIMIT 1`;if(duplicate[0])return res.status(409).json({error:"Ο κωδικός/SKU χρησιμοποιείται ήδη σε άλλο προϊόν."})}
+    const barcodeValues=[...new Set(body.barcodes.map(row=>row.barcode))];
+    if(barcodeValues.length!==body.barcodes.length)return res.status(400).json({error:"Το ίδιο barcode έχει καταχωριστεί περισσότερες από μία φορές."});
+    if(barcodeValues.length){const duplicate=await prisma.$queryRaw`SELECT pb."barcode" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${company} AND pb."productId"<>${product.id} AND pb."barcode"=ANY(${barcodeValues}::text[]) LIMIT 1`;if(duplicate[0])return res.status(409).json({error:`Το barcode ${duplicate[0].barcode} ανήκει ήδη σε άλλο προϊόν.`})}
+    await prisma.$transaction(async tx=>{
+      let categoryId=null;
+      if(body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
+      if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${req.user.id})`;
+      await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
+      await tx.$executeRaw`DELETE FROM "ProductBarcode" WHERE "productId"=${product.id}`;
+      for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier})`;
+      for(const row of body.stores)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","minStock","active") VALUES (${uid()},${row.storeId},${product.id},${row.salePrice},${row.minStock},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","minStock"=EXCLUDED."minStock","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
+    });
+    res.json({ok:true,id:product.id});
   }catch(error){next(error)}
 });
 
