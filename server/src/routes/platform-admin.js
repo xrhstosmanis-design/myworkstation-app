@@ -19,6 +19,33 @@ const licenseStatuses=["TRIAL","PILOT","ACTIVE","SUSPENDED","EXPIRED"];
 const planSchema=z.enum(plans);
 const licenseStatusSchema=z.enum(licenseStatuses);
 const dateValue=z.string().trim().optional().or(z.literal(""));
+const quickLabels=["ΝΕΡΟ 500ML","ΝΕΡΟ 1,5LT","ΚΟΥΛΟΥΡΙ ΘΕΣ/ΝΙΚΗΣ","ΠΟΤΗΡΙ ΜΕ ΠΑΓΟ","ΠΛΑΣΤΙΚΗ ΣΑΚΟΥΛΑ","ΜΑΣΚΑ 0,60","ΠΑΡΟΧΗ","ΜΠΑΝΑΝΑ ΤΜΧ.","ΣΑΝΤΟΥΙΤΣ","ΧΥΜΟΣ ΠΟΡΤΟΚΑΛΙ","FREDDO ESPRESSO","CAPPUCCINO","ΤΣΙΧΛΕΣ","ΑΝΑΨΥΚΤΙΚΟ 330ML","ENERGY DRINK","ΣΟΚΟΛΑΤΑ ΜΠΑΡΑ"];
+const categoryLabels=["ΖΕΣΤΑ ΡΟΦΗΜΑΤΑ","ΚΡΥΑ ΡΟΦΗΜΑΤΑ","ΑΝΑΨΥΚΤΙΚΑ","ΧΥΜΟΙ","ΝΕΡΑ","ΜΠΥΡΕΣ","ΚΡΑΣΙΑ","ΑΛΚΟΟΛΟΥΧΑ","PREMIUM BAKERY","ΑΡΤΟΠΟΙΙΑ","ΣΦΟΛΙΑΤΕΣ","ΣΑΝΤΟΥΙΤΣ","ΓΛΥΚΑ","ΠΑΓΩΤΑ","SNACKS","ΞΗΡΟΙ ΚΑΡΠΟΙ & ΣΠΟΡΟΙ","ΕΙΔΗ ΧΩΡΙΣ BARCODE","ΑΡΤΙΖΑΝ - ΠΕΡΕΚ","ΧΩΡΙΑΤΙΚΗ ΖΥΜΗ","ΔΙΑ ΧΕΙΡΟΣ","ΠΑΚΕΤΑ ΠΡΟΣΦΟΡΩΝ","ΥΠΗΡΕΣΙΕΣ","ΚΕΝΟ","ΚΕΝΟ"];
+const palette=["#1597a5","#287e9e","#4f8fbe","#dc7a27","#3978b8","#9aa82f","#9a5353","#76558e","#b99a42","#98734b","#b59336","#77983f","#aa526e","#467ba3","#38989a","#8b6b48","#498769","#397d78","#71925d","#79549a","#d3832e","#40779a","#c9cecc","#d7dad8"];
+const defaultPosLayout={
+  title:"OPERATOR POS",productColumns:6,showSku:true,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},
+  quickKeys:quickLabels.map((label,index)=>({id:`quick-${index+1}`,label,productQuery:label,color:palette[index%palette.length],visible:true})),
+  categories:categoryLabels.map((label,index)=>({id:`category-${index+1}`,label,categoryName:label==="ΚΕΝΟ"?"":label,color:palette[index],visible:label!=="ΚΕΝΟ"})),
+  buttons:[
+    {id:"cancel",label:"ΑΚΥΡΩΣΗ",action:"CLEAR_CART",color:"#e33d3d",visible:true},{id:"print",label:"ΕΚΤΥΠΩΣΗ",action:"PRINT",color:"#ffffff",visible:true},
+    {id:"hold",label:"ΑΝΑΜΟΝΗ",action:"HOLD",color:"#eea51d",visible:true},{id:"payments",label:"ΠΛΗΡΩΜΕΣ",action:"PAYMENTS",color:"#ffffff",visible:true},
+    {id:"internal",label:"ΕΣΩΤΕΡΙΚΗ",action:"INTERNAL",color:"#8556ae",visible:true},{id:"waste",label:"ΚΟΥΒΑΣ",action:"WASTE",color:"#f0672f",visible:true},
+    {id:"cash",label:"ΜΕΤΡΗΤΑ",action:"CASH",color:"#078a4d",visible:true},{id:"iris",label:"IRIS",action:"IRIS",color:"#149dad",visible:true},
+    {id:"mixed",label:"ΜΙΚΤΗ",action:"MIXED",color:"#ffffff",visible:true},{id:"card",label:"ΚΑΡΤΑ",action:"CARD",color:"#3979cc",visible:true}
+  ]
+};
+const colorSchema=z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const keyedButtonSchema=z.object({id:z.string().trim().min(1).max(60),label:z.string().trim().min(1).max(60),color:colorSchema,visible:z.boolean()});
+const posLayoutSchema=z.object({
+  title:z.string().trim().min(1).max(80),productColumns:z.coerce.number().int().min(2).max(8),showSku:z.boolean(),
+  theme:z.object({headerColor:colorSchema,accentColor:colorSchema,surfaceColor:colorSchema}).default(defaultPosLayout.theme),
+  quickKeys:z.array(keyedButtonSchema.extend({productQuery:z.string().trim().max(120)})).max(24).default(defaultPosLayout.quickKeys),
+  categories:z.array(keyedButtonSchema.extend({categoryName:z.string().trim().max(120)})).max(32).default(defaultPosLayout.categories),
+  buttons:z.array(keyedButtonSchema.extend({action:z.enum(["CASH","CARD","CLEAR_CART","PRINT","HOLD","PAYMENTS","INTERNAL","WASTE","IRIS","MIXED"])})).max(20)
+}).superRefine((value,ctx)=>{
+  const ids=[...value.quickKeys,...value.categories,...value.buttons].map(button=>button.id);
+  if(new Set(ids).size!==ids.length)ctx.addIssue({code:z.ZodIssueCode.custom,message:"Κάθε κουμπί χρειάζεται μοναδικό αναγνωριστικό."});
+});
 
 function parseDate(value){
   if(!value)return null;
@@ -221,6 +248,36 @@ router.post("/companies/:companyId/support-access",async(req,res,next)=>{
     const token=jwt.sign({id:req.user.id,companyId:company.id,role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,fullName:req.user.fullName,email:req.user.email,tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:req.user.sessionVersion,supportContext:{companyId:company.id,companyName:company.name,storeId:store?.id||null,storeName:store?.name||null,destination:body.destination}},process.env.JWT_SECRET,{expiresIn:"2h"});
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_SUPPORT_ACCESS",success:true,deviceName:`${company.name}${store?` · ${store.name}`:""}`}});
     res.json({token,expiresInMinutes:120,user:{id:req.user.id,fullName:req.user.fullName,role:"OWNER",isSuperAdmin:true,company:{id:company.id,name:company.name}},supportContext:{companyId:company.id,companyName:company.name,storeId:store?.id||null,storeName:store?.name||null,destination:body.destination}});
+  }catch(error){next(error)}
+});
+
+router.get("/pos-designer",async(req,res,next)=>{
+  try{
+    const drafts=await prisma.$queryRaw`SELECT "layoutJson","version","updatedAt" FROM "PlatformPosDraft" WHERE "id"='GLOBAL' LIMIT 1`;
+    const companies=await prisma.company.findMany({select:{id:true,name:true,stores:{where:{active:true},select:{id:true,name:true,city:true},orderBy:{name:"asc"}}},orderBy:{name:"asc"}});
+    const published=await prisma.$queryRaw`SELECT "storeId","version","publishedAt" FROM "StorePosLayout"`;
+    res.json({draft:drafts[0]?.layoutJson||defaultPosLayout,draftVersion:drafts[0]?.version||0,updatedAt:drafts[0]?.updatedAt||null,companies,published});
+  }catch(error){next(error)}
+});
+
+router.put("/pos-designer/draft",async(req,res,next)=>{
+  try{
+    const layout=posLayoutSchema.parse(req.body||{});
+    const rows=await prisma.$queryRaw`INSERT INTO "PlatformPosDraft" ("id","layoutJson","version","updatedBy","updatedAt") VALUES ('GLOBAL',${JSON.stringify(layout)}::jsonb,1,${req.user.id},CURRENT_TIMESTAMP) ON CONFLICT ("id") DO UPDATE SET "layoutJson"=EXCLUDED."layoutJson","version"="PlatformPosDraft"."version"+1,"updatedBy"=EXCLUDED."updatedBy","updatedAt"=CURRENT_TIMESTAMP RETURNING "version","updatedAt"`;
+    res.json({ok:true,draftVersion:rows[0].version,updatedAt:rows[0].updatedAt});
+  }catch(error){next(error)}
+});
+
+router.post("/pos-designer/publish",async(req,res,next)=>{
+  try{
+    const body=z.object({storeIds:z.array(z.string()).min(1).max(1000)}).parse(req.body||{});
+    const storeIds=[...new Set(body.storeIds)];
+    const stores=await prisma.store.findMany({where:{id:{in:storeIds},active:true},select:{id:true,companyId:true}});
+    if(stores.length!==storeIds.length)return res.status(404).json({error:"Ένα ή περισσότερα καταστήματα δεν βρέθηκαν."});
+    const drafts=await prisma.$queryRaw`SELECT "layoutJson" FROM "PlatformPosDraft" WHERE "id"='GLOBAL' LIMIT 1`;
+    const layout=posLayoutSchema.parse(drafts[0]?.layoutJson||defaultPosLayout);
+    await prisma.$transaction(async tx=>{for(const store of stores)await tx.$executeRaw`INSERT INTO "StorePosLayout" ("storeId","companyId","layoutJson","version","publishedBy","publishedAt") VALUES (${store.id},${store.companyId},${JSON.stringify(layout)}::jsonb,1,${req.user.id},CURRENT_TIMESTAMP) ON CONFLICT ("storeId") DO UPDATE SET "layoutJson"=EXCLUDED."layoutJson","version"="StorePosLayout"."version"+1,"publishedBy"=EXCLUDED."publishedBy","publishedAt"=CURRENT_TIMESTAMP`});
+    res.json({ok:true,publishedStores:stores.length});
   }catch(error){next(error)}
 });
 

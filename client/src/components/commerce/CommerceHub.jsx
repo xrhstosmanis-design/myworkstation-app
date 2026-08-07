@@ -30,6 +30,8 @@ export default function CommerceHub({api,stores=[]}){
   const [handover,setHandover]=useState([]);
   const [aiStatus,setAiStatus]=useState(null);
   const [cart,setCart]=useState([]);
+  const [posLayout,setPosLayout]=useState({title:"OPERATOR POS",productColumns:6,showSku:true,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},quickKeys:[],categories:[],buttons:[{id:"cash",label:"ΜΕΤΡΗΤΑ",action:"CASH",color:"#078a4d",visible:true},{id:"card",label:"ΚΑΡΤΑ",action:"CARD",color:"#3979cc",visible:true}]});
+  const [posCategory,setPosCategory]=useState("");
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
   const active=new Set(activeModules);
@@ -55,7 +57,9 @@ export default function CommerceHub({api,stores=[]}){
 
   const loadPos=async()=>{
     if(!storeId||!active.has("POS"))return;
-    if(active.has("INVENTORY")){const i=await api(`/api/commerce/inventory?storeId=${encodeURIComponent(storeId)}`);setInventory(i.rows||[])}
+    const tasks=[api(`/api/commerce/pos-layout?storeId=${encodeURIComponent(storeId)}`)];
+    if(active.has("INVENTORY"))tasks.push(api(`/api/commerce/inventory?storeId=${encodeURIComponent(storeId)}`));
+    const [layout,i]=await Promise.all(tasks);setPosLayout(current=>({...current,...(layout.layoutJson||{}),theme:{...current.theme,...(layout.layoutJson?.theme||{})},quickKeys:layout.layoutJson?.quickKeys||[],categories:layout.layoutJson?.categories||[],buttons:layout.layoutJson?.buttons||current.buttons}));setPosCategory("");if(i)setInventory(i.rows||[]);
   };
 
   const loadAnalytics=async()=>{
@@ -118,6 +122,18 @@ export default function CommerceHub({api,stores=[]}){
       setCart([]);setMessage(`Πώληση ${money(result.total)} καταγράφηκε ως ΜΗ ΦΟΡΟΛΟΓΙΚΗ.`);await loadPos();
     }catch(e){setError(e.message)}
   };
+  const addQuickProduct=query=>{
+    const needle=String(query||"").trim().toLocaleLowerCase("el-GR");
+    const product=inventory.find(row=>[row.name,row.sku,row.categoryName].some(value=>String(value||"").toLocaleLowerCase("el-GR")===needle))||inventory.find(row=>String(row.name||"").toLocaleLowerCase("el-GR").includes(needle));
+    if(!product)return setError(`Δεν βρέθηκε προϊόν για τη γρήγορη θέση «${query}».`);
+    setError("");addCart(product);
+  };
+  const runPosAction=action=>{
+    if(action==="CASH"||action==="CARD")return completeSale(action);
+    if(action==="CLEAR_CART"){setCart([]);setMessage("Η τρέχουσα συναλλαγή καθαρίστηκε.");return}
+    setMessage(`Η ενέργεια «${action}» επιλέχθηκε. Η φορολογική εκτέλεση παραμένει στον πιστοποιημένο Connector/Kiosk Manager.`);
+  };
+  const visiblePosProducts=posCategory?inventory.filter(product=>String(product.categoryName||"").toLocaleLowerCase("el-GR")===posCategory.toLocaleLowerCase("el-GR")):inventory;
 
   const createHandover=async event=>{
     event.preventDefault();const f=new FormData(event.currentTarget);setError("");
@@ -155,7 +171,13 @@ export default function CommerceHub({api,stores=[]}){
       <RecipeManagementPanel api={api} products={products}/>
     </>}
 
-    {tab==="pos"&&<><div className="commerce-notice"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ PILOT.</b> Η φορολογική απόδειξη συνεχίζει να εκδίδεται μόνο από Kiosk Manager/RBS μέχρι να ενεργοποιηθεί ο πιστοποιημένος Connector.</div>{!active.has("INVENTORY")&&<div className="commerce-error">Για τον κατάλογο POS ενεργοποίησε μαζί και το module Αποθήκη.</div>}<div className="commerce-pos"><section className="pos-products">{inventory.map(product=><button className="pos-product" key={product.id} onClick={()=>addCart(product)}><b>{product.name}</b><small>{product.sku||product.categoryName||""}</small><strong>{money(product.salePrice)}</strong></button>)}</section><aside className="pos-cart"><h3>Καλάθι</h3><div className="pos-cart-list">{cart.map(line=><div className="pos-cart-line" key={line.id}><span>{line.name}<small>{line.qty} × {money(line.price)}</small></span><button onClick={()=>changeQty(line.id,-1)}>−</button><button onClick={()=>changeQty(line.id,1)}>+</button></div>)}</div><div className="pos-total"><span>Σύνολο</span><strong>{money(cartTotal)}</strong></div><div className="pos-warning">Οι παρακάτω επιλογές γράφουν μόνο μη φορολογική πώληση στη βάση MyWorkStation.</div><button className="commerce-primary" disabled={!cart.length} onClick={()=>completeSale("CASH")}>Μετρητά</button><button className="commerce-primary" disabled={!cart.length} onClick={()=>completeSale("CARD")}>Κάρτα</button></aside></div></>}
+    {tab==="pos"&&<><div className="commerce-notice"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ PILOT.</b> Η φορολογική απόδειξη συνεχίζει να εκδίδεται μόνο από Kiosk Manager/RBS μέχρι να ενεργοποιηθεί ο πιστοποιημένος Connector.</div>{!active.has("INVENTORY")&&<div className="commerce-error">Για τον κατάλογο POS ενεργοποίησε μαζί και το module Αποθήκη.</div>}<div className="store-operator-pos" style={{"--store-pos-head":posLayout.theme?.headerColor||"#033d2f","--store-pos-accent":posLayout.theme?.accentColor||"#087a52","--store-pos-surface":posLayout.theme?.surfaceColor||"#ffffff"}}>
+      <header><div className="store-pos-logo">MW</div><div className="store-pos-brand"><small>MyWorkStation · STORE POS</small><b>{posLayout.title||"OPERATOR POS"}</b></div><input placeholder="Barcode ή αναζήτηση προϊόντος"/><button>Αναζήτηση</button><div className="store-pos-user"><b>Συνδεδεμένος χρήστης</b><small>Ταμείο ανοικτό</small></div></header>
+      <aside className="store-pos-quick"><div><b>ΓΡΗΓΟΡΑ</b><small>{(posLayout.quickKeys||[]).filter(x=>x.visible).length} θέσεις</small></div>{(posLayout.quickKeys||[]).filter(x=>x.visible).slice(0,24).map((button,index)=><button key={button.id} style={{background:button.color}} onClick={()=>addQuickProduct(button.productQuery||button.label)}><i>{index+1}</i>{button.label}</button>)}</aside>
+      <main className="store-pos-main"><div className="store-pos-table-head"><span>ΠΟΣ.</span><span>ΕΙΔΟΣ</span><span>STOCK</span><span>ΤΙΜΗ</span><span>ΣΥΝΟΛΟ</span></div><div className="store-pos-sale-lines">{cart.length?cart.map(line=><article key={line.id}><span>{line.qty}</span><b>{line.name}</b><span>—</span><span>{money(line.price)}</span><strong>{money(line.qty*line.price)}</strong></article>):<div className="store-pos-empty"><b>Νέα συναλλαγή</b><span>Πάτησε προϊόν ή σκάναρε barcode</span></div>}</div><div className="store-pos-category-title"><b>ΚΑΤΗΓΟΡΙΕΣ</b><button className={!posCategory?"active":""} onClick={()=>setPosCategory("")}>ΑΡΧΙΚΗ</button><span>{posCategory||"ΒΑΣΙΚΗ ΟΘΟΝΗ"}</span></div><div className="store-pos-categories" style={{gridTemplateColumns:`repeat(${posLayout.productColumns||6},minmax(0,1fr))`}}>{(posLayout.categories||[]).filter(x=>x.visible).map((button,index)=><button className={posCategory===button.categoryName?"active":""} key={button.id} style={{background:button.color}} onClick={()=>setPosCategory(button.categoryName||"")}><i>{index+1}</i>{button.label}</button>)}</div><div className="store-pos-products" style={{gridTemplateColumns:`repeat(${posLayout.productColumns||6},minmax(0,1fr))`}}>{visiblePosProducts.map(product=><button key={product.id} onClick={()=>addCart(product)}><b>{product.name}</b>{posLayout.showSku&&<small>{product.sku||product.categoryName||""}</small>}<strong>{money(product.salePrice)}</strong></button>)}</div></main>
+      <aside className="store-pos-right"><label>ΠΕΛΑΤΗΣ — Πελάτης λιανικής</label><div className="store-pos-money"><span>ΕΛΑΒΑ<b>0,00 €</b></span><span>ΡΕΣΤΑ<b>0,00 €</b></span></div><div className="store-pos-keypad">{[7,8,9,4,5,6,1,2,3,0,",","⌫"].map(value=><button key={value}>{value}</button>)}</div><button className="store-pos-clear">ΚΑΘΑΡΙΣΜΟΣ ΠΟΣΟΥ</button><div className="store-pos-cart-tools"><button onClick={()=>cart[0]&&changeQty(cart[0].id,1)}>ΠΟΣ.</button><button>ΑΛΛΑΓΗ</button><button onClick={()=>setCart([])}>ΣΒΗΣΙΜΟ</button></div></aside>
+      <footer>{(posLayout.buttons||[]).filter(button=>button.visible).map(button=><button style={{background:button.color,color:String(button.color).toLowerCase()==="#ffffff"?"#173f34":"#fff"}} key={button.id} disabled={(button.action==="CASH"||button.action==="CARD")&&!cart.length} onClick={()=>runPosAction(button.action)}>{button.label}</button>)}<div className="store-pos-total"><span>ΣΥΝΟΛΟ</span><b>{money(cartTotal)}</b></div></footer>
+    </div></>}
 
     {tab==="analytics"&&<AdvancedSalesAnalytics api={api} stores={stores} initialStoreId={storeId}/>}
 
