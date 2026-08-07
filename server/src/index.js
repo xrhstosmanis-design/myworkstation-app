@@ -11,6 +11,7 @@ import storeOperatorRoutes from "./routes/store-operators.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
+import masterCatalogRoutes from "./routes/master-catalog.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
@@ -22,16 +23,18 @@ import { ensurePlatformSchema } from "./platform-bootstrap.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
 import { ensureExtendedModulesSchema } from "./extended-modules-bootstrap.js";
 import { ensureCommerceCompatibility } from "./commerce-compatibility.js";
+import { ensureMasterCatalogSchema } from "./master-catalog-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 
 const app=express();
 app.use(cors());
-app.use(express.json());
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.18.0+modules-v1"}));
+app.use(express.json({limit:"8mb"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.19.0+master-product-catalog"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
+app.use("/api/platform/master-catalog",masterCatalogRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/license",licenseRoutes);
@@ -46,6 +49,7 @@ app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 app.use((err,req,res,next)=>{
   console.error(err);
   if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});
+  if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});
   res.status(500).json({error:"Παρουσιάστηκε εσωτερικό σφάλμα."});
 });
 
@@ -63,9 +67,10 @@ try{
   await ensureCommercialSchema();
   await ensureExtendedModulesSchema();
   await ensureCommerceCompatibility();
+  await ensureMasterCatalogSchema();
 }catch(error){
   console.error("Platform/commercial schema bootstrap failed.",error);
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.18.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.19.0 on port ${process.env.PORT||8080}`));
