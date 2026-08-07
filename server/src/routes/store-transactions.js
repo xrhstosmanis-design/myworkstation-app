@@ -51,6 +51,10 @@ const tableStatements=[
     "amount" NUMERIC(14,2) NOT NULL,
     "description" TEXT,
     "supplierName" TEXT,
+    "attachmentData" TEXT,
+    "attachmentMimeType" TEXT,
+    "attachmentFilename" TEXT,
+    "attachmentChecksum" TEXT,
     "actorId" TEXT NOT NULL,
     "actorName" TEXT NOT NULL,
     "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -63,7 +67,11 @@ const tableStatements=[
   `CREATE INDEX IF NOT EXISTS "StoreTransaction_store_occurred_idx"
    ON "StoreTransaction" ("storeId","occurredAt" DESC)`,
   `CREATE INDEX IF NOT EXISTS "StoreTransaction_session_idx"
-   ON "StoreTransaction" ("sessionId","occurredAt" DESC)`
+   ON "StoreTransaction" ("sessionId","occurredAt" DESC)`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentData" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
 ];
 
 async function ensureTables(){
@@ -129,8 +137,18 @@ const transactionSchema=z.object({
   type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","CASH_TRANSFER"]),
   amount:z.coerce.number().finite().positive().max(999999999),
   description:z.string().trim().max(500).optional().nullable(),
-  supplierName:z.string().trim().max(180).optional().nullable()
+  supplierName:z.string().trim().max(180).optional().nullable(),
+  attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
 });
+
+function parseAttachment(attachment){
+  if(!attachment)return null;
+  const match=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(attachment.dataUrl);
+  if(!match){const error=new Error("Η φωτογραφία πρέπει να είναι JPEG, PNG ή WEBP.");error.status=400;throw error}
+  const bytes=Buffer.from(match[2],"base64");
+  if(bytes.length<100||bytes.length>1200000){const error=new Error("Η φωτογραφία πρέπει να είναι έως 1,2 MB.");error.status=400;throw error}
+  return {dataUrl:attachment.dataUrl,mimeType:match[1],filename:attachment.filename,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
+}
 
 router.use(auth,requireLedgerAccess);
 
@@ -145,8 +163,10 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const openSession=openRows[0]||null;
   const recentRows=await prisma.$queryRaw`
-    SELECT * FROM "StoreTransaction"
+    SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
+           ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+      AND (${req.user.tokenType!=="STORE_OPERATOR"} OR "actorId"=${req.user.id})
     ORDER BY "occurredAt" DESC LIMIT 80
   `;
   const recent=recentRows.map(normalize);
@@ -166,6 +186,9 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   if(body.type==="SUPPLIER_PAYMENT"&&!body.supplierName){
     return res.status(400).json({error:"Γράψε τον προμηθευτή της πληρωμής."});
   }
+  const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
+  if(needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
+  const attachment=parseAttachment(body.attachment);
   const openRows=await prisma.$queryRaw`
     SELECT "id" FROM "CashShiftSession"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN'
@@ -176,13 +199,26 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "StoreTransaction" (
-      "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName"
+      "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
     ) VALUES (
       ${crypto.randomUUID()},${req.user.companyId},${store.id},${session.id},${body.type},${body.amount},
-      ${body.description||null},${body.supplierName||null},${req.user.id},${actorName}
+      ${body.description||null},${body.supplierName||null},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
     ) RETURNING *
   `;
   res.status(201).json(normalize(rows[0]));
+}));
+
+router.get("/:transactionId/attachment",route(async(req,res)=>{
+  const rows=await prisma.$queryRaw`
+    SELECT "storeId","actorId","attachmentData","attachmentMimeType","attachmentFilename"
+    FROM "StoreTransaction" WHERE "id"=${req.params.transactionId} AND "companyId"=${req.user.companyId} LIMIT 1
+  `;
+  const row=rows[0];
+  if(!row)return res.status(404).json({error:"Δεν βρέθηκε συναλλαγή."});
+  assertStoreAccess(req,row.storeId);
+  if(req.user.tokenType==="STORE_OPERATOR"&&row.actorId!==req.user.id)return res.status(403).json({error:"Μπορείς να δεις μόνο τα δικά σου παραστατικά."});
+  if(!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει φωτογραφία παραστατικού."});
+  res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename});
 }));
 
 router.post("/:transactionId/reverse",route(async(req,res)=>{

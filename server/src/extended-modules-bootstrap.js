@@ -10,6 +10,9 @@ const statements=[
   "method" TEXT NOT NULL DEFAULT 'PIN',
   "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "note" TEXT,
+  "responsibleName" TEXT,
+  "createdByUserId" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "AttendanceEvent_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "AttendanceEvent_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -87,6 +90,9 @@ const statements=[
   CONSTRAINT "DocumentInbox_attachmentId_fkey" FOREIGN KEY ("attachmentId") REFERENCES "DocumentAttachment"("id") ON DELETE SET NULL ON UPDATE CASCADE
 )`,
 `CREATE INDEX IF NOT EXISTS "DocumentInbox_company_status_idx" ON "DocumentInbox"("companyId","status")`,
+`ALTER TABLE "DocumentInbox" ADD COLUMN IF NOT EXISTS "responsibleName" TEXT`,
+`ALTER TABLE "DocumentInbox" ADD COLUMN IF NOT EXISTS "createdByUserId" TEXT`,
+`ALTER TABLE "DocumentInbox" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`,
 
 `CREATE TABLE IF NOT EXISTS "ConnectorDevice" (
   "id" TEXT NOT NULL,

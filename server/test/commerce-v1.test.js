@@ -11,10 +11,10 @@ test("Commerce V1 sale route is explicitly non fiscal",async()=>{
 });
 
 test("Commerce V1 ready modules are activatable while technical modules stay locked",()=>{
-  for(const key of ["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER"]){
+  for(const key of ["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","AI_READER"]){
     assert.equal(moduleCatalog.find(m=>m.key===key)?.commercialReady,true,`${key} must be pilot-ready`);
   }
-  for(const key of ["AI_READER","CONNECTOR_RBS","REMOTE_SUPPORT"]){
+  for(const key of ["CONNECTOR_RBS","REMOTE_SUPPORT"]){
     assert.equal(moduleCatalog.find(m=>m.key===key)?.commercialReady,false,`${key} must remain locked`);
   }
 });

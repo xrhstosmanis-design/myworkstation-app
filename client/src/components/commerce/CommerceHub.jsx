@@ -1,5 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BarChart3,Boxes,ClipboardCheck,FileScan,LockKeyhole,PackagePlus,RefreshCw,ShoppingCart} from "lucide-react";
+import {BarChart3,Boxes,ClipboardCheck,FileScan,Files,LockKeyhole,PackagePlus,RefreshCw,ShoppingCart} from "lucide-react";
+import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
+import AiReaderPanel from "./AiReaderPanel.jsx";
 import "./commerce-hub.css";
 
 const money=value=>`${Number(value||0).toFixed(2)} €`;
@@ -126,6 +128,7 @@ export default function CommerceHub({api,stores=[]}){
         <button disabled={!active.has("POS")} className={`${tab==="pos"?"active":""} ${!active.has("POS")?"locked":""}`} onClick={()=>setTab("pos")}><ShoppingCart/> POS</button>
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
+        <button disabled={!active.has("DOCUMENTS")} className={`${tab==="documents"?"active":""} ${!active.has("DOCUMENTS")?"locked":""}`} onClick={()=>setTab("documents")}><Files/> Θυρίδα Τιμολογίων</button>
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> AI Reader</button>
       </div>
       <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -145,6 +148,8 @@ export default function CommerceHub({api,stores=[]}){
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 
-    {tab==="ai"&&aiStatus&&<section className="commerce-box"><h3>AI Reader — workflow δύο σταδίων</h3><p>Πρώτα εμφανίζονται πρόχειρα αποτελέσματα χωρίς AI μαζί με confidence. Αν το confidence είναι πάνω από <b>{aiStatus.localConfidenceThreshold}%</b>, δεν καλείται αυτόματα AI.</p><p>Η κλήση AI θα γίνεται μόνο όταν ο χρήστης πατήσει <b>«Επανέλεγχος με AI»</b>.</p><div className="commerce-notice">{aiStatus.message}</div><p>Πρόχειρα παραστατικά σε αναμονή: <b>{aiStatus.drafts}</b></p></section>}
+    {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores}/>}
+
+    {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi}/>}
   </div>;
 }
