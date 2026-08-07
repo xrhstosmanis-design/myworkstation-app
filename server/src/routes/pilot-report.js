@@ -82,7 +82,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
 
   const sessions=sessionsRaw.map(row=>normalizeMoney(row,[
     "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational",
-    "cashSales","cardSales","expenses","closingDrawer","closingCustody","closingCoins",
+    "cashSales","cardSales","eftposTotal","cardVariance","expenses","closingDrawer","closingCustody","closingCoins",
     "closingSafe","expectedOperational","actualOperational","variance","nextOpeningTotal"
   ]));
   const transactions=transactionsRaw.map(row=>normalizeMoney(row,["amount"]));
@@ -106,6 +106,8 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
     reversedCount:transactions.length-activeTransactions.length,
     sessionsOpened:sessions.length,
     sessionsClosed:closed.length,
+    eftposTotal:closed.reduce((sum,row)=>sum+Number(row.eftposTotal||0),0),
+    cardVarianceTotal:closed.reduce((sum,row)=>sum+Number(row.cardVariance||0),0),
     varianceTotal:closed.reduce((sum,row)=>sum+Number(row.variance||0),0),
     operators
   };

@@ -29,10 +29,11 @@ export default function PilotDailyReport({api,store}){
       ["ΣΥΝΟΨΗ"],["Πωλήσεις μετρητών",data.summary.cashSales],["Πωλήσεις καρτών",data.summary.cardSales],
       ["Πληρωμές προμηθευτών",data.summary.supplierPayments],["Λοιπά έξοδα",data.summary.otherExpenses],
       ["Σύνολο εξόδων",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
-      ["Συνολική διαφορά",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
+      ["EFTPOS",data.summary.eftposTotal],["Διαφορά καρτών–EFTPOS",data.summary.cardVarianceTotal],
+      ["Συνολική διαφορά ταμείων",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
       ["Ακυρωμένες συναλλαγές",data.summary.reversedCount],[],
-      ["ΒΑΡΔΙΕΣ"],["Βάρδια","Άνοιγμα","Άνοιξε","Κλείσιμο","Έκλεισε","Έναρξη","Μετρητά","Κάρτες","Έξοδα","Πραγματικό","Διαφορά"],
-      ...data.sessions.map(row=>[row.shiftLabel,when(row.openedAt),row.openedByName||"",when(row.closedAt),row.closedByName||"",row.openingOperational,row.cashSales,row.cardSales,row.expenses,row.actualOperational,row.variance]),[],
+      ["ΒΑΡΔΙΕΣ"],["Βάρδια","Άνοιγμα","Άνοιξε","Κλείσιμο","Έκλεισε","Έναρξη","Μετρητά","Κάρτες","EFTPOS","Διαφορά καρτών–EFTPOS","Έξοδα","Πραγματικό","Διαφορά ταμείου"],
+      ...data.sessions.map(row=>[row.shiftLabel,when(row.openedAt),row.openedByName||"",when(row.closedAt),row.closedByName||"",row.openingOperational,row.cashSales,row.cardSales,row.eftposTotal,row.cardVariance,row.expenses,row.actualOperational,row.variance]),[],
       ["ΣΥΝΑΛΛΑΓΕΣ"],["Ώρα","Τύπος","Ποσό","Περιγραφή","Προμηθευτής","Εργαζόμενος","Κατάσταση"],
       ...data.transactions.map(row=>[when(row.occurredAt),typeLabels[row.type]||row.type,row.amount,row.description||"",row.supplierName||"",row.actorName,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"])
     ];
@@ -53,6 +54,8 @@ export default function PilotDailyReport({api,store}){
       <div className="pilot-report-metrics">
         <article><span>Μετρητά</span><strong>{money(summary.cashSales)}</strong></article>
         <article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article>
+        <article><span>EFTPOS</span><strong>{money(summary.eftposTotal)}</strong></article>
+        <article><span>Κάρτες − EFTPOS</span><strong className={Math.abs(Number(summary.cardVarianceTotal||0))>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
         <article><span>Έξοδα</span><strong>{money(summary.expensesTotal)}</strong></article>
         <article><span>Διαφορά</span><strong className={Number(summary.varianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.varianceTotal)}</strong></article>
         <article><span>Βάρδιες</span><strong>{summary.sessionsClosed||0}/{summary.sessionsOpened||0}</strong></article>
@@ -60,7 +63,7 @@ export default function PilotDailyReport({api,store}){
       </div>
       <div className="pilot-operators"><UsersRound/><div><b>Εργαζόμενοι ημέρας</b><span>{operators.length?operators.join(" · "):"Δεν υπάρχουν καταχωρίσεις"}</span></div></div>
       <div className="pilot-report-grid">
-        <section><h4>Βάρδιες</h4>{(data?.sessions||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν βάρδιες για την ημερομηνία.</div>:data.sessions.map(row=><div className="pilot-session-row" key={row.id}><div><b>{row.shiftLabel}</b><small>{when(row.openedAt)} {row.openedByName?`· ${row.openedByName}`:""}</small></div><span>{row.status==="CLOSED"?"ΚΛΕΙΣΤΗ":"ΑΝΟΙΧΤΗ"}</span><div><small>Μετρητά / Κάρτες</small><b>{money(row.cashSales)} / {money(row.cardSales)}</b></div><div><small>Διαφορά</small><b className={Number(row.variance)<0?"pilot-negative":"pilot-positive"}>{row.status==="CLOSED"?money(row.variance):"—"}</b></div></div>)}</section>
+        <section><h4>Βάρδιες</h4>{(data?.sessions||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν βάρδιες για την ημερομηνία.</div>:data.sessions.map(row=><div className="pilot-session-row" key={row.id}><div><b>{row.shiftLabel}</b><small>{when(row.openedAt)} {row.openedByName?`· ${row.openedByName}`:""}</small></div><span>{row.status==="CLOSED"?"ΚΛΕΙΣΤΗ":"ΑΝΟΙΧΤΗ"}</span><div><small>Μετρητά / Κάρτες / EFTPOS</small><b>{money(row.cashSales)} / {money(row.cardSales)} / {row.status==="CLOSED"?money(row.eftposTotal):"—"}</b></div><div><small>Ταμείο / Κάρτες−EFTPOS</small><b className={Number(row.variance)<0?"pilot-negative":"pilot-positive"}>{row.status==="CLOSED"?`${money(row.variance)} / ${money(row.cardVariance)}`:"—"}</b></div></div>)}</section>
         <section><h4>Τελευταίες συναλλαγές</h4>{(data?.transactions||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν συναλλαγές για την ημερομηνία.</div>:data.transactions.slice().reverse().slice(0,20).map(row=><div className={`pilot-transaction-row ${row.reversedAt?"reversed":""}`} key={row.id}><div><b>{typeLabels[row.type]||row.type}</b><small>{when(row.occurredAt)} · {row.actorName}</small></div><strong>{money(row.amount)}</strong><span>{row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"}</span></div>)}</section>
       </div>
     </>}
