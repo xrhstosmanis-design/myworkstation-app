@@ -20,6 +20,7 @@ import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from
 import licenseRoutes from "./routes/license.js";
 import { auth } from "./middleware/auth.js";
 import { commerceTenantGuard } from "./middleware/commerce-tenant-guard.js";
+import { requireOwnerProductAccess } from "./middleware/owner-product-access.js";
 import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
@@ -47,7 +48,7 @@ app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTrans
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
-app.use("/api/owner-products",auth,ownerProductRoutes);
+app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 
