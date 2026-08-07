@@ -20,6 +20,10 @@ test("store operators only receive and open their own transactions",()=>{
   assert.match(route,/Μπορείς να δεις μόνο τα δικά σου παραστατικά/);
 });
 
+test("my transactions query reads from the protected ledger table",()=>{
+  assert.match(route,/SELECT "id","companyId","storeId"[\s\S]*FROM "StoreTransaction"[\s\S]*"actorId"=\$\{req\.user\.id\}/);
+});
+
 test("store UI exposes camera capture and my payments",()=>{
   assert.match(client,/capture="environment"/);
   assert.match(client,/Οι πληρωμές και συναλλαγές μου/);

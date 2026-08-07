@@ -165,6 +165,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   const recentRows=await prisma.$queryRaw`
     SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
            ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename"
+    FROM "StoreTransaction"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
       AND (${req.user.tokenType!=="STORE_OPERATOR"} OR "actorId"=${req.user.id})
     ORDER BY "occurredAt" DESC LIMIT 80
