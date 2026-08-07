@@ -1,6 +1,8 @@
 import {prisma} from "./prisma.js";
 
 const statements=[
+`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatVerified" BOOLEAN NOT NULL DEFAULT false`,
+
 `CREATE TABLE IF NOT EXISTS "ProductPriceHistory" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
