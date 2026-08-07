@@ -191,6 +191,15 @@ router.post("/customers",requireCompanyModule("POS"),async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/pos-layout",requireCompanyModule("POS"),async(req,res,next)=>{
+  try{
+    const store=await ownedStore(req.user.companyId,String(req.query.storeId||""));
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    const rows=await prisma.$queryRaw`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    res.json(rows[0]||{layoutJson:{title:"POS",productColumns:4,showSku:true,buttons:[{id:"cash",label:"Μετρητά",action:"CASH",color:"#0f766e",visible:true},{id:"card",label:"Κάρτα",action:"CARD",color:"#1677bd",visible:true}]},version:0,publishedAt:null});
+  }catch(error){next(error)}
+});
+
 router.post("/sales",requireCompanyModule("POS"),async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string(),operatorEmployeeId:z.string().optional().nullable(),customerId:z.string().optional().nullable(),discount:z.coerce.number().min(0).optional(),lines:z.array(z.object({productId:z.string().optional().nullable(),description:z.string().min(1).max(250),quantity:z.coerce.number().positive(),unitPrice:z.coerce.number().min(0),vatRate:z.coerce.number().min(0).max(100).optional(),discount:z.coerce.number().min(0).optional()})).min(1).max(200),payments:z.array(z.object({method:z.enum(["CASH","CARD","CREDIT","OTHER"]),amount:z.coerce.number().positive(),terminalRef:z.string().max(100).optional().nullable()})).min(1).max(10)}).parse(req.body||{});

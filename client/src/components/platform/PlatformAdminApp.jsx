@@ -1,7 +1,8 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {Building2,CalendarDays,ExternalLink,KeyRound,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {Building2,CalendarDays,ExternalLink,KeyRound,LayoutTemplate,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
+import PosDesignerPanel from "./PosDesignerPanel.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 
@@ -33,6 +34,7 @@ export default function PlatformAdminApp(){
   const [message,setMessage]=useState("");
   const [showNew,setShowNew]=useState(false);
   const [showSecurity,setShowSecurity]=useState(false);
+  const [showPosDesigner,setShowPosDesigner]=useState(false);
   const [ownerCompany,setOwnerCompany]=useState(null);
   const [resetCompany,setResetCompany]=useState(null);
   const [storeCompany,setStoreCompany]=useState(null);
@@ -138,7 +140,7 @@ export default function PlatformAdminApp(){
       <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><a href="/"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
-      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
+      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       <div className="platform-stats">
@@ -167,6 +169,7 @@ export default function PlatformAdminApp(){
     </main>
 
     {showSecurity&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setShowSecurity(false)}><X/></button><h2>Ασφάλεια Platform Admin</h2><p>Έλεγχος δύο βημάτων, συνδεδεμένες συσκευές και ιστορικό εισόδων.</p><PlatformSecurityPanel request={request} onCurrentRevoked={()=>clearSession()}/></section></div>}
+    {showPosDesigner&&<PosDesignerPanel request={request} onClose={()=>setShowPosDesigner(false)}/>}
 
     {showNew&&<div className="platform-modal"><form onSubmit={createCompany}><button type="button" className="modal-close" onClick={()=>setShowNew(false)}><X/></button><h2>Νέος εμπορικός πελάτης</h2><p>Δημιουργούνται εταιρεία, ιδιοκτήτης και πρώτο κατάστημα.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId"/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><div></div><label>Ονοματεπώνυμο ιδιοκτήτη<input name="ownerFullName" required/></label><label>Email ιδιοκτήτη<input name="ownerEmail" type="email" required/></label><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required/></label><div></div><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setShowNew(false)}>Ακύρωση</button><button disabled={busy==="create"}>{busy==="create"?"Δημιουργία…":"Δημιουργία πελάτη"}</button></div></form></div>}
 

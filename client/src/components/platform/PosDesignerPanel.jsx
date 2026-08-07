@@ -1,0 +1,53 @@
+import React,{useEffect,useMemo,useState} from "react";
+import {ArrowDown,ArrowUp,Eye,Palette,Plus,Save,Send,Trash2,X} from "lucide-react";
+import "./pos-designer.css";
+
+const actions=[
+  ["CASH","Μετρητά"],["CARD","Κάρτα"],["IRIS","IRIS"],["MIXED","Μικτή πληρωμή"],["CLEAR_CART","Ακύρωση / καθαρισμός"],
+  ["PRINT","Εκτύπωση"],["HOLD","Αναμονή"],["PAYMENTS","Πληρωμές"],["INTERNAL","Εσωτερική"],["WASTE","Κουβάς / φύρα"]
+];
+const colors=["#1597a5","#287e9e","#4f8fbe","#dc7a27","#3978b8","#9aa82f","#9a5353","#76558e"];
+const normalize=value=>({
+  title:value?.title||"OPERATOR POS",productColumns:Number(value?.productColumns||6),showSku:value?.showSku!==false,
+  theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff",...(value?.theme||{})},
+  quickKeys:value?.quickKeys||[],categories:value?.categories||[],buttons:value?.buttons||[]
+});
+const makeButton=(kind,index)=>kind==="buttons"
+  ?{id:`action-${Date.now()}`,label:"ΝΕΟ ΚΟΥΜΠΙ",action:"PAYMENTS",color:"#475569",visible:true}
+  :{id:`${kind}-${Date.now()}`,label:kind==="quickKeys"?"ΝΕΟ ΠΡΟΪΟΝ":"ΝΕΑ ΚΑΤΗΓΟΡΙΑ",[kind==="quickKeys"?"productQuery":"categoryName"]:"",color:colors[index%colors.length],visible:true};
+
+export default function PosDesignerPanel({request,onClose}){
+  const [data,setData]=useState(null),[layout,setLayout]=useState(null),[section,setSection]=useState("quickKeys"),[selected,setSelected]=useState(new Set()),[busy,setBusy]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");
+  const load=async()=>{setError("");try{const result=await request("/api/platform/pos-designer");setData(result);setLayout(normalize(result.draft))}catch(err){setError(err.message)}};
+  useEffect(()=>{load()},[]);
+  const stores=useMemo(()=>(data?.companies||[]).flatMap(company=>company.stores.map(store=>({...store,companyName:company.name,published:(data?.published||[]).find(row=>row.storeId===store.id)}))),[data]);
+  const rows=layout?.[section]||[];
+  const update=(id,patch)=>setLayout(current=>({...current,[section]:current[section].map(button=>button.id===id?{...button,...patch}:button)}));
+  const move=(index,delta)=>setLayout(current=>{const list=[...current[section]],next=index+delta;if(next<0||next>=list.length)return current;[list[index],list[next]]=[list[next],list[index]];return {...current,[section]:list}});
+  const save=async()=>{setBusy("save");setError("");setMessage("");try{const result=await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(layout)});setMessage(`Το πρόχειρο αποθηκεύτηκε ως έκδοση ${result.draftVersion}. Δεν άλλαξε κανένα κατάστημα.`);await load()}catch(err){setError(err.message)}finally{setBusy("")}};
+  const publish=async()=>{if(!selected.size)return setError("Επίλεξε τουλάχιστον ένα κατάστημα.");setBusy("publish");setError("");setMessage("");try{await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(layout)});const result=await request("/api/platform/pos-designer/publish",{method:"POST",body:JSON.stringify({storeIds:[...selected]})});setMessage(`Η εγκεκριμένη μορφή POS δημοσιεύτηκε σε ${result.publishedStores} καταστήματα.`);setSelected(new Set());await load()}catch(err){setError(err.message)}finally{setBusy("")}};
+  if(!layout)return <div className="pos-designer-overlay"><section className="pos-designer-shell"><button className="pos-designer-close" onClick={onClose}><X/></button><p>{error||"Φόρτωση σχεδιαστή POS…"}</p></section></div>;
+  return <div className="pos-designer-overlay"><section className="pos-designer-shell">
+    <button className="pos-designer-close" onClick={onClose} aria-label="Κλείσιμο"><X/></button>
+    <header><div><span>SUPER ADMIN POS DESIGNER</span><h2><Palette/>Σχεδιαστής πραγματικού POS</h2><p>Οι αλλαγές παραμένουν πρόχειρες. Τίποτα δεν αλλάζει στα καταστήματα πριν πατήσεις «Δημοσίευση».</p></div><div><button onClick={save} disabled={busy}><Save/>Αποθήκευση πρόχειρου</button><button className="publish" onClick={publish} disabled={busy||!selected.size}><Send/>Δημοσίευση ({selected.size})</button></div></header>
+    {error&&<div className="pos-designer-alert error">{error}</div>}{message&&<div className="pos-designer-alert success">{message}</div>}
+    <div className="pos-designer-workspace">
+      <section className="pos-designer-controls">
+        <h3>Γενικές ρυθμίσεις</h3>
+        <div className="designer-settings"><label>Τίτλος POS<input value={layout.title} onChange={e=>setLayout({...layout,title:e.target.value})}/></label><label>Στήλες κατηγοριών<select value={layout.productColumns} onChange={e=>setLayout({...layout,productColumns:Number(e.target.value)})}>{[4,5,6,7,8].map(value=><option key={value}>{value}</option>)}</select></label><label>Χρώμα κεφαλίδας<input type="color" value={layout.theme.headerColor} onChange={e=>setLayout({...layout,theme:{...layout.theme,headerColor:e.target.value}})}/></label><label>Κύριο χρώμα<input type="color" value={layout.theme.accentColor} onChange={e=>setLayout({...layout,theme:{...layout.theme,accentColor:e.target.value}})}/></label><label className="toggle"><input type="checkbox" checked={layout.showSku} onChange={e=>setLayout({...layout,showSku:e.target.checked})}/>Εμφάνιση SKU</label></div>
+        <nav className="designer-tabs"><button className={section==="quickKeys"?"active":""} onClick={()=>setSection("quickKeys")}>Γρήγορα προϊόντα ({layout.quickKeys.length})</button><button className={section==="categories"?"active":""} onClick={()=>setSection("categories")}>Κατηγορίες ({layout.categories.length})</button><button className={section==="buttons"?"active":""} onClick={()=>setSection("buttons")}>Κάτω πλήκτρα ({layout.buttons.length})</button></nav>
+        <div className="pos-button-title"><h3>{section==="quickKeys"?"Γρήγορες θέσεις":section==="categories"?"Πλήκτρα κατηγοριών":"Ενέργειες και πληρωμές"}</h3><button onClick={()=>setLayout({...layout,[section]:[...rows,makeButton(section,rows.length)]})}><Plus/>Προσθήκη</button></div>
+        <div className="pos-button-editor">{rows.map((button,index)=><article key={button.id}><div className="move"><button onClick={()=>move(index,-1)}><ArrowUp/></button><button onClick={()=>move(index,1)}><ArrowDown/></button></div><input value={button.label} onChange={e=>update(button.id,{label:e.target.value})}/>{section==="buttons"?<select value={button.action} onChange={e=>update(button.id,{action:e.target.value})}>{actions.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>:<input placeholder={section==="quickKeys"?"Όνομα/SKU προϊόντος":"Ακριβές όνομα κατηγορίας"} value={button[section==="quickKeys"?"productQuery":"categoryName"]||""} onChange={e=>update(button.id,{[section==="quickKeys"?"productQuery":"categoryName"]:e.target.value})}/>}<input type="color" value={button.color} onChange={e=>update(button.id,{color:e.target.value})}/><label><input type="checkbox" checked={button.visible} onChange={e=>update(button.id,{visible:e.target.checked})}/>Ορατό</label><button className="delete" onClick={()=>setLayout({...layout,[section]:rows.filter(row=>row.id!==button.id)})}><Trash2/></button></article>)}</div>
+      </section>
+      <section className="pos-designer-preview"><h3><Eye/>Ζωντανή προεπισκόπηση — πραγματική διάταξη καταστήματος</h3><div className="operator-pos-preview" style={{"--preview-head":layout.theme.headerColor,"--preview-accent":layout.theme.accentColor,"--preview-surface":layout.theme.surfaceColor}}>
+        <div className="operator-preview-head"><b>MW</b><span>MyWorkStation · GO LIVE KAT<strong>{layout.title}</strong></span><input placeholder="Barcode ή αναζήτηση προϊόντος"/><button>⌕</button><small>Χρήστης Μάνης<br/>Ταμείο ανοικτό</small></div>
+        <aside className="operator-quick"><header><b>ΓΡΗΓΟΡΑ</b><small>{layout.quickKeys.filter(x=>x.visible).length} θέσεις</small></header>{layout.quickKeys.filter(x=>x.visible).slice(0,16).map((button,index)=><button key={button.id} style={{background:button.color}}><i>{index+1}</i>{button.label}</button>)}</aside>
+        <main className="operator-sale"><div className="operator-table-head"><span>ΠΟΣ.</span><span>ΕΙΔΟΣ</span><span>STOCK</span><span>ΤΙΜΗ</span><span>ΣΥΝΟΛΟ</span></div><div className="operator-empty">🛒<b>Νέα συναλλαγή</b><small>Πάτησε προϊόν ή σκάναρε barcode</small></div><div className="operator-category-head"><b>ΚΑΤΗΓΟΡΙΕΣ</b><span>ΒΑΣΙΚΗ ΟΘΟΝΗ</span></div><div className="operator-categories" style={{gridTemplateColumns:`repeat(${layout.productColumns},1fr)`}}>{layout.categories.filter(x=>x.visible).slice(0,24).map((button,index)=><button key={button.id} style={{background:button.color}}><i>{index+1}</i>{button.label}</button>)}</div></main>
+        <aside className="operator-keypad"><label>ΠΕΛΑΤΗΣ — Πελάτης λιανικής</label><div className="operator-money"><span>ΕΛΑΒΑ<b>0,00 €</b></span><span>ΡΕΣΤΑ<b>0,00 €</b></span></div><div className="operator-numbers">{[7,8,9,4,5,6,1,2,3,0,",","⌫"].map(value=><button key={value}>{value}</button>)}</div><button className="operator-clear">ΚΑΘΑΡΙΣΜΟΣ ΠΟΣΟΥ</button></aside>
+        <footer>{layout.buttons.filter(x=>x.visible).map(button=><button key={button.id} style={{background:button.color,color:["#ffffff","#fff"].includes(button.color.toLowerCase())?"#173f34":"#fff"}}>{button.label}</button>)}<strong>ΣΥΝΟΛΟ<br/><b>0,00 €</b></strong></footer>
+      </div>
+        <h3>Δημοσίευση σε καταστήματα</h3><p className="publish-help">Επίλεξε μόνο τα καταστήματα που πρέπει να πάρουν αυτή την έκδοση. Η προεπισκόπηση από μόνη της δεν αλλάζει τίποτα.</p><div className="store-select-actions"><button onClick={()=>setSelected(new Set(stores.map(store=>store.id)))}>Επιλογή όλων</button><button onClick={()=>setSelected(new Set())}>Καθαρισμός</button></div><div className="pos-store-list">{stores.map(store=><label key={store.id}><input type="checkbox" checked={selected.has(store.id)} onChange={e=>setSelected(current=>{const next=new Set(current);e.target.checked?next.add(store.id):next.delete(store.id);return next})}/><span><b>{store.name}</b><small>{store.companyName}{store.city?` · ${store.city}`:""}</small></span><em>{store.published?`Δημοσιευμένη έκδοση ${store.published.version}`:"Χωρίς δημοσίευση"}</em></label>)}</div>
+      </section>
+    </div>
+  </section></div>;
+}
