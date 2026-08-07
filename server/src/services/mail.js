@@ -107,3 +107,18 @@ export async function sendCashShiftClosedEmail({to,storeName,session}){
   const html=`<div style="font-family:Arial,sans-serif;max-width:680px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table><h3>Έλεγχος διπλών συναλλαγών</h3><pre style="white-space:pre-wrap;background:#f5f7fa;padding:12px">${escapeHtml(duplicateText)}</pre>${session.closingNote?`<p><strong>Σημείωση:</strong> ${escapeHtml(session.closingNote)}</p>`:""}<p style="color:#64748b">Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
   return sendEmail({to,subject,text,html});
 }
+
+export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,occurredAt,description,reason,originalType}){
+  const at=occurredAt?new Date(occurredAt):new Date();
+  const isReversal=kind==="REVERSAL";
+  const title=isReversal?"Αντιλογισμός συναλλαγής":"Καταχώριση ποσοστών";
+  const subject=`ΕΙΔΟΠΟΙΗΣΗ · ${title} · ${storeName}`;
+  const rows=[["Ενέργεια",title],["Κατάστημα",storeName],["Ημερομηνία / ώρα",at.toLocaleString("el-GR")],["Ποσό",eur(amount)],["Χρήστης",actorName||"—"]];
+  if(isReversal&&originalType)rows.push(["Αρχικός τύπος",originalType]);
+  if(description)rows.push(["Περιγραφή",description]);
+  if(reason)rows.push(["Αιτιολογία αντιλογισμού",reason]);
+  const text=[subject,"",...rows.map(([label,value])=>`${label}: ${value}`),"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");
+  const htmlRows=rows.map(([label,value])=>`<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
+  const html=`<div style="font-family:Arial,sans-serif;max-width:680px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table><p style="color:#64748b">Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
+  return sendEmail({to,subject,text,html});
+}
