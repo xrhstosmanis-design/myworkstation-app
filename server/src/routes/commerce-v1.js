@@ -243,4 +243,24 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   try{const rows=await prisma.$queryRaw`SELECT "id" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});res.status(409).json({error:"Ο AI provider δεν έχει συνδεθεί ακόμη. Δεν έγινε καμία χρέωση ούτε αυτόματη κλήση AI."})}catch(error){next(error)}
 });
 
+router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const line=z.object({productId:z.string(),description:z.string().trim().min(1).max(250),quantity:z.coerce.number().positive(),unit:z.enum(["PIECE","PACKAGE"]),unitsPerPackage:z.coerce.number().positive().max(100000),unitCost:z.coerce.number().min(0),vatRate:z.coerce.number().min(0).max(100)});
+    const body=z.object({supplierId:z.string(),documentNumber:z.string().trim().max(80).optional().nullable(),documentDate:z.coerce.date().optional(),lines:z.array(line).min(1).max(500)}).parse(req.body||{});
+    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});if(job.status==="CONFIRMED")return res.status(409).json({error:"Η ανάγνωση έχει ήδη επιβεβαιωθεί και δεν θα ξαναενημερώσει την αποθήκη."});
+    const supplier=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    const productIds=[...new Set(body.lines.map(item=>item.productId))];const products=await prisma.$queryRaw`SELECT "id","trackStock" FROM "Product" WHERE "companyId"=${req.user.companyId} AND "active"=true AND "id"=ANY(${productIds}::text[])`;if(products.length!==productIds.length)return res.status(404).json({error:"Ένα ή περισσότερα προϊόντα δεν ανήκουν στην εταιρεία."});
+    const tracked=new Map(products.map(product=>[product.id,product.trackStock]));const docId=id();
+    const totals=body.lines.reduce((sum,item)=>{const net=item.quantity*item.unitCost;const vat=net*item.vatRate/100;return {net:sum.net+net,vat:sum.vat+vat,gross:sum.gross+net+vat}},{net:0,vat:0,gross:0});
+    await prisma.$transaction(async tx=>{
+      const locked=await tx.$queryRaw`SELECT "status" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;if(locked[0]?.status==="CONFIRMED"){const error=new Error("Η ανάγνωση έχει ήδη επιβεβαιωθεί.");error.status=409;throw error}
+      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId") VALUES (${docId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber||null},${body.documentDate||new Date()},${totals.net},${totals.vat},${totals.gross},'OCR_DRAFT','APPROVED',${req.user.id})`;
+      for(const item of body.lines){const net=item.quantity*item.unitCost,vat=net*item.vatRate/100,stockQuantity=item.unit==="PACKAGE"?item.quantity*item.unitsPerPackage:item.quantity;await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;if(tracked.get(item.productId)){const perPieceCost=item.unit==="PACKAGE"?item.unitCost/item.unitsPerPackage:item.unitCost;await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${job.storeId},${item.productId},${stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${stockQuantity},"updatedAt"=CURRENT_TIMESTAMP`;await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${job.storeId},${item.productId},'PURCHASE',${stockQuantity},${perPieceCost},'AI_READER_CONFIRM',${docId},'Επιβεβαιωμένη παραλαβή από τοπικό OCR',${req.user.id})`;}}
+      await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='CONFIRMED',"purchaseDocumentId"=${docId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
+    });
+    res.status(201).json({id:docId,status:"APPROVED",stockUpdated:true,...totals});
+  }catch(error){next(error)}
+});
+
 export default router;

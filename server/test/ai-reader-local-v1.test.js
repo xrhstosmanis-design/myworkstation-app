@@ -25,3 +25,19 @@ test("reader retains OCR lines and confidence",()=>{
   assert.match(panel,/Μη αναγνωρίσιμο/);
   assert.match(catalog,/key:"AI_READER"[\s\S]*commercialReady:true/);
 });
+
+test("confirmation is atomic, tenant guarded and cannot update stock twice",()=>{
+  assert.match(route,/\/ai-reader\/jobs\/:jobId\/confirm/);
+  assert.match(route,/requireCompanyModule\("AI_READER"\),requireCompanyModule\("INVENTORY"\)/);
+  assert.match(route,/FOR UPDATE/);
+  assert.match(route,/status==="CONFIRMED"/);
+  assert.match(route,/movementType","quantity"[\s\S]*'PURCHASE'/);
+  assert.match(route,/AI_READER_CONFIRM/);
+});
+
+test("review UI requires explicit product lines and shows package conversion",()=>{
+  assert.match(panel,/Τσέκαρε μόνο τις πραγματικές γραμμές προϊόντων/);
+  assert.match(panel,/Τεμ\.\/κιβώτιο/);
+  assert.match(panel,/Στην αποθήκη:/);
+  assert.match(panel,/Επιβεβαίωση παραστατικού & ενημέρωση αποθήκης/);
+});

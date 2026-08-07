@@ -69,6 +69,11 @@ export async function commerceTenantGuard(req,res,next){
       if(body.supplierId&&!await rawExists("Supplier",companyId,body.supplierId))return bad(res,"ο προμηθευτής παραστατικού");
     }
 
+    if(/^\/ai-reader\/jobs\/[^/]+\/confirm$/.test(path)&&req.method==="POST"){
+      if(body.supplierId&&!await rawExists("Supplier",companyId,body.supplierId))return bad(res,"ο προμηθευτής OCR");
+      for(const line of Array.isArray(body.lines)?body.lines:[]){if(line?.productId&&!await rawExists("Product",companyId,line.productId))return bad(res,"το προϊόν OCR")}
+    }
+
     next();
   }catch(error){next(error)}
 }
