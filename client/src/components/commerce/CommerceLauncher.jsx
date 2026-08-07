@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from "react";
-import {BriefcaseBusiness,X} from "lucide-react";
+import {BriefcaseBusiness,Boxes,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
+import OwnerProductCenter from "./OwnerProductCenter.jsx";
 
 async function request(path,options={}){
   const token=localStorage.getItem("token");
@@ -12,6 +13,7 @@ async function request(path,options={}){
 
 export default function CommerceLauncher(){
   const [visible,setVisible]=useState(false);
+  const [mode,setMode]=useState("products");
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
   const [stores,setStores]=useState([]);
   useEffect(()=>{
@@ -19,12 +21,19 @@ export default function CommerceLauncher(){
     return()=>clearInterval(timer);
   },[]);
   const open=async()=>{
-    setVisible(true);
+    setMode("products");setVisible(true);
     try{setStores(await request("/api/stores"))}catch{setStores([])}
   };
   if(!authenticated)return null;
   return <>
     <button className="commerce-launcher" onClick={open}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
-    {visible&&<div className="commerce-overlay"><section className="commerce-shell"><button className="commerce-close" onClick={()=>setVisible(false)}><X/></button><CommerceHub api={request} stores={stores}/></section></div>}
+    {visible&&<div className="commerce-overlay"><section className="commerce-shell">
+      <button className="commerce-close" onClick={()=>setVisible(false)}><X/></button>
+      <div className="commerce-mode-switch">
+        <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
+        <button className={mode==="legacy"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
+      </div>
+      {mode==="products"?<OwnerProductCenter api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
+    </section></div>}
   </>;
 }
