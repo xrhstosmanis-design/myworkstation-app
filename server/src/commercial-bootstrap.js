@@ -302,6 +302,13 @@ const statements=[
   "priority" TEXT NOT NULL DEFAULT 'NORMAL',
   "message" TEXT NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'OPEN',
+  "fromName" TEXT,
+  "acknowledgedById" TEXT,
+  "acknowledgedByName" TEXT,
+  "attachmentData" TEXT,
+  "attachmentMimeType" TEXT,
+  "attachmentFilename" TEXT,
+  "attachmentChecksum" TEXT,
   "acknowledgedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "ShiftHandover_pkey" PRIMARY KEY ("id"),
@@ -310,6 +317,13 @@ const statements=[
   CONSTRAINT "ShiftHandover_toEmployeeId_fkey" FOREIGN KEY ("toEmployeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE
 )`,
 `CREATE INDEX IF NOT EXISTS "ShiftHandover_store_status_idx" ON "ShiftHandover"("storeId","status")`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "fromName" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "acknowledgedById" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "acknowledgedByName" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "attachmentData" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
+`ALTER TABLE "ShiftHandover" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`,
 
 `CREATE TABLE IF NOT EXISTS "DocumentAttachment" (
   "id" TEXT NOT NULL,
@@ -319,13 +333,15 @@ const statements=[
   "filename" TEXT,
   "mimeType" TEXT,
   "storageKey" TEXT NOT NULL,
+  "contentData" TEXT,
   "checksum" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "DocumentAttachment_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "DocumentAttachment_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "DocumentAttachment_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE
 )`,
-`CREATE INDEX IF NOT EXISTS "DocumentAttachment_companyId_idx" ON "DocumentAttachment"("companyId")`
+`CREATE INDEX IF NOT EXISTS "DocumentAttachment_companyId_idx" ON "DocumentAttachment"("companyId")`,
+`ALTER TABLE "DocumentAttachment" ADD COLUMN IF NOT EXISTS "contentData" TEXT`
 ];
 
 export async function ensureCommercialSchema(){

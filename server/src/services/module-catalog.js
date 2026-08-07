@@ -10,8 +10,8 @@ export const moduleCatalog=[
   {key:"POS",name:"MyWorkStation POS",description:"Μη φορολογικές πωλήσεις pilot, προϊόντα, πελάτες και πληρωμές. Φορολογική έκδοση μόνο μέσω Connector RBS.",category:"POS",commercialReady:true},
   {key:"SALES_ANALYTICS",name:"Αναλυτική Πωλήσεων",description:"Τζίρος, προϊόντα, τρόποι πληρωμής και συγκρίσεις περιόδων.",category:"REPORTS",commercialReady:true},
   {key:"SHIFT_HANDOVER",name:"Παράδοση Βάρδιας",description:"Εκκρεμότητες, προτεραιότητες και επιβεβαίωση από την επόμενη βάρδια.",category:"CONTROL",commercialReady:true},
-  {key:"AI_READER",name:"AI Reader Τιμολογίων",description:"Πρόχειρη ανάγνωση χωρίς AI και προαιρετικός επανέλεγχος όταν συνδεθεί ο AI provider.",category:"AI",commercialReady:false,requiresTechnicalActivation:true},
-  {key:"DOCUMENTS",name:"Έγγραφα & Τιμολόγια",description:"Θυρίδες παραστατικών, αρχεία, προμηθευτές και κατάσταση επεξεργασίας.",category:"OPERATIONS",commercialReady:false},
+  {key:"AI_READER",name:"AI Reader Τιμολογίων",description:"Τοπικό OCR χωρίς αυτόματη AI χρέωση, confidence ανά γραμμή και προαιρετικός χειροκίνητος επανέλεγχος όταν συνδεθεί provider.",category:"AI",commercialReady:true},
+  {key:"DOCUMENTS",name:"Έγγραφα & Τιμολόγια",description:"Θυρίδα τιμολογίων, αρχεία ανά κατάστημα/προμηθευτή, υπεύθυνος και κατάσταση επεξεργασίας.",category:"OPERATIONS",commercialReady:true},
   {key:"ATTENDANCE",name:"Παρουσία & Μισθοδοσία",description:"Είσοδος/έξοδος εργαζομένων, ώρες εργασίας και μηνιαία σύνολα.",category:"HR",commercialReady:false},
   {key:"CONNECTOR_RBS",name:"Connector RBS / CapDriver",description:"Τοπική διασύνδεση με CapDriver και φορολογική RBS.",category:"CONNECTORS",commercialReady:false,requiresTechnicalActivation:true},
   {key:"REMOTE_SUPPORT",name:"Remote Support",description:"Απομακρυσμένη υποστήριξη με audit και έγκριση χρήστη.",category:"SUPPORT",commercialReady:false,requiresTechnicalActivation:true}

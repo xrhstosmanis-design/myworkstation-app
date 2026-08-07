@@ -65,6 +65,10 @@ export async function commerceTenantGuard(req,res,next){
       if(body.toEmployeeId&&!await employeeExists(companyId,body.toEmployeeId))return bad(res,"ο εργαζόμενος παραλαβής");
     }
 
+    if(path==="/documents/inbox"&&req.method==="POST"){
+      if(body.supplierId&&!await rawExists("Supplier",companyId,body.supplierId))return bad(res,"ο προμηθευτής παραστατικού");
+    }
+
     next();
   }catch(error){next(error)}
 }

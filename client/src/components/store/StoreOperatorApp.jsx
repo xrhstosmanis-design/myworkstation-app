@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState} from "react";
 import {BadgeEuro,ContactRound,KeyRound,LogOut,ScanLine,ShieldCheck,Store,Wifi} from "lucide-react";
 import CashControlPanel from "../cloud/CashControlPanel.jsx";
 import StoreTransactionsPanel from "./StoreTransactionsPanel.jsx";
+import StoreHandoverPanel from "./StoreHandoverPanel.jsx";
 import "./store-operator.css";
 
 export default function StoreOperatorApp({api,storeId}){
@@ -72,6 +73,7 @@ export default function StoreOperatorApp({api,storeId}){
     <main className="store-mode-main">
       <div className="store-mode-title"><div><span>LIVE OPERATIONS</span><h1>Λειτουργία Καταστήματος</h1><p>Συναλλαγές, έλεγχος ταμείου και παράδοση βάρδιας με προσωπικό audit.</p></div><div className="store-online"><Wifi/>Online</div></div>
       <StoreTransactionsPanel api={api} store={session.store} onChanged={()=>setLedgerVersion(v=>v+1)}/>
+      <StoreHandoverPanel api={api} store={session.store}/>
       <CashControlPanel key={`cash-${ledgerVersion}`} api={api} store={session.store}/>
     </main>
   </div>;
