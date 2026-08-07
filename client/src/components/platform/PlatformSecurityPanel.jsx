@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Laptop,RefreshCw,ShieldCheck,Smartphone,Trash2} from "lucide-react";
+import {Laptop,Mail,RefreshCw,Send,ShieldCheck,Smartphone,Trash2} from "lucide-react";
 
 const eventLabels={
   PASSWORD_REJECTED:"Αποτυχημένος κωδικός",
@@ -22,10 +22,19 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
+  const [mailStatus,setMailStatus]=useState(null);
+  const [mailBusy,setMailBusy]=useState(false);
+  const [mailMessage,setMailMessage]=useState("");
 
   const load=async()=>{
     setLoading(true);setError("");
-    try{setData(await request("/api/auth/security"))}catch(err){setError(err.message)}finally{setLoading(false)}
+    try{
+      const [security,mail]=await Promise.all([
+        request("/api/auth/security"),
+        request("/api/platform/mail/status")
+      ]);
+      setData(security);setMailStatus(mail);
+    }catch(err){setError(err.message)}finally{setLoading(false)}
   };
   useEffect(()=>{load()},[]);
 
@@ -41,6 +50,13 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
     setBusy("others");setError("");
     try{await request("/api/auth/sessions/revoke-others",{method:"POST",body:"{}"});await load()}catch(err){setError(err.message)}finally{setBusy("")}
   };
+  const sendMailTest=async()=>{
+    setMailBusy(true);setError("");setMailMessage("");
+    try{
+      const result=await request("/api/platform/mail/test",{method:"POST",body:"{}"});
+      setMailMessage(`Το δοκιμαστικό email στάλθηκε στο ${result.recipient}.`);
+    }catch(err){setError(err.message)}finally{setMailBusy(false)}
+  };
 
   if(loading)return <div className="security-loading">Έλεγχος ασφάλειας…</div>;
   return <div className="platform-security-panel">
@@ -51,6 +67,17 @@ export default function PlatformSecurityPanel({request,onCurrentRevoked}){
       <button onClick={revokeOthers} disabled={busy==="others"}>{busy==="others"?"Αποσύνδεση…":"Αποσύνδεση άλλων συσκευών"}</button>
       <button className="security-refresh" onClick={load}><RefreshCw/>Ανανέωση</button>
     </div>
+
+    <section className="security-section">
+      <h3>Εταιρικό email</h3>
+      <div className="security-summary">
+        <article><Mail/><div><b>SMTP αποστολή</b><span>{mailStatus?.configured?"Έτοιμη":"Χρειάζεται ρύθμιση"}</span></div></article>
+        <article><ShieldCheck/><div><b>Ασφαλής σύνδεση</b><span>{mailStatus?.secure?`SSL/TLS · ${mailStatus.port}`:"Μη ενεργή"}</span></div></article>
+        <button onClick={sendMailTest} disabled={mailBusy||!mailStatus?.configured}><Send/>{mailBusy?"Αποστολή…":"Αποστολή δοκιμαστικού email"}</button>
+      </div>
+      {mailMessage&&<div className="platform-alert success">{mailMessage}</div>}
+      {!mailStatus?.configured&&<div className="platform-alert error">Λείπουν ρυθμίσεις email: {(mailStatus?.missing||[]).join(", ")||"έλεγχος server"}</div>}
+    </section>
 
     <section className="security-section">
       <h3>Συνδεδεμένες συσκευές</h3>
