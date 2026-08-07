@@ -117,6 +117,7 @@ model AuthAudit {
 model Store {
   id        String   @id @default(cuid())
   name      String
+  responsibleEmail String?
   address   String?
   city      String?
   active    Boolean  @default(true)
