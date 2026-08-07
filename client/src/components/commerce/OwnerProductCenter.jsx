@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BadgePercent,Boxes,Check,ClipboardList,PackageSearch,RefreshCw,Search,Store,Tag} from "lucide-react";
+import {BadgePercent,Boxes,Check,ClipboardList,PackageSearch,RefreshCw,Search,Store,Tag,Upload} from "lucide-react";
 import "./owner-products.css";
+import "./commercial-tools.css";
 
 const money=v=>v===null||v===undefined||v===""?"—":`${Number(v).toFixed(2)} €`;
 const n=v=>Number(v||0);
@@ -26,6 +27,10 @@ export default function OwnerProductCenter({api,stores=[]}){
   const [editVatVerified,setEditVatVerified]=useState(false);
   const [promotions,setPromotions]=useState([]);
   const [promotionType,setPromotionType]=useState("PERCENT");
+  const [bulkProducts,setBulkProducts]=useState([]);
+  const [bulkStores,setBulkStores]=useState([]);
+  const [bulkMode,setBulkMode]=useState("SET");
+  const [excelFile,setExcelFile]=useState(null);
   const [stocktakes,setStocktakes]=useState([]);
   const [openStocktake,setOpenStocktake]=useState(null);
   const [busy,setBusy]=useState(false);
@@ -90,12 +95,36 @@ export default function OwnerProductCenter({api,stores=[]}){
   const createPromotion=async event=>{
     event.preventDefault();clearStatus();setBusy(true);
     const f=new FormData(event.currentTarget);const type=String(f.get("promotionType"));const storeIds=activeStores.filter(s=>f.get(`store_${s.id}`)==="on").map(s=>s.id);
+    if(!f.get("productId")&&!String(f.get("barcode")||"").trim()){setBusy(false);return setError("Επίλεξε προϊόν ή γράψε το barcode του.")}
     try{
-      await api("/api/owner-products/promotions",{method:"POST",body:JSON.stringify({productId:f.get("productId"),name:f.get("name"),promotionType:type,percentOff:type==="PERCENT"?Number(f.get("percentOff")):null,buyQuantity:type==="BUY_X_GET_Y"?Number(f.get("buyQuantity")):null,freeQuantity:type==="BUY_X_GET_Y"?Number(f.get("freeQuantity")):null,fixedPrice:type==="FIXED_PRICE"?Number(f.get("fixedPrice")):null,startsAt:f.get("startsAt"),endsAt:f.get("endsAt"),priority:Number(f.get("priority")||100),storeIds})});
+      await api("/api/owner-products/promotions",{method:"POST",body:JSON.stringify({productId:f.get("productId")||null,barcode:String(f.get("barcode")||"").trim()||null,name:f.get("name"),promotionType:type,percentOff:type==="PERCENT"?Number(f.get("percentOff")):null,buyQuantity:type==="BUY_X_GET_Y"?Number(f.get("buyQuantity")):null,freeQuantity:type==="BUY_X_GET_Y"?Number(f.get("freeQuantity")):null,fixedPrice:type==="FIXED_PRICE"?Number(f.get("fixedPrice")):null,startsAt:f.get("startsAt"),endsAt:f.get("endsAt"),priority:Number(f.get("priority")||100),storeIds})});
       event.currentTarget.reset();setPromotionType("PERCENT");setMessage("Η προσφορά δημιουργήθηκε.");await loadPromotions();
     }catch(e){setError(e.message)}finally{setBusy(false)}
   };
   const togglePromotion=async promotion=>{clearStatus();try{await api(`/api/owner-products/promotions/${promotion.id}`,{method:"PATCH",body:JSON.stringify({active:!promotion.active})});await loadPromotions()}catch(e){setError(e.message)}};
+
+  const saveBulkPrices=async event=>{
+    event.preventDefault();clearStatus();
+    if(!bulkProducts.length||!bulkStores.length)return setError("Επίλεξε τουλάχιστον ένα προϊόν και ένα κατάστημα.");
+    const f=new FormData(event.currentTarget);setBusy(true);
+    try{
+      const result=await api("/api/owner-products/prices/bulk",{method:"POST",body:JSON.stringify({productIds:bulkProducts,storeIds:bulkStores,mode:bulkMode,value:Number(f.get("value"))})});
+      setMessage(`Η μαζική αλλαγή ολοκληρώθηκε σε ${result.changed} τιμές και καταγράφηκε στο ιστορικό.`);await loadCatalog();
+    }catch(e){setError(e.message)}finally{setBusy(false)}
+  };
+
+  const importPromotions=async event=>{
+    event.preventDefault();clearStatus();
+    if(!excelFile)return setError("Επίλεξε αρχείο Excel.");
+    const f=new FormData(event.currentTarget),sourceStoreId=String(f.get("sourceStoreId")||"");
+    const targetStoreIds=activeStores.filter(s=>s.id!==sourceStoreId&&f.get(`target_${s.id}`)==="on").map(s=>s.id);
+    setBusy(true);
+    try{
+      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν διαβάστηκε το αρχείο."));reader.readAsDataURL(excelFile)});
+      const result=await api("/api/owner-products/promotions/import-excel",{method:"POST",body:JSON.stringify({dataUrl,sourceStoreId,targetStoreIds})});
+      setMessage(`Εισήχθησαν ${result.created} γραμμές και εφαρμόστηκαν σε ${result.stores} καταστήματα.`);setExcelFile(null);event.currentTarget.reset();await loadPromotions();
+    }catch(e){setError(e.message)}finally{setBusy(false)}
+  };
 
   const loadStocktakes=async()=>{clearStatus();setBusy(true);try{setStocktakes(await api("/api/owner-products/stocktakes/list"))}catch(e){setError(e.message)}finally{setBusy(false)}};
   const createStocktake=async event=>{
@@ -112,17 +141,40 @@ export default function OwnerProductCenter({api,stores=[]}){
     clearStatus();setBusy(true);try{await api(`/api/owner-products/stocktakes/${openStocktake.id}/finalize`,{method:"POST",body:"{}"});setMessage("Η απογραφή οριστικοποιήθηκε και οι διαφορές γράφτηκαν ως κινήσεις αποθήκης.");await openStocktakeById(openStocktake.id);await loadStocktakes()}catch(e){setError(e.message)}finally{setBusy(false)}
   };
 
-  useEffect(()=>{if(tab==="prices")loadCatalog();if(tab==="promotions"){loadCatalog();loadPromotions()}if(tab==="stocktake")loadStocktakes()},[tab]);
+  useEffect(()=>{if(tab==="prices"||tab==="bulk"||tab==="promotion-import")loadCatalog();if(tab==="promotions"){loadCatalog();loadPromotions()}if(tab==="promotion-import")loadPromotions();if(tab==="stocktake")loadStocktakes()},[tab]);
 
   return <div className="owner-products">
     <div className="owner-products-head"><div><h2>Προϊόντα, Τιμές, Προσφορές & Απογραφή</h2><p>Ο Owner επιλέγει από τον κεντρικό κατάλογο και ορίζει ξεχωριστή εμπορική πολιτική ανά κατάστημα.</p></div><button onClick={()=>{if(tab==="master")searchMaster();if(tab==="prices")loadCatalog();if(tab==="promotions")loadPromotions();if(tab==="stocktake")loadStocktakes()}}><RefreshCw/>Ανανέωση</button></div>
     <div className="owner-product-tabs">
       <button className={tab==="master"?"active":""} onClick={()=>setTab("master")}><PackageSearch/>Master Catalog</button>
       <button className={tab==="prices"?"active":""} onClick={()=>setTab("prices")}><Tag/>Τιμές ανά κατάστημα</button>
+      <button className={tab==="bulk"?"active":""} onClick={()=>setTab("bulk")}><Tag/>Μαζική αλλαγή τιμών</button>
       <button className={tab==="promotions"?"active":""} onClick={()=>setTab("promotions")}><BadgePercent/>Προσφορές</button>
+      <button className={tab==="promotion-import"?"active":""} onClick={()=>setTab("promotion-import")}><Upload/>Excel / Barcode</button>
       <button className={tab==="stocktake"?"active":""} onClick={()=>setTab("stocktake")}><ClipboardList/>Απογραφή</button>
     </div>
     {error&&<div className="op-alert error">{error}</div>}{message&&<div className="op-alert success">{message}</div>}
+    {tab==="bulk"&&<form className="op-box op-form" onSubmit={saveBulkPrices}>
+      <h3>Μαζική αλλαγή τιμών με επιλογή προϊόντων</h3>
+      <p>Επίλεξε συγκεκριμένα προϊόντα και καταστήματα. Κάθε αλλαγή αποθηκεύεται στο ιστορικό τιμών.</p>
+      <fieldset><legend>Προϊόντα</legend><div className="bulk-check-list">{catalog.map(product=><label className="check" key={product.id}><input type="checkbox" checked={bulkProducts.includes(product.id)} onChange={e=>setBulkProducts(current=>e.target.checked?[...current,product.id]:current.filter(id=>id!==product.id))}/><span>{product.name}<small>{product.sku||"—"} · {money(product.salePrice)}</small></span></label>)}</div></fieldset>
+      <fieldset><legend>Καταστήματα</legend>{activeStores.map(store=><label className="check" key={store.id}><input type="checkbox" checked={bulkStores.includes(store.id)} onChange={e=>setBulkStores(current=>e.target.checked?[...current,store.id]:current.filter(id=>id!==store.id))}/>{store.name}</label>)}</fieldset>
+      <div className="op-two"><label>Ενέργεια<select value={bulkMode} onChange={e=>setBulkMode(e.target.value)}><option value="SET">Ορισμός νέας τιμής</option><option value="INCREASE_PERCENT">Αύξηση %</option><option value="DECREASE_PERCENT">Μείωση %</option></select></label><label>{bulkMode==="SET"?"Νέα τιμή €":"Ποσοστό %"}<input name="value" type="number" min="0" max="999999" step="0.01" required/></label></div>
+      <button className="primary" disabled={busy}>Εφαρμογή σε {bulkProducts.length} προϊόντα × {bulkStores.length} καταστήματα</button>
+    </form>}
+    {tab==="promotion-import"&&<div className="op-grid two">
+      <section className="op-box"><h3>Νέα προσφορά με barcode</h3><form className="op-form" onSubmit={createPromotion}>
+        <label>Barcode προϊόντος<input name="barcode" required autoFocus placeholder="Σκάναρε ή γράψε barcode"/></label><input name="productId" type="hidden" value="" readOnly/>
+        <label>Όνομα προσφοράς<input name="name" required/></label><label>Τύπος<select name="promotionType" value={promotionType} onChange={e=>setPromotionType(e.target.value)}><option value="PERCENT">Ποσοστό %</option><option value="BUY_X_GET_Y">X + Y δωρεάν</option><option value="FIXED_PRICE">Τελική τιμή</option></select></label>
+        {promotionType==="PERCENT"&&<label>Έκπτωση %<input name="percentOff" type="number" min="0.01" max="100" step="0.01" required/></label>}{promotionType==="BUY_X_GET_Y"&&<div className="op-two"><label>Αγορά X<input name="buyQuantity" type="number" min="1" required/></label><label>Δωρεάν Y<input name="freeQuantity" type="number" min="1" required/></label></div>}{promotionType==="FIXED_PRICE"&&<label>Τελική τιμή<input name="fixedPrice" type="number" min="0.01" step="0.01" required/></label>}
+        <div className="op-two"><label>Από<input name="startsAt" type="datetime-local" defaultValue={localInputDate(new Date())} required/></label><label>Έως<input name="endsAt" type="datetime-local" defaultValue={localInputDate(new Date(Date.now()+7*86400000))} required/></label></div><input name="priority" type="hidden" value="100" readOnly/>
+        <fieldset><legend>Δημιουργία και αποστολή σε καταστήματα</legend>{activeStores.map(store=><label className="check" key={store.id}><input name={`store_${store.id}`} type="checkbox" defaultChecked/>{store.name}</label>)}</fieldset><button className="primary">Δημιουργία με barcode</button>
+      </form></section>
+      <section className="op-box"><h3>Εισαγωγή προσφορών από Excel</h3><form className="op-form" onSubmit={importPromotions}>
+        <label>Αρχείο Excel<input type="file" accept=".xlsx,.xls" onChange={e=>setExcelFile(e.target.files?.[0]||null)} required/></label><label>Δημιουργία πρώτα στο κατάστημα<select name="sourceStoreId" required><option value="">Επιλογή</option>{activeStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
+        <fieldset><legend>Αποστολή αντιγράφου και στα υπόλοιπα</legend>{activeStores.map(store=><label className="check" key={store.id}><input name={`target_${store.id}`} type="checkbox"/>{store.name}</label>)}</fieldset><div className="op-alert info">Στήλες: Barcode, Όνομα προσφοράς, Τύπος, Από, Έως και ανάλογα Έκπτωση %, Αγορά X, Δωρεάν Y ή Τελική τιμή.</div><button className="primary" disabled={busy}><Upload/>Εισαγωγή και αποστολή</button>
+      </form></section>
+    </div>}
 
     {tab==="master"&&<div className="op-grid two"><section className="op-box"><h3>Αναζήτηση 26.656 προϊόντων</h3><form className="op-search" onSubmit={searchMaster}><input value={masterQuery} onChange={e=>setMasterQuery(e.target.value)} placeholder="Περιγραφή, κωδικός ή barcode"/><button disabled={busy}><Search/>Αναζήτηση</button></form><div className="op-list">{masterResults.map(row=><button key={row.id} className={`op-product ${selectedMaster?.id===row.id?"selected":""}`} onClick={()=>chooseMaster(row)}><span><b>{row.name}</b><small>{row.sourceCode} · {row.categoryName||"Χωρίς κατηγορία"}</small></span><span>{row.companyProductId?<em className="ok">ΕΝΕΡΓΟ</em>:<em>MASTER</em>}<small>{money(row.defaultRetailPrice)}</small></span></button>)}</div></section>{selectedMaster?<aside className="op-box"><h3>{selectedMaster.name}</h3><p>Βασική λιανική Master: <b>{money(selectedMaster.defaultRetailPrice)}</b></p><label>Βασική τιμή εταιρείας<input type="number" step="0.01" min="0" value={basePrice} onChange={e=>setBasePrice(e.target.value)}/></label><div className="store-price-list"><h4>Καταστήματα</h4>{activeStores.map(store=><div className="store-price" key={store.id}><label className="check"><input type="checkbox" checked={Boolean(activationStores[store.id]?.active)} onChange={e=>setActivationStores(c=>({...c,[store.id]:{...c[store.id],active:e.target.checked}}))}/><Store/>{store.name}</label><input type="number" step="0.01" min="0" value={activationStores[store.id]?.salePrice??""} onChange={e=>setActivationStores(c=>({...c,[store.id]:{...c[store.id],salePrice:e.target.value}}))} placeholder="Τιμή"/></div>)}</div>{selectedMaster.vatVerified?<div className="op-alert success">ΦΠΑ Master επιβεβαιωμένος: {n(selectedMaster.vatRate)}%</div>:<div className="op-alert warning">Ο ΦΠΑ δεν είναι επιβεβαιωμένος. Το προϊόν θα ενεργοποιηθεί χωρίς αυθαίρετη φορολογική τιμή.</div>}<button className="primary" onClick={activateMaster} disabled={busy}><Check/>Ενεργοποίηση / ενημέρωση προϊόντος</button></aside>:<aside className="op-box empty">Επίλεξε προϊόν από τον Master Catalog.</aside>}</div>}
 

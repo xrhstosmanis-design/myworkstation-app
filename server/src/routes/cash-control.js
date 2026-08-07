@@ -28,6 +28,9 @@ const tableStatements = [
     "closedAt" TIMESTAMPTZ,
     "cashSales" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "cardSales" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb,
     "expenses" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "closingDrawer" NUMERIC(14,2),
     "closingCustody" NUMERIC(14,2),
@@ -42,6 +45,9 @@ const tableStatements = [
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_store_idx"
    ON "CashShiftSession" ("storeId") WHERE "status"='OPEN'`,
   `CREATE INDEX IF NOT EXISTS "CashShiftSession_store_opened_idx"
@@ -95,6 +101,7 @@ const openSchema=z.object({
 const closeSchema=z.object({
   cashSales:amount,
   cardSales:amount,
+  eftposTotal:amount,
   expenses:amount,
   drawer:amount,
   custody:amount,
@@ -108,12 +115,53 @@ function normalize(row){
   if(!row)return null;
   const fields=[
     "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational",
-    "cashSales","cardSales","expenses","closingDrawer","closingCustody","closingCoins",
+    "cashSales","cardSales","eftposTotal","cardVariance","expenses","closingDrawer","closingCustody","closingCoins",
     "closingSafe","expectedOperational","actualOperational","variance","nextOpeningTotal"
   ];
   const result={...row};
   for(const field of fields) result[field]=row[field]==null?null:money(row[field]);
+  result.duplicateReview=Array.isArray(row.duplicateReviewJson)?row.duplicateReviewJson:[];
   return result;
+}
+
+async function findConsecutiveDuplicateSales(companyId,storeId,from,to){
+  const rows=await prisma.$queryRaw`
+    SELECT s."id",s."occurredAt",s."total",l."productId",l."description",
+           l."quantity",l."unitPrice",l."discount",l."lineTotal"
+    FROM "Sale" s
+    JOIN "SaleLine" l ON l."saleId"=s."id"
+    WHERE s."companyId"=${companyId} AND s."storeId"=${storeId}
+      AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
+    ORDER BY s."occurredAt",s."id",COALESCE(l."productId",''),l."description",l."id"
+  `;
+  const sales=[];
+  for(const row of rows){
+    let sale=sales[sales.length-1];
+    if(!sale||sale.id!==row.id){
+      sale={id:row.id,occurredAt:row.occurredAt,total:money(row.total),lines:[]};
+      sales.push(sale);
+    }
+    sale.lines.push({
+      productId:row.productId||null,
+      description:row.description,
+      quantity:money(row.quantity),unitPrice:money(row.unitPrice),
+      discount:money(row.discount),lineTotal:money(row.lineTotal)
+    });
+  }
+  const signature=sale=>JSON.stringify({total:sale.total,lines:sale.lines.map(line=>[
+    line.productId||line.description,line.quantity,line.unitPrice,line.discount,line.lineTotal
+  ])});
+  const matches=[];
+  for(let index=1;index<sales.length;index++){
+    const previous=sales[index-1],current=sales[index];
+    if(signature(previous)!==signature(current))continue;
+    matches.push({
+      firstSaleId:previous.id,secondSaleId:current.id,
+      firstAt:previous.occurredAt,secondAt:current.occurredAt,total:current.total,
+      products:current.lines.map(line=>`${line.description} × ${line.quantity}`)
+    });
+  }
+  return matches;
 }
 
 function route(handler){
@@ -207,11 +255,17 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   const expected=session.openingOperational+body.cashSales-body.expenses;
   const actual=body.drawer+body.custody+body.coins;
   const variance=actual-expected;
+  const cardVariance=body.cardSales-body.eftposTotal;
+  const duplicateReview=Math.abs(cardVariance)>0.009
+    ?await findConsecutiveDuplicateSales(req.user.companyId,session.storeId,session.openedAt,new Date())
+    :[];
+  const duplicateReviewJson=JSON.stringify(duplicateReview);
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     UPDATE "CashShiftSession"
     SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
-        "cashSales"=${body.cashSales},"cardSales"=${body.cardSales},"expenses"=${body.expenses},
+        "cashSales"=${body.cashSales},"cardSales"=${body.cardSales},"eftposTotal"=${body.eftposTotal},
+        "cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${body.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
         "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},
         "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()

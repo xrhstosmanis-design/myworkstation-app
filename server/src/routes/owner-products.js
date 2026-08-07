@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
+import XLSX from "xlsx";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 
@@ -15,6 +16,10 @@ async function ownedStore(company,storeId){
 }
 async function ownedProduct(company,productId){
   const rows=await prisma.$queryRaw`SELECT "id","name","salePrice","costPrice","vatRate","vatVerified","masterProductId" FROM "Product" WHERE "id"=${String(productId)} AND "companyId"=${company} LIMIT 1`;
+  return rows[0]||null;
+}
+async function productByBarcode(company,barcode){
+  const rows=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "ProductBarcode" b ON b."productId"=p."id" WHERE p."companyId"=${company} AND b."barcode"=${String(barcode)} AND p."active"=true LIMIT 1`;
   return rows[0]||null;
 }
 
@@ -150,6 +155,19 @@ router.patch("/:productId/prices",requireCompanyModule("INVENTORY"),async(req,re
   }catch(error){next(error)}
 });
 
+router.post("/prices/bulk",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);
+    const body=z.object({productIds:z.array(z.string().min(1)).min(1).max(500),storeIds:z.array(z.string().min(1)).min(1).max(500),mode:z.enum(["SET","INCREASE_PERCENT","DECREASE_PERCENT"]),value:z.coerce.number().min(0).max(100000)}).parse(req.body||{});
+    const productIds=[...new Set(body.productIds)],storeIds=[...new Set(body.storeIds)];
+    const [products,stores]=await Promise.all([prisma.$queryRaw`SELECT "id","salePrice" FROM "Product" WHERE "companyId"=${company} AND "id"=ANY(${productIds}::text[])`,prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}})]);
+    if(products.length!==productIds.length||stores.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο προϊόν ή κατάστημα."});
+    let changed=0;
+    await prisma.$transaction(async tx=>{for(const product of products){for(const storeId of storeIds){const oldRows=await tx.$queryRaw`SELECT "salePrice" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${product.id} LIMIT 1`;const old=money(oldRows[0]?.salePrice??product.salePrice)??0;const nextPrice=Number((body.mode==="SET"?body.value:body.mode==="INCREASE_PERCENT"?old*(1+body.value/100):old*(1-body.value/100)).toFixed(2));if(nextPrice<0)throw Object.assign(new Error("Η νέα τιμή δεν μπορεί να είναι αρνητική."),{status:400});await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${storeId},${old},${nextPrice},'BULK_STORE_PRICE',${req.user.id})`;await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active") VALUES (${uid()},${storeId},${product.id},${nextPrice},true) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","updatedAt"=CURRENT_TIMESTAMP`;changed++}}});
+    res.json({ok:true,changed,products:productIds.length,stores:storeIds.length});
+  }catch(error){next(error)}
+});
+
 router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);
@@ -176,7 +194,7 @@ router.post("/promotions",requireCompanyModule("INVENTORY"),async(req,res,next)=
   try{
     const company=companyId(req);
     const body=z.object({
-      productId:z.string().min(1),name:z.string().trim().min(1).max(180),promotionType:z.enum(["PERCENT","BUY_X_GET_Y","FIXED_PRICE"]),
+      productId:z.string().min(1).optional(),barcode:z.string().trim().min(3).max(80).optional(),name:z.string().trim().min(1).max(180),promotionType:z.enum(["PERCENT","BUY_X_GET_Y","FIXED_PRICE"]),
       percentOff:z.coerce.number().gt(0).lte(100).nullable().optional(),buyQuantity:z.coerce.number().gt(0).nullable().optional(),freeQuantity:z.coerce.number().gt(0).nullable().optional(),fixedPrice:z.coerce.number().min(0).nullable().optional(),
       startsAt:z.coerce.date(),endsAt:z.coerce.date(),priority:z.coerce.number().int().min(0).max(9999).default(100),storeIds:z.array(z.string().min(1)).min(1).max(500)
     }).parse(req.body||{});
@@ -184,16 +202,31 @@ router.post("/promotions",requireCompanyModule("INVENTORY"),async(req,res,next)=
     if(body.promotionType==="PERCENT"&&!body.percentOff)return res.status(400).json({error:"Χρειάζεται ποσοστό έκπτωσης."});
     if(body.promotionType==="BUY_X_GET_Y"&&(!body.buyQuantity||!body.freeQuantity))return res.status(400).json({error:"Χρειάζονται ποσότητες αγοράς και δωρεάν τεμαχίων."});
     if(body.promotionType==="FIXED_PRICE"&&body.fixedPrice===null)return res.status(400).json({error:"Χρειάζεται τελική τιμή προσφοράς."});
-    if(!await ownedProduct(company,body.productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    const product=body.productId?await ownedProduct(company,body.productId):body.barcode?await productByBarcode(company,body.barcode):null;
+    if(!product)return res.status(404).json({error:"Δεν βρέθηκε ενεργό προϊόν με την επιλογή ή το barcode."});
     const ids=[...new Set(body.storeIds)];
     const valid=await prisma.store.findMany({where:{companyId:company,id:{in:ids}},select:{id:true}});
     if(valid.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα στην προσφορά."});
     const promotionId=uid();
     await prisma.$transaction(async tx=>{
-      await tx.$executeRaw`INSERT INTO "Promotion" ("id","companyId","productId","name","promotionType","percentOff","buyQuantity","freeQuantity","fixedPrice","startsAt","endsAt","priority","createdByUserId") VALUES (${promotionId},${company},${body.productId},${body.name},${body.promotionType},${body.percentOff??null},${body.buyQuantity??null},${body.freeQuantity??null},${body.fixedPrice??null},${body.startsAt},${body.endsAt},${body.priority},${req.user.id})`;
+      await tx.$executeRaw`INSERT INTO "Promotion" ("id","companyId","productId","name","promotionType","percentOff","buyQuantity","freeQuantity","fixedPrice","startsAt","endsAt","priority","createdByUserId") VALUES (${promotionId},${company},${product.id},${body.name},${body.promotionType},${body.percentOff??null},${body.buyQuantity??null},${body.freeQuantity??null},${body.fixedPrice??null},${body.startsAt},${body.endsAt},${body.priority},${req.user.id})`;
       for(const storeId of ids)await tx.$executeRaw`INSERT INTO "PromotionStore" ("id","promotionId","storeId") VALUES (${uid()},${promotionId},${storeId})`;
     });
     res.status(201).json({id:promotionId});
+  }catch(error){next(error)}
+});
+
+router.post("/promotions/import-excel",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);
+    const body=z.object({dataUrl:z.string().max(4200000),sourceStoreId:z.string().min(1),targetStoreIds:z.array(z.string().min(1)).max(500).default([])}).parse(req.body||{});
+    const match=/^data:application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|vnd\.ms-excel);base64,([A-Za-z0-9+/=]+)$/.exec(body.dataUrl);if(!match)return res.status(400).json({error:"Απαιτείται αρχείο Excel .xlsx ή .xls."});
+    const storeIds=[...new Set([body.sourceStoreId,...body.targetStoreIds])];const valid=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});if(valid.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
+    const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:true}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    if(!rows.length||rows.length>1000)return res.status(400).json({error:"Το Excel πρέπει να περιέχει 1 έως 1.000 γραμμές."});
+    const parsed=[];for(let i=0;i<rows.length;i++){const r=rows[i],barcode=String(r.Barcode||r.BARCODE||r.barcode||"").trim(),name=String(r["Όνομα προσφοράς"]||r.Name||r.name||"").trim(),type=String(r["Τύπος"]||r.Type||r.type||"").trim().toUpperCase();const product=await productByBarcode(company,barcode);if(!product)return res.status(400).json({error:`Γραμμή ${i+2}: δεν βρέθηκε προϊόν για barcode ${barcode||"(κενό)"}.`});const startsAt=new Date(r["Από"]||r.StartsAt||r.startsAt),endsAt=new Date(r["Έως"]||r.EndsAt||r.endsAt);if(!name||!["PERCENT","BUY_X_GET_Y","FIXED_PRICE"].includes(type)||Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||endsAt<=startsAt)return res.status(400).json({error:`Γραμμή ${i+2}: ελέγξτε όνομα, τύπο και ημερομηνίες.`});parsed.push({product,name,type,startsAt,endsAt,percentOff:Number(r["Έκπτωση %"]||r.PercentOff||0)||null,buyQuantity:Number(r["Αγορά X"]||r.BuyX||0)||null,freeQuantity:Number(r["Δωρεάν Y"]||r.FreeY||0)||null,fixedPrice:Number(r["Τελική τιμή"]||r.FixedPrice||0)||null,priority:Number(r["Προτεραιότητα"]||r.Priority||100)})}
+    await prisma.$transaction(async tx=>{for(const row of parsed){const promotionId=uid();await tx.$executeRaw`INSERT INTO "Promotion" ("id","companyId","productId","name","promotionType","percentOff","buyQuantity","freeQuantity","fixedPrice","startsAt","endsAt","priority","createdByUserId") VALUES (${promotionId},${company},${row.product.id},${row.name},${row.type},${row.percentOff},${row.buyQuantity},${row.freeQuantity},${row.fixedPrice},${row.startsAt},${row.endsAt},${row.priority},${req.user.id})`;for(const storeId of storeIds)await tx.$executeRaw`INSERT INTO "PromotionStore" ("id","promotionId","storeId") VALUES (${uid()},${promotionId},${storeId})`}});
+    res.status(201).json({ok:true,created:parsed.length,stores:storeIds.length});
   }catch(error){next(error)}
 });
 
