@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {createRoot} from "react-dom/client";
+import {createPortal} from "react-dom";
 import {Database,FileSpreadsheet,Search,ShieldCheck,XCircle} from "lucide-react";
 import "./master-catalog.css";
 
@@ -19,6 +19,7 @@ const fileToBase64=file=>new Promise((resolve,reject)=>{
 });
 
 export default function MasterCatalogCenter(){
+  const [toolbar,setToolbar]=useState(null);
   const [open,setOpen]=useState(false);
   const [file,setFile]=useState(null);
   const [base64,setBase64]=useState("");
@@ -32,6 +33,12 @@ export default function MasterCatalogCenter(){
 
   const loadStatus=async()=>{try{setStatus(await api("/api/platform/master-catalog/status"))}catch{}};
   useEffect(()=>{if(open)loadStatus()},[open]);
+  useEffect(()=>{
+    const resolveToolbar=()=>setToolbar(document.querySelector(".platform-title-actions"));
+    resolveToolbar();
+    const timer=setInterval(resolveToolbar,500);
+    return()=>clearInterval(timer);
+  },[]);
 
   const choose=async event=>{
     const selected=event.target.files?.[0];
@@ -66,14 +73,18 @@ export default function MasterCatalogCenter(){
     try{setResults(await api(`/api/platform/master-catalog/search?q=${encodeURIComponent(query.trim())}`))}catch(err){setError(err.message)}finally{setBusy(false)}
   };
 
+  const launcher=toolbar?createPortal(
+    <button className="master-catalog-launcher" onClick={()=>setOpen(true)}><Database/>Master Catalog</button>,
+    toolbar
+  ):null;
+
   return <>
-    <button className="master-catalog-launcher" onClick={()=>setOpen(true)}><Database/>Master Catalog</button>
+    {launcher}
     {open&&<div className="master-catalog-overlay">
       <div className="master-catalog-modal">
         <div className="master-catalog-head"><div><h2>Platform Master Product Catalog</h2><p>Κεντρική βάση προϊόντων — μόνο για SUPER_ADMIN</p></div><button onClick={()=>setOpen(false)}><XCircle/></button></div>
         {status&&<div className="master-kpis"><div><small>Προϊόντα στη βάση</small><b>{Number(status.catalog?.products||0).toLocaleString("el-GR")}</b></div><div><small>Χωρίς λιανική</small><b>{Number(status.catalog?.missingRetail||0).toLocaleString("el-GR")}</b></div><div><small>ΦΠΑ μη επιβεβαιωμένο</small><b>{Number(status.catalog?.vatUnverified||0).toLocaleString("el-GR")}</b></div></div>}
         {error&&<div className="master-alert error">{error}</div>}{done&&<div className="master-alert success">{done}</div>}
-
         <section className="master-section">
           <div className="master-section-title"><FileSpreadsheet/><div><h3>Εισαγωγή Excel</h3><p>Πρώτα γίνεται προεπισκόπηση. Η οριστική εισαγωγή απαιτεί δεύτερη ενέργεια.</p></div></div>
           <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={choose} disabled={busy}/>
@@ -86,7 +97,6 @@ export default function MasterCatalogCenter(){
             <button className="master-primary" onClick={importNow} disabled={busy||preview.alreadyImported}>{busy?"Εισαγωγή…":preview.alreadyImported?"Το αρχείο έχει ήδη εισαχθεί":"Οριστική εισαγωγή στον Master Catalog"}</button>
           </div>}
         </section>
-
         <section className="master-section">
           <div className="master-section-title"><Search/><div><h3>Έλεγχος καταλόγου</h3><p>Αναζήτηση με περιγραφή, κωδικό ή barcode μετά την εισαγωγή.</p></div></div>
           <form className="master-search" onSubmit={search}><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="π.χ. ΑΛΦΑ 330 ή 520…"/><button disabled={busy}>Αναζήτηση</button></form>
