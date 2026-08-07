@@ -240,7 +240,7 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
 
 router.post("/companies/:companyId/support-access",async(req,res,next)=>{
   try{
-    const body=z.object({storeId:z.string().optional().nullable(),destination:z.enum(["ALL","SHIFTS","CASH_CONTROL"]).default("ALL")}).parse(req.body||{});
+    const body=z.object({storeId:z.string().optional().nullable(),destination:z.enum(["ALL","BACKOFFICE","SHIFTS","CASH_CONTROL"]).default("ALL")}).parse(req.body||{});
     const company=await prisma.company.findUnique({where:{id:req.params.companyId},select:{id:true,name:true,active:true}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε ο πελάτης."});
     const store=body.storeId?await prisma.store.findFirst({where:{id:body.storeId,companyId:company.id},select:{id:true,name:true}}):null;
