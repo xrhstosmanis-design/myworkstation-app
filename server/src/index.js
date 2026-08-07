@@ -13,6 +13,7 @@ import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
+import connectorObserverRoutes from "./routes/connector-observer.js";
 import ownerProductRoutes from "./routes/owner-products.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
@@ -54,6 +55,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes)
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
+app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),connectorObserverRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 
 app.use((err,req,res,next)=>{
