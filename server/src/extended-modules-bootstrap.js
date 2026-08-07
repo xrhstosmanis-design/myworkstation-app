@@ -235,6 +235,27 @@ const statements=[
 )`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "ProviderOutbox_idempotency_key" ON "ProviderOutbox"("idempotencyKey")`,
 `CREATE INDEX IF NOT EXISTS "ProviderOutbox_company_status_idx" ON "ProviderOutbox"("companyId","status")`,
+`ALTER TABLE "ProviderOutbox" ADD COLUMN IF NOT EXISTS "sandboxReference" TEXT`,
+`ALTER TABLE "ProviderOutbox" ADD COLUMN IF NOT EXISTS "sandboxValidatedAt" TIMESTAMP(3)`,
+
+`CREATE TABLE IF NOT EXISTS "ProviderAttempt" (
+  "id" TEXT NOT NULL,
+  "companyId" TEXT NOT NULL,
+  "outboxId" TEXT NOT NULL,
+  "environment" TEXT NOT NULL DEFAULT 'SANDBOX',
+  "mode" TEXT NOT NULL DEFAULT 'VALIDATION_ONLY',
+  "externalCall" BOOLEAN NOT NULL DEFAULT false,
+  "status" TEXT NOT NULL,
+  "requestHash" TEXT NOT NULL,
+  "responseJson" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "errorText" TEXT,
+  "createdByUserId" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "ProviderAttempt_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "ProviderAttempt_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "ProviderAttempt_outboxId_fkey" FOREIGN KEY ("outboxId") REFERENCES "ProviderOutbox"("id") ON DELETE CASCADE ON UPDATE CASCADE
+)`,
+`CREATE INDEX IF NOT EXISTS "ProviderAttempt_outbox_created_idx" ON "ProviderAttempt"("outboxId","createdAt")`,
 
 `CREATE TABLE IF NOT EXISTS "RemoteSupportSession" (
   "id" TEXT NOT NULL,
