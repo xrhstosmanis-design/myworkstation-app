@@ -102,7 +102,7 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
-  const backoffice=["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const permissions=req.user?.permissions||[];
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL"));
   if(!backoffice&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
@@ -192,12 +192,16 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     ORDER BY "openedAt" DESC LIMIT 1
   `;
   const openSession=openRows[0]||null;
+  const canReviewStoreLedger=req.user.tokenType!=="STORE_OPERATOR"||req.user.permissions?.includes("STORE_LEDGER_REVIEW");
+  const canReverse=req.user.tokenType!=="STORE_OPERATOR"
+    ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
+    :req.user.permissions?.includes("TRANSACTION_REVERSAL");
   const recentRows=await prisma.$queryRaw`
     SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
            ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename"
     FROM "StoreTransaction"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
-      AND (${req.user.tokenType!=="STORE_OPERATOR"} OR "actorId"=${req.user.id})
+      AND (${canReviewStoreLedger} OR "actorId"=${req.user.id})
     ORDER BY "occurredAt" DESC LIMIT 80
   `;
   const recent=recentRows.map(normalize);
@@ -212,7 +216,8 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     openSession,
     summary:totals(sessionRows),
     suppliers,
-    recent
+    recent,
+    access:{canReviewStoreLedger,canReverse}
   });
 }));
 
@@ -256,13 +261,16 @@ router.get("/:transactionId/attachment",route(async(req,res)=>{
   const row=rows[0];
   if(!row)return res.status(404).json({error:"Δεν βρέθηκε συναλλαγή."});
   assertStoreAccess(req,row.storeId);
-  if(req.user.tokenType==="STORE_OPERATOR"&&row.actorId!==req.user.id)return res.status(403).json({error:"Μπορείς να δεις μόνο τα δικά σου παραστατικά."});
+  const canReviewStoreLedger=req.user.permissions?.includes("STORE_LEDGER_REVIEW");
+  if(req.user.tokenType==="STORE_OPERATOR"&&!canReviewStoreLedger&&row.actorId!==req.user.id)return res.status(403).json({error:"Μπορείς να δεις μόνο τα δικά σου παραστατικά."});
   if(!row.attachmentData)return res.status(404).json({error:"Δεν υπάρχει φωτογραφία παραστατικού."});
   res.json({dataUrl:row.attachmentData,mimeType:row.attachmentMimeType,filename:row.attachmentFilename});
 }));
 
 router.post("/:transactionId/reverse",route(async(req,res)=>{
-  const canReverse=["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const canReverse=req.user.tokenType!=="STORE_OPERATOR"
+    ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
+    :req.user.permissions?.includes("TRANSACTION_REVERSAL");
   if(!canReverse)return res.status(403).json({error:"Μόνο υπεύθυνος ή διαχειριστής μπορεί να ακυρώσει συναλλαγή."});
   const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const found=await prisma.$queryRaw`
