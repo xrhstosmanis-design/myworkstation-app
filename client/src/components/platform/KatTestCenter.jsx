@@ -38,7 +38,7 @@ export default function KatTestCenter(){
     <section className="kat-test-grid">
       <article className="kat-test-card"><ShieldCheck/><div><small>Περιβάλλον</small><strong>{status?.ready?"ΕΤΟΙΜΟ":"ΔΕΝ ΕΧΕΙ ΣΤΗΘΕΙ"}</strong><span>{status?.ready?"Ξεχωριστός tenant/store":"Χρειάζεται αρχική δημιουργία"}</span></div></article>
       <article className="kat-test-card"><UsersRound/><div><small>Ρόλοι</small><strong>3</strong><span>Super Admin / Admin / Πωλητής</span></div></article>
-      <article className="kat-test-card"><Store/><div><small>Store Mode</small><strong>{status?.ready?"ΕΝΕΡΓΟ":"ΑΝΑΜΟΝΗ"}</strong><span>{storeId}</span></div></article>
+      <article className="kat-test-card"><Store/><div><small>Εμπορικό POS</small><strong>{status?.ready?"ΕΤΟΙΜΟ ΓΙΑ ΔΟΚΙΜΗ":"ΑΝΑΜΟΝΗ"}</strong><span>{storeId}</span></div></article>
     </section>
     <section className="kat-test-panel">
       <div className="kat-test-panel-head"><div><h2>Αρχική δημιουργία / επαναφορά KAT TEST</h2><p>Δημιουργεί ασφαλή δοκιμαστικά credentials και αντιγράφει το υπάρχον POS layout του ΚΑΤ όταν υπάρχει.</p></div><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div>
@@ -57,7 +57,7 @@ export default function KatTestCenter(){
     {status?.ready&&<section className="kat-test-panel">
       <h2>Άμεσες δοκιμές</h2>
       <div className="kat-test-actions">
-        <a className="primary" href={`/store/${encodeURIComponent(storeId)}`}><UserRoundCog/>Άνοιγμα ως Πωλητής</a>
+        <a className="primary" href={`/pos/${encodeURIComponent(storeId)}`}><UserRoundCog/>Άνοιγμα κανονικού POS ως Πωλητής</a>
         <a href="/platform-admin"><ShieldCheck/>Super Admin / POS Designer</a>
         <a href="/"><ExternalLink/>Backoffice για Admin/Owner</a>
       </div>
