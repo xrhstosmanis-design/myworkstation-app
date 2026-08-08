@@ -77,7 +77,7 @@ async function ensureTables(){
 }
 
 function requireCashAccess(req,res,next){
-  const backoffice=["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const storeOperator=req.user?.tokenType==="STORE_OPERATOR"&&req.user?.permissions?.includes("CASH_CONTROL");
   if(!backoffice&&!storeOperator){
     return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
