@@ -45,4 +45,24 @@ router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=
   }catch(error){next(error)}
 });
 
+router.post("/:productId/stock-adjustment",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+    const body=z.object({storeId:z.string().min(1),mode:z.enum(["SET","ADD","SUBTRACT"]),quantity:z.coerce.number().min(0).max(100000000),logMovement:z.boolean().default(true)}).parse(req.body||{});
+    const rows=await prisma.$queryRaw`
+      SELECT sp."currentStock",p."id" AS "productId",p."name",p."costPrice"
+      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "Store" s ON s."id"=sp."storeId"
+      WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND s."id"=${body.storeId} LIMIT 1`;
+    const row=rows[0];if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
+    const current=Number(row.currentStock||0);const next=body.mode==="SET"?body.quantity:body.mode==="ADD"?current+body.quantity:current-body.quantity;
+    if(next<0)return res.status(400).json({error:"Η διόρθωση θα δημιουργούσε αρνητικό stock."});
+    const delta=next-current;
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${next},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId}`;
+      if(body.logMovement&&delta!==0)await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${body.storeId},${req.params.productId},'MANUAL_ADJUSTMENT',${delta},${Number(row.costPrice||0)},'PRODUCT_CARD',${req.params.productId},${body.mode==="SET"?'Χειροκίνητη ακριβής διόρθωση stock':body.mode==="ADD"?'Χειροκίνητη αύξηση stock':'Χειροκίνητη μείωση stock'},${req.user.id})`;
+    });
+    res.json({ok:true,previousStock:current,currentStock:next,delta});
+  }catch(error){next(error)}
+});
+
 export default router;
