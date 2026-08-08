@@ -39,10 +39,15 @@ test("physical pilot smoke tests are explicitly confirmed without fiscal automat
 });
 
 test("readiness remains available during a rolling deploy before optional tables exist",()=>{
-  assert.match(route,/to_regclass\('public\."PilotStoreProfile"'\)/);
+  assert.match(route,/to_regclass\('public\."PilotStoreProfile"'\)::text/);
   assert.match(route,/profileTable\[0\]\?\.tableName\?/);
-  assert.match(route,/to_regclass\('public\."StorePosLayout"'\)/);
+  assert.match(route,/to_regclass\('public\."StorePosLayout"'\)::text/);
   assert.match(route,/layoutTable\[0\]\?\.tableName\?/);
+});
+
+test("readiness table probes are safely deserialized by Prisma",()=>{
+  assert.doesNotMatch(route,/to_regclass\('[^']+'\) AS "tableName"/);
+  assert.equal((route.match(/to_regclass\('[^']+'\)::text AS "tableName"/g)||[]).length,4);
 });
 
 test("Super Admin can print a clean store readiness report",()=>{
