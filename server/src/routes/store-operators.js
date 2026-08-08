@@ -180,7 +180,7 @@ async function ownedStore(storeId,companyId){
 router.get("/stores/:storeId/directory",route(async(req,res)=>{
   const store=await activeStore(req.params.storeId);
   const rows=await prisma.$queryRaw`
-    SELECT c."id",c."employeeId",c."displayName",c."role",
+    SELECT c."id",c."employeeId",c."displayName",
            (c."pinHash" IS NOT NULL) AS "hasPin",
            (c."cardCodeHash" IS NOT NULL) AS "hasCard"
     FROM "StoreOperatorCredential" c
@@ -314,6 +314,11 @@ router.put("/stores/:storeId/employees/:employeeId",route(async(req,res)=>{
       "active"=EXCLUDED."active",
       "updatedAt"=NOW()
   `;
+  // A credential reset by an administrator must also release any previous
+  // failed-login guard for this employee and their old/new card.
+  await clearLoginFailures(store.id,loginSubject("PIN",employee.id));
+  if(existing?.cardCodeHash)await clearLoginFailures(store.id,loginSubject("CARD",existing.cardCodeHash));
+  if(cardCodeHash)await clearLoginFailures(store.id,loginSubject("CARD",cardCodeHash));
   await audit({companyId:store.companyId,storeId:store.id,operatorId:id,actorId:req.user.id,eventType:"OPERATOR_CREDENTIAL_UPDATED",details:{employeeId:employee.id,role:body.role,active:body.active,hasPin:!!pinHash,hasCard:!!cardCodeHash}});
   res.json({ok:true,employeeId:employee.id,credentialId:id,hasPin:!!pinHash,hasCard:!!cardCodeHash,cardCodeLast4,active:body.active,role:body.role});
 }));
