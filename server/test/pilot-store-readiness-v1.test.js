@@ -19,6 +19,13 @@ test("readiness checks mandatory pilot modules, credentials, manager and mail",(
   assert.match(route,/to_regclass\('public\."CashShiftSession"'\)/);
 });
 
+test("Super Admin can assign the Store Mode manager remotely without changing credentials",()=>{
+  assert.match(route,/stores\/:storeId\/store-mode-manager/);
+  assert.match(route,/SET "role"='MANAGER'/);
+  assert.match(route,/if\(!selected\[0\]\.hasCredential\)/);
+  assert.match(ui,/Απομακρυσμένα · δεν αλλάζει PIN και δεν ανοίγει βάρδια/);
+});
+
 test("readiness is read only and keeps RBS outside the pilot flow",()=>{
   assert.match(route,/Παράλληλη μη φορολογική λειτουργία — καμία εντολή προς RBS/);
   assert.match(ui,/Ο έλεγχος είναι μόνο ανάγνωσης/);
