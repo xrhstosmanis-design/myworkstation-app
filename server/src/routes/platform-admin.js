@@ -258,6 +258,8 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
     const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"') AS "tableName"`;
     const openShifts=cashTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "CashShiftSession" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "status"='OPEN'`:[{total:0}];
     const layouts=await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`;
+    const profileRows=await prisma.$queryRaw`SELECT "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedAt" FROM "PilotStoreProfile" WHERE "companyId"=${company.id} AND "storeId"=${store.id} LIMIT 1`;
+    const profile=profileRows[0]||null;
     const mail=getMailStatus();
     const emailRecipient=Boolean(company.users[0]?.email||store.responsibleEmail);
     const checks=[
@@ -267,13 +269,41 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
       {key:"employees",label:"Ενεργό προσωπικό καταστήματος",ok:activeEmployees>0,blocking:true,detail:`${activeEmployees} ενεργοί εργαζόμενοι`},
       {key:"credentials",label:"Προσωπική είσοδος με PIN ή κάρτα",ok:credentials.total>0&&(credentials.withPin>0||credentials.withCard>0),blocking:true,detail:`${credentials.total} ενεργοί · ${credentials.withPin} PIN · ${credentials.withCard} κάρτες`},
       {key:"manager",label:"Υπεύθυνος Store Mode",ok:credentials.managers>0,blocking:true,detail:`${credentials.managers} υπεύθυνοι`},
+      {key:"pilotProfile",label:"Στοιχεία πιλοτικής εγκατάστασης",ok:Boolean(profile?.pcName&&profile?.operatingHours&&profile?.responsibleName),blocking:true,detail:profile?.pcName&&profile?.operatingHours&&profile?.responsibleName?`${profile.pcName} · ${profile.operatingHours} · ${profile.responsibleName}`:"Συμπληρώστε PC, ωράριο και υπεύθυνο"},
+      {key:"backup",label:"Επιβεβαιωμένο backup πριν από αλλαγές",ok:Boolean(profile?.backupConfirmedAt),blocking:true,detail:profile?.backupConfirmedAt?`Επιβεβαιώθηκε ${new Date(profile.backupConfirmedAt).toLocaleString("el-GR")}`:"Δεν έχει επιβεβαιωθεί backup"},
+      {key:"scopeFreeze",label:"Κλείδωμα design και βάσης δεδομένων",ok:Boolean(profile?.designFrozenAt&&profile?.databaseFrozenAt),blocking:true,detail:profile?.designFrozenAt&&profile?.databaseFrozenAt?"Design και βάση κλειδωμένα για την πιλοτική εγκατάσταση":"Απαιτείται κλείδωμα design και βάσης"},
       {key:"mail",label:"Email αναφοράς κλεισίματος",ok:!store.cashCloseEmailEnabled||(mail.configured&&emailRecipient),blocking:store.cashCloseEmailEnabled,detail:store.cashCloseEmailEnabled?(mail.configured&&emailRecipient?"SMTP έτοιμο και υπάρχει παραλήπτης":"Ελέγξτε SMTP ή email παραλήπτη"):"Απενεργοποιημένο για το κατάστημα"},
       {key:"posLayout",label:"Δημοσιευμένος σχεδιασμός POS",ok:Number(layouts[0]?.total||0)>0,blocking:false,detail:Number(layouts[0]?.total||0)>0?"Έχει δημοσιευτεί στο κατάστημα":"Προαιρετικό για την πρώτη παράλληλη δοκιμή"},
       {key:"openShift",label:"Κατάσταση βάρδιας",ok:true,blocking:false,detail:Number(openShifts[0]?.total||0)>0?"Υπάρχει ανοιχτή βάρδια — μην εκτελέσετε νέα δοκιμή ανοίγματος":"Δεν υπάρχει ανοιχτή βάρδια"},
       {key:"fiscalIsolation",label:"Απομόνωση από RBS / φορολογική λειτουργία",ok:true,blocking:true,detail:"Παράλληλη μη φορολογική λειτουργία — καμία εντολή προς RBS"}
     ];
     const blockers=checks.filter(check=>check.blocking&&!check.ok);
-    res.json({ready:blockers.length===0,checkedAt:new Date().toISOString(),company:{id:company.id,name:company.name},store:{id:store.id,name:store.name},checks,blockers:blockers.length});
+    res.json({ready:blockers.length===0,checkedAt:new Date().toISOString(),company:{id:company.id,name:company.name},store:{id:store.id,name:store.name},profile,checks,blockers:blockers.length});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/pilot-profile",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      pcName:z.string().trim().min(2).max(120),
+      operatingHours:z.string().trim().min(3).max(160),
+      responsibleName:z.string().trim().min(2).max(160),
+      notes:z.string().trim().max(1000).optional().or(z.literal("")),
+      backupConfirmed:z.boolean(),designFrozen:z.boolean(),databaseFrozen:z.boolean()
+    }).parse(req.body||{});
+    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const now=new Date();
+    const rows=await prisma.$queryRaw`
+      INSERT INTO "PilotStoreProfile" ("storeId","companyId","pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedBy","updatedAt")
+      VALUES (${store.id},${store.companyId},${body.pcName},${body.operatingHours},${body.responsibleName},${body.notes||null},${body.backupConfirmed?now:null},${body.designFrozen?now:null},${body.databaseFrozen?now:null},${req.user.id},CURRENT_TIMESTAMP)
+      ON CONFLICT ("storeId") DO UPDATE SET "pcName"=EXCLUDED."pcName","operatingHours"=EXCLUDED."operatingHours","responsibleName"=EXCLUDED."responsibleName","notes"=EXCLUDED."notes",
+        "backupConfirmedAt"=CASE WHEN ${body.backupConfirmed} THEN COALESCE("PilotStoreProfile"."backupConfirmedAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "designFrozenAt"=CASE WHEN ${body.designFrozen} THEN COALESCE("PilotStoreProfile"."designFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "databaseFrozenAt"=CASE WHEN ${body.databaseFrozen} THEN COALESCE("PilotStoreProfile"."databaseFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "updatedBy"=${req.user.id},"updatedAt"=CURRENT_TIMESTAMP
+      RETURNING "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedAt"`;
+    res.json(rows[0]);
   }catch(error){next(error)}
 });
 
