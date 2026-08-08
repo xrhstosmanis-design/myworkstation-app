@@ -1,0 +1,70 @@
+import React,{useEffect,useState} from "react";
+import {CheckCircle2,ExternalLink,RefreshCw,ShieldCheck,Store,UserRoundCog,UsersRound} from "lucide-react";
+import "./kat-test-center.css";
+
+async function request(path,options={}){
+  const token=localStorage.getItem("token");
+  const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
+  const text=await response.text();
+  let data={};
+  if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
+  if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
+  return data;
+}
+
+export default function KatTestCenter(){
+  const [status,setStatus]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const [result,setResult]=useState(null);
+  const load=async()=>{
+    setLoading(true);setError("");
+    try{setStatus(await request("/api/platform/kat-test/status"))}
+    catch(err){setError(err.message)}finally{setLoading(false)}
+  };
+  useEffect(()=>{load()},[]);
+  const bootstrap=async event=>{
+    event.preventDefault();setBusy(true);setError("");setResult(null);
+    const form=new FormData(event.currentTarget);
+    const body=Object.fromEntries(form.entries());
+    try{const response=await request("/api/platform/kat-test/bootstrap",{method:"POST",body:JSON.stringify(body)});setResult(response);await load()}
+    catch(err){setError(err.message)}finally{setBusy(false)}
+  };
+  const storeId=status?.company?.stores?.[0]?.id||"kat-test-store";
+  return <div className="kat-test-shell">
+    <header className="kat-test-header"><div><span>KAT TEST</span><h1>Κέντρο δοκιμών 3 ρόλων</h1><p>Απομονωμένο ψηφιακό δίδυμο του ΚΑΤ. Χωρίς RBS, CapDriver ή φορολογική ταμειακή.</p></div><a href="/platform-admin"><ExternalLink/>Platform Admin</a></header>
+    {error&&<div className="kat-test-alert error">{error}</div>}
+    <section className="kat-test-grid">
+      <article className="kat-test-card"><ShieldCheck/><div><small>Περιβάλλον</small><strong>{status?.ready?"ΕΤΟΙΜΟ":"ΔΕΝ ΕΧΕΙ ΣΤΗΘΕΙ"}</strong><span>{status?.ready?"Ξεχωριστός tenant/store":"Χρειάζεται αρχική δημιουργία"}</span></div></article>
+      <article className="kat-test-card"><UsersRound/><div><small>Ρόλοι</small><strong>3</strong><span>Super Admin / Admin / Πωλητής</span></div></article>
+      <article className="kat-test-card"><Store/><div><small>Store Mode</small><strong>{status?.ready?"ΕΝΕΡΓΟ":"ΑΝΑΜΟΝΗ"}</strong><span>{storeId}</span></div></article>
+    </section>
+    <section className="kat-test-panel">
+      <div className="kat-test-panel-head"><div><h2>Αρχική δημιουργία / επαναφορά KAT TEST</h2><p>Δημιουργεί ασφαλή δοκιμαστικά credentials και αντιγράφει το υπάρχον POS layout του ΚΑΤ όταν υπάρχει.</p></div><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div>
+      <form className="kat-test-form" onSubmit={bootstrap}>
+        <label>Owner όνομα<input name="ownerName" defaultValue="KAT TEST Owner" required/></label>
+        <label>Owner email<input name="ownerEmail" type="email" placeholder="kat-test-owner@example.com" required/></label>
+        <label>Owner κωδικός<input name="ownerPassword" type="password" minLength="8" required/></label>
+        <label>Admin όνομα<input name="adminName" defaultValue="KAT TEST Admin" required/></label>
+        <label>Admin email<input name="adminEmail" type="email" placeholder="kat-test-admin@example.com" required/></label>
+        <label>Admin κωδικός<input name="adminPassword" type="password" minLength="8" required/></label>
+        <label>Πωλητής<input name="sellerName" defaultValue="KAT TEST Πωλητής" required/></label>
+        <label>PIN πωλητή<input name="sellerPin" inputMode="numeric" pattern="[0-9]{4,8}" placeholder="4-8 ψηφία" required/></label>
+        <button disabled={busy}>{busy?"Δημιουργία…":"Δημιουργία / Επαναφορά KAT TEST"}</button>
+      </form>
+    </section>
+    {status?.ready&&<section className="kat-test-panel">
+      <h2>Άμεσες δοκιμές</h2>
+      <div className="kat-test-actions">
+        <a className="primary" href={`/store/${encodeURIComponent(storeId)}`}><UserRoundCog/>Άνοιγμα ως Πωλητής</a>
+        <a href="/platform-admin"><ShieldCheck/>Super Admin / POS Designer</a>
+        <a href="/"><ExternalLink/>Backoffice για Admin/Owner</a>
+      </div>
+      <div className="kat-test-checks">
+        <span><CheckCircle2/>Προϊόντα & κατηγορίες</span><span><CheckCircle2/>Κουμπιά POS</span><span><CheckCircle2/>Τιμές</span><span><CheckCircle2/>Βάρδιες</span><span><CheckCircle2/>Μετρητά / κάρτα</span><span><CheckCircle2/>Δικαιώματα ρόλων</span>
+      </div>
+      {result&&<div className="kat-test-alert success">Το KAT TEST δημιουργήθηκε. POS layout αντιγράφηκε: {result.posLayoutCopied?"Ναι":"Όχι - θα δημιουργηθεί από τον POS Designer"}.</div>}
+    </section>}
+  </div>;
+}
