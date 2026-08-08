@@ -274,10 +274,19 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   if(transaction.reversedAt)return res.status(409).json({error:"Η συναλλαγή έχει ήδη ακυρωθεί."});
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
-    UPDATE "StoreTransaction"
+    UPDATE "StoreTransaction" transaction
     SET "reversedAt"=NOW(),"reversedBy"=${req.user.id},"reversedByName"=${actorName},"reversalReason"=${body.reason}
-    WHERE "id"=${transaction.id} RETURNING *
+    FROM "CashShiftSession" shift
+    WHERE transaction."id"=${transaction.id}
+      AND transaction."companyId"=${req.user.companyId}
+      AND transaction."reversedAt" IS NULL
+      AND shift."id"=transaction."sessionId"
+      AND shift."companyId"=transaction."companyId"
+      AND shift."storeId"=transaction."storeId"
+      AND shift."status"='OPEN'
+    RETURNING transaction.*
   `;
+  if(!rows[0])return res.status(409).json({error:"Η βάρδια της συναλλαγής έχει κλείσει. Δεν επιτρέπεται μεταγενέστερη αλλαγή στα οριστικοποιημένα στοιχεία."});
   const reversed=normalize(rows[0]);
   const store=await ownedStore(transaction.storeId,req.user.companyId);
   const emailNotification=await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"REVERSAL",transaction:reversed,actorName,reason:body.reason});
