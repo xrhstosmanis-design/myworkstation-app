@@ -8,11 +8,13 @@ import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
 import KatTestCenter from "./components/platform/KatTestCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import CommercialPosApp from "./components/commerce/CommercialPosApp.jsx";
+import {installAnalyticsTabs} from "./components/commerce/installAnalyticsTabs.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
 import "./components/platform/commercial-license.css";
 import "./components/platform/platform-audit.css";
+import "./components/commerce/myworkstation-analytics-theme.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -69,6 +71,8 @@ const storeApi=async(path,options={})=>{
 };
 
 const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
+
+installAnalyticsTabs();
 
 if(katTestMatch){
   document.title="MyWorkStation TEST";
