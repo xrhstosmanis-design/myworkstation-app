@@ -247,7 +247,7 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
     const requiredModules=["CORE","STORE_MODE","CASH_CONTROL","PILOT_REPORT"];
     const now=new Date();
     const activeModules=new Set(company.modules.filter(row=>row.active&&(!row.startsAt||row.startsAt<=now)&&(!row.endsAt||row.endsAt>=now)).map(row=>row.moduleKey));
-    const credentialTable=await prisma.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"') AS "tableName"`;
+    const credentialTable=await prisma.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"')::text AS "tableName"`;
     const credentialRows=credentialTable[0]?.tableName?await prisma.$queryRaw`
       SELECT COUNT(*)::int AS "total",COUNT(*) FILTER (WHERE "pinHash" IS NOT NULL)::int AS "withPin",
              COUNT(*) FILTER (WHERE "cardCodeHash" IS NOT NULL)::int AS "withCard",COUNT(*) FILTER (WHERE "role"='MANAGER')::int AS "managers"
@@ -255,11 +255,11 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
     `:[{total:0,withPin:0,withCard:0,managers:0}];
     const credentials=credentialRows[0];
     const activeEmployees=await prisma.employee.count({where:{storeId:store.id,active:true}});
-    const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"') AS "tableName"`;
+    const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"')::text AS "tableName"`;
     const openShifts=cashTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "CashShiftSession" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "status"='OPEN'`:[{total:0}];
-    const layoutTable=await prisma.$queryRaw`SELECT to_regclass('public."StorePosLayout"') AS "tableName"`;
+    const layoutTable=await prisma.$queryRaw`SELECT to_regclass('public."StorePosLayout"')::text AS "tableName"`;
     const layouts=layoutTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`:[{total:0}];
-    const profileTable=await prisma.$queryRaw`SELECT to_regclass('public."PilotStoreProfile"') AS "tableName"`;
+    const profileTable=await prisma.$queryRaw`SELECT to_regclass('public."PilotStoreProfile"')::text AS "tableName"`;
     const profileRows=profileTable[0]?.tableName?await prisma.$queryRaw`SELECT "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","loginTestedAt","shiftOpenTestedAt","shiftCloseTestedAt","kioskUnaffectedAt","updatedAt" FROM "PilotStoreProfile" WHERE "companyId"=${company.id} AND "storeId"=${store.id} LIMIT 1`:[];
     const profile=profileRows[0]||null;
     const mail=getMailStatus();
