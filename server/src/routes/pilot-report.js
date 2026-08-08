@@ -13,7 +13,8 @@ const tableStatements=[
     "openedBy" TEXT NOT NULL,"openedByName" TEXT,"openedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "openingDrawer" NUMERIC(14,2) NOT NULL DEFAULT 0,"openingCustody" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingCoins" NUMERIC(14,2) NOT NULL DEFAULT 0,"openingSafe" NUMERIC(14,2) NOT NULL DEFAULT 0,
-    "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,"openingNote" TEXT,"closedBy" TEXT,
+    "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,"expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0,"openingNote" TEXT,"closedBy" TEXT,
     "closedByName" TEXT,"closedAt" TIMESTAMPTZ,"cashSales" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "cardSales" NUMERIC(14,2) NOT NULL DEFAULT 0,"expenses" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "closingDrawer" NUMERIC(14,2),"closingCustody" NUMERIC(14,2),"closingCoins" NUMERIC(14,2),
@@ -23,6 +24,8 @@ const tableStatements=[
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"sessionId" TEXT,
     "type" TEXT NOT NULL,"amount" NUMERIC(14,2) NOT NULL,"description" TEXT,"supplierName" TEXT,
@@ -84,7 +87,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
   `;
 
   const sessions=sessionsRaw.map(row=>normalizeMoney(row,[
-    "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational",
+    "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance",
     "cashSales","cardSales","eftposTotal","cardVariance","expenses","closingDrawer","closingCustody","closingCoins",
     "closingSafe","expectedOperational","actualOperational","variance","nextOpeningTotal"
   ]));
@@ -118,6 +121,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
     eftposTotal:closed.reduce((sum,row)=>sum+Number(row.eftposTotal||0),0),
     cardVarianceTotal:closed.reduce((sum,row)=>sum+Number(row.cardVariance||0),0),
     varianceTotal:closed.reduce((sum,row)=>sum+Number(row.variance||0),0),
+    openingVarianceTotal:sessions.reduce((sum,row)=>sum+Number(row.openingVariance||0),0),
     operators
   };
   res.json({store:{id:store.id,name:store.name},date:query.date,summary,sessions,transactions});

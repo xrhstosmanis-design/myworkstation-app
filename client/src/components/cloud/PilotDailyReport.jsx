@@ -32,9 +32,10 @@ export default function PilotDailyReport({api,store}){
       ["Αφαιρέθηκαν από τη βάρδια",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
       ["EFTPOS",data.summary.eftposTotal],["Διαφορά καρτών–EFTPOS",data.summary.cardVarianceTotal],
       ["Συνολική διαφορά ταμείων",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
+      ["Συνολική διαφορά έναρξης",data.summary.openingVarianceTotal],
       ["Ακυρωμένες συναλλαγές",data.summary.reversedCount],[],
-      ["ΒΑΡΔΙΕΣ"],["Βάρδια","Άνοιγμα","Άνοιξε","Κλείσιμο","Έκλεισε","Έναρξη","Μετρητά","Κάρτες","EFTPOS","Διαφορά καρτών–EFTPOS","Έξοδα","Πραγματικό","Διαφορά ταμείου"],
-      ...data.sessions.map(row=>[row.shiftLabel,when(row.openedAt),row.openedByName||"",when(row.closedAt),row.closedByName||"",row.openingOperational,row.cashSales,row.cardSales,row.eftposTotal,row.cardVariance,row.expenses,row.actualOperational,row.variance]),[],
+      ["ΒΑΡΔΙΕΣ"],["Βάρδια","Άνοιγμα","Άνοιξε","Κλείσιμο","Έκλεισε","Αναμενόμενη έναρξη","Δηλωμένη έναρξη","Διαφορά έναρξης","Μετρητά","Κάρτες","EFTPOS","Διαφορά καρτών–EFTPOS","Έξοδα","Πραγματικό","Διαφορά ταμείου"],
+      ...data.sessions.map(row=>[row.shiftLabel,when(row.openedAt),row.openedByName||"",when(row.closedAt),row.closedByName||"",row.expectedOpeningOperational,row.openingOperational,row.openingVariance,row.cashSales,row.cardSales,row.eftposTotal,row.cardVariance,row.expenses,row.actualOperational,row.variance]),[],
       ["ΣΥΝΑΛΛΑΓΕΣ"],["Ώρα","Τύπος","Ποσό","Περιγραφή","Προμηθευτής","Εργαζόμενος","Κατάσταση"],
       ...data.transactions.map(row=>[when(row.occurredAt),typeLabels[row.type]||row.type,row.amount,row.description||"",row.supplierName||"",row.actorName,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"])
     ];
@@ -59,6 +60,7 @@ export default function PilotDailyReport({api,store}){
         <article><span>Κάρτες − EFTPOS</span><strong className={Math.abs(Number(summary.cardVarianceTotal||0))>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
         <article><span>Αφαιρέθηκαν από ταμείο</span><strong>{money(summary.expensesTotal)}</strong></article>
         <article><span>Διαφορά</span><strong className={Number(summary.varianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.varianceTotal)}</strong></article>
+        <article><span>Διαφορά έναρξης</span><strong className={Number(summary.openingVarianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.openingVarianceTotal)}</strong></article>
         <article><span>Βάρδιες</span><strong>{summary.sessionsClosed||0}/{summary.sessionsOpened||0}</strong></article>
         <article><span>Συναλλαγές</span><strong>{summary.transactionCount||0}</strong></article>
       </div>

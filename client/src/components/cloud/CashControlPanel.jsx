@@ -49,6 +49,8 @@ export default function CashControlPanel({api,store}){
   useEffect(()=>{load()},[store.id]);
 
   const openingOperational=useMemo(()=>number(openForm.drawer)+number(openForm.custody)+number(openForm.coins),[openForm]);
+  const expectedOpening=number(data?.suggestedOpening?.operational);
+  const openingVariance=openingOperational-expectedOpening;
   const closingOperational=useMemo(()=>number(closeForm.drawer)+number(closeForm.custody)+number(closeForm.coins),[closeForm]);
   const expectedOperational=useMemo(()=>{
     const opening=number(data?.openSession?.openingOperational);
@@ -116,6 +118,7 @@ export default function CashControlPanel({api,store}){
         <MoneyField icon={<ShieldCheck/>} label="Χρηματοκιβώτιο" value={openForm.safe} onChange={value=>updateOpen("safe",value)}/>
         <label className="cash-wide">Σημείωση<input value={openForm.note} onChange={e=>updateOpen("note",e.target.value)} placeholder="Προαιρετική σημείωση παράδοσης"/></label>
         <div className="cash-total"><span>Έναρξη επόμενης λειτουργίας</span><strong>{money(openingOperational)}</strong></div>
+        {data?.recent?.some(row=>row.status==="CLOSED")&&Math.abs(openingVariance)>.009&&<div className="cloud-alert cloud-error cash-wide"><b>Διαφορά από την προηγούμενη παράδοση: {money(openingVariance)}</b><span>Αναμενόμενο {money(expectedOpening)} · Δηλωμένο {money(openingOperational)}. Η διαφορά θα καταγραφεί στη νέα βάρδια.</span></div>}
         <button className="cash-submit" disabled={busy}>{busy?"Αποθήκευση…":"Άνοιγμα βάρδιας"}</button>
       </form>:<form className="cash-form" onSubmit={closeShift}>
         <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
@@ -145,6 +148,7 @@ export default function CashControlPanel({api,store}){
           <div><b>{row.shiftLabel}</b><small>{when(row.openedAt)} · {row.openedByName||"Χρήστης"}{row.closedByName?` → ${row.closedByName}`:""}</small></div>
           <span className={`status-pill ${row.status==="OPEN"?"active":"revoked"}`}>{row.status==="OPEN"?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</span>
           <div><span>Έναρξη</span><b>{money(row.openingOperational)}</b></div>
+          <div><span>Διαφορά έναρξης</span><b className={number(row.openingVariance)<0?"cash-negative":"cash-positive"}>{money(row.openingVariance)}</b></div>
           <div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div>
           <div><span>Κάρτες</span><b>{money(row.cardSales)}</b></div>
           <div><span>EFTPOS</span><b>{row.status==="CLOSED"?money(row.eftposTotal):"—"}</b></div>

@@ -23,6 +23,8 @@ const tableStatements = [
     "openingCoins" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingSafe" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0,
+    "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0,
     "openingNote" TEXT,
     "closedBy" TEXT,
     "closedByName" TEXT,
@@ -46,6 +48,8 @@ const tableStatements = [
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "expectedOpeningOperational" NUMERIC(14,2) NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openingVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
@@ -123,7 +127,7 @@ function money(value){return Number(value||0)}
 function normalize(row){
   if(!row)return null;
   const fields=[
-    "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational",
+    "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance",
     "cashSales","cardSales","eftposTotal","cardVariance","expenses","closingDrawer","closingCustody","closingCoins",
     "closingSafe","expectedOperational","actualOperational","variance","nextOpeningTotal"
   ];
@@ -246,14 +250,21 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   `;
   if(existing[0]) return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});
   const operational=body.drawer+body.custody+body.coins;
+  const lastClosedRows=await prisma.$queryRaw`
+    SELECT "nextOpeningTotal" FROM "CashShiftSession"
+    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED'
+    ORDER BY "closedAt" DESC LIMIT 1
+  `;
+  const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational;
+  const openingVariance=operational-expectedOpening;
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "CashShiftSession" (
       "id","companyId","storeId","shiftLabel","openedBy","openedByName",
-      "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","openingNote"
+      "openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote"
     ) VALUES (
       ${crypto.randomUUID()},${req.user.companyId},${store.id},${body.shiftLabel},${req.user.id},${actorName},
-      ${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${body.note||null}
+      ${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}
     ) RETURNING *
   `;
   res.status(201).json(normalize(rows[0]));
