@@ -51,6 +51,20 @@ export async function ensurePlatformSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PlatformPosDraft" ("id" TEXT PRIMARY KEY,"layoutJson" JSONB NOT NULL,"version" INTEGER NOT NULL DEFAULT 1,"updatedBy" TEXT,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StorePosLayout" ("storeId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"layoutJson" JSONB NOT NULL,"version" INTEGER NOT NULL DEFAULT 1,"publishedBy" TEXT,"publishedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorePosLayout_company_idx" ON "StorePosLayout"("companyId")`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PilotStoreProfile" (
+    "storeId" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "pcName" TEXT,
+    "operatingHours" TEXT,
+    "responsibleName" TEXT,
+    "notes" TEXT,
+    "backupConfirmedAt" TIMESTAMPTZ,
+    "designFrozenAt" TIMESTAMPTZ,
+    "databaseFrozenAt" TIMESTAMPTZ,
+    "updatedBy" TEXT,
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PilotStoreProfile_company_idx" ON "PilotStoreProfile"("companyId")`);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "UserSession" (
       "id" TEXT NOT NULL,
