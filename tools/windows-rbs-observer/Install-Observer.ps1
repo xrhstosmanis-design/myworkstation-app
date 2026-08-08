@@ -5,6 +5,10 @@ if(!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 if([string]::IsNullOrWhiteSpace($PairingCode)){$PairingCode=Read-Host "Pairing code from MyWorkStation"}
 if($PairingCode.Length -lt 6){throw "Invalid pairing code."}
 $source=Split-Path -Parent $MyInvocation.MyCommand.Path
+$preflight=Join-Path $source "Preflight-Observer.ps1"
+if(!(Test-Path -LiteralPath $preflight)){throw "Preflight-Observer.ps1 is missing. Use the complete official package."}
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $preflight -ApiBase $ApiBase -WatchPath $WatchPath -ForInstall
+if($LASTEXITCODE -ne 0){throw "Pre-installation checks failed. Open MyWorkStation_Observer_Precheck.txt on the desktop."}
 $root="C:\ProgramData\MyWorkStation\RbsObserver"
 $backupRoot="C:\MyWorkStation_Backups\KAT_{0}" -f (Get-Date -Format "yyyyMMdd_HHmmss")
 $protected=@("C:\_km","C:\Kiosk Manager","C:\CapDriverService","C:\capture")
@@ -20,6 +24,7 @@ if(!(Test-Path -LiteralPath $WatchPath)){throw "Observation path $WatchPath was 
 New-Item -ItemType Directory -Path $root -Force|Out-Null
 Copy-Item (Join-Path $source "Observer.ps1") $root -Force
 Copy-Item (Join-Path $source "Status-Observer.ps1") $root -Force
+Copy-Item $preflight $root -Force
 $pairBody=@{code=$PairingCode;deviceName=("KAT-PC RBS Observer - "+$env:COMPUTERNAME);platform="Windows Read-Only Observer";metadata=@{observerMode="READ_ONLY";commandsEnabled=$false}}|ConvertTo-Json -Depth 4 -Compress
 $pair=Invoke-RestMethod -Uri ($ApiBase.TrimEnd("/")+"/api/cloud/v1/pair") -Method Post -ContentType "application/json; charset=utf-8" -Body $pairBody -TimeoutSec 30
 $tokenBytes=[Text.Encoding]::UTF8.GetBytes($pair.token)
