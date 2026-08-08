@@ -1,99 +1,63 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {Boxes,ChevronRight,Filter,Grid3X3,Layers3,List,RefreshCw,Search,Settings2,Tag} from "lucide-react";
+import {Barcode,BarChart3,Boxes,Camera,ChevronRight,FileText,Filter,Image,Layers3,List,MessageSquare,MoreHorizontal,Plus,RefreshCw,Search,Settings2,ShoppingCart,Tag,Trash2} from "lucide-react";
 import OwnerProductCenter from "./OwnerProductCenter.jsx";
 import "./kiosk-style-backoffice.css";
 
 const money=value=>`${Number(value||0).toFixed(2)} €`;
 const text=value=>String(value??"").trim();
+const sumStock=row=>(row.stores||[]).reduce((sum,s)=>sum+Number(s.currentStock||0),0);
+const TABS=[
+  ["basic","Βασικά στοιχεία",FileText],["barcodes","Barcodes",Barcode],["invoice","Κωδ. τιμολογίου",FileText],["comments","Σχόλια",MessageSquare],
+  ["stats","Στατιστικά",BarChart3],["other","Λοιπά",MoreHorizontal],["photo","ΦΩΤΟ",Image],["purchases","Αγορές",ShoppingCart],
+];
 
 export default function KioskStyleProductCenter({api,stores=[]}){
-  const [mode,setMode]=useState("items");
-  const [rows,setRows]=useState([]);
-  const [query,setQuery]=useState("");
-  const [category,setCategory]=useState("ALL");
-  const [vat,setVat]=useState("ALL");
-  const [status,setStatus]=useState("ALL");
-  const [selected,setSelected]=useState(null);
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState("");
+  const [mode,setMode]=useState("items"),[tab,setTab]=useState("basic");
+  const [rows,setRows]=useState([]),[query,setQuery]=useState(""),[category,setCategory]=useState("ALL"),[vat,setVat]=useState("ALL"),[status,setStatus]=useState("ALL");
+  const [selected,setSelected]=useState(null),[draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
 
-  const load=async()=>{
-    setBusy(true);setError("");
-    try{
-      const data=await api(`/api/owner-products/catalog?q=${encodeURIComponent(query.trim())}`);
-      setRows(Array.isArray(data)?data:[]);
-      if(selected){const fresh=(data||[]).find(row=>row.id===selected.id);if(fresh)setSelected(fresh)}
-    }catch(e){setError(e.message)}finally{setBusy(false)}
-  };
-
+  const load=async()=>{setBusy(true);setError("");try{const data=await api(`/api/owner-products/catalog?q=${encodeURIComponent(query.trim())}`);const list=Array.isArray(data)?data:[];setRows(list);if(selected){const fresh=list.find(r=>r.id===selected.id);if(fresh)choose(fresh)}}catch(e){setError(e.message)}finally{setBusy(false)}};
   useEffect(()=>{load()},[]);
 
-  const categories=useMemo(()=>{
-    const map=new Map();
-    rows.forEach(row=>{const key=text(row.categoryName)||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ";map.set(key,(map.get(key)||0)+1)});
-    return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"el"));
-  },[rows]);
+  const categories=useMemo(()=>{const map=new Map();rows.forEach(r=>{const k=text(r.categoryName)||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ";map.set(k,(map.get(k)||0)+1)});return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"el"))},[rows]);
+  const vatOptions=useMemo(()=>[...new Set(rows.map(r=>String(Number(r.vatRate||0))))].sort((a,b)=>Number(a)-Number(b)),[rows]);
+  const filtered=useMemo(()=>rows.filter(r=>{const c=text(r.categoryName)||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ";if(category!=="ALL"&&c!==category)return false;if(vat!=="ALL"&&String(Number(r.vatRate||0))!==vat)return false;if(status==="ACTIVE"&&r.active===false)return false;if(status==="INACTIVE"&&r.active!==false)return false;return true}),[rows,category,vat,status]);
 
-  const filtered=useMemo(()=>rows.filter(row=>{
-    const rowCategory=text(row.categoryName)||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ";
-    if(category!=="ALL"&&rowCategory!==category)return false;
-    if(vat!=="ALL"&&String(Number(row.vatRate||0))!==vat)return false;
-    if(status==="ACTIVE"&&row.active===false)return false;
-    if(status==="INACTIVE"&&row.active!==false)return false;
-    return true;
-  }),[rows,category,vat,status]);
-
-  const vatOptions=useMemo(()=>[...new Set(rows.map(row=>String(Number(row.vatRate||0))))].sort((a,b)=>Number(a)-Number(b)),[rows]);
+  const choose=row=>{setSelected(row);setTab("basic");setDraft({name:row.name||"",sku:row.sku||"",description:row.description||"",categoryName:row.categoryName||"",unit:row.unit||"PIECE",costPrice:String(Number(row.costPrice||0)),salePrice:String(Number(row.salePrice||0)),vatRate:String(Number(row.vatRate||0)),vatVerified:Boolean(row.vatVerified),trackStock:row.trackStock!==false,active:row.active!==false,barcodes:(row.barcodes||[]).map(x=>({barcode:x.barcode||"",unitMultiplier:String(Number(x.unitMultiplier||1))}))})};
+  const change=(key,value)=>setDraft(d=>({...d,[key]:value}));
+  const save=async()=>{if(!selected||!draft)return;setBusy(true);setError("");setMessage("");try{await api(`/api/owner-products/${selected.id}/card`,{method:"PATCH",body:JSON.stringify({...draft,costPrice:Number(draft.costPrice||0),salePrice:Number(draft.salePrice||0),vatRate:Number(draft.vatRate||0),barcodes:draft.barcodes.filter(x=>x.barcode.trim()).map(x=>({barcode:x.barcode.trim(),unitMultiplier:Number(x.unitMultiplier||1)})),stores:(selected.stores||[]).map(s=>({storeId:s.storeId,active:s.active!==false,salePrice:Number(s.salePrice??draft.salePrice??0),minStock:s.minStock??null}))})});setMessage("Η καρτέλα είδους αποθηκεύτηκε.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
 
   if(mode==="full")return <div className="kiosk-shell"><div className="kiosk-return"><button onClick={()=>setMode("items")}><List/>Επιστροφή στα Είδη</button><span>Πλήρης εμπορική διαχείριση MyWorkStation</span></div><OwnerProductCenter api={api} stores={stores}/></div>;
 
   return <div className="kiosk-shell">
-    <div className="kiosk-topbar">
-      <div><strong>MyWorkStation BackOffice</strong><span>Λογική Kiosk Manager · σύγχρονη έκδοση</span></div>
-      <div className="kiosk-top-actions"><button onClick={load} disabled={busy}><RefreshCw/>Ανανέωση</button><button className="primary" onClick={()=>setMode("full")}><Settings2/>Πλήρης διαχείριση</button></div>
-    </div>
+    <div className="kiosk-topbar"><div><strong>MyWorkStation BackOffice</strong><span>Λογική Kiosk Manager · σύγχρονη έκδοση</span></div><div className="kiosk-top-actions"><button onClick={load} disabled={busy}><RefreshCw/>Ανανέωση</button><button className="primary" onClick={()=>setMode("full")}><Settings2/>Πλήρης διαχείριση</button></div></div>
+    <div className="kiosk-main-tabs"><button className={mode==="items"?"active":""} onClick={()=>setMode("items")}><Boxes/>Είδη αποθήκης</button><button className={mode==="categories"?"active":""} onClick={()=>setMode("categories")}><Layers3/>Κατηγορίες / Υποκατηγορίες</button></div>
+    {error&&<div className="kiosk-error">{error}</div>}{message&&<div className="kiosk-success">{message}</div>}
 
-    <div className="kiosk-main-tabs">
-      <button className={mode==="items"?"active":""} onClick={()=>setMode("items")}><Boxes/>Είδη αποθήκης</button>
-      <button className={mode==="categories"?"active":""} onClick={()=>setMode("categories")}><Layers3/>Κατηγορίες / Υποκατηγορίες</button>
-    </div>
-
-    {error&&<div className="kiosk-error">{error}</div>}
-
-    {mode==="categories"?<div className="kiosk-category-workspace">
-      <section className="kiosk-grid-panel">
-        <div className="kiosk-grid-title"><b>Κατηγορίες ειδών</b><span>{categories.length} κατηγορίες</span></div>
-        <div className="kiosk-table kiosk-category-table">
-          <div className="kiosk-tr head"><span>Περιγραφή</span><span>Είδη</span><span>% ειδών</span><span></span></div>
-          {categories.map(([name,count])=><button className="kiosk-tr" key={name} onClick={()=>{setCategory(name);setMode("items")}}><span><Tag/>{name}</span><span>{count}</span><span>{rows.length?((count/rows.length)*100).toFixed(2):"0.00"}%</span><span><ChevronRight/></span></button>)}
-        </div>
+    {mode==="categories"?<div className="kiosk-category-workspace"><section className="kiosk-grid-panel"><div className="kiosk-grid-title"><b>Κατηγορίες ειδών</b><span>{categories.length} κατηγορίες</span></div><div className="kiosk-table kiosk-category-table"><div className="kiosk-tr head"><span>Περιγραφή</span><span>Είδη</span><span>% ειδών</span><span></span></div>{categories.map(([name,count])=><button className="kiosk-tr" key={name} onClick={()=>{setCategory(name);setMode("items")}}><span><Tag/>{name}</span><span>{count}</span><span>{rows.length?((count/rows.length)*100).toFixed(2):"0.00"}%</span><span><ChevronRight/></span></button>)}</div></section><section className="kiosk-grid-panel empty-panel"><Layers3/><b>Υποκατηγορίες</b><p>Θα συνδεθούν στο πραγματικό μοντέλο προϊόντων χωρίς να αλλάξει η γνωστή ροή.</p></section></div>:
+    <div className="kiosk-items-v2">
+      <section className="kiosk-grid-panel product-list-panel">
+        <div className="kiosk-toolbar"><div className="kiosk-filters"><select value={category} onChange={e=>setCategory(e.target.value)}><option value="ALL">Όλες οι κατηγορίες</option>{categories.map(([name])=><option key={name}>{name}</option>)}</select><select value={vat} onChange={e=>setVat(e.target.value)}><option value="ALL">Όλα τα ΦΠΑ</option>{vatOptions.map(v=><option key={v} value={v}>ΦΠΑ {v}%</option>)}</select></div><form onSubmit={e=>{e.preventDefault();load()}}><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Περιγραφή, κωδικός ή barcode"/><button>Αναζήτηση</button></form><div className="kiosk-filters"><Filter/><select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλα</option><option value="ACTIVE">Ενεργά</option><option value="INACTIVE">Ανενεργά</option></select></div></div>
+        <div className="kiosk-grid-title"><b>{filtered.length} προϊόντα</b><span>Αρχείο ειδών / αποθήκη</span></div>
+        <div className="kiosk-table"><div className="kiosk-tr head items-v2"><span></span><span>Κωδικός</span><span>Barcode</span><span>Περιγραφή</span><span>Κατηγορία</span><span>ΦΠΑ</span><span>Λιανική</span><span>Stock</span></div>{filtered.map(r=><button key={r.id} className={`kiosk-tr items-v2 ${selected?.id===r.id?"selected-row":""}`} onClick={()=>choose(r)}><span className="edit-cell">✎</span><span>{r.sku||"—"}</span><span>{(r.barcodes||[])[0]?.barcode||"—"}</span><span><b>{r.name}</b></span><span>{r.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</span><span>{Number(r.vatRate||0)}%</span><span><b>{money(r.salePrice)}</b></span><span>{sumStock(r)}</span></button>)}</div>
+        <div className="kiosk-list-footer"><button><Plus/>Νέο είδος</button><button>Ομαδική διόρθωση</button><button onClick={()=>setMode("full")}>Εισαγωγή από Excel</button><button onClick={()=>window.print()}>Εκτύπωση</button></div>
       </section>
-      <section className="kiosk-grid-panel empty-panel"><Layers3/><b>Υποκατηγορίες</b><p>Η περιοχή μένει στη γνώριμη διάταξη Kiosk Manager. Οι πραγματικές υποκατηγορίες θα εμφανίζονται εδώ μόλις συνδεθούν στο μοντέλο προϊόντων.</p></section>
-    </div>:<div className="kiosk-items-workspace">
-      <aside className="kiosk-left-list">
-        <div className="kiosk-section-head"><b>Κατηγορίες</b><small>{rows.length} είδη</small></div>
-        <button className={category==="ALL"?"selected":""} onClick={()=>setCategory("ALL")}><span>ΟΛΑ ΤΑ ΕΙΔΗ</span><b>{rows.length}</b></button>
-        {categories.map(([name,count])=><button key={name} className={category===name?"selected":""} onClick={()=>setCategory(name)}><span>{name}</span><b>{count}</b></button>)}
-      </aside>
 
-      <main className="kiosk-grid-panel">
-        <div className="kiosk-toolbar">
-          <form onSubmit={e=>{e.preventDefault();load()}}><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Περιγραφή, κωδικός ή barcode"/><button>Αναζήτηση</button></form>
-          <div className="kiosk-filters"><Filter/><select value={vat} onChange={e=>setVat(e.target.value)}><option value="ALL">Όλα τα ΦΠΑ</option>{vatOptions.map(value=><option key={value} value={value}>ΦΠΑ {value}%</option>)}</select><select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλα</option><option value="ACTIVE">Ενεργά</option><option value="INACTIVE">Ανενεργά</option></select></div>
-        </div>
-        <div className="kiosk-grid-title"><b>{category==="ALL"?"ΕΙΔΗ ΑΠΟΘΗΚΗΣ":category}</b><span>{filtered.length} αποτελέσματα</span></div>
-        <div className="kiosk-table">
-          <div className="kiosk-tr head items"><span>Κωδικός</span><span>Περιγραφή</span><span>Κατηγορία</span><span>ΦΠΑ</span><span>Τιμή</span><span>Stock</span></div>
-          {filtered.map(row=><button key={row.id} className={`kiosk-tr items ${selected?.id===row.id?"selected-row":""}`} onClick={()=>setSelected(row)}><span>{row.sku||"—"}</span><span><b>{row.name}</b><small>{(row.barcodes||[])[0]?.barcode||"Χωρίς barcode"}</small></span><span>{row.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</span><span>{Number(row.vatRate||0)}%</span><span><b>{money(row.salePrice)}</b></span><span>{(row.stores||[]).reduce((sum,s)=>sum+Number(s.currentStock||0),0)}</span></button>)}
-        </div>
-      </main>
-
-      <aside className="kiosk-product-card">
-        {selected?<><div className="kiosk-card-head"><div><small>ΚΑΡΤΕΛΑ ΕΙΔΟΥΣ</small><h3>{selected.name}</h3></div><em className={selected.active===false?"off":""}>{selected.active===false?"ΑΝΕΝΕΡΓΟ":"ΕΝΕΡΓΟ"}</em></div>
-          <dl><dt>Κωδικός</dt><dd>{selected.sku||"—"}</dd><dt>Κατηγορία</dt><dd>{selected.categoryName||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ"}</dd><dt>ΦΠΑ</dt><dd>{Number(selected.vatRate||0)}% {selected.vatVerified?"✓":"(μη επιβεβαιωμένο)"}</dd><dt>Λιανική</dt><dd>{money(selected.salePrice)}</dd><dt>Κόστος</dt><dd>{money(selected.costPrice)}</dd><dt>Barcode</dt><dd>{(selected.barcodes||[]).map(x=>x.barcode).join(", ")||"—"}</dd></dl>
-          <div className="kiosk-store-stock"><b>Καταστήματα</b>{(selected.stores||[]).map(store=><div key={store.storeId}><span>{store.storeName}</span><span>{money(store.salePrice)} · Stock {Number(store.currentStock||0)}</span></div>)}</div>
-          <button className="primary full-card" onClick={()=>setMode("full")}><Grid3X3/>Άνοιγμα πλήρους καρτέλας / τιμών</button>
-        </>:<div className="kiosk-empty-card"><Boxes/><b>Επίλεξε είδος</b><span>Η καρτέλα θα εμφανιστεί εδώ, όπως στη λογική του Kiosk Manager.</span></div>}
+      <aside className="kiosk-product-card kiosk-product-card-v2">
+        {selected&&draft?<><div className="kiosk-card-head"><div><h3>{selected.name}</h3><small><span className={draft.active?"status-on":"status-off"}>{draft.active?"Ενεργό":"Ανενεργό"}</span> · Κωδικός: {selected.sku||"—"}</small></div><button className="card-close" onClick={()=>{setSelected(null);setDraft(null)}}>×</button></div>
+          <div className="product-tabs">{TABS.map(([id,label,Icon])=><button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}><Icon/>{label}</button>)}</div>
+          <div className="product-tab-body">
+            {tab==="basic"&&<div className="product-form-grid"><label>Περιγραφή<input value={draft.name} onChange={e=>change("name",e.target.value)}/></label><label>Εσωτερικός Κωδικός<input value={draft.sku} onChange={e=>change("sku",e.target.value)}/></label><label>Κατηγορία<input value={draft.categoryName} onChange={e=>change("categoryName",e.target.value)}/></label><label>Υποκατηγορία<input value={selected.subcategoryName||""} placeholder="Χωρίς υποκατηγορία" readOnly/></label><label>Εταιρεία<input value={selected.companyName||""} placeholder="Χωρίς εταιρεία" readOnly/></label><label>Προμηθευτής<input value={selected.supplierName||""} placeholder="Χωρίς προμηθευτή" readOnly/></label><label>Τιμή αγοράς<input type="number" step="0.01" value={draft.costPrice} onChange={e=>change("costPrice",e.target.value)}/></label><label>Τμήμα ΦΠΑ<input type="number" step="0.01" value={draft.vatRate} onChange={e=>change("vatRate",e.target.value)}/></label><label>Τιμή λιανικής<input type="number" step="0.01" value={draft.salePrice} onChange={e=>change("salePrice",e.target.value)}/></label><label>Μονάδα μέτρησης<input value={draft.unit} onChange={e=>change("unit",e.target.value)}/></label><label>Alarm Stock<input value={(selected.stores||[])[0]?.minStock??""} readOnly/></label><label>Αποθήκη<input value={sumStock(selected)} readOnly/></label><div className="product-checks"><label><input type="checkbox" checked={draft.active} onChange={e=>change("active",e.target.checked)}/> Ενεργό</label><label><input type="checkbox" checked={draft.trackStock} onChange={e=>change("trackStock",e.target.checked)}/> Παρακολούθηση stock</label><label><input type="checkbox" checked={draft.vatVerified} onChange={e=>change("vatVerified",e.target.checked)}/> Επιβεβαιωμένο ΦΠΑ</label></div></div>}
+            {tab==="barcodes"&&<div className="tab-table"><div className="tab-row head"><span>Barcode</span><span>Συσκευασία</span><span></span></div>{draft.barcodes.map((b,i)=><div className="tab-row" key={i}><input value={b.barcode} onChange={e=>setDraft(d=>({...d,barcodes:d.barcodes.map((x,j)=>j===i?{...x,barcode:e.target.value}:x)}))}/><input value={b.unitMultiplier} onChange={e=>setDraft(d=>({...d,barcodes:d.barcodes.map((x,j)=>j===i?{...x,unitMultiplier:e.target.value}:x)}))}/><button onClick={()=>setDraft(d=>({...d,barcodes:d.barcodes.filter((_,j)=>j!==i)}))}><Trash2/></button></div>)}<button className="add-line" onClick={()=>setDraft(d=>({...d,barcodes:[...d.barcodes,{barcode:"",unitMultiplier:"1"}]}))}><Plus/>Νέο barcode</button></div>}
+            {tab==="invoice"&&<div className="empty-tab"><FileText/><b>Κωδικοί τιμολογίου / προμηθευτή</b><p>Δεν υπάρχουν αποθηκευμένες εγγραφές στο σημερινό μοντέλο. Η καρτέλα είναι έτοιμη για σύνδεση χωρίς να εμφανίζει εικονικά δεδομένα.</p></div>}
+            {tab==="comments"&&<div className="empty-tab"><MessageSquare/><b>Παρατηρήσεις / Σχόλια ετικέτας</b><p>Δεν υπάρχει ακόμη πεδίο σχολίων στην κεντρική καρτέλα.</p></div>}
+            {tab==="stats"&&<div className="stats-grid"><div><span>Αποθήκη</span><b>{sumStock(selected)}</b></div><div><span>Μέση λιανική</span><b>{money(selected.salePrice)}</b></div><div><span>Μέση αγορά</span><b>{money(selected.costPrice)}</b></div><div><span>Margin</span><b>{Number(selected.salePrice)>0?(((Number(selected.salePrice)-Number(selected.costPrice||0))/Number(selected.salePrice))*100).toFixed(2):"0.00"}%</b></div><div><span>ΦΠΑ</span><b>{Number(selected.vatRate||0)}%</b></div><div><span>Barcodes</span><b>{(selected.barcodes||[]).length}</b></div></div>}
+            {tab==="other"&&<div className="product-form-grid"><label>Ειδοποιήσεις (PoS)<input value={selected.posNotice||""} readOnly/></label><label>Θέση<input value={selected.location||""} readOnly/></label><label>Πεδίο<input value={selected.customField1||""} readOnly/></label><label>Πεδίο 2<input value={selected.customField2||""} readOnly/></label><label>Πεδίο 3<input value={selected.customField3||""} readOnly/></label><label>Πεδίο 4<input value={selected.customField4||""} readOnly/></label></div>}
+            {tab==="photo"&&<div className="empty-tab"><Camera/><b>Αρχείο εικόνας προϊόντος</b><p>Δεν υπάρχει ακόμη αποθηκευμένη φωτογραφία για αυτό το είδος.</p></div>}
+            {tab==="purchases"&&<div className="empty-tab"><ShoppingCart/><b>Αναζήτηση αγορών με ημερομηνία</b><p>Η ιστορική καρτέλα αγορών θα συνδεθεί με τα πραγματικά παραστατικά προμηθευτών. Δεν εμφανίζονται πλασματικές αγορές.</p></div>}
+          </div>
+          <div className="product-card-actions"><button onClick={()=>{setSelected(null);setDraft(null)}}>Επιστροφή</button><span/><button className="primary" onClick={save} disabled={busy}>Καταχώρηση</button><button onClick={()=>choose(selected)}>Ακύρωση</button></div>
+        </>:<div className="kiosk-empty-card"><Boxes/><b>Επίλεξε είδος</b><span>Πάτησε το μολύβι ή τη γραμμή προϊόντος για να ανοίξει η πλήρης καρτέλα.</span></div>}
       </aside>
     </div>}
   </div>;
