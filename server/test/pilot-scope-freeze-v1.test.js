@@ -11,6 +11,7 @@ test("pilot profile stores the real PC, operating hours and responsible person p
   assert.match(route,/stores\/:storeId\/pilot-profile/);
   assert.match(route,/"pcName","operatingHours","responsibleName"/);
   assert.match(ui,/Κλείδωμα πιλοτικής εγκατάστασης/);
+  assert.match(ui,/company\.stores\.length===1[\s\S]*Ετοιμότητα/);
 });
 
 test("pilot readiness blocks until backup, design and database freezes are confirmed",()=>{

@@ -190,6 +190,7 @@ export default function PlatformAdminApp(){
             <div className="platform-company-plan"><label>Πακέτο<select value={company.plan} onChange={e=>updateCompany(company.id,{plan:e.target.value},`Το πακέτο του ${company.name} ενημερώθηκε.`)} disabled={busy===company.id}>{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><small>{company.plan==="TRIAL"?`Λήξη δοκιμής: ${when(company.trialEndsAt)}`:"Χωρίς ημερομηνία λήξης"}</small></div>
             <div className="platform-company-actions">
               <button className="secondary" onClick={()=>setStoreCompany(company)}><Store/>Καταστήματα</button>
+              {company.stores.length===1&&<button className="secondary" onClick={()=>checkReadiness(company,company.stores[0])} disabled={busy===`readiness:${company.stores[0].id}`}><ShieldCheck/>{busy===`readiness:${company.stores[0].id}`?"Έλεγχος…":"Ετοιμότητα"}</button>}
               <button className="secondary" onClick={()=>setOwnerCompany(company)}><Users/>{company.owner?"Στοιχεία ιδιοκτήτη":"Ορισμός ιδιοκτήτη"}</button>
               <button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button>
               <button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button>
