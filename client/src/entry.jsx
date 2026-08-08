@@ -27,6 +27,12 @@ const storeApi=async(path,options={})=>{
   if(text){
     try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}
   }
+  if(response.status===401&&storeMatch){
+    localStorage.removeItem("token");
+    localStorage.removeItem("storeOperatorSession");
+    localStorage.removeItem("user");
+    window.location.reload();
+  }
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
   return data;
 };

@@ -7,8 +7,38 @@ export async function auth(req,res,next){
   try{
     const payload=jwt.verify(token,process.env.JWT_SECRET);
 
-    // Store Operator tokens keep their existing isolated authentication flow.
+    // Store Operator access follows the current database state on every request.
+    // A disabled credential, employee, store or company must not remain usable
+    // until the 12-hour JWT expiry, and role changes require a fresh token.
     if(payload.tokenType==="STORE_OPERATOR"){
+      const rows=await prisma.$queryRaw`
+        SELECT c."id",c."role",c."active",
+               e."active" AS "employeeActive",
+               s."active" AS "storeActive",
+               co."active" AS "companyActive"
+        FROM "StoreOperatorCredential" c
+        JOIN "Employee" e ON e."id"=c."employeeId"
+        JOIN "Store" s ON s."id"=c."storeId"
+        JOIN "Company" co ON co."id"=c."companyId"
+        WHERE c."id"=${payload.operatorId||payload.id}
+          AND c."employeeId"=${payload.employeeId}
+          AND c."storeId"=${payload.storeId}
+          AND c."companyId"=${payload.companyId}
+        LIMIT 1
+      `;
+      const operator=rows[0];
+      if(!operator||!operator.active||!operator.employeeActive||!operator.storeActive||!operator.companyActive){
+        return res.status(401).json({
+          error:"Η πρόσβαση Store Mode δεν είναι πλέον ενεργή. Συνδεθείτε ξανά.",
+          code:"STORE_OPERATOR_SESSION_REVOKED"
+        });
+      }
+      if(operator.role!==payload.role){
+        return res.status(401).json({
+          error:"Τα δικαιώματα Store Mode άλλαξαν. Συνδεθείτε ξανά.",
+          code:"STORE_OPERATOR_ROLE_CHANGED"
+        });
+      }
       req.user=payload;
       return next();
     }
