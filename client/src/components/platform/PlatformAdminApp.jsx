@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,Building2,CalendarDays,CheckCircle2,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,Building2,CalendarDays,CheckCircle2,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Plus,RefreshCw,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
@@ -134,6 +134,17 @@ export default function PlatformAdminApp(){
     catch(err){setError(err.message)}finally{setBusy("")}
   };
 
+  const storeModeUrl=store=>`${window.location.origin}/store/${encodeURIComponent(store.id)}`;
+  const downloadStoreShortcut=store=>{
+    const content=`[InternetShortcut]\r\nURL=${storeModeUrl(store)}\r\n`;
+    const blob=new Blob([content],{type:"application/internet-shortcut;charset=utf-8"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=`MyWorkStation Store Mode - ${store.name.replace(/[\\/:*?"<>|]/g,"-")}.url`;
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(link.href);
+    setMessage(`Η συντόμευση Store Mode για το «${store.name}» δημιουργήθηκε.`);
+  };
+
   const expiringTrials=useMemo(()=>{
     const now=Date.now(),week=7*24*60*60*1000;
     return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
@@ -184,7 +195,7 @@ export default function PlatformAdminApp(){
 
     {resetCompany&&<div className="platform-modal"><form className="small" onSubmit={resetPassword}><button type="button" className="modal-close" onClick={()=>setResetCompany(null)}><X/></button><h2>Νέος προσωρινός κωδικός</h2><p>{resetCompany.owner?.fullName} · {resetCompany.owner?.email}</p><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required autoFocus/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setResetCompany(null)}>Ακύρωση</button><button disabled={busy==="reset"}>{busy==="reset"?"Αποθήκευση…":"Αλλαγή κωδικού"}</button></div></form></div>}
 
-    {storeCompany&&!storeEdit&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button></div></article>)}</div></section></div>}
+    {storeCompany&&!storeEdit&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setStoreCompany(null)}><X/></button><h2>Καταστήματα πελάτη</h2><p>{storeCompany.name}</p><div className="security-list">{storeCompany.stores.map(store=><article key={store.id}><Store/><div><b>{store.name}</b><span>{store.city||"Χωρίς πόλη"}</span><small>{store.responsibleEmail||"Δεν έχει οριστεί email υπευθύνου"} · Email κλεισίματος: {store.cashCloseEmailEnabled!==false?"ΝΑΙ":"ΟΧΙ"}</small></div><div className="platform-store-actions"><a href={storeModeUrl(store)} target="_blank" rel="noreferrer"><ExternalLink/>Store Mode</a><button className="secondary" onClick={()=>downloadStoreShortcut(store)}><Download/>Συντόμευση PC</button><button onClick={()=>openCustomer(storeCompany,store,"BACKOFFICE")}><LayoutDashboard/>Πλήρες Backoffice</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"SHIFTS")}><CalendarDays/>Βάρδιες</button><button className="secondary" onClick={()=>openCustomer(storeCompany,store,"CASH_CONTROL")}><WalletCards/>Έλεγχος Ταμείων</button><button className="secondary" onClick={()=>checkReadiness(storeCompany,store)} disabled={busy===`readiness:${store.id}`}><ShieldCheck/>{busy===`readiness:${store.id}`?"Έλεγχος…":"Ετοιμότητα"}</button><button className="secondary" onClick={()=>setStoreEdit(store)}>Επεξεργασία</button></div></article>)}</div></section></div>}
 
     {readiness&&<div className="platform-modal"><section className="platform-security-dialog readiness-dialog"><button type="button" className="modal-close" onClick={()=>setReadiness(null)}><X/></button><h2>Έλεγχος ετοιμότητας καταστήματος</h2><p>{readiness.company.name} · {readiness.store.name}</p><div className={`readiness-summary ${readiness.ready?"ready":"blocked"}`}>{readiness.ready?<CheckCircle2/>:<AlertTriangle/>}<div><b>{readiness.ready?"ΕΤΟΙΜΟ ΓΙΑ ΠΑΡΑΛΛΗΛΗ ΠΙΛΟΤΙΚΗ ΛΕΙΤΟΥΡΓΙΑ":`${readiness.blockers} ΥΠΟΧΡΕΩΤΙΚΕΣ ΕΚΚΡΕΜΟΤΗΤΕΣ`}</b><span>Έλεγχος: {new Date(readiness.checkedAt).toLocaleString("el-GR")}</span></div></div><div className="readiness-list">{readiness.checks.map(check=><article className={check.ok?"ok":"missing"} key={check.key}>{check.ok?<CheckCircle2/>:<AlertTriangle/>}<div><b>{check.label}</b><span>{check.detail}</span></div><em>{check.ok?"OK":check.blocking?"ΥΠΟΧΡΕΩΤΙΚΟ":"ΠΡΟΑΙΡΕΤΙΚΟ"}</em></article>)}</div><p className="readiness-note">Ο έλεγχος είναι μόνο ανάγνωσης. Δεν ανοίγει βάρδια, δεν δημιουργεί συναλλαγές και δεν επικοινωνεί με RBS/ταμειακή.</p></section></div>}
 
