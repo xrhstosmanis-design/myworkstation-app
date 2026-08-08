@@ -86,6 +86,7 @@ function last4(value){
   return normalized.slice(-4)||null;
 }
 function operatorToken(row){
+  const permissions=operatorPermissions(row.role);
   return jwt.sign({
     id:row.id,
     operatorId:row.id,
@@ -95,8 +96,12 @@ function operatorToken(row){
     role:row.role,
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
-    permissions:["CASH_CONTROL","ATTENDANCE"]
+    permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
+}
+function operatorPermissions(role){
+  const common=["CASH_CONTROL","ATTENDANCE","STORE_LEDGER"];
+  return role==="MANAGER"?[...common,"STORE_LEDGER_REVIEW","TRANSACTION_REVERSAL"]:common;
 }
 async function audit({companyId,storeId,operatorId=null,actorId,eventType,details={}}){
   await prisma.$executeRaw`
@@ -152,7 +157,7 @@ router.post("/login/pin",route(async(req,res)=>{
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId}});
   res.json({
     token:operatorToken(operator),
-    user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true},
+    user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
     store:{id:operator.storeId,name:operator.storeName},
     company:{id:operator.companyId,name:operator.companyName}
   });
@@ -180,7 +185,7 @@ router.post("/login/card",route(async(req,res)=>{
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_CARD",details:{employeeId:operator.employeeId,cardLast4:operator.cardCodeLast4}});
   res.json({
     token:operatorToken(operator),
-    user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true},
+    user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
     store:{id:operator.storeId,name:operator.storeName},
     company:{id:operator.companyId,name:operator.companyName}
   });
