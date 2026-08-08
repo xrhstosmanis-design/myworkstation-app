@@ -54,7 +54,23 @@ const tableStatements=[
     UNIQUE ("storeId","subjectKey")
   )`,
   `CREATE INDEX IF NOT EXISTS "StoreOperatorLoginGuard_lock_idx"
-   ON "StoreOperatorLoginGuard" ("storeId","lockedUntil")`
+   ON "StoreOperatorLoginGuard" ("storeId","lockedUntil")`,
+  `CREATE TABLE IF NOT EXISTS "StoreOperatorSession" (
+    "id" TEXT PRIMARY KEY,
+    "operatorId" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "lastSeenAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "expiresAt" TIMESTAMPTZ NOT NULL,
+    "revokedAt" TIMESTAMPTZ,
+    "userAgent" TEXT,
+    "ipAddress" TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_operator_active_idx"
+   ON "StoreOperatorSession" ("operatorId","expiresAt") WHERE "revokedAt" IS NULL`,
+  `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_expiry_idx"
+   ON "StoreOperatorSession" ("expiresAt")`
 ];
 
 async function ensureTables(){
@@ -77,9 +93,7 @@ function route(handler){
       if(error?.code==="P2010"||error?.code==="23505"||String(error?.message||"").includes("unique constraint")){
         return res.status(409).json({error:"Η κάρτα χρησιμοποιείται ήδη από άλλον εργαζόμενο."});
       }
-      const clientStatus=Number.isInteger(error?.status)&&error.status>=400&&error.status<500?error.status:null;
-      const publicError=error?.publicMessage||(clientStatus?error?.message:null)||"Παρουσιάστηκε προσωρινό σφάλμα. Δοκιμάστε ξανά.";
-      return res.status(clientStatus||500).json({error:publicError});
+      return res.status(error?.status||500).json({error:error?.publicMessage||error?.message||"Σφάλμα εισόδου καταστήματος."});
     }
   };
 }
@@ -142,7 +156,7 @@ function last4(value){
   const normalized=normalizeCard(value);
   return normalized.slice(-4)||null;
 }
-function operatorToken(row){
+function operatorToken(row,sessionId){
   const permissions=operatorPermissions(row.role);
   return jwt.sign({
     id:row.id,
@@ -153,8 +167,19 @@ function operatorToken(row){
     role:row.role,
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
+    operatorSessionId:sessionId,
     permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
+}
+async function createOperatorSession(req,row){
+  const sessionId=crypto.randomUUID();
+  const expiresAt=new Date(Date.now()+12*60*60*1000);
+  await prisma.$executeRaw`
+    INSERT INTO "StoreOperatorSession"
+      ("id","operatorId","companyId","storeId","expiresAt","userAgent","ipAddress")
+    VALUES (${sessionId},${row.id},${row.companyId},${row.storeId},${expiresAt},${req.headers["user-agent"]||null},${req.ip||null})
+  `;
+  return sessionId;
 }
 function operatorPermissions(role){
   const common=["CASH_CONTROL","ATTENDANCE","STORE_LEDGER"];
@@ -215,9 +240,10 @@ router.post("/login/pin",route(async(req,res)=>{
   }
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
+  const operatorSessionId=await createOperatorSession(req,operator);
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId}});
   res.json({
-    token:operatorToken(operator),
+    token:operatorToken(operator,operatorSessionId),
     user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
     store:{id:operator.storeId,name:operator.storeName},
     company:{id:operator.companyId,name:operator.companyName}
@@ -249,13 +275,28 @@ router.post("/login/card",route(async(req,res)=>{
   }
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
+  const operatorSessionId=await createOperatorSession(req,operator);
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_CARD",details:{employeeId:operator.employeeId,cardLast4:operator.cardCodeLast4}});
   res.json({
-    token:operatorToken(operator),
+    token:operatorToken(operator,operatorSessionId),
     user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
     store:{id:operator.storeId,name:operator.storeName},
     company:{id:operator.companyId,name:operator.companyName}
   });
+}));
+
+router.post("/logout",auth,route(async(req,res)=>{
+  if(req.user?.tokenType!=="STORE_OPERATOR"||!req.user?.operatorSessionId){
+    return res.status(400).json({error:"Δεν υπάρχει ενεργή συνεδρία Store Mode."});
+  }
+  await prisma.$executeRaw`
+    UPDATE "StoreOperatorSession" SET "revokedAt"=COALESCE("revokedAt",NOW())
+    WHERE "id"=${req.user.operatorSessionId}
+      AND "operatorId"=${req.user.operatorId||req.user.id}
+      AND "storeId"=${req.user.storeId}
+  `;
+  await audit({companyId:req.user.companyId,storeId:req.user.storeId,operatorId:req.user.operatorId||req.user.id,actorId:req.user.operatorId||req.user.id,eventType:"OPERATOR_LOGOUT"});
+  res.json({ok:true});
 }));
 
 router.use(auth,requireAdmin);
