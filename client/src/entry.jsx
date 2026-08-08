@@ -19,6 +19,23 @@ const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
 const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
+const TEST_COMPANY_ID="kat-test-company";
+const TEST_STORE_ID="kat-test-store";
+
+const readStored=key=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
+const returnFromStaleTestPos=()=>{
+  const back=readStored("posReturnAuth");
+  localStorage.removeItem("storeOperatorSession");
+  localStorage.removeItem("posReturnAuth");
+  if(back?.token){
+    localStorage.setItem("token",back.token);
+    localStorage.setItem("user",JSON.stringify(back.user||{}));
+  }else{
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
+  window.location.replace("/platform-admin/kat-test");
+};
 
 const storeApi=async(path,options={})=>{
   const token=localStorage.getItem("token");
@@ -43,6 +60,10 @@ const storeApi=async(path,options={})=>{
     localStorage.removeItem("user");
     window.location.reload();
   }
+  if(posMatch&&response.status===404&&data.error==="Δεν βρέθηκε ενεργό κατάστημα."){
+    returnFromStaleTestPos();
+    return new Promise(()=>{});
+  }
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
   return data;
 };
@@ -50,15 +71,24 @@ const storeApi=async(path,options={})=>{
 const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
 
 if(katTestMatch){
-  document.title="MyWorkStation KAT TEST";
+  document.title="MyWorkStation TEST";
   createRoot(document.getElementById("root")).render(<KatTestCenter/>);
 }else if(platformMatch){
   document.title="MyWorkStation Platform Admin";
   createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><KatTestQuickAccess/></>);
 }else if(posMatch){
   const storeId=decodeURIComponent(posMatch[1]);
+  const stored=readStored("storeOperatorSession");
+  const staleTestSession=stored&&(
+    stored.store?.id!==TEST_STORE_ID||
+    stored.company?.id!==TEST_COMPANY_ID||
+    stored.store?.name!=="TEST"||
+    stored.company?.name!=="TEST"||
+    storeId!==TEST_STORE_ID
+  );
   document.title="MyWorkStation POS";
-  createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>);
+  if(staleTestSession)returnFromStaleTestPos();
+  else createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>);
 }else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
