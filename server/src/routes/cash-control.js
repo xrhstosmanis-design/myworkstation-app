@@ -52,7 +52,15 @@ const tableStatements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_store_idx"
    ON "CashShiftSession" ("storeId") WHERE "status"='OPEN'`,
   `CREATE INDEX IF NOT EXISTS "CashShiftSession_store_opened_idx"
-   ON "CashShiftSession" ("storeId", "openedAt" DESC)`
+   ON "CashShiftSession" ("storeId", "openedAt" DESC)`,
+  `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"sessionId" TEXT,
+    "type" TEXT NOT NULL,"amount" NUMERIC(14,2) NOT NULL,"description" TEXT,"supplierName" TEXT,
+    "subtractFromShift" BOOLEAN NOT NULL DEFAULT false,"actorId" TEXT NOT NULL,"actorName" TEXT NOT NULL,
+    "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "reversedAt" TIMESTAMPTZ,"reversedBy" TEXT,"reversedByName" TEXT,"reversalReason" TEXT
+  )`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
 ];
 
 async function ensureTables(){
@@ -165,6 +173,18 @@ async function findConsecutiveDuplicateSales(companyId,storeId,from,to){
   return matches;
 }
 
+async function authoritativeShiftTotals(companyId,storeId,sessionId){
+  const rows=await prisma.$queryRaw`
+    SELECT
+      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL),0) AS "cashSales",
+      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL),0) AS "cardSales",
+      COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
+    FROM "StoreTransaction"
+    WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}
+  `;
+  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),expenses:money(rows[0]?.expenses)};
+}
+
 function route(handler){
   return async(req,res)=>{
     try{
@@ -253,10 +273,11 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   const session=normalize(found[0]);
   if(!session)return res.status(404).json({error:"Δεν βρέθηκε ανοιχτή βάρδια."});
   assertStoreAccess(req,session.storeId);
-  const expected=session.openingOperational+body.cashSales-body.expenses;
+  const ledger=await authoritativeShiftTotals(req.user.companyId,session.storeId,session.id);
+  const expected=session.openingOperational+ledger.cashSales-ledger.expenses;
   const actual=body.drawer+body.custody+body.coins;
   const variance=actual-expected;
-  const cardVariance=body.cardSales-body.eftposTotal;
+  const cardVariance=ledger.cardSales-body.eftposTotal;
   const duplicateReview=Math.abs(cardVariance)>0.009
     ?await findConsecutiveDuplicateSales(req.user.companyId,session.storeId,session.openedAt,new Date())
     :[];
@@ -265,8 +286,8 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   const rows=await prisma.$queryRaw`
     UPDATE "CashShiftSession"
     SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
-        "cashSales"=${body.cashSales},"cardSales"=${body.cardSales},"eftposTotal"=${body.eftposTotal},
-        "cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${body.expenses},
+        "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},
+        "cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
         "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},
         "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()

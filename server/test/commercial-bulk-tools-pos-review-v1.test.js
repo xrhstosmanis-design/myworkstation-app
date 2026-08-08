@@ -38,7 +38,8 @@ test("supplier comparison ranks normalized approved purchase costs",()=>{
 
 test("POS-EFTPOS variance only creates a review warning",()=>{
   assert.match(cash,/eftposTotal/);
-  assert.match(cash,/cardVariance=body\.cardSales-body\.eftposTotal/);
+  assert.match(cash,/cardVariance=ledger\.cardSales-body\.eftposTotal/);
+  assert.match(cash,/authoritativeShiftTotals/);
   assert.match(cash,/findConsecutiveDuplicateSales/);
   assert.match(cash,/signature\(previous\)!==signature\(current\)/);
   assert.doesNotMatch(cash,/DELETE FROM "Sale"/);
