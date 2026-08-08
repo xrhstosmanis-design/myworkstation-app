@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
@@ -293,6 +294,51 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
   }catch(error){next(error)}
 });
 
+router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,next)=>{
+  try{
+    const company=await prisma.company.findUnique({
+      where:{id:req.params.companyId},
+      select:{id:true,name:true,taxId:true,city:true,email:true,phone:true,active:true,plan:true,licenseStatus:true,subscriptionStartsAt:true,subscriptionEndsAt:true,autoRenew:true,createdAt:true,updatedAt:true,modules:true,users:{select:{id:true,email:true,fullName:true,role:true,mustChangePassword:true,totpEnabled:true,createdAt:true,updatedAt:true}}}
+    });
+    const store=company?await prisma.store.findFirst({
+      where:{id:req.params.storeId,companyId:company.id},
+      include:{employees:{include:{rules:true,availability:true,leaveRequests:true},orderBy:{fullName:"asc"}},shifts:{orderBy:{code:"asc"}},schedules:{include:{assignments:true},orderBy:{weekStart:"desc"}}}
+    }):null;
+    if(!company||!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+
+    const productTables=await prisma.$queryRaw`SELECT to_regclass('public."Product"')::text AS "product",to_regclass('public."StoreProduct"')::text AS "storeProduct"`;
+    const products=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "Product" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
+    const categories=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "ProductCategory" WHERE "companyId"=${company.id} ORDER BY "sortOrder" ASC,"name" ASC`:[];
+    const barcodes=productTables[0]?.product?await prisma.$queryRaw`SELECT b.* FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId" WHERE p."companyId"=${company.id} ORDER BY b."barcode" ASC`:[];
+    const storeProducts=productTables[0]?.storeProduct?await prisma.$queryRaw`SELECT * FROM "StoreProduct" WHERE "storeId"=${store.id} ORDER BY "productId" ASC`:[];
+    const suppliers=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
+    const credentialsTable=await prisma.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"')::text AS "tableName"`;
+    const operators=credentialsTable[0]?.tableName?await prisma.$queryRaw`SELECT "id","employeeId","displayName","role","active","createdAt","updatedAt",("pinHash" IS NOT NULL) AS "hasPin",("cardCodeHash" IS NOT NULL) AS "hasCard" FROM "StoreOperatorCredential" WHERE "companyId"=${company.id} AND "storeId"=${store.id} ORDER BY "displayName" ASC`:[];
+    const layoutTable=await prisma.$queryRaw`SELECT to_regclass('public."StorePosLayout"')::text AS "tableName"`;
+    const layouts=layoutTable[0]?.tableName?await prisma.$queryRaw`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`:[];
+    const generatedAt=new Date();
+    const snapshot={
+      format:"MYWORKSTATION_PILOT_SAFETY_BACKUP_V1",generatedAt:generatedAt.toISOString(),generatedBy:{id:req.user.id,email:req.user.email||"super-admin"},
+      scope:{companyId:company.id,companyName:company.name,storeId:store.id,storeName:store.name},
+      security:{containsPasswords:false,containsPinOrCardSecrets:false,restorationRequiresSuperAdmin:true},
+      company,store,commercial:{categories,products,barcodes,storeProducts,suppliers},storeMode:{operators},pos:{publishedLayouts:layouts}
+    };
+    const serialized=JSON.stringify(snapshot,(_key,value)=>typeof value==="bigint"?value.toString():value,2);
+    const checksum=crypto.createHash("sha256").update(serialized).digest("hex");
+    const document=JSON.stringify({...snapshot,integrity:{algorithm:"SHA-256",checksum}},(_key,value)=>typeof value==="bigint"?value.toString():value,2);
+    await prisma.$executeRaw`
+      INSERT INTO "PilotStoreProfile" ("storeId","companyId","backupConfirmedAt","updatedBy","updatedAt")
+      VALUES (${store.id},${company.id},${generatedAt},${req.user.id},CURRENT_TIMESTAMP)
+      ON CONFLICT ("storeId") DO UPDATE SET "backupConfirmedAt"=${generatedAt},"updatedBy"=${req.user.id},"updatedAt"=CURRENT_TIMESTAMP`;
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"PILOT_SAFETY_BACKUP_DOWNLOADED",success:true,deviceName:`${store.name} · SHA256 ${checksum.slice(0,16)}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    const date=generatedAt.toISOString().slice(0,10);
+    res.setHeader("Content-Type","application/json; charset=utf-8");
+    res.setHeader("Content-Disposition",`attachment; filename="MyWorkStation_${date}_pilot-safety-backup.json"`);
+    res.setHeader("X-Backup-SHA256",checksum);
+    res.send(document);
+  }catch(error){next(error)}
+});
+
 router.put("/companies/:companyId/stores/:storeId/store-mode-manager",async(req,res,next)=>{
   try{
     const body=z.object({employeeId:z.string().trim().min(1)}).parse(req.body||{});
@@ -322,7 +368,7 @@ router.put("/companies/:companyId/stores/:storeId/pilot-profile",async(req,res,n
       operatingHours:z.string().trim().min(3).max(160),
       responsibleName:z.string().trim().min(2).max(160),
       notes:z.string().trim().max(1000).optional().or(z.literal("")),
-      backupConfirmed:z.boolean(),designFrozen:z.boolean(),databaseFrozen:z.boolean(),
+      designFrozen:z.boolean(),databaseFrozen:z.boolean(),
       loginTested:z.boolean(),shiftOpenTested:z.boolean(),shiftCloseTested:z.boolean(),kioskUnaffected:z.boolean()
     }).parse(req.body||{});
     const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
@@ -330,9 +376,8 @@ router.put("/companies/:companyId/stores/:storeId/pilot-profile",async(req,res,n
     const now=new Date();
     const rows=await prisma.$queryRaw`
       INSERT INTO "PilotStoreProfile" ("storeId","companyId","pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","loginTestedAt","shiftOpenTestedAt","shiftCloseTestedAt","kioskUnaffectedAt","updatedBy","updatedAt")
-      VALUES (${store.id},${store.companyId},${body.pcName},${body.operatingHours},${body.responsibleName},${body.notes||null},${body.backupConfirmed?now:null},${body.designFrozen?now:null},${body.databaseFrozen?now:null},${body.loginTested?now:null},${body.shiftOpenTested?now:null},${body.shiftCloseTested?now:null},${body.kioskUnaffected?now:null},${req.user.id},CURRENT_TIMESTAMP)
+      VALUES (${store.id},${store.companyId},${body.pcName},${body.operatingHours},${body.responsibleName},${body.notes||null},NULL,${body.designFrozen?now:null},${body.databaseFrozen?now:null},${body.loginTested?now:null},${body.shiftOpenTested?now:null},${body.shiftCloseTested?now:null},${body.kioskUnaffected?now:null},${req.user.id},CURRENT_TIMESTAMP)
       ON CONFLICT ("storeId") DO UPDATE SET "pcName"=EXCLUDED."pcName","operatingHours"=EXCLUDED."operatingHours","responsibleName"=EXCLUDED."responsibleName","notes"=EXCLUDED."notes",
-        "backupConfirmedAt"=CASE WHEN ${body.backupConfirmed} THEN COALESCE("PilotStoreProfile"."backupConfirmedAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "designFrozenAt"=CASE WHEN ${body.designFrozen} THEN COALESCE("PilotStoreProfile"."designFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "databaseFrozenAt"=CASE WHEN ${body.databaseFrozen} THEN COALESCE("PilotStoreProfile"."databaseFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "loginTestedAt"=CASE WHEN ${body.loginTested} THEN COALESCE("PilotStoreProfile"."loginTestedAt",CURRENT_TIMESTAMP) ELSE NULL END,
