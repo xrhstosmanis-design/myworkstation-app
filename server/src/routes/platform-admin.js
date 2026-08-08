@@ -257,8 +257,10 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
     const activeEmployees=await prisma.employee.count({where:{storeId:store.id,active:true}});
     const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"') AS "tableName"`;
     const openShifts=cashTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "CashShiftSession" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "status"='OPEN'`:[{total:0}];
-    const layouts=await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`;
-    const profileRows=await prisma.$queryRaw`SELECT "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedAt" FROM "PilotStoreProfile" WHERE "companyId"=${company.id} AND "storeId"=${store.id} LIMIT 1`;
+    const layoutTable=await prisma.$queryRaw`SELECT to_regclass('public."StorePosLayout"') AS "tableName"`;
+    const layouts=layoutTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`:[{total:0}];
+    const profileTable=await prisma.$queryRaw`SELECT to_regclass('public."PilotStoreProfile"') AS "tableName"`;
+    const profileRows=profileTable[0]?.tableName?await prisma.$queryRaw`SELECT "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","loginTestedAt","shiftOpenTestedAt","shiftCloseTestedAt","kioskUnaffectedAt","updatedAt" FROM "PilotStoreProfile" WHERE "companyId"=${company.id} AND "storeId"=${store.id} LIMIT 1`:[];
     const profile=profileRows[0]||null;
     const mail=getMailStatus();
     const emailRecipient=Boolean(company.users[0]?.email||store.responsibleEmail);
@@ -272,6 +274,9 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
       {key:"pilotProfile",label:"Στοιχεία πιλοτικής εγκατάστασης",ok:Boolean(profile?.pcName&&profile?.operatingHours&&profile?.responsibleName),blocking:true,detail:profile?.pcName&&profile?.operatingHours&&profile?.responsibleName?`${profile.pcName} · ${profile.operatingHours} · ${profile.responsibleName}`:"Συμπληρώστε PC, ωράριο και υπεύθυνο"},
       {key:"backup",label:"Επιβεβαιωμένο backup πριν από αλλαγές",ok:Boolean(profile?.backupConfirmedAt),blocking:true,detail:profile?.backupConfirmedAt?`Επιβεβαιώθηκε ${new Date(profile.backupConfirmedAt).toLocaleString("el-GR")}`:"Δεν έχει επιβεβαιωθεί backup"},
       {key:"scopeFreeze",label:"Κλείδωμα design και βάσης δεδομένων",ok:Boolean(profile?.designFrozenAt&&profile?.databaseFrozenAt),blocking:true,detail:profile?.designFrozenAt&&profile?.databaseFrozenAt?"Design και βάση κλειδωμένα για την πιλοτική εγκατάσταση":"Απαιτείται κλείδωμα design και βάσης"},
+      {key:"operatorSmoke",label:"Δοκιμή εισόδου εργαζομένου",ok:Boolean(profile?.loginTestedAt),blocking:true,detail:profile?.loginTestedAt?`Επιβεβαιώθηκε ${new Date(profile.loginTestedAt).toLocaleString("el-GR")}`:"Εκκρεμεί πραγματική είσοδος με PIN ή κάρτα"},
+      {key:"shiftSmoke",label:"Δοκιμή ανοίγματος και κλεισίματος βάρδιας",ok:Boolean(profile?.shiftOpenTestedAt&&profile?.shiftCloseTestedAt),blocking:true,detail:profile?.shiftOpenTestedAt&&profile?.shiftCloseTestedAt?"Άνοιγμα και κλείσιμο επιβεβαιώθηκαν":"Εκκρεμεί πραγματική δοκιμή βάρδιας"},
+      {key:"kioskIsolation",label:"Επιβεβαίωση ανεπηρέαστου Kiosk Manager",ok:Boolean(profile?.kioskUnaffectedAt),blocking:true,detail:profile?.kioskUnaffectedAt?"Kiosk Manager και ταμειακή συνέχισαν κανονικά":"Εκκρεμεί επιβεβαίωση μετά τη δοκιμή"},
       {key:"mail",label:"Email αναφοράς κλεισίματος",ok:!store.cashCloseEmailEnabled||(mail.configured&&emailRecipient),blocking:store.cashCloseEmailEnabled,detail:store.cashCloseEmailEnabled?(mail.configured&&emailRecipient?"SMTP έτοιμο και υπάρχει παραλήπτης":"Ελέγξτε SMTP ή email παραλήπτη"):"Απενεργοποιημένο για το κατάστημα"},
       {key:"posLayout",label:"Δημοσιευμένος σχεδιασμός POS",ok:Number(layouts[0]?.total||0)>0,blocking:false,detail:Number(layouts[0]?.total||0)>0?"Έχει δημοσιευτεί στο κατάστημα":"Προαιρετικό για την πρώτη παράλληλη δοκιμή"},
       {key:"openShift",label:"Κατάσταση βάρδιας",ok:true,blocking:false,detail:Number(openShifts[0]?.total||0)>0?"Υπάρχει ανοιχτή βάρδια — μην εκτελέσετε νέα δοκιμή ανοίγματος":"Δεν υπάρχει ανοιχτή βάρδια"},
@@ -289,20 +294,25 @@ router.put("/companies/:companyId/stores/:storeId/pilot-profile",async(req,res,n
       operatingHours:z.string().trim().min(3).max(160),
       responsibleName:z.string().trim().min(2).max(160),
       notes:z.string().trim().max(1000).optional().or(z.literal("")),
-      backupConfirmed:z.boolean(),designFrozen:z.boolean(),databaseFrozen:z.boolean()
+      backupConfirmed:z.boolean(),designFrozen:z.boolean(),databaseFrozen:z.boolean(),
+      loginTested:z.boolean(),shiftOpenTested:z.boolean(),shiftCloseTested:z.boolean(),kioskUnaffected:z.boolean()
     }).parse(req.body||{});
     const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
     const now=new Date();
     const rows=await prisma.$queryRaw`
-      INSERT INTO "PilotStoreProfile" ("storeId","companyId","pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedBy","updatedAt")
-      VALUES (${store.id},${store.companyId},${body.pcName},${body.operatingHours},${body.responsibleName},${body.notes||null},${body.backupConfirmed?now:null},${body.designFrozen?now:null},${body.databaseFrozen?now:null},${req.user.id},CURRENT_TIMESTAMP)
+      INSERT INTO "PilotStoreProfile" ("storeId","companyId","pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","loginTestedAt","shiftOpenTestedAt","shiftCloseTestedAt","kioskUnaffectedAt","updatedBy","updatedAt")
+      VALUES (${store.id},${store.companyId},${body.pcName},${body.operatingHours},${body.responsibleName},${body.notes||null},${body.backupConfirmed?now:null},${body.designFrozen?now:null},${body.databaseFrozen?now:null},${body.loginTested?now:null},${body.shiftOpenTested?now:null},${body.shiftCloseTested?now:null},${body.kioskUnaffected?now:null},${req.user.id},CURRENT_TIMESTAMP)
       ON CONFLICT ("storeId") DO UPDATE SET "pcName"=EXCLUDED."pcName","operatingHours"=EXCLUDED."operatingHours","responsibleName"=EXCLUDED."responsibleName","notes"=EXCLUDED."notes",
         "backupConfirmedAt"=CASE WHEN ${body.backupConfirmed} THEN COALESCE("PilotStoreProfile"."backupConfirmedAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "designFrozenAt"=CASE WHEN ${body.designFrozen} THEN COALESCE("PilotStoreProfile"."designFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "databaseFrozenAt"=CASE WHEN ${body.databaseFrozen} THEN COALESCE("PilotStoreProfile"."databaseFrozenAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "loginTestedAt"=CASE WHEN ${body.loginTested} THEN COALESCE("PilotStoreProfile"."loginTestedAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "shiftOpenTestedAt"=CASE WHEN ${body.shiftOpenTested} THEN COALESCE("PilotStoreProfile"."shiftOpenTestedAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "shiftCloseTestedAt"=CASE WHEN ${body.shiftCloseTested} THEN COALESCE("PilotStoreProfile"."shiftCloseTestedAt",CURRENT_TIMESTAMP) ELSE NULL END,
+        "kioskUnaffectedAt"=CASE WHEN ${body.kioskUnaffected} THEN COALESCE("PilotStoreProfile"."kioskUnaffectedAt",CURRENT_TIMESTAMP) ELSE NULL END,
         "updatedBy"=${req.user.id},"updatedAt"=CURRENT_TIMESTAMP
-      RETURNING "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","updatedAt"`;
+      RETURNING "pcName","operatingHours","responsibleName","notes","backupConfirmedAt","designFrozenAt","databaseFrozenAt","loginTestedAt","shiftOpenTestedAt","shiftCloseTestedAt","kioskUnaffectedAt","updatedAt"`;
     res.json(rows[0]);
   }catch(error){next(error)}
 });
