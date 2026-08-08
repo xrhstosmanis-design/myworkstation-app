@@ -56,6 +56,7 @@ const tableStatements=[
     "attachmentMimeType" TEXT,
     "attachmentFilename" TEXT,
     "attachmentChecksum" TEXT,
+    "subtractFromShift" BOOLEAN NOT NULL DEFAULT false,
     "actorId" TEXT NOT NULL,
     "actorName" TEXT NOT NULL,
     "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -73,6 +74,7 @@ const tableStatements=[
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
+  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "supplierId" TEXT`
   ,`CREATE INDEX IF NOT EXISTS "StoreTransaction_supplier_idx" ON "StoreTransaction" ("companyId","supplierId","occurredAt" DESC)`
 ];
@@ -118,19 +120,25 @@ async function ownedStore(storeId,companyId){
 }
 function normalize(row){
   if(!row)return null;
-  return {...row,amount:Number(row.amount||0)};
+  return {...row,amount:Number(row.amount||0),subtractFromShift:Boolean(row.subtractFromShift)};
 }
 function totals(rows){
   const active=rows.filter(row=>!row.reversedAt);
   const sum=type=>active.filter(row=>row.type===type).reduce((total,row)=>total+Number(row.amount||0),0);
+  const sumShiftExpense=type=>active.filter(row=>row.type===type&&row.subtractFromShift).reduce((total,row)=>total+Number(row.amount||0),0);
   const supplierPayments=sum("SUPPLIER_PAYMENT");
   const otherExpenses=sum("OTHER_EXPENSE");
+  const deductedSupplierPayments=sumShiftExpense("SUPPLIER_PAYMENT");
+  const deductedOtherExpenses=sumShiftExpense("OTHER_EXPENSE");
   return {
     cashSales:sum("SALE_CASH"),
     cardSales:sum("SALE_CARD"),
     supplierPayments,
     otherExpenses,
-    expensesTotal:supplierPayments+otherExpenses,
+    expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
+    recordedExpensesTotal:supplierPayments+otherExpenses,
+    deductedSupplierPayments,
+    deductedOtherExpenses,
     percentages:sum("PERCENTAGES"),
     count:active.length
   };
@@ -142,6 +150,7 @@ const transactionSchema=z.object({
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
+  subtractFromShift:z.coerce.boolean().optional().default(false),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
 });
 
@@ -184,7 +193,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const openSession=openRows[0]||null;
   const recentRows=await prisma.$queryRaw`
-    SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
+    SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
            ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename"
     FROM "StoreTransaction"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
@@ -222,10 +231,10 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "StoreTransaction" (
-      "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+      "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
     ) VALUES (
       ${crypto.randomUUID()},${req.user.companyId},${store.id},${session.id},${body.type},${body.amount},
-      ${body.description||null},${body.supplierId||null},${supplierName},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
+      ${body.description||null},${body.supplierId||null},${supplierName},${needsPhoto&&body.subtractFromShift},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
     ) RETURNING *
   `;
   const transaction=normalize(rows[0]);

@@ -32,3 +32,14 @@ test("store UI exposes camera capture and my payments",()=>{
   assert.match(client,/photoRequired\(type\)&&!attachment/);
   assert.match(client,/Προβολή φωτογραφίας/);
 });
+
+test("payments reduce the shift only after an explicit cashier choice",()=>{
+  assert.match(route,/ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false/);
+  assert.match(route,/subtractFromShift:z\.coerce\.boolean\(\)\.optional\(\)\.default\(false\)/);
+  assert.match(route,/row\.type===type&&row\.subtractFromShift/);
+  assert.match(route,/recordedExpensesTotal:supplierPayments\+otherExpenses/);
+  assert.match(route,/expensesTotal:deductedSupplierPayments\+deductedOtherExpenses/);
+  assert.match(client,/Αφαίρεση από τη βάρδια/);
+  assert.match(client,/setSubtractFromShift\(false\)/);
+  assert.match(client,/subtractFromShift\}\)\}/);
+});
