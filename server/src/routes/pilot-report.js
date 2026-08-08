@@ -26,10 +26,12 @@ const tableStatements=[
   `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"sessionId" TEXT,
     "type" TEXT NOT NULL,"amount" NUMERIC(14,2) NOT NULL,"description" TEXT,"supplierName" TEXT,
+    "subtractFromShift" BOOLEAN NOT NULL DEFAULT false,
     "actorId" TEXT NOT NULL,"actorName" TEXT NOT NULL,"occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"reversedAt" TIMESTAMPTZ,"reversedBy" TEXT,
     "reversedByName" TEXT,"reversalReason" TEXT
-  )`
+  )`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
 ];
 
 async function ensureTables(){
@@ -69,15 +71,16 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
   const sessionsRaw=await prisma.$queryRaw`
     SELECT * FROM "CashShiftSession"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
-      AND (("openedAt" AT TIME ZONE 'Europe/Athens')::date=CAST(${query.date} AS date)
-        OR ("closedAt" IS NOT NULL AND ("closedAt" AT TIME ZONE 'Europe/Athens')::date=CAST(${query.date} AS date)))
+      AND (COALESCE("closedAt","openedAt") AT TIME ZONE 'Europe/Athens')::date=CAST(${query.date} AS date)
     ORDER BY "openedAt" ASC
   `;
   const transactionsRaw=await prisma.$queryRaw`
-    SELECT * FROM "StoreTransaction"
-    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
-      AND ("occurredAt" AT TIME ZONE 'Europe/Athens')::date=CAST(${query.date} AS date)
-    ORDER BY "occurredAt" ASC
+    SELECT transaction.* FROM "StoreTransaction" transaction
+    JOIN "CashShiftSession" shift ON shift."id"=transaction."sessionId"
+      AND shift."companyId"=transaction."companyId" AND shift."storeId"=transaction."storeId"
+    WHERE transaction."storeId"=${store.id} AND transaction."companyId"=${req.user.companyId}
+      AND (COALESCE(shift."closedAt",shift."openedAt") AT TIME ZONE 'Europe/Athens')::date=CAST(${query.date} AS date)
+    ORDER BY transaction."occurredAt" ASC
   `;
 
   const sessions=sessionsRaw.map(row=>normalizeMoney(row,[
@@ -88,6 +91,7 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
   const transactions=transactionsRaw.map(row=>normalizeMoney(row,["amount"]));
   const activeTransactions=transactions.filter(row=>!row.reversedAt);
   const sumType=type=>activeTransactions.filter(row=>row.type===type).reduce((sum,row)=>sum+row.amount,0);
+  const sumDeductedType=type=>activeTransactions.filter(row=>row.type===type&&row.subtractFromShift).reduce((sum,row)=>sum+row.amount,0);
   const closed=sessions.filter(row=>row.status==="CLOSED");
   const operators=[...new Set([
     ...transactions.map(row=>row.actorName),
@@ -95,12 +99,17 @@ router.get("/stores/:storeId/daily",route(async(req,res)=>{
   ].filter(Boolean))];
   const supplierPayments=sumType("SUPPLIER_PAYMENT");
   const otherExpenses=sumType("OTHER_EXPENSE");
+  const deductedSupplierPayments=sumDeductedType("SUPPLIER_PAYMENT");
+  const deductedOtherExpenses=sumDeductedType("OTHER_EXPENSE");
   const summary={
     cashSales:sumType("SALE_CASH"),
     cardSales:sumType("SALE_CARD"),
     supplierPayments,
     otherExpenses,
-    expensesTotal:supplierPayments+otherExpenses,
+    recordedExpensesTotal:supplierPayments+otherExpenses,
+    deductedSupplierPayments,
+    deductedOtherExpenses,
+    expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
     percentages:sumType("PERCENTAGES"),
     transactionCount:activeTransactions.length,
     reversedCount:transactions.length-activeTransactions.length,

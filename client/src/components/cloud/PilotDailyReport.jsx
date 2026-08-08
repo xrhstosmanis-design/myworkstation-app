@@ -28,7 +28,8 @@ export default function PilotDailyReport({api,store}){
       ["Κατάστημα",data.store.name],["Ημερομηνία",data.date],[],
       ["ΣΥΝΟΨΗ"],["Πωλήσεις μετρητών",data.summary.cashSales],["Πωλήσεις καρτών",data.summary.cardSales],
       ["Πληρωμές προμηθευτών",data.summary.supplierPayments],["Λοιπά έξοδα",data.summary.otherExpenses],
-      ["Σύνολο εξόδων",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
+      ["Σύνολο καταγεγραμμένων πληρωμών / εξόδων",data.summary.recordedExpensesTotal],
+      ["Αφαιρέθηκαν από τη βάρδια",data.summary.expensesTotal],["Ποσοστά",data.summary.percentages],
       ["EFTPOS",data.summary.eftposTotal],["Διαφορά καρτών–EFTPOS",data.summary.cardVarianceTotal],
       ["Συνολική διαφορά ταμείων",data.summary.varianceTotal],["Ενεργές συναλλαγές",data.summary.transactionCount],
       ["Ακυρωμένες συναλλαγές",data.summary.reversedCount],[],
@@ -46,7 +47,7 @@ export default function PilotDailyReport({api,store}){
   const operators=useMemo(()=>summary.operators||[],[summary.operators]);
   return <article className="cloud-panel pilot-report">
     <div className="cloud-panel-head pilot-report-head">
-      <div><h3><FileSpreadsheet/>Ημερήσια Αναφορά Πιλότου</h3><p>Σύγκριση των καταχωρίσεων MyWorkStation με το πραγματικό κλείσιμο Kiosk Manager.</p></div>
+      <div><h3><FileSpreadsheet/>Ημερήσια Αναφορά Πιλότου</h3><p>Κάθε βάρδια και όλες οι κινήσεις της εμφανίζονται στην ημερομηνία οριστικοποίησής της.</p></div>
       <div className="pilot-report-actions"><label><CalendarDays/><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button onClick={exportCsv} disabled={!data||loading}><Download/>Excel CSV</button></div>
     </div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
@@ -56,7 +57,7 @@ export default function PilotDailyReport({api,store}){
         <article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article>
         <article><span>EFTPOS</span><strong>{money(summary.eftposTotal)}</strong></article>
         <article><span>Κάρτες − EFTPOS</span><strong className={Math.abs(Number(summary.cardVarianceTotal||0))>.009?"pilot-negative":"pilot-positive"}>{money(summary.cardVarianceTotal)}</strong></article>
-        <article><span>Έξοδα</span><strong>{money(summary.expensesTotal)}</strong></article>
+        <article><span>Αφαιρέθηκαν από ταμείο</span><strong>{money(summary.expensesTotal)}</strong></article>
         <article><span>Διαφορά</span><strong className={Number(summary.varianceTotal)<0?"pilot-negative":"pilot-positive"}>{money(summary.varianceTotal)}</strong></article>
         <article><span>Βάρδιες</span><strong>{summary.sessionsClosed||0}/{summary.sessionsOpened||0}</strong></article>
         <article><span>Συναλλαγές</span><strong>{summary.transactionCount||0}</strong></article>
