@@ -60,8 +60,10 @@ export default function StoreOperatorApp({api,storeId}){
       remember(result);
     }catch(err){setError(err.message);setCardCode("");setTimeout(()=>cardRef.current?.focus(),50)}finally{setBusy(false)}
   };
-  const logout=()=>{
-    localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");setSession(null);setDirectory(null);
+  const logout=async()=>{
+    try{await api("/api/operators/logout",{method:"POST"})}catch{}finally{
+      localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");setSession(null);setDirectory(null);
+    }
   };
 
   if(session)return <div className="store-mode-shell">
