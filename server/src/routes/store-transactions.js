@@ -239,6 +239,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       AND shift."status"='OPEN'
     ORDER BY shift."openedAt" DESC
     LIMIT 1
+    FOR KEY SHARE OF shift
     RETURNING *
   `;
   if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});

@@ -133,8 +133,8 @@ function normalize(row){
   return result;
 }
 
-async function findConsecutiveDuplicateSales(companyId,storeId,from,to){
-  const rows=await prisma.$queryRaw`
+async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
+  const rows=await db.$queryRaw`
     SELECT s."id",s."occurredAt",s."total",l."productId",l."description",
            l."quantity",l."unitPrice",l."discount",l."lineTotal"
     FROM "Sale" s
@@ -173,8 +173,8 @@ async function findConsecutiveDuplicateSales(companyId,storeId,from,to){
   return matches;
 }
 
-async function authoritativeShiftTotals(companyId,storeId,sessionId){
-  const rows=await prisma.$queryRaw`
+async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
+  const rows=await db.$queryRaw`
     SELECT
       COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL),0) AS "cashSales",
       COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL),0) AS "cardSales",
@@ -261,42 +261,46 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
 
 router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   const body=closeSchema.parse(req.body||{});
-  const found=await prisma.$queryRaw`
-    SELECT s.* FROM "CashShiftSession" s
-    JOIN "Store" st ON st."id"=s."storeId"
-    WHERE s."id"=${req.params.sessionId}
-      AND s."companyId"=${req.user.companyId}
-      AND st."companyId"=${req.user.companyId}
-      AND s."status"='OPEN'
-    LIMIT 1
-  `;
-  const session=normalize(found[0]);
-  if(!session)return res.status(404).json({error:"Δεν βρέθηκε ανοιχτή βάρδια."});
-  assertStoreAccess(req,session.storeId);
-  const ledger=await authoritativeShiftTotals(req.user.companyId,session.storeId,session.id);
-  const expected=session.openingOperational+ledger.cashSales-ledger.expenses;
-  const actual=body.drawer+body.custody+body.coins;
-  const variance=actual-expected;
-  const cardVariance=ledger.cardSales-body.eftposTotal;
-  const duplicateReview=Math.abs(cardVariance)>0.009
-    ?await findConsecutiveDuplicateSales(req.user.companyId,session.storeId,session.openedAt,new Date())
-    :[];
-  const duplicateReviewJson=JSON.stringify(duplicateReview);
   const actorName=req.user.fullName||"Χρήστης";
-  const rows=await prisma.$queryRaw`
-    UPDATE "CashShiftSession"
-    SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
-        "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},
-        "cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
-        "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
-        "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},
-        "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
-    WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *
-  `;
-  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
-  const closed=normalize(rows[0]);
+  const closeResult=await prisma.$transaction(async tx=>{
+    const found=await tx.$queryRaw`
+      SELECT s.* FROM "CashShiftSession" s
+      JOIN "Store" st ON st."id"=s."storeId"
+      WHERE s."id"=${req.params.sessionId}
+        AND s."companyId"=${req.user.companyId}
+        AND st."companyId"=${req.user.companyId}
+        AND s."status"='OPEN'
+      LIMIT 1
+      FOR UPDATE OF s
+    `;
+    const session=normalize(found[0]);
+    if(!session)return null;
+    assertStoreAccess(req,session.storeId);
+    const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
+    const expected=session.openingOperational+ledger.cashSales-ledger.expenses;
+    const actual=body.drawer+body.custody+body.coins;
+    const variance=actual-expected;
+    const cardVariance=ledger.cardSales-body.eftposTotal;
+    const duplicateReview=Math.abs(cardVariance)>0.009
+      ?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date())
+      :[];
+    const duplicateReviewJson=JSON.stringify(duplicateReview);
+    const rows=await tx.$queryRaw`
+      UPDATE "CashShiftSession"
+      SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
+          "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},
+          "cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
+          "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
+          "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},
+          "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
+      WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *
+    `;
+    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId}:null;
+  });
+  if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
+  const {closed,storeId}=closeResult;
   const [store,owners]=await Promise.all([
-    prisma.store.findFirst({where:{id:session.storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true,cashCloseEmailEnabled:true}}),
+    prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true,cashCloseEmailEnabled:true}}),
     prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})
   ]);
   const recipients=[...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean);
