@@ -11,15 +11,21 @@ export async function auth(req,res,next){
     // A disabled credential, employee, store or company must not remain usable
     // until the 12-hour JWT expiry, and role changes require a fresh token.
     if(payload.tokenType==="STORE_OPERATOR"){
+      if(!payload.operatorSessionId){
+        return res.status(401).json({error:"Απαιτείται νέα είσοδος στο Store Mode.",code:"STORE_OPERATOR_SESSION_REQUIRED"});
+      }
       const rows=await prisma.$queryRaw`
         SELECT c."id",c."role",c."active",
                e."active" AS "employeeActive",
                s."active" AS "storeActive",
-               co."active" AS "companyActive"
+               co."active" AS "companyActive",
+               os."expiresAt" AS "operatorSessionExpiresAt",
+               os."revokedAt" AS "operatorSessionRevokedAt"
         FROM "StoreOperatorCredential" c
         JOIN "Employee" e ON e."id"=c."employeeId"
         JOIN "Store" s ON s."id"=c."storeId"
         JOIN "Company" co ON co."id"=c."companyId"
+        JOIN "StoreOperatorSession" os ON os."id"=${payload.operatorSessionId} AND os."operatorId"=c."id"
         WHERE c."id"=${payload.operatorId||payload.id}
           AND c."employeeId"=${payload.employeeId}
           AND c."storeId"=${payload.storeId}
@@ -27,7 +33,8 @@ export async function auth(req,res,next){
         LIMIT 1
       `;
       const operator=rows[0];
-      if(!operator||!operator.active||!operator.employeeActive||!operator.storeActive||!operator.companyActive){
+      const operatorSessionExpired=!operator?.operatorSessionExpiresAt||new Date(operator.operatorSessionExpiresAt).getTime()<=Date.now();
+      if(!operator||operatorSessionExpired||operator.operatorSessionRevokedAt||!operator.active||!operator.employeeActive||!operator.storeActive||!operator.companyActive){
         return res.status(401).json({
           error:"Η πρόσβαση Store Mode δεν είναι πλέον ενεργή. Συνδεθείτε ξανά.",
           code:"STORE_OPERATOR_SESSION_REVOKED"
@@ -39,6 +46,7 @@ export async function auth(req,res,next){
           code:"STORE_OPERATOR_ROLE_CHANGED"
         });
       }
+      prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "lastSeenAt"=NOW() WHERE "id"=${payload.operatorSessionId} AND "lastSeenAt"<NOW()-INTERVAL '5 minutes'`.catch(()=>{});
       req.user=payload;
       return next();
     }
