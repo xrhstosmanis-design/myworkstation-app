@@ -45,9 +45,15 @@ router.get("/stores/:storeId",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+const paymentMethodSchema=z.enum(["CASH","CARD","IRIS"]);
 const checkoutSchema=z.object({
   items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999)})).min(1).max(200),
-  paymentMethod:z.enum(["CASH","CARD"])
+  paymentMethod:z.enum(["CASH","CARD","IRIS","MIXED"]).optional(),
+  payments:z.array(z.object({method:paymentMethodSchema,amount:z.coerce.number().positive()})).min(2).max(3).optional()
+}).superRefine((value,ctx)=>{
+  if(value.paymentMethod==="MIXED"&&!value.payments){ctx.addIssue({code:z.ZodIssueCode.custom,path:["payments"],message:"Η μικτή πληρωμή χρειάζεται ανάλυση ποσών."})}
+  if(value.payments&&value.paymentMethod!=="MIXED"){ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Η ανάλυση πληρωμών χρησιμοποιείται μόνο στη μικτή πληρωμή."})}
+  if(!value.paymentMethod){ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Επιλέξτε τρόπο πληρωμής."})}
 });
 
 router.post("/stores/:storeId/checkout",async(req,res,next)=>{
@@ -65,13 +71,17 @@ router.post("/stores/:storeId/checkout",async(req,res,next)=>{
     const byId=new Map(rows.map(row=>[row.id,row]));
     const items=body.items.map(item=>{const product=byId.get(item.productId);const unitPrice=money(product.salePrice);return {...item,name:product.name,vatRate:money(product.vatRate),unitPrice,lineTotal:Number((unitPrice*item.quantity).toFixed(2))}});
     const total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2));
+    const payments=body.paymentMethod==="MIXED"?body.payments:[{method:body.paymentMethod,amount:total}];
+    const paid=Number(payments.reduce((sum,payment)=>sum+money(payment.amount),0).toFixed(2));
+    if(Math.abs(paid-total)>0.009)return res.status(400).json({error:`Η ανάλυση πληρωμών (${paid.toFixed(2)} €) πρέπει να ισούται με το σύνολο (${total.toFixed(2)} €).`});
+
     const saleId=crypto.randomUUID();
-    const paymentId=crypto.randomUUID();
     const ledgerId=crypto.randomUUID();
     const actorId=req.user.id;
     const actorName=req.user.fullName||"Πωλητής";
     const employeeId=req.user.employeeId||null;
-    const ledgerType=body.paymentMethod==="CASH"?"SALE_CASH":"SALE_CARD";
+    const cashAmount=payments.filter(x=>x.method==="CASH").reduce((sum,x)=>sum+money(x.amount),0);
+    const nonCashAmount=Number((total-cashAmount).toFixed(2));
 
     await prisma.$transaction(async tx=>{
       const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`;
@@ -80,10 +90,13 @@ router.post("/stores/:storeId/checkout",async(req,res,next)=>{
       for(const item of items){
         await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${item.lineTotal})`;
       }
-      await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${paymentId},${saleId},${body.paymentMethod},${total})`;
-      await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${ledgerId},${req.user.companyId},${store.id},${open[0].id},${ledgerType},${total},${`POS πώληση ${saleId}`},${actorId},${actorName})`;
+      for(const payment of payments){
+        await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`;
+      }
+      const description=`POS πώληση ${saleId} · ${body.paymentMethod}${body.paymentMethod==="MIXED"?` · ΜΕΤΡΗΤΑ ${cashAmount.toFixed(2)} / ΗΛΕΚΤΡΟΝΙΚΑ ${nonCashAmount.toFixed(2)}`:""}`;
+      await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${ledgerId},${req.user.companyId},${store.id},${open[0].id},${cashAmount===total?"SALE_CASH":"SALE_CARD"},${total},${description},${actorId},${actorName})`;
     });
-    res.status(201).json({saleId,total,paymentMethod:body.paymentMethod,fiscalStatus:"NON_FISCAL"});
+    res.status(201).json({saleId,total,paymentMethod:body.paymentMethod,payments,fiscalStatus:"NON_FISCAL"});
   }catch(error){
     if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.",details:error.issues});
     next(error);
