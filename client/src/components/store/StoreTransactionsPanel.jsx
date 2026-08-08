@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {ArrowRightLeft,Camera,CreditCard,Eye,RefreshCw,ReceiptText,ShoppingCart,Truck,WalletCards} from "lucide-react";
+import {ArrowRightLeft,Camera,CreditCard,Eye,RefreshCw,ReceiptText,RotateCcw,ShoppingCart,Truck,WalletCards} from "lucide-react";
 import "./store-transactions.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -57,6 +57,13 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   };
   const choosePhoto=async event=>{setError("");try{const ready=await preparePhoto(event.target.files?.[0]);setAttachment(ready);setAttachmentName(ready?.filename||"")}catch(err){setAttachment(null);setAttachmentName("");setError(err.message)}};
   const viewPhoto=async row=>{try{const result=await api(`/api/transactions/${row.id}/attachment`);const popup=window.open();if(popup)popup.document.write(`<title>Παραστατικό</title><img src="${result.dataUrl}" style="max-width:100%;height:auto;display:block;margin:auto">`)}catch(err){setError(err.message)}};
+  const reverse=async row=>{
+    const reason=window.prompt("Αιτία ακύρωσης της συναλλαγής:");
+    if(!reason?.trim())return;
+    setBusy(true);setError("");setMessage("");
+    try{await api(`/api/transactions/${row.id}/reverse`,{method:"POST",body:JSON.stringify({reason:reason.trim()})});setMessage("Η συναλλαγή ακυρώθηκε και καταγράφηκε ονομαστικά.");await load();onChanged?.()}
+    catch(err){setError(err.message)}finally{setBusy(false)}
+  };
 
   const summary=data?.summary||{};
   return <article className="cloud-panel ledger-module">
@@ -76,8 +83,8 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
         {photoRequired(type)&&<label className="ledger-shift-deduction"><input type="checkbox" checked={subtractFromShift} onChange={e=>setSubtractFromShift(e.target.checked)}/><span><b>Αφαίρεση από τη βάρδια</b><small>Επίλεξέ το μόνο αν το ποσό πληρώθηκε από τα μετρητά αυτής της βάρδιας.</small></span></label>}
         <button className="ledger-submit" disabled={busy||!amount||(photoRequired(type)&&!attachment)}>{busy?"Καταχώριση…":"Καταχώριση"}</button>
       </form>}
-      <div className="ledger-list-head"><h4>Οι πληρωμές και συναλλαγές μου</h4><span>Ορατές μόνο στον συνδεδεμένο εργαζόμενο και στους υπευθύνους.</span></div>
-      <div className="ledger-list">{(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη δικές σου συναλλαγές.</div>:data.recent.map(row=>{const info=typeInfo(row.type);const Icon=info.icon;return <div className={`ledger-row ${row.reversedAt?"reversed":""}`} key={row.id}><Icon/><div><b>{info.label}</b><span>{row.supplierName||row.description||"Χωρίς περιγραφή"}</span><small>{when(row.occurredAt)} · {row.actorName}{photoRequired(row.type)?` · ${row.subtractFromShift?"Αφαιρείται από τη βάρδια":"Δεν αφαιρείται από τη βάρδια"}`:""}</small>{row.hasAttachment&&<button className="ledger-attachment" onClick={()=>viewPhoto(row)}><Eye/>Προβολή φωτογραφίας</button>}</div><strong>{money(row.amount)}</strong><em>{row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"}</em></div>})}</div>
+      <div className="ledger-list-head"><h4>{data?.access?.canReviewStoreLedger?"Συναλλαγές καταστήματος":"Οι πληρωμές και συναλλαγές μου"}</h4><span>{data?.access?.canReviewStoreLedger?"Ο Υπεύθυνος βλέπει τις καταχωρίσεις όλων των εργαζομένων του καταστήματος.":"Ο εργαζόμενος βλέπει μόνο τις δικές του καταχωρίσεις."}</span></div>
+      <div className="ledger-list">{(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη συναλλαγές.</div>:data.recent.map(row=>{const info=typeInfo(row.type);const Icon=info.icon;return <div className={`ledger-row ${row.reversedAt?"reversed":""}`} key={row.id}><Icon/><div><b>{info.label}</b><span>{row.supplierName||row.description||"Χωρίς περιγραφή"}</span><small>{when(row.occurredAt)} · {row.actorName}{photoRequired(row.type)?` · ${row.subtractFromShift?"Αφαιρείται από τη βάρδια":"Δεν αφαιρείται από τη βάρδια"}`:""}</small>{row.hasAttachment&&<button className="ledger-attachment" onClick={()=>viewPhoto(row)}><Eye/>Προβολή φωτογραφίας</button>}{data?.access?.canReverse&&!row.reversedAt&&<button className="ledger-attachment" onClick={()=>reverse(row)} disabled={busy}><RotateCcw/>Ακύρωση με αιτιολογία</button>}</div><strong>{money(row.amount)}</strong><em>{row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"}</em></div>})}</div>
     </>}
   </article>;
 }
