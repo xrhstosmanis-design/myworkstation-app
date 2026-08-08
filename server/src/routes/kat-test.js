@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
+import XLSX from "xlsx";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 
@@ -68,6 +69,10 @@ async function saveCurrentTestState(tx,actorId){
   return {saved:true,layoutVersion:Number(layoutRows[0]?.version||0),productCount:productRows.length};
 }
 
+const text=(row,...keys)=>{for(const key of keys){const value=row?.[key];if(value!==undefined&&value!==null&&String(value).trim()!=="")return String(value).trim()}return ""};
+const numberValue=(row,keys,defaultValue=0)=>{for(const key of keys){const value=row?.[key];if(value!==undefined&&value!==null&&String(value).trim()!==""){const parsed=Number(String(value).replace(",","."));return Number.isFinite(parsed)?parsed:NaN}}return defaultValue};
+const unitValue=value=>({ΤΕΜΑΧΙΟ:"PIECE",ΤΕΜ:"PIECE",PIECE:"PIECE",KG:"KG",ΚΙΛΟ:"KG",LITER:"LITER",ΛΙΤΡΟ:"LITER",PACKAGE:"PACKAGE",ΣΥΣΚΕΥΑΣΙΑ:"PACKAGE"}[String(value||"").trim().toUpperCase()]||"PIECE");
+
 router.get("/status",async(req,res,next)=>{try{
   await ensureSupportTables();
   const [company,snapshotRows]=await Promise.all([
@@ -91,6 +96,58 @@ router.post("/save-state",async(req,res,next)=>{try{
   if(!store)return res.status(404).json({error:"Δεν έχει δημιουργηθεί ακόμη το TEST."});
   const saved=await prisma.$transaction(tx=>saveCurrentTestState(tx,req.user?.id));
   res.json({ok:true,...saved,note:"Η τρέχουσα κατάσταση του TEST αποθηκεύτηκε μόνιμα στον server."});
+}catch(error){next(error)}});
+
+router.post("/bulk-inventory-import",async(req,res,next)=>{try{
+  const store=await prisma.store.findFirst({where:{id:TEST_STORE_ID,companyId:TEST_COMPANY_ID,active:true},select:{id:true}});
+  if(!store)return res.status(404).json({error:"Δεν έχει δημιουργηθεί ακόμη το TEST."});
+  const body=z.object({dataUrl:z.string().max(12000000)}).parse(req.body||{});
+  const match=/^data:application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|vnd\.ms-excel);base64,([A-Za-z0-9+/=]+)$/.exec(body.dataUrl);
+  if(!match)return res.status(400).json({error:"Απαιτείται αρχείο Excel .xlsx ή .xls."});
+  const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:true});
+  const sheet=workbook.Sheets[workbook.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+  if(!rows.length||rows.length>2000)return res.status(400).json({error:"Το Excel πρέπει να περιέχει 1 έως 2.000 γραμμές."});
+  const parsed=rows.map((row,index)=>{
+    const name=text(row,"Προϊόν","Ονομασία","Όνομα","Name","Product","name");
+    const barcode=text(row,"Barcode","BARCODE","barcode","EAN","Κωδικός Barcode");
+    const sku=text(row,"SKU","Κωδικός","Code","code","sku");
+    const category=text(row,"Κατηγορία","Category","category");
+    const salePrice=numberValue(row,["Τιμή","Τιμή Πώλησης","SalePrice","Price","salePrice"],0);
+    const costPrice=numberValue(row,["Κόστος","Τιμή Αγοράς","CostPrice","costPrice"],0);
+    const vatRate=numberValue(row,["ΦΠΑ","VAT","VatRate","vatRate"],24);
+    const stock=numberValue(row,["Απόθεμα","Stock","Quantity","Qty","stock"],0);
+    const minStock=numberValue(row,["Ελάχιστο Απόθεμα","MinStock","minStock"],0);
+    const unit=unitValue(text(row,"Μονάδα","Unit","unit"));
+    if(!name)return {error:`Γραμμή ${index+2}: λείπει η ονομασία προϊόντος.`};
+    if(!barcode&&!sku)return {error:`Γραμμή ${index+2}: χρειάζεται Barcode ή SKU.`};
+    for(const [label,value] of [["Τιμή",salePrice],["Κόστος",costPrice],["ΦΠΑ",vatRate],["Απόθεμα",stock],["Ελάχιστο Απόθεμα",minStock]])if(!Number.isFinite(value)||value<0)return {error:`Γραμμή ${index+2}: μη έγκυρη τιμή στο πεδίο ${label}.`};
+    if(vatRate>100)return {error:`Γραμμή ${index+2}: ο ΦΠΑ δεν μπορεί να ξεπερνά το 100%.`};
+    return {name,barcode,sku,category,salePrice,costPrice,vatRate,stock,minStock,unit};
+  });
+  const invalid=parsed.find(row=>row.error);if(invalid)return res.status(400).json({error:invalid.error});
+  const seen=new Set();for(let i=0;i<parsed.length;i++){const key=parsed[i].barcode?`B:${parsed[i].barcode}`:`S:${parsed[i].sku}`;if(seen.has(key))return res.status(400).json({error:`Γραμμή ${i+2}: διπλό Barcode/SKU μέσα στο Excel.`});seen.add(key)}
+  const summary=await prisma.$transaction(async tx=>{
+    let created=0,updated=0,categoriesCreated=0,barcodesAdded=0;
+    const categoryCache=new Map();
+    for(const row of parsed){
+      let categoryId=null;
+      if(row.category){
+        const cacheKey=row.category.toLocaleLowerCase("el-GR");categoryId=categoryCache.get(cacheKey)||null;
+        if(!categoryId){const existing=await tx.$queryRawUnsafe(`SELECT "id" FROM "ProductCategory" WHERE "companyId"=$1 AND LOWER("name")=LOWER($2) LIMIT 1`,TEST_COMPANY_ID,row.category);categoryId=existing[0]?.id||crypto.randomUUID();if(!existing[0]){await tx.$executeRawUnsafe(`INSERT INTO "ProductCategory" ("id","companyId","name","active") VALUES ($1,$2,$3,TRUE)`,categoryId,TEST_COMPANY_ID,row.category);categoriesCreated++}categoryCache.set(cacheKey,categoryId)}
+      }
+      let productRows=[];
+      if(row.barcode)productRows=await tx.$queryRawUnsafe(`SELECT p."id" FROM "Product" p JOIN "ProductBarcode" pb ON pb."productId"=p."id" WHERE p."companyId"=$1 AND pb."barcode"=$2 LIMIT 1`,TEST_COMPANY_ID,row.barcode);
+      if(!productRows[0]&&row.sku)productRows=await tx.$queryRawUnsafe(`SELECT "id" FROM "Product" WHERE "companyId"=$1 AND "sku"=$2 LIMIT 1`,TEST_COMPANY_ID,row.sku);
+      const productId=productRows[0]?.id||crypto.randomUUID();
+      if(productRows[0]){await tx.$executeRawUnsafe(`UPDATE "Product" SET "categoryId"=$1,"sku"=$2,"name"=$3,"unit"=$4,"vatRate"=$5,"vatVerified"=TRUE,"salePrice"=$6,"costPrice"=$7,"trackStock"=TRUE,"active"=TRUE,"updatedAt"=NOW() WHERE "id"=$8 AND "companyId"=$9`,categoryId,row.sku||null,row.name,row.unit,row.vatRate,row.salePrice,row.costPrice,productId,TEST_COMPANY_ID);updated++}
+      else{await tx.$executeRawUnsafe(`INSERT INTO "Product" ("id","companyId","categoryId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE,$8,$9,TRUE,TRUE)`,productId,TEST_COMPANY_ID,categoryId,row.sku||null,row.name,row.unit,row.vatRate,row.salePrice,row.costPrice);created++}
+      if(row.barcode){const barcodeRows=await tx.$queryRawUnsafe(`SELECT "id" FROM "ProductBarcode" WHERE "productId"=$1 AND "barcode"=$2 LIMIT 1`,productId,row.barcode);if(!barcodeRows[0]){const foreign=await tx.$queryRawUnsafe(`SELECT pb."id" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=$1 AND pb."barcode"=$2 AND pb."productId"<>$3 LIMIT 1`,TEST_COMPANY_ID,row.barcode,productId);if(foreign[0])throw Object.assign(new Error(`Το barcode ${row.barcode} χρησιμοποιείται ήδη από άλλο προϊόν.`),{status:409});await tx.$executeRawUnsafe(`INSERT INTO "ProductBarcode" ("id","productId","barcode") VALUES ($1,$2,$3)`,crypto.randomUUID(),productId,row.barcode);barcodesAdded++}}
+      await tx.$executeRawUnsafe(`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","minStock","active") VALUES ($1,$2,$3,$4,$5,$6,TRUE) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","currentStock"=EXCLUDED."currentStock","minStock"=EXCLUDED."minStock","active"=TRUE,"updatedAt"=NOW()`,crypto.randomUUID(),TEST_STORE_ID,productId,row.salePrice,row.stock,row.minStock);
+    }
+    return {created,updated,categoriesCreated,barcodesAdded,rows:parsed.length};
+  });
+  res.status(201).json({ok:true,...summary,storeId:TEST_STORE_ID,note:"Η μαζική καταχώρηση αποθηκεύτηκε μόνιμα στο TEST και είναι διαθέσιμη σε Admin και POS."});
 }catch(error){next(error)}});
 
 // Παλιό endpoint μόνο για συμβατότητα. Δεν υπάρχει πραγματικό ΚΑΤ ως πηγή.
