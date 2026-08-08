@@ -222,7 +222,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const body=openSchema.parse(req.body||{});
   const existing=await prisma.$queryRaw`
     SELECT "id" FROM "CashShiftSession"
-    WHERE "storeId"=${store.id} AND "status"='OPEN' LIMIT 1
+    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' LIMIT 1
   `;
   if(existing[0]) return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});
   const operational=body.drawer+body.custody+body.coins;
@@ -270,8 +270,9 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},
         "expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},
         "nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
-    WHERE "id"=${session.id} RETURNING *
+    WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *
   `;
+  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   const closed=normalize(rows[0]);
   const [store,owners]=await Promise.all([
     prisma.store.findFirst({where:{id:session.storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true,cashCloseEmailEnabled:true}}),
