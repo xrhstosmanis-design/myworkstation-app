@@ -27,6 +27,7 @@
 - Το PR #82 πρόσθεσε μαζική καταχώρηση προϊόντων/αποθήκης από Excel για Super Admin.
 - Το TEST POS ανοίγει ταμείο και φορτώνει την εγκεκριμένη διάταξη με quick keys, κατηγορίες και κάτω πλήκτρα.
 - Ενεργό branch: `feat/test-pos-product-linking`.
+- Ενεργό PR: #83.
 - Νέα φάση: αξιόπιστη σύνδεση quick buttons / barcode / SKU / ονομασίας με τα προϊόντα που εισάγονται στο TEST.
 - Υπάρχει μόνιμο POS functional baseline στο `docs/TEST_POS_FUNCTIONAL_BASELINE.md`.
 
@@ -56,7 +57,7 @@
 
 ## Quick buttons / product linking
 
-Στο ενεργό branch `feat/test-pos-product-linking` έγινε το πρώτο μόνιμο checkpoint:
+Στο ενεργό branch `feat/test-pos-product-linking`:
 
 - Commit `763b64f` στο `CommercialPosApp.jsx`.
 - Η αναζήτηση quick button / search δεν βασίζεται πλέον μόνο σε απλό substring.
@@ -65,15 +66,27 @@
 - Παράδειγμα: `ΝΕΡΟ 500ML` μπορεί να συνδεθεί με προϊόν `ΝΕΡΟ 500 ML` χωρίς να απαιτείται ακριβώς η ίδια μορφοποίηση.
 - Δεν αλλάζει η αποθηκευμένη διάταξη POS ούτε ξαναδημιουργούνται τα κουμπιά.
 
+## Stale TEST POS session recovery
+
+Μετά από εικόνα όπου το POS εμφάνιζε `Δεν βρέθηκε ενεργό κατάστημα.` ενώ στην κεφαλίδα υπήρχε ακόμα `KAT TEST`, καταγράφηκε ότι ο browser μπορούσε να κρατά παλιό operator session / παλιό store context.
+
+- Commit `4d3a6c8` στο `client/src/entry.jsx`.
+- Το μοναδικό canonical TEST context είναι `companyId=kat-test-company` και `storeId=kat-test-store` με ονομασία `TEST`.
+- Αν το POS ανοίξει με παλιό store/company/name ή παλιό URL, το stale operator session καθαρίζεται αυτόματα.
+- Αν υπάρχει αποθηκευμένο Platform Admin context, επαναφέρεται και ο χρήστης επιστρέφει αυτόματα στο `/platform-admin/kat-test` αντί να μένει σε χαλασμένο POS.
+- Το ίδιο recovery ενεργοποιείται όταν το POS API επιστρέψει 404 `Δεν βρέθηκε ενεργό κατάστημα.`.
+- Δεν διαγράφονται προϊόντα, POS layout, κατηγορίες ή αποθήκη.
+
 ## Άμεση συνέχεια
 
-1. CI/build του product-linking checkpoint.
-2. Δημιουργία PR για το `feat/test-pos-product-linking`.
-3. Επιβεβαίωση με προϊόντα TEST ότι quick key, barcode και αναζήτηση βρίσκουν το ίδιο προϊόν.
-4. Έλεγχος κατηγοριών μετά τη μαζική εισαγωγή.
-5. Δοκιμή πώλησης με Μετρητά / Κάρτα / IRIS / Μικτή.
-6. Έλεγχος των ίδιων προϊόντων από Admin και Super Admin.
-7. Μετά συνέχιση με τις υπόλοιπες λειτουργίες καταστήματος χωρίς αλλαγή της βασικής POS διάταξης.
+1. CI/build του PR #83 με product linking + stale-session recovery.
+2. Merge στο `main` όταν περάσει.
+3. Επανείσοδος στο TEST POS από το TEST Center, ώστε να χρησιμοποιείται μόνο το canonical TEST context.
+4. Επιβεβαίωση με προϊόντα TEST ότι quick key, barcode και αναζήτηση βρίσκουν το ίδιο προϊόν.
+5. Έλεγχος κατηγοριών μετά τη μαζική εισαγωγή.
+6. Δοκιμή πώλησης με Μετρητά / Κάρτα / IRIS / Μικτή.
+7. Έλεγχος των ίδιων προϊόντων από Admin και Super Admin.
+8. Μετά συνέχιση με τις υπόλοιπες λειτουργίες καταστήματος χωρίς αλλαγή της βασικής POS διάταξης.
 
 ## Υποχρεωτική διαδικασία για κάθε επόμενη συνεδρία GPT
 
