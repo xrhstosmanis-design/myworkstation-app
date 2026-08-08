@@ -18,6 +18,7 @@ import ownerProductRoutes from "./routes/owner-products.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import katTestRoutes from "./routes/kat-test.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
 import licenseRoutes from "./routes/license.js";
@@ -38,12 +39,13 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json({limit:"12mb"}));
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.20.0+owner-products"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.21.0+kat-test"}));
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
 app.use("/api/platform/master-catalog",masterCatalogPreviewRoutes);
 app.use("/api/platform/master-catalog",masterCatalogRoutes);
+app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform/mail",mailRoutes);
@@ -88,4 +90,4 @@ try{
   process.exit(1);
 }
 
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.20.0 on port ${process.env.PORT||8080}`));
+app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.21.0 on port ${process.env.PORT||8080}`));
