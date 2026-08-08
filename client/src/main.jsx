@@ -22,13 +22,20 @@ function App(){
  const params=new URLSearchParams(window.location.search),supportPage=params.get("supportPage"),supportStore=params.get("supportStore");
  const [page,setPage]=useState(supportPage||"dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null);
  const supportContext=(()=>{try{return JSON.parse(localStorage.getItem("supportContext")||"null")}catch{return null}})();
+ const returnToPlatform=async()=>{
+   const platformToken=sessionStorage.getItem("platformToken");
+   try{await api("/api/platform/support-access/exit",{method:"POST",body:"{}"})}catch(error){console.warn("Support access exit audit failed",error)}
+   if(platformToken)localStorage.setItem("token",platformToken);else localStorage.removeItem("token");
+   sessionStorage.removeItem("platformToken");localStorage.removeItem("supportContext");localStorage.removeItem("user");
+   window.location.href="/platform-admin";
+ };
  const load=async()=>{const [st,emps,strs,lvs]=await Promise.all([api("/api/dashboard"),api("/api/employees"),api("/api/stores"),api("/api/leaves")]);setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);const target=strs.find(row=>row.id===supportStore);if(target&&supportPage==="stores")setSelectedStore(target);const scheduleStore=target||strs[0];if(scheduleStore){const sc=await api(`/api/schedules/latest?storeId=${scheduleStore.id}`);setSchedule(sc)}};
  useEffect(()=>{if(user)load().catch(()=>logout())},[user]);
  const logout=()=>{localStorage.clear();setUser(null)};
  if(!user)return <Login onLogin={setUser}/>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{user.company.name}</small></div></div>
  <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav><Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
- {supportContext&&<button className="logout" onClick={()=>{const token=sessionStorage.getItem("platformToken");if(token)localStorage.setItem("token",token);localStorage.removeItem("supportContext");localStorage.removeItem("user");window.location.href="/platform-admin"}}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
+ {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
  <main><header><div><h1>{({dashboard:"Αρχική",employees:"Προσωπικό",stores:"Καταστήματα",schedule:"Βάρδιες",leaves:"Άδειες & Απουσίες"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>
  {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
  {page==="employees"&&<Employees rows={employees} stores={stores} reload={load}/>}

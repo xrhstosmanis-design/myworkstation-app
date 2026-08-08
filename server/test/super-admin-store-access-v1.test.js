@@ -21,6 +21,9 @@ test("super admin support access is short lived, tenant targeted and audited",()
   assert.match(platform,/expiresIn:"2h"/);
   assert.match(platform,/SUPER_ADMIN_SUPPORT_ACCESS/);
   assert.match(platform,/id:body\.storeId,companyId:company\.id/);
+  assert.match(platform,/\/support-access\/exit/);
+  assert.match(platform,/SUPER_ADMIN_SUPPORT_EXIT/);
+  assert.match(platform,/req\.user\?\.supportContext/);
 });
 
 test("platform UI opens shifts and cash control and provides an explicit return",()=>{
@@ -29,4 +32,6 @@ test("platform UI opens shifts and cash control and provides an explicit return"
   assert.match(admin,/sessionStorage\.setItem\("platformToken"/);
   assert.match(backoffice,/Επιστροφή στο Super Admin/);
   assert.match(backoffice,/ΠΡΟΣΒΑΣΗ SUPER ADMIN/);
+  assert.match(backoffice,/\/api\/platform\/support-access\/exit/);
+  assert.match(backoffice,/sessionStorage\.removeItem\("platformToken"/);
 });

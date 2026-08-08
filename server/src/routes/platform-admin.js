@@ -403,6 +403,29 @@ router.post("/companies/:companyId/support-access",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.post("/support-access/exit",async(req,res,next)=>{
+  try{
+    const context=req.user?.supportContext;
+    if(!context?.companyId){
+      return res.status(400).json({error:"Δεν υπάρχει ενεργή πρόσβαση υποστήριξης πελάτη."});
+    }
+    const company=await prisma.company.findUnique({where:{id:context.companyId},select:{id:true,name:true}});
+    const store=context.storeId
+      ?await prisma.store.findFirst({where:{id:context.storeId,companyId:context.companyId},select:{id:true,name:true}})
+      :null;
+    await prisma.authAudit.create({data:{
+      userId:req.user.id,
+      email:req.user.email||"super-admin",
+      event:"SUPER_ADMIN_SUPPORT_EXIT",
+      success:true,
+      deviceName:`${company?.name||context.companyName||context.companyId}${store?` · ${store.name}`:context.storeName?` · ${context.storeName}`:""}`,
+      userAgent:req.headers["user-agent"]||null,
+      ipAddress:req.ip||null
+    }});
+    res.json({ok:true});
+  }catch(error){next(error)}
+});
+
 router.get("/pos-designer",async(req,res,next)=>{
   try{
     const drafts=await prisma.$queryRaw`SELECT "layoutJson","version","updatedAt" FROM "PlatformPosDraft" WHERE "id"='GLOBAL' LIMIT 1`;
