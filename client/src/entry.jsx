@@ -7,6 +7,7 @@ import CommercialLicenseCenter from "./components/platform/CommercialLicenseCent
 import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
 import KatTestCenter from "./components/platform/KatTestCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
+import CommercialPosApp from "./components/commerce/CommercialPosApp.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -16,6 +17,7 @@ import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
+const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
 
 const storeApi=async(path,options={})=>{
@@ -35,6 +37,12 @@ const storeApi=async(path,options={})=>{
     localStorage.removeItem("user");
     window.location.reload();
   }
+  if(response.status===401&&posMatch){
+    localStorage.removeItem("token");
+    localStorage.removeItem("storeOperatorSession");
+    localStorage.removeItem("user");
+    window.location.reload();
+  }
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
   return data;
 };
@@ -47,6 +55,10 @@ if(katTestMatch){
 }else if(platformMatch){
   document.title="MyWorkStation Platform Admin";
   createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><KatTestQuickAccess/></>);
+}else if(posMatch){
+  const storeId=decodeURIComponent(posMatch[1]);
+  document.title="MyWorkStation POS";
+  createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>);
 }else if(storeMatch){
   const storeId=decodeURIComponent(storeMatch[1]);
   document.title="MyWorkStation Store Mode";
