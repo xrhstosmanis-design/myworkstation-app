@@ -26,6 +26,14 @@ test("Super Admin can assign the Store Mode manager remotely without changing cr
   assert.match(ui,/Απομακρυσμένα · δεν αλλάζει PIN και δεν ανοίγει βάρδια/);
 });
 
+test("the readiness report separates remote work from checks performed at KAT",()=>{
+  assert.match(route,/ΑΠΟΜΑΚΡΥΣΜΕΝΑ — Υπεύθυνος Store Mode/);
+  assert.match(route,/ΑΠΟΜΑΚΡΥΣΜΕΝΑ — Επιβεβαιωμένο backup/);
+  assert.match(route,/ΣΤΟ ΚΑΤ — Δοκιμή εισόδου εργαζομένου/);
+  assert.match(route,/ΣΤΟ ΚΑΤ — Δοκιμή ανοίγματος και κλεισίματος βάρδιας/);
+  assert.match(route,/ΣΤΟ ΚΑΤ — Επιβεβαίωση ανεπηρέαστου Kiosk Manager/);
+});
+
 test("readiness is read only and keeps RBS outside the pilot flow",()=>{
   assert.match(route,/Παράλληλη μη φορολογική λειτουργία — καμία εντολή προς RBS/);
   assert.match(ui,/Ο έλεγχος είναι μόνο ανάγνωσης/);
