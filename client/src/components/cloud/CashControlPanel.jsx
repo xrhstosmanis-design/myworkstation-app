@@ -120,10 +120,10 @@ export default function CashControlPanel({api,store}){
       </form>:<form className="cash-form" onSubmit={closeShift}>
         <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
         <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
-        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)}/>
-        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)}/>
+        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)} readOnly/>
+        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)} readOnly/>
         <MoneyField icon={<WalletCards/>} label="Σύνολο EFTPOS" value={closeForm.eftposTotal} onChange={value=>updateClose("eftposTotal",value)}/>
-        <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)}/>
+        <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)} readOnly/>
         <div className="cash-divider cash-wide">Πραγματική καταμέτρηση παράδοσης</div>
         <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={closeForm.drawer} onChange={value=>updateClose("drawer",value)}/>
         <MoneyField icon={<ShieldCheck/>} label="Φύλαξη" value={closeForm.custody} onChange={value=>updateClose("custody",value)}/>
@@ -155,6 +155,6 @@ export default function CashControlPanel({api,store}){
   </article>;
 }
 
-function MoneyField({icon,label,value,onChange}){
-  return <label className="cash-money-field"><span>{icon}{label}</span><div><input type="number" min="0" max="999999999" step="0.01" value={value} onChange={event=>onChange(event.target.value)}/><small>€</small></div></label>;
+function MoneyField({icon,label,value,onChange,readOnly=false}){
+  return <label className="cash-money-field"><span>{icon}{label}</span><div><input type="number" min="0" max="999999999" step="0.01" value={value} readOnly={readOnly} aria-readonly={readOnly} onChange={event=>onChange(event.target.value)}/><small>€</small></div></label>;
 }
