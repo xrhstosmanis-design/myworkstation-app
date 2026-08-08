@@ -42,7 +42,19 @@ const tableStatements=[
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS "StoreOperatorAudit_store_created_idx"
-   ON "StoreOperatorAudit" ("storeId","createdAt" DESC)`
+   ON "StoreOperatorAudit" ("storeId","createdAt" DESC)`,
+  `CREATE TABLE IF NOT EXISTS "StoreOperatorLoginGuard" (
+    "id" TEXT PRIMARY KEY,
+    "storeId" TEXT NOT NULL,
+    "subjectKey" TEXT NOT NULL,
+    "failedCount" INTEGER NOT NULL DEFAULT 0,
+    "windowStartedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "lockedUntil" TIMESTAMPTZ,
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","subjectKey")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "StoreOperatorLoginGuard_lock_idx"
+   ON "StoreOperatorLoginGuard" ("storeId","lockedUntil")`
 ];
 
 async function ensureTables(){
@@ -80,6 +92,49 @@ function normalizeCard(value){
 }
 function cardHash(value){
   return crypto.createHash("sha256").update(normalizeCard(value)).digest("hex");
+}
+function loginSubject(kind,value){
+  return `${kind}:${crypto.createHash("sha256").update(String(value||"")).digest("hex")}`;
+}
+async function assertLoginAllowed(storeId,subjectKey){
+  const rows=await prisma.$queryRaw`
+    SELECT "lockedUntil" FROM "StoreOperatorLoginGuard"
+    WHERE "storeId"=${storeId} AND "subjectKey"=${subjectKey} LIMIT 1
+  `;
+  if(rows[0]?.lockedUntil&&new Date(rows[0].lockedUntil).getTime()>Date.now()){
+    const error=new Error("Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε ξανά σε 15 λεπτά.");
+    error.status=429;
+    throw error;
+  }
+}
+async function recordLoginFailure(storeId,subjectKey){
+  const lockUntil=new Date(Date.now()+15*60*1000);
+  await prisma.$executeRaw`
+    INSERT INTO "StoreOperatorLoginGuard"
+      ("id","storeId","subjectKey","failedCount","windowStartedAt","lockedUntil","updatedAt")
+    VALUES (${crypto.randomUUID()},${storeId},${subjectKey},1,NOW(),NULL,NOW())
+    ON CONFLICT ("storeId","subjectKey") DO UPDATE SET
+      "failedCount"=CASE
+        WHEN "StoreOperatorLoginGuard"."windowStartedAt"<NOW()-INTERVAL '15 minutes' THEN 1
+        ELSE "StoreOperatorLoginGuard"."failedCount"+1
+      END,
+      "windowStartedAt"=CASE
+        WHEN "StoreOperatorLoginGuard"."windowStartedAt"<NOW()-INTERVAL '15 minutes' THEN NOW()
+        ELSE "StoreOperatorLoginGuard"."windowStartedAt"
+      END,
+      "lockedUntil"=CASE
+        WHEN "StoreOperatorLoginGuard"."windowStartedAt">=NOW()-INTERVAL '15 minutes'
+          AND "StoreOperatorLoginGuard"."failedCount"+1>=5 THEN ${lockUntil}
+        ELSE NULL
+      END,
+      "updatedAt"=NOW()
+  `;
+}
+async function clearLoginFailures(storeId,subjectKey){
+  await prisma.$executeRaw`
+    DELETE FROM "StoreOperatorLoginGuard"
+    WHERE "storeId"=${storeId} AND "subjectKey"=${subjectKey}
+  `;
 }
 function last4(value){
   const normalized=normalizeCard(value);
@@ -139,6 +194,8 @@ router.get("/stores/:storeId/directory",route(async(req,res)=>{
 router.post("/login/pin",route(async(req,res)=>{
   const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/)}).parse(req.body);
   await activeStore(body.storeId);
+  const subjectKey=loginSubject("PIN",body.employeeId);
+  await assertLoginAllowed(body.storeId,subjectKey);
   const rows=await prisma.$queryRaw`
     SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
     FROM "StoreOperatorCredential" c
@@ -151,8 +208,10 @@ router.post("/login/pin",route(async(req,res)=>{
   `;
   const operator=rows[0];
   if(!operator||!operator.pinHash||!(await bcrypt.compare(body.pin,operator.pinHash))){
+    await recordLoginFailure(body.storeId,subjectKey);
     return res.status(401).json({error:"Λανθασμένο PIN."});
   }
+  await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId}});
   res.json({
@@ -169,6 +228,8 @@ router.post("/login/card",route(async(req,res)=>{
   const normalized=normalizeCard(body.cardCode);
   if(normalized.length<3)return res.status(400).json({error:"Η κάρτα δεν είναι έγκυρη."});
   const hash=cardHash(normalized);
+  const subjectKey=loginSubject("CARD",hash);
+  await assertLoginAllowed(body.storeId,subjectKey);
   const rows=await prisma.$queryRaw`
     SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
     FROM "StoreOperatorCredential" c
@@ -180,7 +241,11 @@ router.post("/login/card",route(async(req,res)=>{
     LIMIT 1
   `;
   const operator=rows[0];
-  if(!operator)return res.status(401).json({error:"Η κάρτα δεν αναγνωρίστηκε."});
+  if(!operator){
+    await recordLoginFailure(body.storeId,subjectKey);
+    return res.status(401).json({error:"Η κάρτα δεν αναγνωρίστηκε."});
+  }
+  await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_CARD",details:{employeeId:operator.employeeId,cardLast4:operator.cardCodeLast4}});
   res.json({
