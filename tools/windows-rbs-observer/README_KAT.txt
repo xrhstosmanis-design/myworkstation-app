@@ -5,6 +5,8 @@ SAFETY
 - Does not issue, cancel or resend receipts.
 - Does not send commands to Kiosk Manager, CapDriver or RBS.
 - Does not upload/store raw fiscal content or filenames.
+- If Internet is temporarily unavailable, only hash, byte length, source and
+  timestamp are queued locally and delivered automatically after reconnection.
 - Kiosk Manager / RBS remains the only fiscal route.
 
 INSTALLATION
