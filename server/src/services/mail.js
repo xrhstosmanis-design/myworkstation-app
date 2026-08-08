@@ -87,14 +87,17 @@ const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;"
 export async function sendCashShiftClosedEmail({to,storeName,session}){
   const variance=Number(session.variance||0);
   const cardVariance=Number(session.cardVariance||0);
+  const openingVariance=Number(session.openingVariance||0);
   const duplicateReview=Array.isArray(session.duplicateReview)?session.duplicateReview:[];
-  const alert=Math.abs(variance)>0.009||Math.abs(cardVariance)>0.009||duplicateReview.length>0;
+  const alert=Math.abs(variance)>0.009||Math.abs(cardVariance)>0.009||Math.abs(openingVariance)>0.009||duplicateReview.length>0;
   const closedAt=session.closedAt?new Date(session.closedAt):new Date();
   const subject=`${alert?"ΠΡΟΣΟΧΗ · ":""}Κλείσιμο ταμείου · ${storeName} · ${closedAt.toLocaleDateString("el-GR")}`;
   const rows=[
     ["Κατάστημα",storeName],["Βάρδια",session.shiftLabel],["Υπεύθυνος",session.closedByName||"—"],
     ["Μετρητά πωλήσεων",eur(session.cashSales)],["Κάρτες POS",eur(session.cardSales)],
     ["EFTPOS",eur(session.eftposTotal)],["Διαφορά POS–EFTPOS",eur(cardVariance)],
+    ["Αναμενόμενη έναρξη",eur(session.expectedOpeningOperational)],["Δηλωμένη έναρξη",eur(session.openingOperational)],
+    ["Διαφορά έναρξης",eur(openingVariance)],
     ["Έξοδα",eur(session.expenses)],["Αναμενόμενο ταμείο",eur(session.expectedOperational)],
     ["Πραγματικό ταμείο",eur(session.actualOperational)],["Διαφορά ταμείου",eur(variance)],
     ["Έναρξη επόμενης",eur(session.nextOpeningTotal)]

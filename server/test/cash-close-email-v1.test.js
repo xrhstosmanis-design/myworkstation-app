@@ -15,7 +15,11 @@ test("cash close sends a tenant owner report after the close is persisted",()=>{
   assert.match(cash,/res\.json\(\{\.\.\.closed,emailNotification\}\)/);
 });
 
-test("cash report includes variance, EFTPOS and duplicate-sale review",()=>{
+test("cash report includes opening, cash, EFTPOS and duplicate-sale review",()=>{
+  assert.match(mail,/Math\.abs\(openingVariance\)>0\.009/);
+  assert.match(mail,/Αναμενόμενη έναρξη/);
+  assert.match(mail,/Δηλωμένη έναρξη/);
+  assert.match(mail,/Διαφορά έναρξης/);
   assert.match(mail,/Διαφορά POS–EFTPOS/);
   assert.match(mail,/Διαφορά ταμείου/);
   assert.match(mail,/Έλεγχος διπλών συναλλαγών/);
