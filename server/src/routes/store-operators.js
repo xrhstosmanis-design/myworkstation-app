@@ -77,7 +77,9 @@ function route(handler){
       if(error?.code==="P2010"||error?.code==="23505"||String(error?.message||"").includes("unique constraint")){
         return res.status(409).json({error:"Η κάρτα χρησιμοποιείται ήδη από άλλον εργαζόμενο."});
       }
-      return res.status(error?.status||500).json({error:error?.publicMessage||error?.message||"Σφάλμα εισόδου καταστήματος."});
+      const clientStatus=Number.isInteger(error?.status)&&error.status>=400&&error.status<500?error.status:null;
+      const publicError=error?.publicMessage||(clientStatus?error?.message:null)||"Παρουσιάστηκε προσωρινό σφάλμα. Δοκιμάστε ξανά.";
+      return res.status(clientStatus||500).json({error:publicError});
     }
   };
 }
