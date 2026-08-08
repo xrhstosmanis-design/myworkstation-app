@@ -13,10 +13,12 @@ INSTALLATION
 1. In MyWorkStation Platform Admin, technically activate CONNECTOR_RBS for KAT.
 2. Open KAT store, create a 15-minute Cloud Store Connector pairing code.
 3. Copy this whole folder to the KAT PC.
-4. Right-click INSTALL_OBSERVER_KAT.cmd and choose Run as administrator.
-5. Enter the pairing code. No passwords, Git or Node are required.
-6. Wait for INSTALLATION COMPLETE - READ ONLY.
-7. Open desktop shortcut "MyWorkStation Observer - Katastasi".
+4. First run PRECHECK_OBSERVER_KAT.cmd. It creates a safe text report on
+   the desktop and does not change Kiosk Manager, CapDriver or RBS.
+5. Right-click INSTALL_OBSERVER_KAT.cmd and choose Run as administrator.
+6. Enter the pairing code. No passwords, Git or Node are required.
+7. Wait for INSTALLATION COMPLETE - READ ONLY.
+8. Open desktop shortcut "MyWorkStation Observer - Katastasi".
 
 The installer first backs up existing C:\_km, C:\Kiosk Manager,
 C:\CapDriverService and C:\capture under C:\MyWorkStation_Backups.
