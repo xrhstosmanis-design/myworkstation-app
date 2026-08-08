@@ -1,5 +1,6 @@
 .platform-store-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.platform-store-actions button{padding:8px 10px!important;font-size:12px}
+.platform-store-actions button,.platform-store-actions a{padding:8px 10px!important;font-size:12px;border:0;border-radius:9px;background:#187fc1;color:white;font-weight:800;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer}
+.platform-store-actions .secondary{background:#e9eff7;color:#294361}
 .platform-store-actions svg{width:16px;height:16px}
 .platform-toggle{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;gap:10px;margin-top:14px}
 .platform-toggle input{width:auto!important}
