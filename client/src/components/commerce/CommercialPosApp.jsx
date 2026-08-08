@@ -4,6 +4,7 @@ import "./commerce-hub.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=value=>Number(String(value??0).replace(",","."))||0;
+const normalizeProductKey=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const fallbackLayout={title:"OPERATOR POS",productColumns:6,showSku:true,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},quickKeys:[],categories:[],buttons:[{id:"cash",label:"ΜΕΤΡΗΤΑ",action:"CASH",color:"#078a4d",visible:true},{id:"card",label:"ΚΑΡΤΑ",action:"CARD",color:"#3979cc",visible:true}]};
 const parseStored=key=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
 
@@ -34,7 +35,14 @@ export default function CommercialPosApp({api,storeId}){
   const deleteSelected=()=>{if(!selectedId)return;setCart(rows=>rows.filter(x=>x.id!==selectedId));setSelectedId(null)};
   const total=cart.reduce((sum,x)=>sum+x.qty*x.price,0),received=num(amountInput),change=Math.max(0,received-total);
   const visible=useMemo(()=>category?products.filter(x=>String(x.categoryName||"").toLocaleLowerCase("el-GR")===category.toLocaleLowerCase("el-GR")):products,[products,category]);
-  const findProduct=text=>{const n=String(text||"").trim().toLocaleLowerCase("el-GR");if(!n)return null;return products.find(x=>(x.barcodes||[]).some(b=>String(b)===String(text).trim()))||products.find(x=>[x.name,x.sku].some(v=>String(v||"").toLocaleLowerCase("el-GR")===n))||products.find(x=>String(x.name||"").toLocaleLowerCase("el-GR").includes(n))};
+  const findProduct=text=>{
+    const raw=String(text||"").trim(),key=normalizeProductKey(raw);if(!key)return null;
+    return products.find(x=>(x.barcodes||[]).some(b=>String(b).trim()===raw))
+      ||products.find(x=>normalizeProductKey(x.sku)===key)
+      ||products.find(x=>normalizeProductKey(x.name)===key)
+      ||products.find(x=>(x.barcodes||[]).some(b=>normalizeProductKey(b)===key))
+      ||products.find(x=>normalizeProductKey(x.name).includes(key)||key.includes(normalizeProductKey(x.name)));
+  };
   const searchProduct=e=>{e?.preventDefault();const p=findProduct(query);if(p){setError("");add(p);setQuery("")}else setError(`Δεν βρέθηκε προϊόν για «${query}».`)};
   const quick=q=>{const p=findProduct(q);if(p){setError("");add(p)}else setError(`Δεν βρέθηκε προϊόν για «${q}».`)};
   const keypad=v=>{if(v==="⌫")return setAmountInput(x=>x.slice(0,-1));setAmountInput(x=>`${x}${v===","?".":v}`)};
