@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {BriefcaseBusiness,Boxes,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
-import OwnerProductCenter from "./OwnerProductCenter.jsx";
+import KioskStyleProductCenter from "./KioskStyleProductCenter.jsx";
 
 async function request(path,options={}){
   const token=localStorage.getItem("token");
@@ -33,7 +33,7 @@ export default function CommerceLauncher(){
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
         <button className={mode==="legacy"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
-      {mode==="products"?<OwnerProductCenter api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
+      {mode==="products"?<KioskStyleProductCenter api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
     </section></div>}
   </>;
 }
