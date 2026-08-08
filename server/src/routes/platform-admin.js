@@ -254,6 +254,12 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
       FROM "StoreOperatorCredential" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "active"=TRUE
     `:[{total:0,withPin:0,withCard:0,managers:0}];
     const credentials=credentialRows[0];
+    const operatorRows=credentialTable[0]?.tableName?await prisma.$queryRaw`
+      SELECT "employeeId","displayName","role",("pinHash" IS NOT NULL OR "cardCodeHash" IS NOT NULL) AS "hasCredential"
+      FROM "StoreOperatorCredential"
+      WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "active"=TRUE
+      ORDER BY "displayName" ASC
+    `:[];
     const activeEmployees=await prisma.employee.count({where:{storeId:store.id,active:true}});
     const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"')::text AS "tableName"`;
     const openShifts=cashTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "CashShiftSession" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "status"='OPEN'`:[{total:0}];
@@ -283,7 +289,29 @@ router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res
       {key:"fiscalIsolation",label:"Απομόνωση από RBS / φορολογική λειτουργία",ok:true,blocking:true,detail:"Παράλληλη μη φορολογική λειτουργία — καμία εντολή προς RBS"}
     ];
     const blockers=checks.filter(check=>check.blocking&&!check.ok);
-    res.json({ready:blockers.length===0,checkedAt:new Date().toISOString(),company:{id:company.id,name:company.name},store:{id:store.id,name:store.name},profile,checks,blockers:blockers.length});
+    res.json({ready:blockers.length===0,checkedAt:new Date().toISOString(),company:{id:company.id,name:company.name},store:{id:store.id,name:store.name},profile,operators:operatorRows,checks,blockers:blockers.length});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/store-mode-manager",async(req,res,next)=>{
+  try{
+    const body=z.object({employeeId:z.string().trim().min(1)}).parse(req.body||{});
+    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId},select:{id:true,companyId:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const selected=await prisma.$queryRaw`
+      SELECT "id","employeeId","displayName",("pinHash" IS NOT NULL OR "cardCodeHash" IS NOT NULL) AS "hasCredential"
+      FROM "StoreOperatorCredential"
+      WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "employeeId"=${body.employeeId} AND "active"=TRUE
+      LIMIT 1
+    `;
+    if(!selected[0])return res.status(404).json({error:"Δεν βρέθηκε ενεργός εργαζόμενος στο Store Mode."});
+    if(!selected[0].hasCredential)return res.status(400).json({error:"Ο εργαζόμενος χρειάζεται πρώτα ενεργό PIN ή κάρτα."});
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "role"='EMPLOYEE',"updatedAt"=NOW() WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "role"='MANAGER'`;
+      await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "role"='MANAGER',"updatedAt"=NOW() WHERE "id"=${selected[0].id}`;
+    });
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_MODE_MANAGER_ASSIGNED",success:true,deviceName:`${selected[0].displayName} · ${store.id}`}});
+    res.json({ok:true,employeeId:selected[0].employeeId,displayName:selected[0].displayName});
   }catch(error){next(error)}
 });
 
