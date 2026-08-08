@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { catalogView,moduleCatalog,moduleKeys,planDefaults } from "../services/module-catalog.js";
+import { getMailStatus } from "../services/mail.js";
 
 const router=Router();
 router.use(auth);
@@ -235,6 +236,44 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
       data:{name:body.name,city:body.city||null,responsibleEmail:body.responsibleEmail.toLowerCase()||null,cashCloseEmailEnabled:body.cashCloseEmailEnabled}
     });
     res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res,next)=>{
+  try{
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId},include:{modules:true,users:{where:{role:"OWNER"},select:{id:true,email:true}},stores:{where:{id:req.params.storeId},include:{_count:{select:{employees:true}}}}}});
+    const store=company?.stores?.[0];
+    if(!company||!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
+    const requiredModules=["CORE","STORE_MODE","CASH_CONTROL","PILOT_REPORT"];
+    const now=new Date();
+    const activeModules=new Set(company.modules.filter(row=>row.active&&(!row.startsAt||row.startsAt<=now)&&(!row.endsAt||row.endsAt>=now)).map(row=>row.moduleKey));
+    const credentialTable=await prisma.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"') AS "tableName"`;
+    const credentialRows=credentialTable[0]?.tableName?await prisma.$queryRaw`
+      SELECT COUNT(*)::int AS "total",COUNT(*) FILTER (WHERE "pinHash" IS NOT NULL)::int AS "withPin",
+             COUNT(*) FILTER (WHERE "cardCodeHash" IS NOT NULL)::int AS "withCard",COUNT(*) FILTER (WHERE "role"='MANAGER')::int AS "managers"
+      FROM "StoreOperatorCredential" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "active"=TRUE
+    `:[{total:0,withPin:0,withCard:0,managers:0}];
+    const credentials=credentialRows[0];
+    const activeEmployees=await prisma.employee.count({where:{storeId:store.id,active:true}});
+    const cashTable=await prisma.$queryRaw`SELECT to_regclass('public."CashShiftSession"') AS "tableName"`;
+    const openShifts=cashTable[0]?.tableName?await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "CashShiftSession" WHERE "companyId"=${company.id} AND "storeId"=${store.id} AND "status"='OPEN'`:[{total:0}];
+    const layouts=await prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "StorePosLayout" WHERE "companyId"=${company.id} AND "storeId"=${store.id}`;
+    const mail=getMailStatus();
+    const emailRecipient=Boolean(company.users[0]?.email||store.responsibleEmail);
+    const checks=[
+      {key:"company",label:"Ενεργή εταιρεία και άδεια",ok:company.active&&!['SUSPENDED','EXPIRED'].includes(company.licenseStatus),blocking:true,detail:`${company.licenseStatus} · ${company.plan}`},
+      {key:"store",label:"Ενεργό κατάστημα",ok:store.active,blocking:true,detail:store.name},
+      {key:"modules",label:"Βασικά modules πιλοτικής λειτουργίας",ok:requiredModules.every(key=>activeModules.has(key)),blocking:true,detail:requiredModules.filter(key=>!activeModules.has(key)).length?`Λείπουν: ${requiredModules.filter(key=>!activeModules.has(key)).join(", ")}`:"CORE · STORE MODE · CASH CONTROL · PILOT REPORT"},
+      {key:"employees",label:"Ενεργό προσωπικό καταστήματος",ok:activeEmployees>0,blocking:true,detail:`${activeEmployees} ενεργοί εργαζόμενοι`},
+      {key:"credentials",label:"Προσωπική είσοδος με PIN ή κάρτα",ok:credentials.total>0&&(credentials.withPin>0||credentials.withCard>0),blocking:true,detail:`${credentials.total} ενεργοί · ${credentials.withPin} PIN · ${credentials.withCard} κάρτες`},
+      {key:"manager",label:"Υπεύθυνος Store Mode",ok:credentials.managers>0,blocking:true,detail:`${credentials.managers} υπεύθυνοι`},
+      {key:"mail",label:"Email αναφοράς κλεισίματος",ok:!store.cashCloseEmailEnabled||(mail.configured&&emailRecipient),blocking:store.cashCloseEmailEnabled,detail:store.cashCloseEmailEnabled?(mail.configured&&emailRecipient?"SMTP έτοιμο και υπάρχει παραλήπτης":"Ελέγξτε SMTP ή email παραλήπτη"):"Απενεργοποιημένο για το κατάστημα"},
+      {key:"posLayout",label:"Δημοσιευμένος σχεδιασμός POS",ok:Number(layouts[0]?.total||0)>0,blocking:false,detail:Number(layouts[0]?.total||0)>0?"Έχει δημοσιευτεί στο κατάστημα":"Προαιρετικό για την πρώτη παράλληλη δοκιμή"},
+      {key:"openShift",label:"Κατάσταση βάρδιας",ok:true,blocking:false,detail:Number(openShifts[0]?.total||0)>0?"Υπάρχει ανοιχτή βάρδια — μην εκτελέσετε νέα δοκιμή ανοίγματος":"Δεν υπάρχει ανοιχτή βάρδια"},
+      {key:"fiscalIsolation",label:"Απομόνωση από RBS / φορολογική λειτουργία",ok:true,blocking:true,detail:"Παράλληλη μη φορολογική λειτουργία — καμία εντολή προς RBS"}
+    ];
+    const blockers=checks.filter(check=>check.blocking&&!check.ok);
+    res.json({ready:blockers.length===0,checkedAt:new Date().toISOString(),company:{id:company.id,name:company.name},store:{id:store.id,name:store.name},checks,blockers:blockers.length});
   }catch(error){next(error)}
 });
 

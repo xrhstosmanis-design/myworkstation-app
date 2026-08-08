@@ -3,3 +3,7 @@
 .platform-store-actions svg{width:16px;height:16px}
 .platform-toggle{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;gap:10px;margin-top:14px}
 .platform-toggle input{width:auto!important}
+.readiness-dialog{width:min(760px,94vw)}
+.readiness-summary{display:flex;align-items:center;gap:13px;padding:16px;border-radius:14px;margin:18px 0}.readiness-summary.ready{background:#e5f7ef;color:#08734e}.readiness-summary.blocked{background:#fff0e2;color:#9a4b0b}.readiness-summary>svg{width:28px;height:28px}.readiness-summary>div{display:grid;gap:3px}.readiness-summary span{font-size:12px}
+.readiness-list{display:grid;gap:8px}.readiness-list article{display:grid;grid-template-columns:24px 1fr auto;gap:11px;align-items:center;padding:12px;border:1px solid #dbe4ef;border-radius:12px}.readiness-list article>svg{width:21px}.readiness-list article>div{display:grid;gap:3px}.readiness-list article span{font-size:12px;color:#6f7d92}.readiness-list article em{font-size:9px;font-style:normal;font-weight:900;padding:5px 7px;border-radius:999px}.readiness-list .ok>svg{color:#11815c}.readiness-list .ok em{background:#dcf5e9;color:#08724d}.readiness-list .missing>svg{color:#b45309}.readiness-list .missing em{background:#fff0d9;color:#98580a}
+.readiness-note{margin-top:16px;padding:12px;border-radius:11px;background:#eef3f8;color:#52657d;font-size:12px}
