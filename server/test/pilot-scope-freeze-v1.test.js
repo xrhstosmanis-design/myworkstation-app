@@ -18,9 +18,19 @@ test("pilot profile stores the real PC, operating hours and responsible person p
 test("pilot readiness blocks until backup, design and database freezes are confirmed",()=>{
   assert.match(route,/key:"backup"[\s\S]*blocking:true/);
   assert.match(route,/key:"scopeFreeze"[\s\S]*blocking:true/);
-  assert.match(ui,/Έχει ληφθεί ασφαλές backup/);
+  assert.match(ui,/Λήψη ασφαλούς backup/);
   assert.match(ui,/Κλείδωμα υπάρχοντος design/);
   assert.match(ui,/Κλείδωμα δομής βάσης/);
+});
+
+test("Super Admin creates a tenant-scoped safety backup before it is confirmed",()=>{
+  assert.match(route,/stores\/:storeId\/pilot-backup/);
+  assert.match(route,/MYWORKSTATION_PILOT_SAFETY_BACKUP_V1/);
+  assert.match(route,/containsPasswords:false/);
+  assert.match(route,/containsPinOrCardSecrets:false/);
+  assert.match(route,/X-Backup-SHA256/);
+  assert.match(route,/PILOT_SAFETY_BACKUP_DOWNLOADED/);
+  assert.match(ui,/downloadPilotBackup/);
 });
 
 test("scope freeze does not involve the RBS fiscal path",()=>{
@@ -47,7 +57,7 @@ test("readiness remains available during a rolling deploy before optional tables
 
 test("readiness table probes are safely deserialized by Prisma",()=>{
   assert.doesNotMatch(route,/to_regclass\('[^']+'\) AS "tableName"/);
-  assert.equal((route.match(/to_regclass\('[^']+'\)::text AS "tableName"/g)||[]).length,4);
+  assert.equal((route.match(/to_regclass\('[^']+'\)::text AS "tableName"/g)||[]).length,6);
 });
 
 test("Super Admin can print a clean store readiness report",()=>{
