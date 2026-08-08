@@ -5,6 +5,7 @@ import {readFile} from "node:fs/promises";
 const route=await readFile(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const bootstrap=await readFile(new URL("../src/platform-bootstrap.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
+const css=await readFile(new URL("../../client/src/components/platform/platform-super-access.css",import.meta.url),"utf8");
 
 test("pilot profile stores the real PC, operating hours and responsible person per store",()=>{
   assert.match(bootstrap,/CREATE TABLE IF NOT EXISTS "PilotStoreProfile"/);
@@ -42,4 +43,12 @@ test("readiness remains available during a rolling deploy before optional tables
   assert.match(route,/profileTable\[0\]\?\.tableName\?/);
   assert.match(route,/to_regclass\('public\."StorePosLayout"'\)/);
   assert.match(route,/layoutTable\[0\]\?\.tableName\?/);
+});
+
+test("Super Admin can print a clean store readiness report",()=>{
+  assert.match(ui,/readiness-print-floating/);
+  assert.match(ui,/window\.print\(\)/);
+  assert.match(ui,/Εκτύπωση ελέγχου/);
+  assert.match(css,/@media print/);
+  assert.match(css,/\.pilot-profile-form\{display:none!important\}/);
 });
