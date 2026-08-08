@@ -202,7 +202,11 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const recent=recentRows.map(normalize);
   const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
-  const sessionRows=openSession?recent.filter(row=>row.sessionId===openSession.id):[];
+  const sessionRows=openSession?(await prisma.$queryRaw`
+    SELECT "type","amount","subtractFromShift","reversedAt"
+    FROM "StoreTransaction"
+    WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+  `).map(normalize):[];
   res.json({
     store:{id:store.id,name:store.name},
     openSession,

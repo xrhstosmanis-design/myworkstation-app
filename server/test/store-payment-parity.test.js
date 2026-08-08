@@ -43,3 +43,10 @@ test("payments reduce the shift only after an explicit cashier choice",()=>{
   assert.match(client,/setSubtractFromShift\(false\)/);
   assert.match(client,/subtractFromShift\}\)\}/);
 });
+
+test("open shift totals use every transaction and not only the recent UI list",()=>{
+  assert.match(route,/ORDER BY "occurredAt" DESC LIMIT 80/);
+  assert.match(route,/SELECT "type","amount","subtractFromShift","reversedAt"[\s\S]*WHERE "sessionId"=\$\{openSession\.id\}/);
+  assert.match(route,/"storeId"=\$\{store\.id\} AND "companyId"=\$\{req\.user\.companyId\}/);
+  assert.doesNotMatch(route,/const sessionRows=openSession\?recent\.filter/);
+});
