@@ -34,6 +34,7 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   const [supplierId,setSupplierId]=useState("");
   const [attachment,setAttachment]=useState(null);
   const [attachmentName,setAttachmentName]=useState("");
+  const [subtractFromShift,setSubtractFromShift]=useState(false);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -49,8 +50,8 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
   const save=async event=>{
     event.preventDefault();setBusy(true);setError("");setMessage("");
     try{
-      const saved=await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierId,supplierName,attachment})});
-      setAmount("");setDescription("");setSupplierId("");setSupplierName("");setAttachment(null);setAttachmentName("");setMessage(saved.emailNotification?.status==="FAILED"?"Η καταχώριση αποθηκεύτηκε, αλλά το email ειδοποίησης δεν στάλθηκε.":"Η συναλλαγή καταχωρίστηκε στη βάρδια.");
+      const saved=await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type,amount:Number(amount),description,supplierId,supplierName,attachment,subtractFromShift})});
+      setAmount("");setDescription("");setSupplierId("");setSupplierName("");setAttachment(null);setAttachmentName("");setSubtractFromShift(false);setMessage(saved.emailNotification?.status==="FAILED"?"Η καταχώριση αποθηκεύτηκε, αλλά το email ειδοποίησης δεν στάλθηκε.":"Η συναλλαγή καταχωρίστηκε στη βάρδια.");
       await load();onChanged?.();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
@@ -67,15 +68,16 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
       <div className="ledger-metrics"><article><span>Μετρητά</span><strong>{money(summary.cashSales)}</strong></article><article><span>Κάρτες</span><strong>{money(summary.cardSales)}</strong></article><article><span>Έξοδα</span><strong>{money(summary.expensesTotal)}</strong></article><article><span>Ποσοστά</span><strong>{money(summary.percentages)}</strong></article></div>
       {!data?.openSession?<div className="ledger-no-shift"><b>Δεν υπάρχει ανοιχτή βάρδια.</b><span>Άνοιξε πρώτα τη βάρδια στον Έλεγχο Ταμείου.</span></div>:<form className="ledger-form" onSubmit={save}>
         <div className="ledger-session"><span>Ενεργή βάρδια</span><b>{data.openSession.shiftLabel}</b><small>{when(data.openSession.openedAt)} · {data.openSession.openedByName||"Χρήστης"}</small></div>
-        <div className="ledger-types">{types.map(item=>{const Icon=item.icon;return <button type="button" className={type===item.id?"active":""} onClick={()=>{setType(item.id);setAttachment(null);setAttachmentName("")}} key={item.id}><Icon/><span>{item.label}</span></button>})}</div>
+        <div className="ledger-types">{types.map(item=>{const Icon=item.icon;return <button type="button" className={type===item.id?"active":""} onClick={()=>{setType(item.id);setAttachment(null);setAttachmentName("");setSubtractFromShift(false)}} key={item.id}><Icon/><span>{item.label}</span></button>})}</div>
         <label>Ποσό<input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} required/></label>
         {type==="SUPPLIER_PAYMENT"&&<label>Προμηθευτής{(data?.suppliers||[]).length?<select value={supplierId} onChange={e=>{setSupplierId(e.target.value);setSupplierName(data.suppliers.find(row=>row.id===e.target.value)?.name||"")}} required><option value="">Επιλογή</option>{data.suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select>:<input value={supplierName} onChange={e=>setSupplierName(e.target.value)} required/>}</label>}
         <label>Περιγραφή<input value={description} onChange={e=>setDescription(e.target.value)} placeholder="Προαιρετική αιτιολογία"/></label>
         {photoRequired(type)&&<label className="ledger-photo"><span><Camera/>Φωτογραφία παραστατικού *</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choosePhoto} required/><small>{attachmentName||"Λήψη από κάμερα ή επιλογή αρχείου"}</small></label>}
+        {photoRequired(type)&&<label className="ledger-shift-deduction"><input type="checkbox" checked={subtractFromShift} onChange={e=>setSubtractFromShift(e.target.checked)}/><span><b>Αφαίρεση από τη βάρδια</b><small>Επίλεξέ το μόνο αν το ποσό πληρώθηκε από τα μετρητά αυτής της βάρδιας.</small></span></label>}
         <button className="ledger-submit" disabled={busy||!amount||(photoRequired(type)&&!attachment)}>{busy?"Καταχώριση…":"Καταχώριση"}</button>
       </form>}
       <div className="ledger-list-head"><h4>Οι πληρωμές και συναλλαγές μου</h4><span>Ορατές μόνο στον συνδεδεμένο εργαζόμενο και στους υπευθύνους.</span></div>
-      <div className="ledger-list">{(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη δικές σου συναλλαγές.</div>:data.recent.map(row=>{const info=typeInfo(row.type);const Icon=info.icon;return <div className={`ledger-row ${row.reversedAt?"reversed":""}`} key={row.id}><Icon/><div><b>{info.label}</b><span>{row.supplierName||row.description||"Χωρίς περιγραφή"}</span><small>{when(row.occurredAt)} · {row.actorName}</small>{row.hasAttachment&&<button className="ledger-attachment" onClick={()=>viewPhoto(row)}><Eye/>Προβολή φωτογραφίας</button>}</div><strong>{money(row.amount)}</strong><em>{row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"}</em></div>})}</div>
+      <div className="ledger-list">{(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη δικές σου συναλλαγές.</div>:data.recent.map(row=>{const info=typeInfo(row.type);const Icon=info.icon;return <div className={`ledger-row ${row.reversedAt?"reversed":""}`} key={row.id}><Icon/><div><b>{info.label}</b><span>{row.supplierName||row.description||"Χωρίς περιγραφή"}</span><small>{when(row.occurredAt)} · {row.actorName}{photoRequired(row.type)?` · ${row.subtractFromShift?"Αφαιρείται από τη βάρδια":"Δεν αφαιρείται από τη βάρδια"}`:""}</small>{row.hasAttachment&&<button className="ledger-attachment" onClick={()=>viewPhoto(row)}><Eye/>Προβολή φωτογραφίας</button>}</div><strong>{money(row.amount)}</strong><em>{row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"}</em></div>})}</div>
     </>}
   </article>;
 }
