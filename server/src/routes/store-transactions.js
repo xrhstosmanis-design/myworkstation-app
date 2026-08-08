@@ -225,22 +225,23 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   if(needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
   const attachment=parseAttachment(body.attachment);
-  const openRows=await prisma.$queryRaw`
-    SELECT "id" FROM "CashShiftSession"
-    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN'
-    ORDER BY "openedAt" DESC LIMIT 1
-  `;
-  const session=openRows[0];
-  if(!session)return res.status(409).json({error:"Άνοιξε πρώτα τη βάρδια στον Έλεγχο Ταμείου."});
   const actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
     INSERT INTO "StoreTransaction" (
       "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
-    ) VALUES (
-      ${crypto.randomUUID()},${req.user.companyId},${store.id},${session.id},${body.type},${body.amount},
+    )
+    SELECT
+      ${crypto.randomUUID()},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
       ${body.description||null},${body.supplierId||null},${supplierName},${needsPhoto&&body.subtractFromShift},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
-    ) RETURNING *
+    FROM "CashShiftSession" shift
+    WHERE shift."storeId"=${store.id}
+      AND shift."companyId"=${req.user.companyId}
+      AND shift."status"='OPEN'
+    ORDER BY shift."openedAt" DESC
+    LIMIT 1
+    RETURNING *
   `;
+  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
   const transaction=normalize(rows[0]);
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({...transaction,emailNotification});
