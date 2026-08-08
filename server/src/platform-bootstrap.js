@@ -65,6 +65,10 @@ export async function ensurePlatformSchema(){
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PilotStoreProfile_company_idx" ON "PilotStoreProfile"("companyId")`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PilotStoreProfile" ADD COLUMN IF NOT EXISTS "loginTestedAt" TIMESTAMPTZ`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PilotStoreProfile" ADD COLUMN IF NOT EXISTS "shiftOpenTestedAt" TIMESTAMPTZ`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PilotStoreProfile" ADD COLUMN IF NOT EXISTS "shiftCloseTestedAt" TIMESTAMPTZ`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PilotStoreProfile" ADD COLUMN IF NOT EXISTS "kioskUnaffectedAt" TIMESTAMPTZ`);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "UserSession" (
       "id" TEXT NOT NULL,

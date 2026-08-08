@@ -26,3 +26,20 @@ test("scope freeze does not involve the RBS fiscal path",()=>{
   assert.match(route,/καμία εντολή προς RBS/);
   assert.match(ui,/δεν επικοινωνεί με RBS\/ταμειακή/);
 });
+
+test("physical pilot smoke tests are explicitly confirmed without fiscal automation",()=>{
+  assert.match(bootstrap,/"loginTestedAt" TIMESTAMPTZ/);
+  assert.match(route,/key:"operatorSmoke"[\s\S]*blocking:true/);
+  assert.match(route,/key:"shiftSmoke"[\s\S]*blocking:true/);
+  assert.match(route,/key:"kioskIsolation"[\s\S]*blocking:true/);
+  assert.match(ui,/Είσοδος με PIN\/κάρτα/);
+  assert.match(ui,/Kiosk Manager ανεπηρέαστο/);
+  assert.match(ui,/δεν στέλνει εντολές σε RBS ή ταμειακή/);
+});
+
+test("readiness remains available during a rolling deploy before optional tables exist",()=>{
+  assert.match(route,/to_regclass\('public\."PilotStoreProfile"'\)/);
+  assert.match(route,/profileTable\[0\]\?\.tableName\?/);
+  assert.match(route,/to_regclass\('public\."StorePosLayout"'\)/);
+  assert.match(route,/layoutTable\[0\]\?\.tableName\?/);
+});
