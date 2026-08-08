@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {CheckCircle2,Database,ExternalLink,RefreshCw,ShieldCheck,UserRoundCog,UsersRound} from "lucide-react";
+import {CheckCircle2,Database,ExternalLink,RefreshCw,ShieldCheck,Upload,UserRoundCog,UsersRound} from "lucide-react";
 import "./kat-test-center.css";
 
 async function request(path,options={}){
@@ -10,11 +10,12 @@ async function request(path,options={}){
 }
 
 export default function KatTestCenter(){
-  const [status,setStatus]=useState(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null);
+  const [status,setStatus]=useState(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null),[inventoryFile,setInventoryFile]=useState(null),[inventoryResult,setInventoryResult]=useState(null);
   const load=async()=>{setLoading(true);setError("");try{setStatus(await request("/api/platform/kat-test/status"))}catch(err){setError(err.message)}finally{setLoading(false)}};
   useEffect(()=>{load()},[]);
   const bootstrap=async event=>{event.preventDefault();setBusy(true);setError("");setResult(null);const body=Object.fromEntries(new FormData(event.currentTarget).entries());try{setResult(await request("/api/platform/kat-test/bootstrap",{method:"POST",body:JSON.stringify(body)}));await load()}catch(err){setError(err.message)}finally{setBusy(false)}};
   const saveState=async()=>{setBusy(true);setError("");setResult(null);try{setResult(await request("/api/platform/kat-test/save-state",{method:"POST",body:"{}"}));await load()}catch(err){setError(err.message)}finally{setBusy(false)}};
+  const bulkInventoryImport=async event=>{event.preventDefault();if(!inventoryFile)return;setBusy(true);setError("");setInventoryResult(null);try{const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν ήταν δυνατή η ανάγνωση του Excel."));reader.readAsDataURL(inventoryFile)});const imported=await request("/api/platform/kat-test/bulk-inventory-import",{method:"POST",body:JSON.stringify({dataUrl})});setInventoryResult(imported);setInventoryFile(null);event.currentTarget.reset();await load()}catch(err){setError(err.message)}finally{setBusy(false)}};
   const storeId=status?.company?.stores?.[0]?.id||"kat-test-store",snapshot=status?.testSnapshot;
   return <div className="kat-test-shell">
     <header className="kat-test-header"><div><span>TEST</span><h1>Μόνιμο περιβάλλον ανάπτυξης</h1><p>Εδώ χτίζουμε και ελέγχουμε το MyWorkStation μέχρι να γίνει η τελική εμπορική έκδοση. Δεν αντιστοιχεί σε πραγματικό κατάστημα και δεν επαναφέρεται από την αρχή.</p></div><a href="/platform-admin"><ExternalLink/>Platform Admin</a></header>
@@ -28,6 +29,15 @@ export default function KatTestCenter(){
       <div className="kat-test-panel-head"><div><h2>Μόνιμη κατάσταση TEST</h2><p>Πριν από σημαντικές αλλαγές αποθηκεύουμε snapshot του υπάρχοντος POS, προϊόντων, κατηγοριών, barcodes, τιμών και stock. Η καθημερινή δουλειά συνεχίζει πάνω στην ίδια βάση.</p></div><button className="secondary" onClick={saveState} disabled={busy||!status?.ready}><Database/>{busy?"Αποθήκευση…":"Αποθήκευση snapshot"}</button></div>
       {snapshot&&<div className="kat-test-alert success">Τελευταίο snapshot: POS έκδοση {snapshot.layoutVersion} · {snapshot.productCount} προϊόντα. Το κλείσιμο browser ή η αλλαγή υπολογιστή δεν διαγράφει το TEST.</div>}
     </section>
+    {status?.ready&&<section className="kat-test-panel">
+      <div className="kat-test-panel-head"><div><h2>Μαζική καταχώρηση αποθήκης — Super Admin</h2><p>Ανεβάζεις Excel και τα προϊόντα περνούν μαζικά στη μόνιμη αποθήκη του TEST. Τα βλέπει αμέσως ο Admin και το POS.</p></div><Upload/></div>
+      <form className="kat-test-form" onSubmit={bulkInventoryImport}>
+        <label>Excel αποθήκης<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={e=>setInventoryFile(e.target.files?.[0]||null)} required/></label>
+        <div className="kat-test-import-help"><b>Στήλες που διαβάζονται:</b><span>Προϊόν/Ονομασία, Barcode ή SKU, Κατηγορία, Τιμή, Κόστος, ΦΠΑ, Απόθεμα, Ελάχιστο Απόθεμα, Μονάδα.</span><small>Έως 2.000 γραμμές. Αν υπάρχει ήδη ίδιο Barcode ή SKU, το προϊόν ενημερώνεται αντί να διπλασιάζεται.</small></div>
+        <button disabled={busy||!inventoryFile}><Upload/>{busy?"Καταχώρηση…":"Μαζική καταχώρηση στο TEST"}</button>
+      </form>
+      {inventoryResult&&<div className="kat-test-alert success">Ολοκληρώθηκε: {inventoryResult.rows} γραμμές · {inventoryResult.created} νέα προϊόντα · {inventoryResult.updated} ενημερώσεις · {inventoryResult.categoriesCreated} νέες κατηγορίες · {inventoryResult.barcodesAdded} νέα barcodes.</div>}
+    </section>}
     <section className="kat-test-panel"><div className="kat-test-panel-head"><div><h2>Χρήστες TEST</h2><p>Δημιουργεί ή ενημερώνει τα δοκιμαστικά credentials χωρίς να διαγράφει προϊόντα, POS layout ή την υπάρχουσα εμπορική κατάσταση.</p></div><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div>
       <form className="kat-test-form" onSubmit={bootstrap}>
         <label>Owner όνομα<input name="ownerName" defaultValue="TEST Owner" required/></label><label>Owner email<input name="ownerEmail" type="email" placeholder="test-owner@example.com" required/></label><label>Owner κωδικός<input name="ownerPassword" type="password" minLength="8" required/></label>
