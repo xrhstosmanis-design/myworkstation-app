@@ -5,6 +5,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
+import KatTestCenter from "./components/platform/KatTestCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -14,6 +15,7 @@ import "./components/platform/platform-audit.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
+const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
 
 const storeApi=async(path,options={})=>{
@@ -37,7 +39,10 @@ const storeApi=async(path,options={})=>{
   return data;
 };
 
-if(platformMatch){
+if(katTestMatch){
+  document.title="MyWorkStation KAT TEST";
+  createRoot(document.getElementById("root")).render(<KatTestCenter/>);
+}else if(platformMatch){
   document.title="MyWorkStation Platform Admin";
   createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/></>);
 }else if(storeMatch){
