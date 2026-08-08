@@ -24,3 +24,25 @@ test("a shift closed before persistence produces a conflict and no notification"
   assert.match(createRoute,/if\(!rows\[0\]\)return res\.status\(409\)/);
   assert.match(createRoute,/Η συναλλαγή δεν αποθηκεύτηκε/);
 });
+
+const reverseStart=route.indexOf('router.post("/:transactionId/reverse"');
+const reverseRoute=route.slice(reverseStart);
+
+test("a reversal is atomic and permitted only while its scoped shift is open",()=>{
+  assert.match(reverseRoute,/UPDATE "StoreTransaction" transaction[\s\S]*FROM "CashShiftSession" shift/);
+  assert.match(reverseRoute,/transaction\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.match(reverseRoute,/transaction\."reversedAt" IS NULL/);
+  assert.match(reverseRoute,/shift\."id"=transaction\."sessionId"/);
+  assert.match(reverseRoute,/shift\."companyId"=transaction\."companyId"/);
+  assert.match(reverseRoute,/shift\."storeId"=transaction\."storeId"/);
+  assert.match(reverseRoute,/shift\."status"='OPEN'/);
+});
+
+test("a closed shift cannot be changed or trigger a reversal email",()=>{
+  const conflict=reverseRoute.indexOf("Η βάρδια της συναλλαγής έχει κλείσει");
+  const notification=reverseRoute.indexOf("notifyLedgerAlert");
+  assert.ok(conflict>reverseRoute.indexOf("RETURNING transaction.*"));
+  assert.ok(notification>conflict);
+  assert.match(reverseRoute,/if\(!rows\[0\]\)return res\.status\(409\)/);
+  assert.match(reverseRoute,/οριστικοποιημένα στοιχεία/);
+});
