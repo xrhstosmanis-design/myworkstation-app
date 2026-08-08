@@ -306,12 +306,21 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,n
     }):null;
     if(!company||!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
 
-    const productTables=await prisma.$queryRaw`SELECT to_regclass('public."Product"')::text AS "product",to_regclass('public."StoreProduct"')::text AS "storeProduct"`;
-    const products=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "Product" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
-    const categories=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "ProductCategory" WHERE "companyId"=${company.id} ORDER BY "sortOrder" ASC,"name" ASC`:[];
-    const barcodes=productTables[0]?.product?await prisma.$queryRaw`SELECT b.* FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId" WHERE p."companyId"=${company.id} ORDER BY b."barcode" ASC`:[];
-    const storeProducts=productTables[0]?.storeProduct?await prisma.$queryRaw`SELECT * FROM "StoreProduct" WHERE "storeId"=${store.id} ORDER BY "productId" ASC`:[];
-    const suppliers=productTables[0]?.product?await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
+    // A rolling deploy can briefly expose only part of the commercial schema. Probe
+    // every optional table independently so the safety backup remains available and
+    // never turns a missing optional table into a Platform Admin error.
+    const commercialTables=await prisma.$queryRaw`
+      SELECT to_regclass('public."Product"')::text AS "product",
+             to_regclass('public."ProductCategory"')::text AS "category",
+             to_regclass('public."ProductBarcode"')::text AS "barcode",
+             to_regclass('public."StoreProduct"')::text AS "storeProduct",
+             to_regclass('public."Supplier"')::text AS "supplier"`;
+    const available=commercialTables[0]||{};
+    const products=available.product?await prisma.$queryRaw`SELECT * FROM "Product" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
+    const categories=available.category?await prisma.$queryRaw`SELECT * FROM "ProductCategory" WHERE "companyId"=${company.id} ORDER BY "sortOrder" ASC,"name" ASC`:[];
+    const barcodes=available.barcode&&available.product?await prisma.$queryRaw`SELECT b.* FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId" WHERE p."companyId"=${company.id} ORDER BY b."barcode" ASC`:[];
+    const storeProducts=available.storeProduct?await prisma.$queryRaw`SELECT * FROM "StoreProduct" WHERE "storeId"=${store.id} ORDER BY "productId" ASC`:[];
+    const suppliers=available.supplier?await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "companyId"=${company.id} ORDER BY "name" ASC`:[];
     const credentialsTable=await prisma.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"')::text AS "tableName"`;
     const operators=credentialsTable[0]?.tableName?await prisma.$queryRaw`SELECT "id","employeeId","displayName","role","active","createdAt","updatedAt",("pinHash" IS NOT NULL) AS "hasPin",("cardCodeHash" IS NOT NULL) AS "hasCard" FROM "StoreOperatorCredential" WHERE "companyId"=${company.id} AND "storeId"=${store.id} ORDER BY "displayName" ASC`:[];
     const layoutTable=await prisma.$queryRaw`SELECT to_regclass('public."StorePosLayout"')::text AS "tableName"`;
@@ -321,6 +330,10 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,n
       format:"MYWORKSTATION_PILOT_SAFETY_BACKUP_V1",generatedAt:generatedAt.toISOString(),generatedBy:{id:req.user.id,email:req.user.email||"super-admin"},
       scope:{companyId:company.id,companyName:company.name,storeId:store.id,storeName:store.name},
       security:{containsPasswords:false,containsPinOrCardSecrets:false,restorationRequiresSuperAdmin:true},
+      completeness:{
+        productCatalog:Boolean(available.product),categories:Boolean(available.category),barcodes:Boolean(available.barcode),
+        storeProducts:Boolean(available.storeProduct),suppliers:Boolean(available.supplier)
+      },
       company,store,commercial:{categories,products,barcodes,storeProducts,suppliers},storeMode:{operators},pos:{publishedLayouts:layouts}
     };
     const serialized=JSON.stringify(snapshot,(_key,value)=>typeof value==="bigint"?value.toString():value,2);
