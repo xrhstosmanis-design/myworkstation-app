@@ -41,6 +41,13 @@ export default function PlatformAdminApp(){
   const [storeEdit,setStoreEdit]=useState(null);
   const [readiness,setReadiness]=useState(null);
 
+  useEffect(()=>{
+    if(!readiness)return undefined;
+    const closeOnEscape=event=>{if(event.key==="Escape")setReadiness(null)};
+    window.addEventListener("keydown",closeOnEscape);
+    return()=>window.removeEventListener("keydown",closeOnEscape);
+  },[readiness]);
+
   const clearSession=(clearError=true)=>{
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
     setUser(null);setData(null);setShowSecurity(false);if(clearError)setError("");

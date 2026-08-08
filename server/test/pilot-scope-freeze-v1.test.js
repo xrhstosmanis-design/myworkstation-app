@@ -57,3 +57,10 @@ test("Super Admin can print a clean store readiness report",()=>{
   assert.match(css,/@media print/);
   assert.match(css,/\.pilot-profile-form\{display:none!important\}/);
 });
+
+test("readiness always provides visible close and Escape exit controls",()=>{
+  assert.match(ui,/if\(event\.key==="Escape"\)setReadiness\(null\)/);
+  assert.match(ui,/className="modal-close" onClick=\{\(\)=>setReadiness\(null\)\}/);
+  assert.match(css,/\.readiness-dialog>\.modal-close\{position:fixed!important/);
+  assert.match(css,/z-index:97!important/);
+});
