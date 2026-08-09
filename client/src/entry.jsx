@@ -16,6 +16,7 @@ import {installOwnerShiftControlCenter} from "./components/commerce/installOwner
 import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseOrdersSuite.js";
 import {installSupplierControlSuite} from "./components/commerce/installSupplierControlSuite.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
+import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
@@ -30,6 +31,7 @@ import "./components/commerce/owner-shift-control-center.css";
 import "./components/commerce/purchase-orders-suite.css";
 import "./components/commerce/supplier-control-suite.css";
 import "./components/commerce/supplier-product-transfer.css";
+import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
 import "./components/commerce/touch-keyboard.css";
 import "./styles.css";
@@ -75,6 +77,7 @@ const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{positio
 
 installTouchKeyboard();
 installSupplierProductTransfer();
+installSupplierProductCatalog();
 installSupplierGlobalReports();
 installAnalyticsTabs();
 installSalesAnalysisSuite();
