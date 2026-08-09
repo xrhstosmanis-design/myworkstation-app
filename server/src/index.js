@@ -15,6 +15,7 @@ import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-pre
 import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderRoutes from "./routes/purchase-orders.js";
+import supplierControlRoutes from "./routes/supplier-control.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -44,7 +45,6 @@ import { ensureOwnerProductSchema } from "./owner-product-bootstrap.js";
 import { ensureProductDeliverySchema } from "./product-delivery-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
-
 const app=express();
 app.use(cors());
 app.use(express.json({limit:"12mb"}));
@@ -67,6 +67,7 @@ app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPay
 app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShiftsRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderActionRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);
+app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
@@ -90,10 +91,7 @@ app.use((err,req,res,next)=>{
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
-app.get("*",(req,res,next)=>{
-  if(req.path.startsWith("/api/")) return next();
-  res.sendFile(path.join(dist,"index.html"));
-});
+app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
 
 try{
   await ensurePlatformSchema();
@@ -104,9 +102,5 @@ try{
   await ensureMasterCatalogSchema();
   await ensureOwnerProductSchema();
   await ensureProductDeliverySchema();
-}catch(error){
-  console.error("Platform/commercial schema bootstrap failed.",error);
-  process.exit(1);
-}
-
+}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
