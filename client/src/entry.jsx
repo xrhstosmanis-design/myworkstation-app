@@ -86,7 +86,15 @@ installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
 installKioskPaymentsImport();
 installOwnerShiftControlCenter();
-installPurchaseOrdersSuite();
+const installPurchaseOrdersSafely=()=>{
+  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-purchase-orders-launch]"))return;
+  const NativeObserver=window.MutationObserver;
+  window.MutationObserver=class{observe(){}disconnect(){}};
+  try{installPurchaseOrdersSuite()}finally{window.MutationObserver=NativeObserver}
+};
+installPurchaseOrdersSafely();
+const purchaseOrdersHostObserver=new MutationObserver(installPurchaseOrdersSafely);
+purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){
   document.title="MyWorkStation TEST";
