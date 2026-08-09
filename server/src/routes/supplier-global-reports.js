@@ -42,7 +42,6 @@ router.get("/reports/purchases",async(req,res,next)=>{try{
   const items=rows.map(r=>({...r,documents:n(r.documents),net:n(r.net),vat:n(r.vat),gross:n(r.gross)})),summary=items.reduce((a,r)=>{a.documents+=r.documents;a.net+=r.net;a.vat+=r.vat;a.gross+=r.gross;return a},{documents:0,net:0,vat:0,gross:0});items.forEach(r=>r.percentOfTotal=summary.gross?r.gross/summary.gross*100:0);res.json({from,to,suppliers,items,summary});
 }catch(error){next(error)}});
 
-const supplierMapCte=companyId=>prisma.$queryRawUnsafe;
 router.get("/reports/sales",async(req,res,next)=>{try{
   const companyId=req.user.companyId,{from,to,supplierId}=parseQuery(req.query),suppliers=await supplierOptions(companyId);
   const rows=await prisma.$queryRaw`
@@ -90,14 +89,14 @@ router.get("/reports/sales/:supplierId/items",async(req,res,next)=>{try{
       WHERE d."companyId"=${companyId} AND l."productId" IN (SELECT "productId" FROM assigned) GROUP BY l."productId"
     )
     SELECT p."id" AS "productId",p."sku",p."name",COALESCE(link."supplierCode",pol."supplierCode") AS "supplierCode",SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS sales,
-      SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))) AS "vatSales",COALESCE(SUM(stock."currentStock"),0) AS "currentStock",COALESCE(c."lastCost",0) AS "lastCost",COALESCE(c."avgCost",0) AS "avgCost"
+      SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))) AS "vatSales",COALESCE(stock."currentStock",0) AS "currentStock",COALESCE(c."lastCost",0) AS "lastCost",COALESCE(c."avgCost",0) AS "avgCost"
     FROM assigned a JOIN "Product" p ON p."id"=a."productId" JOIN "SaleLine" sl ON sl."productId"=p."id" JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId}
     LEFT JOIN costs c ON c."productId"=p."id"
-    LEFT JOIN "StoreProduct" stock ON stock."productId"=p."id"
+    LEFT JOIN LATERAL (SELECT COALESCE(SUM(sp."currentStock"),0) AS "currentStock" FROM "StoreProduct" sp WHERE sp."productId"=p."id") stock ON true
     LEFT JOIN "SupplierProductLink" link ON link."companyId"=${companyId} AND link."supplierId"=${supplierId} AND link."productId"=p."id" AND link."active"=true
     LEFT JOIN LATERAL (SELECT l2."supplierCode" FROM "PurchaseOrderLine" l2 JOIN "PurchaseOrder" o2 ON o2."id"=l2."orderId" WHERE o2."companyId"=${companyId} AND o2."supplierId"=${supplierId} AND l2."productId"=p."id" AND l2."supplierCode" IS NOT NULL ORDER BY l2."updatedAt" DESC NULLS LAST,l2."createdAt" DESC LIMIT 1) pol ON true
     WHERE sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to}
-    GROUP BY p."id",p."sku",p."name",link."supplierCode",pol."supplierCode",c."lastCost",c."avgCost" ORDER BY sales DESC`;
+    GROUP BY p."id",p."sku",p."name",link."supplierCode",pol."supplierCode",c."lastCost",c."avgCost",stock."currentStock" ORDER BY sales DESC`;
   const items=rows.map(r=>{const quantity=n(r.quantity),sales=n(r.sales),avgCost=n(r.avgCost),lastCost=n(r.lastCost),costAvg=quantity*avgCost,costLast=quantity*lastCost;return{...r,quantity,sales,vatSales:n(r.vatSales),currentStock:n(r.currentStock),avgCost,lastCost,averageSale:quantity?sales/quantity:0,profitWithAverage:sales-costAvg,profitWithLast:sales-costLast,margin:sales?(sales-costAvg)/sales*100:0}});res.json({supplierId,from,to,items});
 }catch(error){next(error)}});
 
