@@ -74,8 +74,8 @@ const installSupplierControlSafely=()=>{
   installSupplierControlSuite();
 };
 installPurchaseOrdersSafely();installSupplierControlSafely();
-const commerceHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely()});
-commerceHostObserver.observe(document.documentElement,{childList:true,subtree:true});
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely()});
+purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><KatTestQuickAccess/></>)}
