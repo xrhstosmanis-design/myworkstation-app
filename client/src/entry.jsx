@@ -10,6 +10,7 @@ import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import CommercialPosApp from "./components/commerce/CommercialPosApp.jsx";
 import {installAnalyticsTabs} from "./components/commerce/installAnalyticsTabs.js";
 import {installSalesAnalysisSuite} from "./components/commerce/installSalesAnalysisSuite.js";
+import {installOwnerPaymentsSuite} from "./components/commerce/installOwnerPaymentsSuite.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -17,6 +18,7 @@ import "./components/platform/commercial-license.css";
 import "./components/platform/platform-audit.css";
 import "./components/commerce/myworkstation-analytics-theme.css";
 import "./components/commerce/sales-analysis-suite.css";
+import "./components/commerce/owner-payments-suite.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -76,6 +78,7 @@ const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{positio
 
 installAnalyticsTabs();
 installSalesAnalysisSuite();
+installOwnerPaymentsSuite();
 
 if(katTestMatch){
   document.title="MyWorkStation TEST";
