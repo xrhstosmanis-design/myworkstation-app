@@ -45,6 +45,27 @@ router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=
   }catch(error){next(error)}
 });
 
+router.get("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+    const rows=await prisma.$queryRaw`SELECT "id","name","isModifier","modifierGroup","isService","eDeliveryEnabled","efoodEnabled","woltEnabled","publishStock","publishPrices","efoodPrice","woltPrice" FROM "Product" WHERE "companyId"=${company} AND "id"=${req.params.productId} LIMIT 1`;
+    if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    res.json(rows[0]);
+  }catch(error){next(error)}
+});
+
+router.patch("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+    const body=z.object({
+      isModifier:z.boolean().default(false),modifierGroup:z.string().trim().max(160).nullable().optional(),isService:z.boolean().default(false),eDeliveryEnabled:z.boolean().default(false),efoodEnabled:z.boolean().default(false),woltEnabled:z.boolean().default(false),publishStock:z.boolean().default(false),publishPrices:z.boolean().default(false),efoodPrice:z.coerce.number().min(0).nullable().optional(),woltPrice:z.coerce.number().min(0).nullable().optional()
+    }).parse(req.body||{});
+    const exists=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "id"=${req.params.productId} LIMIT 1`;if(!exists[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    await prisma.$executeRaw`UPDATE "Product" SET "isModifier"=${body.isModifier},"modifierGroup"=${body.modifierGroup||null},"isService"=${body.isService},"eDeliveryEnabled"=${body.eDeliveryEnabled},"efoodEnabled"=${body.efoodEnabled},"woltEnabled"=${body.woltEnabled},"publishStock"=${body.publishStock},"publishPrices"=${body.publishPrices},"efoodPrice"=${body.efoodPrice??null},"woltPrice"=${body.woltPrice??null},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${company} AND "id"=${req.params.productId}`;
+    res.json({ok:true});
+  }catch(error){next(error)}
+});
+
 router.post("/:productId/stock-adjustment",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
