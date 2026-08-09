@@ -18,6 +18,7 @@ import {installSupplierControlSuite} from "./components/commerce/installSupplier
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
+import {installSupplierBasicExtras} from "./components/commerce/installSupplierBasicExtras.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -79,6 +80,7 @@ installTouchKeyboard();
 installSupplierProductTransfer();
 installSupplierProductCatalog();
 installSupplierGlobalReports();
+installSupplierBasicExtras();
 installAnalyticsTabs();
 installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
