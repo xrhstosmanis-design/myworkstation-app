@@ -12,6 +12,7 @@ import {installAnalyticsTabs} from "./components/commerce/installAnalyticsTabs.j
 import {installSalesAnalysisSuite} from "./components/commerce/installSalesAnalysisSuite.js";
 import {installOwnerPaymentsSuite} from "./components/commerce/installOwnerPaymentsSuite.js";
 import {installKioskPaymentsImport} from "./components/commerce/installKioskPaymentsImport.js";
+import {installOwnerShiftControlCenter} from "./components/commerce/installOwnerShiftControlCenter.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -20,6 +21,7 @@ import "./components/platform/platform-audit.css";
 import "./components/commerce/myworkstation-analytics-theme.css";
 import "./components/commerce/sales-analysis-suite.css";
 import "./components/commerce/owner-payments-suite.css";
+import "./components/commerce/owner-shift-control-center.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -81,6 +83,7 @@ installAnalyticsTabs();
 installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
 installKioskPaymentsImport();
+installOwnerShiftControlCenter();
 
 if(katTestMatch){
   document.title="MyWorkStation TEST";
