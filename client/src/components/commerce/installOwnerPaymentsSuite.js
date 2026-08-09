@@ -9,7 +9,7 @@ const fmt=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",mon
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const pct=value=>value===null||value===undefined?"—":`${Number(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
 const state={from:monthStartValue(),to:todayValue(),storeId:"",supplierId:"",q:"",supplier:true,other:true,report:null,loading:false,error:"",tab:"overview"};
-const canOpenOwnerPayments=()=>{try{return ["OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
+const canOpenOwnerPayments=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 
 async function api(path){
   const token=localStorage.getItem("token");
