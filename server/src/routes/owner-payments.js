@@ -15,11 +15,11 @@ const reportQuery=z.object({
 const n=value=>Number(value||0);
 const isoDay=date=>new Date(date).toISOString().slice(0,10);
 const mapMovement=row=>({...row,amount:n(row.amount),hasAttachment:Boolean(row.hasAttachment),subtractFromShift:Boolean(row.subtractFromShift)});
-const ownerRoles=new Set(["OWNER","ADMIN","MANAGER"]);
+const ownerRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 
 function requireOwnerReport(req){
   if(req.user?.tokenType==="STORE_OPERATOR"||!ownerRoles.has(req.user?.role)){
-    const error=new Error("Η αναφορά εξόδων είναι διαθέσιμη μόνο σε Ιδιοκτήτη, Admin ή Manager.");error.status=403;throw error;
+    const error=new Error("Η αναφορά εξόδων είναι διαθέσιμη σε Super Admin, Ιδιοκτήτη, Admin ή Manager.");error.status=403;throw error;
   }
 }
 function dateRange(query){
