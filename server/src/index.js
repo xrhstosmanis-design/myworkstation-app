@@ -12,6 +12,7 @@ import storeTransactionRoutes from "./routes/store-transactions.js";
 import ownerPaymentsRoutes from "./routes/owner-payments.js";
 import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
 import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-preview.js";
+import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -61,6 +62,7 @@ app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTrans
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsRoutes);
+app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShiftsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
