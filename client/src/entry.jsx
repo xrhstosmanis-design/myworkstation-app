@@ -15,6 +15,7 @@ import {installKioskPaymentsImport} from "./components/commerce/installKioskPaym
 import {installOwnerShiftControlCenter} from "./components/commerce/installOwnerShiftControlCenter.js";
 import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseOrdersSuite.js";
 import {installSupplierControlSuite} from "./components/commerce/installSupplierControlSuite.js";
+import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -27,6 +28,7 @@ import "./components/commerce/owner-payments-suite.css";
 import "./components/commerce/owner-shift-control-center.css";
 import "./components/commerce/purchase-orders-suite.css";
 import "./components/commerce/supplier-control-suite.css";
+import "./components/commerce/supplier-product-transfer.css";
 import "./components/commerce/touch-keyboard.css";
 import "./styles.css";
 
@@ -70,6 +72,7 @@ const storeApi=async(path,options={})=>{
 const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
 
 installTouchKeyboard();
+installSupplierProductTransfer();
 installAnalyticsTabs();
 installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
