@@ -1,6 +1,16 @@
 import {Router} from "express";
 import supplierControlRoutes from "./supplier-control.js";
+import {ensureSupplierControlCompatibility} from "../supplier-control-bootstrap.js";
+
 const router=Router();
+router.use(async(req,res,next)=>{
+  try{
+    await ensureSupplierControlCompatibility();
+    next();
+  }catch(error){
+    next(error);
+  }
+});
 router.use((req,res,next)=>{
   if(req.body&&typeof req.body==="object"&&!Array.isArray(req.body)){
     for(const key of ["email","taxId","legacyCode","erpCode","profession","phone","mobile","fax","sellerName","accountingCode","notes","address","city","chargeAddress","code","postalCode","label"]){
