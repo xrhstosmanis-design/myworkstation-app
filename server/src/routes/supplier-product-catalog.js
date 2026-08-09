@@ -9,11 +9,16 @@ let schemaPromise;
 
 async function ensureSchema(){
   if(!schemaPromise){
-    schemaPromise=prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
-      "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
-      "supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',
-      "updatedBy" TEXT,"updatedByName" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE("companyId","supplierId","productId"))`).catch(error=>{schemaPromise=undefined;throw error});
+    schemaPromise=(async()=>{
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
+        "supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',
+        "updatedBy" TEXT,"updatedByName" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE("companyId","supplierId","productId"))`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "name" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+    })().catch(error=>{schemaPromise=undefined;throw error});
   }
   return schemaPromise;
 }
@@ -56,7 +61,7 @@ router.get("/:supplierId/products",async(req,res,next)=>{
         GROUP BY l."productId"
       )
       SELECT p."id",p."sku",p."name",p."unit",p."vatRate",p."salePrice",p."active",c."name" AS "categoryName",
-        link."supplierCode",link."source" AS "linkSource",link."updatedAt" AS "linkUpdatedAt",
+        COALESCE(link."supplierCode",pol."supplierCode") AS "supplierCode",link."source" AS "linkSource",link."updatedAt" AS "linkUpdatedAt",
         COALESCE(costs."avgCost",0) AS "avgCost",COALESCE(costs."lastCost",0) AS "lastCost",costs."lastPurchaseAt",COALESCE(costs."purchaseCount",0)::int AS "purchaseCount",
         COALESCE(stock."currentStock",0) AS "currentStock",
         COALESCE(json_agg(DISTINCT jsonb_build_object('id',b."id",'barcode',b."barcode",'salePrice',b."salePrice",'name',b."name")) FILTER (WHERE b."id" IS NOT NULL),'[]') AS barcodes
@@ -64,16 +69,22 @@ router.get("/:supplierId/products",async(req,res,next)=>{
       JOIN "Product" p ON p."id"=map."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "SupplierProductLink" link ON link."companyId"=${companyId} AND link."supplierId"=${supplierId} AND link."productId"=p."id" AND link."active"=true
+      LEFT JOIN LATERAL (
+        SELECT l2."supplierCode" FROM "PurchaseOrderLine" l2
+        JOIN "PurchaseOrder" o2 ON o2."id"=l2."orderId"
+        WHERE o2."companyId"=${companyId} AND o2."supplierId"=${supplierId} AND l2."productId"=p."id" AND l2."supplierCode" IS NOT NULL
+        ORDER BY l2."updatedAt" DESC NULLS LAST,l2."createdAt" DESC LIMIT 1
+      ) pol ON true
       LEFT JOIN supplier_costs costs ON costs."productId"=p."id"
       LEFT JOIN LATERAL (SELECT COALESCE(SUM(sp."currentStock"),0) AS "currentStock" FROM "StoreProduct" sp WHERE sp."productId"=p."id") stock ON true
       LEFT JOIN "ProductBarcode" b ON b."productId"=p."id"
       WHERE map."supplierId"=${supplierId}
-        AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR COALESCE(link."supplierCode",'') ILIKE ${text} OR EXISTS(SELECT 1 FROM "ProductBarcode" bx WHERE bx."productId"=p."id" AND bx."barcode" ILIKE ${text}))
-      GROUP BY p."id",p."sku",p."name",p."unit",p."vatRate",p."salePrice",p."active",c."name",link."supplierCode",link."source",link."updatedAt",costs."avgCost",costs."lastCost",costs."lastPurchaseAt",costs."purchaseCount",stock."currentStock"
+        AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR COALESCE(link."supplierCode",pol."supplierCode",'') ILIKE ${text} OR EXISTS(SELECT 1 FROM "ProductBarcode" bx WHERE bx."productId"=p."id" AND bx."barcode" ILIKE ${text}))
+      GROUP BY p."id",p."sku",p."name",p."unit",p."vatRate",p."salePrice",p."active",c."name",link."supplierCode",pol."supplierCode",link."source",link."updatedAt",costs."avgCost",costs."lastCost",costs."lastPurchaseAt",costs."purchaseCount",stock."currentStock"
       ORDER BY p."active" DESC,p."name"`;
     const items=rows.map(row=>({...row,vatRate:n(row.vatRate),salePrice:n(row.salePrice),avgCost:n(row.avgCost),lastCost:n(row.lastCost),purchaseCount:n(row.purchaseCount),currentStock:n(row.currentStock),active:Boolean(row.active),barcodes:Array.isArray(row.barcodes)?row.barcodes:[]}));
     const summary=items.reduce((a,row)=>{a.items++;if(row.active)a.active++;a.stock+=row.currentStock;a.stockValue+=row.currentStock*row.avgCost;a.purchaseDocs+=row.purchaseCount;return a},{items:0,active:0,stock:0,stockValue:0,purchaseDocs:0});
-    res.json({supplier,items,summary,sourceNote:"Η τρέχουσα αντιστοίχιση χρησιμοποιεί ενεργό SupplierProductLink και, όπου δεν υπάρχει, τον προμηθευτή της πιο πρόσφατης εγκεκριμένης αγοράς."});
+    res.json({supplier,items,summary,sourceNote:"Η τρέχουσα αντιστοίχιση χρησιμοποιεί ενεργό SupplierProductLink και, όπου δεν υπάρχει, τον προμηθευτή της πιο πρόσφατης εγκεκριμένης αγοράς. Ο κωδικός προμηθευτή προέρχεται από την ενεργή σύνδεση ή την τελευταία πραγματική γραμμή παραγγελίας."});
   }catch(error){next(error)}
 });
 
