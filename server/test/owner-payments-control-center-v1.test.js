@@ -9,7 +9,7 @@ const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url)
 const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
 
 test("owner payments report is restricted and reads real commercial sources",()=>{
-  assert.match(route,/ownerRoles=new Set\(\["OWNER","ADMIN","MANAGER"\]\)/);
+  assert.match(route,/ownerRoles=new Set\(\["SUPER_ADMIN","OWNER","ADMIN","MANAGER"\]\)/);
   assert.match(route,/StoreTransaction/);
   assert.match(route,/PurchaseDocument/);
   assert.match(route,/FROM "Sale"/);
@@ -17,6 +17,11 @@ test("owner payments report is restricted and reads real commercial sources",()=
   assert.match(route,/reversedCount/);
   assert.match(route,/percentOfSales/);
   assert.match(route,/changePercent/);
+});
+
+test("super admin has the same owner payments visibility during support/backoffice access",()=>{
+  assert.match(installer,/\["SUPER_ADMIN","OWNER","ADMIN","MANAGER"\]/);
+  assert.match(route,/SUPER_ADMIN/);
 });
 
 test("owner payments UI exposes kiosk-style criteria and full audit views",()=>{
