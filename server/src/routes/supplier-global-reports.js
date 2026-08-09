@@ -57,16 +57,16 @@ router.get("/reports/sales",async(req,res,next)=>{try{
       LEFT JOIN latest_purchase lp ON lp."productId"=p."id"
       WHERE p."companyId"=${companyId}
     ), product_cost AS (
-      SELECT l."productId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost"
+      SELECT l."productId",d."supplierId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost"
       FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL
-      GROUP BY l."productId"
+      WHERE d."companyId"=${companyId} AND d."status"='APPROVED' AND l."productId" IS NOT NULL AND d."supplierId" IS NOT NULL
+      GROUP BY l."productId",d."supplierId"
     )
     SELECT s."id" AS "supplierId",s."name" AS "supplierName",COUNT(DISTINCT sa."id")::int AS transactions,COUNT(DISTINCT sl."productId")::int AS items,
       COALESCE(SUM(sl."lineTotal"),0) AS sales,
       COALESCE(SUM(sl."quantity"*COALESCE(pc."avgCost",0)),0) AS cost,
       COALESCE(SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))),0) AS "vatSales"
-    FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" JOIN product_supplier ps ON ps."productId"=sl."productId" JOIN "Supplier" s ON s."id"=ps."supplierId" AND s."companyId"=${companyId} LEFT JOIN product_cost pc ON pc."productId"=sl."productId"
+    FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" JOIN product_supplier ps ON ps."productId"=sl."productId" JOIN "Supplier" s ON s."id"=ps."supplierId" AND s."companyId"=${companyId} LEFT JOIN product_cost pc ON pc."productId"=sl."productId" AND pc."supplierId"=s."id"
     WHERE sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND sa."occurredAt">=${from} AND sa."occurredAt"<=${to} AND (${supplierId}::text IS NULL OR s."id"=${supplierId})
     GROUP BY s."id",s."name" ORDER BY sales DESC`;
   const items=rows.map(r=>{const sales=n(r.sales),cost=n(r.cost),profit=sales-cost;return{...r,transactions:n(r.transactions),items:n(r.items),sales,cost,profit,vatSales:n(r.vatSales),margin:sales?profit/sales*100:0}}),summary=items.reduce((a,r)=>{a.suppliers++;a.sales+=r.sales;a.cost+=r.cost;a.profit+=r.profit;a.vatSales+=r.vatSales;a.items+=r.items;return a},{suppliers:0,sales:0,cost:0,profit:0,vatSales:0,items:0});summary.margin=summary.sales?summary.profit/summary.sales*100:0;items.forEach(r=>r.percentOfSales=summary.sales?r.sales/summary.sales*100:0);res.json({from,to,suppliers,items,summary});
@@ -86,7 +86,7 @@ router.get("/reports/sales/:supplierId/items",async(req,res,next)=>{try{
       SELECT l."productId",SUM(l."netAmount")/NULLIF(SUM(CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(l."unitsPerPackage",1) ELSE l."quantity" END),0) AS "avgCost",
         (array_agg(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END ORDER BY d."documentDate" DESC))[1] AS "lastCost"
       FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
-      WHERE d."companyId"=${companyId} AND l."productId" IN (SELECT "productId" FROM assigned) GROUP BY l."productId"
+      WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId} AND l."productId" IN (SELECT "productId" FROM assigned) GROUP BY l."productId"
     )
     SELECT p."id" AS "productId",p."sku",p."name",COALESCE(link."supplierCode",pol."supplierCode") AS "supplierCode",SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS sales,
       SUM(sl."lineTotal"*(sl."vatRate"/(100+sl."vatRate"))) AS "vatSales",COALESCE(stock."currentStock",0) AS "currentStock",COALESCE(c."lastCost",0) AS "lastCost",COALESCE(c."avgCost",0) AS "avgCost"
