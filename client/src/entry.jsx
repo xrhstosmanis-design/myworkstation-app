@@ -13,6 +13,7 @@ import {installSalesAnalysisSuite} from "./components/commerce/installSalesAnaly
 import {installOwnerPaymentsSuite} from "./components/commerce/installOwnerPaymentsSuite.js";
 import {installKioskPaymentsImport} from "./components/commerce/installKioskPaymentsImport.js";
 import {installOwnerShiftControlCenter} from "./components/commerce/installOwnerShiftControlCenter.js";
+import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseOrdersSuite.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -22,6 +23,7 @@ import "./components/commerce/myworkstation-analytics-theme.css";
 import "./components/commerce/sales-analysis-suite.css";
 import "./components/commerce/owner-payments-suite.css";
 import "./components/commerce/owner-shift-control-center.css";
+import "./components/commerce/purchase-orders-suite.css";
 import "./styles.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -84,6 +86,15 @@ installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
 installKioskPaymentsImport();
 installOwnerShiftControlCenter();
+const installPurchaseOrdersSafely=()=>{
+  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-purchase-orders-launch]"))return;
+  const NativeObserver=window.MutationObserver;
+  window.MutationObserver=class{observe(){}disconnect(){}};
+  try{installPurchaseOrdersSuite()}finally{window.MutationObserver=NativeObserver}
+};
+installPurchaseOrdersSafely();
+const purchaseOrdersHostObserver=new MutationObserver(installPurchaseOrdersSafely);
+purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){
   document.title="MyWorkStation TEST";
