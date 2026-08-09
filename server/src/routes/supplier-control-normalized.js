@@ -1,4 +1,5 @@
 import {Router} from "express";
+import supplierProductTransferRoutes from "./supplier-product-transfer.js";
 import supplierControlRoutes from "./supplier-control.js";
 import {ensureSupplierControlCompatibility} from "../supplier-control-bootstrap.js";
 
@@ -19,5 +20,6 @@ router.use((req,res,next)=>{
   }
   next();
 });
+router.use(supplierProductTransferRoutes);
 router.use(supplierControlRoutes);
 export default router;
