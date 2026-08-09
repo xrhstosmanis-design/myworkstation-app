@@ -15,7 +15,7 @@ import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-pre
 import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderRoutes from "./routes/purchase-orders.js";
-import supplierControlRoutes from "./routes/supplier-control.js";
+import supplierControlRoutes from "./routes/supplier-control-normalized.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -81,28 +81,10 @@ app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRout
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),connectorObserverRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
-
-app.use((err,req,res,next)=>{
-  console.error(err);
-  if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});
-  if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});
-  res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."});
-});
-
+app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-
-try{
-  await ensurePlatformSchema();
-  await ensurePlatformAuditSchema();
-  await ensureCommercialSchema();
-  await ensureExtendedModulesSchema();
-  await ensureCommerceCompatibility();
-  await ensureMasterCatalogSchema();
-  await ensureOwnerProductSchema();
-  await ensureProductDeliverySchema();
-  await ensureSupplierControlCompatibility();
-}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensureSupplierControlCompatibility()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
