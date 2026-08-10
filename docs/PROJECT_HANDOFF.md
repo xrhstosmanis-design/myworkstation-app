@@ -21,11 +21,12 @@
 - Δεν επαναφέρουμε MutationObserver/render loops. Διατηρείται ο guarded `purchaseOrdersHostObserver` και lazy drill-down/server pagination patterns.
 - Κάθε ουσιαστική αλλαγή: branch → PR → CI → merge → Render SUCCESS.
 
-## Live baseline πριν το τρέχον PR
+## Τρέχουσα LIVE βάση
 
-Τελευταίο live functional πακέτο: **PR #119 — Delivery report**.
-Merge commit: `4dcfa34f0f9b498b777c0528e196e56378b737f0`.
-Render production: `https://myworkstation-app.onrender.com`.
+Τελευταίο live πακέτο: **PR #120 — Global MyWorkStation Color Audit**.
+Merge commit: `b2599c45472a17add9a77497f464e0ce14f99a99`.
+CI #167: **SUCCESS**.
+Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** μετά το PR #120.
 
 ### Ολοκληρωμένα πακέτα
 
@@ -43,6 +44,7 @@ Render production: `https://myworkstation-app.onrender.com`.
 - #117 Stock analysis + lazy movements.
 - #118 Sales statistics + historical cost-at-sale + lazy detail.
 - #119 Delivery report + lazy DispatchNoteLine detail.
+- #120 Global color normalization στην εγκεκριμένη MyWorkStation navy/teal παλέτα.
 
 ## Σταθερή απαίτηση Καταστροφών
 
@@ -52,22 +54,18 @@ Render production: `https://myworkstation-app.onrender.com`.
 
 Δεν εμφανίζονται πραγματικά Z μέχρι πραγματική φορολογική πηγή connector/RBS/provider. Ποτέ fabricated Z.
 
-# ΤΡΕΧΟΥΣΑ ΕΡΓΑΣΙΑ — GLOBAL COLOR AUDIT
+## Global Color Audit — ΟΛΟΚΛΗΡΩΜΕΝΟ
 
-Branch: `fix/global-myworkstation-color-audit`
-PR: **#120 — Normalize all Commerce colors to MyWorkStation navy/teal baseline**
-Head μετά το normalization: `ce37eb7c2eb91a88b0e3c72b141e34f4203f280f` πριν από αυτή την ενημέρωση docs.
-CI #166 για τον κώδικα normalization: **SUCCESS** (tests + production build). Η ενημέρωση αυτού του handoff δημιουργεί νέο head/CI πριν το merge.
+Το PR #120 διορθώνει structural Kiosk-color leaks χωρίς αλλαγή λειτουργίας/layout.
 
-### Τι διορθώνει το PR #120
-
+Διορθώθηκαν:
 - Προμηθευτές: active tabs/edit tabs, headers, totals, primary actions.
 - Πελάτες: active tabs/detail tabs, headers, row hover, primary actions.
-- Παραγγελίες & Αγορές: orange active tab, bright structural headers, totals, primary actions.
-- Αναφορές: orange active tabs/filter border/hover και bright headers, μαζί με stock/sales/delivery drilldowns.
+- Παραγγελίες & Αγορές: orange active tabs, bright structural headers, totals, primary actions.
+- Αναφορές: orange active tabs/filter border/hover, bright headers και stock/sales/delivery drilldowns.
 - Supplier global reports: orange selected row/totals και bright headers.
-- Supplier product catalog/transfer: headers/actions.
-- Τιμοκατάλογος: controller V2/modal/header/buttons και legacy important price-tab hotfix specificity.
+- Supplier product catalog/transfer: structural headers/actions.
+- Τιμοκατάλογος: controller V2/modal/header/buttons και legacy important price-tab specificity.
 - Owner Payments / Βάρδιες & Διαφορές: structural headers/search actions.
 - Kiosk-style Product Center: orange selected row και structural active/modal/action colors.
 
@@ -77,25 +75,15 @@ Canonical layer:
 Last-load bootstrap:
 `client/src/theme-normalization-bootstrap.js`
 
-Το bootstrap φορτώνεται τελευταίο στο `client/index.html`, μετά από audit/stock/sales/delivery report bootstraps.
-
-### Τι ΔΕΝ αλλάζει
-
-- business logic,
-- API/routes,
-- calculations,
-- grids/layout,
-- semantic error/success/warning colors. Κόκκινο/πράσινο/amber παραμένουν όταν εκφράζουν πραγματική κατάσταση, όχι navigation/theme.
-
 Regression:
 `server/test/myworkstation-global-color-baseline-v1.test.js`
 
-## Αμέσως επόμενο
+Semantic warning/error/success colors **δεν** αφαιρέθηκαν. Κόκκινο/πράσινο/amber παραμένουν μόνο όταν έχουν πραγματική σημασία κατάστασης/προειδοποίησης.
 
-1. Περιμένουμε το νέο CI του PR #120 μετά την ενημέρωση handoff.
-2. Merge PR #120 όταν είναι SUCCESS.
-3. Περιμένουμε Render SUCCESS.
-4. Επιβεβαιώνουμε ότι το handoff δείχνει το τελικό merge commit.
-5. Μετά λέμε στον χρήστη:
+## ΑΜΕΣΩΣ ΕΠΟΜΕΝΟ
+
+Ο χρήστης έχει ζητήσει να στείλει **νέες φωτογραφίες** μετά την ολοκλήρωση του color audit.
+
+Σε νέα συνεδρία, αφού διαβαστεί αυτό το handoff, η σωστή συνέχεια είναι:
 
 **«Ο ΕΛΕΓΧΟΣ ΧΡΩΜΑΤΩΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΣΤΕΙΛΕ ΜΟΥ ΤΙΣ ΝΕΕΣ ΦΩΤΟΓΡΑΦΙΕΣ.»**
