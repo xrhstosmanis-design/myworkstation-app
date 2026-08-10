@@ -1,161 +1,101 @@
 # MyWorkStation — Permanent Project Handoff
 
-Αυτό είναι το **πρώτο αρχείο συνέχειας** του έργου. Κάθε νέα συνεδρία πρέπει να το διαβάζει πριν αλλάξει κώδικα. Δεν βασιζόμαστε στη μνήμη browser/chat και δεν ξαναφτιάχνουμε λειτουργίες που υπάρχουν ήδη.
+Αυτό είναι το πρώτο αρχείο συνέχειας του έργου. Κάθε νέα συνεδρία το διαβάζει πριν αλλάξει κώδικα. Δεν ξαναφτιάχνουμε λειτουργίες που υπάρχουν ήδη.
 
-## Τελευταίο ασφαλές snapshot
+## Ασφαλές checkpoint
 
-Immutable checkpoint:
+Πλήρες immutable snapshot πριν από το color audit:
 `docs/checkpoints/PROJECT_CHECKPOINT_2026-08-10_2045.md`
 
-Αν υπάρχει αμφιβολία για το τι είχε ολοκληρωθεί στις 10/08/2026, διαβάζουμε αυτό το checkpoint και τα σχετικά merged PRs.
+Το snapshot περιλαμβάνει αναλυτικά την κατάσταση μέχρι PR #119, τις λειτουργίες Προμηθευτών/Πελατών/Τιμοκαταλόγου/Αναφορών, touch keyboard, anti-freeze και real-data rules.
 
 ## Απαράβατοι κανόνες
 
-1. Μόνιμη βάση ανάπτυξης: `TEST`.
-2. Κάθε ουσιαστική αλλαγή αποθηκεύεται σε GitHub branch/commit και ολοκληρώνεται με PR → CI → merge → Render SUCCESS πριν θεωρηθεί live.
-3. Πραγματικά δεδομένα μόνο. Αν λείπει source: `—`, `NOT_CONNECTED` ή σαφής αναμονή. Ποτέ fabricated ποσά/φορολογικά δεδομένα/MARK/Z/provider status.
-4. SUPER_ADMIN = platform owner/admin. OWNER/ADMIN = store owner/admin. POS/Store Operator = καθημερινός χειριστής.
-5. Kiosk Manager / RBS / CapDriver παραμένουν ξεχωριστά. Δεν αλλάζονται και δεν προσομοιώνεται φορολογική λειτουργία χωρίς πραγματικό connector/provider.
-6. Τα screenshots Kiosk Manager είναι **λειτουργική αναφορά** για layout, πεδία, tabs, context menus, μολύβια και κάτω κουμπιά. **Δεν αντιγράφουμε τα χρώματα Kiosk Manager**.
-7. MyWorkStation visual baseline: light blue/gray background, λευκά rounded panels, navy active tabs/headers, teal primary actions, καθαρά ελληνικά labels. Βλ. `docs/BACKOFFICE_VISUAL_BASELINE.md`.
-8. Τα κάτω κουμπιά που φαίνονται σε screenshot είναι βασικά και πρέπει να είναι πραγματικά λειτουργικά.
-9. Global touch keyboard εφαρμόζεται σε όλα τα text/number inputs. Δεν ξαναγράφεται ξεχωριστά ανά module.
-10. Προστατεύουμε τον browser από render/MutationObserver loops. Διατηρείται το guarded `purchaseOrdersHostObserver` και τα υπάρχοντα lazy drill-down patterns.
+- Μόνιμη βάση ανάπτυξης: TEST.
+- Πραγματικά δεδομένα μόνο. Χωρίς fabricated ποσά, MARK, Z ή provider status.
+- SUPER_ADMIN = platform owner/admin, OWNER/ADMIN = store owner/admin, POS/Store Operator = καθημερινός χειριστής.
+- Kiosk Manager/RBS/CapDriver παραμένουν ξεχωριστά συστήματα.
+- Kiosk screenshots = functional reference για πεδία/tabs/context menus/κάτω actions, **όχι color reference**.
+- MyWorkStation palette: light blue/gray background, white rounded panels, **navy `#123b5d` active tabs/headers**, **teal `#0f766e` primary actions**.
+- Global touch keyboard εφαρμόζεται σε όλα τα text/number inputs. Δεν δημιουργούμε δεύτερο keyboard.
+- Δεν επαναφέρουμε MutationObserver/render loops. Διατηρείται ο guarded `purchaseOrdersHostObserver` και lazy drill-down/server pagination patterns.
+- Κάθε ουσιαστική αλλαγή: branch → PR → CI → merge → Render SUCCESS.
 
-## Τρέχουσα live έκδοση
+## Live baseline πριν το τρέχον PR
 
-Τελευταίο merged/live πακέτο: **PR #119 — Delivery report**.
+Τελευταίο live functional πακέτο: **PR #119 — Delivery report**.
 Merge commit: `4dcfa34f0f9b498b777c0528e196e56378b737f0`.
-Render: `https://myworkstation-app.onrender.com` — SUCCESS μετά το PR #119.
+Render production: `https://myworkstation-app.onrender.com`.
 
-## Ολοκληρωμένα βασικά πακέτα
+### Ολοκληρωμένα πακέτα
 
-### POS / Sales / Owner
-- PR #95: browser freeze fix Ανάλυσης Πωλήσεων.
-- PR #97: Από/Έως και criteria layout.
-- PR #98/#99: Έξοδα & Πληρωμές + SUPER_ADMIN.
-- PR #100/#101: Kiosk Excel/CSV payments/expenses import + read-only preview.
-- PR #102: Βάρδιες & Διαφορές με A/A και πλήρες drill-down.
+- #95 freeze fix Sales Analytics.
+- #97 Από/Έως Sales Analysis.
+- #98/#99 Owner Expenses & Payments + SUPER_ADMIN.
+- #100/#101 Excel/CSV import + preview-first.
+- #102 Βάρδιες & Διαφορές.
+- #103 Παραγγελίες & Αγορές, MarkUp ↔ Νέα Λιανική, barcode, stock proposal/alarm.
+- #104–#110 Προμηθευτές, global touch keyboard, runtime fixes, transfer, reports, product catalog, DOU/MYF.
+- #111 Πελάτες: 3-tab pencil, addresses, context menu/right-click/long-press, receipts edit, turnover, ledger, NOT_CONNECTED fiscal tabs.
+- #112–#114 Τιμοκατάλογος: 4 functional tabs, price audit, promotions/gifts/wholesale, lower actions, leaflet modal.
+- #115 Καταστροφές με Τιμή αγοράς + Σύνολο αγοράς και Reports base.
+- #116 sale-list deletion/product deactivation audit.
+- #117 Stock analysis + lazy movements.
+- #118 Sales statistics + historical cost-at-sale + lazy detail.
+- #119 Delivery report + lazy DispatchNoteLine detail.
 
-### Παραγγελίες / Προμηθευτές
-- PR #103: Παραγγελίες & Αγορές, MarkUp ↔ Νέα Λιανική, barcodes, proposal/alarm Stock.
-- PR #104–#110: Προμηθευτές, global touch keyboard, runtime fixes, μεταφορά ειδών/κωδικών, supplier global reports, supplier product catalog, ΔΟΥ/MYF.
+## Σταθερή απαίτηση Καταστροφών
 
-### Πελάτες
-- PR #111: Πελατολόγιο / Εισπράξεις / Τζίρος / myDATA / Πάροχος.
-- Pencil detail: Βασικά στοιχεία / Διευθύνσεις / Λοιπά.
-- Right-click + touch long-press 650ms.
-- Είσπραξη, balance adjustment, τζίρος μήνα/έτους, ledger, safe deactivate.
-- Receipt row pencil με πραγματικό PATCH + atomic Customer.balance update.
-- myDATA/provider explicit NOT_CONNECTED μέχρι πραγματική integration.
+Πάντα: ποσότητα, **τιμή αγοράς**, **σύνολο αγοράς = ποσότητα × πραγματικό κόστος**, λιανική, χειριστής, category/subcategory, supplier, store και total purchase sum. Cost priority: `StockMovement.unitCost` → τελευταία εγκεκριμένη αγορά πριν την καταστροφή → `Product.costPrice`.
 
-### Τιμοκατάλογος
-- PR #112–#114.
-- 4 λειτουργικά tabs: Έλεγχος τιμών / Προσφορές φυλλαδίου / Προσφορές & δώρα / Τιμές χονδρικής.
-- Server pagination.
-- ProductPriceHistory audit.
-- Leaflet modal με προϊόν, barcode, subcategory, current/new price, discount, valid-from/until, bonus points.
-- New Price ↔ Discount αμφίδρομα.
-- Κάτω actions πραγματικά: Κλείσιμο / Νέα εγγραφή / Διόρθωση / Import όπου ισχύει / Excel / Ανανέωση.
+## Ζ / Ζ Ταμειακής
 
-### Αναφορές
-- PR #115: base Reports suite + Καταστροφές με **Τιμή αγοράς** και **Σύνολο αγοράς**.
-- PR #116: audit Διαγραφών λίστας πώλησης + Απενεργοποιήσεων ειδών.
-- PR #117: Στατιστικά/Ανάλυση αποθήκης + lazy movement drill-down.
-- PR #118: Στατιστικά πωλήσεων + historical cost-at-sale + lazy sale drill-down.
-- PR #119: Delivery report από DispatchNote / DispatchNoteLine + lazy line drill-down.
+Δεν εμφανίζονται πραγματικά Z μέχρι πραγματική φορολογική πηγή connector/RBS/provider. Ποτέ fabricated Z.
 
-Υλοποιημένα report families:
-- Διαγραφές λίστας πώλησης.
-- Αλλαγές τιμών.
-- Απενεργοποιήσεις ειδών.
-- Χρονολόγιο κινήσεων.
-- Αναφορά τμημάτων.
-- Delivery.
-- Παραστατικά.
-- Απογραφές.
-- Καταστροφές.
-- Στιγμιότυπα αποθήκης / ανά είδος.
-- Στατιστικά/Ανάλυση αποθήκης.
-- Στατιστικά πωλήσεων.
-- LogIn.
+# ΤΡΕΧΟΥΣΑ ΕΡΓΑΣΙΑ — GLOBAL COLOR AUDIT
 
-`Ζ / Ζ Ταμειακής`: UI placeholder/availability state μόνο. Δεν εμφανίζεται πραγματικό Ζ μέχρι πραγματική φορολογική πηγή connector/RBS/provider. Ποτέ fabricated Z.
+Branch: `fix/global-myworkstation-color-audit`
+PR: **#120 — Normalize all Commerce colors to MyWorkStation navy/teal baseline**
+Head μετά το normalization: `ce37eb7c2eb91a88b0e3c72b141e34f4203f280f` πριν από αυτή την ενημέρωση docs.
+CI #166 για τον κώδικα normalization: **SUCCESS** (tests + production build). Η ενημέρωση αυτού του handoff δημιουργεί νέο head/CI πριν το merge.
 
-## Καταστροφές — σταθερή απαίτηση
+### Τι διορθώνει το PR #120
 
-Η αναφορά πρέπει να κρατά πάντα:
-- ημερομηνία,
-- SKU,
-- περιγραφή,
-- ποσότητα,
-- **τιμή αγοράς**,
-- **σύνολο αγοράς = ποσότητα × πραγματικό κόστος**,
-- λιανική,
-- χειριστή,
-- κατηγορία/subcategory,
-- προμηθευτή,
-- κατάστημα,
-- συνολικό purchase total στο κάτω μέρος.
+- Προμηθευτές: active tabs/edit tabs, headers, totals, primary actions.
+- Πελάτες: active tabs/detail tabs, headers, row hover, primary actions.
+- Παραγγελίες & Αγορές: orange active tab, bright structural headers, totals, primary actions.
+- Αναφορές: orange active tabs/filter border/hover και bright headers, μαζί με stock/sales/delivery drilldowns.
+- Supplier global reports: orange selected row/totals και bright headers.
+- Supplier product catalog/transfer: headers/actions.
+- Τιμοκατάλογος: controller V2/modal/header/buttons και legacy important price-tab hotfix specificity.
+- Owner Payments / Βάρδιες & Διαφορές: structural headers/search actions.
+- Kiosk-style Product Center: orange selected row και structural active/modal/action colors.
 
-Cost source priority: `StockMovement.unitCost` → τελευταία εγκεκριμένη αγορά πριν την καταστροφή → `Product.costPrice` fallback.
+Canonical layer:
+`client/src/components/commerce/myworkstation-global-theme-normalization.css`
 
-## Touch keyboard — μόνιμος κανόνας
+Last-load bootstrap:
+`client/src/theme-normalization-bootstrap.js`
 
-Το global touch keyboard είναι ήδη υλοποιημένο. Ανοίγει σε touch/pen για text/number fields, έχει numeric layout για αριθμητικά και Greek/English για text. Date/select/file/checkbox/radio μένουν native. Μην ξαναυλοποιήσεις δεύτερο keyboard.
+Το bootstrap φορτώνεται τελευταίο στο `client/index.html`, μετά από audit/stock/sales/delivery report bootstraps.
 
-## Anti-freeze — μόνιμος κανόνας
+### Τι ΔΕΝ αλλάζει
 
-- Μην επαναφέρεις MutationObserver/render loop.
-- Sales Analytics freeze fix = PR #95.
-- Price Catalog = server pagination.
-- Supplier/Stock/Sales/Delivery item details = lazy drill-down.
-- Νέα modules να χρησιμοποιούν existing guarded observer ή event capture όταν γίνεται.
+- business logic,
+- API/routes,
+- calculations,
+- grids/layout,
+- semantic error/success/warning colors. Κόκκινο/πράσινο/amber παραμένουν όταν εκφράζουν πραγματική κατάσταση, όχι navigation/theme.
 
-# ΕΝΕΡΓΗ ΕΡΓΑΣΙΑ ΤΩΡΑ — GLOBAL COLOR AUDIT
+Regression:
+`server/test/myworkstation-global-color-baseline-v1.test.js`
 
-Ο χρήστης ζήτησε **πριν στείλει νέες φωτογραφίες** να ελεγχθούν όλα τα χρώματα του προγράμματος, επειδή αρκετές νεότερες σελίδες κράτησαν παλέτα Kiosk Manager.
+## Αμέσως επόμενο
 
-Στόχος της ενεργής εργασίας:
-- έλεγχος όλων των Commerce/BackOffice CSS και modal styles,
-- λειτουργία/layout να μείνει όπως υλοποιήθηκε,
-- Kiosk orange/έντονα Kiosk blues να αντικατασταθούν με MyWorkStation theme,
-- navy active tabs/headers,
-- teal primary actions,
-- light blue-gray backgrounds,
-- white panels,
-- χωρίς business logic/data/route αλλαγές.
-
-### Ήδη εντοπισμένα color leaks
-
-- `client/src/components/commerce/customer-control-suite.css`
-  - `.cc-tabs button.active` → orange `#ffc76d`.
-  - `.cc-detail-tabs button.active` → orange `#ffc86f`.
-  - row hover `#fff0cf` πρέπει να επανεξεταστεί.
-- `client/src/components/commerce/kiosk-reports-suite.css`
-  - `.kr-tabs button.active` → orange `#ffc978`.
-  - filter border `#ef9b20`.
-  - έντονο `#1475bd` σε filter/table headers — έλεγχος/normalization σε navy MyWorkStation.
-  - row hover `#fff0c8`.
-- `client/src/components/commerce/supplier-global-reports.css`
-  - `.row.selected` → orange `#ffd18c`.
-  - totals border `#efb04f`.
-  - headers `#2378c7` πρέπει να εναρμονιστούν.
-- `supplier-product-catalog.css`, `supplier-product-transfer.css`, report V3/V4/V5 CSS: έλεγχος των strong bright-blue headers/controls έναντι του baseline.
-- `price-catalog-controller-v2.css`: έλεγχος Kiosk-like blues και normalization προς το ήδη πιο σωστό `price-catalog-suite.css` / visible nav MyWorkStation theme.
-
-### Κατάσταση color audit
-
-Το audit έχει ξεκινήσει σε επίπεδο εντοπισμού CSS leaks. **Δεν έχει ακόμη γίνει final color-fix PR.**
-Αυτό είναι το αμέσως επόμενο task.
-
-## Αμέσως επόμενα βήματα
-
-1. Δημιουργία branch για global color normalization.
-2. Διόρθωση CSS μόνο — όχι business logic.
-3. Regression test που απαγορεύει τις γνωστές Kiosk orange τιμές στα βασικά Commerce suites.
-4. PR → CI → merge.
-5. Επιβεβαίωση Render SUCCESS.
-6. Τότε μήνυμα στον χρήστη:
+1. Περιμένουμε το νέο CI του PR #120 μετά την ενημέρωση handoff.
+2. Merge PR #120 όταν είναι SUCCESS.
+3. Περιμένουμε Render SUCCESS.
+4. Επιβεβαιώνουμε ότι το handoff δείχνει το τελικό merge commit.
+5. Μετά λέμε στον χρήστη:
 
 **«Ο ΕΛΕΓΧΟΣ ΧΡΩΜΑΤΩΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΣΤΕΙΛΕ ΜΟΥ ΤΙΣ ΝΕΕΣ ΦΩΤΟΓΡΑΦΙΕΣ.»**
