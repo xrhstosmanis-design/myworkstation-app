@@ -2,6 +2,7 @@ import React,{useEffect,useState} from "react";
 import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
+import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
 
 async function request(path,options={}){
   const token=localStorage.getItem("token");
@@ -32,6 +33,7 @@ const enhanceChildWindows=()=>{
 export default function CommerceLauncher(){
   const [visible,setVisible]=useState(false);
   const [mode,setMode]=useState("products");
+  const [inventoryStoreId,setInventoryStoreId]=useState("");
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
   const [stores,setStores]=useState([]);
   const [minimized,setMinimized]=useState(false);
@@ -49,20 +51,28 @@ export default function CommerceLauncher(){
   },[visible]);
   const open=async()=>{
     setMode("products");setVisible(true);setMinimized(false);setMaximized(true);
-    try{setStores(await request("/api/stores"))}catch{setStores([])}
+    try{const list=await request("/api/stores");setStores(list);setInventoryStoreId(list[0]?.id||"")}catch{setStores([]);setInventoryStoreId("")}
   };
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
+  const interceptWarehouse=event=>{
+    if(mode!=="legacy")return;
+    const button=event.target.closest?.(".commerce-hub .commerce-module-strip button");
+    if(!button||!String(button.textContent||"").includes("Αποθήκη")||button.disabled)return;
+    event.preventDefault();event.stopPropagation();
+    const selector=document.querySelector(".commerce-hub > .panel label select");
+    setInventoryStoreId(selector?.value||stores[0]?.id||"");setMode("inventory");
+  };
   if(!authenticated)return null;
   return <>
     <button className="commerce-launcher" onClick={open}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
-    {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
+    {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
       <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation BackOffice</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>setVisible(false)}><X/></button></div></div>
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
-        <button className={mode==="legacy"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
+        <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
-      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
+      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
       </>}
     </section></div>}
   </>;
