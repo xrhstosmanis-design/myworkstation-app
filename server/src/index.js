@@ -24,6 +24,8 @@ import kioskReportsStockV3Routes from "./routes/kiosk-reports-stock-v3.js";
 import kioskReportsSalesV4Routes from "./routes/kiosk-reports-sales-v4.js";
 import kioskReportsDeliveryV5Routes from "./routes/kiosk-reports-delivery-v5.js";
 import kioskReportsRoutes from "./routes/kiosk-reports.js";
+import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
+import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -85,6 +87,8 @@ app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsStockV
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsSalesV4Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsDeliveryV5Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsRoutes);
+app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveImportRoutes);
+app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
