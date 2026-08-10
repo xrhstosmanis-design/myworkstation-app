@@ -16,6 +16,7 @@ import {installOwnerShiftControlCenter} from "./components/commerce/installOwner
 import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseOrdersSuite.js";
 import {installSupplierControlSuite} from "./components/commerce/installSupplierControlSuite.js";
 import {installCustomerControlSuiteV2} from "./components/commerce/installCustomerControlSuiteV2.js";
+import {installPriceCatalogSuite} from "./components/commerce/installPriceCatalogSuite.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
@@ -33,6 +34,7 @@ import "./components/commerce/owner-shift-control-center.css";
 import "./components/commerce/purchase-orders-suite.css";
 import "./components/commerce/supplier-control-suite.css";
 import "./components/commerce/customer-control-suite.css";
+import "./components/commerce/price-catalog-suite.css";
 import "./components/commerce/supplier-product-transfer.css";
 import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
@@ -101,8 +103,12 @@ const installCustomerControlSafely=()=>{
   if(!document.querySelector(".commerce-hub")||document.querySelector("[data-customer-control-launch]"))return;
   installCustomerControlSuiteV2();
 };
-installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely()});
+const installPriceCatalogSafely=()=>{
+  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-price-catalog-launch]"))return;
+  installPriceCatalogSuite();
+};
+installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
