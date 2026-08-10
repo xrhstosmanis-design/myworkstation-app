@@ -17,6 +17,7 @@ import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseO
 import {installSupplierControlSuite} from "./components/commerce/installSupplierControlSuite.js";
 import {installCustomerControlSuiteV2} from "./components/commerce/installCustomerControlSuiteV2.js";
 import {installPriceCatalogSuite} from "./components/commerce/installPriceCatalogSuite.js";
+import {installPriceCatalogVisibleNav} from "./components/commerce/installPriceCatalogVisibleNav.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
@@ -40,6 +41,7 @@ import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
 import "./components/commerce/touch-keyboard.css";
 import "./styles.css";
+import "./components/commerce/price-catalog-visible-nav.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
@@ -81,6 +83,7 @@ const storeApi=async(path,options={})=>{
 const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
 
 installTouchKeyboard();
+installPriceCatalogVisibleNav();
 installSupplierProductTransfer();
 installSupplierProductCatalog();
 installSupplierGlobalReports();
