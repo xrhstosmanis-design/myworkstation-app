@@ -1,0 +1,75 @@
+:root{--mws-navy:#123b5d;--mws-navy-deep:#102f4e;--mws-teal:#0f766e;--mws-teal-soft:#e8f7f4;--mws-surface:#fff;--mws-bg:#f3f7fb;--mws-line:#cbd9e5;--mws-soft:#eef5f8;--mws-text:#17324d}
+
+/* MyWorkStation global Commerce color normalization. Kiosk screenshots define functionality, not palette. Semantic warning/error/success colors are intentionally preserved. */
+
+.sc-tabs button.active,.sc-edit-tabs button.active,
+.cc-tabs button.active,.cc-detail-tabs button.active,
+.po-tabs button.active,.kr-tabs button.active,
+.pc-tabs button.active,.price-catalog-visible-nav button.active,
+.price-catalog-suite>.pc-tabs>button.active,
+.kiosk-main-tabs button.active,.product-tabs button.active{
+ background:var(--mws-navy)!important;color:#fff!important;border-color:var(--mws-navy)!important;box-shadow:inset 0 -3px 0 var(--mws-teal)!important
+}
+
+.sc-filter,.kr-filter{border-bottom-color:var(--mws-line)!important}
+.sc-table .row.totals,.sgr-table .row.totals,.po-line-grid .row.totals{background:#f5f9fc!important;border-top-color:#9fb7c8!important;color:var(--mws-text)!important}
+.sgr-table .row.selected,.kiosk-tr.selected-row{background:var(--mws-teal-soft)!important;box-shadow:inset 4px 0 var(--mws-teal)!important}
+.cc-table .row:not(.head):not(.totals):hover,.kr-row:not(.kr-head):hover{background:#edf8f6!important}
+
+.sc-filter>b,.sc-table .row.head,.sc-modal-title,
+.sgr-table .row.head,.spc-table .row.head,.spt-table .row.head,
+.po-filter>b,.po-panel-head,.po-orders-table .row.head,.po-stock-table .row.head,.po-line-grid .row.head,.po-barcode-table .row.head,.po-modal-title.blue,
+.cc-filter>b,.cc-table .row.head,.cc-modal-title,
+.kr-filter>b,.kr-panel h3,.kr-head,.kr-stock-detail-table .detail-head,
+.owner-payments-filter-title,.owner-payments-table .row.head,
+.osc-filter-title,.osc-row.head,.osc-detail-table .row.head,
+.pcv2-head,.pcv2-table .row.head,.pcv2-title,
+.kiosk-tr.head,.tab-row.head{background:var(--mws-navy)!important;color:#fff!important}
+
+.sc-form button.primary,.spt-actions .primary,
+.cc-form button.primary,
+.po-filter-actions button:first-child,.po-order-toolbar button[data-add-line],.po-modal .primary,
+.owner-payments-search,.osc-search,
+.pcv2-actions button.primary,.pc-modal-actions button.primary,
+.kiosk-toolbar form button,.kiosk-top-actions button.primary,.kiosk-product-card .primary,.product-card-actions .primary,.kiosk-modal-actions .primary{
+ background:var(--mws-teal)!important;color:#fff!important;border-color:var(--mws-teal)!important
+}
+
+.sc-filter button,.sc-form button,.sc-panel button,
+.cc-filter button,.cc-summary button,
+.kr-filter button,.kr-toolbar button,
+.pcv2-footer button,.pcv2-actions button,.pcv2-search button,
+.spc-controls button,.spc-actions button,.spc-detail-actions button,
+.spt-actions button,.po-title>button,.po-search,.po-filter-actions button,.po-stock-filter button,
+.osc-filter-actions button,.osc-panel-head button,.osc-dialog-actions button{color:var(--mws-navy)!important}
+
+.sc-table strong,.sc-context button,.sc-pencil,.sc-doc,
+.sgr-summary b,.sgr-table strong,.sgr-expand,.sgr-detail-head,.sgr-detail-table strong,
+.spc-summary b,.spc-table strong,.spc-barcodes h3,
+.kr-total,.kr-summary strong,.kr-sales-cards b,.kr-sales-plus,.kr-sales-drill-head,.kr-expand,.kr-stock-dialog h3,
+.pcv2-footer strong,.pcv2-table button,.pcv2-line label,.pcv2-form label,.pcv2-product,
+.pc-footer>strong,.pc-price-pencil,.pc-table button,
+.owner-payments-table .row strong,.owner-payments-bars .bar-row b{color:var(--mws-navy)!important}
+.kr-sales-plus,.kr-expand,.kr-delivery-plus,.sgr-expand{border-color:#8dbbb6!important}
+.kr-sales-plus:hover,.kr-expand:hover,.kr-delivery-plus:hover,.sgr-expand:hover{background:var(--mws-teal-soft)!important;color:var(--mws-teal)!important}
+
+.sgr-detail,.kr-sales-drill,.kr-delivery-drill{background:#f2f8fb!important;border-color:#b9d0dc!important}
+.sgr-detail-table .row.head{background:#dce9ef!important;color:var(--mws-navy)!important}
+.kr-info,.pcv2-product,.cc-ledger-balance{background:#eef6f8!important;color:var(--mws-navy)!important}
+
+.kiosk-main-tabs{border-bottom-color:var(--mws-navy)!important}
+.kiosk-toolbar form button{background:var(--mws-teal)!important}
+.edit-cell{color:var(--mws-teal)!important}
+.product-tabs button.active{color:#fff!important}
+
+.owner-payments-filter-title,.osc-filter-title{background:var(--mws-navy)!important}
+.owner-payments-search,.osc-search{background:var(--mws-teal)!important}
+.owner-payments-table .row.head,.osc-row.head,.osc-detail-table .row.head{background:var(--mws-navy)!important}
+
+.sc-modal-title,.cc-modal-title,.pcv2-title,.po-modal-title.blue,.osc-dialog-title,.kiosk-modal-title{background:var(--mws-navy)!important;color:#fff!important}
+
+.supplier-control-suite :is(button,input,select,textarea):focus-visible,
+.customer-control-suite :is(button,input,select,textarea):focus-visible,
+.purchase-orders-suite :is(button,input,select,textarea):focus-visible,
+.kiosk-reports-suite :is(button,input,select):focus-visible,
+.price-catalog-suite :is(button,input,select):focus-visible{outline:3px solid rgba(15,118,110,.28)!important;outline-offset:1px!important}
