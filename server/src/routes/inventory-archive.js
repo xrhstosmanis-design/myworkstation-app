@@ -44,7 +44,7 @@ router.get("/",async(req,res,next)=>{
     const total=Number(countRows[0]?.count||0);
 
     const rows=await prisma.$queryRaw`
-      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."active" AS "productActive",
+      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
         c."name" AS "categoryName",mp."subcategoryName",mp."brandName",
         sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",
@@ -89,10 +89,10 @@ router.get("/",async(req,res,next)=>{
     `;
 
     const items=rows.map(row=>{
-      const salePrice=n(row.salePrice),vatRate=n(row.vatRate),currentStock=n(row.currentStock),fallbackCost=n(row.lastPurchasePrice||0),baseCost=n(row.averagePurchasePrice||0),cost=fallbackCost||baseCost||0;
+      const salePrice=n(row.salePrice),vatRate=n(row.vatRate),currentStock=n(row.currentStock),latest=n(row.lastPurchasePrice||0),average=n(row.averagePurchasePrice||0),stored=n(row.costPrice||0),cost=latest||average||stored||0;
       const saleNet=salePrice/(1+vatRate/100);
       return {...row,
-        salePrice,currentStock,minStock:row.minStock===null?null:n(row.minStock),vatRate,
+        salePrice,currentStock,minStock:row.minStock===null?null:n(row.minStock),vatRate,costPrice:n(row.costPrice),
         lastPurchasePrice:row.lastPurchasePrice===null?null:n(row.lastPurchasePrice),
         averagePurchasePrice:row.averagePurchasePrice===null?null:n(row.averagePurchasePrice),
         efoodPrice:row.efoodPrice===null?null:n(row.efoodPrice),woltPrice:row.woltPrice===null?null:n(row.woltPrice),sales15Qty:n(row.sales15Qty),
