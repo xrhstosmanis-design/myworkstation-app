@@ -20,6 +20,7 @@ import customerControlRoutes from "./routes/customer-control-v2.js";
 import priceCatalogRoutes from "./routes/price-catalog-normalized.js";
 import kioskReportsAuditRoutes from "./routes/kiosk-reports-audit.js";
 import kioskReportsStockV3Routes from "./routes/kiosk-reports-stock-v3.js";
+import kioskReportsSalesV4Routes from "./routes/kiosk-reports-sales-v4.js";
 import kioskReportsRoutes from "./routes/kiosk-reports.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
@@ -78,6 +79,7 @@ app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerContro
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogRoutes);
 app.use("/api/reports",auth,kioskReportsAuditRoutes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsStockV3Routes);
+app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsSalesV4Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
