@@ -3,6 +3,7 @@ import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
+import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
   const token=localStorage.getItem("token");
