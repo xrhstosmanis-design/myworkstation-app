@@ -1,6 +1,7 @@
 import React from "react";
 import {createRoot} from "react-dom/client";
 import OperatorManagementPanel from "./OperatorManagementPanel.jsx";
+import {installManagementCategoriesSuite} from "./installManagementCategoriesSuite.js";
 
 let mountedRoot=null;
 let mountedHost=null;
@@ -9,6 +10,7 @@ function activeModules(){try{return JSON.parse(localStorage.getItem("activeModul
 function clearSuiteClasses(hub){[...hub.classList].filter(name=>name!=="commerce-hub"&&name.endsWith("-active")).forEach(name=>hub.classList.remove(name))}
 
 export function installOperatorManagementSuite(api){
+  installManagementCategoriesSuite(api);
   const hub=document.querySelector(".commerce-hub");
   const strip=hub?.querySelector(".commerce-module-strip");
   if(!hub||!strip||strip.querySelector("[data-operator-management-launch]"))return;
