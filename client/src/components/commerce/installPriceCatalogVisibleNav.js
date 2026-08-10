@@ -1,4 +1,5 @@
 import {installPriceCatalogControllerV2} from "./installPriceCatalogControllerV2.js";
+import {installPriceCatalogPriceFooterHotfix} from "./installPriceCatalogPriceFooterHotfix.js";
 
 const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const tabs=[
@@ -54,6 +55,7 @@ export function installPriceCatalogVisibleNav(){
   if(installed||!allowed())return;
   installed=true;
   installPriceCatalogControllerV2();
+  installPriceCatalogPriceFooterHotfix();
   document.addEventListener("click",scheduleSync,true);
   window.addEventListener("myworkstation:modules-updated",scheduleSync);
   syncAll();
