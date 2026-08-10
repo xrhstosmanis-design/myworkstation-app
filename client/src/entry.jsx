@@ -15,6 +15,7 @@ import {installKioskPaymentsImport} from "./components/commerce/installKioskPaym
 import {installOwnerShiftControlCenter} from "./components/commerce/installOwnerShiftControlCenter.js";
 import {installPurchaseOrdersSuite} from "./components/commerce/installPurchaseOrdersSuite.js";
 import {installSupplierControlSuite} from "./components/commerce/installSupplierControlSuite.js";
+import {installCustomerControlSuiteV2} from "./components/commerce/installCustomerControlSuiteV2.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
@@ -31,6 +32,7 @@ import "./components/commerce/owner-payments-suite.css";
 import "./components/commerce/owner-shift-control-center.css";
 import "./components/commerce/purchase-orders-suite.css";
 import "./components/commerce/supplier-control-suite.css";
+import "./components/commerce/customer-control-suite.css";
 import "./components/commerce/supplier-product-transfer.css";
 import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
@@ -95,8 +97,12 @@ const installSupplierControlSafely=()=>{
   if(!document.querySelector(".commerce-hub")||document.querySelector("[data-supplier-control-launch]"))return;
   installSupplierControlSuite();
 };
-installPurchaseOrdersSafely();installSupplierControlSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely()});
+const installCustomerControlSafely=()=>{
+  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-customer-control-launch]"))return;
+  installCustomerControlSuiteV2();
+};
+installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
@@ -108,6 +114,6 @@ else if(posMatch){
 }else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
 else{
   installOwnerPasswordChangeGate();installModuleUiEnforcement();import("./main.jsx");
-  const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(launcherRoot).render(<PilotReportLauncherLive/>);
+  const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(document.getElementById("pilot-report-root")).render(<PilotReportLauncherLive/>);
   const commerceRoot=document.createElement("div");commerceRoot.id="commerce-root";document.body.appendChild(commerceRoot);createRoot(commerceRoot).render(<CommerceLauncher/>);
 }
