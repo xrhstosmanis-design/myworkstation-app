@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import test from "node:test";
+const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
+const read=p=>fs.readFileSync(path.join(repo,p),"utf8");
+const backend="server/src/routes/management-parameters.js";
+const panel="client/src/components/commerce/ManagementParametersPanel.jsx";
+const css="client/src/components/commerce/management-parameters.css";
+const launcher="client/src/components/commerce/CommerceLauncher.jsx";
+const b=read(backend),c=read(panel),styles=read(css),l=read(launcher),index=read("server/src/index.js");
+
+test("parameters backend parses",()=>execFileSync(process.execPath,["--check",path.join(repo,backend)]));
+test("all photographed parameter tabs exist",()=>{for(const text of ["Αρχείο επιχείρησης","Τράπεζες","e-Delivery","PoS","BackOffice","Βάρδιες","Πελάτες","eMail","Λοιπά","Αγορές & παραγγελίες"])assert.ok(c.includes(text),text)});
+test("gear opens real parameters panel",()=>{assert.match(l,/commerce-parameters-gear/);assert.match(l,/ManagementParametersPanel/);assert.match(l,/Settings2/);assert.match(l,/SUPER_ADMIN/);assert.match(l,/OWNER/);assert.match(l,/ADMIN/);assert.match(l,/MANAGER/)});
+test("business profile uses real Company record",()=>{assert.match(b,/prisma\.company\.findUnique/);assert.match(b,/prisma\.company\.update/);for(const key of ["name","taxId","city","email","phone"])assert.ok(b.includes(key),key)});
+test("parameter sections are company scoped and audited",()=>{assert.match(b,/ManagementParameters/);assert.match(b,/companyId/);assert.match(b,/ManagementParameterAudit/);assert.match(b,/actorId/);assert.match(b,/section/)});
+test("secrets and manager PIN are encrypted and never returned",()=>{assert.match(b,/aes-256-gcm/);assert.match(b,/woltPasswordEnc/);assert.match(b,/efoodPasswordEnc/);assert.match(b,/aadePasswordEnc/);assert.match(b,/managerPinEnc/);assert.match(b,/publicSecrets/);assert.doesNotMatch(b,/decrypt\s*=/);assert.doesNotMatch(b,/ADVANCED99|997261585AD|EDPS|13248261/)});
+test("unconnected providers are explicit instead of fabricated",()=>{assert.match(b,/aade:"NOT_CONNECTED"/);assert.match(b,/edelivery:"NOT_CONNECTED"/);assert.match(b,/eftpos:"NOT_CONNECTED"/);assert.match(c,/Μη συνδεδεμένο/)});
+test("critical photographed fields are present",()=>{for(const text of ["venue_id","vendor_id","Χρήση PIN για είσοδο χειριστή","Ταμειακή: επιβεβαίωση συναλλαγής EFT/POS","OnLine έλεγχος λιανικής από Barcode","Ειδοποίηση στο έλλειμμα","Πρόθεμα κάρτας πελάτη","Συμβάντα αυτόματης αποστολής e-mail","Ζυγιζόμενα & ηλεκτρονικός ζυγός","Παράμετροι ΑΑΔΕ","Πρόταση παραγγελίας (ημέρες από)"])assert.ok(c.includes(text),text)});
+test("parameters retain core lower actions",()=>{assert.match(c,/Κλείσιμο/);assert.match(c,/Καταχώρηση/);assert.match(c,/Οι παράμετροι αποθηκεύτηκαν/)});
+test("management role guard excludes store operators",()=>{assert.match(b,/STORE_OPERATOR/);assert.match(b,/SUPER_ADMIN/);assert.match(b,/OWNER/);assert.match(b,/ADMIN/);assert.match(b,/MANAGER/)});
+test("specific parameter route mounts before generic management route",()=>{const specific=index.indexOf('/api/management/parameters');const generic=index.indexOf('/api/management",auth');assert.ok(specific>=0&&generic>=0&&specific<generic)});
+test("parameter UI adds no MutationObserver and keeps MyWorkStation colors",()=>{assert.doesNotMatch(c,/MutationObserver/);assert.match(styles,/#123b5d/);assert.match(styles,/#0f766e/);assert.doesNotMatch(styles,/#ffa500|#ff9/i)});
