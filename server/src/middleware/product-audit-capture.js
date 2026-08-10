@@ -4,8 +4,10 @@ import {ensureKioskReportAuditSchema,insertKioskAuditEvent} from "../kiosk-repor
 function requestedChange(req){
   if(req.method!=="PATCH"||req.body?.active===undefined)return null;
   if(req.path==="/bulk-card"&&Array.isArray(req.body?.productIds))return {ids:[...new Set(req.body.productIds.map(String))],nextActive:req.body.active===true,sourceType:"BULK_PRODUCT_CARD"};
-  const match=req.path.match(/^\/([^/]+)\/card$/);
+  let match=req.path.match(/^\/([^/]+)\/card$/);
   if(match)return {ids:[decodeURIComponent(match[1])],nextActive:req.body.active===true,sourceType:"PRODUCT_CARD"};
+  match=req.path.match(/^\/products\/([^/]+)$/);
+  if(match)return {ids:[decodeURIComponent(match[1])],nextActive:req.body.active===true,sourceType:"COMMERCE_PRODUCT"};
   return null;
 }
 
