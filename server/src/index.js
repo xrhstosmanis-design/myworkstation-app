@@ -16,7 +16,7 @@ import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderRoutes from "./routes/purchase-orders.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
-import customerControlRoutes from "./routes/customer-control.js";
+import customerControlRoutes from "./routes/customer-control-v2.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
