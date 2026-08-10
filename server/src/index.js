@@ -17,6 +17,7 @@ import managementModifiersRoutes from "./routes/management-modifiers.js";
 import managementCustomerCategoriesRoutes from "./routes/management-customer-categories.js";
 import managementProfessionsRoutes from "./routes/management-professions.js";
 import managementBusinessUnitsRoutes from "./routes/management-business-units.js";
+import managementParametersRoutes from "./routes/management-parameters.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import ownerPaymentsRoutes from "./routes/owner-payments.js";
 import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
@@ -86,6 +87,7 @@ app.use("/api/management/modifiers",auth,requireCompanyModule("INVENTORY"),manag
 app.use("/api/management/customer-categories",auth,requireCompanyModule("CORE"),managementCustomerCategoriesRoutes);
 app.use("/api/management/professions",auth,requireCompanyModule("CORE"),managementProfessionsRoutes);
 app.use("/api/management/business-units",auth,requireCompanyModule("CORE"),managementBusinessUnitsRoutes);
+app.use("/api/management/parameters",auth,requireCompanyModule("CORE"),managementParametersRoutes);
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
 app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTransactionRoutes);
