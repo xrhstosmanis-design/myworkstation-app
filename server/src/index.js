@@ -13,6 +13,7 @@ import managementCategoriesRoutes from "./routes/management-categories.js";
 import managementVatDepartmentsRoutes from "./routes/management-vat-departments.js";
 import managementExpenseCategoriesRoutes from "./routes/management-expense-categories.js";
 import managementProductCompaniesRoutes from "./routes/management-product-companies.js";
+import managementModifiersRoutes from "./routes/management-modifiers.js";
 import storeTransactionRoutes from "./routes/store-transactions.js";
 import ownerPaymentsRoutes from "./routes/owner-payments.js";
 import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
@@ -78,6 +79,7 @@ app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operato
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);
 app.use("/api/management/product-companies",auth,requireCompanyModule("INVENTORY"),managementProductCompaniesRoutes);
+app.use("/api/management/modifiers",auth,requireCompanyModule("INVENTORY"),managementModifiersRoutes);
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
 app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTransactionRoutes);
