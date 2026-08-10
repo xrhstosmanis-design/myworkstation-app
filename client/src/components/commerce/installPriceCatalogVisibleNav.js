@@ -1,5 +1,6 @@
-const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
+import {installPriceCatalogControllerV2} from "./installPriceCatalogControllerV2.js";
 
+const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const tabs=[
   ["prices","▣ Έλεγχος τιμών πώλησης"],
   ["leaflet","🎟 Προσφορές φυλλαδίου"],
@@ -7,18 +8,12 @@ const tabs=[
   ["wholesale","🔖 Τιμές χονδρικής"]
 ];
 let installed=false;
-let lastTab="prices";
 let syncScheduled=false;
 
 function scheduleSync(){
   if(syncScheduled)return;
   syncScheduled=true;
   requestAnimationFrame(()=>{syncScheduled=false;syncAll()});
-}
-
-function activeInternalTab(suite){
-  const active=suite?.querySelector("[data-pc-tab].active");
-  return active?.dataset?.pcTab||lastTab;
 }
 
 function buildNav(hub,panel,strip){
@@ -31,22 +26,6 @@ function buildNav(hub,panel,strip){
   nav.hidden=true;
   nav.innerHTML=tabs.map(([id,label])=>`<button type="button" data-price-catalog-visible-tab="${id}">${label}</button>`).join("");
   strip.insertAdjacentElement("afterend",nav);
-  nav.addEventListener("click",event=>{
-    const button=event.target.closest("[data-price-catalog-visible-tab]");
-    if(!button)return;
-    event.preventDefault();
-    event.stopPropagation();
-    const tabId=button.dataset.priceCatalogVisibleTab;
-    lastTab=tabId;
-    const suite=hub.querySelector(".price-catalog-suite:not([hidden])")||hub.querySelector(".price-catalog-suite");
-    const internal=suite?.querySelector(`[data-pc-tab="${tabId}"]`);
-    if(!internal){
-      console.error("Price catalog internal tab missing",tabId);
-      return;
-    }
-    internal.click();
-    scheduleSync();
-  });
   return nav;
 }
 
@@ -61,11 +40,11 @@ function syncHub(hub){
   const active=visibleSuite&&launch.classList.contains("active");
   nav.hidden=!active;
   if(!active)return;
-  lastTab=activeInternalTab(suite);
+  const selected=document.querySelector(".price-catalog-visible-nav button.active")?.dataset.priceCatalogVisibleTab||"prices";
   nav.querySelectorAll("[data-price-catalog-visible-tab]").forEach(button=>{
-    const selected=button.dataset.priceCatalogVisibleTab===lastTab;
-    button.classList.toggle("active",selected);
-    button.setAttribute("aria-selected",selected?"true":"false");
+    const isSelected=button.dataset.priceCatalogVisibleTab===selected;
+    button.classList.toggle("active",isSelected);
+    button.setAttribute("aria-selected",isSelected?"true":"false");
   });
 }
 
@@ -74,6 +53,7 @@ function syncAll(){document.querySelectorAll(".commerce-hub").forEach(syncHub)}
 export function installPriceCatalogVisibleNav(){
   if(installed||!allowed())return;
   installed=true;
+  installPriceCatalogControllerV2();
   document.addEventListener("click",scheduleSync,true);
   window.addEventListener("myworkstation:modules-updated",scheduleSync);
   syncAll();
