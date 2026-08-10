@@ -23,10 +23,10 @@
 
 ## Τρέχουσα LIVE βάση
 
-Τελευταίο live πακέτο: **PR #121 — Modern BackOffice Home + Χειριστές**.
-Merge commit: `107a533c5b2d88489ceffdab9fdc65709f9c77e8`.
-CI #169: **SUCCESS** (306 tests + production build).
-Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** μετά το PR #121.
+Τελευταίο live πακέτο: **PR #122 — Αρχείο ειδών (Αποθήκη)**.
+Merge commit: `af062882cffb143b70403e73ff259301de400c8b`.
+CI #170: **SUCCESS** (tests/security + production build).
+Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** μετά το PR #122.
 
 ### Ολοκληρωμένα πακέτα
 
@@ -46,6 +46,105 @@ Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** με
 - #119 Delivery report + lazy DispatchNoteLine detail.
 - #120 Global color normalization στην εγκεκριμένη MyWorkStation navy/teal παλέτα.
 - #121 Modern αρχική Εμπορικής λειτουργίας + πλήρες πρώτο module Χειριστών.
+- #122 Πλήρες `Αρχείο ειδών (Αποθήκη)` με server pagination, πραγματικά κόστη/stock/πωλήσεις, edit, toolbar και preview-first Excel/CSV.
+
+## Αρχείο ειδών (Αποθήκη) — LIVE από PR #122
+
+Άνοιγμα:
+`Λοιπές εμπορικές λειτουργίες → Αποθήκη`.
+
+Η παλιά απλή σελίδα Αποθήκης παρακάμπτεται και ανοίγει το νέο πλήρες workspace `InventoryArchivePanel`.
+
+Κριτήρια:
+- Κατηγορία,
+- Υποκατηγορία,
+- Περιγραφή / SKU / Barcode,
+- ενεργά / όλα / ανενεργά,
+- 50 / 100 / 200 γραμμές ανά σελίδα.
+
+Anti-freeze:
+- server pagination από την αρχή,
+- ποτέ μαζικό render δεκάδων χιλιάδων προϊόντων,
+- βαριά δεδομένα αγοράς/πωλήσεων υπολογίζονται μόνο για την τρέχουσα σελίδα,
+- κανένας νέος MutationObserver μέσα στο `InventoryArchivePanel`.
+
+Πραγματικές πηγές:
+`StoreProduct`, `Product`, `ProductBarcode`, `ProductCategory`, `MasterProduct`, `PurchaseDocumentLine`, `PurchaseDocument`, `Supplier`, `SaleLine`, `Sale`.
+
+Grid πεδία:
+- Εσωτερικός κωδικός / SKU,
+- Barcode,
+- Περιγραφή,
+- Margin,
+- Markup,
+- Λιανική,
+- efood / Wolt τιμές,
+- Stock,
+- συνολική αξία λιανικής stock,
+- συνολικό κόστος stock,
+- τελευταία αγορά,
+- μέση αγορά 6μήνου,
+- ημερομηνία τελευταίας αγοράς,
+- βασικός προμηθευτής,
+- ΦΠΑ,
+- κατηγορία / υποκατηγορία,
+- brand/company field όπου υπάρχει πραγματική πηγή,
+- Alarm stock,
+- πωλήσεις τελευταίων 15 ημερών,
+- τελευταία πώληση,
+- e‑Delivery / publish stock / publish prices flags,
+- ενημέρωση,
+- μονάδα,
+- ID.
+
+Cost priority στο archive:
+**τελευταία εγκεκριμένη αγορά → μέση εγκεκριμένη αγορά 6μήνου → αποθηκευμένο `Product.costPrice`**.
+Package purchase cost κανονικοποιείται σε κόστος ανά τεμάχιο όπου υπάρχει `unitsPerPackage`.
+
+Κάτω βασικά κουμπιά:
+- Κλείσιμο,
+- Νέο είδος,
+- Ομαδική διόρθωση,
+- Παραγγελία,
+- Εισαγωγή από Excel,
+- Εκτύπωση,
+- e‑Delivery.
+
+Λειτουργίες:
+- Μολύβι → πραγματική διόρθωση καρτέλας, store-specific λιανική και πραγματικό stock adjustment.
+- Νέο είδος → `Product` + `StoreProduct`, προαιρετικό αρχικό stock.
+- Ομαδική διόρθωση → κατηγορία / ΦΠΑ / λιανική / ενεργό.
+- Παραγγελία → ανοίγει το ήδη υπάρχον πραγματικό module `Παραγγελίες & Αγορές`.
+- Εκτύπωση → browser print view.
+- e‑Delivery → υπάρχον πραγματικό Product delivery settings UI.
+
+### Excel / CSV — preview-first
+
+Routes:
+- `POST /api/inventory-archive/import-preview` — **χωρίς write**,
+- `POST /api/inventory-archive/import` — τελική εισαγωγή μετά από ρητή επιβεβαίωση.
+
+Preview ταξινομεί κάθε γραμμή ως:
+`CREATE`, `UPDATE`, `INVALID`.
+
+Matching υπάρχοντος είδους:
+SKU πρώτα, μετά Barcode.
+Δεν δημιουργούνται phantom matches.
+
+Για υπάρχοντα είδη το stock **δεν αλλάζει από προεπιλογή**. Αλλάζει μόνο αν ο χρήστης ενεργοποιήσει ρητά «Ενημέρωση stock και στα υπάρχοντα είδη».
+
+Όριο εισαγωγής: έως 2.000 γραμμές ανά αρχείο.
+
+Σημαντικό όριο της τρέχουσας έκδοσης:
+- Το preview δεν κάνει ακόμη ξεχωριστή προειδοποίηση για διπλό SKU/barcode **μέσα στο ίδιο αρχείο**. Τα database unique constraints αποτρέπουν λανθασμένη εγγραφή, αλλά μελλοντικό hardening μπορεί να προσθέσει duplicate-row warning στο preview.
+
+Κύρια αρχεία:
+- `server/src/routes/inventory-archive.js`
+- `server/src/routes/inventory-archive-import.js`
+- `client/src/components/commerce/InventoryArchivePanel.jsx`
+- `client/src/components/commerce/inventory-archive.css`
+- `client/src/components/commerce/inventory-archive-delivery.css`
+- `server/test/inventory-archive-kiosk-v1.test.js`
 
 ## Χειριστές — LIVE από PR #121
 
@@ -113,7 +212,7 @@ Access:
 - SUPER_ADMIN μπορεί να δουλεύει στο επιλεγμένο target store, χωρίς να παρακάμπτεται το store module entitlement.
 
 Anti-freeze:
-- **δεν προστέθηκε νέος MutationObserver**.
+- **δεν προστέθηκε νέος MutationObserver** από το operator suite.
 - `installOperatorManagementSafely()` τρέχει μέσα στον υπάρχοντα guarded `purchaseOrdersHostObserver`.
 
 Σημαντικό όριο τρέχουσας έκδοσης:
@@ -154,7 +253,8 @@ Semantic warning/error/success colors **δεν** αφαιρέθηκαν. Κόκ�
 
 ## ΑΜΕΣΩΣ ΕΠΟΜΕΝΟ
 
-1. Ο χρήστης κάνει `Ctrl+F5` και δοκιμάζει τη νέα αρχική Εμπορικής λειτουργίας και το `👥 Χειριστές`.
-2. Αν υπάρχει UI/runtime πρόβλημα, διορθώνεται ως μικρό hotfix χωρίς να ξαναγραφτεί το module.
+1. Ο χρήστης κάνει `Ctrl+F5 → Λοιπές εμπορικές λειτουργίες → Αποθήκη` και ελέγχει το νέο `Αρχείο ειδών (Αποθήκη)`.
+2. Αν υπάρχει UI/runtime πρόβλημα, διορθώνεται ως μικρό hotfix πάνω στο PR #122 baseline — δεν ξαναγράφουμε το module.
 3. Αν είναι σωστό, συνεχίζουμε με τις επόμενες Kiosk Manager φωτογραφίες.
-4. Μελλοντικό operator hardening: granular permission enforcement στο Store Mode token/UI/API, μόνο όταν ζητηθεί/χαρτογραφηθεί πλήρως.
+4. Μελλοντικό inventory hardening: duplicate SKU/barcode warning μέσα στο ίδιο Excel preview, μόνο αν χρειαστεί.
+5. Μελλοντικό operator hardening: granular permission enforcement στο Store Mode token/UI/API, μόνο όταν ζητηθεί/χαρτογραφηθεί πλήρως.
