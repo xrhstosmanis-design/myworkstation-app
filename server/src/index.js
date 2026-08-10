@@ -39,6 +39,7 @@ import mailRoutes from "./routes/mail.js";
 import { auth } from "./middleware/auth.js";
 import { commerceTenantGuard } from "./middleware/commerce-tenant-guard.js";
 import { requireOwnerProductAccess } from "./middleware/owner-product-access.js";
+import { productAuditCapture } from "./middleware/product-audit-capture.js";
 import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
@@ -81,6 +82,7 @@ app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes
 app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
+app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
