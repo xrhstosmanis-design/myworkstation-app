@@ -46,7 +46,9 @@ test("navigation lives inside the top commerce panel and remains observer-free",
 test("Kiosk actions include the required lower toolbar and leaflet modal",()=>{
   const c=read(controller);
   for(const label of ["Κλείσιμο","Νέα εγγραφή","Διόρθωση","Εισαγωγή από αρχείο","Excel","Ανανέωση"])assert.ok(c.includes(label),label);
-  for(const label of ["Νέα προσφορά για Φυλλάδιο","Είδος:","Κωδικός / Barcode:","Υποκατηγορία:","Τρέχουσα τιμή:","Νέα τιμή:","% έκπτωσης:","Ισχύει από:","Bonus πόντοι:","Ισχύει έως και:","Καταχώρηση"])assert.ok(c.includes(label),label);
+  assert.ok(c.includes('row?"Διόρθωση":"Νέα"'));
+  assert.ok(c.includes("προσφορά για Φυλλάδιο"));
+  for(const label of ["Είδος:","Κωδικός / Barcode:","Υποκατηγορία:","Τρέχουσα τιμή:","Νέα τιμή:","% έκπτωσης:","Ισχύει από:","Bonus πόντοι:","Ισχύει έως και:","Καταχώρηση"])assert.ok(c.includes(label),label);
   assert.match(c,/offerPrice\.addEventListener\("input",recalcDiscount\)/);
   assert.match(c,/discountPercent\.addEventListener\("input",recalcPrice\)/);
   assert.match(c,/input\.accept="\.csv,text\/csv"/);
