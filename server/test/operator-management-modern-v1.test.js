@@ -76,7 +76,7 @@ test("modern commerce home and operator screens use MyWorkStation navy teal base
   assert.match(homeCss,/#0f766e/);
   assert.match(homeCss,/commerce-module-strip/);
   assert.match(homeCss,/commerce-status-grid/);
+  assert.match(homeCss,/operator-management-active/);
   assert.match(css,/#123b5d/);
   assert.match(css,/#0f766e/);
-  assert.match(css,/operator-management-active/);
 });
