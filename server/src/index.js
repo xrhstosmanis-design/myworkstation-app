@@ -68,7 +68,7 @@ app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
-app.use("/api/operator-management",auth,requireCompanyModule("STORE_MODE"),operatorManagementV2Routes);
+app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
 app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTransactionRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
