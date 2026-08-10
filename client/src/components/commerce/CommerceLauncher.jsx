@@ -55,6 +55,14 @@ export default function CommerceLauncher(){
   };
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
   const interceptWarehouse=event=>{
+    if(mode==="inventory"){
+      const orderButton=event.target.closest?.(".ia-toolbar button");
+      if(orderButton&&String(orderButton.textContent||"").includes("Παραγγελία")){
+        event.preventDefault();event.stopPropagation();setMode("legacy");
+        window.setTimeout(()=>document.querySelector("[data-purchase-orders-launch]")?.click(),60);
+      }
+      return;
+    }
     if(mode!=="legacy")return;
     const button=event.target.closest?.(".commerce-hub .commerce-module-strip button");
     if(!button||!String(button.textContent||"").includes("Αποθήκη")||button.disabled)return;
