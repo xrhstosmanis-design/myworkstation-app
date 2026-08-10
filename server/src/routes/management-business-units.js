@@ -35,6 +35,27 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ManagementShippingMethod_company_code_uq" ON "ManagementShippingMethod" ("companyId","code")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementShippingMethod_company_active_idx" ON "ManagementShippingMethod" ("companyId","active","code")`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ManagementPosTerminal" (
+        "id" TEXT PRIMARY KEY,
+        "companyId" TEXT NOT NULL,
+        "bankId" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "tid" TEXT,
+        "paymentMethodCode" TEXT NOT NULL,
+        "iris" BOOLEAN NOT NULL DEFAULT false,
+        "helperField1" TEXT,
+        "deferredCode" TEXT,
+        "helperField3" TEXT,
+        "ipAddress" TEXT,
+        "port" INTEGER,
+        "onlineMiddleware" BOOLEAN NOT NULL DEFAULT false,
+        "notes" TEXT,
+        "active" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementPosTerminal_company_active_idx" ON "ManagementPosTerminal" ("companyId","active","name")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementPosTerminal_company_bank_idx" ON "ManagementPosTerminal" ("companyId","bankId")`);
     })().catch(error=>{schemaPromise=undefined;throw error});
   }
   return schemaPromise;
@@ -58,6 +79,21 @@ const shippingSchema=z.object({
   description:z.string().trim().min(1).max(180),
   active:z.coerce.boolean().optional()
 });
+const terminalSchema=z.object({
+  bankId:z.string().trim().min(1).max(80),
+  name:z.string().trim().min(1).max(180),
+  tid:z.string().trim().max(80).optional().nullable(),
+  paymentMethodCode:z.string().trim().min(1).max(40),
+  iris:z.coerce.boolean().optional(),
+  helperField1:z.string().trim().max(180).optional().nullable(),
+  deferredCode:z.string().trim().max(80).optional().nullable(),
+  helperField3:z.string().trim().max(180).optional().nullable(),
+  ipAddress:z.string().trim().max(120).optional().nullable(),
+  port:z.coerce.number().int().min(1).max(65535).optional().nullable(),
+  onlineMiddleware:z.coerce.boolean().optional(),
+  notes:z.string().trim().max(1000).optional().nullable(),
+  active:z.coerce.boolean().optional()
+});
 
 async function ensureBankCodeFree(companyId,code,excludeId=null){
   const rows=await prisma.$queryRaw`SELECT "id" FROM "ManagementBank" WHERE "companyId"=${companyId} AND "internalCode"=${code} AND (${excludeId}::text IS NULL OR "id"<>${excludeId}) LIMIT 1`;
@@ -66,6 +102,11 @@ async function ensureBankCodeFree(companyId,code,excludeId=null){
 async function ensureShippingCodeFree(companyId,code,excludeId=null){
   const rows=await prisma.$queryRaw`SELECT "id" FROM "ManagementShippingMethod" WHERE "companyId"=${companyId} AND "code"=${code} AND (${excludeId}::text IS NULL OR "id"<>${excludeId}) LIMIT 1`;
   if(rows.length){const e=new Error("Υπάρχει ήδη τρόπος αποστολής με αυτόν τον κωδικό.");e.status=409;throw e}
+}
+async function requireBank(companyId,bankId){
+  const bank=(await prisma.$queryRaw`SELECT "id","name","active" FROM "ManagementBank" WHERE "id"=${bankId} AND "companyId"=${companyId} LIMIT 1`)[0];
+  if(!bank){const e=new Error("Δεν βρέθηκε η επιλεγμένη τράπεζα.");e.status=400;throw e}
+  return bank;
 }
 
 router.get("/banks",async(req,res,next)=>{try{
@@ -119,6 +160,39 @@ router.delete("/shipping-methods/:id",async(req,res,next)=>{try{
   const companyId=req.user.companyId;
   const count=await prisma.$executeRaw`UPDATE "ManagementShippingMethod" SET "active"=false,"updatedAt"=NOW() WHERE "id"=${req.params.id} AND "companyId"=${companyId}`;
   if(!count)return res.status(404).json({error:"Δεν βρέθηκε ο τρόπος αποστολής."});
+  res.json({ok:true});
+}catch(error){next(error)}});
+
+router.get("/pos-terminals",async(req,res,next)=>{try{
+  const companyId=req.user.companyId;
+  const items=await prisma.$queryRaw`
+    SELECT t.*,b."name" AS "bankName",b."internalCode" AS "bankInternalCode"
+    FROM "ManagementPosTerminal" t
+    LEFT JOIN "ManagementBank" b ON b."id"=t."bankId" AND b."companyId"=t."companyId"
+    WHERE t."companyId"=${companyId} AND t."active"=true
+    ORDER BY COALESCE(b."name",''),t."name",t."createdAt"
+  `;
+  res.json({items});
+}catch(error){next(error)}});
+router.post("/pos-terminals",async(req,res,next)=>{try{
+  const companyId=req.user.companyId,b=terminalSchema.parse(req.body||{}),id=uid();
+  await requireBank(companyId,b.bankId);
+  await prisma.$executeRaw`INSERT INTO "ManagementPosTerminal" ("id","companyId","bankId","name","tid","paymentMethodCode","iris","helperField1","deferredCode","helperField3","ipAddress","port","onlineMiddleware","notes","active") VALUES (${id},${companyId},${b.bankId},${b.name},${b.tid||null},${b.paymentMethodCode},${b.iris===true},${b.helperField1||null},${b.deferredCode||null},${b.helperField3||null},${b.ipAddress||null},${b.port??null},${b.onlineMiddleware===true},${b.notes||null},${b.active!==false})`;
+  res.status(201).json({id});
+}catch(error){next(error)}});
+router.patch("/pos-terminals/:id",async(req,res,next)=>{try{
+  const companyId=req.user.companyId,b=terminalSchema.partial().parse(req.body||{});
+  const found=(await prisma.$queryRaw`SELECT * FROM "ManagementPosTerminal" WHERE "id"=${req.params.id} AND "companyId"=${companyId} LIMIT 1`)[0];
+  if(!found)return res.status(404).json({error:"Δεν βρέθηκε το PoS τερματικό."});
+  const bankId=b.bankId??found.bankId,name=b.name??found.name,tid=b.tid===undefined?found.tid:b.tid,paymentMethodCode=b.paymentMethodCode??found.paymentMethodCode,iris=b.iris===undefined?found.iris:b.iris,helperField1=b.helperField1===undefined?found.helperField1:b.helperField1,deferredCode=b.deferredCode===undefined?found.deferredCode:b.deferredCode,helperField3=b.helperField3===undefined?found.helperField3:b.helperField3,ipAddress=b.ipAddress===undefined?found.ipAddress:b.ipAddress,port=b.port===undefined?found.port:b.port,onlineMiddleware=b.onlineMiddleware===undefined?found.onlineMiddleware:b.onlineMiddleware,notes=b.notes===undefined?found.notes:b.notes,active=b.active===undefined?found.active:b.active;
+  await requireBank(companyId,bankId);
+  await prisma.$executeRaw`UPDATE "ManagementPosTerminal" SET "bankId"=${bankId},"name"=${name},"tid"=${tid||null},"paymentMethodCode"=${paymentMethodCode},"iris"=${iris},"helperField1"=${helperField1||null},"deferredCode"=${deferredCode||null},"helperField3"=${helperField3||null},"ipAddress"=${ipAddress||null},"port"=${port??null},"onlineMiddleware"=${onlineMiddleware},"notes"=${notes||null},"active"=${active},"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+  res.json({ok:true});
+}catch(error){next(error)}});
+router.delete("/pos-terminals/:id",async(req,res,next)=>{try{
+  const companyId=req.user.companyId;
+  const count=await prisma.$executeRaw`UPDATE "ManagementPosTerminal" SET "active"=false,"updatedAt"=NOW() WHERE "id"=${req.params.id} AND "companyId"=${companyId}`;
+  if(!count)return res.status(404).json({error:"Δεν βρέθηκε το PoS τερματικό."});
   res.json({ok:true});
 }catch(error){next(error)}});
 
