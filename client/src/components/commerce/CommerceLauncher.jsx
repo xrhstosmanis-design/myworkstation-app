@@ -13,6 +13,8 @@ async function request(path,options={}){
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
   return data;
 }
+const readStored=key=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
+const parameterRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 
 const enhanceChildWindows=()=>{
   document.querySelectorAll(".commerce-overlay .kiosk-modal,.commerce-overlay .capital-modal").forEach(win=>{
@@ -41,6 +43,7 @@ export default function CommerceLauncher(){
   const [minimized,setMinimized]=useState(false);
   const [maximized,setMaximized]=useState(true);
   const [parametersOpen,setParametersOpen]=useState(false);
+  const canManageParameters=parameterRoles.has(readStored("user")?.role);
   useEffect(()=>{
     const timer=setInterval(()=>setAuthenticated(Boolean(localStorage.getItem("token")&&localStorage.getItem("user"))),700);
     return()=>clearInterval(timer);
@@ -84,8 +87,8 @@ export default function CommerceLauncher(){
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
       {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
-      <button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>
-      {parametersOpen&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
+      {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
+      {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
       </>}
     </section></div>}
   </>;
