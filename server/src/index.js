@@ -16,6 +16,7 @@ import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderRoutes from "./routes/purchase-orders.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
+import customerControlRoutes from "./routes/customer-control.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -68,6 +69,7 @@ app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShift
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderActionRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
+app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
