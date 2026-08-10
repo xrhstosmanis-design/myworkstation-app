@@ -27,9 +27,11 @@ async function ensureSchema(){
         "woltPasswordEnc" TEXT,
         "efoodPasswordEnc" TEXT,
         "aadePasswordEnc" TEXT,
+        "managerPinEnc" TEXT,
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ManagementParameters" ADD COLUMN IF NOT EXISTS "managerPinEnc" TEXT`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementParameters_company_idx" ON "ManagementParameters" ("companyId")`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ManagementParameterAudit" (
         "id" TEXT PRIMARY KEY,
@@ -55,7 +57,7 @@ const optText=max=>z.string().trim().max(max).optional().nullable();
 const bool=z.coerce.boolean().optional();
 const num=(min,max)=>z.coerce.number().min(min).max(max).optional();
 const businessSchema=z.object({
-  name:optText(180),tradeTitle:optText(180),taxId:optText(30),gemi:optText(40),taxOffice:optText(120),profession:optText(220),address:optText(220),city:optText(120),postalCode:optText(20),region:optText(120),phone:optText(50),mobile1:optText(50),mobile2:optText(50),edpa:bool,distinctiveTitleEnabled:bool,vatMode:z.enum(["NORMAL","REDUCED"]).optional(),autoVatUpdate:bool,invoiceMessage:optText(500),slogan:optText(220),storeDescription:optText(220),logoPath:optText(500),website:optText(300),erpCode:optText(80)
+  name:z.string().trim().min(1).max(180).optional(),tradeTitle:optText(180),taxId:optText(30),gemi:optText(40),taxOffice:optText(120),profession:optText(220),address:optText(220),city:optText(120),postalCode:optText(20),region:optText(120),phone:optText(50),mobile1:optText(50),mobile2:optText(50),edpa:bool,distinctiveTitleEnabled:bool,vatMode:z.enum(["NORMAL","REDUCED"]).optional(),autoVatUpdate:bool,invoiceMessage:optText(500),slogan:optText(220),storeDescription:optText(220),logoPath:optText(500),website:optText(300),erpCode:optText(80)
 }).passthrough();
 const banksSchema=z.object({bankAccounts:z.array(z.object({name:z.string().trim().max(180).default(""),iban:z.string().trim().max(80).default("")})).max(4).optional()}).passthrough();
 const edeliverySchema=z.object({woltVenueId:optText(120),woltBaseUrl:optText(500),woltUsername:optText(180),woltPassword:optText(500),efoodVendorId:optText(120),efoodUrl:optText(500),efoodUsername:optText(180),efoodPassword:optText(500),syncPriceWithBase:bool}).passthrough();
@@ -89,42 +91,41 @@ async function getRow(companyId){
   await prisma.$executeRaw`INSERT INTO "ManagementParameters" ("id","companyId") VALUES (${id},${companyId}) ON CONFLICT ("companyId") DO NOTHING`;
   return (await prisma.$queryRaw`SELECT * FROM "ManagementParameters" WHERE "companyId"=${companyId} LIMIT 1`)[0];
 }
-const clean=v=>v===undefined?undefined:v;
 const mergeSection=(settings,section,value)=>({...settings,[section]:{...(settings?.[section]||{}),...value}});
+const publicSecrets=row=>({woltPasswordConfigured:Boolean(row.woltPasswordEnc),efoodPasswordConfigured:Boolean(row.efoodPasswordEnc),aadePasswordConfigured:Boolean(row.aadePasswordEnc),managerPinConfigured:Boolean(row.managerPinEnc)});
 
 router.get("/",async(req,res,next)=>{try{
   const companyId=req.user.companyId,row=await getRow(companyId);
   const company=await prisma.company.findUnique({where:{id:companyId},select:{id:true,name:true,taxId:true,city:true,email:true,phone:true}});
   if(!company)return res.status(404).json({error:"Δεν βρέθηκε η εταιρεία."});
-  res.json({
-    company,
-    settings:row.settings||{},
-    secrets:{woltPasswordConfigured:Boolean(row.woltPasswordEnc),efoodPasswordConfigured:Boolean(row.efoodPasswordEnc),aadePasswordConfigured:Boolean(row.aadePasswordEnc)},
-    integrations:{aade:"NOT_CONNECTED",edelivery:"NOT_CONNECTED",eftpos:"NOT_CONNECTED"}
-  });
+  res.json({company,settings:row.settings||{},secrets:publicSecrets(row),integrations:{aade:"NOT_CONNECTED",edelivery:"NOT_CONNECTED",eftpos:"NOT_CONNECTED"}});
 }catch(error){next(error)}});
 
 router.patch("/:section",async(req,res,next)=>{try{
   const section=String(req.params.section||"");if(!sections.has(section))return res.status(404).json({error:"Άγνωστη ενότητα παραμέτρων."});
   const companyId=req.user.companyId,row=await getRow(companyId),parsed=schemas[section].parse(req.body||{}),payload={...parsed};
-  let woltPasswordEnc=row.woltPasswordEnc,efoodPasswordEnc=row.efoodPasswordEnc,aadePasswordEnc=row.aadePasswordEnc;
+  let woltPasswordEnc=row.woltPasswordEnc,efoodPasswordEnc=row.efoodPasswordEnc,aadePasswordEnc=row.aadePasswordEnc,managerPinEnc=row.managerPinEnc;
   if(section==="edelivery"){
     if(payload.woltPassword){woltPasswordEnc=encrypt(payload.woltPassword)}delete payload.woltPassword;
     if(payload.efoodPassword){efoodPasswordEnc=encrypt(payload.efoodPassword)}delete payload.efoodPassword;
+  }
+  if(section==="pos"){
+    if(payload.managerPin){managerPinEnc=encrypt(payload.managerPin)}delete payload.managerPin;
   }
   if(section==="other"){
     if(payload.aadePassword){aadePasswordEnc=encrypt(payload.aadePassword)}delete payload.aadePassword;
   }
   if(section==="business"){
     const companyData={};
-    for(const [key,value] of Object.entries({name:payload.name,taxId:payload.taxId,city:payload.city,phone:payload.phone}))if(value!==undefined)companyData[key]=value||null;
+    if(payload.name!==undefined)companyData.name=payload.name;
+    for(const [key,value] of Object.entries({taxId:payload.taxId,city:payload.city,phone:payload.phone}))if(value!==undefined)companyData[key]=value||null;
     if(Object.keys(companyData).length)await prisma.company.update({where:{id:companyId},data:companyData});
   }
   if(section==="email"&&payload.businessEmail!==undefined)await prisma.company.update({where:{id:companyId},data:{email:payload.businessEmail||null}});
-  const settings=mergeSection(row.settings||{},section,Object.fromEntries(Object.entries(payload).filter(([,v])=>clean(v)!==undefined)));
-  await prisma.$executeRaw`UPDATE "ManagementParameters" SET "settings"=${JSON.stringify(settings)}::jsonb,"woltPasswordEnc"=${woltPasswordEnc},"efoodPasswordEnc"=${efoodPasswordEnc},"aadePasswordEnc"=${aadePasswordEnc},"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
+  const settings=mergeSection(row.settings||{},section,Object.fromEntries(Object.entries(payload).filter(([,v])=>v!==undefined)));
+  await prisma.$executeRaw`UPDATE "ManagementParameters" SET "settings"=${JSON.stringify(settings)}::jsonb,"woltPasswordEnc"=${woltPasswordEnc},"efoodPasswordEnc"=${efoodPasswordEnc},"aadePasswordEnc"=${aadePasswordEnc},"managerPinEnc"=${managerPinEnc},"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
   await prisma.$executeRaw`INSERT INTO "ManagementParameterAudit" ("id","companyId","section","actorId","actorName") VALUES (${uid()},${companyId},${section},${req.user.id||null},${req.user.fullName||req.user.email||req.user.role||null})`;
-  res.json({ok:true,secrets:{woltPasswordConfigured:Boolean(woltPasswordEnc),efoodPasswordConfigured:Boolean(efoodPasswordEnc),aadePasswordConfigured:Boolean(aadePasswordEnc)}});
+  res.json({ok:true,secrets:publicSecrets({woltPasswordEnc,efoodPasswordEnc,aadePasswordEnc,managerPinEnc})});
 }catch(error){next(error)}});
 
 export default router;
