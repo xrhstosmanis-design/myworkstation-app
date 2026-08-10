@@ -1,8 +1,9 @@
 import React,{useEffect,useState} from "react";
-import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,X} from "lucide-react";
+import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
+import ManagementParametersPanel from "./ManagementParametersPanel.jsx";
 import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
@@ -39,6 +40,7 @@ export default function CommerceLauncher(){
   const [stores,setStores]=useState([]);
   const [minimized,setMinimized]=useState(false);
   const [maximized,setMaximized]=useState(true);
+  const [parametersOpen,setParametersOpen]=useState(false);
   useEffect(()=>{
     const timer=setInterval(()=>setAuthenticated(Boolean(localStorage.getItem("token")&&localStorage.getItem("user"))),700);
     return()=>clearInterval(timer);
@@ -51,7 +53,7 @@ export default function CommerceLauncher(){
     return()=>observer.disconnect();
   },[visible]);
   const open=async()=>{
-    setMode("products");setVisible(true);setMinimized(false);setMaximized(true);
+    setMode("products");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     try{const list=await request("/api/stores");setStores(list);setInventoryStoreId(list[0]?.id||"")}catch{setStores([]);setInventoryStoreId("")}
   };
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
@@ -75,13 +77,15 @@ export default function CommerceLauncher(){
   return <>
     <button className="commerce-launcher" onClick={open}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
-      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation BackOffice</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>setVisible(false)}><X/></button></div></div>
+      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation BackOffice</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
       {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
+      <button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>
+      {parametersOpen&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
       </>}
     </section></div>}
   </>;
