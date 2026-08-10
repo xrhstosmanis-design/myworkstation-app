@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import test from "node:test";
+const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
+const read=p=>fs.readFileSync(path.join(repo,p),"utf8");
+const backend="server/src/routes/management-professions.js",installer="client/src/components/commerce/installManagementProfessionsSuite.js",bootstrap="client/src/management-professions-bootstrap.js",panel="client/src/components/commerce/ManagementProfessionsPanel.jsx",css="client/src/components/commerce/management-professions.css";
+const b=read(backend),i=read(installer),boot=read(bootstrap),c=read(panel),styles=read(css),index=read("server/src/index.js"),html=read("client/index.html");
+test("professions backend and installer parse",()=>{execFileSync(process.execPath,["--check",path.join(repo,backend)]);execFileSync(process.execPath,["--check",path.join(repo,installer)]);execFileSync(process.execPath,["--check",path.join(repo,bootstrap)])});
+test("professions are real company scoped customer metadata",()=>{assert.match(b,/ManagementCustomerProfession/);assert.match(b,/customerProfessionId/);assert.match(b,/companyId/);assert.match(b,/SUPER_ADMIN/);assert.match(b,/STORE_OPERATOR/)});
+test("professions grid matches photographed controls",()=>{for(const text of ["Κωδ","Περιγραφή","Κλείσιμο","Ανανέωση","Νέα εγγραφή","Excel / CSV","Συγχρονισμός"])assert.ok(c.includes(text),text);assert.match(c,/<Edit3\/>/);assert.match(c,/<Trash2\/>/)});
+test("profession writes are CRUD with soft deactivate",()=>{assert.match(b,/router\.post\("\/"/);assert.match(b,/router\.patch\("\/:professionId"/);assert.match(b,/SET "active"=false/);assert.doesNotMatch(b,/DELETE FROM "ManagementCustomerProfession"/)});
+test("synchronize is honest local-only integrity check",()=>{assert.match(b,/LOCAL_ONLY/);assert.match(b,/externalSource:false/);assert.match(b,/Δεν υπάρχει συνδεδεμένη εξωτερική πηγή/);assert.doesNotMatch(b,/AUTONOVA|ΑΡΤΟΠΟΙΕΙΟ|ΒΙΟΜΗΧΑΝΙΑ/)});
+test("professions tab is enabled without MutationObserver",()=>{assert.match(i,/Επαγγέλματα/);assert.match(i,/management-profession-active/);assert.doesNotMatch(i+boot,/new MutationObserver/);assert.match(html,/management-professions-bootstrap\.js/)});
+test("server mounts professions before generic management route",()=>{const specific=index.indexOf('/api/management/professions');const generic=index.indexOf('/api/management",auth');assert.ok(specific>=0&&generic>=0&&specific<generic)});
+test("MyWorkStation palette is preserved",()=>{assert.match(styles,/#123b5d/);assert.match(styles,/#0f766e/);assert.doesNotMatch(styles,/#ffa500|#ff9/i)});
