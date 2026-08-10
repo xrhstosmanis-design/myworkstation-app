@@ -23,6 +23,7 @@ import {installSupplierProductTransfer} from "./components/commerce/installSuppl
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
 import {installSupplierGlobalReports} from "./components/commerce/installSupplierGlobalReports.js";
 import {installSupplierBasicExtras} from "./components/commerce/installSupplierBasicExtras.js";
+import {installOperatorManagementSuite} from "./components/commerce/installOperatorManagementSuite.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -42,6 +43,7 @@ import "./components/commerce/supplier-product-transfer.css";
 import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
 import "./components/commerce/touch-keyboard.css";
+import "./components/commerce/commerce-home-modern.css";
 import "./styles.css";
 import "./components/commerce/price-catalog-visible-nav.css";
 
@@ -116,8 +118,12 @@ const installPriceCatalogSafely=()=>{
   if(!document.querySelector(".commerce-hub")||document.querySelector("[data-price-catalog-launch]"))return;
   installPriceCatalogSuite();
 };
-installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely()});
+const installOperatorManagementSafely=()=>{
+  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-operator-management-launch]"))return;
+  installOperatorManagementSuite(storeApi);
+};
+installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installOperatorManagementSafely();
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
