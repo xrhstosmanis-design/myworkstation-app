@@ -34,8 +34,9 @@ test("audit reports render the two real audit tabs",()=>{
   const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
   assert.match(client,/Διαγραφές λίστας πώλησης/);
   assert.match(client,/Απενεργοποιήσεις ειδών/);
-  assert.match(client,/\/api\/reports\/sale-deletions/);
-  assert.match(client,/\/api\/reports\/deactivations/);
+  assert.match(client,/api\(`\/api\/reports\/\$\{/);
+  assert.match(client,/sale-deletions/);
+  assert.match(client,/deactivations/);
   assert.doesNotMatch(client,/MutationObserver/);
 });
 
