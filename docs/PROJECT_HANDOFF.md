@@ -1,163 +1,161 @@
 # MyWorkStation — Permanent Project Handoff
 
-Αυτό το αρχείο είναι το μόνιμο σημείο συνέχειας του έργου. Κάθε νέα εργασία, αλλαγή, απόφαση ή ολοκληρωμένο στάδιο πρέπει να αποθηκεύεται άμεσα στο repository ώστε οποιαδήποτε επόμενη συνεδρία GPT να μπορεί να συνεχίσει χωρίς να ξαναστήνει ή να ξαναμαντεύει το έργο.
+Αυτό είναι το **πρώτο αρχείο συνέχειας** του έργου. Κάθε νέα συνεδρία πρέπει να το διαβάζει πριν αλλάξει κώδικα. Δεν βασιζόμαστε στη μνήμη browser/chat και δεν ξαναφτιάχνουμε λειτουργίες που υπάρχουν ήδη.
 
-## Απαράβατος κανόνας
+## Τελευταίο ασφαλές snapshot
 
-1. Δεν βασιζόμαστε στη μνήμη της συνομιλίας ή στη σελίδα του browser.
-2. Κάθε ουσιαστική αλλαγή κώδικα αποθηκεύεται αμέσως σε branch/commit.
-3. Κάθε σημαντική απόφαση αρχιτεκτονικής ή λειτουργίας καταγράφεται αμέσως σε docs μέσα στο repository.
-4. Κάθε ενεργή φάση εργασίας πρέπει να έχει σαφές branch και, όπου υπάρχει, PR.
-5. Πριν κλείσει μια φάση, ενημερώνεται αυτό το handoff με: τι ολοκληρώθηκε, τι είναι ενεργό, τι απομένει, ποιο branch/PR συνεχίζει.
-6. Καμία νέα συνεδρία δεν ξαναφτιάχνει λειτουργίες που υπάρχουν ήδη. Πρώτα διαβάζει αυτό το αρχείο, το `docs/TEST_POS_FUNCTIONAL_BASELINE.md`, το `docs/BACKOFFICE_VISUAL_BASELINE.md`, το ενεργό PR και το σχετικό branch.
-7. Το TEST είναι η μόνιμη βάση ανάπτυξης. Δεν υπάρχει πραγματικό κατάστημα ΚΑΤ ως πηγή.
-8. Το Backoffice δεν ξανασχεδιάζεται. Η εγκεκριμένη εμφάνιση/δομή είναι αυτή των screenshots της 07/08/2026 και έχει αποθηκευτεί στο `docs/BACKOFFICE_VISUAL_BASELINE.md`.
+Immutable checkpoint:
+`docs/checkpoints/PROJECT_CHECKPOINT_2026-08-10_2045.md`
 
-## Σταθερό μοντέλο δοκιμών
+Αν υπάρχει αμφιβολία για το τι είχε ολοκληρωθεί στις 10/08/2026, διαβάζουμε αυτό το checkpoint και τα σχετικά merged PRs.
 
-- SUPER ADMIN = ο ιδιοκτήτης/διαχειριστής της πλατφόρμας.
-- ADMIN = ο ιδιοκτήτης του καταστήματος.
-- POS = το POS του καταστήματος / καθημερινή ροή πωλητή.
+## Απαράβατοι κανόνες
 
-Κάθε λειτουργία θεωρείται ολοκληρωμένη μόνο όταν ελέγχεται σωστά και στους τρεις ρόλους όπου εφαρμόζεται.
+1. Μόνιμη βάση ανάπτυξης: `TEST`.
+2. Κάθε ουσιαστική αλλαγή αποθηκεύεται σε GitHub branch/commit και ολοκληρώνεται με PR → CI → merge → Render SUCCESS πριν θεωρηθεί live.
+3. Πραγματικά δεδομένα μόνο. Αν λείπει source: `—`, `NOT_CONNECTED` ή σαφής αναμονή. Ποτέ fabricated ποσά/φορολογικά δεδομένα/MARK/Z/provider status.
+4. SUPER_ADMIN = platform owner/admin. OWNER/ADMIN = store owner/admin. POS/Store Operator = καθημερινός χειριστής.
+5. Kiosk Manager / RBS / CapDriver παραμένουν ξεχωριστά. Δεν αλλάζονται και δεν προσομοιώνεται φορολογική λειτουργία χωρίς πραγματικό connector/provider.
+6. Τα screenshots Kiosk Manager είναι **λειτουργική αναφορά** για layout, πεδία, tabs, context menus, μολύβια και κάτω κουμπιά. **Δεν αντιγράφουμε τα χρώματα Kiosk Manager**.
+7. MyWorkStation visual baseline: light blue/gray background, λευκά rounded panels, navy active tabs/headers, teal primary actions, καθαρά ελληνικά labels. Βλ. `docs/BACKOFFICE_VISUAL_BASELINE.md`.
+8. Τα κάτω κουμπιά που φαίνονται σε screenshot είναι βασικά και πρέπει να είναι πραγματικά λειτουργικά.
+9. Global touch keyboard εφαρμόζεται σε όλα τα text/number inputs. Δεν ξαναγράφεται ξεχωριστά ανά module.
+10. Προστατεύουμε τον browser από render/MutationObserver loops. Διατηρείται το guarded `purchaseOrdersHostObserver` και τα υπάρχοντα lazy drill-down patterns.
 
-## Τρέχουσα κατάσταση
+## Τρέχουσα live έκδοση
 
-- Μόνιμη βάση ανάπτυξης: `TEST`.
-- Τα PR #80, #81 και #82 έχουν γίνει merge στο `main`.
-- Το PR #82 πρόσθεσε μαζική καταχώρηση προϊόντων/αποθήκης από Excel για Super Admin.
-- Το TEST POS ανοίγει ταμείο και φορτώνει την εγκεκριμένη διάταξη με quick keys, κατηγορίες και κάτω πλήκτρα.
-- Ενεργό branch: `feat/test-pos-product-linking`.
-- Ενεργό PR: #83.
-- Νέα φάση: αξιόπιστη σύνδεση quick buttons / barcode / SKU / ονομασίας με τα προϊόντα που εισάγονται στο TEST.
-- Υπάρχει μόνιμο POS functional baseline στο `docs/TEST_POS_FUNCTIONAL_BASELINE.md`.
-- Υπάρχει πλέον μόνιμο Backoffice visual/functional baseline στο `docs/BACKOFFICE_VISUAL_BASELINE.md`, βασισμένο στα screenshots 07/08/2026.
+Τελευταίο merged/live πακέτο: **PR #119 — Delivery report**.
+Merge commit: `4dcfa34f0f9b498b777c0528e196e56378b737f0`.
+Render: `https://myworkstation-app.onrender.com` — SUCCESS μετά το PR #119.
 
-## Εγκεκριμένο Backoffice baseline
+## Ολοκληρωμένα βασικά πακέτα
 
-Τα screenshots 07/08/2026 που αποτελούν την οπτική αναφορά είναι:
+### POS / Sales / Owner
+- PR #95: browser freeze fix Ανάλυσης Πωλήσεων.
+- PR #97: Από/Έως και criteria layout.
+- PR #98/#99: Έξοδα & Πληρωμές + SUPER_ADMIN.
+- PR #100/#101: Kiosk Excel/CSV payments/expenses import + read-only preview.
+- PR #102: Βάρδιες & Διαφορές με A/A και πλήρες drill-down.
 
-- `image(10).png`
-- `image(20260807-110915).png`
-- `image(20260807-111025).png`
-- `image(20260807-111313).png`
-- `image(20260807-111444).png`
-- `image(20260807-111554).png`
-- `image(20260807-111641).png`
+### Παραγγελίες / Προμηθευτές
+- PR #103: Παραγγελίες & Αγορές, MarkUp ↔ Νέα Λιανική, barcodes, proposal/alarm Stock.
+- PR #104–#110: Προμηθευτές, global touch keyboard, runtime fixes, μεταφορά ειδών/κωδικών, supplier global reports, supplier product catalog, ΔΟΥ/MYF.
 
-Η βασική εμπορική περιοχή παραμένει **Προϊόντα, Τιμές, Προσφορές & Απογραφή** με sub-tabs **Master Catalog / Τιμές ανά κατάστημα / Προσφορές / Απογραφή**, light blue-gray background, μεγάλα λευκά rounded panels, navy ενεργά tabs και teal primary actions. Ο Master Catalog πρέπει να εμφανίζει πραγματική scrollable λίστα προϊόντων και φίλτρα/ομαδοποίηση ανά ομάδα, προϊόν, ΦΠΑ, κατηγορία, υποκατηγορία, brand/εταιρεία, προμηθευτή, barcode/κωδικό και κατάσταση. Η πλήρης προδιαγραφή είναι στο `docs/BACKOFFICE_VISUAL_BASELINE.md`.
+### Πελάτες
+- PR #111: Πελατολόγιο / Εισπράξεις / Τζίρος / myDATA / Πάροχος.
+- Pencil detail: Βασικά στοιχεία / Διευθύνσεις / Λοιπά.
+- Right-click + touch long-press 650ms.
+- Είσπραξη, balance adjustment, τζίρος μήνα/έτους, ledger, safe deactivate.
+- Receipt row pencil με πραγματικό PATCH + atomic Customer.balance update.
+- myDATA/provider explicit NOT_CONNECTED μέχρι πραγματική integration.
 
-## Ολοκληρωμένη βάση POS
+### Τιμοκατάλογος
+- PR #112–#114.
+- 4 λειτουργικά tabs: Έλεγχος τιμών / Προσφορές φυλλαδίου / Προσφορές & δώρα / Τιμές χονδρικής.
+- Server pagination.
+- ProductPriceHistory audit.
+- Leaflet modal με προϊόν, barcode, subcategory, current/new price, discount, valid-from/until, bonus points.
+- New Price ↔ Discount αμφίδρομα.
+- Κάτω actions πραγματικά: Κλείσιμο / Νέα εγγραφή / Διόρθωση / Import όπου ισχύει / Excel / Ανανέωση.
 
-- CASH, CARD, IRIS, MIXED.
-- Έλεγχος μικτής πληρωμής.
-- Barcode / SKU / αναζήτηση ονόματος.
-- ΕΛΑΒΑ / ΡΕΣΤΑ και αριθμητικό πληκτρολόγιο.
-- Επιλογή γραμμής, αλλαγή ποσότητας, διαγραφή.
-- Payment panel.
-- Server-side Αναμονή συναλλαγής και επαναφορά.
-- Ξεχωριστή ledger καταγραφή μετρητών και ηλεκτρονικών πληρωμών.
-- Υποχρεωτική ανοιχτή βάρδια πριν από checkout.
+### Αναφορές
+- PR #115: base Reports suite + Καταστροφές με **Τιμή αγοράς** και **Σύνολο αγοράς**.
+- PR #116: audit Διαγραφών λίστας πώλησης + Απενεργοποιήσεων ειδών.
+- PR #117: Στατιστικά/Ανάλυση αποθήκης + lazy movement drill-down.
+- PR #118: Στατιστικά πωλήσεων + historical cost-at-sale + lazy sale drill-down.
+- PR #119: Delivery report από DispatchNote / DispatchNoteLine + lazy line drill-down.
 
-## Super Admin — Μαζική καταχώρηση αποθήκης
+Υλοποιημένα report families:
+- Διαγραφές λίστας πώλησης.
+- Αλλαγές τιμών.
+- Απενεργοποιήσεις ειδών.
+- Χρονολόγιο κινήσεων.
+- Αναφορά τμημάτων.
+- Delivery.
+- Παραστατικά.
+- Απογραφές.
+- Καταστροφές.
+- Στιγμιότυπα αποθήκης / ανά είδος.
+- Στατιστικά/Ανάλυση αποθήκης.
+- Στατιστικά πωλήσεων.
+- LogIn.
 
-Η λειτουργία είναι πλέον merged στο `main` μέσω PR #82:
+`Ζ / Ζ Ταμειακής`: UI placeholder/availability state μόνο. Δεν εμφανίζεται πραγματικό Ζ μέχρι πραγματική φορολογική πηγή connector/RBS/provider. Ποτέ fabricated Z.
 
-- `POST /api/platform/kat-test/bulk-inventory-import` αποκλειστικά για Platform Super Admin.
-- Excel `.xlsx` / `.xls`, έως 2.000 γραμμές.
-- Στήλες: Προϊόν/Ονομασία, Barcode ή SKU, Κατηγορία, Τιμή, Κόστος, ΦΠΑ, Απόθεμα, Ελάχιστο Απόθεμα, Μονάδα.
-- Ίδιο Barcode ή SKU ενημερώνει υπάρχον προϊόν αντί να δημιουργεί διπλό.
-- Αυτόματη δημιουργία νέων κατηγοριών.
-- Ενημέρωση `Product`, `ProductBarcode` και `StoreProduct` ώστε τα προϊόντα να είναι διαθέσιμα σε Admin και POS.
-- UI στο TEST Center με επιλογή Excel και σύνοψη αποτελέσματος.
+## Καταστροφές — σταθερή απαίτηση
 
-## Quick buttons / product linking
+Η αναφορά πρέπει να κρατά πάντα:
+- ημερομηνία,
+- SKU,
+- περιγραφή,
+- ποσότητα,
+- **τιμή αγοράς**,
+- **σύνολο αγοράς = ποσότητα × πραγματικό κόστος**,
+- λιανική,
+- χειριστή,
+- κατηγορία/subcategory,
+- προμηθευτή,
+- κατάστημα,
+- συνολικό purchase total στο κάτω μέρος.
 
-Στο ενεργό branch `feat/test-pos-product-linking`:
+Cost source priority: `StockMovement.unitCost` → τελευταία εγκεκριμένη αγορά πριν την καταστροφή → `Product.costPrice` fallback.
 
-- Commit `763b64f` στο `CommercialPosApp.jsx`.
-- Η αναζήτηση quick button / search δεν βασίζεται πλέον μόνο σε απλό substring.
-- Γίνεται κανονικοποίηση πεζών/κεφαλαίων, τόνων, κενών και συμβόλων.
-- Ελέγχονται με σειρά: ακριβές barcode, ακριβές SKU, ακριβές κανονικοποιημένο όνομα, κανονικοποιημένο barcode και τέλος ασφαλές όνομα.
-- Παράδειγμα: `ΝΕΡΟ 500ML` μπορεί να συνδεθεί με προϊόν `ΝΕΡΟ 500 ML` χωρίς να απαιτείται ακριβώς η ίδια μορφοποίηση.
-- Δεν αλλάζει η αποθηκευμένη διάταξη POS ούτε ξαναδημιουργούνται τα κουμπιά.
+## Touch keyboard — μόνιμος κανόνας
 
-## Stale TEST POS session recovery
+Το global touch keyboard είναι ήδη υλοποιημένο. Ανοίγει σε touch/pen για text/number fields, έχει numeric layout για αριθμητικά και Greek/English για text. Date/select/file/checkbox/radio μένουν native. Μην ξαναυλοποιήσεις δεύτερο keyboard.
 
-Μετά από εικόνα όπου το POS εμφάνιζε `Δεν βρέθηκε ενεργό κατάστημα.` ενώ στην κεφαλίδα υπήρχε ακόμα `KAT TEST`, καταγράφηκε ότι ο browser μπορούσε να κρατά παλιό operator session / παλιό store context.
+## Anti-freeze — μόνιμος κανόνας
 
-- Commit `4d3a6c8` στο `client/src/entry.jsx`.
-- Το μοναδικό canonical TEST context είναι `companyId=kat-test-company` και `storeId=kat-test-store` με ονομασία `TEST`.
-- Αν το POS ανοίξει με παλιό store/company/name ή παλιό URL, το stale operator session καθαρίζεται αυτόματα.
-- Αν υπάρχει αποθηκευμένο Platform Admin context, επαναφέρεται και ο χρήστης επιστρέφει αυτόματα στο `/platform-admin/kat-test` αντί να μένει σε χαλασμένο POS.
-- Το ίδιο recovery ενεργοποιείται όταν το POS API επιστρέψει 404 `Δεν βρέθηκε ενεργό κατάστημα.`.
-- Δεν διαγράφονται προϊόντα, POS layout, κατηγορίες ή αποθήκη.
+- Μην επαναφέρεις MutationObserver/render loop.
+- Sales Analytics freeze fix = PR #95.
+- Price Catalog = server pagination.
+- Supplier/Stock/Sales/Delivery item details = lazy drill-down.
+- Νέα modules να χρησιμοποιούν existing guarded observer ή event capture όταν γίνεται.
 
-## Άμεση συνέχεια
+# ΕΝΕΡΓΗ ΕΡΓΑΣΙΑ ΤΩΡΑ — GLOBAL COLOR AUDIT
 
-1. CI/build του PR #83 με product linking + stale-session recovery.
-2. Merge στο `main` όταν περάσει.
-3. Επανείσοδος στο TEST POS από το TEST Center, ώστε να χρησιμοποιείται μόνο το canonical TEST context.
-4. Επιβεβαίωση με προϊόντα TEST ότι quick key, barcode και αναζήτηση βρίσκουν το ίδιο προϊόν.
-5. Εφαρμογή του `BACKOFFICE_VISUAL_BASELINE.md` στον Master Catalog/Backoffice χωρίς αλλαγή της εγκεκριμένης εμφάνισης.
-6. Master Catalog: πραγματική λίστα 26k+ προϊόντων και φίλτρα/ομαδοποίηση ανά ομάδα/προϊόν/ΦΠΑ/κατηγορία/υποκατηγορία/brand/προμηθευτή/barcode/status.
-7. Από την ίδια οθόνη ο Super Admin να ενεργοποιεί μεμονωμένα ή μαζικά προϊόντα στο TEST/store.
-8. Έλεγχος κατηγοριών μετά τη μαζική εισαγωγή.
-9. Δοκιμή πώλησης με Μετρητά / Κάρτα / IRIS / Μικτή.
-10. Έλεγχος των ίδιων προϊόντων από Admin και Super Admin.
-11. Μετά συνέχιση με τις υπόλοιπες λειτουργίες καταστήματος χωρίς αλλαγή της βασικής POS ή Backoffice διάταξης.
+Ο χρήστης ζήτησε **πριν στείλει νέες φωτογραφίες** να ελεγχθούν όλα τα χρώματα του προγράμματος, επειδή αρκετές νεότερες σελίδες κράτησαν παλέτα Kiosk Manager.
 
-## Υποχρεωτική διαδικασία για κάθε επόμενη συνεδρία GPT
+Στόχος της ενεργής εργασίας:
+- έλεγχος όλων των Commerce/BackOffice CSS και modal styles,
+- λειτουργία/layout να μείνει όπως υλοποιήθηκε,
+- Kiosk orange/έντονα Kiosk blues να αντικατασταθούν με MyWorkStation theme,
+- navy active tabs/headers,
+- teal primary actions,
+- light blue-gray backgrounds,
+- white panels,
+- χωρίς business logic/data/route αλλαγές.
 
-1. Διάβασε `docs/PROJECT_HANDOFF.md`.
-2. Διάβασε `docs/TEST_POS_FUNCTIONAL_BASELINE.md`.
-3. Διάβασε `docs/BACKOFFICE_VISUAL_BASELINE.md`.
-4. Έλεγξε το ενεργό branch και το ενεργό PR.
-5. Συνέχισε από το τελευταίο commit χωρίς επανεκκίνηση του σχεδιασμού.
-6. Μετά από κάθε ουσιαστική αλλαγή, κάνε commit άμεσα και ενημέρωσε αυτό το handoff αν αλλάζει η κατάσταση του έργου.
+### Ήδη εντοπισμένα color leaks
 
-Αυτός ο κανόνας υπερισχύει οποιασδήποτε παλιότερης ροής που βασιζόταν σε προσωρινή κατάσταση, browser state ή μνήμη συνομιλίας.
+- `client/src/components/commerce/customer-control-suite.css`
+  - `.cc-tabs button.active` → orange `#ffc76d`.
+  - `.cc-detail-tabs button.active` → orange `#ffc86f`.
+  - row hover `#fff0cf` πρέπει να επανεξεταστεί.
+- `client/src/components/commerce/kiosk-reports-suite.css`
+  - `.kr-tabs button.active` → orange `#ffc978`.
+  - filter border `#ef9b20`.
+  - έντονο `#1475bd` σε filter/table headers — έλεγχος/normalization σε navy MyWorkStation.
+  - row hover `#fff0c8`.
+- `client/src/components/commerce/supplier-global-reports.css`
+  - `.row.selected` → orange `#ffd18c`.
+  - totals border `#efb04f`.
+  - headers `#2378c7` πρέπει να εναρμονιστούν.
+- `supplier-product-catalog.css`, `supplier-product-transfer.css`, report V3/V4/V5 CSS: έλεγχος των strong bright-blue headers/controls έναντι του baseline.
+- `price-catalog-controller-v2.css`: έλεγχος Kiosk-like blues και normalization προς το ήδη πιο σωστό `price-catalog-suite.css` / visible nav MyWorkStation theme.
 
----
+### Κατάσταση color audit
 
-## Νεότερη κατάσταση — 09/08/2026
+Το audit έχει ξεκινήσει σε επίπεδο εντοπισμού CSS leaks. **Δεν έχει ακόμη γίνει final color-fix PR.**
+Αυτό είναι το αμέσως επόμενο task.
 
-Η παραπάνω παλιά «Τρέχουσα κατάσταση» διατηρείται ως ιστορικό. Η πραγματική νεότερη συνέχεια είναι η ακόλουθη:
+## Αμέσως επόμενα βήματα
 
-### Ολοκληρωμένα στο `main`
+1. Δημιουργία branch για global color normalization.
+2. Διόρθωση CSS μόνο — όχι business logic.
+3. Regression test που απαγορεύει τις γνωστές Kiosk orange τιμές στα βασικά Commerce suites.
+4. PR → CI → merge.
+5. Επιβεβαίωση Render SUCCESS.
+6. Τότε μήνυμα στον χρήστη:
 
-- PR #95: fix browser freeze στα tabs Ανάλυσης Πωλήσεων.
-- PR #96/#97: λειτουργικό φίλτρο ημερομηνιών Από–Έως και Kiosk-style κριτήρια αναζήτησης στην Ανάλυση Πωλήσεων.
-- PR #98/#99: owner ενότητα **Έξοδα & Πληρωμές**, με πλήρη πρόσβαση και για Platform `SUPER_ADMIN`.
-- PR #100: ασφαλής εισαγωγή πραγματικού ιστορικού εξόδων/πληρωμών από Kiosk Manager Excel/CSV με deduplication.
-- PR #101: υποχρεωτική read-only προεπισκόπηση πριν από οριστική Kiosk εισαγωγή. Merge commit `bf06769a204433ac36112c177dccbd34eb7d7c15`, Render SUCCESS.
-
-### Ενεργή φάση — Owner Βάρδιες & Διαφορές
-
-- Ενεργό branch: `feat/owner-shift-control-center`.
-- Ενεργό PR: **#102**.
-- Μόνιμη προδιαγραφή: `docs/OWNER_SHIFT_CONTROL_CENTER.md`.
-- Πηγή λειτουργικής αναφοράς: 9 screenshots Kiosk Manager που δόθηκαν στις 09/08/2026.
-
-Απαράβατη συμπεριφορά:
-
-- Το **Α/Α** του κύριου πίνακα είναι clickable και ανοίγει την πλήρη βάρδια στο **Ημερολόγιο κινήσεων**.
-- Η **Διαφορά** είναι clickable και ανοίγει απευθείας την πλήρη προβολή **Διαφορά**.
-- Η προβολή Διαφορά εξηγεί: συνέχεια έναρξης, μετρητά, κάρτες, EFTPOS, Κάρτες−EFTPOS, καταγεγραμμένα έξοδα, έξοδα που αφαιρέθηκαν από βάρδια, αναμενόμενο, Παρέδωσα/πραγματικό, τελική διαφορά, επόμενη έναρξη, αντιλογισμούς και duplicate-review alerts.
-- Τύπος: `Διαφορά = Πραγματικό λειτουργικό κλείσιμο − Αναμενόμενο λειτουργικό κλείσιμο`.
-- Το ΦΠΑ παραμένει `—` μέχρι πραγματική φορολογική πηγή/Connector.
-- Χρησιμοποιούνται μόνο πραγματικά `CashShiftSession`, `StoreTransaction`, `Sale`, `SaleLine`, `Payment`, `ProductCategory` και `Store` δεδομένα.
-- Η νέα owner λειτουργία είναι ξεχωριστό suite/tab και δεν αλλάζει το υπάρχον Sales Analytics DOM, ώστε να μην επανέλθει browser loop/freeze.
-
-### Άμεση συνέχεια αυτής της φάσης
-
-1. Ολοκλήρωση CI του PR #102.
-2. Διόρθωση οποιουδήποτε regression/build failure πριν από merge.
-3. Merge μόνο με επιτυχημένο CI.
-4. Αναμονή Render μέχρι `SUCCESS`.
-5. Έλεγχος στο TEST ως Platform Super Admin:
-   - εμφανίζεται `📋 Βάρδιες & Διαφορές`,
-   - κλικ σε Α/Α ανοίγει πλήρη βάρδια,
-   - κλικ σε Διαφορά ανοίγει απευθείας τη σωστή ανάλυση,
-   - μηδενική διαφορά εμφανίζεται πράσινα/ουδέτερα και πραγματική απόκλιση ως σήμα ελέγχου,
-   - κανένα εικονικό φορολογικό δεδομένο.
+**«Ο ΕΛΕΓΧΟΣ ΧΡΩΜΑΤΩΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΣΤΕΙΛΕ ΜΟΥ ΤΙΣ ΝΕΕΣ ΦΩΤΟΓΡΑΦΙΕΣ.»**
