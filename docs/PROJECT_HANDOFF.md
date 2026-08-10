@@ -23,10 +23,10 @@
 
 ## Τρέχουσα LIVE βάση
 
-Τελευταίο live πακέτο: **PR #120 — Global MyWorkStation Color Audit**.
-Merge commit: `b2599c45472a17add9a77497f464e0ce14f99a99`.
-CI #167: **SUCCESS**.
-Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** μετά το PR #120.
+Τελευταίο live πακέτο: **PR #121 — Modern BackOffice Home + Χειριστές**.
+Merge commit: `107a533c5b2d88489ceffdab9fdc65709f9c77e8`.
+CI #169: **SUCCESS** (306 tests + production build).
+Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** μετά το PR #121.
 
 ### Ολοκληρωμένα πακέτα
 
@@ -45,6 +45,94 @@ Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** με
 - #118 Sales statistics + historical cost-at-sale + lazy detail.
 - #119 Delivery report + lazy DispatchNoteLine detail.
 - #120 Global color normalization στην εγκεκριμένη MyWorkStation navy/teal παλέτα.
+- #121 Modern αρχική Εμπορικής λειτουργίας + πλήρες πρώτο module Χειριστών.
+
+## Χειριστές — LIVE από PR #121
+
+Νέο κουμπί `👥 Χειριστές` μέσα στις Λοιπές εμπορικές λειτουργίες. Χρησιμοποιεί πραγματικά `Employee` + `StoreOperatorCredential` δεδομένα ανά κατάστημα.
+
+Κύρια οθόνη:
+- username,
+- όνομα,
+- δικαιώματα/ρόλος,
+- τηλ. σταθμού,
+- κινητό,
+- τελευταία είσοδος,
+- ημερομηνία εγγραφής,
+- αναζήτηση,
+- toggle «Μόνο οι ενεργοί χειριστές».
+
+Ενέργειες ανά γραμμή:
+- μολύβι → καρτέλα χειριστή,
+- κάδος → **soft deactivate** credential, ποτέ hard delete Employee,
+- λουκέτο → αλλαγή PIN.
+
+Κάτω βασικά κουμπιά:
+- Κλείσιμο,
+- Νέα εγγραφή,
+- Ανανέωση,
+- Εκτύπωση PIN.
+
+### Μολύβι — 4 tabs
+
+1. **Στοιχεία χειριστή**
+   - όνομα, τηλέφωνα, μισθός/ωριαία τιμή,
+   - πρόσβαση PoS / BackOffice,
+   - ενεργός / Power User,
+   - Διαχειριστής / Πωλητής,
+   - Kiosk-style matrix λειτουργικών permissions,
+   - τρόποι πληρωμής.
+2. **Δικαιώματα πρόσβασης**
+   - `backoffice μενού`,
+   - `backoffice καρτέλες`,
+   - αποθήκευση granular selections σε πραγματικό `StoreOperatorProfile`.
+3. **Λοιπά**
+   - customer display / VFD,
+   - terminal PoS override,
+   - cash limit,
+   - σημειώσεις.
+4. **Παραστατικά**
+   - σειρά λιανικής πώλησης,
+   - σειρά επιστροφής,
+   - διεύθυνση/τηλέφωνο εγκατάστασης.
+
+### PIN / ασφάλεια
+
+- PIN αποθηκεύεται μόνο ως bcrypt hash (`pinHash`).
+- Λουκέτο: νέο PIN + επαλήθευση, 4–8 ψηφία.
+- Αλλαγή PIN προσπαθεί να ανακαλέσει υπάρχον ενεργό operator session.
+- «Εκτύπωση PIN» **δεν μπορεί να διαβάσει παλιό PIN** επειδή είναι hashed. Δημιουργεί νέο ασφαλές 6ψήφιο random PIN, το αποθηκεύει hashed και εμφανίζει plaintext μόνο στο one-time print window.
+- create/update/PIN/deactivate γράφουν `StoreOperatorAudit`.
+
+Additive profile table:
+`StoreOperatorProfile` με username/phones/hourlyRate, PoS/BackOffice/Power User, permissions JSON, backoffice menu/tabs, customer display, terminal override, cash limit, notes, document-series fields.
+
+Access:
+- SUPER_ADMIN / OWNER / ADMIN μόνο.
+- store-scoped `STORE_MODE` module check.
+- SUPER_ADMIN μπορεί να δουλεύει στο επιλεγμένο target store, χωρίς να παρακάμπτεται το store module entitlement.
+
+Anti-freeze:
+- **δεν προστέθηκε νέος MutationObserver**.
+- `installOperatorManagementSafely()` τρέχει μέσα στον υπάρχοντα guarded `purchaseOrdersHostObserver`.
+
+Σημαντικό όριο τρέχουσας έκδοσης:
+- Τα granular checkbox permissions του νέου `StoreOperatorProfile` αποθηκεύονται πραγματικά και είναι έτοιμα για enforcement, αλλά **δεν πρέπει να ισχυριζόμαστε ότι κάθε μεμονωμένο checkbox ήδη κρύβει/μπλοκάρει όλες τις αντίστοιχες legacy routes/screens**. Το υπάρχον Store Mode token εξακολουθεί να έχει τον βασικό role-based permission μηχανισμό. Μελλοντικό βήμα: σύνδεση granular profile permissions στο token/UI/API enforcement.
+
+## Modern αρχική Εμπορικής λειτουργίας — PR #121
+
+Εφαρμόστηκε το σχέδιο που επέλεξε ο χρήστης:
+- μεγάλο λευκό rounded commercial panel,
+- καθαρό title/subtitle,
+- μοντέρνα module tiles,
+- navy active module,
+- teal interaction accents,
+- modern store selector,
+- active / locked module cards με καθαρότερο spacing,
+- χωρίς αλλαγή business logic στα υπάρχοντα modules.
+
+CSS:
+`client/src/components/commerce/commerce-home-modern.css`
 
 ## Σταθερή απαίτηση Καταστροφών
 
@@ -56,34 +144,17 @@ Render production: `https://myworkstation-app.onrender.com` — **SUCCESS** με
 
 ## Global Color Audit — ΟΛΟΚΛΗΡΩΜΕΝΟ
 
-Το PR #120 διορθώνει structural Kiosk-color leaks χωρίς αλλαγή λειτουργίας/layout.
-
-Διορθώθηκαν:
-- Προμηθευτές: active tabs/edit tabs, headers, totals, primary actions.
-- Πελάτες: active tabs/detail tabs, headers, row hover, primary actions.
-- Παραγγελίες & Αγορές: orange active tabs, bright structural headers, totals, primary actions.
-- Αναφορές: orange active tabs/filter border/hover, bright headers και stock/sales/delivery drilldowns.
-- Supplier global reports: orange selected row/totals και bright headers.
-- Supplier product catalog/transfer: structural headers/actions.
-- Τιμοκατάλογος: controller V2/modal/header/buttons και legacy important price-tab specificity.
-- Owner Payments / Βάρδιες & Διαφορές: structural headers/search actions.
-- Kiosk-style Product Center: orange selected row και structural active/modal/action colors.
-
-Canonical layer:
+Το PR #120 διορθώνει structural Kiosk-color leaks χωρίς αλλαγή λειτουργίας/layout. Canonical layer:
 `client/src/components/commerce/myworkstation-global-theme-normalization.css`
 
 Last-load bootstrap:
 `client/src/theme-normalization-bootstrap.js`
 
-Regression:
-`server/test/myworkstation-global-color-baseline-v1.test.js`
-
 Semantic warning/error/success colors **δεν** αφαιρέθηκαν. Κόκκινο/πράσινο/amber παραμένουν μόνο όταν έχουν πραγματική σημασία κατάστασης/προειδοποίησης.
 
 ## ΑΜΕΣΩΣ ΕΠΟΜΕΝΟ
 
-Ο χρήστης έχει ζητήσει να στείλει **νέες φωτογραφίες** μετά την ολοκλήρωση του color audit.
-
-Σε νέα συνεδρία, αφού διαβαστεί αυτό το handoff, η σωστή συνέχεια είναι:
-
-**«Ο ΕΛΕΓΧΟΣ ΧΡΩΜΑΤΩΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΣΤΕΙΛΕ ΜΟΥ ΤΙΣ ΝΕΕΣ ΦΩΤΟΓΡΑΦΙΕΣ.»**
+1. Ο χρήστης κάνει `Ctrl+F5` και δοκιμάζει τη νέα αρχική Εμπορικής λειτουργίας και το `👥 Χειριστές`.
+2. Αν υπάρχει UI/runtime πρόβλημα, διορθώνεται ως μικρό hotfix χωρίς να ξαναγραφτεί το module.
+3. Αν είναι σωστό, συνεχίζουμε με τις επόμενες Kiosk Manager φωτογραφίες.
+4. Μελλοντικό operator hardening: granular permission enforcement στο Store Mode token/UI/API, μόνο όταν ζητηθεί/χαρτογραφηθεί πλήρως.
