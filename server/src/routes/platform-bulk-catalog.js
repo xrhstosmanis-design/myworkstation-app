@@ -31,6 +31,24 @@ router.get("/targets",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/products",async(req,res,next)=>{
+  try{
+    const q=String(req.query.q||"").trim(),category=String(req.query.category||"").trim(),subcategory=String(req.query.subcategory||"").trim(),like=`%${q}%`;
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."sourceCode",p."name",p."categoryName",p."subcategoryName",p."brandName",p."defaultRetailPrice",p."defaultCostPrice",p."vatRate",p."vatVerified",
+        COALESCE((SELECT json_agg(b."barcode" ORDER BY b."barcode") FROM "MasterProductBarcode" b WHERE b."masterProductId"=p."id" AND b."scanEnabled"=true),'[]') AS barcodes
+      FROM "MasterProduct" p
+      WHERE p."active"=true
+        AND (${q===""} OR p."name" ILIKE ${like} OR p."sourceCode" ILIKE ${like} OR EXISTS(SELECT 1 FROM "MasterProductBarcode" bx WHERE bx."masterProductId"=p."id" AND bx."barcode" ILIKE ${like}))
+        AND (${category===""} OR p."categoryName"=${category})
+        AND (${subcategory===""} OR p."subcategoryName"=${subcategory})
+      ORDER BY p."categoryName" NULLS LAST,p."subcategoryName" NULLS LAST,p."name" LIMIT 500`;
+    const categories=await prisma.$queryRaw`SELECT DISTINCT "categoryName" AS name FROM "MasterProduct" WHERE "active"=true AND "categoryName" IS NOT NULL ORDER BY "categoryName"`;
+    const subcategories=category?await prisma.$queryRaw`SELECT DISTINCT "subcategoryName" AS name FROM "MasterProduct" WHERE "active"=true AND "categoryName"=${category} AND "subcategoryName" IS NOT NULL ORDER BY "subcategoryName"`:[];
+    res.json({rows:rows.map(row=>({...row,defaultRetailPrice:row.defaultRetailPrice===null?null:Number(row.defaultRetailPrice),defaultCostPrice:row.defaultCostPrice===null?null:Number(row.defaultCostPrice),vatRate:row.vatRate===null?null:Number(row.vatRate)})),categories:categories.map(x=>x.name),subcategories:subcategories.map(x=>x.name)});
+  }catch(error){next(error)}
+});
+
 const dispatchSchema=z.object({masterProductIds:z.array(z.string().min(1)).min(1).max(500),storeIds:z.array(z.string().min(1)).min(1).max(200)}).superRefine((body,ctx)=>{
   if(body.masterProductIds.length*body.storeIds.length>10000)ctx.addIssue({code:z.ZodIssueCode.custom,message:"Επιτρέπονται έως 10.000 συνδυασμοί προϊόν × κατάστημα."});
 });
