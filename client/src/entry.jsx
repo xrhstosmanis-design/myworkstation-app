@@ -22,6 +22,7 @@ import {installPriceCatalogVisibleNav} from "./components/commerce/installPriceC
 import {installPromotionStoreScope} from "./components/commerce/installPromotionStoreScope.js";
 import {installPromotionStoreGuard} from "./components/commerce/installPromotionStoreGuard.js";
 import {installLeafletImport} from "./components/commerce/installLeafletImport.js";
+import {installBulkPricePreview} from "./components/commerce/installBulkPricePreview.js";
 import {installKioskReportsSuite} from "./components/commerce/installKioskReportsSuite.js";
 import {installPosSaleAuditReport} from "./components/commerce/installPosSaleAuditReport.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
@@ -56,6 +57,7 @@ import "./components/commerce/price-catalog-visible-nav.css";
 import "./components/commerce/promotion-store-scope.css";
 import "./components/commerce/promotion-store-guard.css";
 import "./components/commerce/leaflet-import.css";
+import "./components/commerce/bulk-price-preview.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
@@ -88,6 +90,7 @@ const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{positio
 
 installPosCheckoutSafety();
 installTouchKeyboard();
+installBulkPricePreview();
 installPriceCatalogVisibleNav();
 installSupplierProductTransfer();
 installSupplierProductCatalog();
