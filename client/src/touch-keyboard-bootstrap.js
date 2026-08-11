@@ -7,7 +7,7 @@ const NUMERIC=[['7','8','9'],['4','5','6'],['1','2','3'],['0',',','⌫']];
 let active=null,language='EL';
 
 function eligible(el){
-  if(!el||el.disabled||el.readOnly)return false;
+  if(!el||el.disabled||el.readOnly||el.dataset?.keyboard==='off')return false;
   if(el.tagName==='TEXTAREA')return true;
   if(el.tagName!=='INPUT')return false;
   const type=(el.type||'text').toLowerCase();
@@ -68,20 +68,39 @@ function render(){
   }
 }
 function openFor(el){
+  if(!eligible(el))return;
   active=el;const shell=document.getElementById('mws-touch-keyboard');if(!shell)return;
   shell.classList.add('open');render();
   setTimeout(()=>{try{el.scrollIntoView({block:'center',behavior:'smooth'});el.focus({preventScroll:true})}catch{}},0);
 }
+function keyboardIcon(){
+  const b=document.createElement('button');
+  b.type='button';b.className='mws-keyboard-trigger';b.setAttribute('aria-label','Άνοιγμα πληκτρολογίου οθόνης');b.title='Πληκτρολόγιο οθόνης';
+  b.innerHTML='<span aria-hidden="true">⌨</span>';
+  return b;
+}
+function decorateField(el){
+  if(!eligible(el)||el.dataset.mwsKeyboardReady==='1')return;
+  el.dataset.mwsKeyboardReady='1';
+  const trigger=keyboardIcon();trigger.dataset.keepKeyboard='1';trigger.addEventListener('pointerdown',e=>e.preventDefault());trigger.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openFor(el)});
+  el.insertAdjacentElement('afterend',trigger);
+}
+function decorateAll(root=document){
+  if(root.nodeType===1&&eligible(root))decorateField(root);
+  root.querySelectorAll?.('input,textarea').forEach(decorateField);
+}
 function mount(){
   if(document.getElementById('mws-touch-keyboard'))return;
-  const shell=document.createElement('div');shell.id='mws-touch-keyboard';shell.setAttribute('role','dialog');shell.setAttribute('aria-label','Πληκτρολόγιο αφής');
+  const shell=document.createElement('div');shell.id='mws-touch-keyboard';shell.setAttribute('role','dialog');shell.setAttribute('aria-label','Πληκτρολόγιο οθόνης');
   shell.innerHTML='<div class="mws-keyboard-panel"><div class="mws-keyboard-value"></div><div class="mws-key-grid"></div></div>';
   document.body.appendChild(shell);
+  decorateAll(document);
+  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)decorateAll(node)})));
+  observer.observe(document.body,{childList:true,subtree:true});
   document.addEventListener('focusin',e=>{if(!TOUCH_CAPABLE()||!eligible(e.target))return;openFor(e.target)},true);
   document.addEventListener('pointerdown',e=>{
-    if(!TOUCH_CAPABLE())return;
-    if(eligible(e.target)){openFor(e.target);return}
-    if(shell.classList.contains('open')&&!shell.contains(e.target)&&!e.target.closest?.('[data-keep-keyboard]'))close();
+    if(eligible(e.target)&&TOUCH_CAPABLE()){openFor(e.target);return}
+    if(shell.classList.contains('open')&&!shell.contains(e.target)&&!e.target.closest?.('[data-keep-keyboard],.mws-keyboard-trigger'))close();
   },true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 }
