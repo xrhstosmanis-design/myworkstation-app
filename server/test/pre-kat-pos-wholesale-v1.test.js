@@ -9,9 +9,21 @@ const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
 const read=p=>fs.readFileSync(path.join(repo,p),"utf8");
 const backendPath="server/src/routes/store-pos.js";
 const clientPath="client/src/components/commerce/CommercialPosApp.jsx";
-const backend=read(backendPath),client=read(clientPath),css=read("client/src/components/commerce/pos-customer.css");
+const bootstrapPath="server/src/pos-pricing-bootstrap.js";
+const backend=read(backendPath),client=read(clientPath),css=read("client/src/components/commerce/pos-customer.css"),bootstrap=read(bootstrapPath),index=read("server/src/index.js");
 
-test("POS wholesale server parses",()=>{execFileSync(process.execPath,["--check",path.join(repo,backendPath)])});
+test("POS wholesale server and pricing bootstrap parse",()=>{
+  execFileSync(process.execPath,["--check",path.join(repo,backendPath)]);
+  execFileSync(process.execPath,["--check",path.join(repo,bootstrapPath)]);
+});
+
+test("wholesale schema is guaranteed at server startup and not dependent on opening Price Catalog first",()=>{
+  assert.match(bootstrap,/CREATE TABLE IF NOT EXISTS "CustomerWholesalePrice"/);
+  assert.match(bootstrap,/UNIQUE\("companyId","customerId","productId"\)/);
+  assert.match(bootstrap,/CustomerWholesalePrice_customer_idx/);
+  assert.match(index,/import \{ ensurePosPricingSchema \} from "\.\/pos-pricing-bootstrap\.js"/);
+  assert.match(index,/await ensurePosPricingSchema\(\)/);
+});
 
 test("customer wholesale lookup is tenant customer product and current-store scoped",()=>{
   assert.match(backend,/router\.get\("\/stores\/:storeId\/customers\/:customerId\/prices"/);
@@ -32,7 +44,8 @@ test("server price resolver applies wholesale then retail fallback",()=>{
 });
 
 test("checkout and HOLD both use server-side customer-aware pricing",()=>{
-  assert.match(backend,/resolveItems\(req,store,body\.items,customer\)/g);
+  const matches=backend.match(/resolveItems\(req,store,body\.items,customer\)/g)||[];
+  assert.ok(matches.length>=2,"checkout and HOLD must both use customer-aware resolver");
   assert.match(backend,/INSERT INTO "SaleLine"[\s\S]*\$\{item\.unitPrice\}/);
   assert.doesNotMatch(backend,/cartItemSchema[\s\S]{0,250}(unitPrice|price):/);
   assert.match(backend,/wholesaleLines=items\.filter\(item=>item\.priceSource==="WHOLESALE"\)\.length/);
@@ -64,6 +77,9 @@ test("POS visibly marks wholesale products and lines",()=>{
 });
 
 test("wholesale pricing does not yet mix promotion precedence in this step",()=>{
-  const resolver=backend.slice(backend.indexOf("async function resolveItems"),backend.indexOf("router.get(\"/stores/:storeId/holds\""));
+  const start=backend.indexOf("async function resolveItems");
+  const end=backend.indexOf('router.get("/stores/:storeId/holds"');
+  assert.ok(start>=0&&end>start,"resolveItems boundaries must exist");
+  const resolver=backend.slice(start,end);
   assert.doesNotMatch(resolver,/PriceCatalogPromotion|LEAFLET|GIFT/);
 });
