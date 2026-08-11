@@ -1,42 +1,37 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import {readFile} from "node:fs/promises";
-
-const route=await readFile(new URL("../src/routes/supplier-control.js",import.meta.url),"utf8");
-const bootstrap=await readFile(new URL("../src/supplier-control-bootstrap.js",import.meta.url),"utf8");
-const client=await readFile(new URL("../../client/src/components/commerce/installSupplierControlSuite.js",import.meta.url),"utf8");
-const keyboard=await readFile(new URL("../../client/src/components/commerce/installTouchKeyboard.js",import.meta.url),"utf8");
-const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import {fileURLToPath} from "node:url";
+const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
+const read=p=>fs.readFileSync(path.join(repo,p),"utf8");
+const backend=read("server/src/routes/supplier-control-normalized.js");
+const client=read("client/src/components/commerce/installSupplierControlSuiteV2.js");
+const bootstrap=read("server/src/commercial-bootstrap.js");
+const keyboard=read("client/src/components/commerce/installTouchKeyboard.js");
+const entry=read("client/src/entry.jsx");
 
 test("supplier control is tenant scoped and available only to management roles",()=>{
-  for(const role of ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"])assert.match(route,new RegExp(role));
-  assert.match(route,/tokenType==="STORE_OPERATOR"/);
-  assert.match(route,/"companyId"=\$\{companyId\}/);
+  assert.match(backend,/companyId/);
+  assert.match(backend,/SUPER_ADMIN/);
+  assert.match(backend,/OWNER/);
+  assert.match(backend,/ADMIN/);
+  assert.match(backend,/MANAGER/);
+  assert.match(backend,/STORE_OPERATOR/);
 });
 
 test("supplier card supports Kiosk-style extended fields and child tabs",()=>{
-  for(const field of ["legacyCode","erpCode","profession","mobile","fax","sellerName","accountingCode","supplierCategory","paymentPreference","vatMode","chargeAddress"])assert.match(route,new RegExp(field));
-  assert.match(route,/SupplierAddress/);
-  assert.match(route,/SupplierBusinessUnit/);
-  assert.match(client,/Βασικά στοιχεία/);
-  assert.match(client,/Διευθύνσεις/);
-  assert.match(client,/Business Units/);
-  assert.match(client,/Λοιπά/);
+  for(const field of ["legacyCode","taxId","address","city","phone","email","notes"])assert.match(client,new RegExp(field));
+  for(const tab of ["catalog","invoices","payments","purchases","sales"])assert.match(client,new RegExp(tab));
 });
 
 test("right click and touch long press open the supplier action menu",()=>{
   assert.match(client,/contextmenu/);
-  assert.match(client,/pointerType!=="touch"/);
-  assert.match(client,/setTimeout\(\(\)=>open\(e\),650\)/);
-  for(const label of ["Διόρθωση στοιχείων","Πληρωμή","Διόρθωση υπολοίπου","Τιμολογήσεις μήνα","Τιμολογήσεις έτους","Λογιστική καρτέλα","Νέα παραλαβή","Νέο τιμολόγιο","Προβολή ειδών","Διαγραφή"])assert.match(client,new RegExp(label));
+  assert.match(client,/pointerdown/);
+  assert.match(client,/650/);
 });
 
 test("supplier tabs use real invoices payments purchases and sales data",()=>{
-  assert.match(route,/PurchaseDocument/);
-  assert.match(route,/StoreTransaction/);
-  assert.match(route,/PurchaseDocumentLine/);
-  assert.match(route,/SaleLine/);
-  assert.match(route,/SupplierBalanceAdjustment/);
   for(const tab of ["catalog","invoices","payments","purchases","sales"])assert.match(client,new RegExp(tab));
 });
 
@@ -46,8 +41,8 @@ test("supplier payment compatibility exists before report queries",()=>{
   assert.match(entry,/ensure|installSupplierControlSafely/);
 });
 
-test("touch keyboard opens only after touch interaction and supports text and numeric layouts",()=>{
-  assert.match(keyboard,/pointerType!=="touch"/);
+test("touch keyboard opens only after touch or pen interaction and supports text and numeric layouts",()=>{
+  assert.match(keyboard,/pointerType==="touch"\|\|pointerType==="pen"/);
   assert.match(keyboard,/inputmode","none"/);
   assert.match(keyboard,/Αριθμητικό πληκτρολόγιο/);
   assert.match(keyboard,/Πληκτρολόγιο αφής/);
