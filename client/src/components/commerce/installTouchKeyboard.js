@@ -53,13 +53,16 @@ function open(input){if(!editable(input))return;activeInput=input;input.dataset.
 function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true}
 function makeButton(input){
   const button=document.createElement("button");button.type="button";button.className="mws-touch-field-trigger";button.title="Άνοιγμα πληκτρολογίου οθόνης";button.setAttribute("aria-label","Άνοιγμα πληκτρολογίου οθόνης");button.textContent="⌨";
-  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);fieldButtons.set(input,button);return button;
+  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);input.classList.add("mws-has-keyboard-trigger");fieldButtons.set(input,button);return button;
 }
 function positionButton(input,button){
-  if(!editable(input)||!input.isConnected){button.remove();fieldButtons.delete(input);return}
+  if(!editable(input)||!input.isConnected){button.remove();input?.classList?.remove("mws-has-keyboard-trigger");fieldButtons.delete(input);return}
   const rect=input.getBoundingClientRect();const hidden=rect.width<=0||rect.height<=0||rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth;
   button.hidden=hidden;if(hidden)return;
-  const size=34,gap=5;let left=rect.right+gap;if(left+size>window.innerWidth-5)left=Math.max(5,rect.right-size-5);const top=Math.max(5,Math.min(window.innerHeight-size-5,rect.top+(rect.height-size)/2));button.style.left=`${left}px`;button.style.top=`${top}px`;
+  const size=Math.max(28,Math.min(34,rect.height-6));
+  const left=Math.max(rect.left+2,rect.right-size-4);
+  const top=Math.max(3,rect.top+(rect.height-size)/2);
+  button.style.left=`${left}px`;button.style.top=`${top}px`;button.style.width=`${size}px`;button.style.height=`${size}px`;
 }
 function syncButtons(){
   document.querySelectorAll("input,textarea").forEach(input=>{if(editable(input)&&!fieldButtons.has(input))makeButton(input)});
