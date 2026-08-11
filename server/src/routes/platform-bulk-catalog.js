@@ -109,7 +109,7 @@ router.post("/dispatch",async(req,res,next)=>{
     let createdProducts=0,activatedMappings=0;
     await prisma.$transaction(async tx=>{
       for(const [companyId,targetStores] of byCompany){
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`platform-dispatch:${companyId}`}))`;
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`platform-dispatch:${companyId}`}))::text AS "lock"`;
         for(const master of masters){const ensured=await ensureTenantProduct(tx,companyId,master,targetStores);if(ensured.createdProduct)createdProducts++;activatedMappings+=ensured.activatedMappings}
       }
       await tx.$executeRaw`INSERT INTO "PlatformBulkCatalogAudit" ("id","actorId","productIdsJson","storeIdsJson","createdProducts","activatedMappings") VALUES (${uid()},${req.user.id},${JSON.stringify(productIds)}::jsonb,${JSON.stringify(storeIds)}::jsonb,${createdProducts},${activatedMappings})`;
@@ -149,7 +149,7 @@ router.post("/promotions",async(req,res,next)=>{
         for(const master of masters){
           const ensured=await ensureTenantProduct(tx,companyId,master,targetStores);if(ensured.createdProduct)createdProducts++;activatedMappings+=ensured.activatedMappings;
           const product=ensured.product,targetStoreIds=targetStores.map(s=>s.id).sort();
-          for(const storeId of targetStoreIds)await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`platform-promo:${companyId}:${product.id}:${body.promotionType}:${storeId}`}))`;
+          for(const storeId of targetStoreIds)await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`platform-promo:${companyId}:${product.id}:${body.promotionType}:${storeId}`}))::text AS "lock"`;
           if(body.active){
             const overlaps=await tx.$queryRaw`SELECT DISTINCT pr."id",ps."storeId" FROM "PriceCatalogPromotion" pr JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId" WHERE pr."companyId"=${companyId} AND pr."productId"=${product.id} AND pr."promotionType"=${body.promotionType} AND pr."active"=true AND ps."storeId"=ANY(${targetStoreIds}::text[]) AND pr."validFrom"<=${validUntil||new Date("9999-12-31T23:59:59.999Z")} AND COALESCE(pr."validUntil",'infinity'::timestamptz)>=${validFrom}`;
             if(overlaps.length){const e=new Error(`Υπάρχει ήδη ενεργή ${body.promotionType==="LEAFLET"?"προσφορά":"ενέργεια δώρου"} για το «${product.name}» σε ${new Set(overlaps.map(x=>x.storeId)).size} επιλεγμένο/α κατάστημα/τα.`);e.status=409;throw e}
