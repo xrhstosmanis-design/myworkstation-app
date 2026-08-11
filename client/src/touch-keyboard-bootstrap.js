@@ -5,6 +5,7 @@ const GREEK=[['1','2','3','4','5','6','7','8','9','0','⌫'],['%','ς','Ε','Ρ'
 const ENGLISH=[['1','2','3','4','5','6','7','8','9','0','⌫'],['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L','-'],['Z','X','C','V','B','N','M',',','.','/','@']];
 const NUMERIC=[['7','8','9'],['4','5','6'],['1','2','3'],['0',',','⌫']];
 let active=null,language='EL';
+const fieldTriggers=new Map();
 
 function eligible(el){
   if(!el||el.disabled||el.readOnly||el.dataset?.keyboard==='off')return false;
@@ -70,40 +71,40 @@ function openFor(el){
   shell.classList.add('open');render();
   setTimeout(()=>{try{el.scrollIntoView({block:'center',behavior:'smooth'});el.focus({preventScroll:true})}catch{}},0);
 }
-function makeTrigger(el){
+function createTrigger(el){
   const b=document.createElement('button');
-  b.type='button';b.className='mws-keyboard-trigger mws-keyboard-trigger-inline';b.title='Άνοιγμα πληκτρολογίου οθόνης';b.setAttribute('aria-label','Άνοιγμα πληκτρολογίου οθόνης');b.innerHTML='<span aria-hidden="true">⌨</span>';
+  b.type='button';b.className='mws-keyboard-trigger mws-keyboard-trigger-field';b.title='Άνοιγμα πληκτρολογίου οθόνης';b.setAttribute('aria-label','Άνοιγμα πληκτρολογίου οθόνης');b.innerHTML='<span aria-hidden="true">⌨</span>';
   b.addEventListener('pointerdown',e=>e.preventDefault());
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openFor(el)});
-  return b;
+  document.body.appendChild(b);fieldTriggers.set(el,b);return b;
 }
-function hasTrigger(el){
-  const next=el.nextElementSibling;
-  return !!(next&&next.classList?.contains('mws-keyboard-trigger-inline')&&next.dataset?.mwsFor===el.dataset?.mwsKeyboardId);
+function positionOne(el,b){
+  if(!eligible(el)||!el.isConnected){b.remove();fieldTriggers.delete(el);return}
+  const r=el.getBoundingClientRect();
+  const hidden=r.width<=0||r.height<=0||r.bottom<0||r.top>window.innerHeight||r.right<0||r.left>window.innerWidth;
+  b.hidden=hidden;if(hidden)return;
+  const size=34,gap=4;
+  let left=r.right+gap;
+  if(left+size>window.innerWidth-4)left=Math.max(4,r.right-size-4);
+  const top=Math.min(window.innerHeight-size-4,Math.max(4,r.top+(r.height-size)/2));
+  b.style.left=`${left}px`;b.style.top=`${top}px`;
 }
-let seq=0;
-function decorateField(el){
-  if(!eligible(el)||hasTrigger(el))return;
-  if(!el.dataset.mwsKeyboardId)el.dataset.mwsKeyboardId=`mws-kb-${++seq}`;
-  const trigger=makeTrigger(el);trigger.dataset.mwsFor=el.dataset.mwsKeyboardId;
-  el.insertAdjacentElement('afterend',trigger);
+function syncTriggers(){
+  document.querySelectorAll('input,textarea').forEach(el=>{if(eligible(el)&&!fieldTriggers.has(el))createTrigger(el)});
+  [...fieldTriggers.entries()].forEach(([el,b])=>positionOne(el,b));
 }
-function decorateAll(root=document){
-  if(root.nodeType===1&&eligible(root))decorateField(root);
-  root.querySelectorAll?.('input,textarea').forEach(decorateField);
-}
+function scheduleSync(){requestAnimationFrame(syncTriggers)}
 function mount(){
   if(document.getElementById('mws-touch-keyboard'))return;
   const shell=document.createElement('div');shell.id='mws-touch-keyboard';shell.setAttribute('role','dialog');shell.setAttribute('aria-label','Πληκτρολόγιο οθόνης');
   shell.innerHTML='<div class="mws-keyboard-panel"><div class="mws-key-grid"></div></div>';
   document.body.appendChild(shell);
-  decorateAll(document);
-  const refresh=()=>decorateAll(document);
-  const observer=new MutationObserver(()=>requestAnimationFrame(refresh));
-  observer.observe(document.body,{childList:true,subtree:true});
-  setInterval(refresh,1200);
-  document.addEventListener('focusin',e=>{if(eligible(e.target)&&TOUCH_CAPABLE())openFor(e.target)},true);
-  document.addEventListener('pointerdown',e=>{if(eligible(e.target)&&TOUCH_CAPABLE()){openFor(e.target);return}if(shell.classList.contains('open')&&!shell.contains(e.target)&&!e.target.closest?.('.mws-keyboard-trigger-inline'))close()},true);
+  syncTriggers();
+  const observer=new MutationObserver(scheduleSync);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','type','style','class']});
+  document.addEventListener('focusin',e=>{if(!eligible(e.target))return;if(TOUCH_CAPABLE())openFor(e.target)},true);
+  document.addEventListener('pointerdown',e=>{if(eligible(e.target)&&TOUCH_CAPABLE())openFor(e.target);if(shell.classList.contains('open')&&!shell.contains(e.target)&&!e.target.closest?.('.mws-keyboard-trigger'))close()},true);
+  window.addEventListener('resize',scheduleSync);window.addEventListener('scroll',scheduleSync,true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+  setInterval(syncTriggers,1200);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
