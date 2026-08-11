@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 15:41 Europe/Athens
+Updated: 2026-08-11 15:45 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -29,6 +29,14 @@ TEST 3: Χειριστές / employee access and role controls.
 - Employee rows, role selectors, PIN status, card/barcode fields, active-access toggles and save controls render correctly.
 - User confirmed the section opens and is usable.
 
+TEST 4: Πωλήσεις & Πληρωμές.
+- Real browser load/display result: PASS.
+- `Συναλλαγές Βάρδιας` renders correctly with totals for cash/cards/expenses/percentages.
+- Existing store transaction is visible: cash sale `1,00 €`, active, with cancellation-with-reason action.
+- UI correctly reports that there is currently no open shift and instructs opening the shift first in Cash Control.
+- `Έλεγχος Ταμείου` section also renders below with status `ΚΛΕΙΣΤΗ`.
+- Full new-transaction acceptance is intentionally pending until a real shift is opened and the POS end-to-end flow is executed.
+
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
 - Implemented in branch `feat/backoffice-horizontal-section-cards`.
@@ -45,7 +53,8 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. TEST 4 — `Πωλήσεις & Πληρωμές` in the live `Κυλικείο ΚΑΤ` BackOffice.
-2. Then test `Βάρδιες & Ταμεία`, `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
-3. After BackOffice acceptance, execute POS end-to-end flows.
-4. Save a new checkpoint after each major test milestone or fix.
+1. TEST 5 — `Βάρδιες & Ταμεία` in the live `Κυλικείο ΚΑΤ` BackOffice.
+2. Open and exercise a real non-fiscal shift flow if the UI allows it; do not create a fiscal/provider transaction.
+3. Then test `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
+4. After BackOffice acceptance, execute POS end-to-end flows including the pending real new-sale test.
+5. Save a new checkpoint after each major test milestone or fix.
