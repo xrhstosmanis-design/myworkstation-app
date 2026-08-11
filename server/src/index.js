@@ -63,6 +63,7 @@ import { ensureCommerceCompatibility } from "./commerce-compatibility.js";
 import { ensureMasterCatalogSchema } from "./master-catalog-bootstrap.js";
 import { ensureOwnerProductSchema } from "./owner-product-bootstrap.js";
 import { ensureProductDeliverySchema } from "./product-delivery-bootstrap.js";
+import { ensurePosPricingSchema } from "./pos-pricing-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -125,5 +126,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
