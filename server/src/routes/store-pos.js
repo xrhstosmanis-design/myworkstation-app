@@ -97,6 +97,21 @@ router.get("/stores/:storeId/customers",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/stores/:storeId/customers/:customerId/prices",async(req,res,next)=>{
+  try{
+    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);const customer=await resolveCustomer(req,req.params.customerId);
+    const rows=await prisma.$queryRaw`
+      SELECT w."productId",w."wholesalePrice"
+      FROM "CustomerWholesalePrice" w
+      JOIN "Product" p ON p."id"=w."productId" AND p."companyId"=w."companyId" AND p."active"=true
+      JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true
+      WHERE w."companyId"=${req.user.companyId} AND w."customerId"=${customer.id} AND w."active"=true
+      ORDER BY w."productId"
+    `;
+    res.json({customerId:customer.id,items:rows.map(row=>({productId:row.productId,wholesalePrice:money(row.wholesalePrice)}))});
+  }catch(error){next(error)}
+});
+
 const cartItemSchema=z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999)});
 const paymentMethodSchema=z.enum(["CASH","CARD","IRIS"]);
 const checkoutSchema=z.object({
@@ -111,16 +126,22 @@ const checkoutSchema=z.object({
 });
 const holdSchema=z.object({items:z.array(cartItemSchema).min(1).max(200),customerId:z.string().min(1).optional().nullable()});
 
-async function resolveItems(req,store,items){
-  const ids=[...new Set(items.map(x=>x.productId))];
+async function resolveItems(req,store,items,customer=null){
+  const ids=[...new Set(items.map(x=>x.productId))],customerId=customer?.id||null;
   const rows=await prisma.$queryRaw`
-    SELECT p."id",p."sku",p."name",p."vatRate",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock"
-    FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
+    SELECT p."id",p."sku",p."name",p."vatRate",
+           COALESCE(sp."salePrice",p."salePrice") AS "retailPrice",
+           COALESCE(w."wholesalePrice",COALESCE(sp."salePrice",p."salePrice")) AS "effectivePrice",
+           CASE WHEN w."id" IS NULL THEN 'RETAIL' ELSE 'WHOLESALE' END AS "priceSource",
+           COALESCE(sp."currentStock",0) AS "currentStock"
+    FROM "StoreProduct" sp
+    JOIN "Product" p ON p."id"=sp."productId"
+    LEFT JOIN "CustomerWholesalePrice" w ON ${customerId}::text IS NOT NULL AND w."companyId"=${req.user.companyId} AND w."customerId"=${customerId} AND w."productId"=p."id" AND w."active"=true
     WHERE sp."storeId"=${store.id} AND p."companyId"=${req.user.companyId} AND sp."active"=true AND p."active"=true AND p."id"=ANY(${ids}::text[])
   `;
   if(rows.length!==ids.length){const error=new Error("Ένα ή περισσότερα προϊόντα δεν είναι ενεργά στο κατάστημα.");error.status=400;throw error}
   const byId=new Map(rows.map(row=>[row.id,row]));
-  return items.map(item=>{const product=byId.get(item.productId);const unitPrice=money(product.salePrice);return {productId:item.productId,id:item.productId,name:product.name,sku:product.sku,quantity:item.quantity,qty:item.quantity,stock:money(product.currentStock),vatRate:money(product.vatRate),unitPrice,price:unitPrice,lineTotal:Number((unitPrice*item.quantity).toFixed(2))}});
+  return items.map(item=>{const product=byId.get(item.productId),retailPrice=money(product.retailPrice),unitPrice=money(product.effectivePrice);return {productId:item.productId,id:item.productId,name:product.name,sku:product.sku,quantity:item.quantity,qty:item.quantity,stock:money(product.currentStock),vatRate:money(product.vatRate),retailPrice,unitPrice,price:unitPrice,priceSource:product.priceSource,lineTotal:Number((unitPrice*item.quantity).toFixed(2))}});
 }
 
 router.get("/stores/:storeId/holds",async(req,res,next)=>{
@@ -136,7 +157,7 @@ router.post("/stores/:storeId/holds",async(req,res,next)=>{
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);await ensureHoldTable();const body=holdSchema.parse(req.body||{});
     const open=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
     if(!open[0])return res.status(409).json({error:"Δεν υπάρχει ανοιχτή βάρδια. Άνοιξε πρώτα βάρδια."});
-    const [items,customer]=await Promise.all([resolveItems(req,store,body.items),resolveCustomer(req,body.customerId)]);const total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2));const id=crypto.randomUUID();
+    const customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer),total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2)),id=crypto.randomUUID();
     await prisma.$executeRaw`INSERT INTO "PosHeldTransaction" ("id","companyId","storeId","sessionId","operatorId","operatorName","customerId","customerName","itemsJson","total") VALUES (${id},${req.user.companyId},${store.id},${open[0].id},${req.user.id},${req.user.fullName||"Πωλητής"},${customer?.id||null},${customer?.name||null},${JSON.stringify(items)}::jsonb,${total})`;
     res.status(201).json({id,total,items,customer,heldAt:new Date().toISOString()});
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Η συναλλαγή αναμονής δεν είναι έγκυρη.",details:error.issues});next(error)}
@@ -157,7 +178,7 @@ router.post("/stores/:storeId/checkout",async(req,res,next)=>{
     assertStore(req,req.params.storeId);
     const store=await storeFor(req,req.params.storeId);
     const body=checkoutSchema.parse(req.body||{});
-    const [items,customer]=await Promise.all([resolveItems(req,store,body.items),resolveCustomer(req,body.customerId)]);
+    const customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer);
     const total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2));
     const payments=body.paymentMethod==="MIXED"?body.payments:[{method:body.paymentMethod,amount:total}];
     const paid=Number(payments.reduce((sum,payment)=>sum+money(payment.amount),0).toFixed(2));
@@ -180,7 +201,8 @@ router.post("/stores/:storeId/checkout",async(req,res,next)=>{
       if(cashAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open[0].id},'SALE_CASH',${cashAmount},${`POS πώληση ${saleId} · ΜΕΤΡΗΤΑ`},${actorId},${actorName})`;
       if(cardAmount+irisAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open[0].id},'SALE_CARD',${cardAmount+irisAmount},${`POS πώληση ${saleId} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`},${actorId},${actorName})`;
     });
-    res.status(201).json({saleId,total,customer,paymentMethod:body.paymentMethod,payments,fiscalStatus:"NON_FISCAL"});
+    const wholesaleLines=items.filter(item=>item.priceSource==="WHOLESALE").length;
+    res.status(201).json({saleId,total,customer,wholesaleLines,paymentMethod:body.paymentMethod,payments,fiscalStatus:"NON_FISCAL"});
   }catch(error){
     if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.",details:error.issues});
     next(error);
