@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 16:24 Europe/Athens
+Updated: 2026-08-11 16:27 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -71,6 +71,12 @@ TEST 7: Συσκευές.
 - User confirmed this is the known intended test device.
 - `Απενεργοποίηση` was intentionally not executed during acceptance because it would revoke the active test device and interrupt the remaining test flow.
 
+TEST 8: Ιστορικό / cloud audit.
+- Real browser result: PASS.
+- `Ιστορικό` card scrolls correctly to `Τελευταίες cloud ενέργειες`.
+- Live audit entries are visible with timestamps, including `CATALOG ITEM UPDATED`, `DEMO CATALOG SAVED`, `DEVICE PAIRED` and `PAIRING CODE CREATED`.
+- BackOffice acceptance pass TEST 1–8 is now complete.
+
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
 - Implemented in branch `feat/backoffice-horizontal-section-cards`.
@@ -87,7 +93,8 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. TEST 8 — `Ιστορικό` in the live `Κυλικείο ΚΑΤ` BackOffice.
-2. After BackOffice acceptance, enter POS / Store Mode, open a real non-fiscal shift there, and execute the pending end-to-end new-sale flow.
-3. Continue through customers, prices/wholesale/promotions, HOLD, cash/card/mixed flows, duplicate-sale protection, cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
-4. Save a new checkpoint after each major test milestone or fix.
+1. Enter Store Mode / POS for `Κυλικείο ΚΑΤ`.
+2. Open a real non-fiscal shift there from Store Mode / POS.
+3. Execute end-to-end new-sale acceptance: product add, cart, customer, retail/wholesale/promotions, HOLD/restore, cash/card/mixed software flows and duplicate-sale protection.
+4. Continue cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
+5. Save a new checkpoint after each major test milestone or fix.
