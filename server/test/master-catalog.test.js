@@ -21,11 +21,13 @@ test("Master Catalog import is Super Admin only and two-stage",async()=>{
   assert.match(source,/alreadyImported/);
 });
 
-test("Master Catalog protects scan, zero prices and unverified VAT",async()=>{
+test("Master Catalog protects scan, zero prices and accepts valid zero VAT",async()=>{
   const source=await fs.readFile(new URL("../src/routes/master-catalog.js",import.meta.url),"utf8");
   assert.match(source,/scanEnabled:!product\.duplicateBarcode/);
   assert.match(source,/retail!==null&&retail>0\?retail:null/);
-  assert.match(source,/vat!==null&&vat>0\?vat:null/);
+  assert.match(source,/vat!==null&&vat>=0\?vat:null/);
+  assert.match(source,/vatVerified:Boolean\(vat!==null&&vat>=0\)/);
+  assert.match(source,/zeroVatIsValid:true/);
   assert.match(source,/stockNotImportedIntoStores:true/);
 });
 
