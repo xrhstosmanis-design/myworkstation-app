@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {CreditCard,RefreshCw,Search,ShoppingCart,Trash2,Wallet} from "lucide-react";
+import {RefreshCw,Search,ShoppingCart,Trash2} from "lucide-react";
+import "../platform/pos-designer.css";
 import "./store-pos.css";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -10,12 +11,12 @@ const quickCategory=button=>isCategoryQuick(button)?String(button.productQuery).
 const productMatchesCodes=(product,codes)=>{const wanted=new Set((codes||[]).map(String));if(!wanted.size)return false;return wanted.has(String(product.sku||""))||(product.barcodes||[]).some(code=>wanted.has(String(code)))};
 
 export default function StorePosPanel({api,store,onChanged}){
-  const [data,setData]=useState(null),[cart,setCart]=useState([]),[query,setQuery]=useState(""),[category,setCategory]=useState(""),[categoryCodes,setCategoryCodes]=useState([]),[browseActive,setBrowseActive]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+  const [data,setData]=useState(null),[cart,setCart]=useState([]),[query,setQuery]=useState(""),[category,setCategory]=useState(""),[categoryCodes,setCategoryCodes]=useState([]),[browseActive,setBrowseActive]=useState(false),[received,setReceived]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const load=async()=>{setError("");try{setData(await api(`/api/store-pos/stores/${store.id}`))}catch(err){setError(err.message)}};
   useEffect(()=>{load()},[store.id]);
   const layout=data?.layout||fallbackLayout;
   const products=data?.products||[];
-  const categories=useMemo(()=>[...new Set(products.map(p=>p.categoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")),[products]);
+  const allCategories=useMemo(()=>[...new Set(products.map(p=>p.categoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")),[products]);
   const visible=useMemo(()=>{
     const q=query.trim().toLocaleLowerCase("el-GR");
     if(!browseActive&&!q)return [];
@@ -26,34 +27,40 @@ export default function StorePosPanel({api,store,onChanged}){
     }).slice(0,120);
   },[products,query,category,categoryCodes,browseActive]);
   const total=cart.reduce((sum,row)=>sum+row.salePrice*row.quantity,0);
+  const receivedNumber=Number(String(received||"").replace(",","."))||0;
+  const change=Math.max(0,receivedNumber-total);
   const add=product=>setCart(current=>{const found=current.find(row=>row.id===product.id);return found?current.map(row=>row.id===product.id?{...row,quantity:row.quantity+1}:row):[...current,{...product,quantity:1}]});
   const qty=(id,delta)=>setCart(current=>current.map(row=>row.id===id?{...row,quantity:Math.max(1,row.quantity+delta)}:row));
   const remove=id=>setCart(current=>current.filter(row=>row.id!==id));
   const quickProduct=button=>products.find(p=>p.name.toLocaleLowerCase("el-GR").includes(String(button.productQuery||button.label).toLocaleLowerCase("el-GR"))||String(p.sku||"")===String(button.productQuery||"")||(p.barcodes||[]).some(code=>String(code)===String(button.productQuery||"")));
-  const openGroup=(label,codes,fallbackCategory="")=>{setQuery("");setBrowseActive(true);setCategory(label||fallbackCategory||"");setCategoryCodes(Array.isArray(codes)?codes:[]);if((codes||[]).length)setMessage(`Άνοιξε η ομάδα «${label}» με ${(codes||[]).length} επιλεγμένα προϊόντα.`);else if(fallbackCategory)setMessage(`Άνοιξε η κατηγορία «${fallbackCategory}». Επίλεξε προϊόν.`)};
-  const clearCategory=()=>{setCategory("");setCategoryCodes([]);setBrowseActive(false);setMessage("")};
-  const useQuick=button=>{
-    if(isCategoryQuick(button)){openGroup(button.label,button.productCodes||[],quickCategory(button));return;}
-    const product=quickProduct(button);
-    if(product)add(product);else setError(`Δεν βρέθηκε το προϊόν για το κουμπί «${button.label}».`);
-  };
-  const checkout=async paymentMethod=>{
-    if(!cart.length)return;
-    setBusy(true);setError("");setMessage("");
-    try{const result=await api(`/api/store-pos/stores/${store.id}/checkout`,{method:"POST",body:JSON.stringify({paymentMethod,items:cart.map(row=>({productId:row.id,quantity:row.quantity}))})});setCart([]);setMessage(`Η πώληση ${euro(result.total)} καταχωρίστηκε ως ${paymentMethod==="CASH"?"μετρητά":"κάρτα"}.`);onChanged?.()}catch(err){setError(err.message)}finally{setBusy(false)}
-  };
-  return <article className="store-pos-card" style={{"--pos-head":layout.theme?.headerColor||"#033d2f","--pos-accent":layout.theme?.accentColor||"#087a52"}}>
-    <div className="store-pos-top"><div><span>ΚΑΝΟΝΙΚΟ POS · ΔΗΜΟΣΙΕΥΜΕΝΗ ΔΙΑΤΑΞΗ</span><h2>{layout.title||"OPERATOR POS"}</h2><small>Έκδοση {data?.layoutVersion||0} · {products.length} ενεργά προϊόντα</small></div><button onClick={load}><RefreshCw/>Ανανέωση</button></div>
+  const openGroup=(label,codes,fallbackCategory="")=>{setQuery("");setBrowseActive(true);setCategory(label||fallbackCategory||"");setCategoryCodes(Array.isArray(codes)?codes:[]);setMessage("")};
+  const home=()=>{setCategory("");setCategoryCodes([]);setBrowseActive(false);setQuery("");setMessage("")};
+  const useQuick=button=>{if(isCategoryQuick(button)){openGroup(button.label,button.productCodes||[],quickCategory(button));return}const product=quickProduct(button);if(product)add(product);else setError(`Δεν βρέθηκε το προϊόν για το κουμπί «${button.label}».`)};
+  const checkout=async paymentMethod=>{if(!cart.length)return;setBusy(true);setError("");setMessage("");try{const result=await api(`/api/store-pos/stores/${store.id}/checkout`,{method:"POST",body:JSON.stringify({paymentMethod,items:cart.map(row=>({productId:row.id,quantity:row.quantity}))})});setCart([]);setReceived("");setMessage(`Η πώληση ${euro(result.total)} καταχωρίστηκε.`);onChanged?.()}catch(err){setError(err.message)}finally{setBusy(false)}};
+  const runAction=button=>{switch(button.action){case"CASH":checkout("CASH");break;case"CARD":checkout("CARD");break;case"CLEAR_CART":setCart([]);setReceived("");break;default:setMessage(`Η ενέργεια «${button.label}» είναι διαθέσιμη στη διάταξη και θα συνδεθεί με την αντίστοιχη εμπορική λειτουργία.`)}};
+  const keypad=value=>{if(value==="⌫")return setReceived(v=>v.slice(0,-1));if(value===",")return setReceived(v=>v.includes(",")?v:`${v||"0"},`);setReceived(v=>`${v}${value}`)};
+  const categoryButtons=(layout.categories||[]).filter(x=>x.visible);
+  const quickButtons=(layout.quickKeys||[]).filter(x=>x.visible);
+  const actionButtons=(layout.buttons||[]).filter(x=>x.visible);
+
+  return <article className="store-pos-card store-pos-designer-runtime">
+    <div className="store-pos-top" style={{background:layout.theme?.headerColor||"#033d2f"}}><div><span>ΚΑΝΟΝΙΚΟ POS · ΔΗΜΟΣΙΕΥΜΕΝΗ ΔΙΑΤΑΞΗ</span><h2>{layout.title||"OPERATOR POS"}</h2><small>Έκδοση {data?.layoutVersion||0} · {products.length} ενεργά προϊόντα</small></div><button onClick={load}><RefreshCw/>Ανανέωση</button></div>
     {error&&<div className="store-pos-alert error">{error}</div>}{message&&<div className="store-pos-alert success">{message}</div>}
-    <div className="store-pos-body">
-      <aside className="store-pos-quick"><h3>ΓΡΗΓΟΡΑ</h3>{(layout.quickKeys||[]).filter(x=>x.visible).map(button=>{const categoryButton=isCategoryQuick(button);const product=categoryButton?null:quickProduct(button);const groupCount=(button.productCodes||[]).length;const enabled=categoryButton?(groupCount>0||Boolean(quickCategory(button))):Boolean(product);return <button key={button.id} style={{background:button.color}} disabled={!enabled} onClick={()=>enabled&&useQuick(button)}>{button.label}<small>{categoryButton?(groupCount?`${groupCount} προϊόντα`:`Κατηγορία · ${quickCategory(button)}`):product?euro(product.salePrice):"Δεν έχει συνδεθεί"}</small></button>})}</aside>
-      <section className="store-pos-products">
-        <div className="store-pos-search"><Search/><input value={query} onChange={e=>{setQuery(e.target.value);setBrowseActive(Boolean(e.target.value.trim()))}} placeholder="Barcode, SKU ή όνομα προϊόντος"/></div>
-        <div className="store-pos-categories"><button className={!browseActive&&!category?"active":""} onClick={clearCategory}>ΑΡΧΙΚΗ</button>{(layout.categories||[]).filter(x=>x.visible).map(button=>{const codes=button.productCodes||[];const active=browseActive&&category===button.label;return <button key={button.id} className={active?"active":""} style={{background:button.color}} onClick={()=>codes.length?openGroup(button.label,codes,button.categoryName||""):(setBrowseActive(true),setCategoryCodes([]),setCategory(button.categoryName||button.label||""))}>{button.label}{codes.length?<small> · {codes.length}</small>:null}</button>})}{!(layout.categories||[]).length&&categories.map(name=><button key={name} className={browseActive&&category===name?"active":""} onClick={()=>{setBrowseActive(true);setCategoryCodes([]);setCategory(name)}}>{name}</button>)}</div>
-        {browseActive&&category&&<div className="store-pos-alert success">{categoryCodes.length?"Ομάδα":"Κατηγορία"}: <b>{category}</b> · {visible.length} προϊόντα <button type="button" onClick={clearCategory}>Πίσω στην αρχική</button></div>}
-        {!browseActive&&!query.trim()?<div className="store-pos-browse-empty"><ShoppingCart/><b>Νέα συναλλαγή</b><span>Πάτησε Γρήγορο, Κατηγορία ή αναζήτησε / σκάναρε προϊόν.</span></div>:<div className="store-pos-grid" style={{gridTemplateColumns:`repeat(${Math.max(2,Math.min(8,Number(layout.productColumns||6)))},minmax(120px,1fr))`}}>{visible.map(product=><button key={product.id} onClick={()=>add(product)}><b>{product.name}</b>{layout.showSku&&<small>{product.sku||"Χωρίς SKU"}</small>}<strong>{euro(product.salePrice)}</strong></button>)}</div>}
-      </section>
-      <aside className="store-pos-cart"><div className="store-pos-cart-title"><ShoppingCart/><h3>Συναλλαγή</h3><span>{cart.reduce((n,row)=>n+row.quantity,0)} τεμ.</span></div><div className="store-pos-lines">{cart.length===0?<div className="store-pos-empty">Πάτησε προϊόν ή αναζήτησέ το.</div>:cart.map(row=><div className="store-pos-line" key={row.id}><div><b>{row.name}</b><small>{euro(row.salePrice)} × {row.quantity}</small></div><div className="store-pos-qty"><button onClick={()=>qty(row.id,-1)}>-</button><span>{row.quantity}</span><button onClick={()=>qty(row.id,1)}>+</button></div><strong>{euro(row.salePrice*row.quantity)}</strong><button className="trash" onClick={()=>remove(row.id)}><Trash2/></button></div>)}</div><div className="store-pos-total"><span>ΣΥΝΟΛΟ</span><strong>{euro(total)}</strong></div><div className="store-pos-pay"><button disabled={busy||!cart.length} onClick={()=>checkout("CASH")}><Wallet/>ΜΕΤΡΗΤΑ</button><button disabled={busy||!cart.length} onClick={()=>checkout("CARD")}><CreditCard/>ΚΑΡΤΑ</button></div></aside>
+    <div className="operator-pos-preview store-runtime-pos" style={{"--preview-head":layout.theme?.headerColor||"#033d2f","--preview-accent":layout.theme?.accentColor||"#087a52","--preview-surface":layout.theme?.surfaceColor||"#fff"}}>
+      <div className="operator-preview-head"><b>MW</b><span>MyWorkStation · {store.name}<strong>{layout.title||"OPERATOR POS"}</strong></span><input value={query} onChange={e=>{setQuery(e.target.value);setBrowseActive(Boolean(e.target.value.trim()))}} placeholder="Barcode ή αναζήτηση προϊόντος"/><button aria-label="Αναζήτηση"><Search/></button><small>Συνδεδεμένος<br/>Εργαζόμενος</small></div>
+
+      <aside className="operator-quick"><header><b>ΓΡΗΓΟΡΑ</b><small>{quickButtons.length} θέσεις</small></header>{quickButtons.slice(0,16).map((button,index)=>{const categoryButton=isCategoryQuick(button);const product=categoryButton?null:quickProduct(button);const enabled=categoryButton?Boolean((button.productCodes||[]).length||quickCategory(button)):Boolean(product);return <button key={button.id} disabled={!enabled} onClick={()=>enabled&&useQuick(button)} style={{background:button.color}}><i>{index+1}</i>{button.label}{!categoryButton&&product&&<small>{euro(product.salePrice)}</small>}</button>})}</aside>
+
+      <main className="operator-sale">
+        <div className="operator-table-head"><span>ΠΟΣ.</span><span>ΕΙΔΟΣ</span><span>STOCK</span><span>ΤΙΜΗ</span><span>ΣΥΝΟΛΟ</span></div>
+        <div className="runtime-transaction-area">{cart.length===0?<div className="operator-empty">🛒<b>Νέα συναλλαγή</b><small>Πάτησε προϊόν ή σκάναρε barcode</small></div>:cart.map(row=><div className="runtime-sale-row" key={row.id}><span className="runtime-qty"><button onClick={()=>qty(row.id,-1)}>−</button><b>{row.quantity}</b><button onClick={()=>qty(row.id,1)}>+</button></span><span><b>{row.name}</b>{layout.showSku&&<small>{row.sku||""}</small>}</span><span>{row.stock??0}</span><span>{euro(row.salePrice)}</span><span><b>{euro(row.salePrice*row.quantity)}</b><button className="runtime-trash" onClick={()=>remove(row.id)}><Trash2/></button></span></div>)}</div>
+        <div className="operator-category-head"><b>{browseActive?(category||"ΑΠΟΤΕΛΕΣΜΑΤΑ"):"ΚΑΤΗΓΟΡΙΕΣ"}</b><span>{browseActive?<button className="runtime-home-link" onClick={home}>ΒΑΣΙΚΗ ΟΘΟΝΗ</button>:"ΒΑΣΙΚΗ ΟΘΟΝΗ"}</span></div>
+        <div className="operator-categories runtime-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(2,Math.min(8,Number(layout.productColumns||6)))},1fr)`}}>{browseActive?visible.map((product,index)=><button key={product.id} onClick={()=>add(product)} style={{background:layout.theme?.accentColor||"#087a52"}}><i>{index+1}</i>{product.name}<small>{euro(product.salePrice)}</small></button>):categoryButtons.length?categoryButtons.slice(0,24).map((button,index)=><button key={button.id} onClick={()=>{const codes=button.productCodes||[];codes.length?openGroup(button.label,codes,button.categoryName||""):(setBrowseActive(true),setCategoryCodes([]),setCategory(button.categoryName||button.label||""))}} style={{background:button.color}}><i>{index+1}</i>{button.label}</button>):allCategories.slice(0,24).map((name,index)=><button key={name} onClick={()=>{setBrowseActive(true);setCategory(name);setCategoryCodes([])}}><i>{index+1}</i>{name}</button>)}</div>
+      </main>
+
+      <aside className="operator-keypad"><label>ΠΕΛΑΤΗΣ — Πελάτης λιανικής</label><div className="operator-money"><span>ΕΛΑΒΑ<b>{receivedNumber?euro(receivedNumber):"0,00 €"}</b></span><span>ΡΕΣΤΑ<b>{euro(change)}</b></span></div><div className="operator-numbers">{[7,8,9,4,5,6,1,2,3,0,",","⌫"].map(value=><button key={value} onClick={()=>keypad(String(value))}>{value}</button>)}</div><button className="operator-clear" onClick={()=>setReceived("")}>ΚΑΘΑΡΙΣΜΟΣ ΠΟΣΟΥ</button></aside>
+
+      <footer>{actionButtons.map(button=><button key={button.id} onClick={()=>runAction(button)} disabled={busy&&["CASH","CARD"].includes(button.action)} style={{background:button.color,color:"#fff"}}>{button.label}</button>)}<strong>ΣΥΝΟΛΟ<br/><b>{euro(total)}</b></strong></footer>
     </div>
     <div className="store-pos-nonfiscal">KAT TEST / PILOT: η πώληση καταγράφεται στο MyWorkStation ως NON_FISCAL και δεν στέλνει εντολή σε RBS, CapDriver ή πραγματική ταμειακή.</div>
   </article>;
