@@ -19,6 +19,7 @@ async function storeFor(req,storeId){
   return row;
 }
 const money=v=>Number(v||0);
+const round2=v=>Number(Number(v||0).toFixed(2));
 async function ensureHoldTable(){
   if(holdTablesReady)return;
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PosHeldTransaction" (
@@ -45,12 +46,20 @@ async function ensureHoldTable(){
 
 async function resolveCustomer(req,customerId){
   if(!customerId)return null;
-  const customer=await prisma.customer.findFirst({
-    where:{id:customerId,companyId:req.user.companyId,active:true},
-    select:{id:true,name:true,taxId:true,phone:true,email:true,discountPercent:true,creditLimit:true,balance:true}
-  });
+  const rows=await prisma.$queryRaw`
+    SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard"
+    FROM "Customer"
+    WHERE "id"=${customerId} AND "companyId"=${req.user.companyId} AND "active"=true
+    LIMIT 1`;
+  const customer=rows[0];
   if(!customer){const error=new Error("Ο πελάτης δεν βρέθηκε ή δεν είναι ενεργός στην εταιρεία.");error.status=400;throw error}
-  return {...customer,discountPercent:money(customer.discountPercent),creditLimit:money(customer.creditLimit),balance:money(customer.balance)};
+  return {...customer,discountPercent:money(customer.discountPercent),creditLimit:money(customer.creditLimit),balance:money(customer.balance),hasMemberCard:Boolean(String(customer.memberCard||"").trim())};
+}
+async function promotionSettings(companyId){
+  try{
+    const rows=await prisma.$queryRaw`SELECT "settings" FROM "ManagementParameters" WHERE "companyId"=${companyId} LIMIT 1`;
+    return {leafletOnlyWithCustomerCard:Boolean(rows[0]?.settings?.backoffice?.leafletOnlyWithCustomerCard)};
+  }catch{return {leafletOnlyWithCustomerCard:false}}
 }
 
 router.get("/stores/:storeId",async(req,res,next)=>{
@@ -69,13 +78,7 @@ router.get("/stores/:storeId",async(req,res,next)=>{
       ORDER BY c."name" NULLS LAST,p."name"
       LIMIT 5000
     `;
-    res.json({
-      store,
-      layout:layoutRows[0]?.layoutJson||null,
-      layoutVersion:Number(layoutRows[0]?.version||0),
-      publishedAt:layoutRows[0]?.publishedAt||null,
-      products:products.map(row=>({...row,salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))
-    });
+    res.json({store,layout:layoutRows[0]?.layoutJson||null,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,products:products.map(row=>({...row,salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
   }catch(error){next(error)}
 });
 
@@ -86,14 +89,12 @@ router.get("/stores/:storeId/customers",async(req,res,next)=>{
     if(q.length<2)return res.json({items:[]});
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
-      SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance"
+      SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard"
       FROM "Customer"
       WHERE "companyId"=${req.user.companyId} AND "active"=true
-        AND ("name" ILIKE ${like} OR COALESCE("taxId",'') ILIKE ${like} OR COALESCE("phone",'') ILIKE ${like} OR COALESCE("email",'') ILIKE ${like})
-      ORDER BY "name"
-      LIMIT 30
-    `;
-    res.json({items:rows.map(row=>({...row,discountPercent:money(row.discountPercent),creditLimit:money(row.creditLimit),balance:money(row.balance)}))});
+        AND ("name" ILIKE ${like} OR COALESCE("taxId",'') ILIKE ${like} OR COALESCE("phone",'') ILIKE ${like} OR COALESCE("email",'') ILIKE ${like} OR COALESCE("memberCard",'') ILIKE ${like})
+      ORDER BY "name" LIMIT 30`;
+    res.json({items:rows.map(row=>({...row,discountPercent:money(row.discountPercent),creditLimit:money(row.creditLimit),balance:money(row.balance),hasMemberCard:Boolean(String(row.memberCard||"").trim()),memberCard:undefined}))});
   }catch(error){next(error)}
 });
 
@@ -106,50 +107,77 @@ router.get("/stores/:storeId/customers/:customerId/prices",async(req,res,next)=>
       JOIN "Product" p ON p."id"=w."productId" AND p."companyId"=w."companyId" AND p."active"=true
       JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true
       WHERE w."companyId"=${req.user.companyId} AND w."customerId"=${customer.id} AND w."active"=true
-      ORDER BY w."productId"
-    `;
+      ORDER BY w."productId"`;
     res.json({customerId:customer.id,items:rows.map(row=>({productId:row.productId,wholesalePrice:money(row.wholesalePrice)}))});
   }catch(error){next(error)}
 });
 
 const cartItemSchema=z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999)});
+const quoteSchema=z.object({items:z.array(cartItemSchema).min(1).max(200),customerId:z.string().min(1).optional().nullable()});
 const paymentMethodSchema=z.enum(["CASH","CARD","IRIS"]);
-const checkoutSchema=z.object({
-  items:z.array(cartItemSchema).min(1).max(200),
-  customerId:z.string().min(1).optional().nullable(),
-  paymentMethod:z.enum(["CASH","CARD","IRIS","MIXED"]).optional(),
-  payments:z.array(z.object({method:paymentMethodSchema,amount:z.coerce.number().positive()})).min(2).max(3).optional()
-}).superRefine((value,ctx)=>{
-  if(value.paymentMethod==="MIXED"&&!value.payments){ctx.addIssue({code:z.ZodIssueCode.custom,path:["payments"],message:"Η μικτή πληρωμή χρειάζεται ανάλυση ποσών."})}
-  if(value.payments&&value.paymentMethod!=="MIXED"){ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Η ανάλυση πληρωμών χρησιμοποιείται μόνο στη μικτή πληρωμή."})}
-  if(!value.paymentMethod){ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Επιλέξτε τρόπο πληρωμής."})}
+const checkoutSchema=quoteSchema.extend({paymentMethod:z.enum(["CASH","CARD","IRIS","MIXED"]).optional(),payments:z.array(z.object({method:paymentMethodSchema,amount:z.coerce.number().positive()})).min(2).max(3).optional()}).superRefine((value,ctx)=>{
+  if(value.paymentMethod==="MIXED"&&!value.payments)ctx.addIssue({code:z.ZodIssueCode.custom,path:["payments"],message:"Η μικτή πληρωμή χρειάζεται ανάλυση ποσών."});
+  if(value.payments&&value.paymentMethod!=="MIXED")ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Η ανάλυση πληρωμών χρησιμοποιείται μόνο στη μικτή πληρωμή."});
+  if(!value.paymentMethod)ctx.addIssue({code:z.ZodIssueCode.custom,path:["paymentMethod"],message:"Επιλέξτε τρόπο πληρωμής."});
 });
-const holdSchema=z.object({items:z.array(cartItemSchema).min(1).max(200),customerId:z.string().min(1).optional().nullable()});
+const holdSchema=quoteSchema;
+
+function giftCandidate(promotion,retailPrice,quantity){
+  const saleQuantity=Math.max(0,money(promotion.saleQuantity)),bonusQuantity=Math.max(0,money(promotion.bonusQuantity)),discountPercent=Math.max(0,Math.min(100,money(promotion.discountPercent)));
+  const group=saleQuantity+bonusQuantity;if(group<=0||bonusQuantity<=0||discountPercent<=0)return null;
+  const groups=Math.floor(quantity/group),discountedUnits=groups*bonusQuantity;if(discountedUnits<=0)return null;
+  const discount=round2(discountedUnits*retailPrice*(discountPercent/100)),lineTotal=round2(retailPrice*quantity-discount);
+  return {promotionId:promotion.id,promotionType:"GIFT",lineTotal,discount,customerPoints:0};
+}
+function leafletCandidate(promotion,retailPrice,quantity){
+  if(promotion.offerPrice===null||promotion.offerPrice===undefined)return null;const offer=Math.max(0,money(promotion.offerPrice)),lineTotal=round2(offer*quantity),discount=round2(Math.max(0,retailPrice*quantity-lineTotal));
+  if(lineTotal>=round2(retailPrice*quantity))return null;
+  return {promotionId:promotion.id,promotionType:"LEAFLET",lineTotal,discount,customerPoints:money(promotion.customerPoints)};
+}
 
 async function resolveItems(req,store,items,customer=null){
   const ids=[...new Set(items.map(x=>x.productId))],customerId=customer?.id||null;
   const rows=await prisma.$queryRaw`
-    SELECT p."id",p."sku",p."name",p."vatRate",
-           COALESCE(sp."salePrice",p."salePrice") AS "retailPrice",
-           COALESCE(w."wholesalePrice",COALESCE(sp."salePrice",p."salePrice")) AS "effectivePrice",
-           CASE WHEN w."id" IS NULL THEN 'RETAIL' ELSE 'WHOLESALE' END AS "priceSource",
-           COALESCE(sp."currentStock",0) AS "currentStock"
-    FROM "StoreProduct" sp
-    JOIN "Product" p ON p."id"=sp."productId"
+    SELECT p."id",p."sku",p."name",p."vatRate",COALESCE(sp."salePrice",p."salePrice") AS "retailPrice",w."id" AS "wholesaleId",w."wholesalePrice",COALESCE(sp."currentStock",0) AS "currentStock"
+    FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId"
     LEFT JOIN "CustomerWholesalePrice" w ON ${customerId}::text IS NOT NULL AND w."companyId"=${req.user.companyId} AND w."customerId"=${customerId} AND w."productId"=p."id" AND w."active"=true
-    WHERE sp."storeId"=${store.id} AND p."companyId"=${req.user.companyId} AND sp."active"=true AND p."active"=true AND p."id"=ANY(${ids}::text[])
-  `;
+    WHERE sp."storeId"=${store.id} AND p."companyId"=${req.user.companyId} AND sp."active"=true AND p."active"=true AND p."id"=ANY(${ids}::text[])`;
   if(rows.length!==ids.length){const error=new Error("Ένα ή περισσότερα προϊόντα δεν είναι ενεργά στο κατάστημα.");error.status=400;throw error}
-  const byId=new Map(rows.map(row=>[row.id,row]));
-  return items.map(item=>{const product=byId.get(item.productId),retailPrice=money(product.retailPrice),unitPrice=money(product.effectivePrice);return {productId:item.productId,id:item.productId,name:product.name,sku:product.sku,quantity:item.quantity,qty:item.quantity,stock:money(product.currentStock),vatRate:money(product.vatRate),retailPrice,unitPrice,price:unitPrice,priceSource:product.priceSource,lineTotal:Number((unitPrice*item.quantity).toFixed(2))}});
+  const [promotions,settings]=await Promise.all([
+    prisma.$queryRaw`
+      SELECT pr."id",pr."productId",pr."promotionType",pr."offerPrice",pr."discountPercent",pr."saleQuantity",pr."bonusQuantity",pr."customerPoints",pr."validFrom",pr."validUntil"
+      FROM "PriceCatalogPromotion" pr JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
+      WHERE pr."companyId"=${req.user.companyId} AND ps."storeId"=${store.id} AND pr."active"=true AND pr."productId"=ANY(${ids}::text[]) AND pr."validFrom"<=NOW() AND (pr."validUntil" IS NULL OR pr."validUntil">=NOW())
+      ORDER BY pr."productId",pr."promotionType",pr."validFrom" DESC,pr."id"`,
+    promotionSettings(req.user.companyId)
+  ]);
+  const byId=new Map(rows.map(row=>[row.id,row])),promoByProduct=new Map();
+  for(const promotion of promotions){if(!promoByProduct.has(promotion.productId))promoByProduct.set(promotion.productId,[]);promoByProduct.get(promotion.productId).push(promotion)}
+  return items.map(item=>{
+    const product=byId.get(item.productId),retailPrice=money(product.retailPrice),quantity=money(item.quantity),hasWholesale=Boolean(product.wholesaleId),basePrice=hasWholesale?money(product.wholesalePrice):retailPrice,baseTotal=round2(basePrice*quantity);
+    if(hasWholesale)return {productId:item.productId,id:item.productId,name:product.name,sku:product.sku,quantity,qty:quantity,stock:money(product.currentStock),vatRate:money(product.vatRate),retailPrice,unitPrice:basePrice,effectiveUnitPrice:basePrice,price:basePrice,priceSource:"WHOLESALE",promotionId:null,promotionType:null,customerPoints:0,discount:0,lineTotal:baseTotal};
+    const candidates=[];
+    for(const promotion of promoByProduct.get(item.productId)||[]){
+      if(promotion.promotionType==="LEAFLET"){
+        if(settings.leafletOnlyWithCustomerCard&&!customer?.hasMemberCard)continue;
+        const candidate=leafletCandidate(promotion,retailPrice,quantity);if(candidate)candidates.push(candidate);
+      }else if(promotion.promotionType==="GIFT"){
+        const candidate=giftCandidate(promotion,retailPrice,quantity);if(candidate)candidates.push(candidate);
+      }
+    }
+    candidates.sort((a,b)=>a.lineTotal-b.lineTotal||String(a.promotionType).localeCompare(String(b.promotionType))||String(a.promotionId).localeCompare(String(b.promotionId)));
+    const best=candidates[0]&&candidates[0].lineTotal<round2(retailPrice*quantity)?candidates[0]:null,lineTotal=best?.lineTotal??round2(retailPrice*quantity),discount=best?.discount??0,effectiveUnitPrice=quantity>0?round2(lineTotal/quantity):retailPrice;
+    return {productId:item.productId,id:item.productId,name:product.name,sku:product.sku,quantity,qty:quantity,stock:money(product.currentStock),vatRate:money(product.vatRate),retailPrice,unitPrice:retailPrice,effectiveUnitPrice,price:effectiveUnitPrice,priceSource:best?.promotionType||"RETAIL",promotionId:best?.promotionId||null,promotionType:best?.promotionType||null,customerPoints:best?.customerPoints||0,discount,lineTotal};
+  });
 }
+function quoteSummary(items){const subtotal=round2(items.reduce((sum,item)=>sum+item.unitPrice*item.quantity,0)),discount=round2(items.reduce((sum,item)=>sum+money(item.discount),0)),total=round2(items.reduce((sum,item)=>sum+item.lineTotal,0));return {subtotal,discount,total}}
+
+router.post("/stores/:storeId/quote",async(req,res,next)=>{
+  try{assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),body=quoteSchema.parse(req.body||{}),customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer);res.json({customer,items,...quoteSummary(items)})}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Η τιμολόγηση καλαθιού δεν είναι έγκυρη.",details:error.issues});next(error)}
+});
 
 router.get("/stores/:storeId/holds",async(req,res,next)=>{
-  try{
-    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);await ensureHoldTable();
-    const rows=await prisma.$queryRaw`SELECT "id","operatorId","operatorName","customerId","customerName","itemsJson","total","heldAt" FROM "PosHeldTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='HELD' ORDER BY "heldAt" DESC LIMIT 20`;
-    res.json({rows:rows.map(row=>({...row,total:money(row.total),items:Array.isArray(row.itemsJson)?row.itemsJson:[]}))});
-  }catch(error){next(error)}
+  try{assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);await ensureHoldTable();const rows=await prisma.$queryRaw`SELECT "id","operatorId","operatorName","customerId","customerName","itemsJson","total","heldAt" FROM "PosHeldTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='HELD' ORDER BY "heldAt" DESC LIMIT 20`;res.json({rows:rows.map(row=>({...row,total:money(row.total),items:Array.isArray(row.itemsJson)?row.itemsJson:[]}))})}catch(error){next(error)}
 });
 
 router.post("/stores/:storeId/holds",async(req,res,next)=>{
@@ -157,9 +185,9 @@ router.post("/stores/:storeId/holds",async(req,res,next)=>{
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);await ensureHoldTable();const body=holdSchema.parse(req.body||{});
     const open=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
     if(!open[0])return res.status(409).json({error:"Δεν υπάρχει ανοιχτή βάρδια. Άνοιξε πρώτα βάρδια."});
-    const customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer),total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2)),id=crypto.randomUUID();
-    await prisma.$executeRaw`INSERT INTO "PosHeldTransaction" ("id","companyId","storeId","sessionId","operatorId","operatorName","customerId","customerName","itemsJson","total") VALUES (${id},${req.user.companyId},${store.id},${open[0].id},${req.user.id},${req.user.fullName||"Πωλητής"},${customer?.id||null},${customer?.name||null},${JSON.stringify(items)}::jsonb,${total})`;
-    res.status(201).json({id,total,items,customer,heldAt:new Date().toISOString()});
+    const customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer),summary=quoteSummary(items),id=crypto.randomUUID();
+    await prisma.$executeRaw`INSERT INTO "PosHeldTransaction" ("id","companyId","storeId","sessionId","operatorId","operatorName","customerId","customerName","itemsJson","total") VALUES (${id},${req.user.companyId},${store.id},${open[0].id},${req.user.id},${req.user.fullName||"Πωλητής"},${customer?.id||null},${customer?.name||null},${JSON.stringify(items)}::jsonb,${summary.total})`;
+    res.status(201).json({id,...summary,items,customer,heldAt:new Date().toISOString()});
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Η συναλλαγή αναμονής δεν είναι έγκυρη.",details:error.issues});next(error)}
 });
 
@@ -175,38 +203,22 @@ router.post("/stores/:storeId/holds/:holdId/restore",async(req,res,next)=>{
 
 router.post("/stores/:storeId/checkout",async(req,res,next)=>{
   try{
-    assertStore(req,req.params.storeId);
-    const store=await storeFor(req,req.params.storeId);
-    const body=checkoutSchema.parse(req.body||{});
-    const customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer);
-    const total=Number(items.reduce((sum,item)=>sum+item.lineTotal,0).toFixed(2));
-    const payments=body.paymentMethod==="MIXED"?body.payments:[{method:body.paymentMethod,amount:total}];
-    const paid=Number(payments.reduce((sum,payment)=>sum+money(payment.amount),0).toFixed(2));
-    if(Math.abs(paid-total)>0.009)return res.status(400).json({error:`Η ανάλυση πληρωμών (${paid.toFixed(2)} €) πρέπει να ισούται με το σύνολο (${total.toFixed(2)} €).`});
-
-    const saleId=crypto.randomUUID();
-    const actorId=req.user.id;
-    const actorName=req.user.fullName||"Πωλητής";
-    const employeeId=req.user.employeeId||null;
-    const cashAmount=payments.filter(x=>x.method==="CASH").reduce((sum,x)=>sum+money(x.amount),0);
-    const cardAmount=payments.filter(x=>x.method==="CARD").reduce((sum,x)=>sum+money(x.amount),0);
-    const irisAmount=payments.filter(x=>x.method==="IRIS").reduce((sum,x)=>sum+money(x.amount),0);
-
+    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),body=checkoutSchema.parse(req.body||{}),customer=await resolveCustomer(req,body.customerId),items=await resolveItems(req,store,body.items,customer),summary=quoteSummary(items);
+    const payments=body.paymentMethod==="MIXED"?body.payments:[{method:body.paymentMethod,amount:summary.total}],paid=round2(payments.reduce((sum,payment)=>sum+money(payment.amount),0));
+    if(Math.abs(paid-summary.total)>0.009)return res.status(400).json({error:`Η ανάλυση πληρωμών (${paid.toFixed(2)} €) πρέπει να ισούται με το σύνολο (${summary.total.toFixed(2)} €).`});
+    const saleId=crypto.randomUUID(),actorId=req.user.id,actorName=req.user.fullName||"Πωλητής",employeeId=req.user.employeeId||null,cashAmount=payments.filter(x=>x.method==="CASH").reduce((sum,x)=>sum+money(x.amount),0),cardAmount=payments.filter(x=>x.method==="CARD").reduce((sum,x)=>sum+money(x.amount),0),irisAmount=payments.filter(x=>x.method==="IRIS").reduce((sum,x)=>sum+money(x.amount),0);
     await prisma.$transaction(async tx=>{
       const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`;
       if(!open[0]){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Άνοιξε πρώτα βάρδια.");error.status=409;throw error}
-      await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${req.user.companyId},${store.id},${customer?.id||null},${employeeId},'NON_FISCAL',${total},0,${total},'COMPLETED','POS')`;
-      for(const item of items){await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${item.lineTotal})`}
-      for(const payment of payments){await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`}
+      await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${req.user.companyId},${store.id},${customer?.id||null},${employeeId},'NON_FISCAL',${summary.subtotal},${summary.discount},${summary.total},'COMPLETED','POS')`;
+      for(const item of items)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},${item.discount},${item.vatRate},${item.lineTotal})`;
+      for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`;
       if(cashAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open[0].id},'SALE_CASH',${cashAmount},${`POS πώληση ${saleId} · ΜΕΤΡΗΤΑ`},${actorId},${actorName})`;
       if(cardAmount+irisAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open[0].id},'SALE_CARD',${cardAmount+irisAmount},${`POS πώληση ${saleId} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`},${actorId},${actorName})`;
     });
-    const wholesaleLines=items.filter(item=>item.priceSource==="WHOLESALE").length;
-    res.status(201).json({saleId,total,customer,wholesaleLines,paymentMethod:body.paymentMethod,payments,fiscalStatus:"NON_FISCAL"});
-  }catch(error){
-    if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.",details:error.issues});
-    next(error);
-  }
+    const wholesaleLines=items.filter(item=>item.priceSource==="WHOLESALE").length,promotionLines=items.filter(item=>["LEAFLET","GIFT"].includes(item.priceSource)).length;
+    res.status(201).json({saleId,...summary,customer,wholesaleLines,promotionLines,paymentMethod:body.paymentMethod,payments,fiscalStatus:"NON_FISCAL"});
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.",details:error.issues});next(error)}
 });
 
 export default router;

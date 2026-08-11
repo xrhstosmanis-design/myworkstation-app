@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {normalizePromotionDateBody} from "../promotion-time.js";
 import priceCatalogRoutes from "./price-catalog.js";
 
 const router=Router();
@@ -22,6 +23,14 @@ async function ensureCompatibility(){
       ];
       for(const sql of alters)await prisma.$executeRawUnsafe(sql);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ProductPriceHistory_company_product_idx" ON "ProductPriceHistory"("companyId","productId","createdAt" DESC)`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PriceCatalogPromotionStore" (
+        "promotionId" TEXT NOT NULL,
+        "companyId" TEXT NOT NULL,
+        "storeId" TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY("promotionId","storeId")
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotionStore_company_store_idx" ON "PriceCatalogPromotionStore"("companyId","storeId","promotionId")`);
     })().catch(error=>{compatibilityPromise=undefined;throw error});
   }
   return compatibilityPromise;
@@ -77,6 +86,47 @@ router.get("/products",async(req,res,next)=>{
     const total=Number(countRows[0]?.count||0);
     res.json({items,count:items.length,total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize)),storeId});
   }catch(error){next(error)}
+});
+
+async function ownedPromotion(companyId,promotionId){
+  const rows=await prisma.$queryRaw`SELECT "id","promotionType","productId","active" FROM "PriceCatalogPromotion" WHERE "id"=${promotionId} AND "companyId"=${companyId} LIMIT 1`;
+  return rows[0]||null;
+}
+
+router.get("/promotions/:promotionId/stores",async(req,res,next)=>{
+  try{
+    const companyId=req.user.companyId,promotion=await ownedPromotion(companyId,req.params.promotionId);
+    if(!promotion)return res.status(404).json({error:"Δεν βρέθηκε η προσφορά."});
+    const [stores,assigned]=await Promise.all([
+      prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
+      prisma.$queryRaw`SELECT "storeId" FROM "PriceCatalogPromotionStore" WHERE "companyId"=${companyId} AND "promotionId"=${promotion.id} ORDER BY "storeId"`
+    ]);
+    const selected=new Set(assigned.map(row=>row.storeId));
+    res.json({promotion,stores:stores.map(store=>({...store,selected:selected.has(store.id)})),storeIds:[...selected]});
+  }catch(error){next(error)}
+});
+
+router.put("/promotions/:promotionId/stores",async(req,res,next)=>{
+  try{
+    const companyId=req.user.companyId,promotion=await ownedPromotion(companyId,req.params.promotionId);
+    if(!promotion)return res.status(404).json({error:"Δεν βρέθηκε η προσφορά."});
+    const storeIds=[...new Set(Array.isArray(req.body?.storeIds)?req.body.storeIds.map(value=>String(value||"").trim()).filter(Boolean):[])];
+    if(storeIds.length>200)return res.status(400).json({error:"Υπερβολικά πολλά καταστήματα για μία προσφορά."});
+    if(storeIds.length){
+      const count=await prisma.store.count({where:{companyId,active:true,id:{in:storeIds}}});
+      if(count!==storeIds.length)return res.status(400).json({error:"Ένα ή περισσότερα καταστήματα δεν ανήκουν στην εταιρεία ή δεν είναι ενεργά."});
+    }
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`DELETE FROM "PriceCatalogPromotionStore" WHERE "companyId"=${companyId} AND "promotionId"=${promotion.id}`;
+      for(const storeId of storeIds)await tx.$executeRaw`INSERT INTO "PriceCatalogPromotionStore" ("promotionId","companyId","storeId") VALUES (${promotion.id},${companyId},${storeId}) ON CONFLICT ("promotionId","storeId") DO NOTHING`;
+    });
+    res.json({ok:true,storeIds,posActive:storeIds.length>0});
+  }catch(error){next(error)}
+});
+
+router.use("/promotions",(req,res,next)=>{
+  if(["POST","PATCH"].includes(req.method)&&req.body&&typeof req.body==="object")req.body=normalizePromotionDateBody(req.body);
+  next();
 });
 
 router.use(priceCatalogRoutes);

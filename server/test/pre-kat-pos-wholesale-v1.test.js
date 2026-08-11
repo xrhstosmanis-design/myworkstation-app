@@ -35,17 +35,17 @@ test("customer wholesale lookup is tenant customer product and current-store sco
   assert.match(backend,/sp\."active"=true/);
 });
 
-test("server price resolver applies wholesale then retail fallback",()=>{
+test("server resolver keeps wholesale as explicit customer price source",()=>{
   assert.match(backend,/LEFT JOIN "CustomerWholesalePrice" w/);
-  assert.match(backend,/COALESCE\(w\."wholesalePrice",COALESCE\(sp\."salePrice",p\."salePrice"\)\) AS "effectivePrice"/);
-  assert.match(backend,/CASE WHEN w\."id" IS NULL THEN 'RETAIL' ELSE 'WHOLESALE' END AS "priceSource"/);
-  assert.match(backend,/retailPrice/);
-  assert.match(backend,/unitPrice=money\(product\.effectivePrice\)/);
+  assert.match(backend,/w\."id" AS "wholesaleId",w\."wholesalePrice"/);
+  assert.match(backend,/hasWholesale=Boolean\(product\.wholesaleId\)/);
+  assert.match(backend,/basePrice=hasWholesale\?money\(product\.wholesalePrice\):retailPrice/);
+  assert.match(backend,/priceSource:"WHOLESALE"/);
 });
 
-test("checkout and HOLD both use server-side customer-aware pricing",()=>{
+test("quote checkout and HOLD all use server-side customer-aware pricing",()=>{
   const matches=backend.match(/resolveItems\(req,store,body\.items,customer\)/g)||[];
-  assert.ok(matches.length>=2,"checkout and HOLD must both use customer-aware resolver");
+  assert.ok(matches.length>=3,"quote, HOLD and checkout must use customer-aware resolver");
   assert.match(backend,/INSERT INTO "SaleLine"[\s\S]*\$\{item\.unitPrice\}/);
   assert.doesNotMatch(backend,/cartItemSchema[\s\S]{0,250}(unitPrice|price):/);
   assert.match(backend,/wholesaleLines=items\.filter\(item=>item\.priceSource==="WHOLESALE"\)\.length/);
@@ -66,20 +66,23 @@ test("switching customer reprices cart from base retail and cannot carry previou
   assert.match(client,/setWholesalePrices\(\{\}\)/);
 });
 
-test("POS visibly marks wholesale products and lines",()=>{
+test("POS visibly marks wholesale products and authoritative quoted lines",()=>{
   assert.ok(client.includes("Χονδρική"));
-  assert.match(client,/pos-wholesale-badge/);
-  assert.match(client,/pos-wholesale-price/);
-  assert.match(css,/\.pos-wholesale-badge/);
-  assert.match(css,/\.pos-wholesale-price/);
+  assert.match(client,/pos-price-badge wholesale/);
+  assert.match(client,/pos-special-price/);
+  assert.match(css,/\.pos-price-badge/);
+  assert.match(css,/\.pos-special-price/);
   assert.match(css,/#0f766e/);
   assert.doesNotMatch(css,/#ffa500|#ff9800/i);
 });
 
-test("wholesale pricing does not yet mix promotion precedence in this step",()=>{
+test("wholesale wins before retail promotions and does not stack",()=>{
   const start=backend.indexOf("async function resolveItems");
-  const end=backend.indexOf('router.get("/stores/:storeId/holds"');
+  const end=backend.indexOf("function quoteSummary");
   assert.ok(start>=0&&end>start,"resolveItems boundaries must exist");
   const resolver=backend.slice(start,end);
-  assert.doesNotMatch(resolver,/PriceCatalogPromotion|LEAFLET|GIFT/);
+  const wholesaleReturn=resolver.indexOf('if(hasWholesale)return');
+  const candidateStart=resolver.indexOf('const candidates=[]');
+  assert.ok(wholesaleReturn>=0&&candidateStart>wholesaleReturn,"wholesale must return before promotion candidates are evaluated");
+  assert.match(resolver,/priceSource:"WHOLESALE",promotionId:null,promotionType:null/);
 });

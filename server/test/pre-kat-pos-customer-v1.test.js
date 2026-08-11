@@ -11,9 +11,7 @@ const backendPath="server/src/routes/store-pos.js";
 const clientPath="client/src/components/commerce/CommercialPosApp.jsx";
 const backend=read(backendPath),client=read(clientPath),css=read("client/src/components/commerce/pos-customer.css"),index=read("server/src/index.js");
 
-test("POS customer implementation parses",()=>{
-  execFileSync(process.execPath,["--check",path.join(repo,backendPath)]);
-});
+test("POS customer implementation parses",()=>{execFileSync(process.execPath,["--check",path.join(repo,backendPath)])});
 
 test("POS has a minimal company-scoped customer search endpoint",()=>{
   assert.match(backend,/router\.get\("\/stores\/:storeId\/customers"/);
@@ -21,12 +19,14 @@ test("POS has a minimal company-scoped customer search endpoint",()=>{
   assert.match(backend,/"companyId"=\$\{req\.user\.companyId\}/);
   assert.match(backend,/"active"=true/);
   assert.match(backend,/LIMIT 30/);
-  assert.doesNotMatch(backend,/customerCategoryId|notes|points|memberCard/);
+  assert.doesNotMatch(backend,/customerCategoryId|notes|points/);
+  assert.match(backend,/hasMemberCard:Boolean/);
+  assert.match(backend,/memberCard:undefined/);
 });
 
 test("checkout validates customer in tenant and persists Sale.customerId",()=>{
   assert.match(backend,/resolveCustomer\(req,body\.customerId\)/);
-  assert.match(backend,/where:\{id:customerId,companyId:req\.user\.companyId,active:true\}/);
+  assert.match(backend,/WHERE "id"=\$\{customerId\} AND "companyId"=\$\{req\.user\.companyId\} AND "active"=true/);
   assert.match(backend,/customerId:z\.string\(\)\.min\(1\)\.optional\(\)\.nullable\(\)/);
   assert.match(backend,/INSERT INTO "Sale" \("id","companyId","storeId","customerId"/);
   assert.match(backend,/\$\{customer\?\.id\|\|null\}/);
@@ -35,7 +35,7 @@ test("checkout validates customer in tenant and persists Sale.customerId",()=>{
 test("held transactions preserve and restore the selected customer",()=>{
   assert.match(backend,/ADD COLUMN IF NOT EXISTS "customerId" TEXT/);
   assert.match(backend,/ADD COLUMN IF NOT EXISTS "customerName" TEXT/);
-  assert.match(backend,/holdSchema=.*customerId/s);
+  assert.match(backend,/holdSchema=quoteSchema/);
   assert.match(backend,/"customerId","customerName","itemsJson"/);
   assert.match(backend,/RETURNING "id","customerId","customerName","itemsJson"/);
   assert.match(client,/customerId:customer\?\.id\|\|null/);
