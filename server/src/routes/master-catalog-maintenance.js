@@ -31,9 +31,10 @@ const selectedSchema=z.object({masterProductIds:z.array(z.string().min(1)).min(1
 
 async function deleteSelectedMasters(tx,ids){
   if(!ids.length)return {deletedProducts:0,detachedTenantProducts:0};
-  const detachedRows=await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "Product" WHERE "masterProductId" = ANY($1::text[])`,ids);
+  const detached=await tx.$executeRawUnsafe(`UPDATE "Product" SET "masterProductId"=NULL WHERE "masterProductId" = ANY($1::text[])`,ids);
+  await tx.$executeRawUnsafe(`DELETE FROM "MasterProductBarcode" WHERE "masterProductId" = ANY($1::text[])`,ids);
   const deleted=await tx.$executeRawUnsafe(`DELETE FROM "MasterProduct" WHERE "id" = ANY($1::text[])`,ids);
-  return {deletedProducts:Number(deleted||0),detachedTenantProducts:Number(detachedRows?.[0]?.count||0)};
+  return {deletedProducts:Number(deleted||0),detachedTenantProducts:Number(detached||0)};
 }
 
 router.post("/delete-selected",async(req,res,next)=>{
@@ -47,9 +48,12 @@ router.post("/delete-selected",async(req,res,next)=>{
       const outcome=await deleteSelectedMasters(tx,existingIds);
       await tx.$executeRaw`INSERT INTO "MasterCatalogMaintenanceAudit" ("id","actorId","action","productIdsJson","deletedProducts","detachedTenantProducts") VALUES (${crypto.randomUUID()},${req.user.id},'DELETE_SELECTED',${JSON.stringify(existingIds)}::jsonb,${outcome.deletedProducts},${outcome.detachedTenantProducts})`;
       return outcome;
-    },{maxWait:10000,timeout:30000});
+    },{maxWait:10000,timeout:60000});
     res.json({ok:true,...result});
-  }catch(error){next(error)}
+  }catch(error){
+    console.error("Master Catalog delete-selected failed",error);
+    res.status(500).json({error:"Η διαγραφή επιλεγμένων απέτυχε.",detail:String(error?.message||error).slice(0,500),code:error?.code||null});
+  }
 });
 
 router.post("/clear",async(req,res,next)=>{
@@ -58,21 +62,23 @@ router.post("/clear",async(req,res,next)=>{
     if(confirmation!=="ΔΙΑΓΡΑΦΗ MASTER CATALOG")return res.status(400).json({error:"Απαιτείται η ακριβής επιβεβαίωση «ΔΙΑΓΡΑΦΗ MASTER CATALOG»."});
     const result=await prisma.$transaction(async tx=>{
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('master-catalog-maintenance'))`;
-      const [masterCount,tenantRefs]=await Promise.all([
-        tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "MasterProduct"`,
-        tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" WHERE "masterProductId" IS NOT NULL`
-      ]);
-      // Foreign keys already guarantee safety:
-      // Product.masterProductId -> MasterProduct ON DELETE SET NULL
-      // MasterProductBarcode.masterProductId -> MasterProduct ON DELETE CASCADE
-      // Therefore a direct set-based delete is both safer and much faster for large catalogs.
-      await tx.$executeRawUnsafe(`DELETE FROM "MasterProduct"`);
-      const outcome={deletedProducts:Number(masterCount?.[0]?.count||0),detachedTenantProducts:Number(tenantRefs?.[0]?.count||0)};
+      const masterCount=await tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "MasterProduct"`;
+      const detached=await tx.$executeRawUnsafe(`UPDATE "Product" SET "masterProductId"=NULL WHERE "masterProductId" IS NOT NULL`);
+      const deletedBarcodes=await tx.$executeRawUnsafe(`DELETE FROM "MasterProductBarcode"`);
+      const deletedProducts=await tx.$executeRawUnsafe(`DELETE FROM "MasterProduct"`);
+      const outcome={
+        deletedProducts:Number(deletedProducts||masterCount?.[0]?.count||0),
+        detachedTenantProducts:Number(detached||0),
+        deletedBarcodes:Number(deletedBarcodes||0)
+      };
       await tx.$executeRaw`INSERT INTO "MasterCatalogMaintenanceAudit" ("id","actorId","action","productIdsJson","deletedProducts","detachedTenantProducts") VALUES (${crypto.randomUUID()},${req.user.id},'CLEAR_ALL',NULL,${outcome.deletedProducts},${outcome.detachedTenantProducts})`;
       return outcome;
-    },{maxWait:10000,timeout:120000});
+    },{maxWait:15000,timeout:180000});
     res.json({ok:true,...result});
-  }catch(error){next(error)}
+  }catch(error){
+    console.error("Master Catalog clear failed",error);
+    res.status(500).json({error:"Ο καθαρισμός Master Catalog απέτυχε.",detail:String(error?.message||error).slice(0,700),code:error?.code||null});
+  }
 });
 
 export default router;
