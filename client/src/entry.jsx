@@ -8,6 +8,7 @@ import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
 import KatTestCenter from "./components/platform/KatTestCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import CommercialPosApp from "./components/commerce/CommercialPosApp.jsx";
+import PosSaleActionsPanel from "./components/commerce/PosSaleActionsPanel.jsx";
 import {installAnalyticsTabs} from "./components/commerce/installAnalyticsTabs.js";
 import {installSalesAnalysisSuite} from "./components/commerce/installSalesAnalysisSuite.js";
 import {installOwnerPaymentsSuite} from "./components/commerce/installOwnerPaymentsSuite.js";
@@ -104,6 +105,6 @@ purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subt
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><KatTestQuickAccess/></>)}
-else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>)}
+else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<><CommercialPosApp api={storeApi} storeId={storeId}/><PosSaleActionsPanel api={storeApi} storeId={storeId}/></>)}
 else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
 else{installOwnerPasswordChangeGate();installModuleUiEnforcement();import("./main.jsx");const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(document.getElementById("pilot-report-root")).render(<PilotReportLauncherLive/>);const commerceRoot=document.createElement("div");commerceRoot.id="commerce-root";document.body.appendChild(commerceRoot);createRoot(commerceRoot).render(<CommerceLauncher/>)}
