@@ -1,10 +1,11 @@
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
 let activeInput=null,lastTouchAt=0,lang="EL",shift=false;
+const fieldButtons=new Map();
 
 const fire=input=>{input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}))};
 const editable=el=>{
-  if(!(el instanceof HTMLElement)||el.disabled||el.readOnly)return false;
+  if(!(el instanceof HTMLElement)||el.disabled||el.readOnly||el.dataset?.keyboard==="off")return false;
   if(el.matches("textarea,[contenteditable='true']"))return true;
   if(!(el instanceof HTMLInputElement))return false;
   const type=(el.type||"text").toLowerCase();
@@ -29,7 +30,7 @@ function render(){
   }
   const chars=labels[lang],sizes=rows[lang];let cursor=0;
   const line=s=>{const part=chars.slice(cursor,cursor+s);cursor+=s;return `<div class="mws-touch-row">${part.map(ch=>`<button data-key="${ch}">${shift?ch.toLocaleUpperCase(lang==="EL"?"el-GR":"en-US"):ch}</button>`).join("")}</div>`};
-  root.innerHTML=`<div class="mws-touch-head"><b>Πληκτρολόγιο αφής</b><span>${lang==="EL"?"Ελληνικά":"English"}</span><button data-key="CLOSE">✕</button></div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button data-key="SHIFT">⇧</button><button data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button data-key="@">@</button><button data-key="SPACE" class="space">κενό</button><button data-key=".">.</button><button data-key="BACK">⌫</button><button data-key="ENTER" class="enter">↵</button></div>`;
+  root.innerHTML=`<div class="mws-touch-head"><b>Πληκτρολόγιο οθόνης</b><span>${lang==="EL"?"Ελληνικά":"English"}</span><button data-key="CLOSE">✕</button></div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button data-key="SHIFT">⇧</button><button data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button data-key="@">@</button><button data-key="SPACE" class="space">κενό</button><button data-key=".">.</button><button data-key="BACK">⌫</button><button data-key="ENTER" class="enter">↵</button></div>`;
 }
 function insertText(text){
   const input=activeInput;if(!input)return;
@@ -48,12 +49,28 @@ function prepareInput(input){
   if(!input.dataset.mwsOriginalInputmode)input.dataset.mwsOriginalInputmode=input.getAttribute("inputmode")??"__none__";
   input.setAttribute("inputmode","none");
 }
-function open(input){activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);render();setTimeout(()=>input.focus({preventScroll:true}),0)}
+function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);render();setTimeout(()=>input.focus({preventScroll:true}),0)}
 function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true}
+function makeButton(input){
+  const button=document.createElement("button");button.type="button";button.className="mws-touch-field-trigger";button.title="Άνοιγμα πληκτρολογίου οθόνης";button.setAttribute("aria-label","Άνοιγμα πληκτρολογίου οθόνης");button.textContent="⌨";
+  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);fieldButtons.set(input,button);return button;
+}
+function positionButton(input,button){
+  if(!editable(input)||!input.isConnected){button.remove();fieldButtons.delete(input);return}
+  const rect=input.getBoundingClientRect();const hidden=rect.width<=0||rect.height<=0||rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth;
+  button.hidden=hidden;if(hidden)return;
+  const size=34,gap=5;let left=rect.right+gap;if(left+size>window.innerWidth-5)left=Math.max(5,rect.right-size-5);const top=Math.max(5,Math.min(window.innerHeight-size-5,rect.top+(rect.height-size)/2));button.style.left=`${left}px`;button.style.top=`${top}px`;
+}
+function syncButtons(){
+  document.querySelectorAll("input,textarea").forEach(input=>{if(editable(input)&&!fieldButtons.has(input))makeButton(input)});
+  [...fieldButtons.entries()].forEach(([input,button])=>positionButton(input,button));
+}
+function scheduleSync(){requestAnimationFrame(syncButtons)}
 export function installTouchKeyboard(){
-  ensure();
-  document.addEventListener("pointerdown",event=>{if(!isTouchLikePointer(event.pointerType))return;lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)},true);
+  ensure();syncButtons();
+  const observer=new MutationObserver(scheduleSync);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","disabled","readonly","type"]});
+  document.addEventListener("pointerdown",event=>{if(isTouchLikePointer(event.pointerType)){lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)}},true);
   document.addEventListener("focusin",event=>{const el=event.target;if(!editable(el))return;if(Date.now()-lastTouchAt<1800)open(el)},true);
-  document.addEventListener("pointerdown",event=>{if(!activeInput)return;if(event.target.closest("#mws-touch-keyboard"))return;if(event.target===activeInput)return;if(!editable(event.target))close()},true);
-  window.addEventListener("resize",()=>{if(activeInput)render()});
+  document.addEventListener("pointerdown",event=>{if(!activeInput)return;if(event.target.closest("#mws-touch-keyboard,.mws-touch-field-trigger"))return;if(event.target===activeInput)return;if(!editable(event.target))close()},true);
+  window.addEventListener("resize",scheduleSync);window.addEventListener("scroll",scheduleSync,true);setInterval(syncButtons,1200);
 }
