@@ -20,6 +20,7 @@ import {installCustomerControlSuiteV2} from "./components/commerce/installCustom
 import {installPriceCatalogSuite} from "./components/commerce/installPriceCatalogSuite.js";
 import {installPriceCatalogVisibleNav} from "./components/commerce/installPriceCatalogVisibleNav.js";
 import {installPromotionStoreScope} from "./components/commerce/installPromotionStoreScope.js";
+import {installPromotionStoreGuard} from "./components/commerce/installPromotionStoreGuard.js";
 import {installLeafletImport} from "./components/commerce/installLeafletImport.js";
 import {installKioskReportsSuite} from "./components/commerce/installKioskReportsSuite.js";
 import {installPosSaleAuditReport} from "./components/commerce/installPosSaleAuditReport.js";
@@ -53,6 +54,7 @@ import "./components/commerce/commerce-home-modern.css";
 import "./styles.css";
 import "./components/commerce/price-catalog-visible-nav.css";
 import "./components/commerce/promotion-store-scope.css";
+import "./components/commerce/promotion-store-guard.css";
 import "./components/commerce/leaflet-import.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
@@ -102,10 +104,11 @@ const installSupplierControlSafely=()=>{if(!document.querySelector(".commerce-hu
 const installCustomerControlSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-customer-control-launch]"))return;installCustomerControlSuiteV2()};
 const installPriceCatalogSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-price-catalog-launch]"))return;installPriceCatalogSuite()};
 const installPromotionStoreScopeSafely=()=>{if(!document.querySelector(".price-catalog-suite"))return;installPromotionStoreScope()};
+const installPromotionStoreGuardSafely=()=>{if(!document.querySelector(".price-catalog-suite"))return;installPromotionStoreGuard()};
 const installLeafletImportSafely=()=>{if(!document.querySelector(".price-catalog-suite"))return;installLeafletImport()};
 const installOperatorManagementSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-operator-management-launch]"))return;installOperatorManagementSuite(storeApi)};
-installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installLeafletImportSafely();installOperatorManagementSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installLeafletImportSafely();installOperatorManagementSafely()});
+installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely();
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
