@@ -10,7 +10,6 @@ const MAX_COMBINATIONS=10000;
 const MAX_SAMPLE_ROWS=500;
 const uid=()=>crypto.randomUUID();
 const norm=value=>String(value??"").trim().toLocaleLowerCase("el-GR");
-const money=value=>Number(value||0);
 const round2=value=>Number(Number(value||0).toFixed(2));
 let schemaPromise;
 
@@ -29,13 +28,15 @@ async function ensureSchema(){
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 
 const productRef=z.object({name:z.string().trim().min(1).max(250),sku:z.string().trim().max(80).optional().nullable()});
-const baseSchema=z.object({
+const baseObject=z.object({
   productRefs:z.array(productRef).min(1).max(MAX_PRODUCTS),
   storeNames:z.array(z.string().trim().min(1).max(180)).min(1).max(MAX_STORES),
   mode:z.enum(["SET","INCREASE_PERCENT","DECREASE_PERCENT"]),
   value:z.coerce.number().finite().min(0).max(100000)
-}).superRefine((body,ctx)=>{if(body.mode==="DECREASE_PERCENT"&&body.value>100)ctx.addIssue({code:z.ZodIssueCode.custom,path:["value"],message:"Η μείωση δεν μπορεί να ξεπερνά το 100%."});if(body.productRefs.length*body.storeNames.length>MAX_COMBINATIONS)ctx.addIssue({code:z.ZodIssueCode.custom,path:["productRefs"],message:`Η προεπισκόπηση επιτρέπει έως ${MAX_COMBINATIONS} συνδυασμούς προϊόν × κατάστημα.`})});
-const commitSchema=baseSchema.extend({previewHash:z.string().length(64),confirm:z.literal(true),acceptSkipped:z.boolean().default(false)});
+});
+const validateSelection=(body,ctx)=>{if(body.mode==="DECREASE_PERCENT"&&body.value>100)ctx.addIssue({code:z.ZodIssueCode.custom,path:["value"],message:"Η μείωση δεν μπορεί να ξεπερνά το 100%."});if(body.productRefs.length*body.storeNames.length>MAX_COMBINATIONS)ctx.addIssue({code:z.ZodIssueCode.custom,path:["productRefs"],message:`Η προεπισκόπηση επιτρέπει έως ${MAX_COMBINATIONS} συνδυασμούς προϊόν × κατάστημα.`})};
+const baseSchema=baseObject.superRefine(validateSelection);
+const commitSchema=baseObject.extend({previewHash:z.string().length(64),confirm:z.literal(true),acceptSkipped:z.boolean().default(false)}).superRefine(validateSelection);
 
 function resolveUnique(rows,keyFn,label){
   const map=new Map();for(const row of rows){const key=keyFn(row);if(!key)continue;const bucket=map.get(key)||[];bucket.push(row);map.set(key,bucket)}
