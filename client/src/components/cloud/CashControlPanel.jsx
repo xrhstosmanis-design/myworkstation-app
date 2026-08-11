@@ -91,7 +91,7 @@ export default function CashControlPanel({api,store}){
 
   return <article className="cloud-panel cash-module">
     <div className="cloud-panel-head cash-heading">
-      <div><h3><WalletCards/>Έλεγχος Ταμείου</h3><p>Άνοιγμα και κλείσιμο βάρδιας με Συρτάρι, Φύλαξη, Κέρματα και Χρηματοκιβώτιο.</p></div>
+      <div><h3><WalletCards/>Έλεγχος Ταμείου</h3><p>Παρακολούθηση βάρδιας, ταμείου και παράδοσης. Η έναρξη βάρδιας γίνεται μόνο από το POS / Store Mode.</p></div>
       <button className="cash-refresh" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
     </div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
@@ -109,18 +109,10 @@ export default function CashControlPanel({api,store}){
         <article><span>Τελευταία διαφορά</span><strong className={number(lastClosed?.variance)<0?"cash-negative":"cash-positive"}>{lastClosed?money(lastClosed.variance):"—"}</strong></article>
       </div>
 
-      {!data?.openSession?<form className="cash-form" onSubmit={openShift}>
-        <div className="cash-form-title"><CheckCircle2/><div><h4>Άνοιγμα βάρδιας</h4><p>Το σύνολο έναρξης υπολογίζεται από Συρτάρι + Φύλαξη + Κέρματα. Το χρηματοκιβώτιο είναι ενημερωτικό.</p></div></div>
-        <label className="cash-wide">Ονομασία βάρδιας<input value={openForm.shiftLabel} onChange={e=>updateOpen("shiftLabel",e.target.value)} required/></label>
-        <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={openForm.drawer} onChange={value=>updateOpen("drawer",value)}/>
-        <MoneyField icon={<ShieldCheck/>} label="Φύλαξη" value={openForm.custody} onChange={value=>updateOpen("custody",value)}/>
-        <MoneyField icon={<Coins/>} label="Κέρματα" value={openForm.coins} onChange={value=>updateOpen("coins",value)}/>
-        <MoneyField icon={<ShieldCheck/>} label="Χρηματοκιβώτιο" value={openForm.safe} onChange={value=>updateOpen("safe",value)}/>
-        <label className="cash-wide">Σημείωση<input value={openForm.note} onChange={e=>updateOpen("note",e.target.value)} placeholder="Προαιρετική σημείωση παράδοσης"/></label>
-        <div className="cash-total"><span>Έναρξη επόμενης λειτουργίας</span><strong>{money(openingOperational)}</strong></div>
-        {data?.recent?.some(row=>row.status==="CLOSED")&&Math.abs(openingVariance)>.009&&<div className="cloud-alert cloud-error cash-wide"><b>Διαφορά από την προηγούμενη παράδοση: {money(openingVariance)}</b><span>Αναμενόμενο {money(expectedOpening)} · Δηλωμένο {money(openingOperational)}. Η διαφορά θα καταγραφεί στη νέα βάρδια.</span></div>}
-        <button className="cash-submit" disabled={busy}>{busy?"Αποθήκευση…":"Άνοιγμα βάρδιας"}</button>
-      </form>:<form className="cash-form" onSubmit={closeShift}>
+      {!data?.openSession?<div className="cloud-empty">
+        <b>Η βάρδια είναι κλειστή.</b><br/>
+        Η έναρξη βάρδιας δεν επιτρέπεται από το BackOffice. Ανοίγει μόνο από το POS / Store Mode από τον χειριστή του καταστήματος.
+      </div>:<form className="cash-form" onSubmit={closeShift}>
         <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
         <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)} readOnly/>
