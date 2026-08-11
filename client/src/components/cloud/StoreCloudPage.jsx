@@ -69,6 +69,11 @@ export default function StoreCloudPage({api,store,onBack}){
     try{await navigator.clipboard.writeText(pairing.code);setMessage("Ο κωδικός αντιγράφηκε.")}catch{setMessage(`Κωδικός: ${pairing.code}`)}
   };
   const goTo=sectionId=>document.getElementById(sectionId)?.scrollIntoView({behavior:"smooth",block:"start"});
+  const openProducts=()=>{
+    const launcher=document.querySelector(".commerce-launcher");
+    if(launcher){launcher.click();return}
+    setMessage("Η εμπορική λειτουργία προϊόντων δεν είναι ακόμη διαθέσιμη στην οθόνη.");
+  };
 
   return <section className="cloud-page">
     <div className="cloud-titlebar">
@@ -83,7 +88,7 @@ export default function StoreCloudPage({api,store,onBack}){
       <button type="button" onClick={()=>goTo("backoffice-operators")}><Users/>Χειριστές</button>
       <button type="button" onClick={()=>goTo("backoffice-transactions")}><ReceiptText/>Πωλήσεις & Πληρωμές</button>
       <button type="button" onClick={()=>goTo("backoffice-cash")}><WalletCards/>Βάρδιες & Ταμεία</button>
-      <button type="button" onClick={()=>goTo("backoffice-catalog")}><Boxes/>Προϊόντα & Απόθεμα</button>
+      <button type="button" onClick={openProducts}><Boxes/>Προϊόντα & Απόθεμα</button>
       <button type="button" onClick={()=>goTo("backoffice-devices")}><Monitor/>Συσκευές</button>
       <button type="button" onClick={()=>goTo("backoffice-audit")}><History/>Ιστορικό</button>
     </nav>
