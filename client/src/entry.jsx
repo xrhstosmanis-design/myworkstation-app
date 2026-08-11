@@ -26,6 +26,7 @@ import {installSupplierGlobalReports} from "./components/commerce/installSupplie
 import {installSupplierBasicExtras} from "./components/commerce/installSupplierBasicExtras.js";
 import {installOperatorManagementSuite} from "./components/commerce/installOperatorManagementSuite.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
+import {installPosCheckoutSafety} from "./pos-checkout-safety.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
 import "./components/platform/platform-security.css";
@@ -78,6 +79,7 @@ const storeApi=async(path,options={})=>{
 
 const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
 
+installPosCheckoutSafety();
 installTouchKeyboard();
 installPriceCatalogVisibleNav();
 installSupplierProductTransfer();
