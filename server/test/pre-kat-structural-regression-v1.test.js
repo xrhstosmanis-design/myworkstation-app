@@ -67,7 +67,7 @@ test("price catalog remains paginated instead of rendering the full catalog",()=
 
 test("core implemented workspaces keep real lower action wiring",()=>{
   const targets=[
-    ["InventoryArchivePanel.jsx",["Κλείσιμο","Νέο είδος","Ομαδική διόρθωση","Παραγγελία","Εισαγωγή από Excel","Εκτύπωση","e-Delivery"]],
+    ["InventoryArchivePanel.jsx",["Κλείσιμο","Νέο είδος","Ομαδική διόρθωση","Παραγγελία","Εισαγωγή από Excel","Εκτύπωση","e‑Delivery"]],
     ["ManagementBusinessUnitsPanel.jsx",["Κλείσιμο","Ανανέωση","Νέα εγγραφή"]],
     ["ManagementModifiersPanel.jsx",["Κλείσιμο","Ανανέωση","Νέα εγγραφή"]],
     ["ManagementCustomerCategoriesPanel.jsx",["Κλείσιμο","Ανανέωση","Νέα εγγραφή"]],
@@ -81,9 +81,11 @@ test("core implemented workspaces keep real lower action wiring",()=>{
   }
 });
 
-test("large report drilldowns remain lazy and do not preload every detail row",()=>{
-  const sales=read("client/src/components/commerce/installKioskReportsSuite.js");
+test("large report drilldowns remain lazy and load detail only after explicit expansion",()=>{
+  const sales=read("client/src/components/commerce/installKioskReportsSalesV4.js");
   const supplier=read("client/src/components/commerce/installSupplierGlobalReports.js");
-  assert.ok(/expand|drill|detail/i.test(sales));
-  assert.ok(/expand|drill|detail/i.test(supplier));
+  assert.match(sales,/data-sales-product/);
+  assert.match(sales,/async function drill/);
+  assert.match(sales,/\/sales-analysis\/\$\{encodeURIComponent\(button\.dataset\.salesProduct\)\}/);
+  assert.ok(/expand|drill|detail|data-sales-product/i.test(supplier));
 });
