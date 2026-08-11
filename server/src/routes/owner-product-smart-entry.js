@@ -36,6 +36,26 @@ async function nextSku(companyId,tx=prisma){
   return String(rows[0]?.next||10001);
 }
 
+router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;await ensureSchema();
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",
+             c."name" AS "categoryName",sc."name" AS "subcategoryName",vd."id" AS "vatDepartmentId",vd."description" AS "vatDepartmentName",
+             COALESCE((SELECT json_agg(jsonb_build_object('barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
+             COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
+      FROM "Product" p
+      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" AND sc."companyId"=${companyId}
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
+      LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
+      LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId}
+      WHERE p."companyId"=${companyId} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
+      GROUP BY p."id",c."name",sc."name",vd."id",vd."description" ORDER BY p."name" LIMIT 500`;
+    res.json(rows.map(row=>({...row,salePrice:Number(row.salePrice||0),costPrice:Number(row.costPrice||0),vatRate:Number(row.vatRate||0)})));
+  }catch(error){next(error)}
+});
+
 router.get("/smart-entry/options",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureSchema();
@@ -79,9 +99,9 @@ router.post("/smart-entry",requireCompanyModule("INVENTORY"),async(req,res,next)
     await prisma.$transaction(async tx=>{
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId+":product-sku"}))`;
       sku=await nextSku(companyId,tx);
-      let vatDepartmentId=body.vatDepartmentId&&String(body.vatDepartmentId).startsWith("rate:")?null:body.vatDepartmentId||null;
-      if(vatDepartmentId){const dep=(await tx.$queryRaw`SELECT "id","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${vatDepartmentId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`)[0];if(!dep)vatDepartmentId=null}
-      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","vatDepartmentId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${companyId},${body.categoryId},${body.subcategoryId||null},${vatDepartmentId},${sku},${body.name},${body.unit},${body.vatRate},true,${body.salePrice},${body.costPrice},${body.trackStock},${body.active})`;
+      let vatDepartmentId=body.vatDepartmentId&&String(body.vatDepartmentId).startsWith("rate:")?null:body.vatDepartmentId||null,effectiveVatRate=Number(body.vatRate||0);
+      if(vatDepartmentId){const dep=(await tx.$queryRaw`SELECT "id","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${vatDepartmentId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`)[0];if(!dep)vatDepartmentId=null;else effectiveVatRate=Number(dep.vatRate||0)}
+      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","vatDepartmentId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${companyId},${body.categoryId},${body.subcategoryId||null},${vatDepartmentId},${sku},${body.name},${body.unit},${effectiveVatRate},true,${body.salePrice},${body.costPrice},${body.trackStock},${body.active})`;
       if(body.barcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${productId},${body.barcode},1)`;
       for(const storeId of body.storeIds)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${storeId},${productId},${body.salePrice},${body.initialStock},true) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","currentStock"=EXCLUDED."currentStock","active"=true,"updatedAt"=CURRENT_TIMESTAMP`;
     });
