@@ -23,7 +23,7 @@ router.get("/stock-analysis",async(req,res,next)=>{
       SELECT p."id" AS "productId",p."sku",p."name",p."vatRate",p."unit",
         c."name" AS "categoryName",mp."subcategoryName",s."id" AS "storeId",s."name" AS "storeName",
         COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
-        COALESCE(sa."salesQuantity",0) AS "salesQuantity",sa."lastSaleAt",
+        COALESCE(sa."salesQuantity",0) AS "salesQuantity",sa."lastSaleAt",COALESCE(sa."reversalQuantity",0) AS "reversalQuantity",
         COALESCE(lp."unitCost",p."costPrice",0) AS "purchasePrice",lp."documentDate" AS "lastPurchaseAt",lp."supplierName"
       FROM "StoreProduct" sp
       JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId}
@@ -31,7 +31,9 @@ router.get("/stock-analysis",async(req,res,next)=>{
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN LATERAL (
-        SELECT COALESCE(SUM(sl."quantity"),0) AS "salesQuantity",MAX(sale."occurredAt") AS "lastSaleAt"
+        SELECT COALESCE(SUM(sl."quantity"),0) AS "salesQuantity",
+          MAX(sale."occurredAt") FILTER (WHERE COALESCE(sale."source",'')<>'POS_REVERSAL') AS "lastSaleAt",
+          ABS(COALESCE(SUM(sl."quantity") FILTER (WHERE sale."source"='POS_REVERSAL'),0)) AS "reversalQuantity"
         FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId"
         WHERE sl."productId"=p."id" AND sale."companyId"=${companyId} AND sale."storeId"=sp."storeId"
           AND sale."status"='COMPLETED' AND sale."occurredAt">=${from} AND sale."occurredAt"<${to}
@@ -48,11 +50,11 @@ router.get("/stock-analysis",async(req,res,next)=>{
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
       ORDER BY p."name",s."name" LIMIT 10000`;
     const items=rows.map(r=>{
-      const currentStock=n(r.currentStock),salePrice=n(r.salePrice),purchasePrice=n(r.purchasePrice),vatRate=n(r.vatRate),salesQuantity=n(r.salesQuantity);
+      const currentStock=n(r.currentStock),salePrice=n(r.salePrice),purchasePrice=n(r.purchasePrice),vatRate=n(r.vatRate),salesQuantity=n(r.salesQuantity),reversalQuantity=n(r.reversalQuantity);
       const saleNet=salePrice/(1+vatRate/100),retailValue=currentStock*salePrice,purchaseValue=currentStock*purchasePrice;
-      return {...r,currentStock,salePrice,purchasePrice,vatRate,salesQuantity,retailValue,purchaseValue,margin:saleNet>0?((saleNet-purchasePrice)/saleNet)*100:0};
+      return {...r,currentStock,salePrice,purchasePrice,vatRate,salesQuantity,reversalQuantity,retailValue,purchaseValue,margin:saleNet>0?((saleNet-purchasePrice)/saleNet)*100:0};
     });
-    res.json({items,count:items.length,totalStockQuantity:items.reduce((a,r)=>a+r.currentStock,0),totalRetailValue:items.reduce((a,r)=>a+r.retailValue,0),totalPurchaseValue:items.reduce((a,r)=>a+r.purchaseValue,0),totalSalesQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),from,to});
+    res.json({items,count:items.length,totalStockQuantity:items.reduce((a,r)=>a+r.currentStock,0),totalRetailValue:items.reduce((a,r)=>a+r.retailValue,0),totalPurchaseValue:items.reduce((a,r)=>a+r.purchaseValue,0),totalSalesQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalReversalQuantity:items.reduce((a,r)=>a+r.reversalQuantity,0),from,to,reversalAware:true});
   }catch(error){next(error)}
 });
 
