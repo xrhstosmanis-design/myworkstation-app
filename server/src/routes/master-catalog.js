@@ -14,38 +14,88 @@ router.use((req,res,next)=>{
 });
 
 const uploadSchema=z.object({filename:z.string().trim().min(1).max(255),base64:z.string().min(100)});
-const expectedHeaders=["Εσωτερικός Κωδικός","Barcode","Περιγραφή","Κατηγορία","Υποκατηγορία","Προμηθευτής","Εταιρεία / Brand","Τιμή Λιανικής","Τιμή Κόστους","ΦΠΑ","Απόθεμα","Ελάχιστο Απόθεμα","Θέση Ραφιού","Ενεργό","Κατάσταση Ελέγχου"];
 const text=value=>value===undefined||value===null?null:String(value).trim();
-const number=value=>{if(value===undefined||value===null||value==="")return null;const parsed=Number(value);return Number.isFinite(parsed)?parsed:null};
-const isSummaryRow=row=>!text(row["Εσωτερικός Κωδικός"])&&/^\d+[.,]?\d*$/.test(text(row["Περιγραφή"])||"");
+const number=value=>{if(value===undefined||value===null||value==="")return null;const normalized=typeof value==="string"?value.trim().replace(",","."):value;const parsed=Number(normalized);return Number.isFinite(parsed)?parsed:null};
 const stableId=(prefix,value)=>`${prefix}_${crypto.createHash("sha1").update(String(value)).digest("hex")}`;
+
+const aliases={
+  sourceCode:["Εσωτερικός Κωδικός","SKU","Κωδικός","ΚΩΔΙΚΟΣ"],
+  barcode:["Barcode","BARCODE","EAN"],
+  name:["Περιγραφή","ΠΕΡΙΓΡΑΦΗ","Description"],
+  category:["Κατηγορία","ΚΑΤΗΓΟΡΙΑ"],
+  subcategory:["Υποκατηγορία","ΥΠΟΚΑΤΗΓΟΡΙΑ"],
+  supplier:["Προμηθευτής","ΠΡΟΜΗΘΕΥΤΗΣ"],
+  brand:["Εταιρεία / Brand","Εταιρεία","Brand"],
+  retail:["Τιμή Λιανικής","Λιανική","ΛΙΑΝΙΚΗ"],
+  cost:["Τιμή Κόστους","Τιμή Αγοράς","Αγορά","ΤΙΜΗ ΑΓΟΡΑΣ"],
+  vat:["ΦΠΑ","ΦΠΑ %","VAT"],
+  stock:["Απόθεμα","Stock","STOCK"],
+  active:["Ενεργό","ΕΝΕΡΓΟ","Active"],
+  reviewStatus:["Κατάσταση Ελέγχου","ΚΑΤΑΣΤΑΣΗ ΕΛΕΓΧΟΥ"]
+};
+
+const normalized=value=>String(value??"").trim().toLocaleUpperCase("el-GR");
+const headerMatches=(header,candidates)=>candidates.some(candidate=>normalized(header)===normalized(candidate));
+const findHeader=(headers,candidates)=>headers.find(header=>headerMatches(header,candidates))||null;
+const rowValue=(row,headers,candidates)=>{const header=findHeader(headers,candidates);return header?row[header]:null};
+
+function resolveProductSheet(workbook){
+  const preferred=["ΠΡΟΪΟΝΤΑ_IMPORT","Προϊόντα","ΠΡΟΪΟΝΤΑ","Products","PRODUCTS"];
+  for(const wanted of preferred){
+    const actual=workbook.SheetNames.find(name=>normalized(name)===normalized(wanted));
+    if(actual)return {name:actual,sheet:workbook.Sheets[actual]};
+  }
+  for(const name of workbook.SheetNames){
+    const sheet=workbook.Sheets[name];
+    const headers=(XLSX.utils.sheet_to_json(sheet,{header:1,range:0,blankrows:false})[0]||[]).map(v=>String(v||"").trim());
+    if(findHeader(headers,aliases.sourceCode)&&findHeader(headers,aliases.name))return {name,sheet};
+  }
+  throw new Error(`Δεν βρέθηκε φύλλο προϊόντων. Διαθέσιμα φύλλα: ${workbook.SheetNames.join(", ")||"κανένα"}.`);
+}
 
 function parseWorkbook(base64){
   const buffer=Buffer.from(base64,"base64");
   if(buffer.length>8*1024*1024)throw new Error("Το αρχείο είναι μεγαλύτερο από το επιτρεπόμενο όριο των 8 MB.");
   const workbook=XLSX.read(buffer,{type:"buffer",cellDates:false});
-  const sheet=workbook.Sheets["ΠΡΟΪΟΝΤΑ_IMPORT"];
-  if(!sheet)throw new Error("Δεν βρέθηκε το φύλλο ΠΡΟΪΟΝΤΑ_IMPORT.");
+  const resolved=resolveProductSheet(workbook),sheet=resolved.sheet;
   const rows=XLSX.utils.sheet_to_json(sheet,{defval:null,raw:true});
   const headers=(XLSX.utils.sheet_to_json(sheet,{header:1,range:0,blankrows:false})[0]||[]).map(v=>String(v||"").trim());
-  for(const header of expectedHeaders)if(!headers.includes(header))throw new Error(`Λείπει η στήλη «${header}».`);
+  const required=[["εσωτερικός κωδικός / SKU",aliases.sourceCode],["περιγραφή",aliases.name]];
+  for(const [label,candidates] of required)if(!findHeader(headers,candidates))throw new Error(`Λείπει η στήλη «${label}». Βρέθηκαν: ${headers.filter(Boolean).join(", ")}.`);
   const products=[];
   for(let i=0;i<rows.length;i++){
-    const row=rows[i];if(isSummaryRow(row))continue;
-    const sourceCode=text(row["Εσωτερικός Κωδικός"]),name=text(row["Περιγραφή"]);if(!sourceCode||!name)continue;
-    const retail=number(row["Τιμή Λιανικής"]),cost=number(row["Τιμή Κόστους"]),vat=number(row["ΦΠΑ"]),category=text(row["Κατηγορία"]),barcode=text(row["Barcode"]);
-    products.push({sourceCode,barcode,name,categoryName:category,subcategoryName:text(row["Υποκατηγορία"]),supplierName:text(row["Προμηθευτής"]),brandName:text(row["Εταιρεία / Brand"]),defaultRetailPrice:retail!==null&&retail>0?retail:null,defaultCostPrice:cost!==null&&cost>0?cost:null,vatRate:vat!==null&&vat>=0?vat:null,vatVerified:Boolean(vat!==null&&vat>=0),active:(text(row["Ενεργό"])||"").toUpperCase()==="ΝΑΙ",reviewStatus:text(row["Κατάσταση Ελέγχου"]),sourceRow:i+2});
+    const row=rows[i];
+    const sourceCode=text(rowValue(row,headers,aliases.sourceCode)),name=text(rowValue(row,headers,aliases.name));
+    if(!sourceCode||!name)continue;
+    const retail=number(rowValue(row,headers,aliases.retail)),cost=number(rowValue(row,headers,aliases.cost)),vat=number(rowValue(row,headers,aliases.vat)),category=text(rowValue(row,headers,aliases.category)),barcode=text(rowValue(row,headers,aliases.barcode));
+    const activeRaw=(text(rowValue(row,headers,aliases.active))||"ΝΑΙ").toUpperCase();
+    const active=!(["ΟΧΙ","NO","FALSE","0","ΑΝΕΝΕΡΓΟ"].includes(activeRaw));
+    products.push({
+      sourceCode,barcode,name,
+      categoryName:category,
+      subcategoryName:text(rowValue(row,headers,aliases.subcategory)),
+      supplierName:text(rowValue(row,headers,aliases.supplier)),
+      brandName:text(rowValue(row,headers,aliases.brand)),
+      defaultRetailPrice:retail!==null&&retail>0?retail:null,
+      defaultCostPrice:cost!==null&&cost>0?cost:null,
+      vatRate:vat!==null&&vat>=0?vat:null,
+      vatVerified:Boolean(vat!==null&&vat>=0),
+      active,
+      reviewStatus:text(rowValue(row,headers,aliases.reviewStatus)),
+      sourceRow:i+2
+    });
   }
+  if(!products.length)throw new Error(`Το φύλλο «${resolved.name}» βρέθηκε αλλά δεν περιέχει έγκυρες γραμμές προϊόντων με SKU/κωδικό και Περιγραφή.`);
   const barcodeCount=new Map();for(const product of products)if(product.barcode)barcodeCount.set(product.barcode,(barcodeCount.get(product.barcode)||0)+1);
   const duplicateSet=new Set([...barcodeCount.entries()].filter(([,count])=>count>1).map(([barcode])=>barcode));
   for(const product of products)product.duplicateBarcode=Boolean(product.barcode&&duplicateSet.has(product.barcode));
   const duplicateDetails=[...duplicateSet].map(barcode=>({barcode,products:products.filter(product=>product.barcode===barcode).map(product=>({sourceCode:product.sourceCode,name:product.name,retail:product.defaultRetailPrice,cost:product.defaultCostPrice,sourceRow:product.sourceRow}))}));
-  return {buffer,products,duplicateDetails,stats:{actualProducts:products.length,duplicateBarcodes:duplicateSet.size,missingBarcodes:products.filter(product=>!product.barcode).length,missingRetail:products.filter(product=>product.defaultRetailPrice===null).length,placeholderCategories:products.filter(product=>(product.categoryName||"").startsWith("_ΧΩΡΙΣ")).length,placeholderSubcategories:products.filter(product=>(product.subcategoryName||"").startsWith("_ΧΩΡΙΣ")).length,vatUnverified:products.filter(product=>!product.vatVerified).length}};
+  return {buffer,products,duplicateDetails,sheetName:resolved.name,stats:{actualProducts:products.length,duplicateBarcodes:duplicateSet.size,missingBarcodes:products.filter(product=>!product.barcode).length,missingRetail:products.filter(product=>product.defaultRetailPrice===null).length,placeholderCategories:products.filter(product=>(product.categoryName||"").startsWith("_ΧΩΡΙΣ")).length,placeholderSubcategories:products.filter(product=>(product.subcategoryName||"").startsWith("_ΧΩΡΙΣ")).length,vatUnverified:products.filter(product=>!product.vatVerified).length}};
 }
 
 async function declaredReportTotal(base64){try{const workbook=XLSX.read(Buffer.from(base64,"base64"),{type:"buffer"});const sheet=workbook.Sheets["ΑΝΑΦΟΡΑ"];if(!sheet)return null;const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});const row=rows.find(item=>String(item?.[0]||"").trim()==="Σύνολο προϊόντων");return row?Number(row[1]):null}catch{return null}}
 
-router.post("/preview",async(req,res,next)=>{try{const body=uploadSchema.parse(req.body||{});const parsed=parseWorkbook(body.base64);const importVersion=crypto.createHash("sha256").update(parsed.buffer).digest("hex");const declaredTotal=await declaredReportTotal(body.base64);const existing=await prisma.$queryRaw`SELECT "status","importedProducts","completedAt" FROM "MasterCatalogImport" WHERE "importVersion"=${importVersion} LIMIT 1`;res.json({filename:body.filename,importVersion,declaredTotal,...parsed.stats,countDifference:declaredTotal===null?null:declaredTotal-parsed.stats.actualProducts,duplicateDetails:parsed.duplicateDetails,alreadyImported:existing[0]?.status==="COMPLETED",existingImport:existing[0]||null,safety:{duplicateBarcodeScanDisabled:true,zeroRetailBecomesNull:true,zeroVatIsValid:true,stockNotImportedIntoStores:true}})}catch(error){next(error)}});
+router.post("/preview",async(req,res,next)=>{try{const body=uploadSchema.parse(req.body||{});const parsed=parseWorkbook(body.base64);const importVersion=crypto.createHash("sha256").update(parsed.buffer).digest("hex");const declaredTotal=await declaredReportTotal(body.base64);const existing=await prisma.$queryRaw`SELECT "status","importedProducts","completedAt" FROM "MasterCatalogImport" WHERE "importVersion"=${importVersion} LIMIT 1`;res.json({filename:body.filename,sheetName:parsed.sheetName,importVersion,declaredTotal,...parsed.stats,countDifference:declaredTotal===null?null:declaredTotal-parsed.stats.actualProducts,duplicateDetails:parsed.duplicateDetails,alreadyImported:existing[0]?.status==="COMPLETED",existingImport:existing[0]||null,safety:{duplicateBarcodeScanDisabled:true,zeroRetailBecomesNull:true,zeroVatIsValid:true,stockNotImportedIntoStores:true}})}catch(error){next(error)}});
 
 function productTuple(product,importVersion){const productId=stableId("mp",product.sourceCode);return {productId,values:[productId,product.sourceCode,product.name,product.categoryName,product.subcategoryName,product.supplierName,product.brandName,product.defaultRetailPrice,product.defaultCostPrice,product.vatRate,product.vatVerified,product.active,product.reviewStatus,product.sourceRow,importVersion]}}
 
