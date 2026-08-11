@@ -8,7 +8,20 @@ const fallbackLayout={title:"OPERATOR POS",productColumns:6,showSku:true,theme:{
 const CATEGORY_PREFIX="CATEGORY::";
 const isCategoryQuick=button=>String(button?.productQuery||"").startsWith(CATEGORY_PREFIX);
 const quickCategory=button=>isCategoryQuick(button)?String(button.productQuery).slice(CATEGORY_PREFIX.length):"";
-const productMatchesCodes=(product,codes)=>{const wanted=new Set((codes||[]).map(String));if(!wanted.size)return false;return wanted.has(String(product.sku||""))||(product.barcodes||[]).some(code=>wanted.has(String(code)))};
+const identifierVariants=value=>{
+  const raw=String(value??"").trim();
+  if(!raw)return [];
+  const compact=raw.replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,"").toLocaleUpperCase("el-GR");
+  const variants=new Set([raw.toLocaleUpperCase("el-GR"),compact]);
+  if(/^\d+$/.test(compact))variants.add(compact.replace(/^0+(?=\d)/,""));
+  return [...variants].filter(Boolean);
+};
+const productIdentifiers=product=>[product?.id,product?.sku,...(product?.barcodes||[])].flatMap(identifierVariants);
+const productMatchesCodes=(product,codes)=>{
+  const wanted=new Set((codes||[]).flatMap(identifierVariants));
+  if(!wanted.size)return false;
+  return productIdentifiers(product).some(value=>wanted.has(value));
+};
 
 export default function StorePosPanel({api,store,onChanged}){
   const [data,setData]=useState(null),[cart,setCart]=useState([]),[query,setQuery]=useState(""),[category,setCategory]=useState(""),[categoryCodes,setCategoryCodes]=useState([]),[browseActive,setBrowseActive]=useState(false),[received,setReceived]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
@@ -32,7 +45,11 @@ export default function StorePosPanel({api,store,onChanged}){
   const add=product=>setCart(current=>{const found=current.find(row=>row.id===product.id);return found?current.map(row=>row.id===product.id?{...row,quantity:row.quantity+1}:row):[...current,{...product,quantity:1}]});
   const qty=(id,delta)=>setCart(current=>current.map(row=>row.id===id?{...row,quantity:Math.max(1,row.quantity+delta)}:row));
   const remove=id=>setCart(current=>current.filter(row=>row.id!==id));
-  const quickProduct=button=>products.find(p=>p.name.toLocaleLowerCase("el-GR").includes(String(button.productQuery||button.label).toLocaleLowerCase("el-GR"))||String(p.sku||"")===String(button.productQuery||"")||(p.barcodes||[]).some(code=>String(code)===String(button.productQuery||"")));
+  const quickProduct=button=>{
+    const needle=String(button.productQuery||button.label||"").trim();
+    const lower=needle.toLocaleLowerCase("el-GR");
+    return products.find(product=>productMatchesCodes(product,[needle])||product.name.toLocaleLowerCase("el-GR").includes(lower));
+  };
   const openGroup=(label,codes,fallbackCategory="")=>{setQuery("");setBrowseActive(true);setCategory(label||fallbackCategory||"");setCategoryCodes(Array.isArray(codes)?codes:[]);setMessage("")};
   const home=()=>{setCategory("");setCategoryCodes([]);setBrowseActive(false);setQuery("");setMessage("")};
   const useQuick=button=>{if(isCategoryQuick(button)){openGroup(button.label,button.productCodes||[],quickCategory(button));return}const product=quickProduct(button);if(product)add(product);else setError(`Δεν βρέθηκε το προϊόν για το κουμπί «${button.label}».`)};
@@ -53,7 +70,7 @@ export default function StorePosPanel({api,store,onChanged}){
 
       <main className="operator-sale">
         <div className="operator-table-head"><span>ΠΟΣ.</span><span>ΕΙΔΟΣ</span><span>STOCK</span><span>ΤΙΜΗ</span><span>ΣΥΝΟΛΟ</span></div>
-        <div className="runtime-transaction-area">{cart.length===0?<div className="operator-empty">🛒<b>Νέα συναλλαγή</b><small>Πάτησε προϊόν ή σκάναρε barcode</small></div>:cart.map(row=><div className="runtime-sale-row" key={row.id}><span className="runtime-qty"><button onClick={()=>qty(row.id,-1)}>−</button><b>{row.quantity}</b><button onClick={()=>qty(row.id,1)}>+</button></span><span><b>{row.name}</b>{layout.showSku&&<small>{row.sku||""}</small>}</span><span>{row.stock??0}</span><span>{euro(row.salePrice)}</span><span><b>{euro(row.salePrice*row.quantity)}</b><button className="runtime-trash" onClick={()=>remove(row.id)}><Trash2/></button></span></div>)}</div>
+        <div className="runtime-transaction-area">{cart.length===0?<div className="operator-empty">🛒<b>Νέα συναλλαγή</b><small>Πάτησε προϊόν ή σκάναρε barcode</small></div>:cart.map(row=><div className="runtime-sale-row" key={row.id}><span className="runtime-qty"><button onClick={()=>qty(row.id,-1)}>−</button><b>{row.quantity}</b><button onClick={()=>qty(row.id,1)}>+</button></span><span><b>{row.name}</b>{layout.showSku&&<small>{row.sku||""}</small>}</span><span>{row.currentStock??row.stock??0}</span><span>{euro(row.salePrice)}</span><span><b>{euro(row.salePrice*row.quantity)}</b><button className="runtime-trash" onClick={()=>remove(row.id)}><Trash2/></button></span></div>)}</div>
         <div className="operator-category-head"><b>{browseActive?(category||"ΑΠΟΤΕΛΕΣΜΑΤΑ"):"ΚΑΤΗΓΟΡΙΕΣ"}</b><span>{browseActive?<button className="runtime-home-link" onClick={home}>ΒΑΣΙΚΗ ΟΘΟΝΗ</button>:"ΒΑΣΙΚΗ ΟΘΟΝΗ"}</span></div>
         <div className="operator-categories runtime-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(2,Math.min(8,Number(layout.productColumns||6)))},1fr)`}}>{browseActive?visible.map((product,index)=><button key={product.id} onClick={()=>add(product)} style={{background:layout.theme?.accentColor||"#087a52"}}><i>{index+1}</i>{product.name}<small>{euro(product.salePrice)}</small></button>):categoryButtons.length?categoryButtons.slice(0,24).map((button,index)=><button key={button.id} onClick={()=>{const codes=button.productCodes||[];codes.length?openGroup(button.label,codes,button.categoryName||""):(setBrowseActive(true),setCategoryCodes([]),setCategory(button.categoryName||button.label||""))}} style={{background:button.color}}><i>{index+1}</i>{button.label}</button>):allCategories.slice(0,24).map((name,index)=><button key={name} onClick={()=>{setBrowseActive(true);setCategory(name);setCategoryCodes([])}}><i>{index+1}</i>{name}</button>)}</div>
       </main>
