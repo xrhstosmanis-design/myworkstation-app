@@ -48,7 +48,9 @@ const statements=[
   CONSTRAINT "ProductBarcode_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "ProductBarcode_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
-`CREATE UNIQUE INDEX IF NOT EXISTS "ProductBarcode_barcode_key" ON "ProductBarcode"("barcode")`,
+`DROP INDEX IF EXISTS "ProductBarcode_barcode_key"`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "ProductBarcode_productId_barcode_key" ON "ProductBarcode"("productId","barcode")`,
+`CREATE INDEX IF NOT EXISTS "ProductBarcode_barcode_idx" ON "ProductBarcode"("barcode")`,
 `CREATE INDEX IF NOT EXISTS "ProductBarcode_productId_idx" ON "ProductBarcode"("productId")`,
 
 `CREATE TABLE IF NOT EXISTS "StoreProduct" (
