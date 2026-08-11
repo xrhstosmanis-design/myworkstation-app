@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import platformBulkCatalogRoutes from "./platform-bulk-catalog.js";
 
 const router=Router();
 router.use(auth);
@@ -12,6 +13,7 @@ router.use((req,res,next)=>{
   if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
 });
+router.use("/bulk",platformBulkCatalogRoutes);
 
 const uploadSchema=z.object({filename:z.string().trim().min(1).max(255),base64:z.string().min(100)});
 const expectedHeaders=[
@@ -33,8 +35,6 @@ router.post("/preview",async(req,res,next)=>{
     const buffer=Buffer.from(body.base64,"base64");
     if(buffer.length>8*1024*1024)return res.status(413).json({error:"Το αρχείο είναι μεγαλύτερο από το επιτρεπόμενο όριο των 8 MB."});
 
-    // One workbook read only. The previous preview parsed the same XLSX twice,
-    // which caused unnecessary memory pressure on small Render instances.
     const workbook=XLSX.read(buffer,{type:"buffer",cellDates:false,dense:true});
     const productSheet=workbook.Sheets["ΠΡΟΪΟΝΤΑ_IMPORT"];
     if(!productSheet)return res.status(400).json({error:"Δεν βρέθηκε το φύλλο ΠΡΟΪΟΝΤΑ_IMPORT."});
