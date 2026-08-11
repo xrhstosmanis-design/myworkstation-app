@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 16:20 Europe/Athens
+Updated: 2026-08-11 16:24 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -64,6 +64,13 @@ TEST 6: Προϊόντα & Απόθεμα navigation.
 - Confirmed live: `Προϊόντα & Απόθεμα` opens the real `Εμπορική λειτουργία → Προϊόντα, Τιμές, Προσφορές & Απογραφή` workspace.
 - Product grid is visible with category filters, VAT, retail price, stock, new item, Excel import and full-management controls.
 
+TEST 7: Συσκευές.
+- Real browser result: PASS for navigation and display.
+- `Συσκευές` card scrolls to `Συσκευές καταστήματος` correctly.
+- Registered device is visible as `MyWorkStation POS - Chrisurface`, Windows / Node v24.14.0, status `ACTIVE`, with pairing and last-contact timestamps.
+- User confirmed this is the known intended test device.
+- `Απενεργοποίηση` was intentionally not executed during acceptance because it would revoke the active test device and interrupt the remaining test flow.
+
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
 - Implemented in branch `feat/backoffice-horizontal-section-cards`.
@@ -80,8 +87,7 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. TEST 7 — `Συσκευές` in the live `Κυλικείο ΚΑΤ` BackOffice.
-2. TEST 8 — `Ιστορικό`.
-3. After BackOffice acceptance, enter POS / Store Mode, open a real non-fiscal shift there, and execute the pending end-to-end new-sale flow.
-4. Continue through customers, prices/wholesale/promotions, HOLD, cash/card/mixed flows, duplicate-sale protection, cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
-5. Save a new checkpoint after each major test milestone or fix.
+1. TEST 8 — `Ιστορικό` in the live `Κυλικείο ΚΑΤ` BackOffice.
+2. After BackOffice acceptance, enter POS / Store Mode, open a real non-fiscal shift there, and execute the pending end-to-end new-sale flow.
+3. Continue through customers, prices/wholesale/promotions, HOLD, cash/card/mixed flows, duplicate-sale protection, cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
+4. Save a new checkpoint after each major test milestone or fix.
