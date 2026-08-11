@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {normalizePromotionDateBody} from "../promotion-time.js";
 import priceCatalogRoutes from "./price-catalog.js";
 
 const router=Router();
@@ -121,6 +122,11 @@ router.put("/promotions/:promotionId/stores",async(req,res,next)=>{
     });
     res.json({ok:true,storeIds,posActive:storeIds.length>0});
   }catch(error){next(error)}
+});
+
+router.use("/promotions",(req,res,next)=>{
+  if(["POST","PATCH"].includes(req.method)&&req.body&&typeof req.body==="object")req.body=normalizePromotionDateBody(req.body);
+  next();
 });
 
 router.use(priceCatalogRoutes);
