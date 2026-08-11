@@ -18,6 +18,7 @@ import {installSupplierControlSuite} from "./components/commerce/installSupplier
 import {installCustomerControlSuiteV2} from "./components/commerce/installCustomerControlSuiteV2.js";
 import {installPriceCatalogSuite} from "./components/commerce/installPriceCatalogSuite.js";
 import {installPriceCatalogVisibleNav} from "./components/commerce/installPriceCatalogVisibleNav.js";
+import {installPromotionStoreScope} from "./components/commerce/installPromotionStoreScope.js";
 import {installKioskReportsSuite} from "./components/commerce/installKioskReportsSuite.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
@@ -46,6 +47,7 @@ import "./components/commerce/touch-keyboard.css";
 import "./components/commerce/commerce-home-modern.css";
 import "./styles.css";
 import "./components/commerce/price-catalog-visible-nav.css";
+import "./components/commerce/promotion-store-scope.css";
 
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
@@ -68,18 +70,8 @@ const storeApi=async(path,options={})=>{
   const token=localStorage.getItem("token");
   const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const text=await response.text();let data={};if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
-  if(response.status===401&&storeMatch){
-    localStorage.removeItem("token");
-    localStorage.removeItem("storeOperatorSession");
-    localStorage.removeItem("user");
-    window.location.reload();
-  }
-  if(response.status===401&&posMatch){
-    localStorage.removeItem("token");
-    localStorage.removeItem("storeOperatorSession");
-    localStorage.removeItem("user");
-    window.location.reload();
-  }
+  if(response.status===401&&storeMatch){localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");window.location.reload()}
+  if(response.status===401&&posMatch){localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");window.location.reload()}
   if(posMatch&&response.status===404&&data.error==="Δεν βρέθηκε ενεργό κατάστημα."){returnFromStaleTestPos();return new Promise(()=>{})}
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data;
 };
@@ -97,44 +89,19 @@ installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
 installKioskPaymentsImport();
 installOwnerShiftControlCenter();
-const installReportsSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-kiosk-reports-launch]"))return;
-  installKioskReportsSuite();
-};
-const installPurchaseOrdersSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-purchase-orders-launch]"))return;
-  const NativeObserver=window.MutationObserver;window.MutationObserver=class{observe(){}disconnect(){}};
-  try{installPurchaseOrdersSuite()}finally{window.MutationObserver=NativeObserver}
-};
-const installSupplierControlSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-supplier-control-launch]"))return;
-  installSupplierControlSuite();
-};
-const installCustomerControlSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-customer-control-launch]"))return;
-  installCustomerControlSuiteV2();
-};
-const installPriceCatalogSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-price-catalog-launch]"))return;
-  installPriceCatalogSuite();
-};
-const installOperatorManagementSafely=()=>{
-  if(!document.querySelector(".commerce-hub")||document.querySelector("[data-operator-management-launch]"))return;
-  installOperatorManagementSuite(storeApi);
-};
-installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installOperatorManagementSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installOperatorManagementSafely()});
+const installReportsSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-kiosk-reports-launch]"))return;installKioskReportsSuite()};
+const installPurchaseOrdersSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-purchase-orders-launch]"))return;const NativeObserver=window.MutationObserver;window.MutationObserver=class{observe(){}disconnect(){}};try{installPurchaseOrdersSuite()}finally{window.MutationObserver=NativeObserver}};
+const installSupplierControlSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-supplier-control-launch]"))return;installSupplierControlSuite()};
+const installCustomerControlSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-customer-control-launch]"))return;installCustomerControlSuiteV2()};
+const installPriceCatalogSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-price-catalog-launch]"))return;installPriceCatalogSuite()};
+const installPromotionStoreScopeSafely=()=>{if(!document.querySelector(".price-catalog-suite"))return;installPromotionStoreScope()};
+const installOperatorManagementSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-operator-management-launch]"))return;installOperatorManagementSuite(storeApi)};
+installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installOperatorManagementSafely();
+const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><KatTestQuickAccess/></>)}
-else if(posMatch){
-  const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");
-  const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);
-  document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>);
-}else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
-else{
-  installOwnerPasswordChangeGate();installModuleUiEnforcement();import("./main.jsx");
-  const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(document.getElementById("pilot-report-root")).render(<PilotReportLauncherLive/>);
-  const commerceRoot=document.createElement("div");commerceRoot.id="commerce-root";document.body.appendChild(commerceRoot);createRoot(commerceRoot).render(<CommerceLauncher/>);
-}
+else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<CommercialPosApp api={storeApi} storeId={storeId}/>)}
+else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
+else{installOwnerPasswordChangeGate();installModuleUiEnforcement();import("./main.jsx");const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(document.getElementById("pilot-report-root")).render(<PilotReportLauncherLive/>);const commerceRoot=document.createElement("div");commerceRoot.id="commerce-root";document.body.appendChild(commerceRoot);createRoot(commerceRoot).render(<CommerceLauncher/>)}
