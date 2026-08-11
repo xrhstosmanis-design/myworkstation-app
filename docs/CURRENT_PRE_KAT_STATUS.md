@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 15:58 Europe/Athens
+Updated: 2026-08-11 16:20 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -52,6 +52,18 @@ TEST 5: Βάρδιες & Ταμεία — BackOffice shift-opening policy.
 - Confirmed in live BackOffice: status `ΚΛΕΙΣΤΗ`, no `Άνοιγμα βάρδιας` form/button, and visible read-only instruction that opening is allowed only from POS / Store Mode.
 - Recent shift history remains visible, including opening, opening variance, cash, cards, EFTPOS and final variance values.
 
+TEST 6: Προϊόντα & Απόθεμα navigation.
+- Initial real browser result: FAIL — the horizontal card scrolled to legacy pairing / Demo catalog instead of the real product and stock workspace.
+- Root cause: the card targeted legacy `backoffice-catalog` content.
+- Fix branch: `fix/backoffice-products-navigation`.
+- PR #148.
+- MyWorkStation CI #208: SUCCESS.
+- PR #148 merged to `main`.
+- Merge commit: `4406a6bc136fab324778ed006e78af3584c18ef7`.
+- Real browser re-test after deployment: PASS.
+- Confirmed live: `Προϊόντα & Απόθεμα` opens the real `Εμπορική λειτουργία → Προϊόντα, Τιμές, Προσφορές & Απογραφή` workspace.
+- Product grid is visible with category filters, VAT, retail price, stock, new item, Excel import and full-management controls.
+
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
 - Implemented in branch `feat/backoffice-horizontal-section-cards`.
@@ -68,8 +80,8 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. TEST 6 — open `Προϊόντα & Απόθεμα` in the live `Κυλικείο ΚΑΤ` BackOffice and verify that the real product/stock workspace loads correctly.
-2. Then test `Συσκευές` and `Ιστορικό`.
+1. TEST 7 — `Συσκευές` in the live `Κυλικείο ΚΑΤ` BackOffice.
+2. TEST 8 — `Ιστορικό`.
 3. After BackOffice acceptance, enter POS / Store Mode, open a real non-fiscal shift there, and execute the pending end-to-end new-sale flow.
 4. Continue through customers, prices/wholesale/promotions, HOLD, cash/card/mixed flows, duplicate-sale protection, cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
 5. Save a new checkpoint after each major test milestone or fix.
