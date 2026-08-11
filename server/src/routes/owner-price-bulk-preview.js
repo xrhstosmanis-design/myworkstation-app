@@ -10,7 +10,7 @@ const MAX_COMBINATIONS=10000;
 const MAX_SAMPLE_ROWS=500;
 const uid=()=>crypto.randomUUID();
 const norm=value=>String(value??"").trim().toLocaleLowerCase("el-GR");
-const round2=value=>Number(Number(value||0).toFixed(2));
+const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 let schemaPromise;
 
 async function ensureSchema(){
