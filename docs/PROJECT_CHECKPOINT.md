@@ -1,6 +1,6 @@
 # MyWorkStation — PROJECT CHECKPOINT / CONTINUATION RULES
 
-Τελευταία ενημέρωση: 2026-08-11 14:22 Europe/Athens
+Τελευταία ενημέρωση: 2026-08-11 14:23 Europe/Athens
 
 ## Σκοπός
 Αυτό το αρχείο είναι το μόνιμο σημείο συνέχειας του έργου. Σε νέα σελίδα ή νέα συνομιλία, πρώτα ελέγχουμε αυτό το checkpoint και την πραγματική κατάσταση GitHub/CI/Render και συνεχίζουμε από το τελευταίο εκτελεσμένο βήμα. Δεν ξαναφτιάχνουμε ολοκληρωμένη εργασία.
@@ -24,40 +24,40 @@
 - 2A Πραγματικός πελάτης στο POS — LIVE.
 - 2B Χονδρικές τιμές ανά πελάτη — LIVE.
 - 2C Προσφορές Φυλλαδίου/Δώρα, store targeting, authoritative quote, Europe/Athens normalization — LIVE.
-- 2D-1 Idempotency / duplicate-sale protection — PR #138 MERGED. Είχε επιβεβαιωθεί Render SUCCESS και θεωρείται LIVE.
-- 2D-2 Ακύρωση / Επιστροφή / Ετεροχρονισμένη συναλλαγή με reversal + audit, χωρίς hard delete — PR #139 MERGED.
+- 2D-1 Idempotency / duplicate-sale protection — PR #138 MERGED, Render SUCCESS επιβεβαιωμένο — LIVE.
+- 2D-2 Ακύρωση / Επιστροφή / Ετεροχρονισμένη συναλλαγή με reversal + audit, χωρίς hard delete — PR #139 MERGED. Render status πρέπει να επιβεβαιώνεται πριν χαρακτηριστεί LIVE αν δεν υπάρχει νεότερη επιβεβαίωση.
+- 2E Reversal-aware BackOffice reports/customer metrics — PR #140 MERGED, merge commit `12eb926dbf80c5a0bd3569c19e57e234ac84b600`, CI #198 SUCCESS. Render status δεν έχει επιβεβαιωθεί στο checkpoint αυτό.
+- 3A Εισαγωγή προσφορών φυλλαδίου από XLSX/XLS/CSV — PR #141 MERGED, head `760f382658038c902568938bf3532edfd2a2a517`, merge commit `206c5dd196b7665bf3ccc7ec04ca2ce95f01b2a9`, CI #199 SUCCESS. Render status δεν έχει επιβεβαιωθεί στο checkpoint αυτό.
 
 ## Τρέχον ενεργό checkpoint
-PRE-KAT STEP 2E — Reversal-aware BackOffice
+PRE-KAT μετά το STEP 3A.
 
-- PR: #140 `PRE-KAT reversal-aware BackOffice reports and customer metrics`
-- Branch: `feat/pre-kat-reversal-aware-backoffice-v1`
-- Head SHA: `8538e109c06dad7f8bfdfe5a33e16a87435f9d6d`
-- CI: MyWorkStation CI run #198 — SUCCESS.
-- PR status κατά το τελευταίο έλεγχο: OPEN / mergeable.
-- Merge: ΔΕΝ έχει ακόμη εκτελεστεί στο checkpoint αυτό.
-- Render: ΔΕΝ έχει ακόμη επιβεβαιωθεί για το #140.
-
-### Τι περιλαμβάνει το 2E
-- Reversal-aware customer visits/turnover/reporting.
-- Customer ledger labels για SALE_CANCEL / SALE_RETURN / SALE_DELAYED με original-sale link και reason.
-- Sales analysis με negative reversal quantity/value/cost/profit και ξεχωριστό return value.
-- Stock analysis με net sold quantity + reversal quantity και σωστό lastSaleAt.
-- `/api/reports/pos-sale-actions` από πραγματικό `PosSaleActionAudit`.
-- BackOffice αναφορά `Ακυρώσεις / Επιστροφές POS` με date/store/search, original/reversal IDs, ποσά, delayed timestamps, πελάτη, actor, reason, CSV και print.
-- Regression `pre-kat-reversal-aware-backoffice-v1.test.js`.
+### Τι ολοκληρώθηκε στο 3A
+- Πραγματική `Εισαγωγή από αρχείο` στο Τιμοκατάλογος → Προσφορές φυλλαδίου.
+- XLSX/XLS/CSV έως 8 MB / 5000 data rows.
+- Preview-first χωρίς writes.
+- Tenant-scoped product matching: Barcode → SKU/internal code → exact normalized description.
+- Δεν δημιουργούνται phantom products.
+- READY / UNRESOLVED / INVALID / OVERLAP classification.
+- Active-store targeting και overlap detection μέσω `PriceCatalogPromotionStore`.
+- Europe/Athens wall-clock normalization.
+- Η πραγματική `Product.salePrice` παραμένει authoritative original price.
+- Commit με re-preview/hash verification και explicit confirmation.
+- Append-only batch audit.
+- UI capped preview rendering για anti-freeze προστασία.
+- Χωρίς νέο MutationObserver.
 
 ## Ακριβές επόμενο εκτελέσιμο βήμα
-1. Επιβεβαίωση ότι το PR #140 παραμένει στο ίδιο head SHA και ότι το CI #198 είναι SUCCESS.
-2. Merge του PR #140 στο `main`.
-3. Έλεγχος του deployment/Render για το merge commit. Μόνο αν είναι SUCCESS χαρακτηρίζεται το 2E LIVE.
-4. Ενημέρωση αυτού του checkpoint με merge commit + Render αποτέλεσμα.
-5. Συνέχεια στο επόμενο PRE-KAT βήμα χωρίς επιστροφή σε προηγούμενα ολοκληρωμένα βήματα.
+1. Επιβεβαίωση deployment/Render για τα merge commits των #140 και #141. Μόνο όσα έχουν πραγματικό Render SUCCESS χαρακτηρίζονται LIVE.
+2. Έλεγχος του επόμενου PRE-KAT commerce/price-catalog βήματος πάνω στην τρέχουσα `main`, χωρίς επιστροφή σε προηγούμενα βήματα.
+3. Δημιουργία ξεχωριστού branch/PR για το επόμενο βήμα, CI + production build, merge και έλεγχος Render.
+4. Αμέσως μετά ενημέρωση αυτού του checkpoint.
 
 ## Τελικό acceptance πριν το ΚΑΤ
 Θα γίνουν πραγματικές δοκιμές από άκρη σε άκρη, τουλάχιστον:
 - δημιουργία/επεξεργασία πελάτη → επιλογή στο POS,
 - χονδρική/προσφορά/δώρο → authoritative τελική τιμή,
+- εισαγωγή προσφορών από αρχείο → preview → επιβεβαίωση → POS εφαρμογή,
 - μετρητά/κάρτα/μικτή πληρωμή,
 - HOLD/restore,
 - duplicate/double-click/network retry,
