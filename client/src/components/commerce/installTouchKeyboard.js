@@ -11,6 +11,7 @@ const editable=el=>{
   return TEXT_TYPES.has(type)||NUMERIC_TYPES.has(type);
 };
 const isNumeric=input=>input instanceof HTMLInputElement&&(NUMERIC_TYPES.has((input.type||"").toLowerCase())||input.dataset.mwsNumeric==="1");
+const isTouchLikePointer=pointerType=>pointerType==="touch"||pointerType==="pen";
 const labels={EL:["ς","ε","ρ","τ","υ","θ","ι","ο","π","α","σ","δ","φ","γ","η","ξ","κ","λ","ζ","χ","ψ","ω","β","ν","μ"],EN:["q","w","e","r","t","y","u","i","o","p","a","s","d","f","g","h","j","k","l","z","x","c","v","b","n","m"]};
 const rows={EL:[9,9,7],EN:[10,9,7]};
 
@@ -51,7 +52,7 @@ function open(input){activeInput=input;input.dataset.mwsTouchKeyboard="1";prepar
 function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true}
 export function installTouchKeyboard(){
   ensure();
-  document.addEventListener("pointerdown",event=>{if(event.pointerType!=="touch")return;lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)},true);
+  document.addEventListener("pointerdown",event=>{if(!isTouchLikePointer(event.pointerType))return;lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)},true);
   document.addEventListener("focusin",event=>{const el=event.target;if(!editable(el))return;if(Date.now()-lastTouchAt<1800)open(el)},true);
   document.addEventListener("pointerdown",event=>{if(!activeInput)return;if(event.target.closest("#mws-touch-keyboard"))return;if(event.target===activeInput)return;if(!editable(event.target))close()},true);
   window.addEventListener("resize",()=>{if(activeInput)render()});
