@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 15:38 Europe/Athens
+Updated: 2026-08-11 15:41 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -23,6 +23,12 @@ TEST 1: BackOffice launch from Platform Admin.
 TEST 2: tenant/store isolation from BackOffice.
 - Real browser result: PASS for store listing; only `Κυλικείο ΚΑΤ` is visible in this tenant context.
 
+TEST 3: Χειριστές / employee access and role controls.
+- Real browser result: PASS.
+- Operators section opens correctly from the horizontal BackOffice navigation.
+- Employee rows, role selectors, PIN status, card/barcode fields, active-access toggles and save controls render correctly.
+- User confirmed the section opens and is usable.
+
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
 - Implemented in branch `feat/backoffice-horizontal-section-cards`.
@@ -39,8 +45,7 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. Continue real BackOffice acceptance flow from the live `Κυλικείο ΚΑΤ` page.
-2. Next functional area: `Χειριστές` / employee access and role controls.
-3. Then test `Πωλήσεις & Πληρωμές`, `Βάρδιες & Ταμεία`, `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
-4. After BackOffice acceptance, execute POS end-to-end flows.
-5. Save a new checkpoint after each major test milestone or fix.
+1. TEST 4 — `Πωλήσεις & Πληρωμές` in the live `Κυλικείο ΚΑΤ` BackOffice.
+2. Then test `Βάρδιες & Ταμεία`, `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
+3. After BackOffice acceptance, execute POS end-to-end flows.
+4. Save a new checkpoint after each major test milestone or fix.
