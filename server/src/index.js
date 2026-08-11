@@ -28,6 +28,7 @@ import purchaseOrderRoutes from "./routes/purchase-orders.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
 import customerControlReversalAwareRoutes from "./routes/customer-control-reversal-aware.js";
 import customerControlRoutes from "./routes/customer-control-v2.js";
+import priceCatalogImportRoutes from "./routes/price-catalog-import.js";
 import priceCatalogRoutes from "./routes/price-catalog-normalized.js";
 import kioskReportsPosSaleActionsRoutes from "./routes/kiosk-reports-pos-sale-actions.js";
 import kioskReportsAuditRoutes from "./routes/kiosk-reports-audit.js";
@@ -105,6 +106,7 @@ app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOr
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
+app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogImportRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogRoutes);
 app.use("/api/reports",auth,kioskReportsPosSaleActionsRoutes);
 app.use("/api/reports",auth,kioskReportsAuditRoutes);
