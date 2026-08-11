@@ -17,7 +17,7 @@ router.get("/sales-analysis",async(req,res,next)=>{try{
   const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
   const rows=await prisma.$queryRaw`
     WITH base AS (
-      SELECT sa."id" AS "saleId",sa."storeId",sa."occurredAt",sl."productId",sl."description",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
+      SELECT sa."id" AS "saleId",sa."storeId",sa."occurredAt",sa."source",sl."productId",sl."description",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
         p."sku",COALESCE(p."name",sl."description") AS "name",c."name" AS "categoryName",mp."subcategoryName",s."name" AS "storeName",
         COALESCE(sp."currentStock",0) AS "currentStock",
         COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",
@@ -45,17 +45,21 @@ router.get("/sales-analysis",async(req,res,next)=>{try{
       SUM("quantity") AS "salesQuantity",SUM("lineTotal") AS "grossSales",
       SUM(CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "netSales",
       SUM("lineTotal"-CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "vatValue",
-      SUM("quantity"*"unitCost") AS "costValue",MAX("occurredAt") AS "lastSaleAt",
+      SUM("quantity"*"unitCost") AS "costValue",
+      MAX("occurredAt") FILTER (WHERE COALESCE("source",'')<>'POS_REVERSAL') AS "lastSaleAt",
       SUM("discount") AS "discountValue",
+      COUNT(DISTINCT "saleId") FILTER (WHERE COALESCE("source",'')<>'POS_REVERSAL')::int AS "normalSaleCount",
+      COUNT(DISTINCT "saleId") FILTER (WHERE "source"='POS_REVERSAL')::int AS "reversalCount",
+      ABS(COALESCE(SUM("lineTotal") FILTER (WHERE "source"='POS_REVERSAL'),0)) AS "returnGrossValue",
       (array_agg("supplierName" ORDER BY "occurredAt" DESC) FILTER (WHERE "supplierName" IS NOT NULL))[1] AS "supplierName"
     FROM base
     GROUP BY "productId","sku","name","categoryName","subcategoryName","storeId","storeName"
     ORDER BY SUM("lineTotal") DESC,"name" ASC LIMIT 10000`;
   const items=rows.map(r=>{
     const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue),costValue=n(r.costValue),profit=netSales-costValue,salesQuantity=n(r.salesQuantity);
-    return {...r,currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue)};
+    return {...r,currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)};
   });
-  res.json({items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0)});
+  res.json({items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true});
 }catch(error){next(error)}});
 
 router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
@@ -63,7 +67,7 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
   const owned=await prisma.$queryRaw`SELECT "id","name" FROM "Product" WHERE "companyId"=${companyId} AND "id"=${productId} LIMIT 1`;
   if(!owned[0])return res.status(404).json({error:"Δεν βρέθηκε το είδος."});
   const rows=await prisma.$queryRaw`
-    SELECT sa."id" AS "saleId",sa."occurredAt",sa."receiptNumber",sa."source",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
+    SELECT sa."id" AS "saleId",sa."occurredAt",sa."createdAt",sa."receiptNumber",sa."source",sa."transactionMode",sa."reversalKind",sa."originalSaleId",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
       s."name" AS "storeName",e."fullName" AS "operatorName",cu."name" AS "customerName",
       COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",pc."supplierName",
       COALESCE(pay."methods",'') AS "paymentMethods"
@@ -84,8 +88,8 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
     ) pay ON true
     WHERE sl."productId"=${productId} AND sa."occurredAt">=${from} AND sa."occurredAt"<${to} AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
     ORDER BY sa."occurredAt" DESC LIMIT 5000`;
-  const items=rows.map(r=>{const quantity=n(r.quantity),lineTotal=n(r.lineTotal),vatRate=n(r.vatRate),netValue=vatRate?lineTotal/(1+vatRate/100):lineTotal,vatValue=lineTotal-netValue,unitCost=n(r.unitCost),costValue=quantity*unitCost,profit=netValue-costValue;return {...r,quantity,unitPrice:n(r.unitPrice),discount:n(r.discount),vatRate,lineTotal,netValue,vatValue,unitCost,costValue,profit,margin:netValue?profit/netValue*100:0}});
-  res.json({product:owned[0],items,count:items.length});
+  const items=rows.map(r=>{const quantity=n(r.quantity),lineTotal=n(r.lineTotal),vatRate=n(r.vatRate),netValue=vatRate?lineTotal/(1+vatRate/100):lineTotal,vatValue=lineTotal-netValue,unitCost=n(r.unitCost),costValue=quantity*unitCost,profit=netValue-costValue;return {...r,quantity,unitPrice:n(r.unitPrice),discount:n(r.discount),vatRate,lineTotal,netValue,vatValue,unitCost,costValue,profit,margin:netValue?profit/netValue*100:0,isReversal:r.source==="POS_REVERSAL"}});
+  res.json({product:owned[0],items,count:items.length,reversalAware:true});
 }catch(error){next(error)}});
 
 export default router;
