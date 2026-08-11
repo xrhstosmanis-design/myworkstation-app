@@ -45,9 +45,9 @@ test("checkout accepts transaction UUID and explicit duplicate confirmation only
 
 test("checkout serializes same fingerprint before replay and duplicate checks",()=>{
   const lock=pos.indexOf("pg_advisory_xact_lock");
-  const replay=pos.indexOf("findSaleByClientTransaction");
-  const similar=pos.indexOf("findRecentSimilarSale");
-  const insert=pos.indexOf('INSERT INTO "Sale"',lock);
+  const replay=pos.indexOf("findSaleByClientTransaction",lock);
+  const similar=pos.indexOf("findRecentSimilarSale",replay);
+  const insert=pos.indexOf('INSERT INTO "Sale"',similar);
   assert.ok(lock>=0&&replay>lock&&similar>replay&&insert>similar);
   assert.match(pos,/seconds:45/);
 });
