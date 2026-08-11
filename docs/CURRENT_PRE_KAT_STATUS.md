@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 15:45 Europe/Athens
+Updated: 2026-08-11 15:55 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -33,9 +33,22 @@ TEST 4: Πωλήσεις & Πληρωμές.
 - Real browser load/display result: PASS.
 - `Συναλλαγές Βάρδιας` renders correctly with totals for cash/cards/expenses/percentages.
 - Existing store transaction is visible: cash sale `1,00 €`, active, with cancellation-with-reason action.
-- UI correctly reports that there is currently no open shift and instructs opening the shift first in Cash Control.
+- UI correctly reports that there is currently no open shift.
 - `Έλεγχος Ταμείου` section also renders below with status `ΚΛΕΙΣΤΗ`.
-- Full new-transaction acceptance is intentionally pending until a real shift is opened and the POS end-to-end flow is executed.
+- Full new-transaction acceptance is intentionally pending until a real shift is opened from POS / Store Mode and the POS end-to-end flow is executed.
+
+TEST 5: Βάρδιες & Ταμεία — BackOffice shift-opening policy.
+- Real browser finding: FAIL by product requirement — BackOffice exposed an `Άνοιγμα βάρδιας` form/button while no shift was open.
+- User requirement: BackOffice must not open shifts. Shift opening is only from POS / Store Mode at the operational store endpoint.
+- Fix branch: `fix/backoffice-no-open-shift`.
+- PR #147.
+- UI fix: when no shift is open, BackOffice now shows only a read-only message that shift opening is not permitted there and must be done from POS / Store Mode. Existing monitoring/history and close/hand-off behavior for an already-open shift remains available.
+- Initial MyWorkStation CI #206: FAILURE because one legacy static test still required the removed BackOffice opening-warning form text (`Διαφορά από την προηγούμενη παράδοση`). Product code behavior matched the new requirement; the test contract was stale.
+- Test updated to assert the new BackOffice no-open policy while preserving opening-continuity checks in server/history/report coverage.
+- Follow-up MyWorkStation CI #207: SUCCESS (506 tests, 506 passed).
+- PR #147 merged to `main`.
+- Merge commit: `35d4a0ae4bb8074b64749b33015c2fc89dd24910`.
+- Real browser refresh/re-test is the immediate next action.
 
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
@@ -53,8 +66,8 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. TEST 5 — `Βάρδιες & Ταμεία` in the live `Κυλικείο ΚΑΤ` BackOffice.
-2. Open and exercise a real non-fiscal shift flow if the UI allows it; do not create a fiscal/provider transaction.
+1. On the live `Κυλικείο ΚΑΤ` BackOffice, open `Βάρδιες & Ταμεία` and press Ctrl+F5 after deployment of merge commit `35d4a0ae4bb8074b64749b33015c2fc89dd24910`.
+2. Verify that no `Άνοιγμα βάρδιας` form or button exists in BackOffice and that the read-only POS / Store Mode instruction is visible. Mark TEST 5 PASS after this real-browser confirmation.
 3. Then test `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
-4. After BackOffice acceptance, execute POS end-to-end flows including the pending real new-sale test.
+4. After BackOffice acceptance, execute POS end-to-end flows including opening the real shift from Store Mode and the pending new-sale test.
 5. Save a new checkpoint after each major test milestone or fix.
