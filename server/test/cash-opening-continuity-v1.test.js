@@ -16,10 +16,11 @@ test("opening stores the previous handover expectation and the declared variance
   assert.match(cash,/\$\{expectedOpening\},\$\{openingVariance\}/);
 });
 
-test("cash control visibly warns about a changed opening amount",()=>{
-  assert.match(cashUi,/Διαφορά από την προηγούμενη παράδοση/);
-  assert.match(cashUi,/Η διαφορά θα καταγραφεί στη νέα βάρδια/);
+test("BackOffice keeps opening continuity visible but cannot open a shift",()=>{
+  assert.match(cashUi,/Η έναρξη βάρδιας δεν επιτρέπεται από το BackOffice/);
+  assert.match(cashUi,/Ανοίγει μόνο από το POS \/ Store Mode/);
   assert.match(cashUi,/Διαφορά έναρξης/);
+  assert.doesNotMatch(cashUi,/<form className="cash-form" onSubmit=\{openShift\}>/);
 });
 
 test("daily report includes opening continuity in screen and export",()=>{
