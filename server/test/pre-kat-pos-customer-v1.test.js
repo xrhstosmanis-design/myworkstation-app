@@ -39,7 +39,7 @@ test("held transactions preserve and restore the selected customer",()=>{
   assert.match(backend,/"customerId","customerName","itemsJson"/);
   assert.match(backend,/RETURNING "id","customerId","customerName","itemsJson"/);
   assert.match(client,/customerId:customer\?\.id\|\|null/);
-  assert.match(client,/setCustomer\(r\.customer\|\|null\)/);
+  assert.match(client,/applyCustomerPricing\(r\.customer\|\|null,rows\)/);
 });
 
 test("POS UI lets operator search select and clear a real customer",()=>{
@@ -51,9 +51,10 @@ test("POS UI lets operator search select and clear a real customer",()=>{
   assert.match(client,/customerId:customer\?\.id\|\|null/);
 });
 
-test("successful checkout clears customer but HOLD restore brings it back",()=>{
+test("successful checkout clears customer but HOLD restore brings it back through pricing resolver",()=>{
   assert.match(client,/setCart\(\[\]\);setSelectedId\(null\);setCustomer\(null\)/);
-  assert.match(client,/setCustomer\(r\.customer\|\|null\)/);
+  assert.match(client,/applyCustomerPricing\(r\.customer\|\|null,rows\)/);
+  assert.match(client,/setCustomer\(value\)/);
 });
 
 test("store POS remains protected by authenticated Store Mode module route",()=>{
