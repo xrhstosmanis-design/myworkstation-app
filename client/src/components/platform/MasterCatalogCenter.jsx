@@ -1,6 +1,6 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useMemo,useState} from "react";
 import {createPortal} from "react-dom";
-import {Database,FileSpreadsheet,Search,ShieldCheck,XCircle} from "lucide-react";
+import {Database,FileSpreadsheet,Search,Send,ShieldCheck,XCircle} from "lucide-react";
 import "./master-catalog.css";
 
 const api=async(path,options={})=>{
@@ -12,97 +12,49 @@ const api=async(path,options={})=>{
 };
 
 const fileToBase64=file=>new Promise((resolve,reject)=>{
-  const reader=new FileReader();
-  reader.onload=()=>resolve(String(reader.result||"").split(",")[1]||"");
-  reader.onerror=()=>reject(new Error("Δεν ήταν δυνατή η ανάγνωση του αρχείου."));
-  reader.readAsDataURL(file);
+  const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").split(",")[1]||"");reader.onerror=()=>reject(new Error("Δεν ήταν δυνατή η ανάγνωση του αρχείου."));reader.readAsDataURL(file);
 });
 
 export default function MasterCatalogCenter(){
-  const [toolbar,setToolbar]=useState(null);
-  const [open,setOpen]=useState(false);
-  const [file,setFile]=useState(null);
-  const [base64,setBase64]=useState("");
-  const [preview,setPreview]=useState(null);
-  const [status,setStatus]=useState(null);
-  const [query,setQuery]=useState("");
-  const [results,setResults]=useState([]);
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState("");
-  const [done,setDone]=useState("");
+  const [toolbar,setToolbar]=useState(null),[open,setOpen]=useState(false),[file,setFile]=useState(null),[base64,setBase64]=useState(""),[preview,setPreview]=useState(null),[status,setStatus]=useState(null);
+  const [query,setQuery]=useState(""),[results,setResults]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState("");
+  const [bulk,setBulk]=useState({rows:[],categories:[],subcategories:[]}),[targets,setTargets]=useState([]),[bulkQuery,setBulkQuery]=useState(""),[bulkCategory,setBulkCategory]=useState(""),[bulkSubcategory,setBulkSubcategory]=useState("");
+  const [selectedProducts,setSelectedProducts]=useState([]),[selectedStores,setSelectedStores]=useState([]);
 
   const loadStatus=async()=>{try{setStatus(await api("/api/platform/master-catalog/status"))}catch{}};
-  useEffect(()=>{if(open)loadStatus()},[open]);
-  useEffect(()=>{
-    const resolveToolbar=()=>setToolbar(document.querySelector(".platform-title-actions"));
-    resolveToolbar();
-    const timer=setInterval(resolveToolbar,500);
-    return()=>clearInterval(timer);
-  },[]);
+  const loadTargets=async()=>{try{const data=await api("/api/platform/master-catalog/bulk/targets");setTargets(data.companies||[])}catch(err){setError(err.message)}};
+  const loadBulk=async()=>{setBusy(true);setError("");try{const params=new URLSearchParams();if(bulkQuery.trim())params.set("q",bulkQuery.trim());if(bulkCategory)params.set("category",bulkCategory);if(bulkSubcategory)params.set("subcategory",bulkSubcategory);const data=await api(`/api/platform/master-catalog/bulk/products?${params}`);setBulk(data);setSelectedProducts(ids=>ids.filter(id=>(data.rows||[]).some(row=>row.id===id)))}catch(err){setError(err.message)}finally{setBusy(false)}};
+  useEffect(()=>{if(open){loadStatus();loadTargets();loadBulk()}},[open]);
+  useEffect(()=>{const resolveToolbar=()=>setToolbar(document.querySelector(".platform-title-actions"));resolveToolbar();const timer=setInterval(resolveToolbar,500);return()=>clearInterval(timer)},[]);
 
-  const choose=async event=>{
-    const selected=event.target.files?.[0];
-    setPreview(null);setDone("");setError("");
-    if(!selected)return;
-    if(!/\.xlsx$/i.test(selected.name)){setError("Επίλεξε αρχείο Excel .xlsx.");return;}
-    if(selected.size>8*1024*1024){setError("Το αρχείο ξεπερνά τα 8 MB.");return;}
-    setFile(selected);setBusy(true);
-    try{
-      const encoded=await fileToBase64(selected);
-      setBase64(encoded);
-      const data=await api("/api/platform/master-catalog/preview",{method:"POST",body:JSON.stringify({filename:selected.name,base64:encoded})});
-      setPreview(data);
-    }catch(err){setError(err.message)}finally{setBusy(false)}
-  };
+  const choose=async event=>{const selected=event.target.files?.[0];setPreview(null);setDone("");setError("");if(!selected)return;if(!/\.xlsx$/i.test(selected.name)){setError("Επίλεξε αρχείο Excel .xlsx.");return}if(selected.size>8*1024*1024){setError("Το αρχείο ξεπερνά τα 8 MB.");return}setFile(selected);setBusy(true);try{const encoded=await fileToBase64(selected);setBase64(encoded);setPreview(await api("/api/platform/master-catalog/preview",{method:"POST",body:JSON.stringify({filename:selected.name,base64:encoded})}))}catch(err){setError(err.message)}finally{setBusy(false)}};
+  const importNow=async()=>{if(!file||!base64||!preview)return;if(!window.confirm(`Να γίνει οριστική εισαγωγή ${preview.actualProducts.toLocaleString("el-GR")} προϊόντων στον Platform Master Catalog;`))return;setBusy(true);setError("");setDone("");try{const data=await api("/api/platform/master-catalog/import",{method:"POST",body:JSON.stringify({filename:file.name,base64})});setDone(data.alreadyImported?"Το ίδιο αρχείο είχε ήδη εισαχθεί. Δεν δημιουργήθηκαν διπλά προϊόντα.":`Η εισαγωγή ολοκληρώθηκε: ${Number(data.importedProducts||0).toLocaleString("el-GR")} προϊόντα.`);await Promise.all([loadStatus(),loadBulk()])}catch(err){setError(err.message)}finally{setBusy(false)}};
+  const search=async event=>{event?.preventDefault();if(query.trim().length<2)return;setBusy(true);setError("");try{setResults(await api(`/api/platform/master-catalog/search?q=${encodeURIComponent(query.trim())}`))}catch(err){setError(err.message)}finally{setBusy(false)}};
 
-  const importNow=async()=>{
-    if(!file||!base64||!preview)return;
-    if(!window.confirm(`Να γίνει οριστική εισαγωγή ${preview.actualProducts.toLocaleString("el-GR")} προϊόντων στον Platform Master Catalog;`))return;
-    setBusy(true);setError("");setDone("");
-    try{
-      const data=await api("/api/platform/master-catalog/import",{method:"POST",body:JSON.stringify({filename:file.name,base64})});
-      setDone(data.alreadyImported?"Το ίδιο αρχείο είχε ήδη εισαχθεί. Δεν δημιουργήθηκαν διπλά προϊόντα.":`Η εισαγωγή ολοκληρώθηκε: ${Number(data.importedProducts||0).toLocaleString("el-GR")} προϊόντα.`);
-      await loadStatus();
-    }catch(err){setError(err.message)}finally{setBusy(false)}
-  };
+  const toggleProduct=id=>setSelectedProducts(ids=>ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
+  const allVisible=(bulk.rows||[]).length>0&&(bulk.rows||[]).every(row=>selectedProducts.includes(row.id));
+  const toggleVisible=()=>setSelectedProducts(allVisible?selectedProducts.filter(id=>!(bulk.rows||[]).some(row=>row.id===id)):[...new Set([...selectedProducts,...(bulk.rows||[]).map(row=>row.id)])]);
+  const toggleStore=id=>setSelectedStores(ids=>ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
+  const toggleCompany=company=>{const ids=(company.stores||[]).map(s=>s.id),all=ids.length>0&&ids.every(id=>selectedStores.includes(id));setSelectedStores(all?selectedStores.filter(id=>!ids.includes(id)):[...new Set([...selectedStores,...ids])])};
+  const combinations=selectedProducts.length*selectedStores.length;
+  const dispatch=async()=>{if(!selectedProducts.length)return setError("Επίλεξε τουλάχιστον ένα προϊόν.");if(!selectedStores.length)return setError("Επίλεξε τουλάχιστον ένα κατάστημα.");if(!window.confirm(`Να σταλούν ${selectedProducts.length} προϊόντα σε ${selectedStores.length} καταστήματα (${combinations} συνδυασμοί);`))return;setBusy(true);setError("");setDone("");try{const r=await api("/api/platform/master-catalog/bulk/dispatch",{method:"POST",body:JSON.stringify({masterProductIds:selectedProducts,storeIds:selectedStores})});setDone(`Ολοκληρώθηκε η μαζική αποστολή: ${r.products} προϊόντα × ${r.stores} καταστήματα. Νέα εταιρικά προϊόντα: ${r.createdProducts}. Νέες αντιστοιχίσεις καταστημάτων: ${r.activatedMappings}.`)}catch(err){setError(err.message)}finally{setBusy(false)}};
 
-  const search=async event=>{
-    event?.preventDefault();
-    if(query.trim().length<2)return;
-    setBusy(true);setError("");
-    try{setResults(await api(`/api/platform/master-catalog/search?q=${encodeURIComponent(query.trim())}`))}catch(err){setError(err.message)}finally{setBusy(false)}
-  };
+  const launcher=toolbar?createPortal(<button className="master-catalog-launcher" onClick={()=>setOpen(true)}><Database/>Master Catalog</button>,toolbar):null;
+  return <>{launcher}{open&&<div className="master-catalog-overlay"><div className="master-catalog-modal">
+    <div className="master-catalog-head"><div><h2>Platform Master Product Catalog</h2><p>Κεντρική βάση προϊόντων — SUPER ADMIN</p></div><button onClick={()=>setOpen(false)}><XCircle/></button></div>
+    {status&&<div className="master-kpis"><div><small>Προϊόντα στη βάση</small><b>{Number(status.catalog?.products||0).toLocaleString("el-GR")}</b></div><div><small>Χωρίς λιανική</small><b>{Number(status.catalog?.missingRetail||0).toLocaleString("el-GR")}</b></div><div><small>ΦΠΑ μη επιβεβαιωμένο</small><b>{Number(status.catalog?.vatUnverified||0).toLocaleString("el-GR")}</b></div></div>}
+    {error&&<div className="master-alert error">{error}</div>}{done&&<div className="master-alert success">{done}</div>}
 
-  const launcher=toolbar?createPortal(
-    <button className="master-catalog-launcher" onClick={()=>setOpen(true)}><Database/>Master Catalog</button>,
-    toolbar
-  ):null;
+    <section className="master-section bulk-target-section"><div className="master-section-title"><Send/><div><h3>Μαζική αποστολή προϊόντων σε καταστήματα</h3><p>Φίλτραρε, επίλεξε προϊόντα και όρισε ακριβώς τα καταστήματα προορισμού.</p></div></div>
+      <div className="bulk-target-filters"><input value={bulkQuery} onChange={e=>setBulkQuery(e.target.value)} placeholder="Περιγραφή, κωδικός ή barcode"/><select value={bulkCategory} onChange={e=>{setBulkCategory(e.target.value);setBulkSubcategory("")}}><option value="">Όλες οι κατηγορίες</option>{(bulk.categories||[]).map(x=><option key={x}>{x}</option>)}</select><select value={bulkSubcategory} onChange={e=>setBulkSubcategory(e.target.value)}><option value="">Όλες οι υποκατηγορίες</option>{(bulk.subcategories||[]).map(x=><option key={x}>{x}</option>)}</select><button onClick={loadBulk} disabled={busy}>Αναζήτηση</button></div>
+      <div className="bulk-target-layout"><div className="bulk-products"><div className="bulk-target-head"><label><input type="checkbox" checked={allVisible} onChange={toggleVisible}/> Επιλογή όλων των εμφανιζόμενων</label><b>{selectedProducts.length} επιλεγμένα</b></div>{(bulk.rows||[]).map(row=><label className="bulk-product-row" key={row.id}><input type="checkbox" checked={selectedProducts.includes(row.id)} onChange={()=>toggleProduct(row.id)}/><span><b>{row.name}</b><small>{row.sourceCode} · {row.categoryName||"Χωρίς κατηγορία"}{row.subcategoryName?` → ${row.subcategoryName}`:""} · ΦΠΑ {row.vatRate??"—"}%</small></span><span>{row.defaultRetailPrice===null?"—":`${Number(row.defaultRetailPrice).toFixed(2)} €`}</span></label>)}</div>
+        <div className="bulk-stores"><div className="bulk-target-head"><b>Καταστήματα προορισμού</b><span>{selectedStores.length} επιλεγμένα</span></div>{targets.map(company=><div className="bulk-company" key={company.id}><button type="button" onClick={()=>toggleCompany(company)}><b>{company.name}</b><small>Όλα / κανένα</small></button>{(company.stores||[]).map(store=><label key={store.id}><input type="checkbox" checked={selectedStores.includes(store.id)} onChange={()=>toggleStore(store.id)}/><span>{store.name}<small>{store.city||""}</small></span></label>)}</div>)}</div></div>
+      <div className="bulk-target-footer"><span><b>{selectedProducts.length}</b> προϊόντα × <b>{selectedStores.length}</b> καταστήματα = <b>{combinations}</b> συνδυασμοί</span><button className="master-primary" onClick={dispatch} disabled={busy||!selectedProducts.length||!selectedStores.length||combinations>10000}>Αποστολή στα επιλεγμένα καταστήματα</button></div>
+    </section>
 
-  return <>
-    {launcher}
-    {open&&<div className="master-catalog-overlay">
-      <div className="master-catalog-modal">
-        <div className="master-catalog-head"><div><h2>Platform Master Product Catalog</h2><p>Κεντρική βάση προϊόντων — μόνο για SUPER_ADMIN</p></div><button onClick={()=>setOpen(false)}><XCircle/></button></div>
-        {status&&<div className="master-kpis"><div><small>Προϊόντα στη βάση</small><b>{Number(status.catalog?.products||0).toLocaleString("el-GR")}</b></div><div><small>Χωρίς λιανική</small><b>{Number(status.catalog?.missingRetail||0).toLocaleString("el-GR")}</b></div><div><small>ΦΠΑ μη επιβεβαιωμένο</small><b>{Number(status.catalog?.vatUnverified||0).toLocaleString("el-GR")}</b></div></div>}
-        {error&&<div className="master-alert error">{error}</div>}{done&&<div className="master-alert success">{done}</div>}
-        <section className="master-section">
-          <div className="master-section-title"><FileSpreadsheet/><div><h3>Εισαγωγή Excel</h3><p>Πρώτα γίνεται προεπισκόπηση. Η οριστική εισαγωγή απαιτεί δεύτερη ενέργεια.</p></div></div>
-          <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={choose} disabled={busy}/>
-          {busy&&!preview&&<p>Ανάλυση αρχείου…</p>}
-          {preview&&<div className="master-preview">
-            <div className="master-kpis compact"><div><small>Πραγματικά προϊόντα</small><b>{preview.actualProducts.toLocaleString("el-GR")}</b></div><div><small>Δήλωση Excel</small><b>{preview.declaredTotal?.toLocaleString("el-GR")||"—"}</b></div><div><small>Διπλά barcode</small><b>{preview.duplicateBarcodes}</b></div><div><small>Χωρίς barcode</small><b>{preview.missingBarcodes}</b></div><div><small>Χωρίς λιανική</small><b>{preview.missingRetail}</b></div><div><small>ΦΠΑ μη επιβεβαιωμένο</small><b>{preview.vatUnverified.toLocaleString("el-GR")}</b></div></div>
-            {preview.countDifference!==0&&<div className="master-alert warning">Η παλιά αναφορά του Excel δηλώνει {preview.declaredTotal?.toLocaleString("el-GR")} προϊόντα, αλλά βρέθηκαν {preview.actualProducts.toLocaleString("el-GR")} πραγματικές γραμμές προϊόντων. Η τελική γραμμή του φύλλου είναι σύνοψη και δεν θα εισαχθεί.</div>}
-            <div className="master-alert info"><ShieldCheck/> Τα διπλά barcode θα εισαχθούν με απενεργοποιημένο automatic scan. Τιμές 0 θα γίνουν κενές και ο ΦΠΑ 0 θα χαρακτηριστεί μη επιβεβαιωμένος. Απόθεμα του Excel δεν μεταφέρεται σε κανένα κατάστημα.</div>
-            {preview.duplicateDetails?.length>0&&<details><summary>Προβολή {preview.duplicateDetails.length} διπλών barcode</summary><div className="master-duplicates">{preview.duplicateDetails.map(item=><div key={item.barcode}><b>{item.barcode}</b>{item.products.map(product=><small key={`${item.barcode}-${product.sourceCode}`}>{product.sourceCode} · {product.name} · γραμμή {product.sourceRow}</small>)}</div>)}</div></details>}
-            <button className="master-primary" onClick={importNow} disabled={busy||preview.alreadyImported}>{busy?"Εισαγωγή…":preview.alreadyImported?"Το αρχείο έχει ήδη εισαχθεί":"Οριστική εισαγωγή στον Master Catalog"}</button>
-          </div>}
-        </section>
-        <section className="master-section">
-          <div className="master-section-title"><Search/><div><h3>Έλεγχος καταλόγου</h3><p>Αναζήτηση με περιγραφή, κωδικό ή barcode μετά την εισαγωγή.</p></div></div>
-          <form className="master-search" onSubmit={search}><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="π.χ. ΑΛΦΑ 330 ή 520…"/><button disabled={busy}>Αναζήτηση</button></form>
-          <div className="master-results">{results.map((row,index)=><div className="master-result" key={`${row.id}-${row.barcode||index}`}><span><b>{row.name}</b><small>{row.sourceCode} · {row.categoryName||"Χωρίς κατηγορία"}</small></span><span>{row.barcode||"χωρίς barcode"}{row.duplicateBarcode&&<small className="danger">διπλό — scan off</small>}</span><span>{row.defaultRetailPrice===null?"χωρίς τιμή":`${Number(row.defaultRetailPrice).toFixed(2)} €`}</span></div>)}</div>
-        </section>
-      </div>
-    </div>}
-  </>;
+    <section className="master-section"><div className="master-section-title"><FileSpreadsheet/><div><h3>Εισαγωγή Excel στον Master Catalog</h3><p>Πρώτα προεπισκόπηση και μετά οριστική εισαγωγή. Μετά μπορείς να επιλέξεις τα εισαγμένα προϊόντα παραπάνω και να τα στείλεις μαζικά.</p></div></div><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={choose} disabled={busy}/>{busy&&!preview&&<p>Ανάλυση αρχείου…</p>}{preview&&<div className="master-preview"><div className="master-kpis compact"><div><small>Πραγματικά προϊόντα</small><b>{preview.actualProducts.toLocaleString("el-GR")}</b></div><div><small>Δήλωση Excel</small><b>{preview.declaredTotal?.toLocaleString("el-GR")||"—"}</b></div><div><small>Διπλά barcode</small><b>{preview.duplicateBarcodes}</b></div><div><small>Χωρίς barcode</small><b>{preview.missingBarcodes}</b></div><div><small>Χωρίς λιανική</small><b>{preview.missingRetail}</b></div><div><small>ΦΠΑ μη επιβεβαιωμένο</small><b>{preview.vatUnverified.toLocaleString("el-GR")}</b></div></div>{preview.countDifference!==0&&<div className="master-alert warning">Η παλιά αναφορά δηλώνει {preview.declaredTotal?.toLocaleString("el-GR")} προϊόντα, αλλά βρέθηκαν {preview.actualProducts.toLocaleString("el-GR")} πραγματικές γραμμές.</div>}<div className="master-alert info"><ShieldCheck/> Τα διπλά barcode μπαίνουν με scan off. Το απόθεμα Excel δεν μεταφέρεται αυτόματα σε καταστήματα.</div><button className="master-primary" onClick={importNow} disabled={busy||preview.alreadyImported}>{busy?"Εισαγωγή…":preview.alreadyImported?"Το αρχείο έχει ήδη εισαχθεί":"Οριστική εισαγωγή στον Master Catalog"}</button></div>}</section>
+
+    <section className="master-section"><div className="master-section-title"><Search/><div><h3>Γρήγορος έλεγχος καταλόγου</h3><p>Αναζήτηση με περιγραφή, κωδικό ή barcode.</p></div></div><form className="master-search" onSubmit={search}><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="π.χ. ΑΛΦΑ 330 ή 520…"/><button disabled={busy}>Αναζήτηση</button></form><div className="master-results">{results.map((row,index)=><div className="master-result" key={`${row.id}-${row.barcode||index}`}><span><b>{row.name}</b><small>{row.sourceCode} · {row.categoryName||"Χωρίς κατηγορία"}</small></span><span>{row.barcode||"χωρίς barcode"}</span><span>{row.defaultRetailPrice===null?"χωρίς τιμή":`${Number(row.defaultRetailPrice).toFixed(2)} €`}</span></div>)}</div></section>
+    <style>{`.bulk-target-filters{display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:8px;margin:10px 0}.bulk-target-filters input,.bulk-target-filters select{border:1px solid #cbd9e2;border-radius:9px;padding:9px;background:#fff}.bulk-target-filters button{border:0;border-radius:9px;background:#0f8f83;color:#fff;font-weight:900;padding:0 14px}.bulk-target-layout{display:grid;grid-template-columns:1.45fr 1fr;gap:12px}.bulk-products,.bulk-stores{border:1px solid #cfdae2;border-radius:12px;background:#fff;max-height:420px;overflow:auto}.bulk-target-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;background:#eef5f8;border-bottom:1px solid #d7e2e8}.bulk-product-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:9px 11px;border-bottom:1px solid #edf1f4}.bulk-product-row span:first-of-type{display:grid}.bulk-product-row small,.bulk-company small{color:#718493;font-size:11px}.bulk-company>button{width:100%;display:flex;justify-content:space-between;border:0;background:#0f2f4a;color:#fff;padding:9px 11px;cursor:pointer}.bulk-company>label{display:flex;gap:8px;padding:8px 11px;border-bottom:1px solid #edf1f4}.bulk-company>label span{display:grid}.bulk-target-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;padding:12px;border:1px solid #b8d9d3;border-radius:10px;background:#eaf8f5}@media(max-width:900px){.bulk-target-filters,.bulk-target-layout{grid-template-columns:1fr}.bulk-target-footer{align-items:stretch;flex-direction:column}}`}</style>
+  </div></div>}</>;
 }
