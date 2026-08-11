@@ -1,6 +1,6 @@
 # CURRENT PRE-KAT STATUS
 
-Updated: 2026-08-11 15:55 Europe/Athens
+Updated: 2026-08-11 15:58 Europe/Athens
 
 This file is an append-style operational checkpoint complementing `docs/PROJECT_CHECKPOINT.md`.
 
@@ -38,7 +38,7 @@ TEST 4: Πωλήσεις & Πληρωμές.
 - Full new-transaction acceptance is intentionally pending until a real shift is opened from POS / Store Mode and the POS end-to-end flow is executed.
 
 TEST 5: Βάρδιες & Ταμεία — BackOffice shift-opening policy.
-- Real browser finding: FAIL by product requirement — BackOffice exposed an `Άνοιγμα βάρδιας` form/button while no shift was open.
+- Initial real browser finding: FAIL by product requirement — BackOffice exposed an `Άνοιγμα βάρδιας` form/button while no shift was open.
 - User requirement: BackOffice must not open shifts. Shift opening is only from POS / Store Mode at the operational store endpoint.
 - Fix branch: `fix/backoffice-no-open-shift`.
 - PR #147.
@@ -48,7 +48,9 @@ TEST 5: Βάρδιες & Ταμεία — BackOffice shift-opening policy.
 - Follow-up MyWorkStation CI #207: SUCCESS (506 tests, 506 passed).
 - PR #147 merged to `main`.
 - Merge commit: `35d4a0ae4bb8074b64749b33015c2fc89dd24910`.
-- Real browser refresh/re-test is the immediate next action.
+- Real browser refresh/re-test: PASS.
+- Confirmed in live BackOffice: status `ΚΛΕΙΣΤΗ`, no `Άνοιγμα βάρδιας` form/button, and visible read-only instruction that opening is allowed only from POS / Store Mode.
+- Recent shift history remains visible, including opening, opening variance, cash, cards, EFTPOS and final variance values.
 
 ## Approved BackOffice UI change during real testing
 - Six horizontal BackOffice section cards: Χειριστές, Πωλήσεις & Πληρωμές, Βάρδιες & Ταμεία, Προϊόντα & Απόθεμα, Συσκευές, Ιστορικό.
@@ -66,8 +68,8 @@ Complete real end-to-end testing of all MyWorkStation functions that can run wit
 Excluded only from physical execution today: fiscal cash register/USB, hardware-dependent Observer, real EFTPOS terminals, and external providers requiring production credentials/hardware. Their internal validation, persistence, audit and UI logic must still be tested where possible.
 
 ## Immediate next action
-1. On the live `Κυλικείο ΚΑΤ` BackOffice, open `Βάρδιες & Ταμεία` and press Ctrl+F5 after deployment of merge commit `35d4a0ae4bb8074b64749b33015c2fc89dd24910`.
-2. Verify that no `Άνοιγμα βάρδιας` form or button exists in BackOffice and that the read-only POS / Store Mode instruction is visible. Mark TEST 5 PASS after this real-browser confirmation.
-3. Then test `Προϊόντα & Απόθεμα`, `Συσκευές`, and `Ιστορικό`.
-4. After BackOffice acceptance, execute POS end-to-end flows including opening the real shift from Store Mode and the pending new-sale test.
+1. TEST 6 — open `Προϊόντα & Απόθεμα` in the live `Κυλικείο ΚΑΤ` BackOffice and verify that the real product/stock workspace loads correctly.
+2. Then test `Συσκευές` and `Ιστορικό`.
+3. After BackOffice acceptance, enter POS / Store Mode, open a real non-fiscal shift there, and execute the pending end-to-end new-sale flow.
+4. Continue through customers, prices/wholesale/promotions, HOLD, cash/card/mixed flows, duplicate-sale protection, cancellation/refund/delayed transaction, EFTPOS internal logic, reports, stock, suppliers, purchase orders and audit/history.
 5. Save a new checkpoint after each major test milestone or fix.
