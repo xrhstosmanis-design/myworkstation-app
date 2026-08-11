@@ -49,6 +49,7 @@ import connectorObserverRoutes from "./routes/connector-observer.js";
 import ownerPriceBulkPreviewRoutes from "./routes/owner-price-bulk-preview.js";
 import ownerProductRoutes from "./routes/owner-products.js";
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
+import ownerProductSmartEntryRoutes from "./routes/owner-product-smart-entry.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
@@ -127,6 +128,7 @@ app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes)
 app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
+app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
