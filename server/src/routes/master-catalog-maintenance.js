@@ -29,6 +29,13 @@ router.use(async(req,res,next)=>{try{await ensureAuditSchema();next()}catch(erro
 
 const selectedSchema=z.object({masterProductIds:z.array(z.string().min(1)).min(1).max(1000)});
 
+async function lockMaintenance(tx){
+  // pg_advisory_xact_lock returns PostgreSQL void. Prisma $queryRaw tries to
+  // deserialize that void column and fails with P2010. Cast the result to text
+  // so Prisma receives a supported scalar type while preserving the lock.
+  await tx.$queryRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('master-catalog-maintenance'))::text AS "lock"`);
+}
+
 async function deleteSelectedMasters(tx,ids){
   if(!ids.length)return {deletedProducts:0,detachedTenantProducts:0};
   const detached=await tx.$executeRawUnsafe(`UPDATE "Product" SET "masterProductId"=NULL WHERE "masterProductId" = ANY($1::text[])`,ids);
@@ -44,7 +51,7 @@ router.post("/delete-selected",async(req,res,next)=>{
     const existingIds=existing.map(row=>row.id);
     if(!existingIds.length)return res.json({ok:true,deletedProducts:0,detachedTenantProducts:0});
     const result=await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('master-catalog-maintenance'))`;
+      await lockMaintenance(tx);
       const outcome=await deleteSelectedMasters(tx,existingIds);
       await tx.$executeRaw`INSERT INTO "MasterCatalogMaintenanceAudit" ("id","actorId","action","productIdsJson","deletedProducts","detachedTenantProducts") VALUES (${crypto.randomUUID()},${req.user.id},'DELETE_SELECTED',${JSON.stringify(existingIds)}::jsonb,${outcome.deletedProducts},${outcome.detachedTenantProducts})`;
       return outcome;
@@ -61,7 +68,7 @@ router.post("/clear",async(req,res,next)=>{
     const confirmation=String(req.body?.confirmation||"").trim();
     if(confirmation!=="ΔΙΑΓΡΑΦΗ MASTER CATALOG")return res.status(400).json({error:"Απαιτείται η ακριβής επιβεβαίωση «ΔΙΑΓΡΑΦΗ MASTER CATALOG»."});
     const result=await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('master-catalog-maintenance'))`;
+      await lockMaintenance(tx);
       const masterCount=await tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "MasterProduct"`;
       const detached=await tx.$executeRawUnsafe(`UPDATE "Product" SET "masterProductId"=NULL WHERE "masterProductId" IS NOT NULL`);
       const deletedBarcodes=await tx.$executeRawUnsafe(`DELETE FROM "MasterProductBarcode"`);
