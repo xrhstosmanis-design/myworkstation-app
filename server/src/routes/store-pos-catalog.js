@@ -49,9 +49,38 @@ async function audit(req,store,eventType,details={}){
   await prisma.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify(details)}::jsonb)`;
 }
 
+function requestedPaymentMethods(body={}){
+  if(body.paymentMethod==="MIXED")return Array.isArray(body.payments)?body.payments.map(row=>String(row?.method||"").toUpperCase()).filter(Boolean):[];
+  return body.paymentMethod?[String(body.paymentMethod).toUpperCase()]:[];
+}
+
+router.use("/stores/:storeId",async(req,res,next)=>{
+  try{
+    assertStore(req,req.params.storeId);
+    const store=await storeFor(req,req.params.storeId);
+    const access=await operatorAccess(req,store.id);
+    req.storeOperatorAccess=access;
+    req.storeOperatorStore=store;
+    if(req.method==="POST"&&req.path.endsWith("/checkout")){
+      const methods=requestedPaymentMethods(req.body||{});
+      const needsCash=methods.includes("CASH");
+      const needsCards=methods.includes("CARD")||methods.includes("IRIS");
+      if(needsCash&&!access.cash){
+        await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});
+        return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."});
+      }
+      if(needsCards&&!access.cards){
+        await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});
+        return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."});
+      }
+    }
+    next();
+  }catch(error){next(error)}
+});
+
 router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
   try{
-    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),access=await operatorAccess(req,store.id);
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
     if(!access.onlineProductSearch)return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
     const q=String(req.query.q||"").trim();if(q.length<3)return res.status(400).json({error:"Χρειάζονται τουλάχιστον 3 χαρακτήρες ή barcode."});const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
@@ -65,7 +94,7 @@ router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
 
 router.get("/stores/:storeId",async(req,res,next)=>{
   try{
-    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),access=await operatorAccess(req,store.id);
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
     const layoutRows=await prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);
     const products=await prisma.$queryRaw`
       SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",resolved_mp."id" AS "resolvedMasterProductId",resolved_mp."sourceCode" AS "masterCode",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",c."name" AS "categoryName",
