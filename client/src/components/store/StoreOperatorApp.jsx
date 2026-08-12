@@ -35,7 +35,7 @@ export default function StoreOperatorApp({api,storeId}){
     <div className="store-pilot-banner"><ShieldCheck/><div><b>ΕΜΠΟΡΙΚΗ ΠΙΛΟΤΙΚΗ ΔΟΚΙΜΗ — ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΛΕΙΤΟΥΡΓΙΑ</b><span>Οι δοκιμαστικές πωλήσεις καταγράφονται στο MyWorkStation χωρίς αποστολή στην πραγματική ταμειακή.</span></div></div>
     <main className="store-mode-main">
       <div className="store-mode-title"><div><span>SALES POS</span><h1>POS Πωλήσεων — {session.store.name}</h1><p>Το POS φορτώνει τα ενεργά προϊόντα, τις τιμές και τα barcodes του συγκεκριμένου καταστήματος.</p></div><div className="store-online"><Wifi/>Online</div></div>
-      <StorePosPanel api={api} store={session.store} onChanged={changed}/>
+      <StorePosPanel api={api} store={session.store} onChanged={changed} canEditCategories={session.user.role==="MANAGER"}/>
       <StoreAttendancePanel api={api} employee={session.user}/>
       <StoreTransactionsPanel api={api} store={session.store} onChanged={changed}/>
       <StoreHandoverPanel api={api} store={session.store}/>
