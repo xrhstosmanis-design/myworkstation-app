@@ -84,6 +84,11 @@ router.get("/stores/:storeId",async(req,res,next)=>{
                AND pb_match."barcode"=mpb_match."barcode"
               WHERE mpb_match."masterProductId"=mp."id"
             )
+            OR (
+              p."name" IS NOT NULL
+              AND mp."name" IS NOT NULL
+              AND lower(btrim(mp."name"))=lower(btrim(p."name"))
+            )
           )
         ORDER BY
           CASE
@@ -94,7 +99,15 @@ router.get("/stores/:storeId",async(req,res,next)=>{
               WHERE mpb_sku_rank."masterProductId"=mp."id"
                 AND mpb_sku_rank."barcode"=p."sku"
             ) THEN 2
-            ELSE 3
+            WHEN EXISTS (
+              SELECT 1
+              FROM "MasterProductBarcode" mpb_rank
+              JOIN "ProductBarcode" pb_rank
+                ON pb_rank."productId"=p."id"
+               AND pb_rank."barcode"=mpb_rank."barcode"
+              WHERE mpb_rank."masterProductId"=mp."id"
+            ) THEN 3
+            ELSE 4
           END,
           mp."id"
         LIMIT 1
