@@ -70,6 +70,12 @@ router.get("/stores/:storeId",async(req,res,next)=>{
           AND (
             mp."id"=p."masterProductId"
             OR (p."sku" IS NOT NULL AND mp."sourceCode"=p."sku")
+            OR (p."sku" IS NOT NULL AND EXISTS (
+              SELECT 1
+              FROM "MasterProductBarcode" mpb_sku
+              WHERE mpb_sku."masterProductId"=mp."id"
+                AND mpb_sku."barcode"=p."sku"
+            ))
             OR EXISTS (
               SELECT 1
               FROM "MasterProductBarcode" mpb_match
@@ -83,7 +89,12 @@ router.get("/stores/:storeId",async(req,res,next)=>{
           CASE
             WHEN mp."id"=p."masterProductId" THEN 0
             WHEN p."sku" IS NOT NULL AND mp."sourceCode"=p."sku" THEN 1
-            ELSE 2
+            WHEN p."sku" IS NOT NULL AND EXISTS (
+              SELECT 1 FROM "MasterProductBarcode" mpb_sku_rank
+              WHERE mpb_sku_rank."masterProductId"=mp."id"
+                AND mpb_sku_rank."barcode"=p."sku"
+            ) THEN 2
+            ELSE 3
           END,
           mp."id"
         LIMIT 1
