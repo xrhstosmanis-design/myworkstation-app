@@ -43,6 +43,7 @@ import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-
 import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
+import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import attendanceRoutes from "./routes/attendance.js";
@@ -126,6 +127,7 @@ app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventor
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
