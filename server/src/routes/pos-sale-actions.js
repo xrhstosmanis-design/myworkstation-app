@@ -36,7 +36,8 @@ export async function ensurePosSaleActionSchema(){
           "details" JSONB NOT NULL DEFAULT '{}'::jsonb,
           "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )`,
-        `CREATE INDEX IF NOT EXISTS "PosSaleActionAudit_store_created_idx" ON "PosSaleActionAudit"("storeId","createdAt" DESC)`
+        `CREATE INDEX IF NOT EXISTS "PosSaleActionAudit_store_created_idx" ON "PosSaleActionAudit"("storeId","createdAt" DESC)`,
+        `CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`
       ];
       for(const sql of statements)await prisma.$executeRawUnsafe(sql);
     })().catch(error=>{readyPromise=undefined;throw error});
@@ -58,6 +59,9 @@ async function ownedStore(req,storeId){
 }
 async function insertAudit(db,{req,storeId,saleId=null,relatedSaleId=null,actionType,reason=null,details={}}){
   await db.$executeRaw`INSERT INTO "PosSaleActionAudit" ("id","companyId","storeId","saleId","relatedSaleId","actionType","reason","actorId","actorName","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${storeId},${saleId},${relatedSaleId},${actionType},${reason},${req.user.id||null},${actorName(req)},${JSON.stringify(details||{})}::jsonb)`;
+}
+async function insertOperatorAudit(db,{req,storeId,eventType,details={}}){
+  await db.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${storeId},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify(details||{})}::jsonb)`;
 }
 
 router.use(async(req,res,next)=>{try{await ensurePosSaleActionSchema();next()}catch(error){next(error)}});
@@ -100,6 +104,7 @@ router.post("/stores/:storeId/sales/:saleId/delayed",async(req,res,next)=>{
       await tx.$executeRaw`UPDATE "Sale" SET "occurredAt"=${body.occurredAt},"transactionMode"='DELAYED',"delayedReason"=${body.reason},"delayedRecordedAt"=NOW() WHERE "id"=${sale.id}`;
       await tx.$executeRaw`UPDATE "StoreTransaction" SET "occurredAt"=${body.occurredAt} WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "sessionId"=${open.id} AND COALESCE("description",'') LIKE ${pattern}`;
       await insertAudit(tx,{req,storeId:store.id,saleId:sale.id,actionType:"DELAYED",reason:body.reason,details:{oldOccurredAt:oldAt,newOccurredAt:body.occurredAt,sessionId:open.id}});
+      await insertOperatorAudit(tx,{req,storeId:store.id,eventType:"POS_SALE_DELAYED",details:{saleId:sale.id,oldOccurredAt:oldAt,newOccurredAt:body.occurredAt,reason:body.reason,sessionId:open.id}});
       return {saleId:sale.id,occurredAt:body.occurredAt,recordedAt:new Date(),transactionMode:"DELAYED"};
     });
     res.json(result);
@@ -130,13 +135,18 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       if(!lines.length||!payments.length){const e=new Error("Η αρχική πώληση δεν έχει πλήρη ανάλυση γραμμών/πληρωμών.");e.status=409;throw e}
       const reversalId=crypto.randomUUID(),label=body.kind==="CANCEL"?"ΑΚΥΡΩΣΗ":"ΕΠΙΣΤΡΟΦΗ",employeeId=req.user.employeeId||null;
       await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","customerId","fiscalStatus","subtotal","discount","total","status","source","occurredAt","transactionMode","originalSaleId","reversalKind") VALUES (${reversalId},${req.user.companyId},${store.id},${employeeId},${sale.customerId||null},'NON_FISCAL',${-money(sale.subtotal)},${-money(sale.discount)},${-money(sale.total)},'COMPLETED','POS_REVERSAL',NOW(),'NORMAL',${sale.id},${body.kind})`;
-      for(const line of lines){await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;if(line.productId)await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)+${money(line.quantity)} WHERE "storeId"=${store.id} AND "productId"=${line.productId}`}
+      for(const line of lines){
+        await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;
+        if(line.productId)await tx.$executeRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE`;
+      }
       for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount","terminalRef") VALUES (${crypto.randomUUID()},${reversalId},${payment.method},${-money(payment.amount)},${payment.terminalRef||null})`;
       const cash=payments.filter(p=>p.method==="CASH").reduce((sum,p)=>sum+money(p.amount),0),card=payments.filter(p=>p.method==="CARD").reduce((sum,p)=>sum+money(p.amount),0),iris=payments.filter(p=>p.method==="IRIS").reduce((sum,p)=>sum+money(p.amount),0),who=actorName(req);
       if(cash>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open.id},'SALE_CASH',${-cash},${`POS ${label} ${reversalId} · αρχική ${sale.id} · ΜΕΤΡΗΤΑ`},${req.user.id},${who})`;
       if(card+iris>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open.id},'SALE_CARD',${-(card+iris)},${`POS ${label} ${reversalId} · αρχική ${sale.id} · ΚΑΡΤΑ ${card.toFixed(2)} · IRIS ${iris.toFixed(2)}`},${req.user.id},${who})`;
       await tx.$executeRaw`UPDATE "Sale" SET "reversalState"=${body.kind},"reversedAt"=NOW(),"reversedBy"=${req.user.id},"reversedByName"=${who} WHERE "id"=${sale.id}`;
-      await insertAudit(tx,{req,storeId:store.id,saleId:reversalId,relatedSaleId:sale.id,actionType:body.kind,reason:body.reason,details:{originalTotal:money(sale.total),reversalTotal:-money(sale.total),sessionId:open.id,payments:payments.map(p=>({method:p.method,amount:money(p.amount)}))}});
+      const auditDetails={originalTotal:money(sale.total),reversalTotal:-money(sale.total),sessionId:open.id,payments:payments.map(p=>({method:p.method,amount:money(p.amount)})),items:lines.map(line=>({productId:line.productId,description:line.description,quantity:money(line.quantity),lineTotal:money(line.lineTotal)}))};
+      await insertAudit(tx,{req,storeId:store.id,saleId:reversalId,relatedSaleId:sale.id,actionType:body.kind,reason:body.reason,details:auditDetails});
+      await insertOperatorAudit(tx,{req,storeId:store.id,eventType:body.kind==="CANCEL"?"POS_SALE_CANCELLED":"POS_RETURN_COMPLETED",details:{saleId:sale.id,reversalSaleId:reversalId,reason:body.reason,...auditDetails}});
       return {saleId:sale.id,reversalSaleId:reversalId,kind:body.kind,total:money(sale.total),reversalTotal:-money(sale.total),sessionId:open.id,fiscalStatus:"NON_FISCAL"};
     });
     res.status(201).json(result);
