@@ -4,19 +4,25 @@ import "./pos-designer.css";
 
 const colors=["#1597a5","#287e9e","#4f8fbe","#dc7a27","#3978b8","#9aa82f","#9a5353","#76558e"];
 const CATEGORY_PREFIX="CATEGORY::";
-const isCategoryQuick=button=>String(button?.productQuery||"").startsWith(CATEGORY_PREFIX);
-const quickValue=button=>isCategoryQuick(button)?String(button.productQuery).slice(CATEGORY_PREFIX.length):String(button?.productQuery||"");
-const normalizeButton=button=>({...button,productCodes:Array.isArray(button?.productCodes)?button.productCodes:[]});
-const normalize=value=>({
-  title:value?.title||"OPERATOR POS",
+const META_SEP="::MWSMETA::";
+const FONT_SEP="::MWSFONT::";
+const decodeStored=value=>{const raw=String(value||"");const [base,meta=""]=raw.split(META_SEP);return{base,codes:meta?meta.split(",").filter(Boolean).map(code=>{try{return decodeURIComponent(code)}catch{return code}}):[]}};
+const encodeStored=(base,codes=[])=>{const clean=String(base||"").split(META_SEP)[0];return codes.length?`${clean}${META_SEP}${codes.map(code=>encodeURIComponent(String(code))).join(",")}`:clean};
+const decodeTitle=value=>{const raw=String(value||"OPERATOR POS");const index=raw.lastIndexOf(FONT_SEP);if(index<0)return{title:raw,fontScale:1};const fontScale=Number(raw.slice(index+FONT_SEP.length));return{title:raw.slice(0,index)||"OPERATOR POS",fontScale:Number.isFinite(fontScale)?fontScale:1}};
+const isCategoryQuick=button=>decodeStored(button?.productQuery).base.startsWith(CATEGORY_PREFIX);
+const quickValue=button=>{const value=decodeStored(button?.productQuery).base;return value.startsWith(CATEGORY_PREFIX)?value.slice(CATEGORY_PREFIX.length):value};
+const normalizeButton=(button,kind)=>{const stored=decodeStored(kind==="categories"?button?.categoryName:button?.productQuery);return{...button,[kind==="categories"?"categoryName":"productQuery"]:stored.base,productCodes:Array.isArray(button?.productCodes)&&button.productCodes.length?button.productCodes:stored.codes}};
+const normalize=value=>{const title=decodeTitle(value?.title);return{
+  title:title.title,
   productColumns:Number(value?.productColumns||6),
   showSku:value?.showSku!==false,
-  buttonFontScale:Number(value?.buttonFontScale||1),
+  buttonFontScale:Number(value?.buttonFontScale||title.fontScale||1),
   theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff",...(value?.theme||{})},
-  quickKeys:(value?.quickKeys||[]).map(normalizeButton),
-  categories:(value?.categories||[]).map(normalizeButton),
+  quickKeys:(value?.quickKeys||[]).map(button=>normalizeButton(button,"quickKeys")),
+  categories:(value?.categories||[]).map(button=>normalizeButton(button,"categories")),
   buttons:value?.buttons||[]
-});
+}};
+const serialize=value=>({...value,title:`${String(value.title||"OPERATOR POS").split(FONT_SEP)[0]}${FONT_SEP}${Number(value.buttonFontScale||1)}`,quickKeys:(value.quickKeys||[]).map(button=>({...button,productQuery:isCategoryQuick(button)?encodeStored(`${CATEGORY_PREFIX}${quickValue(button)}`,button.productCodes||[]):button.productQuery})),categories:(value.categories||[]).map(button=>({...button,categoryName:encodeStored(button.categoryName||button.label,button.productCodes||[])}))});
 const makeButton=(kind,index)=>kind==="quickKeys"
   ?{id:`quick-${Date.now()}`,label:"ΝΕΟ ΚΟΥΜΠΙ",productQuery:"",productCodes:[],color:colors[index%colors.length],visible:true}
   :{id:`category-${Date.now()}`,label:"ΝΕΑ ΚΑΤΗΓΟΡΙΑ",categoryName:"",productCodes:[],color:colors[index%colors.length],visible:true};
@@ -33,8 +39,8 @@ export default function PosDesignerPanel({request,onClose}){
   const updateSection=(kind,id,patch)=>setLayout(current=>({...current,[kind]:current[kind].map(button=>button.id===id?{...button,...patch}:button)}));
   const update=(id,patch)=>updateSection(section,id,patch);
   const move=(index,delta)=>setLayout(current=>{const list=[...current[section]],next=index+delta;if(next<0||next>=list.length)return current;[list[index],list[next]]=[list[next],list[index]];return {...current,[section]:list}});
-  const save=async()=>{setBusy("save");setError("");setMessage("");try{const result=await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(layout)});setMessage(`Αποθηκεύτηκε μόνιμα στη βάση ως πρόχειρη έκδοση ${result.draftVersion}.`);await load()}catch(err){setError(err.message)}finally{setBusy("")}};
-  const publish=async()=>{if(!selected.size)return setError("Επίλεξε τουλάχιστον ένα κατάστημα.");setBusy("publish");setError("");setMessage("");try{await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(layout)});const result=await request("/api/platform/pos-designer/publish",{method:"POST",body:JSON.stringify({storeIds:[...selected]})});setMessage(`Δημοσιεύτηκαν τα κουμπιά προϊόντων/κατηγοριών σε ${result.publishedStores} καταστήματα.`);setSelected(new Set());await load()}catch(err){setError(err.message)}finally{setBusy("")}};
+  const save=async()=>{setBusy("save");setError("");setMessage("");try{const result=await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(serialize(layout))});setMessage(`Αποθηκεύτηκε μόνιμα στη βάση ως πρόχειρη έκδοση ${result.draftVersion}.`);await load()}catch(err){setError(err.message)}finally{setBusy("")}};
+  const publish=async()=>{if(!selected.size)return setError("Επίλεξε τουλάχιστον ένα κατάστημα.");setBusy("publish");setError("");setMessage("");try{await request("/api/platform/pos-designer/draft",{method:"PUT",body:JSON.stringify(serialize(layout))});const result=await request("/api/platform/pos-designer/publish",{method:"POST",body:JSON.stringify({storeIds:[...selected]})});setMessage(`Δημοσιεύτηκαν τα κουμπιά προϊόντων/κατηγοριών σε ${result.publishedStores} καταστήματα.`);setSelected(new Set());await load()}catch(err){setError(err.message)}finally{setBusy("")}};
   const clearVisual=()=>{if(!window.confirm("Να καθαριστούν μόνο τα Γρήγορα και οι Κατηγορίες από το πρόχειρο POS; Οι STANDARD λειτουργίες δεν επηρεάζονται."))return;setLayout(current=>({...current,quickKeys:[],categories:[]}));setMessage("Καθαρίστηκαν μόνο τα κουμπιά προϊόντων/κατηγοριών. Οι STANDARD λειτουργίες παραμένουν.");setSection("quickKeys")};
   const openSinglePicker=button=>{setPicker({mode:"single",kind:"quickKeys",id:button.id});setPickerQuery(quickValue(button));setPickerRows([]);setPickerError("");setGroupSelected(new Set())};
   const openGroupPicker=(kind,button)=>{setPicker({mode:"group",kind,id:button.id});setPickerQuery("");setPickerRows([]);setPickerError("");setGroupSelected(new Set(button.productCodes||[]))};
