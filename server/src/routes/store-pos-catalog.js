@@ -41,7 +41,8 @@ router.get("/stores/:storeId",async(req,res,next)=>{
         p."name",
         p."vatRate",
         p."masterProductId",
-        mp."sourceCode" AS "masterCode",
+        resolved_mp."id" AS "resolvedMasterProductId",
+        resolved_mp."sourceCode" AS "masterCode",
         COALESCE(sp."salePrice",p."salePrice") AS "salePrice",
         COALESCE(sp."currentStock",0) AS "currentStock",
         c."name" AS "categoryName",
@@ -54,7 +55,7 @@ router.get("/stores/:storeId",async(req,res,next)=>{
         COALESCE(
           (SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode")
            FROM "MasterProductBarcode" mpb
-           WHERE mpb."masterProductId"=p."masterProductId"),
+           WHERE mpb."masterProductId"=resolved_mp."id"),
           '[]'
         ) AS "masterBarcodes"
       FROM "StoreProduct" sp
@@ -62,7 +63,31 @@ router.get("/stores/:storeId",async(req,res,next)=>{
         ON p."id"=sp."productId"
        AND p."companyId"=${req.user.companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
-      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN LATERAL (
+        SELECT mp."id",mp."sourceCode"
+        FROM "MasterProduct" mp
+        WHERE mp."active"=true
+          AND (
+            mp."id"=p."masterProductId"
+            OR (p."sku" IS NOT NULL AND mp."sourceCode"=p."sku")
+            OR EXISTS (
+              SELECT 1
+              FROM "MasterProductBarcode" mpb_match
+              JOIN "ProductBarcode" pb_match
+                ON pb_match."productId"=p."id"
+               AND pb_match."barcode"=mpb_match."barcode"
+              WHERE mpb_match."masterProductId"=mp."id"
+            )
+          )
+        ORDER BY
+          CASE
+            WHEN mp."id"=p."masterProductId" THEN 0
+            WHEN p."sku" IS NOT NULL AND mp."sourceCode"=p."sku" THEN 1
+            ELSE 2
+          END,
+          mp."id"
+        LIMIT 1
+      ) resolved_mp ON true
       WHERE sp."storeId"=${store.id}
         AND sp."active"=true
         AND p."active"=true
@@ -76,7 +101,9 @@ router.get("/stores/:storeId",async(req,res,next)=>{
       publishedAt:layoutRows[0]?.publishedAt||null,
       products:products.map(row=>({
         ...row,
+        masterProductId:row.resolvedMasterProductId||row.masterProductId||null,
         sourceCode:row.masterCode||row.sku||null,
+        masterCode:row.masterCode||null,
         barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],
         salePrice:money(row.salePrice),
         currentStock:money(row.currentStock),
