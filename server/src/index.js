@@ -40,6 +40,7 @@ import kioskReportsRoutes from "./routes/kiosk-reports.js";
 import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-actions.js";
+import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
@@ -122,6 +123,7 @@ app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsDelive
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsRoutes);
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveImportRoutes);
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
