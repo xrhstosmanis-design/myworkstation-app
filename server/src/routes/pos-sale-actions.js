@@ -69,12 +69,12 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."occurredAt",s."createdAt",
              s."transactionMode",s."delayedReason",s."reversalState",s."fiscalStatus",c."name" AS "customerName",
              COALESCE((SELECT json_agg(json_build_object('method',p."method",'amount',p."amount") ORDER BY p."createdAt",p."id") FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json) AS "payments",
-             COALESCE((SELECT json_agg(json_build_object('description',l."description",'quantity',l."quantity",'lineTotal',l."lineTotal") ORDER BY l."createdAt",l."id") FROM "SaleLine" l WHERE l."saleId"=s."id"),'[]'::json) AS "lines"
+             COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal") ORDER BY l."createdAt",l."id") FROM "SaleLine" l WHERE l."saleId"=s."id"),'[]'::json) AS "lines"
       FROM "Sale" s
       LEFT JOIN "Customer" c ON c."id"=s."customerId" AND c."companyId"=s."companyId"
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND s."source"='POS' AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 30`;
-    res.json({store,rows:rows.map(row=>({...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments:(row.payments||[]).map(p=>({...p,amount:money(p.amount)})),lines:(row.lines||[]).map(l=>({...l,quantity:money(l.quantity),lineTotal:money(l.lineTotal)}))}))});
+    res.json({store,rows:rows.map(row=>({...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments:(row.payments||[]).map(p=>({...p,amount:money(p.amount)})),lines:(row.lines||[]).map(l=>({...l,quantity:money(l.quantity),unitPrice:money(l.unitPrice),lineTotal:money(l.lineTotal)}))}))});
   }catch(error){next(error)}
 });
 
@@ -130,7 +130,7 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       if(!lines.length||!payments.length){const e=new Error("Η αρχική πώληση δεν έχει πλήρη ανάλυση γραμμών/πληρωμών.");e.status=409;throw e}
       const reversalId=crypto.randomUUID(),label=body.kind==="CANCEL"?"ΑΚΥΡΩΣΗ":"ΕΠΙΣΤΡΟΦΗ",employeeId=req.user.employeeId||null;
       await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","customerId","fiscalStatus","subtotal","discount","total","status","source","occurredAt","transactionMode","originalSaleId","reversalKind") VALUES (${reversalId},${req.user.companyId},${store.id},${employeeId},${sale.customerId||null},'NON_FISCAL',${-money(sale.subtotal)},${-money(sale.discount)},${-money(sale.total)},'COMPLETED','POS_REVERSAL',NOW(),'NORMAL',${sale.id},${body.kind})`;
-      for(const line of lines)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;
+      for(const line of lines){await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;if(line.productId)await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)+${money(line.quantity)} WHERE "storeId"=${store.id} AND "productId"=${line.productId}`}
       for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount","terminalRef") VALUES (${crypto.randomUUID()},${reversalId},${payment.method},${-money(payment.amount)},${payment.terminalRef||null})`;
       const cash=payments.filter(p=>p.method==="CASH").reduce((sum,p)=>sum+money(p.amount),0),card=payments.filter(p=>p.method==="CARD").reduce((sum,p)=>sum+money(p.amount),0),iris=payments.filter(p=>p.method==="IRIS").reduce((sum,p)=>sum+money(p.amount),0),who=actorName(req);
       if(cash>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open.id},'SALE_CASH',${-cash},${`POS ${label} ${reversalId} · αρχική ${sale.id} · ΜΕΤΡΗΤΑ`},${req.user.id},${who})`;
