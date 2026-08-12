@@ -12,8 +12,8 @@ Base checkpoint: `eb19b377` — central BackOffice operator permissions in POS.
 - Real KAT test is required before an item is marked PASS / removable from the 170-item list.
 
 ## Completed in this checkpoint
-### Server-side payment permission enforcement
-`server/src/routes/store-pos-catalog.js` now acts as a central access gate for `/api/store-pos/stores/:storeId/*` requests.
+### 1. Server-side payment permission enforcement
+`server/src/routes/store-pos-catalog.js` is now a central access gate for `/api/store-pos/stores/:storeId/*` requests.
 
 For checkout:
 - `CASH` requires BackOffice permission `cash` / «Μετρητά».
@@ -23,27 +23,45 @@ For checkout:
 - Existing online barcode search continues to use `onlineBarcode` from the same BackOffice profile.
 - Store/operator tenant isolation remains enforced.
 
-## Confirmed existing checkout integration
-The current POS checkout already writes real shared BackOffice records:
+### 2. Atomic POS stock update
+The POS checkout now updates `StoreProduct.currentStock` in the same database transaction that creates the sale.
+
+For every sold line:
+- `SaleLine` is inserted.
+- If the linked BackOffice product has `trackStock=TRUE`, the store stock is decremented by the sold quantity.
+- The stock write is store-scoped and company-scoped.
+- If the sale transaction rolls back, the stock update rolls back with it.
+
+### 3. Normal sale audit
+A successful POS sale now writes `POS_SALE_COMPLETED` to `StoreOperatorAudit` inside the same transaction.
+The audit includes:
+- sale ID
+- shift/session ID
+- total
+- payment method and payment breakdown
+- customer ID when present
+- products and quantities
+- operator / actor from the authenticated POS session
+
+## Confirmed shared BackOffice records used by checkout
 - `Sale`
 - `SaleLine`
 - `Payment`
+- `StoreProduct.currentStock`
 - `StoreTransaction` linked to the open `CashShiftSession`
-- cash and card/IRIS split for mixed payments
-- duplicate-sale/idempotency safety
+- `StoreOperatorAudit`
+- duplicate-sale/idempotency safety records
 - `NON_FISCAL` status for KAT software testing
 
-## Critical gap found — NOT completed yet
-The inspected checkout inserts `Sale` / `SaleLine` / `Payment` and shift transactions, but no stock decrement is visible in that checkout transaction.
-
-Before KAT sale testing is accepted, complete and verify:
-1. POS sale decrements `StoreProduct.currentStock` atomically in the same DB transaction.
-2. Insufficient/invalid store product state fails closed.
-3. Return/reversal restores stock through the existing reversal path without double adjustment.
-4. Sale + stock + payments + shift movement stay one coherent BackOffice transaction.
+## Still to verify before KAT sale PASS
+1. Return/reversal restores stock through the existing reversal path exactly once.
+2. Payment/shift totals remain correct for CASH, CARD and MIXED after the new stock write.
+3. UI visibility follows the same BackOffice permissions, not only server enforcement.
+4. CI/build passes on this branch.
+5. Real KAT test: PIN → open NON_FISCAL shift → product → CASH → verify BackOffice sale/payment/stock/shift/audit.
 
 ## Next action
-Implement atomic stock movement for POS checkout, then inspect normal-sale audit linkage and execute CI. After that, request the user's first real KAT test: PIN → open NON_FISCAL shift → product → CASH → verify BackOffice sale/payment/stock/shift/audit.
+Run repository CI/build through a PR, inspect any failure, then continue directly with return/reversal stock symmetry and UI permission visibility. After those pass, request the user's first real KAT test.
 
 ## 170-item list status
-No item is removable yet from the master list in this checkpoint because the end-to-end real KAT sale test has not passed.
+No item is removable yet from the master list because the real end-to-end KAT sale test has not passed.
