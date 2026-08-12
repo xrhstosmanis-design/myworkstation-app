@@ -34,3 +34,5 @@ export default function StorePosStandardModals({active,onClose,api,store,cart,to
     {active==="MIXED"&&<div className="pos-mixed-payment"><strong>{euro(total)}</strong><label>Μετρητά<input autoFocus inputMode="decimal" value={mixedCash} onChange={e=>setMixedCash(e.target.value)}/></label><div><span>Κάρτα</span><b>{euro(mixedCard)}</b></div><button className="pos-primary-action" disabled={!cart.length||busy} onClick={doMixed}><CreditCard/>Αποστολή υπολοίπου στην κάρτα</button></div>}
   </main></section></div>;
 }
+
+// Render deploy trigger after POS modal restore
