@@ -8,7 +8,7 @@ const fallbackLayout={title:"OPERATOR POS",productColumns:6,showSku:true,buttonF
 const CATEGORY_PREFIX="CATEGORY::";
 const isCategoryQuick=button=>String(button?.productQuery||"").startsWith(CATEGORY_PREFIX);
 const quickCategory=button=>isCategoryQuick(button)?String(button.productQuery).slice(CATEGORY_PREFIX.length):"";
-const identifierVariants=value=>{const raw=String(value??"").trim();if(!raw)return[];const compact=raw.replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,"").toLocaleUpperCase("el-GR");const variants=new Set([raw.toLocaleUpperCase("el-GR"),compact]);if(/^\d+$/.test(compact))variants.add(compact.replace(/^0+(?=\d)/,""));return[...variants].filter(Boolean)};
+const identifierVariants=value=>{const raw=String(value??"").trim();if(!raw)return[];const upper=raw.toLocaleUpperCase("el-GR"),compact=raw.replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,"").toLocaleUpperCase("el-GR"),variants=new Set([upper,compact]);const base=raw.split("~")[0]?.trim();if(base&&base!==raw){const baseUpper=base.toLocaleUpperCase("el-GR"),baseCompact=base.replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,"").toLocaleUpperCase("el-GR");variants.add(baseUpper);variants.add(baseCompact);if(/^\d+$/.test(baseCompact))variants.add(baseCompact.replace(/^0+(?=\d)/,""))}if(/^\d+$/.test(compact))variants.add(compact.replace(/^0+(?=\d)/,""));return[...variants].filter(Boolean)};
 const productIdentifiers=product=>[product?.id,product?.sku,product?.sourceCode,product?.masterCode,...(product?.barcodes||[])].flatMap(identifierVariants);
 const productMatchesCodes=(product,codes)=>{const wanted=new Set((codes||[]).flatMap(identifierVariants));return wanted.size>0&&productIdentifiers(product).some(value=>wanted.has(value))};
 
