@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import fixedPosDesignerRoutes from "./platform-pos-designer-fixed.js";
 
 const router=Router();
 router.use(auth);
@@ -11,6 +12,8 @@ router.use((req,res,next)=>{
   if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
 });
+
+router.use("/pos-designer-fixed",fixedPosDesignerRoutes);
 
 router.put("/companies/:companyId/owner",async(req,res,next)=>{
   try{
