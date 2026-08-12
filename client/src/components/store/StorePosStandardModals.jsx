@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Camera,CreditCard,PauseCircle,Printer,Search,Trash2,UserRound,Wallet,X} from "lucide-react";
+import "./store-pos-standard-modals.css";
 
 const euro=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=v=>Number(String(v||"0").replace(",","."))||0;
