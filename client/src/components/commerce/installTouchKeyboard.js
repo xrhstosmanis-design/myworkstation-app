@@ -1,7 +1,6 @@
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
-let activeInput=null,lastTouchAt=0,lang="EL",shift=false;
-const fieldButtons=new Map();
+let activeInput=null,lastTouchAt=0,lang="EL",shift=false,activeButton=null;
 
 const fire=input=>{input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}))};
 const editable=el=>{
@@ -49,31 +48,34 @@ function prepareInput(input){
   if(!input.dataset.mwsOriginalInputmode)input.dataset.mwsOriginalInputmode=input.getAttribute("inputmode")??"__none__";
   input.setAttribute("inputmode","none");
 }
-function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);render();setTimeout(()=>input.focus({preventScroll:true}),0)}
-function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true}
+function removeButton(){if(activeButton){activeButton.remove();activeButton=null}document.querySelectorAll('.mws-touch-field-trigger').forEach(b=>b.remove())}
 function makeButton(input){
+  removeButton();
   const button=document.createElement("button");button.type="button";button.className="mws-touch-field-trigger";button.title="Άνοιγμα πληκτρολογίου οθόνης";button.setAttribute("aria-label","Άνοιγμα πληκτρολογίου οθόνης");button.textContent="⌨";
-  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);input.classList.add("mws-has-keyboard-trigger");fieldButtons.set(input,button);return button;
+  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);activeButton=button;positionButton(input,button);return button;
 }
-function positionButton(input,button){
-  if(!editable(input)||!input.isConnected){button.remove();input?.classList?.remove("mws-has-keyboard-trigger");fieldButtons.delete(input);return}
+function positionButton(input,button=activeButton){
+  if(!button||!editable(input)||!input.isConnected){removeButton();return}
   const rect=input.getBoundingClientRect();const hidden=rect.width<=0||rect.height<=0||rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth;
   button.hidden=hidden;if(hidden)return;
   const size=Math.max(28,Math.min(34,rect.height-6));
-  const left=Math.max(rect.left+2,rect.right-size-4);
-  const top=Math.max(3,rect.top+(rect.height-size)/2);
+  const left=Math.max(rect.left+2,rect.right-size-4),top=Math.max(3,Math.min(window.innerHeight-size-3,rect.top+(rect.height-size)/2));
   button.style.left=`${left}px`;button.style.top=`${top}px`;button.style.width=`${size}px`;button.style.height=`${size}px`;
 }
-function syncButtons(){
-  document.querySelectorAll("input,textarea").forEach(input=>{if(editable(input)&&!fieldButtons.has(input))makeButton(input)});
-  [...fieldButtons.entries()].forEach(([input,button])=>positionButton(input,button));
+function syncButton(){
+  const focused=editable(document.activeElement)?document.activeElement:null;
+  if(!focused){removeButton();return}
+  if(!activeButton)makeButton(focused);else positionButton(focused,activeButton);
 }
-function scheduleSync(){requestAnimationFrame(syncButtons)}
+function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);render();if(!activeButton)makeButton(input);setTimeout(()=>input.focus({preventScroll:true}),0)}
+function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true;syncButton()}
+function scheduleSync(){requestAnimationFrame(syncButton)}
 export function installTouchKeyboard(){
-  ensure();syncButtons();
+  ensure();removeButton();
   const observer=new MutationObserver(scheduleSync);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","disabled","readonly","type"]});
   document.addEventListener("pointerdown",event=>{if(isTouchLikePointer(event.pointerType)){lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)}},true);
-  document.addEventListener("focusin",event=>{const el=event.target;if(!editable(el))return;if(Date.now()-lastTouchAt<1800)open(el)},true);
+  document.addEventListener("focusin",event=>{const el=event.target;if(!editable(el)){removeButton();return}makeButton(el);if(Date.now()-lastTouchAt<1800)open(el)},true);
+  document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);
   document.addEventListener("pointerdown",event=>{if(!activeInput)return;if(event.target.closest("#mws-touch-keyboard,.mws-touch-field-trigger"))return;if(event.target===activeInput)return;if(!editable(event.target))close()},true);
-  window.addEventListener("resize",scheduleSync);window.addEventListener("scroll",scheduleSync,true);setInterval(syncButtons,1200);
+  window.addEventListener("resize",scheduleSync);window.addEventListener("scroll",scheduleSync,true);
 }
