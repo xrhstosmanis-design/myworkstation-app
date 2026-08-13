@@ -144,7 +144,8 @@ async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
     FROM "Sale" s
     JOIN "SaleLine" l ON l."saleId"=s."id"
     WHERE s."companyId"=${companyId} AND s."storeId"=${storeId}
-      AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
+      AND s."status"='COMPLETED' AND COALESCE(s."source",'')='POS'
+      AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
     ORDER BY s."occurredAt",s."id",COALESCE(l."productId",''),l."description",l."id"
   `;
   const sales=[];
@@ -180,8 +181,8 @@ async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
 async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
   const rows=await db.$queryRaw`
     SELECT
-      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL),0) AS "cashSales",
-      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL),0) AS "cardSales",
+      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL AND COALESCE("description",'') NOT ILIKE 'ΦΥΡΑ /%'),0) AS "cashSales",
+      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL AND COALESCE("description",'') NOT ILIKE 'ΦΥΡΑ /%'),0) AS "cardSales",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
     FROM "StoreTransaction"
     WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}
