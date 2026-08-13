@@ -44,6 +44,7 @@ import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-
 import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
+import storePosConsumptionRoutes from "./routes/store-pos-consumption.js";
 import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
@@ -132,6 +133,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalog
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
