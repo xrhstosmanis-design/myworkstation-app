@@ -26,7 +26,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
 
     const [manual,purchases,sales]=await Promise.all([
       prisma.$queryRaw`
-        SELECT sm."id",sm."createdAt",sm."movementType",sm."quantity",sm."unitCost",sm."note",
+        SELECT sm."id",sm."createdAt",sm."movementType",sm."quantity",sm."unitCost",NULL::numeric AS "salePrice",sm."note",
                COALESCE(u."fullName",'—') AS "actorName",sm."sourceType",sm."sourceId"
         FROM "StockMovement" sm LEFT JOIN "User" u ON u."id"=sm."createdByUserId"
         WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
@@ -36,6 +36,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         SELECT l."id",d."documentDate" AS "createdAt",'PURCHASE'::text AS "movementType",
                CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(NULLIF(l."unitsPerPackage",0),1) ELSE l."quantity" END AS "quantity",
                CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/COALESCE(NULLIF(l."unitsPerPackage",0),1) ELSE l."unitCost" END AS "unitCost",
+               NULL::numeric AS "salePrice",
                CONCAT('Αγορά ',COALESCE(d."documentNumber",''),CASE WHEN sup."name" IS NULL THEN '' ELSE CONCAT(' · ',sup."name") END) AS "note",
                COALESCE(u."fullName",'—') AS "actorName",'PURCHASE_DOCUMENT'::text AS "sourceType",d."id" AS "sourceId"
         FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
@@ -43,17 +44,23 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED'
           AND l."productId"=${productId} AND d."documentDate">=${from} AND d."documentDate"<=${to}`,
       prisma.$queryRaw`
-        SELECT sl."id",s."occurredAt" AS "createdAt",'SALE'::text AS "movementType",
-               -ABS(sl."quantity") AS "quantity",0::numeric AS "unitCost",
-               CONCAT('Πώληση ',COALESCE(s."receiptNumber",s."id")) AS "note",
-               COALESCE(e."fullName",'POS') AS "actorName",'SALE'::text AS "sourceType",s."id" AS "sourceId"
+        SELECT sl."id",s."occurredAt" AS "createdAt",
+               CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'RETURN'
+                    WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'CANCEL'
+                    ELSE 'SALE' END::text AS "movementType",
+               CASE WHEN s."source"='POS_REVERSAL' THEN ABS(sl."quantity") ELSE -ABS(sl."quantity") END AS "quantity",
+               0::numeric AS "unitCost",ABS(sl."unitPrice") AS "salePrice",
+               CONCAT(CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'Επιστροφή '
+                           WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'Ακύρωση '
+                           ELSE 'Πώληση ' END,COALESCE(s."receiptNumber",s."id")) AS "note",
+               COALESCE(e."fullName",'POS') AS "actorName",s."source" AS "sourceType",s."id" AS "sourceId"
         FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
         LEFT JOIN "Employee" e ON e."id"=s."operatorEmployeeId"
         WHERE s."companyId"=${companyId} AND s."storeId"=${storeId} AND s."status"='COMPLETED'
           AND sl."productId"=${productId} AND s."occurredAt">=${from} AND s."occurredAt"<=${to}`
     ]);
 
-    const combined=[...manual,...purchases,...sales].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    const combined=[...manual,...purchases,...sales].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     let running=n(product.currentStock);
     const movements=combined.map(row=>{
       const delta=n(row.quantity),stockAfter=running;
