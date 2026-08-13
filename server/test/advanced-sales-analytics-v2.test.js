@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
 
-const route=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
+const route=await readFile(new URL("../src/routes/commerce-v1-legacy.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/commerce/AdvancedSalesAnalytics.jsx",import.meta.url),"utf8");
 
 test("advanced analytics is tenant scoped and supports all-store or one-store reports",()=>{
