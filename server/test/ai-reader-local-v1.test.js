@@ -35,9 +35,12 @@ test("confirmation is atomic, tenant guarded and cannot update stock twice",()=>
   assert.match(route,/AI_READER_CONFIRM/);
 });
 
-test("review UI requires explicit product lines and shows package conversion",()=>{
+test("review UI sends invoice to drafts and waits for approval before stock",()=>{
   assert.match(panel,/Τσέκαρε μόνο τις πραγματικές γραμμές προϊόντων/);
   assert.match(panel,/Τεμ\.\/κιβώτιο/);
-  assert.match(panel,/Στην αποθήκη:/);
-  assert.match(panel,/Επιβεβαίωση παραστατικού & ενημέρωση αποθήκης/);
+  assert.match(panel,/Μετά την έγκριση στην αποθήκη:/);
+  assert.match(panel,/Αποστολή στα Πρόχειρα για έλεγχο/);
+  assert.match(panel,/περιμένει έγκριση/);
+  assert.doesNotMatch(panel,/Επιβεβαίωση παραστατικού & ενημέρωση αποθήκης/);
+  assert.doesNotMatch(panel,/Μόνο το παρακάτω κουμπί δημιουργεί αγορά και ενημερώνει απόθεμα/);
 });
