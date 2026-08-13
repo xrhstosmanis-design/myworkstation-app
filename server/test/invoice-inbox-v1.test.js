@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const commercial=await readFile(new URL("../src/commercial-bootstrap.js",import.meta.url),"utf8");
 const extended=await readFile(new URL("../src/extended-modules-bootstrap.js",import.meta.url),"utf8");
-const route=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
+const route=await readFile(new URL("../src/routes/commerce-v1-legacy.js",import.meta.url),"utf8");
 const guard=await readFile(new URL("../src/middleware/commerce-tenant-guard.js",import.meta.url),"utf8");
 const modules=await readFile(new URL("../src/services/module-catalog.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/commerce/InvoiceInboxPanel.jsx",import.meta.url),"utf8");
