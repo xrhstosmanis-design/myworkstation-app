@@ -10,7 +10,8 @@ function sync(root){
     :"Δεν εκδίδεται απόδειξη. Η ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ καταγράφεται NON_FISCAL, ΔΕΝ μετράει στον τζίρο και αφαιρείται κανονικά από stock.";
   const action=root.querySelector(".pos-danger-action");
   if(action){
-    for(const node of [...action.childNodes])if(node.nodeType===Node.TEXT_NODE&&String(node.textContent||"").includes("Καταχώριση"))node.textContent=` Καταχώριση ${label()} `;
+    const amount=(String(action.textContent||"").match(/[\d.,]+\s*€/)||[""])[0];
+    for(const node of [...action.childNodes])if(node.nodeType===Node.TEXT_NODE&&String(node.textContent||"").includes("Καταχώριση"))node.textContent=` Καταχώριση ${label()}${amount?` ${amount}`:""}`;
   }
   root.querySelectorAll("[data-consumption-kind]").forEach(button=>button.classList.toggle("active",button.dataset.consumptionKind===state.kind));
 }
@@ -22,6 +23,7 @@ function enhance(){
     const main=modal.querySelector("main");
     if(!main)continue;
     if(!main.querySelector("[data-consumption-selector]")){
+      state.kind="WASTE";
       const selector=document.createElement("div");
       selector.dataset.consumptionSelector="true";
       selector.className="pos-payment-types";
