@@ -3,18 +3,23 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const route=await readFile(new URL("../src/routes/pos-sale-actions.js",import.meta.url),"utf8");
+const gate=await readFile(new URL("../src/routes/store-pos-catalog.js",import.meta.url),"utf8");
 const display=await readFile(new URL("../src/routes/store-pos-sale-display.js",import.meta.url),"utf8");
 
-test("POS return uses central BackOffice returnItems permission",()=>{
-  assert.match(route,/permissions\.returnItems/);
-  assert.match(route,/StoreOperatorProfile/);
-  assert.match(route,/POS_RETURN_DENIED_PERMISSION/);
+test("POS return uses the single central BackOffice returnItems permission gate",()=>{
+  assert.match(gate,/returnItems:Boolean\(p\.returnItems\)/);
+  assert.match(gate,/!access\.returnItems/);
+  assert.match(gate,/permission:"returnItems"/);
+  assert.match(gate,/action:"SALE_REVERSE"/);
+  assert.doesNotMatch(route,/requireReturnPermission/);
+  assert.doesNotMatch(route,/StoreOperatorCredential/);
 });
 
-test("POS reversal restores tracked stock and writes StockMovement in same transaction",()=>{
+test("POS reversal restores tracked BackOffice stock without depending on StockMovement schema",()=>{
   assert.match(route,/p\."trackStock"=TRUE RETURNING sp\."productId"/);
-  assert.match(route,/INSERT INTO "StockMovement"/);
-  assert.match(route,/'POS_REVERSAL'/);
+  assert.match(route,/restoredProductIds\.push/);
+  assert.match(route,/stockRestoredProductIds:restoredProductIds/);
+  assert.doesNotMatch(route,/INSERT INTO "StockMovement"/);
   assert.match(route,/POS_RETURN_COMPLETED/);
 });
 
