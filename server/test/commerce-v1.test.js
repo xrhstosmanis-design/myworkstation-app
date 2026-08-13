@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import {moduleCatalog} from "../src/services/module-catalog.js";
 
 test("Commerce V1 sale route is explicitly non fiscal",async()=>{
-  const source=await fs.readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
+  const source=await fs.readFile(new URL("../src/routes/commerce-v1-legacy.js",import.meta.url),"utf8");
   assert.match(source,/fiscalStatus[^\n]*NON_FISCAL|NON_FISCAL/);
   assert.ok(!source.includes("FISCAL_OK"));
   assert.ok(!source.includes("issueReceipt"));
