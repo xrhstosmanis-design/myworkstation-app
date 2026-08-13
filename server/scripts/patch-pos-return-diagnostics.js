@@ -1,0 +1,9 @@
+import {readFile,writeFile} from "node:fs/promises";
+
+const path=new URL("../src/index.js",import.meta.url);
+const source=await readFile(path,"utf8");
+const before='app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});';
+const after='app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});if(!err?.status&&/\\/api\\/store-pos\\/stores\\/[^/]+\\/sales\\/[^/]+\\/reverse$/.test(req.originalUrl||req.url||"")){const raw=String(err?.meta?.message||err?.message||"");const dbCode=String(err?.meta?.code||err?.code||"UNKNOWN").replace(/[^A-Za-z0-9_-]/g,"").slice(0,24)||"UNKNOWN";const stage=raw.includes("SaleLine")?"SALE_LINE":raw.includes("Payment")?"PAYMENT":raw.includes("StoreProduct")?"STOCK":raw.includes("StoreTransaction")?"LEDGER":raw.includes("PosSaleActionAudit")||raw.includes("StoreOperatorAudit")?"AUDIT":raw.includes("Sale")?"SALE":"UNKNOWN";return res.status(500).json({error:`Η επιστροφή απέτυχε στο στάδιο ${stage}. Κωδικός ${dbCode}.`,code:`POS_RETURN_${stage}_FAILED`,stage});}res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});';
+if(!source.includes(before))throw new Error("Global error handler signature changed; diagnostics patch not applied.");
+await writeFile(path,source.replace(before,after));
+console.log("[startup] safe POS return diagnostics enabled");
