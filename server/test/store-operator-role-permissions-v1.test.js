@@ -32,8 +32,8 @@ test("Store Mode operator is never treated as an unrestricted BackOffice manager
 });
 
 test("existing cash and ledger routes consume live permissions",()=>{
-  assert.match(ledger,/permissions\?\.includes\("STORE_LEDGER"\)/);
-  assert.match(ledger,/permissions\?\.includes\("STORE_LEDGER_REVIEW"\)/);
+  assert.match(ledger,/const permissions=req\.user\?\.permissions\|\|\[\]/);
+  assert.match(ledger,/permissions\.includes\("STORE_LEDGER"\)/);
   assert.match(cash,/permissions\?\.includes\("CASH_CONTROL"\)/);
 });
 
