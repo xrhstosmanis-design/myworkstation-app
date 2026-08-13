@@ -74,9 +74,9 @@ test("reversal is append-only, nets sale/payments and restores shared tracked Ba
   assert.match(server,/UPDATE "StoreProduct" sp SET "currentStock"=COALESCE\(sp\."currentStock",0\)\+/);
   assert.match(server,/p\."trackStock"=TRUE/);
   assert.match(server,/p\."companyId"=\$\{req\.user\.companyId\}/);
-  assert.match(server,/INSERT\s+INTO\s+"StockMovement"/i);
-  assert.match(server,/'POS_REVERSAL'/);
-  assert.match(server,/Math\.abs\(money\(line\.quantity\)\)/);
+  assert.match(server,/restoredProductIds\.push/);
+  assert.match(server,/stockRestoredProductIds:restoredProductIds/);
+  assert.doesNotMatch(server,/INSERT\s+INTO\s+"StockMovement"/i);
 });
 
 test("reversal and delayed actions are serialized and fully audited",()=>{
