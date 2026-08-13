@@ -10,7 +10,8 @@ const cash=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.u
 test("Store Mode runtime permissions come from the current BackOffice operator profile",()=>{
   assert.match(auth,/LEFT JOIN "StoreOperatorProfile"/);
   assert.match(auth,/profilePermissions/);
-  assert.match(auth,/permissions:storeRuntimePermissions/);
+  assert.match(auth,/const permissions=storeRuntimePermissions/);
+  assert.match(auth,/req\.user=\{\.\.\.payload,permissions\}/);
   assert.match(auth,/p\.permissions\?\.cash/);
   assert.match(auth,/p\.permissions\?\.shiftTransactionsPos/);
   assert.match(auth,/p\.permissions\?\.allShiftTransactionsPos/);
@@ -36,7 +37,16 @@ test("existing cash and ledger routes consume live permissions",()=>{
   assert.match(cash,/permissions\?\.includes\("CASH_CONTROL"\)/);
 });
 
-test("legacy login token permissions are not the authority after authentication",()=>{
+test("BackOffice supplier and same-shift payment permissions are enforced before store transaction creation",()=>{
+  assert.match(auth,/function enforceStorePaymentPermissions/);
+  assert.match(auth,/type==="SUPPLIER_PAYMENT"&&!permissions\.includes\("SUPPLIER_PAYMENT"\)/);
+  assert.match(auth,/paymentSource==="CASH_SHIFT"/);
+  assert.match(auth,/!permissions\.includes\("SAME_SHIFT_PAYMENTS"\)/);
+  assert.match(auth,/if\(!enforceStorePaymentPermissions\(req,res,permissions\)\)return/);
+});
+
+test("legacy login token permissions are overwritten by current BackOffice permissions",()=>{
   assert.match(operators,/function operatorPermissions\(role\)/);
-  assert.match(auth,/req\.user=\{\.\.\.payload,permissions:storeRuntimePermissions/);
+  assert.match(auth,/const permissions=storeRuntimePermissions/);
+  assert.match(auth,/req\.user=\{\.\.\.payload,permissions\}/);
 });
