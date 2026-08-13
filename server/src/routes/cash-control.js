@@ -140,18 +140,21 @@ function normalize(row){
 async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
   const rows=await db.$queryRaw`
     SELECT s."id",s."occurredAt",s."total",l."productId",l."description",
-           l."quantity",l."unitPrice",l."discount",l."lineTotal"
+           l."quantity",l."unitPrice",l."discount",l."lineTotal",
+           EXISTS (SELECT 1 FROM "Payment" p WHERE p."saleId"=s."id" AND p."method"='CARD' AND p."amount">0) AS "hasCard",
+           NOT EXISTS (SELECT 1 FROM "Payment" p WHERE p."saleId"=s."id" AND p."method"<>'CARD' AND p."amount"<>0) AS "cardOnly"
     FROM "Sale" s
     JOIN "SaleLine" l ON l."saleId"=s."id"
     WHERE s."companyId"=${companyId} AND s."storeId"=${storeId}
-      AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
+      AND s."status"='COMPLETED' AND s."source"='POS'
+      AND s."occurredAt">=${from} AND s."occurredAt"<=${to}
     ORDER BY s."occurredAt",s."id",COALESCE(l."productId",''),l."description",l."id"
   `;
   const sales=[];
   for(const row of rows){
     let sale=sales[sales.length-1];
     if(!sale||sale.id!==row.id){
-      sale={id:row.id,occurredAt:row.occurredAt,total:money(row.total),lines:[]};
+      sale={id:row.id,occurredAt:row.occurredAt,total:money(row.total),cardOnly:Boolean(row.hasCard&&row.cardOnly),lines:[]};
       sales.push(sale);
     }
     sale.lines.push({
@@ -167,6 +170,7 @@ async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
   const matches=[];
   for(let index=1;index<sales.length;index++){
     const previous=sales[index-1],current=sales[index];
+    if(!previous.cardOnly||!current.cardOnly)continue;
     if(signature(previous)!==signature(current))continue;
     matches.push({
       firstSaleId:previous.id,secondSaleId:current.id,
