@@ -63,6 +63,19 @@ async function insertAudit(db,{req,storeId,saleId=null,relatedSaleId=null,action
 async function insertOperatorAudit(db,{req,storeId,eventType,details={}}){
   await db.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${storeId},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify(details||{})}::jsonb)`;
 }
+async function requireReturnPermission(req,storeId){
+  if(req.user?.tokenType!=="STORE_OPERATOR")return;
+  const rows=await prisma.$queryRaw`
+    SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions",COALESCE(p."posAccess",TRUE) AS "posAccess"
+    FROM "StoreOperatorCredential" c
+    LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
+    WHERE c."id"=${req.user.operatorId||req.user.id} AND c."storeId"=${storeId} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;
+  const row=rows[0],permissions=row?.permissions&&typeof row.permissions==="object"?row.permissions:{};
+  if(!row||row.posAccess===false||!permissions.returnItems){
+    await insertOperatorAudit(prisma,{req,storeId,eventType:"POS_RETURN_DENIED_PERMISSION",details:{requiredPermission:"returnItems"}});
+    const error=new Error("Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice.");error.status=403;throw error;
+  }
+}
 
 router.use(async(req,res,next)=>{try{await ensurePosSaleActionSchema();next()}catch(error){next(error)}});
 
@@ -114,7 +127,9 @@ router.post("/stores/:storeId/sales/:saleId/delayed",async(req,res,next)=>{
 const reverseSchema=z.object({kind:z.enum(["CANCEL","RETURN"]),reason:z.string().trim().min(3).max(500)});
 router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
   try{
-    const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{}),result=await prisma.$transaction(async tx=>{
+    const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{});
+    if(body.kind==="RETURN")await requireReturnPermission(req,store.id);
+    const result=await prisma.$transaction(async tx=>{
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`reverse:${req.params.saleId}`})) AS locked`;
       const sale=(await tx.$queryRaw`SELECT * FROM "Sale" WHERE "id"=${req.params.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
       if(!sale){const e=new Error("Δεν βρέθηκε η πώληση.");e.status=404;throw e}
@@ -137,7 +152,10 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","customerId","fiscalStatus","subtotal","discount","total","status","source","occurredAt","transactionMode","originalSaleId","reversalKind") VALUES (${reversalId},${req.user.companyId},${store.id},${employeeId},${sale.customerId||null},'NON_FISCAL',${-money(sale.subtotal)},${-money(sale.discount)},${-money(sale.total)},'COMPLETED','POS_REVERSAL',NOW(),'NORMAL',${sale.id},${body.kind})`;
       for(const line of lines){
         await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;
-        if(line.productId)await tx.$executeRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE`;
+        if(line.productId){
+          const restored=await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;
+          if(restored[0])await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${line.productId},${body.kind},${Math.abs(money(line.quantity))},'POS_REVERSAL',${reversalId},${`${label} αρχικής πώλησης ${sale.id}`},${req.user.id})`;
+        }
       }
       for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount","terminalRef") VALUES (${crypto.randomUUID()},${reversalId},${payment.method},${-money(payment.amount)},${payment.terminalRef||null})`;
       const cash=payments.filter(p=>p.method==="CASH").reduce((sum,p)=>sum+money(p.amount),0),card=payments.filter(p=>p.method==="CARD").reduce((sum,p)=>sum+money(p.amount),0),iris=payments.filter(p=>p.method==="IRIS").reduce((sum,p)=>sum+money(p.amount),0),who=actorName(req);
