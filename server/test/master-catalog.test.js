@@ -34,5 +34,5 @@ test("Master Catalog protects scan, zero prices and accepts valid zero VAT",asyn
 test("Master Catalog skips generated Excel summary row",async()=>{
   const source=await fs.readFile(new URL("../src/routes/master-catalog.js",import.meta.url),"utf8");
   assert.match(source,/isSummaryRow/);
-  assert.match(source,/if\(isSummaryRow\(row\)\)continue/);
+  assert.match(source,/if\(isSummaryRow\(row,headers\)\)continue/);
 });
