@@ -60,7 +60,7 @@ export default function StoreTransactionsPanel({api,store,onChanged}){
 
   const summary=data?.summary||{},otherRows=(data?.recent||[]).filter(row=>!isLinkedPosRow(row));
   return <article className="cloud-panel ledger-module">
-    <div className="cloud-panel-head ledger-heading"><div><h3><WalletCards/>Συναλλαγές Βάρδιας</h3><p>Κάθε πώληση εμφανίζεται μία φορά, με προϊόντα, χειριστή και ανάλυση πληρωμής.</p></div><button onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button></div>
+    <div className="cloud-panel-head ledger-heading"><div><h3><WalletCards/>Συναλλαγές Βάρδιας</h3><p><b>Συναλλαγές καταστήματος</b> · Οι πληρωμές και συναλλαγές μου εμφανίζονται σύμφωνα με τα κεντρικά δικαιώματα του χειριστή στο BackOffice.</p><p>Κάθε πώληση εμφανίζεται μία φορά, με προϊόντα, χειριστή και ανάλυση πληρωμής.</p></div><button onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button></div>
     <div className="ledger-non-fiscal"><b>ΜΗ ΦΟΡΟΛΟΓΙΚΗ ΚΑΤΑΓΡΑΦΗ</b><span>Η απόδειξη συνεχίζει να εκδίδεται από το υπάρχον Kiosk Manager και την ταμειακή.</span></div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}{message&&<div className="cloud-alert cloud-success">{message}</div>}
     {loading?<div className="cloud-loading">Φόρτωση συναλλαγών…</div>:<>
