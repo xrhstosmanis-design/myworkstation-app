@@ -17,7 +17,7 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,cash:true,cards:true};
+const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,cash:true,cards:true,initialCash:true};
 async function operatorAccess(req,storeId){
   if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
   const rows=await prisma.$queryRaw`
@@ -41,7 +41,8 @@ async function operatorAccess(req,storeId){
     addBarcode:Boolean(p.addBarcode),
     editDescription:Boolean(p.editDescription),
     cash:Boolean(p.cash),
-    cards:Boolean(p.cards)
+    cards:Boolean(p.cards),
+    initialCash:Boolean(p.initialCash)
   };
 }
 async function audit(req,store,eventType,details={}){
