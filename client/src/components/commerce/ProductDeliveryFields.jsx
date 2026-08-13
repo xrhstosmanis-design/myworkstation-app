@@ -1,4 +1,5 @@
 import React from "react";
+import "../../touch-keyboard-bootstrap.js";
 
 const moneyInput=value=>value===null||value===undefined?"":String(Number(value));
 
