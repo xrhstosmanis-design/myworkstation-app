@@ -1,0 +1,23 @@
+import React,{useEffect,useMemo,useState} from "react";
+import {ArrowLeft,ArrowRightLeft,CreditCard,ReceiptText,RefreshCw,RotateCcw,ShoppingCart,Truck,WalletCards,X} from "lucide-react";
+import "./store-shift-menu.css";
+
+const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const when=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";
+const paymentLabel=method=>method==="CASH"?"ΜΕΤΡΗΤΑ":method==="CARD"?"ΚΑΡΤΑ":method==="IRIS"?"IRIS":String(method||"ΠΛΗΡΩΜΗ");
+const typeLabel=kind=>({SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση με κάρτα",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπά έξοδα",PERCENTAGES:"Ποσοστά",TRANSFER:"Μεταφορά ποσού",WASTE:"Φύρα / Κατανάλωση προσωπικού"}[kind]||String(kind||"Κίνηση"));
+
+export default function StoreShiftTransactionsModal({api,store,onClose}){
+  const [overview,setOverview]=useState(null),[sales,setSales]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+  const load=async()=>{setLoading(true);setError("");try{const [o,s]=await Promise.all([api(`/api/transactions/stores/${store.id}/overview`),api(`/api/store-pos/stores/${store.id}/sales/recent`)]);setOverview(o);setSales(s.rows||[])}catch(e){setError(e.message)}finally{setLoading(false)}};
+  useEffect(()=>{load()},[store.id]);
+  const rows=useMemo(()=>{
+    const saleIds=new Set(sales.map(s=>String(s.id)));
+    const saleRows=sales.map(s=>({id:`sale-${s.id}`,at:s.occurredAt||s.createdAt,kind:Number(s.total)<0||s.source==="POS_REVERSAL"?"RETURN":s.source==="EXCHANGE"?"EXCHANGE":"SALE",actor:s.actorName||"POS",amount:Number(s.total||0),lines:s.lines||[],payments:s.payments||[],description:null,reversed:Boolean(s.reversalState)}));
+    const other=(overview?.recent||[]).filter(row=>{const text=String(row.description||"");return ![...saleIds].some(id=>text.includes(id))}).map(row=>({id:`tx-${row.id}`,at:row.occurredAt,kind:/ΦΥΡΑ/i.test(String(row.description||""))?"WASTE":row.type,actor:row.actorName||"Χειριστής",amount:Number(row.amount||0),lines:[],payments:[],description:row.supplierName||row.description||null,reversed:Boolean(row.reversedAt)}));
+    return [...saleRows,...other].sort((a,b)=>new Date(b.at)-new Date(a.at));
+  },[overview,sales]);
+  const icon=kind=>kind==="RETURN"?<RotateCcw/>:kind==="SALE"||kind==="EXCHANGE"?<ShoppingCart/>:kind==="SALE_CARD"?<CreditCard/>:kind==="SUPPLIER_PAYMENT"?<Truck/>:kind==="TRANSFER"?<ArrowRightLeft/>:<ReceiptText/>;
+  const label=row=>row.kind==="RETURN"?"Επιστροφή":row.kind==="EXCHANGE"?"Αλλαγή είδους":row.kind==="SALE"?"Πώληση":typeLabel(row.kind);
+  return <div className="shift-overlay"><section className="shift-timeline-modal"><header><div><small>MYWORKSTATION · ΕΝΕΡΓΗ ΒΑΡΔΙΑ</small><h2>Συναλλαγές βάρδιας</h2><p>{overview?.openSession?.shiftLabel||store.name}</p></div><button onClick={onClose}><X/></button></header><div className="shift-timeline-tools"><button onClick={onClose}><ArrowLeft/>Επιστροφή στο POS</button><span>{overview?.openSession?`${when(overview.openSession.openedAt)} · ${overview.openSession.openedByName||"Χειριστής"}`:"Δεν υπάρχει ανοιχτή βάρδια"}</span><button onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div>{error&&<div className="shift-timeline-error">{error}</div>}<div className="shift-timeline-list">{loading?<div className="shift-timeline-empty">Φόρτωση συναλλαγών…</div>:rows.length===0?<div className="shift-timeline-empty">Δεν υπάρχουν συναλλαγές στην ενεργή βάρδια.</div>:rows.map(row=><article key={row.id} className={`${row.kind==="RETURN"?"return":""} ${row.reversed?"reversed":""}`}><div className="shift-timeline-icon">{icon(row.kind)}</div><div className="shift-timeline-content"><div className="shift-timeline-title"><b>{label(row)}</b><strong>{money(row.amount)}</strong></div><small>{when(row.at)} · {row.actor}</small>{row.lines.length>0&&<div className="shift-timeline-products">{row.lines.map((line,index)=><div key={line.id||index}><span><b>{Math.abs(Number(line.quantity||0))}×</b> {line.description||"Προϊόν"}</span><span>{money(line.lineTotal)}</span></div>)}</div>}{row.payments.length>0&&<div className="shift-timeline-payments"><WalletCards/>{row.payments.map(p=>`${paymentLabel(p.method)} ${money(p.amount)}`).join(" + ")}</div>}{row.description&&<p>{row.description}</p>}{row.reversed&&<em>ΑΚΥΡΩΜΕΝΗ ΚΙΝΗΣΗ</em>}</div></article>)}</div></section></div>;
+}
