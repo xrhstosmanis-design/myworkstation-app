@@ -38,6 +38,11 @@ const normalized=value=>String(value??"").trim().toLocaleUpperCase("el-GR");
 const headerMatches=(header,candidates)=>candidates.some(candidate=>normalized(header)===normalized(candidate));
 const findHeader=(headers,candidates)=>headers.find(header=>headerMatches(header,candidates))||null;
 const rowValue=(row,headers,candidates)=>{const header=findHeader(headers,candidates);return header?row[header]:null};
+const isSummaryRow=(row,headers)=>{
+  const sourceCode=text(rowValue(row,headers,aliases.sourceCode));
+  const name=text(rowValue(row,headers,aliases.name));
+  return !sourceCode&&/^\d+[.,]?\d*$/.test(name||"");
+};
 
 function resolveProductSheet(workbook){
   const preferred=["ΠΡΟΪΟΝΤΑ_IMPORT","Προϊόντα","ΠΡΟΪΟΝΤΑ","Products","PRODUCTS"];
@@ -65,6 +70,7 @@ function parseWorkbook(base64){
   const products=[];
   for(let i=0;i<rows.length;i++){
     const row=rows[i];
+    if(isSummaryRow(row,headers))continue;
     const sourceCode=text(rowValue(row,headers,aliases.sourceCode)),name=text(rowValue(row,headers,aliases.name));
     if(!sourceCode||!name)continue;
     const retail=number(rowValue(row,headers,aliases.retail)),cost=number(rowValue(row,headers,aliases.cost)),vat=number(rowValue(row,headers,aliases.vat)),category=text(rowValue(row,headers,aliases.category)),barcode=text(rowValue(row,headers,aliases.barcode));

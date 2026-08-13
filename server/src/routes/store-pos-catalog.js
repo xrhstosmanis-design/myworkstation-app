@@ -49,9 +49,54 @@ async function audit(req,store,eventType,details={}){
   await prisma.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify(details)}::jsonb)`;
 }
 
+function requestedPaymentMethods(body={}){
+  if(body.paymentMethod==="MIXED")return Array.isArray(body.payments)?body.payments.map(row=>String(row?.method||"").toUpperCase()).filter(Boolean):[];
+  return body.paymentMethod?[String(body.paymentMethod).toUpperCase()]:[];
+}
+function layoutForAccess(rawLayout,access){
+  if(!rawLayout||typeof rawLayout!=="object")return rawLayout||null;
+  const layout=structuredClone(rawLayout);
+  if(Array.isArray(layout.buttons))layout.buttons=layout.buttons.map(button=>{
+    const action=String(button?.action||button?.id||"").toUpperCase();
+    if(action==="CASH"&&!access.cash)return {...button,visible:false};
+    if((action==="CARD"||action==="IRIS")&&!access.cards)return {...button,visible:false};
+    if(action==="MIXED"&&(!access.cash||!access.cards))return {...button,visible:false};
+    return button;
+  });
+  return layout;
+}
+
+router.use("/stores/:storeId",async(req,res,next)=>{
+  try{
+    assertStore(req,req.params.storeId);
+    const store=await storeFor(req,req.params.storeId);
+    const access=await operatorAccess(req,store.id);
+    req.storeOperatorAccess=access;
+    req.storeOperatorStore=store;
+    if(req.method==="POST"&&req.path.endsWith("/checkout")){
+      const methods=requestedPaymentMethods(req.body||{});
+      const needsCash=methods.includes("CASH");
+      const needsCards=methods.includes("CARD")||methods.includes("IRIS");
+      if(needsCash&&!access.cash){
+        await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});
+        return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."});
+      }
+      if(needsCards&&!access.cards){
+        await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});
+        return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."});
+      }
+    }
+    if(req.method==="POST"&&/\/sales\/[^/]+\/reverse$/.test(req.path)&&!access.returnItems){
+      await audit(req,store,"POS_PERMISSION_DENIED",{permission:"returnItems",action:"SALE_REVERSE",saleId:req.path.split("/").at(-2)||null});
+      return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice."});
+    }
+    next();
+  }catch(error){next(error)}
+});
+
 router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
   try{
-    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),access=await operatorAccess(req,store.id);
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
     if(!access.onlineProductSearch)return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
     const q=String(req.query.q||"").trim();if(q.length<3)return res.status(400).json({error:"Χρειάζονται τουλάχιστον 3 χαρακτήρες ή barcode."});const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
@@ -65,15 +110,16 @@ router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
 
 router.get("/stores/:storeId",async(req,res,next)=>{
   try{
-    assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),access=await operatorAccess(req,store.id);
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
     const layoutRows=await prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);
+    const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);
     const products=await prisma.$queryRaw`
       SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",resolved_mp."id" AS "resolvedMasterProductId",resolved_mp."sourceCode" AS "masterCode",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",c."name" AS "categoryName",
         COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=resolved_mp."id"),'[]') AS "masterBarcodes"
       FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN LATERAL (SELECT mp."id",mp."sourceCode" FROM "MasterProduct" mp WHERE mp."active"=true AND (mp."id"=p."masterProductId" OR (p."sku" IS NOT NULL AND mp."sourceCode"=p."sku") OR (p."sku" IS NOT NULL AND EXISTS (SELECT 1 FROM "MasterProductBarcode" z WHERE z."masterProductId"=mp."id" AND z."barcode"=p."sku")) OR EXISTS (SELECT 1 FROM "MasterProductBarcode" mb JOIN "ProductBarcode" pb ON pb."productId"=p."id" AND pb."barcode"=mb."barcode" WHERE mb."masterProductId"=mp."id") OR (p."name" IS NOT NULL AND mp."name" IS NOT NULL AND lower(btrim(mp."name"))=lower(btrim(p."name")))) ORDER BY CASE WHEN mp."id"=p."masterProductId" THEN 0 WHEN p."sku" IS NOT NULL AND mp."sourceCode"=p."sku" THEN 1 ELSE 2 END,mp."id" LIMIT 1) resolved_mp ON true
       WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name" LIMIT 5000`;
-    res.json({store,layout:layoutRows[0]?.layoutJson||null,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
+    res.json({store,layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
   }catch(error){next(error)}
 });
 export default router;

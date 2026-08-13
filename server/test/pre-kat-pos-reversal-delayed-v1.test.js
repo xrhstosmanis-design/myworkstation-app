@@ -57,7 +57,7 @@ test("cancellation is same-shift only while return can create a later reversal",
   assert.match(server,/kind:z\.enum\(\["CANCEL","RETURN"\]\)/);
 });
 
-test("reversal is append-only and nets sale lines payments and cash ledger",()=>{
+test("reversal is append-only, nets sale/payments and restores shared tracked BackOffice stock",()=>{
   assert.match(server,/'POS_REVERSAL'/);
   assert.match(server,/originalSaleId/);
   assert.match(server,/reversalKind/);
@@ -71,7 +71,10 @@ test("reversal is append-only and nets sale lines payments and cash ledger",()=>
   assert.match(server,/'SALE_CARD'/);
   assert.match(server,/"reversalState"=\$\{body\.kind\}/);
   assert.doesNotMatch(server,/DELETE\s+FROM\s+"Sale"/i);
-  assert.doesNotMatch(server,/UPDATE\s+"StoreProduct"|INSERT\s+INTO\s+"StockMovement"/i);
+  assert.match(server,/UPDATE "StoreProduct" sp SET "currentStock"=COALESCE\(sp\."currentStock",0\)\+/);
+  assert.match(server,/p\."trackStock"=TRUE/);
+  assert.match(server,/p\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.doesNotMatch(server,/INSERT\s+INTO\s+"StockMovement"/i);
 });
 
 test("reversal and delayed actions are serialized and fully audited",()=>{
@@ -79,6 +82,10 @@ test("reversal and delayed actions are serialized and fully audited",()=>{
   assert.match(server,/pg_advisory_xact_lock\(hashtext\(\$\{`reverse:/);
   assert.match(server,/FOR UPDATE/);
   assert.match(server,/PosSaleActionAudit/);
+  assert.match(server,/StoreOperatorAudit/);
+  assert.match(server,/POS_RETURN_COMPLETED/);
+  assert.match(server,/POS_SALE_CANCELLED/);
+  assert.match(server,/POS_SALE_DELAYED/);
   assert.match(server,/actionType:body\.kind/);
   assert.match(server,/reason:body\.reason/);
 });
