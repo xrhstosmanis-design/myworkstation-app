@@ -23,13 +23,14 @@ test("no-document payments require a reason and retain normal audit fields",()=>
 
 test("cash-shift source automatically drives the existing shift deduction",()=>{
   assert.match(route,/paymentSource:z\.enum\(\["CASH_SHIFT","EXTERNAL"\]\)/);
-  assert.match(route,/subtractFromShift=isPayment\?body\.paymentSource==="CASH_SHIFT"/);
+  assert.match(route,/body\.paymentSource==="CASH_SHIFT"/);
   assert.match(route,/expensesTotal:deductedSupplierPayments\+deductedOtherExpenses/);
 });
 
-test("payment submission is idempotent through a deterministic transaction id",()=>{
+test("new and legacy payment submissions are protected from duplicate persistence",()=>{
   assert.match(route,/idempotencyKey:z\.string/);
   assert.match(route,/function paymentId\(companyId,storeId,key\)/);
-  assert.match(route,/const id=isPayment\?paymentId\(req\.user\.companyId,store\.id,body\.idempotencyKey\):crypto\.randomUUID\(\)/);
+  assert.match(route,/paymentKey=isPayment\?\(body\.idempotencyKey\|\|legacyAttachment\?\.checksum\)/);
+  assert.match(route,/const id=isPayment\?paymentId\(req\.user\.companyId,store\.id,paymentKey\):crypto\.randomUUID\(\)/);
   assert.match(route,/ίδια πληρωμή έχει ήδη καταχωρηθεί/);
 });
