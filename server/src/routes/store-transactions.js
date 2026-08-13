@@ -96,6 +96,7 @@ function route(handler){
     }catch(error){
       console.error("Store Transactions:",error);
       if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε το είδος συναλλαγής και το ποσό.",details:error.issues});
+      if(error?.code==="23505"||error?.code==="P2010")return res.status(409).json({error:"Η ίδια πληρωμή έχει ήδη καταχωρηθεί. Δεν δημιουργήθηκε δεύτερη εγγραφή."});
       return res.status(error?.status||500).json({error:error?.message||"Σφάλμα στις συναλλαγές βάρδιας."});
     }
   };
@@ -150,6 +151,10 @@ const transactionSchema=z.object({
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
+  evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
+  purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
+  paymentSource:z.enum(["CASH_SHIFT","EXTERNAL"]).optional().nullable(),
+  idempotencyKey:z.string().trim().min(8).max(180).optional().nullable(),
   subtractFromShift:z.coerce.boolean().optional().default(false),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
 });
@@ -161,6 +166,10 @@ function parseAttachment(attachment){
   const bytes=Buffer.from(match[2],"base64");
   if(bytes.length<100||bytes.length>1200000){const error=new Error("Η φωτογραφία πρέπει να είναι έως 1,2 MB.");error.status=400;throw error}
   return {dataUrl:attachment.dataUrl,mimeType:match[1],filename:attachment.filename,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
+}
+
+function paymentId(companyId,storeId,key){
+  return `pay_${crypto.createHash("sha256").update(`${companyId}:${storeId}:${key}`).digest("hex")}`;
 }
 
 async function alertRecipients(companyId,store){
@@ -198,7 +207,14 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     :req.user.permissions?.includes("TRANSACTION_REVERSAL");
   const recentRows=await prisma.$queryRaw`
     SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","reversedAt","reversedBy","reversedByName","reversalReason",
-           ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename"
+           ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename",
+           CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId",
+           CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN 'DOCUMENT'
+                WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "attachmentData" IS NULL THEN 'NO_DOCUMENT'
+                ELSE 'LEGACY' END AS "evidenceMode",
+           CASE WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true THEN 'CASH_SHIFT'
+                WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') THEN 'EXTERNAL'
+                ELSE NULL END AS "paymentSource"
     FROM "StoreTransaction"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
       AND (${canReviewStoreLedger} OR "actorId"=${req.user.id})
@@ -206,6 +222,13 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const recent=recentRows.map(normalize);
   const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
+  const purchaseDocuments=await prisma.$queryRaw`
+    SELECT p."id",p."supplierId",p."documentNumber",p."documentDate",p."totalGross",p."status",s."name" AS "supplierName"
+    FROM "PurchaseDocument" p
+    LEFT JOIN "Supplier" s ON s."id"=p."supplierId" AND s."companyId"=${req.user.companyId}
+    WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${store.id} AND p."status" IN ('DRAFT','APPROVED')
+    ORDER BY p."documentDate" DESC,p."id" DESC LIMIT 100
+  `;
   const sessionRows=openSession?(await prisma.$queryRaw`
     SELECT "type","amount","subtractFromShift","reversedAt"
     FROM "StoreTransaction"
@@ -216,6 +239,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     openSession,
     summary:totals(sessionRows),
     suppliers,
+    purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross||0)})),
     recent,
     access:{canReviewStoreLedger,canReverse}
   });
@@ -225,19 +249,53 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
-  let supplierName=body.supplierName||null;
-  if(body.type==="SUPPLIER_PAYMENT"){const rows=body.supplierId?await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`:[];if(body.supplierId&&!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});supplierName=rows[0]?.name||supplierName;if(!supplierName)return res.status(400).json({error:"Επίλεξε τον προμηθευτή της πληρωμής."})}
+  const isPayment=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
-  if(needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
-  const attachment=parseAttachment(body.attachment);
+  const legacyPayment=isPayment&&!body.evidenceMode;
+  let supplierName=body.supplierName||null;
+  let purchaseDocument=null;
+  if(body.type==="SUPPLIER_PAYMENT"){
+    const rows=body.supplierId?await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`:[];
+    if(body.supplierId&&!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    supplierName=rows[0]?.name||supplierName;
+    if(!supplierName)return res.status(400).json({error:"Επίλεξε τον προμηθευτή της πληρωμής."});
+  }
+  if(legacyPayment&&needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
+  if(isPayment&&!legacyPayment){
+    if(!body.idempotencyKey)return res.status(400).json({error:"Λείπει το αναγνωριστικό ασφαλούς καταχώρισης της πληρωμής."});
+    if(!body.paymentSource)return res.status(400).json({error:"Δήλωσε αν η πληρωμή έγινε από το ταμείο της βάρδιας ή εξωτερικά."});
+    if(body.evidenceMode==="DOCUMENT"){
+      if(!body.purchaseDocumentId)return res.status(400).json({error:"Επίλεξε το πρόχειρο/εγκεκριμένο παραστατικό από το AI Reader."});
+      const docs=await prisma.$queryRaw`
+        SELECT "id","supplierId","status"
+        FROM "PurchaseDocument"
+        WHERE "id"=${body.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id}
+          AND "status" IN ('DRAFT','APPROVED') LIMIT 1
+      `;
+      purchaseDocument=docs[0]||null;
+      if(!purchaseDocument)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμο παραστατικό του καταστήματος από τη ροή OCR/AI Reader."});
+      if(body.type==="SUPPLIER_PAYMENT"&&body.supplierId&&purchaseDocument.supplierId!==body.supplierId)return res.status(400).json({error:"Ο προμηθευτής της πληρωμής δεν συμφωνεί με το παραστατικό."});
+    }else{
+      if(body.purchaseDocumentId)return res.status(400).json({error:"Καταχώριση χωρίς παραστατικό δεν μπορεί να συνδεθεί με PurchaseDocument."});
+      if(!body.description||body.description.trim().length<3)return res.status(400).json({error:"Η αιτιολογία/περιγραφή είναι υποχρεωτική όταν δεν υπάρχει παραστατικό."});
+    }
+  }
+  const legacyAttachment=(legacyPayment||!isPayment)?parseAttachment(body.attachment):null;
   const actorName=req.user.fullName||"Χρήστης";
+  const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
+  const subtractFromShift=isPayment
+    ?(legacyPayment?Boolean(body.subtractFromShift):body.paymentSource==="CASH_SHIFT")
+    :Boolean(body.subtractFromShift);
+  const id=isPayment?paymentId(req.user.companyId,store.id,paymentKey):crypto.randomUUID();
+  const documentMime=purchaseDocument?"application/vnd.myworkstation.purchase-document":null;
+  const evidenceChecksum=isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null;
   const rows=await prisma.$queryRaw`
     INSERT INTO "StoreTransaction" (
       "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
     )
     SELECT
-      ${crypto.randomUUID()},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
-      ${body.description||null},${body.supplierId||null},${supplierName},${needsPhoto&&body.subtractFromShift},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null}
+      ${id},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
+      ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
     FROM "CashShiftSession" shift
     WHERE shift."storeId"=${store.id}
       AND shift."companyId"=${req.user.companyId}
@@ -250,7 +308,13 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
   const transaction=normalize(rows[0]);
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
-  res.status(201).json({...transaction,emailNotification});
+  res.status(201).json({
+    ...transaction,
+    purchaseDocumentId:purchaseDocument?.id||null,
+    evidenceMode:isPayment?(body.evidenceMode||"LEGACY"):null,
+    paymentSource:isPayment?(legacyPayment?(body.subtractFromShift?"CASH_SHIFT":"EXTERNAL"):body.paymentSource):null,
+    emailNotification
+  });
 }));
 
 router.get("/:transactionId/attachment",route(async(req,res)=>{
