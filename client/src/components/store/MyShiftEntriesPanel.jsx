@@ -11,11 +11,11 @@ export default function MyShiftEntriesPanel({api,store,operator}){
     try{
       const result=await api(`/api/transactions/stores/${store.id}/overview`);
       const sessionId=result.openSession?.id;
-      const own=String(operator?.fullName||"").trim();
-      setRows(sessionId?(result.recent||[]).filter(row=>paymentTypes.has(row.type)&&row.sessionId===sessionId&&(!own||String(row.actorName||"").trim()===own)):[]);
+      const operatorId=String(operator?.id||"").trim();
+      setRows(sessionId?(result.recent||[]).filter(row=>paymentTypes.has(row.type)&&row.sessionId===sessionId&&(!operatorId||String(row.actorId||"").trim()===operatorId)):[]);
     }catch(e){setError(e.message)}finally{setLoading(false)}
   };
-  useEffect(()=>{load()},[store.id,operator?.fullName]);
+  useEffect(()=>{load()},[store.id,operator?.id]);
   return <section className="cloud-panel">
     <div className="cloud-panel-head"><div><h3>Οι πληρωμές μου</h3><p>Μόνο πληρωμές προμηθευτών και λοιπά έξοδα της ενεργής βάρδιας, με πλήρες audit.</p></div><button onClick={load} disabled={loading}>Ανανέωση</button></div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
