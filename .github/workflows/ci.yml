@@ -50,7 +50,7 @@ jobs:
         run: |
           npm run prisma:push -w server
           npm run seed -w server
-      - name: Start real server and verify HTTP health
+      - name: Run real HTTP E2E flows
         run: |
           PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
           SERVER_PID=$!
@@ -75,4 +75,5 @@ jobs:
           console.error("Server did not become healthy",lastError);
           process.exit(1);
           NODE
+          node server/e2e/payment-shift-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
