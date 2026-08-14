@@ -42,17 +42,19 @@ export default function StoreCloudPage({api,store,onBack}){
       if(event.key!==STORE_SYNC_KEY||!event.newValue)return;
       consumeSyncValue(event.newValue);
     };
-    const refreshOnFocus=()=>refresh();
     const checkServerFingerprint=async()=>{
       if(serverCheckBusy.current)return;
       serverCheckBusy.current=true;
       try{
-        const result=await api(`/api/transactions/stores/${store.id}/overview`);
+        const result=await api(`/api/transactions/stores/${store.id}/overview?sync=${Date.now()}`,{cache:"no-store"});
         const next=ledgerFingerprint(result);
-        if(lastServerFingerprint.current===null){lastServerFingerprint.current=next;return}
+        if(lastServerFingerprint.current===null){lastServerFingerprint.current=next;refresh();return}
         if(next!==lastServerFingerprint.current){lastServerFingerprint.current=next;refresh()}
       }catch{}finally{serverCheckBusy.current=false}
     };
+    const refreshOnFocus=()=>checkServerFingerprint();
+    const refreshOnVisibility=()=>{if(document.visibilityState==="visible")checkServerFingerprint()};
+    const refreshOnPageShow=()=>checkServerFingerprint();
 
     try{lastSyncValue.current=localStorage.getItem(STORE_SYNC_KEY)}catch{}
     checkServerFingerprint();
@@ -62,11 +64,15 @@ export default function StoreCloudPage({api,store,onBack}){
     const serverSignalWatch=window.setInterval(checkServerFingerprint,SERVER_SYNC_MS);
     window.addEventListener("storage",syncFromStoreMode);
     window.addEventListener("focus",refreshOnFocus);
+    document.addEventListener("visibilitychange",refreshOnVisibility);
+    window.addEventListener("pageshow",refreshOnPageShow);
     return ()=>{
       window.clearInterval(localSignalWatch);
       window.clearInterval(serverSignalWatch);
       window.removeEventListener("storage",syncFromStoreMode);
       window.removeEventListener("focus",refreshOnFocus);
+      document.removeEventListener("visibilitychange",refreshOnVisibility);
+      window.removeEventListener("pageshow",refreshOnPageShow);
     };
   },[api,store.id]);
 
