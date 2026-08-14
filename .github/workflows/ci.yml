@@ -55,7 +55,9 @@ jobs:
           PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
           SERVER_PID=$!
           cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          on_error() { status=$?; echo "--- MyWorkStation E2E server log ---"; cat /tmp/myworkstation-e2e-server.log || true; exit "$status"; }
           trap cleanup EXIT
+          trap on_error ERR
           node --input-type=module <<'NODE'
           const url="http://127.0.0.1:8080/api/health";
           let lastError;
@@ -83,4 +85,5 @@ jobs:
           node server/e2e/payment-boundaries-flow.mjs
           node server/e2e/operator-shift-close-audit-flow.mjs
           node server/e2e/eftpos-shift-close-flow.mjs
+          node server/e2e/pos-to-shift-backoffice-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
