@@ -134,6 +134,7 @@ function totals(rows){
   return {
     cashSales:sum("SALE_CASH"),
     cardSales:sum("SALE_CARD"),
+    transferIn:sum("TRANSFER_AMOUNT"),
     supplierPayments,
     otherExpenses,
     expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
