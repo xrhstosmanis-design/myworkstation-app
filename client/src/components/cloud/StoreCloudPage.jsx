@@ -5,10 +5,31 @@ import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
 
 const STORE_SYNC_KEY="myworkstation:store-sync";
+const SERVER_SYNC_MS=2000;
+
+const ledgerFingerprint=result=>{
+  const summary=result?.summary||{};
+  const session=result?.openSession||null;
+  const latest=(result?.recent||[])[0]||null;
+  return JSON.stringify({
+    sessionId:session?.id||null,
+    sessionStatus:session?.status||null,
+    shiftLabel:session?.shiftLabel||null,
+    openingOperational:Number(session?.openingOperational||0),
+    cashSales:Number(summary.cashSales||0),
+    cardSales:Number(summary.cardSales||0),
+    expensesTotal:Number(summary.expensesTotal||0),
+    latestId:latest?.id||null,
+    latestAt:latest?.occurredAt||latest?.createdAt||null,
+    recentCount:(result?.recent||[]).length
+  });
+};
 
 export default function StoreCloudPage({api,store,onBack}){
   const [version,setVersion]=useState(0);
   const lastSyncValue=useRef(null);
+  const lastServerFingerprint=useRef(null);
+  const serverCheckBusy=useRef(false);
   const refresh=()=>setVersion(value=>value+1);
 
   useEffect(()=>{
@@ -22,18 +43,32 @@ export default function StoreCloudPage({api,store,onBack}){
       consumeSyncValue(event.newValue);
     };
     const refreshOnFocus=()=>refresh();
+    const checkServerFingerprint=async()=>{
+      if(serverCheckBusy.current)return;
+      serverCheckBusy.current=true;
+      try{
+        const result=await api(`/api/transactions/stores/${store.id}/overview`);
+        const next=ledgerFingerprint(result);
+        if(lastServerFingerprint.current===null){lastServerFingerprint.current=next;return}
+        if(next!==lastServerFingerprint.current){lastServerFingerprint.current=next;refresh()}
+      }catch{}finally{serverCheckBusy.current=false}
+    };
+
     try{lastSyncValue.current=localStorage.getItem(STORE_SYNC_KEY)}catch{}
+    checkServerFingerprint();
     const localSignalWatch=window.setInterval(()=>{
       try{consumeSyncValue(localStorage.getItem(STORE_SYNC_KEY))}catch{}
     },750);
+    const serverSignalWatch=window.setInterval(checkServerFingerprint,SERVER_SYNC_MS);
     window.addEventListener("storage",syncFromStoreMode);
     window.addEventListener("focus",refreshOnFocus);
     return ()=>{
       window.clearInterval(localSignalWatch);
+      window.clearInterval(serverSignalWatch);
       window.removeEventListener("storage",syncFromStoreMode);
       window.removeEventListener("focus",refreshOnFocus);
     };
-  },[store.id]);
+  },[api,store.id]);
 
   return <section className="cloud-page store-operations-front">
     <div className="cloud-titlebar">
@@ -49,7 +84,7 @@ export default function StoreCloudPage({api,store,onBack}){
       </div>
     </div>
 
-    <OwnerPaymentQuickActions key={`owner-payments-${version}`} api={api} store={store} onChanged={refresh}/>
+    <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
 
     <div id="backoffice-transactions" className="backoffice-anchor">
       <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>
