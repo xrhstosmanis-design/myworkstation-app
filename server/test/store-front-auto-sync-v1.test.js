@@ -11,13 +11,21 @@ test("Store Mode publishes a store-scoped refresh signal after real ledger chang
   assert.match(operator,/const changed=\(\)=>\{setLedgerVersion\(v=>v\+1\);/);
 });
 
-test("BackOffice refreshes both operational panels when the same store changes",()=>{
+test("BackOffice refreshes both operational panels from browser or server ledger changes",()=>{
+  assert.match(backoffice,/const SERVER_SYNC_MS=2000/);
   assert.match(backoffice,/window\.addEventListener\("storage",syncFromStoreMode\)/);
   assert.match(backoffice,/payload\.storeId===store\.id/);
   assert.match(backoffice,/window\.addEventListener\("focus",refreshOnFocus\)/);
-  assert.match(backoffice,/window\.setInterval\(\(\)=>\{/);
-  assert.match(backoffice,/consumeSyncValue\(localStorage\.getItem\(STORE_SYNC_KEY\)\)/);
-  assert.match(backoffice,/window\.clearInterval\(localSignalWatch\)/);
+  assert.match(backoffice,/api\(`\/api\/transactions\/stores\/\$\{store\.id\}\/overview`\)/);
+  assert.match(backoffice,/const next=ledgerFingerprint\(result\)/);
+  assert.match(backoffice,/if\(next!==lastServerFingerprint\.current\)\{lastServerFingerprint\.current=next;refresh\(\)\}/);
+  assert.match(backoffice,/window\.setInterval\(checkServerFingerprint,SERVER_SYNC_MS\)/);
+  assert.match(backoffice,/window\.clearInterval\(serverSignalWatch\)/);
   assert.match(backoffice,/key=\{`transactions-\$\{version\}`\}/);
   assert.match(backoffice,/key=\{`cash-\$\{version\}`\}/);
+});
+
+test("Automatic operational refresh does not remount owner payment controls",()=>{
+  assert.match(backoffice,/<OwnerPaymentQuickActions api=\{api\} store=\{store\} onChanged=\{refresh\}\/\>/);
+  assert.doesNotMatch(backoffice,/OwnerPaymentQuickActions key=/);
 });
