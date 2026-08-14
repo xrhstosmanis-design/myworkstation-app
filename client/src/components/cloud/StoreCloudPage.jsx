@@ -1,6 +1,7 @@
 import React,{useState} from "react";
 import {ArrowLeft,RefreshCw} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
+import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
 
 export default function StoreCloudPage({api,store,onBack}){
@@ -17,9 +18,11 @@ export default function StoreCloudPage({api,store,onBack}){
       <div>
         <span className="cloud-kicker">MYWORKSTATION · BACKOFFICE</span>
         <h2>{store.name}</h2>
-        <p>Ενεργή βάρδια και έλεγχος ταμείου. Οι υπόλοιπες εμπορικές λειτουργίες διαχειρίζονται από την Εμπορική λειτουργία.</p>
+        <p>Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.</p>
       </div>
     </div>
+
+    <OwnerPaymentQuickActions key={`owner-payments-${version}`} api={api} store={store} onChanged={refresh}/>
 
     <div id="backoffice-transactions" className="backoffice-anchor">
       <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>

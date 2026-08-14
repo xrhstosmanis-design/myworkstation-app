@@ -7,11 +7,11 @@ const mail=fs.readFileSync(new URL("../src/services/mail.js",import.meta.url),"u
 const ui=fs.readFileSync(new URL("../../client/src/components/store/StoreTransactionsPanel.jsx",import.meta.url),"utf8");
 
 test("percentages keep the scoped backend alert but are not an entry control in the active-shift view",()=>{
-  assert.match(route,/type:z\.enum\(\["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES"\]\)/);
+  assert.match(route,/type:z\.enum\(\[[^\]]*"PERCENTAGES"[^\]]*\]\)/);
+  assert.match(route,/type:z\.enum\(\[[^\]]*"TRANSFER_AMOUNT"[^\]]*\]\)/);
   assert.match(route,/body\.type==="PERCENTAGES"\?await notifyLedgerAlert/);
   assert.match(route,/companyId,role:"OWNER"/);
   assert.match(route,/store\.responsibleEmail/);
-  assert.doesNotMatch(ui,/Μεταφορά ποσού/);
   assert.doesNotMatch(ui,/id:"PERCENTAGES",label:"Ποσοστά"/);
   assert.match(ui,/Κινήσεις ενεργής βάρδιας/);
 });
@@ -26,7 +26,8 @@ test("every reversal is persisted before its email is attempted",()=>{
   assert.match(mail,/Χρήστης/);
 });
 
-test("ordinary entries and legacy cash transfers do not send alerts",()=>{
+test("ordinary entries and transfer movements do not send alerts",()=>{
+  assert.doesNotMatch(route,/TRANSFER_AMOUNT[\s\S]*notifyLedgerAlert\(\{[^}]*kind:"TRANSFER_AMOUNT"/);
   assert.doesNotMatch(route,/CASH_TRANSFER[\s\S]*notifyLedgerAlert/);
   assert.match(route,/const emailNotification=body\.type==="PERCENTAGES"/);
 });
