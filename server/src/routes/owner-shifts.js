@@ -14,7 +14,8 @@ const querySchema=z.object({
 const n=value=>Number(value||0);
 const moneyFields=["openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","cashSales","cardSales","eftposTotal","cardVariance","expenses","closingDrawer","closingCustody","closingCoins","closingSafe","expectedOperational","actualOperational","variance","nextOpeningTotal","recordedSupplierPayments","recordedOtherExpenses","deductedSupplierPayments","deductedOtherExpenses","percentages"];
 const normalizeShift=row=>{const out={...row};for(const key of moneyFields)out[key]=row[key]==null?null:n(row[key]);out.transactionCount=n(row.transactionCount);out.reversedCount=n(row.reversedCount);out.durationMinutes=row.durationMinutes==null?null:n(row.durationMinutes);out.duplicateReview=Array.isArray(row.duplicateReviewJson)?row.duplicateReviewJson:[];return out};
-const normalizeTx=row=>({...row,amount:n(row.amount),subtractFromShift:Boolean(row.subtractFromShift),hasAttachment:Boolean(row.hasAttachment)});
+const normalizeSaleLines=lines=>(Array.isArray(lines)?lines:[]).map(line=>({...line,quantity:n(line.quantity),unitPrice:n(line.unitPrice),lineTotal:n(line.lineTotal)}));
+const normalizeTx=row=>{const saleLines=normalizeSaleLines(row.saleLines),saleType=["SALE_CASH","SALE_CARD"].includes(row.type),productSummary=saleLines.map(line=>`${Math.abs(n(line.quantity))}× ${line.description||"Προϊόν"}`).join(" · ");return {...row,auditDescription:saleType&&productSummary?row.description:null,description:saleType&&productSummary?productSummary:row.description,saleLines,productSummary,amount:n(row.amount),subtractFromShift:Boolean(row.subtractFromShift),hasAttachment:Boolean(row.hasAttachment)}};
 
 let schemaPromise;
 async function ensureSchema(){
@@ -115,7 +116,10 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
     const [transactionsRaw,categoriesRaw,paymentsRaw,salesRaw]=await Promise.all([
       prisma.$queryRaw`
         SELECT t."id",t."type",t."amount",t."description",t."supplierId",t."supplierName",t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",
-          t."reversedAt",t."reversedBy",t."reversedByName",t."reversalReason",t."sourceType",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentFilename"
+          t."reversedAt",t."reversedBy",t."reversedByName",t."reversalReason",t."sourceType",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentFilename",
+          COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal") ORDER BY l."createdAt",l."id")
+            FROM "Sale" sale JOIN "SaleLine" l ON l."saleId"=sale."id"
+            WHERE sale."companyId"=t."companyId" AND sale."storeId"=t."storeId" AND COALESCE(t."description",'') LIKE ('%'||sale."id"||'%')),'[]'::json) AS "saleLines"
         FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."storeId"=${shift.storeId} AND t."sessionId"=${shift.id} ORDER BY t."occurredAt" ASC
       `,
       prisma.$queryRaw`
@@ -144,7 +148,7 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
       expectedOperational:n(shift.expectedOperational),actualOperational:n(shift.actualOperational),closingDrawer:n(shift.closingDrawer),closingCustody:n(shift.closingCustody),closingCoins:n(shift.closingCoins),closingSafe:n(shift.closingSafe),variance:n(shift.variance),nextOpeningTotal:n(shift.nextOpeningTotal),
       formula:"Διαφορά = Πραγματικό λειτουργικό κλείσιμο − Αναμενόμενο λειτουργικό κλείσιμο"
     };
-    const alerts=[];if(Math.abs(difference.openingVariance)>.009)alerts.push({kind:"OPENING_VARIANCE",amount:difference.openingVariance,label:"Διαφορά έναρξης"});if(Math.abs(difference.cardVariance)>.009)alerts.push({kind:"CARD_VARIANCE",amount:difference.cardVariance,label:"Διαφορά Καρτών − EFTPOS"});if(Math.abs(difference.variance)>.009)alerts.push({kind:"CLOSING_VARIANCE",amount:difference.variance,label:"Διαφορά κλεισίματος"});for(const row of transactions.filter(row=>row.reversedAt))alerts.push({kind:"REVERSAL",amount:n(row.amount),label:`Αντιλογισμός: ${row.description||row.type}`,transactionId:row.id});for(const item of shift.duplicateReview||[])alerts.push({kind:"DUPLICATE_REVIEW",amount:n(item.total),label:"Πιθανή διαδοχική ίδια πώληση για έλεγχο",detail:item});
+    const alerts=[];if(Math.abs(difference.openingVariance)>.009)alerts.push({kind:"OPENING_VARIANCE",amount:difference.openingVariance,label:"Διαφορά έναρξης"});if(Math.abs(difference.cardVariance)>.009)alerts.push({kind:"CARD_VARIANCE",amount:difference.cardVariance,label:"Διαφορά Καρτών − EFTPOS"});if(Math.abs(difference.variance)>.009)alerts.push({kind:"CLOSING_VARIANCE",amount:difference.variance,label:"Διαφορά κλεισίματος"});for(const row of transactions.filter(row=>row.reversedAt))alerts.push({kind:"REVERSAL",amount:n(row.amount),label:`Αντιλογισμός: ${row.auditDescription||row.description||row.type}`,transactionId:row.id});for(const item of shift.duplicateReview||[])alerts.push({kind:"DUPLICATE_REVIEW",amount:n(item.total),label:"Πιθανή διαδοχική ίδια πώληση για έλεγχο",detail:item});
     res.json({shift,transactions,categories,paymentMethods,sales,difference,alerts,sourceStatus:{vatFiscal:false,note:"Η ανάλυση Τμήματος ΦΠΑ παραμένει κλειδωμένη μέχρι πραγματική φορολογική πηγή/Connector."}});
   }catch(error){next(error)}
 });
