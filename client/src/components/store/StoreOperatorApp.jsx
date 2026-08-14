@@ -8,6 +8,7 @@ import "./store-operator.css";
 import "./store-shift-menu.css";
 const n=value=>Number(String(value||"0").replace(",","."))||0;
 const money=value=>n(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const STORE_SYNC_KEY="myworkstation:store-sync";
 export default function StoreOperatorApp({api:baseApi,storeId}){
  const api=async(path,options={})=>{const token=sessionStorage.getItem("storeOperatorToken");const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const text=await response.text();let data={};if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}if(response.status===401){sessionStorage.removeItem("storeOperatorToken");sessionStorage.removeItem("storeOperatorSession")}if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data};
  const [directory,setDirectory]=useState(null),[session,setSession]=useState(()=>{try{const saved=JSON.parse(sessionStorage.getItem("storeOperatorSession")||"null");return saved?.store?.id===storeId?saved:null}catch{return null}}),[runtimeAccess,setRuntimeAccess]=useState(null);
@@ -24,7 +25,7 @@ export default function StoreOperatorApp({api:baseApi,storeId}){
  const loginPin=async event=>{event.preventDefault();setBusy(true);setError("");try{remember(await api("/api/operators/login/pin",{method:"POST",body:JSON.stringify({storeId,employeeId,pin})}))}catch(err){setError(err.message)}finally{setBusy(false)}};
  const loginCard=async event=>{event.preventDefault();setBusy(true);setError("");try{remember(await api("/api/operators/login/card",{method:"POST",body:JSON.stringify({storeId,cardCode})}))}catch(err){setError(err.message);setCardCode("");setTimeout(()=>cardRef.current?.focus(),50)}finally{setBusy(false)}};
  const logout=async()=>{try{await api("/api/operators/logout",{method:"POST"})}catch{}finally{sessionStorage.removeItem("storeOperatorToken");sessionStorage.removeItem("storeOperatorSession");setSession(null);setDirectory(null);setShiftState(null);setRuntimeAccess(null);setOperatorMenu(false);setShiftView(null)}};
- const changed=()=>setLedgerVersion(v=>v+1);
+ const changed=()=>{setLedgerVersion(v=>v+1);try{localStorage.setItem(STORE_SYNC_KEY,JSON.stringify({storeId:session?.store?.id||storeId,at:Date.now()}))}catch{}};
  const openShift=async event=>{event.preventDefault();setBusy(true);setError("");try{await api(`/api/cash/stores/${session.store.id}/sessions/open`,{method:"POST",body:JSON.stringify({shiftLabel:shiftForm.shiftLabel,drawer:n(shiftForm.drawer),custody:n(shiftForm.custody),coins:n(shiftForm.coins),safe:n(shiftForm.safe),note:shiftForm.note})});await checkShift();changed()}catch(err){setError(err.message)}finally{setBusy(false)}};
  const canTransactions=Boolean(runtimeAccess?.shiftTransactions),canCloseShift=Boolean(runtimeAccess?.cash),allowAllTransactions=Boolean(runtimeAccess?.allShiftTransactions);
  const captureOperatorClick=event=>{let node=event.target;while(node&&node!==event.currentTarget){const text=String(node.textContent||"").replace(/\s+/g," ").trim();if(/^Χειριστής\s*/i.test(text)){event.preventDefault();event.stopPropagation();setOperatorMenu(value=>!value);return}node=node.parentElement}};
