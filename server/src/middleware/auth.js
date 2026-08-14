@@ -41,7 +41,7 @@ export async function auth(req,res,next){
         return res.status(401).json({error:"Απαιτείται νέα είσοδος στο Store Mode.",code:"STORE_OPERATOR_SESSION_REQUIRED"});
       }
       const rows=await prisma.$queryRaw`
-        SELECT c."id",c."role",c."active",
+        SELECT c."id",c."displayName",c."employeeId",c."companyId",c."storeId",c."role",c."active",
                e."active" AS "employeeActive",
                s."active" AS "storeActive",
                co."active" AS "companyActive",
@@ -76,7 +76,7 @@ export async function auth(req,res,next){
       prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "lastSeenAt"=NOW() WHERE "id"=${payload.operatorSessionId} AND "lastSeenAt"<NOW()-INTERVAL '5 minutes'`.catch(()=>{});
       const permissions=storeRuntimePermissions({posAccess:operator.posAccess,permissions:operator.profilePermissions});
       if(!enforceStorePaymentPermissions(req,res,permissions))return;
-      req.user={...payload,permissions};
+      req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
       return next();
     }
 
