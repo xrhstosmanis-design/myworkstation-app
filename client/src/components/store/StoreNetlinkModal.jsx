@@ -3,14 +3,7 @@ import {CreditCard,RefreshCw,X} from "lucide-react";
 import "./store-netlink.css";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const groupsFromMenu=menu=>{
-  const source=menu?.data??menu;
-  if(Array.isArray(source))return source;
-  if(Array.isArray(source?.groups))return source.groups;
-  if(Array.isArray(source?.productGroups))return source.productGroups;
-  if(Array.isArray(source?.items))return source.items;
-  return [];
-};
+const groupsFromMenu=menu=>{const source=menu?.data??menu;if(Array.isArray(source))return source;if(Array.isArray(source?.groups))return source.groups;if(Array.isArray(source?.productGroups))return source.productGroups;if(Array.isArray(source?.items))return source.items;return []};
 const productsFromGroup=group=>Array.isArray(group?.products)?group.products:Array.isArray(group?.items)?group.items:[];
 const productIdOf=p=>String(p?.productId??p?.id??p?.code??"");
 const productNameOf=p=>String(p?.name??p?.label??p?.description??productIdOf(p));
@@ -20,10 +13,11 @@ const flowOf=p=>String(p?.flow??p?.flowType??"execute").toLowerCase();
 const propertiesOf=schema=>schema?.properties&&typeof schema.properties==="object"?schema.properties:{};
 const requiredOf=schema=>new Set(Array.isArray(schema?.required)?schema.required:[]);
 const valueForInput=(spec,value)=>spec?.type==="number"||spec?.type==="integer"?String(value??""):value??"";
+const providerData=value=>value?.data??value??{};
+const amountOf=(product,prepared=null)=>Number(prepared?.amount??providerData(prepared?.result)?.amount??product?.amount??product?.price??0);
 
 function DynamicField({name,spec,value,onChange,required}){
-  const label=spec?.title||spec?.description||name;
-  const options=Array.isArray(spec?.enum)?spec.enum:null;
+  const label=spec?.title||spec?.description||name,options=Array.isArray(spec?.enum)?spec.enum:null;
   if(options)return <label className="netlink-field"><span>{label}{required?" *":""}</span><select value={value??""} onChange={e=>onChange(e.target.value)}><option value="">Επιλογή...</option>{options.map(option=><option key={String(option)} value={String(option)}>{String(option)}</option>)}</select></label>;
   if(spec?.type==="boolean")return <label className="netlink-field netlink-check"><input type="checkbox" checked={Boolean(value)} onChange={e=>onChange(e.target.checked)}/><span>{label}</span></label>;
   const inputMode=spec?.type==="number"||spec?.type==="integer"?"decimal":"text";
@@ -31,20 +25,12 @@ function DynamicField({name,spec,value,onChange,required}){
 }
 
 export default function StoreNetlinkModal({api,store,onClose,onPrepared,onError}){
-  const [status,setStatus]=useState(null),[menu,setMenu]=useState(null),[selected,setSelected]=useState(null),[payload,setPayload]=useState({}),[busy,setBusy]=useState(false),[error,setError]=useState("");
-  const groups=useMemo(()=>groupsFromMenu(menu),[menu]);
-  const schema=schemaOf(selected),properties=propertiesOf(schema),required=requiredOf(schema);
-  const load=async()=>{setBusy(true);setError("");try{const [s,m]=await Promise.all([api("/api/netlink/status"),api("/api/netlink/menu")]);setStatus(s);setMenu(m)}catch(err){setError(err.message);onError?.(err)}finally{setBusy(false)}};
-  useEffect(()=>{load()},[store.id]);
-  useEffect(()=>{setPayload({})},[selected&&productIdOf(selected)]);
+  const [status,setStatus]=useState(null),[config,setConfig]=useState(null),[menu,setMenu]=useState(null),[selected,setSelected]=useState(null),[payload,setPayload]=useState({}),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const groups=useMemo(()=>groupsFromMenu(menu),[menu]),schema=schemaOf(selected),properties=propertiesOf(schema),required=requiredOf(schema);
+  const load=async()=>{setBusy(true);setError("");try{const [s,c,m]=await Promise.all([api("/api/netlink/status"),api(`/api/netlink/stores/${store.id}/config`),api("/api/netlink/menu")]);setStatus(s);setConfig(c);setMenu(m)}catch(err){setError(err.message);onError?.(err)}finally{setBusy(false)}};
+  useEffect(()=>{load()},[store.id]);useEffect(()=>{setPayload({})},[selected&&productIdOf(selected)]);
   const normalizedPayload=()=>Object.fromEntries(Object.entries(payload).map(([key,value])=>{const spec=properties[key]||{};if(spec.type==="number")return[key,Number(String(value).replace(",","."))];if(spec.type==="integer")return[key,Number.parseInt(value,10)];return[key,value]}));
-  const validate=()=>{for(const key of required){const value=payload[key];if(value===undefined||value===null||value==="")return `Συμπλήρωσε το πεδίο «${properties[key]?.title||properties[key]?.description||key}».`}return ""};
-  const continueFlow=async()=>{if(!selected)return;const validation=validate();if(validation)return setError(validation);setBusy(true);setError("");try{const productId=productIdOf(selected),flow=flowOf(selected),requestId=crypto.randomUUID(),cleanPayload=normalizedPayload();if(flow==="prepare"){const prepared=await api("/api/netlink/prepare",{method:"POST",body:JSON.stringify({storeId:store.id,productId,payload:cleanPayload,requestId})});onPrepared?.({mode:"PREPARED",product:selected,payload:cleanPayload,requestId,prepared});return}onPrepared?.({mode:"READY_TO_EXECUTE",product:selected,payload:cleanPayload,requestId})}catch(err){setError(err.message);onError?.(err)}finally{setBusy(false)}};
-  return <div className="netlink-overlay" role="dialog" aria-modal="true"><div className="netlink-modal">
-    <header><div><b><CreditCard size={19}/> NETLINK</b><small>Προπληρωμένες υπηρεσίες · ίδιο ταμείο / ίδιος τζίρος</small></div><button type="button" onClick={onClose} aria-label="Κλείσιμο"><X size={20}/></button></header>
-    {error&&<div className="netlink-error">{error}</div>}
-    {!status?.configured&&!busy&&<div className="netlink-warning">Η σύνδεση Netlink δεν έχει ρυθμιστεί ακόμη στον server.</div>}
-    <div className="netlink-toolbar"><span>Κατάστημα: <b>{store.name}</b></span><button type="button" onClick={load} disabled={busy}><RefreshCw size={15}/> Ανανέωση</button></div>
-    {!selected?<div className="netlink-groups">{groups.map((group,index)=><section key={group?.id||groupNameOf(group,index)}><h3>{groupNameOf(group,index)}</h3><div className="netlink-products">{productsFromGroup(group).map(product=><button type="button" key={productIdOf(product)} onClick={()=>setSelected(product)} disabled={busy}><b>{productNameOf(product)}</b>{product?.amount!=null&&<span>{euro(product.amount)}</span>}<small>{flowOf(product)==="prepare"?"Έλεγχος → Επιβεβαίωση":"Άμεση εκτέλεση"}</small></button>)}</div></section>)}{!groups.length&&!busy&&<div className="netlink-empty">Δεν επέστρεψαν διαθέσιμα προϊόντα από τη Netlink.</div>}</div>:<div className="netlink-form"><button className="netlink-back" type="button" onClick={()=>setSelected(null)}>← Προϊόντα</button><h2>{productNameOf(selected)}</h2>{Object.keys(properties).map(name=><DynamicField key={name} name={name} spec={properties[name]} value={payload[name]} required={required.has(name)} onChange={value=>setPayload(current=>({...current,[name]:value}))}/>)}{!Object.keys(properties).length&&<p>Το προϊόν δεν απαιτεί επιπλέον στοιχεία.</p>}<button className="netlink-primary" type="button" disabled={busy} onClick={continueFlow}>{busy?"Περιμένετε...":flowOf(selected)==="prepare"?"ΕΛΕΓΧΟΣ ΣΤΟΙΧΕΙΩΝ":"ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΠΛΗΡΩΜΗ"}</button><p className="netlink-note">Η τελική Netlink εκτέλεση θα γίνει μόνο αφού δημιουργηθεί η κανονική πώληση POS.</p></div>}
-  </div></div>;
+  const validate=()=>{if(!config?.configured||!config?.saleProduct?.id)return "Δεν έχει οριστεί ακόμη το προϊόν POS που θα χρησιμοποιεί το Netlink σε αυτό το κατάστημα.";for(const key of required){const value=payload[key];if(value===undefined||value===null||value==="")return `Συμπλήρωσε το πεδίο «${properties[key]?.title||properties[key]?.description||key}».`}return ""};
+  const continueFlow=async()=>{if(!selected)return;const validation=validate();if(validation)return setError(validation);setBusy(true);setError("");try{const productId=productIdOf(selected),flow=flowOf(selected),requestId=crypto.randomUUID(),cleanPayload=normalizedPayload();let prepared=null;if(flow==="prepare")prepared=await api("/api/netlink/prepare",{method:"POST",body:JSON.stringify({storeId:store.id,productId,payload:cleanPayload,requestId})});const amount=amountOf(selected,prepared);if(!(amount>0))throw new Error("Η Netlink δεν επέστρεψε έγκυρο ποσό για τη συναλλαγή.");onPrepared?.({mode:prepared?"PREPARED":"READY_TO_EXECUTE",product:selected,productId,payload:cleanPayload,requestId,prepared,amount,status,config,saleProduct:config.saleProduct});}catch(err){setError(err.message);onError?.(err)}finally{setBusy(false)}};
+  return <div className="netlink-overlay" role="dialog" aria-modal="true"><div className="netlink-modal"><header><div><b><CreditCard size={19}/> NETLINK</b><small>Προπληρωμένες υπηρεσίες · ίδιο ταμείο / ίδιος τζίρος</small></div><button type="button" onClick={onClose} aria-label="Κλείσιμο"><X size={20}/></button></header>{error&&<div className="netlink-error">{error}</div>}{!status?.configured&&!busy&&<div className="netlink-warning">Η σύνδεση Netlink δεν έχει ρυθμιστεί ακόμη στον server.</div>}{status?.configured&&!status?.executeEnabled&&!busy&&<div className="netlink-warning">Η τελική εκτέλεση είναι ακόμη κλειδωμένη για ασφαλή δοκιμή.</div>}{!config?.configured&&!busy&&<div className="netlink-warning">Χρειάζεται πρώτα αντιστοίχιση Netlink με ενεργό προϊόν POS του καταστήματος.</div>}<div className="netlink-toolbar"><span>Κατάστημα: <b>{store.name}</b>{config?.saleProduct&&<small> · POS: {config.saleProduct.name}</small>}</span><button type="button" onClick={load} disabled={busy}><RefreshCw size={15}/> Ανανέωση</button></div>{!selected?<div className="netlink-groups">{groups.map((group,index)=><section key={group?.id||groupNameOf(group,index)}><h3>{groupNameOf(group,index)}</h3><div className="netlink-products">{productsFromGroup(group).map(product=><button type="button" key={productIdOf(product)} onClick={()=>setSelected(product)} disabled={busy}><b>{productNameOf(product)}</b>{product?.amount!=null&&<span>{euro(product.amount)}</span>}<small>{flowOf(product)==="prepare"?"Έλεγχος → Επιβεβαίωση":"Άμεση εκτέλεση"}</small></button>)}</div></section>)}{!groups.length&&!busy&&<div className="netlink-empty">Δεν επέστρεψαν διαθέσιμα προϊόντα από τη Netlink.</div>}</div>:<div className="netlink-form"><button className="netlink-back" type="button" onClick={()=>setSelected(null)}>← Προϊόντα</button><h2>{productNameOf(selected)}</h2>{Object.keys(properties).map(name=><DynamicField key={name} name={name} spec={properties[name]} value={payload[name]} required={required.has(name)} onChange={value=>setPayload(current=>({...current,[name]:value}))}/>)}{!Object.keys(properties).length&&<p>Το προϊόν δεν απαιτεί επιπλέον στοιχεία.</p>}<button className="netlink-primary" type="button" disabled={busy} onClick={continueFlow}>{busy?"Περιμένετε...":flowOf(selected)==="prepare"?"ΕΛΕΓΧΟΣ ΣΤΟΙΧΕΙΩΝ":"ΣΥΝΕΧΕΙΑ ΣΤΗΝ ΠΛΗΡΩΜΗ"}</button><p className="netlink-note">Η αξία θα μπει στην κανονική συναλλαγή POS και η Netlink εκτέλεση θα συνδεθεί με το ίδιο Sale ID.</p></div>}</div></div>;
 }
