@@ -28,13 +28,14 @@ PR: #210
 - Δυναμικό `StoreNetlinkModal` που διαβάζει product groups και JSON payload schema από το Netlink menu.
 - Per-store `NetlinkStoreConfig` για mapping σε ενεργό POS product ώστε VAT/accounting να μην είναι hard-coded στον connector.
 - Super Admin module catalog registration ως paid add-on, χωρίς default ενεργοποίηση σε κανένα plan.
+- Store Mode launcher: εμφανίζεται μόνο όταν το `NETLINK_PREPAID` περνά το server-side module gate.
+- Pending Netlink state: μετά από prepare/selection η υπηρεσία περιμένει την κανονική POS πληρωμή και δεν εκτελείται μόνη της.
 
 ## Σε εξέλιξη
-1. Store Mode entry point / κουμπί Netlink μόνο όταν το module είναι ενεργό.
-2. Mapping UI για επιλογή του POS product ανά κατάστημα.
-3. Checkout binding: provider item -> mapped POS product -> normal Sale -> Netlink execute.
-4. Staging test με credentials Netlink.
-5. E2E tests για tenant isolation, duplicate request και settlement.
+1. Mapping UI για επιλογή του POS product ανά κατάστημα.
+2. Checkout binding: provider item -> mapped POS product -> normal Sale -> Netlink execute.
+3. Staging test με credentials Netlink.
+4. E2E tests για tenant isolation, duplicate request και settlement.
 
 ## Production safety
 Το `NETLINK_ENABLE_EXECUTE` παραμένει `false` μέχρι να ολοκληρωθεί και να περάσει CI/E2E το checkout binding.
