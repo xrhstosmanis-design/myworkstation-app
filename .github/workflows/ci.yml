@@ -81,4 +81,5 @@ jobs:
           node server/e2e/reversal-tenant-isolation-flow.mjs
           node server/e2e/operator-ledger-visibility-flow.mjs
           node server/e2e/payment-boundaries-flow.mjs
+          node server/e2e/operator-shift-close-audit-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
