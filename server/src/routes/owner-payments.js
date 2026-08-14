@@ -14,7 +14,20 @@ const reportQuery=z.object({
 
 const n=value=>Number(value||0);
 const isoDay=date=>new Date(date).toISOString().slice(0,10);
-const mapMovement=row=>({...row,amount:n(row.amount),hasAttachment:Boolean(row.hasAttachment),subtractFromShift:Boolean(row.subtractFromShift)});
+const purchaseDocumentMime="application/vnd.myworkstation.purchase-document";
+const mapMovement=row=>{
+  const hasAttachment=Boolean(row.hasAttachment);
+  const linkedPurchaseDocument=row.attachmentMimeType===purchaseDocumentMime;
+  return {
+    ...row,
+    amount:n(row.amount),
+    hasAttachment,
+    subtractFromShift:Boolean(row.subtractFromShift),
+    purchaseDocumentId:linkedPurchaseDocument?row.attachmentFilename:null,
+    evidenceMode:linkedPurchaseDocument?"DOCUMENT":hasAttachment?"LEGACY_PHOTO":"NO_DOCUMENT",
+    paymentSource:row.subtractFromShift?"CASH_SHIFT":"EXTERNAL"
+  };
+};
 const ownerRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 
 function requireOwnerReport(req){
@@ -85,7 +98,11 @@ router.get("/report",async(req,res,next)=>{
         COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT'),0) AS "supplierPayments",
         COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL AND t."type"='OTHER_EXPENSE'),0) AS "otherExpenses",
         COALESCE(AVG(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS average,
-        COUNT(*) FILTER (WHERE t."reversedAt" IS NULL AND t."attachmentData" IS NULL)::int AS "missingAttachments",
+        COUNT(*) FILTER (
+          WHERE t."reversedAt" IS NULL
+            AND t."attachmentData" IS NULL
+            AND COALESCE(t."attachmentMimeType",'')<>${purchaseDocumentMime}
+        )::int AS "missingAttachments",
         COUNT(*) FILTER (WHERE t."reversedAt" IS NOT NULL)::int AS "reversedCount"
       FROM "StoreTransaction" t
       JOIN "Store" st ON st."id"=t."storeId"
@@ -121,7 +138,7 @@ router.get("/report",async(req,res,next)=>{
         SELECT t."id",t."storeId",st."name" AS "storeName",t."sessionId",t."type",t."amount",t."description",
                t."supplierId",COALESCE(NULLIF(t."supplierName",''),sp."name") AS "supplierName",
                t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",
-               (t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentFilename"
+               (t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentMimeType",t."attachmentFilename"
         FROM "StoreTransaction" t
         JOIN "Store" st ON st."id"=t."storeId"
         LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
@@ -198,7 +215,7 @@ router.get("/report",async(req,res,next)=>{
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
           AND (${type}::text IS NULL OR t."type"=${type})
           AND (${needle}::text IS NULL OR COALESCE(t."description",'') ILIKE ${needle?`%${needle}%`:null} OR COALESCE(t."supplierName",sp."name",'') ILIKE ${needle?`%${needle}%`:null} OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
-        GROUP BY COALESCE(NULLIF(BTRIM(t."description"),''),'Λοιπά έξοδα') ORDER BY amount DESC
+        GROUP BY COALESCE(NULLIF(BTRIM(t."description"),''),'Λοιπα έξοδα') ORDER BY amount DESC
       `,
       prisma.$queryRaw`
         SELECT DATE(t."occurredAt") AS day,COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses

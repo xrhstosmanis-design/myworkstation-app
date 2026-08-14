@@ -38,7 +38,9 @@ test("owner payments UI exposes kiosk-style criteria and full audit views",()=>{
   assert.match(installer,/Έλεγχοι \/ Alerts/);
   assert.match(installer,/data-op-photo/);
   assert.match(installer,/Χειριστής/);
-  assert.match(installer,/Αφαιρέθηκε/);
+  assert.match(installer,/Από βάρδια/);
+  assert.match(installer,/Εξωτερική/);
+  assert.match(installer,/AI Reader/);
 });
 
 test("owner view does not invent accounting debt",()=>{
