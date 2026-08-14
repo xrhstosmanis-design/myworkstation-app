@@ -17,6 +17,8 @@ export async function ensureNetlinkSchema(){
         "providerTransactionId" TEXT,
         "providerReference" TEXT,
         "amount" NUMERIC(14,2),
+        "serviceFeeAmount" NUMERIC(14,2) NOT NULL DEFAULT 0.50,
+        "customerTotal" NUMERIC(14,2),
         "commissionRate" NUMERIC(8,6) NOT NULL DEFAULT 0.010000,
         "commissionAmount" NUMERIC(14,2),
         "paymentMethod" TEXT,
@@ -29,6 +31,8 @@ export async function ensureNetlinkSchema(){
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "NetlinkTransaction" ADD COLUMN IF NOT EXISTS "serviceFeeAmount" NUMERIC(14,2) NOT NULL DEFAULT 0.50`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "NetlinkTransaction" ADD COLUMN IF NOT EXISTS "customerTotal" NUMERIC(14,2)`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "NetlinkTransaction_store_request_uq" ON "NetlinkTransaction"("storeId","requestId")`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "NetlinkTransaction_provider_tx_uq" ON "NetlinkTransaction"("providerTransactionId") WHERE "providerTransactionId" IS NOT NULL`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkTransaction_company_created_idx" ON "NetlinkTransaction"("companyId","createdAt" DESC)`);
@@ -38,11 +42,15 @@ export async function ensureNetlinkSchema(){
         "storeId" TEXT PRIMARY KEY,
         "companyId" TEXT NOT NULL,
         "saleProductId" TEXT,
+        "serviceFeeProductId" TEXT,
+        "serviceFeeAmount" NUMERIC(14,2) NOT NULL DEFAULT 0.50,
         "active" BOOLEAN NOT NULL DEFAULT true,
         "notes" TEXT,
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "NetlinkStoreConfig" ADD COLUMN IF NOT EXISTS "serviceFeeProductId" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "NetlinkStoreConfig" ADD COLUMN IF NOT EXISTS "serviceFeeAmount" NUMERIC(14,2) NOT NULL DEFAULT 0.50`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkStoreConfig_company_idx" ON "NetlinkStoreConfig"("companyId")`);
     })().catch(error=>{readyPromise=undefined;throw error});
   }
