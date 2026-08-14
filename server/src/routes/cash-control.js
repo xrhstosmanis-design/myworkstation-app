@@ -182,12 +182,11 @@ async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
     SELECT
       COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL),0) AS "cashSales",
       COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL),0) AS "cardSales",
-      COALESCE(SUM("amount") FILTER (WHERE "type"='CASH_TRANSFER' AND "reversedAt" IS NULL),0) AS "cashTransfers",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
     FROM "StoreTransaction"
     WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}
   `;
-  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),cashTransfers:money(rows[0]?.cashTransfers),expenses:money(rows[0]?.expenses)};
+  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),expenses:money(rows[0]?.expenses)};
 }
 
 function route(handler){
@@ -289,7 +288,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     if(!session)return null;
     assertStoreAccess(req,session.storeId);
     const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
-    const expected=session.openingOperational+ledger.cashTransfers+ledger.cashSales-ledger.expenses;
+    const expected=session.openingOperational+ledger.cashSales-ledger.expenses;
     const actual=body.drawer+body.custody+body.coins;
     const variance=actual-expected;
     const cardVariance=ledger.cardSales-body.eftposTotal;
