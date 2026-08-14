@@ -76,4 +76,5 @@ jobs:
           process.exit(1);
           NODE
           node server/e2e/payment-shift-flow.mjs
+          node server/e2e/ai-reader-payment-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
