@@ -72,8 +72,9 @@ test("My Payments remains limited to the current operator payments and expenses 
   assert.match(myPayments,/new Set\(\["SUPPLIER_PAYMENT","OTHER_EXPENSE"\]\)/);
   assert.match(myPayments,/const sessionId=result\.openSession\?\.id/);
   assert.match(myPayments,/paymentTypes\.has\(row\.type\)&&row\.sessionId===sessionId/);
-  assert.match(myPayments,/operator\?\.fullName/);
-  assert.match(myPayments,/String\(row\.actorName\|\|""\)\.trim\(\)===own/);
+  assert.match(myPayments,/const operatorId=String\(operator\?\.id\|\|""\)\.trim\(\)/);
+  assert.match(myPayments,/String\(row\.actorId\|\|""\)\.trim\(\)===operatorId/);
+  assert.doesNotMatch(myPayments,/row\.actorName[\s\S]*===own/);
   assert.match(myPayments,/Οι πληρωμές μου/);
   assert.match(myPayments,/Χωρίς παραστατικό · πλήρες audit/);
 });
