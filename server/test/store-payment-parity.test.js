@@ -26,26 +26,23 @@ test("my transactions query reads from the protected ledger table",()=>{
   assert.match(route,/SELECT "id","companyId","storeId"[\s\S]*FROM "StoreTransaction"[\s\S]*"actorId"=\$\{req\.user\.id\}/);
 });
 
-test("store UI exposes AI Reader evidence choices and my payments",()=>{
-  assert.match(client,/Με παραστατικό από AI Reader/);
-  assert.match(client,/Χωρίς παραστατικό/);
-  assert.match(client,/purchaseDocumentId/);
-  assert.match(client,/Οι πληρωμές και συναλλαγές μου/);
-  assert.match(client,/Προβολή φωτογραφίας/);
-  assert.doesNotMatch(client,/capture="environment"/);
+test("shift transactions UI exposes only the active shift timeline",()=>{
+  assert.match(client,/Συναλλαγές βάρδιας/);
+  assert.match(client,/Κινήσεις ενεργής βάρδιας/);
+  assert.match(client,/Εμφανίζονται μόνο οι κινήσεις της ενεργής βάρδιας/);
+  assert.match(client,/Αναμενόμενο/);
+  assert.doesNotMatch(client,/Με παραστατικό από AI Reader/);
+  assert.doesNotMatch(client,/Καταχώριση πληρωμής/);
 });
 
-test("payments reduce the shift only after an explicit cashier source choice",()=>{
+test("payments reduce the shift only after the authoritative backend source choice",()=>{
   assert.match(route,/ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false/);
   assert.match(route,/subtractFromShift:z\.coerce\.boolean\(\)\.optional\(\)\.default\(false\)/);
   assert.match(route,/row\.type===type&&row\.subtractFromShift/);
   assert.match(route,/recordedExpensesTotal:supplierPayments\+otherExpenses/);
   assert.match(route,/expensesTotal:deductedSupplierPayments\+deductedOtherExpenses/);
-  assert.match(client,/paymentSource/);
-  assert.match(client,/CASH_SHIFT/);
-  assert.match(client,/EXTERNAL/);
-  assert.match(client,/Από τα μετρητά της ίδιας βάρδιας/);
-  assert.match(client,/Εξωτερική πληρωμή/);
+  assert.match(route,/paymentSource:z\.enum\(\["CASH_SHIFT","EXTERNAL"\]\)/);
+  assert.match(route,/evidenceMode:z\.enum\(\["DOCUMENT","NO_DOCUMENT"\]\)/);
 });
 
 test("open shift totals use every transaction and not only the recent UI list",()=>{
