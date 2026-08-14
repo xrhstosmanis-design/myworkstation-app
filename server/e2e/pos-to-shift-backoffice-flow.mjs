@@ -82,34 +82,44 @@ async function main(){
   assert.equal(quote.response.status,200,JSON.stringify(quote.payload));
   assert.equal(quote.payload.total,6);
 
+  const noReason=await request(`/api/store-pos/stores/${storeId}/checkout`,{
+    method:"POST",token:operatorToken,
+    body:{items:[{productId,quantity:2,unitPriceOverride:2.5}],paymentMethod:"MIXED",payments:[{method:"CASH",amount:2},{method:"CARD",amount:3}],clientTransactionId:crypto.randomUUID()}
+  });
+  assert.equal(noReason.response.status,400,"manual price without reason must be rejected");
+
   const checkout=await request(`/api/store-pos/stores/${storeId}/checkout`,{
     method:"POST",token:operatorToken,
-    body:{items:[{productId,quantity:2}],paymentMethod:"MIXED",payments:[{method:"CASH",amount:2},{method:"CARD",amount:4}],clientTransactionId:crypto.randomUUID()}
+    body:{items:[{productId,quantity:2,unitPriceOverride:2.5,overrideReason:"E2E ελεγμένη αλλαγή τιμής"}],paymentMethod:"MIXED",payments:[{method:"CASH",amount:2},{method:"CARD",amount:3}],clientTransactionId:crypto.randomUUID()}
   });
   assert.equal(checkout.response.status,201,JSON.stringify(checkout.payload));
-  assert.equal(checkout.payload.total,6);
+  assert.equal(checkout.payload.total,5);
   const saleId=checkout.payload.id||checkout.payload.saleId;
   assert.ok(saleId,"POS checkout did not return sale id");
 
   const stockRows=await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`;
   assert.equal(Number(stockRows[0]?.currentStock),8,"POS checkout did not reduce tracked stock by sold quantity");
 
+  const saleLineRows=await prisma.$queryRaw`SELECT "unitPrice","lineTotal" FROM "SaleLine" WHERE "saleId"=${saleId} LIMIT 1`;
+  assert.equal(Number(saleLineRows[0]?.unitPrice),2.5);
+  assert.equal(Number(saleLineRows[0]?.lineTotal),5);
+
   const ledger=await request(`/api/transactions/stores/${storeId}/overview`,{token:operatorToken});
   assert.equal(ledger.response.status,200,JSON.stringify(ledger.payload));
   assert.equal(ledger.payload.openSession?.id,sessionId);
   assert.equal(ledger.payload.summary?.cashSales,2);
-  assert.equal(ledger.payload.summary?.cardSales,4);
+  assert.equal(ledger.payload.summary?.cardSales,3);
   assert.ok((ledger.payload.recent||[]).some(item=>item.type==="SALE_CASH"&&item.amount===2));
-  assert.ok((ledger.payload.recent||[]).some(item=>item.type==="SALE_CARD"&&item.amount===4));
+  assert.ok((ledger.payload.recent||[]).some(item=>item.type==="SALE_CARD"&&item.amount===3));
 
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{
     method:"POST",token:operatorToken,
-    body:{cashSales:999,cardSales:999,eftposTotal:4,expenses:999,drawer:52,custody:0,coins:0,safe:0,note:"POS mixed sale physical count"}
+    body:{cashSales:999,cardSales:999,eftposTotal:3,expenses:999,drawer:52,custody:0,coins:0,safe:0,note:"POS mixed sale physical count"}
   });
   assert.equal(closed.response.status,200,JSON.stringify(closed.payload));
   assert.equal(closed.payload.cashSales,2);
-  assert.equal(closed.payload.cardSales,4);
-  assert.equal(closed.payload.eftposTotal,4);
+  assert.equal(closed.payload.cardSales,3);
+  assert.equal(closed.payload.eftposTotal,3);
   assert.equal(closed.payload.cardVariance,0);
   assert.equal(closed.payload.expectedOperational,52);
   assert.equal(closed.payload.actualOperational,52);
@@ -118,14 +128,14 @@ async function main(){
   const detail=await request(`/api/owner-shifts/${sessionId}/detail`,{token:ownerToken});
   assert.equal(detail.response.status,200,JSON.stringify(detail.payload));
   assert.equal(detail.payload.shift?.cashSales,2);
-  assert.equal(detail.payload.shift?.cardSales,4);
-  assert.equal(detail.payload.shift?.eftposTotal,4);
+  assert.equal(detail.payload.shift?.cardSales,3);
+  assert.equal(detail.payload.shift?.eftposTotal,3);
   assert.equal(detail.payload.shift?.variance,0);
   assert.equal(detail.payload.sales?.count,1);
-  assert.equal(detail.payload.sales?.total,6);
+  assert.equal(detail.payload.sales?.total,5);
   const methods=new Map((detail.payload.paymentMethods||[]).map(item=>[item.method,item.amount]));
   assert.equal(methods.get("CASH"),2);
-  assert.equal(methods.get("CARD"),4);
+  assert.equal(methods.get("CARD"),3);
   assert.ok((detail.payload.transactions||[]).some(item=>item.type==="SALE_CASH"&&item.actorName==="E2E POS Cashier"));
   assert.ok((detail.payload.transactions||[]).some(item=>item.type==="SALE_CARD"&&item.actorName==="E2E POS Cashier"));
 
@@ -140,9 +150,11 @@ async function main(){
   assert.equal(saleAudit.operatorId,operatorId,"POS sale audit operatorId does not match the authenticated Store Operator");
   assert.equal(saleAudit.actorId,operatorId,"POS sale audit actorId does not match the authenticated Store Operator");
   assert.equal(saleAudit.details?.sessionId,sessionId,`POS sale audit points to wrong shift. Audit: ${JSON.stringify(saleAudit)}`);
-  assert.equal(Number(saleAudit.details?.total),6);
+  assert.equal(Number(saleAudit.details?.total),5);
+  assert.equal(saleAudit.details?.items?.[0]?.priceSource,"MANUAL");
+  assert.equal(saleAudit.details?.items?.[0]?.overrideReason,"E2E ελεγμένη αλλαγή τιμής");
 
-  console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:4});
+  console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }
 
 try{await main()}finally{await prisma.$disconnect()}
