@@ -65,7 +65,9 @@ async function main(){
   const operatorLogin=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin:operatorPin}});
   assert.equal(operatorLogin.response.status,200,JSON.stringify(operatorLogin.payload));
   const operatorToken=operatorLogin.payload?.token;
+  const operatorId=operatorLogin.payload?.user?.id;
   assert.ok(operatorToken);
+  assert.ok(operatorId);
 
   const opened=await request(`/api/cash/stores/${storeId}/sessions/open`,{
     method:"POST",token:operatorToken,
@@ -127,12 +129,21 @@ async function main(){
   assert.ok((detail.payload.transactions||[]).some(item=>item.type==="SALE_CASH"&&item.actorName==="E2E POS Cashier"));
   assert.ok((detail.payload.transactions||[]).some(item=>item.type==="SALE_CARD"&&item.actorName==="E2E POS Cashier"));
 
-  const auditRows=await prisma.$queryRaw`SELECT "eventType","details" FROM "StoreOperatorAudit" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "actorId"=${operatorLogin.payload.user.id} AND "eventType"='POS_SALE_COMPLETED' ORDER BY "createdAt" DESC LIMIT 1`;
-  assert.equal(auditRows[0]?.eventType,"POS_SALE_COMPLETED");
+  const auditRows=await prisma.$queryRaw`
+    SELECT "operatorId","actorId","eventType","details"
+    FROM "StoreOperatorAudit"
+    WHERE "companyId"=${companyId} AND "storeId"=${storeId}
+      AND "eventType"='POS_SALE_COMPLETED'
+      AND "details"->>'sessionId'=${sessionId}
+    ORDER BY "createdAt" DESC LIMIT 1
+  `;
+  assert.equal(auditRows[0]?.eventType,"POS_SALE_COMPLETED","POS checkout did not create the expected StoreOperatorAudit event for its shift");
+  assert.equal(auditRows[0]?.operatorId,operatorId,"POS sale audit operatorId does not match the authenticated Store Operator");
+  assert.equal(auditRows[0]?.actorId,operatorId,"POS sale audit actorId does not match the authenticated Store Operator");
   assert.equal(auditRows[0]?.details?.sessionId,sessionId);
   assert.equal(Number(auditRows[0]?.details?.total),6);
 
-  console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,stockAfter:8,cash:2,card:4});
+  console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:4});
 }
 
 try{await main()}finally{await prisma.$disconnect()}
