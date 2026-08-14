@@ -79,11 +79,13 @@ async function main(){
   assert.equal(payment.payload.purchaseDocumentId,documentId);
   assert.equal(payment.payload.evidenceMode,"DOCUMENT");
   assert.equal(payment.payload.paymentSource,"EXTERNAL");
-  assert.equal(payment.payload.sessionId,sessionId);
+  assert.equal(payment.payload.sessionId,null,"External BackOffice payment must not belong to the employee cash shift");
   assert.equal(await stock(productId),0,"Payment linked to DRAFT changed inventory");
 
   const overview=await request(`/api/transactions/stores/${storeId}/overview`,{token});
   assert.equal(overview.response.status,200,JSON.stringify(overview.payload));
+  assert.equal(overview.payload.openSession?.id,sessionId);
+  assert.equal(Number(overview.payload.summary?.expensesTotal||0),0,"External BackOffice payment changed active-shift cash expenses");
   const documentChoice=(overview.payload.purchaseDocuments||[]).find(row=>row.id===documentId);
   assert.ok(documentChoice,"DRAFT PurchaseDocument is not exposed to existing payment UI overview");
   assert.equal(documentChoice.status,"DRAFT");

@@ -25,6 +25,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
   const suppliers=ledger?.suppliers||[];
   const documents=ledger?.purchaseDocuments||[];
   const selectedDocument=useMemo(()=>documents.find(row=>row.id===form.purchaseDocumentId)||null,[documents,form.purchaseDocumentId]);
+  const requiresShift=active?.type==="TRANSFER_AMOUNT"||form.paymentSource==="CASH_SHIFT";
 
   const load=async()=>{if(!allowed)return;setError("");try{setLedger(await api(`/api/transactions/stores/${store.id}/overview`))}catch(e){setError(e.message)}};
   useEffect(()=>{load()},[store.id,allowed]);
@@ -39,6 +40,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     if(amount<=0)return setError("Βάλε ποσό μεγαλύτερο από 0.");
     if(active.type==="SUPPLIER_PAYMENT"&&!form.supplierId)return setError("Επίλεξε προμηθευτή.");
     if(active.document&&!form.purchaseDocumentId)return setError("Επίλεξε παραστατικό από την υπάρχουσα ροή παραστατικών / AI Reader.");
+    if(requiresShift&&!ledger?.openSession)return setError("Δεν υπάρχει ενεργή βάρδια για αυτή την κίνηση.");
     setBusy(true);setError("");setMessage("");
     try{
       const body=active.type==="TRANSFER_AMOUNT"
@@ -72,7 +74,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     {active&&<div onMouseDown={e=>e.target===e.currentTarget&&close()} style={{position:"fixed",inset:0,zIndex:5000,background:"rgba(10,24,43,.48)",display:"grid",placeItems:"center",padding:20}}><form onSubmit={submit} style={{width:"min(640px,96vw)",background:"white",borderRadius:20,boxShadow:"0 24px 80px rgba(0,0,0,.24)",overflow:"hidden"}}>
       <header style={{padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #e4ebf3"}}><div><small style={{color:"#6b7b91"}}>MYWORKSTATION · {store.name}</small><h2 style={{margin:"4px 0 0"}}>{active.label}</h2></div><button type="button" onClick={close} style={{border:0,background:"transparent",cursor:"pointer"}}><X/></button></header>
       <div style={{padding:20,display:"grid",gap:14}}>
-        {!ledger?.openSession&&<div style={{padding:11,borderRadius:11,background:"#fff7e6",color:"#8a5a00"}}>Δεν υπάρχει ενεργή βάρδια στο κατάστημα. Η καταχώριση επιτρέπεται μόνο όσο υπάρχει ενεργή βάρδια.</div>}
+        {requiresShift&&!ledger?.openSession&&<div style={{padding:11,borderRadius:11,background:"#fff7e6",color:"#8a5a00"}}>Δεν υπάρχει ενεργή βάρδια στο κατάστημα για αυτή την κίνηση. Οι εξωτερικές πληρωμές μπορούν να καταχωριστούν κανονικά χωρίς βάρδια.</div>}
         {active.type==="SUPPLIER_PAYMENT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Προμηθευτής<select value={form.supplierId} onChange={e=>setForm({...form,supplierId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
         {active.document&&<label style={{display:"grid",gap:6,fontWeight:700}}>Παραστατικό<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε παραστατικό</option>{documents.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select></label>}
         <label style={{display:"grid",gap:6,fontWeight:700}}>Ποσό<input inputMode="decimal" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0,00" style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10,fontSize:18,fontWeight:800}}/></label>
@@ -81,7 +83,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
         {error&&<div style={{padding:10,borderRadius:10,background:"#fff0f0",color:"#b42318"}}>{error}</div>}
         {message&&<div style={{padding:10,borderRadius:10,background:"#eaf8ef",color:"#08783e"}}>{message}</div>}
       </div>
-      <footer style={{padding:"14px 20px",display:"flex",justifyContent:"flex-end",gap:10,borderTop:"1px solid #e4ebf3"}}><button type="button" onClick={close} style={{padding:"11px 16px",border:"1px solid #ccd8e6",background:"white",borderRadius:10,fontWeight:700}}>Άκυρο</button><button disabled={busy||!ledger?.openSession} style={{padding:"11px 18px",border:0,background:"#1769e0",color:"white",borderRadius:10,fontWeight:800}}>{busy?"Καταχώριση…":"Καταχώριση"}</button></footer>
+      <footer style={{padding:"14px 20px",display:"flex",justifyContent:"flex-end",gap:10,borderTop:"1px solid #e4ebf3"}}><button type="button" onClick={close} style={{padding:"11px 16px",border:"1px solid #ccd8e6",background:"white",borderRadius:10,fontWeight:700}}>Άκυρο</button><button disabled={busy||(requiresShift&&!ledger?.openSession)} style={{padding:"11px 18px",border:0,background:"#1769e0",color:"white",borderRadius:10,fontWeight:800}}>{busy?"Καταχώριση…":"Καταχώριση"}</button></footer>
     </form></div>}
   </section>;
 }

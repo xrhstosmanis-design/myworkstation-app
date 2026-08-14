@@ -70,9 +70,14 @@ async function main(){
   await insertDocument({id:otherTenantDocId,company:otherCompanyId,store:otherTenantStoreId,supplier:foreignSupplierId,total:9});
 
   const beforeNoShift=await transactionCount();
-  const noShift=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:2,description:"valid but no open shift",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-bound-no-shift-001"}});
-  assert.equal(noShift.response.status,409,"Payment without open shift was stored");
-  assert.equal(await transactionCount(),beforeNoShift,"Payment without open shift left a StoreTransaction");
+  const noShift=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:2,description:"valid external payment without shift",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-bound-no-shift-001"}});
+  assert.equal(noShift.response.status,201,JSON.stringify(noShift.payload));
+  assert.equal(noShift.payload.sessionId,null,"External BackOffice payment was attached to a shift");
+  assert.equal(await transactionCount(),beforeNoShift+1,"External payment without shift was not stored");
+
+  const noShiftCash=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:2,description:"cash-shift payment without shift",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:"e2e-bound-no-shift-cash-001"}});
+  assert.equal(noShiftCash.response.status,409,"CASH_SHIFT payment without open shift was stored");
+  assert.equal(await transactionCount(),beforeNoShift+1,"Rejected CASH_SHIFT payment left a StoreTransaction");
 
   const opened=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token,body:{shiftLabel:"E2E payment boundaries",drawer:30,custody:0,coins:0,safe:0,note:"boundary validation"}});
   assert.equal(opened.response.status,201,JSON.stringify(opened.payload));
@@ -101,7 +106,7 @@ async function main(){
   const valid=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"SUPPLIER_PAYMENT",amount:12.4,description:"valid linked document",supplierId:supplierAId,evidenceMode:"DOCUMENT",purchaseDocumentId:validDocId,paymentSource:"EXTERNAL",idempotencyKey:"e2e-bound-valid-001"}});
   assert.equal(valid.response.status,201,JSON.stringify(valid.payload));
   assert.equal(valid.payload.purchaseDocumentId,validDocId);
-  assert.equal(valid.payload.sessionId,sessionId);
+  assert.equal(valid.payload.sessionId,null,"External linked supplier payment was attached to active shift");
 
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token,body:{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:30,custody:0,coins:0,safe:0,note:"external payment boundary close"}});
   assert.equal(closed.response.status,200,JSON.stringify(closed.payload));
@@ -109,9 +114,14 @@ async function main(){
   assert.equal(closed.payload.expectedOperational,30);
 
   before=await transactionCount();
-  const afterClose=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:1,description:"after close must fail",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-bound-after-close-001"}});
-  assert.equal(afterClose.response.status,409,"Payment after shift close was stored");
-  assert.equal(await transactionCount(),before,"Payment after shift close left a StoreTransaction");
+  const afterClose=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:1,description:"external payment after close",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-bound-after-close-001"}});
+  assert.equal(afterClose.response.status,201,JSON.stringify(afterClose.payload));
+  assert.equal(afterClose.payload.sessionId,null,"External payment after shift close was attached to a shift");
+  assert.equal(await transactionCount(),before+1,"External payment after close was not stored");
+
+  const afterCloseCash=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:1,description:"cash-shift payment after close",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:"e2e-bound-after-close-cash-001"}});
+  assert.equal(afterCloseCash.response.status,409,"CASH_SHIFT payment after shift close was stored");
+  assert.equal(await transactionCount(),before+1,"Rejected CASH_SHIFT payment after close left a StoreTransaction");
 
   console.log("E2E payment validation boundaries passed",{sessionId,validPaymentId:valid.payload.id});
 }

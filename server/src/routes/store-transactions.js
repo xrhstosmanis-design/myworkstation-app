@@ -286,26 +286,40 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const subtractFromShift=isPayment
     ?(legacyPayment?Boolean(body.subtractFromShift):body.paymentSource==="CASH_SHIFT")
     :Boolean(body.subtractFromShift);
+  const externalPayment=isPayment&&!legacyPayment&&body.paymentSource==="EXTERNAL";
   const id=isPayment?paymentId(req.user.companyId,store.id,paymentKey):crypto.randomUUID();
   const documentMime=purchaseDocument?"application/vnd.myworkstation.purchase-document":null;
   const evidenceChecksum=isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null;
-  const rows=await prisma.$queryRaw`
-    INSERT INTO "StoreTransaction" (
-      "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
-    )
-    SELECT
-      ${id},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
-      ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
-    FROM "CashShiftSession" shift
-    WHERE shift."storeId"=${store.id}
-      AND shift."companyId"=${req.user.companyId}
-      AND shift."status"='OPEN'
-    ORDER BY shift."openedAt" DESC
-    LIMIT 1
-    FOR KEY SHARE OF shift
-    RETURNING *
-  `;
-  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
+  let rows;
+  if(externalPayment){
+    rows=await prisma.$queryRaw`
+      INSERT INTO "StoreTransaction" (
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+      ) VALUES (
+        ${id},${req.user.companyId},${store.id},${null},${body.type},${body.amount},
+        ${body.description||null},${body.supplierId||null},${supplierName},false,${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+      )
+      RETURNING *
+    `;
+  }else{
+    rows=await prisma.$queryRaw`
+      INSERT INTO "StoreTransaction" (
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+      )
+      SELECT
+        ${id},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
+        ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+      FROM "CashShiftSession" shift
+      WHERE shift."storeId"=${store.id}
+        AND shift."companyId"=${req.user.companyId}
+        AND shift."status"='OPEN'
+      ORDER BY shift."openedAt" DESC
+      LIMIT 1
+      FOR KEY SHARE OF shift
+      RETURNING *
+    `;
+    if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
+  }
   const transaction=normalize(rows[0]);
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({
