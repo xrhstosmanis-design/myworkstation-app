@@ -11,7 +11,9 @@ test("Store Mode runtime permissions come from the current BackOffice operator p
   assert.match(auth,/LEFT JOIN "StoreOperatorProfile"/);
   assert.match(auth,/profilePermissions/);
   assert.match(auth,/const permissions=storeRuntimePermissions/);
-  assert.match(auth,/req\.user=\{\.\.\.payload,permissions\}/);
+  assert.match(auth,/id:operator\.id/);
+  assert.match(auth,/fullName:operator\.displayName/);
+  assert.match(auth,/role:operator\.role,permissions/);
   assert.match(auth,/p\.permissions\?\.cash/);
   assert.match(auth,/p\.permissions\?\.shiftTransactionsPos/);
   assert.match(auth,/p\.permissions\?\.allShiftTransactionsPos/);
@@ -48,5 +50,7 @@ test("BackOffice supplier and same-shift payment permissions are enforced before
 test("legacy login token permissions are overwritten by current BackOffice permissions",()=>{
   assert.match(operators,/function operatorPermissions\(role\)/);
   assert.match(auth,/const permissions=storeRuntimePermissions/);
-  assert.match(auth,/req\.user=\{\.\.\.payload,permissions\}/);
+  assert.match(auth,/id:operator\.id/);
+  assert.match(auth,/fullName:operator\.displayName/);
+  assert.match(auth,/role:operator\.role,permissions/);
 });
