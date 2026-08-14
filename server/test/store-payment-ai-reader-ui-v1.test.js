@@ -5,19 +5,16 @@ import fs from "node:fs";
 const ui=fs.readFileSync(new URL("../../client/src/components/store/StoreTransactionsPanel.jsx",import.meta.url),"utf8");
 const route=fs.readFileSync(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8");
 
-test("store payment UI uses the existing AI Reader PurchaseDocument contract",()=>{
-  assert.match(ui,/Με παραστατικό από AI Reader/);
-  assert.match(ui,/Χωρίς παραστατικό/);
-  assert.match(ui,/purchaseDocumentId/);
-  assert.match(ui,/evidenceMode/);
-  assert.match(ui,/paymentSource/);
-  assert.match(ui,/idempotencyKey/);
-  assert.match(ui,/CASH_SHIFT/);
-  assert.match(ui,/EXTERNAL/);
-  assert.doesNotMatch(ui,/Φωτογραφία παραστατικού \*/);
+test("active shift UI is read-only and does not embed payment evidence entry controls",()=>{
+  assert.match(ui,/Συναλλαγές βάρδιας/);
+  assert.match(ui,/Κινήσεις ενεργής βάρδιας/);
+  assert.match(ui,/Εμφανίζονται μόνο οι κινήσεις της ενεργής βάρδιας/);
+  assert.doesNotMatch(ui,/Με παραστατικό από AI Reader/);
+  assert.doesNotMatch(ui,/purchaseDocumentId/);
+  assert.doesNotMatch(ui,/CASH_SHIFT/);
 });
 
-test("existing transaction backend remains the payment authority",()=>{
+test("existing transaction backend remains the payment and AI Reader evidence authority",()=>{
   assert.match(route,/evidenceMode:z\.enum\(\["DOCUMENT","NO_DOCUMENT"\]\)/);
   assert.match(route,/purchaseDocumentId:z\.string/);
   assert.match(route,/paymentSource:z\.enum\(\["CASH_SHIFT","EXTERNAL"\]\)/);
