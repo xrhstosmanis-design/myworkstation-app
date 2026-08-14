@@ -130,18 +130,17 @@ async function main(){
   assert.ok((detail.payload.transactions||[]).some(item=>item.type==="SALE_CARD"&&item.actorName==="E2E POS Cashier"));
 
   const auditRows=await prisma.$queryRaw`
-    SELECT "operatorId","actorId","eventType","details"
+    SELECT "operatorId","actorId","eventType","details","createdAt"
     FROM "StoreOperatorAudit"
     WHERE "companyId"=${companyId} AND "storeId"=${storeId}
-      AND "eventType"='POS_SALE_COMPLETED'
-      AND "details"->>'sessionId'=${sessionId}
-    ORDER BY "createdAt" DESC LIMIT 1
+    ORDER BY "createdAt" DESC LIMIT 30
   `;
-  assert.equal(auditRows[0]?.eventType,"POS_SALE_COMPLETED","POS checkout did not create the expected StoreOperatorAudit event for its shift");
-  assert.equal(auditRows[0]?.operatorId,operatorId,"POS sale audit operatorId does not match the authenticated Store Operator");
-  assert.equal(auditRows[0]?.actorId,operatorId,"POS sale audit actorId does not match the authenticated Store Operator");
-  assert.equal(auditRows[0]?.details?.sessionId,sessionId);
-  assert.equal(Number(auditRows[0]?.details?.total),6);
+  const saleAudit=auditRows.find(row=>row.eventType==="POS_SALE_COMPLETED");
+  assert.ok(saleAudit,`POS sale audit missing. Recent StoreOperatorAudit rows: ${JSON.stringify(auditRows)}`);
+  assert.equal(saleAudit.operatorId,operatorId,"POS sale audit operatorId does not match the authenticated Store Operator");
+  assert.equal(saleAudit.actorId,operatorId,"POS sale audit actorId does not match the authenticated Store Operator");
+  assert.equal(saleAudit.details?.sessionId,sessionId,`POS sale audit points to wrong shift. Audit: ${JSON.stringify(saleAudit)}`);
+  assert.equal(Number(saleAudit.details?.total),6);
 
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:4});
 }
