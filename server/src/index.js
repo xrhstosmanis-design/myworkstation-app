@@ -54,6 +54,7 @@ import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
 import connectorObserverRoutes from "./routes/connector-observer.js";
 import netlinkRoutes from "./routes/netlink.js";
+import netlinkConfigRoutes from "./routes/netlink-config.js";
 import ownerPriceBulkPreviewRoutes from "./routes/owner-price-bulk-preview.js";
 import ownerProductRoutes from "./routes/owner-products.js";
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
@@ -154,6 +155,7 @@ app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRout
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),connectorObserverRoutes);
 app.use("/api/netlink",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkRoutes);
+app.use("/api/netlink-config",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkConfigRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
