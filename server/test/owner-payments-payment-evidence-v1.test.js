@@ -22,6 +22,14 @@ test("BackOffice exposes payment source and evidence without opening a fake phot
   assert.match(ui,/data-op-photo/);
 });
 
+test("BackOffice payment audit exposes the exact shift session together with payment source",()=>{
+  assert.match(route,/t\."sessionId"/);
+  assert.match(ui,/Βάρδια \/ Πηγή/);
+  assert.match(ui,/row\.sessionId/);
+  assert.match(ui,/String\(row\.sessionId\)\.slice\(0,8\)/);
+  assert.match(ui,/"Βάρδια","Πηγή πληρωμής"/);
+});
+
 test("BackOffice alerts only explicitly undocumented payments",()=>{
   assert.match(ui,/active\.filter\(row=>row\.evidenceMode==="NO_DOCUMENT"\)/);
   assert.doesNotMatch(ui,/active\.filter\(row=>!row\.hasAttachment\)/);
@@ -32,4 +40,5 @@ test("BackOffice CSV preserves evidence and cash-source audit",()=>{
   assert.match(ui,/ΑΠΟ ΒΑΡΔΙΑ/);
   assert.match(ui,/ΕΞΩΤΕΡΙΚΗ/);
   assert.match(ui,/AI Reader \$\{row\.purchaseDocumentId\|\|""\}/);
+  assert.match(ui,/row\.sessionId\|\|""/);
 });
