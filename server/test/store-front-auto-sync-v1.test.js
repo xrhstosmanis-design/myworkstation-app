@@ -15,6 +15,9 @@ test("BackOffice refreshes both operational panels when the same store changes",
   assert.match(backoffice,/window\.addEventListener\("storage",syncFromStoreMode\)/);
   assert.match(backoffice,/payload\.storeId===store\.id/);
   assert.match(backoffice,/window\.addEventListener\("focus",refreshOnFocus\)/);
+  assert.match(backoffice,/window\.setInterval\(\(\)=>\{/);
+  assert.match(backoffice,/consumeSyncValue\(localStorage\.getItem\(STORE_SYNC_KEY\)\)/);
+  assert.match(backoffice,/window\.clearInterval\(localSignalWatch\)/);
   assert.match(backoffice,/key=\{`transactions-\$\{version\}`\}/);
   assert.match(backoffice,/key=\{`cash-\$\{version\}`\}/);
 });
