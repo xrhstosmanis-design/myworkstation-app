@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const read=path=>readFile(new URL(path,import.meta.url),"utf8");
-const [auth,invoice,ledger,cash,paymentUi,closeUi,myPayments,ownerRoute,ownerUi]=await Promise.all([
+const [auth,invoice,ledger,cash,shiftUi,closeUi,myPayments,ownerRoute,ownerUi]=await Promise.all([
   read("../src/middleware/auth.js"),
   read("../src/routes/commerce-invoice-draft-approval.js"),
   read("../src/routes/store-transactions.js"),
@@ -43,14 +43,13 @@ test("supplier payments and other expenses use one StoreTransaction and CashShif
   assert.match(ledger,/paymentId\(req\.user\.companyId,store\.id,paymentKey\)/);
 });
 
-test("Store payment UI reuses PurchaseDocument and requires a reason without a document",()=>{
-  assert.match(paymentUi,/Με παραστατικό από AI Reader/);
-  assert.match(paymentUi,/Χωρίς παραστατικό/);
-  assert.match(paymentUi,/purchaseDocumentId/);
-  assert.match(paymentUi,/description\.trim\(\)\.length<3/);
-  assert.match(paymentUi,/CASH_SHIFT/);
-  assert.match(paymentUi,/EXTERNAL/);
-  assert.doesNotMatch(paymentUi,/Φωτογραφία παραστατικού \*/);
+test("Store shift transactions UI is active-shift read-only and does not duplicate payment entry",()=>{
+  assert.match(shiftUi,/Κινήσεις ενεργής βάρδιας/);
+  assert.match(shiftUi,/Αναμενόμενο/);
+  assert.match(shiftUi,/openSession/);
+  assert.doesNotMatch(shiftUi,/Με παραστατικό από AI Reader/);
+  assert.doesNotMatch(shiftUi,/purchaseDocumentId/);
+  assert.doesNotMatch(shiftUi,/ledger-submit/);
 });
 
 test("same-shift payments reduce the same authoritative expected-cash formula used at close",()=>{
