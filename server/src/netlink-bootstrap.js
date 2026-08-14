@@ -34,6 +34,16 @@ export async function ensureNetlinkSchema(){
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkTransaction_company_created_idx" ON "NetlinkTransaction"("companyId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkTransaction_store_created_idx" ON "NetlinkTransaction"("storeId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkTransaction_sale_idx" ON "NetlinkTransaction"("saleId") WHERE "saleId" IS NOT NULL`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "NetlinkStoreConfig" (
+        "storeId" TEXT PRIMARY KEY,
+        "companyId" TEXT NOT NULL,
+        "saleProductId" TEXT,
+        "active" BOOLEAN NOT NULL DEFAULT true,
+        "notes" TEXT,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NetlinkStoreConfig_company_idx" ON "NetlinkStoreConfig"("companyId")`);
     })().catch(error=>{readyPromise=undefined;throw error});
   }
   return readyPromise;
