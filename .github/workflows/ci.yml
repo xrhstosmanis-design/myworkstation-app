@@ -79,4 +79,5 @@ jobs:
           node server/e2e/ai-reader-payment-flow.mjs
           node server/e2e/live-operator-permissions-flow.mjs
           node server/e2e/reversal-tenant-isolation-flow.mjs
+          node server/e2e/operator-ledger-visibility-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
