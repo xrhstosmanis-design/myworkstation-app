@@ -134,6 +134,7 @@ function totals(rows){
   return {
     cashSales:sum("SALE_CASH"),
     cardSales:sum("SALE_CARD"),
+    cashTransfers:sum("CASH_TRANSFER"),
     supplierPayments,
     otherExpenses,
     expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
@@ -146,7 +147,7 @@ function totals(rows){
 }
 
 const transactionSchema=z.object({
-  type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES"]),
+  type:z.enum(["SALE_CASH","SALE_CARD","CASH_TRANSFER","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES"]),
   amount:z.coerce.number().finite().positive().max(999999999),
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
@@ -280,6 +281,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       if(!body.description||body.description.trim().length<3)return res.status(400).json({error:"Η αιτιολογία/περιγραφή είναι υποχρεωτική όταν δεν υπάρχει παραστατικό."});
     }
   }
+  if(body.type==="CASH_TRANSFER"&&(!body.description||body.description.trim().length<3))return res.status(400).json({error:"Γράψε από πού προέρχεται η μεταφορά ποσού προς τη βάρδια."});
   const legacyAttachment=(legacyPayment||!isPayment)?parseAttachment(body.attachment):null;
   const actorName=req.user.fullName||"Χρήστης";
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
