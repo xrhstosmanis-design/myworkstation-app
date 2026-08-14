@@ -18,7 +18,7 @@ export default function StoreCloudPage({api,store,onBack}){
       </div>
     </div>
 
-    <div className="cloud-hero"><div><span className="cloud-kicker">MYWORKSTATION · BACKOFFICE</span><h2>{store.name}</h2><p>Ζωντανή εικόνα της ενεργής βάρδιας. Οι κινήσεις εμφανίζονται πρώτες και ο έλεγχος ταμείου παραμένει διαθέσιμος στην ίδια σελίδα χωρίς δεύτερο σύστημα.</p></div></div>
+    <div className="cloud-hero"><div><span className="cloud-kicker">MYWORKSTATION · BACKOFFICE</span><h2>{store.name}</h2><p>Ζωντανή εικόνα της ενεργής βάρδιας. Οι κινήσεις εμφανίζονται πρώτες και ο έλεγχος ταμείου παραμένει διαθέσιμος στην ίδια σελίδα χωρίς δεύτερο σύστημα. Το πλήρες ιστορικό και οι αναφορές παραμένουν στην Εμπορική λειτουργία.</p></div></div>
 
     <div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>
     <div id="backoffice-cash" className="backoffice-anchor"><CashControlPanel key={`cash-${version}`} api={api} store={store}/></div>
