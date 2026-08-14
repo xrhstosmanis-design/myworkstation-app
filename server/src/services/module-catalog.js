@@ -8,6 +8,7 @@ export const moduleCatalog=[
   {key:"PILOT_REPORT",name:"Αναφορά Πιλότου",description:"Ημερήσια αναφορά λειτουργίας και audit.",category:"REPORTS",commercialReady:true},
   {key:"INVENTORY",name:"Αποθήκη & Συνταγές",description:"Προϊόντα, barcode, προμηθευτές, αγορές, αποθέματα, αναλώσεις και συνταγές.",category:"OPERATIONS",commercialReady:true},
   {key:"POS",name:"MyWorkStation POS",description:"Μη φορολογικές πωλήσεις pilot, προϊόντα, πελάτες και πληρωμές. Φορολογική έκδοση μόνο μέσω Connector RBS.",category:"POS",commercialReady:true},
+  {key:"NETLINK_PREPAID",name:"Κάρτες & Προπληρωμένες Υπηρεσίες (Netlink)",description:"Πληρωμένο πρόσθετο module για προϊόντα Netlink μέσα στο ίδιο POS, με κανονική καταγραφή στον τζίρο, provider transaction audit και εκκαθάριση προμήθειας MyWorkStation.",category:"CONNECTORS",commercialReady:true,billingType:"PAID_ADDON"},
   {key:"SALES_ANALYTICS",name:"Αναλυτική Πωλήσεων",description:"Τζίρος, προϊόντα, τρόποι πληρωμής και συγκρίσεις περιόδων.",category:"REPORTS",commercialReady:true},
   {key:"SHIFT_HANDOVER",name:"Παράδοση Βάρδιας",description:"Εκκρεμότητες, προτεραιότητες και επιβεβαίωση από την επόμενη βάρδια.",category:"CONTROL",commercialReady:true},
   {key:"AI_READER",name:"AI Reader Τιμολογίων",description:"Τοπικό OCR χωρίς αυτόματη AI χρέωση, confidence ανά γραμμή και προαιρετικός χειροκίνητος επανέλεγχος όταν συνδεθεί provider.",category:"AI",commercialReady:true},
