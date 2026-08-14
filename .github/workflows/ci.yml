@@ -9,10 +9,28 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myworkstation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d myworkstation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       NODE_ENV: test
       JWT_SECRET: test-only-ci-jwt-secret-with-sufficient-length
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myworkstation_test
+      INITIAL_ADMIN_EMAIL: ci-admin@myworkstation.test
+      INITIAL_ADMIN_PASSWORD: ci-only-password-not-for-production
+      KAT_OWNER_EMAIL: ci-kat-owner@myworkstation.test
+      KAT_OWNER_NAME: CI KAT Owner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,3 +46,33 @@ jobs:
         run: npm test -w server
       - name: Build client and Prisma client
         run: npm run build
+      - name: Prepare isolated E2E database
+        run: |
+          npm run prisma:push -w server
+          npm run seed -w server
+      - name: Start real server and verify HTTP health
+        run: |
+          PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          node --input-type=module <<'NODE'
+          const url="http://127.0.0.1:8080/api/health";
+          let lastError;
+          for(let attempt=0;attempt<40;attempt++){
+            try{
+              const response=await fetch(url);
+              if(response.ok){
+                const body=await response.json();
+                if(body?.ok===true){
+                  console.log("Real HTTP health check passed",body);
+                  process.exit(0);
+                }
+              }
+            }catch(error){lastError=error}
+            await new Promise(resolve=>setTimeout(resolve,500));
+          }
+          console.error("Server did not become healthy",lastError);
+          process.exit(1);
+          NODE
+          cat /tmp/myworkstation-e2e-server.log
