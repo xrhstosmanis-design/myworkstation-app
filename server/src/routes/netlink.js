@@ -48,24 +48,28 @@ router.post("/prepare",async(req,res,next)=>{
   }
 });
 
-const executeSchema=z.object({storeId:z.string().min(1),productId:z.string().min(1),payload:z.record(z.any()).default({}),confirmation:z.record(z.any()).optional(),requestId:z.string().min(6).max(100),paymentMethod:z.enum(["CASH","CARD","IRIS","MIXED"]).optional(),saleId:z.string().min(1).optional()});
+const executeSchema=z.object({storeId:z.string().min(1),productId:z.string().min(1),payload:z.record(z.any()).default({}),confirmation:z.record(z.any()).optional(),requestId:z.string().min(6).max(100),paymentMethod:z.enum(["CASH","CARD","IRIS","MIXED"]).optional(),saleId:z.string().min(1)});
 router.post("/execute",async(req,res,next)=>{
   let ledgerId=null;
   try{
     if(process.env.NETLINK_ENABLE_EXECUTE!=="true")return res.status(409).json({error:"Η πραγματική εκτέλεση Netlink παραμένει κλειδωμένη μέχρι να ολοκληρωθεί η σύνδεση με την κανονική πώληση POS.",code:"NETLINK_EXECUTE_LOCKED"});
     const body=executeSchema.parse(req.body||{});await storeFor(req,body.storeId);
-    if(!body.saleId)return res.status(400).json({error:"Η Netlink συναλλαγή πρέπει να συνδέεται με κανονική πώληση POS.",code:"NETLINK_SALE_REQUIRED"});
-    const sales=await prisma.$queryRaw`SELECT "id","storeId","companyId","total","status" FROM "Sale" WHERE "id"=${body.saleId} AND "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} LIMIT 1`;
-    if(!sales[0])return res.status(404).json({error:"Δεν βρέθηκε η συνδεδεμένη πώληση POS."});
+    const sales=await prisma.$queryRaw`SELECT "id","storeId","companyId","total","status","occurredAt" FROM "Sale" WHERE "id"=${body.saleId} AND "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const sale=sales[0];
+    if(!sale)return res.status(404).json({error:"Δεν βρέθηκε η συνδεδεμένη πώληση POS."});
+    if(String(sale.status)!=="COMPLETED")return res.status(409).json({error:"Η Netlink εκτέλεση επιτρέπεται μόνο αφού ολοκληρωθεί η κανονική πώληση POS.",code:"NETLINK_POS_SALE_NOT_COMPLETED"});
+    const existing=await prisma.$queryRaw`SELECT "id","status","providerTransactionId","amount" FROM "NetlinkTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${body.storeId} AND "requestId"=${body.requestId} LIMIT 1`;
+    if(existing[0])return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη καταχωρηθεί.",code:"NETLINK_DUPLICATE_REQUEST",transaction:existing[0]});
     ledgerId=crypto.randomUUID();
     await prisma.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","saleId","requestId","productId","flow","status","paymentMethod","operatorId","operatorName") VALUES (${ledgerId},${req.user.companyId},${body.storeId},${body.saleId},${body.requestId},${body.productId},'EXECUTE','EXECUTING',${body.paymentMethod||null},${req.user.id||null},${req.user.fullName||null})`;
     const result=await netlinkClient().execute(body.productId,{requestId:body.requestId,payload:body.payload,confirmation:body.confirmation});
-    const amount=txAmount(result),providerTransactionId=txId(result),reference=txReference(result),commissionAmount=money(amount*commissionRate);
-    await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='COMPLETED',"providerTransactionId"=${providerTransactionId},"providerReference"=${reference},"amount"=${amount},"commissionRate"=${commissionRate},"commissionAmount"=${commissionAmount},"completedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${ledgerId}`;
-    res.json({requestId:body.requestId,transactionLedgerId:ledgerId,commission:{rate:commissionRate,amount:commissionAmount},result});
+    const amount=txAmount(result),providerTransactionId=txId(result),reference=txReference(result),commissionAmount=money(amount*commissionRate),saleTotal=money(sale.total);
+    const amountNeedsReview=amount>saleTotal+0.01;
+    await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"=${amountNeedsReview?'AMOUNT_REVIEW':'COMPLETED'},"providerTransactionId"=${providerTransactionId},"providerReference"=${reference},"amount"=${amount},"commissionRate"=${commissionRate},"commissionAmount"=${commissionAmount},"completedAt"=NOW(),"updatedAt"=NOW(),"errorCode"=${amountNeedsReview?'PROVIDER_AMOUNT_EXCEEDS_SALE':null},"errorMessage"=${amountNeedsReview?`Netlink ${amount.toFixed(2)} > POS sale ${saleTotal.toFixed(2)}`:null} WHERE "id"=${ledgerId}`;
+    res.json({requestId:body.requestId,transactionLedgerId:ledgerId,status:amountNeedsReview?"AMOUNT_REVIEW":"COMPLETED",saleId:body.saleId,saleTotal,commission:{rate:commissionRate,amount:commissionAmount},result});
   }catch(error){
     if(ledgerId)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='FAILED',"errorCode"=${error.code||null},"errorMessage"=${String(error.message||"Netlink error").slice(0,500)},"updatedAt"=NOW() WHERE "id"=${ledgerId}`.catch(()=>{});
-    if(error?.code==="P2002")return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη καταχωρηθεί.",code:"NETLINK_DUPLICATE_REQUEST"});
+    if(error?.code==="P2002"||error?.code==="23505")return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη καταχωρηθεί.",code:"NETLINK_DUPLICATE_REQUEST"});
     next(error);
   }
 });
@@ -74,7 +78,7 @@ router.get("/transactions",async(req,res,next)=>{
   try{
     const query=z.object({storeId:z.string().optional(),limit:z.coerce.number().int().min(1).max(500).default(100)}).parse(req.query);
     if(query.storeId)await storeFor(req,query.storeId);
-    const rows=await prisma.$queryRaw`SELECT "id","storeId","saleId","requestId","productId","flow","status","providerTransactionId","providerReference","amount","commissionRate","commissionAmount","paymentMethod","operatorName","preparedAt","completedAt","createdAt" FROM "NetlinkTransaction" WHERE "companyId"=${req.user.companyId} AND (${query.storeId||null}::text IS NULL OR "storeId"=${query.storeId||null}) ORDER BY "createdAt" DESC LIMIT ${query.limit}`;
+    const rows=await prisma.$queryRaw`SELECT "id","storeId","saleId","requestId","productId","flow","status","providerTransactionId","providerReference","amount","commissionRate","commissionAmount","paymentMethod","operatorName","preparedAt","completedAt","createdAt","errorCode","errorMessage" FROM "NetlinkTransaction" WHERE "companyId"=${req.user.companyId} AND (${query.storeId||null}::text IS NULL OR "storeId"=${query.storeId||null}) ORDER BY "createdAt" DESC LIMIT ${query.limit}`;
     res.json({items:rows.map(row=>({...row,amount:row.amount===null?null:money(row.amount),commissionRate:Number(row.commissionRate||commissionRate),commissionAmount:row.commissionAmount===null?null:money(row.commissionAmount)}))});
   }catch(error){next(error)}
 });
