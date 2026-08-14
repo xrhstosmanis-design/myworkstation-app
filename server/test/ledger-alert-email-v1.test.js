@@ -6,13 +6,14 @@ const route=fs.readFileSync(new URL("../src/routes/store-transactions.js",import
 const mail=fs.readFileSync(new URL("../src/services/mail.js",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../../client/src/components/store/StoreTransactionsPanel.jsx",import.meta.url),"utf8");
 
-test("percentages replace cash transfer and trigger a scoped email alert",()=>{
+test("percentages keep the scoped backend alert but are not an entry control in the active-shift view",()=>{
   assert.match(route,/type:z\.enum\(\["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES"\]\)/);
   assert.match(route,/body\.type==="PERCENTAGES"\?await notifyLedgerAlert/);
   assert.match(route,/companyId,role:"OWNER"/);
   assert.match(route,/store\.responsibleEmail/);
   assert.doesNotMatch(ui,/Μεταφορά ποσού/);
-  assert.match(ui,/id:"PERCENTAGES",label:"Ποσοστά"/);
+  assert.doesNotMatch(ui,/id:"PERCENTAGES",label:"Ποσοστά"/);
+  assert.match(ui,/Κινήσεις ενεργής βάρδιας/);
 });
 
 test("every reversal is persisted before its email is attempted",()=>{
