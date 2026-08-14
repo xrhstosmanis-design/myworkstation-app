@@ -68,9 +68,12 @@ test("shift close requires real physical drawer count before the existing close 
   assert.match(closeUi,/\/api\/cash\/sessions\/\$\{data\.openSession\.id\}\/close/);
 });
 
-test("My Payments remains limited to supplier payments and other expenses",()=>{
+test("My Payments remains limited to the current operator payments and expenses of the active shift",()=>{
   assert.match(myPayments,/new Set\(\["SUPPLIER_PAYMENT","OTHER_EXPENSE"\]\)/);
-  assert.match(myPayments,/filter\(row=>paymentTypes\.has\(row\.type\)\)/);
+  assert.match(myPayments,/const sessionId=result\.openSession\?\.id/);
+  assert.match(myPayments,/paymentTypes\.has\(row\.type\)&&row\.sessionId===sessionId/);
+  assert.match(myPayments,/operator\?\.fullName/);
+  assert.match(myPayments,/String\(row\.actorName\|\|""\)\.trim\(\)===own/);
   assert.match(myPayments,/Οι πληρωμές μου/);
   assert.match(myPayments,/Χωρίς παραστατικό · πλήρες audit/);
 });
