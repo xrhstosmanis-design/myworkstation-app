@@ -102,11 +102,16 @@ function evidenceLabel(row){
   if(row.evidenceMode==="LEGACY_PHOTO")return `<button data-op-photo="${esc(row.id)}">Προβολή φωτογραφίας</button>`;
   return "Χωρίς παραστατικό";
 }
+function shiftAudit(row){
+  const shift=row.sessionId?`#${esc(String(row.sessionId).slice(0,8))}`:"—";
+  const source=row.paymentSource==="CASH_SHIFT"?"Από βάρδια":"Εξωτερική";
+  return `<b>${shift}</b><small>${source}</small>`;
+}
 function movementsHtml(report){
   const rows=report?.movements||[];
   return `<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Όλες οι κινήσεις</h3><small>${rows.length} εγγραφές · εμφανίζονται ενεργές και ακυρωμένες για πλήρες audit.</small></div>
-    <div class="owner-payments-table movements"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Τύπος</span><span>Προμηθευτής / περιγραφή</span><span>Ποσό</span><span>Χειριστής</span><span>Πηγή</span><span>Παραστατικό</span><span>Κατάσταση</span></div>
-    ${rows.map(row=>`<div class="row ${row.reversedAt?"reversed":""}"><span>${esc(fmt(row.occurredAt))}<small>#${esc(String(row.id).slice(0,8))}</small></span><span>${esc(row.storeName)}</span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτής":"Λοιπό έξοδο"}</span><span><b>${esc(row.supplierName||row.description||"Χωρίς περιγραφή")}</b>${row.supplierName&&row.description?`<small>${esc(row.description)}</small>`:""}</span><strong>${money(row.amount)}</strong><span>${esc(row.actorName)}</span><span>${row.paymentSource==="CASH_SHIFT"?"Από βάρδια":"Εξωτερική"}</span><span>${evidenceLabel(row)}</span><span class="${row.reversedAt?"bad":"ok"}">${row.reversedAt?`ΑΚΥΡΩΜΕΝΗ${row.reversalReason?`<small>${esc(row.reversalReason)}</small>`:""}`:"ΕΝΕΡΓΗ"}</span></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κινήσεις για τα κριτήρια.</div>'}</div></section>`;
+    <div class="owner-payments-table movements"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Τύπος</span><span>Προμηθευτής / περιγραφή</span><span>Ποσό</span><span>Χειριστής</span><span>Βάρδια / Πηγή</span><span>Παραστατικό</span><span>Κατάσταση</span></div>
+    ${rows.map(row=>`<div class="row ${row.reversedAt?"reversed":""}"><span>${esc(fmt(row.occurredAt))}<small>#${esc(String(row.id).slice(0,8))}</small></span><span>${esc(row.storeName)}</span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτής":"Λοιπό έξοδο"}</span><span><b>${esc(row.supplierName||row.description||"Χωρίς περιγραφή")}</b>${row.supplierName&&row.description?`<small>${esc(row.description)}</small>`:""}</span><strong>${money(row.amount)}</strong><span>${esc(row.actorName)}</span><span>${shiftAudit(row)}</span><span>${evidenceLabel(row)}</span><span class="${row.reversedAt?"bad":"ok"}">${row.reversedAt?`ΑΚΥΡΩΜΕΝΗ${row.reversalReason?`<small>${esc(row.reversalReason)}</small>`:""}`:"ΕΝΕΡΓΗ"}</span></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κινήσεις για τα κριτήρια.</div>'}</div></section>`;
 }
 function alertsHtml(report){
   const rows=report?.movements||[],s=report?.summary||{},avg=number(s.averageExpense);
@@ -148,10 +153,10 @@ function setRange(id){
 }
 function exportCsv(){
   const rows=state.report?.movements||[];
-  const lines=[["Ημερομηνία","Κατάστημα","Τύπος","Προμηθευτής","Περιγραφή","Ποσό","Χειριστής","Πηγή πληρωμής","Παραστατικό","Κατάσταση"]];
+  const lines=[["Ημερομηνία","Κατάστημα","Τύπος","Προμηθευτής","Περιγραφή","Ποσό","Χειριστής","Βάρδια","Πηγή πληρωμής","Παραστατικό","Κατάσταση"]];
   for(const row of rows){
     const evidence=row.evidenceMode==="DOCUMENT"?`AI Reader ${row.purchaseDocumentId||""}`:row.evidenceMode==="LEGACY_PHOTO"?"Φωτογραφία":"Χωρίς παραστατικό";
-    lines.push([fmt(row.occurredAt),row.storeName,row.type,row.supplierName||"",row.description||"",number(row.amount).toFixed(2),row.actorName,row.paymentSource==="CASH_SHIFT"?"ΑΠΟ ΒΑΡΔΙΑ":"ΕΞΩΤΕΡΙΚΗ",evidence,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"]);
+    lines.push([fmt(row.occurredAt),row.storeName,row.type,row.supplierName||"",row.description||"",number(row.amount).toFixed(2),row.actorName,row.sessionId||"",row.paymentSource==="CASH_SHIFT"?"ΑΠΟ ΒΑΡΔΙΑ":"ΕΞΩΤΕΡΙΚΗ",evidence,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"]);
   }
   const csv="\ufeff"+lines.map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(";")).join("\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
