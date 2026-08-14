@@ -53,6 +53,8 @@ import commerceV1Routes from "./routes/commerce-v1.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
 import connectorObserverRoutes from "./routes/connector-observer.js";
+import netlinkRoutes from "./routes/netlink.js";
+import netlinkConfigRoutes from "./routes/netlink-config.js";
 import ownerPriceBulkPreviewRoutes from "./routes/owner-price-bulk-preview.js";
 import ownerProductRoutes from "./routes/owner-products.js";
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
@@ -80,6 +82,7 @@ import { ensureOwnerProductSchema } from "./owner-product-bootstrap.js";
 import { ensureProductDeliverySchema } from "./product-delivery-bootstrap.js";
 import { ensurePosPricingSchema } from "./pos-pricing-bootstrap.js";
 import { ensurePosSaleSafetySchema } from "./pos-sale-safety.js";
+import { ensureNetlinkSchema } from "./netlink-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -151,11 +154,13 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),connectorObserverRoutes);
+app.use("/api/netlink",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkRoutes);
+app.use("/api/netlink-config",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkConfigRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
 app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureNetlinkSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));

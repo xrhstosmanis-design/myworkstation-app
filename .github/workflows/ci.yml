@@ -31,6 +31,9 @@ jobs:
       INITIAL_ADMIN_PASSWORD: ci-only-password-not-for-production
       KAT_OWNER_EMAIL: ci-kat-owner@myworkstation.test
       KAT_OWNER_NAME: CI KAT Owner
+      NETLINK_TEST_MODE: "true"
+      NETLINK_MOCK_PROVIDER: "true"
+      NETLINK_ENABLE_EXECUTE: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,4 +89,5 @@ jobs:
           node server/e2e/operator-shift-close-audit-flow.mjs
           node server/e2e/eftpos-shift-close-flow.mjs
           node server/e2e/pos-to-shift-backoffice-flow.mjs
+          node server/e2e/netlink-test-mode-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
