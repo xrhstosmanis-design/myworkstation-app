@@ -14,16 +14,18 @@ test("Super Admin exposes an explicit full Backoffice entry for every selected s
   assert.match(platformRoutes,/destination:z\.enum\(\["ALL","BACKOFFICE","SHIFTS","CASH_CONTROL"\]\)/);
 });
 
-test("customer Backoffice unifies the active operational modules without duplicating routes",()=>{
-  for(const label of ["Χειριστές","Πωλήσεις & Πληρωμές","Βάρδιες & Ταμεία","Προϊόντα & Απόθεμα","Συσκευές","Ιστορικό"]){
-    assert.match(storeSource,new RegExp(label));
-  }
-  for(const anchor of ["backoffice-operators","backoffice-transactions","backoffice-cash","backoffice-catalog","backoffice-devices","backoffice-audit"]){
-    assert.match(storeSource,new RegExp(anchor));
-  }
-  assert.match(storeSource,/OperatorAccessPanel/);
+test("customer store front stays focused on active shift transactions and cash control",()=>{
   assert.match(storeSource,/StoreTransactionsPanel/);
   assert.match(storeSource,/CashControlPanel/);
+  assert.match(storeSource,/backoffice-transactions/);
+  assert.match(storeSource,/backoffice-cash/);
+  assert.match(storeSource,/Εμπορική λειτουργία/);
+  assert.doesNotMatch(storeSource,/OperatorAccessPanel/);
+  assert.doesNotMatch(storeSource,/backoffice-operators/);
+  assert.doesNotMatch(storeSource,/Σύνδεση δεύτερου υπολογιστή/);
+  assert.doesNotMatch(storeSource,/Demo catalog/);
+  assert.doesNotMatch(storeSource,/Συσκευές καταστήματος/);
+  assert.doesNotMatch(storeSource,/Τελευταίες cloud ενέργειες/);
 });
 
 test("Backoffice navigation preserves the current visual system and responsive behavior",()=>{
