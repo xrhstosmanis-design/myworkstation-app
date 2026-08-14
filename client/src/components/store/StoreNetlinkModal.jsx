@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {CreditCard,RefreshCw,X} from "lucide-react";
+import "./store-netlink.css";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const groupsFromMenu=menu=>{
