@@ -77,7 +77,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά για audit.
 
-Στο productLines επέστρεψε ΜΟΝΟ τις πραγματικές γραμμές ειδών/προϊόντων του πίνακα του τιμολογίου. ΜΗΝ βάλεις κεφαλίδες, στοιχεία πελάτη/προμηθευτή, ΑΦΜ, ημερομηνίες, IBAN/τράπεζες, υποσύνολα, ΦΠΑ, σύνολα, πληρωτέο, ΕΙΣΠΡΑΞΗ ή λοιπές πληροφοριακές γραμμές. Για κάθε πραγματικό είδος διάβασε από τις αντίστοιχες στήλες: κωδικό είδους, barcode αν υπάρχει, καθαρή περιγραφή, ποσότητα, μονάδα μέτρησης, τεμάχια ανά συσκευασία αν αναγράφονται, καθαρή τιμή μονάδας, καθαρή αξία γραμμής, ποσοστό ΦΠΑ και τελική αξία γραμμής. Μην χρησιμοποιείς αριθμούς που ανήκουν στην περιγραφή/συσκευασία (π.χ. 0,33L, 500ML, 6x330ml) ως τιμή ή ποσότητα. Αν ένα πεδίο δεν διαβάζεται πραγματικά, βάλε 0 ή κενό string αντί να μαντέψεις. Το rawText κάθε productLine να είναι η ορατή γραμμή/γραμμές του συγκεκριμένου είδους. Το aiConfidence και confidence είναι ποσοστά 0-100.
+Στο productLines επέστρεψε ΜΟΝΟ τις πραγματικές γραμμές ειδών/προϊόντων του πίνακα του τιμολογίου. ΜΗΝ βάλεις κεφαλίδες, στοιχεία πελάτη/προμηθευτή, ΑΦΜ, ημερομηνίες, IBAN/τράπεζες, υποσύνολα, ΦΠΑ, σύνολα, πληρωτέο, ΕΙΣΠΡΑΞΗ ή λοιπές πληροφοριακές γραμμές. Για κάθε πραγματικό είδος διάβασε ΥΠΟΧΡΕΩΤΙΚΑ από τις σωστές στήλες: code=κωδικός είδους ΜΟΝΟ, description=ονομασία ΜΟΝΟ χωρίς τον κωδικό, quantity=ποσότητα της γραμμής, unit=μονάδα μέτρησης, unitsPerPackage=τεμάχια ανά συσκευασία αν αναγράφονται, unitCost=καθαρή τιμή μονάδας, netAmount=καθαρή αξία γραμμής, vatRate=ποσοστό ΦΠΑ, grossAmount=τελική αξία γραμμής. Μην χρησιμοποιείς αριθμούς που ανήκουν στην περιγραφή/συσκευασία (π.χ. 0,33L, 500ML, 6x330ml) ως τιμή ή ποσότητα. Μην βάζεις αυθαίρετα quantity=1: αν η ποσότητα δεν διαβάζεται καθαρά βάλε 0. Αν unitCost δεν διαβάζεται αλλά quantity>0 και netAmount>0, υπολόγισε unitCost=netAmount/quantity. Αν grossAmount δεν διαβάζεται αλλά netAmount και vatRate υπάρχουν, υπολόγισε grossAmount=netAmount*(1+vatRate/100). Αν ένα πεδίο πραγματικά δεν διαβάζεται και δεν μπορεί να υπολογιστεί με ασφάλεια, βάλε 0 ή κενό string αντί να μαντέψεις. Το rawText κάθε productLine να είναι η ορατή γραμμή/γραμμές του συγκεκριμένου είδους. Το aiConfidence και confidence είναι ποσοστά 0-100.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):
 ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
@@ -87,16 +87,26 @@ ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
     const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
-    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500):[];
+    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(line=>{
+      const quantity=Math.max(0,Number(line.quantity||0));
+      const netAmount=Math.max(0,Number(line.netAmount||0));
+      let unitCost=Math.max(0,Number(line.unitCost||0));
+      if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
+      const vatRate=Math.max(0,Number(line.vatRate||0));
+      let grossAmount=Math.max(0,Number(line.grossAmount||0));
+      if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
+      return {...line,code:String(line.code||"").trim(),description:String(line.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unitCost,netAmount,vatRate,grossAmount};
+    }):[];
     parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
     if(parsed.productLines.length){
       parsed.lines=parsed.productLines.map(line=>{
-        const code=String(line.code||line.barcode||"").trim();
         const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim();
-        const quantity=Math.max(0,Number(line.quantity||0))||1;
+        const quantity=Math.max(0,Number(line.quantity||0));
         const unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ";
         const unitCost=Math.max(0,Number(line.unitCost||0));
-        return {text:[code,description,`${quantity} ${unit}`,decimalText(unitCost)].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))};
+        const quantityText=quantity>0?`${quantity} ${unit}`:"";
+        const priceText=unitCost>0?decimalText(unitCost):"";
+        return {text:[description,quantityText,priceText].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))};
       });
     }else{
       parsed.lines=[];
