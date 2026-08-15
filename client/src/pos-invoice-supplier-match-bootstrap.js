@@ -3,15 +3,13 @@ const stop=new Set(['ΑΕ','Α','Ε','ΙΚΕ','ΜΟΝ','ΕΠΕ','ΟΕ','ΕΕ','B
 const tokens=s=>norm(s).split(' ').filter(x=>x.length>=3&&!stop.has(x));
 const setNative=(el,value)=>{const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;if(set)set.call(el,value);else el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));};
 function scoreNames(a,b){const A=tokens(a),B=tokens(b);if(!A.length||!B.length)return 0;const sa=new Set(A),sb=new Set(B);let common=0;for(const x of sa)if(sb.has(x))common++;const contain=norm(a).includes(norm(b))||norm(b).includes(norm(a));return contain?1:common/Math.min(sa.size,sb.size);}
-function tryMatch(panel){
-  const box=panel.querySelector('.mws-new-supplier');
-  if(!box||box.style.display==='none')return;
+function findExisting(panel){
   const candidate=panel.querySelector('.mws-sup-name')?.value?.trim()||'';
   const tax=(panel.querySelector('.mws-sup-tax')?.value||'').replace(/\D/g,'');
-  if(!candidate&&!tax)return;
+  if(!candidate&&!tax)return null;
   const form=panel.closest('.pos-payment-form');
   const select=form?.querySelector('select');
-  if(!select)return;
+  if(!select)return null;
   let best=null,bestScore=0;
   for(const option of [...select.options]){
     if(!option.value)continue;
@@ -21,14 +19,43 @@ function tryMatch(panel){
     const score=scoreNames(candidate,text);
     if(score>bestScore){best=option;bestScore=score;}
   }
-  if(best&&bestScore>=0.5){
-    setNative(select,best.value);
-    box.style.display='none';
-    const status=panel.querySelector('.mws-invoice-status');
-    if(status){const current=status.innerHTML;status.innerHTML=current.replace(/Προμηθευτής:\s*<b>.*?<\/b>/i,`Προμηθευτής: <b>${best.textContent}</b>`);}
-    panel.dataset.mwsExistingSupplierMatch=best.value;
+  return best&&bestScore>=0.67?{option:best,score:bestScore,select}:null;
+}
+function applyMatch(panel,match){
+  if(!match)return false;
+  setNative(match.select,match.option.value);
+  const box=panel.querySelector('.mws-new-supplier');
+  if(box)box.style.display='none';
+  const status=panel.querySelector('.mws-invoice-status');
+  if(status){
+    const current=status.innerHTML||status.textContent||'';
+    if(/Προμηθευτής:/i.test(current))status.innerHTML=current.replace(/Προμηθευτής:\s*<b>.*?<\/b>/i,`Προμηθευτής: <b>${match.option.textContent}</b>`);
+    else status.innerHTML=`Βρέθηκε υπάρχων προμηθευτής στο BackOffice: <b>${match.option.textContent}</b>`;
   }
+  panel.dataset.mwsExistingSupplierMatch=match.option.value;
+  return true;
+}
+function tryMatch(panel){
+  const box=panel.querySelector('.mws-new-supplier');
+  if(!box||box.style.display==='none')return;
+  applyMatch(panel,findExisting(panel));
 }
 function scan(){document.querySelectorAll('.pos-invoice-scan-v2').forEach(tryMatch)}
-new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true});
-setInterval(scan,500);scan();
+
+// Final duplicate guard: even if the candidate box is still visible for a moment,
+// never create a second supplier when the OCR name already matches an existing option.
+document.addEventListener('click',event=>{
+  const button=event.target?.closest?.('.mws-save-supplier');
+  if(!button)return;
+  const panel=button.closest('.pos-invoice-scan-v2');
+  if(!panel)return;
+  const match=findExisting(panel);
+  if(!match)return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  applyMatch(panel,match);
+},{capture:true});
+
+new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+setInterval(scan,750);scan();
