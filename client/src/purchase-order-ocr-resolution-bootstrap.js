@@ -4,6 +4,9 @@ const user=()=>{try{return JSON.parse(localStorage.getItem("user")||"null")}catc
 const headers=()=>{const token=localStorage.getItem("token");return {"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}};
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+const nonProductPattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΩΡΑ|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|EMAIL|URL|IBAN|ΠΕΛΑΤ|ΣΤΟΙΧΕΙΑ|ΚΩΔΙΚΟΣ|ΣΕΙΡΑ|ΑΡΙΘΜΟΣ|ΣΥΝΟΛΟ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ|ΚΑΘΑΡΗ|ΑΞΙΑΦΠΑ|ΦΠΑ|VAT|ΑΞΙΑΠΡΟΕΚΠΤ|ΕΚΠΤΩΣΗ|ΕΚΠΤΩΣΗΕΙΔΩΝ|ΣΥΝΟΛΟΕΚΠΤΩΣΗΣ|DISCOUNT|ΕΠΙΒΑΡΥΝΣΗ|ΜΕΤΑΦΟΡΙΚΑ|ΠΑΡΑΤΗΡΗΣ|ΑΝΑΛΥΣΗΦΠΑ|ΣΥΝΟΛΟΠΟΣΟΤΗΤΩΝ)/;
+const isProductRow=row=>row?.ocrLineType==="PRODUCT"&&!nonProductPattern.test(norm(row.ocrRawText||row.description||""));
 let lastOrderId=null;
 
 async function api(path,options={}){
@@ -42,12 +45,13 @@ function lineStatus(row){
 }
 
 function renderPanel(panel,data){
-  const rows=(data.rows||[]).filter(row=>row.ocrLineType==="PRODUCT");
-  panel.dataset.unresolved=String(data.unresolved||0);
+  const rows=(data.rows||[]).filter(isProductRow);
+  const unresolved=rows.filter(row=>row.resolutionStatus==="UNRESOLVED").length;
+  panel.dataset.unresolved=String(unresolved);
   panel.innerHTML=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-      <div><h3 style="margin:0 0 4px">Έλεγχος γραμμών τιμολογίου</h3><small>Εμφανίζονται μόνο οι πραγματικές γραμμές ειδών του τιμολογίου. Κεφαλίδες, στοιχεία πελάτη, τράπεζες, IBAN, URL και λοιπές πληροφοριακές γραμμές δεν εμφανίζονται και δεν επηρεάζουν stock.</small></div>
-      <div style="font-weight:900;${data.unresolved?"color:#a75d00":"color:#14733c"}">${data.unresolved?`${data.unresolved} άλυτες γραμμές`:`✓ Όλες οι γραμμές προϊόντων ελέγχθηκαν`}</div>
+      <div><h3 style="margin:0 0 4px">Έλεγχος γραμμών τιμολογίου</h3><small>Εμφανίζονται μόνο οι πραγματικές γραμμές ειδών του τιμολογίου. Κεφαλίδες, στοιχεία πελάτη, οικονομικά σύνολα, εκπτώσεις, ΦΠΑ και λοιπές πληροφοριακές γραμμές δεν εμφανίζονται και δεν επηρεάζουν stock.</small></div>
+      <div style="font-weight:900;${unresolved?"color:#a75d00":"color:#14733c"}">${unresolved?`${unresolved} άλυτες γραμμές`:`✓ Όλες οι γραμμές προϊόντων ελέγχθηκαν`}</div>
     </div>
     <div style="display:grid;gap:7px">${rows.map(row=>`
       <article data-ocr-line="${esc(row.id)}" style="border:1px solid ${row.resolutionStatus==='UNRESOLVED'?'#e3b34f':'#dce5e2'};border-radius:10px;padding:9px;background:${row.resolutionStatus==='UNRESOLVED'?'#fffaf0':'#fff'}">
@@ -111,7 +115,7 @@ async function openSearch(modal,panel,orderId,line){
 }
 
 function bindPanel(modal,panel,orderId,data){
-  const byId=new Map((data.rows||[]).filter(row=>row.ocrLineType==="PRODUCT").map(row=>[row.id,row]));
+  const byId=new Map((data.rows||[]).filter(isProductRow).map(row=>[row.id,row]));
   panel.querySelectorAll("[data-ocr-search]").forEach(btn=>btn.onclick=()=>openSearch(modal,panel,orderId,byId.get(btn.dataset.ocrSearch)));
   panel.querySelectorAll("[data-ocr-new]").forEach(btn=>btn.onclick=async()=>{const line=byId.get(btn.dataset.ocrNew);try{await createProduct(orderId,line);await refreshPanel(modal,panel,orderId)}catch(error){alert(error.message)}});
 }
