@@ -73,6 +73,16 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη${duplicate.storeName?` στο ${duplicate.storeName}`:""} (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
 
+      let shift=null;
+      if(body.settlementMode==="PAID"){
+        const shifts=await tx.$queryRaw`
+          SELECT "id" FROM "CashShiftSession"
+          WHERE "companyId"=${req.user.companyId} AND "storeId"=${job.storeId} AND "status"='OPEN'
+          ORDER BY "openedAt" DESC LIMIT 1 FOR UPDATE`;
+        shift=shifts[0]||null;
+        if(!shift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Πληρωμένο με μετρητά τιμολόγιο δεν μπορεί να καταχωρηθεί χωρίς ενεργή βάρδια.");error.status=409;throw error;}
+      }
+
       const documentId=id();
       await tx.$executeRaw`
         INSERT INTO "PurchaseDocument" (
@@ -91,9 +101,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
             "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName",
             "subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
           ) VALUES (
-            ${paymentTransactionId},${req.user.companyId},${job.storeId},NULL,'SUPPLIER_PAYMENT',${body.totalGross},
-            ${body.note||`Πληρωμένο τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},
-            false,${req.user.id},${req.user.fullName||"Χειριστής"},NULL,'application/vnd.myworkstation.purchase-document',${documentId},
+            ${paymentTransactionId},${req.user.companyId},${job.storeId},${shift.id},'SUPPLIER_PAYMENT',${body.totalGross},
+            ${body.note||`Πληρωμένο με μετρητά τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},
+            true,${req.user.id},${req.user.fullName||"Χειριστής"},NULL,'application/vnd.myworkstation.purchase-document',${documentId},
             ${crypto.createHash("sha256").update(`invoice:${documentId}`).digest("hex")}
           )`;
         await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=${paymentTransactionId} WHERE "id"=${documentId}`;
@@ -112,12 +122,12 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       settlementMode:body.settlementMode,
       paymentRecorded:Boolean(result.paymentTransactionId),
       paymentTransactionId:result.paymentTransactionId,
-      subtractFromShift:false,
+      subtractFromShift:body.settlementMode==="PAID",
       stockUpdated:false,
       awaitingApproval:true,
       message:body.settlementMode==="PAID"
-        ?"Το τιμολόγιο καταχωρίστηκε ως πληρωμένο και στάλθηκε για έλεγχο. Δεν αφαιρέθηκε ποσό από τη βάρδια."
-        :"Το τιμολόγιο καταχωρίστηκε με πίστωση και στάλθηκε για έλεγχο. Δεν δημιουργήθηκε πληρωμή και δεν αφαιρέθηκε ποσό από τη βάρδια."
+        ?"Το τιμολόγιο καταχωρίστηκε ως πληρωμένο με μετρητά, αφαιρέθηκε από την ενεργή βάρδια και στάλθηκε στις Παραγγελίες & Αγορές για έλεγχο. Η αποθήκη δεν ενημερώθηκε ακόμη."
+        :"Το τιμολόγιο καταχωρίστηκε με πίστωση και στάλθηκε στις Παραγγελίες & Αγορές για έλεγχο. Δεν δημιουργήθηκε πληρωμή και δεν αφαιρέθηκε ποσό από τη βάρδια."
     });
   }catch(error){next(error)}
 });
