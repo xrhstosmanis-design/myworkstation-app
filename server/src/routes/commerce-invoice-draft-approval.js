@@ -6,6 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
+const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 
 function canApprove(req){
   return req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
@@ -20,6 +21,30 @@ const lineSchema=z.object({
   unitCost:z.coerce.number().min(0),
   vatRate:z.coerce.number().min(0).max(100)
 });
+
+async function findDuplicateInvoice(tx,{companyId,supplierId,documentNumber}){
+  const normalized=normalizeDocumentNumber(documentNumber);
+  if(!supplierId||!normalized)return null;
+  const docs=await tx.$queryRaw`
+    SELECT d."id",d."status",d."documentNumber",d."documentDate",st."name" AS "storeName"
+    FROM "PurchaseDocument" d
+    LEFT JOIN "Store" st ON st."id"=d."storeId"
+    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
+      AND d."status" IN ('DRAFT','APPROVED')
+      AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${normalized}
+    ORDER BY d."documentDate" DESC LIMIT 1`;
+  if(docs[0])return {source:"PURCHASE_DOCUMENT",...docs[0]};
+  const orders=await tx.$queryRaw`
+    SELECT o."id",o."status",o."invoiceNumber" AS "documentNumber",o."createdAt" AS "documentDate",st."name" AS "storeName"
+    FROM "PurchaseOrder" o
+    LEFT JOIN "Store" st ON st."id"=o."storeId"
+    WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
+      AND o."status" IN ('NEW','FINAL','INVOICED')
+      AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${normalized}
+    ORDER BY o."updatedAt" DESC LIMIT 1`;
+  if(orders[0])return {source:"PURCHASE_ORDER",...orders[0]};
+  return null;
+}
 
 router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -43,6 +68,12 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
     await prisma.$transaction(async tx=>{
       const locked=await tx.$queryRaw`SELECT "status" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       if(["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0]?.status)){const error=new Error("Η ανάγνωση έχει ήδη σταλεί για έλεγχο ή εγκριθεί.");error.status=409;throw error}
+      const duplicate=await findDuplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
+      if(duplicate){
+        const error=new Error(`Το τιμολόγιο ${body.documentNumber} έχει ήδη καταχωρηθεί${duplicate.storeName?` στο ${duplicate.storeName}`:""} (${duplicate.status}). Δεν δημιουργήθηκε δεύτερο πρόχειρο παραστατικό.`);
+        error.status=409;
+        throw error;
+      }
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId") VALUES (${docId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber||null},${body.documentDate||new Date()},${totals.net},${totals.vat},${totals.gross},'OCR_DRAFT','DRAFT',${req.user.id})`;
       for(const item of body.lines){
         const net=item.quantity*item.unitCost,vat=net*item.vatRate/100;
