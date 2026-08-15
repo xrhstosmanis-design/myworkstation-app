@@ -61,7 +61,7 @@ function allOcrRows(resultJson){
     const upper=norm(text);
     const barcode=(text.match(/(?:^|\D)(\d{8,14})(?:\D|$)/)||[])[1]||null;
     const amounts=(text.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2,4})|\d+(?:[.,]\d{2,4})/g)||[]).map(num).filter(v=>v!==null&&v>=0);
-    const infoPattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|ΣΥΝΟΛΟ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ|ΚΑΘΑΡΗ|ΑΞΙΑΦΠΑ|ΦΠΑ|VAT|ΕΚΠΤΩΣΗ|DISCOUNT|ΜΕΤΑΦΟΡΙΚΑ|ΠΑΡΑΤΗΡΗΣ)/;
+    const infoPattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|ΣΤΟΙΧΕΙΑΠΕΛΑΤΗ|ΣΤΟΙΧΕΙΑΠΑΡΑΣΤΑΤΙΚΟΥ|ΣΥΝΟΛΟ|ΣΥΝΟΛΟΠΟΣΟΤΗΤΩΝ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ|ΚΑΘΑΡΗ|ΑΞΙΑΦΠΑ|ΦΠΑ|VAT|ΕΚΠΤΩΣΗ|ΕΚΠΤ|DISCOUNT|ΑΞΙΑΠΡΟΕΚΠΤ|ΕΠΙΒΑΡΥΝΣ|ΜΕΤΑΦΟΡΙΚΑ|ΠΑΡΑΤΗΡΗΣ|ΑΝΑΛΥΣΗΦΠΑ)/;
     const productHints=Boolean(barcode)||(/[A-Za-zΑ-Ωα-ω]/.test(text)&&amounts.length>0&&!infoPattern.test(upper));
     const lineType=productHints?"PRODUCT":"INFO";
     let description=text;
