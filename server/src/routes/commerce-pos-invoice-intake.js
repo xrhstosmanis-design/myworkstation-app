@@ -81,6 +81,22 @@ async function duplicateInvoice(tx,{companyId,supplierId,documentNumber}){
 }
 
 function candidateOcrRows(resultJson){
+  const structured=Array.isArray(resultJson?.productLines)?resultJson.productLines:[];
+  if(structured.length){
+    return structured.slice(0,500).map((entry,index)=>{
+      const quantity=Math.max(0,Number(entry?.quantity||0));
+      const netAmount=Math.max(0,Number(entry?.netAmount||0));
+      let unitCost=Math.max(0,Number(entry?.unitCost||0));
+      if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
+      const vatRate=Math.max(0,Number(entry?.vatRate||0));
+      let grossAmount=Math.max(0,Number(entry?.grossAmount||0));
+      if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
+      const code=String(entry?.code||"").trim();
+      const description=String(entry?.description||entry?.rawText||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g," ").trim();
+      const barcode=String(entry?.barcode||"").trim()||null;
+      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,vatRate,grossAmount,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
+    }).filter(row=>row.description.length>=2);
+  }
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
   const rows=[];
   for(const [index,entry] of source.entries()){
@@ -96,7 +112,7 @@ function candidateOcrRows(resultJson){
     let quantity=1;
     const qMatch=text.match(/(?:^|\s)(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:ΤΕΜ|ΤΜΧ|PCS|X|Χ)\b/i);
     if(qMatch){const q=num(qMatch[1]);if(q&&q>0)quantity=q;}
-    rows.push({sequence:index+1,text,description,barcode,unitCost,quantity,confidence:Number(entry?.confidence||0),lineType:"PRODUCT"});
+    rows.push({sequence:index+1,text,description,barcode,unitCost,quantity,confidence:Number(entry?.confidence||0),lineType:"PRODUCT",structured:false});
   }
   return rows.slice(0,500);
 }
@@ -164,9 +180,15 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
 
       const ocrRows=await matchProducts(tx,req.user.companyId,candidateOcrRows(job.resultJson||{}));
       for(const row of ocrRows){
-        const product=row.product,vatRate=product?Number(product.vatRate||0):0;
-        const quantity=Math.max(0.0001,Number(row.quantity||1)),unitCost=Math.max(0,Number(row.unitCost||0));
-        const netAmount=quantity*unitCost,vatAmount=netAmount*vatRate/100,grossAmount=netAmount+vatAmount;
+        const product=row.product;
+        const quantity=row.structured?Math.max(0,Number(row.quantity||0)):Math.max(0.0001,Number(row.quantity||1));
+        const unitCost=Math.max(0,Number(row.unitCost||0));
+        const vatRate=row.structured?Math.max(0,Number(row.vatRate||0)):(product?Number(product.vatRate||0):0);
+        const calculatedNet=quantity*unitCost;
+        const netAmount=row.structured&&Number(row.netAmount||0)>0?Math.max(0,Number(row.netAmount)):calculatedNet;
+        const structuredGross=row.structured?Math.max(0,Number(row.grossAmount||0)):0;
+        const vatAmount=structuredGross>0&&structuredGross>=netAmount?structuredGross-netAmount:netAmount*vatRate/100;
+        const grossAmount=structuredGross>0?structuredGross:netAmount+vatAmount;
         const resolutionStatus=product?"MATCHED":"UNRESOLVED";
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,0,${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT')`;
       }
@@ -195,6 +217,7 @@ router.get("/purchase-orders/:orderId/ocr-lines",requireManager,async(req,res,ne
     if(order.sourceType==="POS_OCR_DRAFT"&&order.status==="NEW"){
       for(const row of rows){
         if(row.productId||row.resolutionStatus!=="UNRESOLVED")continue;
+        if(row.ocrLineType==="PRODUCT")continue;
         if(candidateInfo(row.ocrRawText||row.description||"").candidate)continue;
         await prisma.$executeRaw`UPDATE "PurchaseOrderLine" SET "resolutionStatus"='INFO',"ocrLineType"='INFO',"unitCost"=0,"netAmount"=0,"vatAmount"=0,"grossAmount"=0,"updatedAt"=NOW() WHERE "id"=${row.id} AND "orderId"=${order.id}`;
         row.resolutionStatus="INFO";row.ocrLineType="INFO";row.unitCost=0;row.grossAmount=0;
