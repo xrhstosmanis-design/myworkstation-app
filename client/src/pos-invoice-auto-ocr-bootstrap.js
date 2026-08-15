@@ -6,7 +6,11 @@ const readJsonBody = (body) => {
 };
 
 const tokenHeaders = () => {
-  const token = localStorage.getItem("token");
+  // Store Mode/POS authenticates operators with a revocable session token in
+  // sessionStorage. BackOffice keeps its token in localStorage. Prefer the
+  // Store Operator token so capabilities/OCR use the same authenticated actor
+  // as the payment that triggered the invoice upload.
+  const token = sessionStorage.getItem("storeOperatorToken") || localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
