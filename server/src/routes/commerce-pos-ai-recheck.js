@@ -39,8 +39,11 @@ const invoiceSchema={
     aiConfidence:{type:"number",minimum:0,maximum:100},
     supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},email:{type:"string"},phone:{type:"string"},address:{type:"string"},city:{type:"string"}},required:["name","taxId","email","phone","address","city"]},
     documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},rawText:{type:"string"},
-    lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}}
-  },required:["aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines"]
+    lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}},
+    productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:{
+      rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
+    },required:["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","grossAmount","confidence"]}}
+  },required:["aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines","productLines"]
 };
 
 router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{
@@ -69,7 +72,11 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const filePart=job.mimeType==="application/pdf"
       ? {type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}
       : {type:"input_image",image_url:job.contentData,detail:"high"};
-    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Μην επιστρέψεις κενά/0 απλώς επειδή το OCR έχει λάθη: προσπάθησε να διαβάσεις οπτικά το παραστατικό. Επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά, χωρίς να παραλείψεις είδη, ποσότητες, τιμές, εκπτώσεις, ΦΠΑ, σύνολα ή πληροφοριακές γραμμές. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία. Αν κάτι πραγματικά δεν διαβάζεται, τότε μόνο άφησέ το κενό ή 0. Το aiConfidence είναι η συνολική βεβαιότητα ανάγνωσης.
+    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
+
+Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά για audit.
+
+Στο productLines επέστρεψε ΜΟΝΟ τις πραγματικές γραμμές ειδών/προϊόντων του πίνακα του τιμολογίου. ΜΗΝ βάλεις κεφαλίδες, στοιχεία πελάτη/προμηθευτή, ΑΦΜ, ημερομηνίες, IBAN/τράπεζες, υποσύνολα, ΦΠΑ, σύνολα, πληρωτέο, ΕΙΣΠΡΑΞΗ ή λοιπές πληροφοριακές γραμμές. Για κάθε πραγματικό είδος διάβασε από τις αντίστοιχες στήλες: κωδικό είδους, barcode αν υπάρχει, καθαρή περιγραφή, ποσότητα, μονάδα μέτρησης, τεμάχια ανά συσκευασία αν αναγράφονται, καθαρή τιμή μονάδας, καθαρή αξία γραμμής, ποσοστό ΦΠΑ και τελική αξία γραμμής. Μην χρησιμοποιείς αριθμούς που ανήκουν στην περιγραφή/συσκευασία (π.χ. 0,33L, 500ML, 6x330ml) ως τιμή ή ποσότητα. Αν ένα πεδίο δεν διαβάζεται πραγματικά, βάλε 0 ή κενό string αντί να μαντέψεις. Το rawText κάθε productLine να είναι η ορατή γραμμή/γραμμές του συγκεκριμένου είδους. Το aiConfidence και confidence είναι ποσοστά 0-100.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):
 ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
@@ -79,6 +86,7 @@ ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
     parsed.lines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
+    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500):[];
     parsed.rawText=parsed.rawText||parsed.lines.map(x=>x.text).join("\n")||localRawText;
     if(!parsed.lines.length&&Array.isArray(previous.lines))parsed.lines=previous.lines;
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
