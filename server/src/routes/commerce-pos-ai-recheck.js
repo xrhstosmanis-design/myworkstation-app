@@ -16,21 +16,6 @@ function outputText(response){
   return "";
 }
 
-function mergeInvoiceLines(previousLines=[],aiLines=[]){
-  const merged=[],seen=new Set();
-  const add=line=>{
-    const text=String(line?.text||"").replace(/\s+/g," ").trim();
-    if(!text)return;
-    const key=norm(text);
-    if(!key||seen.has(key))return;
-    seen.add(key);
-    merged.push({text,confidence:Math.max(0,Math.min(100,Number(line?.confidence)||0))});
-  };
-  for(const line of Array.isArray(previousLines)?previousLines:[])add(line);
-  for(const line of Array.isArray(aiLines)?aiLines:[])add(line);
-  return merged.slice(0,1000);
-}
-
 async function supplierMatch(companyId,candidate={}){
   const taxId=cleanTaxId(candidate.taxId);
   if(taxId){
@@ -84,15 +69,18 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const filePart=job.mimeType==="application/pdf"
       ? {type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}
       : {type:"input_image",image_url:job.contentData,detail:"high"};
-    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Μην επιστρέψεις κενά/0 απλώς επειδή το OCR έχει λάθη: προσπάθησε να διαβάσεις οπτικά το παραστατικό. Επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά, χωρίς να παραλείψεις είδη, ποσότητες, τιμές, εκπτώσεις, ΦΠΑ, σύνολα ή πληροφοριακές γραμμές. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία. Αν κάτι πραγματικά δεν διαβάζεται, τότε μόνο άφησέ το κενό ή 0. Το aiConfidence είναι η συνολική βεβαιότητα ανάγνωσης.\n\nΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
+    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Μην επιστρέψεις κενά/0 απλώς επειδή το OCR έχει λάθη: προσπάθησε να διαβάσεις οπτικά το παραστατικό. Επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά, χωρίς να παραλείψεις είδη, ποσότητες, τιμές, εκπτώσεις, ΦΠΑ, σύνολα ή πληροφοριακές γραμμές. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία. Αν κάτι πραγματικά δεν διαβάζεται, τότε μόνο άφησέ το κενό ή 0. Το aiConfidence είναι η συνολική βεβαιότητα ανάγνωσης.
+
+ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):
+${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
     const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error;}
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
-    const aiLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
-    parsed.lines=mergeInvoiceLines(previous.lines,aiLines);
+    parsed.lines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
     parsed.rawText=parsed.rawText||parsed.lines.map(x=>x.text).join("\n")||localRawText;
+    if(!parsed.lines.length&&Array.isArray(previous.lines))parsed.lines=previous.lines;
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     const aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
