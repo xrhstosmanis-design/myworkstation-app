@@ -1,28 +1,130 @@
 const CACHE_KEY='mws:pending-invoice-payment-v1';
 let syncTimer=null;
 const syncing=new WeakSet();
-const valueSetter=(el,value)=>{if(!el)return;const next=String(value??'');if(String(el.value??'')===next)return;const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;const set=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(set)set.call(el,next);else el.value=next;el.dispatchEvent(new Event(el instanceof HTMLSelectElement?'change':'input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))};
-const textNorm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+
+const valueSetter=(el,value)=>{
+  if(!el)return;
+  const next=String(value??'');
+  if(String(el.value??'')===next)return;
+  const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
+  const set=Object.getOwnPropertyDescriptor(proto,'value')?.set;
+  if(set)set.call(el,next);else el.value=next;
+  el.dispatchEvent(new Event(el instanceof HTMLSelectElement?'change':'input',{bubbles:true}));
+  el.dispatchEvent(new Event('change',{bubbles:true}));
+};
+
 const readCache=()=>{try{return JSON.parse(sessionStorage.getItem(CACHE_KEY)||'{}')}catch{return{}}};
 const writeCache=data=>{try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({...readCache(),...data,updatedAt:Date.now()}))}catch{}};
-function paymentRoot(panel){let node=panel;while(node&&node!==document.body){const txt=String(node.textContent||'');if(txt.includes('Πληρωμές')&&txt.includes('Πληρωμή προμηθευτή')&&txt.includes('Λοιπά έξοδα')&&txt.includes('Ποσό')&&txt.includes('Παρατηρήσεις'))return node;node=node.parentElement}return panel.closest('form')||panel.parentElement}
-function fieldNearText(root,text,selector){const wanted=textNorm(text);const targets=[...root.querySelectorAll('label,div,span,p,strong,b')].filter(el=>textNorm(el.textContent)===wanted);for(const t of targets){let node=t;for(let depth=0;depth<4&&node&&root.contains(node);depth++,node=node.parentElement){const controls=[...node.querySelectorAll(selector)].filter(el=>el!==t&&!el.disabled);if(controls.length)return controls[0]}const next=t.nextElementSibling;if(next?.matches?.(selector))return next;const n=next?.querySelector?.(selector);if(n)return n}return null}
-function outsidePanel(root,panel,selector){return [...root.querySelectorAll(selector)].filter(el=>!panel.contains(el)&&!el.disabled)}
-function findAmountInput(root,panel){const near=fieldNearText(root,'Ποσό','input');if(near&&!panel.contains(near))return near;const candidates=outsidePanel(root,panel,'input').filter(el=>!el.readOnly);const panelTop=panel.getBoundingClientRect().top;return candidates.find(el=>{const r=el.getBoundingClientRect();return r.width>180&&r.height>35&&r.top<panelTop&&r.left>root.getBoundingClientRect().left+root.getBoundingClientRect().width*.45})||candidates.find(el=>el.inputMode==='decimal'||el.type==='number')||null}
-function findNotes(root,panel){const near=fieldNearText(root,'Παρατηρήσεις','textarea');if(near&&!panel.contains(near))return near;return outsidePanel(root,panel,'textarea').find(el=>el.getBoundingClientRect().top<panel.getBoundingClientRect().top)||null}
-function findSupplierSelect(root,panel){const near=fieldNearText(root,'Προμηθευτής','select');if(near&&!panel.contains(near))return near;return outsidePanel(root,panel,'select').find(el=>el.getBoundingClientRect().top<panel.getBoundingClientRect().top)||null}
-function supplierCandidate(panel){return panel.querySelector('.mws-sup-name')?.value?.trim()||''}
-function normSupplier(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,'')}
-function isProcessing(panel){const status=String(panel.querySelector('.mws-invoice-status')?.textContent||'');return /2\/2|Αυτόματος επανέλεγχος|επανέλεγχος με AI|Διαβάζω|επεξεργασία|αναλύ|OCR.*(?:<|κάτω)/i.test(status)}
-function ensureSupplierSelected(root,panel,cached){const select=findSupplierSelect(root,panel);if(!select)return;let option=null;if(cached?.supplierValue)option=[...select.options].find(o=>String(o.value)===String(cached.supplierValue))||null;const candidate=supplierCandidate(panel)||cached?.supplier||'';if(!option&&candidate){const key=normSupplier(candidate);option=[...select.options].find(o=>o.value&&normSupplier(o.textContent)===key)||null}if(option&&select.value!==option.value)valueSetter(select,option.value);if(option)writeCache({supplier:option.textContent?.trim()||candidate,supplierValue:option.value})}
-function parseTotalRaw(raw){raw=String(raw||'').trim();if(!raw)return'';const normalized=raw.replace(/\s/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.]/g,'');const n=Number(normalized);return Number.isFinite(n)&&n>0?n.toFixed(2):''}
-function panelSnapshot(panel){const total=parseTotalRaw(panel.querySelector('.mws-doc-total')?.value);const number=panel.querySelector('.mws-doc-number')?.value?.trim()||'';const date=panel.querySelector('.mws-doc-date')?.value?.trim()||'';const supplier=supplierCandidate(panel);const data={};if(total)data.total=total;if(number)data.number=number;if(date)data.date=date;if(supplier)data.supplier=supplier;if(Object.keys(data).length)writeCache(data);return data}
-function notesText(number,date){const parts=[];if(number)parts.push(`Τιμολόγιο ${String(number).replace(/^ΤΑΔ\s*/i,'').trim()||number}`);if(date){const [y,m,d]=String(date).split('-');parts.push(`Ημ/νία ${d&&m&&y?`${d}/${m}/${y}`:date}`)}return parts.join(' · ')}
-function syncPanel(panel){if(!panel?.isConnected||syncing.has(panel))return;panelSnapshot(panel);if(isProcessing(panel))return;const root=paymentRoot(panel);if(!root)return;syncing.add(panel);try{const data=readCache();ensureSupplierSelected(root,panel,data);if(data.total){const amount=findAmountInput(root,panel);if(amount)valueSetter(amount,data.total)}const notes=findNotes(root,panel);const text=notesText(data.number,data.date);if(notes&&text)valueSetter(notes,text)}finally{queueMicrotask(()=>syncing.delete(panel))}}
-function attach(panel){if(panel.dataset.paymentSyncAttached)return;panel.dataset.paymentSyncAttached='1';const schedule=()=>scheduleSync();for(const sel of ['.mws-doc-total','.mws-doc-number','.mws-doc-date','.mws-sup-name']){const el=panel.querySelector(sel);el?.addEventListener('input',schedule);el?.addEventListener('change',schedule)}new MutationObserver(schedule).observe(panel,{subtree:true,childList:true,characterData:true});panelSnapshot(panel);scheduleSync()}
-function scheduleSync(delay=120){clearTimeout(syncTimer);syncTimer=setTimeout(syncAll,delay)}
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const stop=new Set(['ΑΕ','Α','Ε','ΙΚΕ','ΜΟΝ','ΕΠΕ','ΟΕ','ΕΕ','BEER','SUPPLIES','SUPPLY','THE','AND']);
+const tokens=s=>norm(s).split(' ').filter(x=>x.length>=3&&!stop.has(x));
+
+function scoreNames(a,b){
+  const A=tokens(a),B=tokens(b);if(!A.length||!B.length)return 0;
+  const sa=new Set(A),sb=new Set(B);let common=0;for(const x of sa)if(sb.has(x))common++;
+  const contain=norm(a).includes(norm(b))||norm(b).includes(norm(a));
+  return contain?1:common/Math.min(sa.size,sb.size);
+}
+
+function paymentRoot(panel){return panel.closest('.pos-payment-form')||null}
+function labelControl(root,labelText,selector='input'){
+  const labels=[...root.querySelectorAll('label')].filter(l=>!l.closest('.pos-invoice-scan-v2'));
+  const wanted=norm(labelText);
+  for(const label of labels){
+    const own=norm([...label.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent).join(' '));
+    if(own===wanted||norm(label.textContent||'').startsWith(wanted)){
+      const control=label.querySelector(selector);if(control)return control;
+    }
+  }
+  return null;
+}
+function findSupplierSelect(root){return labelControl(root,'Προμηθευτής','select')||root.querySelector('select')}
+function findAmountInput(root){return labelControl(root,'Ποσό','input')}
+function findNotes(root){return labelControl(root,'Παρατηρήσεις','input,textarea')}
+
+function parseTotalRaw(raw){
+  raw=String(raw||'').trim();if(!raw)return'';
+  const normalized=raw.replace(/\s/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.]/g,'');
+  const n=Number(normalized);return Number.isFinite(n)&&n>0?n.toFixed(2):'';
+}
+function statusSupplier(panel){
+  const status=panel.querySelector('.mws-invoice-status')?.textContent||'';
+  const m=status.match(/Προμηθευτής:\s*(.+?)(?:\s*·\s*Αρ\.|\s*·\s*Σύνολο:|$)/i);
+  return m?.[1]?.trim()||'';
+}
+function supplierCandidate(panel){return statusSupplier(panel)||panel.querySelector('.mws-sup-name')?.value?.trim()||''}
+function isProcessing(panel){
+  const status=String(panel.querySelector('.mws-invoice-status')?.textContent||'');
+  return /2\/2|Αυτόματος επανέλεγχος|επανέλεγχος με AI|Διαβάζω|επεξεργασία|αναλύ/i.test(status);
+}
+function matchSupplier(select,candidate){
+  if(!select||!candidate)return null;
+  let best=null,bestScore=0;
+  for(const option of [...select.options]){
+    if(!option.value)continue;
+    const score=scoreNames(candidate,option.textContent||'');
+    if(score>bestScore){best=option;bestScore=score;}
+  }
+  return best&&bestScore>=0.67?best:null;
+}
+function ensureSupplierSelected(root,panel,cached){
+  const select=findSupplierSelect(root);if(!select)return;
+  const currentCandidate=supplierCandidate(panel);
+  let option=matchSupplier(select,currentCandidate);
+  // Only fall back to cached ID when the current invoice has no usable supplier name.
+  if(!option&&!currentCandidate&&cached?.supplierValue){
+    option=[...select.options].find(o=>String(o.value)===String(cached.supplierValue))||null;
+  }
+  if(option){
+    valueSetter(select,option.value);
+    writeCache({supplier:option.textContent?.trim()||currentCandidate,supplierValue:option.value});
+    const box=panel.querySelector('.mws-new-supplier');if(box)box.style.display='none';
+  }
+}
+function panelSnapshot(panel){
+  const total=parseTotalRaw(panel.querySelector('.mws-doc-total')?.value);
+  const number=panel.querySelector('.mws-doc-number')?.value?.trim()||'';
+  const date=panel.querySelector('.mws-doc-date')?.value?.trim()||'';
+  const supplier=supplierCandidate(panel);
+  const data={};if(total)data.total=total;if(number)data.number=number;if(date)data.date=date;if(supplier)data.supplier=supplier;
+  if(Object.keys(data).length)writeCache(data);
+  return data;
+}
+function notesText(number,date){
+  const parts=[];
+  if(number)parts.push(`Τιμολόγιο ${String(number).trim()}`);
+  if(date){const [y,m,d]=String(date).split('-');parts.push(`Ημ/νία ${d&&m&&y?`${d}/${m}/${y}`:date}`)}
+  return parts.join(' · ');
+}
+function syncPanel(panel){
+  if(!panel?.isConnected||syncing.has(panel))return;
+  panelSnapshot(panel);
+  if(isProcessing(panel))return;
+  const root=paymentRoot(panel);if(!root)return;
+  syncing.add(panel);
+  try{
+    const data=readCache();
+    ensureSupplierSelected(root,panel,data);
+    const currentTotal=parseTotalRaw(panel.querySelector('.mws-doc-total')?.value)||data.total;
+    if(currentTotal){const amount=findAmountInput(root);if(amount)valueSetter(amount,currentTotal)}
+    const currentNumber=panel.querySelector('.mws-doc-number')?.value?.trim()||data.number||'';
+    const currentDate=panel.querySelector('.mws-doc-date')?.value?.trim()||data.date||'';
+    const notes=findNotes(root);const text=notesText(currentNumber,currentDate);if(notes&&text)valueSetter(notes,text);
+  }finally{queueMicrotask(()=>syncing.delete(panel))}
+}
+function attach(panel){
+  if(panel.dataset.paymentSyncAttached)return;
+  panel.dataset.paymentSyncAttached='1';
+  const schedule=()=>scheduleSync();
+  for(const sel of ['.mws-doc-total','.mws-doc-number','.mws-doc-date','.mws-sup-name']){
+    const el=panel.querySelector(sel);el?.addEventListener('input',schedule);el?.addEventListener('change',schedule);
+  }
+  new MutationObserver(schedule).observe(panel,{subtree:true,childList:true,characterData:true});
+  panelSnapshot(panel);scheduleSync();
+}
+function scheduleSync(delay=100){clearTimeout(syncTimer);syncTimer=setTimeout(syncAll,delay)}
 function syncAll(){document.querySelectorAll('.pos-invoice-scan-v2').forEach(panel=>{attach(panel);syncPanel(panel)})}
-new MutationObserver(()=>scheduleSync(150)).observe(document.documentElement,{subtree:true,childList:true});
-window.addEventListener('mws-payment-restored',()=>scheduleSync(250));
-setInterval(()=>{const panels=[...document.querySelectorAll('.pos-invoice-scan-v2')];for(const panel of panels){panelSnapshot(panel);if(!isProcessing(panel))syncPanel(panel)}},1500);
+new MutationObserver(()=>scheduleSync(120)).observe(document.documentElement,{subtree:true,childList:true});
+window.addEventListener('mws-payment-restored',()=>scheduleSync(180));
+setInterval(()=>{for(const panel of document.querySelectorAll('.pos-invoice-scan-v2')){panelSnapshot(panel);if(!isProcessing(panel))syncPanel(panel)}},1000);
 scheduleSync(0);
