@@ -45,6 +45,21 @@ function requireManager(req,res,next){
 async function duplicateInvoice(tx,{companyId,supplierId,documentNumber}){
   const normalized=normalizeDocumentNumber(documentNumber);
   if(!supplierId||!normalized)return null;
+  const orphans=await tx.$queryRaw`
+    SELECT d."id"
+    FROM "PurchaseDocument" d
+    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
+      AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
+      AND d."paymentTransactionId" IS NULL
+      AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${normalized}
+      AND NOT EXISTS (
+        SELECT 1 FROM "PurchaseOrder" o
+        WHERE o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId"
+      )`;
+  for(const orphan of orphans){
+    await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=NULL,"status"='LOCAL_COMPLETE',"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${companyId} AND "purchaseDocumentId"=${orphan.id}`;
+    await tx.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${orphan.id} AND "companyId"=${companyId} AND "status"='DRAFT' AND "paymentTransactionId" IS NULL`;
+  }
   const docs=await tx.$queryRaw`
     SELECT d."id",d."status",d."documentNumber",s."name" AS "storeName"
     FROM "PurchaseDocument" d
