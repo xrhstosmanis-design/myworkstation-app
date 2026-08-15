@@ -6,6 +6,11 @@ const setNative=(el,value)=>{const set=Object.getOwnPropertyDescriptor(HTMLSelec
 const writeCache=data=>{try{const old=JSON.parse(sessionStorage.getItem(CACHE_KEY)||'{}');sessionStorage.setItem(CACHE_KEY,JSON.stringify({...old,...data,updatedAt:Date.now()}))}catch{}};
 function scoreNames(a,b){const A=tokens(a),B=tokens(b);if(!A.length||!B.length)return 0;const sa=new Set(A),sb=new Set(B);let common=0;for(const x of sa)if(sb.has(x))common++;const contain=norm(a).includes(norm(b))||norm(b).includes(norm(a));return contain?1:common/Math.min(sa.size,sb.size);}
 function candidateName(panel){
+  if(panel.matches?.('.pos-invoice-v3')){
+    const inputs=[...panel.querySelectorAll('input')];
+    const supplierInput=inputs.find(input=>input.placeholder==='Επωνυμία');
+    if(supplierInput?.value?.trim())return supplierInput.value.trim();
+  }
   const field=panel.querySelector('.mws-sup-name')?.value?.trim();
   if(field)return field;
   const status=panel.querySelector('.mws-invoice-status')?.textContent||'';
@@ -13,14 +18,22 @@ function candidateName(panel){
   return match?.[1]?.trim()||'';
 }
 function paymentSelect(panel){
+  if(panel.matches?.('.pos-invoice-v3'))return panel.querySelector('select');
   const local=panel.closest('.pos-payment-form')?.querySelector('select');
   if(local)return local;
   const modal=panel.closest('.pos-standard-modal')||document.querySelector('.pos-standard-modal');
   return modal?.querySelector('.pos-payment-form select')||document.querySelector('.pos-payment-form select');
 }
+function candidateTax(panel){
+  if(panel.matches?.('.pos-invoice-v3')){
+    const inputs=[...panel.querySelectorAll('input')];
+    return (inputs.find(input=>input.placeholder==='ΑΦΜ')?.value||'').replace(/\D/g,'');
+  }
+  return (panel.querySelector('.mws-sup-tax')?.value||'').replace(/\D/g,'');
+}
 function findExisting(panel){
   const candidate=candidateName(panel);
-  const tax=(panel.querySelector('.mws-sup-tax')?.value||'').replace(/\D/g,'');
+  const tax=candidateTax(panel);
   if(!candidate&&!tax)return null;
   const select=paymentSelect(panel);
   if(!select)return null;
@@ -47,7 +60,7 @@ function applyMatch(panel,match){
   return true;
 }
 function tryMatch(panel){applyMatch(panel,findExisting(panel));}
-function scan(){document.querySelectorAll('.pos-invoice-scan-v2').forEach(tryMatch)}
+function scan(){document.querySelectorAll('.pos-invoice-scan-v2,.pos-invoice-v3').forEach(tryMatch)}
 
 document.addEventListener('click',event=>{
   const button=event.target?.closest?.('.mws-save-supplier');
