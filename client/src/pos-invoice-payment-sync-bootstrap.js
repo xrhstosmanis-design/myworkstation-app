@@ -1,6 +1,7 @@
 const CACHE_KEY='mws:pending-invoice-payment-v1';
 let syncTimer=null;
 const syncing=new WeakSet();
+const freshResetDone=new WeakSet();
 
 const valueSetter=(el,value)=>{
   if(!el)return;
@@ -15,6 +16,7 @@ const valueSetter=(el,value)=>{
 
 const readCache=()=>{try{return JSON.parse(sessionStorage.getItem(CACHE_KEY)||'{}')}catch{return{}}};
 const writeCache=data=>{try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({...readCache(),...data,updatedAt:Date.now()}))}catch{}};
+const clearCache=()=>{try{sessionStorage.removeItem(CACHE_KEY)}catch{}};
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 const stop=new Set(['ΑΕ','Α','Ε','ΙΚΕ','ΜΟΝ','ΕΠΕ','ΟΕ','ΕΕ','BEER','SUPPLIES','SUPPLY','THE','AND']);
 const tokens=s=>norm(s).split(' ').filter(x=>x.length>=3&&!stop.has(x));
@@ -41,6 +43,24 @@ function labelControl(root,labelText,selector='input'){
 function findSupplierSelect(root){return labelControl(root,'Προμηθευτής','select')||root.querySelector('select')}
 function findAmountInput(root){return labelControl(root,'Ποσό','input')}
 function findNotes(root){return labelControl(root,'Παρατηρήσεις','input,textarea')}
+
+function freshInvoicePanel(panel){
+  const fileInput=panel.querySelector('input[type="file"]');
+  const hasFile=Boolean(fileInput?.files?.length);
+  const status=String(panel.querySelector('.mws-invoice-status')?.textContent||'');
+  const number=panel.querySelector('.mws-doc-number')?.value?.trim()||'';
+  const total=panel.querySelector('.mws-doc-total')?.value?.trim()||'';
+  const waiting=/Περιμένει τιμολόγιο|Δεν επιλέχθηκε/i.test(status);
+  return !hasFile&&!number&&!total&&(waiting||!status.trim());
+}
+function resetFreshPayment(root,panel){
+  if(freshResetDone.has(root)||!freshInvoicePanel(panel))return;
+  freshResetDone.add(root);
+  clearCache();
+  const supplier=findSupplierSelect(root);if(supplier)valueSetter(supplier,'');
+  const amount=findAmountInput(root);if(amount)valueSetter(amount,'');
+  const notes=findNotes(root);if(notes)valueSetter(notes,'');
+}
 
 function parseTotalRaw(raw){
   raw=String(raw||'').trim();if(!raw)return'';
@@ -71,7 +91,6 @@ function ensureSupplierSelected(root,panel,cached){
   const select=findSupplierSelect(root);if(!select)return;
   const currentCandidate=supplierCandidate(panel);
   let option=matchSupplier(select,currentCandidate);
-  // Only fall back to cached ID when the current invoice has no usable supplier name.
   if(!option&&!currentCandidate&&cached?.supplierValue){
     option=[...select.options].find(o=>String(o.value)===String(cached.supplierValue))||null;
   }
@@ -98,9 +117,10 @@ function notesText(number,date){
 }
 function syncPanel(panel){
   if(!panel?.isConnected||syncing.has(panel))return;
-  panelSnapshot(panel);
-  if(isProcessing(panel))return;
   const root=paymentRoot(panel);if(!root)return;
+  resetFreshPayment(root,panel);
+  panelSnapshot(panel);
+  if(isProcessing(panel)||freshInvoicePanel(panel))return;
   syncing.add(panel);
   try{
     const data=readCache();
@@ -120,11 +140,11 @@ function attach(panel){
     const el=panel.querySelector(sel);el?.addEventListener('input',schedule);el?.addEventListener('change',schedule);
   }
   new MutationObserver(schedule).observe(panel,{subtree:true,childList:true,characterData:true});
-  panelSnapshot(panel);scheduleSync();
+  scheduleSync();
 }
 function scheduleSync(delay=100){clearTimeout(syncTimer);syncTimer=setTimeout(syncAll,delay)}
 function syncAll(){document.querySelectorAll('.pos-invoice-scan-v2').forEach(panel=>{attach(panel);syncPanel(panel)})}
 new MutationObserver(()=>scheduleSync(120)).observe(document.documentElement,{subtree:true,childList:true});
 window.addEventListener('mws-payment-restored',()=>scheduleSync(180));
-setInterval(()=>{for(const panel of document.querySelectorAll('.pos-invoice-scan-v2')){panelSnapshot(panel);if(!isProcessing(panel))syncPanel(panel)}},1000);
+setInterval(()=>{for(const panel of document.querySelectorAll('.pos-invoice-scan-v2')){if(!isProcessing(panel))syncPanel(panel)}},1000);
 scheduleSync(0);
