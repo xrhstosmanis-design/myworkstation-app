@@ -19,7 +19,7 @@ function candidateInfo(value){
   const barcode=(text.match(/(?:^|\D)(\d{8,14})(?:\D|$)/)||[])[1]||null;
   const amounts=(text.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2,4})|\d+(?:[.,]\d{2,4})/g)||[]).map(num).filter(v=>v!==null&&v>=0);
   const hasLetters=/[A-Za-zΑ-Ωα-ω]/.test(text);
-  const candidate=!infoLinePattern.test(upper)&&hasLetters&&(Boolean(barcode)||amounts.length>=2);
+  const candidate=!infoLinePattern.test(upper)&&hasLetters&&(Boolean(barcode)||amounts.length>=1);
   return {candidate,text,barcode,amounts};
 }
 
