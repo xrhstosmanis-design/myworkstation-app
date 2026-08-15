@@ -50,6 +50,7 @@ import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-approval.js";
+import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
@@ -149,6 +150,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
