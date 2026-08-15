@@ -101,6 +101,9 @@ function restorePayment(){
   overlay.style.removeProperty('visibility');overlay.style.removeProperty('pointer-events');overlay.style.removeProperty('opacity');
   if(state.overlayStyles){overlay.style.visibility=state.overlayStyles.visibility;overlay.style.pointerEvents=state.overlayStyles.pointerEvents;overlay.style.opacity=state.overlayStyles.opacity}
   if(state.pill)state.pill.style.display='none';
+  window.dispatchEvent(new CustomEvent('mws-payment-restored'));
+  setTimeout(()=>window.dispatchEvent(new CustomEvent('mws-payment-restored')),120);
+  setTimeout(()=>window.dispatchEvent(new CustomEvent('mws-payment-restored')),450);
   overlay.scrollIntoView?.({block:'center',inline:'center'});
 }
 
