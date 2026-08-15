@@ -41,18 +41,20 @@ function fingerprint(companyId,supplierId,documentNumber){
   return crypto.createHash("sha256").update(`${companyId}|${supplierId}|${normalized}`).digest("hex");
 }
 
-async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId}){
+async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=null}){
   const normalized=normalizeDocumentNumber(documentNumber);
   if(!supplierId||!normalized)return null;
+  const excludedOrderId=orderId||"";
   const orderRows=await tx.$queryRaw`
     SELECT o."id",o."invoiceNumber",o."status",o."createdAt",s."name" AS "supplierName",st."name" AS "storeName"
     FROM "PurchaseOrder" o
     LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
     LEFT JOIN "Store" st ON st."id"=o."storeId"
-    WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId} AND o."id"<>${orderId}
-      AND o."status" IN ('FINAL','INVOICED')
+    WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
+      AND (${excludedOrderId}='' OR o."id"<>${excludedOrderId})
+      AND o."status" IN ('NEW','FINAL','INVOICED')
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${normalized}
-    ORDER BY o."updatedAt" DESC LIMIT 1`;
+    ORDER BY CASE o."status" WHEN 'INVOICED' THEN 1 WHEN 'FINAL' THEN 2 ELSE 3 END,o."updatedAt" DESC LIMIT 1`;
   if(orderRows[0])return {source:"PURCHASE_ORDER",...orderRows[0]};
 
   const docRows=await tx.$queryRaw`
@@ -60,7 +62,8 @@ async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId}
     FROM "PurchaseDocument" d
     LEFT JOIN "Supplier" s ON s."id"=d."supplierId"
     LEFT JOIN "Store" st ON st."id"=d."storeId"
-    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId} AND d."id"<>${orderId}
+    WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
+      AND (${excludedOrderId}='' OR d."id"<>${excludedOrderId})
       AND d."status"='APPROVED'
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${normalized}
     ORDER BY d."documentDate" DESC LIMIT 1`;
@@ -69,6 +72,48 @@ async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId}
 }
 
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
+
+router.post("/",async(req,res,next)=>{
+  try{
+    if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return next();
+    const supplierId=req.body?.supplierId||null;
+    const invoiceNumber=req.body?.invoiceNumber||null;
+    if(!supplierId||!normalizeDocumentNumber(invoiceNumber))return next();
+    const duplicate=await prisma.$transaction(tx=>duplicateDetails(tx,{companyId:req.user.companyId,supplierId,documentNumber:invoiceNumber}));
+    if(!duplicate)return next();
+    return res.status(409).json({
+      error:`Το παραστατικό ${invoiceNumber} υπάρχει ήδη${duplicate.storeName?` στο ${duplicate.storeName}`:""} (${duplicate.status||"καταχωρημένο"}). Δεν δημιουργήθηκε νέα παραγγελία.`,
+      duplicate
+    });
+  }catch(error){next(error)}
+});
+
+router.delete("/:orderId",async(req,res,next)=>{
+  try{
+    if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Δεν έχεις δικαίωμα διαγραφής παραγγελίας."});
+    const companyId=req.user.companyId;
+    const result=await prisma.$transaction(async tx=>{
+      const rows=await tx.$queryRaw`SELECT "id","status","invoiceNumber" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} FOR UPDATE`;
+      const found=rows[0];
+      if(!found){const error=new Error("Δεν βρέθηκε η παραγγελία.");error.status=404;throw error}
+      if(found.status!=="NEW"){
+        const error=new Error("Διαγράφονται μόνο πρόχειρες / Νέες παραγγελίες. Η Οριστική ή Τιμολογημένη παραγγελία χρειάζεται ακύρωση/αντιστροφή.");
+        error.status=409;
+        throw error;
+      }
+      const posting=await tx.$queryRaw`SELECT "orderId" FROM "PurchaseOrderPosting" WHERE "orderId"=${found.id} LIMIT 1`;
+      if(posting[0]){
+        const error=new Error("Η παραγγελία έχει ήδη επηρεάσει την αποθήκη και δεν μπορεί να διαγραφεί.");
+        error.status=409;
+        throw error;
+      }
+      await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
+      await tx.$executeRaw`DELETE FROM "PurchaseOrder" WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+      return {ok:true,deleted:true,id:found.id,invoiceNumber:found.invoiceNumber};
+    });
+    res.json(result);
+  }catch(error){next(error)}
+});
 
 router.patch("/:orderId",async(req,res,next)=>{
   try{
