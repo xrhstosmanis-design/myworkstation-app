@@ -2,9 +2,17 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 
 const router=Router();
+let schemaReady=false;
+async function ensureSchema(){
+  if(schemaReady)return;
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`);
+  schemaReady=true;
+}
+
 router.patch("/:orderId",async(req,res,next)=>{
   try{
     if(req.body?.status!=="FINAL")return next();
+    await ensureSchema();
     const rows=await prisma.$queryRaw`
       SELECT COUNT(*)::int AS "count"
       FROM "PurchaseOrderLine" l
