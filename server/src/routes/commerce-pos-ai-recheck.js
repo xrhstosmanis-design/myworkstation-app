@@ -9,6 +9,7 @@ const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+const decimalText=value=>Math.max(0,Number(value||0)).toFixed(4).replace(".",",");
 
 function outputText(response){
   if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
@@ -85,10 +86,22 @@ ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error;}
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
-    parsed.lines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
+    const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
     parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500):[];
-    parsed.rawText=parsed.rawText||parsed.lines.map(x=>x.text).join("\n")||localRawText;
-    if(!parsed.lines.length&&Array.isArray(previous.lines))parsed.lines=previous.lines;
+    parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
+    if(parsed.productLines.length){
+      parsed.lines=parsed.productLines.map(line=>{
+        const code=String(line.code||line.barcode||"").trim();
+        const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim();
+        const quantity=Math.max(0,Number(line.quantity||0))||1;
+        const unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ";
+        const unitCost=Math.max(0,Number(line.unitCost||0));
+        return {text:[code,description,`${quantity} ${unit}`,decimalText(unitCost)].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))};
+      });
+    }else{
+      parsed.lines=[];
+    }
+    parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     const aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
