@@ -56,7 +56,7 @@ test("same-shift payments reduce the same authoritative expected-cash formula us
   assert.match(ledger,/expensesTotal:deductedSupplierPayments\+deductedOtherExpenses/);
   assert.match(ledger,/row\.type===type&&row\.subtractFromShift/);
   assert.match(cash,/authoritativeShiftTotals/);
-  assert.match(cash,/const expected=session\.openingOperational\+ledger\.cashSales-ledger\.expenses/);
+  assert.match(cash,/const expected=session\.openingOperational\+ledger\.cashSales\+ledger\.transferIn-ledger\.expenses/);
   assert.match(closeUi,/openingOperational\)\+n\(form\.cashSales\)-n\(form\.expenses\)/);
   assert.match(closeUi,/Αναμενόμενο λειτουργικό σύνολο/);
 });
