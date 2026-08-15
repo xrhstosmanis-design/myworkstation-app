@@ -53,25 +53,31 @@ async function duplicateInvoice(tx,{companyId,supplierId,documentNumber}){
   return orders[0]||null;
 }
 
-function allOcrRows(resultJson){
+function candidateOcrRows(resultJson){
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
-  return source.map((entry,index)=>{
+  const rows=[];
+  for(const [index,entry] of source.entries()){
     const text=String(entry?.text||"").replace(/\s+/g," ").trim();
-    if(!text)return null;
+    if(!text||text.length<3)continue;
     const upper=norm(text);
+    if(/^(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|ΑΦΜ|ΔΟΥ|ΣΥΝΟΛΟ|ΦΠΑ|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ)/.test(upper))continue;
     const barcode=(text.match(/(?:^|\D)(\d{8,14})(?:\D|$)/)||[])[1]||null;
     const amounts=(text.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2,4})|\d+(?:[.,]\d{2,4})/g)||[]).map(num).filter(v=>v!==null&&v>=0);
-    const infoPattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|ΣΤΟΙΧΕΙΑΠΕΛΑΤΗ|ΣΤΟΙΧΕΙΑΠΑΡΑΣΤΑΤΙΚΟΥ|ΣΥΝΟΛΟ|ΣΥΝΟΛΟΠΟΣΟΤΗΤΩΝ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ|ΚΑΘΑΡΗ|ΑΞΙΑΦΠΑ|ΦΠΑ|VAT|ΕΚΠΤΩΣΗ|ΕΚΠΤ|DISCOUNT|ΑΞΙΑΠΡΟΕΚΠΤ|ΕΠΙΒΑΡΥΝΣ|ΜΕΤΑΦΟΡΙΚΑ|ΠΑΡΑΤΗΡΗΣ|ΑΝΑΛΥΣΗΦΠΑ)/;
-    const productHints=Boolean(barcode)||(/[A-Za-zΑ-Ωα-ω]/.test(text)&&amounts.length>0&&!infoPattern.test(upper));
-    const lineType=productHints?"PRODUCT":"INFO";
-    let description=text;
-    if(lineType==="PRODUCT")description=text.replace(/(?:^|\D)\d{8,14}(?:\D|$)/g," ").replace(/\s+/g," ").trim()||text;
+    const hasLetters=/[A-Za-zΑ-Ωα-ω]/.test(text);
+    if(!hasLetters&&!barcode)continue;
+    if(!barcode&&amounts.length===0)continue;
+    let description=text
+      .replace(/(?:^|\D)\d{8,14}(?:\D|$)/g," ")
+      .replace(/\s+\d{1,3}(?:\.\d{3})*(?:,\d{2,4})\s*€?\s*$/g,"")
+      .replace(/\s+/g," ").trim();
+    if(description.length<2)description=text;
+    const unitCost=amounts.length?Number(amounts[amounts.length-1]||0):0;
     let quantity=1;
     const qMatch=text.match(/(?:^|\s)(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:ΤΕΜ|ΤΜΧ|PCS|X|Χ)\b/i);
     if(qMatch){const q=num(qMatch[1]);if(q&&q>0)quantity=q;}
-    const unitCost=lineType==="PRODUCT"&&amounts.length?Number(amounts[amounts.length-1]||0):0;
-    return {sequence:index+1,text,description,barcode,unitCost,quantity,confidence:Number(entry?.confidence||0),lineType};
-  }).filter(Boolean).slice(0,1000);
+    rows.push({sequence:index+1,text,description,barcode,unitCost,quantity,confidence:Number(entry?.confidence||0),lineType:"PRODUCT"});
+  }
+  return rows.slice(0,500);
 }
 
 async function matchProducts(tx,companyId,rows){
@@ -82,7 +88,6 @@ async function matchProducts(tx,companyId,rows){
   const byBarcode=new Map();
   for(const p of products)for(const barcode of p.barcodes||[])byBarcode.set(String(barcode),p);
   for(const row of rows){
-    if(row.lineType!=="PRODUCT"){row.product=null;continue;}
     let product=row.barcode?byBarcode.get(String(row.barcode)):null;
     if(!product){
       const key=norm(row.description);
@@ -136,13 +141,13 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber},${body.documentDate||new Date()},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
 
-      const ocrRows=await matchProducts(tx,req.user.companyId,allOcrRows(job.resultJson||{}));
+      const ocrRows=await matchProducts(tx,req.user.companyId,candidateOcrRows(job.resultJson||{}));
       for(const row of ocrRows){
-        const product=row.product,info=row.lineType!=="PRODUCT",vatRate=product?Number(product.vatRate||0):0;
-        const quantity=info?1:Math.max(0.0001,Number(row.quantity||1)),unitCost=info?0:Math.max(0,Number(row.unitCost||0));
+        const product=row.product,vatRate=product?Number(product.vatRate||0):0;
+        const quantity=Math.max(0.0001,Number(row.quantity||1)),unitCost=Math.max(0,Number(row.unitCost||0));
         const netAmount=quantity*unitCost,vatAmount=netAmount*vatRate/100,grossAmount=netAmount+vatAmount;
-        const resolutionStatus=info?"INFO":product?"MATCHED":"UNRESOLVED";
-        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,0,${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},${row.lineType})`;
+        const resolutionStatus=product?"MATCHED":"UNRESOLVED";
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,0,${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT')`;
       }
 
       let paymentTransactionId=null;
@@ -152,7 +157,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=${paymentTransactionId} WHERE "id"=${documentId}`;
       }
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
-      return {documentId,orderId,paymentTransactionId,lineCount:ocrRows.length,unresolved:ocrRows.filter(r=>r.lineType==='PRODUCT'&&!r.product).length};
+      return {documentId,orderId,paymentTransactionId,lineCount:ocrRows.length,unresolved:ocrRows.filter(r=>!r.product).length};
     });
 
     res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,message:body.settlementMode==="PAID"?`Το τιμολόγιο καταχωρίστηκε, αφαιρέθηκε από την ενεργή βάρδια και στάλθηκε στις Παραγγελίες & Αγορές για έλεγχο. ${result.unresolved} γραμμές χρειάζονται επίλυση. Η αποθήκη δεν ενημερώθηκε ακόμη.`:`Το τιμολόγιο καταχωρίστηκε με πίστωση και στάλθηκε στις Παραγγελίες & Αγορές για έλεγχο. ${result.unresolved} γραμμές χρειάζονται επίλυση. Δεν αφαιρέθηκε ποσό από τη βάρδια και η αποθήκη δεν ενημερώθηκε ακόμη.`});
