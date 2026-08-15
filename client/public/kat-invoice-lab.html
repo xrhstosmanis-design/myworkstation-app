@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyWorkStation · KAT Invoice Lab</title>
+  <style>
+    :root{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:#15342b;background:#eef4f1}
+    *{box-sizing:border-box} body{margin:0;padding:24px}.shell{max-width:1500px;margin:auto;background:#fff;border:1px solid #cad9d3;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.08);overflow:hidden}
+    header{padding:18px 22px;background:#073e32;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px}.tag{background:#daf4e8;color:#174b3d;border-radius:99px;padding:5px 9px;font-size:12px;font-weight:800}
+    main{padding:20px}.notice{padding:12px;background:#fff8df;border:1px solid #e7cf78;border-radius:9px;margin-bottom:16px;font-weight:700}.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}label{font-weight:800;display:grid;gap:5px}select,input,button{font:inherit;padding:9px 10px;border:1px solid #b9cac4;border-radius:8px;background:#fff}button{font-weight:900;cursor:pointer;background:#0b6f55;color:#fff;border-color:#0b6f55}button:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#fff;color:#174b3d}.status{padding:10px 12px;border-radius:8px;background:#f2f6f4;margin:10px 0;font-weight:800}.error{background:#fff0f1;color:#9b1c31}.facts{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:10px;margin:12px 0}.fact{padding:10px;border:1px solid #d5e0dc;border-radius:8px}.fact small{display:block;color:#61756e}.fact b{display:block;margin-top:3px}.wrap{overflow:auto;border:1px solid #d5e0dc;border-radius:10px}table{border-collapse:collapse;width:100%;min-width:1200px;font-size:13px}th,td{padding:8px;border-bottom:1px solid #e4ebe8;text-align:left;vertical-align:top}th{position:sticky;top:0;background:#f3f7f5}.zero{background:#fff4f0;color:#a43b21;font-weight:900}.ok{background:#eefaf4}.raw{white-space:pre-wrap;background:#12241f;color:#d9f2e8;padding:12px;border-radius:8px;max-height:320px;overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12px}.muted{color:#687c75}.hidden{display:none}@media(max-width:900px){body{padding:8px}.facts{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<div class="shell">
+<header><div><strong style="font-size:20px">MyWorkStation · KAT Invoice Lab</strong><div style="opacity:.8;font-size:13px;margin-top:3px">Απομονωμένη δοκιμή AI Reader — χωρίς πληρωμή / παραγγελία / stock</div></div><span class="tag">SAFE TEST MODE</span></header>
+<main>
+  <div class="notice">Αυτή η σελίδα δημιουργεί μόνο AI Reader job και κάνει AI recheck. Δεν καλεί POS intake, δεν δημιουργεί Purchase Order και δεν ενημερώνει αποθήκη.</div>
+  <div class="row">
+    <label>Κατάστημα<select id="store"><option value="">Φόρτωση…</option></select></label>
+    <label>Τιμολόγιο<input id="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></label>
+    <button id="run" disabled>Δοκιμή AI ανάγνωσης</button>
+    <button id="clear" class="secondary" type="button">Καθαρισμός</button>
+  </div>
+  <div id="status" class="status">Περιμένει αρχείο.</div>
+  <div id="facts" class="facts hidden"></div>
+  <div id="tableWrap" class="wrap hidden"><table><thead><tr><th>#</th><th>Κωδικός</th><th>Barcode</th><th>Περιγραφή</th><th>Ποσότητα</th><th>Μονάδα</th><th>Τεμ./συσκ.</th><th>Τιμή</th><th>Καθαρή αξία</th><th>ΦΠΑ</th><th>Μικτή αξία</th><th>Confidence</th><th>Raw</th></tr></thead><tbody id="tbody"></tbody></table></div>
+  <h3 id="rawTitle" class="hidden">Raw structured response</h3><pre id="raw" class="raw hidden"></pre>
+</main>
+</div>
+<script>
+const $=id=>document.getElementById(id), token=localStorage.getItem('token');
+const state={file:null,stores:[],busy:false};
+const api=async(path,options={})=>{const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`);return data};
+const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Δεν διαβάστηκε το αρχείο.'));reader.readAsDataURL(file)});
+const fmt=n=>Number(n||0).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:4});
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function status(text,error=false){$('status').textContent=text;$('status').className=`status${error?' error':''}`}
+function reset(){state.file=null;$('file').value='';$('facts').classList.add('hidden');$('tableWrap').classList.add('hidden');$('raw').classList.add('hidden');$('rawTitle').classList.add('hidden');$('tbody').innerHTML='';status('Περιμένει αρχείο.');$('run').disabled=true}
+async function loadStores(){if(!token){status('Δεν υπάρχει ενεργό login token. Άνοιξε πρώτα το MyWorkStation και συνδέσου.',true);return}try{const rows=await api('/api/stores');state.stores=Array.isArray(rows)?rows:[];$('store').innerHTML=state.stores.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');const kat=state.stores.find(s=>String(s.name||'').toLocaleUpperCase('el-GR').includes('ΚΑΤ')||String(s.name||'').toUpperCase().includes('KAT'));if(kat)$('store').value=kat.id;status(`Έτοιμο · ${state.stores.length} καταστήματα φορτώθηκαν.`)}catch(e){status(`Αποτυχία φόρτωσης καταστημάτων: ${e.message}`,true)}}
+$('file').addEventListener('change',e=>{state.file=e.target.files?.[0]||null;$('run').disabled=!state.file||!$('store').value;status(state.file?`Έτοιμο για test: ${state.file.name}`:'Περιμένει αρχείο.')});
+$('store').addEventListener('change',()=>{$('run').disabled=!state.file||!$('store').value});$('clear').addEventListener('click',reset);
+$('run').addEventListener('click',async()=>{if(!state.file||!$('store').value||state.busy)return;state.busy=true;$('run').disabled=true;$('facts').classList.add('hidden');$('tableWrap').classList.add('hidden');$('raw').classList.add('hidden');$('rawTitle').classList.add('hidden');try{status('1/2 Δημιουργία απομονωμένου AI Reader job…');const mimeType=state.file.type||'image/jpeg';if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(mimeType))throw new Error('Χρησιμοποίησε JPG, PNG, WEBP ή PDF.');const dataUrl=await readFile(state.file);const job=await api('/api/commerce/ai-reader/jobs',{method:'POST',body:JSON.stringify({storeId:$('store').value,filename:state.file.name||'kat-invoice-test',mimeType,dataUrl,localConfidence:0,result:{rawText:'',lines:[],pageCount:null,pdfNote:'Standalone KAT invoice lab'}})});if(!job?.id)throw new Error('Ο server δεν επέστρεψε job id.');status(`2/2 AI structured extraction… · job ${job.id}`);const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:'POST',body:JSON.stringify({force:true})});const result=ai?.result||{},lines=Array.isArray(result.productLines)?result.productLines:[];$('facts').innerHTML=[['Job',job.id],['Προμηθευτής',result?.supplier?.name||'—'],['Παραστατικό',result.documentNumber||'—'],['Ημερομηνία',result.documentDate||'—'],['Σύνολο',`${fmt(result.totalGross)} €`]].map(([a,b])=>`<div class="fact"><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join('');$('facts').classList.remove('hidden');$('tbody').innerHTML=lines.map((l,i)=>{const bad=Number(l.quantity||0)<=0||Number(l.unitCost||0)<=0;return `<tr class="${bad?'zero':'ok'}"><td>${i+1}</td><td>${esc(l.code||'—')}</td><td>${esc(l.barcode||'—')}</td><td>${esc(l.description||'—')}</td><td>${esc(l.quantity??0)}</td><td>${esc(l.unit||'—')}</td><td>${esc(l.unitsPerPackage??0)}</td><td>${fmt(l.unitCost)}</td><td>${fmt(l.netAmount)}</td><td>${esc(l.vatRate??0)}%</td><td>${fmt(l.grossAmount)}</td><td>${esc(l.confidence??0)}%</td><td>${esc(l.rawText||'')}</td></tr>`}).join('');$('tableWrap').classList.remove('hidden');$('raw').textContent=JSON.stringify(ai,null,2);$('raw').classList.remove('hidden');$('rawTitle').classList.remove('hidden');const incomplete=lines.filter(l=>Number(l.quantity||0)<=0||Number(l.unitCost||0)<=0).length;status(`Ολοκληρώθηκε: ${lines.length} productLines · ${incomplete} με ελλιπή ποσότητα/τιμή. Καμία επιχειρησιακή καταχώριση δεν έγινε.`)}catch(e){status(`Αποτυχία test: ${e.message}`,true)}finally{state.busy=false;$('run').disabled=!state.file||!$('store').value}});
+loadStores();
+</script>
+</body></html>
