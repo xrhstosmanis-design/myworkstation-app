@@ -15,7 +15,7 @@ export default function CashControlPanel({api,store}){
   const [message,setMessage]=useState("");
   const [eftposReview,setEftposReview]=useState(null);
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
-  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",...initialAmounts,note:""});
+  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});
 
   const load=async()=>{
     setLoading(true);setError("");
@@ -38,6 +38,7 @@ export default function CashControlPanel({api,store}){
           cashSales:String(ledgerSummary?.cashSales??form.cashSales??0),
           cardSales:String(ledgerSummary?.cardSales??form.cardSales??0),
           expenses:String(ledgerSummary?.expensesTotal??form.expenses??0),
+          transferIn:String(ledgerSummary?.transferIn??form.transferIn??0),
           drawer:String(result.openSession.openingDrawer||0),
           custody:String(result.openSession.openingCustody||0),
           coins:String(result.openSession.openingCoins||0),
@@ -54,8 +55,8 @@ export default function CashControlPanel({api,store}){
   const closingOperational=useMemo(()=>number(closeForm.drawer)+number(closeForm.custody)+number(closeForm.coins),[closeForm]);
   const expectedOperational=useMemo(()=>{
     const opening=number(data?.openSession?.openingOperational);
-    return opening+number(closeForm.cashSales)-number(closeForm.expenses);
-  },[data,closeForm.cashSales,closeForm.expenses]);
+    return opening+number(closeForm.cashSales)+number(closeForm.transferIn)-number(closeForm.expenses);
+  },[data,closeForm.cashSales,closeForm.transferIn,closeForm.expenses]);
   const variance=closingOperational-expectedOperational;
   const lastClosed=(data?.recent||[]).find(row=>row.status==="CLOSED");
 
@@ -85,7 +86,7 @@ export default function CashControlPanel({api,store}){
       if(result.emailNotification?.status==="SENT")setMessage(`Η βάρδια έκλεισε και η αναφορά στάλθηκε με email. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
       if(result.emailNotification?.status==="FAILED")setError("Η βάρδια έκλεισε κανονικά, αλλά το email αναφοράς δεν στάλθηκε. Ενημέρωσε τον διαχειριστή.");
       setEftposReview(result);
-      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",...initialAmounts,note:""});await load();
+      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});await load();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
 
@@ -114,10 +115,11 @@ export default function CashControlPanel({api,store}){
         Η έναρξη βάρδιας δεν επιτρέπεται από το BackOffice. Ανοίγει μόνο από το POS / Store Mode από τον χειριστή του καταστήματος.
       </div>:<form className="cash-form" onSubmit={closeShift}>
         <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
-        <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
+        <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών, μεταφορών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)} readOnly/>
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)} readOnly/>
         <MoneyField icon={<WalletCards/>} label="Σύνολο EFTPOS" value={closeForm.eftposTotal} onChange={value=>updateClose("eftposTotal",value)}/>
+        <MoneyField icon={<TrendingUp/>} label="Μεταφορές προς βάρδια" value={closeForm.transferIn} onChange={value=>updateClose("transferIn",value)} readOnly/>
         <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)} readOnly/>
         <div className="cash-divider cash-wide">Πραγματική καταμέτρηση παράδοσης</div>
         <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={closeForm.drawer} onChange={value=>updateClose("drawer",value)}/>

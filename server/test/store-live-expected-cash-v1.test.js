@@ -15,7 +15,7 @@ test("live expected cash reuses existing shift and transaction overview totals",
 });
 
 test("live expected display stays aligned with authoritative close formula",()=>{
-  assert.match(cash,/const expected=session\.openingOperational\+ledger\.cashSales-ledger\.expenses/);
+  assert.match(cash,/const expected=session\.openingOperational\+ledger\.cashSales\+ledger\.transferIn-ledger\.expenses/);
   assert.match(cash,/authoritativeShiftTotals/);
   assert.match(ledger,/expensesTotal:deductedSupplierPayments\+deductedOtherExpenses/);
   assert.match(ledger,/row\.type===type&&row\.subtractFromShift/);
