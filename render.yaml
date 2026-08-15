@@ -23,6 +23,10 @@ services:
         value: admin@myworkstationapp.gr
       - key: INITIAL_ADMIN_PASSWORD
         generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_INVOICE_MODEL
+        value: gpt-5-mini
       - key: KAT_OWNER_NAME
         value: Νίκη Ραζάτου
       - key: KAT_OWNER_EMAIL
