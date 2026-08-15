@@ -43,6 +43,29 @@ function labelControl(root,labelText,selector='input'){
 function findSupplierSelect(root){return labelControl(root,'Προμηθευτής','select')||root.querySelector('select')}
 function findAmountInput(root){return labelControl(root,'Ποσό','input')}
 function findNotes(root){return labelControl(root,'Παρατηρήσεις','input,textarea')}
+function findAmountPad(root){
+  const amount=findAmountInput(root);if(!amount)return null;
+  const pads=[...root.querySelectorAll('.pos-inline-keypad')];
+  if(!pads.length)return null;
+  let node=amount.parentElement;
+  while(node&&node!==root){
+    let sibling=node.nextElementSibling;
+    while(sibling){if(sibling.matches?.('.pos-inline-keypad'))return sibling;sibling=sibling.nextElementSibling}
+    node=node.parentElement;
+  }
+  return pads[0]||null;
+}
+function setAmountViaPad(root,total){
+  const desired=parseTotalRaw(total);if(!desired)return;
+  const amount=findAmountInput(root);if(!amount)return;
+  if(parseTotalRaw(amount.value)===desired)return;
+  const pad=findAmountPad(root);if(!pad){valueSetter(amount,desired);return;}
+  const buttons=[...pad.querySelectorAll('button')];
+  const clickText=text=>{const btn=buttons.find(b=>String(b.textContent||'').trim()===text);btn?.click()};
+  const clear=buttons.find(b=>/ΚΑΘΑΡΙΣΜΟΣ|^C$/i.test(String(b.textContent||'').trim()));
+  clear?.click();
+  for(const ch of desired.replace('.',','))clickText(ch);
+}
 
 function freshInvoicePanel(panel){
   const fileInput=panel.querySelector('input[type="file"]');
@@ -58,7 +81,7 @@ function resetFreshPayment(root,panel){
   freshResetDone.add(root);
   clearCache();
   const supplier=findSupplierSelect(root);if(supplier)valueSetter(supplier,'');
-  const amount=findAmountInput(root);if(amount)valueSetter(amount,'');
+  const amount=findAmountInput(root);if(amount&&amount.value)setAmountViaPad(root,'0');
   const notes=findNotes(root);if(notes)valueSetter(notes,'');
 }
 
@@ -126,7 +149,7 @@ function syncPanel(panel){
     const data=readCache();
     ensureSupplierSelected(root,panel,data);
     const currentTotal=parseTotalRaw(panel.querySelector('.mws-doc-total')?.value)||data.total;
-    if(currentTotal){const amount=findAmountInput(root);if(amount)valueSetter(amount,currentTotal)}
+    if(currentTotal)setAmountViaPad(root,currentTotal);
     const currentNumber=panel.querySelector('.mws-doc-number')?.value?.trim()||data.number||'';
     const currentDate=panel.querySelector('.mws-doc-date')?.value?.trim()||data.date||'';
     const notes=findNotes(root);const text=notesText(currentNumber,currentDate);if(notes&&text)valueSetter(notes,text);
