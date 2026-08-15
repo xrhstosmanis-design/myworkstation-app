@@ -46,6 +46,33 @@ async function findDuplicateInvoice(tx,{companyId,supplierId,documentNumber}){
   return null;
 }
 
+// Runs before commerce-v1 /documents/inbox. Exact same file cannot be stored twice.
+router.post("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
+  try{
+    const body=z.object({storeId:z.string(),supplierId:z.string().optional().nullable(),file:z.object({dataUrl:z.string(),filename:z.string().optional()})}).passthrough().parse(req.body||{});
+    const match=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(body.file.dataUrl||"");
+    if(!match)return next();
+    const bytes=Buffer.from(match[2],"base64");
+    const checksum=crypto.createHash("sha256").update(bytes).digest("hex");
+    const duplicate=await prisma.$queryRaw`
+      SELECT i."id",i."status",i."receivedAt",s."name" AS "storeName",sp."name" AS "supplierName",a."filename"
+      FROM "DocumentInbox" i
+      JOIN "DocumentAttachment" a ON a."id"=i."attachmentId"
+      LEFT JOIN "Store" s ON s."id"=i."storeId"
+      LEFT JOIN "Supplier" sp ON sp."id"=i."supplierId"
+      WHERE i."companyId"=${req.user.companyId}
+        AND i."storeId"=${body.storeId}
+        AND a."checksum"=${checksum}
+      ORDER BY i."receivedAt" DESC LIMIT 1`;
+    if(duplicate[0])return res.status(409).json({
+      error:`Το ίδιο αρχείο τιμολογίου έχει ήδη σταλεί${duplicate[0].storeName?` στο ${duplicate[0].storeName}`:""}. Δεν δημιουργήθηκε δεύτερη εγγραφή.`,
+      duplicate:true,
+      existing:{id:duplicate[0].id,status:duplicate[0].status,receivedAt:duplicate[0].receivedAt,filename:duplicate[0].filename,supplierName:duplicate[0].supplierName||null}
+    });
+    next();
+  }catch(error){next(error)}
+});
+
 router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const body=z.object({
