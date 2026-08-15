@@ -10,6 +10,18 @@ const managers=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const num=value=>{const n=Number(String(value??"").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null};
+const infoLinePattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΩΡΑ|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|EMAIL|URL|ΣΕΙΡΑ|ΕΙΔΟΣΠΑΡΑΣΤΑΤΙΚΟΥ|ΣΤΟΙΧΕΙΑΠΕΛΑΤΗ|ΣΤΟΙΧΕΙΑΠΑΡΑΣΤΑΤΙΚΟΥ|ΣΥΝΟΛΟ|ΣΥΝΟΛΟΠΟΣΟΤΗΤΩΝ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ|ΚΑΘΑΡΗ|ΑΞΙΑΦΠΑ|ΑΞΙΑΠΡΟΕΚΠΤ|ΦΠΑ|VAT|ΕΚΠΤΩΣΗ|ΕΚΠΤ|DISCOUNT|ΕΠΙΒΑΡΥΝΣ|ΜΕΤΑΦΟΡΙΚΑ|ΠΑΡΑΤΗΡΗΣ|ΑΝΑΛΥΣΗΦΠΑ)/;
+
+function candidateInfo(value){
+  const text=String(value||"").replace(/\s+/g," ").trim();
+  if(!text||text.length<3)return {candidate:false,text,barcode:null,amounts:[]};
+  const upper=norm(text);
+  const barcode=(text.match(/(?:^|\D)(\d{8,14})(?:\D|$)/)||[])[1]||null;
+  const amounts=(text.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2,4})|\d+(?:[.,]\d{2,4})/g)||[]).map(num).filter(v=>v!==null&&v>=0);
+  const hasLetters=/[A-Za-zΑ-Ωα-ω]/.test(text);
+  const candidate=!infoLinePattern.test(upper)&&hasLetters&&(Boolean(barcode)||amounts.length>=2);
+  return {candidate,text,barcode,amounts};
+}
 
 async function ensureColumns(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`);
@@ -57,15 +69,9 @@ function candidateOcrRows(resultJson){
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
   const rows=[];
   for(const [index,entry] of source.entries()){
-    const text=String(entry?.text||"").replace(/\s+/g," ").trim();
-    if(!text||text.length<3)continue;
-    const upper=norm(text);
-    if(/^(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|ΑΦΜ|ΔΟΥ|ΣΥΝΟΛΟ|ΦΠΑ|ΠΛΗΡΩΤΕΟ|ΚΑΘΑΡΗΑΞΙΑ)/.test(upper))continue;
-    const barcode=(text.match(/(?:^|\D)(\d{8,14})(?:\D|$)/)||[])[1]||null;
-    const amounts=(text.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2,4})|\d+(?:[.,]\d{2,4})/g)||[]).map(num).filter(v=>v!==null&&v>=0);
-    const hasLetters=/[A-Za-zΑ-Ωα-ω]/.test(text);
-    if(!hasLetters&&!barcode)continue;
-    if(!barcode&&amounts.length===0)continue;
+    const parsed=candidateInfo(entry?.text||"");
+    if(!parsed.candidate)continue;
+    const {text,barcode,amounts}=parsed;
     let description=text
       .replace(/(?:^|\D)\d{8,14}(?:\D|$)/g," ")
       .replace(/\s+\d{1,3}(?:\.\d{3})*(?:,\d{2,4})\s*€?\s*$/g,"")
@@ -171,7 +177,16 @@ router.get("/purchase-orders/:orderId/ocr-lines",requireManager,async(req,res,ne
       SELECT l."id",l."productId",l."description",l."quantity",l."unitCost",l."vatRate",l."grossAmount",l."ocrRawText",l."ocrConfidence",l."resolutionStatus",l."detectedBarcode",l."ocrSequence",l."ocrLineType",p."name" AS "productName",p."sku",p."salePrice",p."costPrice",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes"
       FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId}
       WHERE l."orderId"=${order.id} ORDER BY COALESCE(l."ocrSequence",2147483647),l."createdAt",l."id"`;
-    res.json({order,rows:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),vatRate:Number(r.vatRate||0),grossAmount:Number(r.grossAmount||0),ocrConfidence:Number(r.ocrConfidence||0)})),unresolved:rows.filter(r=>r.resolutionStatus==='UNRESOLVED').length});
+    if(order.sourceType==="POS_OCR_DRAFT"&&order.status==="NEW"){
+      for(const row of rows){
+        if(row.productId||row.resolutionStatus!=="UNRESOLVED")continue;
+        if(candidateInfo(row.ocrRawText||row.description||"").candidate)continue;
+        await prisma.$executeRaw`UPDATE "PurchaseOrderLine" SET "resolutionStatus"='INFO',"ocrLineType"='INFO',"unitCost"=0,"netAmount"=0,"vatAmount"=0,"grossAmount"=0,"updatedAt"=NOW() WHERE "id"=${row.id} AND "orderId"=${order.id}`;
+        row.resolutionStatus="INFO";row.ocrLineType="INFO";row.unitCost=0;row.grossAmount=0;
+      }
+    }
+    const visibleRows=order.sourceType==="POS_OCR_DRAFT"?rows.filter(r=>r.resolutionStatus!=="INFO"):rows;
+    res.json({order,rows:visibleRows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),vatRate:Number(r.vatRate||0),grossAmount:Number(r.grossAmount||0),ocrConfidence:Number(r.ocrConfidence||0)})),unresolved:visibleRows.filter(r=>r.resolutionStatus==='UNRESOLVED').length});
   }catch(error){next(error)}
 });
 
