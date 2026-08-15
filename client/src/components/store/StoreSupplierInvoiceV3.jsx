@@ -7,7 +7,6 @@ const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",curr
 const parseMoney=value=>{const n=Number(String(value??"").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
 const normalize=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν ήταν δυνατή η ανάγνωση του τιμολογίου."));reader.readAsDataURL(file)});
-const toReviewLine=(line,index)=>({included:true,rawText:String(line?.rawText||line?.description||""),code:String(line?.code||""),barcode:String(line?.barcode||""),description:String(line?.description||"").trim(),quantity:Number(line?.quantity||0),unit:String(line?.unit||"ΤΜΧ")||"ΤΜΧ",unitsPerPackage:Number(line?.unitsPerPackage||0),unitCost:Number(line?.unitCost||0),vatRate:Number(line?.vatRate??24),confidence:Number(line?.confidence||0),key:`${index}-${String(line?.code||line?.description||"")}`});
 
 function collectLines(data){
   const found=[];
@@ -74,11 +73,8 @@ const emptyInvoice=()=>({file:null,jobId:"",stage:"IDLE",confidence:null,aiCalle
 
 export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged,setMessage}){
   const [invoice,setInvoice]=useState(emptyInvoice),[candidate,setCandidate]=useState({name:"",taxId:"",phone:"",email:"",address:"",city:""});
-  const [reviewLines,setReviewLines]=useState([]),[reviewSaved,setReviewSaved]=useState(false);
   const [cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
   const selectedSupplier=useMemo(()=>suppliers.find(row=>String(row.id)===String(invoice.supplierId))||null,[suppliers,invoice.supplierId]);
-  const includedReview=useMemo(()=>reviewLines.filter(line=>line.included),[reviewLines]);
-  const reviewReady=Boolean(includedReview.length&&includedReview.every(line=>String(line.description||"").trim()&&Number(line.quantity)>0&&Number(line.unitCost)>0&&Number(line.vatRate)>=0));
   const stopCamera=()=>{stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};
   useEffect(()=>()=>stream?.getTracks?.().forEach(track=>track.stop()),[stream]);
 
@@ -88,13 +84,12 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
   const applyReady=(base,result={},supplierMatch=null,aiCalled=false,confidence=null)=>{
     const supplierCandidate=result?.supplier||base.supplierCandidate||{};
     setCandidate({name:supplierCandidate.name||"",taxId:supplierCandidate.taxId||"",phone:supplierCandidate.phone||"",email:supplierCandidate.email||"",address:supplierCandidate.address||"",city:supplierCandidate.city||""});
-    if(Array.isArray(result?.productLines)&&result.productLines.length){setReviewLines(result.productLines.map(toReviewLine));setReviewSaved(false)}
-    setInvoice(current=>({...current,stage:"READY",working:false,aiCalled,confidence:Number(confidence??current.confidence??0),supplierId:supplierMatch?.id||base.supplierId||current.supplierId||"",documentNumber:String(result?.documentNumber||base.documentNumber||current.documentNumber||""),documentDate:String(result?.documentDate||base.documentDate||current.documentDate||today()).slice(0,10),totalGross:Number(result?.totalGross||base.totalGross||0)>0?String(Number(result?.totalGross||base.totalGross).toFixed(2)).replace(".",","):current.totalGross,status:"Έτοιμο για έλεγχο γραμμών"}));
+    setInvoice(current=>({...current,stage:"READY",working:false,aiCalled,confidence:Number(confidence??current.confidence??0),supplierId:supplierMatch?.id||base.supplierId||current.supplierId||"",documentNumber:String(result?.documentNumber||base.documentNumber||current.documentNumber||""),documentDate:String(result?.documentDate||base.documentDate||current.documentDate||today()).slice(0,10),totalGross:Number(result?.totalGross||base.totalGross||0)>0?String(Number(result?.totalGross||base.totalGross).toFixed(2)).replace(".",","):current.totalGross,status:"Έτοιμο για καταχώριση"}));
   };
 
   const processFile=async file=>{
     if(!file)return;
-    setCandidate({name:"",taxId:"",phone:"",email:"",address:"",city:""});setReviewLines([]);setReviewSaved(false);
+    setCandidate({name:"",taxId:"",phone:"",email:"",address:"",city:""});
     setInvoice({...emptyInvoice(),file,stage:"OCR",working:true,status:"Διαβάζω τιμολόγιο…"});
     try{
       const ocr=await localOcr(file),base=localMeta(ocr.rawText,suppliers);
@@ -127,19 +122,16 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     setInvoice(current=>({...current,working:true,status:"Καταχωρίζω τον νέο προμηθευτή…"}));
     try{
       const data=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/supplier`,{method:"POST",body:JSON.stringify(candidate)});
-      setInvoice(current=>({...current,supplierId:data.supplier.id,working:false,stage:"READY",status:"Έτοιμο για έλεγχο γραμμών"}));onChanged?.();
+      setInvoice(current=>({...current,supplierId:data.supplier.id,working:false,stage:"READY",status:"Έτοιμο για καταχώριση"}));onChanged?.();
     }catch(error){setFailure(error.message||"Δεν αποθηκεύτηκε ο προμηθευτής.")}
   };
 
-  const changeReview=(index,field,value)=>{setReviewSaved(false);setReviewLines(rows=>rows.map((line,i)=>i===index?{...line,[field]:value}:line))};
-  const ready=Boolean(invoice.stage==="READY"&&invoice.jobId&&invoice.supplierId&&invoice.documentNumber.trim()&&invoice.documentDate&&parseMoney(invoice.totalGross)>0&&["PAID","CREDIT"].includes(invoice.settlementMode)&&reviewReady&&!invoice.working&&!invoice.done);
+  const ready=Boolean(invoice.stage==="READY"&&invoice.jobId&&invoice.supplierId&&invoice.documentNumber.trim()&&invoice.documentDate&&parseMoney(invoice.totalGross)>0&&["PAID","CREDIT"].includes(invoice.settlementMode)&&!invoice.working&&!invoice.done);
   const submit=async()=>{
     if(!ready)return;
     const totalGross=parseMoney(invoice.totalGross),documentNumber=invoice.documentNumber.trim();
-    setInvoice(current=>({...current,stage:"SUBMITTING",working:true,status:"Αποθηκεύω τον έλεγχο γραμμών…"}));
+    setInvoice(current=>({...current,stage:"SUBMITTING",working:true,status:"Καταχώριση σε εξέλιξη…"}));
     try{
-      await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/product-lines`,{method:"PUT",body:JSON.stringify({productLines:includedReview.map(line=>({rawText:line.rawText||line.description,code:line.code||"",barcode:line.barcode||"",description:String(line.description||"").trim(),quantity:Number(line.quantity||0),unit:line.unit||"ΤΜΧ",unitsPerPackage:Number(line.unitsPerPackage||0),unitCost:Number(line.unitCost||0),vatRate:Number(line.vatRate||0),confidence:Number(line.confidence||0)}))})});
-      setReviewSaved(true);setInvoice(current=>({...current,status:"Καταχώριση σε εξέλιξη…"}));
       const data=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/pos-intake`,{method:"POST",body:JSON.stringify({supplierId:invoice.supplierId,documentNumber,documentDate:invoice.documentDate,totalGross,settlementMode:invoice.settlementMode,note:invoice.note.trim()||null})});
       if(data?.stockUpdated===true)throw new Error("Η αποθήκη ενημερώθηκε πριν την Οριστικοποίηση. Η καταχώριση σταμάτησε για έλεγχο.");
       const success=invoice.settlementMode==="PAID"?`✅ Πληρωμή ${euro(totalGross)} καταγράφηκε και τιμολόγιο ${documentNumber} στάλθηκε για έλεγχο`:`✅ Τιμολόγιο ${documentNumber} καταχωρίστηκε ΜΕ ΠΙΣΤΩΣΗ και στάλθηκε για έλεγχο`;
@@ -161,22 +153,9 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     <label>Ημερομηνία<input type="date" value={invoice.documentDate} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,documentDate:event.target.value}))}/></label>
     <label>Συνολικό ποσό<input inputMode="decimal" value={invoice.totalGross} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,totalGross:event.target.value}))}/></label>
     <label>Παρατηρήσεις<input value={invoice.note} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,note:event.target.value}))}/></label>
-
-    {reviewLines.length>0&&<div style={{margin:"14px 0",border:"1px solid #d8b45b",borderRadius:10,padding:10,background:"#fff"}}>
-      <div style={{fontWeight:900,marginBottom:4}}>Έλεγχος γραμμών τιμολογίου — {includedReview.length} είδη</div>
-      <small style={{display:"block",marginBottom:9}}>Όπως στο αρχικό AI Reader: έλεγξε ποσότητα και τιμή πριν φύγει το τιμολόγιο για BackOffice. Δεν ενημερώνεται stock εδώ.</small>
-      <div style={{display:"grid",gap:8}}>{reviewLines.map((line,index)=><div key={line.key||index} style={{border:"1px solid #dbe4e8",borderRadius:8,padding:8,background:line.included?"#f7fffb":"#f6f6f6"}}>
-        <div style={{display:"grid",gridTemplateColumns:"auto 110px minmax(220px,1fr)",gap:6,alignItems:"center"}}><input type="checkbox" checked={line.included} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"included",e.target.checked)}/><input placeholder="Κωδικός" value={line.code} disabled={!line.included||invoice.working||invoice.done} onChange={e=>changeReview(index,"code",e.target.value)}/><input placeholder="Περιγραφή προϊόντος" value={line.description} disabled={!line.included||invoice.working||invoice.done} onChange={e=>changeReview(index,"description",e.target.value)}/></div>
-        {line.included&&<div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(95px,1fr))",gap:6,marginTop:7}}><label>Ποσότητα<input type="number" min="0" step="0.001" value={line.quantity} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"quantity",e.target.value)}/></label><label>Μονάδα<select value={line.unit} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"unit",e.target.value)}><option value="ΤΜΧ">Τεμάχια</option><option value="PIECE">Τεμάχια</option><option value="PACKAGE">Κιβώτιο/συσκ.</option><option value="ΚΙΒ">Κιβώτιο</option></select></label><label>Τεμ./κιβώτιο<input type="number" min="0" step="1" value={line.unitsPerPackage} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"unitsPerPackage",e.target.value)}/></label><label>Τιμή αγοράς<input type="number" min="0" step="0.0001" value={line.unitCost} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"unitCost",e.target.value)}/></label><label>ΦΠΑ %<input type="number" min="0" max="100" step="0.01" value={line.vatRate} disabled={invoice.working||invoice.done} onChange={e=>changeReview(index,"vatRate",e.target.value)}/></label></div>}
-      </div>)}</div>
-      {!reviewReady&&<div style={{marginTop:8,padding:8,borderRadius:7,background:"#fff7ed",fontWeight:800}}>⚠ Συμπλήρωσε σωστή ποσότητα και τιμή αγοράς σε κάθε επιλεγμένο προϊόν. Δεν θα καταχωριστεί με 0 ή αυθαίρετο 1.</div>}
-      {reviewSaved&&<div style={{marginTop:8,color:"#087f5b",fontWeight:800}}>✓ Οι ελεγμένες γραμμές αποθηκεύτηκαν.</div>}
-    </div>}
-    {invoice.jobId&&invoice.stage==="READY"&&reviewLines.length===0&&<div style={{margin:"10px 0",padding:9,borderRadius:8,background:"#fff7ed",fontWeight:800}}>⚠ Δεν υπάρχουν ακόμη δομημένες γραμμές προϊόντων. Πάτησε «Επανέλεγχος με AI» πριν την καταχώριση.</div>}
-
     <div style={{display:"flex",gap:8,margin:"12px 0"}}><button type="button" style={{flex:1,fontWeight:invoice.settlementMode==="PAID"?900:600}} disabled={invoice.working||invoice.done} aria-pressed={invoice.settlementMode==="PAID"} onClick={()=>setInvoice(current=>({...current,settlementMode:"PAID"}))}>ΠΛΗΡΩΜΕΝΟ</button><button type="button" style={{flex:1,fontWeight:invoice.settlementMode==="CREDIT"?900:600}} disabled={invoice.working||invoice.done} aria-pressed={invoice.settlementMode==="CREDIT"} onClick={()=>setInvoice(current=>({...current,settlementMode:"CREDIT"}))}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
     <small style={{display:"block",marginBottom:10}}><b>ΠΛΗΡΩΜΕΝΟ:</b> δημιουργεί το τιμολόγιο προς έλεγχο και αφαιρεί το ποσό από την ενεργή βάρδια. <b>ΜΕ ΠΙΣΤΩΣΗ:</b> δημιουργεί το τιμολόγιο προς έλεγχο χωρίς αφαίρεση χρημάτων. Το stock παραμένει ανέγγιχτο μέχρι την Οριστικοποίηση.</small>
     {!selectedSupplier&&invoice.supplierId&&<small style={{display:"block",marginBottom:8}}>Ο επιλεγμένος προμηθευτής θα επιβεβαιωθεί από τον server.</small>}
-    <button className="pos-primary-action" type="button" disabled={!ready} onClick={submit}><Wallet/> {invoice.stage==="SUBMITTING"?"Καταχώριση σε εξέλιξη…":"Καταχώριση τιμολογίου για έλεγχο"}</button>
+    <button className="pos-primary-action" type="button" disabled={!ready} onClick={submit}><Wallet/> {invoice.stage==="SUBMITTING"?"Καταχώριση σε εξέλίξη…":"Καταχώριση τιμολογίου για έλεγχο"}</button>
   </div>;
 }
