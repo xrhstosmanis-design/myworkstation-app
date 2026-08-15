@@ -37,29 +37,28 @@ async function loadLines(orderId){
 }
 
 function lineStatus(row){
-  if(row.resolutionStatus==="INFO")return `<span style="padding:3px 8px;border-radius:999px;background:#eef2f5">INFO</span>`;
   if(row.resolutionStatus==="MATCHED")return `<span style="padding:3px 8px;border-radius:999px;background:#e4f6e9;color:#176b32">✓ ΑΝΤΙΣΤΟΙΧΙΣΜΕΝΟ</span>`;
   return `<span style="padding:3px 8px;border-radius:999px;background:#fff1cf;color:#8a5700">! ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟ</span>`;
 }
 
 function renderPanel(panel,data){
-  const rows=data.rows||[];
+  const rows=(data.rows||[]).filter(row=>row.ocrLineType==="PRODUCT");
   panel.dataset.unresolved=String(data.unresolved||0);
   panel.innerHTML=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
-      <div><h3 style="margin:0 0 4px">Έλεγχος γραμμών τιμολογίου</h3><small>Οι γραμμές εμφανίζονται με την ίδια σειρά που διαβάστηκαν από το τιμολόγιο. INFO = πληροφοριακή γραμμή, δεν επηρεάζει stock.</small></div>
+      <div><h3 style="margin:0 0 4px">Έλεγχος γραμμών τιμολογίου</h3><small>Εμφανίζονται μόνο οι πραγματικές γραμμές ειδών του τιμολογίου. Κεφαλίδες, στοιχεία πελάτη, τράπεζες, IBAN, URL και λοιπές πληροφοριακές γραμμές δεν εμφανίζονται και δεν επηρεάζουν stock.</small></div>
       <div style="font-weight:900;${data.unresolved?"color:#a75d00":"color:#14733c"}">${data.unresolved?`${data.unresolved} άλυτες γραμμές`:`✓ Όλες οι γραμμές προϊόντων ελέγχθηκαν`}</div>
     </div>
     <div style="display:grid;gap:7px">${rows.map(row=>`
-      <article data-ocr-line="${esc(row.id)}" style="border:1px solid ${row.resolutionStatus==='UNRESOLVED'?'#e3b34f':'#dce5e2'};border-radius:10px;padding:9px;background:${row.resolutionStatus==='INFO'?'#f7f8f9':row.resolutionStatus==='UNRESOLVED'?'#fffaf0':'#fff'}">
+      <article data-ocr-line="${esc(row.id)}" style="border:1px solid ${row.resolutionStatus==='UNRESOLVED'?'#e3b34f':'#dce5e2'};border-radius:10px;padding:9px;background:${row.resolutionStatus==='UNRESOLVED'?'#fffaf0':'#fff'}">
         <div style="display:grid;grid-template-columns:52px minmax(240px,1fr) 180px 150px;gap:8px;align-items:center">
           <b>#${row.ocrSequence||"—"}</b>
           <div><div style="font-weight:700">${esc(row.ocrRawText||row.description||"")}</div><small>OCR ${Math.round(Number(row.ocrConfidence||0))}%${row.detectedBarcode?` · Barcode ${esc(row.detectedBarcode)}`:""}</small></div>
           <div>${lineStatus(row)}</div>
-          <div>${row.productName?`<b>${esc(row.productName)}</b><small style="display:block">${esc(row.sku||"")}</small>`:row.ocrLineType==='PRODUCT'?'<b>Χωρίς προϊόν</b>':'—'}</div>
+          <div>${row.productName?`<b>${esc(row.productName)}</b><small style="display:block">${esc(row.sku||"")}</small>`:'<b>Χωρίς προϊόν</b>'}</div>
         </div>
         ${row.resolutionStatus==='UNRESOLVED'?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px"><button type="button" data-ocr-search="${esc(row.id)}">🔎 Online / Κατάλογος</button><button type="button" data-ocr-new="${esc(row.id)}">＋ Νέα εγγραφή</button></div>`:""}
-      </article>`).join("")}
+      </article>`).join("")||'<div style="padding:14px;border:1px dashed #cbd5d1;border-radius:10px">Δεν αναγνωρίστηκε ακόμη πραγματική γραμμή προϊόντος στο παραστατικό.</div>'}
     </div>`;
 }
 
@@ -112,7 +111,7 @@ async function openSearch(modal,panel,orderId,line){
 }
 
 function bindPanel(modal,panel,orderId,data){
-  const byId=new Map((data.rows||[]).map(row=>[row.id,row]));
+  const byId=new Map((data.rows||[]).filter(row=>row.ocrLineType==="PRODUCT").map(row=>[row.id,row]));
   panel.querySelectorAll("[data-ocr-search]").forEach(btn=>btn.onclick=()=>openSearch(modal,panel,orderId,byId.get(btn.dataset.ocrSearch)));
   panel.querySelectorAll("[data-ocr-new]").forEach(btn=>btn.onclick=async()=>{const line=byId.get(btn.dataset.ocrNew);try{await createProduct(orderId,line);await refreshPanel(modal,panel,orderId)}catch(error){alert(error.message)}});
 }
