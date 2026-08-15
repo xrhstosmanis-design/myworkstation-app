@@ -45,7 +45,10 @@ async function localOcr(file){
 function localMeta(rawText,suppliers=[]){
   const raw=String(rawText||""),lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),joined=normalize(raw);
   let supplier=null,best=0;
-  for(const item of suppliers){const key=normalize(item.name);if(key.length>=4&&joined.includes(key)&&key.length>best){supplier=item;best=key.length;}}
+  for(const item of suppliers){
+    const names=[String(item.name||""),String(item.name||"").replace(/\s*\([^)]*\)\s*$/g,"")];
+    for(const name of names){const key=normalize(name);if(key.length>=4&&joined.includes(key)&&key.length>best){supplier=item;best=key.length;}}
+  }
   let documentNumber="";
   for(const line of lines){
     const match=line.match(/(?:ΤΙΜΟΛΟΓΙΟ|ΤΙΜ|INVOICE|ΠΑΡΑΣΤΑΤΙΚΟ).{0,30}?(?:ΑΡ\.?|ΑΡΙΘΜ(?:ΟΣ)?|NO\.?|#)?\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/]{2,})/i)||line.match(/(?:ΑΡ\.?\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|ΑΡΙΘΜΟΣ\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|INVOICE\s*NO\.?)\s*[:\-]?\s*([A-ZΑ-Ω0-9\-/]{3,})/i);
@@ -101,6 +104,16 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     }catch(error){setFailure(error.message||"Η ανάγνωση του τιμολογίου απέτυχε.")}
   };
 
+  const manualAiRecheck=async()=>{
+    if(!invoice.jobId||invoice.working||invoice.done)return;
+    const base={supplierId:invoice.supplierId,supplierName:selectedSupplier?.name||"",documentNumber:invoice.documentNumber,documentDate:invoice.documentDate,totalGross:parseMoney(invoice.totalGross),supplierCandidate:candidate};
+    setInvoice(current=>({...current,stage:"AI",working:true,status:"Γίνεται επανέλεγχος με AI μετά από δική σου επιλογή…"}));
+    try{
+      const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});
+      applyReady(base,ai?.result||{},ai?.supplierMatch||null,true,Number(ai?.confidence??invoice.confidence??0));
+    }catch(error){setFailure(error.message||"Ο επανέλεγχος με AI απέτυχε.")}
+  };
+
   const capture=()=>{const video=videoRef.current,canvas=canvasRef.current;if(!video||!canvas)return;canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720;canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob)return;stopCamera();processFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.92)};
 
   const saveSupplier=async()=>{
@@ -132,6 +145,7 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={invoice.working||invoice.done}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" disabled={invoice.working||invoice.done} onChange={event=>processFile(event.target.files?.[0]||null)}/></label><b>{invoice.file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
     {invoice.confidence!==null&&<small style={{display:"block",margin:"8px 0",fontWeight:700}}>Ανάγνωση {Math.round(Number(invoice.confidence)||0)}%{invoice.aiCalled?" · AI επανέλεγχος":" · τοπικό OCR"}</small>}
+    {invoice.jobId&&invoice.stage==="READY"&&!invoice.aiCalled&&!invoice.done&&<button type="button" onClick={manualAiRecheck} disabled={invoice.working} style={{margin:"0 0 10px",fontWeight:800}}>Επανέλεγχος με AI</button>}
 
     <label>Προμηθευτής<select value={invoice.supplierId} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,supplierId:event.target.value}))}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select></label>
     {!invoice.supplierId&&invoice.jobId&&candidate.name&&<div style={{border:"1px solid #f59e0b",borderRadius:9,padding:10,margin:"8px 0",background:"#fff7ed"}}><b>Νέος προμηθευτής — δεν βρέθηκε στο BackOffice</b><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:8}}><input placeholder="Επωνυμία" value={candidate.name} onChange={e=>setCandidate(x=>({...x,name:e.target.value}))}/><input placeholder="ΑΦΜ" value={candidate.taxId} onChange={e=>setCandidate(x=>({...x,taxId:e.target.value}))}/><input placeholder="Τηλέφωνο" value={candidate.phone} onChange={e=>setCandidate(x=>({...x,phone:e.target.value}))}/><input placeholder="Email" value={candidate.email} onChange={e=>setCandidate(x=>({...x,email:e.target.value}))}/><input placeholder="Διεύθυνση" value={candidate.address} onChange={e=>setCandidate(x=>({...x,address:e.target.value}))}/><input placeholder="Πόλη" value={candidate.city} onChange={e=>setCandidate(x=>({...x,city:e.target.value}))}/></div><button type="button" style={{width:"100%",marginTop:8,fontWeight:800}} disabled={invoice.working} onClick={saveSupplier}>Καταχώριση στους Προμηθευτές</button></div>}
