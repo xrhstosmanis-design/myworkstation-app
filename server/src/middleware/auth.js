@@ -76,7 +76,8 @@ export async function auth(req,res,next){
       prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "lastSeenAt"=NOW() WHERE "id"=${payload.operatorSessionId} AND "lastSeenAt"<NOW()-INTERVAL '5 minutes'`.catch(()=>{});
       const permissions=storeRuntimePermissions({posAccess:operator.posAccess,permissions:operator.profilePermissions});
       if(!enforceStorePaymentPermissions(req,res,permissions))return;
-      req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
+      const posOcrJobCreate=req.method==="POST"&&String(req.originalUrl||"").split("?")[0]==="/api/commerce/ai-reader/jobs";
+      req.user={...payload,id:posOcrJobCreate?null:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
       return next();
     }
 
