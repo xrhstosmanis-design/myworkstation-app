@@ -64,21 +64,27 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 
+    const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+    const localRawText=String(previous.rawText||"").slice(0,60000);
     const filePart=job.mimeType==="application/pdf"
       ? {type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}
       : {type:"input_image",image_url:job.contentData,detail:"high"};
-    const prompt=`Διάβασε το συνημμένο τιμολόγιο προμηθευτή με μεγάλη ακρίβεια. Επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά που εμφανίζονται στο παραστατικό, χωρίς να παραλείψεις γραμμές ειδών, εκπτώσεων, ΦΠΑ, συνόλων ή πληροφοριών. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), αριθμό τιμολογίου/παραστατικού, ημερομηνία και τελικό πληρωτέο ποσό. documentDate σε μορφή YYYY-MM-DD όταν διαβάζεται, αλλιώς κενό string. Μην εφευρίσκεις στοιχεία. Για άγνωστο στοιχείο δώσε κενό string ή 0. Το aiConfidence να εκφράζει τη συνολική βεβαιότητα ανάγνωσης.`;
-    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Μην επιστρέψεις κενά/0 απλώς επειδή το OCR έχει λάθη: προσπάθησε να διαβάσεις οπτικά το παραστατικό. Επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά, χωρίς να παραλείψεις είδη, ποσότητες, τιμές, εκπτώσεις, ΦΠΑ, σύνολα ή πληροφοριακές γραμμές. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία. Αν κάτι πραγματικά δεν διαβάζεται, τότε μόνο άφησέ το κενό ή 0. Το aiConfidence είναι η συνολική βεβαιότητα ανάγνωσης.
+
+ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):
+${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
+    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error;}
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
     parsed.lines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
-    parsed.rawText=parsed.rawText||parsed.lines.map(x=>x.text).join("\n");
+    parsed.rawText=parsed.rawText||parsed.lines.map(x=>x.text).join("\n")||localRawText;
+    if(!parsed.lines.length&&Array.isArray(previous.lines))parsed.lines=previous.lines;
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     const aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
-    res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null});
+    res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
   }catch(error){next(error)}
 });
 
