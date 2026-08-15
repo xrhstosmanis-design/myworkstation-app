@@ -13,7 +13,7 @@ function collectLines(data){
   const visit=node=>{
     if(!node)return;
     if(Array.isArray(node)){node.forEach(visit);return;}
-    if(node.text&&String(node.text).trim())found.push({text:String(node.text).trim(),confidence:Math.max(0,Math.min(100,Math.round(Number(node.confidence)||0)))});
+    if(node.text&&node.words&&String(node.text).trim())found.push({text:String(node.text).trim(),confidence:Math.max(0,Math.min(100,Math.round(Number(node.confidence)||0)))});
     for(const key of ["blocks","paragraphs","lines"])visit(node[key]);
   };
   visit(data?.blocks);
