@@ -34,6 +34,11 @@ async function supplierMatch(companyId,candidate={}){
   return null;
 }
 
+const productLineProperties={
+  rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
+};
+const productLineRequired=["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","grossAmount","confidence"];
+
 const invoiceSchema={
   type:"object",additionalProperties:false,
   properties:{
@@ -41,10 +46,25 @@ const invoiceSchema={
     supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},email:{type:"string"},phone:{type:"string"},address:{type:"string"},city:{type:"string"}},required:["name","taxId","email","phone","address","city"]},
     documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},rawText:{type:"string"},
     lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}},
-    productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:{
-      rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
-    },required:["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","grossAmount","confidence"]}}
+    productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}
   },required:["aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines","productLines"]
+};
+
+const productTableSchema={
+  type:"object",additionalProperties:false,
+  properties:{productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},
+  required:["productLines"]
+};
+
+const normalizeProductLine=line=>{
+  const quantity=Math.max(0,Number(line?.quantity||0));
+  const netAmount=Math.max(0,Number(line?.netAmount||0));
+  let unitCost=Math.max(0,Number(line?.unitCost||0));
+  if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
+  const vatRate=Math.max(0,Number(line?.vatRate||0));
+  let grossAmount=Math.max(0,Number(line?.grossAmount||0));
+  if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
+  return {...line,rawText:String(line?.rawText||""),code:String(line?.code||"").trim(),barcode:String(line?.barcode||"").trim(),description:String(line?.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unit:String(line?.unit||"").trim(),unitsPerPackage:Math.max(0,Number(line?.unitsPerPackage||0)),unitCost,netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line?.confidence||0)))};
 };
 
 router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{
@@ -93,16 +113,61 @@ ${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
     const text=outputText(payload);let parsed;
     try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
     const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
-    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(line=>{
-      const quantity=Math.max(0,Number(line.quantity||0));
-      const netAmount=Math.max(0,Number(line.netAmount||0));
-      let unitCost=Math.max(0,Number(line.unitCost||0));
-      if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
-      const vatRate=Math.max(0,Number(line.vatRate||0));
-      let grossAmount=Math.max(0,Number(line.grossAmount||0));
-      if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
-      return {...line,code:String(line.code||"").trim(),description:String(line.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unitCost,netAmount,vatRate,grossAmount};
-    }):[];
+    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+
+    const needsTablePass=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
+    if(needsTablePass){
+      const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
+      const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Αγνόησε όλα τα στοιχεία προμηθευτή, πελάτη, τραπεζών, σύνολα και footer. Κοίτα ΜΟΝΟ τον πίνακα προϊόντων στο πρωτότυπο παραστατικό.
+
+Ένας προηγούμενος έλεγχος βρήκε τις παρακάτω γραμμές προϊόντων αλλά απέτυχε να διαβάσει τις αριθμητικές στήλες. Χρησιμοποίησε αυτές τις γραμμές ως anchors και εντόπισε την ίδια οριζόντια σειρά στο πρωτότυπο:
+${anchors}
+
+Για ΚΑΘΕ anchor ακολούθησε οριζόντια την ίδια σειρά και διάβασε με βάση τις κεφαλίδες του πίνακα: Κωδικός/Περιγραφή | Μ.Μ. | ΤΜΧ | Τιμή ΤΜΧ | Αξία | Εκπτώσεις | Καθ Αξία | ΦΠΑ. Χαρτογράφηση: quantity=ΤΜΧ, unit=Μ.Μ., unitCost=Τιμή ΤΜΧ, netAmount=Καθ Αξία, vatRate=% ΦΠΑ. Η συσκευασία μέσα στην περιγραφή (24x33cl, 20x50cl, 0,5L κ.λπ.) ΔΕΝ είναι quantity ή unitCost. Η στήλη Αξία πριν τις εκπτώσεις ΔΕΝ είναι unitCost.
+
+Επέστρεψε μόνο productLines, κατά προτίμηση στην ίδια σειρά με τα anchors. Μην εφευρίσκεις τιμές. Αν ένα συγκεκριμένο πεδίο πραγματικά δεν φαίνεται, βάλε 0. Αν quantity>0 και netAmount>0 αλλά unitCost δεν φαίνεται, υπολόγισε unitCost=netAmount/quantity. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount. Κάνε zoom/λεπτομερή οπτικό έλεγχο των αριθμητικών στηλών πριν βάλεις 0.`;
+      const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+      const tablePayload=await tableResponse.json().catch(()=>({}));
+      if(tableResponse.ok){
+        try{
+          const tableParsed=JSON.parse(outputText(tablePayload));
+          const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+          const byCode=new Map(recovered.filter(line=>line.code).map(line=>[norm(line.code),line]));
+          parsed.productLines=parsed.productLines.map((line,index)=>{
+            let candidate=line.code?byCode.get(norm(line.code)):null;
+            if(!candidate&&recovered[index])candidate=recovered[index];
+            if(!candidate){
+              const key=norm(line.description);
+              candidate=recovered.find(row=>{const r=norm(row.description);return key&&r&&(r.includes(key)||key.includes(r));});
+            }
+            if(!candidate)return line;
+            return normalizeProductLine({...line,
+              rawText:candidate.rawText||line.rawText,
+              code:candidate.code||line.code,
+              barcode:candidate.barcode||line.barcode,
+              description:candidate.description||line.description,
+              quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,
+              unit:candidate.unit||line.unit,
+              unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
+              unitCost:Number(candidate.unitCost||0)>0?candidate.unitCost:line.unitCost,
+              netAmount:Number(candidate.netAmount||0)>0?candidate.netAmount:line.netAmount,
+              vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,
+              grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
+              confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))
+            });
+          });
+          parsed.tableRecheckCalled=true;
+          parsed.tableRecheckRecovered=parsed.productLines.filter(line=>Number(line.quantity||0)>0||Number(line.unitCost||0)>0||Number(line.netAmount||0)>0).length;
+        }catch{
+          parsed.tableRecheckCalled=true;
+          parsed.tableRecheckRecovered=0;
+        }
+      }else{
+        parsed.tableRecheckCalled=true;
+        parsed.tableRecheckRecovered=0;
+      }
+    }
+
     parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
     if(parsed.productLines.length){
       parsed.lines=parsed.productLines.map(line=>{
