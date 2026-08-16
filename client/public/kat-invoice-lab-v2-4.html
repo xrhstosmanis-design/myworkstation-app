@@ -1,31 +1,29 @@
-<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAT Invoice Lab V2.5</title></head><body><div id="boot" style="font:700 18px system-ui;padding:24px">Φόρτωση KAT Invoice Lab V2.5…</div><script>
+<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAT Invoice Lab V2.6</title></head><body><div id="boot" style="font:700 18px system-ui;padding:24px">Φόρτωση KAT Invoice Lab V2.6…</div><script>
 (async()=>{try{let h=await (await fetch('/kat-invoice-lab-v2.html?base=v22',{cache:'no-store'})).text();
-h=h.replaceAll('V2.2','V2.5').replace('SUPPLIER CODE + DISCOUNT PRIORITY','REGRESSION LAB · DEDUP + RECOVERY + NORMALIZED CASE TO PCS');
+h=h.replaceAll('V2.2','V2.6').replace('SUPPLIER CODE + DISCOUNT PRIORITY','REGRESSION LAB · SAFE DEDUP + NORMALIZED CASE TO PCS');
 // Keep the proven V2.2 commercial parser untouched. Add only post-processing.
 const inject=`
-function strongDescKey(v){return norm(String(v||'').replace(/\\b(1PACK|1\\s*POD|C20U|C12U|C14U|C38U)\\b/ig,' ').replace(/\\s+/g,' ').trim())}
-function rowScore(x){const e=enrich(x);return (deriveCode(e)?20:0)+(Number(e.quantity||0)>0?10:0)+(Number(e.unitCost||0)>0?10:0)+(Number(e.netAmount||0)>0?8:0)+(Number(e.vatRate||0)>0?3:0)+(Number(e.confidence||0)/100)+Math.min(5,String(e.rawText||'').length/100)}
-function dedupeLines(lines){const out=[];for(const src of (lines||[])){const s=enrich(src),sk=strongDescKey(s.description||s.rawText);let idx=-1;for(let i=0;i<out.length;i++){const o=enrich(out[i]),ok=strongDescKey(o.description||o.rawText);const qtyCompat=Number(s.quantity||0)<=0||Number(o.quantity||0)<=0||Number(s.quantity||0)===Number(o.quantity||0);if(sk&&ok&&qtyCompat&&(sk===ok||sk.includes(ok)||ok.includes(sk))){idx=i;break}}if(idx<0){out.push({...src});continue}const a=out[idx],better=rowScore(src)>rowScore(a)?src:a,worse=better===src?a:src;const merged={...better};for(const k of ['code','barcode','description','unit'])if(!String(merged[k]||'').trim()&&String(worse[k]||'').trim())merged[k]=worse[k];for(const k of ['quantity','unitCost','netAmount','vatRate','grossAmount','confidence'])if(Number(merged[k]||0)<=0&&Number(worse[k]||0)>0)merged[k]=worse[k];if(String(worse.rawText||'').length>String(merged.rawText||'').length)merged.rawText=worse.rawText;out[idx]=merged}return out}
-function normalizedPackText(line){return String((line?.description||'')+' '+(line?.rawText||'')+' '+(line?.unit||'')).toLocaleUpperCase('el-GR').replace(/,/g,'.').replace(/ΛΤ/g,'LT').replace(/ΛΙΤΡ(?:Ο|Α|ΩΝ)?/g,'L').replace(/LIT(?:RE|ER|RO|RA)?/g,'L').replace(/\s+/g,' ')}
-function isCaseLike(t){return /(ΚΙΒ|ΚΒ|ΚΙΒΩΤ|CASE|BOX)/.test(t)}
+function strongDescKey(v){return norm(String(v||'').replace(/\\b(1PACK|1\\s*POD|C20U|C12U|C14U|C38U|1X6PACK|1X24|12X0[.,]?75LT?)\\b/ig,' ').replace(/\\s+/g,' ').trim())}
+function rowScore(x){const e=enrich(x);return (deriveCode(e)?30:0)+(Number(e.quantity||0)>0?12:0)+(Number(e.unitCost||0)>0?12:0)+(Number(e.netAmount||0)>0?10:0)+(Number(e.vatRate||0)>0?4:0)+(Number(e.confidence||0)/100)+Math.min(6,String(e.rawText||'').length/90)}
+function sameProduct(a,b){const ac=deriveCode(a),bc=deriveCode(b);if(ac&&bc&&ac===bc)return true;const ak=strongDescKey(a?.description||a?.rawText),bk=strongDescKey(b?.description||b?.rawText);if(!ak||!bk)return false;if(ak===bk)return true;const min=Math.min(ak.length,bk.length),max=Math.max(ak.length,bk.length);return min>=8&&min/max>=0.78&&(ak.includes(bk)||bk.includes(ak))}
+function dedupeLines(lines){const out=[];for(const src of (lines||[])){let idx=-1;for(let i=0;i<out.length;i++){if(sameProduct(out[i],src)){idx=i;break}}if(idx<0){out.push({...src});continue}const current=out[idx],better=rowScore(src)>rowScore(current)?src:current,worse=better===src?current:src,merged={...better};for(const k of ['code','barcode','description','unit'])if(!String(merged[k]||'').trim()&&String(worse[k]||'').trim())merged[k]=worse[k];for(const k of ['quantity','unitCost','netAmount','vatRate','grossAmount','confidence'])if(Number(merged[k]||0)<=0&&Number(worse[k]||0)>0)merged[k]=worse[k];const br=String(better.rawText||''),wr=String(worse.rawText||'');if(wr.length>br.length&&rowScore(worse)>=rowScore(better)-5)merged.rawText=wr;out[idx]=merged}return out}
+function normalizedPackText(line){return String((line?.description||'')+' '+(line?.rawText||'')+' '+(line?.unit||'')).toLocaleUpperCase('el-GR').replace(/,/g,'.').replace(/ΚΙΒΩΤΙΟ|ΚΙΒΩΤ|ΚΙΒΩΤ\.|ΚΙΒ\/Δ|ΚΙΒ\/Θ|ΚΙΒ|ΚΒ\/Δ|ΚΒ|CASE|BOX/g,' CASE ').replace(/ΛΤ/g,'LT').replace(/ΛΙΤΡ(?:Ο|Α|ΩΝ)?/g,'L').replace(/LIT(?:RE|ER|RO|RA)?/g,'L').replace(/\s+/g,' ').trim()}
+function isCaseLike(t){return /\\bCASE\\b/.test(t)}
 function packRule(line){const t=normalizedPackText(line);if(!isCaseLike(t))return null;
-  if(/MONSTER|RED\s*BULL|REDBULL/.test(t))return {pcs:24,rule:'Monster / Red Bull'};
-  if(/(1\.5\s*(L|LT)\b|1500\s*ML\b)/.test(t))return {pcs:6,rule:'1,5L'};
-  if(/(330\s*ML\b|0\.33\s*L\b|33\s*CL\b)/.test(t))return {pcs:24,rule:'330ml'};
-  if(/(500\s*ML\b|0\.5\s*L\b|50\s*CL\b)/.test(t))return {pcs:24,rule:'500ml'};
+  if(/MONSTER|RED\\s*BULL|REDBULL/.test(t))return {pcs:24,rule:'Monster / Red Bull'};
+  if(/(1\\.5\\s*(L|LT)\\b|1500\\s*ML\\b)/.test(t))return {pcs:6,rule:'1,5L'};
+  if(/(330\\s*ML\\b|0\\.33\\s*L\\b|33\\s*CL\\b)/.test(t))return {pcs:24,rule:'330ml'};
+  if(/(500\\s*ML\\b|0\\.5\\s*L\\b|50\\s*CL\\b)/.test(t))return {pcs:24,rule:'500ml'};
   if(/ΦΙΑΛ|BOTTLE/.test(t))return {pcs:20,rule:'Φιάλες'};
   return null}
 function stockView(line){const e=enrich(line),r=packRule(e);if(!r)return {...e,stockQty:null,netUnitCost:null,packRule:''};const stockQty=Number(e.quantity||0)*r.pcs;const netUnitCost=stockQty>0&&Number(e.netAmount||0)>0?Number(e.netAmount)/stockQty:0;return {...e,stockQty,netUnitCost,packRule:r.rule+' · '+r.pcs+' τμχ/ΚΒ'}}
 `;
 h=h.replace('function render(jobId,ai,lines,label){',inject+'\nfunction render(jobId,ai,lines,label){');
-// Add stock conversion columns without changing invoice columns.
 h=h.replace('<th>Confidence</th><th>Raw</th>','<th>ΤΜΧ stock</th><th>Καθ. τιμή/ΤΜΧ</th><th>Κανόνας συσκ.</th><th>Confidence</th><th>Raw</th>');
 h=h.replace("const rows=(lines||[]).map(enrich).filter(l=>l.code||String(l.description||'').trim());","const rows=dedupeLines(lines||[]).map(stockView).filter(l=>l.code||String(l.description||'').trim());");
 h=h.replace("<td>${esc(l.confidence??0)}%</td><td>${esc(l.rawText||'')}</td>","<td>${l.stockQty==null?'—':esc(l.stockQty)}</td><td>${l.netUnitCost==null?'—':fmt(l.netUnitCost)}</td><td>${esc(l.packRule||'—')}</td><td>${esc(l.confidence??0)}%</td><td>${esc(l.rawText||'')}</td>");
-// Before rendering, collapse obvious duplicates. Recovery/crops from V2.2 remain available.
-h=h.replace("render(full.job.id,full.ai,lines,'KAT_V2_5_SUPPLIER_CODE_DISCOUNTS');","lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_5_DEDUP_CASE_TO_PCS');");
-h=h.replace("status('3/3 V2.5 supplier-code/discount parsing…');render(full.job.id,full.ai,lines,'KAT_V2_5_SUPPLIER_CODE_DISCOUNTS');","status('3/3 V2.5 dedup + κανονικοποίηση συσκευασιών…');lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_5_NORMALIZED_CASE_TO_PCS');");
-// Explicit safe-test wording.
-h=h.replace('V2.5: ο κωδικός στην αρχή της γραμμής κρατιέται ως Κωδικός προμηθευτή.','V2.5 SAFE: οι οικονομικές τιμές του V2.2 παραμένουν ανέγγιχτες. Post-processing κανόνες: όλα τα 1,5L=6 τμχ/ΚΒ, 330ml=24, 500ml=24, φιάλες=20, Monster/Red Bull=24. Υποστηρίζονται 1.5L/1,5L/1.5LT/1500ML, 330ML/0,33L/33CL και 500ML/0,5L/50CL.');
-document.open();document.write(h);document.close();}catch(e){document.getElementById('boot').textContent='Σφάλμα φόρτωσης V2.5: '+e.message}})();
+h=h.replace("render(full.job.id,full.ai,lines,'KAT_V2_6_SUPPLIER_CODE_DISCOUNTS');","lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_6_SAFE_DEDUP_CASE_TO_PCS');");
+h=h.replace("status('3/3 V2.6 supplier-code/discount parsing…');render(full.job.id,full.ai,lines,'KAT_V2_6_SUPPLIER_CODE_DISCOUNTS');","status('3/3 V2.6 safe dedup + κανονικοποίηση κιβωτίων…');lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_6_SAFE_DEDUP_CASE_TO_PCS');");
+h=h.replace('V2.6: ο κωδικός στην αρχή της γραμμής κρατιέται ως Κωδικός προμηθευτή.','V2.6 SAFE: οι οικονομικές τιμές του V2.2 παραμένουν ανέγγιχτες. Όλες οι μορφές Κιβ/δ, Κιβώτ, Κιβώτιο, ΚΒ, CASE, BOX κανονικοποιούνται. Κανόνες: 1,5L=6 τμχ/ΚΒ, 330ml=24, 500ml=24, φιάλες=20, Monster/Red Bull=24. Το dedup κρατά την πληρέστερη γραμμή για ίδιο προϊόν.');
+document.open();document.write(h);document.close();}catch(e){document.getElementById('boot').textContent='Σφάλμα φόρτωσης V2.6: '+e.message}})();
 </script></body></html>
