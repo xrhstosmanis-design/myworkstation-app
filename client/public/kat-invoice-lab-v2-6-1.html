@@ -1,0 +1,15 @@
+<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAT Invoice Lab V2.6.1</title></head><body><div id="boot" style="font:700 18px system-ui;padding:24px">Φόρτωση KAT Invoice Lab V2.6.1…</div><script>
+(async()=>{try{
+ let src=await (await fetch('/kat-invoice-lab-v2-4.html?authfix=v261',{cache:'no-store'})).text();
+ src=src.replaceAll('V2.6','V2.6.1');
+ const marker='// Keep the proven V2.2 commercial parser untouched. Add only post-processing.';
+ const patch=`
+// AUTH-ONLY PATCH: keep parser/dedup/pack rules untouched.
+h=h.replace("const $=id=>document.getElementById(id),token=localStorage.getItem('token');const state={file:null,stores:[],busy:false};","const $=id=>document.getElementById(id),token=(localStorage.getItem('token')||sessionStorage.getItem('token')||sessionStorage.getItem('platformToken')||'');const state={file:null,stores:[],busy:false};");
+h=h.replace("const api=async(path,options={})=>{const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:\\`Bearer \\${token}\\`}:{})}});","const api=async(path,options={})=>{const r=await fetch(path,{credentials:'include',...options,headers:{'Content-Type':'application/json',...(token?{Authorization:\\`Bearer \\${token}\\`}:{})}});");
+h=h.replace("async function loadStores(){if(!token){status('Δεν υπάρχει ενεργό login token. Άνοιξε πρώτα το MyWorkStation και συνδέσου.',true);return}try{","async function loadStores(){try{");
+`;
+ src=src.replace(marker,patch+'\n'+marker);
+ document.open();document.write(src);document.close();
+}catch(e){document.getElementById('boot').textContent='Σφάλμα φόρτωσης V2.6.1: '+e.message}})();
+</script></body></html>
