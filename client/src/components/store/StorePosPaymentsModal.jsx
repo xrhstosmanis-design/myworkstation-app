@@ -24,7 +24,7 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
    <label>Ποσό<input readOnly inputMode="decimal" value={form.amount}/></label><Pad value={form.amount} onChange={amount=>setForm(c=>({...c,amount}))}/><label>Παρατηρήσεις<input value={form.description} onChange={e=>setForm(c=>({...c,description:e.target.value}))}/></label>
    <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><Camera/> Επιλογή αρχείου<input type="file" accept="image/*,application/pdf" onChange={e=>setForm(c=>({...c,file:e.target.files?.[0]||null}))}/></label><b>{form.file?.name||"Δεν επιλέχθηκε φωτογραφία"}</b></div>
    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
-   <label className="pos-check"><input type="checkbox" checked={form.subtractFromShift} onChange={e=>setForm(c=>({...c,subtractFromShift:e.target.checked))}/>Αφαίρεση από τα μετρητά της βάρδιας</label><button className="pos-primary-action" disabled={busy} onClick={submitOther}><Wallet/> Καταχώριση εξόδου</button>
+   <label className="pos-check"><input type="checkbox" checked={form.subtractFromShift} onChange={e=>setForm(c=>({...c,subtractFromShift:e.target.checked}))}/>Αφαίρεση από τα μετρητά της βάρδιας</label><button className="pos-primary-action" disabled={busy} onClick={submitOther}><Wallet/> Καταχώριση εξόδου</button>
   </div>}
  </div></main></section></div>
 }
