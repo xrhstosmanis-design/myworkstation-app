@@ -7,7 +7,7 @@ const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(",","."))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
-async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,inboxId}){
+async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,inboxId,mode,paymentTransactionId}){
   const patch=async(status,note)=>{try{await api(`/api/commerce/documents/inbox/${encodeURIComponent(inboxId)}`,{method:"PATCH",body:JSON.stringify({status,note})})}catch{}};
   try{
     const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"POS FAST PAYMENT — background V2.4.4"}})});
@@ -20,8 +20,12 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
     const finalNumber=String(result.documentNumber||documentNumber||"").trim();
     const finalDate=String(result.documentDate||documentDate||today()).slice(0,10);
     const finalTotal=Number(result.totalGross||totalGross||0);
-    const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:finalNumber||`POS-${Date.now()}`,documentDate:finalDate,totalGross:finalTotal,settlementMode:"CREDIT",note:`POS FAST • Inbox ${inboxId}`})});
-    await patch("IN_REVIEW",`✅ V2.4.4 ολοκληρώθηκε στο παρασκήνιο • ${productLines.length} γραμμές • ${created?.purchaseOrderId||created?.purchaseDocumentId||"προς έλεγχο"}`);
+    const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:finalNumber||`POS-${Date.now()}`,documentDate:finalDate,totalGross:finalTotal,settlementMode:"CREDIT",note:`POS FAST • Inbox ${inboxId} • ${mode==="PAID"?"πληρωμή καταχωρισμένη στη βάρδια":"πίστωση"}`})});
+    const documentId=created?.id||created?.purchaseDocumentId||null;
+    if(mode==="PAID"&&paymentTransactionId&&documentId){
+      await api(`/api/commerce/purchase-documents/${encodeURIComponent(documentId)}/link-fast-payment`,{method:"POST",body:JSON.stringify({transactionId:paymentTransactionId})});
+    }
+    await patch("IN_REVIEW",`✅ V2.4.4 ολοκληρώθηκε • ${finalNumber||"χωρίς αριθμό"} • ${finalDate} • ${finalTotal.toFixed(2)} € • ${productLines.length} γραμμές • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΠΙΣΤΩΣΗ"} • ${created?.purchaseOrderId||documentId||"προς έλεγχο"}`);
   }catch(error){
     await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο BackOffice • ${String(error?.message||error).slice(0,700)}`);
   }
@@ -39,24 +43,26 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     if(!ready)return;
     setBusy(true);
     try{
-      const dataUrl=await readFile(file);
+      const dataUrl=await readFile(file),key=paymentKey();
       const responsibleName="POS";
       const note=`POS FAST • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • Ποσό ${num(amount).toFixed(2)} €${documentNumber?` • Τιμολόγιο ${documentNumber}`:""} • Αναμονή V2.4.4`;
       const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl,filename:file.name||"timologio.jpg"}})});
+      let paymentTransactionId=null;
       if(mode==="PAID"){
-        await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description:documentNumber?`Τιμολόγιο ${documentNumber}`:"Πληρωμή προμηθευτή από POS",subtractFromShift:true,attachment:{dataUrl,filename:file.name||"timologio.jpg"}})});
-        try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id}}))}catch{}
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description:documentNumber?`Τιμολόγιο ${documentNumber} — FAST POS":"Πληρωμή προμηθευτή FAST POS",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
+        paymentTransactionId=payment?.id||null;
+        try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
       }
-      setMessage?.(`✅ ${mode==="PAID"?"Η πληρωμή καταχωρίστηκε στη βάρδια":"Το τιμολόγιο καταχωρίστηκε με πίστωση"}. Ο έλεγχος V2.4.4 συνεχίζεται στο BackOffice.`);
+      setMessage?.(`✅ ${mode==="PAID"?"Η πληρωμή καταχωρίστηκε στη βάρδια":"Το τιμολόγιο καταχωρίστηκε με πίστωση"}. Επιστροφή στο POS — ο έλεγχος συνεχίζεται στο BackOffice.`);
       onChanged?.();
-      backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id});
+      backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id,mode,paymentTransactionId});
     }catch(error){
       setMessage?.(`❌ ${error?.message||"Η καταχώριση απέτυχε."}`);
       setBusy(false);
     }
   };
   return <div className="pos-payment-form-v3-root">
-    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>FAST PAYMENT — ο υπάλληλος πληρώνει/παραλαμβάνει και επιστρέφει αμέσως στις πωλήσεις. Ο έλεγχος γίνεται στο BackOffice.</div>
+    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>FAST PAYMENT — φωτογραφία/PDF, προμηθευτής, ποσό και ένα πάτημα. Ο έλεγχος γίνεται στο BackOffice.</div>
     <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     <label>Προμηθευτής<select value={supplierId} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
