@@ -36,6 +36,28 @@ const statements=[
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_supplier_idx" ON "SupplierProductMapping"("supplierId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_product_idx" ON "SupplierProductMapping"("productId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_barcode_idx" ON "SupplierProductMapping"("supplierBarcode")`,
+`CREATE OR REPLACE FUNCTION mws_preserve_ai_reader_lines() RETURNS trigger AS $$
+DECLARE
+  v_new_products JSONB;
+  v_new_lines JSONB;
+  v_old_lines JSONB;
+BEGIN
+  IF NEW."resultJson" IS NULL OR OLD."resultJson" IS NULL THEN RETURN NEW; END IF;
+  v_new_products:=COALESCE(NEW."resultJson"->'productLines','[]'::jsonb);
+  v_new_lines:=COALESCE(NEW."resultJson"->'lines','[]'::jsonb);
+  v_old_lines:=COALESCE(OLD."resultJson"->'lines','[]'::jsonb);
+  IF jsonb_typeof(v_new_products)='array' AND jsonb_typeof(v_new_lines)='array' AND jsonb_typeof(v_old_lines)='array'
+     AND jsonb_array_length(v_new_products)=0 AND jsonb_array_length(v_new_lines)=0 AND jsonb_array_length(v_old_lines)>0 THEN
+    NEW."resultJson":=jsonb_set(NEW."resultJson",'{lines}',v_old_lines,true);
+    IF COALESCE(jsonb_array_length(COALESCE(NEW."resultJson"->'auditLines','[]'::jsonb)),0)=0 THEN
+      NEW."resultJson":=jsonb_set(NEW."resultJson",'{auditLines}',v_old_lines,true);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql`,
+`DROP TRIGGER IF EXISTS trg_mws_preserve_ai_reader_lines ON "AiReaderJob"`,
+`CREATE TRIGGER trg_mws_preserve_ai_reader_lines BEFORE UPDATE OF "resultJson" ON "AiReaderJob" FOR EACH ROW EXECUTE FUNCTION mws_preserve_ai_reader_lines()`,
 `CREATE OR REPLACE FUNCTION mws_pos_ocr_line_before_write() RETURNS trigger AS $$
 DECLARE
   v_company TEXT;
@@ -125,5 +147,5 @@ $$ LANGUAGE plpgsql`,
 
 export async function ensureSupplierItemLearningSchema(){
   for(const statement of statements) await prisma.$executeRawUnsafe(statement);
-  console.log("Supplier item learning + POS OCR approval bridge schema bootstrap completed.");
+  console.log("Supplier item learning + POS OCR approval bridge + AI line preservation bootstrap completed.");
 }
