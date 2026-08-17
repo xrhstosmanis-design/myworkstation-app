@@ -12,6 +12,7 @@ const sectionRules=[
 ];
 
 const normalizeText=value=>String(value||"").replace(/\s+/g," ").trim();
+const money=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
 
 function nearestContainer(element){
   return element.closest("section,article,.panel,.cloud-section,.store-cloud-section")||element.parentElement;
@@ -80,6 +81,58 @@ function disabledReadFallback(path){
   return null;
 }
 
+function readJsonBody(input,init){
+  try{
+    if(typeof init?.body==="string")return JSON.parse(init.body);
+    if(typeof input!=="string"&&typeof input?.body==="string")return JSON.parse(input.body);
+  }catch{}
+  return null;
+}
+
+function mismatchMessage(data){
+  return `ΠΡΟΣΟΧΗ — ΔΙΑΦΟΡΑ ΤΙΜΟΛΟΓΙΟΥ\n\n`+
+    `Σύνολο τιμολογίου: ${money(data.invoiceTotal)} €\n`+
+    `Σύνολο γραμμών: ${money(data.linesTotal)} €\n`+
+    `Διαφορά: ${money(data.absoluteDifference)} €\n`+
+    `Επιτρεπτή ανοχή: ${money(data.tolerance??0.05)} €\n\n`+
+    `Η κανονική Οριστικοποίηση έχει μπλοκαριστεί.`;
+}
+
+async function maybeOwnerManagerOverride({response,input,init,originalFetch,url,method}){
+  if(method!=="PATCH"||!/^\/api\/purchase-orders\/[^/]+$/.test(url.pathname))return response;
+  const requestBody=readJsonBody(input,init);
+  if(requestBody?.status!=="FINAL"||requestBody?.totalMismatchOverride===true)return response;
+  if(response.status!==409)return response;
+
+  let data={};
+  try{data=await response.clone().json()}catch{return response}
+  if(data?.code!=="INVOICE_TOTAL_MISMATCH")return response;
+
+  const base=mismatchMessage(data);
+  if(data.overrideAllowed!==true){
+    alert(`${base}\n\nΜόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να εγκρίνει καταχώριση με αυτή τη διαφορά.`);
+    return response;
+  }
+
+  const accepted=confirm(`${base}\n\nΘέλεις να συνεχίσεις ΜΕ ΕΥΘΥΝΗ ΙΔΙΟΚΤΗΤΗ/ΔΙΑΧΕΙΡΙΣΤΗ;\n\nΗ ενέργεια, η διαφορά και ο λόγος θα καταγραφούν στο audit.`);
+  if(!accepted)return response;
+
+  let reason="";
+  while(reason.length<5){
+    const value=prompt("Γράψε υποχρεωτικά τον λόγο της καταχώρισης με διαφορά:",reason);
+    if(value===null)return response;
+    reason=String(value).trim();
+    if(reason.length<5)alert("Ο λόγος είναι υποχρεωτικός και πρέπει να είναι σαφής (τουλάχιστον 5 χαρακτήρες).");
+  }
+
+  const retryBody={...requestBody,status:"FINAL",totalMismatchOverride:true,totalMismatchReason:reason};
+  const retryInit={...init,method:"PATCH",body:JSON.stringify(retryBody)};
+  const headers=new Headers(init?.headers||(typeof input!=="string"?input?.headers:undefined)||{});
+  if(!headers.has("Content-Type"))headers.set("Content-Type","application/json");
+  retryInit.headers=headers;
+  return originalFetch(url.pathname+url.search,retryInit);
+}
+
 export function installModuleUiEnforcement(){
   if(window.__myWorkStationModuleEnforcement)return;
   window.__myWorkStationModuleEnforcement=true;
@@ -140,7 +193,8 @@ export function installModuleUiEnforcement(){
       const fallback=disabledReadFallback(url.pathname);
       return new Response(JSON.stringify(fallback),{status:200,headers:{"Content-Type":"application/json"}});
     }
-    return originalFetch(input,init);
+    const response=await originalFetch(input,init);
+    return maybeOwnerManagerOverride({response,input,init,originalFetch,url,method});
   };
 
   const observer=new MutationObserver(()=>applyRules(activeModules));
