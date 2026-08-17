@@ -53,6 +53,7 @@ import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-approval.js";
 import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
+import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
@@ -85,6 +86,7 @@ import { ensureProductDeliverySchema } from "./product-delivery-bootstrap.js";
 import { ensurePosPricingSchema } from "./pos-pricing-bootstrap.js";
 import { ensurePosSaleSafetySchema } from "./pos-sale-safety.js";
 import { ensureKatAiReaderTestEntitlement } from "./kat-ai-reader-test-entitlement.js";
+import { ensureSupplierItemLearningSchema } from "./supplier-item-learning-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -156,6 +158,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes)
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosAiRecheckRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
 app.use("/api/logistics",auth,requireCompanyModule("INVENTORY"),providerLogisticsRoutes);
@@ -166,5 +169,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
