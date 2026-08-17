@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {Camera,Wallet,X} from "lucide-react";
-import StoreSupplierInvoiceV3 from "./StoreSupplierInvoiceV3.jsx";
+import StoreSupplierInvoiceV244 from "./StoreSupplierInvoiceV244.jsx";
 
 const euro=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=v=>Number(String(v||"0").replace(",","."))||0;
@@ -18,10 +18,10 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
  const supplierMode=form.type==="SUPPLIER_PAYMENT",suppliers=ledger?.suppliers||[];
  const invoiceChanged=()=>{onChanged?.()};
  const invoiceMessage=message=>{setMessage?.(message);if(String(message||"").startsWith("✅"))onClose?.()};
- return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v3="1">
+ return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
   <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>ΕΠΙΛΟΓΗ ΚΑΤΗΓΟΡΙΑΣ — η πραγματική πληρωμή εκτελείται μόνο από την τελική καταχώριση του τιμολογίου</small></div>
   <div className="pos-payment-types"><button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"OTHER_EXPENSE"}))}>Λοιπά έξοδα</button><button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"SUPPLIER_PAYMENT"}))}>Πληρωμή προμηθευτή</button></div>
-  {supplierMode?<div className="pos-payment-form-v3-root"><StoreSupplierInvoiceV3 api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/></div>:<div className="pos-payment-form">
+  {supplierMode?<div className="pos-payment-form-v3-root"><StoreSupplierInvoiceV244 api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/></div>:<div className="pos-payment-form">
    <label>Ποσό<input readOnly inputMode="decimal" value={form.amount}/></label><Pad value={form.amount} onChange={amount=>setForm(c=>({...c,amount}))}/><label>Παρατηρήσεις<input value={form.description} onChange={e=>setForm(c=>({...c,description:e.target.value}))}/></label>
    <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><Camera/> Επιλογή αρχείου<input type="file" accept="image/*,application/pdf" onChange={e=>setForm(c=>({...c,file:e.target.files?.[0]||null}))}/></label><b>{form.file?.name||"Δεν επιλέχθηκε φωτογραφία"}</b></div>
    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
