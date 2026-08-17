@@ -45,7 +45,8 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
       const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl,filename:file.name||"timologio.jpg"}})});
       let paymentTransactionId=null;
       if(mode==="PAID"){
-        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description:documentNumber?`Τιμολόγιο ${documentNumber} — FAST POS":"Πληρωμή προμηθευτή FAST POS",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
+        const description=documentNumber?`Τιμολόγιο ${documentNumber} — FAST POS`:"Πληρωμή προμηθευτή FAST POS";
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description,evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
         paymentTransactionId=payment?.id||null;
         if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
         try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
