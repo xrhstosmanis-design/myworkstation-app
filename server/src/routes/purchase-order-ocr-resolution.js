@@ -47,7 +47,12 @@ router.get("/:orderId/ocr-lines",async(req,res,next)=>{
       LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId}
       WHERE l."orderId"=${order.id}
       ORDER BY COALESCE(l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
-    res.json({order,rows:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),vatRate:Number(r.vatRate||0),grossAmount:Number(r.grossAmount||0),ocrConfidence:Number(r.ocrConfidence||0)})),unresolved:rows.filter(r=>r.resolutionStatus==='UNRESOLVED').length});
+    const mapped=rows.map((r,index)=>{
+      const quantity=Number(r.quantity||0),unitCost=Number(r.unitCost||0),grossAmount=Number(r.grossAmount||0);
+      const economicProduct=Boolean(String(r.description||r.ocrRawText||"").trim())&&quantity>0&&(unitCost>0||grossAmount>0);
+      return {...r,quantity,unitCost,vatRate:Number(r.vatRate||0),grossAmount,ocrConfidence:Number(r.ocrConfidence||0),ocrSequence:Number(r.ocrLineIndex||index+1),ocrLineType:economicProduct?"PRODUCT":"INFO"};
+    });
+    res.json({order,rows:mapped,unresolved:mapped.filter(r=>r.ocrLineType==="PRODUCT"&&r.resolutionStatus==='UNRESOLVED').length});
   }catch(error){next(error)}
 });
 
