@@ -50,7 +50,8 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
         if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
         try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
       }
-      setMessage?.(`✅ ${mode==="PAID"?"Η πληρωμή καταχωρίστηκε στη βάρδια":"Το τιμολόγιο καταχωρίστηκε με πίστωση"}. Επιστροφή στο POS — ο έλεγχος συνεχίζεται στο BackOffice.`);
+      const successText=mode==="PAID"?"Η πληρωμή καταχωρίστηκε στη βάρδια":"Το τιμολόγιο καταχωρίστηκε με πίστωση";
+      setMessage?.(`✅ ${successText}. Επιστροφή στο POS — ο έλεγχος συνεχίζεται στο BackOffice.`);
       onChanged?.();
       backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id,mode,paymentTransactionId});
     }catch(error){
