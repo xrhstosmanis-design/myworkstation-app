@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import purchaseOrderTotalReconciliationGuard from "./purchase-order-total-reconciliation-guard.js";
 
 const router=Router();
 let schemaReady=false;
@@ -8,6 +9,10 @@ async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`);
   schemaReady=true;
 }
+
+// Πρώτα ελέγχεται η οικονομική συμφωνία του OCR τιμολογίου. Αν υπάρχει
+// διαφορά > 0,05 €, απαιτείται ρητή ευθύνη Ιδιοκτήτη/Διαχειριστή και λόγος.
+router.use(purchaseOrderTotalReconciliationGuard);
 
 router.patch("/:orderId",async(req,res,next)=>{
   try{
