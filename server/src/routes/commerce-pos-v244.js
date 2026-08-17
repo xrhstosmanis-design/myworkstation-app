@@ -22,5 +22,32 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.post("/purchase-documents/:documentId/link-fast-payment",async(req,res,next)=>{
+  try{
+    const transactionId=String(req.body?.transactionId||"").trim();
+    if(!transactionId)return res.status(400).json({error:"Λείπει η συναλλαγή της άμεσης πληρωμής."});
+    const docs=await prisma.$queryRaw`
+      SELECT "id","storeId","supplierId","totalGross","settlementMode","paymentTransactionId"
+      FROM "PurchaseDocument"
+      WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const doc=docs[0];
+    if(!doc)return res.status(404).json({error:"Δεν βρέθηκε το τιμολόγιο για σύνδεση πληρωμής."});
+    if(doc.paymentTransactionId&&doc.paymentTransactionId!==transactionId)return res.status(409).json({error:"Το τιμολόγιο είναι ήδη συνδεδεμένο με άλλη πληρωμή."});
+    const rows=await prisma.$queryRaw`
+      SELECT "id","storeId","supplierId","type","amount","subtractFromShift","reversedAt"
+      FROM "StoreTransaction"
+      WHERE "id"=${transactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const payment=rows[0];
+    if(!payment)return res.status(404).json({error:"Δεν βρέθηκε η άμεση πληρωμή της βάρδιας."});
+    const valid=payment.type==='SUPPLIER_PAYMENT'&&!payment.reversedAt&&payment.subtractFromShift&&payment.storeId===doc.storeId&&payment.supplierId===doc.supplierId&&Math.abs(Number(payment.amount||0)-Number(doc.totalGross||0))<=0.05;
+    if(!valid)return res.status(409).json({error:"Η πληρωμή δεν συμφωνεί με κατάστημα, προμηθευτή ή ποσό του τιμολογίου."});
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "PurchaseDocument" SET "settlementMode"='PAID',"paymentTransactionId"=${transactionId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${doc.id} AND "companyId"=${req.user.companyId}`;
+      await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${doc.id} WHERE "id"=${transactionId} AND "companyId"=${req.user.companyId}`;
+    });
+    res.json({ok:true,documentId:doc.id,transactionId,settlementMode:"PAID",duplicatePaymentCreated:false});
+  }catch(error){next(error)}
+});
+
 router.use(coreRouter);
 export default router;
