@@ -27,6 +27,8 @@ import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderUnresolvedGuardRoutes from "./routes/purchase-order-unresolved-guard.js";
 import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-guard.js";
 import purchaseOrderRoutes from "./routes/purchase-orders.js";
+import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
+import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
 import customerControlReversalAwareRoutes from "./routes/customer-control-reversal-aware.js";
 import customerControlRoutes from "./routes/customer-control-v2.js";
@@ -156,6 +158,8 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
+app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderOcrResolutionRoutes);
+app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderTotalReconciliationGuardRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosV244Routes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosAiRecheckRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);
