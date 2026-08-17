@@ -46,7 +46,7 @@ router.patch("/:orderId",async(req,res,next)=>{
     if(!companyId)return next();
 
     const rows=await prisma.$queryRaw`
-      SELECT o."id",o."invoiceNumber",o."sourceType",o."sourceDocumentId",
+      SELECT o."id",o."status",o."invoiceNumber",o."sourceType",o."sourceDocumentId",
              d."totalGross" AS "invoiceTotal"
       FROM "PurchaseOrder" o
       LEFT JOIN "PurchaseDocument" d
@@ -55,6 +55,11 @@ router.patch("/:orderId",async(req,res,next)=>{
       LIMIT 1`;
     const order=rows[0];
     if(!order)return next();
+
+    // Αν έχει ήδη Οριστικοποιηθεί, η ευθύνη/αιτιολογία έχει ήδη κριθεί στην
+    // πρώτη μετάβαση NEW -> FINAL. Επιτρέπουμε idempotent επανέλεγχο/posting
+    // (π.χ. pack correction) χωρίς δεύτερη δήλωση ευθύνης.
+    if(order.status==="FINAL"||order.status==="INVOICED")return next();
 
     // Reconciliation is mandatory for invoices created from the POS OCR/V2.4.4 flow.
     if(order.sourceType!=="POS_OCR_DRAFT"||!order.sourceDocumentId||Number(order.invoiceTotal||0)<=0)return next();
