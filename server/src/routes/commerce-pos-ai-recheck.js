@@ -7,9 +7,11 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 const router=Router();
 const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
+const TOTAL_TOLERANCE=0.05;
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const decimalText=value=>Math.max(0,Number(value||0)).toFixed(4).replace(".",",");
+const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 
 function outputText(response){
   if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
@@ -26,10 +28,8 @@ async function supplierMatch(companyId,candidate={}){
   const key=norm(candidate.name);
   if(key.length>=4){
     const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
-    const exact=rows.find(row=>norm(row.name)===key);
-    if(exact)return exact;
-    const close=rows.find(row=>{const k=norm(row.name);return key.length>=7&&k.length>=7&&(k.includes(key)||key.includes(k));});
-    if(close)return close;
+    const exact=rows.find(row=>norm(row.name)===key);if(exact)return exact;
+    const close=rows.find(row=>{const k=norm(row.name);return key.length>=7&&k.length>=7&&(k.includes(key)||key.includes(k));});if(close)return close;
   }
   return null;
 }
@@ -38,194 +38,126 @@ const productLineProperties={
   rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
 };
 const productLineRequired=["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","grossAmount","confidence"];
-
-const invoiceSchema={
-  type:"object",additionalProperties:false,
-  properties:{
-    aiConfidence:{type:"number",minimum:0,maximum:100},
-    supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},email:{type:"string"},phone:{type:"string"},address:{type:"string"},city:{type:"string"}},required:["name","taxId","email","phone","address","city"]},
-    documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},rawText:{type:"string"},
-    lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}},
-    productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}
-  },required:["aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines","productLines"]
-};
-
-const productTableSchema={
-  type:"object",additionalProperties:false,
-  properties:{productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},
-  required:["productLines"]
-};
+const invoiceSchema={type:"object",additionalProperties:false,properties:{aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},email:{type:"string"},phone:{type:"string"},address:{type:"string"},city:{type:"string"}},required:["name","taxId","email","phone","address","city"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},rawText:{type:"string"},lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines","productLines"]};
+const productTableSchema={type:"object",additionalProperties:false,properties:{productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["productLines"]};
 
 const normalizeProductLine=line=>{
   const quantity=Math.max(0,Number(line?.quantity||0));
   const netAmount=Math.max(0,Number(line?.netAmount||0));
-  let unitCost=Math.max(0,Number(line?.unitCost||0));
-  if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
+  let unitCost=Math.max(0,Number(line?.unitCost||0));if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
   const vatRate=Math.max(0,Number(line?.vatRate||0));
-  let grossAmount=Math.max(0,Number(line?.grossAmount||0));
-  if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
+  let grossAmount=Math.max(0,Number(line?.grossAmount||0));if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
   return {...line,rawText:String(line?.rawText||""),code:String(line?.code||"").trim(),barcode:String(line?.barcode||"").trim(),description:String(line?.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unit:String(line?.unit||"").trim(),unitsPerPackage:Math.max(0,Number(line?.unitsPerPackage||0)),unitCost,netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line?.confidence||0)))};
 };
+const lineGrossTotal=lines=>money2((lines||[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
+function mergeRecoveredLines(current,recovered){
+  const out=(current||[]).map(line=>({...line}));
+  for(const candidate of recovered||[]){
+    if(!String(candidate?.description||candidate?.rawText||"").trim())continue;
+    let index=-1;
+    if(candidate.code)index=out.findIndex(line=>line.code&&norm(line.code)===norm(candidate.code));
+    if(index<0)index=out.findIndex(line=>descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
+    if(index<0){out.push(normalizeProductLine(candidate));continue}
+    const line=out[index];
+    out[index]=normalizeProductLine({...line,
+      rawText:candidate.rawText||line.rawText,code:candidate.code||line.code,barcode:candidate.barcode||line.barcode,description:candidate.description||line.description,
+      quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,unit:candidate.unit||line.unit,unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
+      unitCost:Number(candidate.unitCost||0)>0?candidate.unitCost:line.unitCost,netAmount:Number(candidate.netAmount||0)>0?candidate.netAmount:line.netAmount,
+      vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
+      confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))});
+  }
+  return out;
+}
 
-router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{
-    const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT','POS_OCR_DRAFT') AND "status"='DRAFT'`;
-    const connected=Boolean(process.env.OPENAI_API_KEY);
-    res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:THRESHOLD,aiAutomatic:true,aiProviderConnected:connected,message:connected?"OCR πρώτο. Κάτω από 65% γίνεται αυτόματος επανέλεγχος AI.":"OCR πρώτο. Για αυτόματο AI κάτω από 65% απαιτείται OPENAI_API_KEY στον server."});
-  }catch(error){next(error)}
-});
+router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT','POS_OCR_DRAFT') AND "status"='DRAFT'`;
+  const connected=Boolean(process.env.OPENAI_API_KEY);res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:THRESHOLD,aiAutomatic:true,aiProviderConnected:connected,message:connected?"OCR πρώτο. Κάτω από 65% γίνεται αυτόματος επανέλεγχος AI.":"OCR πρώτο. Για αυτόματο AI κάτω από 65% απαιτείται OPENAI_API_KEY στον server."});
+}catch(error){next(error)}});
 
-router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{
-    const jobs=await prisma.$queryRaw`
-      SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData"
-      FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId"
-      WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
-    const job=jobs[0];
-    if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
-    if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    if(Number(job.localConfidence||0)>=THRESHOLD&&!req.body?.force)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
-    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
-    if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
+router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+  const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
+  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
+  if(Number(job.localConfidence||0)>=THRESHOLD&&!req.body?.force)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+  if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 
-    const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
-    const localRawText=String(previous.rawText||"").slice(0,60000);
-    const filePart=job.mimeType==="application/pdf"
-      ? {type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}
-      : {type:"input_image",image_url:job.contentData,detail:"high"};
-    const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα σε ό,τι βλέπεις καθαρά στο πρωτότυπο. Βρες την επωνυμία και το ΑΦΜ του ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ (όχι του πελάτη), τον αριθμό τιμολογίου/παραστατικού, ημερομηνία και το τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
+  const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+  const localRawText=String(previous.rawText||"").slice(0,60000);
+  const filePart=job.mimeType==="application/pdf"?{type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}:{type:"input_image",image_url:job.contentData,detail:"high"};
+  const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα στο πρωτότυπο. Βρες τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ, ΑΦΜ, αριθμό παραστατικού, ημερομηνία και τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
 
-Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές με την ίδια σειρά για audit.
+Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές για audit. Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται.
 
-Στο productLines επέστρεψε ΜΟΝΟ τις πραγματικές γραμμές ειδών/προϊόντων του πίνακα του τιμολογίου. ΜΗΝ βάλεις κεφαλίδες, στοιχεία πελάτη/προμηθευτή, ΑΦΜ, ημερομηνίες, IBAN/τράπεζες, υποσύνολα, ΦΠΑ, σύνολα, πληρωτέο, ΕΙΣΠΡΑΞΗ ή λοιπές πληροφοριακές γραμμές.
+Για ΚΑΘΕ προϊόν ακολούθησε την ΙΔΙΑ ΟΡΙΖΟΝΤΙΑ ΣΕΙΡΑ από αριστερά προς τα δεξιά. Χαρτογράφηση: ΤΜΧ=quantity, Μ.Μ.=unit, Τιμή ΤΜΧ=unitCost, Καθ Αξία=netAmount, %ΦΠΑ=vatRate. Αν υπάρχει τελική αξία με ΦΠΑ είναι grossAmount. Αριθμοί συσκευασίας (500ML, 6x330ml κ.λπ.) δεν είναι ποσότητα/τιμή. Αν unitCost δεν φαίνεται αλλά quantity>0 και netAmount>0, unitCost=netAmount/quantity. Αν grossAmount δεν φαίνεται αλλά netAmount και vatRate υπάρχουν, υπολόγισέ το.
 
-ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ ΓΙΑ ΤΟΝ ΠΙΝΑΚΑ ΕΙΔΩΝ: μην αρκεστείς στο OCR κείμενο της περιγραφής. Κοίτα το ΠΡΩΤΟΤΥΠΟ οπτικά και για ΚΑΘΕ προϊόν ακολούθησε την ΙΔΙΑ ΟΡΙΖΟΝΤΙΑ ΣΕΙΡΑ από αριστερά προς τα δεξιά μέχρι όλες τις αριθμητικές στήλες. Σε παραστατικά αυτού του τύπου οι κεφαλίδες μπορεί να εμφανίζονται ως: Κωδικός/Περιγραφή | Μ.Μ. | ΤΜΧ | Τιμή ΤΜΧ | Αξία | Έκπτ.1 | Αξία Έκπτ.2 | Καθ Αξία | ΦΠΑ. Χρησιμοποίησε τη θέση της στήλης και όχι απλώς τη σειρά των αριθμών στο raw OCR. Χαρτογράφηση: ΤΜΧ = quantity, Μ.Μ. = unit, Τιμή ΤΜΧ = unitCost, Καθ Αξία = netAmount, % ΦΠΑ = vatRate. Αν υπάρχει ξεχωριστή τελική αξία γραμμής με ΦΠΑ, αυτή είναι grossAmount. Η στήλη Αξία πριν τις εκπτώσεις ΔΕΝ είναι unitCost. Οι εκπτώσεις ΔΕΝ είναι ποσότητα ή τιμή μονάδας.
+ΠΡΙΝ επιστρέψεις JSON, μέτρησε οπτικά πόσες πραγματικές σειρές προϊόντων υπάρχουν και βεβαιώσου ότι το productLines έχει τον ίδιο αριθμό. Έπειτα σύγκρινε νοητά το άθροισμα των τελικών αξιών γραμμών με το τελικό πληρωτέο ποσό. Αν υπάρχει εμφανής μεγάλη διαφορά, ξανακοίτα τον πίνακα για γραμμή που παρέλειψες πριν απαντήσεις.
 
-Για κάθε πραγματικό είδος διάβασε ΥΠΟΧΡΕΩΤΙΚΑ από τις σωστές στήλες: code=κωδικός είδους ΜΟΝΟ, description=ονομασία ΜΟΝΟ χωρίς τον κωδικό, quantity=ποσότητα της γραμμής, unit=μονάδα μέτρησης, unitsPerPackage=τεμάχια ανά συσκευασία αν αναγράφονται, unitCost=καθαρή τιμή μονάδας, netAmount=καθαρή αξία γραμμής, vatRate=ποσοστό ΦΠΑ, grossAmount=τελική αξία γραμμής. Μην χρησιμοποιείς αριθμούς που ανήκουν στην περιγραφή/συσκευασία (π.χ. 0,33L, 500ML, 6x330ml) ως τιμή ή ποσότητα. Μην βάζεις αυθαίρετα quantity=1: αν η ποσότητα δεν διαβάζεται καθαρά βάλε 0. Αν unitCost δεν διαβάζεται αλλά quantity>0 και netAmount>0, υπολόγισε unitCost=netAmount/quantity. Αν grossAmount δεν διαβάζεται αλλά netAmount και vatRate υπάρχουν, υπολόγισε grossAmount=netAmount*(1+vatRate/100). Αν ένα πεδίο πραγματικά δεν διαβάζεται και δεν μπορεί να υπολογιστεί με ασφάλεια, βάλε 0 ή κενό string αντί να μαντέψεις. Το rawText κάθε productLine να είναι η ορατή γραμμή/γραμμές του συγκεκριμένου είδους. Το aiConfidence και confidence είναι ποσοστά 0-100.
+ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
+  const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+  const payload=await apiResponse.json().catch(()=>({}));if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
+  let parsed;try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
+  const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
+  parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
-Πριν επιστρέψεις το JSON, κάνε δεύτερο οπτικό έλεγχο ΜΟΝΟ στις αριθμητικές στήλες όλων των productLines. Αν έχεις βρει προϊόν αλλά quantity=0 και unitCost=0, ξανακοίτα οριζόντια την ίδια σειρά στο πρωτότυπο πριν δεχτείς τα μηδενικά. Μη μαντέψεις αν πραγματικά δεν φαίνονται.
+  const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
+  const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
+  const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
+  const partialNumericMissing=parsed.productLines.some(line=>Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0||Number(line.netAmount||0)<=0);
+  const needsTablePass=parsed.productLines.length>0&&(allNumericMissing||partialNumericMissing||totalMismatch);
+  if(needsTablePass){
+    const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
+    const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα ΜΟΝΟ τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών, τράπεζες/IBAN, σύνολα και footer.
 
-ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):
-${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
-    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
-    const payload=await apiResponse.json().catch(()=>({}));
-    if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error;}
-    const text=outputText(payload);let parsed;
-    try{parsed=JSON.parse(text)}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error;}
-    const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
-    parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+Ο πρώτος έλεγχος βρήκε προσωρινά:\n${anchors||"(καμία ασφαλής γραμμή)"}
 
-    const needsTablePass=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
-    if(needsTablePass){
-      const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
-      const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Αγνόησε όλα τα στοιχεία προμηθευτή, πελάτη, τραπεζών, σύνολα και footer. Κοίτα ΜΟΝΟ τον πίνακα προϊόντων στο πρωτότυπο παραστατικό.
+Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
 
-Ένας προηγούμενος έλεγχος βρήκε τις παρακάτω γραμμές προϊόντων αλλά απέτυχε να διαβάσει τις αριθμητικές στήλες. Χρησιμοποίησε αυτές τις γραμμές ως anchors και εντόπισε την ίδια οριζόντια σειρά στο πρωτότυπο:
-${anchors}
+Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | Μ.Μ. | ΤΜΧ | Τιμή ΤΜΧ | Αξία | Εκπτώσεις | Καθ Αξία | ΦΠΑ. quantity=ΤΜΧ, unit=Μ.Μ., unitCost=Τιμή ΤΜΧ, netAmount=Καθ Αξία, vatRate=%ΦΠΑ. Αριθμοί συσκευασίας μέσα στην περιγραφή δεν είναι quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή. Αν quantity>0 και netAmount>0 αλλά unitCost δεν φαίνεται, unitCost=netAmount/quantity. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount.`;
+    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+    const tablePayload=await tableResponse.json().catch(()=>({}));
+    if(tableResponse.ok){try{
+      const tableParsed=JSON.parse(outputText(tablePayload));
+      const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+      parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
+      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
+    }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
+    else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}
+  }
 
-Για ΚΑΘΕ anchor ακολούθησε οριζόντια την ίδια σειρά και διάβασε με βάση τις κεφαλίδες του πίνακα: Κωδικός/Περιγραφή | Μ.Μ. | ΤΜΧ | Τιμή ΤΜΧ | Αξία | Εκπτώσεις | Καθ Αξία | ΦΠΑ. Χαρτογράφηση: quantity=ΤΜΧ, unit=Μ.Μ., unitCost=Τιμή ΤΜΧ, netAmount=Καθ Αξία, vatRate=% ΦΠΑ. Η συσκευασία μέσα στην περιγραφή (24x33cl, 20x50cl, 0,5L κ.λπ.) ΔΕΝ είναι quantity ή unitCost. Η στήλη Αξία πριν τις εκπτώσεις ΔΕΝ είναι unitCost.
+  parsed.productLinesGrossBeforeRecovery=initialLinesTotal;
+  parsed.productLinesGrossAfterRecovery=lineGrossTotal(parsed.productLines);
+  parsed.invoiceTotalForCompleteness=invoiceTotal;
+  parsed.productLinesTotalDifference=money2(parsed.productLinesGrossAfterRecovery-invoiceTotal);
+  parsed.productLinesComplete=invoiceTotal<=0||Math.abs(parsed.productLinesTotalDifference)<=TOTAL_TOLERANCE+0.000001;
+  parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
+  parsed.lines=parsed.productLines.length?parsed.productLines.map(line=>{const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim(),quantity=Math.max(0,Number(line.quantity||0)),unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ",unitCost=Math.max(0,Number(line.unitCost||0));return {text:[description,quantity>0?`${quantity} ${unit}`:"",unitCost>0?decimalText(unitCost):""].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))}}):[];
+  parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
+  const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
+  await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+  res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+}catch(error){next(error)}});
 
-Επέστρεψε μόνο productLines, κατά προτίμηση στην ίδια σειρά με τα anchors. Μην εφευρίσκεις τιμές. Αν ένα συγκεκριμένο πεδίο πραγματικά δεν φαίνεται, βάλε 0. Αν quantity>0 και netAmount>0 αλλά unitCost δεν φαίνεται, υπολόγισε unitCost=netAmount/quantity. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount. Κάνε zoom/λεπτομερή οπτικό έλεγχο των αριθμητικών στηλών πριν βάλεις 0.`;
-      const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
-      const tablePayload=await tableResponse.json().catch(()=>({}));
-      if(tableResponse.ok){
-        try{
-          const tableParsed=JSON.parse(outputText(tablePayload));
-          const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
-          const byCode=new Map(recovered.filter(line=>line.code).map(line=>[norm(line.code),line]));
-          parsed.productLines=parsed.productLines.map((line,index)=>{
-            let candidate=line.code?byCode.get(norm(line.code)):null;
-            if(!candidate&&recovered[index])candidate=recovered[index];
-            if(!candidate){
-              const key=norm(line.description);
-              candidate=recovered.find(row=>{const r=norm(row.description);return key&&r&&(r.includes(key)||key.includes(r));});
-            }
-            if(!candidate)return line;
-            return normalizeProductLine({...line,
-              rawText:candidate.rawText||line.rawText,
-              code:candidate.code||line.code,
-              barcode:candidate.barcode||line.barcode,
-              description:candidate.description||line.description,
-              quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,
-              unit:candidate.unit||line.unit,
-              unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
-              unitCost:Number(candidate.unitCost||0)>0?candidate.unitCost:line.unitCost,
-              netAmount:Number(candidate.netAmount||0)>0?candidate.netAmount:line.netAmount,
-              vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,
-              grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
-              confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))
-            });
-          });
-          parsed.tableRecheckCalled=true;
-          parsed.tableRecheckRecovered=parsed.productLines.filter(line=>Number(line.quantity||0)>0||Number(line.unitCost||0)>0||Number(line.netAmount||0)>0).length;
-        }catch{
-          parsed.tableRecheckCalled=true;
-          parsed.tableRecheckRecovered=0;
-        }
-      }else{
-        parsed.tableRecheckCalled=true;
-        parsed.tableRecheckRecovered=0;
-      }
-    }
+router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const reviewLine=z.object({rawText:z.string().max(2000).optional().default(""),code:z.string().trim().max(80).optional().default(""),barcode:z.string().trim().max(80).optional().default(""),description:z.string().trim().min(1).max(500),quantity:z.coerce.number().min(0).max(1000000),unit:z.string().trim().max(40).optional().default("ΤΜΧ"),unitsPerPackage:z.coerce.number().min(0).max(100000).optional().default(0),unitCost:z.coerce.number().min(0).max(10000000),vatRate:z.coerce.number().min(0).max(100),confidence:z.coerce.number().min(0).max(100).optional().default(0)});
+  const body=z.object({productLines:z.array(reviewLine).min(1).max(500)}).parse(req.body||{});
+  const jobs=await prisma.$queryRaw`SELECT "id","storeId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+  const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});if(job.purchaseDocumentId)return res.status(409).json({error:"Το τιμολόγιο έχει ήδη καταχωριστεί για έλεγχο και οι γραμμές δεν μπορούν να αλλάξουν από το POS."});
+  const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+  const productLines=body.productLines.map(line=>{const quantity=Math.max(0,Number(line.quantity||0)),unitCost=Math.max(0,Number(line.unitCost||0)),vatRate=Math.max(0,Number(line.vatRate||0)),netAmount=quantity*unitCost,grossAmount=netAmount*(1+vatRate/100);return {rawText:String(line.rawText||line.description),code:String(line.code||""),barcode:String(line.barcode||""),description:String(line.description||"").trim(),quantity,unit:String(line.unit||"ΤΜΧ"),unitsPerPackage:Math.max(0,Number(line.unitsPerPackage||0)),unitCost,netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line.confidence||0)))}});
+  const resultJson={...previous,productLines,lines:productLines.map(line=>({text:[line.description,line.quantity>0?`${line.quantity} ${line.unit}`:"",line.unitCost>0?decimalText(line.unitCost):""].filter(Boolean).join(" "),confidence:line.confidence})),reviewedAt:new Date().toISOString(),reviewedByUserId:req.user.id};
+  await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(resultJson)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+  res.json({ok:true,id:job.id,productLines,message:"Οι γραμμές τιμολογίου αποθηκεύτηκαν για την τελική καταχώριση."});
+}catch(error){next(error)}});
 
-    parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
-    if(parsed.productLines.length){
-      parsed.lines=parsed.productLines.map(line=>{
-        const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim();
-        const quantity=Math.max(0,Number(line.quantity||0));
-        const unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ";
-        const unitCost=Math.max(0,Number(line.unitCost||0));
-        const quantityText=quantity>0?`${quantity} ${unit}`:"";
-        const priceText=unitCost>0?decimalText(unitCost):"";
-        return {text:[description,quantityText,priceText].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))};
-      });
-    }else{
-      parsed.lines=[];
-    }
-    parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
-    const match=await supplierMatch(req.user.companyId,parsed.supplier);
-    const aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
-    await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
-    res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
-  }catch(error){next(error)}
-});
-
-router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{
-    const reviewLine=z.object({
-      rawText:z.string().max(2000).optional().default(""),code:z.string().trim().max(80).optional().default(""),barcode:z.string().trim().max(80).optional().default(""),description:z.string().trim().min(1).max(500),
-      quantity:z.coerce.number().min(0).max(1000000),unit:z.string().trim().max(40).optional().default("ΤΜΧ"),unitsPerPackage:z.coerce.number().min(0).max(100000).optional().default(0),unitCost:z.coerce.number().min(0).max(10000000),vatRate:z.coerce.number().min(0).max(100),confidence:z.coerce.number().min(0).max(100).optional().default(0)
-    });
-    const body=z.object({productLines:z.array(reviewLine).min(1).max(500)}).parse(req.body||{});
-    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
-    const job=jobs[0];
-    if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
-    if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    if(job.purchaseDocumentId)return res.status(409).json({error:"Το τιμολόγιο έχει ήδη καταχωριστεί για έλεγχο και οι γραμμές δεν μπορούν να αλλάξουν από το POS."});
-    const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
-    const productLines=body.productLines.map(line=>{
-      const quantity=Math.max(0,Number(line.quantity||0)),unitCost=Math.max(0,Number(line.unitCost||0)),vatRate=Math.max(0,Number(line.vatRate||0));
-      const netAmount=quantity*unitCost,grossAmount=netAmount*(1+vatRate/100);
-      return {rawText:String(line.rawText||line.description),code:String(line.code||""),barcode:String(line.barcode||""),description:String(line.description||"").trim(),quantity,unit:String(line.unit||"ΤΜΧ"),unitsPerPackage:Math.max(0,Number(line.unitsPerPackage||0)),unitCost,netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line.confidence||0)))};
-    });
-    const resultJson={...previous,productLines,lines:productLines.map(line=>({text:[line.description,line.quantity>0?`${line.quantity} ${line.unit}`:"",line.unitCost>0?decimalText(line.unitCost):""].filter(Boolean).join(" "),confidence:line.confidence})),reviewedAt:new Date().toISOString(),reviewedByUserId:req.user.id};
-    await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(resultJson)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
-    res.json({ok:true,id:job.id,productLines,message:"Οι γραμμές τιμολογίου αποθηκεύτηκαν για την τελική καταχώριση."});
-  }catch(error){next(error)}
-});
-
-router.post("/ai-reader/jobs/:jobId/supplier",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const body=z.object({name:z.string().trim().min(2).max(180),taxId:z.string().trim().max(30).optional().nullable(),email:z.union([z.string().email(),z.literal("")]).optional().nullable(),phone:z.string().trim().max(40).optional().nullable(),address:z.string().trim().max(250).optional().nullable(),city:z.string().trim().max(120).optional().nullable()}).parse(req.body||{});
-    const jobs=await prisma.$queryRaw`SELECT "id","storeId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
-    if(!jobs[0])return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
-    if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==jobs[0].storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    const existing=await supplierMatch(req.user.companyId,body);
-    if(existing)return res.json({created:false,supplier:existing,message:"Ο προμηθευτής υπήρχε ήδη στο BackOffice και συνδέθηκε."});
-    const supplierId=id();
-    await prisma.$executeRaw`INSERT INTO "Supplier" ("id","companyId","name","taxId","email","phone","address","city","active") VALUES (${supplierId},${req.user.companyId},${body.name},${body.taxId||null},${body.email||null},${body.phone||null},${body.address||null},${body.city||null},true)`;
-    res.status(201).json({created:true,supplier:{id:supplierId,name:body.name,taxId:body.taxId||null,email:body.email||null,phone:body.phone||null,address:body.address||null,city:body.city||null},message:"Ο προμηθευτής καταχωρίστηκε στους Προμηθευτές του BackOffice."});
-  }catch(error){next(error)}
-});
+router.post("/ai-reader/jobs/:jobId/supplier",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
+  const body=z.object({name:z.string().trim().min(2).max(180),taxId:z.string().trim().max(30).optional().nullable(),email:z.union([z.string().email(),z.literal("")]).optional().nullable(),phone:z.string().trim().max(40).optional().nullable(),address:z.string().trim().max(250).optional().nullable(),city:z.string().trim().max(120).optional().nullable()}).parse(req.body||{});
+  const jobs=await prisma.$queryRaw`SELECT "id","storeId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+  if(!jobs[0])return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==jobs[0].storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
+  const existing=await supplierMatch(req.user.companyId,body);if(existing)return res.json({created:false,supplier:existing,message:"Ο προμηθευτής υπήρχε ήδη στο BackOffice και συνδέθηκε."});
+  const supplierId=id();await prisma.$executeRaw`INSERT INTO "Supplier" ("id","companyId","name","taxId","email","phone","address","city","active") VALUES (${supplierId},${req.user.companyId},${body.name},${body.taxId||null},${body.email||null},${body.phone||null},${body.address||null},${body.city||null},true)`;
+  res.status(201).json({created:true,supplier:{id:supplierId,name:body.name,taxId:body.taxId||null,email:body.email||null,phone:body.phone||null,address:body.address||null,city:body.city||null},message:"Ο προμηθευτής καταχωρίστηκε στους Προμηθευτές του BackOffice."});
+}catch(error){next(error)}});
 
 export default router;
