@@ -10,6 +10,7 @@ const statements=[
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrRawText" TEXT`,
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "detectedBarcode" TEXT`,
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`,
+`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`,
 `CREATE TABLE IF NOT EXISTS "SupplierProductMapping" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
@@ -65,6 +66,21 @@ DECLARE
   v_code TEXT;
   v_product TEXT;
 BEGIN
+  IF UPPER(TRIM(COALESCE(NEW."description",''))) ~ '^ANCHOR[[:space:]]*[0-9]+$'
+     OR UPPER(TRIM(COALESCE(NEW."ocrRawText",''))) ~ '^ANCHOR[[:space:]]*[0-9]+$' THEN
+    NEW."productId" := NULL;
+    NEW."supplierCode" := NULL;
+    NEW."detectedBarcode" := NULL;
+    NEW."resolutionStatus" := 'INFO';
+    NEW."ocrLineType" := 'INFO';
+    NEW."quantity" := 0;
+    NEW."unitCost" := 0;
+    NEW."netAmount" := 0;
+    NEW."vatAmount" := 0;
+    NEW."grossAmount" := 0;
+    RETURN NEW;
+  END IF;
+
   IF COALESCE(TRIM(NEW."supplierCode"),'')='' THEN
     v_code := substring(COALESCE(NEW."ocrRawText",'') from '^\\s*([0-9][0-9A-Za-z._/-]{2,39})(?:\\s|$)');
     IF v_code IS NOT NULL THEN NEW."supplierCode" := v_code; END IF;
@@ -89,7 +105,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql`,
 `DROP TRIGGER IF EXISTS trg_mws_pos_ocr_line_before_write ON "PurchaseOrderLine"`,
-`CREATE TRIGGER trg_mws_pos_ocr_line_before_write BEFORE INSERT OR UPDATE OF "supplierCode","ocrRawText","productId" ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_pos_ocr_line_before_write()`,
+`CREATE TRIGGER trg_mws_pos_ocr_line_before_write BEFORE INSERT OR UPDATE ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_pos_ocr_line_before_write()`,
 `CREATE OR REPLACE FUNCTION mws_sync_pos_ocr_line_to_document() RETURNS trigger AS $$
 DECLARE
   v_doc TEXT;
@@ -103,6 +119,11 @@ BEGIN
   SELECT o."sourceDocumentId",o."sourceType" INTO v_doc,v_source
   FROM "PurchaseOrder" o WHERE o."id"=NEW."orderId" LIMIT 1;
   IF v_doc IS NULL OR v_source IS DISTINCT FROM 'POS_OCR_DRAFT' THEN RETURN NEW; END IF;
+
+  IF NEW."resolutionStatus"='INFO' OR NEW."ocrLineType"='INFO' THEN
+    DELETE FROM "PurchaseDocumentLine" WHERE "purchaseOrderLineId"=NEW."id";
+    RETURN NEW;
+  END IF;
 
   v_text := UPPER(COALESCE(NEW."description",'')||' '||COALESCE(NEW."ocrRawText",''));
   IF v_text ~ '(MONSTER|RED[[:space:]]*BULL|REDBULL)' THEN v_pack:=24;
@@ -142,10 +163,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql`,
 `DROP TRIGGER IF EXISTS trg_mws_sync_pos_ocr_line_to_document ON "PurchaseOrderLine"`,
-`CREATE TRIGGER trg_mws_sync_pos_ocr_line_to_document AFTER INSERT OR UPDATE ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_sync_pos_ocr_line_to_document()`
+`CREATE TRIGGER trg_mws_sync_pos_ocr_line_to_document AFTER INSERT OR UPDATE ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_sync_pos_ocr_line_to_document()`,
+`UPDATE "PurchaseOrderLine" l
+ SET "resolutionStatus"='INFO',"ocrLineType"='INFO',"productId"=NULL,"supplierCode"=NULL,"detectedBarcode"=NULL,
+     "quantity"=0,"unitCost"=0,"netAmount"=0,"vatAmount"=0,"grossAmount"=0
+ FROM "PurchaseOrder" o
+ WHERE o."id"=l."orderId" AND o."sourceType"='POS_OCR_DRAFT' AND o."status"='NEW'
+   AND (UPPER(TRIM(COALESCE(l."description",''))) ~ '^ANCHOR[[:space:]]*[0-9]+$'
+        OR UPPER(TRIM(COALESCE(l."ocrRawText",''))) ~ '^ANCHOR[[:space:]]*[0-9]+$')`
 ];
 
 export async function ensureSupplierItemLearningSchema(){
   for(const statement of statements) await prisma.$executeRawUnsafe(statement);
-  console.log("Supplier item learning + POS OCR approval bridge + AI line preservation bootstrap completed.");
+  console.log("Supplier item learning + POS OCR approval bridge + AI line preservation + anchor guard bootstrap completed.");
 }
