@@ -7,6 +7,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 const router=Router();
 const id=()=>crypto.randomUUID();
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
+const normalizeSupplierItemCode=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 
 function canApprove(req){
   return req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
@@ -14,6 +15,8 @@ function canApprove(req){
 
 const lineSchema=z.object({
   productId:z.string(),
+  supplierItemCode:z.string().trim().max(120).optional().nullable(),
+  supplierBarcode:z.string().trim().max(120).optional().nullable(),
   description:z.string().trim().min(1).max(250),
   quantity:z.coerce.number().positive(),
   unit:z.enum(["PIECE","PACKAGE"]),
@@ -104,7 +107,7 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId") VALUES (${docId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber||null},${body.documentDate||new Date()},${totals.net},${totals.vat},${totals.gross},'OCR_DRAFT','DRAFT',${req.user.id})`;
       for(const item of body.lines){
         const net=item.quantity*item.unitCost,vat=net*item.vatRate/100;
-        await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;
+        await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","supplierBarcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.supplierItemCode||null},${item.supplierBarcode||null},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;
       }
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${docId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
     });
@@ -123,16 +126,37 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
       if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
       const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;
       if(!lines.length){const error=new Error("Το παραστατικό δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
+      let learnedMappings=0;
       for(const line of lines){
-        if(!line.productId||!line.trackStock)continue;
+        if(!line.productId)continue;
         const quantity=Number(line.quantity||0),unitsPerPackage=Number(line.unitsPerPackage||1),stockQuantity=line.unit==="PACKAGE"?quantity*unitsPerPackage:quantity;
         const perPieceCost=line.unit==="PACKAGE"?Number(line.unitCost||0)/unitsPerPackage:Number(line.unitCost||0);
-        await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${doc.storeId},${line.productId},${stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${stockQuantity},"updatedAt"=CURRENT_TIMESTAMP`;
-        await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${doc.storeId},${line.productId},'PURCHASE',${stockQuantity},${perPieceCost},'PURCHASE_APPROVAL',${doc.id},'Έγκριση πρόχειρου παραστατικού από BackOffice',${req.user.id})`;
+        if(line.trackStock){
+          await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${doc.storeId},${line.productId},${stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${stockQuantity},"updatedAt"=CURRENT_TIMESTAMP`;
+          await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${doc.storeId},${line.productId},'PURCHASE',${stockQuantity},${perPieceCost},'PURCHASE_APPROVAL',${doc.id},'Έγκριση πρόχειρου παραστατικού από BackOffice',${req.user.id})`;
+        }
+        const supplierItemCode=normalizeSupplierItemCode(line.supplierItemCode);
+        if(doc.supplierId&&supplierItemCode){
+          await tx.$executeRaw`
+            INSERT INTO "SupplierProductMapping" ("id","companyId","supplierId","supplierItemCode","productId","supplierBarcode","lastDescription","unitsPerPackage","lastUnitCost","usageCount","confirmedByUserId","confirmedAt","lastSeenAt")
+            VALUES (${id()},${req.user.companyId},${doc.supplierId},${supplierItemCode},${line.productId},${line.supplierBarcode||null},${line.description||null},${line.unit==="PACKAGE"?unitsPerPackage:null},${perPieceCost},1,${req.user.id},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+            ON CONFLICT ("companyId","supplierId","supplierItemCode") DO UPDATE SET
+              "productId"=EXCLUDED."productId",
+              "supplierBarcode"=COALESCE(EXCLUDED."supplierBarcode","SupplierProductMapping"."supplierBarcode"),
+              "lastDescription"=COALESCE(EXCLUDED."lastDescription","SupplierProductMapping"."lastDescription"),
+              "unitsPerPackage"=COALESCE(EXCLUDED."unitsPerPackage","SupplierProductMapping"."unitsPerPackage"),
+              "lastUnitCost"=COALESCE(EXCLUDED."lastUnitCost","SupplierProductMapping"."lastUnitCost"),
+              "usageCount"="SupplierProductMapping"."usageCount"+1,
+              "confirmedByUserId"=EXCLUDED."confirmedByUserId",
+              "confirmedAt"=CURRENT_TIMESTAMP,
+              "lastSeenAt"=CURRENT_TIMESTAMP,
+              "updatedAt"=CURRENT_TIMESTAMP`;
+          learnedMappings++;
+        }
       }
       await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${doc.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='CONFIRMED',"updatedAt"=CURRENT_TIMESTAMP WHERE "purchaseDocumentId"=${doc.id} AND "companyId"=${req.user.companyId}`;
-      return {alreadyApproved:false,id:doc.id};
+      return {alreadyApproved:false,id:doc.id,learnedMappings};
     });
     res.json({ok:true,...result,status:"APPROVED",stockUpdated:true});
   }catch(error){next(error)}
