@@ -1,59 +1,11 @@
-import {finalizeV244ProductLines as finalizeBase} from './invoice-v244.js';
+import {finalizeV244ProductLines as finalizeBase} from './invoice-v244-core.js';
 
 const n=v=>{const x=Number(v||0);return Number.isFinite(x)?x:0};
 const r2=v=>Math.round((n(v)+Number.EPSILON)*100)/100;
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleUpperCase('el-GR').replace(/[^A-ZΑ-Ω0-9]/g,'');
 const codeOf=x=>String(x?.code||'').trim()||(String(x?.rawText||'').match(/^\s*(\d{5,14})\b/)||[])[1]||'';
 const descOf=x=>norm(x?.description||x?.rawText||'');
-
-function originalFor(lines,out){
- const code=codeOf(out);
- if(code){const hit=(lines||[]).find(x=>codeOf(x)===code);if(hit)return hit;}
- const d=descOf(out);
- if(!d)return null;
- return (lines||[]).find(x=>{const od=descOf(x);return od&&(od===d||od.includes(d)||d.includes(od))})||null;
-}
-
-function structuredIsSane(x){
- const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate);
- if(!(q>0&&u>0))return false;
- if(net>0&&gross>0){if(gross+0.05<net)return false;const expected=net*(1+Math.max(0,vat)/100);if(vat>0&&Math.abs(expected-gross)>Math.max(0.08,gross*0.03))return false;}
- return true;
-}
-
-export function finalizeV244ProductLines(lines){
- const base=finalizeBase(lines||[]);
- return base.map(out=>{
-   const original=originalFor(lines,out);
-   if(!original||!structuredIsSane(original))return out;
-   const q=n(original.quantity),u=n(original.unitCost),net=n(original.netAmount),gross=n(original.grossAmount),vat=n(original.vatRate);
-   const initial=n(original.initialAmount)>0?n(original.initialAmount):r2(q*u);
-   return {...out,
-     quantity:q,
-     unitCost:u,
-     initialAmount:initial,
-     netAmount:net>0?net:out.netAmount,
-     vatRate:vat>=0?vat:out.vatRate,
-     grossAmount:gross>0?gross:out.grossAmount,
-     discount1:n(original.discount1)>=0?n(original.discount1):out.discount1,
-     discount1Amount:n(original.discount1Amount)>=0?n(original.discount1Amount):out.discount1Amount,
-     discount2:n(original.discount2)>=0?n(original.discount2):out.discount2,
-     discount2Amount:n(original.discount2Amount)>=0?n(original.discount2Amount):out.discount2Amount,
-     discount3:n(original.discount3)>=0?n(original.discount3):out.discount3,
-     discount3Amount:n(original.discount3Amount)>=0?n(original.discount3Amount):out.discount3Amount,
-     structuredGuard:true
-   };
- }).filter(x=>String(x.description||'').trim()&&n(x.quantity)>0&&n(x.unitCost)>0);
-}
-
-export function isSafeRecoveryCandidate(line){
- const code=codeOf(line);
- if(!code)return false;
- const q=n(line?.quantity),u=n(line?.unitCost),net=n(line?.netAmount),gross=n(line?.grossAmount),vat=n(line?.vatRate);
- if(!(q>0&&u>0))return false;
- const initial=r2(q*u);
- if(net>0&&net>initial*1.03)return false;
- if(gross>0&&net>0&&gross+0.05<net)return false;
- if(gross>0&&net>0&&vat>0){const expected=net*(1+vat/100);if(Math.abs(expected-gross)>Math.max(0.10,gross*0.04))return false;}
- return true;
-}
+function originalFor(lines,out){const code=codeOf(out);if(code){const hit=(lines||[]).find(x=>codeOf(x)===code);if(hit)return hit;}const d=descOf(out);if(!d)return null;return (lines||[]).find(x=>{const od=descOf(x);return od&&(od===d||od.includes(d)||d.includes(od))})||null;}
+function structuredIsSane(x){const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate);if(!(q>0&&u>0))return false;if(net>0&&gross>0){if(gross+0.05<net)return false;const expected=net*(1+Math.max(0,vat)/100);if(vat>0&&Math.abs(expected-gross)>Math.max(0.08,gross*0.03))return false;}return true;}
+export function finalizeV244ProductLines(lines){const base=finalizeBase(lines||[]);return base.map(out=>{const original=originalFor(lines,out);if(!original||!structuredIsSane(original))return out;const q=n(original.quantity),u=n(original.unitCost),net=n(original.netAmount),gross=n(original.grossAmount),vat=n(original.vatRate),initial=n(original.initialAmount)>0?n(original.initialAmount):r2(q*u);return {...out,quantity:q,unitCost:u,initialAmount:initial,netAmount:net>0?net:out.netAmount,vatRate:vat>=0?vat:out.vatRate,grossAmount:gross>0?gross:out.grossAmount,discount1:n(original.discount1)>=0?n(original.discount1):out.discount1,discount1Amount:n(original.discount1Amount)>=0?n(original.discount1Amount):out.discount1Amount,discount2:n(original.discount2)>=0?n(original.discount2):out.discount2,discount2Amount:n(original.discount2Amount)>=0?n(original.discount2Amount):out.discount2Amount,discount3:n(original.discount3)>=0?n(original.discount3):out.discount3,discount3Amount:n(original.discount3Amount)>=0?n(original.discount3Amount):out.discount3Amount,structuredGuard:true};}).filter(x=>String(x.description||'').trim()&&n(x.quantity)>0&&n(x.unitCost)>0);}
+export function isSafeRecoveryCandidate(line){const code=codeOf(line);if(!code)return false;const q=n(line?.quantity),u=n(line?.unitCost),net=n(line?.netAmount),gross=n(line?.grossAmount),vat=n(line?.vatRate);if(!(q>0&&u>0))return false;const initial=r2(q*u);if(net>0&&net>initial*1.03)return false;if(gross>0&&net>0&&gross+0.05<net)return false;if(gross>0&&net>0&&vat>0){const expected=net*(1+vat/100);if(Math.abs(expected-gross)>Math.max(0.10,gross*0.04))return false;}return true;}
