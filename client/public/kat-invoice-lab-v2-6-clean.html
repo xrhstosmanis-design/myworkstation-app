@@ -1,6 +1,6 @@
-<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAT Invoice Lab V2.6 CLEAN</title></head><body><div id="boot" style="font:700 18px system-ui;padding:24px">Φόρτωση KAT Invoice Lab V2.6 CLEAN…</div><script>
+<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAT Invoice Lab V2.6.7 CLEAN</title></head><body><div id="boot" style="font:700 18px system-ui;padding:24px">Φόρτωση KAT Invoice Lab V2.6.7 CLEAN…</div><script>
 (async()=>{try{let h=await (await fetch('/kat-invoice-lab-v2.html?base=v22',{cache:'no-store'})).text();
-h=h.replaceAll('V2.2','V2.6 CLEAN').replace('SUPPLIER CODE + DISCOUNT PRIORITY','REGRESSION LAB · SAFE DEDUP + NORMALIZED CASE TO PCS');
+h=h.replaceAll('V2.2','V2.6.7 CLEAN').replace('SUPPLIER CODE + DISCOUNT PRIORITY','REGRESSION LAB · SAFE DEDUP + NORMALIZED CASE TO PCS');
 const inject=`
 function strongDescKey(v){return norm(String(v||'').replace(/\\b(1PACK|1\\s*POD|C20U|C12U|C14U|C38U|1X6PACK|1X24|12X0[.,]?75LT?)\\b/ig,' ').replace(/\\s+/g,' ').trim())}
 function rowScore(x){const e=enrich(x);return (deriveCode(e)?30:0)+(Number(e.quantity||0)>0?12:0)+(Number(e.unitCost||0)>0?12:0)+(Number(e.netAmount||0)>0?10:0)+(Number(e.vatRate||0)>0?4:0)+(Number(e.confidence||0)/100)+Math.min(6,String(e.rawText||'').length/90)}
@@ -15,7 +15,10 @@ h=h.replace('function render(jobId,ai,lines,label){',inject+'\nfunction render(j
 h=h.replace('<th>Confidence</th><th>Raw</th>','<th>ΤΜΧ stock</th><th>Καθ. τιμή/ΤΜΧ</th><th>Κανόνας συσκ.</th><th>Confidence</th><th>Raw</th>');
 h=h.replace("const rows=(lines||[]).map(enrich).filter(l=>l.code||String(l.description||'').trim());","const rows=dedupeLines(lines||[]).map(stockView).filter(l=>l.code||String(l.description||'').trim());");
 h=h.replace("<td>${esc(l.confidence??0)}%</td><td>${esc(l.rawText||'')}</td>","<td>${l.stockQty==null?'—':esc(l.stockQty)}</td><td>${l.netUnitCost==null?'—':fmt(l.netUnitCost)}</td><td>${esc(l.packRule||'—')}</td><td>${esc(l.confidence??0)}%</td><td>${esc(l.rawText||'')}</td>");
-h=h.replace("render(full.job.id,full.ai,lines,'KAT_V2_6_CLEAN_SUPPLIER_CODE_DISCOUNTS');","lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_6_CLEAN_SAFE_DEDUP_CASE_TO_PCS');");
-h=h.replace('V2.6 CLEAN: ο κωδικός στην αρχή της γραμμής κρατιέται ως Κωδικός προμηθευτή.','V2.6 CLEAN SAFE: οι οικονομικές τιμές του V2.2 παραμένουν ανέγγιχτες. Όλες οι μορφές κιβωτίου κανονικοποιούνται. Κανόνες: 1,5L=6 τμχ/ΚΒ, 330ml=24, 500ml=24, φιάλες=20, Monster/Red Bull=24.');
-document.open();document.write(h);document.close();}catch(e){document.getElementById('boot').textContent='Σφάλμα φόρτωσης V2.6 CLEAN: '+e.message}})();
+h=h.replace("render(full.job.id,full.ai,lines,'KAT_V2_6_7_CLEAN_SUPPLIER_CODE_DISCOUNTS');","lines=dedupeLines(lines);render(full.job.id,full.ai,lines,'KAT_V2_6_7_CLEAN_SAFE_DEDUP_CASE_TO_PCS');");
+h=h.replace('V2.6.7 CLEAN: ο κωδικός στην αρχή της γραμμής κρατιέται ως Κωδικός προμηθευτή.','V2.6.7 CLEAN SAFE: οι οικονομικές τιμές του V2.2 παραμένουν ανέγγιχτες. Όλες οι μορφές κιβωτίου κανονικοποιούνται. Κανόνες: 1,5L=6 τμχ/ΚΒ, 330ml=24, 500ml=24, φιάλες=20, Monster/Red Bull=24.');
+// FILE-STATE FIX: always sync from the real file input, including before Run.
+h=h.replace("$('file').addEventListener('change',e=>{state.file=e.target.files?.[0]||null;$('run').disabled=!state.file||!$('store').value;status(state.file?`Έτοιμο V2.6.7 CLEAN: ${state.file.name}`:'Περιμένει αρχείο.')});","function syncFileState(){state.file=$('file').files?.[0]||null;$('run').disabled=!state.file||!$('store').value;status(state.file?`Έτοιμο V2.6.7 CLEAN: ${state.file.name}`:'Περιμένει αρχείο.')} $('file').addEventListener('change',syncFileState);");
+h=h.replace("$('run').addEventListener('click',async()=>{if(!state.file||!$('store').value||state.busy)return;","$('run').addEventListener('click',async()=>{state.file=$('file').files?.[0]||state.file;if(!state.file||!$('store').value||state.busy)return;");
+document.open();document.write(h);document.close();}catch(e){document.getElementById('boot').textContent='Σφάλμα φόρτωσης V2.6.7 CLEAN: '+e.message}})();
 </script></body></html>
