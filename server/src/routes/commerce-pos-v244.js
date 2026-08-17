@@ -1,9 +1,14 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {requireCompanyModule} from "../middleware/module-access.js";
 import coreRouter from "./commerce-pos-v244-core.js";
 
 const router=Router();
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
+
+router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>{
+  res.json({enabled:true,moduleKey:"AI_READER"});
+});
 
 router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
   try{
