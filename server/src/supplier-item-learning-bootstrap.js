@@ -3,7 +3,13 @@ import {prisma} from "./prisma.js";
 const statements=[
 `ALTER TABLE "PurchaseDocumentLine" ADD COLUMN IF NOT EXISTS "supplierItemCode" TEXT`,
 `ALTER TABLE "PurchaseDocumentLine" ADD COLUMN IF NOT EXISTS "supplierBarcode" TEXT`,
+`ALTER TABLE "PurchaseDocumentLine" ADD COLUMN IF NOT EXISTS "purchaseOrderLineId" TEXT`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "PurchaseDocumentLine_purchaseOrderLineId_key" ON "PurchaseDocumentLine"("purchaseOrderLineId") WHERE "purchaseOrderLineId" IS NOT NULL`,
 `CREATE INDEX IF NOT EXISTS "PurchaseDocumentLine_supplierItemCode_idx" ON "PurchaseDocumentLine"("supplierItemCode")`,
+`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "supplierCode" TEXT`,
+`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrRawText" TEXT`,
+`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "detectedBarcode" TEXT`,
+`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`,
 `CREATE TABLE IF NOT EXISTS "SupplierProductMapping" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
@@ -29,10 +35,95 @@ const statements=[
 `CREATE UNIQUE INDEX IF NOT EXISTS "SupplierProductMapping_company_supplier_code_key" ON "SupplierProductMapping"("companyId","supplierId","supplierItemCode")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_supplier_idx" ON "SupplierProductMapping"("supplierId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_product_idx" ON "SupplierProductMapping"("productId")`,
-`CREATE INDEX IF NOT EXISTS "SupplierProductMapping_barcode_idx" ON "SupplierProductMapping"("supplierBarcode")`
+`CREATE INDEX IF NOT EXISTS "SupplierProductMapping_barcode_idx" ON "SupplierProductMapping"("supplierBarcode")`,
+`CREATE OR REPLACE FUNCTION mws_pos_ocr_line_before_write() RETURNS trigger AS $$
+DECLARE
+  v_company TEXT;
+  v_supplier TEXT;
+  v_code TEXT;
+  v_product TEXT;
+BEGIN
+  IF COALESCE(TRIM(NEW."supplierCode"),'')='' THEN
+    v_code := substring(COALESCE(NEW."ocrRawText",'') from '^\\s*([0-9][0-9A-Za-z._/-]{2,39})(?:\\s|$)');
+    IF v_code IS NOT NULL THEN NEW."supplierCode" := v_code; END IF;
+  END IF;
+
+  IF NEW."productId" IS NULL AND COALESCE(TRIM(NEW."supplierCode"),'')<>'' THEN
+    SELECT o."companyId",o."supplierId" INTO v_company,v_supplier
+    FROM "PurchaseOrder" o WHERE o."id"=NEW."orderId" LIMIT 1;
+    IF v_company IS NOT NULL AND v_supplier IS NOT NULL THEN
+      SELECT m."productId" INTO v_product
+      FROM "SupplierProductMapping" m
+      WHERE m."companyId"=v_company AND m."supplierId"=v_supplier
+        AND UPPER(REGEXP_REPLACE(TRIM(m."supplierItemCode"),'\\s+','','g'))=UPPER(REGEXP_REPLACE(TRIM(NEW."supplierCode"),'\\s+','','g'))
+      LIMIT 1;
+      IF v_product IS NOT NULL THEN
+        NEW."productId" := v_product;
+        NEW."resolutionStatus" := 'MATCHED';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql`,
+`DROP TRIGGER IF EXISTS trg_mws_pos_ocr_line_before_write ON "PurchaseOrderLine"`,
+`CREATE TRIGGER trg_mws_pos_ocr_line_before_write BEFORE INSERT OR UPDATE OF "supplierCode","ocrRawText","productId" ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_pos_ocr_line_before_write()`,
+`CREATE OR REPLACE FUNCTION mws_sync_pos_ocr_line_to_document() RETURNS trigger AS $$
+DECLARE
+  v_doc TEXT;
+  v_source TEXT;
+  v_text TEXT;
+  v_pack NUMERIC := 1;
+  v_unit TEXT := 'PIECE';
+  v_unit_cost NUMERIC := 0;
+  v_vat NUMERIC := 0;
+BEGIN
+  SELECT o."sourceDocumentId",o."sourceType" INTO v_doc,v_source
+  FROM "PurchaseOrder" o WHERE o."id"=NEW."orderId" LIMIT 1;
+  IF v_doc IS NULL OR v_source IS DISTINCT FROM 'POS_OCR_DRAFT' THEN RETURN NEW; END IF;
+
+  v_text := UPPER(COALESCE(NEW."description",'')||' '||COALESCE(NEW."ocrRawText",''));
+  IF v_text ~ '(MONSTER|RED[[:space:]]*BULL|REDBULL)' THEN v_pack:=24;
+  ELSIF v_text ~ '(1[,.]5[[:space:]]*(L|LT)|1500[[:space:]]*ML)' THEN v_pack:=6;
+  ELSIF v_text ~ '(330[[:space:]]*ML|0[,.]33[[:space:]]*L|33[[:space:]]*CL)' THEN v_pack:=24;
+  ELSIF v_text ~ '(500[[:space:]]*ML|0[,.]5[[:space:]]*L|50[[:space:]]*CL)' THEN v_pack:=24;
+  ELSIF v_text ~ '(750[[:space:]]*ML|0[,.]75[[:space:]]*L)' AND v_text ~ '(ΝΕΡΟ|WATER|ΖΑΓΟΡΙ|ΘΕΩΝΗ)' THEN v_pack:=12;
+  ELSIF v_text ~ '(ΦΙΑΛ|BOTTLE)' THEN v_pack:=20;
+  END IF;
+  IF v_pack>1 AND (v_text ~ '(ΚΙΒ|ΚΒ|CASE|BOX|PACK|1X[0-9]+|[0-9]+X[0-9]+)') THEN v_unit:='PACKAGE'; ELSE v_pack:=1; END IF;
+
+  v_vat:=GREATEST(0,COALESCE(NEW."vatRate",0));
+  IF COALESCE(NEW."quantity",0)>0 AND COALESCE(NEW."netAmount",0)>0 THEN
+    v_unit_cost:=NEW."netAmount"/NEW."quantity";
+  ELSE
+    v_unit_cost:=GREATEST(0,COALESCE(NEW."unitCost",0));
+  END IF;
+
+  INSERT INTO "PurchaseDocumentLine" (
+    "id","purchaseDocumentId","purchaseOrderLineId","productId","supplierItemCode","supplierBarcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount"
+  ) VALUES (
+    md5(random()::text||clock_timestamp()::text),v_doc,NEW."id",NEW."productId",NULLIF(TRIM(NEW."supplierCode"),''),NULLIF(TRIM(NEW."detectedBarcode"),''),NEW."description",GREATEST(0,COALESCE(NEW."quantity",0)),v_unit,CASE WHEN v_unit='PACKAGE' THEN v_pack ELSE NULL END,v_unit_cost,GREATEST(0,COALESCE(NEW."netAmount",0)),v_vat,GREATEST(0,COALESCE(NEW."vatAmount",0)),GREATEST(0,COALESCE(NEW."grossAmount",0))
+  ) ON CONFLICT ("purchaseOrderLineId") WHERE "purchaseOrderLineId" IS NOT NULL DO UPDATE SET
+    "productId"=EXCLUDED."productId",
+    "supplierItemCode"=COALESCE(EXCLUDED."supplierItemCode","PurchaseDocumentLine"."supplierItemCode"),
+    "supplierBarcode"=COALESCE(EXCLUDED."supplierBarcode","PurchaseDocumentLine"."supplierBarcode"),
+    "description"=EXCLUDED."description",
+    "quantity"=EXCLUDED."quantity",
+    "unit"=EXCLUDED."unit",
+    "unitsPerPackage"=EXCLUDED."unitsPerPackage",
+    "unitCost"=EXCLUDED."unitCost",
+    "netAmount"=EXCLUDED."netAmount",
+    "vatRate"=EXCLUDED."vatRate",
+    "vatAmount"=EXCLUDED."vatAmount",
+    "grossAmount"=EXCLUDED."grossAmount";
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql`,
+`DROP TRIGGER IF EXISTS trg_mws_sync_pos_ocr_line_to_document ON "PurchaseOrderLine"`,
+`CREATE TRIGGER trg_mws_sync_pos_ocr_line_to_document AFTER INSERT OR UPDATE ON "PurchaseOrderLine" FOR EACH ROW EXECUTE FUNCTION mws_sync_pos_ocr_line_to_document()`
 ];
 
 export async function ensureSupplierItemLearningSchema(){
   for(const statement of statements) await prisma.$executeRawUnsafe(statement);
-  console.log("Supplier item learning schema bootstrap completed.");
+  console.log("Supplier item learning + POS OCR approval bridge schema bootstrap completed.");
 }
