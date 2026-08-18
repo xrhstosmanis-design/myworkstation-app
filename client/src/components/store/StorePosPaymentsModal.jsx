@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from "react";
 import {Camera,Wallet,X} from "lucide-react";
 import StoreSupplierInvoiceFast from "./StoreSupplierInvoiceFast.jsx";
-import StoreSupplierInvoiceV244 from "./StoreSupplierInvoiceV244.jsx";
+import StoreSupplierInvoicePremiumFast from "./StoreSupplierInvoicePremiumFast.jsx";
 
 const euro=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=v=>Number(String(v||"0").replace(",","."))||0;
@@ -26,10 +26,10 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
  const supplierInvoice=premiumInvoice===null
   ?<div style={{padding:16,fontWeight:800}}>Έλεγχος διαθέσιμου module…</div>
   :premiumInvoice
-   ?<StoreSupplierInvoiceV244 api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>
+   ?<StoreSupplierInvoicePremiumFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>
    :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
  return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
-  <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>{premiumInvoice?"PREMIUM AI READER — ανάγνωση τιμολογίου και συνέχεια στο BackOffice":"STANDARD — απλή καταχώριση πληρωμής προμηθευτή"}</small></div>
+  <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>{premiumInvoice?"PREMIUM AI READER — FAST στοιχεία / πληρωμή, προϊόντα στο background":"STANDARD — απλή καταχώριση πληρωμής προμηθευτή"}</small></div>
   <div className="pos-payment-types"><button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"OTHER_EXPENSE"}))}>Λοιπά έξοδα</button><button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"SUPPLIER_PAYMENT"}))}>Πληρωμή προμηθευτή</button></div>
   {supplierMode?supplierInvoice:<div className="pos-payment-form">
    <label>Ποσό<input readOnly inputMode="decimal" value={form.amount}/></label><Pad value={form.amount} onChange={amount=>setForm(c=>({...c,amount}))}/><label>Παρατηρήσεις<input value={form.description} onChange={e=>setForm(c=>({...c,description:e.target.value}))}/></label>
