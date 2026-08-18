@@ -144,7 +144,7 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
           if(restored[0])restoredProductIds.push(restored[0].productId);
         }
       }
-      for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount","terminalRef") VALUES (${crypto.randomUUID()},${reversalId},${payment.method},${-money(payment.amount)},${payment.terminalRef||null})`;
+      for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${reversalId},${payment.method},${-money(payment.amount)})`;
       const cash=payments.filter(p=>p.method==="CASH").reduce((sum,p)=>sum+money(p.amount),0),card=payments.filter(p=>p.method==="CARD").reduce((sum,p)=>sum+money(p.amount),0),iris=payments.filter(p=>p.method==="IRIS").reduce((sum,p)=>sum+money(p.amount),0),who=actorName(req);
       if(cash>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open.id},'SALE_CASH',${-cash},${`POS ${label} ${reversalId} · αρχική ${sale.id} · ΜΕΤΡΗΤΑ`},${req.user.id},${who})`;
       if(card+iris>0)await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${open.id},'SALE_CARD',${-(card+iris)},${`POS ${label} ${reversalId} · αρχική ${sale.id} · ΚΑΡΤΑ ${card.toFixed(2)} · IRIS ${iris.toFixed(2)}`},${req.user.id},${who})`;
