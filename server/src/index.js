@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
+import katOnlineOrderingRoutes from "./routes/kat-online-ordering.js";
+import katOnlineOrderingModifierRoutes from "./routes/kat-online-ordering-modifiers.js";
 import cashControlRoutes from "./routes/cash-control.js";
 import storeOperatorRoutes from "./routes/store-operators.js";
 import operatorManagementV2Routes from "./routes/operator-management-v2.js";
@@ -95,12 +97,15 @@ import { ensureKatAiReaderTestEntitlement } from "./kat-ai-reader-test-entitleme
 import { ensureSupplierItemLearningSchema } from "./supplier-item-learning-bootstrap.js";
 import { ensureKatPreparationCleanup } from "./kat-preparation-cleanup.js";
 import { ensureKatPreparationSeed } from "./kat-preparation-bootstrap.js";
+import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json({limit:"12mb"}));
 app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.22.0+kat-test-pos"}));
+app.use("/api/public/kat",katOnlineOrderingRoutes);
+app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
@@ -183,5 +188,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
