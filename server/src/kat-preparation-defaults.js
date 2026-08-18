@@ -2,7 +2,7 @@ import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
 const uid=()=>crypto.randomUUID();
-const RECIPE_PROFILE_VERSION=3;
+const RECIPE_PROFILE_VERSION=4;
 const GROUPS=[
  {name:"ΖΑΧΑΡΗ",items:[[10,"ΣΚΕΤΟΣ",0],[20,"ΜΕΤΡΙΟΣ",0],[30,"ΓΛΥΚΟΣ",0],[40,"ΚΑΣΤΑΝΗ ΖΑΧΑΡΗ",0],[50,"ΣΤΕΒΙΑ",0],[60,"ΖΑΧΑΡΙΝΗ",0]]},
  {name:"ΠΑΓΟΣ",items:[[10,"ΧΩΡΙΣ ΠΑΓΟ",0],[20,"ΛΙΓΟΣ ΠΑΓΟΣ",0],[30,"ΚΑΝΟΝΙΚΟΣ ΠΑΓΟΣ",0],[40,"ΠΟΛΥΣ ΠΑΓΟΣ",0]]},
@@ -57,6 +57,7 @@ function recipeFor(name){
  if(/FREDDO ESPRESSO/.test(n))return withColdPack([[bean,18,"GR"]]);
  if(/ICED LATTE/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.milk,160,"ML"]]);
  if(/ICED AMERICANO/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.water,100,"ML"]]);
+ if(/ΦΡΑΠΕ ΜΕ ΓΑΛΑ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,150,"ML"],[ingredientSku.milkEvap,30,"ML"]]);
  if(/ΦΡΑΠΕ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,180,"ML"]]);
  if(/NESCAFE ΚΡΥ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,180,"ML"]]);
  if(/MOCHA ΚΡΥ|ICED MOCHA/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.choc,25,"GR"],[ingredientSku.milk,160,"ML"]]);
