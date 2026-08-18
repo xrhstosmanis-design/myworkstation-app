@@ -6,27 +6,17 @@ const CANONICAL_SKUS=new Set([
 ]);
 const LEGACY_CATEGORIES=["ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΚΑΦΕ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΣΟΚΟΛΑΤΑ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΤΣΑΙ"];
 
-async function main(){
+export async function ensureKatPreparationCleanup(){
  const [store]=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;
- if(!store){console.log("KAT preparation cleanup: store not found");return}
+ if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};
  const legacyCategories=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${store.companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
  const legacyIds=legacyCategories.map(row=>row.id);
  const rows=await prisma.$queryRaw`SELECT "id","sku","name","categoryId" FROM "Product" WHERE "companyId"=${store.companyId} AND (COALESCE("sku",'') LIKE 'MWS-KAT-COF-%' OR COALESCE("sku",'') LIKE 'MWS-KAT-BEV-%' OR (${legacyIds.length}>0 AND "categoryId"=ANY(${legacyIds}::text[])))`;
- const remove=rows.filter(row=>{
-   const sku=String(row.sku||"");
-   if(CANONICAL_SKUS.has(sku))return false;
-   if(sku.startsWith("MWS-PREP-"))return false;
-   if(sku.startsWith("MWS-KAT-BEV-")||sku.startsWith("MWS-KAT-COF-"))return true;
-   return legacyIds.includes(row.categoryId);
- });
- for(const row of remove){
-   await prisma.$executeRaw`DELETE FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${row.id}`;
-   await prisma.$executeRaw`UPDATE "Product" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${row.id}`;
- }
- if(legacyIds.length){
-   await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${store.companyId} AND "id"=ANY(${legacyIds}::text[])`;
- }
+ const remove=rows.filter(row=>{const sku=String(row.sku||"");if(CANONICAL_SKUS.has(sku))return false;if(sku.startsWith("MWS-PREP-"))return false;if(sku.startsWith("MWS-KAT-BEV-")||sku.startsWith("MWS-KAT-COF-"))return true;return legacyIds.includes(row.categoryId)});
+ for(const row of remove){await prisma.$executeRaw`DELETE FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${row.id}`;await prisma.$executeRaw`UPDATE "Product" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${row.id}`}
+ if(legacyIds.length)await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${store.companyId} AND "id"=ANY(${legacyIds}::text[])`;
  console.log(`KAT preparation cleanup: removed ${remove.length} legacy/duplicate active products`);
+ return {ok:true,removed:remove.length};
 }
 
-main().catch(error=>{console.error("KAT preparation cleanup failed",error);process.exitCode=1}).finally(async()=>{await prisma.$disconnect()});
+if(process.argv[1]&&process.argv[1].endsWith("kat-preparation-cleanup.js"))ensureKatPreparationCleanup().catch(error=>{console.error("KAT preparation cleanup failed",error);process.exitCode=1}).finally(async()=>{await prisma.$disconnect()});
