@@ -89,7 +89,7 @@ router.post("/stores/:storeId/sales/:saleId/delayed",async(req,res,next)=>{
     if(target>now+60_000)return res.status(400).json({error:"Η ετεροχρονισμένη ώρα δεν μπορεί να είναι στο μέλλον."});
     if(target<now-31*24*60*60*1000)return res.status(400).json({error:"Για λόγους ασφαλείας η ετεροχρονισμένη πώληση μπορεί να δηλωθεί έως 31 ημέρες πίσω."});
     const result=await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`delay:${req.params.saleId}`})) AS locked`;
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`delay:${req.params.saleId}`})) IS NULL) AS locked`;
       const sale=(await tx.$queryRaw`SELECT * FROM "Sale" WHERE "id"=${req.params.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
       if(!sale){const e=new Error("Δεν βρέθηκε η πώληση.");e.status=404;throw e}
       if(sale.source!=="POS"||sale.status!=="COMPLETED"){const e=new Error("Ετεροχρονισμένη σήμανση επιτρέπεται μόνο σε ολοκληρωμένη αρχική POS πώληση.");e.status=409;throw e}
@@ -117,7 +117,7 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
     const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{});
     // returnItems is enforced once by store-pos-catalog from the central BackOffice operator profile.
     const result=await prisma.$transaction(async tx=>{
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`reverse:${req.params.saleId}`})) AS locked`;
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`reverse:${req.params.saleId}`})) IS NULL) AS locked`;
       const sale=(await tx.$queryRaw`SELECT * FROM "Sale" WHERE "id"=${req.params.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
       if(!sale){const e=new Error("Δεν βρέθηκε η πώληση.");e.status=404;throw e}
       if(sale.source!=="POS"||sale.status!=="COMPLETED"){const e=new Error("Ακύρωση/επιστροφή επιτρέπεται μόνο σε ολοκληρωμένη αρχική POS πώληση.");e.status=409;throw e}
