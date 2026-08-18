@@ -1,40 +1,32 @@
+import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
-const ingredientRows=[
- {sku:"PREP-COFFEE-ARABICA",name:"ΚΑΦΕΣ ESPRESSO ΚΟΚΚΟΣ",unit:"GR",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-SUGAR-WHITE",name:"ΖΑΧΑΡΗ ΛΕΥΚΗ",unit:"GR",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-SUGAR-BROWN",name:"ΖΑΧΑΡΗ ΚΑΣΤΑΝΗ",unit:"GR",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-CUP-FREDDO",name:"ΠΟΤΗΡΙ FREDDO",unit:"PCS",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-LID-FREDDO",name:"ΚΑΠΑΚΙ FREDDO",unit:"PCS",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-STRAW",name:"ΚΑΛΑΜΑΚΙ",unit:"PCS",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-MILK-FULL",name:"ΓΑΛΑ ΠΛΗΡΕΣ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-MILK-LIGHT",name:"ΓΑΛΑ LIGHT",unit:"ML",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-MILK-LACTOSEFREE",name:"ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-MILK-ALMOND",name:"ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-MILK-OAT",name:"ΓΑΛΑ ΒΡΩΜΗΣ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ"},
- {sku:"PREP-SYRUP-CHOC",name:"ΣΙΡΟΠΙ ΣΟΚΟΛΑΤΑ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-SYRUP-CARAMEL",name:"ΣΙΡΟΠΙ ΚΑΡΑΜΕΛΑ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-SYRUP-VANILLA",name:"ΣΙΡΟΠΙ ΒΑΝΙΛΙΑ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-SYRUP-HAZELNUT",name:"ΣΙΡΟΠΙ ΦΟΥΝΤΟΥΚΙ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-CREAM",name:"ΣΑΝΤΙΓΙ",unit:"ML",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-CINNAMON",name:"ΚΑΝΕΛΑ",unit:"GR",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-DECAF",name:"DECAF ΔΟΣΗ",unit:"GR",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"},
- {sku:"PREP-EXTRA-SHOT",name:"EXTRA SHOT ESPRESSO",unit:"GR",category:"ΠΡΟΪΟΝΤΑ MODIFIERS"}
+const uid=()=>crypto.randomUUID();
+const CATEGORY="ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΚΑΦΕ";
+const SUBCATEGORY="ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ";
+const META_SEP="::MWSMETA::";
+
+const INGREDIENTS=[
+ ["MWS-PREP-COFFEE-BEANS","ΚΑΦΕΣ ΣΕ ΚΟΚΚΟΥΣ","GR"],["MWS-PREP-DECAF","ΚΑΦΕΣ DECAF","GR"],["MWS-PREP-SUGAR-WHITE","ΖΑΧΑΡΗ ΛΕΥΚΗ","GR"],["MWS-PREP-SUGAR-BROWN","ΖΑΧΑΡΗ ΚΑΣΤΑΝΗ","GR"],["MWS-PREP-SWEETENER","ΓΛΥΚΑΝΤΙΚΟ / ΖΑΧΑΡΙΝΗ","PCS"],["MWS-PREP-ICE","ΠΑΓΟΣ","PCS"],["MWS-PREP-MILK","ΓΑΛΑ ΦΡΕΣΚΟ","ML"],["MWS-PREP-MILK-LF","ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ","ML"],["MWS-PREP-MILK-ALMOND","ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ","ML"],["MWS-PREP-MILK-OAT","ΓΑΛΑ ΒΡΩΜΗΣ","ML"],["MWS-PREP-MILK-SOY","ΓΑΛΑ ΣΟΓΙΑΣ","ML"],["MWS-PREP-SYRUP-CHOC","ΣΙΡΟΠΙ ΣΟΚΟΛΑΤΑ","ML"],["MWS-PREP-SYRUP-CARAMEL","ΣΙΡΟΠΙ ΚΑΡΑΜΕΛΑ","ML"],["MWS-PREP-SYRUP-VANILLA","ΣΙΡΟΠΙ ΒΑΝΙΛΙΑ","ML"],["MWS-PREP-SYRUP-HAZELNUT","ΣΙΡΟΠΙ ΦΟΥΝΤΟΥΚΙ","ML"],["MWS-PREP-CUP-SMALL","ΠΟΤΗΡΙ ΚΑΦΕ ΜΙΚΡΟ","PCS"],["MWS-PREP-CUP-LARGE","ΠΟΤΗΡΙ ΚΑΦΕ ΜΕΓΑΛΟ","PCS"],["MWS-PREP-LID-SMALL","ΚΑΠΑΚΙ ΚΑΦΕ ΜΙΚΡΟ","PCS"],["MWS-PREP-LID-LARGE","ΚΑΠΑΚΙ ΚΑΦΕ ΜΕΓΑΛΟ","PCS"],["MWS-PREP-STRAW","ΚΑΛΑΜΑΚΙ","PCS"],["MWS-PREP-CINNAMON","ΚΑΝΕΛΑ","GR"],["MWS-PREP-COCOA","ΚΑΚΑΟ","GR"],["MWS-PREP-WHIP","ΣΑΝΤΙΓΙ","GR"]
 ];
+const GROUPS=[
+ ["ESPRESSO","#1599a8",/\bESPRESSO\b/i,/FREDDO|CAP|CAPPU|LATTE/i],["FREDDO ESPRESSO","#2f7fba",/FREDDO.*ESPRESSO|ESPRESSO.*FREDDO/i,null],["CAPPUCCINO","#d97a24",/CAPPUCCINO|CAPPU|\bCAP\b/i,/FREDDO/i],["FREDDO CAPPUCCINO","#9a8f19",/FREDDO.*(CAPPUCCINO|CAPPU|CAP)|(?:CAPPUCCINO|CAPPU|CAP).*FREDDO/i,null],["LATTE","#81549a",/LATTE/i,null],["AMERICANO","#b15252",/AMERICANO/i,null],["NESCAFE / ΦΡΑΠΕ","#1599a8",/NESCAFE|FRAPPE|ΦΡΑΠ/i,null],["ΕΛΛΗΝΙΚΟΣ","#2f7fba",/ΕΛΛΗΝΙΚ|GREEK COFFEE/i,null],["ΦΙΛΤΡΟΥ","#d97a24",/ΦΙΛΤΡ|FILTER COFFEE/i,null],["DECAF","#9a8f19",/DECAF/i,null],["ΣΟΚΟΛΑΤΑ","#81549a",/ΣΟΚΟΛΑΤ|CHOCOLATE/i,null],["ΤΣΑΙ","#b15252",/ΤΣΑΙ|TEA/i,null],["ΡΟΦΗΜΑΤΑ","#1599a8",/ΡΟΦΗΜΑ|MATCHA|CHAI/i,null],["ΛΟΙΠΑ ΚΑΦΕ","#2f7fba",/MACCHIATO|MOCHA|FLAT WHITE/i,null]
+];
+const coffeeLike=name=>/ESPRESSO|FREDDO|CAPPUCCINO|CAPPU|\bCAP\b|LATTE|AMERICANO|NESCAFE|FRAPPE|ΦΡΑΠ|ΕΛΛΗΝΙΚ|GREEK COFFEE|ΦΙΛΤΡ|FILTER COFFEE|DECAF|MACCHIATO|MOCHA|FLAT WHITE|ΣΟΚΟΛΑΤ|CHOCOLATE|ΤΣΑΙ|TEA|MATCHA|CHAI/i.test(String(name||""));
+const encoded=(name,codes)=>`${name}${META_SEP}${codes.map(c=>encodeURIComponent(String(c))).join(",")}`;
 
 export async function ensureKatPreparationSeed(){
- const store=await prisma.store.findFirst({where:{OR:[{slug:"kat-store"},{name:{contains:"ΚΑΤ",mode:"insensitive"}}]},select:{id:true,companyId:true}}).catch(()=>null);
- if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};
- await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "KatPreparationSeedMarker" ("companyId" TEXT PRIMARY KEY,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
- const marker=await prisma.$queryRaw`SELECT "companyId" FROM "KatPreparationSeedMarker" WHERE "companyId"=${store.companyId} LIMIT 1`;
- if(marker.length)return {ok:true,skipped:true};
- for(const row of ingredientRows){
-  const existing=await prisma.product.findFirst({where:{companyId:store.companyId,sku:row.sku},select:{id:true}}).catch(()=>null);
-  if(existing)continue;
-  const product=await prisma.product.create({data:{companyId:store.companyId,sku:row.sku,name:row.name,isActive:true,salePrice:0}});
-  try{await prisma.$executeRaw`UPDATE "Product" SET "categoryName"=${row.category},"unitOfMeasure"=${row.unit} WHERE "id"=${product.id}`}catch{}
-  try{await prisma.storeProduct.create({data:{storeId:store.id,productId:product.id,isActive:true,currentStock:0}})}catch{}
- }
- await prisma.$executeRaw`INSERT INTO "KatPreparationSeedMarker" ("companyId") VALUES (${store.companyId}) ON CONFLICT DO NOTHING`;
- return {ok:true,count:ingredientRows.length};
+ await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSubcategory" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"categoryId" TEXT NOT NULL,"legacyCode" TEXT,"name" TEXT NOT NULL,"property" TEXT NOT NULL DEFAULT 'STOCK_ITEM',"points" DECIMAL(14,4) NOT NULL DEFAULT 0,"pluGroup" INTEGER NOT NULL DEFAULT 0,"classification" TEXT NOT NULL DEFAULT 'MERCHANDISE',"eshopCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+ const [store]=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;
+ if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};const companyId=store.companyId;
+ let [category]=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${companyId} AND UPPER("name")=UPPER(${CATEGORY}) LIMIT 1`;
+ if(!category){category={id:uid()};await prisma.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name","active") VALUES (${category.id},${companyId},${CATEGORY},true)`}
+ let [sub]=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "categoryId"=${category.id} AND UPPER("name")=UPPER(${SUBCATEGORY}) LIMIT 1`;
+ if(!sub){sub={id:uid()};await prisma.$executeRaw`INSERT INTO "ProductSubcategory" ("id","companyId","categoryId","name","property","classification","active") VALUES (${sub.id},${companyId},${category.id},${SUBCATEGORY},'STOCK_ITEM','PRODUCT',true)`}
+ for(const [sku,name,unit] of INGREDIENTS){let [p]=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "sku"=${sku} LIMIT 1`;if(!p){p={id:uid()};await prisma.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","sku","name","description","unit","vatRate","salePrice","costPrice","trackStock","active") VALUES (${p.id},${companyId},${category.id},${sub.id},${sku},${name},'Υλικό παρασκευής / modifier',${unit},13,0,0,true,true)`}else await prisma.$executeRaw`UPDATE "Product" SET "categoryId"=${category.id},"subcategoryId"=${sub.id},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${p.id}`;let [sp]=await prisma.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${p.id} LIMIT 1`;if(!sp)await prisma.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${p.id},0,0,false)`;else await prisma.$executeRaw`UPDATE "StoreProduct" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${sp.id}`}
+ const products=await prisma.$queryRaw`SELECT p."id",p."sku",p."name" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY p."name"`;
+ const coffees=products.filter(p=>coffeeLike(p.name));if(coffees.length){const ids=coffees.map(p=>p.id);await prisma.$executeRaw`UPDATE "Product" SET "categoryId"=${category.id},"subcategoryId"=${sub.id},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`}
+ const rows=await prisma.$queryRawUnsafe(`SELECT "layoutJson" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);if(rows[0]?.layoutJson){const layout=structuredClone(rows[0].layoutJson);const assigned=new Set();layout.categories=GROUPS.map(([label,color,rx,exclude],index)=>{const matched=coffees.filter(p=>rx.test(String(p.name||""))&&(!exclude||!exclude.test(String(p.name||"")))&&!assigned.has(p.id));matched.forEach(p=>assigned.add(p.id));const codes=[...new Set(matched.map(p=>String(p.sku||p.id)))];return{id:`kat-prep-${index+1}`,label,color,visible:true,categoryName:encoded(label,codes),productCodes:codes}});const leftovers=coffees.filter(p=>!assigned.has(p.id));if(leftovers.length){const last=layout.categories[13];last.productCodes=[...new Set([...(last.productCodes||[]),...leftovers.map(p=>String(p.sku||p.id))])];last.categoryName=encoded(last.label,last.productCodes)}await prisma.$queryRawUnsafe(`UPDATE "StorePosLayout" SET "layoutJson"=$2::jsonb,"version"="version"+1,"publishedAt"=NOW() WHERE "storeId"=$1`,store.id,JSON.stringify(layout))}
+ return {ok:true,storeId:store.id,coffeeCount:coffees.length,ingredientCount:INGREDIENTS.length};
 }
