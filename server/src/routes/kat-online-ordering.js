@@ -2,11 +2,14 @@ import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import {auth} from "../middleware/auth.js";
 import {ensureKatOnlineOrderingSchema,getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
 
 const router=Router();
 const money=value=>Math.round(Number(value||0)*100)/100;
 const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
+const ACTIVE_STATUSES=["NEW","ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY"];
+const NEXT_STATUS={NEW:"ACCEPTED",ACCEPTED:"PREPARING",PREPARING:"READY",READY:"OUT_FOR_DELIVERY",OUT_FOR_DELIVERY:"DELIVERED"};
 
 async function ensure(){await ensureKatOnlineOrderingSchema()}
 async function katStore(){
@@ -25,6 +28,38 @@ async function onlineContext(){
   return{store,config};
 }
 function safe(handler){return async(req,res,next)=>{try{await ensure();await handler(req,res)}catch(error){next(error)}}}
+function operatorGuard(req,res,next){
+  if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Η λειτουργία Online Παραγγελιών είναι διαθέσιμη από το POS καταστήματος."});
+  if(String(req.user.storeId||"")!==String(req.params.storeId||""))return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  next();
+}
+async function orderRows(storeId,statuses=ACTIVE_STATUSES){
+  return prisma.$queryRaw`
+    SELECT o.*,
+      COALESCE((SELECT json_agg(json_build_object(
+        'id',l."id",'productId',l."productId",'productName',l."productName",'quantity',l."quantity",
+        'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)
+      ) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items"
+    FROM "OnlineOrder" o
+    WHERE o."storeId"=${storeId} AND o."status"=ANY(${statuses}::text[])
+    ORDER BY CASE o."status" WHEN 'NEW' THEN 0 WHEN 'ACCEPTED' THEN 1 WHEN 'PREPARING' THEN 2 WHEN 'READY' THEN 3 WHEN 'OUT_FOR_DELIVERY' THEN 4 ELSE 9 END,o."createdAt" ASC`;
+}
+function printPayload(order,config){
+  return {
+    title:"ΚΥΛΙΚΕΙΟ ΚΑΤ · ONLINE",
+    orderNumber:order.orderNumber,
+    createdAt:order.createdAt,
+    fulfillmentType:order.fulfillmentType,
+    paymentMethod:order.paymentMethod,
+    customerName:order.customerName,
+    customerPhone:order.customerPhone,
+    location:[order.building,order.floor,order.department,order.room].filter(Boolean).join(" · "),
+    deliveryNotes:order.deliveryNotes||null,
+    items:(order.items||[]).map(row=>({productName:row.productName,quantity:Number(row.quantity||0),unitPrice:money(row.onlineUnitPrice),lineTotal:money(row.lineTotal),modifiers:Array.isArray(row.modifiers)?row.modifiers:[]})),
+    subtotal:money(order.subtotal),deliveryFee:money(order.deliveryFee),total:money(order.total),
+    autoPrint:Boolean(config?.autoPrintOnAccept)
+  };
+}
 
 router.get("/catalog",safe(async(req,res)=>{
   const {store,config}=await onlineContext();
@@ -100,6 +135,40 @@ router.post("/orders",safe(async(req,res)=>{
     await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","toStatus","note") VALUES (${crypto.randomUUID()},${id},'NEW','Online order submitted')`;
   });
   res.status(201).json({ok:true,order:{id,orderNumber,status:"NEW",fulfillmentType:body.fulfillmentType,paymentMethod:body.paymentMethod,subtotal,deliveryFee,total}});
+}));
+
+router.get("/pos/stores/:storeId/orders",auth,operatorGuard,safe(async(req,res)=>{
+  const {store,config}=await onlineContext();
+  if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const rows=await orderRows(store.id);
+  const newCount=rows.filter(row=>row.status==="NEW").length;
+  res.json({module:{key:"ONLINE_ORDERING",active:true},store:{id:store.id,name:store.name},newCount,activeCount:rows.length,autoPrintOnAccept:Boolean(config.autoPrintOnAccept),rows:rows.map(row=>({...row,subtotal:money(row.subtotal),deliveryFee:money(row.deliveryFee),total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:Number(item.quantity||0),onlineUnitPrice:money(item.onlineUnitPrice),lineTotal:money(item.lineTotal)}))}))});
+}));
+
+router.get("/pos/stores/:storeId/orders/:orderId/print",auth,operatorGuard,safe(async(req,res)=>{
+  const {store,config}=await onlineContext();
+  if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const rows=await prisma.$queryRaw`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('productName',l."productName",'quantity',l."quantity",'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items" FROM "OnlineOrder" o WHERE o."id"=${req.params.orderId} AND o."storeId"=${store.id} LIMIT 1`;
+  if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+  res.json({print:printPayload(rows[0],config)});
+}));
+
+router.post("/pos/stores/:storeId/orders/:orderId/status",auth,operatorGuard,safe(async(req,res)=>{
+  const body=z.object({status:z.enum(["ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY","DELIVERED"]),note:z.string().trim().max(300).optional().nullable()}).parse(req.body||{});
+  const {store,config}=await onlineContext();
+  if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const current=(await prisma.$queryRaw`SELECT * FROM "OnlineOrder" WHERE "id"=${req.params.orderId} AND "storeId"=${store.id} LIMIT 1`)[0];
+  if(!current)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+  const expected=NEXT_STATUS[current.status];
+  const pickupReadyToDelivered=current.fulfillmentType==="PICKUP"&&current.status==="READY"&&body.status==="DELIVERED";
+  if(body.status!==expected&&!pickupReadyToDelivered)return res.status(409).json({error:`Η παραγγελία είναι σε κατάσταση ${current.status} και δεν μπορεί να μεταβεί σε ${body.status}.`});
+  const acceptedAt=body.status==="ACCEPTED"?new Date():null,readyAt=body.status==="READY"?new Date():null,deliveredAt=body.status==="DELIVERED"?new Date():null;
+  await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`UPDATE "OnlineOrder" SET "status"=${body.status},"assignedEmployeeId"=COALESCE("assignedEmployeeId",${req.user.employeeId||null}),"acceptedAt"=COALESCE(${acceptedAt},"acceptedAt"),"readyAt"=COALESCE(${readyAt},"readyAt"),"deliveredAt"=COALESCE(${deliveredAt},"deliveredAt"),"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${current.id}`;
+    await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","fromStatus","toStatus","employeeId","note") VALUES (${crypto.randomUUID()},${current.id},${current.status},${body.status},${req.user.employeeId||null},${body.note||null})`;
+  });
+  const updated=(await orderRows(store.id,[body.status]))?.find(row=>row.id===current.id)||{...current,status:body.status};
+  res.json({ok:true,order:{id:current.id,orderNumber:current.orderNumber,status:body.status},print:body.status==="ACCEPTED"?printPayload(updated,config):null});
 }));
 
 export default router;
