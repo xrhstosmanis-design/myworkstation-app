@@ -12,11 +12,36 @@ async function main(){
     create:{id:"pilot-company",name:"Κυλικείο ΚΑΤ"}
   });
 
-  const store = await prisma.store.upsert({
-    where:{id:"pilot-store"},
-    update:{name:"Κυλικείο ΚΑΤ",companyId:company.id},
-    create:{id:"pilot-store",name:"Κυλικείο ΚΑΤ",companyId:company.id}
+  // Prefer the real KAT store already created by the commercial/bootstrap flow.
+  // The old seed used to create a second synthetic `pilot-store`, producing a duplicate
+  // "Κυλικείο ΚΑΤ / Χωρίς πόλη" entry in Platform Admin.
+  let store = await prisma.store.findFirst({
+    where:{
+      companyId:company.id,
+      name:"Κυλικείο ΚΑΤ",
+      id:{not:"pilot-store"},
+      city:{not:null}
+    },
+    orderBy:{createdAt:"asc"}
   });
+
+  if(store){
+    const legacyPilotStore=await prisma.store.findUnique({where:{id:"pilot-store"}});
+    if(legacyPilotStore&&legacyPilotStore.id!==store.id){
+      await prisma.store.delete({where:{id:legacyPilotStore.id}});
+      console.log(`Removed duplicate synthetic KAT store: ${legacyPilotStore.id}`);
+    }
+    store=await prisma.store.update({
+      where:{id:store.id},
+      data:{name:"Κυλικείο ΚΑΤ",city:store.city||"Αθήνα",companyId:company.id}
+    });
+  }else{
+    store = await prisma.store.upsert({
+      where:{id:"pilot-store"},
+      update:{name:"Κυλικείο ΚΑΤ",city:"Αθήνα",companyId:company.id},
+      create:{id:"pilot-store",name:"Κυλικείο ΚΑΤ",city:"Αθήνα",companyId:company.id}
+    });
+  }
 
   const shifts = {};
   for(const s of [
@@ -116,6 +141,7 @@ async function main(){
     });
   }
 
+  console.log(`Seed KAT store: ${store.id} / ${store.name} / ${store.city||"—"}`);
   console.log(`Platform Super Admin: ${email}`);
   console.log(`KAT customer owner: ${katOwnerEmail}`);
 }
