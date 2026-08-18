@@ -79,8 +79,15 @@ export async function ensureKatPreparationDefaults(){
  const products=await prisma.$queryRaw`SELECT "id","name","sku" FROM "Product" WHERE "companyId"=${companyId} AND "sku" LIKE 'MWS-KAT-BEV-%' AND "active"=true`;
  for(const product of products){
   await prisma.$executeRaw`INSERT INTO "PreparationProductSettings" ("companyId","productId","preparationEnabled","environmentalFee","productionStation","autoPrint","recipeProfileVersion") VALUES (${companyId},${product.id},true,0.05,'ΠΑΡΑΓΩΓΗ',true,0) ON CONFLICT ("companyId","productId") DO UPDATE SET "preparationEnabled"=true,"productionStation"='ΠΑΡΑΓΩΓΗ',"autoPrint"=true,"updatedAt"=NOW()`;
-  const n=String(product.name||"").toLocaleUpperCase("el-GR"),familyGroups=/ΣΟΚΟΛΑΤ/.test(n)?["ΖΑΧΑΡΗ","ΠΑΓΟΣ","ΓΑΛΑ","EXTRA"]:/ΤΣΑΙ|ΧΑΜΟΜΗΛ/.test(n)?["ΖΑΧΑΡΗ","ΠΑΓΟΣ","ΓΑΛΑ","EXTRA"]:["ΖΑΧΑΡΗ","ΠΑΓΟΣ","ΧΤΥΠΗΜΑ","ΣΙΡΟΠΙ","ΓΑΛΑ","EXTRA"];
+  const n=String(product.name||"").toLocaleUpperCase("el-GR");
+  const cold=/FREDDO|ICED|ΦΡΑΠ|ΚΡΥ|COLD/.test(n);
+  const baseFamily=/ΣΟΚΟΛΑΤ/.test(n)?["ΖΑΧΑΡΗ","ΓΑΛΑ","EXTRA"]:/ΤΣΑΙ|ΧΑΜΟΜΗΛ/.test(n)?["ΖΑΧΑΡΗ","ΓΑΛΑ","EXTRA"]:["ΖΑΧΑΡΗ","ΧΤΥΠΗΜΑ","ΣΙΡΟΠΙ","ΓΑΛΑ","EXTRA"];
+  const familyGroups=cold?["ΖΑΧΑΡΗ","ΠΑΓΟΣ",...baseFamily.filter(x=>x!=="ΖΑΧΑΡΗ")]:baseFamily;
+  const wantedIds=familyGroups.map(groupName=>groups.find(x=>x.name===groupName)?.id).filter(Boolean);
+  const iceGroup=groups.find(x=>x.name==="ΠΑΓΟΣ");
+  if(!cold&&iceGroup)await prisma.$executeRaw`DELETE FROM "PreparationProductModifierGroup" WHERE "companyId"=${companyId} AND "productId"=${product.id} AND "groupId"=${iceGroup.id}`;
   let seq=0;for(const groupName of familyGroups){const g=groups.find(x=>x.name===groupName);if(!g)continue;await prisma.$executeRaw`INSERT INTO "PreparationProductModifierGroup" ("id","companyId","productId","groupId","required","minSelections","maxSelections","sequence") VALUES (${uid()},${companyId},${product.id},${g.id},false,0,1,${seq++}) ON CONFLICT ("companyId","productId","groupId") DO UPDATE SET "sequence"=EXCLUDED."sequence"`;}
+  if(wantedIds.length)await prisma.$executeRaw`DELETE FROM "PreparationProductModifierGroup" WHERE "companyId"=${companyId} AND "productId"=${product.id} AND NOT ("groupId"=ANY(${wantedIds}::text[]))`;
   const [settings]=await prisma.$queryRaw`SELECT "recipeProfileVersion" FROM "PreparationProductSettings" WHERE "companyId"=${companyId} AND "productId"=${product.id} LIMIT 1`;
   const profileVersion=Number(settings?.recipeProfileVersion||0);
   if(profileVersion<RECIPE_PROFILE_VERSION){
