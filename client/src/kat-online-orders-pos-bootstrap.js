@@ -1,7 +1,7 @@
 const ROOT_ID="mws-kat-online-orders-root";
 const STYLE_ID="mws-kat-online-orders-style";
 const POLL_MS=8000;
-let state={storeId:null,rows:[],activeCount:0,newCount:0,open:false,busy:false,error:"",timer:null,lastNewCount:0};
+let state={storeId:null,rows:[],activeCount:0,newCount:0,open:false,busy:false,error:"",timer:null,lastNewCount:0,initialized:false};
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
@@ -9,6 +9,16 @@ function session(){try{return JSON.parse(sessionStorage.getItem("storeOperatorSe
 function token(){return sessionStorage.getItem("storeOperatorToken")||""}
 function isKat(s){return /ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(s?.store?.name||""))}
 async function api(path,options={}){const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token()?{Authorization:`Bearer ${token()}`}:{}) ,...(options.headers||{})}});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data}
+
+function playNewOrderSound(){
+  try{
+    const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return;
+    const ctx=new AudioContext();
+    const notes=[880,1040,880];
+    notes.forEach((freq,index)=>{const osc=ctx.createOscillator(),gain=ctx.createGain(),start=ctx.currentTime+index*.22;osc.type="sine";osc.frequency.value=freq;gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.22,start+.02);gain.gain.exponentialRampToValueAtTime(.0001,start+.16);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+.18)});
+    setTimeout(()=>ctx.close().catch(()=>{}),1000);
+  }catch{}
+}
 
 function ensureStyle(){if(document.getElementById(STYLE_ID))return;const style=document.createElement("style");style.id=STYLE_ID;style.textContent=`
 .mws-online-orders-button{position:relative;display:flex!important;align-items:center;gap:7px;padding:7px 11px!important;border:1px solid #ffffff45!important;border-radius:10px!important;background:#7c171b!important;color:#fff!important;cursor:pointer;font:inherit;font-weight:900;box-shadow:0 3px 10px #0002}
@@ -27,9 +37,9 @@ function renderModal(){const old=document.querySelector(".mws-online-overlay");i
 
 function mountButton(){const s=session();if(!isKat(s))return removeUi();state.storeId=s.store.id;ensureStyle();const top=document.querySelector(".store-pos-top");if(!top)return;let button=document.querySelector(".mws-online-orders-button");if(!button){button=document.createElement("button");button.type="button";button.className="mws-online-orders-button";button.innerHTML=`<span>ΠΑΡΑΓΓΕΛΙΕΣ</span><b class="badge zero">0</b>`;button.onclick=()=>{state.open=true;renderModal();loadOrders(true)};const storeButton=[...top.querySelectorAll("button")].find(node=>String(node.textContent||"").includes(s.store.name));if(storeButton)storeButton.insertAdjacentElement("afterend",button);else{const actions=top.querySelector(".runtime-top-actions");if(actions)actions.insertAdjacentElement("beforebegin",button);else top.appendChild(button)}}updateBadge()}
 function updateBadge(){const badge=document.querySelector(".mws-online-orders-button .badge");if(!badge)return;badge.textContent=String(state.activeCount||0);badge.classList.toggle("zero",!state.activeCount);const button=document.querySelector(".mws-online-orders-button");if(button)button.title=`${state.newCount} νέες · ${state.activeCount} ενεργές online παραγγελίες`}
-function removeUi(){document.querySelector(".mws-online-orders-button")?.remove();document.querySelector(".mws-online-overlay")?.remove();state.storeId=null;state.rows=[];state.activeCount=0;state.newCount=0;state.open=false}
+function removeUi(){document.querySelector(".mws-online-orders-button")?.remove();document.querySelector(".mws-online-overlay")?.remove();state.storeId=null;state.rows=[];state.activeCount=0;state.newCount=0;state.open=false;state.initialized=false;state.lastNewCount=0}
 
-async function loadOrders(force=false){const s=session();if(!isKat(s)||!token())return removeUi();state.storeId=s.store.id;try{const data=await api(`/api/public/kat/pos/stores/${encodeURIComponent(state.storeId)}/orders`,{cache:"no-store"});state.rows=data.rows||[];state.activeCount=Number(data.activeCount||0);state.newCount=Number(data.newCount||0);state.error="";updateBadge();if(state.open)renderModal();state.lastNewCount=state.newCount}catch(error){if(/module|Online Παραγγελιών|δεν είναι ενεργ/i.test(error.message)){removeUi();return}state.error=error.message;if(force&&state.open)renderModal()}}
+async function loadOrders(force=false){const s=session();if(!isKat(s)||!token())return removeUi();state.storeId=s.store.id;try{const data=await api(`/api/public/kat/pos/stores/${encodeURIComponent(state.storeId)}/orders`,{cache:"no-store"});const previousNew=state.lastNewCount;state.rows=data.rows||[];state.activeCount=Number(data.activeCount||0);state.newCount=Number(data.newCount||0);state.error="";if(state.initialized&&state.newCount>previousNew)playNewOrderSound();state.lastNewCount=state.newCount;state.initialized=true;updateBadge();if(state.open)renderModal()}catch(error){if(/module|Online Παραγγελιών|δεν είναι ενεργ/i.test(error.message)){removeUi();return}state.error=error.message;if(force&&state.open)renderModal()}}
 async function changeStatus(orderId,status){if(state.busy)return;state.busy=true;try{const result=await api(`/api/public/kat/pos/stores/${encodeURIComponent(state.storeId)}/orders/${encodeURIComponent(orderId)}/status`,{method:"POST",body:JSON.stringify({status})});if(status==="ACCEPTED"&&result.print?.autoPrint)printOrder(result.print);await loadOrders(true)}catch(error){state.error=error.message;renderModal()}finally{state.busy=false}}
 async function reprint(orderId){try{const result=await api(`/api/public/kat/pos/stores/${encodeURIComponent(state.storeId)}/orders/${encodeURIComponent(orderId)}/print`,{cache:"no-store"});printOrder(result.print)}catch(error){state.error=error.message;renderModal()}}
 
