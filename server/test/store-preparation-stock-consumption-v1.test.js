@@ -19,6 +19,17 @@ test("preparation batch is linked once to the completed sale",()=>{
   assert.match(preparation,/"status"='CONSUMED',"saleId"=sale_id,"consumedAt"=NOW\(\)/);
   assert.match(preparation,/"status"='SENT'/);
   assert.match(preparation,/PreparationStockConsumption_once_idx/);
+  assert.match(preparation,/FOR UPDATE/);
+});
+
+test("sale must match preparation batch products and quantities before stock consumption",()=>{
+  assert.match(preparation,/FULL OUTER JOIN/);
+  assert.match(preparation,/COALESCE\(x->>'overrideReason',''\)='PREPARATION:'\|\|batch_id/);
+  assert.match(preparation,/b\.qty IS DISTINCT FROM s\.qty/);
+  assert.match(preparation,/Η παραγγελία παρασκευής δεν συμφωνεί με τα προϊόντα\/ποσότητες της πώλησης/);
+  const mismatchGuard=preparation.indexOf("IF mismatch THEN");
+  const firstStockUpdate=preparation.indexOf('UPDATE "StoreProduct" sp SET "currentStock"');
+  assert.ok(mismatchGuard>=0&&firstStockUpdate>mismatchGuard,"batch/sale parity must be checked before any ingredient stock update");
 });
 
 test("POS already carries preparation batch id through override reason",()=>{
