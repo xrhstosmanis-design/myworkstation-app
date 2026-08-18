@@ -32,6 +32,14 @@ test("sale must match preparation batch products and quantities before stock con
   assert.ok(mismatchGuard>=0&&firstStockUpdate>mismatchGuard,"batch/sale parity must be checked before any ingredient stock update");
 });
 
+test("milk modifiers replace recipe milk instead of double-consuming it",()=>{
+  assert.match(preparation,/UPPER\(g\."description"\)='ΓΑΛΑ'/);
+  assert.match(preparation,/recipe_row\.ingredient_sku LIKE 'MWS-PREP-MILK%'/);
+  assert.match(preparation,/milk_base_qty:=milk_base_qty\+recipe_row\."quantity"/);
+  assert.match(preparation,/MODIFIER_SUBSTITUTION/);
+  assert.match(preparation,/IF UPPER\(modifier_row\.group_name\)='ΓΑΛΑ' THEN CONTINUE/);
+});
+
 test("POS already carries preparation batch id through override reason",()=>{
   assert.match(modal,/row\.priceReason=`PREPARATION:\$\{row\.preparationId\|\|""\}`/);
   assert.match(pos,/overrideReason:item\.overrideReason\|\|null/);
