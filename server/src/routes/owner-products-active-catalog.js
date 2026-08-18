@@ -4,19 +4,14 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 
 const router=Router();
 const norm=value=>String(value||"").trim().toUpperCase().replace(/\s+/g," ");
-const drinkKey=value=>{
-  const n=norm(value)
-    .replace("FREDDO ESPRESO 4ΠΛΟ","FREDDO ESPRESSO 4ΠΛΟ")
-    .replace("FREDDO CAP 4ΠΛΟΣ","FREDDO CAP 4ΑΠΛΟΣ");
+const aliasKey=value=>{
+  const n=norm(value);
+  if(["FREDDO CAP 4ΑΠΛΟΣ","FREDDO CAP 4ΠΛΟΣ","FREDDO CAPPUCCINO 4ΑΠΛΟΣ"].includes(n))return "FREDDO CAP 4ΑΠΛΟΣ";
+  if(["FREDDO ESPRESO 4ΠΛΟ","FREDDO ESPRESSO 4ΠΛΟ"].includes(n))return "FREDDO ESPRESSO 4ΠΛΟ";
   return n;
 };
 const isDrinkName=value=>/ESPRESSO|ESPRESO|FREDDO|CAPPUCCINO|CAP\s|LATTE|AMERICANO|MACCHIATO|FLAT WHITE|CORTADO|MOCHA|ΕΛΛΗΝΙΚ|NESCAFE|ΦΡΑΠ|ΚΑΦΕΣ ΦΙΛΤΡΟΥ|ΣΟΚΟΛΑΤ|ΤΣΑΙ|ΤΣΑΪ|MATCHA|ΧΑΜΟΜΗΛ/.test(norm(value));
-const priority=row=>{
-  const sku=String(row.sku||"");
-  if(sku.startsWith("MWS-KAT-BEV-"))return 3;
-  if(sku.startsWith("MWS-"))return 2;
-  return 1;
-};
+const priority=row=>{const sku=String(row.sku||"");if(sku.startsWith("MWS-KAT-BEV-"))return 30;if(sku.startsWith("MWS-"))return 20;return 10};
 
 router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -35,17 +30,13 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
       WHERE p."companyId"=${company} AND p."active"=true AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
       GROUP BY p."id",c."name" ORDER BY p."name" LIMIT 500`;
-
-    const bestByDrink=new Map();
-    const passthrough=[];
+    const bestByDrink=new Map(),passthrough=[];
     for(const row of rows){
       if(!isDrinkName(row.name)){passthrough.push(row);continue}
-      const key=drinkKey(row.name),current=bestByDrink.get(key);
+      const key=aliasKey(row.name),current=bestByDrink.get(key);
       if(!current||priority(row)>priority(current))bestByDrink.set(key,row);
     }
-    const result=[...passthrough,...bestByDrink.values()].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"el"));
-    res.json(result);
+    res.json([...passthrough,...bestByDrink.values()].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"el")));
   }catch(error){next(error)}
 });
-
 export default router;
