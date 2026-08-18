@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ChefHat,Plus,Save,Trash2,X} from "lucide-react";
+import "./product-preparation-editor.css";
 
 const num=v=>Number(v||0);
 const euro=v=>`${num(v).toFixed(2)} €`;
