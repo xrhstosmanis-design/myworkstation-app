@@ -8,6 +8,11 @@ const text=value=>String(value??"").trim();
 const sumStock=row=>(row.stores||[]).reduce((sum,s)=>sum+Number(s.currentStock||0),0);
 const TABS=[["basic","Βασικά στοιχεία",FileText],["barcodes","Barcodes",Barcode],["invoice","Κωδ. τιμολογίου",FileText],["comments","Σχόλια",MessageSquare],["stats","Στατιστικά",BarChart3],["other","Λοιπά",MoreHorizontal],["photo","ΦΩΤΟ",Image],["purchases","Αγορές",ShoppingCart]];
 const blankNew=()=>({name:"",sku:"",barcode:"",categoryName:"",unit:"PIECE",costPrice:"0",salePrice:"0",vatRate:"24",vatVerified:true,trackStock:true,active:true});
+const normalizeProductName=value=>text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/ESPRESO/g,"ESPRESSO").replace(/MACHIATO/g,"MACCHIATO").replace(/\s+/g," ").trim();
+const canonicalBeverageKey=value=>{const name=normalizeProductName(value);if(/^FREDDO CAP(?:PUCCINO)? 4(?:ΑΠΛΟΣ|ΠΛΟΣ)$/.test(name))return "FREDDO CAPPUCCINO 4ΑΠΛΟΣ";if(/^FREDDO ESPRESSO 4ΠΛΟ$/.test(name))return "FREDDO ESPRESSO 4ΠΛΟ";return name};
+const isBeverage=value=>/(ESPRESSO|FREDDO|CAPPUCCINO|LATTE|AMERICANO|MACCHIATO|FLAT WHITE|CORTADO|MOCHA|NESCAFE|ΦΡΑΠΕ|ΕΛΛΗΝ|ΦΙΛΤΡ|ΣΟΚΟΛΑΤ|ΤΣΑΙ|MATCHA)/.test(canonicalBeverageKey(value));
+const canonicalRank=row=>{const sku=text(row?.sku).toUpperCase();if(sku.startsWith("MWS-KAT-BEV-"))return 0;if(sku.startsWith("MWS-"))return 1;if(/^\d+$/.test(sku))return 3;return 2};
+const canonicalActiveRows=list=>{const active=list.filter(row=>row?.active!==false);const winners=new Map();const passthrough=[];for(const row of active){if(!isBeverage(row.name)){passthrough.push(row);continue}const key=canonicalBeverageKey(row.name);const current=winners.get(key);if(!current||canonicalRank(row)<canonicalRank(current))winners.set(key,row)}const keepIds=new Set([...passthrough,...winners.values()].map(row=>row.id));return active.filter(row=>keepIds.has(row.id))};
 
 export default function KioskStyleProductCenter({api,stores=[]}){
   const [mode,setMode]=useState("items"),[tab,setTab]=useState("basic");
@@ -15,7 +20,7 @@ export default function KioskStyleProductCenter({api,stores=[]}){
   const [selected,setSelected]=useState(null),[draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [checked,setChecked]=useState([]),[dialog,setDialog]=useState(null),[newDraft,setNewDraft]=useState(blankNew()),[bulk,setBulk]=useState({categoryName:"",vatRate:"",salePrice:"",active:"KEEP",trackStock:"KEEP"});
 
-  const load=async()=>{setBusy(true);setError("");try{const data=await api(`/api/owner-products/catalog?q=${encodeURIComponent(query.trim())}`);const list=Array.isArray(data)?data:[];setRows(list);setChecked(ids=>ids.filter(id=>list.some(r=>r.id===id)));if(selected){const fresh=list.find(r=>r.id===selected.id);if(fresh)choose(fresh)}}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const load=async()=>{setBusy(true);setError("");try{const data=await api(`/api/owner-products/catalog?q=${encodeURIComponent(query.trim())}`);const list=canonicalActiveRows(Array.isArray(data)?data:[]);setRows(list);setChecked(ids=>ids.filter(id=>list.some(r=>r.id===id)));if(selected){const fresh=list.find(r=>r.id===selected.id);if(fresh)choose(fresh);else{setSelected(null);setDraft(null)}}}catch(e){setError(e.message)}finally{setBusy(false)}};
   useEffect(()=>{load()},[]);
   const categories=useMemo(()=>{const map=new Map();rows.forEach(r=>{const k=text(r.categoryName)||"ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ";map.set(k,(map.get(k)||0)+1)});return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"el"))},[rows]);
   const vatOptions=useMemo(()=>[...new Set(rows.map(r=>String(Number(r.vatRate||0))))].sort((a,b)=>Number(a)-Number(b)),[rows]);
