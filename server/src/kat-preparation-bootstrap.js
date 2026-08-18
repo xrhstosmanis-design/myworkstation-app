@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
+import {ensureKatPreparationDefaults} from "./kat-preparation-defaults.js";
 
 const uid=()=>crypto.randomUUID();
 const META_SEP="::MWSMETA::";
@@ -36,12 +37,9 @@ export async function ensureKatPreparationSeed(){
 
  const items=[];for(const [family,code,name,temp,sale] of CATALOG){const sku=`MWS-KAT-BEV-${code}`,barcode=ean13(`${companyId}:${sku}`),salePrice=round2(sale),costPrice=round2(Math.max(.20,salePrice*.25)),sub=subs[family];let [p]=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "sku"=${sku} LIMIT 1`;if(!p){p={id:uid()};await prisma.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","sku","name","description","unit","vatRate","salePrice","costPrice","trackStock","active") VALUES (${p.id},${companyId},${main.id},${sub.id},${sku},${name},${`Νέο είδος MyWorkStation ΚΑΤ · ${temp==='COLD'?'Κρύο':'Ζεστό'} · προσωρινό κόστος ${costPrice.toFixed(2)} €`},'PIECE',13,${salePrice},${costPrice},true,true)`}else await prisma.$executeRaw`UPDATE "Product" SET "categoryId"=${main.id},"subcategoryId"=${sub.id},"name"=${name},"salePrice"=${salePrice},"costPrice"=${costPrice},"active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${p.id}`;let [pb]=await prisma.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${p.id} AND "barcode"=${barcode} LIMIT 1`;if(!pb)await prisma.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${p.id},${barcode},1)`;let [sp]=await prisma.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${p.id} LIMIT 1`;if(!sp)await prisma.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${p.id},${salePrice},0,true)`;else await prisma.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=${salePrice},"active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${sp.id}`;items.push({family,temp,sku,name})}
 
- // Legacy διπλά: δεν διαγράφονται από τη βάση για να μείνει ανέπαφο ιστορικό/audit.
- // Απενεργοποιούνται μόνο στο κατάστημα ΚΑΤ και οι παλιές κατηγορίες κρύβονται.
  const legacyCats=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
  const legacyIds=legacyCats.map(x=>x.id);
  if(legacyIds.length){await prisma.$executeRaw`UPDATE "StoreProduct" sp SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=p."id" AND p."categoryId"=ANY(${legacyIds}::text[]) AND COALESCE(p."sku",'') NOT LIKE 'MWS-KAT-BEV-%' AND COALESCE(p."sku",'') NOT LIKE 'MWS-PREP-%'`;await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=false WHERE "companyId"=${companyId} AND "id"=ANY(${legacyIds}::text[])`}
- // Επίσης κρύβουμε τυχόν legacy είδη που είχαν ήδη μεταφερθεί στη νέα κατηγορία από προηγούμενο seed.
  await prisma.$executeRaw`UPDATE "StoreProduct" sp SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=p."id" AND p."categoryId"=${main.id} AND COALESCE(p."sku",'') NOT LIKE 'MWS-KAT-BEV-%' AND COALESCE(p."sku",'') NOT LIKE 'MWS-PREP-%'`;
 
  const coffee=items.filter(x=>x.family==='COFFEE'),choc=items.filter(x=>x.family==='CHOCOLATE'),tea=items.filter(x=>x.family==='TEA');
@@ -50,5 +48,6 @@ export async function ensureKatPreparationSeed(){
  const chocChildren=[child('kat-choc-cold','ΚΡΥΑ ΣΟΚΟΛΑΤΑ',choc.filter(x=>x.temp==='COLD'),'#81549a'),child('kat-choc-hot','ΖΕΣΤΗ ΣΟΚΟΛΑΤΑ',choc.filter(x=>x.temp==='HOT'),'#b15252')];
  const teaChildren=[child('kat-tea-cold','ΚΡΥΟ ΤΣΑΙ',tea.filter(x=>x.temp==='COLD'),'#1599a8'),child('kat-tea-hot','ΖΕΣΤΟ ΤΣΑΙ',tea.filter(x=>x.temp==='HOT'),'#9a8f19')];
  const rows=await prisma.$queryRawUnsafe(`SELECT "layoutJson" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);if(rows[0]?.layoutJson){const layout=structuredClone(rows[0].layoutJson),existing=Array.isArray(layout.categories)?layout.categories:[];const roots=[{id:'kat-coffee-root',label:'ΚΑΦΕΣ',color:'#1599a8',visible:true,categoryName:childEncoded('ΚΑΦΕΣ',coffeeChildren),children:coffeeChildren},{id:'kat-choc-root',label:'ΣΟΚΟΛΑΤΑ',color:'#81549a',visible:true,categoryName:childEncoded('ΣΟΚΟΛΑΤΑ',chocChildren),children:chocChildren},{id:'kat-tea-root',label:'ΤΣΑΙ',color:'#9a8f19',visible:true,categoryName:childEncoded('ΤΣΑΙ',teaChildren),children:teaChildren}];layout.categories=[...roots,...existing.filter(x=>!String(x?.id||'').startsWith('kat-drinks-')&&!String(x?.id||'').startsWith('kat-coffee-')&&!String(x?.id||'').startsWith('kat-choc-')&&!String(x?.id||'').startsWith('kat-tea-')&&!String(x?.id||'').startsWith('kat-prep-'))].slice(0,14);await prisma.$queryRawUnsafe(`UPDATE "StorePosLayout" SET "layoutJson"=$2::jsonb,"version"="version"+1,"publishedAt"=NOW() WHERE "storeId"=$1`,store.id,JSON.stringify(layout))}
- return {ok:true,storeId:store.id,mainCategory:MAIN_CATEGORY,coffeeCount:coffee.length,chocolateCount:choc.length,teaCount:tea.length,ingredientCount:INGREDIENTS.length,legacyCategoriesDisabled:legacyIds.length};
+ const defaults=await ensureKatPreparationDefaults();
+ return {ok:true,storeId:store.id,mainCategory:MAIN_CATEGORY,coffeeCount:coffee.length,chocolateCount:choc.length,teaCount:tea.length,ingredientCount:INGREDIENTS.length,legacyCategoriesDisabled:legacyIds.length,preparationDefaults:defaults};
 }
