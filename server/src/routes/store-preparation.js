@@ -103,7 +103,7 @@ async function ensurePreparationBatchTable(){
          ELSIF ice_description LIKE '%ΠΟΛΥΣ ΠΑΓΟΣ%' OR ice_description LIKE '%ΠΟΣΟΤΗΤΑ 3%' THEN ice_target_qty:=150; END IF;
 
          decaf_modifier_id:=NULL;decaf_ingredient_id:=NULL;coffee_base_qty:=0;coffee_base_ingredient_id:=NULL;extra_modifier_id:=NULL;
-         SELECT m."id" INTO decaf_modifier_id FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" WHERE UPPER(g."description")='EXTRA' AND UPPER(m."description")='DECAF' LIMIT 1;
+         SELECT m."id" INTO decaf_modifier_id FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE WHERE UPPER(m."description") LIKE '%DECAF%' LIMIT 1;
          SELECT m."id" INTO extra_modifier_id FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" WHERE UPPER(g."description")='EXTRA' AND UPPER(m."description")='EXTRA ΔΟΣΗ' LIMIT 1;
          SELECT p."id" INTO decaf_ingredient_id FROM "Product" p WHERE p."companyId"=NEW."companyId" AND p."sku"='MWS-PREP-DECAF' AND p."active"=TRUE LIMIT 1;
 
@@ -150,7 +150,7 @@ async function ensurePreparationBatchTable(){
            IF COALESCE(modifier_json->>'id','') = '' OR COALESCE(modifier_json->>'id','') LIKE 'synthetic-%' THEN CONTINUE; END IF;
            FOR modifier_row IN SELECT c."modifierId",c."ingredientProductId",c."quantity",c."unit",c."multiplierMode",g."description" AS group_name,m."description" AS modifier_name FROM "PreparationModifierConsumption" c JOIN "ManagementModifier" m ON m."id"=c."modifierId" AND m."companyId"=c."companyId" JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" WHERE c."companyId"=NEW."companyId" AND c."modifierId"=modifier_json->>'id' LOOP
              IF UPPER(modifier_row.group_name) IN ('ΓΑΛΑ','ΠΑΓΟΣ') THEN CONTINUE; END IF;
-             IF UPPER(modifier_row.group_name)='EXTRA' AND UPPER(modifier_row.modifier_name) IN ('DECAF','EXTRA ΔΟΣΗ') THEN CONTINUE; END IF;
+             IF UPPER(modifier_row.modifier_name) LIKE '%DECAF%' OR (UPPER(modifier_row.group_name)='EXTRA' AND UPPER(modifier_row.modifier_name)='EXTRA ΔΟΣΗ') THEN CONTINUE; END IF;
              consume_qty := product_qty * modifier_row."quantity";
              UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty FROM "Product" p WHERE sp."storeId"=NEW."storeId" AND sp."productId"=modifier_row."ingredientProductId" AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
              INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind") VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',modifier_row."ingredientProductId",modifier_row."modifierId",consume_qty,modifier_row."unit",'MODIFIER') ON CONFLICT DO NOTHING;
