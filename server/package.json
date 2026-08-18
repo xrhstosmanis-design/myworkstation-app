@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/kat-preparation-cleanup.js && node src/index.js",
+    "start": "node scripts/ensure-purchase-order-base.js && node src/kat-preparation-cleanup.js && node src/index.js",
     "test": "node --test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
