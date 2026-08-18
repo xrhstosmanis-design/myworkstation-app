@@ -6,7 +6,16 @@ const CANONICAL_SKUS=new Set([
 ]);
 const LEGACY_CATEGORIES=["ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΚΑΦΕ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΣΟΚΟΛΑΤΑ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΤΣΑΙ"];
 
+async function tableExists(name){
+ const rows=await prisma.$queryRaw`SELECT to_regclass(${`public.${name}`})::text AS "tableName"`;
+ return Boolean(rows[0]?.tableName);
+}
+
 export async function ensureKatPreparationCleanup(){
+ if(!(await tableExists("Store"))||!(await tableExists("Product"))||!(await tableExists("ProductCategory"))||!(await tableExists("StoreProduct"))){
+  console.log("KAT preparation cleanup skipped: commercial tables not bootstrapped yet");
+  return {ok:false,reason:"COMMERCIAL_TABLES_NOT_READY"};
+ }
  const [store]=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;
  if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};
  const legacyCategories=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${store.companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
