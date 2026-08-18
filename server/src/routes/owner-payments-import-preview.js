@@ -2,8 +2,10 @@ import {Router} from "express";
 import * as XLSX from "xlsx";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import bankPaymentPreviewRoutes from "./owner-bank-payments-preview.js";
 
 const router=Router();
+router.use(bankPaymentPreviewRoutes);
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const schema=z.object({storeId:z.string().trim().min(1),filename:z.string().trim().min(1).max(180),dataBase64:z.string().min(20).max(11500000)});
 const strip=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9α-ω]/g,"");
