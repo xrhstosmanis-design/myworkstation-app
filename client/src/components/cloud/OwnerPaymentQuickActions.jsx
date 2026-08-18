@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {Banknote,Building2,FileText,Landmark,ReceiptText,RefreshCw,Truck,UsersRound,WalletCards,X} from "lucide-react";
+import {Banknote,Building2,FileSpreadsheet,FileText,Landmark,ReceiptText,RefreshCw,Truck,UsersRound,WalletCards,X} from "lucide-react";
+import BankPaymentImportPanel from "../commerce/BankPaymentImportPanel.jsx";
 
 const categories=[
   {id:"INVOICE",label:"Πληρωμή Τιμολογίου",type:"SUPPLIER_PAYMENT",icon:FileText,document:true},
@@ -18,7 +19,7 @@ const storedUser=()=>{try{return JSON.parse(localStorage.getItem("user")||"null"
 const safeKey=()=>`owner-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
 export default function OwnerPaymentQuickActions({api,store,onChanged}){
-  const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+  const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[bankOpen,setBankOpen]=useState(false);
   const [form,setForm]=useState({amount:"",supplierId:"",purchaseDocumentId:"",description:"",paymentSource:"EXTERNAL"});
   const user=storedUser();
   const allowed=ownerRoles.has(user?.role);
@@ -62,6 +63,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     }catch(e){setError(e.message)}finally{setBusy(false)}
   };
 
+  const tileStyle={minHeight:88,textAlign:"left",border:"1px solid #dce5ef",background:"linear-gradient(180deg,#fff,#f8fbff)",borderRadius:15,padding:14,cursor:"pointer",display:"flex",alignItems:"center",gap:12};
   return <section style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,marginBottom:18,boxShadow:"0 8px 30px rgba(15,42,75,.05)"}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:14}}>
       <div><h3 style={{margin:0,fontSize:18}}>Πληρωμές Ιδιοκτήτη / Διαχειριστή</h3><p style={{margin:"5px 0 0",color:"#6b7b91",fontSize:13}}>Όλες οι κατηγορίες καταχωρίζονται στην υπάρχουσα ενιαία βάση και στο BackOffice.</p></div>
@@ -69,8 +71,10 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     </div>
     {error&&!active&&<div style={{padding:10,borderRadius:10,background:"#fff0f0",color:"#b42318",marginBottom:12}}>{error}</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(205px,1fr))",gap:12}}>
-      {categories.map(category=>{const Icon=category.icon;return <button key={category.id} type="button" onClick={()=>open(category)} style={{minHeight:88,textAlign:"left",border:"1px solid #dce5ef",background:"linear-gradient(180deg,#fff,#f8fbff)",borderRadius:15,padding:14,cursor:"pointer",display:"flex",alignItems:"center",gap:12}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#eaf2ff",color:"#1769e0"}}><Icon size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#12233d"}}>{category.label}</b><small style={{color:"#718096"}}>{category.type==="TRANSFER_AMOUNT"?"Ξεχωριστή μεταφορά · όχι έξοδο βάρδιας":category.type==="SUPPLIER_PAYMENT"?"Προμηθευτές / παραστατικά":"Κατηγορία εξόδου"}</small></span></button>})}
+      {categories.map(category=>{const Icon=category.icon;return <button key={category.id} type="button" onClick={()=>open(category)} style={tileStyle}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#eaf2ff",color:"#1769e0"}}><Icon size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#12233d"}}>{category.label}</b><small style={{color:"#718096"}}>{category.type==="TRANSFER_AMOUNT"?"Ξεχωριστή μεταφορά · όχι έξοδο βάρδιας":category.type==="SUPPLIER_PAYMENT"?"Προμηθευτές / παραστατικά":"Κατηγορία εξόδου"}</small></span></button>})}
+      <button type="button" onClick={()=>setBankOpen(true)} style={{...tileStyle,border:"2px solid #0f766e",background:"linear-gradient(180deg,#f0fdfa,#ecfdf5)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#d1fae5",color:"#047857"}}><FileSpreadsheet size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#064e3b"}}>Εισαγωγή αρχείου τράπεζας</b><small style={{color:"#47766d"}}>Excel / CSV · matching προμηθευτή / τιμολογίου</small></span></button>
     </div>
+    {bankOpen&&<div onMouseDown={e=>e.target===e.currentTarget&&setBankOpen(false)} style={{position:"fixed",inset:0,zIndex:5900,background:"rgba(10,24,43,.52)",display:"grid",placeItems:"center",padding:20}}><div style={{width:"min(1500px,97vw)",maxHeight:"92vh",overflow:"auto",background:"#f8fafc",borderRadius:20,boxShadow:"0 28px 90px rgba(0,0,0,.28)"}}><header style={{position:"sticky",top:0,zIndex:2,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#123b5d",color:"white"}}><div><b style={{fontSize:19}}>Εισαγωγή αρχείου τράπεζας</b><small style={{display:"block",opacity:.82,marginTop:3}}>{store.name} · προεπισκόπηση πριν από οποιαδήποτε πληρωμή</small></div><button type="button" onClick={()=>setBankOpen(false)} style={{border:0,background:"transparent",color:"white",cursor:"pointer"}}><X size={26}/></button></header><div style={{padding:18}}><BankPaymentImportPanel api={api} fixedStore={store}/></div></div></div>}
     {active&&<div onMouseDown={e=>e.target===e.currentTarget&&close()} style={{position:"fixed",inset:0,zIndex:5000,background:"rgba(10,24,43,.48)",display:"grid",placeItems:"center",padding:20}}><form onSubmit={submit} style={{width:"min(640px,96vw)",background:"white",borderRadius:20,boxShadow:"0 24px 80px rgba(0,0,0,.24)",overflow:"hidden"}}>
       <header style={{padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #e4ebf3"}}><div><small style={{color:"#6b7b91"}}>MYWORKSTATION · {store.name}</small><h2 style={{margin:"4px 0 0"}}>{active.label}</h2></div><button type="button" onClick={close} style={{border:0,background:"transparent",cursor:"pointer"}}><X/></button></header>
       <div style={{padding:20,display:"grid",gap:14}}>
