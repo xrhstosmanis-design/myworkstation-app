@@ -6,11 +6,14 @@ import StoreSupplierInvoicePremiumFast from "./StoreSupplierInvoicePremiumFast.j
 const euro=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=v=>Number(String(v||"0").replace(",","."))||0;
 const fileToDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
+const paymentTabByStore=new Map();
 function Pad({value,onChange}){const press=k=>{const c=String(value??"");if(k==="⌫")return onChange(c.slice(0,-1));if(k==="C")return onChange("");if(k===","){if(c.includes(",")||c.includes("."))return;return onChange(`${c||"0"},`)}onChange(`${c}${k}`.replace(/^0+(?=\d)/,""))};return <div className="pos-inline-keypad">{[7,8,9,4,5,6,1,2,3,0,",","⌫"].map(k=><button key={k} type="button" onClick={()=>press(String(k))}>{k}</button>)}<button type="button" className="wide" onClick={()=>press("C")}>ΚΑΘΑΡΙΣΜΟΣ</button></div>}
 
 export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMessage,setError}){
+ const storeKey=String(store?.id||"default"),initialType=paymentTabByStore.get(storeKey)||"OTHER_EXPENSE";
  const [busy,setBusy]=useState(false),[ledger,setLedger]=useState(null),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
- const [form,setForm]=useState({type:"OTHER_EXPENSE",amount:"",description:"",subtractFromShift:true,file:null});
+ const [form,setForm]=useState({type:initialType,amount:"",description:"",subtractFromShift:true,file:null});
+ const setPaymentType=type=>{paymentTabByStore.set(storeKey,type);setForm(c=>({...c,type}))};
  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
  useEffect(()=>{
   api(`/api/transactions/stores/${store.id}/overview`).then(setLedger).catch(e=>setError(e.message));
@@ -30,7 +33,7 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
    :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
  return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
   <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>{premiumInvoice?"PREMIUM AI READER — FAST στοιχεία / πληρωμή, προϊόντα στο background":"STANDARD — απλή καταχώριση πληρωμής προμηθευτή"}</small></div>
-  <div className="pos-payment-types"><button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"OTHER_EXPENSE"}))}>Λοιπά έξοδα</button><button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setForm(c=>({...c,type:"SUPPLIER_PAYMENT"}))}>Πληρωμή προμηθευτή</button></div>
+  <div className="pos-payment-types"><button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setPaymentType("OTHER_EXPENSE")}>Λοιπά έξοδα</button><button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setPaymentType("SUPPLIER_PAYMENT")}>Πληρωμή προμηθευτή</button></div>
   {supplierMode?supplierInvoice:<div className="pos-payment-form">
    <label>Ποσό<input readOnly inputMode="decimal" value={form.amount}/></label><Pad value={form.amount} onChange={amount=>setForm(c=>({...c,amount}))}/><label>Παρατηρήσεις<input value={form.description} onChange={e=>setForm(c=>({...c,description:e.target.value}))}/></label>
    <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><Camera/> Επιλογή αρχείου<input type="file" accept="image/*,application/pdf" onChange={e=>setForm(c=>({...c,file:e.target.files?.[0]||null}))}/></label><b>{form.file?.name||"Δεν επιλέχθηκε φωτογραφία"}</b></div>
