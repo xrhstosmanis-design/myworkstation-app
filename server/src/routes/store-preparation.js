@@ -8,9 +8,93 @@ const money=v=>Number(v||0);
 let preparationBatchReady=false;
 function assertStore(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const e=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");e.status=403;throw e}}
 async function storeFor(req,id){const store=await prisma.store.findFirst({where:{id,companyId:req.user.companyId,active:true},select:{id:true,companyId:true}});if(!store){const e=new Error("Δεν βρέθηκε ενεργό κατάστημα.");e.status=404;throw e}return store}
-async function ensurePreparationBatchTable(){if(preparationBatchReady)return;await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StorePreparationBatch" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"operatorName" TEXT,"productionStation" TEXT NOT NULL DEFAULT 'ΠΑΡΑΓΩΓΗ',"priority" TEXT NOT NULL DEFAULT 'NORMAL',"note" TEXT,"itemsJson" JSONB NOT NULL DEFAULT '[]'::jsonb,"status" TEXT NOT NULL DEFAULT 'SENT',"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorePreparationBatch_store_created_idx" ON "StorePreparationBatch"("storeId","createdAt" DESC)`);preparationBatchReady=true}
+async function ensurePreparationBatchTable(){
+ if(preparationBatchReady)return;
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StorePreparationBatch" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"operatorName" TEXT,"productionStation" TEXT NOT NULL DEFAULT 'ΠΑΡΑΓΩΓΗ',"priority" TEXT NOT NULL DEFAULT 'NORMAL',"note" TEXT,"itemsJson" JSONB NOT NULL DEFAULT '[]'::jsonb,"status" TEXT NOT NULL DEFAULT 'SENT',"saleId" TEXT,"consumedAt" TIMESTAMPTZ,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+ await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "saleId" TEXT`);
+ await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "consumedAt" TIMESTAMPTZ`);
+ await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorePreparationBatch_store_created_idx" ON "StorePreparationBatch"("storeId","createdAt" DESC)`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationStockConsumption" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"saleId" TEXT NOT NULL,"batchId" TEXT NOT NULL,"sourceProductId" TEXT NOT NULL,"ingredientProductId" TEXT NOT NULL,"modifierId" TEXT,"quantity" NUMERIC(14,4) NOT NULL,"unit" TEXT NOT NULL DEFAULT 'PCS',"kind" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+ await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PreparationStockConsumption_sale_idx" ON "PreparationStockConsumption"("companyId","storeId","saleId")`);
+ await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PreparationStockConsumption_once_idx" ON "PreparationStockConsumption"("batchId","sourceProductId","ingredientProductId",COALESCE("modifierId",''),"kind")`);
+ await prisma.$executeRawUnsafe(`
+ CREATE OR REPLACE FUNCTION mws_consume_preparation_stock_from_pos_audit() RETURNS trigger AS $$
+ DECLARE
+   sale_id TEXT;
+   sale_item JSONB;
+   batch_id TEXT;
+   batch_row RECORD;
+   prep_item JSONB;
+   recipe_row RECORD;
+   modifier_json JSONB;
+   modifier_row RECORD;
+   product_qty NUMERIC;
+   consume_qty NUMERIC;
+ BEGIN
+   IF NEW."eventType" <> 'POS_SALE_COMPLETED' THEN RETURN NEW; END IF;
+   sale_id := COALESCE(NEW."details"->>'saleId','');
+   IF sale_id = '' THEN RETURN NEW; END IF;
 
-router.get("/stores/:storeId/modifiers",async(req,res,next)=>{try{assertStore(req,req.params.storeId);await storeFor(req,req.params.storeId);const productId=String(req.query.productId||"").trim();let groups=[];if(productId){groups=await prisma.$queryRaw`
+   FOR sale_item IN SELECT value FROM jsonb_array_elements(COALESCE(NEW."details"->'items','[]'::jsonb)) LOOP
+     IF COALESCE(sale_item->>'overrideReason','') LIKE 'PREPARATION:%' THEN
+       batch_id := split_part(sale_item->>'overrideReason',':',2);
+       IF batch_id = '' THEN CONTINUE; END IF;
+
+       SELECT * INTO batch_row FROM "StorePreparationBatch"
+       WHERE "id"=batch_id AND "companyId"=NEW."companyId" AND "storeId"=NEW."storeId" AND "status"='SENT'
+       FOR UPDATE;
+       IF NOT FOUND THEN CONTINUE; END IF;
+
+       FOR prep_item IN SELECT value FROM jsonb_array_elements(COALESCE(batch_row."itemsJson",'[]'::jsonb)) LOOP
+         product_qty := GREATEST(0,COALESCE((prep_item->>'quantity')::numeric,0));
+         IF product_qty <= 0 THEN CONTINUE; END IF;
+
+         FOR recipe_row IN
+           SELECT "ingredientProductId","quantity","unit" FROM "PreparationRecipeLine"
+           WHERE "companyId"=NEW."companyId" AND "productId"=prep_item->>'productId' AND "automatic"=TRUE
+         LOOP
+           consume_qty := product_qty * recipe_row."quantity";
+           UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty
+           FROM "Product" p
+           WHERE sp."storeId"=NEW."storeId" AND sp."productId"=recipe_row."ingredientProductId" AND sp."active"=TRUE
+             AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
+           INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind")
+           VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',recipe_row."ingredientProductId",NULL,consume_qty,recipe_row."unit",'RECIPE')
+           ON CONFLICT DO NOTHING;
+         END LOOP;
+
+         FOR modifier_json IN SELECT value FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) LOOP
+           IF COALESCE(modifier_json->>'id','') = '' OR COALESCE(modifier_json->>'id','') LIKE 'synthetic-%' THEN CONTINUE; END IF;
+           FOR modifier_row IN
+             SELECT "modifierId","ingredientProductId","quantity","unit","multiplierMode" FROM "PreparationModifierConsumption"
+             WHERE "companyId"=NEW."companyId" AND "modifierId"=modifier_json->>'id'
+           LOOP
+             consume_qty := product_qty * modifier_row."quantity";
+             UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty
+             FROM "Product" p
+             WHERE sp."storeId"=NEW."storeId" AND sp."productId"=modifier_row."ingredientProductId" AND sp."active"=TRUE
+               AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
+             INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind")
+             VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',modifier_row."ingredientProductId",modifier_row."modifierId",consume_qty,modifier_row."unit",'MODIFIER')
+             ON CONFLICT DO NOTHING;
+           END LOOP;
+         END LOOP;
+       END LOOP;
+
+       UPDATE "StorePreparationBatch" SET "status"='CONSUMED',"saleId"=sale_id,"consumedAt"=NOW()
+       WHERE "id"=batch_id AND "status"='SENT';
+     END IF;
+   END LOOP;
+   RETURN NEW;
+ END;
+ $$ LANGUAGE plpgsql;
+ `);
+ await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "mws_consume_preparation_stock_after_pos_sale" ON "StoreOperatorAudit"`);
+ await prisma.$executeRawUnsafe(`CREATE TRIGGER "mws_consume_preparation_stock_after_pos_sale" AFTER INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION mws_consume_preparation_stock_from_pos_audit()`);
+ preparationBatchReady=true;
+}
+
+router.get("/stores/:storeId/modifiers",async(req,res,next)=>{try{assertStore(req,req.params.storeId);await storeFor(req,req.params.storeId);await ensurePreparationBatchTable();const productId=String(req.query.productId||"").trim();let groups=[];if(productId){groups=await prisma.$queryRaw`
  SELECT g."id",g."description",pg."required",pg."minSelections",pg."maxSelections",pg."sequence",
  COALESCE(json_agg(json_build_object('id',m."id",'description',m."description",'price',m."price") ORDER BY m."sequence",m."description") FILTER (WHERE m."id" IS NOT NULL AND m."active"=true),'[]') AS "items"
  FROM "PreparationProductModifierGroup" pg
