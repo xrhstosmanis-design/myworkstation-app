@@ -9,22 +9,22 @@ const LEGACY_CATEGORIES=["ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΚΑΦΕ","ΠΡ�
 async function main(){
  const [store]=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;
  if(!store){console.log("KAT preparation cleanup: store not found");return}
- const categories=await prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${store.companyId} AND (UPPER("name")=UPPER('ΡΟΦΗΜΑΤΑ') OR "name"=ANY(${LEGACY_CATEGORIES}::text[]))`;
- const categoryIds=categories.map(row=>row.id);
- const rows=await prisma.$queryRaw`SELECT "id","sku","name","categoryId" FROM "Product" WHERE "companyId"=${store.companyId} AND (COALESCE("sku",'') LIKE 'MWS-KAT-COF-%' OR COALESCE("sku",'') LIKE 'MWS-KAT-BEV-%' OR (${categoryIds.length}>0 AND "categoryId"=ANY(${categoryIds}::text[])))`;
+ const legacyCategories=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${store.companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
+ const legacyIds=legacyCategories.map(row=>row.id);
+ const rows=await prisma.$queryRaw`SELECT "id","sku","name","categoryId" FROM "Product" WHERE "companyId"=${store.companyId} AND (COALESCE("sku",'') LIKE 'MWS-KAT-COF-%' OR COALESCE("sku",'') LIKE 'MWS-KAT-BEV-%' OR (${legacyIds.length}>0 AND "categoryId"=ANY(${legacyIds}::text[])))`;
  const remove=rows.filter(row=>{
    const sku=String(row.sku||"");
-   if(sku.startsWith("MWS-PREP-"))return false;
    if(CANONICAL_SKUS.has(sku))return false;
+   if(sku.startsWith("MWS-PREP-"))return false;
    if(sku.startsWith("MWS-KAT-BEV-")||sku.startsWith("MWS-KAT-COF-"))return true;
-   return categoryIds.includes(row.categoryId);
+   return legacyIds.includes(row.categoryId);
  });
  for(const row of remove){
    await prisma.$executeRaw`DELETE FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${row.id}`;
    await prisma.$executeRaw`UPDATE "Product" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${row.id}`;
  }
- if(categoryIds.length){
-   await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${store.companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
+ if(legacyIds.length){
+   await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${store.companyId} AND "id"=ANY(${legacyIds}::text[])`;
  }
  console.log(`KAT preparation cleanup: removed ${remove.length} legacy/duplicate active products`);
 }
