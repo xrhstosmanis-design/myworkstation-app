@@ -23,25 +23,48 @@ async function previewBitmap(file){
 
 async function fastHeaderOcr(file){
   const bitmap=await previewBitmap(file);
-  const targetW=Math.min(1200,bitmap.width),scale=targetW/bitmap.width;
-  const topH=Math.max(1,Math.floor(bitmap.height*.43)),bottomY=Math.floor(bitmap.height*.66),bottomH=Math.max(1,bitmap.height-bottomY);
-  const gap=14,out=document.createElement("canvas");out.width=Math.max(1,Math.round(targetW));out.height=Math.max(1,Math.round((topH+bottomH)*scale)+gap);
+  const targetW=Math.min(1500,bitmap.width),scale=targetW/bitmap.width;
+  const topH=Math.max(1,Math.floor(bitmap.height*.48)),bottomY=Math.floor(bitmap.height*.58),bottomH=Math.max(1,bitmap.height-bottomY);
+  const gap=18,out=document.createElement("canvas");out.width=Math.max(1,Math.round(targetW));out.height=Math.max(1,Math.round((topH+bottomH)*scale)+gap);
   const ctx=out.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(bitmap,0,0,bitmap.width,topH,0,0,out.width,Math.round(topH*scale));ctx.drawImage(bitmap,0,bottomY,bitmap.width,bottomH,0,Math.round(topH*scale)+gap,out.width,Math.round(bottomH*scale));bitmap.close?.();
   const {createWorker}=await import("tesseract.js"),worker=await createWorker("ell+eng");
-  let result;try{await worker.setParameters({tessedit_pageseg_mode:"6"});result=await worker.recognize(out)}finally{await worker.terminate()}
+  let result;try{await worker.setParameters({tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"});result=await worker.recognize(out)}finally{await worker.terminate()}
   return String(result?.data?.text||"");
 }
 
+function validDateParts(d,m,y){return d>=1&&d<=31&&m>=1&&m<=12&&y>=2020&&y<=2100}
+function validInvoiceNumber(value){const x=String(value||"").trim().replace(/^[#:\-\s]+|[#:\-\s]+$/g,"");return /\d/.test(x)&&x.length>=3&&x.length<=40&&!/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test(x)?x:""}
 function headerMeta(rawText,suppliers=[]){
   const raw=String(rawText||""),lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),joined=normalize(raw);
-  let supplier=null,best=0;
-  for(const item of suppliers){for(const name of [String(item.name||""),String(item.name||"").replace(/\s*\([^)]*\)\s*$/g,"")]){const key=normalize(name);if(key.length>=4&&joined.includes(key)&&key.length>best){supplier=item;best=key.length}}}
+  const taxIds=[...raw.matchAll(/(?:ΑΦΜ|AΦM|VAT|VAT\s*NO)\s*[:\-]?\s*([0-9]{9,12})/gi)].map(m=>m[1]);
+  let supplier=suppliers.find(s=>s.taxId&&taxIds.includes(String(s.taxId).replace(/\D/g,"")))||null,best=0;
+  if(!supplier){
+    for(const item of suppliers){
+      for(const name of [String(item.name||""),String(item.name||"").replace(/\s*\([^)]*\)\s*$/g,"")]){
+        const key=normalize(name);if(key.length>=5&&joined.includes(key)&&key.length>best){supplier=item;best=key.length}
+      }
+    }
+  }
   let documentNumber="";
-  for(const line of lines){const m=line.match(/(?:ΤΙΜΟΛΟΓΙΟ|ΤΙΜ|INVOICE|ΠΑΡΑΣΤΑΤΙΚΟ).{0,35}?(?:ΑΡ\.?|ΑΡΙΘΜ(?:ΟΣ)?|NO\.?|#)?\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/]{2,})/i)||line.match(/(?:ΑΡ\.?\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|ΑΡΙΘΜΟΣ\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|INVOICE\s*NO\.?)\s*[:\-]?\s*([A-ZΑ-Ω0-9\-/]{3,})/i);if(m){documentNumber=m[1].trim();break}}
-  let documentDate=today();
-  for(const line of lines){const m=line.match(/(?:ΗΜΕΡΟΜΗΝΙΑ|DATE)?\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:20)?\d{2})/i);if(m){let[d,mo,y]=m[1].split(/[\/\-.]/).map(Number);if(y<100)y+=2000;documentDate=`${String(y).padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;break}}
-  let totalGross=0;const totalWords=/(ΓΕΝΙΚΟ\s*ΣΥΝΟΛΟ|ΠΛΗΡΩΤΕΟ|ΤΕΛΙΚΟ\s*ΣΥΝΟΛΟ|ΣΥΝΟΛΟ\s*ΜΕ\s*ΦΠΑ|TOTAL\s*DUE|GRAND\s*TOTAL|TOTAL)/i;
-  for(const line of lines.filter(x=>totalWords.test(x)).reverse()){const vals=(line.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2})|\d+(?:[.,]\d{2})/g)||[]).map(num).filter(v=>v>0);if(vals.length){totalGross=vals.at(-1);break}}
+  const numberPatterns=[
+    /(?:ΑΡ\.?\s*(?:ΤΙΜΟΛΟΓΙΟΥ|ΠΑΡΑΣΤΑΤΙΚΟΥ)?|ΑΡΙΘΜΟΣ\s*(?:ΤΙΜΟΛΟΓΙΟΥ|ΠΑΡΑΣΤΑΤΙΚΟΥ)?|INVOICE\s*(?:NO\.?|NUMBER)?|DOC(?:UMENT)?\s*NO\.?)\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/\.]{2,39})/i,
+    /(?:ΤΙΜΟΛΟΓΙΟ|INVOICE)\s*(?:ΠΩΛΗΣΗΣ|ΑΓΟΡΑΣ)?\s*(?:ΑΡ\.?|NO\.?|#)\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/\.]{2,39})/i
+  ];
+  for(const line of lines){for(const re of numberPatterns){const m=line.match(re);const candidate=validInvoiceNumber(m?.[1]);if(candidate){documentNumber=candidate;break}}if(documentNumber)break}
+  let documentDate="";
+  for(const line of lines){
+    const m=line.match(/(?:ΗΜΕΡΟΜΗΝΙΑ|ΗΜ\/ΝΙΑ|DATE)?\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:20)?\d{2})/i);
+    if(!m)continue;let[d,mo,y]=m[1].split(/[\/\-.]/).map(Number);if(y<100)y+=2000;if(validDateParts(d,mo,y)){documentDate=`${String(y).padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;break}
+  }
+  let totalGross=0;
+  const strongTotal=/(ΓΕΝΙΚΟ\s*ΣΥΝΟΛΟ|ΠΛΗΡΩΤΕΟ|ΠΟΣΟ\s*ΠΛΗΡΩΜΗΣ|ΤΕΛΙΚΟ\s*ΣΥΝΟΛΟ|ΣΥΝΟΛΟ\s*ΜΕ\s*ΦΠΑ|ΑΞΙΑ\s*ΜΕ\s*ΦΠΑ|TOTAL\s*DUE|AMOUNT\s*DUE|GRAND\s*TOTAL|PAYABLE)/i;
+  const moneyValues=line=>(line.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2})|\d+(?:[.,]\d{2})/g)||[]).map(num).filter(v=>v>0&&v<100000000);
+  for(const line of lines.filter(x=>strongTotal.test(x)).reverse()){const vals=moneyValues(line);if(vals.length){totalGross=vals.at(-1);break}}
+  if(!totalGross){
+    const tail=lines.slice(Math.max(0,Math.floor(lines.length*.55)));
+    const candidates=tail.flatMap(line=>moneyValues(line));
+    if(candidates.length)totalGross=Math.max(...candidates);
+  }
   return {supplierId:supplier?.id||"",documentNumber,documentDate,totalGross};
 }
 
@@ -60,13 +83,13 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
-  const [file,setFile]=useState(null),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(today()),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
+  const [file,setFile]=useState(null),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
   const videoRef=useRef(null),canvasRef=useRef(null),supplier=useMemo(()=>suppliers.find(x=>String(x.id)===String(supplierId))||null,[suppliers,supplierId]);
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
-  const selectFile=async next=>{if(!next)return;setFile(next);setReading(true);setStatus("FAST ανάγνωση βασικών στοιχείων…");try{const text=await fastHeaderOcr(next),meta=headerMeta(text,suppliers);if(meta.supplierId)setSupplierId(meta.supplierId);if(meta.documentNumber)setDocumentNumber(meta.documentNumber);if(meta.documentDate)setDocumentDate(meta.documentDate);if(meta.totalGross>0)setAmount(meta.totalGross.toFixed(2).replace(".",","));setStatus("Έτοιμα τα βασικά στοιχεία. Έλεγξέ τα και ολοκλήρωσε την πληρωμή — τα προϊόντα θα διαβαστούν στο background.")}catch(error){setStatus(`Δεν διαβάστηκαν αυτόματα όλα τα βασικά στοιχεία. Συμπλήρωσέ τα χειροκίνητα και συνέχισε. ${error?.message||""}`)}finally{setReading(false)}};
+  const selectFile=async next=>{if(!next)return;setFile(next);setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setReading(true);setStatus("FAST ανάγνωση βασικών στοιχείων…");try{const text=await fastHeaderOcr(next),meta=headerMeta(text,suppliers);if(meta.supplierId)setSupplierId(meta.supplierId);if(meta.documentNumber)setDocumentNumber(meta.documentNumber);if(meta.documentDate)setDocumentDate(meta.documentDate);if(meta.totalGross>0)setAmount(meta.totalGross.toFixed(2).replace(".",","));const complete=Boolean(meta.supplierId&&meta.documentNumber&&meta.documentDate&&meta.totalGross>0);setStatus(complete?"Έτοιμα τα 4 βασικά στοιχεία. Έλεγξέ τα και ολοκλήρωσε την πληρωμή — τα προϊόντα θα διαβαστούν στο background.":"FAST ανάγνωση ολοκληρώθηκε. Έλεγξε τα πεδία που βρέθηκαν και συμπλήρωσε μόνο ό,τι λείπει.")}catch(error){setStatus(`Δεν διαβάστηκαν αυτόματα όλα τα βασικά στοιχεία. Συμπλήρωσέ τα χειροκίνητα και συνέχισε. ${error?.message||""}`)}finally{setReading(false)}};
   const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.9)};
-  const ready=Boolean(file&&supplierId&&documentNumber.trim()&&num(amount)>0&&mode&&!busy&&!reading);
+  const ready=Boolean(file&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading);
   const submit=async()=>{if(!ready)return;setBusy(true);try{
     await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate})});
     const dataUrl=await readFile(file),key=paymentKey(),totalGross=num(amount),responsibleName="POS";
