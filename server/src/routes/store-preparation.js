@@ -88,14 +88,14 @@ async function ensurePreparationBatchTable(){
          WHERE UPPER(g."description")='ΓΑΛΑ' LIMIT 1;
 
          ice_modifier_id:=NULL;ice_description:=NULL;ice_target_qty:=NULL;ice_base_qty:=0;ice_target_ingredient_id:=NULL;
-         SELECT m."id",UPPER(m."description") INTO ice_modifier_id,ice_description
-         FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
-         JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE
-         JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" AND g."active"=TRUE
-         WHERE UPPER(g."description")='ΠΑΓΟΣ' LIMIT 1;
+         SELECT UPPER(j->>'description') INTO ice_description FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
+         WHERE COALESCE(j->>'id','') LIKE 'synthetic-ΠΑΓΟΣ ΠΟΣΟΤΗΤΑ-%' LIMIT 1;
          IF ice_description IS NULL THEN
-           SELECT UPPER(j->>'description') INTO ice_description FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
-           WHERE COALESCE(j->>'id','') LIKE 'synthetic-ΠΑΓΟΣ ΠΟΣΟΤΗΤΑ-%' LIMIT 1;
+           SELECT m."id",UPPER(m."description") INTO ice_modifier_id,ice_description
+           FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
+           JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE
+           JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" AND g."active"=TRUE
+           WHERE UPPER(g."description")='ΠΑΓΟΣ' LIMIT 1;
          END IF;
          IF ice_description LIKE '%ΧΩΡΙΣ ΠΑΓΟ%' OR ice_description LIKE '%ΠΟΣΟΤΗΤΑ 0%' THEN ice_target_qty:=0;
          ELSIF ice_description LIKE '%ΛΙΓΟΣ ΠΑΓΟΣ%' OR ice_description LIKE '%ΠΟΣΟΤΗΤΑ 1%' THEN ice_target_qty:=50;
