@@ -65,6 +65,7 @@ import providerLogisticsRoutes from "./routes/provider-logistics.js";
 import connectorObserverRoutes from "./routes/connector-observer.js";
 import ownerPriceBulkPreviewRoutes from "./routes/owner-price-bulk-preview.js";
 import ownerProductRoutes from "./routes/owner-products.js";
+import ownerProductsActiveCatalogRoutes from "./routes/owner-products-active-catalog.js";
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
 import ownerProductSmartEntryRoutes from "./routes/owner-product-smart-entry.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
@@ -163,6 +164,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPrevi
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
+app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductsActiveCatalogRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes);
 app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderOcrResolutionRoutes);
 app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderTotalReconciliationGuardRoutes);
