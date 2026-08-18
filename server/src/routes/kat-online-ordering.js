@@ -2,7 +2,7 @@ import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {ensureKatOnlineOrderingSchema,KAT_ONLINE_SURCHARGE,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
+import {ensureKatOnlineOrderingSchema,getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
 
 const router=Router();
 const money=value=>Math.round(Number(value||0)*100)/100;
@@ -15,10 +15,19 @@ async function katStore(){
   if(!store){const error=new Error("Το Κυλικείο ΚΑΤ δεν είναι διαθέσιμο αυτή τη στιγμή.");error.status=503;throw error}
   return store;
 }
+async function onlineContext(){
+  const store=await katStore();
+  const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
+  const module=modules[0],now=Date.now(),moduleActive=Boolean(module?.active)&&(!module.startsAt||new Date(module.startsAt).getTime()<=now)&&(!module.endsAt||new Date(module.endsAt).getTime()>=now);
+  if(!moduleActive){const error=new Error("Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα.");error.status=403;throw error}
+  const config=await getOnlineOrderingConfig(store.id);
+  if(!config?.enabled){const error=new Error("Το Online κατάστημα είναι προσωρινά κλειστό.");error.status=503;throw error}
+  return{store,config};
+}
 function safe(handler){return async(req,res,next)=>{try{await ensure();await handler(req,res)}catch(error){next(error)}}}
 
 router.get("/catalog",safe(async(req,res)=>{
-  const store=await katStore();
+  const {store,config}=await onlineContext();
   const rows=await prisma.$queryRaw`
     SELECT p."id",p."sku",p."name",p."vatRate",
            COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",
@@ -27,7 +36,20 @@ router.get("/catalog",safe(async(req,res)=>{
     JOIN "Product" p ON p."id"=sp."productId"
     WHERE sp."storeId"=${store.id} AND p."companyId"=${store.companyId} AND p."active"=TRUE
     ORDER BY p."name" ASC`;
-  res.json({store:{id:store.id,name:store.name},pricing:{rule:"STORE_PRICE_PLUS_FIXED_SURCHARGE",surcharge:KAT_ONLINE_SURCHARGE},products:rows.map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlinePrice:onlineUnitPrice(row.storePrice),stock:Number(row.currentStock||0),available:Number(row.currentStock||0)>0}))});
+  res.json({
+    store:{id:store.id,name:store.name},
+    module:{key:"ONLINE_ORDERING",active:true},
+    settings:{
+      surchargeType:config.surchargeType,
+      surchargeValue:money(config.surchargeValue),
+      deliveryFee:money(config.deliveryFee),
+      pickupEnabled:Boolean(config.pickupEnabled),
+      deliveryEnabled:Boolean(config.deliveryEnabled),
+      cashEnabled:Boolean(config.cashEnabled),
+      cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled)
+    },
+    products:rows.map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlineSurcharge:onlineSurchargeAmount(row.storePrice,config),onlinePrice:onlineUnitPrice(row.storePrice,config),stock:Number(row.currentStock||0),available:Number(row.currentStock||0)>0}))
+  });
 }));
 
 router.post("/orders",safe(async(req,res)=>{
@@ -44,8 +66,12 @@ router.post("/orders",safe(async(req,res)=>{
     deliveryNotes:z.string().trim().max(500).optional().nullable(),
     items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().int().min(1).max(50),modifiers:z.array(z.unknown()).max(30).optional()})).min(1).max(50)
   }).parse(req.body||{});
+  const {store,config}=await onlineContext();
+  if(body.fulfillmentType==="DELIVERY"&&!config.deliveryEnabled)return res.status(409).json({error:"Το Delivery δεν είναι διαθέσιμο αυτή τη στιγμή."});
+  if(body.fulfillmentType==="PICKUP"&&!config.pickupEnabled)return res.status(409).json({error:"Η παραλαβή από το Κυλικείο δεν είναι διαθέσιμη αυτή τη στιγμή."});
+  if(body.paymentMethod==="CASH"&&!config.cashEnabled)return res.status(409).json({error:"Η πληρωμή με μετρητά δεν είναι διαθέσιμη."});
+  if(body.paymentMethod==="CARD"&&!config.cardOnDeliveryEnabled)return res.status(409).json({error:"Η πληρωμή με ασύρματο POS δεν είναι διαθέσιμη."});
   if(body.fulfillmentType==="DELIVERY"&&!body.department?.trim())return res.status(400).json({error:"Για Delivery χρειάζεται κλινική ή τμήμα."});
-  const store=await katStore();
   const duplicate=await prisma.$queryRaw`SELECT "id","orderNumber","status","total","createdAt" FROM "OnlineOrder" WHERE "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`;
   if(duplicate[0])return res.status(200).json({ok:true,duplicate:true,order:duplicate[0]});
   const ids=[...new Set(body.items.map(row=>row.productId))];
@@ -59,11 +85,11 @@ router.post("/orders",safe(async(req,res)=>{
     const product=byId.get(item.productId);
     if(!product)return res.status(409).json({error:"Ένα προϊόν δεν είναι πλέον διαθέσιμο."});
     if(Number(product.currentStock||0)<item.quantity)return res.status(409).json({error:`Δεν υπάρχει αρκετό απόθεμα για: ${product.name}`});
-    const unit=onlineUnitPrice(product.storePrice),lineTotal=money(unit*item.quantity);
-    lines.push({productId:product.id,productName:product.name,quantity:item.quantity,storeUnitPrice:money(product.storePrice),onlineSurcharge:KAT_ONLINE_SURCHARGE,onlineUnitPrice:unit,lineTotal,modifiers:item.modifiers||[]});
+    const unit=onlineUnitPrice(product.storePrice,config),surcharge=onlineSurchargeAmount(product.storePrice,config),lineTotal=money(unit*item.quantity);
+    lines.push({productId:product.id,productName:product.name,quantity:item.quantity,storeUnitPrice:money(product.storePrice),onlineSurcharge:surcharge,onlineUnitPrice:unit,lineTotal,modifiers:item.modifiers||[]});
   }
   const subtotal=money(lines.reduce((sum,row)=>sum+row.lineTotal,0));
-  const deliveryFee=body.fulfillmentType==="DELIVERY"?1:0;
+  const deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0;
   const total=money(subtotal+deliveryFee);
   const id=crypto.randomUUID();
   const serial=(await prisma.$queryRaw`SELECT COUNT(*)::int AS value FROM "OnlineOrder" WHERE "storeId"=${store.id} AND "createdAt">=CURRENT_DATE`)[0]?.value||0;
