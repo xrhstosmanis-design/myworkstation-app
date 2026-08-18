@@ -29,7 +29,7 @@ function normalizeSale(row){
     ?`ΜΙΚΤΗ · ${payments.map(payment=>`${methodLabel(payment.method)} ${euroPlain(payment.amount)}`).join(" + ")}`
     :(payments[0]?`${methodLabel(payments[0].method)} ${euroPlain(payments[0].amount)}`:"ΧΩΡΙΣ ΠΛΗΡΩΜΗ");
   const productSummary=lines.length?lines.map(line=>`${Math.abs(Number(line.quantity||0))}× ${line.description}`).join(" · "):"Χωρίς προϊόντα";
-  const movementType=row.source==="POS_REVERSAL"?(row.reversalKind==="RETURN"?"RETURN":"CANCEL"):row.source==="EXCHANGE"?"EXCHANGE":"SALE";
+  const movementType=row.source==="POS_REVERSAL"?(row.reversalKind==="RETURN"?"RETURN":"CANCEL"):row.source==="EXCHANGE"?"EXCHANGE":row.source==="WASTE"?"WASTE":"SALE";
   return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary,paymentMethod:`${productSummary} · ${paymentSummary}`,productSummary,movementType};
 }
 
@@ -46,7 +46,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       FROM "Sale" s
       LEFT JOIN "Customer" c ON c."id"=s."customerId" AND c."companyId"=s."companyId"
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id}
-        AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL') AND s."status"='COMPLETED'
+        AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL','WASTE') AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 50`;
     res.json({store,rows:rows.map(normalizeSale)});
   }catch(error){next(error)}
