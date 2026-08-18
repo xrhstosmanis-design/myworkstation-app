@@ -88,7 +88,7 @@ router.get("/deactivations",requireManagement,async(req,res,next)=>{
 router.get("/audit-events",requireManagement,async(req,res,next)=>{
   try{
     const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
-    const rows=await prisma.$queryRaw`
+    const transactionRows=await prisma.$queryRaw`
       SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
         t."sessionId" AS "shiftId",t."actorId",t."actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
         s."name" AS "storeName"
@@ -104,8 +104,34 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(t."type",'') ILIKE ${text}
           OR COALESCE(t."id",'') ILIKE ${text})
       ORDER BY t."occurredAt" DESC LIMIT 10000`;
-    const items=rows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
-    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction"});
+    const actionRows=await prisma.$queryRaw`
+      SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorId",a."actorName",a."saleId",a."relatedSaleId",a."details",
+        s."name" AS "storeName"
+      FROM "PosSaleActionAudit" a
+      LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
+      WHERE a."companyId"=${companyId} AND a."actionType" IN ('RETURN','CANCEL')
+        AND a."createdAt">=${from} AND a."createdAt"<${to}
+        AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
+        AND (${text}::text IS NULL
+          OR COALESCE(a."reason",'') ILIKE ${text}
+          OR COALESCE(a."actorName",'') ILIKE ${text}
+          OR COALESCE(a."actionType",'') ILIKE ${text}
+          OR COALESCE(a."saleId",'') ILIKE ${text}
+          OR COALESCE(a."relatedSaleId",'') ILIKE ${text})
+      ORDER BY a."createdAt" DESC LIMIT 10000`;
+    const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
+    const actionItems=actionRows.map(r=>{
+      const details=r.details&&typeof r.details==="object"?r.details:{};
+      const isReturn=r.actionType==="RETURN",amount=-Math.abs(n(details.originalTotal||details.reversalTotal||0));
+      return {
+        id:r.id,createdAt:r.createdAt,eventType:isReturn?"POS_RETURN":"POS_CANCEL",amount,
+        description:isReturn?`ΟΛΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`:`ΑΚΥΡΩΣΗ ΠΩΛΗΣΗΣ · αρχική πώληση ${r.relatedSaleId||"—"} · αντιλογισμός ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`,
+        supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:r.actorName,subtractFromShift:false,
+        reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
+      };
+    });
+    const items=[...transactionItems,...actionItems].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
+    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit"});
   }catch(error){next(error)}
 });
 
