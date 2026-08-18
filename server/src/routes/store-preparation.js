@@ -31,6 +31,11 @@ async function ensurePreparationBatchTable(){
    product_qty NUMERIC;
    consume_qty NUMERIC;
    mismatch BOOLEAN;
+   milk_modifier_id TEXT;
+   milk_target_ingredient_id TEXT;
+   milk_target_unit TEXT;
+   milk_fallback_qty NUMERIC;
+   milk_base_qty NUMERIC;
  BEGIN
    IF NEW."eventType" <> 'POS_SALE_COMPLETED' THEN RETURN NEW; END IF;
    sale_id := COALESCE(NEW."details"->>'saleId','');
@@ -68,10 +73,26 @@ async function ensurePreparationBatchTable(){
          product_qty := GREATEST(0,COALESCE((prep_item->>'quantity')::numeric,0));
          IF product_qty <= 0 THEN CONTINUE; END IF;
 
+         milk_modifier_id:=NULL;milk_target_ingredient_id:=NULL;milk_target_unit:=NULL;milk_fallback_qty:=NULL;milk_base_qty:=0;
+         SELECT m."id",c."ingredientProductId",c."unit",c."quantity"
+           INTO milk_modifier_id,milk_target_ingredient_id,milk_target_unit,milk_fallback_qty
+         FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
+         JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE
+         JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" AND g."active"=TRUE
+         JOIN "PreparationModifierConsumption" c ON c."companyId"=m."companyId" AND c."modifierId"=m."id"
+         WHERE UPPER(g."description")='ΓΑΛΑ'
+         LIMIT 1;
+
          FOR recipe_row IN
-           SELECT "ingredientProductId","quantity","unit" FROM "PreparationRecipeLine"
-           WHERE "companyId"=NEW."companyId" AND "productId"=prep_item->>'productId' AND "automatic"=TRUE
+           SELECT r."ingredientProductId",r."quantity",r."unit",p."sku" AS ingredient_sku
+           FROM "PreparationRecipeLine" r
+           JOIN "Product" p ON p."id"=r."ingredientProductId" AND p."companyId"=r."companyId"
+           WHERE r."companyId"=NEW."companyId" AND r."productId"=prep_item->>'productId' AND r."automatic"=TRUE
          LOOP
+           IF milk_modifier_id IS NOT NULL AND recipe_row.ingredient_sku LIKE 'MWS-PREP-MILK%' THEN
+             milk_base_qty:=milk_base_qty+recipe_row."quantity";
+             CONTINUE;
+           END IF;
            consume_qty := product_qty * recipe_row."quantity";
            UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty
            FROM "Product" p
@@ -82,12 +103,29 @@ async function ensurePreparationBatchTable(){
            ON CONFLICT DO NOTHING;
          END LOOP;
 
+         IF milk_modifier_id IS NOT NULL AND milk_target_ingredient_id IS NOT NULL THEN
+           consume_qty:=product_qty*CASE WHEN milk_base_qty>0 THEN milk_base_qty ELSE COALESCE(milk_fallback_qty,0) END;
+           IF consume_qty>0 THEN
+             UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty
+             FROM "Product" p
+             WHERE sp."storeId"=NEW."storeId" AND sp."productId"=milk_target_ingredient_id AND sp."active"=TRUE
+               AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
+             INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind")
+             VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',milk_target_ingredient_id,milk_modifier_id,consume_qty,COALESCE(milk_target_unit,'ML'),'MODIFIER_SUBSTITUTION')
+             ON CONFLICT DO NOTHING;
+           END IF;
+         END IF;
+
          FOR modifier_json IN SELECT value FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) LOOP
            IF COALESCE(modifier_json->>'id','') = '' OR COALESCE(modifier_json->>'id','') LIKE 'synthetic-%' THEN CONTINUE; END IF;
            FOR modifier_row IN
-             SELECT "modifierId","ingredientProductId","quantity","unit","multiplierMode" FROM "PreparationModifierConsumption"
-             WHERE "companyId"=NEW."companyId" AND "modifierId"=modifier_json->>'id'
+             SELECT c."modifierId",c."ingredientProductId",c."quantity",c."unit",c."multiplierMode",g."description" AS group_name
+             FROM "PreparationModifierConsumption" c
+             JOIN "ManagementModifier" m ON m."id"=c."modifierId" AND m."companyId"=c."companyId"
+             JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId"
+             WHERE c."companyId"=NEW."companyId" AND c."modifierId"=modifier_json->>'id'
            LOOP
+             IF UPPER(modifier_row.group_name)='ΓΑΛΑ' THEN CONTINUE; END IF;
              consume_qty := product_qty * modifier_row."quantity";
              UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty
              FROM "Product" p
