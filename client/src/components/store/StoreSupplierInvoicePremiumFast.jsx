@@ -57,21 +57,37 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.9)};
   const ready=Boolean(file&&fileDataUrl&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading&&!savingSupplier);
-  const submit=async()=>{if(!ready)return;setBusy(true);try{
-    await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate})});
-    const key=paymentKey(),totalGross=num(amount),responsibleName="POS";
-    const note=`POS PREMIUM FAST • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${totalGross.toFixed(2)} € • Τιμολόγιο ${documentNumber.trim()} • Background V2.4.4`;
-    const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
-    let paymentTransactionId=null;
-    if(mode==="PAID"){
-      const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — PREMIUM FAST POS`,evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
-      paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
-      try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+  const submit=async()=>{
+    if(!ready)return;
+    setBusy(true);
+    let stage="DUPLICATE CHECK";
+    try{
+      setStatus("Έλεγχος duplicate τιμολογίου…");
+      await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate})});
+      stage="ΑΡΧΕΙΟ ΤΙΜΟΛΟΓΙΟΥ";
+      setStatus("Αποθήκευση παραστατικού στο Αρχείο Τιμολογίων…");
+      const key=paymentKey(),totalGross=num(amount),responsibleName="POS";
+      const note=`POS PREMIUM FAST • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${totalGross.toFixed(2)} € • Τιμολόγιο ${documentNumber.trim()} • Background V2.4.4`;
+      const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
+      let paymentTransactionId=null;
+      if(mode==="PAID"){
+        stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
+        setStatus("Καταχώριση πληρωμής στη βάρδια…");
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — PREMIUM FAST POS`,evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
+        paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
+        try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+      }
+      setStatus("✅ Η FAST καταχώριση ολοκληρώθηκε. Η πλήρης ανάγνωση συνεχίζεται στο background.");
+      const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € καταχωρίστηκε. Επιστροφή στο POS — τα προϊόντα διαβάζονται στο background.`:`✅ Τιμολόγιο με πίστωση καταχωρίστηκε. Επιστροφή στο POS — τα προϊόντα διαβάζονται στο background.`;
+      setMessage?.(success);onChanged?.();
+      backgroundV244({api,store,fileDataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,inboxId:inbox.id,mode,paymentTransactionId});
+    }catch(error){
+      const detail=error?.message||"Η καταχώριση απέτυχε.";
+      setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);
+      setMessage?.(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ ${stage}: ${detail}`);
+      setBusy(false);
     }
-    const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € καταχωρίστηκε. Επιστροφή στο POS — τα προϊόντα διαβάζονται στο background.`:`✅ Τιμολόγιο με πίστωση καταχωρίστηκε. Επιστροφή στο POS — τα προϊόντα διαβάζονται στο background.`;
-    setMessage?.(success);onChanged?.();
-    backgroundV244({api,store,fileDataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,inboxId:inbox.id,mode,paymentTransactionId});
-  }catch(error){setMessage?.(`❌ ${error?.message||"Η καταχώριση απέτυχε."}`);setBusy(false)}};
+  };
   return <div className="pos-payment-form-v3-root">
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>PREMIUM FAST — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στο BackOffice.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
