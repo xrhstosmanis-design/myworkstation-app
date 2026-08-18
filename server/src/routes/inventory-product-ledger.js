@@ -47,11 +47,15 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         SELECT sl."id",s."occurredAt" AS "createdAt",
                CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'RETURN'
                     WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'CANCEL'
+                    WHEN s."source"='SELF_CONSUMPTION' THEN 'ΠΡΟΣΩΠΙΚΗ ΚΑΤΑΝΑΛΩΣΗ'
+                    WHEN s."source"='PRODUCT_DESTRUCTION' THEN 'ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ'
                     ELSE 'SALE' END::text AS "movementType",
                CASE WHEN s."source"='POS_REVERSAL' THEN ABS(sl."quantity") ELSE -ABS(sl."quantity") END AS "quantity",
                0::numeric AS "unitCost",ABS(sl."unitPrice") AS "salePrice",
                CONCAT(CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'Επιστροφή '
                            WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'Ακύρωση '
+                           WHEN s."source"='SELF_CONSUMPTION' THEN 'Προσωπική κατανάλωση '
+                           WHEN s."source"='PRODUCT_DESTRUCTION' THEN 'Καταστροφή προϊόντων '
                            ELSE 'Πώληση ' END,COALESCE(s."receiptNumber",s."id")) AS "note",
                COALESCE(e."fullName",'POS') AS "actorName",s."source" AS "sourceType",s."id" AS "sourceId"
         FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
