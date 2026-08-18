@@ -1,0 +1,30 @@
+import crypto from "crypto";
+import {Router} from "express";
+import {z} from "zod";
+import {prisma} from "../prisma.js";
+
+const router=Router();
+const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
+let ready;
+const uid=()=>crypto.randomUUID();
+const n=v=>Number(v||0);
+async function ensure(){if(ready)return ready;ready=(async()=>{
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationRecipeLine" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"ingredientProductId" TEXT NOT NULL,"quantity" NUMERIC(14,4) NOT NULL DEFAULT 0,"unit" TEXT NOT NULL DEFAULT 'PCS',"automatic" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+ await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PreparationRecipeLine_product_idx" ON "PreparationRecipeLine"("companyId","productId")`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationProductModifierGroup" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"groupId" TEXT NOT NULL,"required" BOOLEAN NOT NULL DEFAULT false,"minSelections" INTEGER NOT NULL DEFAULT 0,"maxSelections" INTEGER NOT NULL DEFAULT 1,"sequence" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+ await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PreparationProductModifierGroup_key" ON "PreparationProductModifierGroup"("companyId","productId","groupId")`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationModifierConsumption" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"modifierId" TEXT NOT NULL,"ingredientProductId" TEXT NOT NULL,"quantity" NUMERIC(14,4) NOT NULL DEFAULT 0,"unit" TEXT NOT NULL DEFAULT 'PCS',"multiplierMode" TEXT NOT NULL DEFAULT 'FIXED',"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+ await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PreparationModifierConsumption_modifier_idx" ON "PreparationModifierConsumption"("companyId","modifierId")`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationProductSettings" ("companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"preparationEnabled" BOOLEAN NOT NULL DEFAULT false,"environmentalFee" NUMERIC(14,4) NOT NULL DEFAULT 0,"productionStation" TEXT,"autoPrint" BOOLEAN NOT NULL DEFAULT true,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY("companyId","productId"))`);
+ })();return ready}
+router.use(async(req,res,next)=>{try{await ensure();next()}catch(e){next(e)}});
+router.get("/products/:productId",async(req,res,next)=>{try{const companyId=req.user.companyId,productId=req.params.productId;const product=(await prisma.$queryRaw`SELECT "id","name","sku" FROM "Product" WHERE "id"=${productId} AND "companyId"=${companyId} LIMIT 1`)[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε προϊόν."});const [settings,recipe,groups]=await Promise.all([
+ prisma.$queryRaw`SELECT * FROM "PreparationProductSettings" WHERE "companyId"=${companyId} AND "productId"=${productId} LIMIT 1`,
+ prisma.$queryRaw`SELECT r.*,p."name" AS "ingredientName",p."sku" AS "ingredientSku" FROM "PreparationRecipeLine" r JOIN "Product" p ON p."id"=r."ingredientProductId" WHERE r."companyId"=${companyId} AND r."productId"=${productId} ORDER BY p."name"`,
+ prisma.$queryRaw`SELECT pg.*,g."description" AS "groupName" FROM "PreparationProductModifierGroup" pg JOIN "ManagementModifierGroup" g ON g."id"=pg."groupId" WHERE pg."companyId"=${companyId} AND pg."productId"=${productId} ORDER BY pg."sequence",g."description"`]);res.json({product,settings:settings[0]||{preparationEnabled:false,environmentalFee:0,productionStation:null,autoPrint:true},recipe:recipe.map(x=>({...x,quantity:n(x.quantity)})),groups})}catch(e){next(e)}});
+const settingsSchema=z.object({preparationEnabled:z.boolean().default(false),environmentalFee:z.coerce.number().min(0).max(100).default(0),productionStation:z.string().trim().max(120).optional().nullable(),autoPrint:z.boolean().default(true)});
+router.put("/products/:productId/settings",async(req,res,next)=>{try{if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Μόνο η διαχείριση μπορεί να αλλάζει συνταγές."});const b=settingsSchema.parse(req.body||{});await prisma.$executeRaw`INSERT INTO "PreparationProductSettings" ("companyId","productId","preparationEnabled","environmentalFee","productionStation","autoPrint") VALUES (${req.user.companyId},${req.params.productId},${b.preparationEnabled},${b.environmentalFee},${b.productionStation||null},${b.autoPrint}) ON CONFLICT ("companyId","productId") DO UPDATE SET "preparationEnabled"=EXCLUDED."preparationEnabled","environmentalFee"=EXCLUDED."environmentalFee","productionStation"=EXCLUDED."productionStation","autoPrint"=EXCLUDED."autoPrint","updatedAt"=NOW()`;res.json({ok:true})}catch(e){next(e)}});
+const recipeSchema=z.object({ingredientProductId:z.string().min(1),quantity:z.coerce.number().positive(),unit:z.enum(["PCS","GR","ML"]).default("PCS"),automatic:z.boolean().default(true)});
+router.post("/products/:productId/recipe",async(req,res,next)=>{try{if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Μόνο η διαχείριση μπορεί να αλλάζει συνταγές."});const b=recipeSchema.parse(req.body||{}),id=uid();await prisma.$executeRaw`INSERT INTO "PreparationRecipeLine" ("id","companyId","productId","ingredientProductId","quantity","unit","automatic") VALUES (${id},${req.user.companyId},${req.params.productId},${b.ingredientProductId},${b.quantity},${b.unit},${b.automatic})`;res.status(201).json({id})}catch(e){next(e)}});
+router.delete("/recipe/:id",async(req,res,next)=>{try{if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Μόνο η διαχείριση μπορεί να αλλάζει συνταγές."});await prisma.$executeRaw`DELETE FROM "PreparationRecipeLine" WHERE "id"=${req.params.id} AND "companyId"=${req.user.companyId}`;res.json({ok:true})}catch(e){next(e)}});
+export default router;
