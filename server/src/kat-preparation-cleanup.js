@@ -7,8 +7,8 @@ const CANONICAL_SKUS=new Set([
 const LEGACY_CATEGORIES=["ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΚΑΦΕ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΣΟΚΟΛΑΤΑ","ΠΡΟΪΟΝΤΑ ΠΑΡΑΣΚΕΥΗΣ ΤΣΑΙ"];
 
 async function tableExists(name){
- const rows=await prisma.$queryRaw`SELECT to_regclass(${`public.${name}`})::text AS "tableName"`;
- return Boolean(rows[0]?.tableName);
+ const rows=await prisma.$queryRaw`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=${name}) AS "exists"`;
+ return rows[0]?.exists===true;
 }
 
 export async function ensureKatPreparationCleanup(){
