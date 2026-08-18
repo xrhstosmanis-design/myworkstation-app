@@ -1,6 +1,28 @@
 import {prisma} from "./prisma.js";
 
 const statements=[
+`CREATE TABLE IF NOT EXISTS "OnlineOrderingConfig" (
+  "id" TEXT NOT NULL,
+  "companyId" TEXT NOT NULL,
+  "storeId" TEXT NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT true,
+  "surchargeType" TEXT NOT NULL DEFAULT 'FIXED',
+  "surchargeValue" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "deliveryFee" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "pickupEnabled" BOOLEAN NOT NULL DEFAULT true,
+  "deliveryEnabled" BOOLEAN NOT NULL DEFAULT true,
+  "cashEnabled" BOOLEAN NOT NULL DEFAULT true,
+  "cardOnDeliveryEnabled" BOOLEAN NOT NULL DEFAULT true,
+  "autoPrintOnAccept" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "OnlineOrderingConfig_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "OnlineOrderingConfig_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "OnlineOrderingConfig_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE
+)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "OnlineOrderingConfig_store_key" ON "OnlineOrderingConfig"("storeId")`,
+`CREATE INDEX IF NOT EXISTS "OnlineOrderingConfig_company_idx" ON "OnlineOrderingConfig"("companyId")`,
+
 `CREATE TABLE IF NOT EXISTS "OnlineOrder" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
@@ -44,7 +66,7 @@ const statements=[
   "productName" TEXT NOT NULL,
   "quantity" DECIMAL(14,4) NOT NULL,
   "storeUnitPrice" DECIMAL(14,4) NOT NULL,
-  "onlineSurcharge" DECIMAL(14,4) NOT NULL DEFAULT 0.10,
+  "onlineSurcharge" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "onlineUnitPrice" DECIMAL(14,4) NOT NULL,
   "lineTotal" DECIMAL(14,4) NOT NULL,
   "modifiersJson" JSONB,
@@ -53,6 +75,7 @@ const statements=[
   CONSTRAINT "OnlineOrderLine_order_fkey" FOREIGN KEY ("orderId") REFERENCES "OnlineOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "OnlineOrderLine_product_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 )`,
+`ALTER TABLE "OnlineOrderLine" ALTER COLUMN "onlineSurcharge" SET DEFAULT 0`,
 `CREATE INDEX IF NOT EXISTS "OnlineOrderLine_order_idx" ON "OnlineOrderLine"("orderId")`,
 `CREATE INDEX IF NOT EXISTS "OnlineOrderLine_product_idx" ON "OnlineOrderLine"("productId")`,
 
@@ -73,10 +96,27 @@ const statements=[
 `CREATE INDEX IF NOT EXISTS "OnlineOrderStatusEvent_order_idx" ON "OnlineOrderStatusEvent"("orderId","createdAt")`
 ];
 
-export const KAT_ONLINE_SURCHARGE=0.10;
-export const onlineUnitPrice=(storePrice)=>Math.round((Number(storePrice)+KAT_ONLINE_SURCHARGE)*100)/100;
+export const onlineUnitPrice=(storePrice,config={})=>{
+  const base=Number(storePrice||0),type=String(config.surchargeType||"FIXED").toUpperCase(),value=Math.max(0,Number(config.surchargeValue||0));
+  const surcharge=type==="PERCENT"?base*(value/100):value;
+  return Math.round((base+surcharge)*100)/100;
+};
+export const onlineSurchargeAmount=(storePrice,config={})=>Math.round((onlineUnitPrice(storePrice,config)-Number(storePrice||0))*100)/100;
+
+export async function getOnlineOrderingConfig(storeId){
+  const rows=await prisma.$queryRaw`SELECT * FROM "OnlineOrderingConfig" WHERE "storeId"=${storeId} LIMIT 1`;
+  return rows[0]||null;
+}
+
+async function ensureKatPilotDefaults(){
+  const stores=await prisma.$queryRaw`SELECT s."id",s."companyId" FROM "Store" s WHERE s."active"=TRUE AND LOWER(s."name")=LOWER('Κυλικείο ΚΑΤ') ORDER BY s."createdAt" ASC LIMIT 1`;
+  const store=stores[0];if(!store)return;
+  await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering') ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
+  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE) ON CONFLICT ("storeId") DO NOTHING`;
+}
 
 export async function ensureKatOnlineOrderingSchema(){
   for(const statement of statements)await prisma.$executeRawUnsafe(statement);
-  console.log("KAT online ordering schema bootstrap completed.");
+  await ensureKatPilotDefaults();
+  console.log("Online ordering schema/config bootstrap completed.");
 }
