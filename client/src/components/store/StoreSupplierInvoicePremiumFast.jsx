@@ -38,13 +38,13 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       if(meta?.documentDate)setDocumentDate(meta.documentDate);
       if(Number(meta?.totalGross||0)>0)setAmount(Number(meta.totalGross).toFixed(2).replace(".",","));
       const baseComplete=Boolean(meta?.documentNumber&&meta?.documentDate&&Number(meta?.totalGross||0)>0);
-      if(!meta?.supplierId&&meta?.supplierName){setStatus(`FAST AI βρήκε νέο προμηθευτή: ${meta.supplierName}${meta.supplierTaxId?` • ΑΦΜ ${meta.supplierTaxId}`:""}. Καταχώρισέ τον και συνέχισε χωρίς νέο upload.`)}
+      if(!meta?.supplierId){setStatus(`FAST AI ολοκληρώθηκε. Ο προμηθευτής δεν υπάρχει στη βάση. Έλεγξε/συμπλήρωσε Επωνυμία και ΑΦΜ, καταχώρισέ τον και συνέχισε χωρίς νέο upload.`)}
       else{const complete=Boolean(meta?.supplierId&&baseComplete);setStatus(complete?`FAST AI ολοκληρώθηκε (${Math.round(Number(meta?.confidence||0))}%). Έλεγξε τα 4 στοιχεία και πάτησε ΠΛΗΡΩΜΕΝΟ ή ΜΕ ΠΙΣΤΩΣΗ.`:`FAST AI ολοκληρώθηκε. Συμπλήρωσε μόνο όποιο από τα 4 βασικά στοιχεία λείπει και συνέχισε.`)}
     }catch(error){setStatus(`FAST AI δεν ολοκληρώθηκε. Συμπλήρωσε τα βασικά στοιχεία χειροκίνητα και συνέχισε. ${error?.message||""}`)}finally{setReading(false)}
   };
   const saveNewSupplier=async()=>{
     const name=supplierCandidate.name.trim(),taxId=supplierCandidate.taxId.trim();
-    if(name.length<2)return setMessage?.("❌ Δεν βρέθηκε έγκυρη επωνυμία νέου προμηθευτή.");
+    if(name.length<2)return setMessage?.("❌ Συμπλήρωσε την επωνυμία του νέου προμηθευτή.");
     setSavingSupplier(true);
     try{
       const created=await api("/api/commerce/suppliers",{method:"POST",body:JSON.stringify({name,taxId:taxId||null})});
@@ -78,7 +78,14 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     <label>Προμηθευτής<select value={supplierId} disabled={busy||savingSupplier} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
-    {!supplierId&&supplierCandidate.name&&<div style={{padding:"10px 12px",border:"1px solid #c9a227",borderRadius:10,background:"#fff8dc",margin:"8px 0"}}><div style={{fontWeight:900}}>Νέος προμηθευτής που αναγνώρισε το AI</div><div>{supplierCandidate.name}{supplierCandidate.taxId?` • ΑΦΜ ${supplierCandidate.taxId}`:""}</div><button type="button" onClick={saveNewSupplier} disabled={savingSupplier||busy} style={{marginTop:8,fontWeight:900}}>{savingSupplier?"Καταχώριση…":"ΚΑΤΑΧΩΡΙΣΗ ΝΕΟΥ ΠΡΟΜΗΘΕΥΤΗ"}</button></div>}
+    {!supplierId&&fileDataUrl&&<div style={{padding:"10px 12px",border:"1px solid #c9a227",borderRadius:10,background:"#fff8dc",margin:"8px 0"}}>
+      <div style={{fontWeight:900,marginBottom:6}}>Νέος προμηθευτής</div>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8}}>
+        <label>Επωνυμία<input value={supplierCandidate.name} disabled={savingSupplier||busy} onChange={e=>setSupplierCandidate(c=>({...c,name:e.target.value}))} placeholder="Επωνυμία προμηθευτή"/></label>
+        <label>ΑΦΜ<input value={supplierCandidate.taxId} disabled={savingSupplier||busy} onChange={e=>setSupplierCandidate(c=>({...c,taxId:e.target.value}))} placeholder="ΑΦΜ"/></label>
+      </div>
+      <button type="button" onClick={saveNewSupplier} disabled={savingSupplier||busy||supplierCandidate.name.trim().length<2} style={{marginTop:8,fontWeight:900}}>{savingSupplier?"Καταχώριση…":"ΚΑΤΑΧΩΡΙΣΗ ΝΕΟΥ ΠΡΟΜΗΘΕΥΤΗ"}</button>
+    </div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><label>Συνολικό ποσό<input inputMode="decimal" value={amount} disabled={busy} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αριθμός τιμολογίου<input value={documentNumber} disabled={busy} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} disabled={busy} onChange={e=>setDocumentDate(e.target.value)}/></label></div>
     <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ — από ταμείο</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
     <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {reading?"FAST AI ανάγνωση…":savingSupplier?"Καταχώριση προμηθευτή…":busy?"Καταχώριση…":mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
