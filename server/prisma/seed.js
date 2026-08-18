@@ -62,19 +62,43 @@ async function main(){
 
   const email = String(process.env.INITIAL_ADMIN_EMAIL||"").trim().toLowerCase();
   const password = process.env.INITIAL_ADMIN_PASSWORD;
+  const resetToken = String(process.env.INITIAL_ADMIN_RESET_TOKEN||"").trim();
   if(!email || !password) throw new Error("Λείπουν τα INITIAL_ADMIN_EMAIL ή INITIAL_ADMIN_PASSWORD.");
+
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SeedControl" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "value" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  const resetKey=`initial-admin-password:${email}`;
+  const resetRows=resetToken
+    ? await prisma.$queryRaw`SELECT "value" FROM "SeedControl" WHERE "key"=${resetKey} LIMIT 1`
+    : [];
+  const shouldResetPassword=Boolean(resetToken)&&resetRows[0]?.value!==resetToken;
 
   const existingAdmin=await prisma.user.findUnique({where:{email}});
   if(existingAdmin){
-    await prisma.user.update({
-      where:{id:existingAdmin.id},
-      data:{fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id}
-    });
+    const data={fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id};
+    if(shouldResetPassword){
+      data.passwordHash=await bcrypt.hash(password,12);
+      data.sessionVersion={increment:1};
+    }
+    await prisma.user.update({where:{id:existingAdmin.id},data});
+    if(shouldResetPassword){
+      await prisma.userSession.updateMany({where:{userId:existingAdmin.id,revokedAt:null},data:{revokedAt:new Date()}}).catch(()=>{});
+    }
   }else{
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.create({
       data:{email,passwordHash,fullName:"Χρήστος Μάνης",role:UserRole.SUPER_ADMIN,companyId:company.id}
     });
+  }
+
+  if(resetToken&&(!existingAdmin||shouldResetPassword)){
+    await prisma.$executeRaw`INSERT INTO "SeedControl" ("key","value","updatedAt") VALUES (${resetKey},${resetToken},CURRENT_TIMESTAMP)
+      ON CONFLICT ("key") DO UPDATE SET "value"=EXCLUDED."value","updatedAt"=CURRENT_TIMESTAMP`;
+    console.log("Platform Super Admin password reset token applied once.");
   }
 
   const katOwnerEmail=process.env.KAT_OWNER_EMAIL||"nikirazatou@hotmail.gr";
