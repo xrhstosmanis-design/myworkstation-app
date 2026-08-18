@@ -21,26 +21,42 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
-  const [file,setFile]=useState(null),[fileDataUrl,setFileDataUrl]=useState(""),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
-  const videoRef=useRef(null),canvasRef=useRef(null),supplier=useMemo(()=>suppliers.find(x=>String(x.id)===String(supplierId))||null,[suppliers,supplierId]);
+  const [file,setFile]=useState(null),[fileDataUrl,setFileDataUrl]=useState(""),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false);
+  const videoRef=useRef(null),canvasRef=useRef(null);
+  const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
+  const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const selectFile=async next=>{
     if(!next)return;
-    setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setReading(true);setStatus("PREMIUM FAST AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
+    setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("PREMIUM FAST AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
     try{
       const dataUrl=await readFile(next);setFileDataUrl(dataUrl);
       const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",body:JSON.stringify({storeId:store.id,filename:next.name||"timologio.jpg",mimeType:next.type||"image/jpeg",dataUrl})});
       if(meta?.supplierId)setSupplierId(meta.supplierId);
+      setSupplierCandidate({name:String(meta?.supplierName||""),taxId:String(meta?.supplierTaxId||"")});
       if(meta?.documentNumber)setDocumentNumber(meta.documentNumber);
       if(meta?.documentDate)setDocumentDate(meta.documentDate);
       if(Number(meta?.totalGross||0)>0)setAmount(Number(meta.totalGross).toFixed(2).replace(".",","));
-      const complete=Boolean(meta?.supplierId&&meta?.documentNumber&&meta?.documentDate&&Number(meta?.totalGross||0)>0);
-      setStatus(complete?`FAST AI ολοκληρώθηκε (${Math.round(Number(meta?.confidence||0))}%). Έλεγξε τα 4 στοιχεία και πάτησε ΠΛΗΡΩΜΕΝΟ ή ΜΕ ΠΙΣΤΩΣΗ.`:`FAST AI ολοκληρώθηκε. Συμπλήρωσε μόνο όποιο από τα 4 βασικά στοιχεία λείπει και συνέχισε.`);
+      const baseComplete=Boolean(meta?.documentNumber&&meta?.documentDate&&Number(meta?.totalGross||0)>0);
+      if(!meta?.supplierId&&meta?.supplierName){setStatus(`FAST AI βρήκε νέο προμηθευτή: ${meta.supplierName}${meta.supplierTaxId?` • ΑΦΜ ${meta.supplierTaxId}`:""}. Καταχώρισέ τον και συνέχισε χωρίς νέο upload.`)}
+      else{const complete=Boolean(meta?.supplierId&&baseComplete);setStatus(complete?`FAST AI ολοκληρώθηκε (${Math.round(Number(meta?.confidence||0))}%). Έλεγξε τα 4 στοιχεία και πάτησε ΠΛΗΡΩΜΕΝΟ ή ΜΕ ΠΙΣΤΩΣΗ.`:`FAST AI ολοκληρώθηκε. Συμπλήρωσε μόνο όποιο από τα 4 βασικά στοιχεία λείπει και συνέχισε.`)}
     }catch(error){setStatus(`FAST AI δεν ολοκληρώθηκε. Συμπλήρωσε τα βασικά στοιχεία χειροκίνητα και συνέχισε. ${error?.message||""}`)}finally{setReading(false)}
+  };
+  const saveNewSupplier=async()=>{
+    const name=supplierCandidate.name.trim(),taxId=supplierCandidate.taxId.trim();
+    if(name.length<2)return setMessage?.("❌ Δεν βρέθηκε έγκυρη επωνυμία νέου προμηθευτή.");
+    setSavingSupplier(true);
+    try{
+      const created=await api("/api/commerce/suppliers",{method:"POST",body:JSON.stringify({name,taxId:taxId||null})});
+      const next={id:created.id,name:created.name||name,taxId};
+      setCreatedSupplier(next);setSupplierId(created.id);
+      setStatus(`✅ Ο νέος προμηθευτής ${next.name} καταχωρίστηκε και επιλέχθηκε. Συνέχισε την ίδια πληρωμή.`);
+      onChanged?.();
+    }catch(error){setMessage?.(`❌ ${error?.message||"Δεν καταχωρίστηκε ο νέος προμηθευτής."}`)}finally{setSavingSupplier(false)}
   };
   const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.9)};
-  const ready=Boolean(file&&fileDataUrl&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading);
+  const ready=Boolean(file&&fileDataUrl&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading&&!savingSupplier);
   const submit=async()=>{if(!ready)return;setBusy(true);try{
     await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate})});
     const key=paymentKey(),totalGross=num(amount),responsibleName="POS";
@@ -61,9 +77,10 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
-    <label>Προμηθευτής<select value={supplierId} disabled={busy} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
+    <label>Προμηθευτής<select value={supplierId} disabled={busy||savingSupplier} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
+    {!supplierId&&supplierCandidate.name&&<div style={{padding:"10px 12px",border:"1px solid #c9a227",borderRadius:10,background:"#fff8dc",margin:"8px 0"}}><div style={{fontWeight:900}}>Νέος προμηθευτής που αναγνώρισε το AI</div><div>{supplierCandidate.name}{supplierCandidate.taxId?` • ΑΦΜ ${supplierCandidate.taxId}`:""}</div><button type="button" onClick={saveNewSupplier} disabled={savingSupplier||busy} style={{marginTop:8,fontWeight:900}}>{savingSupplier?"Καταχώριση…":"ΚΑΤΑΧΩΡΙΣΗ ΝΕΟΥ ΠΡΟΜΗΘΕΥΤΗ"}</button></div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><label>Συνολικό ποσό<input inputMode="decimal" value={amount} disabled={busy} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αριθμός τιμολογίου<input value={documentNumber} disabled={busy} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} disabled={busy} onChange={e=>setDocumentDate(e.target.value)}/></label></div>
-    <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} disabled={busy||reading} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ — από ταμείο</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} disabled={busy||reading} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
-    <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {reading?"FAST AI ανάγνωση…":busy?"Καταχώριση…":mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
+    <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ — από ταμείο</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
+    <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {reading?"FAST AI ανάγνωση…":savingSupplier?"Καταχώριση προμηθευτή…":busy?"Καταχώριση…":mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
   </div>;
 }
