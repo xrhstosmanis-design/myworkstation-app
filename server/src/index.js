@@ -48,6 +48,7 @@ import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
 import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-actions.js";
 import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
+import storePreparationRoutes from "./routes/store-preparation.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
 import storePosConsumptionRoutes from "./routes/store-pos-consumption.js";
 import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
@@ -151,6 +152,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsR
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
