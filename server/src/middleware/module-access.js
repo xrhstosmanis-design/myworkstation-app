@@ -85,4 +85,30 @@ export function requireStoreModule(moduleKey){
   };
 }
 
+// Ledger/payment routes are mixed: most actions are scoped by /stores/:storeId,
+// while a few follow-up actions (for example reversal by transaction id) are not.
+// Resolve module entitlement from the real target store whenever a store id exists;
+// otherwise preserve the existing company-scoped behaviour. This keeps tenant
+// isolation intact and avoids using a Super Admin/login company as the entitlement
+// source for a transaction that belongs to another explicitly selected store.
+export function requireCompanyOrStoreModule(moduleKey){
+  return async(req,res,next)=>{
+    try{
+      const storeId=String(req.body?.storeId||req.params?.storeId||req.path.match(/\/stores\/([^/]+)/)?.[1]||"");
+      if(!storeId)return requireCompanyModule(moduleKey)(req,res,next);
+      const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,companyId:true}});
+      if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+      if(!storeTenantAccessAllowed(req.user,store)){
+        return res.status(404).json({error:"Δεν βρέθηκε κατάστημα.",code:"TENANT_STORE_REJECTED"});
+      }
+      const state=await companyModuleState(store.companyId);
+      if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
+      if(!state.activeModules.includes(moduleKey))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
+      req.license=state;
+      req.targetStore=store;
+      next();
+    }catch(error){next(error)}
+  };
+}
+
 export {isCurrentlyActive};
