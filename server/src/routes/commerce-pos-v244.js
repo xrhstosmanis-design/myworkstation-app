@@ -6,9 +6,82 @@ import coreRouter from "./commerce-pos-v244-core.js";
 const router=Router();
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
+const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
+const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+
+function outputText(response){
+  if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
+  for(const item of response?.output||[])for(const part of item?.content||[])if(part?.type==="output_text"&&part.text)return part.text;
+  return "";
+}
+
+async function matchSupplier(companyId,candidate={}){
+  const taxId=cleanTaxId(candidate.taxId);
+  if(taxId){
+    const rows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
+    if(rows[0])return rows[0];
+  }
+  const key=norm(candidate.name);
+  if(key.length>=4){
+    const rows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
+    const exact=rows.find(row=>norm(row.name)===key);if(exact)return exact;
+    const close=rows.find(row=>{const k=norm(row.name);return key.length>=7&&k.length>=7&&(k.includes(key)||key.includes(k));});if(close)return close;
+  }
+  return null;
+}
+
+const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
+  confidence:{type:"number",minimum:0,maximum:100},
+  supplierName:{type:"string"},
+  supplierTaxId:{type:"string"},
+  documentNumber:{type:"string"},
+  documentDate:{type:"string"},
+  totalGross:{type:"number",minimum:0}
+},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
 
 router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>{
   res.json({enabled:true,moduleKey:"AI_READER"});
+});
+
+router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  try{
+    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+    const storeId=String(req.body?.storeId||"");
+    const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
+    const mimeType=String(req.body?.mimeType||"image/jpeg");
+    const dataUrl=String(req.body?.dataUrl||"");
+    if(!storeId||!dataUrl)return res.status(400).json({error:"Δεν βρέθηκε το αρχείο του τιμολογίου."});
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    const isPdf=mimeType==="application/pdf";
+    if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
+    if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
+    const filePart=isPdf
+      ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
+      :{type:"input_image",image_url:dataUrl,detail:"low"};
+    const prompt=`Διάβασε ΜΟΝΟ τα βασικά στοιχεία αυτού του ελληνικού παραστατικού προμηθευτή για γρήγορη πληρωμή POS. Μην διαβάσεις προϊόντα και μην κάνεις ανάλυση γραμμών. Επέστρεψε: εκδότη/προμηθευτή, ΑΦΜ εκδότη, ακριβή αριθμό παραστατικού, ημερομηνία σε YYYY-MM-DD και τελικό πληρωτέο ποσό με ΦΠΑ. Αν κάποιο στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. Ο αριθμός παραστατικού πρέπει να είναι ο πραγματικός αριθμός/σειρά και όχι λέξη κεφαλίδας.`;
+    const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({
+      model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",
+      input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
+      text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
+    })});
+    if(!aiResponse.ok){const text=await aiResponse.text();const error=new Error(`PREMIUM FAST AI απέτυχε (${aiResponse.status}). ${text.slice(0,300)}`);error.status=502;throw error;}
+    const parsed=JSON.parse(outputText(await aiResponse.json())||"{}");
+    const supplier=await matchSupplier(req.user.companyId,{name:parsed.supplierName,taxId:parsed.supplierTaxId});
+    const documentNumber=String(parsed.documentNumber||"").trim();
+    const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"";
+    const totalGross=round2(parsed.totalGross||0);
+    res.json({
+      confidence:Number(parsed.confidence||0),
+      supplierId:supplier?.id||"",
+      supplierName:supplier?.name||String(parsed.supplierName||""),
+      supplierTaxId:supplier?.taxId||String(parsed.supplierTaxId||""),
+      documentNumber:/\d/.test(documentNumber)?documentNumber:"",
+      documentDate,
+      totalGross:totalGross>0?totalGross:0
+    });
+  }catch(error){next(error)}
 });
 
 router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),async(req,res,next)=>{
