@@ -30,6 +30,7 @@ async function ensurePreparationBatchTable(){
    modifier_row RECORD;
    product_qty NUMERIC;
    consume_qty NUMERIC;
+   mismatch BOOLEAN;
  BEGIN
    IF NEW."eventType" <> 'POS_SALE_COMPLETED' THEN RETURN NEW; END IF;
    sale_id := COALESCE(NEW."details"->>'saleId','');
@@ -44,6 +45,24 @@ async function ensurePreparationBatchTable(){
        WHERE "id"=batch_id AND "companyId"=NEW."companyId" AND "storeId"=NEW."storeId" AND "status"='SENT'
        FOR UPDATE;
        IF NOT FOUND THEN CONTINUE; END IF;
+
+       SELECT EXISTS(
+         SELECT 1 FROM (
+           SELECT x->>'productId' AS product_id,SUM(GREATEST(0,COALESCE((x->>'quantity')::numeric,0))) AS qty
+           FROM jsonb_array_elements(COALESCE(batch_row."itemsJson",'[]'::jsonb)) x
+           GROUP BY x->>'productId'
+         ) b
+         FULL OUTER JOIN (
+           SELECT x->>'productId' AS product_id,SUM(GREATEST(0,COALESCE((x->>'quantity')::numeric,0))) AS qty
+           FROM jsonb_array_elements(COALESCE(NEW."details"->'items','[]'::jsonb)) x
+           WHERE COALESCE(x->>'overrideReason','')='PREPARATION:'||batch_id
+           GROUP BY x->>'productId'
+         ) s USING(product_id)
+         WHERE b.product_id IS NULL OR s.product_id IS NULL OR b.qty IS DISTINCT FROM s.qty
+       ) INTO mismatch;
+       IF mismatch THEN
+         RAISE EXCEPTION 'Η παραγγελία παρασκευής δεν συμφωνεί με τα προϊόντα/ποσότητες της πώλησης.' USING ERRCODE='P0001';
+       END IF;
 
        FOR prep_item IN SELECT value FROM jsonb_array_elements(COALESCE(batch_row."itemsJson",'[]'::jsonb)) LOOP
          product_qty := GREATEST(0,COALESCE((prep_item->>'quantity')::numeric,0));
