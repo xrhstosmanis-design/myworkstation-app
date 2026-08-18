@@ -59,8 +59,17 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
     const filePart=isPdf
       ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
-      :{type:"input_image",image_url:dataUrl,detail:"low"};
-    const prompt=`Διάβασε ΜΟΝΟ τα βασικά στοιχεία αυτού του ελληνικού παραστατικού προμηθευτή για γρήγορη πληρωμή POS. Μην διαβάσεις προϊόντα και μην κάνεις ανάλυση γραμμών. Επέστρεψε: εκδότη/προμηθευτή, ΑΦΜ εκδότη, ακριβή αριθμό παραστατικού, ημερομηνία σε YYYY-MM-DD και τελικό πληρωτέο ποσό με ΦΠΑ. Αν κάποιο στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. Ο αριθμός παραστατικού πρέπει να είναι ο πραγματικός αριθμός/σειρά και όχι λέξη κεφαλίδας.`;
+      :{type:"input_image",image_url:dataUrl,detail:"high"};
+    const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού και την κάτω περιοχή για τα τελικά σύνολα. ΜΗΝ αναλύσεις προϊόντα και ΜΗΝ επιστρέψεις γραμμές ειδών.
+
+Χρειάζομαι ΜΟΝΟ αυτά τα 5 στοιχεία:
+1. supplierName = ο ΕΚΔΟΤΗΣ/ΠΡΟΜΗΘΕΥΤΗΣ του παραστατικού, όχι ο πελάτης/παραλήπτης.
+2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
+3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
+4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
+5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
+
+Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
     const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({
       model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",
       input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
