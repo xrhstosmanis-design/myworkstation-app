@@ -78,7 +78,7 @@ import { auth } from "./middleware/auth.js";
 import { commerceTenantGuard } from "./middleware/commerce-tenant-guard.js";
 import { requireOwnerProductAccess } from "./middleware/owner-product-access.js";
 import { productAuditCapture } from "./middleware/product-audit-capture.js";
-import { requireCompanyModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
+import { requireCompanyModule,requireCompanyOrStoreModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
 import { ensureExtendedModulesSchema } from "./extended-modules-bootstrap.js";
@@ -118,7 +118,7 @@ app.use("/api/management/business-units",auth,requireCompanyModule("CORE"),manag
 app.use("/api/management/parameters",auth,requireCompanyModule("CORE"),managementParametersRoutes);
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
-app.use("/api/transactions",auth,requireCompanyModule("CASH_CONTROL"),storeTransactionRoutes);
+app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),storeTransactionRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsRoutes);
