@@ -109,7 +109,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      WHERE a."companyId"=${companyId} AND a."actionType" IN ('RETURN','CANCEL')
+      WHERE a."companyId"=${companyId} AND a."actionType" IN ('RETURN','CANCEL','RETURN_ITEMS')
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
@@ -122,10 +122,16 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
-      const isReturn=r.actionType==="RETURN",amount=-Math.abs(n(details.originalTotal||details.reversalTotal||0));
+      const isFullReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS";
+      const amount=isPartialReturn?-Math.abs(n(details.refund||0)):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
+      const eventType=isPartialReturn?"POS_RETURN_ITEMS":isFullReturn?"POS_RETURN":"POS_CANCEL";
+      const description=isPartialReturn
+        ?`ΜΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
+        :isFullReturn
+          ?`ΟΛΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
+          :`ΑΚΥΡΩΣΗ ΠΩΛΗΣΗΣ · αρχική πώληση ${r.relatedSaleId||"—"} · αντιλογισμός ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`;
       return {
-        id:r.id,createdAt:r.createdAt,eventType:isReturn?"POS_RETURN":"POS_CANCEL",amount,
-        description:isReturn?`ΟΛΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`:`ΑΚΥΡΩΣΗ ΠΩΛΗΣΗΣ · αρχική πώληση ${r.relatedSaleId||"—"} · αντιλογισμός ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`,
+        id:r.id,createdAt:r.createdAt,eventType,amount,description,
         supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:r.actorName,subtractFromShift:false,
         reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
