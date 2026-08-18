@@ -85,4 +85,28 @@ router.get("/deactivations",requireManagement,async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/audit-events",requireManagement,async(req,res,next)=>{
+  try{
+    const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
+    const rows=await prisma.$queryRaw`
+      SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
+        t."sessionId" AS "shiftId",t."actorId",t."actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
+        s."name" AS "storeName"
+      FROM "StoreTransaction" t
+      LEFT JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId"
+      WHERE t."companyId"=${companyId}
+        AND t."occurredAt">=${from} AND t."occurredAt"<${to}
+        AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
+        AND (${text}::text IS NULL
+          OR COALESCE(t."description",'') ILIKE ${text}
+          OR COALESCE(t."supplierName",'') ILIKE ${text}
+          OR COALESCE(t."actorName",'') ILIKE ${text}
+          OR COALESCE(t."type",'') ILIKE ${text}
+          OR COALESCE(t."id",'') ILIKE ${text})
+      ORDER BY t."occurredAt" DESC LIMIT 10000`;
+    const items=rows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
+    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction"});
+  }catch(error){next(error)}
+});
+
 export default router;
