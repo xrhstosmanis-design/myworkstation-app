@@ -39,6 +39,7 @@ const enhanceChildWindows=()=>{
 export default function CommerceLauncher(){
   const [visible,setVisible]=useState(false);
   const [mode,setMode]=useState("products");
+  const [legacyView,setLegacyView]=useState("operations");
   const [inventoryStoreId,setInventoryStoreId]=useState("");
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
   const [stores,setStores]=useState([]);
@@ -58,7 +59,7 @@ export default function CommerceLauncher(){
     return()=>observer.disconnect();
   },[visible]);
   const open=async()=>{
-    setMode("products");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
+    setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     try{const list=await request("/api/stores");setStores(list);setInventoryStoreId(list[0]?.id||"")}catch{setStores([]);setInventoryStoreId("")}
   };
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
@@ -66,12 +67,12 @@ export default function CommerceLauncher(){
     if(mode==="inventory"){
       const orderButton=event.target.closest?.(".ia-toolbar button");
       if(orderButton&&String(orderButton.textContent||"").includes("Παραγγελία")){
-        event.preventDefault();event.stopPropagation();setMode("legacy");
+        event.preventDefault();event.stopPropagation();setMode("legacy");setLegacyView("operations");
         window.setTimeout(()=>document.querySelector("[data-purchase-orders-launch]")?.click(),60);
       }
       return;
     }
-    if(mode!=="legacy")return;
+    if(mode!=="legacy"||legacyView!=="operations")return;
     const button=event.target.closest?.(".commerce-hub .commerce-module-strip button");
     if(!button||!String(button.textContent||"").includes("Αποθήκη")||button.disabled)return;
     event.preventDefault();event.stopPropagation();
@@ -86,10 +87,15 @@ export default function CommerceLauncher(){
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
-        <button className={mode==="online"?"active":""} onClick={()=>setMode("online")}><ShoppingBag/>Online Παραγγελίες</button>
-        <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
+        <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>{setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
-      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
+      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>{setMode("legacy");setLegacyView("operations")}}/>:<>
+        <div className="commerce-mode-switch">
+          <button className={legacyView==="operations"?"active":""} onClick={()=>setLegacyView("operations")}>Εμπορικές λειτουργίες</button>
+          <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
+        </div>
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
+      </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
       {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
