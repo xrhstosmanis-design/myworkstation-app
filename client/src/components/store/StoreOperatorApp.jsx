@@ -9,6 +9,25 @@ import "./store-shift-menu.css";
 const n=value=>Number(String(value||"0").replace(",","."))||0;
 const money=value=>n(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const STORE_SYNC_KEY="myworkstation:store-sync";
+const POS_PERMISSION_STYLE_ID="mws-store-pos-runtime-permissions";
+function applyPosPermissionStyle(access){
+ let style=document.getElementById(POS_PERMISSION_STYLE_ID);
+ if(!style){style=document.createElement("style");style.id=POS_PERMISSION_STYLE_ID;document.head.appendChild(style)}
+ if(!access){style.textContent="";return}
+ const rules=[];
+ if(!access.leftKeys)rules.push(".compact-store-mode .standard-quick{display:none!important}");
+ if(!access.stockPos)rules.push(".compact-store-mode .standard-table-head>:nth-child(3),.compact-store-mode .standard-line>:nth-child(3),.compact-store-mode .pos-product-facts>:nth-child(3){display:none!important}");
+ if(!access.customersPos)rules.push(".compact-store-mode .customer-button{display:none!important}");
+ if(!access.changeRetail)rules.push(".compact-store-mode .line-price-action{pointer-events:none!important;cursor:default!important}.compact-store-mode .line-price-action svg{display:none!important}");
+ if(!access.returnItems)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(3),.compact-store-mode .pos-line-actions>button:nth-child(1),.compact-store-mode .pos-line-actions>button:nth-child(2){display:none!important}");
+ if(!access.supplierPayment&&!access.thirdPartyPayment)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(4){display:none!important}");
+ if(!access.addBarcode)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(3){display:none!important}");
+ if(access.hidePrinter)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(4){display:none!important}");
+ if(!access.editDescription)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(5){display:none!important}");
+ if(!access.cards)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(8){display:none!important}");
+ if(!access.cash)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(9){display:none!important}");
+ style.textContent=rules.join("\n");
+}
 export default function StoreOperatorApp({api:baseApi,storeId}){
  const api=async(path,options={})=>{const token=sessionStorage.getItem("storeOperatorToken");const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const text=await response.text();let data={};if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}if(response.status===401){sessionStorage.removeItem("storeOperatorToken");sessionStorage.removeItem("storeOperatorSession")}if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data};
  const [directory,setDirectory]=useState(null),[session,setSession]=useState(()=>{try{const saved=JSON.parse(sessionStorage.getItem("storeOperatorSession")||"null");return saved?.store?.id===storeId?saved:null}catch{return null}}),[runtimeAccess,setRuntimeAccess]=useState(null);
@@ -20,11 +39,12 @@ export default function StoreOperatorApp({api:baseApi,storeId}){
  const pinOperators=useMemo(()=>directory?.operators?.filter(row=>row.hasPin)||[],[directory]),cardEnabled=useMemo(()=>directory?.operators?.some(row=>row.hasCard)||false,[directory]);
  const checkShift=async()=>{if(!session)return;setShiftLoading(true);setError("");try{const result=await api(`/api/cash/stores/${session.store.id}/overview`);setShiftState(result);if(!result.openSession){const s=result.suggestedOpening||{};setShiftForm(form=>({...form,drawer:String(s.drawer||0),custody:String(s.custody||0),coins:String(s.coins||0),safe:String(s.safe||0)}))}}catch(err){setError(err.message)}finally{setShiftLoading(false)}};
  useEffect(()=>{if(session)checkShift()},[session?.store?.id]);
- useEffect(()=>{if(!session){setRuntimeAccess(null);return}api(`/api/store-pos/stores/${session.store.id}`).then(result=>setRuntimeAccess(result.access||{})).catch(()=>setRuntimeAccess({}))},[session?.store?.id]);
+ useEffect(()=>{if(!session){setRuntimeAccess(null);applyPosPermissionStyle(null);return}let alive=true;const refresh=()=>api(`/api/store-pos/stores/${session.store.id}`).then(result=>{if(alive)setRuntimeAccess(result.access||{})}).catch(()=>{if(alive)setRuntimeAccess({})});refresh();const timer=setInterval(refresh,30000);return()=>{alive=false;clearInterval(timer)}},[session?.store?.id]);
+ useEffect(()=>{applyPosPermissionStyle(runtimeAccess);return()=>applyPosPermissionStyle(null)},[runtimeAccess]);
  const remember=result=>{const next={user:result.user,store:result.store,company:result.company};sessionStorage.setItem("storeOperatorToken",result.token);sessionStorage.setItem("storeOperatorSession",JSON.stringify(next));setSession(next);setShiftState(null);setRuntimeAccess(null);setPin("");setCardCode("")};
  const loginPin=async event=>{event.preventDefault();setBusy(true);setError("");try{remember(await api("/api/operators/login/pin",{method:"POST",body:JSON.stringify({storeId,employeeId,pin})}))}catch(err){setError(err.message)}finally{setBusy(false)}};
  const loginCard=async event=>{event.preventDefault();setBusy(true);setError("");try{remember(await api("/api/operators/login/card",{method:"POST",body:JSON.stringify({storeId,cardCode})}))}catch(err){setError(err.message);setCardCode("");setTimeout(()=>cardRef.current?.focus(),50)}finally{setBusy(false)}};
- const logout=async()=>{try{await api("/api/operators/logout",{method:"POST"})}catch{}finally{sessionStorage.removeItem("storeOperatorToken");sessionStorage.removeItem("storeOperatorSession");setSession(null);setDirectory(null);setShiftState(null);setRuntimeAccess(null);setOperatorMenu(false);setShiftView(null)}};
+ const logout=async()=>{try{await api("/api/operators/logout",{method:"POST"})}catch{}finally{sessionStorage.removeItem("storeOperatorToken");sessionStorage.removeItem("storeOperatorSession");setSession(null);setDirectory(null);setShiftState(null);setRuntimeAccess(null);applyPosPermissionStyle(null);setOperatorMenu(false);setShiftView(null)}};
  const changed=()=>{setLedgerVersion(v=>v+1);try{localStorage.setItem(STORE_SYNC_KEY,JSON.stringify({storeId:session?.store?.id||storeId,at:Date.now()}))}catch{}};
  const openShift=async event=>{event.preventDefault();setBusy(true);setError("");try{await api(`/api/cash/stores/${session.store.id}/sessions/open`,{method:"POST",body:JSON.stringify({shiftLabel:shiftForm.shiftLabel,drawer:n(shiftForm.drawer),custody:n(shiftForm.custody),coins:n(shiftForm.coins),safe:n(shiftForm.safe),note:shiftForm.note})});await checkShift();changed()}catch(err){setError(err.message)}finally{setBusy(false)}};
  const canTransactions=Boolean(runtimeAccess?.shiftTransactions),canCloseShift=Boolean(runtimeAccess?.cash),allowAllTransactions=Boolean(runtimeAccess?.allShiftTransactions);
