@@ -48,12 +48,20 @@ async function ensureKatPilotDefaults(){
     JOIN "Company" c ON c."id"=s."companyId"
     WHERE s."active"=TRUE
       AND c."active"=TRUE
-      AND LOWER(c."name")=LOWER('Κυλικείο ΚΑΤ')
       AND LOWER(s."name")=LOWER('Κυλικείο ΚΑΤ')
-      AND EXISTS (SELECT 1 FROM "User" u WHERE u."companyId"=c."id" AND LOWER(u."email")=LOWER('nikirazatou@hotmail.gr'))
-    ORDER BY s."createdAt" ASC LIMIT 1`;
+      AND (
+        EXISTS (SELECT 1 FROM "OnlineOrderingConfig" oc WHERE oc."storeId"=s."id")
+        OR EXISTS (SELECT 1 FROM "OnlineOrder" oo WHERE oo."storeId"=s."id")
+        OR EXISTS (SELECT 1 FROM "User" u WHERE u."companyId"=c."id" AND LOWER(u."email")=LOWER('nikirazatou@hotmail.gr'))
+      )
+    ORDER BY
+      CASE WHEN EXISTS (SELECT 1 FROM "OnlineOrder" oo WHERE oo."storeId"=s."id") THEN 0
+           WHEN EXISTS (SELECT 1 FROM "OnlineOrderingConfig" oc WHERE oc."storeId"=s."id") THEN 1
+           ELSE 2 END,
+      s."createdAt" ASC
+    LIMIT 1`;
   const store=stores[0];if(!store){console.warn("KAT online ordering bootstrap: production KAT store not found; module not auto-enabled.");return}
   await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes","createdAt","updatedAt") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"notes"='KAT pilot online ordering',"updatedAt"=CURRENT_TIMESTAMP`;
-  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE) ON CONFLICT ("storeId") DO NOTHING`;
+  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
 }
 export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();console.log("Online ordering schema/config bootstrap completed.")}
