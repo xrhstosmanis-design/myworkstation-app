@@ -46,14 +46,15 @@ const getGridMeta=head=>{
  const container=head.parentElement;
  if(!container)return null;
  const isKiosk=head.classList.contains("kiosk-tr");
- const rowSelector=isKiosk?":scope > .kiosk-tr:not(.head)":":scope > .tr:not(.th)";
+ const isInventory=head.classList.contains("ia-row");
+ const rowSelector=isKiosk?":scope > .kiosk-tr:not(.head)":isInventory?":scope > .ia-row.data":":scope > .tr:not(.th)";
  return {container,headers:[...head.children],rows:()=>[...container.querySelectorAll(rowSelector)]};
 };
 
 const getMetaFromHeader=header=>{
  const table=header.closest("table");
  if(table)return {container:table,headers:getNativeHeaders(table),rows:()=>getNativeRows(table)};
- const head=header.closest(".kiosk-tr.head,.tr.th");
+ const head=header.closest(".kiosk-tr.head,.tr.th,.ia-row.head");
  return head?getGridMeta(head):null;
 };
 
@@ -87,7 +88,7 @@ const openPopup=(button,header,label)=>{
 };
 
 const decorateHeaders=(headers,meta)=>{
- headers.forEach((header,index)=>{
+ headers.forEach(header=>{
    if(header.dataset.mwsColumnFilterReady==="1")return;
    const label=TEXT(header.textContent);
    header.dataset.mwsColumnFilterReady="1";
@@ -103,7 +104,7 @@ const decorateHeaders=(headers,meta)=>{
 const decorate=()=>{
  if(location.pathname.startsWith("/pos/")||location.pathname.startsWith("/store/"))return;
  document.querySelectorAll("table").forEach(table=>{if(table.closest(".mws-col-filter-popup"))return;const headers=getNativeHeaders(table);if(headers.length<2)return;decorateHeaders(headers,{container:table,headers,rows:()=>getNativeRows(table)})});
- document.querySelectorAll(".kiosk-tr.head,.tr.th").forEach(head=>{const meta=getGridMeta(head);if(meta&&meta.headers.length>1)decorateHeaders(meta.headers,meta)});
+ document.querySelectorAll(".kiosk-tr.head,.tr.th,.ia-row.head").forEach(head=>{const meta=getGridMeta(head);if(meta&&meta.headers.length>1)decorateHeaders(meta.headers,meta)});
 };
 
 export function installBackofficeColumnFilters(){
