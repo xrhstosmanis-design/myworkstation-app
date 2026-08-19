@@ -18,7 +18,9 @@ function LinkSummary({order}){
 }
 
 export default function OnlineOrdersBackofficePanel({api,stores=[]}){
-  const katStores=useMemo(()=>stores.filter(store=>store.id===TEST_STORE_ID||/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||""))),[stores]);
+  const [managedStores,setManagedStores]=useState([]);
+  const fallbackStores=useMemo(()=>stores.filter(store=>store.id===TEST_STORE_ID||/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||""))),[stores]);
+  const katStores=managedStores.length?managedStores:fallbackStores;
   const [storeId,setStoreId]=useState("");
   const [rows,setRows]=useState([]);
   const [loading,setLoading]=useState(false);
@@ -28,6 +30,14 @@ export default function OnlineOrdersBackofficePanel({api,stores=[]}){
   const [expanded,setExpanded]=useState(null);
 
   useEffect(()=>{
+    let active=true;
+    api("/api/public/kat/backoffice-managed/stores",{cache:"no-store"})
+      .then(data=>{if(active)setManagedStores(Array.isArray(data?.stores)?data.stores:[])})
+      .catch(()=>{});
+    return()=>{active=false};
+  },[api]);
+
+  useEffect(()=>{
     if(katStores.some(store=>store.id===storeId))return;
     setStoreId(katStores[0]?.id||"");
   },[katStores,storeId]);
@@ -35,7 +45,7 @@ export default function OnlineOrdersBackofficePanel({api,stores=[]}){
   const load=async()=>{
     if(!storeId){setRows([]);return}
     setLoading(true);setError("");
-    try{const data=await api(`/api/public/kat/backoffice/stores/${encodeURIComponent(storeId)}/orders?limit=250`,{cache:"no-store"});setRows(data.rows||[])}catch(e){setError(e.message);setRows([])}finally{setLoading(false)}
+    try{const data=await api(`/api/public/kat/backoffice-managed/stores/${encodeURIComponent(storeId)}/orders?limit=250`,{cache:"no-store"});setRows(data.rows||[])}catch(e){setError(e.message);setRows([])}finally{setLoading(false)}
   };
   useEffect(()=>{load()},[storeId]);
 
@@ -62,13 +72,13 @@ export default function OnlineOrdersBackofficePanel({api,stores=[]}){
     </div>
 
     <div className="online-bo-toolbar">
-      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{katStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
+      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{katStores.map(store=><option key={store.id} value={store.id}>{store.isTest?"TEST · Online Παραγγελίες":store.name}</option>)}</select></label>
       <label>Κατάσταση<select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλες</option><option value="NEW">Νέες</option><option value="ACCEPTED">Αποδοχή</option><option value="PREPARING">Ετοιμάζεται</option><option value="READY">Έτοιμη</option><option value="OUT_FOR_DELIVERY">Delivery</option><option value="DELIVERED">Παραδόθηκε</option><option value="CANCELLED">Ακυρώθηκε</option></select></label>
       <label className="online-bo-search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Αρ. παραγγελίας, πελάτης, τηλέφωνο…"/></label>
     </div>
 
     {error&&<div className="online-bo-error">{error}</div>}
-    {!katStores.length&&<div className="online-bo-empty">Δεν βρέθηκε κατάστημα με ενεργές Online Παραγγελίες στον λογαριασμό.</div>}
+    {!katStores.length&&<div className="online-bo-empty">Δεν βρέθηκε κατάστημα με Online Παραγγελίες στον λογαριασμό.</div>}
     {katStores.length&&!loading&&!filtered.length&&<div className="online-bo-empty">Δεν υπάρχουν παραγγελίες για τα επιλεγμένα φίλτρα.</div>}
 
     <div className="online-bo-list">{filtered.map(order=>{
