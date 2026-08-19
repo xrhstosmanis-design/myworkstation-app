@@ -14,14 +14,41 @@ const statements=[
   "cashEnabled" BOOLEAN NOT NULL DEFAULT true,
   "cardOnDeliveryEnabled" BOOLEAN NOT NULL DEFAULT true,
   "autoPrintOnAccept" BOOLEAN NOT NULL DEFAULT true,
+  "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false,
+  "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "staffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0,
+  "permanentStaffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "OnlineOrderingConfig_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "OnlineOrderingConfig_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "OnlineOrderingConfig_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "staffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "permanentStaffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "OnlineOrderingConfig_store_key" ON "OnlineOrderingConfig"("storeId")`,
 `CREATE INDEX IF NOT EXISTS "OnlineOrderingConfig_company_idx" ON "OnlineOrderingConfig"("companyId")`,
+`CREATE TABLE IF NOT EXISTS "OnlineProductVisibility" (
+  "id" TEXT NOT NULL,
+  "companyId" TEXT NOT NULL,
+  "storeId" TEXT NOT NULL,
+  "productId" TEXT NOT NULL,
+  "visible" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "OnlineProductVisibility_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "OnlineProductVisibility_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "OnlineProductVisibility_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "OnlineProductVisibility_product_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE
+)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "OnlineProductVisibility_store_product_key" ON "OnlineProductVisibility"("storeId","productId")`,
+`CREATE INDEX IF NOT EXISTS "OnlineProductVisibility_store_visible_idx" ON "OnlineProductVisibility"("storeId","visible")`,
 `CREATE TABLE IF NOT EXISTS "OnlineOrder" (
   "id" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"orderNumber" TEXT NOT NULL,"channel" TEXT NOT NULL DEFAULT 'ONLINE',"fulfillmentType" TEXT NOT NULL DEFAULT 'DELIVERY',"status" TEXT NOT NULL DEFAULT 'NEW',"paymentMethod" TEXT NOT NULL,"paymentStatus" TEXT NOT NULL DEFAULT 'PENDING',"customerName" TEXT NOT NULL,"customerPhone" TEXT NOT NULL,"building" TEXT,"floor" TEXT,"department" TEXT,"room" TEXT,"deliveryNotes" TEXT,"subtotal" DECIMAL(14,4) NOT NULL DEFAULT 0,"deliveryFee" DECIMAL(14,4) NOT NULL DEFAULT 0,"total" DECIMAL(14,4) NOT NULL DEFAULT 0,"idempotencyKey" TEXT NOT NULL,"assignedEmployeeId" TEXT,"saleId" TEXT,"commercialPostedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"acceptedAt" TIMESTAMP(3),"readyAt" TIMESTAMP(3),"deliveredAt" TIMESTAMP(3),"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "OnlineOrder_pkey" PRIMARY KEY ("id"),CONSTRAINT "OnlineOrder_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "OnlineOrder_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "OnlineOrder_employee_fkey" FOREIGN KEY ("assignedEmployeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -62,6 +89,7 @@ async function ensureKatPilotDefaults(){
     LIMIT 1`;
   const store=stores[0];if(!store){console.warn("KAT online ordering bootstrap: production KAT store not found; module not auto-enabled.");return}
   await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes","createdAt","updatedAt") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"notes"='KAT pilot online ordering',"updatedAt"=CURRENT_TIMESTAMP`;
-  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
+  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
+  await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
 export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();console.log("Online ordering schema/config bootstrap completed.")}
