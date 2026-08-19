@@ -1,6 +1,8 @@
 const pending=new Map();
 const TTL_MS=2*60*1000;
 let installed=false;
+let katOnlineSessionTimer=null;
+let katOnlineBootstrapStarted=false;
 
 const makeUuid=()=>globalThis.crypto?.randomUUID?.()||`xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:(r&3|8);return v.toString(16)});
 const delayedContext=()=>globalThis.__mwsPosDelayedSaleContext||null;
@@ -8,7 +10,25 @@ const stableKey=(body,delayed)=>JSON.stringify({items:body?.items||[],customerId
 const cleanExpired=()=>{const now=Date.now();for(const [key,value] of pending)if(now-value.createdAt>TTL_MS)pending.delete(key)};
 const jsonResponse=(payload,status=409)=>new Response(JSON.stringify(payload),{status,headers:{"Content-Type":"application/json"}});
 
+const syncKatOnlineOperatorSession=()=>{
+  if(!globalThis.location||!/^\/pos\/[^/]+\/?$/.test(globalThis.location.pathname))return false;
+  try{
+    const operatorSession=localStorage.getItem("storeOperatorSession");
+    const operatorToken=localStorage.getItem("token");
+    if(operatorSession)sessionStorage.setItem("storeOperatorSession",operatorSession);else sessionStorage.removeItem("storeOperatorSession");
+    if(operatorToken)sessionStorage.setItem("storeOperatorToken",operatorToken);else sessionStorage.removeItem("storeOperatorToken");
+    return true;
+  }catch{return false}
+};
+const installKatOnlineOrdersPos=()=>{
+  if(!syncKatOnlineOperatorSession()||katOnlineBootstrapStarted)return;
+  katOnlineBootstrapStarted=true;
+  if(!katOnlineSessionTimer)katOnlineSessionTimer=globalThis.setInterval(syncKatOnlineOperatorSession,500);
+  import("./kat-online-orders-pos-bootstrap.js").catch(error=>console.error("KAT online orders POS bootstrap failed",error));
+};
+
 export function installPosCheckoutSafety(){
+  installKatOnlineOrdersPos();
   if(installed||globalThis.__mwsPosCheckoutSafetyInstalled)return;
   installed=true;globalThis.__mwsPosCheckoutSafetyInstalled=true;
   const nativeFetch=globalThis.fetch.bind(globalThis);
