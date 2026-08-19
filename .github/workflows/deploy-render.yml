@@ -1,0 +1,41 @@
+name: Deploy MyWorkStation to Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: render-production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Missing GitHub Actions secret: RENDER_DEPLOY_HOOK_URL"
+            echo "Create a Render Deploy Hook for service myworkstation-app and save it as this repository secret."
+            exit 1
+          fi
+
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 5 -X POST "$RENDER_DEPLOY_HOOK_URL"
+
+      - name: Wait for production health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error https://myworkstation-app.onrender.com/api/health > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Render service did not become healthy in time."
+          exit 1
