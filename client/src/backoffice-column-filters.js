@@ -61,7 +61,11 @@ const GRID_SPECS=[
  {head:".mexp-row.head",rows:".mexp-list > .mexp-row:not(.head)"},
  {head:".mprof-row.head",rows:".mprof-list > .mprof-row:not(.head)"},
  {head:".mmod-group-head",rows:".mmod-list > .mmod-group-row"},
- {head:".mmod-item-head",rows:":scope > .mmod-item-row"}
+ {head:".mmod-item-head",rows:":scope > .mmod-item-row"},
+ {head:".capital-row.head",rows:":scope > .capital-row:not(.head):not(.totals)"},
+ {head:".shift-row.head",rows:":scope > .shift-row:not(.head)"},
+ {head:".category-row.head",rows:":scope > .category-row:not(.head)"},
+ {head:".drawer-row.head",rows:":scope > .drawer-row:not(.head):not(.totals)"}
 ];
 
 const getGridMeta=head=>{
