@@ -68,6 +68,93 @@ export const onlineUnitPrice=(storePrice,config={})=>{const base=Number(storePri
 export const onlineSurchargeAmount=(storePrice,config={})=>Math.round((onlineUnitPrice(storePrice,config)-Number(storePrice||0))*100)/100;
 export async function getOnlineOrderingConfig(storeId){const rows=await prisma.$queryRaw`SELECT * FROM "OnlineOrderingConfig" WHERE "storeId"=${storeId} LIMIT 1`;return rows[0]||null}
 
+async function ensureRecipeIngredientsTracked(){
+  try{
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Product" p
+      SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP
+      WHERE p."active"=TRUE
+        AND p."trackStock"=FALSE
+        AND EXISTS (
+          SELECT 1 FROM "PreparationRecipeLine" r
+          WHERE r."ingredientProductId"=p."id" AND r."automatic"=TRUE
+        )
+    `);
+  }catch(error){console.warn("Online ordering recipe stock tracking reconcile skipped:",error?.message||error)}
+}
+
+async function reconcileDeliveredOnlineSales(){
+  try{
+    await prisma.$executeRawUnsafe(`
+      WITH delivered AS (
+        SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",
+               COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
+               COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+        FROM "OnlineOrder" o
+        LEFT JOIN LATERAL (
+          SELECT e."employeeId" FROM "OnlineOrderStatusEvent" e
+          WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
+          ORDER BY e."createdAt" DESC LIMIT 1
+        ) ev ON TRUE
+        WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+      ), resolved AS (
+        SELECT d.*,c."id" AS "operatorId",c."displayName" AS "operatorName",
+               COALESCE(
+                 (SELECT cs."id" FROM "CashShiftSession" cs
+                  WHERE cs."companyId"=d."companyId" AND cs."storeId"=d."storeId"
+                    AND cs."status"='OPEN' AND c."id" IS NOT NULL AND cs."openedBy"=c."id"
+                  ORDER BY cs."openedAt" DESC LIMIT 1),
+                 (SELECT cs."id" FROM "CashShiftSession" cs
+                  WHERE cs."companyId"=d."companyId" AND cs."storeId"=d."storeId" AND cs."status"='OPEN'
+                  ORDER BY cs."openedAt" DESC LIMIT 1)
+               ) AS "sessionId"
+        FROM delivered d
+        LEFT JOIN "StoreOperatorCredential" c ON c."storeId"=d."storeId" AND c."employeeId"=d."employeeId" AND c."active"=TRUE
+      )
+      UPDATE "Sale" s
+      SET "operatorEmployeeId"=COALESCE(r."employeeId",s."operatorEmployeeId"),
+          "createdAt"=COALESCE(r."postedAt",s."createdAt")
+      FROM resolved r
+      WHERE s."id"=r."saleId"
+    `);
+    await prisma.$executeRawUnsafe(`
+      WITH delivered AS (
+        SELECT o."saleId",o."storeId",o."companyId",o."orderNumber",
+               COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
+               COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+        FROM "OnlineOrder" o
+        LEFT JOIN LATERAL (
+          SELECT e."employeeId" FROM "OnlineOrderStatusEvent" e
+          WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
+          ORDER BY e."createdAt" DESC LIMIT 1
+        ) ev ON TRUE
+        WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+      ), resolved AS (
+        SELECT d.*,c."id" AS "operatorId",c."displayName" AS "operatorName",
+               COALESCE(
+                 (SELECT cs."id" FROM "CashShiftSession" cs
+                  WHERE cs."companyId"=d."companyId" AND cs."storeId"=d."storeId"
+                    AND cs."status"='OPEN' AND c."id" IS NOT NULL AND cs."openedBy"=c."id"
+                  ORDER BY cs."openedAt" DESC LIMIT 1),
+                 (SELECT cs."id" FROM "CashShiftSession" cs
+                  WHERE cs."companyId"=d."companyId" AND cs."storeId"=d."storeId" AND cs."status"='OPEN'
+                  ORDER BY cs."openedAt" DESC LIMIT 1)
+               ) AS "sessionId"
+        FROM delivered d
+        LEFT JOIN "StoreOperatorCredential" c ON c."storeId"=d."storeId" AND c."employeeId"=d."employeeId" AND c."active"=TRUE
+      )
+      UPDATE "StoreTransaction" t
+      SET "sessionId"=COALESCE(r."sessionId",t."sessionId"),
+          "actorId"=COALESCE(r."operatorId",t."actorId"),
+          "actorName"=COALESCE(r."operatorName",t."actorName"),
+          "occurredAt"=COALESCE(r."postedAt",t."occurredAt")
+      FROM resolved r
+      WHERE t."storeId"=r."storeId"
+        AND t."description" LIKE ('ONLINE ' || r."orderNumber" || ' ·%')
+    `);
+  }catch(error){console.warn("Online ordering commercial reconcile skipped:",error?.message||error)}
+}
+
 async function ensureKatPilotDefaults(){
   const stores=await prisma.$queryRaw`
     SELECT s."id",s."companyId"
@@ -92,4 +179,4 @@ async function ensureKatPilotDefaults(){
   await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
-export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();console.log("Online ordering schema/config bootstrap completed.")}
+export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}
