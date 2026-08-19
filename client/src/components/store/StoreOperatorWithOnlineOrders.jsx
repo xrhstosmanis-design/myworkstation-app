@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from "react";
 import StoreOperatorApp from "./StoreOperatorApp.jsx";
-import StoreOnlineOrders from "./StoreOnlineOrders.jsx";
+import StoreOnlineOrders from "./StoreOnlineOrdersV2.jsx";
 
 const readSession=()=>{try{return JSON.parse(sessionStorage.getItem("storeOperatorSession")||"null")}catch{return null}};
 
