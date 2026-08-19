@@ -80,6 +80,13 @@ function enforceStorePosPermissions(req,res,permissions){
   return true;
 }
 
+function exposeStorePosRuntimeAccess(req,res,rights){
+  const path=String(req.originalUrl||"").split("?")[0];
+  if(req.method!=="GET"||!/^\/api\/store-pos\/stores\/[^/]+$/.test(path))return;
+  const send=res.json.bind(res);
+  res.json=body=>send({...body,access:{...(body?.access||{}),...rights}});
+}
+
 export async function auth(req,res,next){
   const token=req.headers.authorization?.replace("Bearer ","");
   if(!token)return res.status(401).json({error:"Απαιτείται σύνδεση."});
@@ -124,9 +131,11 @@ export async function auth(req,res,next){
         return res.status(401).json({error:"Ο ρόλος Store Mode άλλαξε. Συνδεθείτε ξανά.",code:"STORE_OPERATOR_ROLE_CHANGED"});
       }
       prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "lastSeenAt"=NOW() WHERE "id"=${payload.operatorSessionId} AND "lastSeenAt"<NOW()-INTERVAL '5 minutes'`.catch(()=>{});
-      const permissions=storeRuntimePermissions({posAccess:operator.posAccess,permissions:operator.profilePermissions});
+      const rights=operator.profilePermissions&&typeof operator.profilePermissions==="object"?operator.profilePermissions:{};
+      const permissions=storeRuntimePermissions({posAccess:operator.posAccess,permissions:rights});
       if(!enforceStorePaymentPermissions(req,res,permissions))return;
       if(!enforceStorePosPermissions(req,res,permissions))return;
+      exposeStorePosRuntimeAccess(req,res,rights);
       const posOcrJobCreate=req.method==="POST"&&String(req.originalUrl||"").split("?")[0]==="/api/commerce/ai-reader/jobs";
       req.user={...payload,id:posOcrJobCreate?null:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
       return next();
