@@ -11,34 +11,40 @@ function Pad({value,onChange}){const press=k=>{const c=String(value??"");if(k===
 
 export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMessage,setError}){
  const storeKey=String(store?.id||"default"),initialType=paymentTabByStore.get(storeKey)||"OTHER_EXPENSE";
- const [busy,setBusy]=useState(false),[ledger,setLedger]=useState(null),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
+ const [busy,setBusy]=useState(false),[ledger,setLedger]=useState(null),[access,setAccess]=useState(null),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
  const [form,setForm]=useState({type:initialType,amount:"",description:"",subtractFromShift:true,file:null});
  const setPaymentType=type=>{paymentTabByStore.set(storeKey,type);setForm(c=>({...c,type}))};
  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
  useEffect(()=>{
   api(`/api/transactions/stores/${store.id}/overview`).then(setLedger).catch(e=>setError(e.message));
+  api(`/api/store-pos/stores/${store.id}`).then(result=>setAccess(result?.access||{})).catch(e=>setError(e.message));
   api("/api/commerce/ai-reader/capability").then(()=>setPremiumInvoice(true)).catch(()=>setPremiumInvoice(false));
   return()=>stopCamera();
  },[]);
+ useEffect(()=>{if(!access)return;const canSupplier=access.supplierPayment!==false,canOther=access.thirdPartyPayment!==false;if(form.type==="SUPPLIER_PAYMENT"&&!canSupplier&&canOther)setPaymentType("OTHER_EXPENSE");else if(form.type==="OTHER_EXPENSE"&&!canOther&&canSupplier)setPaymentType("SUPPLIER_PAYMENT")},[access]);
+ const canSupplier=access?.supplierPayment!==false,canOther=access?.thirdPartyPayment!==false,hasPaymentAccess=canSupplier||canOther;
  const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setError("Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.")}};
  const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{if(!blob)return;setForm(x=>({...x,file:new File([blob],`parastatiko-${Date.now()}.jpg`,{type:"image/jpeg"})}));stopCamera()},"image/jpeg",.9)};
- const submitOther=async()=>{const amount=num(form.amount);if(amount<=0)return setError("Βάλε ποσό πληρωμής.");if(!form.file)return setError("Βγάλε ή επίλεξε φωτογραφία παραστατικού.");setBusy(true);try{const dataUrl=await fileToDataUrl(form.file);await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type:"OTHER_EXPENSE",amount,description:form.description||null,subtractFromShift:Boolean(form.subtractFromShift),attachment:{dataUrl,filename:form.file.name||"parastatiko.jpg"}})});setError?.("");setMessage(`Το έξοδο ${euro(amount)} καταχωρίστηκε στη βάρδια και στο BackOffice.`);onChanged?.();onClose()}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const submitOther=async()=>{if(!canOther)return setError("Δεν έχεις δικαίωμα Πληρωμής προς Τρίτους από το BackOffice.");const amount=num(form.amount);if(amount<=0)return setError("Βάλε ποσό πληρωμής.");if(!form.file)return setError("Βγάλε ή επίλεξε φωτογραφία παραστατικού.");setBusy(true);try{const dataUrl=await fileToDataUrl(form.file);await api(`/api/transactions/stores/${store.id}`,{method:"POST",body:JSON.stringify({type:"OTHER_EXPENSE",amount,description:form.description||null,subtractFromShift:Boolean(form.subtractFromShift),attachment:{dataUrl,filename:form.file.name||"parastatiko.jpg"}})});setError?.("");setMessage(`Το έξοδο ${euro(amount)} καταχωρίστηκε στη βάρδια και στο BackOffice.`);onChanged?.();onClose()}catch(e){setError(e.message)}finally{setBusy(false)}};
  const supplierMode=form.type==="SUPPLIER_PAYMENT",suppliers=ledger?.suppliers||[];
  const invoiceChanged=()=>{onChanged?.()};
  const invoiceMessage=message=>{const success=String(message||"").startsWith("✅");if(success)setError?.("");setMessage?.(message);if(success)onClose?.()};
- const supplierInvoice=premiumInvoice===null
-  ?<div style={{padding:16,fontWeight:800}}>Έλεγχος διαθέσιμου module…</div>
-  :premiumInvoice
-   ?<StoreSupplierInvoicePremiumFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>
-   :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
+ const supplierInvoice=!canSupplier
+  ?<div style={{padding:16,fontWeight:800}}>Δεν έχεις δικαίωμα Πληρωμής Προμηθευτή από το BackOffice.</div>
+  :premiumInvoice===null
+   ?<div style={{padding:16,fontWeight:800}}>Έλεγχος διαθέσιμου module…</div>
+   :premiumInvoice
+    ?<StoreSupplierInvoicePremiumFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>
+    :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
  return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
+  {!access?<div style={{padding:16,fontWeight:800}}>Έλεγχος δικαιωμάτων χειριστή…</div>:!hasPaymentAccess?<div style={{padding:16,fontWeight:800}}>Δεν έχεις ενεργό δικαίωμα πληρωμών από το BackOffice.</div>:<>
   <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>{premiumInvoice?"PREMIUM AI READER — FAST στοιχεία / πληρωμή, προϊόντα στο background":"STANDARD — απλή καταχώριση πληρωμής προμηθευτή"}</small></div>
-  <div className="pos-payment-types"><button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setPaymentType("OTHER_EXPENSE")}>Λοιπά έξοδα</button><button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setPaymentType("SUPPLIER_PAYMENT")}>Πληρωμή προμηθευτή</button></div>
+  <div className="pos-payment-types">{canOther&&<button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setPaymentType("OTHER_EXPENSE")}>Λοιπά έξοδα</button>}{canSupplier&&<button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setPaymentType("SUPPLIER_PAYMENT")}>Πληρωμή προμηθευτή</button>}</div>
   {supplierMode?supplierInvoice:<div className="pos-payment-form">
    <label>Ποσό<input readOnly inputMode="decimal" value={form.amount}/></label><Pad value={form.amount} onChange={amount=>setForm(c=>({...c,amount}))}/><label>Παρατηρήσεις<input value={form.description} onChange={e=>setForm(c=>({...c,description:e.target.value}))}/></label>
    <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><Camera/> Επιλογή αρχείου<input type="file" accept="image/*,application/pdf" onChange={e=>setForm(c=>({...c,file:e.target.files?.[0]||null}))}/></label><b>{form.file?.name||"Δεν επιλέχθηκε φωτογραφία"}</b></div>
    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
    <label className="pos-check"><input type="checkbox" checked={form.subtractFromShift} onChange={e=>setForm(c=>({...c,subtractFromShift:e.target.checked}))}/>Αφαίρεση από τα μετρητά της βάρδιας</label><button className="pos-primary-action" disabled={busy} onClick={submitOther}><Wallet/> Καταχώριση εξόδου</button>
-  </div>}
+  </div>}</>}
  </div></main></section></div>
 }
