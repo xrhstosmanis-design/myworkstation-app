@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 const root = new URL("../", import.meta.url);
 const defaultsPath = new URL("src/kat-preparation-defaults.js", root);
 const enginePath = new URL("src/routes/store-preparation.js", root);
+const cleanupPath = new URL("src/kat-preparation-cleanup.js", root);
 
 function patchFile(url, transform) {
   const path = url.pathname;
@@ -30,6 +31,25 @@ function patchDefaults(source) {
   // Legacy fixed milk mappings must never be recreated. The selected milk inherits
   // the exact ML from the recipe slot (70, 100, 120, 180, etc.).
   s = s.replace(/\n await set\("ΓΑΛΑ","ΓΑΛΑ ΕΒΑΠΟΡΕ"[\s\S]*?await set\("ΓΑΛΑ","ΓΑΛΑ ΣΟΓΙΑΣ",ingredientSku\.soy,80,"ML"\);/m, "");
+  return s;
+}
+
+function patchCleanup(source) {
+  let s = source;
+
+  // KAT cleanup used to recreate the five fixed 80 ML milk mappings after startup.
+  // Milk is now REPLACE semantics, so cleanup must never create/update milk consumption rows.
+  s = s.replace(/^\s*\["ΓΑΛΑ","ΓΑΛΑ ΕΒΑΠΟΡΕ"[^\n]*\n/gm, "");
+  s = s.replace(/^\s*\["ΓΑΛΑ","ΧΩΡΙΣ ΛΑΚΤΟΖΗ"[^\n]*\n/gm, "");
+  s = s.replace(/^\s*\["ΓΑΛΑ","ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ"[^\n]*\n/gm, "");
+  s = s.replace(/^\s*\["ΓΑΛΑ","ΓΑΛΑ ΒΡΩΜΗΣ"[^\n]*\n/gm, "");
+  s = s.replace(/^\s*\["ΓΑΛΑ","ΓΑΛΑ ΣΟΓΙΑΣ"[^\n]*\n/gm, "");
+
+  const loop = ' for(const [groupName,modifierName,ingredientSku,quantity,unit] of MODIFIER_TARGETS){';
+  const guarded = ' for(const [groupName,modifierName,ingredientSku,quantity,unit] of MODIFIER_TARGETS){\n   if(groupName==="ΓΑΛΑ")continue;';
+  if (s.includes(loop) && !s.includes('if(groupName==="ΓΑΛΑ")continue;')) {
+    s = s.replace(loop, guarded);
+  }
   return s;
 }
 
@@ -144,9 +164,10 @@ async function ensureMilkSlotProduct() {
 
 async function main() {
   patchFile(defaultsPath, patchDefaults);
+  patchFile(cleanupPath, patchCleanup);
   patchFile(enginePath, patchEngine);
   await ensureMilkSlotProduct();
-  console.log("Canonical milk-slot preparation model activated; legacy fixed milk consumption removed.");
+  console.log("Canonical milk-slot model activated; KAT cleanup cannot restore fixed milk quantities.");
 }
 
 main()
