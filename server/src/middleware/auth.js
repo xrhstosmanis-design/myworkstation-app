@@ -65,6 +65,12 @@ function enforceStorePosPermissions(req,res,permissions){
     const manualPrice=(Array.isArray(req.body?.items)?req.body.items:[]).some(item=>item?.unitPriceOverride!==undefined&&item?.unitPriceOverride!==null);
     if(manualPrice&&!permissions.includes("CHANGE_RETAIL"))return deny("Δεν έχεις δικαίωμα «Αλλαγή τιμής λιανικής» από το BackOffice.");
   }
+  if(req.method==="GET"&&/\/sales\/recent$/.test(path)&&!permissions.includes("RETURN_ITEMS")&&!permissions.includes("TRANSACTION_REVERSAL")){
+    return deny("Δεν έχεις δικαίωμα προβολής πωλήσεων για επιστροφή/διόρθωση από το BackOffice.");
+  }
+  if(req.method==="POST"&&/\/sales\/[^/]+\/delayed$/.test(path)&&!permissions.includes("TRANSACTION_REVERSAL")){
+    return deny("Η ετεροχρονισμένη διόρθωση απαιτεί «Όλες οι συναλλαγές βάρδιας (PoS)» από το BackOffice.");
+  }
   if(req.method==="POST"&&(/\/sales\/[^/]+\/(reverse|return-items)$/.test(path)||/\/exchange$/.test(path))&&!permissions.includes("RETURN_ITEMS")){
     return deny("Δεν έχεις δικαίωμα «Επιστροφή ειδών» από το BackOffice.");
   }
