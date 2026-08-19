@@ -85,110 +85,96 @@ async function ensureRecipeIngredientsTracked(){
 
 async function reconcileDeliveredOnlineSales(){
   try{
-    await prisma.$executeRawUnsafe(`
-      WITH delivered AS (
-        SELECT o."saleId",o."storeId",o."companyId",
-               COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
-               COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
-        FROM "OnlineOrder" o
-        LEFT JOIN LATERAL (
-          SELECT e."employeeId" FROM "OnlineOrderStatusEvent" e
-          WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
-          ORDER BY e."createdAt" DESC LIMIT 1
-        ) ev ON TRUE
-        WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
-      )
-      UPDATE "Sale" s
-      SET "operatorEmployeeId"=COALESCE(d."employeeId",s."operatorEmployeeId"),
-          "createdAt"=COALESCE(d."postedAt",s."createdAt")
-      FROM delivered d
-      WHERE s."id"=d."saleId"
-    `);
-  }catch(error){console.warn("Online ordering sale reconcile skipped:",error?.message||error)}
-
-  try{
-    await prisma.$executeRawUnsafe(`
-      WITH delivered AS (
-        SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
-               COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
-               COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
-        FROM "OnlineOrder" o
-        LEFT JOIN LATERAL (
-          SELECT e."employeeId" FROM "OnlineOrderStatusEvent" e
-          WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
-          ORDER BY e."createdAt" DESC LIMIT 1
-        ) ev ON TRUE
-        WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
-      ), resolved AS (
-        SELECT d.*,cs."id" AS "sessionId",
-               COALESCE(c."id",cs."openedBy") AS "operatorId",
-               COALESCE(c."displayName",cs."openedByName",'Online') AS "operatorName"
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRawUnsafe(`
+        WITH delivered AS (
+          SELECT o."saleId",
+                 COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          LEFT JOIN LATERAL (
+            SELECT e."employeeId"
+            FROM "OnlineOrderStatusEvent" e
+            WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
+            ORDER BY e."createdAt" DESC LIMIT 1
+          ) ev ON TRUE
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+        )
+        UPDATE "Sale" s
+        SET "operatorEmployeeId"=COALESCE(d."employeeId",s."operatorEmployeeId"),
+            "createdAt"=COALESCE(d."postedAt",s."createdAt")
         FROM delivered d
-        LEFT JOIN LATERAL (
-          SELECT s."id",s."openedBy",s."openedByName"
-          FROM "CashShiftSession" s
-          WHERE s."companyId"=d."companyId" AND s."storeId"=d."storeId" AND s."status"='OPEN'
-          ORDER BY s."openedAt" DESC LIMIT 1
-        ) cs ON TRUE
-        LEFT JOIN "StoreOperatorCredential" c
-          ON c."storeId"=d."storeId" AND c."employeeId"=d."employeeId" AND c."active"=TRUE
-      )
-      UPDATE "StoreTransaction" t
-      SET "sessionId"=COALESCE(r."sessionId",t."sessionId"),
-          "type"=CASE WHEN r."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
-          "amount"=r."total",
-          "description"='ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || r."orderNumber",
-          "actorId"=COALESCE(r."operatorId",t."actorId"),
-          "actorName"=COALESCE(r."operatorName",t."actorName"),
-          "occurredAt"=COALESCE(r."postedAt",t."occurredAt")
-      FROM resolved r
-      WHERE t."storeId"=r."storeId"
-        AND t."companyId"=r."companyId"
-        AND t."description" ILIKE ('%' || r."orderNumber" || '%')
-    `);
-  }catch(error){console.warn("Online ordering transaction update reconcile skipped:",error?.message||error)}
+        WHERE s."id"=d."saleId"
+      `);
 
-  try{
-    await prisma.$executeRawUnsafe(`
-      WITH delivered AS (
-        SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
-               COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
-               COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
-        FROM "OnlineOrder" o
-        LEFT JOIN LATERAL (
-          SELECT e."employeeId" FROM "OnlineOrderStatusEvent" e
-          WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
-          ORDER BY e."createdAt" DESC LIMIT 1
-        ) ev ON TRUE
-        WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
-      ), resolved AS (
-        SELECT d.*,cs."id" AS "sessionId",
-               COALESCE(c."id",cs."openedBy") AS "operatorId",
-               COALESCE(c."displayName",cs."openedByName",'Online') AS "operatorName"
-        FROM delivered d
-        JOIN LATERAL (
-          SELECT s."id",s."openedBy",s."openedByName"
-          FROM "CashShiftSession" s
-          WHERE s."companyId"=d."companyId" AND s."storeId"=d."storeId" AND s."status"='OPEN'
-          ORDER BY s."openedAt" DESC LIMIT 1
-        ) cs ON TRUE
-        LEFT JOIN "StoreOperatorCredential" c
-          ON c."storeId"=d."storeId" AND c."employeeId"=d."employeeId" AND c."active"=TRUE
-      )
-      INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName","occurredAt","createdAt")
-      SELECT 'online-order-' || r."orderId",r."companyId",r."storeId",r."sessionId",
-             CASE WHEN r."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
-             r."total",'ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || r."orderNumber",r."operatorId",r."operatorName",r."postedAt",CURRENT_TIMESTAMP
-      FROM resolved r
-      WHERE r."operatorId" IS NOT NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM "StoreTransaction" t
-          WHERE t."companyId"=r."companyId" AND t."storeId"=r."storeId"
+      await tx.$executeRawUnsafe(`
+        WITH delivered AS (
+          SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+        ), resolved AS (
+          SELECT d.*,cs."id" AS "sessionId",cs."openedBy" AS "actorId",COALESCE(cs."openedByName",'Online') AS "actorName"
+          FROM delivered d
+          JOIN LATERAL (
+            SELECT s."id",s."openedBy",s."openedByName",s."openedAt"
+            FROM "CashShiftSession" s
+            WHERE s."companyId"=d."companyId"
+              AND s."storeId"=d."storeId"
+              AND s."status"='OPEN'
+              AND s."openedAt"<=d."postedAt"
+            ORDER BY s."openedAt" DESC LIMIT 1
+          ) cs ON TRUE
+        )
+        UPDATE "StoreTransaction" t
+        SET "sessionId"=r."sessionId",
+            "type"=CASE WHEN r."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
+            "amount"=r."total",
+            "description"='ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || r."orderNumber",
+            "actorId"=r."actorId",
+            "actorName"=r."actorName",
+            "occurredAt"=r."postedAt"
+        FROM resolved r
+        WHERE t."companyId"=r."companyId"
+          AND t."storeId"=r."storeId"
+          AND t."description" ILIKE ('%' || r."orderNumber" || '%')
+      `);
+
+      await tx.$executeRawUnsafe(`
+        WITH delivered AS (
+          SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+        ), resolved AS (
+          SELECT d.*,cs."id" AS "sessionId",cs."openedBy" AS "actorId",COALESCE(cs."openedByName",'Online') AS "actorName"
+          FROM delivered d
+          JOIN LATERAL (
+            SELECT s."id",s."openedBy",s."openedByName",s."openedAt"
+            FROM "CashShiftSession" s
+            WHERE s."companyId"=d."companyId"
+              AND s."storeId"=d."storeId"
+              AND s."status"='OPEN'
+              AND s."openedAt"<=d."postedAt"
+            ORDER BY s."openedAt" DESC LIMIT 1
+          ) cs ON TRUE
+        )
+        INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName","occurredAt","createdAt")
+        SELECT 'online-order-' || r."orderId",r."companyId",r."storeId",r."sessionId",
+               CASE WHEN r."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
+               r."total",'ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || r."orderNumber",r."actorId",r."actorName",r."postedAt",CURRENT_TIMESTAMP
+        FROM resolved r
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM "StoreTransaction" t
+          WHERE t."companyId"=r."companyId"
+            AND t."storeId"=r."storeId"
             AND t."description" ILIKE ('%' || r."orderNumber" || '%')
         )
-      ON CONFLICT ("id") DO NOTHING
-    `);
-  }catch(error){console.warn("Online ordering transaction insert reconcile skipped:",error?.message||error)}
+        ON CONFLICT ("id") DO NOTHING
+      `);
+    });
+  }catch(error){console.warn("Online ordering active-shift reconcile failed:",error?.message||error)}
 }
 
 async function ensureKatPilotDefaults(){
