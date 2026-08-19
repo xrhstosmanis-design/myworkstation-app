@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w client && npm run prisma:generate -w server",
+    "build": "node client/scripts/restore-pos-modifier-groups.js && npm run build -w client && npm run prisma:generate -w server",
     "start": "npm run start -w server",
     "seed": "npm run seed -w server"
   },
