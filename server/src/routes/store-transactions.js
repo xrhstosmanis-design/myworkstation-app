@@ -190,18 +190,103 @@ async function notifyLedgerAlert({companyId,store,kind,transaction,actorName,rea
   }
 }
 
+async function reconcileOnlineSalesForOpenSession({store,companyId,openSession}){
+  if(!openSession)return;
+  try{
+    const exists=await prisma.$queryRawUnsafe(`SELECT to_regclass('"OnlineOrder"') AS "tableName"`);
+    if(!exists?.[0]?.tableName)return;
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`
+        WITH delivered AS (
+          SELECT o."saleId",
+                 COALESCE(ev."employeeId",o."assignedEmployeeId") AS "employeeId",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          LEFT JOIN LATERAL (
+            SELECT e."employeeId"
+            FROM "OnlineOrderStatusEvent" e
+            WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
+            ORDER BY e."createdAt" DESC LIMIT 1
+          ) ev ON TRUE
+          WHERE o."companyId"=${companyId}
+            AND o."storeId"=${store.id}
+            AND o."status"='DELIVERED'
+            AND o."saleId" IS NOT NULL
+            AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt")>=${openSession.openedAt}
+        )
+        UPDATE "Sale" s
+        SET "operatorEmployeeId"=COALESCE(d."employeeId",s."operatorEmployeeId"),
+            "createdAt"=COALESCE(d."postedAt",s."createdAt")
+        FROM delivered d
+        WHERE s."id"=d."saleId"
+      `;
+      await tx.$executeRaw`
+        WITH delivered AS (
+          SELECT o."id" AS "orderId",o."orderNumber",o."paymentMethod",o."total",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          WHERE o."companyId"=${companyId}
+            AND o."storeId"=${store.id}
+            AND o."status"='DELIVERED'
+            AND o."saleId" IS NOT NULL
+            AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt")>=${openSession.openedAt}
+        )
+        UPDATE "StoreTransaction" t
+        SET "sessionId"=${openSession.id},
+            "type"=CASE WHEN d."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
+            "amount"=d."total",
+            "description"='ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || d."orderNumber",
+            "actorId"=${openSession.openedBy},
+            "actorName"=${openSession.openedByName||"Online"},
+            "occurredAt"=d."postedAt"
+        FROM delivered d
+        WHERE t."companyId"=${companyId}
+          AND t."storeId"=${store.id}
+          AND t."description" ILIKE ('%' || d."orderNumber" || '%')
+      `;
+      await tx.$executeRaw`
+        WITH delivered AS (
+          SELECT o."id" AS "orderId",o."orderNumber",o."paymentMethod",o."total",
+                 COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
+          FROM "OnlineOrder" o
+          WHERE o."companyId"=${companyId}
+            AND o."storeId"=${store.id}
+            AND o."status"='DELIVERED'
+            AND o."saleId" IS NOT NULL
+            AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt")>=${openSession.openedAt}
+        )
+        INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName","occurredAt","createdAt")
+        SELECT 'online-order-' || d."orderId",${companyId},${store.id},${openSession.id},
+               CASE WHEN d."paymentMethod"='CASH' THEN 'SALE_CASH' ELSE 'SALE_CARD' END,
+               d."total",'ONLINE ΠΑΡΑΓΓΕΛΙΑ ' || d."orderNumber",${openSession.openedBy},${openSession.openedByName||"Online"},d."postedAt",CURRENT_TIMESTAMP
+        FROM delivered d
+        WHERE NOT EXISTS (
+          SELECT 1 FROM "StoreTransaction" t
+          WHERE t."companyId"=${companyId}
+            AND t."storeId"=${store.id}
+            AND t."description" ILIKE ('%' || d."orderNumber" || '%')
+        )
+        ON CONFLICT ("id") DO NOTHING
+      `;
+    });
+  }catch(error){
+    console.error("Online shift reconciliation failed:",error?.message||error);
+  }
+}
+
 router.use(auth,requireLedgerAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const openRows=await prisma.$queryRaw`
-    SELECT "id","shiftLabel","openedAt","openedByName"
+    SELECT "id","shiftLabel","openedAt","openedBy","openedByName"
     FROM "CashShiftSession"
     WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN'
     ORDER BY "openedAt" DESC LIMIT 1
   `;
   const openSession=openRows[0]||null;
+  await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession});
   const canReviewStoreLedger=req.user.tokenType!=="STORE_OPERATOR"||req.user.permissions?.includes("STORE_LEDGER_REVIEW");
   const canReverse=req.user.tokenType!=="STORE_OPERATOR"
     ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
