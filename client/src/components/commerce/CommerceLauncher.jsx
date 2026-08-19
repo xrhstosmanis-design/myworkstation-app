@@ -1,10 +1,11 @@
 import React,{useEffect,useState} from "react";
-import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,X} from "lucide-react";
+import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
 import ManagementParametersPanel from "./ManagementParametersPanel.jsx";
 import SmartProductEntryBridge from "./SmartProductEntryBridge.jsx";
+import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
 import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
@@ -85,9 +86,10 @@ export default function CommerceLauncher(){
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
+        <button className={mode==="online"?"active":""} onClick={()=>setMode("online")}><ShoppingBag/>Online Παραγγελίες</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>setMode("legacy")}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
-      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
+      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>setMode("legacy")}/>:<CommerceHub api={request} stores={stores}/>} 
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
       {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
