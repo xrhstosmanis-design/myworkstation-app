@@ -24,8 +24,7 @@ function patchDefaults(source) {
     );
   }
 
-  // In every beverage recipe the milk line is now a quantity slot, not a physical milk SKU.
-  // The sale engine resolves that slot to the selected milk material.
+  // Milk recipes keep only ML quantity. They no longer point at a physical milk SKU.
   s = s.replaceAll("ingredientSku.milk,", "ingredientSku.milkSlot,");
   return s;
 }
@@ -41,62 +40,57 @@ function patchEngine(source) {
   if (!s.includes("milk_target_sku := COALESCE(milk_target_sku,'MWS-PREP-MILK');")) {
     s = s.replace(
       marker,
-      "          -- No alternative selected means fresh milk. The recipe itself contains only a milk slot.\n          milk_target_sku := COALESCE(milk_target_sku,'MWS-PREP-MILK');\n\n" + marker
+      "          -- The recipe contains only a milk quantity slot. No alternative selected = fresh milk.\n          milk_target_sku := COALESCE(milk_target_sku,'MWS-PREP-MILK');\n\n" + marker
     );
   }
   return s;
 }
 
 async function ensureMilkSlotProduct() {
-  const companies = await prisma.company.findMany({ select: { id: true } });
-  for (const company of companies) {
-    let product = await prisma.product.findFirst({
-      where: { companyId: company.id, sku: "MWS-PREP-MILK-SLOT" },
-      select: { id: true },
-    });
-    if (!product) {
-      product = await prisma.product.create({
-        data: {
-          id: crypto.randomUUID(),
-          companyId: company.id,
-          sku: "MWS-PREP-MILK-SLOT",
-          name: "ΘΕΣΗ ΓΑΛΑΚΤΟΣ (ΜΗ ΑΠΟΘΕΜΑΤΙΚΟ)",
-          category: "ΡΟΦΗΜΑΤΑ",
-          vatRate: 13,
-          retailPrice: 0,
-          active: true,
-          trackStock: false,
-        },
-        select: { id: true },
-      });
-    } else {
-      await prisma.product.update({
-        where: { id: product.id },
-        data: { active: true, trackStock: false, name: "ΘΕΣΗ ΓΑΛΑΚΤΟΣ (ΜΗ ΑΠΟΘΕΜΑΤΙΚΟ)" },
-      });
-    }
+  const companies = await prisma.$queryRawUnsafe(`SELECT "id" FROM "Company"`);
 
-    const fresh = await prisma.product.findFirst({
-      where: { companyId: company.id, sku: "MWS-PREP-MILK" },
-      select: { id: true },
-    });
+  for (const company of companies) {
+    const [fresh] = await prisma.$queryRawUnsafe(
+      `SELECT "id","categoryId","subcategoryId" FROM "Product" WHERE "companyId"=$1 AND "sku"='MWS-PREP-MILK' LIMIT 1`,
+      company.id
+    );
     if (!fresh) continue;
 
-    // Convert existing automatic recipe milk lines to the non-stock milk slot, preserving ML exactly.
-    await prisma.$executeRaw`
-      UPDATE "PreparationRecipeLine"
-      SET "ingredientProductId"=${product.id}, "updatedAt"=NOW()
-      WHERE "companyId"=${company.id}
-        AND "ingredientProductId"=${fresh.id}
-        AND "automatic"=TRUE
-    `;
+    let [slot] = await prisma.$queryRawUnsafe(
+      `SELECT "id" FROM "Product" WHERE "companyId"=$1 AND "sku"='MWS-PREP-MILK-SLOT' LIMIT 1`,
+      company.id
+    );
 
-    // Force the canonical recipe profile to be regenerated once from the new slot definitions.
-    await prisma.$executeRaw`
-      UPDATE "PreparationProductSettings"
-      SET "recipeProfileVersion"=0, "updatedAt"=NOW()
-      WHERE "companyId"=${company.id}
-    `;
+    if (!slot) {
+      slot = { id: crypto.randomUUID() };
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","sku","name","description","unit","vatRate","salePrice","costPrice","trackStock","active")
+         VALUES ($1,$2,$3,$4,'MWS-PREP-MILK-SLOT','ΘΕΣΗ ΓΑΛΑΚΤΟΣ (ΜΗ ΑΠΟΘΕΜΑΤΙΚΟ)','Εσωτερική θέση ποσότητας γάλακτος για συνταγές','ML',13,0,0,false,true)`,
+        slot.id, company.id, fresh.categoryId, fresh.subcategoryId
+      );
+    } else {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Product" SET "name"='ΘΕΣΗ ΓΑΛΑΚΤΟΣ (ΜΗ ΑΠΟΘΕΜΑΤΙΚΟ)',"unit"='ML',"trackStock"=false,"active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`,
+        slot.id
+      );
+    }
+
+    // Existing recipes: replace physical fresh milk with the neutral milk slot, preserving the exact ML.
+    await prisma.$executeRawUnsafe(
+      `UPDATE "PreparationRecipeLine"
+       SET "ingredientProductId"=$1,"updatedAt"=NOW()
+       WHERE "companyId"=$2 AND "ingredientProductId"=$3 AND "automatic"=TRUE`,
+      slot.id, company.id, fresh.id
+    );
+
+    // Regenerate all automatic KAT beverage recipes once with the slot model.
+    await prisma.$executeRawUnsafe(
+      `UPDATE "PreparationProductSettings" s
+       SET "recipeProfileVersion"=0,"updatedAt"=NOW()
+       FROM "Product" p
+       WHERE s."companyId"=$1 AND p."id"=s."productId" AND p."companyId"=s."companyId" AND p."sku" LIKE 'MWS-KAT-BEV-%'`,
+      company.id
+    );
   }
 }
 
