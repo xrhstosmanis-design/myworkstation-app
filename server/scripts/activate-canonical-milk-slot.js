@@ -26,6 +26,10 @@ function patchDefaults(source) {
 
   // Milk recipes keep only ML quantity. They no longer point at a physical milk SKU.
   s = s.replaceAll("ingredientSku.milk,", "ingredientSku.milkSlot,");
+
+  // Legacy fixed milk mappings must never be recreated. The selected milk inherits
+  // the exact ML from the recipe slot (70, 100, 120, 180, etc.).
+  s = s.replace(/\n await set\("ΓΑΛΑ","ΓΑΛΑ ΕΒΑΠΟΡΕ"[\s\S]*?await set\("ΓΑΛΑ","ΓΑΛΑ ΣΟΓΙΑΣ",ingredientSku\.soy,80,"ML"\);/m, "");
   return s;
 }
 
@@ -44,6 +48,37 @@ function patchEngine(source) {
     );
   }
   return s;
+}
+
+async function removeLegacyMilkConsumption(companyId) {
+  // Delete all old fixed milk modifier quantities. These were the source of the fixed -80 ML.
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM "PreparationModifierConsumption" c
+     USING "ManagementModifier" m, "ManagementModifierGroup" g
+     WHERE c."companyId"=$1
+       AND m."id"=c."modifierId"
+       AND g."id"=m."groupId"
+       AND m."companyId"=$1
+       AND g."companyId"=$1
+       AND UPPER(TRIM(g."description"))='ΓΑΛΑ'`,
+    companyId
+  );
+
+  // Remove any remaining legacy POS-audit trigger whose body still reads the old
+  // modifier-consumption table. The clean engine owns preparation stock now.
+  const triggers = await prisma.$queryRawUnsafe(
+    `SELECT t.tgname AS "triggerName"
+     FROM pg_trigger t
+     JOIN pg_class c ON c.oid=t.tgrelid
+     JOIN pg_proc p ON p.oid=t.tgfoid
+     WHERE c.relname='StoreOperatorAudit'
+       AND NOT t.tgisinternal
+       AND LOWER(pg_get_functiondef(p.oid)) LIKE '%preparationmodifierconsumption%'`
+  );
+  for (const row of triggers) {
+    const safe = String(row.triggerName || "").replaceAll('"','""');
+    if (safe) await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "${safe}" ON "StoreOperatorAudit"`);
+  }
 }
 
 async function ensureMilkSlotProduct() {
@@ -83,6 +118,19 @@ async function ensureMilkSlotProduct() {
       slot.id, company.id, fresh.id
     );
 
+    // The actual milk products must be active stock rows so the resolved recipe can decrement them.
+    await prisma.$executeRawUnsafe(
+      `UPDATE "StoreProduct" sp
+       SET "active"=TRUE,"updatedAt"=CURRENT_TIMESTAMP
+       FROM "Product" p
+       WHERE sp."productId"=p."id"
+         AND p."companyId"=$1
+         AND p."sku" IN ('MWS-PREP-MILK','MWS-PREP-MILK-EVAP','MWS-PREP-MILK-LF','MWS-PREP-MILK-ALMOND','MWS-PREP-MILK-OAT','MWS-PREP-MILK-SOY')`,
+      company.id
+    );
+
+    await removeLegacyMilkConsumption(company.id);
+
     // Regenerate all automatic KAT beverage recipes once with the slot model.
     await prisma.$executeRawUnsafe(
       `UPDATE "PreparationProductSettings" s
@@ -98,7 +146,7 @@ async function main() {
   patchFile(defaultsPath, patchDefaults);
   patchFile(enginePath, patchEngine);
   await ensureMilkSlotProduct();
-  console.log("Canonical milk-slot preparation model activated.");
+  console.log("Canonical milk-slot preparation model activated; legacy fixed milk consumption removed.");
 }
 
 main()
