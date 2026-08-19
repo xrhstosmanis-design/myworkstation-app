@@ -32,6 +32,7 @@ import {installSupplierGlobalReports} from "./components/commerce/installSupplie
 import {installSupplierBasicExtras} from "./components/commerce/installSupplierBasicExtras.js";
 import {installOperatorManagementSuite} from "./components/commerce/installOperatorManagementSuite.js";
 import {installTouchKeyboard} from "./components/commerce/installTouchKeyboard.js";
+import {installBackofficeColumnFilters} from "./backoffice-column-filters.js";
 import {installPosCheckoutSafety} from "./pos-checkout-safety.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
@@ -91,6 +92,7 @@ const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{positio
 
 installPosCheckoutSafety();
 installTouchKeyboard();
+installBackofficeColumnFilters();
 installBulkPricePreview();
 installPriceCatalogVisibleNav();
 installSupplierProductTransfer();
