@@ -8,4 +8,6 @@ h=h.replace("function addLine(product,modifierIds){const key=product.id+'|'+[...
 h=h.replace("addConfigured.onclick=()=>configuring&&addLine(configuring,selectedModifiers);","addConfigured.onclick=()=>{const el=document.getElementById('lineComment');lineComment=el?.value||'';if(configuring)addLine(configuring,selectedModifiers,lineComment)};");
 h=h.replace("<small>${euro(lineUnit(r))}</small></div>","${r.comment?`<small class=\"cart-comment\">Σχόλιο: ${r.comment}</small>`:''}<br><small>${euro(lineUnit(r))}</small></div>");
 h=h.replace("deliveryNotes:notes.value.trim()||null","deliveryNotes:[notes.value.trim(),...cart.filter(r=>r.comment).map(r=>`${r.name}: ${r.comment}`)].filter(Boolean).join(' | ')||null");
+for(const id of ['name','phone','building','floor','department','room','notes'])h=h.split(`${id}.value`).join(`document.getElementById('${id}').value`);
+h=h.split('submitOrder.').join("document.getElementById('submitOrder').");
 document.open();document.write(h);document.close()})().catch(()=>{document.body.innerHTML='<p style="font-family:Arial;padding:30px">Προσωρινό σφάλμα φόρτωσης. Κάντε ανανέωση.</p>'})</script></body></html>
