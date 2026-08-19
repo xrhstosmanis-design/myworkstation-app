@@ -65,7 +65,9 @@ const GRID_SPECS=[
  {head:".capital-row.head",rows:":scope > .capital-row:not(.head):not(.totals)"},
  {head:".shift-row.head",rows:":scope > .shift-row:not(.head)"},
  {head:".category-row.head",rows:":scope > .category-row:not(.head)"},
- {head:".drawer-row.head",rows:":scope > .drawer-row:not(.head):not(.totals)"}
+ {head:".drawer-row.head",rows:":scope > .drawer-row:not(.head):not(.totals)"},
+ {head:".stock-row.head",rows:":scope > .stock-row:not(.head)"},
+ {head:".observer-event.head",rows:":scope > .observer-event:not(.head)"}
 ];
 
 const getGridMeta=head=>{
