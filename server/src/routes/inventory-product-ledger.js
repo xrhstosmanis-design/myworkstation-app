@@ -24,7 +24,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
     const product=productRows[0];
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
 
-    const [manual,purchases,sales]=await Promise.all([
+    const [manual,purchases,sales,onlineRecipe]=await Promise.all([
       prisma.$queryRaw`
         SELECT sm."id",sm."createdAt",sm."movementType",sm."quantity",sm."unitCost",NULL::numeric AS "salePrice",sm."note",
                COALESCE(u."fullName",'—') AS "actorName",sm."sourceType",sm."sourceId"
@@ -52,19 +52,39 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
                     ELSE 'SALE' END::text AS "movementType",
                CASE WHEN s."source"='POS_REVERSAL' THEN ABS(sl."quantity") ELSE -ABS(sl."quantity") END AS "quantity",
                0::numeric AS "unitCost",ABS(sl."unitPrice") AS "salePrice",
-               CONCAT(CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'Επιστροφή '
+               CASE WHEN oo."id" IS NOT NULL THEN CONCAT('ONLINE ΠΑΡΑΓΓΕΛΙΑ · ',oo."orderNumber",' · Πώληση ',COALESCE(s."receiptNumber",s."id"))
+                    ELSE CONCAT(CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'Επιστροφή '
                            WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'Ακύρωση '
                            WHEN s."source"='SELF_CONSUMPTION' THEN 'Προσωπική κατανάλωση '
                            WHEN s."source"='PRODUCT_DESTRUCTION' THEN 'Καταστροφή προϊόντων '
-                           ELSE 'Πώληση ' END,COALESCE(s."receiptNumber",s."id")) AS "note",
-               COALESCE(e."fullName",'POS') AS "actorName",s."source" AS "sourceType",s."id" AS "sourceId"
+                           ELSE 'Πώληση ' END,COALESCE(s."receiptNumber",s."id")) END AS "note",
+               COALESCE(e."fullName",'POS') AS "actorName",
+               CASE WHEN oo."id" IS NOT NULL THEN 'ONLINE_ORDER' ELSE s."source" END AS "sourceType",
+               COALESCE(oo."id",s."id") AS "sourceId"
         FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
         LEFT JOIN "Employee" e ON e."id"=s."operatorEmployeeId"
+        LEFT JOIN "OnlineOrder" oo ON oo."saleId"=s."id"
         WHERE s."companyId"=${companyId} AND s."storeId"=${storeId} AND s."status"='COMPLETED'
-          AND sl."productId"=${productId} AND s."occurredAt">=${from} AND s."occurredAt"<=${to}`
+          AND sl."productId"=${productId} AND s."occurredAt">=${from} AND s."occurredAt"<=${to}`,
+      prisma.$queryRaw`
+        SELECT CONCAT(ool."id",':',r."ingredientProductId") AS "id",COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt") AS "createdAt",
+               'RECIPE_CONSUMPTION'::text AS "movementType",
+               -(ABS(ool."quantity")*ABS(r."quantity")) AS "quantity",
+               0::numeric AS "unitCost",NULL::numeric AS "salePrice",
+               CONCAT('ONLINE ΠΑΡΑΓΓΕΛΙΑ · ',o."orderNumber",' · Κατανάλωση συνταγής ',ool."productName") AS "note",
+               COALESCE(e."fullName",'POS') AS "actorName",'ONLINE_ORDER_RECIPE'::text AS "sourceType",o."id" AS "sourceId"
+        FROM "OnlineOrder" o
+        JOIN "OnlineOrderLine" ool ON ool."orderId"=o."id"
+        JOIN "PreparationRecipeLine" r ON r."companyId"=o."companyId" AND r."productId"=ool."productId" AND r."automatic"=TRUE
+        LEFT JOIN "Sale" s ON s."id"=o."saleId"
+        LEFT JOIN "Employee" e ON e."id"=s."operatorEmployeeId"
+        WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."status"='DELIVERED'
+          AND r."ingredientProductId"=${productId}
+          AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt")>=${from}
+          AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt")<=${to}`
     ]);
 
-    const combined=[...manual,...purchases,...sales].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    const combined=[...manual,...purchases,...sales,...onlineRecipe].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
     let running=n(product.currentStock);
     const movements=combined.map(row=>{
       const delta=n(row.quantity),stockAfter=running;
