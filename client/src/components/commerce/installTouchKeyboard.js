@@ -1,3 +1,5 @@
+import {installBackofficeColumnFilters} from "../../backoffice-column-filters.js";
+
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
 let activeInput=null,lastTouchAt=0,lang="EL",shift=false,activeButton=null;
@@ -71,6 +73,7 @@ function open(input){if(!editable(input))return;activeInput=input;input.dataset.
 function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true;syncButton()}
 function scheduleSync(){requestAnimationFrame(syncButton)}
 export function installTouchKeyboard(){
+  installBackofficeColumnFilters();
   ensure();removeButton();
   const observer=new MutationObserver(scheduleSync);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","disabled","readonly","type"]});
   document.addEventListener("pointerdown",event=>{if(isTouchLikePointer(event.pointerType)){lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)}},true);
