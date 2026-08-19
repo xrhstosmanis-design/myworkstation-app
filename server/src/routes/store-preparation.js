@@ -83,9 +83,9 @@ async function ensurePreparationBatchTable(){
          SELECT m."id",c."ingredientProductId",c."unit",c."quantity" INTO milk_modifier_id,milk_target_ingredient_id,milk_target_unit,milk_fallback_qty
          FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
          JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE
-         JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" AND g."active"=TRUE
          JOIN "PreparationModifierConsumption" c ON c."companyId"=m."companyId" AND c."modifierId"=m."id"
-         WHERE UPPER(g."description")='ΓΑΛΑ' LIMIT 1;
+         JOIN "Product" ip ON ip."id"=c."ingredientProductId" AND ip."companyId"=c."companyId" AND ip."active"=TRUE
+         WHERE ip."sku" LIKE 'MWS-PREP-MILK-%' AND ip."sku" <> 'MWS-PREP-MILK' LIMIT 1;
 
          ice_modifier_id:=NULL;ice_description:=NULL;ice_target_qty:=NULL;ice_base_qty:=0;ice_target_ingredient_id:=NULL;
          SELECT UPPER(j->>'description') INTO ice_description FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
@@ -148,8 +148,8 @@ async function ensurePreparationBatchTable(){
 
          FOR modifier_json IN SELECT value FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) LOOP
            IF COALESCE(modifier_json->>'id','') = '' OR COALESCE(modifier_json->>'id','') LIKE 'synthetic-%' THEN CONTINUE; END IF;
-           FOR modifier_row IN SELECT c."modifierId",c."ingredientProductId",c."quantity",c."unit",c."multiplierMode",g."description" AS group_name,m."description" AS modifier_name FROM "PreparationModifierConsumption" c JOIN "ManagementModifier" m ON m."id"=c."modifierId" AND m."companyId"=c."companyId" JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" WHERE c."companyId"=NEW."companyId" AND c."modifierId"=modifier_json->>'id' LOOP
-             IF UPPER(modifier_row.group_name) IN ('ΓΑΛΑ','ΠΑΓΟΣ') THEN CONTINUE; END IF;
+           FOR modifier_row IN SELECT c."modifierId",c."ingredientProductId",c."quantity",c."unit",c."multiplierMode",g."description" AS group_name,m."description" AS modifier_name,p."sku" AS ingredient_sku FROM "PreparationModifierConsumption" c JOIN "ManagementModifier" m ON m."id"=c."modifierId" AND m."companyId"=c."companyId" JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" JOIN "Product" p ON p."id"=c."ingredientProductId" AND p."companyId"=c."companyId" WHERE c."companyId"=NEW."companyId" AND c."modifierId"=modifier_json->>'id' LOOP
+             IF UPPER(modifier_row.group_name) IN ('ΓΑΛΑ','ΠΑΓΟΣ') OR modifier_row.ingredient_sku LIKE 'MWS-PREP-MILK-%' THEN CONTINUE; END IF;
              IF UPPER(modifier_row.modifier_name) LIKE '%DECAF%' OR (UPPER(modifier_row.group_name)='EXTRA' AND UPPER(modifier_row.modifier_name)='EXTRA ΔΟΣΗ') THEN CONTINUE; END IF;
              consume_qty := product_qty * modifier_row."quantity";
              UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty FROM "Product" p WHERE sp."storeId"=NEW."storeId" AND sp."productId"=modifier_row."ingredientProductId" AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
