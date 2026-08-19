@@ -69,7 +69,14 @@ const GRID_SPECS=[
  {head:".stock-row.head",rows:":scope > .stock-row:not(.head)"},
  {head:".observer-event.head",rows:":scope > .observer-event:not(.head)"},
  {head:".commerce-row.head",rows:":scope > .commerce-row:not(.head)"},
- {head:".active-movement-table > .head",rows:":scope > .row"}
+ {head:".active-movement-table > .head",rows:":scope > .row"},
+ {head:".owner-payments-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"},
+ {head:".osc-row.head",rows:":scope > .osc-row:not(.head)"},
+ {head:".osc-detail-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"},
+ {head:".po-orders-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"},
+ {head:".po-stock-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"},
+ {head:".sc-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"},
+ {head:".cc-table > .row.head",rows:":scope > .row:not(.head):not(.totals)"}
 ];
 
 const getGridMeta=head=>{
