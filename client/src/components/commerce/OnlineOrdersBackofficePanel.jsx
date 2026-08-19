@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {ChevronDown,ChevronUp,Clock3,CreditCard,RefreshCw,Search,ShoppingBag} from "lucide-react";
 import "./online-orders-backoffice.css";
 
+const TEST_STORE_ID="kat-test-store";
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const stamp=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"short",timeStyle:"short"}):"—";
 const statusText=status=>({NEW:"ΝΕΑ",ACCEPTED:"ΑΠΟΔΟΧΗ",PREPARING:"ΕΤΟΙΜΑΖΕΤΑΙ",READY:"ΕΤΟΙΜΗ",OUT_FOR_DELIVERY:"ΣΤΟ DELIVERY",DELIVERED:"ΠΑΡΑΔΟΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"})[status]||status;
@@ -17,7 +18,7 @@ function LinkSummary({order}){
 }
 
 export default function OnlineOrdersBackofficePanel({api}){
-  const [katStore,setKatStore]=useState(null);
+  const [managedStores,setManagedStores]=useState([]);
   const [storeId,setStoreId]=useState("");
   const [rows,setRows]=useState([]);
   const [loading,setLoading]=useState(false);
@@ -30,18 +31,23 @@ export default function OnlineOrdersBackofficePanel({api}){
   useEffect(()=>{
     let active=true;
     setStoreLoading(true);
-    api("/api/public/kat/catalog",{cache:"no-store"})
+    setError("");
+    api("/api/public/kat/backoffice-managed/stores",{cache:"no-store"})
       .then(data=>{
         if(!active)return;
-        const store=data?.store||null;
-        setKatStore(store);
-        setStoreId(store?.id||"");
-        if(!store)setError("Δεν βρέθηκε το πραγματικό κατάστημα Κυλικείο ΚΑΤ στο Online Ordering.");
+        const stores=Array.isArray(data?.stores)?data.stores:[];
+        setManagedStores(stores);
+        const realKat=stores.find(store=>store.id!==TEST_STORE_ID&&/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||"")));
+        const preferred=realKat||stores.find(store=>store.id===TEST_STORE_ID)||stores[0]||null;
+        setStoreId(preferred?.id||"");
+        if(!preferred)setError("Δεν βρέθηκε κατάστημα με Online Παραγγελίες.");
       })
-      .catch(e=>{if(active){setKatStore(null);setStoreId("");setError(e?.message||"Δεν ήταν δυνατή η σύνδεση με το Κυλικείο ΚΑΤ.")}})
+      .catch(e=>{if(active){setManagedStores([]);setStoreId("");setError(e?.message||"Δεν ήταν δυνατή η φόρτωση των καταστημάτων Online Παραγγελιών.")}})
       .finally(()=>{if(active)setStoreLoading(false)});
     return()=>{active=false};
   },[api]);
+
+  const selectedStore=useMemo(()=>managedStores.find(store=>store.id===storeId)||null,[managedStores,storeId]);
 
   const load=async()=>{
     if(!storeId){setRows([]);return}
@@ -64,7 +70,7 @@ export default function OnlineOrdersBackofficePanel({api}){
 
   return <section className="online-orders-backoffice">
     <header className="online-bo-head">
-      <div><span className="online-bo-kicker">MYWORKSTATION BACKOFFICE</span><h2>Online Παραγγελίες</h2><p>Παραγγελίες του πραγματικού Κυλικείου ΚΑΤ, κατάσταση, πελάτης, πληρωμή και σύνδεση με την πραγματική εμπορική πώληση. Τα συμβάντα καταγράφονται στο κεντρικό BackOffice → Συμβάντα.</p></div>
+      <div><span className="online-bo-kicker">MYWORKSTATION BACKOFFICE</span><h2>Online Παραγγελίες</h2><p>Παραγγελίες, κατάσταση, πελάτης, πληρωμή και σύνδεση με την πραγματική εμπορική πώληση. Τα συμβάντα καταγράφονται στο κεντρικό BackOffice → Συμβάντα.</p></div>
       <button onClick={load} disabled={loading||!storeId}><RefreshCw className={loading?"spin":""}/>{loading?"Ανανέωση…":"Ανανέωση"}</button>
     </header>
 
@@ -76,14 +82,14 @@ export default function OnlineOrdersBackofficePanel({api}){
     </div>
 
     <div className="online-bo-toolbar">
-      <label>Κατάστημα<select value={storeId} disabled><option value={storeId}>{storeLoading?"Φόρτωση Κυλικείου ΚΑΤ…":katStore?.name||"Κυλικείο ΚΑΤ"}</option></select></label>
+      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)} disabled={storeLoading||!managedStores.length}>{storeLoading?<option value="">Φόρτωση…</option>:managedStores.map(store=><option key={store.id} value={store.id}>{store.id===TEST_STORE_ID?"TEST · Online Παραγγελίες":store.name}</option>)}</select></label>
       <label>Κατάσταση<select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλες</option><option value="NEW">Νέες</option><option value="ACCEPTED">Αποδοχή</option><option value="PREPARING">Ετοιμάζεται</option><option value="READY">Έτοιμη</option><option value="OUT_FOR_DELIVERY">Delivery</option><option value="DELIVERED">Παραδόθηκε</option><option value="CANCELLED">Ακυρώθηκε</option></select></label>
       <label className="online-bo-search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Αρ. παραγγελίας, πελάτης, τηλέφωνο…"/></label>
     </div>
 
     {error&&<div className="online-bo-error">{error}</div>}
-    {!storeLoading&&!katStore&&!error&&<div className="online-bo-empty">Δεν βρέθηκε το πραγματικό Κυλικείο ΚΑΤ.</div>}
-    {katStore&&!loading&&!error&&!filtered.length&&<div className="online-bo-empty">Δεν υπάρχουν παραγγελίες για τα επιλεγμένα φίλτρα.</div>}
+    {!storeLoading&&!managedStores.length&&!error&&<div className="online-bo-empty">Δεν βρέθηκε κατάστημα με Online Παραγγελίες.</div>}
+    {selectedStore&&!loading&&!error&&!filtered.length&&<div className="online-bo-empty">Δεν υπάρχουν παραγγελίες για τα επιλεγμένα φίλτρα.</div>}
 
     <div className="online-bo-list">{filtered.map(order=>{
       const open=expanded===order.id;
@@ -98,7 +104,7 @@ export default function OnlineOrdersBackofficePanel({api}){
         </button>
         {open&&<div className="online-bo-detail">
           <LinkSummary order={order}/>
-          <div className="online-bo-commercial-note"><ShoppingBag/><span><b>Μία πραγματική εμπορική συναλλαγή.</b> Με την παράδοση δημιουργείται η πώληση και αφαιρείται το απόθεμα απευθείας από την πραγματική Αποθήκη του Κυλικείου ΚΑΤ. Δεν υπάρχει δεύτερο online stock.</span></div>
+          <div className="online-bo-commercial-note"><ShoppingBag/><span><b>Μία πραγματική εμπορική συναλλαγή.</b> Με την παράδοση δημιουργείται η πώληση και αφαιρείται το απόθεμα απευθείας από την πραγματική Αποθήκη του καταστήματος. Δεν υπάρχει δεύτερο online stock.</span></div>
         </div>}
       </article>
     })}</div>
