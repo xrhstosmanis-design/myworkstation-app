@@ -5,7 +5,7 @@ services:
     region: frankfurt
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm run prisma:push -w server && node server/scripts/ensure-pos-return-compat.js && node server/scripts/patch-pos-return-diagnostics.js && node server/scripts/patch-pos-return-audit.js && npm run seed && npm start
+    startCommand: npm run prisma:push -w server && node server/scripts/ensure-pos-return-compat.js && node server/scripts/patch-pos-return-diagnostics.js && node server/scripts/patch-pos-return-audit.js && node server/scripts/activate-canonical-milk-slot.js && npm run seed && npm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
