@@ -4,13 +4,19 @@ import { prisma } from "../prisma.js";
 function storeRuntimePermissions(profile){
   const p=profile&&typeof profile==="object"?profile:{};
   const permissions=[];
+  const rights=p.permissions&&typeof p.permissions==="object"?p.permissions:{};
   if(p.posAccess!==false)permissions.push("ATTENDANCE");
-  if(p.permissions?.cash)permissions.push("CASH_CONTROL");
-  if(p.permissions?.shiftTransactionsPos)permissions.push("STORE_LEDGER");
-  if(p.permissions?.allShiftTransactionsPos)permissions.push("STORE_LEDGER_REVIEW");
-  if(p.permissions?.supplierPayment)permissions.push("SUPPLIER_PAYMENT");
-  if(p.permissions?.sameShiftPayments)permissions.push("SAME_SHIFT_PAYMENTS");
-  return permissions;
+  if(rights.cash)permissions.push("CASH_CONTROL");
+  if(rights.shiftTransactionsPos)permissions.push("STORE_LEDGER");
+  if(rights.allShiftTransactionsPos){permissions.push("STORE_LEDGER","STORE_LEDGER_REVIEW","TRANSACTION_REVERSAL")}
+  if(rights.supplierPayment)permissions.push("SUPPLIER_PAYMENT");
+  if(rights.thirdPartyPayment)permissions.push("THIRD_PARTY_PAYMENT");
+  if(rights.transferAmount)permissions.push("TRANSFER_AMOUNT");
+  if(rights.sameShiftPayments)permissions.push("SAME_SHIFT_PAYMENTS");
+  // Payment/transfer actions need the ledger endpoint for their own entry and lookups,
+  // but STORE_LEDGER_REVIEW is still reserved for the explicit all-shift permission.
+  if((rights.supplierPayment||rights.thirdPartyPayment||rights.transferAmount)&&!permissions.includes("STORE_LEDGER"))permissions.push("STORE_LEDGER");
+  return [...new Set(permissions)];
 }
 
 function enforceStorePaymentPermissions(req,res,permissions){
@@ -19,6 +25,14 @@ function enforceStorePaymentPermissions(req,res,permissions){
   const payment=type==="SUPPLIER_PAYMENT"||type==="OTHER_EXPENSE";
   if(type==="SUPPLIER_PAYMENT"&&!permissions.includes("SUPPLIER_PAYMENT")){
     res.status(403).json({error:"Δεν έχεις δικαίωμα Πληρωμής Προμηθευτή από το BackOffice."});
+    return false;
+  }
+  if(type==="OTHER_EXPENSE"&&!permissions.includes("THIRD_PARTY_PAYMENT")){
+    res.status(403).json({error:"Δεν έχεις δικαίωμα Πληρωμής προς Τρίτους από το BackOffice."});
+    return false;
+  }
+  if(type==="TRANSFER_AMOUNT"&&!permissions.includes("TRANSFER_AMOUNT")){
+    res.status(403).json({error:"Δεν έχεις δικαίωμα Μεταφοράς ποσού από το BackOffice."});
     return false;
   }
   const legacyShiftDeduction=req.body?.evidenceMode==null&&(req.body?.subtractFromShift===true||req.body?.subtractFromShift==="true");
