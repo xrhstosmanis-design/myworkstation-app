@@ -51,7 +51,12 @@ const GRID_SPECS=[
  {head:".om-row.head",rows:":scope > .om-row.data"},
  {head:".mg-category-head",rows:".mg-category-row"},
  {head:".mg-sub-head",rows:".mg-sub-row"},
- {head:".ivr.head",rows:":scope > .ivr:not(.head)"}
+ {head:".ivr.head",rows:":scope > .ivr:not(.head)"},
+ {head:".mbu-row.head",rows:".mbu-list > .mbu-row:not(.head)"},
+ {head:".mvat-row.head",rows:".mvat-list > .mvat-row:not(.head)"},
+ {head:".mvat-product-row.head",rows:":scope > .mvat-product-row:not(.head)"},
+ {head:".mpco-row.head",rows:".mpco-list > .mpco-row:not(.head)"},
+ {head:".mpco-product-row.head",rows:":scope > .mpco-product-row:not(.head)"}
 ];
 
 const getGridMeta=head=>{
