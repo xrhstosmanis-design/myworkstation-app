@@ -50,7 +50,8 @@ const GRID_SPECS=[
  {head:".supplier-row.head",rows:":scope > .supplier-row:not(.head)"},
  {head:".om-row.head",rows:":scope > .om-row.data"},
  {head:".mg-category-head",rows:".mg-category-row"},
- {head:".mg-sub-head",rows:".mg-sub-row"}
+ {head:".mg-sub-head",rows:".mg-sub-row"},
+ {head:".ivr.head",rows:":scope > .ivr:not(.head)"}
 ];
 
 const getGridMeta=head=>{
