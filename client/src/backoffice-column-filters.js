@@ -67,7 +67,9 @@ const GRID_SPECS=[
  {head:".category-row.head",rows:":scope > .category-row:not(.head)"},
  {head:".drawer-row.head",rows:":scope > .drawer-row:not(.head):not(.totals)"},
  {head:".stock-row.head",rows:":scope > .stock-row:not(.head)"},
- {head:".observer-event.head",rows:":scope > .observer-event:not(.head)"}
+ {head:".observer-event.head",rows:":scope > .observer-event:not(.head)"},
+ {head:".commerce-row.head",rows:":scope > .commerce-row:not(.head)"},
+ {head:".active-movement-table > .head",rows:":scope > .row"}
 ];
 
 const getGridMeta=head=>{
