@@ -31,7 +31,8 @@ function render(){
   }
   const chars=labels[lang],sizes=rows[lang];let cursor=0;
   const line=s=>{const part=chars.slice(cursor,cursor+s);cursor+=s;return `<div class="mws-touch-row">${part.map(ch=>`<button data-key="${ch}">${shift?ch.toLocaleUpperCase(lang==="EL"?"el-GR":"en-US"):ch}</button>`).join("")}</div>`};
-  root.innerHTML=`<div class="mws-touch-head"><b>Πληκτρολόγιο οθόνης</b><span>${lang==="EL"?"Ελληνικά":"English"}</span><button data-key="CLOSE">✕</button></div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button data-key="SHIFT">⇧</button><button data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button data-key="@">@</button><button data-key="SPACE" class="space">κενό</button><button data-key=".">.</button><button data-key="BACK">⌫</button><button data-key="ENTER" class="enter">↵</button></div>`;
+  const numbers=["1","2","3","4","5","6","7","8","9","0","BACK"];
+  root.innerHTML=`<div class="mws-touch-head"><b>Πληκτρολόγιο οθόνης</b><span>${lang==="EL"?"Ελληνικά":"English"}</span><button data-key="CLOSE">✕</button></div><div class="mws-touch-number-row">${numbers.map(k=>`<button data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button data-key="SHIFT">⇧</button><button data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button data-key="@">@</button><button data-key="SPACE" class="space">κενό</button><button data-key=".">.</button><button data-key=",">,</button><button data-key="ENTER" class="enter">↵</button></div>`;
 }
 function insertText(text){
   const input=activeInput;if(!input)return;
