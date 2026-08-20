@@ -87,7 +87,38 @@ router.use("/stores/:storeId",async(req,res,next)=>{
 });
 
 router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
-  try{const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);if(!access.onlineProductSearch)return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});const q=String(req.query.q||"").trim();if(q.length<3)return res.status(400).json({error:"Χρειάζονται τουλάχιστον 3 χαρακτήρες ή barcode."});const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT mp."id",mp."name",mp."sourceCode",mp."vatRate",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp WHERE mp."active"=TRUE AND (mp."sourceCode" ILIKE ${like} OR mp."name" ILIKE ${like} OR EXISTS (SELECT 1 FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id" AND mpb."barcode" ILIKE ${like})) ORDER BY CASE WHEN mp."sourceCode"=${q} OR EXISTS (SELECT 1 FROM "MasterProductBarcode" x WHERE x."masterProductId"=mp."id" AND x."barcode"=${q}) THEN 0 ELSE 1 END,mp."name" LIMIT 20`;await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,resultCount:rows.length});res.json({query:q,source:"MASTER_CATALOG",rows:rows.map(row=>({...row,vatRate:money(row.vatRate)}))})}catch(error){next(error)}
+  try{
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
+    if(!access.onlineProductSearch)return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
+    const q=String(req.query.q||"").trim();
+    if(q.length<3)return res.status(400).json({error:"Χρειάζονται τουλάχιστον 3 χαρακτήρες ή barcode."});
+    const like=`%${q}%`;
+    const rows=await prisma.$queryRaw`SELECT mp."id",mp."name",mp."sourceCode",mp."vatRate",mp."categoryName",mp."subcategoryName",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp WHERE mp."active"=TRUE AND (mp."sourceCode" ILIKE ${like} OR mp."name" ILIKE ${like} OR EXISTS (SELECT 1 FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id" AND mpb."barcode" ILIKE ${like})) ORDER BY CASE WHEN mp."sourceCode"=${q} OR EXISTS (SELECT 1 FROM "MasterProductBarcode" x WHERE x."masterProductId"=mp."id" AND x."barcode"=${q}) THEN 0 ELSE 1 END,mp."name" LIMIT 20`;
+    if(rows.length){
+      await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"MASTER_CATALOG",resultCount:rows.length});
+      return res.json({query:q,source:"MASTER_CATALOG",rows:rows.map(row=>({...row,vatRate:money(row.vatRate)}))});
+    }
+    if(!/^\d{6,18}$/.test(q)){
+      await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"MASTER_CATALOG",resultCount:0});
+      return res.json({query:q,source:"MASTER_CATALOG",rows:[]});
+    }
+    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4500);
+    try{
+      const response=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(q)}?fields=code,product_name,product_name_el,brands,categories,categories_tags`,{headers:{"User-Agent":"MyWorkStation/1.0 (https://myworkstation.gr)"},signal:controller.signal});
+      if(response.ok){
+        const data=await response.json(),p=data?.product;
+        if(p&&data?.status!==0){
+          const name=String(p.product_name_el||p.product_name||"").trim();
+          const categoryName=Array.isArray(p.categories_tags)&&p.categories_tags.length?String(p.categories_tags[0]).replace(/^..:/,""):String(p.categories||"").trim();
+          const onlineRow={id:`online:${q}`,name:name||`Barcode ${q}`,sourceCode:q,vatRate:null,barcodes:[q],brandName:String(p.brands||"").trim(),categoryName,subcategoryName:"",online:true,source:"OPEN_FOOD_FACTS"};
+          await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"OPEN_FOOD_FACTS",resultCount:1});
+          return res.json({query:q,source:"OPEN_FOOD_FACTS",rows:[onlineRow]});
+        }
+      }
+    }catch{}finally{clearTimeout(timer)}
+    await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"OPEN_FOOD_FACTS",resultCount:0});
+    return res.json({query:q,source:"OPEN_FOOD_FACTS",rows:[]});
+  }catch(error){next(error)}
 });
 
 router.post("/stores/:storeId/preparation",async(req,res,next)=>{
