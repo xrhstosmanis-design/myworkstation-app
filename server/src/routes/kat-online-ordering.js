@@ -56,25 +56,41 @@ async function resolvePreparationRecipe(tx,{store,line}){
   return recipeProducts.length===1?fallback:[];
 }
 
+async function resolveIngredientStockTarget(tx,{store,ingredient}){
+  if(ingredient.storeProductId)return{...ingredient,stockProductId:ingredient.ingredientProductId};
+  const matches=await tx.$queryRaw`
+    SELECT sp."id" AS "storeProductId",p."id" AS "stockProductId",COALESCE(sp."currentStock",0) AS "currentStock"
+    FROM "StoreProduct" sp
+    JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${store.companyId}
+    WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."active"=TRUE
+      AND LOWER(TRIM(p."name"))=LOWER(TRIM(${ingredient.ingredientName}))
+    ORDER BY CASE WHEN COALESCE(sp."currentStock",0)>0 THEN 0 ELSE 1 END,COALESCE(sp."currentStock",0) DESC,p."id"
+    LIMIT 1`;
+  return matches[0]?{...ingredient,...matches[0]}:{...ingredient,stockProductId:ingredient.ingredientProductId};
+}
+
 async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user}){
-  const recipe=await resolvePreparationRecipe(tx,{store,line});
-  if(!recipe.length)return false;
+  const rawRecipe=await resolvePreparationRecipe(tx,{store,line});
+  if(!rawRecipe.length)return false;
+  const recipe=[];
+  for(const ingredient of rawRecipe)recipe.push(await resolveIngredientStockTarget(tx,{store,ingredient}));
   for(const ingredient of recipe){
     const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);
     if(qty<=0)continue;
-    if(!ingredient.storeProductId){const error=new Error(`Το υλικό ${ingredient.ingredientName} της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
-    if(enforceStock&&Number(ingredient.currentStock||0)<qty){const error=new Error(`Δεν υπάρχει αρκετό stock υλικού για ${line.productName}: ${ingredient.ingredientName}`);error.status=409;throw error}
+    if(!ingredient.storeProductId&&enforceStock){const error=new Error(`Το υλικό ${ingredient.ingredientName} της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
+    if(ingredient.storeProductId&&enforceStock&&Number(ingredient.currentStock||0)<qty){const error=new Error(`Δεν υπάρχει αρκετό stock υλικού για ${line.productName}: ${ingredient.ingredientName}`);error.status=409;throw error}
   }
   const movementUserId=user?.tokenType==="STORE_OPERATOR"?null:(user?.id||null);
   for(const ingredient of recipe){
     const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);
-    if(qty<=0)continue;
-    await tx.$executeRaw`UPDATE "Product" SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.ingredientProductId} AND "companyId"=${store.companyId}`;
+    if(qty<=0||!ingredient.storeProductId)continue;
+    const stockProductId=ingredient.stockProductId||ingredient.ingredientProductId;
+    await tx.$executeRaw`UPDATE "Product" SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${stockProductId} AND "companyId"=${store.companyId}`;
     const changed=enforceStock
-      ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
-      : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE`;
-    if(!changed){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}
-    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${ingredient.ingredientProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${movementUserId})`;
+      ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
+      : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
+    if(!changed){if(enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}continue}
+    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${stockProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${movementUserId})`;
   }
   return true;
 }
