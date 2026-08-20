@@ -30,10 +30,8 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
         WHERE o."id"=${req.params.orderId} AND o."storeId"=${req.params.storeId} AND o."companyId"=${req.user.companyId}
         FOR UPDATE`)[0];
       if(!order){const error=new Error("Η Online παραγγελία δεν βρέθηκε.");error.status=404;throw error}
-      if(order.saleId){
-        if(String(order.saleId)===saleId)return{orderNumber:order.orderNumber,saleId,status:order.status,replay:true};
-        const error=new Error("Η Online παραγγελία έχει ήδη συνδεθεί με άλλη πώληση.");error.status=409;throw error;
-      }
+      if(order.saleId&&String(order.saleId)!==saleId){const error=new Error("Η Online παραγγελία έχει ήδη συνδεθεί με άλλη πώληση.");error.status=409;throw error}
+      if(String(order.status)==="DELIVERED"&&String(order.saleId||"")===saleId)return{orderNumber:order.orderNumber,saleId,status:"DELIVERED",replay:true};
       if(!["READY","OUT_FOR_DELIVERY"].includes(String(order.status))){
         const error=new Error("Η Online παραγγελία δεν είναι ακόμη έτοιμη για πληρωμή στο POS.");error.status=409;throw error;
       }
@@ -72,12 +70,13 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
 
       await tx.$executeRaw`
         UPDATE "OnlineOrder"
-        SET "status"='DELIVERED',"saleId"=${saleId},"commercialPostedAt"=NOW(),"deliveredAt"=NOW(),"paymentStatus"='PAID',"paymentMethod"=${requestedMethod},"assignedEmployeeId"=COALESCE(${req.user.employeeId||null},"assignedEmployeeId"),"updatedAt"=NOW()
+        SET "status"='DELIVERED',"saleId"=${saleId},"commercialPostedAt"=COALESCE("commercialPostedAt",NOW()),"deliveredAt"=COALESCE("deliveredAt",NOW()),"paymentStatus"='PAID',"paymentMethod"=${requestedMethod},"assignedEmployeeId"=COALESCE(${req.user.employeeId||null},"assignedEmployeeId"),"updatedAt"=NOW()
         WHERE "id"=${order.id}`;
-      await tx.$executeRaw`
+      const deliveredEvent=(await tx.$queryRaw`SELECT "id" FROM "OnlineOrderStatusEvent" WHERE "orderId"=${order.id} AND "toStatus"='DELIVERED' AND "note" ILIKE ${`%sale ${saleId}%`} LIMIT 1`)[0];
+      if(!deliveredEvent)await tx.$executeRaw`
         INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","fromStatus","toStatus","userId","employeeId","note")
         VALUES (${crypto.randomUUID()},${order.id},${order.status},'DELIVERED',${null},${req.user.employeeId||null},${`POS_CHECKOUT_COMPLETED · sale ${saleId} · ${requestedMethod}`})`;
-      return{orderNumber:order.orderNumber,saleId,status:"DELIVERED",replay:false};
+      return{orderNumber:order.orderNumber,saleId,status:"DELIVERED",replay:Boolean(order.saleId)};
     });
     res.json({ok:true,...result});
   }catch(error){next(error)}
