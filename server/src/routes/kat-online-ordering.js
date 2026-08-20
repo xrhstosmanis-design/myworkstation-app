@@ -20,11 +20,33 @@ async function orderRows(storeId,statuses=ACTIVE_STATUSES){return prisma.$queryR
 function printPayload(order,config){return{title:"ΚΥΛΙΚΕΙΟ ΚΑΤ · ONLINE",orderNumber:order.orderNumber,createdAt:order.createdAt,fulfillmentType:order.fulfillmentType,paymentMethod:order.paymentMethod,customerName:order.customerName,customerPhone:order.customerPhone,location:[order.building,order.floor,order.department,order.room].filter(Boolean).join(" · "),deliveryNotes:order.deliveryNotes||null,items:(order.items||[]).map(row=>({productName:row.productName,quantity:Number(row.quantity||0),unitPrice:money(row.onlineUnitPrice),lineTotal:money(row.lineTotal),modifiers:Array.isArray(row.modifiers)?row.modifiers:[]})),subtotal:money(order.subtotal),deliveryFee:money(order.deliveryFee),total:money(order.total),autoPrint:Boolean(config?.autoPrintOnAccept)}}
 async function addOrderEvent(tx,{orderId,fromStatus,toStatus,userId=null,employeeId=null,note=null}){await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","fromStatus","toStatus","userId","employeeId","note") VALUES (${crypto.randomUUID()},${orderId},${fromStatus||null},${toStatus},${userId},${employeeId},${note})`}
 
-async function consumePreparationRecipe(tx,{store,line,enforceStock}){
-  const recipe=await tx.$queryRaw`SELECT r."ingredientProductId",r."quantity",r."unit",p."name" AS "ingredientName",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "PreparationRecipeLine" r JOIN "Product" p ON p."id"=r."ingredientProductId" AND p."companyId"=r."companyId" LEFT JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=r."ingredientProductId" AND sp."active"=TRUE WHERE r."companyId"=${store.companyId} AND r."productId"=${line.productId} AND r."automatic"=TRUE AND p."active"=TRUE`;
+async function resolvePreparationRecipe(tx,{store,line}){
+  let recipe=await tx.$queryRaw`SELECT r."productId" AS "recipeProductId",r."ingredientProductId",r."quantity",r."unit",p."name" AS "ingredientName",COALESCE(sp."currentStock",0) AS "currentStock",sp."id" AS "storeProductId" FROM "PreparationRecipeLine" r JOIN "Product" p ON p."id"=r."ingredientProductId" AND p."companyId"=r."companyId" LEFT JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=r."ingredientProductId" AND sp."active"=TRUE WHERE r."companyId"=${store.companyId} AND r."productId"=${line.productId} AND r."automatic"=TRUE AND p."active"=TRUE ORDER BY r."id"`;
+  if(recipe.length)return recipe;
+  const fallback=await tx.$queryRaw`SELECT r."productId" AS "recipeProductId",r."ingredientProductId",r."quantity",r."unit",p."name" AS "ingredientName",COALESCE(sp."currentStock",0) AS "currentStock",sp."id" AS "storeProductId" FROM "PreparationRecipeLine" r JOIN "Product" rp ON rp."id"=r."productId" AND rp."companyId"=r."companyId" JOIN "Product" p ON p."id"=r."ingredientProductId" AND p."companyId"=r."companyId" LEFT JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=r."ingredientProductId" AND sp."active"=TRUE WHERE r."companyId"=${store.companyId} AND r."automatic"=TRUE AND p."active"=TRUE AND LOWER(TRIM(rp."name"))=LOWER(TRIM(${line.productName})) ORDER BY r."productId",r."id"`;
+  const recipeProducts=[...new Set(fallback.map(row=>row.recipeProductId))];
+  return recipeProducts.length===1?fallback:[];
+}
+
+async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user}){
+  const recipe=await resolvePreparationRecipe(tx,{store,line});
   if(!recipe.length)return false;
-  for(const ingredient of recipe){if(!ingredient.trackStock)continue;const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);if(qty<=0)continue;if(enforceStock&&Number(ingredient.currentStock||0)<qty){const error=new Error(`Δεν υπάρχει αρκετό stock υλικού για ${line.productName}: ${ingredient.ingredientName}`);error.status=409;throw error}}
-  for(const ingredient of recipe){if(!ingredient.trackStock)continue;const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);if(qty<=0)continue;const changed=enforceStock?await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`:await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE`;if(enforceStock&&!changed){const error=new Error(`Το stock υλικού άλλαξε πριν την ολοκλήρωση: ${ingredient.ingredientName}`);error.status=409;throw error}}
+  for(const ingredient of recipe){
+    const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);
+    if(qty<=0)continue;
+    if(!ingredient.storeProductId){const error=new Error(`Το υλικό ${ingredient.ingredientName} της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
+    if(enforceStock&&Number(ingredient.currentStock||0)<qty){const error=new Error(`Δεν υπάρχει αρκετό stock υλικού για ${line.productName}: ${ingredient.ingredientName}`);error.status=409;throw error}
+  }
+  for(const ingredient of recipe){
+    const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);
+    if(qty<=0)continue;
+    await tx.$executeRaw`UPDATE "Product" SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.ingredientProductId} AND "companyId"=${store.companyId}`;
+    const changed=enforceStock
+      ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
+      : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE`;
+    if(!changed){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}
+    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${ingredient.ingredientProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${user.id||null})`;
+  }
   return true;
 }
 
@@ -32,13 +54,23 @@ async function postCommercialSale(tx,{order,store,user,config}){
   if(order.saleId||order.commercialPostedAt)return order.saleId||null;
   const open=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
   if(!open){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Η online παραγγελία δεν μπορεί να κλείσει ως παραδομένη.");error.status=409;throw error}
-  const lines=await tx.$queryRaw`SELECT l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock",COALESCE((SELECT pps."preparationEnabled" FROM "PreparationProductSettings" pps WHERE pps."companyId"=${store.companyId} AND pps."productId"=p."id" LIMIT 1),FALSE) AS "preparationEnabled" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
+  const lines=await tx.$queryRaw`SELECT l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
   if(!lines.length){const error=new Error("Η online παραγγελία δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
   const enforceStock=Boolean(config?.stockCheckEnabled);
-  for(const line of lines)if(enforceStock&&!line.preparationEnabled&&line.trackStock&&Number(line.currentStock||0)<Number(line.quantity||0)){const error=new Error(`Δεν υπάρχει αρκετό stock για να ολοκληρωθεί: ${line.productName}`);error.status=409;throw error}
   const saleId=crypto.randomUUID(),actorId=user.id,actorName=user.fullName||"Πωλητής",employeeId=user.employeeId||null,total=money(order.total),subtotal=money(order.total);
   await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${store.companyId},${store.id},${employeeId},'NON_FISCAL',${subtotal},0,${total},'COMPLETED',${order.channel||"ONLINE"})`;
-  for(const line of lines){const mods=Array.isArray(line.modifiers)?line.modifiers:[],modifierText=mods.map(m=>m?.description||m?.name).filter(Boolean).join(" · "),description=modifierText?`${line.productName} · ${modifierText}`:line.productName;await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${line.productId},${description},${Number(line.quantity||0)},${money(line.onlineUnitPrice)},0,${Number(line.vatRate||0)},${money(line.lineTotal)})`;if(line.preparationEnabled){await consumePreparationRecipe(tx,{store,line,enforceStock});continue}if(line.trackStock){const qty=Number(line.quantity||0),changed=enforceStock?await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`:await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE`;if(enforceStock&&!changed){const error=new Error(`Το stock άλλαξε πριν την ολοκλήρωση: ${line.productName}`);error.status=409;throw error}}}
+  for(const line of lines){
+    const mods=Array.isArray(line.modifiers)?line.modifiers:[],modifierText=mods.map(m=>m?.description||m?.name).filter(Boolean).join(" · "),description=modifierText?`${line.productName} · ${modifierText}`:line.productName;
+    await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${line.productId},${description},${Number(line.quantity||0)},${money(line.onlineUnitPrice)},0,${Number(line.vatRate||0)},${money(line.lineTotal)})`;
+    const consumedRecipe=await consumePreparationRecipe(tx,{store,line,enforceStock,order,user});
+    if(consumedRecipe)continue;
+    if(line.trackStock){
+      const qty=Number(line.quantity||0),changed=enforceStock
+        ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
+        : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE`;
+      if(!changed){const error=new Error(enforceStock?`Δεν υπάρχει αρκετό stock για να ολοκληρωθεί: ${line.productName}`:`Δεν μπόρεσε να ενημερωθεί το stock: ${line.productName}`);error.status=409;throw error}
+    }
+  }
   if(Number(order.deliveryFee||0)>0)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${null},'Delivery Online Παραγγελίας',1,${money(order.deliveryFee)},0,24,${money(order.deliveryFee)})`;
   await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${order.paymentMethod},${total})`;
   const transactionType=order.paymentMethod==="CASH"?"SALE_CASH":"SALE_CARD";
