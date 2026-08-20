@@ -36,6 +36,43 @@ async function audit(req,store,eventType,details={}){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await prisma.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${eventType},${JSON.stringify(details)}::jsonb)`;
 }
+async function activeStoreProduct(req,store,productId){
+  const rows=await prisma.$queryRaw`
+    SELECT p."id",p."name",p."sku",p."masterProductId"
+    FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id"
+    WHERE p."id"=${productId} AND p."companyId"=${req.user.companyId} AND p."active"=TRUE
+      AND sp."storeId"=${store.id} AND sp."active"=TRUE LIMIT 1`;
+  return rows[0]||null;
+}
+async function persistProductAuditAction(req,store,access){
+  if(req.method!=="POST"||!req.path.endsWith("/audit"))return;
+  const action=String(req.body?.actionType||"").trim().toUpperCase(),details=req.body?.details&&typeof req.body.details==="object"?req.body.details:{};
+  if(action!=="BARCODE_ADD"&&action!=="DESCRIPTION_CHANGE")return;
+  const productId=String(details.productId||"").trim();
+  if(!productId){const error=new Error("Λείπει το προϊόν της αλλαγής.");error.status=400;throw error}
+  const product=await activeStoreProduct(req,store,productId);
+  if(!product){const error=new Error("Το προϊόν δεν είναι ενεργό στο συγκεκριμένο κατάστημα.");error.status=404;throw error}
+  if(action==="BARCODE_ADD"){
+    if(!access.addBarcode){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"addBarcode",action:"BARCODE_ADD",productId});const error=new Error("Δεν έχεις δικαίωμα «Προσθήκη barcode είδους» από το BackOffice.");error.status=403;throw error}
+    const barcode=String(details.newBarcode||"").trim();
+    if(barcode.length<3||barcode.length>80||/\s/.test(barcode)){const error=new Error("Το νέο barcode δεν είναι έγκυρο.");error.status=400;throw error}
+    const conflicts=await prisma.$queryRaw`
+      SELECT pb."productId",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId"
+      WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} LIMIT 1`;
+    if(conflicts[0]&&conflicts[0].productId!==product.id){const error=new Error(`Το barcode ${barcode} είναι ήδη συνδεδεμένο με το προϊόν «${conflicts[0].name}».`);error.status=409;throw error}
+    await prisma.$executeRaw`
+      INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier")
+      VALUES (${crypto.randomUUID()},${product.id},${barcode},1)
+      ON CONFLICT ("productId","barcode") DO NOTHING`;
+    req.body.details={...details,productName:product.name,newBarcode:barcode,persisted:true,scope:"PRODUCT"};
+    return;
+  }
+  if(!access.editDescription){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"editDescription",action:"DESCRIPTION_CHANGE",productId});const error=new Error("Δεν έχεις δικαίωμα «Διόρθωση περιγραφής είδους» από το BackOffice.");error.status=403;throw error}
+  const nextName=String(details.newDescription||"").trim().replace(/\s+/g," ");
+  if(nextName.length<2||nextName.length>240){const error=new Error("Η νέα περιγραφή πρέπει να έχει από 2 έως 240 χαρακτήρες.");error.status=400;throw error}
+  await prisma.$executeRaw`UPDATE "Product" SET "name"=${nextName},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id} AND "companyId"=${req.user.companyId}`;
+  req.body.details={...details,oldDescription:product.name,newDescription:nextName,persisted:true,scope:"PRODUCT"};
+}
 function requestedPaymentMethods(body={}){if(body.paymentMethod==="MIXED")return Array.isArray(body.payments)?body.payments.map(row=>String(row?.method||"").toUpperCase()).filter(Boolean):[];return body.paymentMethod?[String(body.paymentMethod).toUpperCase()]:[]}
 function layoutForAccess(rawLayout,access){if(!rawLayout||typeof rawLayout!=="object")return rawLayout||null;const layout=structuredClone(rawLayout);if(Array.isArray(layout.buttons))layout.buttons=layout.buttons.map(button=>{const action=String(button?.action||button?.id||"").toUpperCase();if(action==="CASH"&&!access.cash)return{...button,visible:false};if((action==="CARD"||action==="IRIS")&&!access.cards)return{...button,visible:false};if(action==="MIXED"&&(!access.cash||!access.cards))return{...button,visible:false};return button});return layout}
 
@@ -44,6 +81,7 @@ router.use("/stores/:storeId",async(req,res,next)=>{
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);const access=await operatorAccess(req,store.id);req.storeOperatorAccess=access;req.storeOperatorStore=store;
     if(req.method==="POST"&&req.path.endsWith("/checkout")){const methods=requestedPaymentMethods(req.body||{}),needsCash=methods.includes("CASH"),needsCards=methods.includes("CARD")||methods.includes("IRIS");if(needsCash&&!access.cash){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."})}if(needsCards&&!access.cards){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."})}}
     if(req.method==="POST"&&/\/sales\/[^/]+\/reverse$/.test(req.path)&&!access.returnItems){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"returnItems",action:"SALE_REVERSE",saleId:req.path.split("/").at(-2)||null});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice."})}
+    await persistProductAuditAction(req,store,access);
     next();
   }catch(error){next(error)}
 });
