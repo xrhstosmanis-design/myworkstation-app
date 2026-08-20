@@ -3,7 +3,7 @@ import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
-import {ensureKatOnlineOrderingSchema,getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
+import {getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
 
 const router=Router();
 const money=value=>Math.round(Number(value||0)*100)/100;
@@ -11,10 +11,9 @@ const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
 const ACTIVE_STATUSES=["NEW","ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY"];
 const NEXT_STATUS={NEW:"ACCEPTED",ACCEPTED:"PREPARING",PREPARING:"READY",READY:"OUT_FOR_DELIVERY",OUT_FOR_DELIVERY:"DELIVERED"};
 
-async function ensure(){await ensureKatOnlineOrderingSchema()}
 async function katStore(){const rows=await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",s."active" FROM "Store" s WHERE s."active"=TRUE AND LOWER(s."name")=LOWER(${KAT_STORE_NAME}) ORDER BY s."createdAt" ASC LIMIT 1`;const store=rows[0];if(!store){const error=new Error("Το Κυλικείο ΚΑΤ δεν είναι διαθέσιμο αυτή τη στιγμή.");error.status=503;throw error}return store}
 async function onlineContext(){const store=await katStore();const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;const module=modules[0],now=Date.now(),moduleActive=Boolean(module?.active)&&(!module.startsAt||new Date(module.startsAt).getTime()<=now)&&(!module.endsAt||new Date(module.endsAt).getTime()>=now);if(!moduleActive){const error=new Error("Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα.");error.status=403;throw error}const config=await getOnlineOrderingConfig(store.id);if(!config?.enabled){const error=new Error("Το Online κατάστημα είναι προσωρινά κλειστό.");error.status=503;throw error}return{store,config}}
-function safe(handler){return async(req,res,next)=>{try{await ensure();await handler(req,res)}catch(error){next(error)}}}
+function safe(handler){return async(req,res,next)=>{try{await handler(req,res)}catch(error){next(error)}}}
 function operatorGuard(req,res,next){if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Η λειτουργία Online Παραγγελιών είναι διαθέσιμη από το POS καταστήματος."});if(String(req.user.storeId||"")!==String(req.params.storeId||""))return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});next()}
 async function orderRows(storeId,statuses=ACTIVE_STATUSES){return prisma.$queryRaw`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'productName',l."productName",'quantity',l."quantity",'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items" FROM "OnlineOrder" o WHERE o."storeId"=${storeId} AND o."status"=ANY(${statuses}::text[]) ORDER BY CASE o."status" WHEN 'NEW' THEN 0 WHEN 'ACCEPTED' THEN 1 WHEN 'PREPARING' THEN 2 WHEN 'READY' THEN 3 WHEN 'OUT_FOR_DELIVERY' THEN 4 ELSE 9 END,o."createdAt" ASC`}
 function printPayload(order,config){return{title:"ΚΥΛΙΚΕΙΟ ΚΑΤ · ONLINE",orderNumber:order.orderNumber,createdAt:order.createdAt,fulfillmentType:order.fulfillmentType,paymentMethod:order.paymentMethod,customerName:order.customerName,customerPhone:order.customerPhone,location:[order.building,order.floor,order.department,order.room].filter(Boolean).join(" · "),deliveryNotes:order.deliveryNotes||null,items:(order.items||[]).map(row=>({productName:row.productName,quantity:Number(row.quantity||0),unitPrice:money(row.onlineUnitPrice),lineTotal:money(row.lineTotal),modifiers:Array.isArray(row.modifiers)?row.modifiers:[]})),subtotal:money(order.subtotal),deliveryFee:money(order.deliveryFee),total:money(order.total),autoPrint:Boolean(config?.autoPrintOnAccept)}}
