@@ -75,4 +75,32 @@ function syncButton(){const focused=editable(document.activeElement)?document.ac
 function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);try{input.focus({preventScroll:true})}catch{}render();if(!activeButton)makeButton(input)}
 function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true;removeButton()}
 function scheduleSync(){requestAnimationFrame(syncButton)}
-export function installTouchKeyboard(){installBackofficeColumnFilters();ensure();removeButton();const observer=new MutationObserver(scheduleSync);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","disabled","readonly","type"]});document.addEventListener("pointerdown",event=>{if(isTouchLikePointer(event.pointerType)){lastTouchAt=Date.now();const el=event.target;if(editable(el))prepareInput(el)}},true);document.addEventListener("focusin",event=>{const el=event.target;if(!editable(el)){removeButton();return}makeButton(el);if(Date.now()-lastTouchAt<1800)open(el)},true);document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);document.addEventListener("pointerdown",event=>{if(!activeInput)return;if(event.target.closest("#mws-touch-keyboard,.mws-touch-field-trigger"))return;if(event.target===activeInput)return;if(!editable(event.target))close()},true);window.addEventListener("resize",scheduleSync);window.addEventListener("scroll",scheduleSync,true)}
+export function installTouchKeyboard(){
+  installBackofficeColumnFilters();ensure();removeButton();
+  const observer=new MutationObserver(scheduleSync);observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","disabled","readonly","type"]});
+  document.addEventListener("pointerdown",event=>{
+    const el=event.target;
+    if(editable(el)){
+      prepareInput(el);
+      if(isTouchLikePointer(event.pointerType)){
+        lastTouchAt=Date.now();
+        event.preventDefault();
+        open(el);
+        return;
+      }
+    }
+    if(!activeInput)return;
+    if(el.closest?.("#mws-touch-keyboard,.mws-touch-field-trigger"))return;
+    if(el===activeInput)return;
+    if(!editable(el))close();
+  },true);
+  document.addEventListener("focusin",event=>{
+    const el=event.target;
+    if(!editable(el)){removeButton();return}
+    prepareInput(el);makeButton(el);
+    if(Date.now()-lastTouchAt<2200)open(el);
+  },true);
+  document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);
+  window.addEventListener("resize",scheduleSync);
+  window.addEventListener("scroll",scheduleSync,true);
+}
