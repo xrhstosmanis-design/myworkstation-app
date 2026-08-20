@@ -17,7 +17,7 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,cash:true,cards:true,initialCash:true};
+const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true};
 async function operatorAccess(req,storeId){
   if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
   const rows=await prisma.$queryRaw`
@@ -29,7 +29,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    leftKeys:Boolean(p.leftKeys),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash)
+    leftKeys:Boolean(p.leftKeys),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash)
   };
 }
 async function audit(req,store,eventType,details={}){
@@ -108,6 +108,18 @@ router.post("/stores/:storeId/preparation",async(req,res,next)=>{
     await prisma.$executeRaw`INSERT INTO "PosOperationalEvent" ("id","companyId","storeId","sessionId","operatorId","operatorName","type","itemsJson","detailsJson","total") VALUES (${id},${req.user.companyId},${store.id},${shift.id},${req.user.id},${req.user.fullName||"Πωλητής"},'PREPARATION',${JSON.stringify(prepared)}::jsonb,${JSON.stringify(details)}::jsonb,${money(body.unitPrice)})`;
     await audit(req,store,"POS_PREPARATION",{preparationId:id,items:prepared,priority:details.priority,stockConsumption:consumed,environmentalFee:details.environmentalFee,unitPrice:details.unitPrice});
     res.status(201).json({ok:true,id,status:"QUEUED",items:prepared,stockConsumption:consumed,priority:details.priority});
+  }catch(error){next(error)}
+});
+
+router.get("/stores/:storeId/customers",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id),q=String(req.query.q||"").trim();
+    if(q.length<2)return res.json({items:[],cardOnly:Boolean(access.customerCardOnly)});
+    const like=`%${q}%`;
+    const rows=access.customerCardOnly
+      ?await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND COALESCE("memberCard",'') ILIKE ${like} ORDER BY "name" LIMIT 30`
+      :await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND ("name" ILIKE ${like} OR COALESCE("taxId",'') ILIKE ${like} OR COALESCE("phone",'') ILIKE ${like} OR COALESCE("email",'') ILIKE ${like} OR COALESCE("memberCard",'') ILIKE ${like}) ORDER BY "name" LIMIT 30`;
+    res.json({cardOnly:Boolean(access.customerCardOnly),items:rows.map(row=>({...row,discountPercent:money(row.discountPercent),creditLimit:money(row.creditLimit),balance:money(row.balance),hasMemberCard:Boolean(String(row.memberCard||"").trim()),memberCard:undefined}))});
   }catch(error){next(error)}
 });
 
