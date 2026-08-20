@@ -2,7 +2,7 @@ import {installBackofficeColumnFilters} from "../../backoffice-column-filters.js
 
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
-let activeInput=null,lastTouchAt=0,lang="EL",shift=false,activeButton=null;
+let activeInput=null,lastTouchAt=0,lang="EL",shift=false,activeButton=null,dialogPosition=null;
 
 const editable=el=>{if(!(el instanceof HTMLElement)||el.disabled||el.readOnly||el.dataset?.keyboard==="off")return false;if(el.matches("textarea,[contenteditable='true']"))return true;if(!(el instanceof HTMLInputElement))return false;const type=(el.type||"text").toLowerCase();return TEXT_TYPES.has(type)||NUMERIC_TYPES.has(type)};
 const isNumeric=input=>input instanceof HTMLInputElement&&(NUMERIC_TYPES.has((input.type||"").toLowerCase())||input.dataset.mwsNumeric==="1");
@@ -25,23 +25,50 @@ function ensure(){
   root.addEventListener("pointerdown",event=>{if(event.target===root){event.preventDefault();close()}});
   return root;
 }
+function applyDialogPosition(root){
+  const dialog=root.querySelector(".mws-touch-dialog");if(!dialog)return;
+  if(!dialogPosition){dialog.style.removeProperty("left");dialog.style.removeProperty("top");dialog.style.removeProperty("transform");return}
+  dialog.style.setProperty("left",`${dialogPosition.left}px`,"important");
+  dialog.style.setProperty("top",`${dialogPosition.top}px`,"important");
+  dialog.style.setProperty("transform","none","important");
+}
+function bindDrag(root){
+  const dialog=root.querySelector(".mws-touch-dialog"),header=dialog?.querySelector("header");if(!dialog||!header)return;
+  header.classList.add("mws-touch-drag-handle");
+  header.addEventListener("pointerdown",event=>{
+    if(event.target.closest("button"))return;
+    event.preventDefault();event.stopPropagation();
+    const rect=dialog.getBoundingClientRect(),offsetX=event.clientX-rect.left,offsetY=event.clientY-rect.top;
+    dialogPosition={left:rect.left,top:rect.top};
+    dialog.style.setProperty("left",`${rect.left}px`,"important");dialog.style.setProperty("top",`${rect.top}px`,"important");dialog.style.setProperty("transform","none","important");
+    header.setPointerCapture?.(event.pointerId);
+    const move=moveEvent=>{
+      const maxLeft=Math.max(6,window.innerWidth-dialog.offsetWidth-6),maxTop=Math.max(6,window.innerHeight-dialog.offsetHeight-6);
+      const left=Math.min(maxLeft,Math.max(6,moveEvent.clientX-offsetX)),top=Math.min(maxTop,Math.max(6,moveEvent.clientY-offsetY));
+      dialogPosition={left,top};dialog.style.setProperty("left",`${left}px`,"important");dialog.style.setProperty("top",`${top}px`,"important");
+    };
+    const end=endEvent=>{header.removeEventListener("pointermove",move);header.removeEventListener("pointerup",end);header.removeEventListener("pointercancel",end);try{header.releasePointerCapture?.(endEvent.pointerId)}catch{}};
+    header.addEventListener("pointermove",move);header.addEventListener("pointerup",end);header.addEventListener("pointercancel",end);
+  },{passive:false});
+}
 function bindKeys(root){
   root.querySelectorAll("button[data-key]").forEach(button=>{
     const run=event=>{event.preventDefault();event.stopPropagation();if(!activeInput&&button.dataset.key!=="CLOSE")return;handle(button.dataset.key)};
     button.addEventListener("pointerdown",run,{passive:false});
   });
 }
+function finishRender(root){bindKeys(root);bindDrag(root);applyDialogPosition(root)}
 function render(){
   const root=ensure();if(!activeInput){root.hidden=true;return}root.hidden=false;
   if(isNumeric(activeInput)){
-    root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Αριθμητικό πληκτρολόγιο</h2></div><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><div class="mws-touch-numeric">${["7","8","9","4","5","6","1","2","3",",","0","BACK"].map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div><div class="mws-touch-actions"><button type="button" data-key="MINUS">−</button><button type="button" data-key="CLEAR">Καθαρισμός</button><button type="button" class="enter" data-key="ENTER">Enter ↵</button></div></main></section>`;
-    bindKeys(root);return;
+    root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION BACKOFFICE</small><h2>Αριθμητικό πληκτρολόγιο</h2></div><span class="mws-touch-drag-hint">Σύρε για μετακίνηση</span><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><div class="mws-touch-numeric">${["7","8","9","4","5","6","1","2","3",",","0","BACK"].map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div><div class="mws-touch-actions"><button type="button" data-key="MINUS">−</button><button type="button" data-key="CLEAR">Καθαρισμός</button><button type="button" class="enter" data-key="ENTER">Enter ↵</button></div></main></section>`;
+    finishRender(root);return;
   }
   const chars=labels[lang],sizes=rows[lang];let cursor=0;
   const line=s=>{const part=chars.slice(cursor,cursor+s);cursor+=s;return `<div class="mws-touch-row">${part.map(ch=>`<button type="button" data-key="${ch}">${shift?ch.toLocaleUpperCase(lang==="EL"?"el-GR":"en-US"):ch}</button>`).join("")}</div>`};
   const numbers=["1","2","3","4","5","6","7","8","9","0","BACK"];
-  root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληκτρολόγιο οθόνης <span>${lang==="EL"?"Ελληνικά":"English"}</span></h2></div><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><div class="mws-touch-number-row">${numbers.map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button type="button" data-key="SHIFT">⇧</button><button type="button" data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button type="button" data-key="@">@</button><button type="button" data-key="SPACE" class="space">κενό</button><button type="button" data-key=".">.</button><button type="button" data-key=",">,</button><button type="button" data-key="ENTER" class="enter">↵</button></div></main></section>`;
-  bindKeys(root);
+  root.innerHTML=`<section class="mws-touch-dialog"><header><div><small>MYWORKSTATION BACKOFFICE</small><h2>Πληκτρολόγιο οθόνης <span>${lang==="EL"?"Ελληνικά":"English"}</span></h2></div><span class="mws-touch-drag-hint">Σύρε για μετακίνηση</span><button type="button" data-key="CLOSE" aria-label="Κλείσιμο">✕</button></header><main><div class="mws-touch-number-row">${numbers.map(k=>`<button type="button" data-key="${k}">${k==="BACK"?"⌫":k}</button>`).join("")}</div>${sizes.map(line).join("")}<div class="mws-touch-row mws-touch-special"><button type="button" data-key="SHIFT">⇧</button><button type="button" data-key="LANG">${lang==="EL"?"EN":"ΕΛ"}</button><button type="button" data-key="@">@</button><button type="button" data-key="SPACE" class="space">κενό</button><button type="button" data-key=".">.</button><button type="button" data-key=",">,</button><button type="button" data-key="ENTER" class="enter">↵</button></div></main></section>`;
+  finishRender(root);
 }
 function insertText(text){
   const input=activeInput;if(!input)return;
@@ -73,7 +100,7 @@ function makeButton(input){removeButton();const button=document.createElement("b
 function positionButton(input,button=activeButton){if(!button||!editable(input)||!input.isConnected){removeButton();return}const rect=input.getBoundingClientRect();const hidden=rect.width<=0||rect.height<=0||rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth;button.hidden=hidden;if(hidden)return;const size=Math.max(28,Math.min(34,rect.height-6));const left=Math.max(rect.left+2,rect.right-size-4),top=Math.max(3,Math.min(window.innerHeight-size-3,rect.top+(rect.height-size)/2));button.style.left=`${left}px`;button.style.top=`${top}px`;button.style.width=`${size}px`;button.style.height=`${size}px`}
 function syncButton(){const focused=editable(document.activeElement)?document.activeElement:null;if(!focused){removeButton();return}if(!activeButton)makeButton(focused);else positionButton(focused,activeButton)}
 function open(input){if(!editable(input))return;activeInput=input;input.dataset.mwsTouchKeyboard="1";prepareInput(input);try{input.focus({preventScroll:true})}catch{}render();if(!activeButton)makeButton(input)}
-function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;ensure().hidden=true;removeButton()}
+function close(){if(activeInput instanceof HTMLInputElement&&activeInput.dataset.mwsOriginalInputmode){const old=activeInput.dataset.mwsOriginalInputmode;if(old==="__none__")activeInput.removeAttribute("inputmode");else activeInput.setAttribute("inputmode",old);delete activeInput.dataset.mwsOriginalInputmode;delete activeInput.dataset.mwsNumeric}activeInput=null;shift=false;dialogPosition=null;ensure().hidden=true;removeButton()}
 function scheduleSync(){requestAnimationFrame(syncButton)}
 export function installTouchKeyboard(){
   installBackofficeColumnFilters();ensure();removeButton();
@@ -101,6 +128,6 @@ export function installTouchKeyboard(){
     if(Date.now()-lastTouchAt<2200)open(el);
   },true);
   document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);
-  window.addEventListener("resize",scheduleSync);
+  window.addEventListener("resize",()=>{dialogPosition=null;scheduleSync()});
   window.addEventListener("scroll",scheduleSync,true);
 }
