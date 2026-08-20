@@ -16,6 +16,11 @@ const newSummary='items=resolvedItems.map((item,index)=>{const requested=body.it
 if(source.includes(oldSummary))source=source.replace(oldSummary,newSummary);
 else if(!source.includes('onlineDeliveryFee=round2(money(body.onlineDeliveryFee||0))'))throw new Error("store-pos online summary anchor not found");
 
+const saleAnchor="${summary.total},'COMPLETED','POS',${clientTransactionId}";
+const saleReplacement="${summary.total},'COMPLETED',${body.onlineOrderId?'ONLINE_POS':'POS'},${clientTransactionId}";
+if(source.includes(saleAnchor))source=source.replace(saleAnchor,saleReplacement);
+else if(!source.includes("body.onlineOrderId?'ONLINE_POS':'POS'"))throw new Error("store-pos sale source anchor not found");
+
 const paymentAnchor='      for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`;';
 const paymentReplacement='      if(onlineDeliveryFee>0)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${null},${body.onlineOrderNumber?`Delivery Online · ${body.onlineOrderNumber}`:"Delivery Online Παραγγελίας"},1,${onlineDeliveryFee},0,24,${onlineDeliveryFee})`;\n'+paymentAnchor;
 if(source.includes(paymentAnchor)&&!source.includes('Delivery Online · ${body.onlineOrderNumber}'))source=source.replace(paymentAnchor,paymentReplacement);
@@ -28,5 +33,9 @@ const cardDesc='${`POS πώληση ${saleId} · ΚΑΡΤΑ ${cardAmount.toFixed
 const cardNew='${body.onlineOrderNumber?`ONLINE ΠΑΡΑΓΓΕΛΙΑ ${body.onlineOrderNumber} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`:`POS πώληση ${saleId} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`}';
 if(source.includes(cardDesc))source=source.replace(cardDesc,cardNew);
 
+const auditNeedle='customerId:customer?.id||null,items:items.map(item=>({productId:item.productId,name:item.name,quantity:item.quantity,unitPrice:item.unitPrice,lineTotal:item.lineTotal,priceSource:item.priceSource,overrideReason:item.overrideReason||null}))';
+const auditReplacement='customerId:customer?.id||null,onlineOrderId:body.onlineOrderId||null,onlineOrderNumber:body.onlineOrderNumber||null,onlineDeliveryFee,items:items.map(item=>({productId:item.productId,name:item.name,quantity:item.quantity,unitPrice:item.unitPrice,lineTotal:item.lineTotal,priceSource:item.priceSource,overrideReason:item.overrideReason||null}))';
+if(source.includes(auditNeedle))source=source.replace(auditNeedle,auditReplacement);
+
 fs.writeFileSync(file,source);
-console.log("Normal POS checkout extended for Online delivery fee and labeling.");
+console.log("Normal POS checkout extended for Online handoff, delivery fee and audit labeling.");
