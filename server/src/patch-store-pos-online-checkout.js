@@ -16,6 +16,11 @@ const newSummary='items=resolvedItems.map((item,index)=>{const requested=body.it
 if(source.includes(oldSummary))source=source.replace(oldSummary,newSummary);
 else if(!source.includes('onlineDeliveryFee=round2(money(body.onlineDeliveryFee||0))'))throw new Error("store-pos online summary anchor not found");
 
+const txAnchor='    const txResult=await prisma.$transaction(async tx=>{\n      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${fingerprint})) IS NULL) AS locked`;';
+const txReplacement='    const txResult=await prisma.$transaction(async tx=>{\n      if(body.onlineOrderId){\n        await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`ONLINE_ORDER:${body.onlineOrderId}`})) IS NULL) AS locked`;\n        const onlineOrder=(await tx.$queryRaw`SELECT "id","orderNumber","saleId","total" FROM "OnlineOrder" WHERE "id"=${body.onlineOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];\n        if(!onlineOrder){const error=new Error("Η Online παραγγελία δεν βρέθηκε για το POS checkout.");error.status=409;throw error}\n        if(body.onlineOrderNumber&&String(onlineOrder.orderNumber)!==String(body.onlineOrderNumber)){const error=new Error("Ο αριθμός Online παραγγελίας δεν συμφωνεί με το checkout.");error.status=409;throw error}\n        if(onlineOrder.saleId){const linked=(await tx.$queryRaw`SELECT "id","total","fiscalStatus" FROM "Sale" WHERE "id"=${onlineOrder.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];if(!linked){const error=new Error("Η Online παραγγελία δείχνει σε πώληση που δεν βρέθηκε.");error.status=409;throw error}return {kind:"REPLAY",sale:linked}}\n      }\n      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${fingerprint})) IS NULL) AS locked`;';
+if(source.includes(txAnchor))source=source.replace(txAnchor,txReplacement);
+else if(!source.includes('ONLINE_ORDER:${body.onlineOrderId}'))throw new Error("store-pos online order lock anchor not found");
+
 const saleAnchor="${summary.total},'COMPLETED','POS',${clientTransactionId}";
 const saleReplacement="${summary.total},'COMPLETED',${body.onlineOrderId?'ONLINE_POS':'POS'},${clientTransactionId}";
 if(source.includes(saleAnchor))source=source.replace(saleAnchor,saleReplacement);
@@ -37,5 +42,10 @@ const auditNeedle='customerId:customer?.id||null,items:items.map(item=>({product
 const auditReplacement='customerId:customer?.id||null,onlineOrderId:body.onlineOrderId||null,onlineOrderNumber:body.onlineOrderNumber||null,onlineDeliveryFee,items:items.map(item=>({productId:item.productId,name:item.name,quantity:item.quantity,unitPrice:item.unitPrice,lineTotal:item.lineTotal,priceSource:item.priceSource,overrideReason:item.overrideReason||null}))';
 if(source.includes(auditNeedle))source=source.replace(auditNeedle,auditReplacement);
 
+const returnAnchor='      if(recent&&body.confirmDuplicate)await insertPosSaleSafetyAudit(tx,{companyId:req.user.companyId,storeId:store.id,saleId,relatedSaleId:recent.id,eventType:"DUPLICATE_CONFIRMED",clientTransactionId,saleFingerprint:fingerprint,actorId,actorName,details:{total:summary.total,paymentMethod:body.paymentMethod}});return {kind:"CREATED",saleId};';
+const returnReplacement='      if(recent&&body.confirmDuplicate)await insertPosSaleSafetyAudit(tx,{companyId:req.user.companyId,storeId:store.id,saleId,relatedSaleId:recent.id,eventType:"DUPLICATE_CONFIRMED",clientTransactionId,saleFingerprint:fingerprint,actorId,actorName,details:{total:summary.total,paymentMethod:body.paymentMethod}});if(body.onlineOrderId){const linkedCount=await tx.$executeRaw`UPDATE "OnlineOrder" SET "saleId"=${saleId},"updatedAt"=NOW() WHERE "id"=${body.onlineOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "saleId" IS NULL`;if(Number(linkedCount)!==1){const error=new Error("Η Online παραγγελία συνδέθηκε ήδη με άλλη πώληση.");error.status=409;throw error}}return {kind:"CREATED",saleId};';
+if(source.includes(returnAnchor))source=source.replace(returnAnchor,returnReplacement);
+else if(!source.includes('linkedCount=await tx.$executeRaw`UPDATE "OnlineOrder"'))throw new Error("store-pos atomic online sale link anchor not found");
+
 fs.writeFileSync(file,source);
-console.log("Normal POS checkout extended for Online handoff, delivery fee and audit labeling.");
+console.log("Normal POS checkout extended for Online handoff, delivery fee, audit labeling and server-side order idempotency.");
