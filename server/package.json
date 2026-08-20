@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/online-transaction-actor-fix.js && node src/online-recipe-stock-repair.js && node src/index.js",
+    "start": "node src/patch-online-pos-handoff-route.js && node src/online-transaction-actor-fix.js && node src/online-recipe-stock-repair.js && node src/index.js",
     "test": "node --test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
