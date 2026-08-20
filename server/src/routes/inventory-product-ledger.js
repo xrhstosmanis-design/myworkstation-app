@@ -81,7 +81,14 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."status"='DELIVERED'
           AND r."ingredientProductId"=${productId}
           AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt")>=${from}
-          AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt")<=${to}`
+          AND COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt")<=${to}
+          AND NOT EXISTS (
+            SELECT 1 FROM "StockMovement" sm
+            WHERE sm."storeId"=o."storeId"
+              AND sm."productId"=r."ingredientProductId"
+              AND sm."sourceType"='ONLINE_ORDER_RECIPE'
+              AND sm."sourceId"=o."id"
+          )`
     ]);
 
     const combined=[...manual,...purchases,...sales,...onlineRecipe].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
