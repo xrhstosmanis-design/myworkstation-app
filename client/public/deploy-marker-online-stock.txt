@@ -1,0 +1,4 @@
+MYWORKSTATION ONLINE STOCK FIX
+marker: online-stock-ledger-v1
+includes: recipe-stock-decrement + StockMovement ONLINE_ORDER_RECIPE + ledger-dedupe
+created: 2026-08-20
