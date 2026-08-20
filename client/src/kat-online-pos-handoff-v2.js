@@ -12,57 +12,13 @@ function ensureStyle(){if(document.getElementById(HANDOFF_STYLE_ID))return;const
 `;document.head.appendChild(style)}
 
 async function fetchOrder(storeId,orderId){const data=await api(`/api/public/kat/pos/stores/${encodeURIComponent(storeId)}/orders`,{cache:"no-store"});const order=(data.rows||[]).find(row=>String(row.id)===String(orderId));if(!order)throw new Error("Η Online παραγγελία δεν βρέθηκε στις ενεργές παραγγελίες.");return order}
-
 async function preparationInfo(storeId,item){try{return await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/modifiers?productId=${encodeURIComponent(item.productId)}`,{cache:"no-store"})}catch{return null}}
-
-async function createPreparationBatch(storeId,order){
-  const checked=await Promise.all((order.items||[]).map(async item=>({item,info:await preparationInfo(storeId,item)})));
-  const prep=checked.filter(x=>Boolean(x.info?.settings?.preparationEnabled)).map(({item})=>({productId:item.productId,quantity:Number(item.quantity||0),modifiers:(item.modifiers||[]).filter(m=>m?.id).map(m=>({id:String(m.id),description:String(m.description||m.name||""),price:Number(m.price||0)}))}));
-  if(!prep.length)return{batchId:null,prepIds:new Set()};
-  const result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/preparation`,{method:"POST",body:JSON.stringify({items:prep,note:`ONLINE ${order.orderNumber}`,priority:"NORMAL",productionStation:"ΠΑΡΑΓΩΓΗ"})});
-  return{batchId:result.batchId||result.id,prepIds:new Set(prep.map(x=>x.productId))};
-}
-
+async function createPreparationBatch(storeId,order){const checked=await Promise.all((order.items||[]).map(async item=>({item,info:await preparationInfo(storeId,item)})));const prep=checked.filter(x=>Boolean(x.info?.settings?.preparationEnabled)).map(({item})=>({productId:item.productId,quantity:Number(item.quantity||0),modifiers:(item.modifiers||[]).filter(m=>m?.id).map(m=>({id:String(m.id),description:String(m.description||m.name||""),price:Number(m.price||0)}))}));if(!prep.length)return{batchId:null,prepIds:new Set()};const result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/preparation`,{method:"POST",body:JSON.stringify({items:prep,note:`ONLINE ${order.orderNumber}`,priority:"NORMAL",productionStation:"ΠΑΡΑΓΩΓΗ"})});return{batchId:result.batchId||result.id,prepIds:new Set(prep.map(x=>x.productId))}}
 function transactionId(orderId){const key=`mws-online-pos-tx:${orderId}`;let value=sessionStorage.getItem(key);if(!value){value=crypto.randomUUID();sessionStorage.setItem(key,value)}return value}
 
-async function payOrder(order,method,setError){
-  if(handoffBusy)return;handoffBusy=true;setError("");
-  const s=session(),storeId=s?.store?.id;if(!storeId){handoffBusy=false;setError("Δεν βρέθηκε ενεργό κατάστημα POS.");return}
-  try{
-    const {batchId,prepIds}=await createPreparationBatch(storeId,order);
-    const rows=(order.items||[]);if(!rows.length)throw new Error("Η Online παραγγελία δεν έχει προϊόντα.");
-    const delivery=Number(order.deliveryFee||0);
-    const checkoutItems=rows.map((item,index)=>{
-      const quantity=Math.max(1,Number(item.quantity||1));
-      const base=Number(item.onlineUnitPrice||0);
-      const deliveryPart=index===0?delivery/quantity:0;
-      const isPrep=Boolean(batchId&&prepIds.has(item.productId));
-      return{productId:item.productId,quantity,unitPriceOverride:Number((base+deliveryPart).toFixed(4)),overrideReason:isPrep?`PREPARATION:${batchId}`:`ONLINE:${order.orderNumber}`};
-    });
-    let sale;
-    try{
-      sale=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/checkout`,{method:"POST",body:JSON.stringify({paymentMethod:method,clientTransactionId:transactionId(order.id),items:checkoutItems})});
-    }catch(error){
-      if(error?.data?.code==="DUPLICATE_SIMILAR_SALE"){
-        sale=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/checkout`,{method:"POST",body:JSON.stringify({paymentMethod:method,clientTransactionId:transactionId(order.id),confirmDuplicate:true,items:checkoutItems})});
-      }else throw error;
-    }
-    if(!sale?.saleId)throw new Error("Το POS δεν επέστρεψε αριθμό πώλησης.");
-    await api(`/api/public/kat/pos-handoff/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(order.id)}/complete-from-pos`,{method:"POST",body:JSON.stringify({saleId:sale.saleId,paymentMethod:method})});
-    sessionStorage.removeItem(`mws-online-pos-tx:${order.id}`);
-    document.querySelector(".mws-pos-pay-overlay")?.remove();
-    document.querySelector(".mws-online-overlay")?.remove();
-    window.dispatchEvent(new CustomEvent("mws:online-pos-completed",{detail:{orderId:order.id,orderNumber:order.orderNumber,saleId:sale.saleId,total:sale.total,paymentMethod:method}}));
-    alert(`Η ${order.orderNumber} ολοκληρώθηκε από το POS.\n${method==="CASH"?"Μετρητά":"Κάρτα"} · ${euro(order.total)}\nΠώληση: ${sale.saleId}`);
-    location.reload();
-  }catch(error){setError(error.message||"Η πληρωμή POS απέτυχε.")}
-  finally{handoffBusy=false}
-}
+async function payOrder(order,method,setError){if(handoffBusy)return;handoffBusy=true;setError("");const s=session(),storeId=s?.store?.id;if(!storeId){handoffBusy=false;setError("Δεν βρέθηκε ενεργό κατάστημα POS.");return}try{const {batchId,prepIds}=await createPreparationBatch(storeId,order);const rows=(order.items||[]);if(!rows.length)throw new Error("Η Online παραγγελία δεν έχει προϊόντα.");const checkoutItems=rows.map(item=>{const quantity=Math.max(1,Number(item.quantity||1)),base=Number(item.onlineUnitPrice||0),isPrep=Boolean(batchId&&prepIds.has(item.productId));return{productId:item.productId,quantity,unitPriceOverride:Number(base.toFixed(4)),overrideReason:isPrep?`PREPARATION:${batchId}`:`ONLINE:${order.orderNumber}`}});const payload={paymentMethod:method,clientTransactionId:transactionId(order.id),onlineOrderId:order.id,onlineOrderNumber:order.orderNumber,onlineDeliveryFee:Number(order.deliveryFee||0),items:checkoutItems};let sale;try{sale=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/checkout`,{method:"POST",body:JSON.stringify(payload)})}catch(error){if(error?.data?.code==="DUPLICATE_SIMILAR_SALE")sale=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/checkout`,{method:"POST",body:JSON.stringify({...payload,confirmDuplicate:true})});else throw error}if(!sale?.saleId)throw new Error("Το POS δεν επέστρεψε αριθμό πώλησης.");await api(`/api/public/kat/pos-handoff/stores/${encodeURIComponent(storeId)}/orders/${encodeURIComponent(order.id)}/complete-from-pos`,{method:"POST",body:JSON.stringify({saleId:sale.saleId,paymentMethod:method})});sessionStorage.removeItem(`mws-online-pos-tx:${order.id}`);document.querySelector(".mws-pos-pay-overlay")?.remove();document.querySelector(".mws-online-overlay")?.remove();window.dispatchEvent(new CustomEvent("mws:online-pos-completed",{detail:{orderId:order.id,orderNumber:order.orderNumber,saleId:sale.saleId,total:sale.total,paymentMethod:method}}));alert(`Η ${order.orderNumber} ολοκληρώθηκε από το POS.\n${method==="CASH"?"Μετρητά":"Κάρτα"} · ${euro(order.total)}\nΠώληση: ${sale.saleId}`);location.reload()}catch(error){setError(error.message||"Η πληρωμή POS απέτυχε.")}finally{handoffBusy=false}}
 
-function showPayment(order){ensureStyle();document.querySelector(".mws-pos-pay-overlay")?.remove();const overlay=document.createElement("div");overlay.className="mws-pos-pay-overlay";const items=(order.items||[]).map(item=>`<div class="mws-pos-pay-line"><span><b>${esc(item.quantity)}× ${esc(item.productName)}</b>${(item.modifiers||[]).length?`<br><small>${esc((item.modifiers||[]).map(m=>m?.description||m?.name||String(m)).join(" · "))}</small>`:""}</span><b>${euro(item.lineTotal)}</b></div>`).join("");overlay.innerHTML=`<section class="mws-pos-pay-card"><header class="mws-pos-pay-head"><div><small>MYWORKSTATION · ONLINE → POS</small><h2>Πληρωμή στο POS</h2></div><button type="button" data-close>×</button></header><div class="mws-pos-pay-body"><div class="mws-pos-pay-order">#${esc(order.orderNumber)}</div><div>${esc(order.customerName||"")} · ${order.fulfillmentType==="DELIVERY"?"Delivery":"Παραλαβή"}</div><div class="mws-pos-pay-items">${items}</div>${Number(order.deliveryFee||0)>0?`<div class="mws-pos-pay-note">Delivery: <b>${euro(order.deliveryFee)}</b> · θα περιληφθεί στο τελικό ποσό της απόδειξης POS.</div>`:""}<div class="mws-pos-pay-total">ΣΥΝΟΛΟ ${euro(order.total)}</div><div class="mws-pos-pay-error" data-error style="display:none"></div><div class="mws-pos-pay-actions"><button type="button" class="mws-pos-pay-cash" data-pay="CASH">ΜΕΤΡΗΤΑ</button><button type="button" class="mws-pos-pay-cardbtn" data-pay="CARD">ΚΑΡΤΑ / POS</button></div></div></section>`;const setError=message=>{const box=overlay.querySelector("[data-error]");box.textContent=message;box.style.display=message?"block":"none"};overlay.querySelector("[data-close]").onclick=()=>overlay.remove();overlay.querySelectorAll("[data-pay]").forEach(button=>button.onclick=()=>payOrder(order,button.dataset.pay,setError));document.body.appendChild(overlay)}
-
+function showPayment(order){ensureStyle();document.querySelector(".mws-pos-pay-overlay")?.remove();const overlay=document.createElement("div");overlay.className="mws-pos-pay-overlay";const items=(order.items||[]).map(item=>`<div class="mws-pos-pay-line"><span><b>${esc(item.quantity)}× ${esc(item.productName)}</b>${(item.modifiers||[]).length?`<br><small>${esc((item.modifiers||[]).map(m=>m?.description||m?.name||String(m)).join(" · "))}</small>`:""}</span><b>${euro(item.lineTotal)}</b></div>`).join("");overlay.innerHTML=`<section class="mws-pos-pay-card"><header class="mws-pos-pay-head"><div><small>MYWORKSTATION · ONLINE → POS</small><h2>Πληρωμή στο POS</h2></div><button type="button" data-close>×</button></header><div class="mws-pos-pay-body"><div class="mws-pos-pay-order">#${esc(order.orderNumber)}</div><div>${esc(order.customerName||"")} · ${order.fulfillmentType==="DELIVERY"?"Delivery":"Παραλαβή"}</div><div class="mws-pos-pay-items">${items}</div>${Number(order.deliveryFee||0)>0?`<div class="mws-pos-pay-note">Delivery: <b>${euro(order.deliveryFee)}</b> · ξεχωριστή γραμμή στην πώληση POS.</div>`:""}<div class="mws-pos-pay-total">ΣΥΝΟΛΟ ${euro(order.total)}</div><div class="mws-pos-pay-error" data-error style="display:none"></div><div class="mws-pos-pay-actions"><button type="button" class="mws-pos-pay-cash" data-pay="CASH">ΜΕΤΡΗΤΑ</button><button type="button" class="mws-pos-pay-cardbtn" data-pay="CARD">ΚΑΡΤΑ / POS</button></div></div></section>`;const setError=message=>{const box=overlay.querySelector("[data-error]");box.textContent=message;box.style.display=message?"block":"none"};overlay.querySelector("[data-close]").onclick=()=>overlay.remove();overlay.querySelectorAll("[data-pay]").forEach(button=>button.onclick=()=>payOrder(order,button.dataset.pay,setError));document.body.appendChild(overlay)}
 async function interceptFinal(event){const button=event.target?.closest?.('[data-status="DELIVERED"]');if(!button)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();const s=session();if(!s?.store?.id)return;try{const order=await fetchOrder(s.store.id,button.dataset.id);showPayment(order)}catch(error){alert(error.message)}}
-
 function relabel(){document.querySelectorAll('[data-status="DELIVERED"]').forEach(button=>{button.textContent="ΣΤΟ POS / ΠΛΗΡΩΜΗ";button.title="Η τελική πώληση, απόδειξη και stock θα ολοκληρωθούν από το κανονικό POS."})}
-
 ensureStyle();document.addEventListener("click",interceptFinal,true);const observer=new MutationObserver(relabel);observer.observe(document.documentElement,{childList:true,subtree:true});relabel();
