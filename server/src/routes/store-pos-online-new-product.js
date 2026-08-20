@@ -51,10 +51,11 @@ router.post("/stores/:storeId/online-product-create",async(req,res,next)=>{
       await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${categoryId},${sku},${name},${unit},${vatRate},true,${salePrice},${costPrice},true,true)`;
       await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${productId},${barcode},1)`;
       await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${productId},${salePrice},${openingStock},true)`;
+      if(openingStock>0)await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${store.id},${productId},'MANUAL_ADJUSTMENT',${openingStock},${costPrice},'POS_ONLINE_NEW_PRODUCT',${productId},'Αρχικό stock από νέο είδος μέσω Online αναζήτησης POS',${req.user.id})`;
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'POS_ONLINE_PRODUCT_CREATE',${JSON.stringify({productId,sku,barcode,name,salePrice,openingStock})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'POS_ONLINE_PRODUCT_CREATE',${JSON.stringify({productId,sku,barcode,name,salePrice,costPrice,vatRate,openingStock,inventoryLinked:true})}::jsonb)`;
     });
-    res.status(201).json({ok:true,id:productId,sku,barcode,name,salePrice,currentStock:openingStock,vatRate,categoryName,unit});
+    res.status(201).json({ok:true,id:productId,sku,barcode,name,salePrice,costPrice,currentStock:openingStock,vatRate,categoryName,unit,inventoryLinked:true});
   }catch(error){next(error)}
 });
 
