@@ -47,12 +47,28 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
         WHERE s."id"=${saleId} AND s."storeId"=${req.params.storeId} AND s."companyId"=${req.user.companyId}
         LIMIT 1`)[0];
       if(!sale||sale.status!=="COMPLETED"){const error=new Error("Η πώληση POS δεν ολοκληρώθηκε.");error.status=409;throw error}
-      if(String(sale.source)!=="ONLINE_POS"){const error=new Error("Η πώληση δεν προέρχεται από την ασφαλή ροή Online → POS.");error.status=409;throw error}
 
       const expected=Number(order.total||0),actual=Number(sale.total||0),paid=Number(sale.paidTotal||0);
       if(Math.abs(expected-actual)>0.011){const error=new Error(`Το σύνολο POS (${actual.toFixed(2)} €) δεν συμφωνεί με την Online παραγγελία (${expected.toFixed(2)} €).`);error.status=409;throw error}
       if(Math.abs(actual-paid)>0.011){const error=new Error(`Η πληρωμή POS (${paid.toFixed(2)} €) δεν συμφωνεί με την πώληση (${actual.toFixed(2)} €).`);error.status=409;throw error}
       if(Number(sale.methodCount||0)<1||Number(sale.otherMethodCount||0)>0){const error=new Error("Ο τρόπος πληρωμής της πώλησης POS δεν συμφωνεί με την επιλογή του χειριστή.");error.status=409;throw error}
+
+      let verifiedOnlineSource=String(sale.source)==="ONLINE_POS";
+      if(!verifiedOnlineSource){
+        const expectedDescription=`ONLINE ΠΑΡΑΓΓΕΛΙΑ ${order.orderNumber}`;
+        const evidence=(await tx.$queryRaw`
+          SELECT st."id"
+          FROM "StoreTransaction" st
+          WHERE st."companyId"=${req.user.companyId}
+            AND st."storeId"=${req.params.storeId}
+            AND st."type"=${requestedMethod==="CASH"?"SALE_CASH":"SALE_CARD"}
+            AND ABS(st."amount"-${actual})<0.011
+            AND st."description" ILIKE ${`%${expectedDescription}%`}
+          ORDER BY st."id" DESC
+          LIMIT 1`)[0];
+        verifiedOnlineSource=Boolean(evidence);
+      }
+      if(!verifiedOnlineSource){const error=new Error("Η πώληση δεν προέρχεται από την ασφαλή ροή Online → POS.");error.status=409;throw error}
 
       await tx.$executeRaw`
         UPDATE "OnlineOrder"
