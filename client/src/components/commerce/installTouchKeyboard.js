@@ -54,7 +54,7 @@ function removeButton(){if(activeButton){activeButton.remove();activeButton=null
 function makeButton(input){
   removeButton();
   const button=document.createElement("button");button.type="button";button.className="mws-touch-field-trigger";button.title="Άνοιγμα πληκτρολογίου οθόνης";button.setAttribute("aria-label","Άνοιγμα πληκτρολογίου οθόνης");button.textContent="⌨";
-  button.addEventListener("pointerdown",event=>event.preventDefault());button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);activeButton=button;positionButton(input,button);return button;
+  button.addEventListener("pointerdown",event=>{event.preventDefault();event.stopPropagation();open(input)});button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();open(input)});document.body.appendChild(button);activeButton=button;positionButton(input,button);return button;
 }
 function positionButton(input,button=activeButton){
   if(!button||!editable(input)||!input.isConnected){removeButton();return}
