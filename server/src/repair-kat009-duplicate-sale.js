@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
 async function repair(){
@@ -47,7 +48,7 @@ async function repair(){
       await tx.$executeRawUnsafe(`DELETE FROM "Payment" WHERE "saleId"=$1`,duplicate.saleId);
       await tx.$executeRawUnsafe(`UPDATE "Sale" SET "status"='CANCELLED' WHERE "id"=$1`,duplicate.saleId);
       await tx.$executeRawUnsafe(`DELETE FROM "StoreTransaction" WHERE "id"=$1`,duplicate.tx.id);
-      await tx.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (gen_random_uuid()::text,$1,$2,NULL,$3,'ONLINE_DUPLICATE_SALE_REPAIRED',jsonb_build_object('orderNumber','KAT-009','canonicalSaleId',$4,'duplicateSaleId',$5,'removedStoreTransactionId',$6,'stockChanged',false))`,order.companyId,order.storeId,String(duplicate.tx.actorId||"SYSTEM"),canonical.saleId,duplicate.saleId,duplicate.tx.id);
+      await tx.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES ($1,$2,$3,NULL,$4,'ONLINE_DUPLICATE_SALE_REPAIRED',jsonb_build_object('orderNumber','KAT-009','canonicalSaleId',$5,'duplicateSaleId',$6,'removedStoreTransactionId',$7,'stockChanged',false))`,crypto.randomUUID(),order.companyId,order.storeId,String(duplicate.tx.actorId||"SYSTEM"),canonical.saleId,duplicate.saleId,duplicate.tx.id);
     }
   });
   console.log(`KAT-009 duplicate repair completed. Canonical sale: ${canonical.saleId}`);
