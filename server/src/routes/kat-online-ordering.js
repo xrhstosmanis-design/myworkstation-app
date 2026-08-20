@@ -65,6 +65,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if(!ingredient.storeProductId){const error=new Error(`Το υλικό ${ingredient.ingredientName} της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
     if(enforceStock&&Number(ingredient.currentStock||0)<qty){const error=new Error(`Δεν υπάρχει αρκετό stock υλικού για ${line.productName}: ${ingredient.ingredientName}`);error.status=409;throw error}
   }
+  const movementUserId=user?.tokenType==="STORE_OPERATOR"?null:(user?.id||null);
   for(const ingredient of recipe){
     const qty=Number(line.quantity||0)*Number(ingredient.quantity||0);
     if(qty<=0)continue;
@@ -73,7 +74,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
       ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
       : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${ingredient.ingredientProductId} AND "active"=TRUE`;
     if(!changed){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}
-    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${ingredient.ingredientProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${user.id||null})`;
+    await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${ingredient.ingredientProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${movementUserId})`;
   }
   return true;
 }
