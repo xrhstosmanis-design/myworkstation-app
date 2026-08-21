@@ -73,6 +73,7 @@ import ownerProductSmartEntryRoutes from "./routes/owner-product-smart-entry.js"
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
 import masterCatalogMaintenanceRoutes from "./routes/master-catalog-maintenance.js";
+import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-online-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
 import katTestRoutes from "./routes/kat-test.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
@@ -109,6 +110,7 @@ app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/auth",authRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
+app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoutes);
 app.use("/api/platform/master-catalog",masterCatalogPreviewRoutes);
 app.use("/api/platform/master-catalog",masterCatalogMaintenanceRoutes);
 app.use("/api/platform/master-catalog",masterCatalogRoutes);
