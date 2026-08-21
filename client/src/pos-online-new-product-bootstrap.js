@@ -12,15 +12,23 @@ if(storeMatch){
 
   const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const num=value=>Number(String(value??"").replace(",","."));
-  const currentQuery=()=>document.querySelector(".standard-search input")?.value?.trim()||"";
+  const visible=el=>{if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0};
+  const currentQuery=()=>{
+    const candidates=[
+      ...document.querySelectorAll('.standard-search input,input[placeholder*="Barcode"],input[placeholder*="barcode"],input[type="search"]')
+    ];
+    const input=candidates.find(el=>visible(el)&&String(el.value||"").trim())||candidates.find(visible);
+    return String(input?.value||"").trim();
+  };
 
   function closeModal(){document.getElementById("mws-pos-online-new-overlay")?.remove()}
   async function openModal(){
-    const query=currentQuery();if(!query)return;
+    const query=currentQuery();if(!query){window.alert("Σκάναρε ή γράψε πρώτα barcode / κωδικό.");return}
     let result;
     try{result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-search?q=${encodeURIComponent(query)}`)}catch(error){window.alert(error.message);return}
     const row=(result.rows||[])[0];if(!row){window.alert("Δεν βρέθηκε online προϊόν για αυτό το barcode.");return}
     const barcode=String((row.barcodes||[])[0]||row.sourceCode||query).trim();
+    closeModal();
     const overlay=document.createElement("div");overlay.id="mws-pos-online-new-overlay";
     overlay.innerHTML=`<section class="mws-pos-online-new-modal" role="dialog" aria-modal="true">
       <header><div><small>ONLINE ΑΝΑΖΗΤΗΣΗ · ΝΕΟ ΕΙΔΟΣ</small><h2>Νέο είδος στο κατάστημα</h2><p>Θα δημιουργηθεί καρτέλα είδους και θα συνδεθεί άμεσα με την Αποθήκη.</p></div><button type="button" data-close>×</button></header>
@@ -56,13 +64,21 @@ if(storeMatch){
     });
   }
 
+  const isOnlineButton=button=>button instanceof HTMLButtonElement&&String(button.textContent||"").replace(/\s+/g," ").trim().toLocaleUpperCase("el-GR").includes("ONLINE ΑΝΑΖΗΤΗΣΗ");
+  document.addEventListener("click",event=>{
+    const button=event.target.closest("button");
+    if(!isOnlineButton(button))return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    openModal();
+  },true);
+
   function enhanceOnlineRows(){
     document.querySelectorAll(".standard-search-results > div").forEach(card=>{
       if(card.dataset.mwsOnlineNewDone==="1")return;
       if(card.querySelector("button")||card.textContent.includes("Το προϊόν δεν υπάρχει"))return;
       const title=card.querySelector("b");if(!title)return;
       card.dataset.mwsOnlineNewDone="1";
-      const button=document.createElement("button");button.type="button";button.className="mws-pos-online-new-button";button.textContent="+ ΝΕΟ ΕΙΔΟΣ";button.addEventListener("click",openModal);card.appendChild(button);
+      const button=document.createElement("button");button.type="button";button.className="mws-pos-online-new-button";button.textContent="+ ΝΕΟ ΕΙΔΟΣ";button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();openModal()});card.appendChild(button);
     });
   }
 
