@@ -30,22 +30,37 @@ if(storeMatch){
     const refresh=buttons.find(button=>String(button.textContent||"").replace(/\s+/g," ").trim().toLocaleUpperCase("el-GR").includes("ΑΝΑΝΕΩΣΗ"));
     refresh?.click();
   };
+  const noResultMessage=result=>{
+    const reason=result?.advanced?.reason;
+    if(reason==="PROVIDER_NOT_CONFIGURED")return "Το Advanced Online Product Search είναι ενεργό, αλλά δεν έχει ρυθμιστεί ακόμη Google search provider.";
+    if(reason==="LIMIT_REACHED")return "Έχει συμπληρωθεί το όριο Advanced Online Product Search για σήμερα ή για τον μήνα.";
+    if(reason==="TIMEOUT")return "Η βαθιά online αναζήτηση καθυστέρησε. Δοκίμασε ξανά σε λίγο.";
+    if(reason==="PROVIDER_ERROR")return "Ο Google search provider δεν είναι προσωρινά διαθέσιμος. Δοκίμασε ξανά σε λίγο.";
+    return "Δεν βρέθηκε online προϊόν για αυτό το barcode.";
+  };
 
   function closeModal(){document.getElementById("mws-pos-online-new-overlay")?.remove()}
   async function openModal(){
     const query=currentQuery();if(!query){window.alert("Σκάναρε ή γράψε πρώτα barcode / κωδικό.");return}
     let result;
     try{result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-search?q=${encodeURIComponent(query)}`)}catch(error){window.alert(error.message);return}
-    const row=(result.rows||[])[0];if(!row){window.alert("Δεν βρέθηκε online προϊόν για αυτό το barcode.");return}
+    const row=(result.rows||[])[0];if(!row){window.alert(noResultMessage(result));return}
     const barcode=String((row.barcodes||[])[0]||row.sourceCode||query).trim();
+    const fromMaster=result.source==="MASTER_CATALOG";
+    const categoryValue=fromMaster?String(row.categoryName||""):"";
+    const suggestedCategory=!fromMaster&&row.categoryName?String(row.categoryName):"";
+    const sourceLabel=result.source==="GOOGLE_SEARCH"?"GOOGLE SEARCH":result.source==="OPEN_FOOD_FACTS"?"OPENFOODFACTS":"MASTER CATALOG";
+    const sourceExtra=row.sourceDomain?` · ${row.sourceDomain}`:"";
     closeModal();
     const overlay=document.createElement("div");overlay.id="mws-pos-online-new-overlay";
     overlay.innerHTML=`<section class="mws-pos-online-new-modal" role="dialog" aria-modal="true">
-      <header><div><small>ONLINE ΑΝΑΖΗΤΗΣΗ · ΝΕΟ ΕΙΔΟΣ</small><h2>Νέο είδος στο κατάστημα</h2><p>Θα δημιουργηθεί καρτέλα είδους και θα συνδεθεί άμεσα με την Αποθήκη.</p></div><button type="button" data-close>×</button></header>
+      <header><div><small>${esc(sourceLabel)} · ΝΕΟ ΕΙΔΟΣ</small><h2>Νέο είδος στο κατάστημα</h2><p>Θα δημιουργηθεί καρτέλα είδους και θα συνδεθεί άμεσα με την Αποθήκη.</p></div><button type="button" data-close>×</button></header>
       <div class="body">
+        <div class="source-note"><b>Πηγή: ${esc(sourceLabel+sourceExtra)}</b><span>Τα στοιχεία είναι πρόταση. Ο χειριστής επιβεβαιώνει ΦΠΑ, κατηγορία και τιμές πριν την καταχώριση.</span></div>
         <label>Barcode<input name="barcode" value="${esc(barcode)}" readonly></label>
         <label>Περιγραφή<input name="name" value="${esc(row.name||"")}" required></label>
-        <label>Κατηγορία<input name="categoryName" value="${esc(row.categoryName||"")}" placeholder="π.χ. ΑΝΑΨΥΚΤΙΚΑ"></label>
+        <label>Κατηγορία<input name="categoryName" value="${esc(categoryValue)}" placeholder="Επίλεξε/γράψε κατηγορία BackOffice"></label>
+        ${suggestedCategory?`<div class="suggestion">Online πρόταση κατηγορίας: <b>${esc(suggestedCategory)}</b> — δεν καταχωρίζεται αυτόματα.</div>`:""}
         <div class="grid3">
           <label>ΦΠΑ %<select name="vatRate"><option value="13" ${Number(row.vatRate)===13||row.vatRate==null?"selected":""}>13%</option><option value="24" ${Number(row.vatRate)===24?"selected":""}>24%</option><option value="6" ${Number(row.vatRate)===6?"selected":""}>6%</option><option value="0" ${Number(row.vatRate)===0?"selected":""}>0%</option></select></label>
           <label>Μονάδα<select name="unit"><option value="PIECE">ΤΕΜ</option><option value="KG">KG</option><option value="LITER">LT</option><option value="PACKAGE">ΣΥΣΚΕΥΑΣΙΑ</option></select></label>
@@ -97,7 +112,7 @@ if(storeMatch){
     #mws-pos-online-new-overlay{position:fixed;inset:0;z-index:2147482500;background:rgba(7,27,45,.62);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
     .mws-pos-online-new-modal{width:min(900px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(5,31,50,.35);border:1px solid #b9cad8;font-family:inherit}
     .mws-pos-online-new-modal header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:18px 20px;background:#153f61;color:#fff}.mws-pos-online-new-modal header small{font-weight:900;letter-spacing:.06em}.mws-pos-online-new-modal header h2{margin:3px 0 2px;font-size:25px}.mws-pos-online-new-modal header p{margin:0;opacity:.9}.mws-pos-online-new-modal header button{border:0;border-radius:9px;background:#ffffff22;color:#fff;width:46px;height:46px;font-size:28px;cursor:pointer}
-    .mws-pos-online-new-modal .body{padding:18px 20px;display:grid;gap:13px}.mws-pos-online-new-modal label{display:grid;gap:6px;font-weight:800}.mws-pos-online-new-modal input,.mws-pos-online-new-modal select{min-height:46px;border:1px solid #b9c9d4;border-radius:8px;padding:8px 11px;font:inherit;background:#fff;box-sizing:border-box}.mws-pos-online-new-modal .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mws-pos-online-new-modal .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.mws-pos-online-new-modal .inventory-note{padding:12px 14px;border:1px solid #9dd6c1;background:#eaf8f2;border-radius:9px;display:grid;gap:3px;color:#134b3b}.mws-pos-online-new-modal .error{padding:11px 13px;background:#fff0f0;border:1px solid #e4aaaa;color:#a22626;border-radius:8px;font-weight:800}.mws-pos-online-new-modal .success{padding:22px;background:#eaf8f2;border:1px solid #9dd6c1;border-radius:10px;display:grid;gap:7px;font-size:18px;color:#134b3b}.mws-pos-online-new-modal footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid #d7e0e6;background:#f6f9fb}.mws-pos-online-new-modal footer button{min-height:44px;padding:0 16px;border-radius:8px;font-weight:900;cursor:pointer}.mws-pos-online-new-modal footer .secondary{border:1px solid #b8c7d2;background:#fff}.mws-pos-online-new-modal footer .primary{border:0;background:#0b7f72;color:#fff}
+    .mws-pos-online-new-modal .body{padding:18px 20px;display:grid;gap:13px}.mws-pos-online-new-modal label{display:grid;gap:6px;font-weight:800}.mws-pos-online-new-modal input,.mws-pos-online-new-modal select{min-height:46px;border:1px solid #b9c9d4;border-radius:8px;padding:8px 11px;font:inherit;background:#fff;box-sizing:border-box}.mws-pos-online-new-modal .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mws-pos-online-new-modal .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.mws-pos-online-new-modal .inventory-note,.mws-pos-online-new-modal .source-note{padding:12px 14px;border:1px solid #9dd6c1;background:#eaf8f2;border-radius:9px;display:grid;gap:3px;color:#134b3b}.mws-pos-online-new-modal .source-note{border-color:#a9c7de;background:#eef6fc;color:#153f61}.mws-pos-online-new-modal .suggestion{padding:9px 12px;background:#fff8df;border:1px solid #e5d399;border-radius:8px;color:#725b16}.mws-pos-online-new-modal .error{padding:11px 13px;background:#fff0f0;border:1px solid #e4aaaa;color:#a22626;border-radius:8px;font-weight:800}.mws-pos-online-new-modal .success{padding:22px;background:#eaf8f2;border:1px solid #9dd6c1;border-radius:10px;display:grid;gap:7px;font-size:18px;color:#134b3b}.mws-pos-online-new-modal footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid #d7e0e6;background:#f6f9fb}.mws-pos-online-new-modal footer button{min-height:44px;padding:0 16px;border-radius:8px;font-weight:900;cursor:pointer}.mws-pos-online-new-modal footer .secondary{border:1px solid #b8c7d2;background:#fff}.mws-pos-online-new-modal footer .primary{border:0;background:#0b7f72;color:#fff}
     @media(max-width:720px){.mws-pos-online-new-modal .grid2,.mws-pos-online-new-modal .grid3{grid-template-columns:1fr}}
   `;document.head.appendChild(style);
   new MutationObserver(enhanceOnlineRows).observe(document.documentElement,{childList:true,subtree:true});
