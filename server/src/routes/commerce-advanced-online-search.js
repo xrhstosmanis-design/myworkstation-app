@@ -1,11 +1,12 @@
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
-import {advancedOnlineProductSearch} from "../advanced-online-product-search.js";
+import {advancedOnlineProductSearch,advancedOnlineSearchEntitlement} from "../advanced-online-product-search.js";
 
 const router=Router(),uid=()=>crypto.randomUUID();
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 const nextSku=async(companyId,tx=prisma)=>String((await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS next FROM "Product" WHERE "companyId"=${companyId}`)[0]?.next||10001);
+async function requireAdvanced(req,res){if(isPlatformSuper(req))return true;const ok=await advancedOnlineSearchEntitlement(req.user.companyId);if(!ok){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return false}return true}
 
 async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
@@ -13,7 +14,7 @@ async function ensureSchema(){
 }
 
 router.get("/options",async(req,res,next)=>{try{
-  await ensureSchema();const companyId=req.user.companyId;
+  if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId;
   const [categories,subcategories,vats,stores]=await Promise.all([
     prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
     prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
@@ -24,7 +25,7 @@ router.get("/options",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.get("/search",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,q=String(req.query.q||"").trim();if(!/^\d{6,18}$/.test(q))return res.status(400).json({error:"Η Advanced Online Search γίνεται με barcode 6–18 ψηφίων."});
+  if(!await requireAdvanced(req,res))return;const companyId=req.user.companyId,q=String(req.query.q||"").trim();if(!/^\d{6,18}$/.test(q))return res.status(400).json({error:"Η Advanced Online Search γίνεται με barcode 6–18 ψηφίων."});
   const local=(await prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",p."categoryId",p."subcategoryId",c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE((SELECT json_agg(pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"=${companyId} AND p."active"=true AND EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${q}) LIMIT 1`)[0];
   if(local)return res.json({source:"MYWORKSTATION",rows:[local],advanced:{reason:"FOUND_LOCAL"}});
   const master=(await prisma.$queryRaw`SELECT mp."id" AS "masterProductId",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."vatRate",mp."defaultRetailPrice",mp."defaultCostPrice",mp."brandName",COALESCE((SELECT json_agg(mb."barcode") FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp WHERE mp."active"=true AND EXISTS(SELECT 1 FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id" AND mb."barcode"=${q}) LIMIT 1`)[0];
@@ -35,7 +36,7 @@ router.get("/search",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.post("/create-product",async(req,res,next)=>{try{
-  await ensureSchema();const companyId=req.user.companyId,body=req.body||{};
+  if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId,body=req.body||{};
   const barcode=String(body.barcode||"").trim(),name=String(body.name||"").trim().replace(/\s+/g," "),categoryId=String(body.categoryId||"").trim(),subcategoryId=String(body.subcategoryId||"").trim()||null,vatDepartmentId=String(body.vatDepartmentId||"").trim()||null,masterProductId=String(body.masterProductId||"").trim()||null;
   const vatRate=Number(body.vatRate),salePrice=Number(body.salePrice||0),costPrice=Number(body.costPrice||0),unit=["PIECE","KG","LITER","PACKAGE"].includes(body.unit)?body.unit:"PIECE";
   if(!/^\d{6,18}$/.test(barcode)||name.length<2)return res.status(400).json({error:"Έλεγξε barcode και περιγραφή."});if(!categoryId)return res.status(400).json({error:"Επίλεξε Κατηγορία."});if(!Number.isFinite(vatRate)||vatRate<0||vatRate>100||!Number.isFinite(salePrice)||salePrice<0||!Number.isFinite(costPrice)||costPrice<0)return res.status(400).json({error:"Έλεγξε ΦΠΑ και τιμές."});
