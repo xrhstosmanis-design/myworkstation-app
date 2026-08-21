@@ -109,13 +109,13 @@ export function advancedProviderConfigured(){
   return Boolean(String(process.env.SERPER_API_KEY||"").trim()||(String(process.env.GOOGLE_CSE_API_KEY||"").trim()&&String(process.env.GOOGLE_CSE_CX||"").trim()));
 }
 
-export async function advancedOnlineProductSearch({companyId,storeId,actorId,barcode}){
-  const entitled=await advancedOnlineSearchEntitlement(companyId);
+export async function advancedOnlineProductSearch({companyId,storeId,actorId,barcode,bypassEntitlement=false,usageContext=null}){
+  const entitled=bypassEntitlement?true:await advancedOnlineSearchEntitlement(companyId);
   if(!entitled)return {enabled:false,configured:advancedProviderConfigured(),reason:"MODULE_DISABLED",rows:[]};
   if(!advancedProviderConfigured())return {enabled:true,configured:false,reason:"PROVIDER_NOT_CONFIGURED",rows:[]};
   const usage=await usageCount(companyId,storeId);
   if(usage.month>=monthlyLimit()||usage.dayStore>=dailyLimit()){
-    await logUsage({companyId,storeId,actorId,query:barcode,provider:"NONE",status:"LIMIT_REACHED",details:{usage,monthlyLimit:monthlyLimit(),dailyLimit:dailyLimit()}});
+    await logUsage({companyId,storeId,actorId,query:barcode,provider:"NONE",status:"LIMIT_REACHED",details:{usage,monthlyLimit:monthlyLimit(),dailyLimit:dailyLimit(),usageContext,bypassEntitlement}});
     return {enabled:true,configured:true,reason:"LIMIT_REACHED",usage,limits:{monthly:monthlyLimit(),dailyStore:dailyLimit()},rows:[]};
   }
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5500),started=Date.now();
@@ -126,11 +126,11 @@ export async function advancedOnlineProductSearch({companyId,storeId,actorId,bar
     if(!result)return {enabled:true,configured:false,reason:"PROVIDER_NOT_CONFIGURED",rows:[]};
     provider=result.provider;
     const rows=normalizeSearchItems(result.items,barcode,result.provider),durationMs=Date.now()-started;
-    await logUsage({companyId,storeId,actorId,query:barcode,provider,status:rows.length?"FOUND":"NOT_FOUND",resultCount:rows.length,durationMs,estimatedCostUsd:result.estimatedCostUsd,details:{exactBarcodeOnly:true}});
+    await logUsage({companyId,storeId,actorId,query:barcode,provider,status:rows.length?"FOUND":"NOT_FOUND",resultCount:rows.length,durationMs,estimatedCostUsd:result.estimatedCostUsd,details:{exactBarcodeOnly:true,usageContext,bypassEntitlement}});
     return {enabled:true,configured:true,reason:rows.length?"FOUND":"NOT_FOUND",provider,rows,usage:{month:usage.month+1,dayStore:usage.dayStore+1},limits:{monthly:monthlyLimit(),dailyStore:dailyLimit()}};
   }catch(error){
     const durationMs=Date.now()-started;
-    await logUsage({companyId,storeId,actorId,query:barcode,provider,status:"PROVIDER_ERROR",durationMs,details:{message:String(error?.message||error).slice(0,180)}}).catch(()=>{});
+    await logUsage({companyId,storeId,actorId,query:barcode,provider,status:"PROVIDER_ERROR",durationMs,details:{message:String(error?.message||error).slice(0,180),usageContext,bypassEntitlement}}).catch(()=>{});
     return {enabled:true,configured:true,reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR",provider,rows:[]};
   }finally{clearTimeout(timer)}
 }
