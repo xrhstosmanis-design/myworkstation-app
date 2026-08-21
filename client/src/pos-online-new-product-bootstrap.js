@@ -14,11 +14,21 @@ if(storeMatch){
   const num=value=>Number(String(value??"").replace(",","."));
   const visible=el=>{if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0};
   const currentQuery=()=>{
-    const candidates=[
-      ...document.querySelectorAll('.standard-search input,input[placeholder*="Barcode"],input[placeholder*="barcode"],input[type="search"]')
-    ];
+    const candidates=[...document.querySelectorAll('.standard-search input,input[placeholder*="Barcode"],input[placeholder*="barcode"],input[type="search"]')];
     const input=candidates.find(el=>visible(el)&&String(el.value||"").trim())||candidates.find(visible);
     return String(input?.value||"").trim();
+  };
+  const clearSearch=()=>{
+    const candidates=[...document.querySelectorAll('.standard-search input,input[placeholder*="Barcode"],input[placeholder*="barcode"],input[type="search"]')];
+    const input=candidates.find(visible);if(!input)return;
+    const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")?.set;
+    if(setter)setter.call(input,"");else input.value="";
+    input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));
+  };
+  const refreshPos=()=>{
+    const buttons=[...document.querySelectorAll("button")];
+    const refresh=buttons.find(button=>String(button.textContent||"").replace(/\s+/g," ").trim().toLocaleUpperCase("el-GR").includes("ΑΝΑΝΕΩΣΗ"));
+    refresh?.click();
   };
 
   function closeModal(){document.getElementById("mws-pos-online-new-overlay")?.remove()}
@@ -59,7 +69,7 @@ if(storeMatch){
         const created=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-create`,{method:"POST",body:JSON.stringify(body)});
         modal.querySelector(".body").innerHTML=`<div class="success"><b>Το είδος καταχωρίστηκε.</b><span>Κωδικός: ${esc(created.sku)} · Stock: ${esc(created.currentStock)} · Η Αποθήκη συνδέθηκε κανονικά.</span></div>`;
         modal.querySelector("footer").innerHTML="";
-        setTimeout(()=>window.location.reload(),900);
+        setTimeout(()=>{closeModal();clearSearch();refreshPos()},700);
       }catch(error){save.disabled=false;save.textContent="Καταχώριση & σύνδεση με Αποθήκη";errorBox.hidden=false;errorBox.textContent=error.message}
     });
   }
