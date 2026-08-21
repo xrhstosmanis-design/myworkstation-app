@@ -129,12 +129,8 @@ async function enhancePurchaseModal(modal,orderId){
 }
 
 document.addEventListener("click",event=>{
-  const open=event.target.closest?.("[data-po-open]");if(open)lastOrderId=open.dataset.poOpen;
-  const finalButton=event.target.closest?.(".po-modal button");
-  if(finalButton&&/Οριστικοποίηση/i.test(finalButton.textContent||"")){
-    const panel=finalButton.closest(".po-modal")?.querySelector(".mws-ocr-resolution-panel");
-    const unresolved=Number(panel?.dataset.unresolved||0);if(unresolved>0){event.preventDefault();event.stopImmediatePropagation();alert(`Υπάρχουν ${unresolved} άλυτες γραμμές προϊόντων. Κάνε πρώτα αντιστοίχιση / barcode / νέα εγγραφή.`)}
-  }
+  const open=event.target.closest?.("[data-po-open]");
+  if(open)lastOrderId=open.dataset.poOpen;
 },true);
 
 function enhance(){
