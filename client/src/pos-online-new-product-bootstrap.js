@@ -42,47 +42,61 @@ if(storeMatch){
   function closeModal(){document.getElementById("mws-pos-online-new-overlay")?.remove()}
   async function openModal(){
     const query=currentQuery();if(!query){window.alert("Σκάναρε ή γράψε πρώτα barcode / κωδικό.");return}
-    let result;
-    try{result=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-search?q=${encodeURIComponent(query)}`)}catch(error){window.alert(error.message);return}
+    let result,options;
+    try{[result,options]=await Promise.all([
+      api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-search?q=${encodeURIComponent(query)}`),
+      api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-options`)
+    ])}catch(error){window.alert(error.message);return}
     const row=(result.rows||[])[0];if(!row){window.alert(noResultMessage(result));return}
     const barcode=String((row.barcodes||[])[0]||row.sourceCode||query).trim();
-    const fromMaster=result.source==="MASTER_CATALOG";
-    const categoryValue=fromMaster?String(row.categoryName||""):"";
-    const suggestedCategory=!fromMaster&&row.categoryName?String(row.categoryName):"";
     const sourceLabel=result.source==="GOOGLE_SEARCH"?"GOOGLE SEARCH":result.source==="OPEN_FOOD_FACTS"?"OPENFOODFACTS":"MASTER CATALOG";
     const sourceExtra=row.sourceDomain?` · ${row.sourceDomain}`:"";
+    const categories=options.categories||[],subcategories=options.subcategories||[];
+    const masterCategory=result.source==="MASTER_CATALOG"?String(row.categoryName||""):"";
+    const masterSubcategory=result.source==="MASTER_CATALOG"?String(row.subcategoryName||""):"";
+    const suggestedCategory=result.source!=="MASTER_CATALOG"&&row.categoryName?String(row.categoryName):"";
+    const normalize=v=>String(v||"").trim().toLocaleLowerCase("el-GR");
+    const matchedCategory=categories.find(c=>normalize(c.name)===normalize(masterCategory));
+    const matchedSubcategory=matchedCategory?subcategories.find(s=>s.categoryId===matchedCategory.id&&normalize(s.name)===normalize(masterSubcategory)):null;
     closeModal();
     const overlay=document.createElement("div");overlay.id="mws-pos-online-new-overlay";
+    const categoryOptions=categories.map(c=>`<option value="${esc(c.id)}" ${matchedCategory?.id===c.id?"selected":""}>${esc(c.name)}</option>`).join("");
     overlay.innerHTML=`<section class="mws-pos-online-new-modal" role="dialog" aria-modal="true">
       <header><div><small>${esc(sourceLabel)} · ΝΕΟ ΕΙΔΟΣ</small><h2>Νέο είδος στο κατάστημα</h2><p>Θα δημιουργηθεί καρτέλα είδους και θα συνδεθεί άμεσα με την Αποθήκη.</p></div><button type="button" data-close>×</button></header>
       <div class="body">
-        <div class="source-note"><b>Πηγή: ${esc(sourceLabel+sourceExtra)}</b><span>Τα στοιχεία είναι πρόταση. Ο χειριστής επιβεβαιώνει ΦΠΑ, κατηγορία και τιμές πριν την καταχώριση.</span></div>
+        <div class="source-note"><b>Πηγή: ${esc(sourceLabel+sourceExtra)}</b><span>Τα online στοιχεία είναι πρόταση. Ο χειριστής επιβεβαιώνει Κατηγορία, Υποκατηγορία, ΦΠΑ και τιμές.</span></div>
         <label>Barcode<input name="barcode" value="${esc(barcode)}" readonly></label>
         <label>Περιγραφή<input name="name" value="${esc(row.name||"")}" required></label>
-        <label>Κατηγορία<input name="categoryName" value="${esc(categoryValue)}" placeholder="Επίλεξε/γράψε κατηγορία BackOffice"></label>
-        ${suggestedCategory?`<div class="suggestion">Online πρόταση κατηγορίας: <b>${esc(suggestedCategory)}</b> — δεν καταχωρίζεται αυτόματα.</div>`:""}
+        <div class="grid2">
+          <label>Κατηγορία<select name="categoryId"><option value="">— Επιλογή κατηγορίας —</option>${categoryOptions}</select></label>
+          <label>Υποκατηγορία<select name="subcategoryId"><option value="">— Χωρίς υποκατηγορία —</option></select></label>
+        </div>
+        ${suggestedCategory?`<div class="suggestion">Online πρόταση κατηγορίας: <b>${esc(suggestedCategory)}</b> — δεν επιλέγεται αυτόματα.</div>`:""}
         <div class="grid3">
-          <label>ΦΠΑ %<select name="vatRate"><option value="13" ${Number(row.vatRate)===13||row.vatRate==null?"selected":""}>13%</option><option value="24" ${Number(row.vatRate)===24?"selected":""}>24%</option><option value="6" ${Number(row.vatRate)===6?"selected":""}>6%</option><option value="0" ${Number(row.vatRate)===0?"selected":""}>0%</option></select></label>
+          <label>ΦΠΑ %<select name="vatRate"><option value="">— Επιλογή ΦΠΑ —</option><option value="13" ${Number(row.vatRate)===13?"selected":""}>13%</option><option value="24" ${Number(row.vatRate)===24?"selected":""}>24%</option><option value="6" ${Number(row.vatRate)===6?"selected":""}>6%</option><option value="0" ${Number(row.vatRate)===0?"selected":""}>0%</option></select></label>
           <label>Μονάδα<select name="unit"><option value="PIECE">ΤΕΜ</option><option value="KG">KG</option><option value="LITER">LT</option><option value="PACKAGE">ΣΥΣΚΕΥΑΣΙΑ</option></select></label>
           <label>Αρχικό stock<input name="openingStock" inputmode="decimal" value="0"></label>
         </div>
         <div class="grid2"><label>Τιμή αγοράς<input name="costPrice" inputmode="decimal" value="0"></label><label>Τιμή λιανικής<input name="salePrice" inputmode="decimal" value="0"></label></div>
-        <div class="inventory-note"><b>Σύνδεση Αποθήκης ενεργή</b><span>Το αρχικό stock θα γραφτεί στο StoreProduct και, αν είναι πάνω από 0, θα δημιουργηθεί κίνηση αποθήκης.</span></div>
+        <div class="inventory-note"><b>Σύνδεση Αποθήκης ενεργή</b><span>Κατηγορία και Υποκατηγορία θα αποθηκευτούν στην ίδια καρτέλα προϊόντος της Αποθήκης.</span></div>
         <div class="error" data-error hidden></div>
       </div>
       <footer><button type="button" data-close class="secondary">Ακύρωση</button><button type="button" data-save class="primary">Καταχώριση & σύνδεση με Αποθήκη</button></footer>
     </section>`;
     document.body.appendChild(overlay);
+    const categorySelect=overlay.querySelector('[name="categoryId"]'),subcategorySelect=overlay.querySelector('[name="subcategoryId"]');
+    const fillSubs=selected=>{const rows=subcategories.filter(s=>s.categoryId===selected);subcategorySelect.innerHTML='<option value="">— Χωρίς υποκατηγορία —</option>'+rows.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");if(matchedSubcategory&&matchedSubcategory.categoryId===selected)subcategorySelect.value=matchedSubcategory.id};
+    fillSubs(categorySelect.value);categorySelect.addEventListener("change",()=>fillSubs(categorySelect.value));
     overlay.querySelectorAll("[data-close]").forEach(btn=>btn.addEventListener("click",closeModal));
     overlay.addEventListener("mousedown",event=>{if(event.target===overlay)closeModal()});
     overlay.querySelector("[data-save]").addEventListener("click",async()=>{
       const modal=overlay.querySelector(".mws-pos-online-new-modal"),errorBox=modal.querySelector("[data-error]"),save=modal.querySelector("[data-save]");
-      const body={barcode:modal.querySelector('[name="barcode"]').value.trim(),name:modal.querySelector('[name="name"]').value.trim(),categoryName:modal.querySelector('[name="categoryName"]').value.trim(),vatRate:num(modal.querySelector('[name="vatRate"]').value),unit:modal.querySelector('[name="unit"]').value,openingStock:num(modal.querySelector('[name="openingStock"]').value),costPrice:num(modal.querySelector('[name="costPrice"]').value),salePrice:num(modal.querySelector('[name="salePrice"]').value)};
-      if(!body.name||!Number.isFinite(body.salePrice)||body.salePrice<=0||!Number.isFinite(body.openingStock)||body.openingStock<0){errorBox.hidden=false;errorBox.textContent="Συμπλήρωσε περιγραφή, λιανική τιμή μεγαλύτερη από 0 και έγκυρο αρχικό stock.";return}
+      const body={barcode:modal.querySelector('[name="barcode"]').value.trim(),name:modal.querySelector('[name="name"]').value.trim(),categoryId:modal.querySelector('[name="categoryId"]').value,subcategoryId:modal.querySelector('[name="subcategoryId"]').value,vatRate:num(modal.querySelector('[name="vatRate"]').value),unit:modal.querySelector('[name="unit"]').value,openingStock:num(modal.querySelector('[name="openingStock"]').value),costPrice:num(modal.querySelector('[name="costPrice"]').value),salePrice:num(modal.querySelector('[name="salePrice"]').value)};
+      if(!body.name||!body.categoryId||!Number.isFinite(body.vatRate)||!Number.isFinite(body.salePrice)||body.salePrice<=0||!Number.isFinite(body.openingStock)||body.openingStock<0){errorBox.hidden=false;errorBox.textContent="Συμπλήρωσε περιγραφή, Κατηγορία, ΦΠΑ, λιανική τιμή μεγαλύτερη από 0 και έγκυρο αρχικό stock.";return}
       save.disabled=true;save.textContent="Καταχώριση…";errorBox.hidden=true;
       try{
         const created=await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/online-product-create`,{method:"POST",body:JSON.stringify(body)});
-        modal.querySelector(".body").innerHTML=`<div class="success"><b>Το είδος καταχωρίστηκε.</b><span>Κωδικός: ${esc(created.sku)} · Stock: ${esc(created.currentStock)} · Η Αποθήκη συνδέθηκε κανονικά.</span></div>`;
+        modal.querySelector(".body").innerHTML=`<div class="success"><b>Το είδος καταχωρίστηκε.</b><span>${esc(created.categoryName)}${created.subcategoryName?` → ${esc(created.subcategoryName)}`:""} · Κωδικός ${esc(created.sku)} · Stock ${esc(created.currentStock)}.</span></div>`;
         modal.querySelector("footer").innerHTML="";
         setTimeout(()=>{closeModal();clearSearch();refreshPos()},700);
       }catch(error){save.disabled=false;save.textContent="Καταχώριση & σύνδεση με Αποθήκη";errorBox.hidden=false;errorBox.textContent=error.message}
