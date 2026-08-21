@@ -38,6 +38,11 @@ async function nextSku(companyId,tx=prisma){
   return String(rows[0]?.next||10001);
 }
 
+async function ensureCategorySchema(){
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSubcategory" ("id" TEXT NOT NULL PRIMARY KEY,"companyId" TEXT NOT NULL,"categoryId" TEXT NOT NULL,"legacyCode" TEXT,"name" TEXT NOT NULL,"property" TEXT NOT NULL DEFAULT 'STOCK_ITEM',"points" DECIMAL(14,4) NOT NULL DEFAULT 0,"pluGroup" INTEGER NOT NULL DEFAULT 0,"classification" TEXT NOT NULL DEFAULT 'MERCHANDISE',"eshopCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+}
+
 const methodLabel=method=>method==="CASH"?"ΜΕΤΡΗΤΑ":method==="CARD"?"ΚΑΡΤΑ":method==="IRIS"?"IRIS":String(method||"ΠΛΗΡΩΜΗ");
 const euroPlain=value=>`${Number(value||0).toFixed(2).replace(".",",")} €`;
 
@@ -52,33 +57,49 @@ function normalizeSale(row){
   return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary,paymentMethod:`${productSummary} · ${paymentSummary}`,productSummary,movementType};
 }
 
+router.get("/stores/:storeId/online-product-options",async(req,res,next)=>{
+  try{
+    const store=await ownedStore(req,req.params.storeId);
+    if(!await canOnlineCreate(req,store.id))return res.status(403).json({error:"Δεν έχεις δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
+    await ensureCategorySchema();
+    const categories=await prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
+    const subcategories=await prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
+    res.json({categories,subcategories});
+  }catch(error){next(error)}
+});
+
 router.post("/stores/:storeId/online-product-create",async(req,res,next)=>{
   try{
     const store=await ownedStore(req,req.params.storeId);
     if(!await canOnlineCreate(req,store.id))return res.status(403).json({error:"Δεν έχεις δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
+    await ensureCategorySchema();
     const body=req.body&&typeof req.body==="object"?req.body:{};
-    const barcode=String(body.barcode||"").trim(),name=String(body.name||"").trim().replace(/\s+/g," "),categoryName=String(body.categoryName||"").trim().replace(/\s+/g," ");
-    const salePrice=Number(body.salePrice||0),costPrice=Number(body.costPrice||0),vatRate=Number(body.vatRate||0),openingStock=Number(body.openingStock||0),unit=["PIECE","KG","LITER","PACKAGE"].includes(body.unit)?body.unit:"PIECE";
+    const barcode=String(body.barcode||"").trim(),name=String(body.name||"").trim().replace(/\s+/g," "),categoryId=String(body.categoryId||"").trim()||null,subcategoryId=String(body.subcategoryId||"").trim()||null;
+    const salePrice=Number(body.salePrice||0),costPrice=Number(body.costPrice||0),vatRate=Number(body.vatRate),openingStock=Number(body.openingStock||0),unit=["PIECE","KG","LITER","PACKAGE"].includes(body.unit)?body.unit:"PIECE";
     if(!/^\d{6,18}$/.test(barcode))return res.status(400).json({error:"Βάλε έγκυρο barcode."});
     if(name.length<2||name.length>250)return res.status(400).json({error:"Βάλε έγκυρη περιγραφή είδους."});
+    if(!categoryId)return res.status(400).json({error:"Επίλεξε κατηγορία."});
+    if(!Number.isFinite(vatRate)||vatRate<0||vatRate>100)return res.status(400).json({error:"Επίλεξε σωστό ΦΠΑ."});
     if(!Number.isFinite(salePrice)||salePrice<=0)return res.status(400).json({error:"Η λιανική τιμή πρέπει να είναι μεγαλύτερη από 0 €."});
-    if(!Number.isFinite(costPrice)||costPrice<0||!Number.isFinite(vatRate)||vatRate<0||vatRate>100||!Number.isFinite(openingStock)||openingStock<0)return res.status(400).json({error:"Έλεγξε τιμή αγοράς, ΦΠΑ και αρχικό stock."});
+    if(!Number.isFinite(costPrice)||costPrice<0||!Number.isFinite(openingStock)||openingStock<0)return res.status(400).json({error:"Έλεγξε τιμή αγοράς και αρχικό stock."});
+    const category=(await prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "id"=${categoryId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];
+    if(!category)return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."});
+    let subcategory=null;
+    if(subcategoryId){subcategory=(await prisma.$queryRaw`SELECT "id","name" FROM "ProductSubcategory" WHERE "id"=${subcategoryId} AND "categoryId"=${categoryId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`)[0];if(!subcategory)return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία."})}
     const duplicate=await prisma.$queryRaw`SELECT p."id",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} LIMIT 1`;
     if(duplicate[0])return res.status(409).json({error:`Το barcode υπάρχει ήδη στο «${duplicate[0].name}».`});
     const productId=uid();let sku="";
     await prisma.$transaction(async tx=>{
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.companyId+":product-sku"}))`;
       sku=await nextSku(req.user.companyId,tx);
-      let categoryId=null;
-      if(categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${req.user.companyId} AND lower(btrim("name"))=lower(btrim(${categoryName})) LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${req.user.companyId},${categoryName})`}
-      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${categoryId},${sku},${name},${unit},${vatRate},true,${salePrice},${costPrice},true,true)`;
+      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${categoryId},${subcategoryId},${sku},${name},${unit},${vatRate},true,${salePrice},${costPrice},true,true)`;
       await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${productId},${barcode},1)`;
       await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${productId},${salePrice},${openingStock},true)`;
       if(openingStock>0)await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${store.id},${productId},'MANUAL_ADJUSTMENT',${openingStock},${costPrice},'POS_ONLINE_NEW_PRODUCT',${productId},'Αρχικό stock από νέο είδος μέσω Online αναζήτησης POS',${req.user.id})`;
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'POS_ONLINE_PRODUCT_CREATE',${JSON.stringify({productId,sku,barcode,name,salePrice,costPrice,vatRate,openingStock,inventoryLinked:true})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'POS_ONLINE_PRODUCT_CREATE',${JSON.stringify({productId,sku,barcode,name,categoryId,subcategoryId,salePrice,costPrice,vatRate,openingStock,inventoryLinked:true})}::jsonb)`;
     });
-    res.status(201).json({ok:true,id:productId,sku,barcode,name,salePrice,costPrice,currentStock:openingStock,vatRate,categoryName,unit,inventoryLinked:true});
+    res.status(201).json({ok:true,id:productId,sku,barcode,name,salePrice,costPrice,currentStock:openingStock,vatRate,categoryId,categoryName:category.name,subcategoryId,subcategoryName:subcategory?.name||null,unit,inventoryLinked:true});
   }catch(error){next(error)}
 });
 
