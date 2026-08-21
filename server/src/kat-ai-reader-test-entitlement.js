@@ -7,7 +7,7 @@ import { prisma } from "./prisma.js";
 // historical store id while keeping normal customer licensing untouched.
 const KAT_TEST_STORE_IDS = ["kat-store", "kat-test-store"];
 const KAT_TEST_STORE_NAME = "Κυλικείο ΚΑΤ";
-const KAT_TEST_MODULES = ["AI_READER", "CASH_CONTROL", "STORE_MODE", "INVENTORY"];
+const KAT_TEST_MODULES = ["AI_READER", "CASH_CONTROL", "STORE_MODE", "INVENTORY", "ADVANCED_ONLINE_PRODUCT_SEARCH"];
 
 export async function ensureKatAiReaderTestEntitlement() {
   const activeStores = await prisma.store.findMany({
