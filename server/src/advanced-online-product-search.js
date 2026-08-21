@@ -92,7 +92,7 @@ async function searchSerper(barcode,signal){
   const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":key,"Content-Type":"application/json"},body:JSON.stringify({q:`\"${barcode}\"`,gl:"gr",hl:"el",num:10}),signal});
   if(!response.ok)throw new Error(`SERPER_${response.status}`);
   const data=await response.json();
-  return {provider:"SERPER_GOOGLE",items:(data.organic||[]).map(x=>({title:x.title,snippet:x.snippet,link:x.link})),estimatedCostUsd:Number(process.env.SERPER_ESTIMATED_COST_PER_QUERY_USD||0)};
+  return {provider:"SERPER_GOOGLE",items:(data.organic||[]).map(x=>({title:x.title,snippet:x.snippet,link:x.link})),estimatedCostUsd:Number(process.env.SERPER_ESTIMATED_COST_PER_QUERY_USD||0.001)};
 }
 
 async function searchGoogleCse(barcode,signal){
