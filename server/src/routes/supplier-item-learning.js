@@ -2,9 +2,12 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import commerceAdvancedOnlineSearchRoutes from "./commerce-advanced-online-search.js";
 
 const router=Router();
 const normCode=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
+
+router.use("/advanced-online-search",commerceAdvancedOnlineSearchRoutes);
 
 router.post("/supplier-item-mappings/resolve",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
