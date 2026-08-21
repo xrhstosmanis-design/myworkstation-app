@@ -1,6 +1,7 @@
 import {Router} from "express";
 import crypto from "crypto";
 import {prisma} from "../prisma.js";
+import {advancedOnlineProductSearch} from "../advanced-online-product-search.js";
 
 const router=Router();
 const money=value=>Number(value||0);
@@ -116,8 +117,13 @@ router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
         }
       }
     }catch{}finally{clearTimeout(timer)}
-    await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"OPEN_FOOD_FACTS",resultCount:0});
-    return res.json({query:q,source:"OPEN_FOOD_FACTS",rows:[]});
+    const advanced=await advancedOnlineProductSearch({companyId:req.user.companyId,storeId:store.id,actorId:req.user.id,barcode:q});
+    if(advanced.rows?.length){
+      await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"GOOGLE_SEARCH",provider:advanced.provider,resultCount:advanced.rows.length,advancedModule:true});
+      return res.json({query:q,source:"GOOGLE_SEARCH",rows:advanced.rows,advanced:{enabled:advanced.enabled,configured:advanced.configured,provider:advanced.provider,usage:advanced.usage,limits:advanced.limits}});
+    }
+    await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"OPEN_FOOD_FACTS",resultCount:0,advancedReason:advanced.reason,advancedEnabled:advanced.enabled,advancedConfigured:advanced.configured});
+    return res.json({query:q,source:"OPEN_FOOD_FACTS",rows:[],advanced:{enabled:advanced.enabled,configured:advanced.configured,reason:advanced.reason,provider:advanced.provider||null,usage:advanced.usage||null,limits:advanced.limits||null}});
   }catch(error){next(error)}
 });
 
