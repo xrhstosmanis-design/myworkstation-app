@@ -1,6 +1,7 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 
 const router=Router();
 const API_VERSION="2024-11-30";
@@ -32,14 +33,10 @@ function discountValue(field){
   return n>0&&n<100?money4(n):0;
 }
 function itemDiscounts(p){
-  const values=[
-    discountValue(p.Discount1)||discountValue(p.DiscountRate)||discountValue(p.DiscountPercent),
-    discountValue(p.Discount2),
-    discountValue(p.Discount3)
-  ];
+  const values=[discountValue(p.Discount1)||discountValue(p.DiscountRate)||discountValue(p.DiscountPercent),discountValue(p.Discount2),discountValue(p.Discount3)];
   const generic=p.Discount;
   if(!values[0]&&generic){
-    if(generic.valueObject){values[0]=discountValue(generic.valueObject.Rate)||discountValue(generic.valueObject.Percent)||discountValue(generic.valueObject.Percentage)}
+    if(generic.valueObject)values[0]=discountValue(generic.valueObject.Rate)||discountValue(generic.valueObject.Percent)||discountValue(generic.valueObject.Percentage);
     if(!values[0])values[0]=discountValue(generic);
   }
   return values.map(v=>v||0);
@@ -82,10 +79,7 @@ async function supplierMatch(companyId,candidate={}){
 }
 function addressText(field){
   if(!field)return "";
-  if(field.valueAddress){
-    const a=field.valueAddress;
-    return [a.streetAddress,a.houseNumber,a.road,a.postalCode,a.city,a.state,a.countryRegion].filter(Boolean).join(", ");
-  }
+  if(field.valueAddress){const a=field.valueAddress;return [a.streetAddress,a.houseNumber,a.road,a.postalCode,a.city,a.state,a.countryRegion].filter(Boolean).join(", ")}
   return fieldText(field);
 }
 function normalizeItem(item,index){
@@ -100,17 +94,11 @@ function normalizeItem(item,index){
   const azureAmount=Math.max(0,numericField(p.Amount));
   const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
   let netAmount=azureNetAmount||azureAmount;
-  if(netAmount<=0&&quantity>0&&unitCost>0){
-    const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
-    netAmount=money2(quantity*unitCost*factor);
-  }
-  if(unitCost<=0&&quantity>0&&netAmount>0){
-    const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
-    unitCost=money4(factor>0?netAmount/(quantity*factor):netAmount/quantity);
-  }
+  if(netAmount<=0&&quantity>0&&unitCost>0){const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);netAmount=money2(quantity*unitCost*factor)}
+  if(unitCost<=0&&quantity>0&&netAmount>0){const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);unitCost=money4(factor>0?netAmount/(quantity*factor):netAmount/quantity)}
   let vatRate=validVatRate(p.TaxRate)||validVatRate(p.VATRate)||validVatRate(p.VatRate);
   if(!vatRate&&netAmount>0&&tax>0)vatRate=inferVatRate(netAmount,tax);
-  if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax)}
+  if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03)netAmount=money2(azureAmount-tax);
   const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:(vatRate>0?netAmount*vatRate/100:0))):0;
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
   const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
@@ -142,14 +130,7 @@ function normalizeAzure(payload){
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
   const productLines=Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[];
-  const supplier={
-    name:fieldText(f.VendorName)||fieldText(f.VendorAddressRecipient),
-    taxId:fieldText(f.VendorTaxId),
-    email:fieldText(f.VendorEmail),
-    phone:fieldText(f.VendorPhoneNumber),
-    address:addressText(f.VendorAddress),
-    city:f.VendorAddress?.valueAddress?.city||""
-  };
+  const supplier={name:fieldText(f.VendorName)||fieldText(f.VendorAddressRecipient),taxId:fieldText(f.VendorTaxId),email:fieldText(f.VendorEmail),phone:fieldText(f.VendorPhoneNumber),address:addressText(f.VendorAddress),city:f.VendorAddress?.valueAddress?.city||""};
   const documentNumber=fieldText(f.InvoiceId);
   const documentDate=fieldText(f.InvoiceDate);
   const totalGross=Math.max(0,numericField(f.InvoiceTotal)||numericField(f.AmountDue));
@@ -176,9 +157,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       console.warn("Azure Document Intelligence returned invoice header without product lines; falling back to AI table reader.",{jobId:job.id,confidence:parsed.aiConfidence});
       return next();
     }
+    await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${parsed.aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
-    return res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:"azure-prebuilt-invoice",provider:"AZURE_DOCUMENT_INTELLIGENCE",fallbackAvailable:Boolean(process.env.OPENAI_API_KEY)});
+    return res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:"azure-prebuilt-invoice",provider:"AZURE_DOCUMENT_INTELLIGENCE",discountVerifier:process.env.OPENAI_API_KEY?"AI_VERIFIED":"NONE",fallbackAvailable:Boolean(process.env.OPENAI_API_KEY)});
   }catch(error){next(error)}
 });
 
