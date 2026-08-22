@@ -122,6 +122,14 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
   }catch(error){next(error)}
 });
 
+// The invoice UI labels finalized Azure lines with AZURE_DOCUMENT_INTELLIGENCE,
+// while the stable V2.4.4 core expects the legacy V2.4.4 source label. Normalize
+// only this transport label; the actual line values remain unchanged.
+router.use("/ai-reader/jobs/:jobId/product-lines",(req,res,next)=>{
+  if(req.method==="PUT"&&req.body?.source==="AZURE_DOCUMENT_INTELLIGENCE")req.body.source="V2.4.4";
+  next();
+});
+
 router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
   try{
     const jobs=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
