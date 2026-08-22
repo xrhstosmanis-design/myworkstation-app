@@ -15,14 +15,26 @@ function safeDiscount(value){
   return Number.isFinite(n)&&n>0&&n<100?money4(n):0;
 }
 
+function stamp(productLines,diagnostics){
+  if(Array.isArray(productLines)){
+    for(const line of productLines){
+      line.discountVerifierStatus=diagnostics.status;
+      line.discountVerifierReason=diagnostics.reason;
+      line.discountVerifierCandidates=diagnostics.candidates;
+      line.discountVerifierAccepted=diagnostics.accepted;
+    }
+  }
+  return diagnostics;
+}
+
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rejectedLowConfidence:0};
-  if(!apiKey){diagnostics.reason='NO_OPENAI_KEY';return diagnostics}
-  if(!contentData){diagnostics.reason='NO_DOCUMENT';return diagnostics}
+  if(!apiKey){diagnostics.reason='NO_OPENAI_KEY';return stamp(productLines,diagnostics)}
+  if(!contentData){diagnostics.reason='NO_DOCUMENT';return stamp(productLines,diagnostics)}
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
   if(productLines.some(line=>Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0)){
     diagnostics.reason='DISCOUNTS_ALREADY_PRESENT';
-    return diagnostics;
+    return stamp(productLines,diagnostics);
   }
 
   diagnostics.called=true;
@@ -71,11 +83,11 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       diagnostics.status='FAILED';
       diagnostics.reason=`HTTP_${response.status}`;
       console.warn('Discount verifier failed:',response.status,await response.text().catch(()=>''));
-      return diagnostics;
+      return stamp(productLines,diagnostics);
     }
     const body=await response.json();
     const text=outputText(body);
-    if(!text){diagnostics.status='FAILED';diagnostics.reason='EMPTY_OUTPUT';return diagnostics}
+    if(!text){diagnostics.status='FAILED';diagnostics.reason='EMPTY_OUTPUT';return stamp(productLines,diagnostics)}
     const parsed=JSON.parse(text);
     const candidates=Array.isArray(parsed?.discounts)?parsed.discounts:[];
     diagnostics.candidates=candidates.length;
@@ -99,5 +111,5 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     diagnostics.reason=error?.message||'UNKNOWN_ERROR';
     console.warn('Discount verifier error:',error?.message||error);
   }
-  return diagnostics;
+  return stamp(productLines,diagnostics);
 }
