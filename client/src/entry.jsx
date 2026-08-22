@@ -36,6 +36,7 @@ import {installBackofficeColumnFilters} from "./backoffice-column-filters.js";
 import {installPosCheckoutSafety} from "./pos-checkout-safety.js";
 import {installModuleUiEnforcement} from "./module-ui-enforcement.js";
 import {installOwnerPasswordChangeGate} from "./owner-password-change.js";
+import "./purchase-order-invoice-supplier-bridge.js";
 import "./components/platform/platform-security.css";
 import "./components/platform/commercial-license.css";
 import "./components/platform/platform-audit.css";
