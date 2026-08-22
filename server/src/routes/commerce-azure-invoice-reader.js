@@ -144,6 +144,29 @@ function normalizeAzure(payload){
 
 router.get("/ai-reader/azure-status",requireCompanyModule("AI_READER"),(req,res)=>res.json({configured:configured(),provider:"AZURE_DOCUMENT_INTELLIGENCE",model:MODEL_ID,apiVersion:API_VERSION}));
 
+router.post("/ai-reader/azure-direct",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  try{
+    if(!configured())return res.status(503).json({error:"Δεν έχει συνδεθεί το Azure Document Intelligence."});
+    const storeId=String(req.body?.storeId||"").trim();
+    const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
+    const mimeType=String(req.body?.mimeType||"image/jpeg");
+    const dataUrl=String(req.body?.dataUrl||"");
+    if(!storeId||!dataUrl)return res.status(400).json({error:"Δεν βρέθηκε κατάστημα ή αρχείο τιμολογίου."});
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    let parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType}));
+    if(!parsed.productLines.length)return res.status(422).json({error:"Το Azure διάβασε το παραστατικό αλλά δεν επέστρεψε γραμμές προϊόντων."});
+    await verifyInvoiceDiscounts({contentData:dataUrl,mimeType,filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    parsed=reconcileAzureInvoice(parsed);
+    const match=await supplierMatch(req.user.companyId,parsed.supplier);
+    return res.json({ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,discountVerifier:process.env.OPENAI_API_KEY?"AI_VERIFIED":"NONE"});
+  }catch(error){
+    console.error("Azure direct invoice read failed:",error?.message||error);
+    const wrapped=new Error(`Azure ανάγνωση απέτυχε: ${error?.message||"άγνωστο σφάλμα"}`);wrapped.status=502;next(wrapped);
+  }
+});
+
 router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   if(!configured())return next();
   try{
