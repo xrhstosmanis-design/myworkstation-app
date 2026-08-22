@@ -54,4 +54,4 @@ export const invoiceLearningServerSyncReady=(async()=>{
   }
 })();
 
-await invoiceLearningServerSyncReady;
+invoiceLearningServerSyncReady.catch(error=>console.error('Invoice Learning startup sync failed',error));
