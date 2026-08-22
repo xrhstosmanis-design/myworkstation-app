@@ -137,12 +137,32 @@ router.patch("/:orderId",async(req,res,next)=>{
   try{
     if(req.body?.status!=="FINAL")return next();
     await ensureSchema();
+
+    // Self-heal παλιά OCR flags: αν η γραμμή έχει ήδη συνδεθεί με πραγματικό
+    // Product, δεν είναι πλέον άλυτη ανεξάρτητα από το παλιό resolutionStatus.
+    await prisma.$executeRaw`
+      UPDATE "PurchaseOrderLine" l
+      SET "resolutionStatus"='MATCHED',"updatedAt"=NOW()
+      FROM "PurchaseOrder" o
+      WHERE o."id"=l."orderId"
+        AND o."id"=${req.params.orderId}
+        AND o."companyId"=${req.user.companyId}
+        AND l."productId" IS NOT NULL
+        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;
+
+    // Μπλοκάρουμε μόνο πραγματικές οικονομικές γραμμές προϊόντων που δεν έχουν
+    // ακόμη productId. Πληροφοριακές/OCR βοηθητικές γραμμές δεν εμποδίζουν FINAL.
     const rows=await prisma.$queryRaw`
       SELECT COUNT(*)::int AS "count"
       FROM "PurchaseOrderLine" l
       JOIN "PurchaseOrder" o ON o."id"=l."orderId"
-      WHERE o."id"=${req.params.orderId} AND o."companyId"=${req.user.companyId}
-        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;
+      WHERE o."id"=${req.params.orderId}
+        AND o."companyId"=${req.user.companyId}
+        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'
+        AND l."productId" IS NULL
+        AND NULLIF(BTRIM(COALESCE(l."description",'')),'') IS NOT NULL
+        AND COALESCE(l."quantity",0)>0
+        AND (COALESCE(l."unitCost",0)>0 OR COALESCE(l."grossAmount",0)>0)`;
     const count=Number(rows[0]?.count||0);
     if(count>0)return res.status(409).json({error:`Υπάρχουν ${count} άλυτες γραμμές προϊόντων από το τιμολόγιο. Κάνε πρώτα αντιστοίχιση, προσθήκη barcode, συγχώνευση ή νέα εγγραφή και μετά Οριστικοποίηση.`,unresolvedLines:count});
 
