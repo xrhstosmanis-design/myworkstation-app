@@ -7,7 +7,7 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm run prisma:push -w server && node server/scripts/ensure-pos-return-compat.js && node server/scripts/patch-pos-return-diagnostics.js && node server/scripts/patch-pos-return-audit.js && node server/scripts/enforce-kiosk-modifier-only-milk-ice.js && npm run seed && npm start
     healthCheckPath: /api/health
-    autoDeployTrigger: commit
+    autoDeployTrigger: checksPass
     envVars:
       - key: NODE_VERSION
         value: 20
