@@ -1,7 +1,9 @@
 name: Deploy MyWorkStation to Render
 
 on:
-  push:
+  workflow_run:
+    workflows: ["MyWorkStation CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -11,8 +13,21 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve revision
+        id: revision
+        env:
+          WORKFLOW_REVISION: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_REVISION: ${{ github.sha }}
+        run: |
+          if [ -n "$WORKFLOW_REVISION" ]; then
+            echo "sha=$WORKFLOW_REVISION" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=$MANUAL_REVISION" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Require Render deploy hook
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -30,7 +45,7 @@ jobs:
 
       - name: Wait for exact production revision
         env:
-          EXPECTED_REVISION: ${{ github.sha }}
+          EXPECTED_REVISION: ${{ steps.revision.outputs.sha }}
         run: |
           echo "Waiting for Render revision $EXPECTED_REVISION"
           for attempt in $(seq 1 90); do
