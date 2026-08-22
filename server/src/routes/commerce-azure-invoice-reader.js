@@ -66,12 +66,16 @@ function normalizeItem(item,index){
   const quantity=Math.max(0,numericField(p.Quantity));
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
   const unitCost=Math.max(0,numericField(p.UnitPrice));
-  const netAmount=Math.max(0,numericField(p.Amount));
   const vatRate=validVatRate(p.TaxRate);
   const tax=Math.max(0,numericField(p.Tax));
+  const azureAmount=Math.max(0,numericField(p.Amount));
+  const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
+  let netAmount=azureNetAmount||azureAmount;
+  if(netAmount<=0&&quantity>0&&unitCost>0)netAmount=money2(quantity*unitCost);
+  if(netAmount>0&&tax>0&&vatRate>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax)}
   const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:(vatRate>0?netAmount*vatRate/100:0))):0;
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
-  const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Amount?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
+  const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
   return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:pct(p.TaxRate?.confidence)};
 }
