@@ -7,6 +7,7 @@ const normalizeDate=value=>{const text=String(value||"").trim();if(!text)return 
 const parseAmount=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const number=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(number)?number:0};
 const setStatus=(modal,text,error=false)=>{const el=modal?.querySelector("[data-invoice-status]");if(!el)return;el.textContent=text;el.style.background=error?"#fff1f2":"#ecfdf5";el.style.color=error?"#991b1b":"#065f46"};
 const reviewedLineCount=modal=>Math.max(Number(modal?.dataset.invoiceProductLines||0),Number(modal?.querySelectorAll("[data-invoice-product-lines] tbody tr").length||0),Number(modal?.querySelectorAll("[data-product-lines-review] tbody tr").length||0));
+const recoverJobIdFromPerformance=()=>{try{const entries=performance.getEntriesByType("resource");for(let i=entries.length-1;i>=0;i--){const name=String(entries[i]?.name||"");const match=name.match(/\/api\/commerce\/ai-reader\/jobs\/([^/?]+)\/(?:ai-recheck|product-lines)(?:[/?]|$)/);if(match)return decodeURIComponent(match[1])}}catch{}return ""};
 
 window.fetch=async function(input,init={}){
   const url=typeof input==="string"?input:input?.url||"";
@@ -25,6 +26,8 @@ async function runCreate(button){
   if(button.dataset.invoiceCreating==="1")return;
 
   setStatus(modal,"Έλεγχος στοιχείων πριν τη δημιουργία…");
+  if(!latestInvoiceJobId)latestInvoiceJobId=recoverJobIdFromPerformance();
+  if(latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId;
   const jobId=String(modal.dataset.invoiceJobId||latestInvoiceJobId||"").trim();
   const reviewedLines=reviewedLineCount(modal);
   const form=modal.querySelector('form[data-new-order]');
@@ -33,7 +36,7 @@ async function runCreate(button){
   const documentDate=normalizeDate(modal.querySelector("[data-doc-date]")?.value)||null;
   const totalGross=parseAmount(modal.querySelector("[data-doc-total]")?.value);
 
-  if(!jobId){setStatus(modal,"Δεν βρέθηκε το job του επανελέγχου. Πάτησε «Επανέλεγχος με AI» και ξαναδοκίμασε.",true);return}
+  if(!jobId){setStatus(modal,"Δεν βρέθηκε το job του επανελέγχου ούτε στο ιστορικό δικτύου. Πάτησε «Επανέλεγχος με AI» μία φορά και ξαναδοκίμασε.",true);return}
   if(reviewedLines<=0){setStatus(modal,"Δεν υπάρχουν ελεγμένες γραμμές προϊόντων. Κάνε πρώτα επανέλεγχο.",true);return}
   if(!supplierId){setStatus(modal,"Επίλεξε/επιβεβαίωσε Προμηθευτή.",true);return}
   if(!documentNumber){setStatus(modal,"Επιβεβαίωσε τον αριθμό τιμολογίου.",true);return}
@@ -75,13 +78,13 @@ function bindButton(button){
   return replacement;
 }
 function scan(){
+  if(!latestInvoiceJobId)latestInvoiceJobId=recoverJobIdFromPerformance();
   document.querySelectorAll("[data-create-invoice]").forEach(button=>{
     const bound=bindButton(button)||button;
     const modal=bound.closest(".po-modal");
+    if(modal&&latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId;
     if(modal&&reviewedLineCount(modal)>0&&!bound.dataset.invoiceCreating){bound.disabled=false;bound.removeAttribute("disabled");bound.style.pointerEvents="auto";bound.style.cursor="pointer";bound.style.opacity="1"}
   });
-  const modal=activeInvoiceModal();
-  if(modal&&latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId;
 }
 new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled"]});
 scan();
