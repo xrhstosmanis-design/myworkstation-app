@@ -11,67 +11,79 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   if(!text)return null;
   const marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);
   if(!marker)return null;
-  const values=(marker[1].match(/-?\\d+(?:[.,]\\d+)?/g)||[]).map(x=>Number(x.replace(",","."))).filter(Number.isFinite);
-  if(values.length<2)return null;
 
-  const canonicalVat=new Set([0,6,13,24]);
-  let vatRate=0;
-  const last=Math.round(Math.abs(values.at(-1)||0));
-  if(canonicalVat.has(last)){vatRate=last;values.pop()}
+  const toValues=s=>(String(s||"").match(/-?\\d+(?:[.,]\\d+)?/g)||[]).map(x=>Number(x.replace(",","."))).filter(Number.isFinite);
+  const after=toValues(marker[1]);
+  if(!after.length)return null;
 
+  // Azure sometimes wraps the right-hand columns before the TEM marker.
+  // Keep only the last few numeric cells from the prefix so product codes/pack sizes cannot drive the math.
+  const prefix=text.slice(0,marker.index||0);
+  const before=toValues(prefix).slice(-5);
+  const all=[...after,...before];
   const close=(a,b,tol=Math.max(0.03,Math.abs(Number(b||0))*0.015))=>Math.abs(Number(a||0)-Number(b||0))<=tol;
+  const canonicalVat=new Set([0,6,13,24]);
   const qHint=Math.max(0,Number(quantityHint||0));
-  let best=null;
 
-  // Find QTY + UNIT PRICE + INITIAL AMOUNT as one arithmetic block.
-  // Example: TEM 6 1,060 6,36 ... => 6 * 1,060 = 6,36.
-  for(let i=0;i<values.length;i++){
-    const qCandidates=[];
-    if(qHint>0)qCandidates.push({q:qHint,priceIndex:i,price:values[i],bonus:20});
-    if(i+1<values.length&&values[i]>0&&Number.isInteger(values[i])&&values[i]<=10000)qCandidates.push({q:values[i],priceIndex:i+1,price:values[i+1],bonus:qHint>0&&close(values[i],qHint,0.001)?30:0});
-    for(const c of qCandidates){
-      if(!(c.q>0&&c.price>0))continue;
-      const initial=c.q*c.price;
-      for(let j=c.priceIndex+1;j<Math.min(values.length,c.priceIndex+4);j++){
-        if(!close(values[j],initial))continue;
-        const score=100+c.bonus-(j-c.priceIndex);
-        if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:values[j],amountIndex:j};
-      }
+  let best=null;
+  const priceCandidates=[];
+  if(qHint>0){
+    for(let i=0;i<Math.min(after.length,5);i++)priceCandidates.push({q:qHint,price:after[i],priceIndex:i,bonus:30});
+  }
+  if(after.length>=2&&after[0]>0&&Number.isInteger(after[0])&&after[0]<=10000){
+    priceCandidates.push({q:after[0],price:after[1],priceIndex:1,bonus:qHint>0&&close(after[0],qHint,0.001)?40:10});
+  }
+
+  // A price is accepted only when quantity × price matches an actual line amount.
+  for(const c of priceCandidates){
+    if(!(c.q>0&&c.price>0))continue;
+    const expected=c.q*c.price;
+    for(let j=0;j<after.length;j++){
+      if(j===c.priceIndex||!close(after[j],expected))continue;
+      const distance=Math.abs(j-c.priceIndex);
+      const score=150+c.bonus-distance;
+      if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.priceIndex};
     }
   }
   if(!best)return null;
 
-  const tail=values.slice(best.amountIndex+1);
-  let running=best.initialAmount;
-  const discounts=[];
-  let cursor=0;
-
-  // Strict invoice-column grammar after initial amount:
-  // [discount %, discount amount] repeated up to 3 times, then [net amount].
-  // A pair is accepted only when BOTH percentage and monetary amount reconcile.
-  while(cursor+1<tail.length&&discounts.length<3){
-    const pct=Math.abs(Number(tail[cursor]||0));
-    const amount=Math.abs(Number(tail[cursor+1]||0));
-    if(!(pct>0&&pct<100))break;
-    const expected=running*pct/100;
-    if(!close(amount,expected,Math.max(0.03,expected*0.03)))break;
-    discounts.push(money4(pct));
-    running=money4(running-amount);
-    cursor+=2;
+  // VAT can be after the row or in a wrapped prefix. Prefer canonical values near the row edges.
+  let vatRate=0;
+  for(const v of [...after.slice().reverse(),...before.slice().reverse()]){
+    const n=Math.round(Math.abs(v));
+    if(canonicalVat.has(n)){vatRate=n;break}
   }
 
-  // The next token, when present, must be the reconciled net value.
-  let netAmount=running;
-  if(cursor<tail.length){
-    const candidate=Math.max(0,Number(tail[cursor]||0));
-    if(close(candidate,running,Math.max(0.03,running*0.02)))netAmount=money4(candidate);
-    else if(discounts.length===0&&close(candidate,best.initialAmount))netAmount=money4(candidate);
-    else if(discounts.length>0)return null;
+  const excluded=[];
+  const consume=value=>{const i=all.findIndex((v,idx)=>!excluded.includes(idx)&&close(v,value,0.001));if(i>=0)excluded.push(i)};
+  consume(best.quantity);consume(best.unitPrice);consume(best.initialAmount);if(vatRate)consume(vatRate);
+
+  let discountMatch=null;
+  const candidates=all.map((v,i)=>({v:Math.abs(Number(v||0)),i})).filter(x=>!excluded.includes(x.i)&&x.v>0&&x.v<100);
+  for(const candidate of candidates){
+    const pct=candidate.v;
+    const predictedDiscount=best.initialAmount*pct/100;
+    const predictedNet=best.initialAmount-predictedDiscount;
+    const amountToken=all.find((v,i)=>i!==candidate.i&&!excluded.includes(i)&&close(v,predictedDiscount,Math.max(0.03,predictedDiscount*0.03)));
+    const netToken=all.find((v,i)=>i!==candidate.i&&!excluded.includes(i)&&v!==amountToken&&close(v,predictedNet,Math.max(0.03,predictedNet*0.02)));
+    if(amountToken!==undefined&&netToken!==undefined){
+      const error=Math.abs(amountToken-predictedDiscount)+Math.abs(netToken-predictedNet);
+      if(!discountMatch||error<discountMatch.error)discountMatch={pct,net:netToken,error};
+    }
   }
 
-  const [discount1=0,discount2=0,discount3=0]=discounts;
+  let discount1=0,discount2=0,discount3=0,netAmount=best.initialAmount;
+  if(discountMatch){
+    discount1=money4(discountMatch.pct);
+    netAmount=money4(discountMatch.net);
+  }else{
+    // No discount is accepted unless both its amount and resulting net are present and reconcile.
+    // This deliberately avoids turning arbitrary monetary cells into percentages.
+    netAmount=money4(best.initialAmount);
+  }
+
   const grossAmount=netAmount>0?money4(netAmount*(1+vatRate/100)):0;
-  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true,columnSchemaValidated:true};
+  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true};
 }
 
 `;
@@ -83,14 +95,14 @@ if(!server.includes(old))throw new Error("Azure numeric line anchor missing.");
 server=server.replace(old,next);
 
 const oldDiscount='    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;';
-const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    // When the raw Azure row has a fully validated column schema, it is authoritative.\n    // Never let generic Azure Discount fields override it (they caused 6.36 / 0.95 / 5.41 to become percentages).\n    const trustedDiscounts=rowFallback?.columnSchemaValidated?[rowFallback.discount1||0,rowFallback.discount2||0,rowFallback.discount3||0]:verifiedAzureDiscounts;\n    const discount1=trustedDiscounts[0]||0,discount2=trustedDiscounts[1]||0,discount3=trustedDiscounts[2]||0;';
+const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    const discount1=rowFallback?.mathValidated?rowFallback.discount1:(verifiedAzureDiscounts[0]||0),discount2=rowFallback?.mathValidated?rowFallback.discount2:(verifiedAzureDiscounts[1]||0),discount3=rowFallback?.mathValidated?rowFallback.discount3:(verifiedAzureDiscounts[2]||0);';
 if(!server.includes(oldDiscount))throw new Error("Azure discount anchor missing.");
 server=server.replace(oldDiscount,nextDiscount);
 
 const oldReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,discountValidated:Boolean(discounts.length)};';
-const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),azureColumnSchemaValidated:Boolean(rowFallback?.columnSchemaValidated),discountValidated:Boolean(rowFallback?.columnSchemaValidated||verifiedAzureDiscounts.length)};';
+const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),discountValidated:Boolean(rowFallback?.mathValidated?rowFallback.discount1:verifiedAzureDiscounts.length)};';
 if(!server.includes(oldReturn))throw new Error("Azure return-line anchor missing.");
 server=server.replace(oldReturn,nextReturn);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: validated Azure row-column schema is authoritative for discounts and net value.");
+console.log("Invoice Learning patched: wrapped Azure rows reconcile quantity, price, discount amount, net value and VAT across both sides of TEM.");
