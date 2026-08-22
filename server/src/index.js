@@ -104,7 +104,7 @@ if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
 app.use(cors());
 app.use(express.json({limit:"12mb"}));
-app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.22.0+kat-test-pos"}));
+app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.22.0+kat-test-pos",revision:process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT||null}));
 app.use("/api/public/kat",katOnlineOrderingRoutes);
 app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/auth",authRoutes);
