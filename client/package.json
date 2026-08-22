@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node src/patch-pos-online-orders-host.js && node src/patch-store-online-orders-retry.js && vite",
-    "build": "node src/patch-pos-online-orders-host.js && node src/patch-store-online-orders-retry.js && vite build",
+    "dev": "node src/patch-pos-online-orders-host.js && vite",
+    "build": "node src/patch-pos-online-orders-host.js && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
