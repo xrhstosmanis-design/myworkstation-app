@@ -24,6 +24,26 @@ function fieldValue(field){
 }
 function fieldText(field){const value=fieldValue(field);return value===null||value===undefined?"":String(value).trim()}
 function numericField(field){const value=fieldValue(field);const n=Number(value);return Number.isFinite(n)?n:0}
+function discountValue(field){
+  if(!field)return 0;
+  let n=numericField(field);
+  if(!Number.isFinite(n)||n<=0)return 0;
+  if(n>0&&n<=1)n*=100;
+  return n>0&&n<100?money4(n):0;
+}
+function itemDiscounts(p){
+  const values=[
+    discountValue(p.Discount1)||discountValue(p.DiscountRate)||discountValue(p.DiscountPercent),
+    discountValue(p.Discount2),
+    discountValue(p.Discount3)
+  ];
+  const generic=p.Discount;
+  if(!values[0]&&generic){
+    if(generic.valueObject){values[0]=discountValue(generic.valueObject.Rate)||discountValue(generic.valueObject.Percent)||discountValue(generic.valueObject.Percentage)}
+    if(!values[0])values[0]=discountValue(generic);
+  }
+  return values.map(v=>v||0);
+}
 function validVatRate(field){
   const n=numericField(field),confidence=pct(field?.confidence);
   if(confidence<70)return 0;
@@ -75,20 +95,27 @@ function normalizeItem(item,index){
   const quantity=Math.max(0,numericField(p.Quantity));
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
   let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost));
+  const [discount1,discount2,discount3]=itemDiscounts(p);
   const tax=Math.max(0,numericField(p.Tax)||numericField(p.TaxAmount));
   const azureAmount=Math.max(0,numericField(p.Amount));
   const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
   let netAmount=azureNetAmount||azureAmount;
-  if(netAmount<=0&&quantity>0&&unitCost>0)netAmount=money2(quantity*unitCost);
-  if(unitCost<=0&&quantity>0&&netAmount>0)unitCost=money4(netAmount/quantity);
+  if(netAmount<=0&&quantity>0&&unitCost>0){
+    const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
+    netAmount=money2(quantity*unitCost*factor);
+  }
+  if(unitCost<=0&&quantity>0&&netAmount>0){
+    const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
+    unitCost=money4(factor>0?netAmount/(quantity*factor):netAmount/quantity);
+  }
   let vatRate=validVatRate(p.TaxRate)||validVatRate(p.VATRate)||validVatRate(p.VatRate);
   if(!vatRate&&netAmount>0&&tax>0)vatRate=inferVatRate(netAmount,tax);
-  if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax);if(unitCost<=0&&quantity>0)unitCost=money4(netAmount/quantity)}
+  if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax)}
   const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:(vatRate>0?netAmount*vatRate/100:0))):0;
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
   const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
-  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
+  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
 async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
