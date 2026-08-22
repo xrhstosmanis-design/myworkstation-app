@@ -23,8 +23,8 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   const qHint=Math.max(0,Number(quantityHint||0));
   let best=null;
 
-  // Identify quantity + unit price only when they are mathematically confirmed by a line amount.
-  // This prevents values such as 6,36 / 0,95 / 5,41 from being shifted into discount columns.
+  // Find QTY + UNIT PRICE + INITIAL AMOUNT as one arithmetic block.
+  // Example: TEM 6 1,060 6,36 ... => 6 * 1,060 = 6,36.
   for(let i=0;i<values.length;i++){
     const qCandidates=[];
     if(qHint>0)qCandidates.push({q:qHint,priceIndex:i,price:values[i],bonus:20});
@@ -39,42 +39,39 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
       }
     }
   }
-
-  if(!best&&qHint>0){
-    for(let i=0;i<values.length-1;i++){
-      const price=values[i],initial=qHint*price;
-      if(price>0&&close(values[i+1],initial)){best={score:80,quantity:qHint,unitPrice:price,initialAmount:values[i+1],amountIndex:i+1};break}
-    }
-  }
   if(!best)return null;
 
   const tail=values.slice(best.amountIndex+1);
-  let discount1=0,discount2=0,discount3=0,netAmount=best.initialAmount;
+  let running=best.initialAmount;
+  const discounts=[];
+  let cursor=0;
 
-  // Accept a discount only if percentage, discount amount and resulting net all reconcile.
-  // Order in Azure raw content can vary, so validate by arithmetic instead of token position.
-  let discountMatch=null;
-  for(const d of tail){
-    const pct=Math.abs(Number(d||0));
-    if(!(pct>0&&pct<100))continue;
-    const predictedDiscount=best.initialAmount*pct/100;
-    const predictedNet=best.initialAmount-predictedDiscount;
-    const amountToken=tail.find(v=>v!==d&&close(v,predictedDiscount,Math.max(0.03,predictedDiscount*0.03)));
-    const netToken=tail.find(v=>v!==d&&v!==amountToken&&close(v,predictedNet,Math.max(0.03,predictedNet*0.02)));
-    if(amountToken!==undefined&&(netToken!==undefined||predictedNet>0)){
-      discountMatch={pct,net:netToken!==undefined?netToken:predictedNet};
-      break;
-    }
-  }
-  if(discountMatch){discount1=money4(discountMatch.pct);netAmount=money4(discountMatch.net)}
-  else{
-    // No proven discount: use a value only when it matches the initial amount; otherwise keep initial.
-    const same=tail.find(v=>close(v,best.initialAmount));
-    netAmount=money4(same!==undefined?same:best.initialAmount);
+  // Strict invoice-column grammar after initial amount:
+  // [discount %, discount amount] repeated up to 3 times, then [net amount].
+  // A pair is accepted only when BOTH percentage and monetary amount reconcile.
+  while(cursor+1<tail.length&&discounts.length<3){
+    const pct=Math.abs(Number(tail[cursor]||0));
+    const amount=Math.abs(Number(tail[cursor+1]||0));
+    if(!(pct>0&&pct<100))break;
+    const expected=running*pct/100;
+    if(!close(amount,expected,Math.max(0.03,expected*0.03)))break;
+    discounts.push(money4(pct));
+    running=money4(running-amount);
+    cursor+=2;
   }
 
+  // The next token, when present, must be the reconciled net value.
+  let netAmount=running;
+  if(cursor<tail.length){
+    const candidate=Math.max(0,Number(tail[cursor]||0));
+    if(close(candidate,running,Math.max(0.03,running*0.02)))netAmount=money4(candidate);
+    else if(discounts.length===0&&close(candidate,best.initialAmount))netAmount=money4(candidate);
+    else if(discounts.length>0)return null;
+  }
+
+  const [discount1=0,discount2=0,discount3=0]=discounts;
   const grossAmount=netAmount>0?money4(netAmount*(1+vatRate/100)):0;
-  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true};
+  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true,columnSchemaValidated:true};
 }
 
 `;
@@ -86,14 +83,14 @@ if(!server.includes(old))throw new Error("Azure numeric line anchor missing.");
 server=server.replace(old,next);
 
 const oldDiscount='    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;';
-const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    const discount1=verifiedAzureDiscounts[0]||rowFallback?.discount1||0,discount2=verifiedAzureDiscounts[1]||rowFallback?.discount2||0,discount3=verifiedAzureDiscounts[2]||rowFallback?.discount3||0;';
+const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    // When the raw Azure row has a fully validated column schema, it is authoritative.\n    // Never let generic Azure Discount fields override it (they caused 6.36 / 0.95 / 5.41 to become percentages).\n    const trustedDiscounts=rowFallback?.columnSchemaValidated?[rowFallback.discount1||0,rowFallback.discount2||0,rowFallback.discount3||0]:verifiedAzureDiscounts;\n    const discount1=trustedDiscounts[0]||0,discount2=trustedDiscounts[1]||0,discount3=trustedDiscounts[2]||0;';
 if(!server.includes(oldDiscount))throw new Error("Azure discount anchor missing.");
 server=server.replace(oldDiscount,nextDiscount);
 
 const oldReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,discountValidated:Boolean(discounts.length)};';
-const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),discountValidated:Boolean(verifiedAzureDiscounts.length||rowFallback?.discount1||rowFallback?.discount2||rowFallback?.discount3)};';
+const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),azureColumnSchemaValidated:Boolean(rowFallback?.columnSchemaValidated),discountValidated:Boolean(rowFallback?.columnSchemaValidated||verifiedAzureDiscounts.length)};';
 if(!server.includes(oldReturn))throw new Error("Azure return-line anchor missing.");
 server=server.replace(oldReturn,nextReturn);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: Azure row values are mapped only when quantity, price, amount and discounts reconcile mathematically.");
+console.log("Invoice Learning patched: validated Azure row-column schema is authoritative for discounts and net value.");
