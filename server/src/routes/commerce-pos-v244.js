@@ -8,6 +8,8 @@ const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const m=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`:null};
+const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
 
 function outputText(response){
   if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
@@ -122,10 +124,23 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
 
 router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
   try{
-    const requestedTotal=Number(req.body?.totalGross||0);
-    if(!(requestedTotal>0))return res.status(409).json({error:"Δεν υπάρχει έγκυρο συνολικό ποσό τιμολογίου. Η V2.4.4 σταμάτησε την καταχώριση για έλεγχο."});
     const jobs=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const result=jobs[0]?.resultJson&&typeof jobs[0].resultJson==="object"?jobs[0].resultJson:{};
+    const source=req.body&&typeof req.body==="object"?req.body:{};
+    const totalFromRequest=intakeNumber(source.totalGross);
+    const totalFromResult=intakeNumber(result.totalGross);
+    const documentNumber=String(source.documentNumber||result.documentNumber||"").trim().slice(0,80);
+    const documentDate=normalizeIntakeDate(source.documentDate)||normalizeIntakeDate(result.documentDate)||null;
+    const supplierId=String(source.supplierId||"").trim();
+    const settlementMode=source.settlementMode==="PAID"?"PAID":"CREDIT";
+    const note=source.note==null?null:String(source.note).trim().slice(0,500);
+    const requestedTotal=totalFromRequest>0?totalFromRequest:totalFromResult;
+    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,note};
+    const missing=[];
+    if(!supplierId)missing.push("Προμηθευτής");
+    if(!documentNumber)missing.push("Αρ. τιμολογίου");
+    if(!(requestedTotal>0))missing.push("Σύνολο με ΦΠΑ");
+    if(missing.length)return res.status(400).json({error:`Λείπουν υποχρεωτικά στοιχεία: ${missing.join(", ")}.`,code:"POS_INTAKE_FIELDS_MISSING",fields:missing});
     const lines=Array.isArray(result.productLines)?result.productLines:[];
     if(!lines.length)return res.status(409).json({error:"Δεν υπάρχουν ασφαλείς structured γραμμές V2.4.4. Η καταχώριση μπλοκαρίστηκε."});
     const structuredGross=round2(lines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
