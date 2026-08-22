@@ -91,4 +91,5 @@ jobs:
           node server/e2e/eftpos-shift-close-flow.mjs
           node server/e2e/pos-to-shift-backoffice-flow.mjs
           node server/e2e/kat-pos-regression-flow.mjs
+          node server/e2e/kat-online-ordering-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
