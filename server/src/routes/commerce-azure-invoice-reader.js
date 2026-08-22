@@ -31,15 +31,6 @@ function discountValue(field){
   if(n>0&&n<=1)n*=100;
   return n>0&&n<100?money4(n):0;
 }
-function discountTextValue(value){
-  const text=String(value||"").replace(/\s/g,"").replace(",",".");
-  const match=text.match(/-?\d+(?:\.\d+)?/);
-  if(!match)return 0;
-  let n=Number(match[0]);
-  if(!Number.isFinite(n)||n<=0)return 0;
-  if(n>0&&n<=1&&/%/.test(text)===false)n*=100;
-  return n>0&&n<100?money4(n):0;
-}
 function itemDiscounts(p){
   const values=[
     discountValue(p.Discount1)||discountValue(p.DiscountRate)||discountValue(p.DiscountPercent),
@@ -104,13 +95,11 @@ function normalizeItem(item,index){
   const quantity=Math.max(0,numericField(p.Quantity));
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
   let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost));
-  const explicitUnitCost=unitCost>0;
   const [discount1,discount2,discount3]=itemDiscounts(p);
   const tax=Math.max(0,numericField(p.Tax)||numericField(p.TaxAmount));
   const azureAmount=Math.max(0,numericField(p.Amount));
   const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
   let netAmount=azureNetAmount||azureAmount;
-  const explicitNetAmount=netAmount>0;
   if(netAmount<=0&&quantity>0&&unitCost>0){
     const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
     netAmount=money2(quantity*unitCost*factor);
@@ -126,68 +115,7 @@ function normalizeItem(item,index){
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
   const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
-  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence)),azureUnitCostExplicit:explicitUnitCost,azureNetAmountExplicit:explicitNetAmount};
-}
-function tableDiscountCandidates(result){
-  const candidates=[];
-  for(const table of Array.isArray(result?.tables)?result.tables:[]){
-    const cells=Array.isArray(table?.cells)?table.cells:[];
-    if(!cells.length)continue;
-    const rows=new Map();
-    for(const cell of cells){
-      const r=Number(cell.rowIndex||0),c=Number(cell.columnIndex||0);
-      if(!rows.has(r))rows.set(r,new Map());
-      rows.get(r).set(c,String(cell.content||"").trim());
-    }
-    let headerRow=-1,discountCols=[];
-    for(const [r,row] of [...rows.entries()].sort((a,b)=>a[0]-b[0])){
-      const found=[];
-      for(const [c,text] of row.entries()){
-        const key=norm(text);
-        if(/(ΕΚΠΤ|DISCOUNT|DISC)/.test(key))found.push(c);
-      }
-      if(found.length){headerRow=r;discountCols=found.slice(0,3);break}
-    }
-    if(headerRow<0||!discountCols.length)continue;
-    const header=rows.get(headerRow)||new Map();
-    let codeCol=null,descriptionCol=null;
-    for(const [c,text] of header.entries()){
-      const key=norm(text);
-      if(codeCol===null&&/(ΚΩΔ|CODE|SKU|ITEMCODE)/.test(key))codeCol=c;
-      if(descriptionCol===null&&/(ΠΕΡΙΓΡΑΦ|DESCRIPTION|ΕΙΔΟΣ|ΠΡΟΙΟΝ|PRODUCT)/.test(key))descriptionCol=c;
-    }
-    for(const [r,row] of rows.entries()){
-      if(r<=headerRow)continue;
-      const discounts=discountCols.map(c=>discountTextValue(row.get(c)||""));
-      if(!discounts.some(v=>v>0))continue;
-      const rowText=[...row.entries()].sort((a,b)=>a[0]-b[0]).map(([,text])=>text).join(" ").replace(/\s+/g," ").trim();
-      const code=codeCol!==null?String(row.get(codeCol)||"").trim():"";
-      const description=descriptionCol!==null?String(row.get(descriptionCol)||"").trim():"";
-      candidates.push({code,description,rowText,discounts});
-    }
-  }
-  return candidates;
-}
-function applyTableDiscounts(result,productLines){
-  const candidates=tableDiscountCandidates(result);
-  if(!candidates.length)return productLines;
-  for(const line of productLines){
-    if(Number(line.discount1||0)>0||Number(line.discount2||0)>0||Number(line.discount3||0)>0)continue;
-    const lineCode=norm(line.code),lineDesc=norm(line.description),lineRaw=norm(line.rawText);
-    let match=null;
-    if(lineCode.length>=3)match=candidates.find(row=>norm(row.code)===lineCode||norm(row.rowText).includes(lineCode))||null;
-    if(!match&&lineDesc.length>=6)match=candidates.find(row=>{const d=norm(row.description),t=norm(row.rowText);return d===lineDesc||d.includes(lineDesc)||lineDesc.includes(d)||(t.length>=6&&t.includes(lineDesc));})||null;
-    if(!match&&lineRaw.length>=8)match=candidates.find(row=>norm(row.rowText).includes(lineRaw)||lineRaw.includes(norm(row.rowText)))||null;
-    if(!match)continue;
-    const [discount1=0,discount2=0,discount3=0]=match.discounts;
-    line.discount1=discount1;line.discount2=discount2;line.discount3=discount3;
-    const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);
-    if(!line.azureNetAmountExplicit&&line.quantity>0&&line.unitCost>0)line.netAmount=money2(line.quantity*line.unitCost*factor);
-    if(!line.azureUnitCostExplicit&&line.quantity>0&&line.netAmount>0&&factor>0)line.unitCost=money4(line.netAmount/(line.quantity*factor));
-    line.grossAmount=line.netAmount>0?money2(line.netAmount+(line.azureTax>0?line.azureTax:(line.vatRate>0?line.netAmount*line.vatRate/100:0))):0;
-    line.azureDiscountSource="TABLE";
-  }
-  return productLines;
+  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
 async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
@@ -213,7 +141,7 @@ function normalizeAzure(payload){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
-  const productLines=applyTableDiscounts(result,Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[]);
+  const productLines=Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[];
   const supplier={
     name:fieldText(f.VendorName)||fieldText(f.VendorAddressRecipient),
     taxId:fieldText(f.VendorTaxId),
