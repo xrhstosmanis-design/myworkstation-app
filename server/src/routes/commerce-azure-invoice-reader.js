@@ -8,6 +8,7 @@ const MODEL_ID="prebuilt-invoice";
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
+const money4=value=>Math.round((Number(value||0)+Number.EPSILON)*10000)/10000;
 const pct=value=>Math.max(0,Math.min(100,Number(value||0)*100));
 const configured=()=>Boolean(String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim()&&String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim());
 
@@ -28,6 +29,14 @@ function validVatRate(field){
   if(confidence<70)return 0;
   const canonical=[0,6,13,24];
   return canonical.includes(Math.round(n))?Math.round(n):0;
+}
+function inferVatRate(netAmount,tax){
+  const net=Number(netAmount||0),taxAmount=Number(tax||0);
+  if(net<=0||taxAmount<=0)return 0;
+  const raw=taxAmount/net*100;
+  const canonical=[6,13,24];
+  const best=canonical.map(rate=>({rate,diff:Math.abs(raw-rate)})).sort((a,b)=>a.diff-b.diff)[0];
+  return best&&best.diff<=1.25?best.rate:0;
 }
 function parseDataUrl(contentData,mimeType){
   const text=String(contentData||"");
@@ -65,19 +74,21 @@ function normalizeItem(item,index){
   const code=fieldText(p.ProductCode)||fieldText(p.ItemCode)||fieldText(p.Code);
   const quantity=Math.max(0,numericField(p.Quantity));
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
-  const unitCost=Math.max(0,numericField(p.UnitPrice));
-  const vatRate=validVatRate(p.TaxRate);
-  const tax=Math.max(0,numericField(p.Tax));
+  let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost));
+  const tax=Math.max(0,numericField(p.Tax)||numericField(p.TaxAmount));
   const azureAmount=Math.max(0,numericField(p.Amount));
   const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
   let netAmount=azureNetAmount||azureAmount;
   if(netAmount<=0&&quantity>0&&unitCost>0)netAmount=money2(quantity*unitCost);
-  if(netAmount>0&&tax>0&&vatRate>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax)}
+  if(unitCost<=0&&quantity>0&&netAmount>0)unitCost=money4(netAmount/quantity);
+  let vatRate=validVatRate(p.TaxRate)||validVatRate(p.VATRate)||validVatRate(p.VatRate);
+  if(!vatRate&&netAmount>0&&tax>0)vatRate=inferVatRate(netAmount,tax);
+  if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03){netAmount=money2(azureAmount-tax);if(unitCost<=0&&quantity>0)unitCost=money4(netAmount/quantity)}
   const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:(vatRate>0?netAmount*vatRate/100:0))):0;
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
-  const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
+  const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
-  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:pct(p.TaxRate?.confidence)};
+  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
 async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
