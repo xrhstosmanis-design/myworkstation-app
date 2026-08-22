@@ -18,10 +18,69 @@ function pushReview(line,reason){
   line.reviewReasons=line.reviewReasons||[];
   if(!line.reviewReasons.includes(reason))line.reviewReasons.push(reason);
 }
+function parseLocaleNumber(text){
+  const raw=String(text||'').trim();if(!raw)return null;
+  let cleaned=raw.replace(/\s/g,'');
+  if(cleaned.includes(',')&&cleaned.includes('.')){
+    if(cleaned.lastIndexOf(',')>cleaned.lastIndexOf('.'))cleaned=cleaned.replace(/\./g,'').replace(',','.');
+    else cleaned=cleaned.replace(/,/g,'');
+  }else if(cleaned.includes(','))cleaned=cleaned.replace(',','.');
+  const n=Number(cleaned);return Number.isFinite(n)?n:null;
+}
+function rawNumberTokens(rawText){
+  const matches=String(rawText||'').match(/\d+(?:[.,]\d+)?/g)||[];
+  return matches.map((raw,index)=>({raw,value:parseLocaleNumber(raw),index})).filter(x=>Number.isFinite(x.value));
+}
+function closeMoney(a,b,min=0.03,ratio=0.015){return Math.abs(Number(a||0)-Number(b||0))<=Math.max(min,Math.abs(Number(b||0))*ratio)}
 function discountFactor(line){
   return [line?.discount1,line?.discount2,line?.discount3].reduce((factor,value)=>{
     const p=Number(value||0);return p>0&&p<100?factor*(1-p/100):factor;
   },1);
+}
+function recoverVerifiedDiscount(line,quantity,unitCost,net){
+  if(quantity<=0||unitCost<=0||net<=0||!line?.rawText)return null;
+  const gross=quantity*unitCost,tokens=rawNumberTokens(line.rawText);
+  if(!tokens.length)return null;
+  const grossIndexes=tokens.filter(t=>closeMoney(t.value,gross,0.04,0.012)).map(t=>t.index);
+  const candidates=[];
+  for(const gIndex of grossIndexes){
+    for(let pIndex=gIndex+1;pIndex<Math.min(tokens.length,gIndex+5);pIndex++){
+      const percent=tokens[pIndex].value;if(!(percent>0&&percent<100))continue;
+      for(let aIndex=pIndex+1;aIndex<Math.min(tokens.length,pIndex+4);aIndex++){
+        const amount=tokens[aIndex].value;if(!(amount>0&&amount<gross))continue;
+        const expectedAmount=gross*percent/100;
+        const after=gross-amount;
+        if(!closeMoney(expectedAmount,amount,0.025,0.025)||!closeMoney(after,net,0.05,0.02))continue;
+        candidates.push({percent:money4(percent),amount:money4(amount),score:Math.abs(expectedAmount-amount)+Math.abs(after-net),evidence:`gross ${tokens[gIndex].raw}; ${tokens[pIndex].raw}% / ${tokens[aIndex].raw}; net ${net}`});
+      }
+    }
+  }
+  if(!candidates.length)return null;
+  candidates.sort((a,b)=>a.score-b.score);
+  const best=candidates[0],second=candidates[1];
+  if(second&&Math.abs(second.score-best.score)<0.0005&&Math.abs(second.percent-best.percent)>0.0001)return null;
+  return best;
+}
+function sanitizeAzureDiscounts(line,quantity,unitCost,net){
+  const current=[Number(line.discount1||0),Number(line.discount2||0),Number(line.discount3||0)];
+  if(!current.some(v=>v>0))return;
+  if(quantity<=0||unitCost<=0||net<=0)return;
+  const expected=money2(quantity*unitCost*discountFactor(line));
+  if(closeMoney(expected,net,0.05,0.02))return;
+  const old1=line.discount1||0,old2=line.discount2||0,old3=line.discount3||0;
+  pushCorrection(line,'discount1',old1,0,'REJECTED_AZURE_DISCOUNT_FIELDS_NOT_MATCHING_LINE_MATH');
+  pushCorrection(line,'discount2',old2,0,'REJECTED_AZURE_DISCOUNT_FIELDS_NOT_MATCHING_LINE_MATH');
+  pushCorrection(line,'discount3',old3,0,'REJECTED_AZURE_DISCOUNT_FIELDS_NOT_MATCHING_LINE_MATH');
+  line.discount1=0;line.discount2=0;line.discount3=0;
+  const recovered=recoverVerifiedDiscount(line,quantity,unitCost,net);
+  if(recovered){
+    pushCorrection(line,'discount1',0,recovered.percent,'RECOVERED_FROM_AZURE_RAW_LINE_MATH');
+    line.discount1=recovered.percent;line.discountAmount1=recovered.amount;
+    line.discountAmount2=0;line.discountAmount3=0;
+    line.discountSource='AZURE_RAW_LINE_MATH_VERIFIED';
+    line.discountConfidence=99;
+    line.discountEvidence=recovered.evidence;
+  }else pushReview(line,'AZURE_DISCOUNT_FIELDS_REJECTED_REVIEW_REQUIRED');
 }
 function applyLearningContract(line){
   const code=String(line.supplierItemCode||line.code||'').trim();
@@ -42,7 +101,9 @@ function applyLearningContract(line){
 function reconcileLine(input,index){
   const line={...input,autoCorrections:[...(input?.autoCorrections||[])],reviewReasons:[...(input?.reviewReasons||[])]};
   let quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||line.unitPrice||0),net=Number(line.netAmount||line.netValue||0),tax=Number(line.azureTax||0),vat=Number(line.vatRate||0),gross=Number(line.grossAmount||0);
-  const factor=discountFactor(line);
+
+  sanitizeAzureDiscounts(line,quantity,unitCost,net);
+  let factor=discountFactor(line);
 
   if(quantity>0&&unitCost<=0&&net>0&&factor>0){
     const derived=money4(net/(quantity*factor));
@@ -68,6 +129,7 @@ function reconcileLine(input,index){
     if(expectedGross>0&&Math.abs(expectedGross-gross)>0.02){pushCorrection(line,'grossAmount',line.grossAmount||0,expectedGross,'NET_PLUS_TAX');line.grossAmount=gross=expectedGross}
   }
 
+  factor=discountFactor(line);
   if(quantity>0&&unitCost>0&&net>0){
     const expectedNet=money2(quantity*unitCost*factor);
     const diff=Math.abs(expectedNet-net);
@@ -117,7 +179,7 @@ export function reconcileAzureInvoice(parsed){
   const verifiedLines=result.productLines.filter(line=>line.autoVerified).length;
   const reviewLines=result.productLines.length-verifiedLines;
   result.reconciliation={
-    engine:'MYWORKSTATION_DETERMINISTIC_V1',
+    engine:'MYWORKSTATION_DETERMINISTIC_V2',
     headerCorrections,
     headerReview,
     lineGrossSum,
