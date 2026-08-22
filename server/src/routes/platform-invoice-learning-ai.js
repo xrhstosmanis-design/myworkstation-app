@@ -26,6 +26,7 @@ const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.value
 const textField=f=>String(f?.valueString??f?.valueDate??f?.content??"").trim();
 const azureConfigured=()=>Boolean(String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim()&&String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim());
 const money2=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
+const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 
 function explicitDiscounts(p){
   const candidates=[p.Discount,p.DiscountRate,p.DiscountPercent,p.LineDiscount,p.LineDiscountRate,p.Discount1,p.Discount2,p.Discount3];
@@ -56,6 +57,37 @@ function rowDiscounts(item,p){
   return filtered;
 }
 
+function parseHint(row={}){
+  const text=String(row?.text||"");
+  const parts=text.split("|").map(x=>x.trim());
+  const num=i=>{const n=Number(String(parts[i]||"").replace(",","."));return Number.isFinite(n)?n:0};
+  return {raw:text,code:parts[0]||"",description:row?.description||parts[1]||"",quantity:num(2),pack:num(3),unitPrice:num(4),discounts:[num(5),num(6),num(7)].filter(v=>v>0&&v<100),vat:num(8)};
+}
+
+function findHint(ocrRows,index,code,description){
+  const hints=(Array.isArray(ocrRows)?ocrRows:[]).map(parseHint);
+  const codeKey=norm(code),descKey=norm(description);
+  if(codeKey){
+    const exact=hints.find(h=>norm(h.code)===codeKey);if(exact)return exact;
+  }
+  if(descKey.length>=6){
+    const close=hints.find(h=>{const x=norm(h.description);return x.length>=6&&(x.includes(descKey)||descKey.includes(x))});if(close)return close;
+  }
+  return hints[index]||null;
+}
+
+function packageFromText(text,hintPack=0){
+  if(Number(hintPack)>1)return Math.round(Number(hintPack));
+  const s=String(text||"").toUpperCase().replace(/,/g,".");
+  const patterns=[
+    /\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|ΜL|LT|L|KG|ΚG)\s*[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)?\b/,
+    /[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/,
+    /(\d{1,3})\s*(?:ΤΜΧ|ΤΕΜ|PCS|PIECES)\b/
+  ];
+  for(const re of patterns){const m=s.match(re);if(m){const n=Number(m[1]);if(n>1&&n<=500)return n}}
+  return 0;
+}
+
 function applyDiscounts(unitPrice,discounts){
   let net=Math.max(0,Number(unitPrice||0));
   for(const d of discounts)net*=1-Math.max(0,Math.min(100,Number(d||0)))/100;
@@ -84,26 +116,30 @@ async function callAzure(fileData,mimeType){
   throw new Error("AZURE_TIMEOUT");
 }
 
-function normalizeAzure(payload){
+function normalizeAzure(payload,ocrRows=[]){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
   const productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
+    const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
     const description=textField(p.Description)||textField(p.ProductName)||textField(p.ItemDescription);
+    const hint=findHint(ocrRows,index,supplierItemCode,description);
     const quantity=Math.max(0,numberField(p.Quantity));
     const unitPrice=Math.max(0,numberField(p.UnitPrice));
     const netAmount=Math.max(0,numberField(p.Amount));
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);
-    const discounts=rowDiscounts(item,p);
+    let discounts=rowDiscounts(item,p);
+    if(!discounts.length&&hint?.discounts?.length)discounts=hint.discounts.slice(0,3);
     const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
+    const unitsPerPackage=packageFromText(`${description} ${item?.content||""}`,hint?.pack||0);
     let netUnitCost=discounts.length&&unitPrice>0?applyDiscounts(unitPrice,discounts):(quantity>0&&netAmount>0?money2(netAmount/quantity):unitPrice);
-    if(quantity>0&&netAmount>0){const amountUnit=money2(netAmount/quantity);if(Math.abs(amountUnit-netUnitCost)>0.03)netUnitCost=amountUnit}
+    if(quantity>0&&netAmount>0&&(!discounts.length||unitPrice<=0)){netUnitCost=money2(netAmount/quantity)}
     const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
-    return {supplierItemCode:textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code),description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:0,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||"")};
+    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:Boolean(hint)};
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
@@ -120,7 +156,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
 
   if(azureConfigured()){
     try{
-      const azure=normalizeAzure(await callAzure(fileData,mimeType));
+      const azure=normalizeAzure(await callAzure(fileData,mimeType),ocrRows);
       if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure);
       console.warn("Azure Invoice Learning returned weak result; falling back to OpenAI.");
     }catch(error){console.error("Azure Invoice Learning fallback:",error?.message||error)}
@@ -130,7 +166,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
   const ocrText=(Array.isArray(ocrRows)?ocrRows:[]).slice(0,300).map((r,i)=>`${i+1}. ${String(r?.text||r?.description||"").slice(0,500)}`).join("\n").slice(0,60000);
-  const prompt=`Είσαι ειδικός ελεγκτής ελληνικών τιμολογίων προμηθευτών για το MyWorkStation Invoice Learning Lab. Διάβασε ΠΡΩΤΑ το πρωτότυπο PDF/εικόνα και χρησιμοποίησε το OCR μόνο ως βοήθημα.\n\nΠΡΩΤΗ ΠΡΟΤΕΡΑΙΟΤΗΤΑ — HEADER: εντόπισε τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ και ΟΧΙ τον πελάτη. Βρες supplier.name, supplier.taxId, documentNumber και documentDate. Αν κάτι δεν είναι αναγνώσιμο άφησέ το κενό.\n\nPRODUCT LINES: κράτησε ΜΟΝΟ πραγματικές γραμμές προϊόντων, ποτέ headers, ΑΦΜ, IBAN, σύνολα ή footer. Για κάθε προϊόν βρες supplierItemCode, description, quantity, unit, unitsPerPackage, unitPrice, discount1/2/3, netUnitCost, netAmount, vatRate, grossAmount και barcode μόνο αν εμφανίζεται. Διαδοχικές εκπτώσεις δεν αθροίζονται. Συσκευασίες όπως 6x500ml δεν είναι quantity.\n\nΠριν απαντήσεις έλεγξε ξανά header, πλήθος προϊόντων και σύνολα. documentDate σε YYYY-MM-DD.\n\nΠρόχειρο OCR confidence ${Number(ocrConfidence||0)}%:\n${ocrText||"(χωρίς χρήσιμο OCR κείμενο)"}`;
+  const prompt=`Είσαι ειδικός ελεγκτής ελληνικών τιμολογίων προμηθευτών για το MyWorkStation Invoice Learning Lab. Διάβασε ΠΡΩΤΑ το πρωτότυπο PDF/εικόνα και χρησιμοποίησε το OCR μόνο ως βοήθημα.\n\nΠΡΩΤΗ ΠΡΟΤΕΡΑΙΟΤΗΤΑ — HEADER: εντόπισε τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ και ΟΧΙ τον πελάτη. Βρες supplier.name, supplier.taxId, documentNumber και documentDate. Αν κάτι δεν είναι αναγνώσιμο άφησέ το κενό.\n\nPRODUCT LINES: κράτησε ΜΟΝΟ πραγματικές γραμμές προϊόντων, ποτέ headers, ΑΦΜ, IBAN, σύνολα ή footer. Για κάθε προϊόν βρες supplierItemCode, description, quantity, unit, unitsPerPackage, unitPrice, discount1/2/3, netUnitCost, netAmount, vatRate, grossAmount και barcode μόνο αν εμφανίζεται. Διαδοχικές εκπτώσεις δεν αθροίζονται. Συσκευασίες όπως 6x500ml δεν είναι quantity. Όταν η περιγραφή γράφει 27GX12T, 500ML X 24, 12 ΤΜΧ κ.λπ., το πλήθος κουτιού πρέπει να μπει στο unitsPerPackage και όχι στο quantity.\n\nΠριν απαντήσεις έλεγξε ξανά header, πλήθος προϊόντων και σύνολα. documentDate σε YYYY-MM-DD.\n\nΠρόχειρο OCR confidence ${Number(ocrConfidence||0)}%:\n${ocrText||"(χωρίς χρήσιμο OCR κείμενο)"}`;
   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
   const raw=await response.json().catch(()=>({}));
   if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
