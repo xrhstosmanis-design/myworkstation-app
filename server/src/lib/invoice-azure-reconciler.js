@@ -1,0 +1,117 @@
+const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
+const money4=value=>Math.round((Number(value||0)+Number.EPSILON)*10000)/10000;
+const cleanTaxId=value=>String(value||'').replace(/\D/g,'');
+const CANONICAL_VAT=[0,6,13,24];
+const tolerance=(value,min=0.03,ratio=0.012)=>Math.max(min,Math.abs(Number(value||0))*ratio);
+
+function nearestVat(raw){
+  const n=Number(raw);if(!Number.isFinite(n)||n<0)return null;
+  const ranked=CANONICAL_VAT.map(rate=>({rate,diff:Math.abs(n-rate)})).sort((a,b)=>a.diff-b.diff);
+  return ranked[0]&&ranked[0].diff<=1.25?ranked[0]:null;
+}
+function pushCorrection(line,field,from,to,reason){
+  if(from===to)return;
+  line.autoCorrections=line.autoCorrections||[];
+  line.autoCorrections.push({field,from,to,reason});
+}
+function pushReview(line,reason){
+  line.reviewReasons=line.reviewReasons||[];
+  if(!line.reviewReasons.includes(reason))line.reviewReasons.push(reason);
+}
+function discountFactor(line){
+  return [line?.discount1,line?.discount2,line?.discount3].reduce((factor,value)=>{
+    const p=Number(value||0);return p>0&&p<100?factor*(1-p/100):factor;
+  },1);
+}
+function reconcileLine(input,index){
+  const line={...input,autoCorrections:[...(input?.autoCorrections||[])],reviewReasons:[...(input?.reviewReasons||[])]};
+  let quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||0),net=Number(line.netAmount||0),tax=Number(line.azureTax||0),vat=Number(line.vatRate||0),gross=Number(line.grossAmount||0);
+  const factor=discountFactor(line);
+
+  if(quantity>0&&unitCost<=0&&net>0&&factor>0){
+    const derived=money4(net/(quantity*factor));
+    if(derived>0){pushCorrection(line,'unitCost',line.unitCost||0,derived,'DERIVED_FROM_QTY_NET_DISCOUNTS');line.unitCost=unitCost=derived}
+  }
+  if(net<=0&&quantity>0&&unitCost>0&&factor>0){
+    const derived=money2(quantity*unitCost*factor);
+    if(derived>0){pushCorrection(line,'netAmount',line.netAmount||0,derived,'DERIVED_FROM_QTY_PRICE_DISCOUNTS');line.netAmount=net=derived}
+  }
+
+  if(net>0&&tax>0){
+    const derived=nearestVat(tax/net*100);
+    if(derived&&(!CANONICAL_VAT.includes(Math.round(vat))||Number(line.azureTaxRateConfidence||0)<70)){
+      pushCorrection(line,'vatRate',line.vatRate||0,derived.rate,'DERIVED_FROM_NET_AND_TAX');line.vatRate=vat=derived.rate;
+    }
+  }
+  if(net>0&&vat>0&&tax<=0){
+    const derivedTax=money2(net*vat/100);
+    pushCorrection(line,'azureTax',line.azureTax||0,derivedTax,'DERIVED_FROM_NET_AND_VAT');line.azureTax=tax=derivedTax;
+  }
+  if(net>0){
+    const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));
+    if(expectedGross>0&&Math.abs(expectedGross-gross)>0.02){pushCorrection(line,'grossAmount',line.grossAmount||0,expectedGross,'NET_PLUS_TAX');line.grossAmount=gross=expectedGross}
+  }
+
+  if(quantity>0&&unitCost>0&&net>0){
+    const expectedNet=money2(quantity*unitCost*factor);
+    const diff=Math.abs(expectedNet-net);
+    if(diff<=tolerance(net,0.05,0.015)){
+      line.mathVerified=true;
+      line.expectedNetAmount=expectedNet;
+      if(diff>0.02){pushCorrection(line,'netAmount',net,expectedNet,'QTY_PRICE_DISCOUNT_MATH');line.netAmount=net=expectedNet;const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));if(expectedGross>0)line.grossAmount=expectedGross}
+    }else{
+      line.mathVerified=false;line.expectedNetAmount=expectedNet;line.netDifference=money2(net-expectedNet);pushReview(line,'NET_DOES_NOT_MATCH_QTY_PRICE_DISCOUNTS');
+    }
+  }else pushReview(line,'INSUFFICIENT_DATA_FOR_LINE_MATH');
+
+  if(vat&&!CANONICAL_VAT.includes(Math.round(vat)))pushReview(line,'NON_CANONICAL_VAT_RATE');
+  if(Number(line.confidence||0)<70)pushReview(line,'LOW_AZURE_CONFIDENCE');
+  if(!String(line.description||'').trim())pushReview(line,'MISSING_DESCRIPTION');
+  if(quantity<=0)pushReview(line,'MISSING_OR_INVALID_QUANTITY');
+
+  line.autoVerified=line.reviewReasons.length===0&&Boolean(line.mathVerified)&&Number(line.confidence||0)>=70;
+  line.reconciliationStatus=line.autoVerified?'AUTO_VERIFIED':line.autoCorrections.length?'AUTO_CORRECTED_REVIEW':'REVIEW';
+  line.reconciliationSequence=index+1;
+  return line;
+}
+
+export function reconcileAzureInvoice(parsed){
+  const result={...parsed,supplier:{...(parsed?.supplier||{})}};
+  const originalTaxId=String(result.supplier.taxId||'');const normalizedTaxId=cleanTaxId(originalTaxId);
+  const headerCorrections=[];const headerReview=[];
+  if(normalizedTaxId&&normalizedTaxId!==originalTaxId){result.supplier.taxId=normalizedTaxId;headerCorrections.push({field:'supplier.taxId',from:originalTaxId,to:normalizedTaxId,reason:'DIGITS_ONLY_NORMALIZATION'})}
+  if(normalizedTaxId&&normalizedTaxId.length!==9)headerReview.push('SUPPLIER_TAX_ID_NOT_9_DIGITS');
+  const originalNumber=String(result.documentNumber||'');const cleanNumber=originalNumber.trim().replace(/\s+/g,' ');
+  if(cleanNumber!==originalNumber){result.documentNumber=cleanNumber;headerCorrections.push({field:'documentNumber',from:originalNumber,to:cleanNumber,reason:'WHITESPACE_NORMALIZATION'})}
+
+  result.productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(reconcileLine):[];
+  result.lines=result.productLines.map(line=>({text:line.rawText||[line.code,line.description,line.quantity,line.unit,line.unitCost,line.netAmount].filter(Boolean).join(' '),confidence:line.confidence}));
+  const usableGross=result.productLines.filter(line=>Number(line.grossAmount||0)>0);
+  const lineGrossSum=money2(usableGross.reduce((sum,line)=>sum+Number(line.grossAmount||0),0));
+  const totalGross=Number(result.totalGross||0);
+  let totalDifference=totalGross>0?money2(totalGross-lineGrossSum):0;
+  const allLinesVerified=result.productLines.length>0&&result.productLines.every(line=>line.autoVerified);
+  if(totalGross<=0&&lineGrossSum>0&&allLinesVerified){
+    headerCorrections.push({field:'totalGross',from:result.totalGross||0,to:lineGrossSum,reason:'SUM_OF_AUTO_VERIFIED_LINES'});result.totalGross=lineGrossSum;totalDifference=0;
+  }else if(totalGross>0&&lineGrossSum>0&&Math.abs(totalDifference)>tolerance(totalGross,0.10,0.015)){
+    headerReview.push('INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM');
+  }
+
+  const correctedLines=result.productLines.filter(line=>line.autoCorrections?.length).length;
+  const verifiedLines=result.productLines.filter(line=>line.autoVerified).length;
+  const reviewLines=result.productLines.length-verifiedLines;
+  result.reconciliation={
+    engine:'MYWORKSTATION_DETERMINISTIC_V1',
+    headerCorrections,
+    headerReview,
+    lineGrossSum,
+    invoiceTotal:Number(result.totalGross||0),
+    totalDifference,
+    lineCount:result.productLines.length,
+    correctedLines,
+    verifiedLines,
+    reviewLines,
+    status:headerReview.length||reviewLines?'REVIEW_REQUIRED':(headerCorrections.length||correctedLines?'AUTO_CORRECTED':'AUTO_VERIFIED')
+  };
+  return result;
+}
