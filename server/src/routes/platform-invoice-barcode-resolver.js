@@ -6,7 +6,9 @@ const isSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPE
 router.use((req,res,next)=>{if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});next()});
 
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]+/g," ").replace(/\s+/g," ").trim();
-const tokens=v=>norm(v).split(" ").filter(x=>x.length>=3&&!/^\d+$/.test(x)).slice(0,8);
+const tokens=v=>norm(v).split(" ").filter(x=>x.length>=2&&!/^\d+$/.test(x)).slice(0,12);
+const stop=new Set(["PET","X12","X6","X24","ΤΕΜ","ΤΜΧ","PCS","ML","LT","LIT","GR"]);
+const meaningful=v=>tokens(v).filter(t=>!stop.has(t));
 const validGtin=value=>{
   const s=String(value||"").replace(/\D/g,"");
   if(![8,12,13,14].includes(s.length))return false;
@@ -15,45 +17,33 @@ const validGtin=value=>{
   return (10-(sum%10))%10===check;
 };
 const extractGtins=text=>[...new Set((String(text||"").match(/(?<!\d)\d{8,14}(?!\d)/g)||[]).map(x=>x.replace(/\D/g,"")).filter(validGtin))];
-const localRows=async(supplierItemCode,description)=>{
+const selectSql=`SELECT mp."id",mp."sourceCode",mp."name",mp."brandName",mp."categoryName",mp."subcategoryName", COALESCE((SELECT json_agg(mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp`;
+
+async function localRows(supplierItemCode,description){
   const code=String(supplierItemCode||"").trim(),desc=String(description||"").trim();
+  const found=new Map();
+  const add=rows=>(rows||[]).forEach(r=>found.set(r.id,r));
   if(code){
-    const exact=await prisma.$queryRaw`
-      SELECT mp."id",mp."sourceCode",mp."name",mp."brandName",mp."categoryName",mp."subcategoryName",
-        COALESCE((SELECT json_agg(mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes"
-      FROM "MasterProduct" mp
-      WHERE mp."active"=true AND mp."sourceCode"=${code}
-      LIMIT 10`;
-    if(exact.length)return exact;
+    add(await prisma.$queryRawUnsafe(`${selectSql} WHERE mp."active"=true AND mp."sourceCode"=$1 LIMIT 20`,code));
   }
-  if(desc.length>=4){
-    const like=`%${desc.replace(/\s+/g,"%")}%`;
-    const byName=await prisma.$queryRaw`
-      SELECT mp."id",mp."sourceCode",mp."name",mp."brandName",mp."categoryName",mp."subcategoryName",
-        COALESCE((SELECT json_agg(mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes"
-      FROM "MasterProduct" mp
-      WHERE mp."active"=true AND mp."name" ILIKE ${like}
-      LIMIT 10`;
-    if(byName.length)return byName;
-    const ts=tokens(desc).slice(0,3);
-    if(ts.length){
-      const pattern=`%${ts.join("%")}%`;
-      return prisma.$queryRaw`
-        SELECT mp."id",mp."sourceCode",mp."name",mp."brandName",mp."categoryName",mp."subcategoryName",
-          COALESCE((SELECT json_agg(mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=mp."id"),'[]') AS "barcodes"
-        FROM "MasterProduct" mp
-        WHERE mp."active"=true AND mp."name" ILIKE ${pattern}
-        LIMIT 10`;
+  if(desc.length>=3){
+    const exact=norm(desc);
+    add(await prisma.$queryRawUnsafe(`${selectSql} WHERE mp."active"=true AND upper(regexp_replace(mp."name",'[^A-Za-zΑ-Ωα-ω0-9]+',' ','g')) LIKE $1 LIMIT 30`,`%${exact}%`));
+    const ts=meaningful(desc);
+    for(const t of ts.slice(0,5)){
+      add(await prisma.$queryRawUnsafe(`${selectSql} WHERE mp."active"=true AND (mp."name" ILIKE $1 OR COALESCE(mp."brandName",'') ILIKE $1) LIMIT 30`,`%${t}%`));
     }
   }
-  return [];
-};
+  return [...found.values()];
+}
 function scoreLocal(row,code,description){
-  let score=0;const rn=norm(row.name),dt=tokens(description);
-  if(code&&String(row.sourceCode||"").trim()===String(code).trim())score+=70;
-  if(dt.length){const hits=dt.filter(t=>rn.includes(t)).length;score+=Math.round(30*hits/dt.length)}
+  let score=0;const rn=norm(row.name),rb=norm(row.brandName),dt=meaningful(description),dn=norm(description);
+  if(code&&String(row.sourceCode||"").trim()===String(code).trim())score+=80;
+  if(dn&&rn===dn)score+=90;
+  else if(dn&&(rn.includes(dn)||dn.includes(rn)))score+=55;
+  if(dt.length){const hits=dt.filter(t=>rn.includes(t)||rb.includes(t)).length;score+=Math.round(55*hits/dt.length);if(hits>=Math.min(3,dt.length))score+=10}
   const barcodes=(Array.isArray(row.barcodes)?row.barcodes:[]).map(String).filter(validGtin);
-  return {row,barcodes,score};
+  return {row,barcodes,score:Math.min(100,score)};
 }
 async function webSearch(query,signal){
   const serper=String(process.env.SERPER_API_KEY||"").trim();
@@ -71,7 +61,7 @@ async function webSearch(query,signal){
   return null;
 }
 function scoreWeb(items,code,description){
-  const dt=tokens(description),counts=new Map();
+  const dt=meaningful(description),counts=new Map();
   items.forEach((item,index)=>{
     const text=[item.title,item.snippet,item.link].join(" "),ntext=norm(text),codeHit=code&&ntext.includes(norm(code)),nameHits=dt.filter(t=>ntext.includes(t)).length;
     for(const barcode of extractGtins(text)){
@@ -84,9 +74,12 @@ function scoreWeb(items,code,description){
 }
 router.post("/invoice-learning/barcode-resolve",async(req,res,next)=>{try{
   const {supplierItemCode="",description=""}=req.body||{};
-  const local=await localRows(supplierItemCode,description);const ranked=local.map(r=>scoreLocal(r,supplierItemCode,description)).filter(x=>x.barcodes.length).sort((a,b)=>b.score-a.score);
+  const local=await localRows(supplierItemCode,description);
+  const ranked=local.map(r=>scoreLocal(r,supplierItemCode,description)).filter(x=>x.barcodes.length).sort((a,b)=>b.score-a.score);
   if(ranked[0]&&ranked[0].score>=70){
-    const best=ranked[0];return res.json({ok:true,found:true,accepted:best.barcodes.length===1,barcode:best.barcodes.length===1?best.barcodes[0]:"",source:"MASTER_CATALOG",confidence:Math.min(100,best.score),masterProduct:{id:best.row.id,name:best.row.name,sourceCode:best.row.sourceCode},candidates:best.barcodes.map(b=>({barcode:b,source:"MASTER_CATALOG",confidence:Math.min(100,best.score)}))});
+    const best=ranked[0],second=ranked[1];
+    const safe=best.barcodes.length===1&&(!second||best.score>=second.score+12);
+    return res.json({ok:true,found:true,accepted:safe,barcode:safe?best.barcodes[0]:"",source:"MASTER_CATALOG",confidence:best.score,masterProduct:{id:best.row.id,name:best.row.name,sourceCode:best.row.sourceCode,brandName:best.row.brandName},candidates:ranked.slice(0,5).flatMap(x=>x.barcodes.map(b=>({barcode:b,source:"MASTER_CATALOG",confidence:x.score,masterProductName:x.row.name}))) });
   }
   const query=[supplierItemCode&&`"${String(supplierItemCode).trim()}"`,String(description||"").trim(),"barcode EAN GTIN"].filter(Boolean).join(" ");
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
