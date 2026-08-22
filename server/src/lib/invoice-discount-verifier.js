@@ -15,16 +15,6 @@ function safeDiscount(value){
   return Number.isFinite(n)&&n>0&&n<100?money4(n):0;
 }
 
-function mathMatches(line,values){
-  const q=Number(line?.quantity||0);
-  const price=Number(line?.unitCost||0);
-  const net=Number(line?.netAmount||0);
-  if(q<=0||price<=0||net<=0)return false;
-  const [d1,d2,d3]=values.map(safeDiscount);
-  const expected=q*price*(1-d1/100)*(1-d2/100)*(1-d3/100);
-  return Math.abs(expected-net)<=Math.max(0.03,net*0.015);
-}
-
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model}){
   if(!apiKey||!contentData||!Array.isArray(productLines)||!productLines.length)return productLines;
   if(productLines.some(line=>Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0))return productLines;
@@ -33,7 +23,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     ? {type:'input_file',filename:filename||'invoice.pdf',file_data:String(contentData).split(',').pop()}
     : {type:'input_image',image_url:contentData,detail:'high'};
 
-  const guide=productLines.map((line,index)=>`${index+1}. ${line.code||''} | ${line.description||''} | qty=${line.quantity||0} | price=${line.unitCost||0} | net=${line.netAmount||0}`).join('\n');
+  const guide=productLines.map((line,index)=>`${index+1}. code=${line.code||''} | ${line.description||''} | qty=${line.quantity||0} | azurePrice=${line.unitCost||0} | azureNet=${line.netAmount||0}`).join('\n');
   const schema={
     type:'object',
     additionalProperties:false,
@@ -48,16 +38,17 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
             discount1:{type:'number',minimum:0,maximum:99.99},
             discount2:{type:'number',minimum:0,maximum:99.99},
             discount3:{type:'number',minimum:0,maximum:99.99},
+            evidence:{type:'string'},
             confidence:{type:'number',minimum:0,maximum:100}
           },
-          required:['index','discount1','discount2','discount3','confidence']
+          required:['index','discount1','discount2','discount3','evidence','confidence']
         }
       }
     },
     required:['discounts']
   };
 
-  const prompt=`Διάβασε ΜΟΝΟ τις ορατές στήλες έκπτωσης του πρωτότυπου τιμολογίου για τις παρακάτω γραμμές. Μην αλλάξεις ποσότητα, τιμή, καθαρή αξία ή ΦΠΑ. discount1/discount2/discount3 είναι ποσοστά. Βάλε 0 όταν δεν υπάρχει σαφής έκπτωση ή δεν είσαι βέβαιος. Μην χρησιμοποιήσεις άλλον αριθμό ως έκπτωση.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
+  const prompt=`Είσαι δεύτερος οπτικός ελεγκτής τιμολογίου. Διάβασε ΜΟΝΟ τις ορατές στήλες έκπτωσης για τις παρακάτω γραμμές προϊόντων. Οι τιμές Azure δίνονται μόνο για ταυτοποίηση γραμμής και ΔΕΝ πρέπει να χρησιμοποιηθούν για υπολογισμό ή συμπέρασμα έκπτωσης. Μην αλλάξεις ποσότητα, τιμή, καθαρή αξία ή ΦΠΑ. discount1/discount2/discount3 είναι ΜΟΝΟ τα ποσοστά που είναι τυπωμένα οπτικά στις αντίστοιχες στήλες έκπτωσης της ίδιας γραμμής. Αν μια στήλη είναι κενή ή δεν διαβάζεται καθαρά, βάλε 0. Στο evidence γράψε σύντομα το ακριβές ορατό κείμενο των εκπτώσεων της γραμμής (π.χ. "10% | 2% | -"). Αν δεν βλέπεις έκπτωση, evidence="none". Μην μετατρέψεις ποσότητες, τιμές, ΦΠΑ, καθαρές αξίες ή σύνολα σε έκπτωση.\n\nΓΡΑΜΜΕΣ AZURE:\n${guide}`;
 
   try{
     const response=await fetch('https://api.openai.com/v1/responses',{
@@ -76,11 +67,12 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     const parsed=JSON.parse(outputText(await response.json())||'{}');
     for(const candidate of Array.isArray(parsed?.discounts)?parsed.discounts:[]){
       const line=productLines[Number(candidate?.index||0)-1];
-      if(!line||Number(candidate?.confidence||0)<80)continue;
+      if(!line||Number(candidate?.confidence||0)<85)continue;
       const values=[safeDiscount(candidate.discount1),safeDiscount(candidate.discount2),safeDiscount(candidate.discount3)];
-      if(!values.some(v=>v>0)||!mathMatches(line,values))continue;
+      if(!values.some(v=>v>0))continue;
       [line.discount1,line.discount2,line.discount3]=values;
-      line.discountSource='AI_DISCOUNT_VERIFIED';
+      line.discountSource='AI_VISUAL_DISCOUNT_ONLY';
+      line.discountEvidence=String(candidate.evidence||'').slice(0,120);
       line.discountConfidence=Number(candidate.confidence||0);
     }
   }catch(error){
