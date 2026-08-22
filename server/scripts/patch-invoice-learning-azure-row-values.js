@@ -9,21 +9,31 @@ if(!server.includes(anchor))throw new Error("Azure row-value patch requires Azur
 const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   const text=String(content||"").replace(/\\s+/g," ").trim();
   if(!text)return null;
-  const marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);
-  if(!marker)return null;
 
   const toValues=s=>(String(s||"").match(/-?\\d+(?:[.,]\\d+)?/g)||[]).map(x=>Number(x.replace(",","."))).filter(Number.isFinite);
-  const after=toValues(marker[1]);
-  if(!after.length)return null;
+  const qHint=Math.max(0,Number(quantityHint||0));
+  const marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);
+  let after=[],before=[],markerBroken=false;
 
-  // Azure sometimes wraps the right-hand columns before the TEM marker.
-  // Keep only the last few numeric cells from the prefix so product codes/pack sizes cannot drive the math.
-  const prefix=text.slice(0,marker.index||0);
-  const before=toValues(prefix).slice(-5);
+  if(marker){
+    after=toValues(marker[1]);
+    if(!after.length)return null;
+    // Azure sometimes wraps the right-hand columns before the TEM marker.
+    // Keep only the last few numeric cells from the prefix so product codes/pack sizes cannot drive the math.
+    const prefix=text.slice(0,marker.index||0);
+    before=toValues(prefix).slice(-5);
+  }else{
+    // Some Azure rows corrupt or split the TEM marker (e.g. "OMIA EM 5 1,420 7,10 15,00 1,07 6,03 13").
+    // In that case use only the numeric tail and ONLY accept it when the full arithmetic chain is proven.
+    if(!(qHint>0))return null;
+    after=toValues(text).slice(-10);
+    if(after.length<5)return null;
+    markerBroken=true;
+  }
+
   const all=[...after,...before];
   const close=(a,b,tol=Math.max(0.03,Math.abs(Number(b||0))*0.015))=>Math.abs(Number(a||0)-Number(b||0))<=tol;
   const canonicalVat=new Set([0,6,13,24]);
-  const qHint=Math.max(0,Number(quantityHint||0));
 
   const discountEvidence=(initialAmount,skipIndexes=[])=>{
     let best=null;
@@ -48,15 +58,15 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   let best=null;
   const priceCandidates=[];
   if(qHint>0){
-    for(let i=0;i<Math.min(after.length,6);i++)priceCandidates.push({q:qHint,price:after[i],priceIndex:i,bonus:30});
+    for(let i=0;i<Math.min(after.length,8);i++)priceCandidates.push({q:qHint,price:after[i],priceIndex:i,bonus:30});
   }
-  if(after.length>=2&&after[0]>0&&Number.isInteger(after[0])&&after[0]<=10000){
+  if(!markerBroken&&after.length>=2&&after[0]>0&&Number.isInteger(after[0])&&after[0]<=10000){
     priceCandidates.push({q:after[0],price:after[1],priceIndex:1,bonus:qHint>0&&close(after[0],qHint,0.001)?40:10});
   }
 
   // A price is accepted only when quantity × price matches an actual line amount.
-  // When multiple pairs match (e.g. "TEM 1 3 1,420 4,26 ..."), strongly prefer
-  // the pair that also proves the complete discount chain amount -> % -> discount value -> net.
+  // When multiple pairs match, strongly prefer the pair that also proves the complete
+  // discount chain amount -> % -> discount value -> net.
   for(const c of priceCandidates){
     if(!(c.q>0&&c.price>0))continue;
     const expected=c.q*c.price;
@@ -73,6 +83,10 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
     }
   }
   if(!best)return null;
+
+  // For a corrupted/missing TEM marker, never trust positional parsing by itself.
+  // Require the full independent proof: qty×price=amount, % discount, discount amount and resulting net.
+  if(markerBroken&&!best.evidence)return null;
 
   // VAT can be after the row or in a wrapped prefix. Prefer canonical values near the row edges.
   let vatRate=0;
@@ -97,26 +111,26 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   }
 
   const grossAmount=netAmount>0?money4(netAmount*(1+vatRate/100)):0;
-  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true};
+  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2,discount3,netAmount,vatRate,grossAmount,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken};
 }
 
 `;
 server=server.replace(anchor,helper+anchor);
 
-const old='    const quantity=Math.max(0,numberField(p.Quantity));const unitPrice=Math.max(0,numberField(p.UnitPrice));const netAmount=Math.max(0,numberField(p.Amount));const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
-const next='    const azureQuantity=Math.max(0,numberField(p.Quantity));\n    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity);\n    const quantity=Math.max(0,rowFallback?.quantity||azureQuantity||0);\n    let unitPrice=Math.max(0,rowFallback?.unitPrice||numberField(p.UnitPrice)||0);\n    let netAmount=Math.max(0,rowFallback?.netAmount||numberField(p.Amount)||0);\n    const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,rowFallback?.vatRate||numberField(p.TaxRate)||0);if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
+const old='    const quantity=Math.max(0,numberField(p.Quantity));const unitPrice=Math.max(0,numberField(p.UnitPrice));const netAmount=Math.max(0,numberField(p.Amount));const tax=Math.max(0,numberField(p.Tax));\\n    let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
+const next='    const azureQuantity=Math.max(0,numberField(p.Quantity));\\n    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity);\\n    const quantity=Math.max(0,rowFallback?.quantity||azureQuantity||0);\\n    let unitPrice=Math.max(0,rowFallback?.unitPrice||numberField(p.UnitPrice)||0);\\n    let netAmount=Math.max(0,rowFallback?.netAmount||numberField(p.Amount)||0);\\n    const tax=Math.max(0,numberField(p.Tax));\\n    let vatRate=Math.max(0,rowFallback?.vatRate||numberField(p.TaxRate)||0);if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
 if(!server.includes(old))throw new Error("Azure numeric line anchor missing.");
 server=server.replace(old,next);
 
 const oldDiscount='    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;';
-const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    const discount1=rowFallback?.mathValidated?rowFallback.discount1:(verifiedAzureDiscounts[0]||0),discount2=rowFallback?.mathValidated?rowFallback.discount2:(verifiedAzureDiscounts[1]||0),discount3=rowFallback?.mathValidated?rowFallback.discount3:(verifiedAzureDiscounts[2]||0);';
+const nextDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\\n    const discount1=rowFallback?.mathValidated?rowFallback.discount1:(verifiedAzureDiscounts[0]||0),discount2=rowFallback?.mathValidated?rowFallback.discount2:(verifiedAzureDiscounts[1]||0),discount3=rowFallback?.mathValidated?rowFallback.discount3:(verifiedAzureDiscounts[2]||0);';
 if(!server.includes(oldDiscount))throw new Error("Azure discount anchor missing.");
 server=server.replace(oldDiscount,nextDiscount);
 
 const oldReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,discountValidated:Boolean(discounts.length)};';
-const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),discountValidated:Boolean(rowFallback?.mathValidated?rowFallback.discount1:verifiedAzureDiscounts.length)};';
+const nextReturn='    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||rowFallback?.unit||"ΤΜΧ",unitsPerPackage,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),ocrHintUsed:false,azureRowFallbackUsed:Boolean(rowFallback),azureRowMathValidated:Boolean(rowFallback?.mathValidated),azureMarkerRecovered:Boolean(rowFallback?.markerRecovered),discountValidated:Boolean(rowFallback?.mathValidated?rowFallback.discount1:verifiedAzureDiscounts.length)};';
 if(!server.includes(oldReturn))throw new Error("Azure return-line anchor missing.");
 server=server.replace(oldReturn,nextReturn);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: ambiguous Azure rows prefer the quantity/price pair that proves the full discount chain.");
+console.log("Invoice Learning patched: corrupted TEM markers are recovered only when the full line arithmetic proves the values.");
