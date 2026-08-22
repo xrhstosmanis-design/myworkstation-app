@@ -2,6 +2,7 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
+import {reconcileAzureInvoice} from "../lib/invoice-azure-reconciler.js";
 
 const router=Router();
 const API_VERSION="2024-11-30";
@@ -152,15 +153,16 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     if(!job.contentData)return next();
     let payload;
     try{payload=await callAzure({contentData:job.contentData,mimeType:job.mimeType})}catch(error){console.error("Azure Document Intelligence fallback:",error?.message||error);return next()}
-    const parsed=normalizeAzure(payload);
+    let parsed=normalizeAzure(payload);
     if(!parsed.productLines.length){
       console.warn("Azure Document Intelligence returned invoice header without product lines; falling back to AI table reader.",{jobId:job.id,confidence:parsed.aiConfidence});
       return next();
     }
     await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    parsed=reconcileAzureInvoice(parsed);
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${parsed.aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
-    return res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:"azure-prebuilt-invoice",provider:"AZURE_DOCUMENT_INTELLIGENCE",discountVerifier:process.env.OPENAI_API_KEY?"AI_VERIFIED":"NONE",fallbackAvailable:Boolean(process.env.OPENAI_API_KEY)});
+    return res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:"azure-prebuilt-invoice",provider:"AZURE_DOCUMENT_INTELLIGENCE",reconciliation:parsed.reconciliation||null,discountVerifier:process.env.OPENAI_API_KEY?"AI_VERIFIED":"NONE",fallbackAvailable:Boolean(process.env.OPENAI_API_KEY)});
   }catch(error){next(error)}
 });
 
