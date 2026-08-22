@@ -28,14 +28,20 @@ jobs:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: curl --fail --silent --show-error --retry 3 --retry-delay 5 -X POST "$RENDER_DEPLOY_HOOK_URL"
 
-      - name: Wait for production health
+      - name: Wait for exact production revision
+        env:
+          EXPECTED_REVISION: ${{ github.sha }}
         run: |
-          for attempt in $(seq 1 60); do
+          echo "Waiting for Render revision $EXPECTED_REVISION"
+          for attempt in $(seq 1 90); do
             if curl --fail --silent --show-error https://myworkstation-app.onrender.com/api/health > /tmp/health.json; then
               cat /tmp/health.json
-              exit 0
+              if grep -Fq "\"revision\":\"$EXPECTED_REVISION\"" /tmp/health.json; then
+                echo "Render is healthy on the expected revision."
+                exit 0
+              fi
             fi
             sleep 10
           done
-          echo "Render service did not become healthy in time."
+          echo "Render did not reach expected revision $EXPECTED_REVISION in time."
           exit 1
