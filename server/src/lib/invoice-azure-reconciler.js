@@ -124,6 +124,18 @@ function reconcileLine(input,index){
     const derivedTax=money2(net*vat/100);
     pushCorrection(line,'azureTax',line.azureTax||0,derivedTax,'DERIVED_FROM_NET_AND_VAT');line.azureTax=tax=derivedTax;
   }
+
+  // Azure may return a Tax amount copied from a pre-discount/base value even when
+  // the line NetAmount is already after discount. Once both net and a canonical VAT
+  // rate are known, the tax must be reconciled against the verified net value.
+  if(net>0&&CANONICAL_VAT.includes(Math.round(vat))&&vat>0){
+    const expectedTax=money2(net*vat/100);
+    if(tax<=0||Math.abs(tax-expectedTax)>0.02){
+      pushCorrection(line,'azureTax',line.azureTax||0,expectedTax,'RECONCILED_FROM_VERIFIED_NET_AND_VAT');
+      line.azureTax=tax=expectedTax;
+    }
+  }
+
   if(net>0){
     const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));
     if(expectedGross>0&&Math.abs(expectedGross-gross)>0.02){pushCorrection(line,'grossAmount',line.grossAmount||0,expectedGross,'NET_PLUS_TAX');line.grossAmount=gross=expectedGross}
@@ -136,7 +148,11 @@ function reconcileLine(input,index){
     if(diff<=tolerance(net,0.05,0.015)){
       line.mathVerified=true;
       line.expectedNetAmount=expectedNet;
-      if(diff>0.02){pushCorrection(line,'netAmount',net,expectedNet,'QTY_PRICE_DISCOUNT_MATH');line.netAmount=net=expectedNet;const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));if(expectedGross>0)line.grossAmount=expectedGross}
+      if(diff>0.02){
+        pushCorrection(line,'netAmount',net,expectedNet,'QTY_PRICE_DISCOUNT_MATH');line.netAmount=net=expectedNet;
+        if(vat>0){const expectedTax=money2(net*vat/100);if(Math.abs(tax-expectedTax)>0.02){pushCorrection(line,'azureTax',tax,expectedTax,'RECALCULATED_AFTER_NET_CORRECTION');line.azureTax=tax=expectedTax}}
+        const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));if(expectedGross>0)line.grossAmount=gross=expectedGross;
+      }
     }else{
       line.mathVerified=false;line.expectedNetAmount=expectedNet;line.netDifference=money2(net-expectedNet);pushReview(line,'NET_DOES_NOT_MATCH_QTY_PRICE_DISCOUNTS');
     }
