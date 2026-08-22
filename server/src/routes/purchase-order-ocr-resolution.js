@@ -6,6 +6,7 @@ import {prisma} from "../prisma.js";
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const id=()=>crypto.randomUUID();
+const normCode=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 
 function requireManager(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
@@ -28,18 +29,94 @@ async function ownedOrder(companyId,orderId){
 }
 async function ownedLine(companyId,orderId,lineId){
   const rows=await prisma.$queryRaw`
-    SELECT l.*,o."storeId",o."status",o."sourceType"
+    SELECT l.*,o."storeId",o."supplierId",o."status",o."sourceType"
     FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId"
     WHERE l."id"=${lineId} AND l."orderId"=${orderId} AND o."companyId"=${companyId} LIMIT 1`;
   return rows[0]||null;
+}
+
+async function learnSupplierMapping(tx,{companyId,supplierId,supplierCode,productId,barcode,description,userId,unitCost}){
+  const code=String(supplierCode||"").trim();
+  if(!supplierId||!code||!productId)return;
+  await tx.$executeRaw`
+    INSERT INTO "SupplierProductMapping" (
+      "id","companyId","supplierId","supplierItemCode","productId","supplierBarcode","lastDescription","lastUnitCost","usageCount","confirmedByUserId","confirmedAt","lastSeenAt","createdAt","updatedAt"
+    ) VALUES (
+      ${id()},${companyId},${supplierId},${code},${productId},${barcode||null},${description||null},${Number(unitCost||0)},1,${userId||null},NOW(),NOW(),NOW(),NOW()
+    )
+    ON CONFLICT ("companyId","supplierId","supplierItemCode") DO UPDATE SET
+      "productId"=EXCLUDED."productId",
+      "supplierBarcode"=COALESCE(EXCLUDED."supplierBarcode","SupplierProductMapping"."supplierBarcode"),
+      "lastDescription"=COALESCE(EXCLUDED."lastDescription","SupplierProductMapping"."lastDescription"),
+      "lastUnitCost"=EXCLUDED."lastUnitCost",
+      "usageCount"="SupplierProductMapping"."usageCount"+1,
+      "confirmedByUserId"=EXCLUDED."confirmedByUserId",
+      "confirmedAt"=NOW(),"lastSeenAt"=NOW(),"updatedAt"=NOW()`;
+}
+
+async function autoResolveExact(companyId,order,userId){
+  if(!order||order.status!=="NEW")return 0;
+  const unresolved=await prisma.$queryRaw`
+    SELECT "id","supplierCode","detectedBarcode","description","unitCost"
+    FROM "PurchaseOrderLine"
+    WHERE "orderId"=${order.id} AND "productId" IS NULL AND COALESCE("resolutionStatus",'MATCHED')='UNRESOLVED'
+    ORDER BY "createdAt","id"`;
+  let resolved=0;
+  for(const line of unresolved){
+    const code=normCode(line.supplierCode);
+    const barcode=String(line.detectedBarcode||"").trim();
+    let productId=null;
+
+    if(order.supplierId&&code){
+      const mapped=await prisma.$queryRaw`
+        SELECT m."productId"
+        FROM "SupplierProductMapping" m
+        JOIN "Product" p ON p."id"=m."productId" AND p."companyId"=${companyId} AND p."active"=true
+        WHERE m."companyId"=${companyId} AND m."supplierId"=${order.supplierId}
+          AND UPPER(REGEXP_REPLACE(TRIM(m."supplierItemCode"),'\\s+','','g'))=${code}
+        LIMIT 1`;
+      productId=mapped[0]?.productId||null;
+    }
+
+    if(!productId&&code){
+      const exactSku=await prisma.$queryRaw`
+        SELECT p."id"
+        FROM "Product" p
+        WHERE p."companyId"=${companyId} AND p."active"=true
+          AND UPPER(REGEXP_REPLACE(TRIM(p."sku"),'\\s+','','g'))=${code}
+        LIMIT 2`;
+      if(exactSku.length===1)productId=exactSku[0].id;
+    }
+
+    if(!productId&&barcode){
+      const exactBarcode=await prisma.$queryRaw`
+        SELECT DISTINCT p."id"
+        FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId"
+        WHERE p."companyId"=${companyId} AND p."active"=true AND b."barcode"=${barcode}
+        LIMIT 2`;
+      if(exactBarcode.length===1)productId=exactBarcode[0].id;
+    }
+
+    if(!productId)continue;
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`
+        UPDATE "PurchaseOrderLine"
+        SET "productId"=${productId},"resolutionStatus"='MATCHED',"updatedAt"=NOW()
+        WHERE "id"=${line.id} AND "orderId"=${order.id} AND "productId" IS NULL`;
+      await learnSupplierMapping(tx,{companyId,supplierId:order.supplierId,supplierCode:line.supplierCode,productId,barcode,description:line.description,userId,unitCost:line.unitCost});
+    });
+    resolved++;
+  }
+  return resolved;
 }
 
 router.get("/:orderId/ocr-lines",async(req,res,next)=>{
   try{
     const order=await ownedOrder(req.user.companyId,req.params.orderId);
     if(!order)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+    await autoResolveExact(req.user.companyId,order,req.user.id);
     const rows=await prisma.$queryRaw`
-      SELECT l."id",l."productId",l."description",l."quantity",l."unitCost",l."vatRate",l."grossAmount",
+      SELECT l."id",l."productId",l."supplierCode",l."description",l."quantity",l."unitCost",l."vatRate",l."grossAmount",
              l."ocrRawText",l."ocrConfidence",l."resolutionStatus",l."detectedBarcode",l."ocrLineIndex",
              p."name" AS "productName",p."sku",p."salePrice",p."costPrice",
              COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes"
@@ -91,10 +168,10 @@ router.post("/:orderId/ocr-lines/:lineId/resolve-existing",async(req,res,next)=>
         if(duplicate[0]&&duplicate[0].id!==product.id){const error=new Error(`Το barcode ${barcode} ανήκει ήδη στο προϊόν «${duplicate[0].name}».`);error.status=409;throw error;}
         if(!duplicate[0])await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${id()},${product.id},${barcode},1)`;
       }
-      const quantity=Math.max(0.0001,Number(line.quantity||1)),unitCost=Math.max(0,Number(line.unitCost||0)),vatRate=Number(product.vatRate||0),net=quantity*unitCost,vat=net*vatRate/100;
-      await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${product.id},"vatRate"=${vatRate},"netAmount"=${net},"vatAmount"=${vat},"grossAmount"=${net+vat},"proposedSalePrice"=${Number(product.salePrice||0)},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id}`;
+      await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${product.id},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id}`;
+      await learnSupplierMapping(tx,{companyId:req.user.companyId,supplierId:line.supplierId,supplierCode:line.supplierCode,productId:product.id,barcode,description:line.description,userId:req.user.id,unitCost:line.unitCost});
     });
-    res.json({ok:true,product:{id:product.id,name:product.name},barcodeAdded:Boolean(body.addBarcode&&barcode)});
+    res.json({ok:true,product:{id:product.id,name:product.name},barcodeAdded:Boolean(body.addBarcode&&barcode),mappingLearned:Boolean(line.supplierId&&String(line.supplierCode||"").trim())});
   }catch(error){next(error)}
 });
 
@@ -114,8 +191,9 @@ router.post("/:orderId/ocr-lines/:lineId/create-product",async(req,res,next)=>{
       await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${id()},${line.storeId},${productId},${body.salePrice},0,true) ON CONFLICT ("storeId","productId") DO NOTHING`;
       const quantity=Math.max(0.0001,Number(line.quantity||1)),unitCost=Math.max(0,Number(line.unitCost||0)),net=quantity*unitCost,vat=net*body.vatRate/100;
       await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${productId},"description"=${body.name},"vatRate"=${body.vatRate},"netAmount"=${net},"vatAmount"=${vat},"grossAmount"=${net+vat},"proposedSalePrice"=${body.salePrice},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${line.id}`;
+      await learnSupplierMapping(tx,{companyId:req.user.companyId,supplierId:line.supplierId,supplierCode:line.supplierCode,productId,barcode,description:body.name,userId:req.user.id,unitCost:line.unitCost});
     });
-    res.status(201).json({ok:true,productId});
+    res.status(201).json({ok:true,productId,mappingLearned:Boolean(line.supplierId&&String(line.supplierCode||"").trim())});
   }catch(error){next(error)}
 });
 
