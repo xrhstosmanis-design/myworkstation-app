@@ -25,24 +25,51 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   const canonicalVat=new Set([0,6,13,24]);
   const qHint=Math.max(0,Number(quantityHint||0));
 
+  const discountEvidence=(initialAmount,skipIndexes=[])=>{
+    let best=null;
+    for(let i=0;i<all.length;i++){
+      if(skipIndexes.includes(i))continue;
+      const pct=Math.abs(Number(all[i]||0));
+      if(!(pct>0&&pct<100))continue;
+      const predictedDiscount=initialAmount*pct/100;
+      const predictedNet=initialAmount-predictedDiscount;
+      for(let a=0;a<all.length;a++){
+        if(a===i||skipIndexes.includes(a)||!close(all[a],predictedDiscount,Math.max(0.03,predictedDiscount*0.03)))continue;
+        for(let n=0;n<all.length;n++){
+          if(n===i||n===a||skipIndexes.includes(n)||!close(all[n],predictedNet,Math.max(0.03,predictedNet*0.02)))continue;
+          const error=Math.abs(all[a]-predictedDiscount)+Math.abs(all[n]-predictedNet);
+          if(!best||error<best.error)best={pct,discountAmount:all[a],net:all[n],error};
+        }
+      }
+    }
+    return best;
+  };
+
   let best=null;
   const priceCandidates=[];
   if(qHint>0){
-    for(let i=0;i<Math.min(after.length,5);i++)priceCandidates.push({q:qHint,price:after[i],priceIndex:i,bonus:30});
+    for(let i=0;i<Math.min(after.length,6);i++)priceCandidates.push({q:qHint,price:after[i],priceIndex:i,bonus:30});
   }
   if(after.length>=2&&after[0]>0&&Number.isInteger(after[0])&&after[0]<=10000){
     priceCandidates.push({q:after[0],price:after[1],priceIndex:1,bonus:qHint>0&&close(after[0],qHint,0.001)?40:10});
   }
 
   // A price is accepted only when quantity × price matches an actual line amount.
+  // When multiple pairs match (e.g. "TEM 1 3 1,420 4,26 ..."), strongly prefer
+  // the pair that also proves the complete discount chain amount -> % -> discount value -> net.
   for(const c of priceCandidates){
     if(!(c.q>0&&c.price>0))continue;
     const expected=c.q*c.price;
     for(let j=0;j<after.length;j++){
-      if(j===c.priceIndex||!close(after[j],expected))continue;
+      if(j===c.priceIndex||j<c.priceIndex||!close(after[j],expected))continue;
+      const globalPriceIndex=c.priceIndex;
+      const globalAmountIndex=j;
+      const evidence=discountEvidence(after[j],[globalPriceIndex,globalAmountIndex]);
       const distance=Math.abs(j-c.priceIndex);
-      const score=150+c.bonus-distance;
-      if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.priceIndex};
+      const evidenceBonus=evidence?120-Math.min(20,evidence.error*100):0;
+      const decimalBonus=Math.abs(c.price-Math.round(c.price))>0.0001?4:0;
+      const score=150+c.bonus+evidenceBonus+decimalBonus-distance;
+      if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.priceIndex,evidence};
     }
   }
   if(!best)return null;
@@ -54,22 +81,9 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
     if(canonicalVat.has(n)){vatRate=n;break}
   }
 
-  const excluded=[];
-  const consume=value=>{const i=all.findIndex((v,idx)=>!excluded.includes(idx)&&close(v,value,0.001));if(i>=0)excluded.push(i)};
-  consume(best.quantity);consume(best.unitPrice);consume(best.initialAmount);if(vatRate)consume(vatRate);
-
-  let discountMatch=null;
-  const candidates=all.map((v,i)=>({v:Math.abs(Number(v||0)),i})).filter(x=>!excluded.includes(x.i)&&x.v>0&&x.v<100);
-  for(const candidate of candidates){
-    const pct=candidate.v;
-    const predictedDiscount=best.initialAmount*pct/100;
-    const predictedNet=best.initialAmount-predictedDiscount;
-    const amountToken=all.find((v,i)=>i!==candidate.i&&!excluded.includes(i)&&close(v,predictedDiscount,Math.max(0.03,predictedDiscount*0.03)));
-    const netToken=all.find((v,i)=>i!==candidate.i&&!excluded.includes(i)&&v!==amountToken&&close(v,predictedNet,Math.max(0.03,predictedNet*0.02)));
-    if(amountToken!==undefined&&netToken!==undefined){
-      const error=Math.abs(amountToken-predictedDiscount)+Math.abs(netToken-predictedNet);
-      if(!discountMatch||error<discountMatch.error)discountMatch={pct,net:netToken,error};
-    }
+  let discountMatch=best.evidence||null;
+  if(!discountMatch){
+    discountMatch=discountEvidence(best.initialAmount,[best.priceIndex,best.amountIndex]);
   }
 
   let discount1=0,discount2=0,discount3=0,netAmount=best.initialAmount;
@@ -105,4 +119,4 @@ if(!server.includes(oldReturn))throw new Error("Azure return-line anchor missing
 server=server.replace(oldReturn,nextReturn);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: wrapped Azure rows reconcile quantity, price, discount amount, net value and VAT across both sides of TEM.");
+console.log("Invoice Learning patched: ambiguous Azure rows prefer the quantity/price pair that proves the full discount chain.");
