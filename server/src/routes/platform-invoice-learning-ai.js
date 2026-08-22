@@ -22,9 +22,45 @@ const schema={type:"object",additionalProperties:false,properties:{
 },required:["aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
 
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
-const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.valueInteger??f?.content;const n=Number(v);return Number.isFinite(n)?n:0};
+const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.valueInteger??f?.content;const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 const textField=f=>String(f?.valueString??f?.valueDate??f?.content??"").trim();
 const azureConfigured=()=>Boolean(String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim()&&String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim());
+const money2=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
+
+function explicitDiscounts(p){
+  const candidates=[p.Discount,p.DiscountRate,p.DiscountPercent,p.LineDiscount,p.LineDiscountRate,p.Discount1,p.Discount2,p.Discount3];
+  const values=[];
+  for(const field of candidates){
+    if(!field)continue;
+    const raw=textField(field)||String(numberField(field)||"");
+    const matches=[...raw.matchAll(/(-?\d{1,2}(?:[.,]\d+)?)\s*%/g)].map(m=>Math.abs(Number(m[1].replace(",","."))));
+    if(matches.length)values.push(...matches);
+    else{const n=Math.abs(numberField(field));if(n>0&&n<100)values.push(n)}
+  }
+  return values.filter(v=>Number.isFinite(v)&&v>0&&v<100).slice(0,3);
+}
+
+function rowDiscounts(item,p){
+  const explicit=explicitDiscounts(p);if(explicit.length)return explicit;
+  const content=String(item?.content||"").replace(/\s+/g," ");
+  const values=[...content.matchAll(/(-?\d{1,2}(?:[.,]\d+)?)\s*%/g)]
+    .map(m=>Math.abs(Number(m[1].replace(",","."))))
+    .filter(v=>Number.isFinite(v)&&v>0&&v<100);
+  const vat=Math.round(Math.max(0,numberField(p.TaxRate)));
+  const filtered=[];
+  for(const v of values){
+    if([6,13,24].includes(Math.round(v))&&Math.round(v)===vat)continue;
+    filtered.push(v);
+    if(filtered.length===3)break;
+  }
+  return filtered;
+}
+
+function applyDiscounts(unitPrice,discounts){
+  let net=Math.max(0,Number(unitPrice||0));
+  for(const d of discounts)net*=1-Math.max(0,Math.min(100,Number(d||0)))/100;
+  return money2(net);
+}
 
 async function callAzure(fileData,mimeType){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
@@ -61,10 +97,13 @@ function normalizeAzure(payload){
     const netAmount=Math.max(0,numberField(p.Amount));
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);
-    const netUnitCost=quantity>0&&netAmount>0?netAmount/quantity:unitPrice;
-    const grossAmount=netAmount>0?netAmount+(tax>0?tax:netAmount*vatRate/100):0;
+    const discounts=rowDiscounts(item,p);
+    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
+    let netUnitCost=discounts.length&&unitPrice>0?applyDiscounts(unitPrice,discounts):(quantity>0&&netAmount>0?money2(netAmount/quantity):unitPrice);
+    if(quantity>0&&netAmount>0){const amountUnit=money2(netAmount/quantity);if(Math.abs(amountUnit-netUnitCost)>0.03)netUnitCost=amountUnit}
+    const grossAmount=netAmount>0?money2(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
-    return {supplierItemCode:textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code),description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:0,unitPrice,discount1:0,discount2:0,discount3:0,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1};
+    return {supplierItemCode:textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code),description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:0,unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||"")};
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
