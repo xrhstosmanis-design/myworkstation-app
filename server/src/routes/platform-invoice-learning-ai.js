@@ -52,6 +52,59 @@ function labelledDiscounts(content=""){
   return out;
 }
 
+function parsePercentCell(content=""){
+  const s=String(content).trim().replace(/,/g,".");
+  const m=s.match(/-?\d{1,2}(?:\.\d+)?/);
+  if(!m)return 0;
+  const n=Math.abs(Number(m[0]));
+  return Number.isFinite(n)&&n>0&&n<100?n:0;
+}
+
+function azureTableDiscounts(result,code,description){
+  const codeKey=norm(code),descKey=norm(description);
+  for(const table of result?.tables||[]){
+    const cells=Array.isArray(table?.cells)?table.cells:[];
+    if(!cells.length)continue;
+    const rows=new Map();
+    for(const c of cells){
+      const r=Number(c.rowIndex||0),col=Number(c.columnIndex||0);
+      if(!rows.has(r))rows.set(r,new Map());
+      rows.get(r).set(col,String(c.content||"").trim());
+    }
+    let headerRow=-1,discountCols=[];
+    for(const [r,cols] of rows){
+      const found=[];
+      for(const [col,text] of cols){
+        const k=norm(text);
+        if(k.includes("ΕΚΠΤ")||k.includes("DISCOUNT")||k==="DISC"||k.startsWith("DISC"))found.push(col);
+      }
+      if(found.length){headerRow=r;discountCols=found.sort((a,b)=>a-b).slice(0,3);break}
+    }
+    if(headerRow<0||!discountCols.length)continue;
+    let best=null,bestScore=0;
+    for(const [r,cols] of rows){
+      if(r<=headerRow)continue;
+      const rowText=[...cols.values()].join(" ");
+      const rowKey=norm(rowText);
+      let score=0;
+      if(codeKey&&rowKey.includes(codeKey))score+=100;
+      if(descKey.length>=6){
+        if(rowKey.includes(descKey))score+=80;
+        else{
+          const words=String(description||"").split(/\s+/).map(norm).filter(x=>x.length>=4);
+          score+=words.filter(w=>rowKey.includes(w)).length*8;
+        }
+      }
+      if(score>bestScore){bestScore=score;best=cols}
+    }
+    if(best&&bestScore>=16){
+      const out=discountCols.map(col=>parsePercentCell(best.get(col)||"")).filter(v=>v>0);
+      if(out.length)return out.slice(0,3);
+    }
+  }
+  return [];
+}
+
 function applyDiscounts(unitPrice,discounts){
   let net=Math.max(0,Number(unitPrice||0));
   for(const d of discounts)net*=1-Math.max(0,Math.min(100,Number(d||0)))/100;
@@ -63,7 +116,7 @@ function discountsReconcile(discounts,unitPrice,quantity,netAmount){
   if(quantity<=0||netAmount<=0)return true;
   const expected=applyDiscounts(unitPrice,discounts);
   const actual=money4(netAmount/quantity);
-  const tolerance=Math.max(0.03,actual*0.015);
+  const tolerance=Math.max(0.03,actual*0.02);
   return Math.abs(expected-actual)<=tolerance;
 }
 
@@ -125,6 +178,10 @@ function normalizeAzure(payload,ocrRows=[]){
 
     let discounts=explicitDiscounts(p);
     if(discounts.length&&!discountsReconcile(discounts,unitPrice,quantity,netAmount))discounts=[];
+    if(!discounts.length){
+      const fromTable=azureTableDiscounts(result,supplierItemCode,description);
+      if(discountsReconcile(fromTable,unitPrice,quantity,netAmount))discounts=fromTable;
+    }
     if(!discounts.length){const labelled=labelledDiscounts(item?.content||"");if(discountsReconcile(labelled,unitPrice,quantity,netAmount))discounts=labelled}
     if(!discounts.length&&hint?.discounts?.length){
       const candidate=hint.discounts.slice(0,3);
