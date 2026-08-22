@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/patch-online-pos-handoff-route.js && node src/patch-store-pos-online-checkout.js && node src/patch-store-transactions-online-reconcile.js && node src/patch-owner-products-price-sync.js && node src/online-transaction-actor-fix.js && node src/online-recipe-stock-repair.js && node src/repair-kat009-duplicate-sale.js && node src/index.js",
+    "start": "node src/patch-invoice-learning-ai-route.js && node src/patch-online-pos-handoff-route.js && node src/patch-store-pos-online-checkout.js && node src/patch-store-transactions-online-reconcile.js && node src/patch-owner-products-price-sync.js && node src/online-transaction-actor-fix.js && node src/online-recipe-stock-repair.js && node src/repair-kat009-duplicate-sale.js && node src/index.js",
     "test": "node --test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
