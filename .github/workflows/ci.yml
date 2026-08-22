@@ -48,6 +48,8 @@ jobs:
         run: npm test -w server
       - name: Build client and Prisma client
         run: npm run build
+      - name: Verify KAT production preparation invariants
+        run: node server/e2e/kat-preparation-source-invariants.mjs
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server
