@@ -24,9 +24,40 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     const line=savedLineFor(tr)||{};
     return {...line,...(meta[rowKey(tr)]||{})};
   };
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const unitOptions=['','PCS','PACK','BOX','GR','KG','ML','LT'];
   const vatOptions=['','0','6','13','24'];
+
+  function taxonomySource(){
+    const state=parse(localStorage.getItem(KEY),{documents:[],master:[]});
+    const categories=new Set();
+    const subByCategory=new Map();
+    const add=(category,subcategory)=>{
+      const c=String(category||'').trim(),s=String(subcategory||'').trim();
+      if(c)categories.add(c);
+      if(c&&s){if(!subByCategory.has(c))subByCategory.set(c,new Set());subByCategory.get(c).add(s)}
+    };
+    for(const item of Array.isArray(state.master)?state.master:[])add(item?.category,item?.subcategory);
+    for(const d of Array.isArray(state.documents)?state.documents:[])for(const line of Array.isArray(d?.lines)?d.lines:[])add(line?.category,line?.subcategory);
+    for(const m of Object.values(meta||{}))add(m?.category,m?.subcategory);
+    return {categories:[...categories].sort((a,b)=>a.localeCompare(b,'el')),subByCategory};
+  }
+
+  function ensureDatalist(id,values){
+    let list=document.getElementById(id);if(!list){list=document.createElement('datalist');list.id=id;document.body.appendChild(list)}
+    list.innerHTML=values.map(x=>`<option value="${esc(x)}"></option>`).join('');
+    return list;
+  }
+
+  function refreshLists(tr){
+    const src=taxonomySource();
+    ensureDatalist('mws-invoice-category-options',src.categories);
+    const cat=tr.querySelector('[data-tax="category"]')?.value?.trim()||'';
+    const values=cat&&src.subByCategory.has(cat)?[...src.subByCategory.get(cat)].sort((a,b)=>a.localeCompare(b,'el')):[...new Set([...src.subByCategory.values()].flatMap(s=>[...s]))].sort((a,b)=>a.localeCompare(b,'el'));
+    const subId=`mws-invoice-subcategory-options-${String(lineNo(tr)||Math.random()).replace(/[^a-zA-Z0-9_-]/g,'_')}`;
+    ensureDatalist(subId,values);
+    const sub=tr.querySelector('[data-tax="subcategory"]');if(sub)sub.setAttribute('list',subId);
+  }
 
   function ensureHeader(){
     const head=document.querySelector('#review thead tr');if(!head||head.dataset.taxonomyReady)return;
@@ -42,27 +73,30 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     const statusTd=tr.lastElementChild;if(!statusTd)return;
     const v=valuesFor(tr);
     const defs=[
-      `<input data-tax="category" placeholder="Κατηγορία" value="${esc(v.category||'')}">`,
-      `<input data-tax="subcategory" placeholder="Υποκατηγορία" value="${esc(v.subcategory||'')}">`,
+      `<input data-tax="category" list="mws-invoice-category-options" placeholder="Επίλεξε ή γράψε κατηγορία" value="${esc(v.category||'')}">`,
+      `<input data-tax="subcategory" placeholder="Επίλεξε ή γράψε υποκατηγορία" value="${esc(v.subcategory||'')}">`,
       `<select data-tax="unit">${unitOptions.map(x=>`<option value="${x}" ${String(v.unit||'')===x?'selected':''}>${x||'—'}</option>`).join('')}</select>`,
       `<input data-tax="packaging" placeholder="π.χ. 12 x 500ML" value="${esc(v.packaging||'')}">`
     ];
     for(const html of defs){const td=document.createElement('td');td.innerHTML=html;tr.insertBefore(td,statusTd)}
+    refreshLists(tr);
     const vat=tr.querySelector('[data-k="vatRate"]');
     if(vat&&vat.tagName==='INPUT'&&!vat.dataset.taxonomyVat){
       const select=document.createElement('select');select.dataset.k='vatRate';select.dataset.taxonomyVat='1';
       const current=String(vat.value||v.vatRate||'');select.innerHTML=vatOptions.map(x=>`<option value="${x}" ${current===x?'selected':''}>${x?x+'%':'—'}</option>`).join('');vat.replaceWith(select);
     }
-    tr.querySelectorAll('[data-tax]').forEach(el=>el.addEventListener('change',()=>{
-      const key=rowKey(tr),cur=meta[key]||{};cur[el.dataset.tax]=el.value;cur.vatRate=tr.querySelector('[data-k="vatRate"]')?.value||'';meta[key]=cur;saveMeta();
-    }));
+    tr.querySelectorAll('[data-tax]').forEach(el=>{
+      const persist=()=>{const key=rowKey(tr),cur=meta[key]||{};cur[el.dataset.tax]=el.value;cur.vatRate=tr.querySelector('[data-k="vatRate"]')?.value||'';meta[key]=cur;saveMeta()};
+      el.addEventListener('change',()=>{persist();if(el.dataset.tax==='category')refreshLists(tr)});
+      if(el.dataset.tax==='category')el.addEventListener('input',()=>refreshLists(tr));
+    });
     tr.querySelector('[data-k="vatRate"]')?.addEventListener('change',()=>{
       const key=rowKey(tr);meta[key]={...(meta[key]||{}),vatRate:tr.querySelector('[data-k="vatRate"]')?.value||''};saveMeta();
     });
     tr.dataset.taxonomyReady='1';
   }
 
-  function scan(){ensureHeader();document.querySelectorAll('#lines tr').forEach(enrichRow)}
+  function scan(){ensureHeader();const src=taxonomySource();ensureDatalist('mws-invoice-category-options',src.categories);document.querySelectorAll('#lines tr').forEach(enrichRow)}
 
   function captureVisible(){
     document.querySelectorAll('#lines tr').forEach(tr=>{
