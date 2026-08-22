@@ -37,6 +37,12 @@ function discountFactor(line){
     const p=Number(value||0);return p>0&&p<100?factor*(1-p/100):factor;
   },1);
 }
+function hasVerifiedDiscount(line){
+  const hasDiscount=[line?.discount1,line?.discount2,line?.discount3].some(value=>Number(value||0)>0&&Number(value||0)<100);
+  if(!hasDiscount)return false;
+  const source=String(line?.discountSource||'').toUpperCase();
+  return source.includes('VERIFIED')||Number(line?.discountConfidence||0)>=85||Number(line?.discountAmount1||0)>0||Number(line?.discountAmount2||0)>0||Number(line?.discountAmount3||0)>0;
+}
 function recoverVerifiedDiscount(line,quantity,unitCost,net){
   if(quantity<=0||unitCost<=0||net<=0||!line?.rawText)return null;
   const gross=quantity*unitCost,tokens=rawNumberTokens(line.rawText);
@@ -66,7 +72,7 @@ function sanitizeAzureDiscounts(line,quantity,unitCost,net){
   if(!current.some(v=>v>0))return;
   if(quantity<=0||unitCost<=0||net<=0)return;
   const expected=money2(quantity*unitCost*discountFactor(line));
-  if(closeMoney(expected,net,0.05,0.02))return;
+  if(closeMoney(expected,net,0.05,0.02)||hasVerifiedDiscount(line))return;
   const old1=line.discount1||0,old2=line.discount2||0,old3=line.discount3||0;
   pushCorrection(line,'discount1',old1,0,'REJECTED_AZURE_DISCOUNT_FIELDS_NOT_MATCHING_LINE_MATH');
   pushCorrection(line,'discount2',old2,0,'REJECTED_AZURE_DISCOUNT_FIELDS_NOT_MATCHING_LINE_MATH');
@@ -114,6 +120,17 @@ function reconcileLine(input,index){
     if(derived>0){pushCorrection(line,'netAmount',line.netAmount||line.netValue||0,derived,'DERIVED_FROM_QTY_PRICE_DISCOUNTS');line.netAmount=net=derived}
   }
 
+  // A verified discount is authoritative for the line economics. Azure may expose
+  // the pre-discount Amount as NetAmount/GrossAmount while the raw row contains a
+  // mathematically verified discount pair. Recompute net before VAT in that case.
+  if(quantity>0&&unitCost>0&&hasVerifiedDiscount(line)){
+    const discountedNet=money2(quantity*unitCost*discountFactor(line));
+    if(discountedNet>0&&Math.abs(discountedNet-net)>0.02){
+      pushCorrection(line,'netAmount',net,discountedNet,'VERIFIED_DISCOUNT_RECALCULATED_NET');
+      line.netAmount=net=discountedNet;
+    }
+  }
+
   if(net>0&&tax>0){
     const derived=nearestVat(tax/net*100);
     if(derived&&(!CANONICAL_VAT.includes(Math.round(vat))||Number(line.azureTaxRateConfidence||0)<70)){
@@ -125,9 +142,6 @@ function reconcileLine(input,index){
     pushCorrection(line,'azureTax',line.azureTax||0,derivedTax,'DERIVED_FROM_NET_AND_VAT');line.azureTax=tax=derivedTax;
   }
 
-  // Azure may return a Tax amount copied from a pre-discount/base value even when
-  // the line NetAmount is already after discount. Once both net and a canonical VAT
-  // rate are known, the tax must be reconciled against the verified net value.
   if(net>0&&CANONICAL_VAT.includes(Math.round(vat))&&vat>0){
     const expectedTax=money2(net*vat/100);
     if(tax<=0||Math.abs(tax-expectedTax)>0.02){
