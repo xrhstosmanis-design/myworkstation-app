@@ -6,6 +6,7 @@ const authHeaders=()=>{const token=localStorage.getItem("token")||sessionStorage
 const normalizeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const match=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(!match)return null;return `${match[3]}-${String(match[2]).padStart(2,"0")}-${String(match[1]).padStart(2,"0")}`};
 const parseAmount=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const number=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(number)?number:0};
 const setStatus=(modal,text,error=false)=>{const el=modal?.querySelector("[data-invoice-status]");if(!el)return;el.textContent=text;el.style.background=error?"#fff1f2":"#ecfdf5";el.style.color=error?"#991b1b":"#065f46"};
+const reviewedLineCount=modal=>Math.max(Number(modal?.dataset.invoiceProductLines||0),Number(modal?.querySelectorAll("[data-invoice-product-lines] tbody tr").length||0),Number(modal?.querySelectorAll("[data-product-lines-review] tbody tr").length||0));
 
 window.fetch=async function(input,init={}){
   const url=typeof input==="string"?input:input?.url||"";
@@ -25,7 +26,7 @@ async function runCreate(button){
 
   setStatus(modal,"Έλεγχος στοιχείων πριν τη δημιουργία…");
   const jobId=String(modal.dataset.invoiceJobId||latestInvoiceJobId||"").trim();
-  const reviewedLines=Math.max(Number(modal.dataset.invoiceProductLines||0),Number(modal.querySelectorAll("[data-invoice-product-lines] tbody tr").length||0),Number(modal.querySelectorAll("[data-product-lines-review] tbody tr").length||0));
+  const reviewedLines=reviewedLineCount(modal);
   const form=modal.querySelector('form[data-new-order]');
   const supplierId=String(form?.querySelector('[name="supplierId"]')?.value||"").trim();
   const documentNumber=String(form?.querySelector('[name="invoiceNumber"]')?.value||"").trim();
@@ -57,10 +58,30 @@ async function runCreate(button){
 }
 
 function bindButton(button){
-  if(!button||button.dataset.createHotfixBound==="1")return;
-  button.dataset.createHotfixBound="1";
-  button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();runCreate(button)},true);
+  if(!button||button.dataset.createHotfixBound==="2")return button;
+  const replacement=button.cloneNode(true);
+  replacement.dataset.createHotfixBound="2";
+  replacement.type="button";
+  replacement.disabled=false;
+  replacement.removeAttribute("disabled");
+  replacement.style.pointerEvents="auto";
+  replacement.style.cursor="pointer";
+  replacement.style.opacity="1";
+  replacement.style.position="relative";
+  replacement.style.zIndex="2";
+  button.replaceWith(replacement);
+  replacement.addEventListener("mousedown",()=>{const modal=replacement.closest(".po-modal");if(modal)setStatus(modal,"Το κουμπί πατήθηκε — έλεγχος στοιχείων…")},true);
+  replacement.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();runCreate(replacement)},true);
+  return replacement;
 }
-function scan(){document.querySelectorAll("[data-create-invoice]").forEach(bindButton);const modal=activeInvoiceModal();if(modal&&latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId}
-new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});
+function scan(){
+  document.querySelectorAll("[data-create-invoice]").forEach(button=>{
+    const bound=bindButton(button)||button;
+    const modal=bound.closest(".po-modal");
+    if(modal&&reviewedLineCount(modal)>0&&!bound.dataset.invoiceCreating){bound.disabled=false;bound.removeAttribute("disabled");bound.style.pointerEvents="auto";bound.style.cursor="pointer";bound.style.opacity="1"}
+  });
+  const modal=activeInvoiceModal();
+  if(modal&&latestInvoiceJobId&&!modal.dataset.invoiceJobId)modal.dataset.invoiceJobId=latestInvoiceJobId;
+}
+new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled"]});
 scan();
