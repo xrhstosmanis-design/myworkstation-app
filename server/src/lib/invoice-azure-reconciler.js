@@ -23,18 +23,34 @@ function discountFactor(line){
     const p=Number(value||0);return p>0&&p<100?factor*(1-p/100):factor;
   },1);
 }
+function applyLearningContract(line){
+  const code=String(line.supplierItemCode||line.code||'').trim();
+  const price=Number(line.unitPrice||line.unitCost||0);
+  const net=Number(line.netValue||line.netAmount||0);
+  const qty=Number(line.quantity||0);
+  line.supplierItemCode=code;
+  line.code=line.code||code;
+  line.unitPrice=price>0?money4(price):0;
+  line.unitCost=Number(line.unitCost||0)>0?money4(line.unitCost):line.unitPrice;
+  line.netValue=net>0?money2(net):0;
+  line.netAmount=Number(line.netAmount||0)>0?money2(line.netAmount):line.netValue;
+  line.netUnitCost=qty>0&&line.netValue>0?money4(line.netValue/qty):0;
+  line.unitsPerPackage=Number(line.unitsPerPackage||0)>0?Number(line.unitsPerPackage):0;
+  line.invoiceLearningContract='V2';
+  return line;
+}
 function reconcileLine(input,index){
   const line={...input,autoCorrections:[...(input?.autoCorrections||[])],reviewReasons:[...(input?.reviewReasons||[])]};
-  let quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||0),net=Number(line.netAmount||0),tax=Number(line.azureTax||0),vat=Number(line.vatRate||0),gross=Number(line.grossAmount||0);
+  let quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||line.unitPrice||0),net=Number(line.netAmount||line.netValue||0),tax=Number(line.azureTax||0),vat=Number(line.vatRate||0),gross=Number(line.grossAmount||0);
   const factor=discountFactor(line);
 
   if(quantity>0&&unitCost<=0&&net>0&&factor>0){
     const derived=money4(net/(quantity*factor));
-    if(derived>0){pushCorrection(line,'unitCost',line.unitCost||0,derived,'DERIVED_FROM_QTY_NET_DISCOUNTS');line.unitCost=unitCost=derived}
+    if(derived>0){pushCorrection(line,'unitCost',line.unitCost||line.unitPrice||0,derived,'DERIVED_FROM_QTY_NET_DISCOUNTS');line.unitCost=unitCost=derived}
   }
   if(net<=0&&quantity>0&&unitCost>0&&factor>0){
     const derived=money2(quantity*unitCost*factor);
-    if(derived>0){pushCorrection(line,'netAmount',line.netAmount||0,derived,'DERIVED_FROM_QTY_PRICE_DISCOUNTS');line.netAmount=net=derived}
+    if(derived>0){pushCorrection(line,'netAmount',line.netAmount||line.netValue||0,derived,'DERIVED_FROM_QTY_PRICE_DISCOUNTS');line.netAmount=net=derived}
   }
 
   if(net>0&&tax>0){
@@ -72,7 +88,7 @@ function reconcileLine(input,index){
   line.autoVerified=line.reviewReasons.length===0&&Boolean(line.mathVerified)&&Number(line.confidence||0)>=70;
   line.reconciliationStatus=line.autoVerified?'AUTO_VERIFIED':line.autoCorrections.length?'AUTO_CORRECTED_REVIEW':'REVIEW';
   line.reconciliationSequence=index+1;
-  return line;
+  return applyLearningContract(line);
 }
 
 export function reconcileAzureInvoice(parsed){
@@ -85,7 +101,7 @@ export function reconcileAzureInvoice(parsed){
   if(cleanNumber!==originalNumber){result.documentNumber=cleanNumber;headerCorrections.push({field:'documentNumber',from:originalNumber,to:cleanNumber,reason:'WHITESPACE_NORMALIZATION'})}
 
   result.productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(reconcileLine):[];
-  result.lines=result.productLines.map(line=>({text:line.rawText||[line.code,line.description,line.quantity,line.unit,line.unitCost,line.netAmount].filter(Boolean).join(' '),confidence:line.confidence}));
+  result.lines=result.productLines.map(line=>({text:line.rawText||[line.supplierItemCode,line.description,line.quantity,line.unit,line.unitPrice,line.netValue].filter(Boolean).join(' '),confidence:line.confidence}));
   const usableGross=result.productLines.filter(line=>Number(line.grossAmount||0)>0);
   const lineGrossSum=money2(usableGross.reduce((sum,line)=>sum+Number(line.grossAmount||0),0));
   const totalGross=Number(result.totalGross||0);
