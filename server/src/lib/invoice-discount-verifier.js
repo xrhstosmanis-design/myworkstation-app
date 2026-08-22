@@ -32,32 +32,40 @@ function stamp(productLines,diagnostics){
   return diagnostics;
 }
 
-function convertAmountsToPercents(line,amounts){
+function validateDiscountPairs(line,pairs){
   const quantity=Number(line?.quantity||0);
   const unitCost=Number(line?.unitCost||0);
   const net=Number(line?.netAmount||0);
-  const [amount1,amount2,amount3]=amounts.map(safeAmount);
-  const grossBase=quantity*unitCost;
-  if(quantity<=0||unitCost<=0||grossBase<=0)return null;
+  if(quantity<=0||unitCost<=0)return null;
 
+  const grossBase=quantity*unitCost;
   let base=grossBase;
   const percents=[];
-  for(const amount of [amount1,amount2,amount3]){
-    if(amount<=0){percents.push(0);continue}
-    if(amount>=base)return null;
-    const percent=safePercent(amount/base*100);
-    if(!percent)return null;
+  const amounts=[];
+
+  for(const pair of pairs){
+    const percent=safePercent(pair?.percent);
+    const amount=safeAmount(pair?.amount);
+    if(!percent&&!amount){
+      percents.push(0);amounts.push(0);continue;
+    }
+    if(!percent||!amount||base<=0)return null;
+
+    const expectedAmount=base*percent/100;
+    const amountTolerance=Math.max(0.02,Math.abs(amount)*0.02);
+    if(Math.abs(expectedAmount-amount)>amountTolerance)return null;
+
     percents.push(percent);
+    amounts.push(amount);
     base-=amount;
   }
 
   if(net>0){
-    const expectedNet=grossBase-amount1-amount2-amount3;
-    const tolerance=Math.max(0.05,net*0.025);
-    if(Math.abs(expectedNet-net)>tolerance)return null;
+    const netTolerance=Math.max(0.05,net*0.02);
+    if(Math.abs(base-net)>netTolerance)return null;
   }
 
-  return {percents,amounts:[amount1,amount2,amount3],base:grossBase};
+  return {percents,amounts,grossBase,expectedNet:base};
 }
 
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model}){
@@ -87,20 +95,23 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
           additionalProperties:false,
           properties:{
             index:{type:'integer',minimum:1},
+            discountPercent1:{type:'number',minimum:0,maximum:99.99},
             discountAmount1:{type:'number',minimum:0},
+            discountPercent2:{type:'number',minimum:0,maximum:99.99},
             discountAmount2:{type:'number',minimum:0},
+            discountPercent3:{type:'number',minimum:0,maximum:99.99},
             discountAmount3:{type:'number',minimum:0},
             confidence:{type:'number',minimum:0,maximum:100},
             evidence:{type:'string'}
           },
-          required:['index','discountAmount1','discountAmount2','discountAmount3','confidence','evidence']
+          required:['index','discountPercent1','discountAmount1','discountPercent2','discountAmount2','discountPercent3','discountAmount3','confidence','evidence']
         }
       }
     },
     required:['discounts']
   };
 
-  const prompt=`Στο συγκεκριμένο ελληνικό τιμολόγιο οι στήλες εκπτώσεων εμφανίζουν ΠΟΣΑ ΣΕ ΕΥΡΩ και όχι ποσοστά. Διάβασε ΜΟΝΟ τα ποσά έκπτωσης της κάθε γραμμής προϊόντος. Μην μετατρέψεις εσύ τα ποσά σε ποσοστά. Μην αλλάξεις ποσότητα, τιμή, καθαρή αξία ή ΦΠΑ. Για κάθε γραμμή επέστρεψε discountAmount1/2/3 ως χρηματικά ποσά σε ευρώ. Βάλε 0 όταν δεν υπάρχει σαφές ποσό έκπτωσης ή δεν είσαι βέβαιος. Μην χρησιμοποιήσεις ποσότητα, τιμή, ΦΠΑ, καθαρή αξία ή άλλον αριθμό ως έκπτωση. Χρησιμοποίησε και το azureContent της ίδιας γραμμής ως βοήθημα. Στο evidence γράψε πολύ σύντομα ποια ποσά έκπτωσης είδες.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
+  const prompt=`Στο συγκεκριμένο ελληνικό τιμολόγιο κάθε έκπτωση μπορεί να εμφανίζεται ως ΠΟΣΟΣΤΟ και δίπλα ως ΠΟΣΟ ΣΕ ΕΥΡΩ. Διάβασε ΜΟΝΟ τα ζεύγη ποσοστού/ποσού έκπτωσης της κάθε γραμμής προϊόντος. Μην αλλάξεις ποσότητα, τιμή, καθαρή αξία ή ΦΠΑ. Για κάθε γραμμή επέστρεψε discountPercent1/2/3 και discountAmount1/2/3. Βάλε 0 μόνο όταν δεν υπάρχει σαφής τιμή ή δεν είσαι βέβαιος. Μην χρησιμοποιήσεις ποσότητα, τιμή, ΦΠΑ, καθαρή αξία ή άλλον αριθμό ως έκπτωση. Χρησιμοποίησε το azureContent της ίδιας γραμμής ως βοήθημα. Παράδειγμα διάταξης: qty=5, price=1,420, αρχική αξία=7,10, discountPercent1=15,00, discountAmount1=1,07, net=6,03. Στο evidence γράψε πολύ σύντομα τι ακριβώς είδες στη γραμμή.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
 
   try{
     const response=await fetch('https://api.openai.com/v1/responses',{
@@ -109,7 +120,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       body:JSON.stringify({
         model:model||'gpt-5',
         input:[{role:'user',content:[{type:'input_text',text:prompt},filePart]}],
-        text:{format:{type:'json_schema',name:'invoice_discount_amounts',strict:true,schema}}
+        text:{format:{type:'json_schema',name:'invoice_discount_pairs',strict:true,schema}}
       })
     });
     if(!response.ok){
@@ -129,19 +140,23 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       if(!line)continue;
       const confidence=Number(candidate?.confidence||0);
       if(confidence<85){diagnostics.rejectedLowConfidence+=1;continue}
-      const amounts=[safeAmount(candidate.discountAmount1),safeAmount(candidate.discountAmount2),safeAmount(candidate.discountAmount3)];
-      if(!amounts.some(v=>v>0))continue;
-      const converted=convertAmountsToPercents(line,amounts);
-      if(!converted){diagnostics.rejectedMath+=1;continue}
-      [line.discount1,line.discount2,line.discount3]=converted.percents;
-      [line.discountAmount1,line.discountAmount2,line.discountAmount3]=converted.amounts;
-      line.discountSource='AI_AMOUNT_TO_PERCENT_VERIFIED';
+      const pairs=[
+        {percent:candidate.discountPercent1,amount:candidate.discountAmount1},
+        {percent:candidate.discountPercent2,amount:candidate.discountAmount2},
+        {percent:candidate.discountPercent3,amount:candidate.discountAmount3}
+      ];
+      if(!pairs.some(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0))continue;
+      const validated=validateDiscountPairs(line,pairs);
+      if(!validated){diagnostics.rejectedMath+=1;continue}
+      [line.discount1,line.discount2,line.discount3]=validated.percents;
+      [line.discountAmount1,line.discountAmount2,line.discountAmount3]=validated.amounts;
+      line.discountSource='AI_PERCENT_AMOUNT_VERIFIED';
       line.discountConfidence=confidence;
       line.discountEvidence=String(candidate?.evidence||'').slice(0,180);
       diagnostics.accepted+=1;
     }
     diagnostics.status='OK';
-    diagnostics.reason=diagnostics.accepted>0?'DISCOUNT_AMOUNTS_CONVERTED':'NO_CONFIDENT_DISCOUNT_AMOUNTS';
+    diagnostics.reason=diagnostics.accepted>0?'DISCOUNT_PAIRS_VERIFIED':'NO_CONFIDENT_DISCOUNT_PAIRS';
   }catch(error){
     diagnostics.status='FAILED';
     diagnostics.reason=error?.message||'UNKNOWN_ERROR';
