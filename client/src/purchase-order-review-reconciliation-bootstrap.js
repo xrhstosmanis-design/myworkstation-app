@@ -17,7 +17,10 @@ async function api(path){
 }
 
 function economicProduct(row){
-  const text=String(row?.ocrRawText||row?.description||"").replace(/\s+/g," ").trim();
+  // Η διορθωμένη περιγραφή της γραμμής είναι authoritative. Το OCR raw text
+  // παραμένει μόνο fallback, ώστε παλιό/θορυβώδες OCR να μην κρύβει προϊόν που
+  // έχει ήδη διορθωθεί ή αντιστοιχιστεί από τον χρήστη.
+  const text=String(row?.description||row?.ocrRawText||"").replace(/\s+/g," ").trim();
   return Boolean(text)&&!nonProductPattern.test(text)&&Number(row?.quantity||0)>0&&(Number(row?.unitCost||0)>0||Number(row?.grossAmount||0)>0);
 }
 
@@ -47,7 +50,7 @@ function repairEmptyState(panel,rows){
     empty.textContent=`✓ Αναγνωρίστηκαν ${rows.length} πραγματικές γραμμές προϊόντων.`;
     empty.style.cssText="padding:12px;border:1px solid #b8dfc4;border-radius:10px;background:#edf9f1;color:#176b32;font-weight:800";
   }
-  const unresolved=rows.filter(row=>row.resolutionStatus==="UNRESOLVED").length;
+  const unresolved=rows.filter(row=>row.resolutionStatus==="UNRESOLVED"&&!row.productId).length;
   panel.dataset.unresolved=String(unresolved);
   const header=[...panel.querySelectorAll("div")].find(node=>/Όλες οι γραμμές προϊόντων ελέγχθηκαν|άλυτες γραμμές/i.test(node.textContent||"")&&node.children.length===0);
   if(header){
