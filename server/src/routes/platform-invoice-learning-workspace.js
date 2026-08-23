@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {requireCompanyModule} from "../middleware/module-access.js";
 
 const router=Router();
 const SCOPE="PLATFORM_GLOBAL";
@@ -58,10 +59,9 @@ async function upsertSupplierProfiles(profiles,userId=null){
   }
 }
 
-// Read-only resolver for the real application/store clients. This is intentionally
-// available to every authenticated tenant user: profiles are centrally learned by
-// Platform Super Admin, while stores only consume them.
-router.get("/invoice-learning/supplier-profile/resolve",async(req,res,next)=>{try{
+// Runtime consumption is deliberately limited to the paid invoice-reading module.
+// Supplier profiles must not affect generic supplier, inventory, POS, or other flows.
+router.get("/invoice-learning/supplier-profile/resolve",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
   if(!isAuthenticated(req))return res.status(401).json({error:"Απαιτείται σύνδεση."});
   const taxId=cleanTaxId(req.query?.taxId);
   const normalizedName=normName(req.query?.name);
