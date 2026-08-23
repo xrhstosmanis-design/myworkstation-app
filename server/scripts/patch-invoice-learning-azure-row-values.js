@@ -14,7 +14,12 @@ if(!server.includes(normalizeAnchor))throw new Error("Azure normalize anchor mis
 const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   const text=String(content||"").replace(/\\s+/g," ").trim();
   if(!text)return null;
-  const toValues=s=>(String(s||"").match(/-?\\d+(?:[.,]\\d+)?/g)||[]).map(x=>Number(x.replace(",","."))).filter(Number.isFinite);
+  // Important: Azure may return prices like ",5900", ",6500", ",0900" or ",9500".
+  // The old regex dropped the leading decimal separator and turned them into 5900/6500/900/9500.
+  // Preserve a leading comma/dot and parse it as 0.xxxx.
+  const toValues=s=>(String(s||"").match(/-?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)/g)||[])
+    .map(x=>{const raw=String(x).trim();const normalized=/^-?[.,]\\d+$/.test(raw)?raw.replace(/^(-?)([.,])/,'$10.'):raw.replace(",",".");return Number(normalized)})
+    .filter(Number.isFinite);
   const qHint=Math.max(0,Number(quantityHint||0));
   const marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);
   let after=[],before=[],markerBroken=false;
@@ -49,4 +54,4 @@ const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discou
 if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched idempotently: Azure row arithmetic + corrupted TEM recovery active.");
+console.log("Invoice Learning patched idempotently: Azure row arithmetic + leading-decimal prices + corrupted TEM recovery active.");
