@@ -25,27 +25,33 @@ function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
   const numericPattern=profile.leadingDecimalPrice?/-?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)/g:/-?\\d+(?:[.,]\\d+)?/g;
   const toValues=s=>(String(s||"").match(numericPattern)||[]).map(x=>{const raw=String(x).trim();const normalized=profile.leadingDecimalPrice&&/^-?[.,]\\d+$/.test(raw)?raw.replace(/^(-?)([.,])/,'$10.'):raw.replace(",",".");return Number(normalized)}).filter(Number.isFinite);
   const qHint=Math.max(0,Number(quantityHint||0)),marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS|EM)\\s+(.+)$/i);let after=[],before=[],markerBroken=false;
-  if(marker){after=toValues(marker[1]);if(!after.length)return null;before=toValues(text.slice(0,marker.index||0)).slice(-5)}else{if(!(qHint>0))return null;after=toValues(text).slice(-10);if(after.length<4)return null;markerBroken=true}
+  if(marker){after=toValues(marker[1]);if(!after.length)return null;before=toValues(text.slice(0,marker.index||0)).slice(-6)}else{if(!(qHint>0))return null;after=toValues(text).slice(-12);if(after.length<4)return null;markerBroken=true}
   const all=[...after,...before],close=(a,b,tol=Math.max(.03,Math.abs(Number(b||0))*.015))=>Math.abs(Number(a||0)-Number(b||0))<=tol;
   const discountEvidence=(initial,skip=[])=>{let best=null;for(let i=0;i<all.length;i++){if(skip.includes(i))continue;const pct=Math.abs(Number(all[i]||0));if(!(pct>0&&pct<100))continue;const da=initial*pct/100,net=initial-da;for(let a=0;a<all.length;a++){if(a===i||skip.includes(a)||!close(all[a],da,Math.max(.03,da*.03)))continue;for(let n=0;n<all.length;n++){if(n===i||n===a||skip.includes(n)||!close(all[n],net,Math.max(.03,net*.02)))continue;const error=Math.abs(all[a]-da)+Math.abs(all[n]-net);if(!best||error<best.error)best={pct,net:all[n],error}}}}return best};
 
-  // IFANTIS profile: Azure often corrupts the unit-price token (e.g. 1,5900 -> 5900,
-  // 3,0900 -> 0900) but preserves the following monetary triplet:
-  // initial line value, discount amount, net line value. Recover ONLY when
-  // initial - discountAmount = net is mathematically proven.
+  // IFANTIS profile only: Azure often wraps one product row across visual lines and corrupts
+  // the unit-price token (1,5900 -> 5900, 3,0900 -> 0900, etc.). The reliable values are
+  // quantity plus initial line value, discount amount and net line value. They may be split
+  // before/after the TEM marker, so search the complete numeric row and accept only a
+  // mathematically proven relation: initial - discount = net. No other supplier uses this.
   if(profile.ifantisBrokenPrice&&qHint>0){
     let bestIfantis=null;
-    for(let i=0;i<=after.length-3;i++){
-      const initial=Number(after[i]||0),discountAmount=Number(after[i+1]||0),net=Number(after[i+2]||0);
-      if(!(initial>0&&discountAmount>=0&&net>=0))continue;
-      if(!close(initial-discountAmount,net,Math.max(.03,initial*.01)))continue;
-      const unitPrice=initial/qHint;
-      if(!(unitPrice>=.05&&unitPrice<=100))continue;
-      const pct=initial>0?discountAmount/initial*100:0;
-      if(!(pct>=0&&pct<100))continue;
-      const roundedPct=Math.abs(pct-Math.round(pct))<=.35?Math.round(pct):pct;
-      const score=500-(Math.abs((initial-discountAmount)-net)*100)-i;
-      if(!bestIfantis||score>bestIfantis.score)bestIfantis={score,quantity:qHint,unitPrice,initialAmount:initial,discount1:roundedPct,netAmount:net};
+    const commonDiscounts=[0,5,10,15,20,25,30,35,40,45,50];
+    for(let i=0;i<all.length;i++){
+      const initial=Number(all[i]||0);if(!(initial>0))continue;
+      const unitPrice=initial/qHint;if(!(unitPrice>=.05&&unitPrice<=100))continue;
+      for(let d=0;d<all.length;d++){
+        if(d===i)continue;const discountAmount=Math.abs(Number(all[d]||0));if(!(discountAmount>=0&&discountAmount<=initial))continue;
+        for(let n=0;n<all.length;n++){
+          if(n===i||n===d)continue;const net=Number(all[n]||0);if(!(net>=0&&net<=initial))continue;
+          if(!close(initial-discountAmount,net,Math.max(.03,initial*.008)))continue;
+          const pct=initial>0?discountAmount/initial*100:0;
+          const nearest=commonDiscounts.reduce((a,b)=>Math.abs(b-pct)<Math.abs(a-pct)?b:a,0);
+          if(Math.abs(pct-nearest)>.45)continue;
+          const score=900-Math.abs(pct-nearest)*100-Math.abs((initial-discountAmount)-net)*200;
+          if(!bestIfantis||score>bestIfantis.score)bestIfantis={score,quantity:qHint,unitPrice,initialAmount:initial,discount1:nearest,netAmount:net};
+        }
+      }
     }
     if(bestIfantis){
       let vatRate=0;for(const v of [...after].reverse().concat([...before].reverse())){const n=Math.round(Math.abs(v));if([6,13,24].includes(n)){vatRate=n;break}}
@@ -77,4 +83,4 @@ const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discou
 if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: IFANTIS line-total/discount/net recovery + universal math validation.");
+console.log("Invoice Learning patched: IFANTIS wrapped-row arithmetic recovery + universal math validation.");
