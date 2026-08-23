@@ -57,6 +57,22 @@ router.get("/invoice-learning/product-knowledge",async(req,res,next)=>{try{
   res.json({ok:true,products:rows});
 }catch(error){next(error)}});
 
+router.put("/invoice-learning/product-knowledge/:id",async(req,res,next)=>{try{
+  const id=String(req.params?.id||"").trim();if(!id)return res.status(400).json({error:"Λείπει το προϊόν Learning."});
+  const body=req.body&&typeof req.body==="object"?req.body:{};
+  const barcode=String(body.barcode||"").replace(/\D/g,"");if(barcode&&(barcode.length<8||barcode.length>14))return res.status(400).json({error:"Το barcode πρέπει να έχει 8 έως 14 ψηφία."});
+  const description=String(body.description||"").trim();if(!description)return res.status(400).json({error:"Η περιγραφή είναι υποχρεωτική."});
+  const supplierItemCode=String(body.supplierItemCode||"").trim();
+  const invoiceUnit=String(body.invoiceUnit||"").trim();const stockUnit=String(body.stockUnit||"").trim();
+  const toNum=v=>v===""||v==null?null:Number(v);const unitsPerPackage=toNum(body.unitsPerPackage),conversionFactor=toNum(body.conversionFactor),vatRate=toNum(body.vatRate);
+  if([unitsPerPackage,conversionFactor,vatRate].some(v=>v!==null&&!Number.isFinite(v)))return res.status(400).json({error:"Έλεγξε τα αριθμητικά πεδία του προϊόντος."});
+  const knowledge={category:String(body.category||"").trim(),subcategory:String(body.subcategory||"").trim(),purchasePrice:toNum(body.purchasePrice),retailPrice:toNum(body.retailPrice),initialStock:toNum(body.initialStock),internalCode:String(body.internalCode||"").trim(),active:body.active!==false,trackStock:body.trackStock!==false,manualProductEdit:true,manualProductEditedAt:new Date().toISOString(),barcodeSource:barcode?"MANUAL_CONFIRMED":undefined};
+  for(const k of ["purchasePrice","retailPrice","initialStock"])if(knowledge[k]!==null&&!Number.isFinite(knowledge[k]))return res.status(400).json({error:"Έλεγξε τιμές αγοράς/λιανικής/stock."});
+  const rows=await prisma.$queryRawUnsafe(`UPDATE "InvoiceLearningProductKnowledge" SET "supplierItemCode"=$1,"description"=$2,"barcode"=$3,"barcodeStatus"=$4,"invoiceUnit"=$5,"stockUnit"=$6,"unitsPerPackage"=$7,"conversionFactor"=$8,"vatRate"=$9,"knowledge"=COALESCE("knowledge",'{}'::jsonb)||$10::jsonb,"verified"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$11 RETURNING "id","supplierKey","supplierTaxId","supplierName","supplierItemCode","description","barcode","barcodeStatus","masterProductId","masterProductName","invoiceUnit","stockUnit","unitsPerPackage","conversionFactor","vatRate","knowledge","verified","updatedAt"`,supplierItemCode||null,description,barcode||null,barcode?"KNOWN":"PENDING",invoiceUnit||null,stockUnit||null,unitsPerPackage,conversionFactor,vatRate,JSON.stringify(knowledge),id);
+  if(!rows?.length)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο κεντρικό Learning."});
+  res.json({ok:true,product:rows[0]});
+}catch(error){next(error)}});
+
 router.put("/invoice-learning/product-knowledge/:id/barcode",async(req,res,next)=>{try{
   const id=String(req.params?.id||"").trim(),barcode=String(req.body?.barcode||"").replace(/\D/g,"");
   if(!id)return res.status(400).json({error:"Λείπει το προϊόν Learning."});
