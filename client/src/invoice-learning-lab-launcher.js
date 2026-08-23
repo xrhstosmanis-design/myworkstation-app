@@ -1,4 +1,8 @@
-if(window.location.pathname.replace(/\/+$/,'')==='/platform-admin'){
+const cleanPath=window.location.pathname.replace(/\/+$/,'');
+if(cleanPath==='/platform-admin/invoice-learning-lab'){
+  import('./invoice-learning-generate-barcode-extension.js');
+}
+if(cleanPath==='/platform-admin'){
   const launch=()=>{
     window.location.assign('/platform-admin/invoice-learning-lab');
   };
