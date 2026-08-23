@@ -3,22 +3,25 @@ import fs from "node:fs";
 const serverPath=new URL("../src/routes/platform-invoice-learning-ai.js",import.meta.url);
 let server=fs.readFileSync(serverPath,"utf8");
 
-// This patch runs during every Render build. The source may already contain an older
-// Azure row parser from a previous deploy, so replace the parser itself instead of
-// depending on the original pre-patch numeric-line anchor.
 const start=server.indexOf('function parseAzureGreekProductRow(');
 const end=start>=0?server.indexOf('\nfunction normalizeAzure(payload){',start):-1;
 const normalizeAnchor='function normalizeAzure(payload){';
 if(!server.includes(normalizeAnchor))throw new Error("Azure normalize anchor missing.");
 
-const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
+const helper=`function supplierAzureProfile(supplierName="",supplierTaxId=""){
+  const name=norm(supplierName),tax=String(supplierTaxId||"").replace(/\\D/g,"");
+  // Supplier-specific parsing rules only. Add future quirks here by supplier identity,
+  // never as global parsing behaviour unless they are mathematically universal.
+  const leadingDecimalPrice = /ΜΑΡΟΣ|MAROS/.test(name);
+  return {leadingDecimalPrice};
+}
+
+function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
   const text=String(content||"").replace(/\\s+/g," ").trim();
   if(!text)return null;
-  // Important: Azure may return prices like ",5900", ",6500", ",0900" or ",9500".
-  // The old regex dropped the leading decimal separator and turned them into 5900/6500/900/9500.
-  // Preserve a leading comma/dot and parse it as 0.xxxx.
-  const toValues=s=>(String(s||"").match(/-?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)/g)||[])
-    .map(x=>{const raw=String(x).trim();const normalized=/^-?[.,]\\d+$/.test(raw)?raw.replace(/^(-?)([.,])/,'$10.'):raw.replace(",",".");return Number(normalized)})
+  const numericPattern=profile.leadingDecimalPrice?/-?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)/g:/-?\\d+(?:[.,]\\d+)?/g;
+  const toValues=s=>(String(s||"").match(numericPattern)||[])
+    .map(x=>{const raw=String(x).trim();const normalized=profile.leadingDecimalPrice&&/^-?[.,]\\d+$/.test(raw)?raw.replace(/^(-?)([.,])/,'$10.'):raw.replace(",",".");return Number(normalized)})
     .filter(Number.isFinite);
   const qHint=Math.max(0,Number(quantityHint||0));
   const marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);
@@ -36,22 +39,17 @@ const helper=`function parseAzureGreekProductRow(content="",quantityHint=0){
   let vatRate=0;for(const v of [...after].reverse().concat([...before].reverse())){const n=Math.round(Math.abs(v));if([6,13,24].includes(n)){vatRate=n;break}}
   const d=best.evidence||discountEvidence(best.initialAmount,[best.priceIndex,best.amountIndex]);
   const discount1=d?money4(d.pct):0,netAmount=d?money4(d.net):money4(best.initialAmount);
-  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2:0,discount3:0,netAmount,vatRate,grossAmount:netAmount>0?money4(netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken};
+  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2:0,discount3:0,netAmount,vatRate,grossAmount:netAmount>0?money4(netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken,supplierProfileApplied:Boolean(profile.leadingDecimalPrice)};
 }
 `;
 
 if(start>=0&&end>start)server=server.slice(0,start)+helper+server.slice(end+1);
 else server=server.replace(normalizeAnchor,helper+'\n'+normalizeAnchor);
 
-// Patch the normalizeAzure numeric block only if it is still the original form.
-const originalNumeric='    const quantity=Math.max(0,numberField(p.Quantity));const unitPrice=Math.max(0,numberField(p.UnitPrice));const netAmount=Math.max(0,numberField(p.Amount));const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
-const patchedNumeric='    const azureQuantity=Math.max(0,numberField(p.Quantity));\n    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity);\n    const quantity=Math.max(0,rowFallback?.quantity||azureQuantity||0);\n    let unitPrice=Math.max(0,rowFallback?.unitPrice||numberField(p.UnitPrice)||0);\n    let netAmount=Math.max(0,rowFallback?.netAmount||numberField(p.Amount)||0);\n    const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,rowFallback?.vatRate||numberField(p.TaxRate)||0);if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
-if(server.includes(originalNumeric))server=server.replace(originalNumeric,patchedNumeric);
-else if(!server.includes('const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity);'))throw new Error("Azure numeric block unknown; refusing unsafe patch.");
-
-const originalDiscount='    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;';
-const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    const discount1=rowFallback?.mathValidated?rowFallback.discount1:(verifiedAzureDiscounts[0]||0),discount2=rowFallback?.mathValidated?rowFallback.discount2:(verifiedAzureDiscounts[1]||0),discount3=rowFallback?.mathValidated?rowFallback.discount3:(verifiedAzureDiscounts[2]||0);';
-if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
+const oldCall='    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity);';
+const newCall='    const azureSupplierProfile=supplierAzureProfile(textField(f.VendorName)||textField(f.VendorAddressRecipient),textField(f.VendorTaxId));\n    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity,azureSupplierProfile);';
+if(server.includes(oldCall))server=server.replace(oldCall,newCall);
+else if(!server.includes('const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity,azureSupplierProfile);'))throw new Error("Azure supplier-profile call anchor missing.");
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched idempotently: Azure row arithmetic + leading-decimal prices + corrupted TEM recovery active.");
+console.log("Invoice Learning patched: universal math validation + supplier-scoped Azure parsing quirks active.");
