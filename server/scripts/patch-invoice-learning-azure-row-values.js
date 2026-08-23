@@ -3,9 +3,6 @@ import fs from "node:fs";
 const serverPath=new URL("../src/routes/platform-invoice-learning-ai.js",import.meta.url);
 let server=fs.readFileSync(serverPath,"utf8");
 
-// The Azure+AI-only patch runs BEFORE this script and changes
-// normalizeAzure(payload,ocrRows=[]) -> normalizeAzure(payload).
-// Accept either form so Render clean builds are deterministic.
 const normalizeAnchor=server.includes('function normalizeAzure(payload){')
   ? 'function normalizeAzure(payload){'
   : server.includes('function normalizeAzure(payload,ocrRows=[]){')
@@ -20,57 +17,50 @@ const end=start>=0?server.indexOf(`\n${normalizeAnchor}`,start):-1;
 
 const helper=`function supplierAzureProfile(supplierName="",supplierTaxId=""){
   const name=norm(supplierName),tax=String(supplierTaxId||"").replace(/\\D/g,"");
-  // Supplier-specific quirks only. Universal rules remain mathematical validation.
   const isIfantis=tax==="094095506"||/IFANTISFOODGROUP|IFANTIS/.test(name);
-  return {
-    leadingDecimalPrice:/ΜΑΡΟΣ|MAROS/.test(name),
-    ifantisBrokenPrice:isIfantis
-  };
+  return {leadingDecimalPrice:/ΜΑΡΟΣ|MAROS/.test(name),ifantisBrokenPrice:isIfantis};
 }
 function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
   const text=String(content||"").replace(/\\s+/g," ").trim();if(!text)return null;
   const numericPattern=profile.leadingDecimalPrice?/-?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)/g:/-?\\d+(?:[.,]\\d+)?/g;
   const toValues=s=>(String(s||"").match(numericPattern)||[]).map(x=>{const raw=String(x).trim();const normalized=profile.leadingDecimalPrice&&/^-?[.,]\\d+$/.test(raw)?raw.replace(/^(-?)([.,])/,'$10.'):raw.replace(",",".");return Number(normalized)}).filter(Number.isFinite);
-  const qHint=Math.max(0,Number(quantityHint||0)),marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS)\\s+(.+)$/i);let after=[],before=[],markerBroken=false;
-  if(marker){after=toValues(marker[1]);if(!after.length)return null;before=toValues(text.slice(0,marker.index||0)).slice(-5)}else{if(!(qHint>0))return null;after=toValues(text).slice(-10);if(after.length<5)return null;markerBroken=true}
+  const qHint=Math.max(0,Number(quantityHint||0)),marker=text.match(/(?:^|\\s)(?:ΤΕΜ|ΤΜΧ|TEM|PCS|EM)\\s+(.+)$/i);let after=[],before=[],markerBroken=false;
+  if(marker){after=toValues(marker[1]);if(!after.length)return null;before=toValues(text.slice(0,marker.index||0)).slice(-5)}else{if(!(qHint>0))return null;after=toValues(text).slice(-10);if(after.length<4)return null;markerBroken=true}
   const all=[...after,...before],close=(a,b,tol=Math.max(.03,Math.abs(Number(b||0))*.015))=>Math.abs(Number(a||0)-Number(b||0))<=tol;
   const discountEvidence=(initial,skip=[])=>{let best=null;for(let i=0;i<all.length;i++){if(skip.includes(i))continue;const pct=Math.abs(Number(all[i]||0));if(!(pct>0&&pct<100))continue;const da=initial*pct/100,net=initial-da;for(let a=0;a<all.length;a++){if(a===i||skip.includes(a)||!close(all[a],da,Math.max(.03,da*.03)))continue;for(let n=0;n<all.length;n++){if(n===i||n===a||skip.includes(n)||!close(all[n],net,Math.max(.03,net*.02)))continue;const error=Math.abs(all[a]-da)+Math.abs(all[n]-net);if(!best||error<best.error)best={pct,net:all[n],error}}}}return best};
+
+  // IFANTIS profile: Azure often corrupts the unit-price token (e.g. 1,5900 -> 5900,
+  // 3,0900 -> 0900) but preserves the following monetary triplet:
+  // initial line value, discount amount, net line value. Recover ONLY when
+  // initial - discountAmount = net is mathematically proven.
+  if(profile.ifantisBrokenPrice&&qHint>0){
+    let bestIfantis=null;
+    for(let i=0;i<=after.length-3;i++){
+      const initial=Number(after[i]||0),discountAmount=Number(after[i+1]||0),net=Number(after[i+2]||0);
+      if(!(initial>0&&discountAmount>=0&&net>=0))continue;
+      if(!close(initial-discountAmount,net,Math.max(.03,initial*.01)))continue;
+      const unitPrice=initial/qHint;
+      if(!(unitPrice>=.05&&unitPrice<=100))continue;
+      const pct=initial>0?discountAmount/initial*100:0;
+      if(!(pct>=0&&pct<100))continue;
+      const roundedPct=Math.abs(pct-Math.round(pct))<=.35?Math.round(pct):pct;
+      const score=500-(Math.abs((initial-discountAmount)-net)*100)-i;
+      if(!bestIfantis||score>bestIfantis.score)bestIfantis={score,quantity:qHint,unitPrice,initialAmount:initial,discount1:roundedPct,netAmount:net};
+    }
+    if(bestIfantis){
+      let vatRate=0;for(const v of [...after].reverse().concat([...before].reverse())){const n=Math.round(Math.abs(v));if([6,13,24].includes(n)){vatRate=n;break}}
+      return {quantity:bestIfantis.quantity,unitPrice:money4(bestIfantis.unitPrice),initialAmount:money4(bestIfantis.initialAmount),discount1:money4(bestIfantis.discount1),discount2:0,discount3:0,netAmount:money4(bestIfantis.netAmount),vatRate,grossAmount:bestIfantis.netAmount>0?money4(bestIfantis.netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken,supplierProfileApplied:true,ifantisRecovered:true};
+    }
+  }
+
   let best=null;const pcs=[];
   if(qHint>0)for(let i=0;i<Math.min(after.length,8);i++)pcs.push({q:qHint,price:after[i],pi:i,bonus:30});
   if(!markerBroken&&after.length>=2&&after[0]>0&&Number.isInteger(after[0]))pcs.push({q:after[0],price:after[1],pi:1,bonus:qHint>0&&close(after[0],qHint,.001)?40:10});
-  // IFANTIS invoices can lose the leading integer/comma of unit price in Azure text,
-  // e.g. 1,5900 -> 5900 or 3,0900 -> 0900. Recover ONLY for this supplier by
-  // deriving unit price from a mathematically valid line amount / quantity pair.
-  if(profile.ifantisBrokenPrice&&qHint>0){
-    for(let j=1;j<Math.min(after.length,8);j++){
-      const amount=Number(after[j]||0),derived=amount/qHint;
-      if(!(amount>0&&derived>=0.05&&derived<=100))continue;
-      const rawCandidate=Number(after[j-1]||0);
-      const suspicious=rawCandidate>=100||rawCandidate===0||rawCandidate>derived*50;
-      if(!suspicious)continue;
-      pcs.push({q:qHint,price:derived,pi:j-1,amountIndexHint:j,bonus:180,ifantisRecovered:true});
-    }
-  }
-  for(const c of pcs){
-    if(!(c.q>0&&c.price>0))continue;
-    if(Number.isInteger(c.amountIndexHint)){
-      const j=c.amountIndexHint,evidence=discountEvidence(after[j],[c.pi,j]);
-      const score=300+c.bonus+(evidence?120-Math.min(20,evidence.error*100):0);
-      if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.pi,evidence,ifantisRecovered:Boolean(c.ifantisRecovered)};
-      continue;
-    }
-    const expected=c.q*c.price;
-    for(let j=c.pi+1;j<after.length;j++){
-      if(!close(after[j],expected))continue;
-      const evidence=discountEvidence(after[j],[c.pi,j]);
-      const score=150+c.bonus+(evidence?120-Math.min(20,evidence.error*100):0)+(Math.abs(c.price-Math.round(c.price))>.0001?4:0)-Math.abs(j-c.pi);
-      if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.pi,evidence};
-    }
-  }
-  if(!best||(markerBroken&&!best.evidence&&!profile.ifantisBrokenPrice))return null;
+  for(const c of pcs){if(!(c.q>0&&c.price>0))continue;const expected=c.q*c.price;for(let j=c.pi+1;j<after.length;j++){if(!close(after[j],expected))continue;const evidence=discountEvidence(after[j],[c.pi,j]);const score=150+c.bonus+(evidence?120-Math.min(20,evidence.error*100):0)+(Math.abs(c.price-Math.round(c.price))>.0001?4:0)-Math.abs(j-c.pi);if(!best||score>best.score)best={score,quantity:c.q,unitPrice:c.price,initialAmount:after[j],amountIndex:j,priceIndex:c.pi,evidence}}}
+  if(!best||(markerBroken&&!best.evidence))return null;
   let vatRate=0;for(const v of [...after].reverse().concat([...before].reverse())){const n=Math.round(Math.abs(v));if([6,13,24].includes(n)){vatRate=n;break}}
   const d=best.evidence||discountEvidence(best.initialAmount,[best.priceIndex,best.amountIndex]),discount1=d?money4(d.pct):0,netAmount=d?money4(d.net):money4(best.initialAmount);
-  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2:0,discount3:0,netAmount,vatRate,grossAmount:netAmount>0?money4(netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken,supplierProfileApplied:Boolean(profile.leadingDecimalPrice||profile.ifantisBrokenPrice),ifantisRecovered:Boolean(best.ifantisRecovered)};
+  return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2:0,discount3:0,netAmount,vatRate,grossAmount:netAmount>0?money4(netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken,supplierProfileApplied:Boolean(profile.leadingDecimalPrice)};
 }
 `;
 
@@ -87,4 +77,4 @@ const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discou
 if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: supplier-scoped IFANTIS price recovery + universal math validation.");
+console.log("Invoice Learning patched: IFANTIS line-total/discount/net recovery + universal math validation.");
