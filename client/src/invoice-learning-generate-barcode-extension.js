@@ -7,10 +7,10 @@ if(window.location.pathname.replace(/\/+$/,'')===LAB_PATH){
     for(let i=0;i<12;i++)sum+=Number(s[i])*(i%2===0?1:3);
     return String((10-(sum%10))%10);
   };
-  const random9=()=>{
+  const random8=()=>{
     const a=new Uint32Array(3);
     if(window.crypto?.getRandomValues)window.crypto.getRandomValues(a);else{a[0]=Date.now();a[1]=Math.random()*0xffffffff;a[2]=performance.now()*1000000;}
-    return String((BigInt(a[0])<<64n)^(BigInt(a[1])<<32n)^BigInt(a[2])).replace('-','').slice(-9).padStart(9,'0');
+    return String((BigInt(a[0])<<64n)^(BigInt(a[1])<<32n)^BigInt(a[2])).replace('-','').slice(-8).padStart(8,'0');
   };
   async function existingBarcodes(){
     try{
@@ -23,7 +23,7 @@ if(window.location.pathname.replace(/\/+$/,'')===LAB_PATH){
   async function makeInternalBarcode(){
     const used=await existingBarcodes();
     for(let i=0;i<30;i++){
-      const base='290'+random9(); // 29x = restricted/internal circulation range, 12 digits before checksum
+      const base='9999'+random8(); // MyWorkStation internal series, 12 digits before EAN-13 checksum
       const ean=base+checksum12(base);
       if(!used.has(ean))return ean;
     }
@@ -41,7 +41,7 @@ if(window.location.pathname.replace(/\/+$/,'')===LAB_PATH){
     button.textContent='⚙ Generate Barcode';
     button.style.cssText='border:0;border-radius:8px;padding:10px 14px;background:#0f8877;color:#fff;font-weight:900;cursor:pointer';
     const note=document.createElement('span');
-    note.textContent='Δημιουργεί δικό μας έγκυρο EAN-13 μόνο όταν το προϊόν δεν έχει barcode.';
+    note.textContent='Δημιουργεί δικό μας EAN-13 σειράς 9999 μόνο όταν το προϊόν δεν έχει barcode.';
     note.style.cssText='font-size:12px;color:#5f7180';
     button.onclick=async()=>{
       if(String(input.value||'').trim()&&!confirm('Υπάρχει ήδη barcode. Θέλεις να το αντικαταστήσεις με δικό μας;'))return;
