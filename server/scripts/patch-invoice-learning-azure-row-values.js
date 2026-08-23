@@ -29,16 +29,12 @@ function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
   const all=[...after,...before],close=(a,b,tol=Math.max(.03,Math.abs(Number(b||0))*.015))=>Math.abs(Number(a||0)-Number(b||0))<=tol;
   const discountEvidence=(initial,skip=[])=>{let best=null;for(let i=0;i<all.length;i++){if(skip.includes(i))continue;const pct=Math.abs(Number(all[i]||0));if(!(pct>0&&pct<100))continue;const da=initial*pct/100,net=initial-da;for(let a=0;a<all.length;a++){if(a===i||skip.includes(a)||!close(all[a],da,Math.max(.03,da*.03)))continue;for(let n=0;n<all.length;n++){if(n===i||n===a||skip.includes(n)||!close(all[n],net,Math.max(.03,net*.02)))continue;const error=Math.abs(all[a]-da)+Math.abs(all[n]-net);if(!best||error<best.error)best={pct,net:all[n],error}}}}return best};
 
-  // IFANTIS profile only: Azure often wraps one product row across visual lines and corrupts
-  // the unit-price token (1,5900 -> 5900, 3,0900 -> 0900, etc.). The reliable values are
-  // quantity plus initial line value, discount amount and net line value. They may be split
-  // before/after the TEM marker, so search the complete numeric row and accept only a
-  // mathematically proven relation: initial - discount = net. No other supplier uses this.
   if(profile.ifantisBrokenPrice&&qHint>0){
     let bestIfantis=null;
     const commonDiscounts=[0,5,10,15,20,25,30,35,40,45,50];
+    const afterCount=after.length;
     for(let i=0;i<all.length;i++){
-      const initial=Number(all[i]||0);if(!(initial>0))continue;
+      const initial=Number(all[i]||0);if(!(initial>0&&initial<=qHint*100))continue;
       const unitPrice=initial/qHint;if(!(unitPrice>=.05&&unitPrice<=100))continue;
       for(let d=0;d<all.length;d++){
         if(d===i)continue;const discountAmount=Math.abs(Number(all[d]||0));if(!(discountAmount>=0&&discountAmount<=initial))continue;
@@ -48,7 +44,13 @@ function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
           const pct=initial>0?discountAmount/initial*100:0;
           const nearest=commonDiscounts.reduce((a,b)=>Math.abs(b-pct)<Math.abs(a-pct)?b:a,0);
           if(Math.abs(pct-nearest)>.45)continue;
-          const score=900-Math.abs(pct-nearest)*100-Math.abs((initial-discountAmount)-net)*200;
+          // Prefer the real IFANTIS layout: initial/discount after TEM and net may wrap before TEM.
+          // Penalize obvious product-code/weight artifacts and implausible unit prices.
+          let score=1000-Math.abs(pct-nearest)*100-Math.abs((initial-discountAmount)-net)*200;
+          if(i<afterCount)score+=45;if(d<afterCount)score+=35;if(n>=afterCount)score+=25;
+          if(unitPrice>=.3&&unitPrice<=20)score+=30;
+          if(initial===qHint||discountAmount===qHint||net===qHint)score-=80;
+          if(initial>500||discountAmount>500||net>500)score-=500;
           if(!bestIfantis||score>bestIfantis.score)bestIfantis={score,quantity:qHint,unitPrice,initialAmount:initial,discount1:nearest,netAmount:net};
         }
       }
@@ -83,4 +85,4 @@ const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discou
 if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
 
 fs.writeFileSync(serverPath,server,"utf8");
-console.log("Invoice Learning patched: IFANTIS wrapped-row arithmetic recovery + universal math validation.");
+console.log("Invoice Learning patched: stricter IFANTIS wrapped-row scoring + universal math validation.");
