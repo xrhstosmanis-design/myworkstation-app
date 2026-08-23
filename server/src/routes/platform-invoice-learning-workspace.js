@@ -4,11 +4,9 @@ import {prisma} from "../prisma.js";
 const router=Router();
 const SCOPE="PLATFORM_GLOBAL";
 const isSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
-
-router.use((req,res,next)=>{
-  if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
-  next();
-});
+const isAuthenticated=req=>Boolean(req.user?.id||req.user?.userId||req.user?.sub||isSuper(req));
+const cleanTaxId=v=>String(v||"").replace(/\D/g,"");
+const normName=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 
 export async function ensureInvoiceLearningWorkspaceSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceLearningWorkspaceState" (
@@ -17,8 +15,69 @@ export async function ensureInvoiceLearningWorkspaceSchema(){
     "updatedByUserId" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
-  console.log("Invoice Learning central workspace schema ready.");
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceSupplierReadingProfile" (
+    "supplierKey" TEXT PRIMARY KEY,
+    "supplierTaxId" TEXT,
+    "supplierName" TEXT,
+    "normalizedName" TEXT,
+    "ruleKey" TEXT,
+    "profileVersion" INTEGER NOT NULL DEFAULT 1,
+    "profile" JSONB NOT NULL DEFAULT '{}'::jsonb,
+    "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
+    "updatedByUserId" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "InvoiceSupplierReadingProfile_taxId_uq" ON "InvoiceSupplierReadingProfile" ("supplierTaxId") WHERE "supplierTaxId" IS NOT NULL AND "supplierTaxId"<>''`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "InvoiceSupplierReadingProfile_name_idx" ON "InvoiceSupplierReadingProfile" ("normalizedName")`);
+  console.log("Invoice Learning central workspace + supplier reading profiles schema ready.");
 }
+
+async function upsertSupplierProfiles(profiles,userId=null){
+  for(const [fallbackKey,p0] of Object.entries(profiles||{})){
+    const p=p0&&typeof p0==="object"?p0:{};
+    const taxId=cleanTaxId(p.supplierTaxId||(/^\d{9}$/.test(String(fallbackKey))?fallbackKey:""));
+    const supplierName=String(p.supplierName||"").trim();
+    if(!taxId&&!supplierName)continue;
+    const normalizedName=normName(supplierName);
+    const supplierKey=taxId||normalizedName||String(fallbackKey);
+    const existing=await prisma.$queryRawUnsafe(`SELECT "profileVersion" FROM "InvoiceSupplierReadingProfile" WHERE "supplierKey"=$1 LIMIT 1`,supplierKey);
+    const version=Math.max(1,Number(existing?.[0]?.profileVersion||0)+1);
+    const builtInRule=taxId==="094095506"?"IFANTIS_FOOD_GROUP":null;
+    const ruleKey=String(p.ruleKey||p.readingRuleKey||builtInRule||"")||null;
+    const profile={...p,supplierName,supplierTaxId:taxId,ruleKey,central:true,profileVersion:version};
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedByUserId","updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,TRUE,$8,CURRENT_TIMESTAMP)
+       ON CONFLICT ("supplierKey") DO UPDATE SET
+         "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName",
+         "ruleKey"=EXCLUDED."ruleKey","profileVersion"=EXCLUDED."profileVersion","profile"=EXCLUDED."profile",
+         "isActive"=TRUE,"updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,
+      supplierKey,taxId||null,supplierName||null,normalizedName||null,ruleKey,version,JSON.stringify(profile),userId
+    );
+  }
+}
+
+// Read-only resolver for the real application/store clients. This is intentionally
+// available to every authenticated tenant user: profiles are centrally learned by
+// Platform Super Admin, while stores only consume them.
+router.get("/invoice-learning/supplier-profile/resolve",async(req,res,next)=>{try{
+  if(!isAuthenticated(req))return res.status(401).json({error:"Απαιτείται σύνδεση."});
+  const taxId=cleanTaxId(req.query?.taxId);
+  const normalizedName=normName(req.query?.name);
+  if(!taxId&&!normalizedName)return res.status(400).json({error:"Δώσε ΑΦΜ ή επωνυμία προμηθευτή."});
+  let rows=[];
+  if(taxId)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 AND "isActive"=TRUE LIMIT 1`,taxId);
+  if(!rows?.length&&normalizedName)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "normalizedName"=$1 AND "isActive"=TRUE ORDER BY "updatedAt" DESC LIMIT 1`,normalizedName);
+  const row=rows?.[0];
+  if(!row)return res.json({ok:true,found:false,profile:null});
+  res.json({ok:true,found:true,profile:{supplierKey:row.supplierKey,supplierTaxId:row.supplierTaxId,supplierName:row.supplierName,ruleKey:row.ruleKey,profileVersion:row.profileVersion,...(row.profile||{}),updatedAt:row.updatedAt}});
+}catch(error){next(error)}});
+
+router.use((req,res,next)=>{
+  if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
+  next();
+});
 
 router.get("/invoice-learning/workspace",async(req,res,next)=>{try{
   const rows=await prisma.$queryRawUnsafe(
@@ -45,7 +104,13 @@ router.put("/invoice-learning/workspace",async(req,res,next)=>{try{
      ON CONFLICT ("scopeKey") DO UPDATE SET "state"=EXCLUDED."state","updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,
     SCOPE,json,userId
   );
-  res.json({ok:true,documents:normalized.documents.length,profiles:Object.keys(normalized.profiles).length,updatedAt:new Date().toISOString()});
+  await upsertSupplierProfiles(normalized.profiles,userId);
+  res.json({ok:true,documents:normalized.documents.length,profiles:Object.keys(normalized.profiles).length,centralSupplierProfiles:Object.keys(normalized.profiles).length,updatedAt:new Date().toISOString()});
+}catch(error){next(error)}});
+
+router.get("/invoice-learning/supplier-profiles",async(req,res,next)=>{try{
+  const rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "isActive"=TRUE ORDER BY "supplierName" NULLS LAST,"updatedAt" DESC`);
+  res.json({ok:true,profiles:rows.map(r=>({supplierKey:r.supplierKey,supplierTaxId:r.supplierTaxId,supplierName:r.supplierName,ruleKey:r.ruleKey,profileVersion:r.profileVersion,...(r.profile||{}),updatedAt:r.updatedAt}))});
 }catch(error){next(error)}});
 
 export default router;
