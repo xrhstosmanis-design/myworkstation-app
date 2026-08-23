@@ -2,7 +2,28 @@ import {prisma} from '../prisma.js';
 const clean=v=>String(v||'').replace(/\D/g,'');
 const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,'');
 export async function ensureInvoiceLearningProductKnowledge(){
- await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceLearningProductKnowledge" ("id" TEXT PRIMARY KEY,"supplierKey" TEXT NOT NULL,"supplierTaxId" TEXT,"supplierName" TEXT,"supplierItemCode" TEXT,"description" TEXT NOT NULL,"normalizedDescription" TEXT,"barcode" TEXT,"barcodeStatus" TEXT NOT NULL DEFAULT 'PENDING','masterProductId' TEXT,'masterProductName' TEXT,'invoiceUnit' TEXT,'stockUnit' TEXT,'unitsPerPackage' NUMERIC(14,4),'conversionFactor' NUMERIC(14,4),'vatRate' NUMERIC(7,4),'knowledge' JSONB NOT NULL DEFAULT '{}'::jsonb,'verified' BOOLEAN NOT NULL DEFAULT FALSE,'updatedAt' TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,'createdAt' TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+ await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceLearningProductKnowledge" (
+  "id" TEXT PRIMARY KEY,
+  "supplierKey" TEXT NOT NULL,
+  "supplierTaxId" TEXT,
+  "supplierName" TEXT,
+  "supplierItemCode" TEXT,
+  "description" TEXT NOT NULL,
+  "normalizedDescription" TEXT,
+  "barcode" TEXT,
+  "barcodeStatus" TEXT NOT NULL DEFAULT 'PENDING',
+  "masterProductId" TEXT,
+  "masterProductName" TEXT,
+  "invoiceUnit" TEXT,
+  "stockUnit" TEXT,
+  "unitsPerPackage" NUMERIC(14,4),
+  "conversionFactor" NUMERIC(14,4),
+  "vatRate" NUMERIC(7,4),
+  "knowledge" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "verified" BOOLEAN NOT NULL DEFAULT FALSE,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+ )`);
  await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "InvoiceLearningProductKnowledge_supplier_code_uq" ON "InvoiceLearningProductKnowledge" ("supplierKey","supplierItemCode") WHERE "supplierItemCode" IS NOT NULL AND "supplierItemCode"<>''`);
  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "InvoiceLearningProductKnowledge_supplier_idx" ON "InvoiceLearningProductKnowledge" ("supplierTaxId","normalizedDescription")`);
 }
