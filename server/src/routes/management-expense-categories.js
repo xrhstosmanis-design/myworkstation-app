@@ -7,11 +7,10 @@ const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 let schemaReady=null;
 
-function requireAccess(req,res,next){
-  if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Οι Κατηγορίες εξόδων είναι διαθέσιμες μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
+function requireManageAccess(req,res,next){
+  if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Οι Κατηγορίες εξόδων είναι διαθέσιμες για διαχείριση μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
-router.use(requireAccess);
 
 async function ensureSchema(){
   if(schemaReady)return schemaReady;
@@ -36,22 +35,26 @@ async function ensureSchema(){
 
 const bodySchema=z.object({description:z.string().trim().min(1).max(180),active:z.boolean().default(true)});
 
+// Read access is also allowed to a STORE_OPERATOR of the same company so the POS
+// can present the categories configured centrally in BackOffice. Operators cannot
+// create, rename, activate/deactivate or delete categories from this route.
 router.get("/",async(req,res,next)=>{
   try{
-    const companyId=req.user.companyId;await ensureSchema();
+    const companyId=req.user?.companyId;if(!companyId)return res.status(403).json({error:"Δεν βρέθηκε εταιρεία χρήστη."});await ensureSchema();
+    const operator=req.user?.tokenType==="STORE_OPERATOR";
     const rows=await prisma.$queryRaw`
       SELECT c."id",c."description",c."active",c."createdAt",c."updatedAt",
         COUNT(t."id") FILTER (WHERE t."type"='OTHER_EXPENSE')::int AS "usageCount"
       FROM "ManagementExpenseCategory" c
       LEFT JOIN "StoreTransaction" t ON t."companyId"=${companyId} AND t."expenseCategoryId"=c."id"
-      WHERE c."companyId"=${companyId}
+      WHERE c."companyId"=${companyId} AND (${!operator} OR c."active"=true)
       GROUP BY c."id"
       ORDER BY c."active" DESC,c."description"`;
     res.json({items:rows.map(r=>({...r,usageCount:Number(r.usageCount||0)}))});
   }catch(error){next(error)}
 });
 
-router.post("/",async(req,res,next)=>{
+router.post("/",requireManageAccess,async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureSchema();const body=bodySchema.parse(req.body||{});
     const exists=await prisma.$queryRaw`SELECT "id" FROM "ManagementExpenseCategory" WHERE "companyId"=${companyId} AND LOWER("description")=LOWER(${body.description}) LIMIT 1`;
@@ -61,7 +64,7 @@ router.post("/",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
-router.patch("/:id",async(req,res,next)=>{
+router.patch("/:id",requireManageAccess,async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureSchema();const body=bodySchema.parse(req.body||{});
     const duplicate=await prisma.$queryRaw`SELECT "id" FROM "ManagementExpenseCategory" WHERE "companyId"=${companyId} AND "id"<>${req.params.id} AND LOWER("description")=LOWER(${body.description}) LIMIT 1`;
@@ -71,7 +74,7 @@ router.patch("/:id",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
-router.delete("/:id",async(req,res,next)=>{
+router.delete("/:id",requireManageAccess,async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;await ensureSchema();
     const count=await prisma.$executeRaw`UPDATE "ManagementExpenseCategory" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.id} AND "companyId"=${companyId}`;
