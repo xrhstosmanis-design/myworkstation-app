@@ -3,14 +3,24 @@ import fs from "node:fs";
 const serverPath=new URL("../src/routes/platform-invoice-learning-ai.js",import.meta.url);
 let server=fs.readFileSync(serverPath,"utf8");
 
-const normalizeAnchor='function normalizeAzure(payload,ocrRows=[]){';
-if(!server.includes(normalizeAnchor))throw new Error("Azure normalize anchor missing.");
-const start=server.indexOf('function supplierAzureProfile(')>=0?server.indexOf('function supplierAzureProfile('):server.indexOf('function parseAzureGreekProductRow(');
-const end=start>=0?server.indexOf('\nfunction normalizeAzure(payload,ocrRows=[]){',start):-1;
+// The Azure+AI-only patch runs BEFORE this script and changes
+// normalizeAzure(payload,ocrRows=[]) -> normalizeAzure(payload).
+// Accept either form so Render clean builds are deterministic.
+const normalizeAnchor=server.includes('function normalizeAzure(payload){')
+  ? 'function normalizeAzure(payload){'
+  : server.includes('function normalizeAzure(payload,ocrRows=[]){')
+    ? 'function normalizeAzure(payload,ocrRows=[]){'
+    : null;
+if(!normalizeAnchor)throw new Error("Azure normalize anchor missing.");
+
+const start=server.indexOf('function supplierAzureProfile(')>=0
+  ? server.indexOf('function supplierAzureProfile(')
+  : server.indexOf('function parseAzureGreekProductRow(');
+const end=start>=0?server.indexOf(`\n${normalizeAnchor}`,start):-1;
 
 const helper=`function supplierAzureProfile(supplierName="",supplierTaxId=""){
   const name=norm(supplierName),tax=String(supplierTaxId||"").replace(/\\D/g,"");
-  // Supplier-specific quirks only. Universal rules stay limited to mathematical validation.
+  // Supplier-specific quirks only. Universal rules remain mathematical validation.
   return {leadingDecimalPrice:/ΜΑΡΟΣ|MAROS/.test(name)};
 }
 function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
@@ -27,12 +37,18 @@ function parseAzureGreekProductRow(content="",quantityHint=0,profile={}){
   return {quantity:best.quantity,unitPrice:money4(best.unitPrice),initialAmount:money4(best.initialAmount),discount1,discount2:0,discount3:0,netAmount,vatRate,grossAmount:netAmount>0?money4(netAmount*(1+vatRate/100)):0,unit:"ΤΜΧ",mathValidated:true,markerRecovered:markerBroken,supplierProfileApplied:Boolean(profile.leadingDecimalPrice)};
 }
 `;
-if(start>=0&&end>start)server=server.slice(0,start)+helper+server.slice(end+1);else server=server.replace(normalizeAnchor,helper+'\n'+normalizeAnchor);
+
+if(start>=0&&end>start)server=server.slice(0,start)+helper+server.slice(end+1);
+else server=server.replace(normalizeAnchor,helper+'\n'+normalizeAnchor);
 
 const originalNumeric='    const quantity=Math.max(0,numberField(p.Quantity));const unitPrice=Math.max(0,numberField(p.UnitPrice));const netAmount=Math.max(0,numberField(p.Amount));const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,numberField(p.TaxRate));if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
 const patchedNumeric='    const azureQuantity=Math.max(0,numberField(p.Quantity));\n    const azureSupplierProfile=supplierAzureProfile(textField(f.VendorName)||textField(f.VendorAddressRecipient),textField(f.VendorTaxId));\n    const rowFallback=parseAzureGreekProductRow(item?.content||"",azureQuantity,azureSupplierProfile);\n    const quantity=Math.max(0,rowFallback?.quantity||azureQuantity||0);\n    let unitPrice=Math.max(0,rowFallback?.unitPrice||numberField(p.UnitPrice)||0);\n    let netAmount=Math.max(0,rowFallback?.netAmount||numberField(p.Amount)||0);\n    const tax=Math.max(0,numberField(p.Tax));\n    let vatRate=Math.max(0,rowFallback?.vatRate||numberField(p.TaxRate)||0);if(![0,6,13,24].includes(Math.round(vatRate)))vatRate=0;else vatRate=Math.round(vatRate);';
-if(server.includes(originalNumeric))server=server.replace(originalNumeric,patchedNumeric);else if(!server.includes('parseAzureGreekProductRow(item?.content||"",azureQuantity,azureSupplierProfile)'))throw new Error("Azure numeric block unknown.");
+if(server.includes(originalNumeric))server=server.replace(originalNumeric,patchedNumeric);
+else if(!server.includes('parseAzureGreekProductRow(item?.content||"",azureQuantity,azureSupplierProfile)'))throw new Error("Azure numeric block unknown.");
+
 const originalDiscount='    const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;';
 const patchedDiscount='    const verifiedAzureDiscounts=discounts.length&&discountsReconcile(discounts,unitPrice,quantity,netAmount)?discounts:[];\n    const discount1=rowFallback?.mathValidated?rowFallback.discount1:(verifiedAzureDiscounts[0]||0),discount2=rowFallback?.mathValidated?rowFallback.discount2:(verifiedAzureDiscounts[1]||0),discount3=rowFallback?.mathValidated?rowFallback.discount3:(verifiedAzureDiscounts[2]||0);';
 if(server.includes(originalDiscount))server=server.replace(originalDiscount,patchedDiscount);
-fs.writeFileSync(serverPath,server,"utf8");console.log("Invoice Learning patched safely: universal math + supplier-scoped parsing quirks.");
+
+fs.writeFileSync(serverPath,server,"utf8");
+console.log("Invoice Learning patched: Azure-only clean build + supplier-scoped parsing quirks.");
