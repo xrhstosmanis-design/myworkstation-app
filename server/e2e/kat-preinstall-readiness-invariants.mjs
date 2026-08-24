@@ -8,6 +8,7 @@ const packageJson=read("package.json");
 const serverPackage=read("server/package.json");
 const observerInstaller=read("tools/windows-rbs-observer/Install-Observer.ps1");
 const observer=read("tools/windows-rbs-observer/Observer.ps1");
+const windowsPreflight=read("tools/windows-kat-preflight/Preflight-KAT.ps1");
 const backupVerify=read("server/src/patch-pilot-backup-verify.js");
 
 for(const flow of [
@@ -19,7 +20,8 @@ for(const flow of [
   "kat-pos-regression-flow.mjs",
   "multi-pos-shift-isolation-flow.mjs",
   "kat-online-ordering-flow.mjs",
-  "kat-preparation-milk-stock-flow.mjs"
+  "kat-preparation-milk-stock-flow.mjs",
+  "kat-windows-preflight-source-invariants.mjs"
 ]) assert.ok(ci.includes(flow),`CI is missing required KAT gate: ${flow}`);
 
 for(const patch of [
@@ -41,6 +43,10 @@ assert.match(observerInstaller,/robocopy/);
 assert.match(observer,/pending-metadata/);
 assert.match(observer,/payloadHash/);
 assert.doesNotMatch(observer,/Invoke-Expression|Start-Process\s+[^\n]*Kiosk|Remove-Item\s+[^\n]*(?:_km|Kiosk Manager|CapDriverService|capture)/i);
+
+assert.match(windowsPreflight,/SOFTWARE PREFLIGHT READY/);
+assert.match(windowsPreflight,/\/api\/health/);
+assert.doesNotMatch(windowsPreflight,/Remove-Item|Set-Service|Stop-Service|Start-Service|schtasks\.exe\s+\/Create|reg\.exe\s+add|Invoke-Expression/i);
 
 assert.match(backupVerify,/DRY_RUN_ONLY/);
 assert.match(backupVerify,/mutatedDatabase:false/);
