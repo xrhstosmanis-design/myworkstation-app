@@ -50,6 +50,16 @@ jobs:
         run: npm run build
       - name: Verify KAT production preparation invariants
         run: node server/e2e/kat-preparation-source-invariants.mjs
+      - name: Verify KAT Windows observer safety invariants
+        run: node server/e2e/kat-windows-observer-source-invariants.mjs
+      - name: Verify KAT Windows pilot preflight safety invariants
+        run: node server/e2e/kat-windows-preflight-source-invariants.mjs
+      - name: Verify KAT backup restore safety invariants
+        run: node server/e2e/pilot-backup-restore-source-invariants.mjs
+      - name: Verify KAT safe vault adjustment invariants
+        run: node server/e2e/kat-safe-vault-adjustment-invariants.mjs
+      - name: Verify KAT aggregate pre-install readiness
+        run: node server/e2e/kat-preinstall-readiness-invariants.mjs
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server
