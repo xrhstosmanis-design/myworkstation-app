@@ -70,14 +70,24 @@ function recoverUnitPriceFromRow(content,quantity,netAmount,description,supplier
 
 function recoverNetAmountFromRow(content,quantity,unitPrice,currentAmount,description,supplierItemCode){
   const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),current=Math.max(0,Number(currentAmount||0));
-  if(!(q>0&&price>0))return current;
-  const before=q*price,tolerance=Math.max(.08,before*.05);
-  if(current>0&&current<=before+tolerance&&current>=before*.15)return current;
+  if(!(q>0&&price>0))return {amount:current,source:"NO_MATH",safe:false};
+  const before=money4(q*price),tol=Math.max(.06,before*.025);
+  if(current>0&&current<=before+tol&&current>=before*.5)return {amount:money4(current),source:"AZURE",safe:true};
   const tail=rowTail(content,description,supplierItemCode);
-  const decimals=[...tail.matchAll(/-?\d+(?:[.,]\d+)?/g)].map(m=>({raw:m[0],n:Number(m[0].replace(",","."))})).filter(x=>Number.isFinite(x.n)&&x.n>0&&/[.,]/.test(x.raw));
-  const plausible=decimals.filter(x=>x.n<=before+Math.max(.08,before*.03)&&x.n>=before*.15);
-  if(!plausible.length)return current;
-  return money4(plausible[plausible.length-1].n);
+  const values=[...tail.matchAll(/-?\d+(?:[.,]\d+)?/g)].map(m=>({raw:m[0],n:Number(m[0].replace(",","."))})).filter(x=>Number.isFinite(x.n)&&x.n>0&&/[.,]/.test(x.raw));
+  const candidates=[];
+  for(const x of values){
+    if(Math.abs(x.n-price)<=Math.max(.01,price*.01))continue;
+    if(x.n>before+tol||x.n<before*.5)continue;
+    const inferred=(1-x.n/before)*100;
+    if(inferred>=-.5&&inferred<=60)candidates.push({amount:x.n,inferred,score:Math.abs(inferred-Math.round(inferred))});
+  }
+  if(candidates.length){
+    candidates.sort((a,b)=>a.score-b.score||b.amount-a.amount);
+    const best=candidates[0];
+    return {amount:money4(best.amount),source:"ROW",safe:true};
+  }
+  return {amount:before,source:"MATH_NO_DISCOUNT",safe:true,needsReview:true};
 }
 
 function recoverDiscountsFromMath(content,quantity,unitPrice,netAmount){
@@ -86,14 +96,14 @@ function recoverDiscountsFromMath(content,quantity,unitPrice,netAmount){
   const before=q*price;
   if(amount>=before-Math.max(.02,before*.005))return [];
   const inferred=(1-amount/before)*100;
-  if(!(inferred>.05&&inferred<80))return [];
+  if(!(inferred>.05&&inferred<60))return [];
   const raw=String(content||"").replace(/\s+/g," ");
   const numbers=[...raw.matchAll(/-?\d+(?:[.,]\d+)?/g)].map(m=>Number(m[0].replace(",","."))).filter(Number.isFinite);
-  const candidates=numbers.filter(n=>n>.05&&n<80&&Math.abs(n-inferred)<=Math.max(.4,inferred*.04));
+  const candidates=numbers.filter(n=>n>.05&&n<60&&Math.abs(n-inferred)<=Math.max(.35,inferred*.03));
   let discount=candidates.length?candidates.sort((a,b)=>Math.abs(a-inferred)-Math.abs(b-inferred))[0]:inferred;
-  const nearestInteger=Math.round(discount);if(Math.abs(discount-nearestInteger)<=.35)discount=nearestInteger;else discount=Math.round(discount*100)/100;
+  const nearestInteger=Math.round(discount);if(Math.abs(discount-nearestInteger)<=.25)discount=nearestInteger;else discount=Math.round(discount*100)/100;
   const expected=before*(1-discount/100);
-  if(Math.abs(expected-amount)>Math.max(.06,amount*.035))return [];
+  if(Math.abs(expected-amount)>Math.max(.05,amount*.02))return [];
   return [discount];
 }
 
@@ -102,7 +112,7 @@ function discountsReconcile(discounts,quantity,unitPrice,netAmount){
   const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),amount=Math.max(0,Number(netAmount||0));
   if(!(q>0&&price>0&&amount>0))return true;
   const expected=q*applyDiscounts(price,discounts);
-  return Math.abs(expected-amount)<=Math.max(.06,amount*.035);
+  return Math.abs(expected-amount)<=Math.max(.05,amount*.02);
 }
 
 async function callAzure(fileData,mimeType){
@@ -135,7 +145,8 @@ function normalizeAzure(payload){
     let unitPrice=Math.max(0,numberField(p.UnitPrice));
     if(!unitPrice)unitPrice=recoverUnitPriceFromRow(item?.content,quantity,netAmount,description,supplierItemCode);
     const originalNetAmount=netAmount;
-    netAmount=recoverNetAmountFromRow(item?.content,quantity,unitPrice,netAmount,description,supplierItemCode);
+    const netRecovery=recoverNetAmountFromRow(item?.content,quantity,unitPrice,netAmount,description,supplierItemCode);
+    netAmount=netRecovery.amount;
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.round(Math.max(0,numberField(p.TaxRate)));if(![0,6,13,24].includes(vatRate))vatRate=0;
     let discounts=explicitDiscounts(p);
@@ -143,9 +154,14 @@ function normalizeAzure(payload){
     if(!discounts.length)discounts=recoverDiscountsFromMath(item?.content,quantity,unitPrice,netAmount);
     const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
     const netUnitCost=unitPrice>0?applyDiscounts(unitPrice,discounts):(quantity>0&&netAmount>0?money4(netAmount/quantity):0);
+    const mathematicallyValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
+    if(!mathematicallyValid&&quantity>0&&unitPrice>0){
+      netAmount=money4(quantity*netUnitCost);
+    }
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
-    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.06,netAmount*.035):false};
+    const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
+    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)};
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
