@@ -50,6 +50,8 @@ jobs:
         run: npm run build
       - name: Verify KAT production preparation invariants
         run: node server/e2e/kat-preparation-source-invariants.mjs
+      - name: Verify KAT Windows observer safety invariants
+        run: node server/e2e/kat-windows-observer-source-invariants.mjs
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server
