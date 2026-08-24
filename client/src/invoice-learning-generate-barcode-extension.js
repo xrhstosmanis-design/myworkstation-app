@@ -23,7 +23,7 @@ if(window.location.pathname.replace(/\/+$/,'')===LAB_PATH){
   async function makeInternalBarcode(){
     const used=await existingBarcodes();
     for(let i=0;i<30;i++){
-      const base='9999'+random8(); // MyWorkStation internal series, 12 digits before EAN-13 checksum
+      const base='9999'+random8();
       const ean=base+checksum12(base);
       if(!used.has(ean))return ean;
     }
@@ -31,7 +31,7 @@ if(window.location.pathname.replace(/\/+$/,'')===LAB_PATH){
   }
   function install(modal){
     if(!modal||modal.dataset.mwsBarcodeGenerator==='1')return;
-    const input=modal.querySelector('[data-barcode]');
+    const input=modal.querySelector('[data-f="barcode"], [data-barcode]');
     if(!input)return;
     modal.dataset.mwsBarcodeGenerator='1';
     const wrap=document.createElement('div');
