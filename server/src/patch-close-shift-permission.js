@@ -27,6 +27,11 @@ patch("./routes/store-pos-catalog.js",[
 
 patch("./routes/cash-control.js",[
   {
+    label:"async cash middleware",
+    from:'function requireCashAccess(req,res,next){',
+    to:'async function requireCashAccess(req,res,next){'
+  },
+  {
     label:"server close authorization",
     from:'if(req.method==="POST"&&/\\/sessions\\/[^/]+\\/close$/.test(path)){\n    if(permissions.includes("CASH_CONTROL"))return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Εμφάνιση κεντρικού Ταμείου (PoS)» από το BackOffice."});\n  }',
     to:'if(req.method==="POST"&&/\\/sessions\\/[^/]+\\/close$/.test(path)){\n    const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",\'{}\'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;\n    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};\n    if(profile.closeShift===true)return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο βάρδιας (PoS)» από το BackOffice."});\n  }'
