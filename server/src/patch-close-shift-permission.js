@@ -38,8 +38,8 @@ patch("./routes/cash-control.js",[
   }
 ]);
 
-// Keep the real HTTP E2E flows aligned with the dedicated BackOffice permissions.
-// These files run after this startup patch, so CI validates the same rules production uses.
+const katShiftPermissions='cash:true,cards:true,initialCash:true,closeShift:true,centralCashPos:false,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true';
+
 patch("../e2e/operator-shift-close-audit-flow.mjs",[
   {
     label:"shift-close E2E operator permissions",
@@ -56,4 +56,13 @@ patch("../e2e/live-operator-permissions-flow.mjs",[
   }
 ]);
 
-console.log("Dedicated close shift permission exposed, enforced and covered by E2E.");
+for(const [file,label,from] of [
+  ["../e2e/kat-pos-regression-flow.mjs","KAT POS regression permissions",'body:profileBody({cash:true,cards:true,returnItems:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})'],
+  ["../e2e/kat-online-ordering-flow.mjs","KAT online ordering permissions",'body:operatorProfile({cash:true,cards:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})'],
+  ["../e2e/kat-preparation-milk-stock-flow.mjs","KAT milk/preparation permissions",'body:profileBody({cash:true,cards:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})']
+]){
+  const prefix=from.slice(0,from.indexOf('({')+2);
+  patch(file,[{label,from,to:`${prefix}{${label.includes('POS regression')?`${katShiftPermissions},returnItems:true`:katShiftPermissions}})`}]);
+}
+
+console.log("Dedicated close shift permission exposed, enforced and covered by KAT E2E.");
