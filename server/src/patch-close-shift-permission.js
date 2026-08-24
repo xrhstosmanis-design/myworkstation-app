@@ -38,4 +38,22 @@ patch("./routes/cash-control.js",[
   }
 ]);
 
-console.log("Dedicated close shift permission exposed and enforced.");
+// Keep the real HTTP E2E flows aligned with the dedicated BackOffice permissions.
+// These files run after this startup patch, so CI validates the same rules production uses.
+patch("../e2e/operator-shift-close-audit-flow.mjs",[
+  {
+    label:"shift-close E2E operator permissions",
+    from:'body:profileBody({cash:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true})',
+    to:'body:profileBody({cash:true,initialCash:true,closeShift:true,centralCashPos:false,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true})'
+  }
+]);
+
+patch("../e2e/live-operator-permissions-flow.mjs",[
+  {
+    label:"live-permissions E2E initial cash",
+    from:'const initialPermissions={cash:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true};',
+    to:'const initialPermissions={cash:true,initialCash:true,closeShift:false,centralCashPos:false,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true};'
+  }
+]);
+
+console.log("Dedicated close shift permission exposed, enforced and covered by E2E.");
