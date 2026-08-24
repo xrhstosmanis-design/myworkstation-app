@@ -19,12 +19,13 @@ function setSingleFile(input,file){
 function queueHost(modal){
   let host=modal.querySelector('[data-invoice-multi-queue]');
   if(host)return host;
-  const panel=modal.querySelector('[data-invoice-status]')?.parentElement;
+  const status=modal.querySelector('[data-invoice-status]');
+  const panel=status?.parentElement;
   if(!panel)return null;
   host=document.createElement('div');
   host.dataset.invoiceMultiQueue='1';
   host.style.cssText='margin-top:8px;padding:9px 10px;border:1px solid #b7cfe0;border-radius:8px;background:#fff;color:#143f61;font-size:12px';
-  panel.querySelector('[data-invoice-status]')?.after(host);
+  status.after(host);
   return host;
 }
 
@@ -40,11 +41,12 @@ function renderQueue(modal){
 
 function feedNext(modal){
   if(!modal||!queueState.files.length)return false;
+  const inputReady=modal.querySelector('[data-pdf-file]')&&modal.querySelector('[data-image-file]');
+  if(!inputReady)return false;
   const file=queueState.files.shift();
   queueState.active=file;
   renderQueue(modal);
-  const input=fileInputFor(modal,file);
-  return setSingleFile(input,file);
+  return setSingleFile(fileInputFor(modal,file),file);
 }
 
 function rememberSelection(modal,input){
@@ -64,16 +66,19 @@ function rememberSelection(modal,input){
 }
 
 function install(modal){
-  if(!modal||modal.dataset.multiInvoiceQueueInstalled)return;
+  if(!modal)return false;
   const form=modal.querySelector('form[data-new-order]');
-  if(!form)return;
-  modal.dataset.multiInvoiceQueueInstalled='1';
   const pdf=modal.querySelector('[data-pdf-file]');
   const image=modal.querySelector('[data-image-file]');
-  if(pdf)rememberSelection(modal,pdf);
-  if(image)rememberSelection(modal,image);
+  const status=modal.querySelector('[data-invoice-status]');
+  if(!form||!pdf||!image||!status)return false;
+
+  rememberSelection(modal,pdf);
+  rememberSelection(modal,image);
+  modal.dataset.multiInvoiceQueueInstalled='1';
   renderQueue(modal);
-  if(!queueState.active&&queueState.files.length)setTimeout(()=>feedNext(modal),150);
+
+  if(!queueState.active&&queueState.files.length)setTimeout(()=>feedNext(modal),120);
 
   const create=modal.querySelector('[data-create-invoice]');
   if(create&&!create.dataset.multiQueueInstalled){
@@ -82,11 +87,11 @@ function install(modal){
       const current=queueState.active;
       if(!current)return;
       setTimeout(()=>{
-        const stillHere=document.documentElement.contains(modal);
-        if(!stillHere){queueState.active=null;}
+        if(!document.documentElement.contains(modal))queueState.active=null;
       },900);
     },true);
   }
+  return true;
 }
 
 function scan(){
@@ -96,8 +101,15 @@ function scan(){
   });
 }
 
+let scheduled=false;
+function scheduleScan(){
+  if(scheduled)return;
+  scheduled=true;
+  requestAnimationFrame(()=>{scheduled=false;scan();});
+}
+
 new MutationObserver(()=>{
-  scan();
+  scheduleScan();
   const modal=[...document.querySelectorAll('.po-modal')].find(m=>/Νέα παραγγελία/i.test(m.querySelector('.po-modal-title h2')?.textContent||''));
   if(modal&&!queueState.active&&queueState.files.length)setTimeout(()=>feedNext(modal),180);
 }).observe(document.documentElement,{childList:true,subtree:true});
