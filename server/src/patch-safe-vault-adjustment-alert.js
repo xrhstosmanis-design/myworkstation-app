@@ -16,7 +16,15 @@ const schemaOld='const openSchema=z.object({shiftLabel:z.string().trim().min(2).
 const schemaNew='const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});';
 if(src.includes(schemaOld)) src=src.replace(schemaOld,schemaNew);
 
-const routePattern=/  const operational=body\.drawer\+body\.custody\+body\.coins;\n  const lastClosedRows=await prisma\.\$queryRaw`SELECT "nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=\$\{store\.id\} AND "companyId"=\$\{req\.user\.companyId\} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;\n  const expectedOpening=[\s\S]*?\n  res\.status\(201\)\.json\(normalize\(rows\[0\]\)\);/;
+const startAnchor='  const operational=body.drawer+body.custody+body.coins;';
+const endAnchor='  res.status(201).json(normalize(rows[0]));';
+const start=src.indexOf(startAnchor);
+const end=start>=0?src.indexOf(endAnchor,start):-1;
+if(start<0||end<0){
+  console.error("Safe vault patch route anchor not found; refusing unsafe partial patch.");
+  process.exit(1);
+}
+const endExclusive=end+endAnchor.length;
 
 const newBlock=`  // ${marker}
   const operational=body.drawer+body.custody+body.coins; // ΧΡΗΜΑΤΟΚΙΒΩΤΙΟ ΔΕΝ ΜΕΤΡΑΕΙ ΣΤΟ ΛΕΙΤΟΥΡΓΙΚΟ ΤΑΜΕΙΟ
@@ -57,10 +65,6 @@ const newBlock=`  // ${marker}
   }
   res.status(201).json({...normalize(rows[0]),safeChange});`;
 
-if(!routePattern.test(src)){
-  console.error("Safe vault patch route anchor not found; refusing unsafe partial patch.");
-  process.exit(1);
-}
-src=src.replace(routePattern,newBlock);
+src=src.slice(0,start)+newBlock+src.slice(endExclusive);
 fs.writeFileSync(path,src);
 console.log("Safe vault adjustment tracking and decrease alert installed.");
