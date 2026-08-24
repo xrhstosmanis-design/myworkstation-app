@@ -32,6 +32,11 @@ patch("./routes/cash-control.js",[
     to:'async function requireCashAccess(req,res,next){'
   },
   {
+    label:"server open authorization",
+    from:'if(req.method==="POST"&&/\\/stores\\/[^/]+\\/sessions\\/open$/.test(path)){\n    if(permissions.includes("INITIAL_CASH"))return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «με αρχικό Ταμείο» από το BackOffice."});\n  }',
+    to:'if(req.method==="POST"&&/\\/stores\\/[^/]+\\/sessions\\/open$/.test(path)){\n    const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",\'{}\'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;\n    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};\n    if(profile.initialCash===true)return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «με αρχικό Ταμείο» από το BackOffice."});\n  }'
+  },
+  {
     label:"server close authorization",
     from:'if(req.method==="POST"&&/\\/sessions\\/[^/]+\\/close$/.test(path)){\n    if(permissions.includes("CASH_CONTROL"))return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Εμφάνιση κεντρικού Ταμείου (PoS)» από το BackOffice."});\n  }',
     to:'if(req.method==="POST"&&/\\/sessions\\/[^/]+\\/close$/.test(path)){\n    const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",\'{}\'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;\n    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};\n    if(profile.closeShift===true)return next();\n    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο βάρδιας (PoS)» από το BackOffice."});\n  }'
@@ -78,4 +83,4 @@ patch("../e2e/kat-preparation-milk-stock-flow.mjs",[
   }
 ]);
 
-console.log("Dedicated close shift permission exposed, enforced and covered by KAT E2E.");
+console.log("Dedicated close shift and initial cash permissions exposed, enforced and covered by KAT E2E.");
