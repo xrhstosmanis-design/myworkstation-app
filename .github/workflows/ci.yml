@@ -54,6 +54,8 @@ jobs:
         run: node server/e2e/kat-windows-observer-source-invariants.mjs
       - name: Verify KAT backup restore safety invariants
         run: node server/e2e/pilot-backup-restore-source-invariants.mjs
+      - name: Verify KAT aggregate pre-install readiness
+        run: node server/e2e/kat-preinstall-readiness-invariants.mjs
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server
