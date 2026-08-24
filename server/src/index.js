@@ -101,7 +101,6 @@ import { ensureSupplierItemLearningSchema } from "./supplier-item-learning-boots
 import { ensureKatPreparationCleanup } from "./kat-preparation-cleanup.js";
 import { ensureKatPreparationSeed } from "./kat-preparation-bootstrap.js";
 import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.js";
-import { ensureNetlinkSchema } from "./netlink-bootstrap.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -195,5 +194,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureNetlinkSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
