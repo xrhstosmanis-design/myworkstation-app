@@ -68,6 +68,10 @@ async function main(){
   assert.equal(open2.payload.terminalPos,"POS-2");
   assert.notEqual(open1.payload.id,open2.payload.id);
 
+  const crossTerminalClose=await request(`/api/cash/sessions/${open2.payload.id}/close`,{method:"POST",token:pos1.token,body:{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:30,custody:0,coins:0,safe:0,note:"must be denied"}});
+  assert.equal(crossTerminalClose.response.status,403,"POS-1 was allowed to close POS-2 shift");
+  assert.match(String(crossTerminalClose.payload?.error||""),/άλλου POS/);
+
   const duplicate=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,body:{shiftLabel:"duplicate POS-1",drawer:20,custody:0,coins:0,safe:0}});
   assert.equal(duplicate.response.status,409,"Same POS accepted two simultaneous open shifts");
 
@@ -109,7 +113,7 @@ async function main(){
   const sessions=await prisma.$queryRaw`SELECT "terminalPos","status","cashSales" FROM "CashShiftSession" WHERE "id" IN (${open1.payload.id},${open2.payload.id}) ORDER BY "terminalPos"`;
   assert.deepEqual(sessions.map(x=>[x.terminalPos,x.status,Number(x.cashSales)]),[["POS-1","CLOSED",2.2],["POS-2","CLOSED",4.4]]);
 
-  console.log("KAT P1 multiple POS shift isolation passed",{stock:7,pos1Cash:2.2,pos2Cash:4.4});
+  console.log("KAT P1 multiple POS shift isolation passed",{stock:7,pos1Cash:2.2,pos2Cash:4.4,crossTerminalClose:"blocked"});
 }
 
 try{await main()}finally{await prisma.$disconnect()}
