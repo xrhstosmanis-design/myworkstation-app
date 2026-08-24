@@ -65,6 +65,32 @@ function recoverUnitPriceFromRow(content,quantity,netAmount,description,supplier
   return decimals[0]?money4(decimals[0].n):0;
 }
 
+function recoverDiscountsFromMath(content,quantity,unitPrice,netAmount){
+  const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),amount=Math.max(0,Number(netAmount||0));
+  if(!(q>0&&price>0&&amount>0))return [];
+  const before=q*price;
+  if(amount>=before-Math.max(.02,before*.005))return [];
+  const inferred=(1-amount/before)*100;
+  if(!(inferred>.05&&inferred<80))return [];
+  const raw=String(content||"").replace(/\s+/g," ");
+  const numbers=[...raw.matchAll(/-?\d+(?:[.,]\d+)?/g)].map(m=>Number(m[0].replace(",","."))).filter(Number.isFinite);
+  const candidates=numbers.filter(n=>n>.05&&n<80&&Math.abs(n-inferred)<=Math.max(.4,inferred*.04));
+  let discount=candidates.length?candidates.sort((a,b)=>Math.abs(a-inferred)-Math.abs(b-inferred))[0]:inferred;
+  const nearestInteger=Math.round(discount);if(Math.abs(discount-nearestInteger)<=.35)discount=nearestInteger;
+  else discount=Math.round(discount*100)/100;
+  const expected=before*(1-discount/100);
+  if(Math.abs(expected-amount)>Math.max(.06,amount*.035))return [];
+  return [discount];
+}
+
+function discountsReconcile(discounts,quantity,unitPrice,netAmount){
+  if(!discounts.length)return false;
+  const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),amount=Math.max(0,Number(netAmount||0));
+  if(!(q>0&&price>0&&amount>0))return true;
+  const expected=q*applyDiscounts(price,discounts);
+  return Math.abs(expected-amount)<=Math.max(.06,amount*.035);
+}
+
 async function callAzure(fileData,mimeType){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
@@ -100,12 +126,14 @@ function normalizeAzure(payload){
     if(!unitPrice)unitPrice=recoverUnitPriceFromRow(item?.content,quantity,netAmount,description,supplierItemCode);
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.round(Math.max(0,numberField(p.TaxRate)));if(![0,6,13,24].includes(vatRate))vatRate=0;
-    const discounts=explicitDiscounts(p);
+    let discounts=explicitDiscounts(p);
+    if(discounts.length&&!discountsReconcile(discounts,quantity,unitPrice,netAmount))discounts=[];
+    if(!discounts.length)discounts=recoverDiscountsFromMath(item?.content,quantity,unitPrice,netAmount);
     const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
-    const netUnitCost=quantity>0&&netAmount>0?money4(netAmount/quantity):(unitPrice>0?applyDiscounts(unitPrice,discounts):0);
+    const netUnitCost=unitPrice>0?applyDiscounts(unitPrice,discounts):(quantity>0&&netAmount>0?money4(netAmount/quantity):0);
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
-    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0};
+    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.06,netAmount*.035):false};
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
