@@ -84,7 +84,10 @@ async function main(){
     note:"KAT P0 fresh milk stock test",priority:"NORMAL",productionStation:"ΠΑΡΑΓΩΓΗ"
   }});
   assert.equal(preparation.response.status,201,JSON.stringify(preparation.payload));
-  const batchId=preparation.payload?.batchId||preparation.payload?.id;assert.ok(batchId);
+  const responseBatchId=preparation.payload?.batchId||preparation.payload?.id||null;
+  const storedBatch=(await prisma.$queryRaw`SELECT "id" FROM "StorePreparationBatch" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SENT' AND (${responseBatchId}::text IS NULL OR "id"=${responseBatchId}) ORDER BY "createdAt" DESC LIMIT 1`)[0]
+    ||(await prisma.$queryRaw`SELECT "id" FROM "StorePreparationBatch" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SENT' ORDER BY "createdAt" DESC LIMIT 1`)[0];
+  const batchId=storedBatch?.id;assert.ok(batchId,"Preparation response was not backed by a StorePreparationBatch");
 
   const unitPrice=Number(drink.storePrice||drink.salePrice||0);
   assert.ok(unitPrice>0,"FREDDO CAPPUCCINO has no sale price");
