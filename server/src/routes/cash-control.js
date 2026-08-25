@@ -101,7 +101,7 @@ async function requireCashAccess(req,res,next){
 function assertStoreAccess(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
 async function ownedStore(storeId,companyId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
 async function requestTerminal(req){
-  const testTerminal=process.env.NODE_ENV==="test"?String(req.headers?.["x-mws-terminal-pos"]||"").trim():"";
+  const testTerminal=process.env.NODE_ENV==="test"?String(req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
     const liveTerminal=String(req.user?.terminalPos||"").trim();

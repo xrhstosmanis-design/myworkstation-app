@@ -12,10 +12,11 @@ const ownerPassword="ci-multi-pos-owner";
 const terminalByToken=new Map();
 
 async function request(path,{method="GET",token,body}={}){
+  const effectiveBody=body!==undefined&&terminalByToken.has(token)?{...body,terminalPos:terminalByToken.get(token)}:body;
   const response=await fetch(`${baseUrl}${path}`,{
     method,
-    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(terminalByToken.has(token)?{"x-mws-terminal-pos":terminalByToken.get(token)}:{}),...(body!==undefined?{"content-type":"application/json"}:{})},
-    body:body===undefined?undefined:JSON.stringify(body)
+    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(terminalByToken.has(token)?{"x-mws-terminal-pos":terminalByToken.get(token)}:{}),...(effectiveBody!==undefined?{"content-type":"application/json"}:{})},
+    body:effectiveBody===undefined?undefined:JSON.stringify(effectiveBody)
   });
   let payload=null;try{payload=await response.json()}catch{}
   return {response,payload};
