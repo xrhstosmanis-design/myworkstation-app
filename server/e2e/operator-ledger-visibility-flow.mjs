@@ -59,7 +59,7 @@ async function main(){
 
   const employeeA=await createOperator(ownerToken,{name:"E2E Ledger Operator A",username:"e2e.ledger.a",pin:"3579"});
   const employeeB=await createOperator(ownerToken,{name:"E2E Ledger Operator B",username:"e2e.ledger.b",pin:"4680"});
-  const ownOnly={cash:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:false};
+  const ownOnly={cash:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,thirdPartyPayment:true,sameShiftPayments:false};
   await setProfile(ownerToken,employeeA,"E2E Ledger Operator A","e2e.ledger.a",ownOnly);
   await setProfile(ownerToken,employeeB,"E2E Ledger Operator B","e2e.ledger.b",ownOnly);
 
