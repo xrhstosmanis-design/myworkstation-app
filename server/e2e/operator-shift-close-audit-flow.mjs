@@ -50,7 +50,7 @@ async function main(){
   assert.equal(created.response.status,201,JSON.stringify(created.payload));
   const employeeId=created.payload.employeeId;
   const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{
-    method:"PATCH",token:ownerToken,body:profileBody({cash:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,thirdPartyPayment:true,sameShiftPayments:true})
+    method:"PATCH",token:ownerToken,body:profileBody({cash:true,initialCash:true,closeShift:true,centralCashPos:false,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,thirdPartyPayment:true,sameShiftPayments:true})
   });
   assert.equal(changed.response.status,200,JSON.stringify(changed.payload));
 
