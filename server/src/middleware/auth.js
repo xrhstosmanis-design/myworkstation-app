@@ -10,7 +10,7 @@ function storeRuntimePermissions(profile){
   if(rights.cards)permissions.push("POS_CARDS");
   if(rights.initialCash)permissions.push("INITIAL_CASH");
   if(p.permissions?.shiftTransactionsPos)permissions.push("STORE_LEDGER");
-  if(p.permissions?.allShiftTransactionsPos){permissions.push("STORE_LEDGER","STORE_LEDGER_REVIEW","TRANSACTION_REVERSAL")}
+  if(p.permissions?.allShiftTransactionsPos)permissions.push("STORE_LEDGER","STORE_LEDGER_REVIEW");
   if(p.permissions?.supplierPayment)permissions.push("SUPPLIER_PAYMENT");
   if(rights.thirdPartyPayment)permissions.push("THIRD_PARTY_PAYMENT");
   if(rights.transferAmount)permissions.push("TRANSFER_AMOUNT");
