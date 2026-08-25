@@ -92,4 +92,22 @@ patch("./routes/store-pos-pilot-actions.js",[
   }
 ]);
 
+patch("./routes/store-pos.js",[
+  {
+    label:"checkout terminal resolver",
+    from:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}',
+    to:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}\n'+terminalHelper
+  },
+  {
+    label:"checkout terminal context",
+    from:'assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),body=checkoutSchema.parse(req.body||{})',
+    to:'assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),terminalPos=await requestTerminal(req),body=checkoutSchema.parse(req.body||{})'
+  },
+  {
+    label:"checkout terminal shift",
+    from:'WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE',
+    to:'WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE'
+  }
+]);
+
 console.log("Multi-POS shift isolation patch completed.");
