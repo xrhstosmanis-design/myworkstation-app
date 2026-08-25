@@ -33,7 +33,7 @@ Legacy PR: #210
 ## CI / PR #231 diagnostic checkpoint — 2026-08-25
 - PR #231 είναι `open`, `draft`, `merged=false`.
 - Head branch: `agent/netlink-staging-current-main`.
-- Head SHA που απέτυχε: `3d05bb6567a44c5c3318817b51f0b1b397c6a3fc`.
+- Head SHA που απέτυχε αρχικά: `3d05bb6567a44c5c3318817b51f0b1b397c6a3fc`.
 - GitHub Actions run: `32779516528` / MyWorkStation CI run #647.
 - Αποτυχία αποκλειστικά στο step: **Run security and licensing tests** (`npm test -w server`).
 - Build, KAT production invariants και E2E δεν έτρεξαν επειδή κόπηκε νωρίτερα το server test suite.
@@ -47,14 +47,19 @@ Legacy PR: #210
 - Το `NETLINK_PREPAID` στο `module-catalog.js` είναι `commercialReady:false` και `requiresTechnicalActivation:true`.
 - Άρα μέχρι εδώ **δεν πειράζουμε κανένα security/licensing/fiscal guard**.
 
-## Σημαντικό branch drift
-- Το PR #231 ξεκίνησε από base SHA `544f26aadbb0f069f65ca427b30980376456d2da`.
-- Το σημερινό `main` έχει προχωρήσει στο `64e2206b45dc3b1945b79f95bf584934c41b0ba1`.
-- Πριν γίνει οποιοδήποτε test-fix πρέπει να αξιολογηθεί/γίνει ασφαλής συγχρονισμός με το σημερινό `main`, ώστε να μη διορθωθεί regression πάνω σε παλιά βάση.
+## Main sync ολοκληρώθηκε — 2026-08-25
+- Πριν το sync δημιουργήθηκε ασφαλές backup branch: `backup/pr231-before-main-sync-2026-08-25` στο SHA `7a6f853a30e9bddf8cedf8ce2e135809e843599e`.
+- Το `main` ήταν στο SHA `64e2206b45dc3b1945b79f95bf584934c41b0ba1`.
+- Ο έλεγχος compare έδειξε diverged branches αλλά οι νέες αλλαγές του `main` δεν αφορούσαν τα βασικά Netlink αρχεία.
+- Δημιουργήθηκε merge-tree πάνω στο σημερινό `main` και διατηρήθηκαν ακριβώς τα 6 αρχεία του PR #231.
+- Νέο sync commit: `e2e312fbb78cb4719e40456fcce9ab92f8c1d081`.
+- Το branch `agent/netlink-staging-current-main` μετακινήθηκε με fast-forward στο παραπάνω commit.
+- Δεν έγινε merge του PR #231 στο `main`.
+- Δεν άλλαξε κανένα authentication/licensing/fiscal/production safety gate.
 
 ## Επόμενο ακριβές βήμα — ΜΗΝ ΞΑΝΑΚΑΝΕΙΣ ΤΑ ΠΑΡΑΠΑΝΩ
-1. Συγχρόνισε το branch `agent/netlink-staging-current-main` με το τωρινό `main` χωρίς merge του PR.
-2. Ξανατρέξε/επιβεβαίωσε `npm test -w server` στο νέο head.
-3. Εντόπισε το πρώτο πραγματικό failing test/assertion από το νέο CI.
-4. Κάνε μόνο τη μικρότερη ασφαλή διόρθωση πάνω σε αυτό.
-5. Μετά γράψε νέο checkpoint με failing test, root cause, commit SHA και CI αποτέλεσμα.
+1. Έλεγξε το CI του νέου head μετά το main sync.
+2. Εντόπισε το πρώτο πραγματικό failing test/assertion από `npm test -w server`.
+3. Κάνε μόνο τη μικρότερη ασφαλή διόρθωση πάνω σε αυτό.
+4. Ξανατρέξε CI.
+5. Γράψε νέο checkpoint με failing test, root cause, commit SHA και CI αποτέλεσμα.
