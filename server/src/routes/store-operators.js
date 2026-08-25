@@ -170,7 +170,7 @@ function operatorToken(row,sessionId){
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
     operatorSessionId:sessionId,
-    terminalPos:row.terminalPos||null,
+    terminalPos:row.terminalPos||row.terminalpos||null,
     permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
 }

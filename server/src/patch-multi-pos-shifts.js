@@ -16,7 +16,7 @@ const terminalHelper=`async function requestTerminal(req){
     const liveTerminal=String(req.user?.terminalPos||"").trim();
     if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
     const rows=await prisma.$queryRaw\`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=\${req.user.companyId} AND p."storeId"=\${req.user.storeId} AND p."employeeId"=\${req.user.employeeId} LIMIT 1\`;
-    return String(rows[0]?.terminalPos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+    return String(rows[0]?.terminalPos||rows[0]?.terminalpos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
   }
   return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
 }`;

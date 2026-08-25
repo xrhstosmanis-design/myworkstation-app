@@ -135,7 +135,7 @@ export async function auth(req,res,next){
       if(!enforceStorePosPermissions(req,res,permissions))return;
       exposeStorePosRuntimeAccess(req,res,rights);
       req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
-      req.user.terminalPos=operator.terminalPos||payload.terminalPos||null;
+      req.user.terminalPos=operator.terminalPos||operator.terminalpos||payload.terminalPos||payload.terminalpos||null;
       return next();
     }
 
