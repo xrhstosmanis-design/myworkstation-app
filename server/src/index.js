@@ -8,7 +8,7 @@ import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
 import katOnlineOrderingRoutes from "./routes/kat-online-ordering.js";
 import katOnlineOrderingModifierRoutes from "./routes/kat-online-ordering-modifiers.js";
-import cashControlRoutes from "./routes/cash-control.js";
+import cashControlRoutes,{ensureCashControlSchema} from "./routes/cash-control.js";
 import storeOperatorRoutes from "./routes/store-operators.js";
 import operatorManagementV2Routes from "./routes/operator-management-v2.js";
 import managementCategoriesRoutes from "./routes/management-categories.js";
@@ -192,5 +192,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
