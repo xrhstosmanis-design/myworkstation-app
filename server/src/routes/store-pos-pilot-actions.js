@@ -18,7 +18,7 @@ async function ensureTables(){if(ready)return ready;ready=(async()=>{
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosSaleActionAudit_store_created_idx" ON "PosSaleActionAudit"("storeId","createdAt" DESC)`);
 })();return ready}
 async function requestTerminal(req){
-  const testTerminal=process.env.NODE_ENV==="test"?String(req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
+  const testTerminal=process.env.MWS_E2E_TERMINAL_OVERRIDE==="1"?String(req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
     const liveTerminal=String(req.user?.terminalPos||"").trim();
