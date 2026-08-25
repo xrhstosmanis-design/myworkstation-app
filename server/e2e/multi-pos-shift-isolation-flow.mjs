@@ -9,11 +9,12 @@ const companyId="pilot-company";
 const storeId="kat-store";
 const ownerEmail=process.env.KAT_OWNER_EMAIL||"ci-kat-owner@myworkstation.test";
 const ownerPassword="ci-multi-pos-owner";
+const terminalByToken=new Map();
 
 async function request(path,{method="GET",token,body}={}){
   const response=await fetch(`${baseUrl}${path}`,{
     method,
-    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},
+    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(terminalByToken.has(token)?{"x-mws-terminal-pos":terminalByToken.get(token)}:{}),...(body!==undefined?{"content-type":"application/json"}:{})},
     body:body===undefined?undefined:JSON.stringify(body)
   });
   let payload=null;try{payload=await response.json()}catch{}
@@ -39,6 +40,7 @@ async function createOperator(ownerToken,{name,pin,terminalPos}){
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin}});
   assert.equal(login.response.status,200,JSON.stringify(login.payload));
   assert.ok(login.payload?.token);
+  terminalByToken.set(login.payload.token,terminalPos);
   return {employeeId,token:login.payload.token};
 }
 

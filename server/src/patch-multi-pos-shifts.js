@@ -12,6 +12,8 @@ const patch=(relativePath,changes)=>{
 };
 
 const terminalHelper=`async function requestTerminal(req){
+  const testTerminal=process.env.NODE_ENV==="test"?String(req.headers?.["x-mws-terminal-pos"]||"").trim():"";
+  if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
     const liveTerminal=String(req.user?.terminalPos||"").trim();
     if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
