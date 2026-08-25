@@ -105,7 +105,14 @@ function route(handler){
 function requireLedgerAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const permissions=req.user?.permissions||[];
-  const operator=req.user?.tokenType==="STORE_OPERATOR"&&(permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL"));
+  const actionPermission=req.method==="POST"&&(
+    permissions.includes("SUPPLIER_PAYMENT")||
+    permissions.includes("THIRD_PARTY_PAYMENT")||
+    permissions.includes("TRANSFER_AMOUNT")
+  );
+  const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
+  );
   if(!backoffice&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
 }

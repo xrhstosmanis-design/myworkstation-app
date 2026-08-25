@@ -21,9 +21,6 @@ function storeRuntimePermissions(profile){
   if(rights.editDescription)permissions.push("EDIT_DESCRIPTION");
   if(rights.customersPos)permissions.push("CUSTOMERS_POS");
   if(rights.onlineBarcode)permissions.push("ONLINE_PRODUCT_SEARCH");
-  // Payment/transfer actions need the ledger endpoint for their own entry and lookups,
-  // but STORE_LEDGER_REVIEW is still reserved for the explicit all-shift permission.
-  if((rights.supplierPayment||rights.thirdPartyPayment||rights.transferAmount)&&!permissions.includes("STORE_LEDGER"))permissions.push("STORE_LEDGER");
   return [...new Set(permissions)];
 }
 
