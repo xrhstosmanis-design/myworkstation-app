@@ -34,6 +34,8 @@ async function createOperator(ownerToken,{name,pin,terminalPos}){
   const employeeId=created.payload.employeeId;
   const profile=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:profileBody(name,terminalPos)});
   assert.equal(profile.response.status,200,JSON.stringify(profile.payload));
+  const terminalRows=await prisma.$executeRaw`UPDATE "StoreOperatorProfile" SET "terminalPos"=${terminalPos},"updatedAt"=NOW() WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId}`;
+  assert.equal(terminalRows,1,"Multi-POS fixture did not persist the operator terminal assignment");
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin}});
   assert.equal(login.response.status,200,JSON.stringify(login.payload));
   assert.ok(login.payload?.token);
