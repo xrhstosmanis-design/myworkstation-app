@@ -68,7 +68,7 @@ async function main(){
   const created=await request(`/api/operator-management/stores/${storeId}/operators`,{method:"POST",token:ownerToken,body:{username:"e2e.kat.online",fullName:"E2E KAT Online",email:"",phone:"",role:"EMPLOYEE",active:true,pin:operatorPin}});
   assert.equal(created.response.status,201,JSON.stringify(created.payload));
   const employeeId=created.payload.employeeId;
-  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:operatorProfile({cash:true,cards:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
+  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:operatorProfile({cash:true,cards:true,changeRetail:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
   assert.equal(changed.response.status,200,JSON.stringify(changed.payload));
 
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin:operatorPin}});
