@@ -28,6 +28,11 @@ test("super admin receives all-store reports by Greek date, POS and shift",()=>{
   assert.match(platformUi,/Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια/);
   assert.match(platform,/stores:\[\.\.\.byStore\.values\(\)\]/);
   assert.match(platformUi,/Συνολικό έλλειμμα/);
+  assert.match(platform,/fromTime/);
+  assert.match(platform,/toTime/);
+  assert.match(platformUi,/Ώρα από/);
+  assert.match(platformUi,/Ώρα έως/);
+  assert.match(platformUi,/athensTime\(row\.closedAt\)/);
 });
 
 test("super admin exports shortages for a selected date range and optional store",()=>{
