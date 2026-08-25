@@ -24,11 +24,15 @@ export async function ensurePurchaseOrderSchema(){
         "createdByUserId" TEXT,
         "createdByName" TEXT,
         "updatedByName" TEXT,
+        "sourceType" TEXT,
+        "sourceDocumentId" TEXT,
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "finalizedAt" TIMESTAMPTZ,
         "invoicedAt" TIMESTAMPTZ
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceType" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceDocumentId" TEXT`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_company_date_idx" ON "PurchaseOrder" ("companyId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_store_idx" ON "PurchaseOrder" ("storeId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_supplier_idx" ON "PurchaseOrder" ("supplierId","createdAt" DESC)`);
