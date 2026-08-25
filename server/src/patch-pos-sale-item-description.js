@@ -2,19 +2,21 @@ import fs from "fs";
 
 const path=new URL("./routes/store-pos.js",import.meta.url);
 let src=fs.readFileSync(path,"utf8");
-const marker="KAT_POS_SALE_ITEM_DESCRIPTION_V1";
+const marker="KAT_POS_SALE_ITEM_DESCRIPTION_V2";
 if(src.includes(marker)){
   console.log("POS sale item description patch already installed.");
   process.exit(0);
 }
 
-const anchor='      for(const payment of payments)await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},${payment.method},${money(payment.amount)})`;';
-const replacement=anchor+'\n      // '+marker+'\n      const itemSummary=items.map(item=>`${Number(item.quantity||0).toLocaleString("el-GR")}× ${item.name}`).join(" + ");';
-if(!src.includes(anchor)){
-  console.error("POS sale item summary anchor not found; refusing unsafe partial patch.");
+const cashNeedle='if(cashAmount>0)await tx.$executeRaw`INSERT INTO "StoreTransaction"';
+const cashIndex=src.indexOf(cashNeedle);
+if(cashIndex<0){
+  console.error("POS cash StoreTransaction anchor not found; refusing unsafe partial patch.");
   process.exit(1);
 }
-src=src.replace(anchor,replacement);
+const lineStart=src.lastIndexOf("\n",cashIndex)+1;
+const insertion='      // '+marker+'\n      const itemSummary=items.map(item=>`${Number(item.quantity||0).toLocaleString("el-GR")}× ${item.name}`).join(" + ");\n';
+src=src.slice(0,lineStart)+insertion+src.slice(lineStart);
 
 const cashOld='${`POS πώληση ${saleId} · ΜΕΤΡΗΤΑ`}';
 const cashNew='${`POS πώληση ${saleId} · ${itemSummary} · ΜΕΤΡΗΤΑ`}';
