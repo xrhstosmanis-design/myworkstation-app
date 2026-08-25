@@ -38,7 +38,7 @@ export default function OnlineOrdersBackofficePanel({api}){
         const stores=Array.isArray(data?.stores)?data.stores:[];
         setManagedStores(stores);
         const realKat=stores.find(store=>store.id!==TEST_STORE_ID&&/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||"")));
-        const preferred=realKat||stores.find(store=>store.id===TEST_STORE_ID)||stores[0]||null;
+        const preferred=realKat||stores.find(store=>store.id!==TEST_STORE_ID)||null;
         setStoreId(preferred?.id||"");
         if(!preferred)setError("Δεν βρέθηκε κατάστημα με Online Παραγγελίες.");
       })
@@ -82,7 +82,7 @@ export default function OnlineOrdersBackofficePanel({api}){
     </div>
 
     <div className="online-bo-toolbar">
-      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)} disabled={storeLoading||!managedStores.length}>{storeLoading?<option value="">Φόρτωση…</option>:managedStores.map(store=><option key={store.id} value={store.id}>{store.id===TEST_STORE_ID?"TEST · Online Παραγγελίες":store.name}</option>)}</select></label>
+      <label>Κατάστημα<select value={storeId} onChange={e=>setStoreId(e.target.value)} disabled={storeLoading||!managedStores.length}>{storeLoading?<option value="">Φόρτωση…</option>:managedStores.filter(store=>store.id!==TEST_STORE_ID).map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
       <label>Κατάσταση<select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Όλες</option><option value="NEW">Νέες</option><option value="ACCEPTED">Αποδοχή</option><option value="PREPARING">Ετοιμάζεται</option><option value="READY">Έτοιμη</option><option value="OUT_FOR_DELIVERY">Delivery</option><option value="DELIVERED">Παραδόθηκε</option><option value="CANCELLED">Ακυρώθηκε</option></select></label>
       <label className="online-bo-search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Αρ. παραγγελίας, πελάτης, τηλέφωνο…"/></label>
     </div>

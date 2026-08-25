@@ -76,7 +76,6 @@ import masterCatalogRoutes from "./routes/master-catalog.js";
 import masterCatalogMaintenanceRoutes from "./routes/master-catalog-maintenance.js";
 import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-online-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
-import katTestRoutes from "./routes/kat-test.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
 import licenseRoutes from "./routes/license.js";
@@ -115,7 +114,6 @@ app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoute
 app.use("/api/platform/master-catalog",masterCatalogPreviewRoutes);
 app.use("/api/platform/master-catalog",masterCatalogMaintenanceRoutes);
 app.use("/api/platform/master-catalog",masterCatalogRoutes);
-app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform/mail",mailRoutes);
