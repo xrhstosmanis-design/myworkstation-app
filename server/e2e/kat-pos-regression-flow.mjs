@@ -75,7 +75,7 @@ async function main(){
   assert.equal(Number(stock?.currentStock),17,"Card sale did not reduce stock");
 
   const cancelled=await request(`/api/store-pos/stores/${storeId}/sales/${cashSaleId}/reverse`,{method:"POST",token,body:{kind:"CANCEL",reason:"KAT P0 automated cancellation"}});
-  assert.equal(cancelled.response.status,200,JSON.stringify(cancelled.payload));
+  assert.equal(cancelled.response.status,201,JSON.stringify(cancelled.payload));
 
   stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];
   assert.equal(Number(stock?.currentStock),19,"Cancellation did not restore stock");
