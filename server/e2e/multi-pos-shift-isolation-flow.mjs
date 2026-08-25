@@ -14,7 +14,8 @@ const terminalByToken=new Map();
 async function request(path,{method="GET",token,terminalPos,body}={}){
   const resolvedTerminal=terminalPos||terminalByToken.get(token)||null;
   const effectiveBody=body!==undefined&&resolvedTerminal?{...body,terminalPos:resolvedTerminal}:body;
-  const response=await fetch(`${baseUrl}${path}`,{
+  const targetPath=resolvedTerminal?`${path}${path.includes("?")?"&":"?"}mwsTerminal=${encodeURIComponent(resolvedTerminal)}`:path;
+  const response=await fetch(`${baseUrl}${targetPath}`,{
     method,
     headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(resolvedTerminal?{"x-mws-terminal-pos":resolvedTerminal}:{}),...(effectiveBody!==undefined?{"content-type":"application/json"}:{})},
     body:effectiveBody===undefined?undefined:JSON.stringify(effectiveBody)

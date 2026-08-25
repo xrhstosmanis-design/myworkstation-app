@@ -12,7 +12,7 @@ const patch=(relativePath,changes)=>{
 };
 
 const terminalHelper=`async function requestTerminal(req){
-  const testTerminal=process.env.CI==="true"?String(req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
+  const testTerminal=process.env.CI==="true"?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
     const liveTerminal=String(req.user?.terminalPos||"").trim();
@@ -42,7 +42,7 @@ patch("./routes/cash-control.js",[
   {
     label:"terminal-scoped shift open",
     from:'  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{});\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});',
-    to:'  assertStoreAccess(req,req.params.storeId);const requestedTerminal=process.env.CI==="true"?String(req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"",store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||await requestTerminal(req);\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});'
+    to:'  assertStoreAccess(req,req.params.storeId);const requestedTerminal=process.env.CI==="true"?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"",store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||await requestTerminal(req);\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});'
   },
   {
     label:"terminal opening continuity",
