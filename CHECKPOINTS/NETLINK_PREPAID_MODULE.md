@@ -74,3 +74,25 @@ Legacy PR: #210
 4. Μην αλλάξεις authentication/licensing/fiscal/production safety gates.
 5. Μην κάνεις merge χωρίς ρητή έγκριση.
 6. Γράψε νέο checkpoint με failing test, root cause, commit SHA και CI αποτέλεσμα.
+
+## CI ολοκληρώθηκε — έτοιμο για staging δοκιμή (2026-08-25)
+- Τελικό ελεγμένο head: `62190056a49c03947a929b078150d573b30a8c53`.
+- GitHub Actions: **CI #701**, run `32849034816` — `success`.
+- Πέρασαν security/licensing tests, build, όλα τα KAT safety invariants, isolated E2E database και όλα τα real HTTP E2E flows.
+- Τοπικό server regression suite: **629/629 PASS**.
+- Η multi-POS λογιστική κίνηση απομονώνεται πλέον στο σωστό `terminalPos`.
+- Η canonical preparation route προηγείται της legacy route: η αποστολή στην παραγωγή δεν αφαιρεί stock και η κατανάλωση γίνεται μία φορά μετά το ολοκληρωμένο checkout.
+- Η Online παραγγελία ολοκληρώνεται μόνο με την προστατευμένη ροή `READY → POS checkout → verified POS handoff → DELIVERED`.
+- Το PR #231 παραμένει draft/open/unmerged.
+- Το Netlink route παραμένει ακριβώς πίσω από `auth + requireCompanyModule("NETLINK_PREPAID")`.
+- Δεν χαλάρωσε κανένα licensing, authentication ή fiscal/production safety gate.
+
+## Επόμενο ακριβές βήμα — staging TEST MODE
+1. Ρύθμισε τα Netlink staging secrets στο staging environment, με `NETLINK_TEST_MODE=true` και `NETLINK_ENABLE_EXECUTE=false`.
+2. Εφάρμοσε τις versioned Prisma migrations στο staging database.
+3. Κάνε deploy το head του PR #231 σε staging, όχι σε production.
+4. Επιβεβαίωσε authentication και ανάκτηση `/menu` χωρίς έκδοση κάρτας/PIN.
+5. Μόνο μετά το PASS των παραπάνω, ενεργοποίησε προσωρινά `NETLINK_ENABLE_EXECUTE=true` στο staging και εκτέλεσε μία ελεγχόμενη TEST MODE συναλλαγή.
+6. Επιβεβαίωσε ότι δημιουργήθηκαν μία `NetlinkTransaction`, μία κανονική `Sale`, οι σωστές γραμμές κάρτας/παροχής και ότι ο τζίρος μετρήθηκε μία φορά.
+7. Επανέφερε αμέσως `NETLINK_ENABLE_EXECUTE=false` μετά τη δοκιμή.
+8. Μην κάνεις merge ή production ενεργοποίηση χωρίς ρητή έγκριση.
