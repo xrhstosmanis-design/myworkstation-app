@@ -85,6 +85,13 @@ async function main(){
   assert.equal(Number(ledger.payload.summary?.cashSales||0),0,"Cancelled cash sale still affects shift cash total");
   assert.equal(Number(ledger.payload.summary?.cardSales||0),2.5,"Active card sale missing from shift total");
 
+  const today=new Date().toISOString().slice(0,10);
+  const audit=await request(`/api/reports/audit-events?from=${today}&to=${today}&storeId=${storeId}`,{token:ownerToken});
+  assert.equal(audit.response.status,200,JSON.stringify(audit.payload));
+  const cancelAudit=(audit.payload?.items||[]).find(r=>r.eventType==="POS_CANCEL"||(/^POS\s+ΑΚΥΡΩΣΗ\b/i.test(String(r.description||""))&&Number(r.amount)<0));
+  assert.ok(cancelAudit,"POS cancellation is missing from central BackOffice audit");
+  assert.ok(Number(cancelAudit.amount)<0,"POS cancellation audit amount must be negative");
+
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token,body:{cashSales:999,cardSales:999,eftposTotal:2.5,expenses:999,drawer:50,custody:0,coins:0,safe:0,note:"KAT P0 regression close"}});
   assert.equal(closed.response.status,200,JSON.stringify(closed.payload));
   assert.equal(Number(closed.payload.cashSales),0);
@@ -92,7 +99,7 @@ async function main(){
   assert.equal(Number(closed.payload.eftposTotal),2.5);
   assert.equal(Number(closed.payload.variance),0);
 
-  console.log("KAT P0 POS regression passed",{sessionId,cashSaleId,cardSaleId,stockAfterCancel:19,cashSales:0,cardSales:2.5});
+  console.log("KAT P0 POS regression passed",{sessionId,cashSaleId,cardSaleId,stockAfterCancel:19,cashSales:0,cardSales:2.5,cancelAuditId:cancelAudit.id});
 }
 
 try{await main()}finally{await prisma.$disconnect()}
