@@ -12,6 +12,7 @@ const tableStatements = [
     "id" TEXT PRIMARY KEY,
     "companyId" TEXT NOT NULL,
     "storeId" TEXT NOT NULL,
+    "terminalPos" TEXT NOT NULL DEFAULT 'MAIN',
     "status" TEXT NOT NULL DEFAULT 'OPEN',
     "shiftLabel" TEXT NOT NULL DEFAULT 'Βάρδια',
     "openedBy" TEXT NOT NULL,
@@ -52,7 +53,9 @@ const tableStatements = [
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_store_idx" ON "CashShiftSession" ("storeId") WHERE "status"='OPEN'`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT NOT NULL DEFAULT 'MAIN'`,
+  `DROP INDEX IF EXISTS "CashShiftSession_one_open_per_store_idx"`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_terminal_idx" ON "CashShiftSession" ("storeId","terminalPos") WHERE "status"='OPEN'`,
   `CREATE INDEX IF NOT EXISTS "CashShiftSession_store_opened_idx" ON "CashShiftSession" ("storeId", "openedAt" DESC)`,
   `CREATE TABLE IF NOT EXISTS "CashControlStoreRule" (
     "storeId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"mode" TEXT NOT NULL DEFAULT 'FULL',
@@ -73,13 +76,19 @@ const tableStatements = [
     "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "reversedAt" TIMESTAMPTZ,"reversedBy" TEXT,"reversedByName" TEXT,"reversalReason" TEXT
   )`,
-  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentData" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
 ];
 
 async function ensureTables(){
   if(!tablesPromise){tablesPromise=(async()=>{for(const sql of tableStatements)await prisma.$executeRawUnsafe(sql)})().catch(error=>{tablesPromise=undefined;throw error})}
   return tablesPromise;
 }
+
+export async function ensureCashControlSchema(){return ensureTables()}
 
 function requireCashAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
