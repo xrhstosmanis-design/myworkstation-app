@@ -157,13 +157,13 @@ app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsRoutes
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveImportRoutes);
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
 app.use("/api/inventory-ledger",auth,requireOwnerProductAccess,inventoryProductLedgerRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
-app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
