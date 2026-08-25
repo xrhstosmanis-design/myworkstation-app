@@ -23,9 +23,9 @@ test("transaction creation takes a key-share lock on the same open shift",()=>{
   assert.match(createRoute,/FROM "CashShiftSession" shift[\s\S]*shift\."status"='OPEN'[\s\S]*FOR KEY SHARE OF shift[\s\S]*RETURNING \*/);
 });
 
-test("email remains outside the database transaction and only follows a committed close",()=>{
+test("manual email status only follows a committed close",()=>{
   const transactionEnd=closeRoute.indexOf("});",closeRoute.indexOf("prisma.$transaction"));
   const conflict=closeRoute.indexOf("if(!closeResult)");
-  const email=closeRoute.indexOf("sendCashShiftClosedEmail");
+  const email=closeRoute.indexOf("MANUAL_SEND_REQUIRED");
   assert.ok(transactionEnd>=0&&conflict>transactionEnd&&email>conflict);
 });
