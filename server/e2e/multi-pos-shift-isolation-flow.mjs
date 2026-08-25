@@ -11,11 +11,12 @@ const ownerEmail=process.env.KAT_OWNER_EMAIL||"ci-kat-owner@myworkstation.test";
 const ownerPassword="ci-multi-pos-owner";
 const terminalByToken=new Map();
 
-async function request(path,{method="GET",token,body}={}){
-  const effectiveBody=body!==undefined&&terminalByToken.has(token)?{...body,terminalPos:terminalByToken.get(token)}:body;
+async function request(path,{method="GET",token,terminalPos,body}={}){
+  const resolvedTerminal=terminalPos||terminalByToken.get(token)||null;
+  const effectiveBody=body!==undefined&&resolvedTerminal?{...body,terminalPos:resolvedTerminal}:body;
   const response=await fetch(`${baseUrl}${path}`,{
     method,
-    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(terminalByToken.has(token)?{"x-mws-terminal-pos":terminalByToken.get(token)}:{}),...(effectiveBody!==undefined?{"content-type":"application/json"}:{})},
+    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(resolvedTerminal?{"x-mws-terminal-pos":resolvedTerminal}:{}),...(effectiveBody!==undefined?{"content-type":"application/json"}:{})},
     body:effectiveBody===undefined?undefined:JSON.stringify(effectiveBody)
   });
   let payload=null;try{payload=await response.json()}catch{}
@@ -64,11 +65,11 @@ async function main(){
   const pos1=await createOperator(ownerToken,{name:"E2E POS One",pin:"7311",terminalPos:"POS-1"});
   const pos2=await createOperator(ownerToken,{name:"E2E POS Two",pin:"7312",terminalPos:"POS-2"});
 
-  const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
+  const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,terminalPos:"POS-1",body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open1.response.status,201,JSON.stringify(open1.payload));
   assert.equal(open1.payload.terminalPos,"POS-1");
 
-  const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
+  const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,terminalPos:"POS-2",body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open2.response.status,201,JSON.stringify(open2.payload));
   assert.equal(open2.payload.terminalPos,"POS-2");
   assert.notEqual(open1.payload.id,open2.payload.id);
