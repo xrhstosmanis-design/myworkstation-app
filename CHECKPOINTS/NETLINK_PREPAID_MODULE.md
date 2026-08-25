@@ -57,9 +57,20 @@ Legacy PR: #210
 - Δεν έγινε merge του PR #231 στο `main`.
 - Δεν άλλαξε κανένα authentication/licensing/fiscal/production safety gate.
 
+## Αρχιτεκτονική αλλαγή storage — 2026-08-25
+- Αποφασίστηκε να μην δημιουργούνται πλέον Netlink tables/indexes κατά την εκτέλεση HTTP requests.
+- Προστέθηκε versioned Prisma migration: `server/prisma/migrations/20260825130500_netlink_prepaid_storage/migration.sql`.
+- Η migration είναι idempotent (`IF NOT EXISTS`) ώστε staging περιβάλλον που είχε ήδη δεχτεί το προσωρινό runtime bootstrap να διατηρήσει τα δεδομένα του.
+- Το `server/src/routes/netlink.js` δεν εισάγει ούτε καλεί πλέον `ensureNetlinkSchema()`.
+- Το προσωρινό `server/src/netlink-bootstrap.js` αφαιρέθηκε.
+- Το route guard στο `server/src/index.js` ΔΕΝ άλλαξε: `auth + requireCompanyModule("NETLINK_PREPAID")`.
+- Τα production fiscal gates και τα `NETLINK_TEST_MODE` / `NETLINK_ENABLE_EXECUTE` locks ΔΕΝ άλλαξαν.
+- Commits υλοποίησης: migration `2f4a999f3548d3aa4375e22252d77cb63ab3f8cf`, route cleanup `42dd66c470291c1d945a8c2d9f7494891c55fb43`, bootstrap removal `b73700db7a11d33df309882e24280b9a63a00e71`.
+
 ## Επόμενο ακριβές βήμα — ΜΗΝ ΞΑΝΑΚΑΝΕΙΣ ΤΑ ΠΑΡΑΠΑΝΩ
-1. Έλεγξε το CI του νέου head μετά το main sync.
-2. Εντόπισε το πρώτο πραγματικό failing test/assertion από `npm test -w server`.
+1. Έλεγξε το νέο CI του head μετά την αφαίρεση runtime DDL.
+2. Αν το `npm test -w server` αποτύχει, πάρε το πρώτο πραγματικό failing assertion από το job log.
 3. Κάνε μόνο τη μικρότερη ασφαλή διόρθωση πάνω σε αυτό.
-4. Ξανατρέξε CI.
-5. Γράψε νέο checkpoint με failing test, root cause, commit SHA και CI αποτέλεσμα.
+4. Μην αλλάξεις authentication/licensing/fiscal/production safety gates.
+5. Μην κάνεις merge χωρίς ρητή έγκριση.
+6. Γράψε νέο checkpoint με failing test, root cause, commit SHA και CI αποτέλεσμα.
