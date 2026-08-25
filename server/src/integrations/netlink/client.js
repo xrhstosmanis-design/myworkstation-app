@@ -16,7 +16,16 @@ async function parseResponse(response){
   let body=null;
   if(text){try{body=JSON.parse(text)}catch{body={raw:text}}}
   if(!response.ok){
-    const error=new Error(body?.error_description||body?.message||body?.error||`Netlink API HTTP ${response.status}`);
+    const providerMessage=value=>{
+      if(typeof value==="string"&&value.trim())return value.trim();
+      if(!value||typeof value!=="object")return null;
+      for(const key of ["error_description","message","detail","description","error"]){
+        const found=providerMessage(value[key]);
+        if(found)return found;
+      }
+      return null;
+    };
+    const error=new Error(providerMessage(body)||`Netlink API HTTP ${response.status}`);
     error.status=response.status>=500?502:400;
     error.code="NETLINK_API_ERROR";
     error.providerStatus=response.status;
