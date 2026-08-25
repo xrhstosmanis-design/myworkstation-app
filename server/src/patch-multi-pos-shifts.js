@@ -13,6 +13,8 @@ const patch=(relativePath,changes)=>{
 
 const terminalHelper=`async function requestTerminal(req){
   if(req.user?.tokenType==="STORE_OPERATOR"){
+    const liveTerminal=String(req.user?.terminalPos||"").trim();
+    if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
     const rows=await prisma.$queryRaw\`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=\${req.user.operatorId||req.user.id} AND c."companyId"=\${req.user.companyId} AND c."active"=TRUE LIMIT 1\`;
     return String(rows[0]?.terminalPos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
   }

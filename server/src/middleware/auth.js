@@ -102,6 +102,7 @@ export async function auth(req,res,next){
                os."expiresAt" AS "operatorSessionExpiresAt",
                os."revokedAt" AS "operatorSessionRevokedAt",
                COALESCE(p."posAccess",TRUE) AS "posAccess",
+               p."terminalPos" AS "terminalPos",
                COALESCE(p."permissions",'{}'::jsonb) AS "profilePermissions"
         FROM "StoreOperatorCredential" c
         JOIN "Employee" e ON e."id"=c."employeeId"
@@ -134,6 +135,7 @@ export async function auth(req,res,next){
       if(!enforceStorePosPermissions(req,res,permissions))return;
       exposeStorePosRuntimeAccess(req,res,rights);
       req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
+      req.user.terminalPos=operator.terminalPos||null;
       return next();
     }
 
