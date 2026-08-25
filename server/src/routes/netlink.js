@@ -2,7 +2,6 @@ import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {ensureNetlinkSchema} from "../netlink-bootstrap.js";
 import {netlinkClient} from "../integrations/netlink/client.js";
 
 const router=Router();
@@ -34,9 +33,6 @@ router.get("/status",async(req,res)=>{
   res.json({moduleKey:"NETLINK_PREPAID",configured:isMockProvider()||credentialsConfigured,provider:isMockProvider()?"MOCK":"NETLINK",executeEnabled:process.env.NETLINK_ENABLE_EXECUTE==="true",testMode:isTestMode(),fiscalGateRequired:!isTestMode(),commissionRate,serviceFeeAmount:defaultServiceFee});
 });
 router.get("/menu",async(req,res,next)=>{try{res.json(await netlinkClient().menu())}catch(error){next(error)}});
-
-const requireNetlinkStorage=async(req,res,next)=>{try{await ensureNetlinkSchema();next()}catch(error){next(error)}};
-router.use(["/stores","/prepare","/execute","/transactions","/settlement-summary"],requireNetlinkStorage);
 
 router.get("/stores/:storeId/config",async(req,res,next)=>{
   try{
