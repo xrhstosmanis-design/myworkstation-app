@@ -58,7 +58,7 @@ async function main(){
   const employeeId=created.payload.employeeId;
 
   const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{
-    method:"PATCH",token:ownerToken,body:profileBody({cash:true,cards:true,initialCash:true,closeShift:true,centralCashPos:false,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true})
+    method:"PATCH",token:ownerToken,body:profileBody({cash:true,cards:true,initialCash:true,closeShift:true,centralCashPos:false,changeRetail:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,supplierPayment:false,sameShiftPayments:true})
   });
   assert.equal(changed.response.status,200,JSON.stringify(changed.payload));
 
