@@ -596,7 +596,8 @@ router.post("/companies/:companyId/reset-owner-password",async(req,res,next)=>{
 router.get("/cash-control/daily",async(req,res,next)=>{
   try{
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-    const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(String(req.query.date||today));
+    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59")}).parse(req.query);
+    const {date,fromTime,toTime}=filters;
     const rows=await prisma.$queryRaw`
       SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
         s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
@@ -609,31 +610,35 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
       LEFT JOIN "StoreTransaction" t ON t."sessionId"=s."id" AND t."companyId"=s."companyId" AND t."storeId"=s."storeId"
       WHERE s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date
+        AND ((${fromTime}::time<=${toTime}::time AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
+          OR (${fromTime}::time>${toTime}::time AND ((s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
       GROUP BY c."id",c."name",st."id",st."name",s."id"
       ORDER BY c."name",st."name",s."openedAt"`;
     const normalized=rows.map(row=>({...row,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),cardVariance:Number(row.cardVariance||0),expenses:Number(row.expenses||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),variance:Number(row.variance||0),duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}));
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
-    res.json({date,timeZone:"Europe/Athens",rows:normalized,stores:[...byStore.values()],totals});
+    res.json({date,fromTime,toTime,timeZone:"Europe/Athens",rows:normalized,stores:[...byStore.values()],totals});
   }catch(error){next(error)}
 });
 
 router.get("/cash-control/shortages",async(req,res,next)=>{try{
-  const range=z.object({from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),storeId:z.string().trim().optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
+  const range=z.object({from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
   if(range.from>range.to)return res.status(422).json({error:"Η ημερομηνία Από πρέπει να είναι πριν από την ημερομηνία Έως."});
   const rows=await prisma.$queryRaw`
     SELECT c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",s."id" AS "sessionId",
-      (s."closedAt" AT TIME ZONE 'Europe/Athens')::date::text AS "date",s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."variance",s."cardVariance"
+      (s."closedAt" AT TIME ZONE 'Europe/Athens')::date::text AS "date",s."openedAt",s."closedAt",s."shiftLabel",s."terminalPos",s."openedByName",s."closedByName",s."variance",s."cardVariance"
     FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
     WHERE s."status"='CLOSED' AND s."variance"<0
       AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${range.from}::date AND ${range.to}::date
+      AND ((${range.fromTime}::time<=${range.toTime}::time AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${range.fromTime}::time AND ${range.toTime}::time)
+        OR (${range.fromTime}::time>${range.toTime}::time AND ((s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${range.fromTime}::time OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${range.toTime}::time)))
       AND (${range.storeId||null}::text IS NULL OR st."id"=${range.storeId||null})
       AND (${range.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${range.operator?`%${range.operator}%`:null})
     ORDER BY "date",c."name",st."name",s."openedAt"`;
   const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),shortage:Math.abs(Number(row.variance||0)),cardVariance:Number(row.cardVariance||0)}));
   const byOperator=new Map();for(const row of normalized){const name=row.openedByName||row.closedByName||"Χωρίς χειριστή";const current=byOperator.get(name)||{operatorName:name,shifts:0,shortage:0};current.shifts++;current.shortage+=row.shortage;byOperator.set(name,current)}
-  res.json({from:range.from,to:range.to,storeId:range.storeId||null,operator:range.operator||null,rows:normalized,operators:[...byOperator.values()],totalShortage:normalized.reduce((sum,row)=>sum+row.shortage,0),timeZone:"Europe/Athens"});
+  res.json({from:range.from,to:range.to,fromTime:range.fromTime,toTime:range.toTime,storeId:range.storeId||null,operator:range.operator||null,rows:normalized,operators:[...byOperator.values()],totalShortage:normalized.reduce((sum,row)=>sum+row.shortage,0),timeZone:"Europe/Athens"});
 }catch(error){next(error)}});
 
 async function cashReportEmailData(storeId,date){
