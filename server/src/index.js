@@ -29,7 +29,7 @@ import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
 import purchaseOrderUnresolvedGuardRoutes from "./routes/purchase-order-unresolved-guard.js";
 import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-guard.js";
-import purchaseOrderRoutes from "./routes/purchase-orders.js";
+import purchaseOrderRoutes,{ensurePurchaseOrderSchema} from "./routes/purchase-orders.js";
 import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
 import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
@@ -194,5 +194,5 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
