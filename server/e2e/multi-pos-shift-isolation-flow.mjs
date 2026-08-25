@@ -86,10 +86,10 @@ async function main(){
   const duplicate=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,body:{shiftLabel:"duplicate POS-1",drawer:20,custody:0,coins:0,safe:0}});
   assert.equal(duplicate.response.status,409,"Same POS accepted two simultaneous open shifts");
 
-  const sale1=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos1.token,body:{items:[{productId,quantity:1}],paymentMethod:"CASH",payments:[{method:"CASH",amount:2.2}],clientTransactionId:crypto.randomUUID()}});
+  const sale1=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos1.token,body:{items:[{productId,quantity:1}],paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()}});
   assert.equal(sale1.response.status,201,JSON.stringify(sale1.payload));
 
-  const sale2=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos2.token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",payments:[{method:"CASH",amount:4.4}],clientTransactionId:crypto.randomUUID()}});
+  const sale2=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos2.token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()}});
   assert.equal(sale2.response.status,201,JSON.stringify(sale2.payload));
 
   const stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];
