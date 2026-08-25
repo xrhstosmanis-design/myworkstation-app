@@ -81,10 +81,10 @@ function requireCashAccess(req,res,next){
     return res.status(403).json({error:"Δεν έχεις δικαίωμα «με αρχικό Ταμείο» από το BackOffice."});
   }
   if(req.method==="POST"&&/\/sessions\/[^/]+\/close$/.test(path)){
-    if(permissions.includes("CASH_CONTROL"))return next();
+    if(permissions?.includes("CASH_CONTROL"))return next();
     return res.status(403).json({error:"Δεν έχεις δικαίωμα «Εμφάνιση κεντρικού Ταμείου (PoS)» από το BackOffice."});
   }
-  if(permissions.includes("CASH_CONTROL"))return next();
+  if(permissions?.includes("CASH_CONTROL"))return next();
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
 }
 function assertStoreAccess(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
@@ -155,7 +155,9 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId"
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
-    const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id),expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses,actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
+    const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
+    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
+    const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),

@@ -58,7 +58,7 @@ function scan(){document.querySelectorAll(".kiosk-reports-suite").forEach(ensure
 export function installKioskReportsAuditV2(){
   if(window.__mwsKioskReportsAuditV2)return;window.__mwsKioskReportsAuditV2=true;
   scan();
-  const observer=new MutationObserver(scan);if(document.body)observer.observe(document.body,{childList:true,subtree:true});else window.addEventListener("DOMContentLoaded",()=>{scan();observer.observe(document.body,{childList:true,subtree:true})},{once:true});
+  if(!document.body)window.addEventListener("DOMContentLoaded",scan,{once:true});
   document.addEventListener("click",event=>{
     const root=event.target.closest(".kiosk-reports-suite");if(!root)return;ensureAuditTab(root);
     const tab=event.target.closest("[data-kr-tab]");

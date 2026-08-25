@@ -54,7 +54,7 @@ test("primary commercial actions are teal and semantic warning classes are not g
 test("theme normalization is loaded after every report bootstrap",()=>{
   const themeIndex=html.indexOf("theme-normalization-bootstrap.js");
   assert.ok(themeIndex>0);
-  for(const script of ["entry.jsx","report-audit-bootstrap.js","report-stock-bootstrap.js","report-sales-bootstrap.js","report-delivery-bootstrap.js"])
+  for(const script of ["entry-dispatch.js","report-audit-bootstrap.js","report-stock-bootstrap.js","report-sales-bootstrap.js","report-delivery-bootstrap.js"])
     assert.ok(html.indexOf(script)>=0&&html.indexOf(script)<themeIndex,script);
   assert.match(theme,/myworkstation-global-theme-normalization\.css/);
 });
