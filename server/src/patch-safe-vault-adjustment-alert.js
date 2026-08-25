@@ -2,7 +2,7 @@ import fs from "fs";
 
 const path=new URL("./routes/cash-control.js",import.meta.url);
 let src=fs.readFileSync(path,"utf8");
-const marker="KAT_SAFE_VAULT_ADJUSTMENT_ALERT_V1";
+const marker="KAT_SAFE_VAULT_ADJUSTMENT_ALERT_V2";
 if(src.includes(marker)){
   console.log("Safe vault adjustment alert patch already installed.");
   process.exit(0);
@@ -52,7 +52,8 @@ const newBlock=`  // ${marker}
     if(safeDelta<0){
       try{
         const owners=await prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}});
-        const recipients=[store.responsibleEmail,...owners.map(row=>row.email)].filter(Boolean);
+        const testRecipient=String(process.env.MAIL_TEST_RECIPIENT||"").trim();
+        const recipients=[...new Set([store.responsibleEmail,...owners.map(row=>row.email),testRecipient].map(value=>String(value||"").trim().toLowerCase()).filter(Boolean))];
         if(recipients.length){
           const now=new Date();
           const subject=\`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · \${store.name}\`;
