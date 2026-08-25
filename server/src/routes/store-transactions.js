@@ -43,6 +43,7 @@ const tableStatements=[
   )`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "openedByName" TEXT`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "closedByName" TEXT`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT NOT NULL DEFAULT 'MAIN'`,
   `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
     "id" TEXT PRIMARY KEY,
     "companyId" TEXT NOT NULL,
@@ -125,6 +126,15 @@ async function ownedStore(storeId,companyId){
   const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return store;
+}
+async function requestTerminal(req){
+  if(req.user?.tokenType==="STORE_OPERATOR"){
+    const liveTerminal=String(req.user?.terminalPos||"").trim();
+    if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
+    const rows=await prisma.$queryRaw`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${req.user.storeId} AND p."employeeId"=${req.user.employeeId} LIMIT 1`;
+    return String(rows[0]?.terminalPos||rows[0]?.terminalpos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+  }
+  return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
 }
 function normalize(row){
   if(!row)return null;
@@ -285,11 +295,11 @@ router.use(auth,requireLedgerAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
   const openRows=await prisma.$queryRaw`
-    SELECT "id","shiftLabel","openedAt","openedBy","openedByName"
+    SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos"
     FROM "CashShiftSession"
-    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN'
+    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN'
     ORDER BY "openedAt" DESC LIMIT 1
   `;
   const openSession=openRows[0]||null;
@@ -374,7 +384,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     }
   }
   const legacyAttachment=(legacyPayment||!isPayment)?parseAttachment(body.attachment):null;
-  const actorName=req.user.fullName||"Χρήστης";
+  const actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
   const subtractFromShift=isPayment
     ?(legacyPayment?Boolean(body.subtractFromShift):body.paymentSource==="CASH_SHIFT")
@@ -405,6 +415,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       FROM "CashShiftSession" shift
       WHERE shift."storeId"=${store.id}
         AND shift."companyId"=${req.user.companyId}
+        AND shift."terminalPos"=${terminalPos}
         AND shift."status"='OPEN'
       ORDER BY shift."openedAt" DESC
       LIMIT 1
