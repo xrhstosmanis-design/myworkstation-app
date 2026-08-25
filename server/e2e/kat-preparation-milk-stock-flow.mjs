@@ -90,7 +90,7 @@ async function main(){
   assert.ok(unitPrice>0,"FREDDO CAPPUCCINO has no sale price");
   const checkout=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{
     items:[{productId:drink.id,quantity:1,unitPriceOverride:unitPrice,overrideReason:`PREPARATION:${batchId}`}],
-    paymentMethod:"CASH",payments:[{method:"CASH",amount:unitPrice}],clientTransactionId:crypto.randomUUID()
+    paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()
   }});
   assert.equal(checkout.response.status,201,JSON.stringify(checkout.payload));
   const saleId=checkout.payload.id||checkout.payload.saleId;assert.ok(saleId);
