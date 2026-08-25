@@ -2,7 +2,7 @@ import fs from "fs";
 
 const path=new URL("./routes/store-pos.js",import.meta.url);
 let src=fs.readFileSync(path,"utf8");
-const marker="KAT_POS_SALE_ITEM_DESCRIPTION_V2";
+const marker="KAT_POS_SALE_ITEM_DESCRIPTION_V3";
 if(src.includes(marker)){
   console.log("POS sale item description patch already installed.");
   process.exit(0);
@@ -18,15 +18,15 @@ const lineStart=src.lastIndexOf("\n",cashIndex)+1;
 const insertion='      // '+marker+'\n      const itemSummary=items.map(item=>`${Number(item.quantity||0).toLocaleString("el-GR")}× ${item.name}`).join(" + ");\n';
 src=src.slice(0,lineStart)+insertion+src.slice(lineStart);
 
-const cashOld='${`POS πώληση ${saleId} · ΜΕΤΡΗΤΑ`}';
-const cashNew='${`POS πώληση ${saleId} · ${itemSummary} · ΜΕΤΡΗΤΑ`}';
-const cardOld='${`POS πώληση ${saleId} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`}';
-const cardNew='${`POS πώληση ${saleId} · ${itemSummary} · ΚΑΡΤΑ ${cardAmount.toFixed(2)} · IRIS ${irisAmount.toFixed(2)}`}';
-if(!src.includes(cashOld)||!src.includes(cardOld)){
-  console.error("POS sale description anchors not found; refusing unsafe partial patch.");
+// Runtime patches may change the payment suffix, so only anchor on the stable
+// sale-description prefix and preserve whatever CASH/CARD/IRIS text follows it.
+const stablePrefix='POS πώληση ${saleId}';
+const occurrences=src.split(stablePrefix).length-1;
+if(occurrences<2){
+  console.error(`POS sale description prefix found ${occurrences} time(s); refusing unsafe partial patch.`);
   process.exit(1);
 }
-src=src.replace(cashOld,cashNew).replace(cardOld,cardNew);
+src=src.replaceAll(stablePrefix,'POS πώληση ${saleId} · ${itemSummary}');
 
 fs.writeFileSync(path,src);
-console.log("POS sale transaction descriptions now include sold items.");
+console.log(`POS sale transaction descriptions now include sold items (${occurrences} descriptions patched).`);
