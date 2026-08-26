@@ -174,7 +174,7 @@ async function existingAuditTables(db){
 function legacyStoreRule(store){
   const name=String(store?.name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
   const differenceOnly=["ΕΣΤΙΑ","ΠΕΤΡΟΥΠΟΛΗ","ΓΑΛΑΤΣΙ"].some(label=>name.includes(label.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()));
-  return {mode:differenceOnly?"DIFFERENCE_ONLY":"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:!differenceOnly,posEftposEnabled:true,source:differenceOnly?"LEGACY_PROGRAM_RULE":"DEFAULT"};
+  return {mode:differenceOnly?"DIFFERENCE_ONLY":"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:!differenceOnly,posEftposEnabled:!differenceOnly,source:differenceOnly?"LEGACY_PROGRAM_RULE":"DEFAULT"};
 }
 async function cashControlRule(store,companyId){
   const rows=await prisma.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
@@ -225,7 +225,7 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
         AND c."status"='CLOSED' AND (c."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date
       ORDER BY t."occurredAt" ASC`
   ]);
-  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="DIFFERENCE_ONLY",effectiveVariance:rule.mode==="DIFFERENCE_ONLY"?0:money(session.variance)}}),expenseChecks=expenseRows.map(row=>{
+  const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}}),expenseChecks=expenseRows.map(row=>{
     const amount=money(row.amount),documentTotal=row.documentTotal==null?null:money(row.documentTotal);
     const status=!row.hasEvidence?"NO_DOCUMENT":documentTotal!=null&&Math.abs(amount-documentTotal)>0.01?"AMOUNT_MISMATCH":"MATCHED";
     return {...row,amount,documentTotal,status,difference:documentTotal==null?null:amount-documentTotal};
