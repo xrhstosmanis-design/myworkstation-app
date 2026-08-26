@@ -22,5 +22,6 @@ test("V07 is idempotent and stores no credentials",()=>{
   assert.match(source,/ON CONFLICT DO NOTHING/);
   assert.match(source,/capturedAutomatically/);
   assert.doesNotMatch(source,/captureVideoOperationalEvent[\s\S]*passwordEnc/);
+  // PostgreSQL prepared statements must receive one trigger DDL command at a time.
   assert.doesNotMatch(source,/DROP TRIGGER[^`]*;CREATE TRIGGER/);
 });
