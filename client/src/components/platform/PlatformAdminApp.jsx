@@ -3,6 +3,7 @@ import {AlertTriangle,Building2,CalendarDays,CheckCircle2,Download,ExternalLink,
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
+import ScreenRecorderControl from "../commerce/ScreenRecorderControl.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 
@@ -250,7 +251,7 @@ export default function PlatformAdminApp(){
   return <div className="platform-shell">
     <header className="platform-header">
       <div className="platform-brand"><div className="platform-logo">MW</div><div><b>MyWorkStation Platform Admin</b><span>Κεντρική εμπορική διαχείριση</span></div></div>
-      <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><a href="/"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
+      <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderControl contextLabel="MYWORKSTATION · PLATFORM ADMIN"/><a href="/"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
       <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
