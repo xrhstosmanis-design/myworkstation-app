@@ -96,3 +96,12 @@ Legacy PR: #210
 6. Επιβεβαίωσε ότι δημιουργήθηκαν μία `NetlinkTransaction`, μία κανονική `Sale`, οι σωστές γραμμές κάρτας/παροχής και ότι ο τζίρος μετρήθηκε μία φορά.
 7. Επανέφερε αμέσως `NETLINK_ENABLE_EXECUTE=false` μετά τη δοκιμή.
 8. Μην κάνεις merge ή production ενεργοποίηση χωρίς ρητή έγκριση.
+
+## Επιβεβαίωση συμβολαίου execute από Netlink — 2026-08-26
+- Η Netlink επιβεβαίωσε γραπτώς ότι για το προϊόν `164` η κλήση είναι `POST /164/execute`.
+- Το ακριβές body είναι `{ "requestId": "...", "payload": {} }`. Το `payload` πρέπει να ακολουθεί το JSON schema του αντίστοιχου προϊόντος στο `/menu`.
+- Απαιτείται `Authorization`; το `Accept-Language` είναι προαιρετικό.
+- Το staging δεν δημιουργεί πραγματικές χρεώσεις, αλλά ισχύει όριο δοκιμών ανά client και τυχόν αύξηση ζητείται από τη Netlink.
+- Ο connector και το regression test διορθώθηκαν ώστε να στέλνουν το παραπάνω wrapper και όχι γυμνό payload.
+- Δεν εκτελείται νέα δοκιμαστική συναλλαγή πριν ολοκληρωθούν merge με το τρέχον `main`, security/licensing tests και CI.
+- Τα `auth + requireCompanyModule("NETLINK_PREPAID")`, fiscal gates και production locks παραμένουν αμετάβλητα.

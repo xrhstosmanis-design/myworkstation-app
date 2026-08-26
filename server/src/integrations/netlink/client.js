@@ -59,7 +59,7 @@ export class NetlinkClient{
   async request(path,{method="GET",body,requestId}={}){let token=await this.token();const call=()=>fetch(`${this.apiBase}${path}`,{method,headers:{Authorization:`Bearer ${token}`,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{}),...(requestId?{"X-Request-Id":requestId}:{}),...(this.stationId?{"X-Station-Id":this.stationId}:{})},body:body!==undefined?JSON.stringify(body):undefined});let response=await call();if(response.status===401){token=(await this.refreshAccessToken()).access_token;response=await call()}return parseResponse(response)}
   menu(){return this.request("/menu")}
   prepare(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/prepare`,{method:"POST",requestId,body:{...(payload||{})}})}
-  execute(productId,{requestId,payload,confirmation}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{...(payload||{}),...(confirmation||{})}})}
+  execute(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{requestId,payload:payload||{}}})}
 }
 
 let singleton;

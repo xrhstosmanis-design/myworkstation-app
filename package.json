@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "node server/scripts/patch-health-revision-source.js && node server/scripts/patch-kiosk-modifier-only-source.js && node server/scripts/patch-invoice-learning-product-search-route.js && node client/scripts/restore-pos-modifier-groups.js && node client/scripts/patch-close-shift-client-permission.js && node client/scripts/patch-kat-offline-runtime-access.js && node client/scripts/patch-kat-offline-catalog.js && node client/scripts/patch-kat-offline-sale-queue.js && node client/scripts/patch-safe-vault-decrease-reason.js && npm run build -w client && npm run prisma:generate -w server",
+    "build": "node server/scripts/patch-health-revision-source.js && node server/scripts/patch-kiosk-modifier-only-source.js && node server/scripts/patch-invoice-learning-product-search-route.js && node client/scripts/restore-pos-modifier-groups.js && node client/scripts/patch-close-shift-client-permission.js && node client/scripts/patch-kat-offline-runtime-access.js && node client/scripts/patch-kat-offline-catalog.js && node client/scripts/patch-kat-offline-sale-queue.js && node client/scripts/patch-safe-vault-decrease-reason.js && node client/scripts/patch-return-sales-active-shift.js && node client/scripts/patch-pos-void-sale.js && npm run build -w client && npm run prisma:generate -w server",
     "start": "npm run start -w server",
     "seed": "npm run seed -w server"
   },

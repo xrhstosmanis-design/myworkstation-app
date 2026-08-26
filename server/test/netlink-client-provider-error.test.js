@@ -29,7 +29,7 @@ test("Netlink client exposes a nested provider error message without object coer
   }finally{globalThis.fetch=originalFetch}
 });
 
-test("Netlink execute sends only the provider payload and keeps request id in the header",async()=>{
+test("Netlink execute sends the provider-required requestId and payload wrapper",async()=>{
   const originalFetch=globalThis.fetch;
   const calls=[];
   globalThis.fetch=async(url,options={})=>{
@@ -41,6 +41,6 @@ test("Netlink execute sends only the provider payload and keeps request id in th
     await new NetlinkClient(config).execute("164",{requestId:"request-123",payload:{},confirmation:undefined});
     assert.equal(calls[1].url,"https://api.example/164/execute");
     assert.equal(calls[1].options.headers["X-Request-Id"],"request-123");
-    assert.deepEqual(JSON.parse(calls[1].options.body),{});
+    assert.deepEqual(JSON.parse(calls[1].options.body),{requestId:"request-123",payload:{}});
   }finally{globalThis.fetch=originalFetch}
 });
