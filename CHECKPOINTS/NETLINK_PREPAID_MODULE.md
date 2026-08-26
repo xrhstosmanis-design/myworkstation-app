@@ -105,3 +105,10 @@ Legacy PR: #210
 - Ο connector και το regression test διορθώθηκαν ώστε να στέλνουν το παραπάνω wrapper και όχι γυμνό payload.
 - Δεν εκτελείται νέα δοκιμαστική συναλλαγή πριν ολοκληρωθούν merge με το τρέχον `main`, security/licensing tests και CI.
 - Τα `auth + requireCompanyModule("NETLINK_PREPAID")`, fiscal gates και production locks παραμένουν αμετάβλητα.
+
+## CI #730 — main-sync regression correction (2026-08-26)
+- Head `ca3c64331a06ef3f115c93cb925a7c27d4837d93` ήταν mergeable και `0` commits πίσω από το `main`.
+- Το CI πέρασε checkout, dependencies και Prisma generate, αλλά το Step 7 είχε `630/633 PASS`.
+- Τα τρία failures ήταν αποκλειστικά UI regression assertions από τη συγχώνευση: ετικέτα POS cancellation, απουσία πρόσθετου `MutationObserver` στο audit installer και ακριβής ετικέτα φύρας στην ενεργή βάρδια.
+- Έγινε η ελάχιστη διόρθωση στα δύο UI αρχεία. Δεν άλλαξε Netlink auth/licensing/fiscal logic.
+- Τα τρία failing tests και τα σχετικά Netlink/licensing/structural tests πέρασαν τοπικά: `24/24 PASS`.
