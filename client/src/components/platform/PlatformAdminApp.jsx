@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,Building2,CalendarDays,CheckCircle2,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Plus,Printer,RefreshCw,Send,ShieldCheck,Store,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,Building2,CalendarDays,CheckCircle2,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Plus,Printer,RefreshCw,Send,ShieldCheck,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
@@ -87,6 +87,7 @@ export default function PlatformAdminApp(){
   const [cashFromTime,setCashFromTime]=useState("00:00");
   const [cashToTime,setCashToTime]=useState("23:59");
   const [cashOperator,setCashOperator]=useState("");
+  const [deleteCompany,setDeleteCompany]=useState(null);
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -130,6 +131,17 @@ export default function PlatformAdminApp(){
     try{
       await request(`/api/platform/companies/${companyId}`,{method:"PATCH",body:JSON.stringify(body)});
       setMessage(label);await load();
+    }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const permanentlyDeleteCompany=async event=>{
+    event.preventDefault();setBusy("delete-company");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);
+    try{
+      const result=await request(`/api/platform/companies/${deleteCompany.id}`,{method:"DELETE",body:JSON.stringify({confirmationName:form.get("confirmationName"),confirmationPhrase:form.get("confirmationPhrase")})});
+      setDeleteCompany(null);
+      setMessage(`Η δοκιμαστική εταιρεία «${result.deleted.name}» διαγράφηκε οριστικά μαζί με ${result.deleted.stores} κατάστημα, ${result.deleted.users} χρήστες και ${result.deleted.employees} εργαζομένους.`);
+      await load();
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
 
@@ -315,6 +327,7 @@ export default function PlatformAdminApp(){
               <button className="secondary" onClick={()=>setOwnerCompany(company)}><Users/>{company.owner?"Στοιχεία ιδιοκτήτη":"Ορισμός ιδιοκτήτη"}</button>
               <button className="secondary" onClick={()=>setResetCompany(company)} disabled={!company.owner}><KeyRound/>Νέος κωδικός</button>
               <button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button>
+              {company.name==="KAT TEST"&&<button className="danger" onClick={()=>setDeleteCompany(company)} disabled={Boolean(busy)}><Trash2/>Οριστική διαγραφή</button>}
             </div>
           </article>)}
         </div>}
@@ -334,6 +347,7 @@ export default function PlatformAdminApp(){
     </section></div>}
 
     {showNew&&<div className="platform-modal"><form onSubmit={createCompany}><button type="button" className="modal-close" onClick={()=>setShowNew(false)}><X/></button><h2>Νέος εμπορικός πελάτης</h2><p>Δημιουργούνται εταιρεία, ιδιοκτήτης και πρώτο κατάστημα.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId"/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><div></div><label>Ονοματεπώνυμο ιδιοκτήτη<input name="ownerFullName" required/></label><label>Email ιδιοκτήτη<input name="ownerEmail" type="email" required/></label><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required/></label><div></div><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setShowNew(false)}>Ακύρωση</button><button disabled={busy==="create"}>{busy==="create"?"Δημιουργία…":"Δημιουργία πελάτη"}</button></div></form></div>}
+    {deleteCompany&&<div className="platform-modal"><form onSubmit={permanentlyDeleteCompany}><button type="button" className="modal-close" onClick={()=>setDeleteCompany(null)}><X/></button><h2>Οριστική διαγραφή KAT TEST</h2><p><AlertTriangle/> Θα διαγραφούν οριστικά η εταιρεία, τα καταστήματα, οι χρήστες, οι εργαζόμενοι και όλα τα δοκιμαστικά δεδομένα της. Η ενέργεια δεν αναιρείται.</p><div className="platform-form-grid"><label>Γράψε KAT TEST<input name="confirmationName" autoComplete="off" required/></label><label>Γράψε DELETE KAT TEST<input name="confirmationPhrase" autoComplete="off" required/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setDeleteCompany(null)}>Ακύρωση</button><button className="danger" disabled={busy==="delete-company"}>{busy==="delete-company"?"Οριστική διαγραφή…":"Διαγραφή όλων των δεδομένων"}</button></div></form></div>}
 
     {ownerCompany&&<div className="platform-modal"><form className="small" onSubmit={saveOwner}><button type="button" className="modal-close" onClick={()=>setOwnerCompany(null)}><X/></button><h2>{ownerCompany.owner?"Στοιχεία ιδιοκτήτη πελάτη":"Ορισμός ιδιοκτήτη πελάτη"}</h2><p>{ownerCompany.name}</p><label>Ονοματεπώνυμο<input name="fullName" defaultValue={ownerCompany.owner?.fullName||""} required autoFocus/></label><label>Email<input name="email" type="email" defaultValue={ownerCompany.owner?.email||""} required/></label><label>{ownerCompany.owner?"Νέος προσωρινός κωδικός — προαιρετικό":"Προσωρινός κωδικός"}<input name="temporaryPassword" type="password" minLength="8" required={!ownerCompany.owner}/></label><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner"}>{busy==="owner"?"Αποθήκευση…":"Αποθήκευση ιδιοκτήτη"}</button></div></form></div>}
 
