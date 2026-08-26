@@ -58,8 +58,8 @@ export class NetlinkClient{
   async token(){if(!this.accessToken)return (await this.obtainToken()).access_token;if(Date.now()>=this.expiresAt-30000)return (await this.refreshAccessToken()).access_token;return this.accessToken}
   async request(path,{method="GET",body,requestId}={}){let token=await this.token();const call=()=>fetch(`${this.apiBase}${path}`,{method,headers:{Authorization:`Bearer ${token}`,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{}),...(requestId?{"X-Request-Id":requestId}:{}),...(this.stationId?{"X-Station-Id":this.stationId}:{})},body:body!==undefined?JSON.stringify(body):undefined});let response=await call();if(response.status===401){token=(await this.refreshAccessToken()).access_token;response=await call()}return parseResponse(response)}
   menu(){return this.request("/menu")}
-  prepare(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/prepare`,{method:"POST",requestId,body:{requestId,payload}})}
-  execute(productId,{requestId,payload,confirmation}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{requestId,payload,...(confirmation?{confirmation}:{})}})}
+  prepare(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/prepare`,{method:"POST",requestId,body:{...(payload||{})}})}
+  execute(productId,{requestId,payload,confirmation}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{...(payload||{}),...(confirmation||{})}})}
 }
 
 let singleton;
