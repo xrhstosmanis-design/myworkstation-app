@@ -20,7 +20,7 @@ async function request(path,{method="GET",token,body}={}){
 const profileBody={
   username:"e2e.kat.final.volume",fullName:"E2E KAT Final Volume",stationPhone:null,mobilePhone:null,hourlyRate:null,
   role:"EMPLOYEE",active:true,posAccess:true,backofficeAccess:false,powerUser:false,
-  permissions:{cash:true,cards:true,returnItems:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true},
+  permissions:{cash:true,cards:true,initialCash:true,closeShift:true,centralCashPos:false,returnItems:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true},
   backofficeMenu:{},backofficeTabs:{},customerDisplay:{},terminalPos:null,cashLimit:null,notes:"KAT final volume regression",
   retailSaleSeries:null,retailReturnSeries:null,installationAddress:null,installationPhone:null
 };
