@@ -127,14 +127,35 @@ export async function ensurePlatformSchema(){
 
   const adminEmail=process.env.INITIAL_ADMIN_EMAIL;
   const adminPassword=process.env.INITIAL_ADMIN_PASSWORD;
+  const adminResetToken=String(process.env.INITIAL_ADMIN_RESET_TOKEN||"").trim();
   if(!adminEmail) throw new Error("Λείπει το INITIAL_ADMIN_EMAIL.");
+
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "BootstrapControl" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "value" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  const resetKey=`initial-admin-password:${adminEmail}`;
+  const resetRows=adminResetToken
+    ? await prisma.$queryRaw`SELECT "value" FROM "BootstrapControl" WHERE "key"=${resetKey} LIMIT 1`
+    : [];
+  const shouldResetAdminPassword=Boolean(adminResetToken)&&resetRows[0]?.value!==adminResetToken;
 
   const existingAdmin=await prisma.user.findUnique({where:{email:adminEmail}});
   if(existingAdmin){
+    const data={fullName:"Χρήστος Μάνης",role:"SUPER_ADMIN",companyId:company.id,mustChangePassword:false};
+    if(shouldResetAdminPassword){
+      if(!adminPassword) throw new Error("Λείπει το INITIAL_ADMIN_PASSWORD για την εφάπαξ επαναφορά Platform Super Admin.");
+      data.passwordHash=await bcrypt.hash(adminPassword,12);
+      data.sessionVersion={increment:1};
+    }
     await prisma.user.update({
       where:{id:existingAdmin.id},
-      data:{fullName:"Χρήστος Μάνης",role:"SUPER_ADMIN",companyId:company.id,mustChangePassword:false}
+      data
     });
+    if(shouldResetAdminPassword){
+      await prisma.userSession.updateMany({where:{userId:existingAdmin.id,revokedAt:null},data:{revokedAt:new Date()}}).catch(()=>{});
+    }
   }else{
     if(!adminPassword) throw new Error("Λείπει το INITIAL_ADMIN_PASSWORD για δημιουργία Platform Super Admin.");
     await prisma.user.create({
@@ -147,6 +168,12 @@ export async function ensurePlatformSchema(){
         companyId:company.id
       }
     });
+  }
+
+  if(adminResetToken&&(!existingAdmin||shouldResetAdminPassword)){
+    await prisma.$executeRaw`INSERT INTO "BootstrapControl" ("key","value","updatedAt") VALUES (${resetKey},${adminResetToken},CURRENT_TIMESTAMP)
+      ON CONFLICT ("key") DO UPDATE SET "value"=EXCLUDED."value","updatedAt"=CURRENT_TIMESTAMP`;
+    console.log("Platform Super Admin password reset token applied once.");
   }
 
   const ownerEmail=process.env.KAT_OWNER_EMAIL||"nikirazatou@hotmail.gr";

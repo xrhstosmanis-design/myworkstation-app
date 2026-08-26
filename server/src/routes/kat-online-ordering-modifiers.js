@@ -7,8 +7,6 @@ import {ensureKatOnlineOrderingSchema,getOnlineOrderingConfig,onlineSurchargeAmo
 
 const router=Router();
 const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
-const TEST_STORE_ID="kat-test-store";
-const TEST_COMPANY_ID="kat-test-company";
 const money=value=>Math.round(Number(value||0)*100)/100;
 
 async function ensure(){await ensureKatOnlineOrderingSchema()}
@@ -89,21 +87,20 @@ router.get("/backoffice-managed/stores",auth,safe(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η προβολή BackOffice δεν είναι διαθέσιμη από λογαριασμό POS."});
   const platform=isPlatformSuperAdmin(req.user);
   const rows=platform
-    ?await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",c."name" AS "companyName",(SELECT COUNT(*)::int FROM "OnlineOrder" o WHERE o."storeId"=s."id") AS "orderCount" FROM "Store" s LEFT JOIN "Company" c ON c."id"=s."companyId" WHERE s."active"=TRUE AND (s."id"=${TEST_STORE_ID} OR LOWER(s."name")=LOWER(${KAT_STORE_NAME})) ORDER BY CASE WHEN s."id"=${TEST_STORE_ID} THEN 0 ELSE 1 END,s."createdAt"`
-    :await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",c."name" AS "companyName",(SELECT COUNT(*)::int FROM "OnlineOrder" o WHERE o."storeId"=s."id") AS "orderCount" FROM "Store" s LEFT JOIN "Company" c ON c."id"=s."companyId" WHERE s."active"=TRUE AND s."companyId"=${req.user.companyId} AND (s."id"=${TEST_STORE_ID} OR LOWER(s."name")=LOWER(${KAT_STORE_NAME})) ORDER BY s."createdAt"`;
-  res.json({stores:rows.map(row=>({...row,isTest:row.id===TEST_STORE_ID,orderCount:Number(row.orderCount||0)}))});
+    ?await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",c."name" AS "companyName",(SELECT COUNT(*)::int FROM "OnlineOrder" o WHERE o."storeId"=s."id") AS "orderCount" FROM "Store" s LEFT JOIN "Company" c ON c."id"=s."companyId" WHERE s."active"=TRUE AND LOWER(s."name")=LOWER(${KAT_STORE_NAME}) ORDER BY s."createdAt"`
+    :await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",c."name" AS "companyName",(SELECT COUNT(*)::int FROM "OnlineOrder" o WHERE o."storeId"=s."id") AS "orderCount" FROM "Store" s LEFT JOIN "Company" c ON c."id"=s."companyId" WHERE s."active"=TRUE AND s."companyId"=${req.user.companyId} AND LOWER(s."name")=LOWER(${KAT_STORE_NAME}) ORDER BY s."createdAt"`;
+  res.json({stores:rows.map(row=>({...row,isTest:false,orderCount:Number(row.orderCount||0)}))});
 }));
 
 router.get("/backoffice-managed/stores/:storeId/orders",auth,safe(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η προβολή BackOffice δεν είναι διαθέσιμη από λογαριασμό POS."});
-  const store=(await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",s."active" FROM "Store" s WHERE s."id"=${req.params.storeId} AND s."active"=TRUE AND (s."id"=${TEST_STORE_ID} OR LOWER(s."name")=LOWER(${KAT_STORE_NAME})) LIMIT 1`)[0];
+  const store=(await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",s."active" FROM "Store" s WHERE s."id"=${req.params.storeId} AND s."active"=TRUE AND LOWER(s."name")=LOWER(${KAT_STORE_NAME}) LIMIT 1`)[0];
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα Online Παραγγελιών."});
   if(store.companyId!==req.user.companyId&&!isPlatformSuperAdmin(req.user))return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
-  if(store.id===TEST_STORE_ID&&store.companyId!==TEST_COMPANY_ID)return res.status(409).json({error:"Μη έγκυρη σύνδεση TEST καταστήματος."});
   const limit=Math.min(Math.max(Number(req.query.limit||150),1),300);
   const rows=await prisma.$queryRaw`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'productName',l."productName",'quantity',l."quantity",'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items",CASE WHEN o."saleId" IS NULL THEN NULL ELSE (SELECT json_build_object('id',s."id",'total',s."total",'status',s."status",'source',s."source",'createdAt',s."createdAt",'payments',COALESCE((SELECT json_agg(json_build_object('id',p."id",'method',p."method",'amount',p."amount")) FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json)) FROM "Sale" s WHERE s."id"=o."saleId" LIMIT 1) END AS "sale",(SELECT json_build_object('id',t."id",'sessionId',t."sessionId",'type',t."type",'amount',t."amount",'description',t."description",'actorName',t."actorName",'createdAt',t."createdAt") FROM "StoreTransaction" t WHERE t."storeId"=o."storeId" AND t."description" LIKE ${'ONLINE %'} || o."orderNumber" || '%' ORDER BY t."createdAt" DESC LIMIT 1) AS "shiftTransaction" FROM "OnlineOrder" o WHERE o."storeId"=${store.id} ORDER BY o."createdAt" DESC LIMIT ${limit}`;
   const normalized=rows.map(row=>({...row,subtotal:money(row.subtotal),deliveryFee:money(row.deliveryFee),total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:Number(item.quantity||0),onlineUnitPrice:money(item.onlineUnitPrice),lineTotal:money(item.lineTotal)})),sale:row.sale?{...row.sale,total:money(row.sale.total),payments:(row.sale.payments||[]).map(payment=>({...payment,amount:money(payment.amount)}))}:null,shiftTransaction:row.shiftTransaction?{...row.shiftTransaction,amount:money(row.shiftTransaction.amount)}:null}));
-  res.json({store:{id:store.id,name:store.name,isTest:store.id===TEST_STORE_ID},count:normalized.length,rows:normalized});
+  res.json({store:{id:store.id,name:store.name,isTest:false},count:normalized.length,rows:normalized});
 }));
 
 export default router;

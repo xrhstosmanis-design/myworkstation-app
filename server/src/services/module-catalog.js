@@ -3,7 +3,7 @@ export const moduleCatalog=[
   {key:"PERSONNEL",name:"Προσωπικό",description:"Εργαζόμενοι, ρόλοι και κανόνες.",category:"CORE",commercialReady:true},
   {key:"SHIFTS",name:"Βάρδιες",description:"Πρόγραμμα και κατανομή βαρδιών.",category:"CORE",commercialReady:true},
   {key:"LEAVES",name:"Άδειες προσωπικού",description:"Άδειες, ασθένειες, απουσίες και διαθεσιμότητα εργαζομένων.",category:"CORE",commercialReady:true},
-  {key:"CASH_CONTROL",name:"Έλεγχος Ταμείου",description:"Άνοιγμα, κλείσιμο, διαφορές και έλεγχος βάρδιας.",category:"CONTROL",commercialReady:true},
+  {key:"CASH_CONTROL",name:"Αυτόματος Έλεγχος Ταμείων",description:"Αυτόματη διασταύρωση βαρδιών, μετρητών, POS–EFTPOS, εξόδων, παραστατικών, ακυρώσεων και επιστροφών.",category:"CONTROL",commercialReady:true,monthlyPriceEur:75},
   {key:"STORE_MODE",name:"Store Mode",description:"Προσωπική είσοδος εργαζομένων με PIN ή κάρτα.",category:"CONTROL",commercialReady:true},
   {key:"PILOT_REPORT",name:"Αναφορά Πιλότου",description:"Ημερήσια αναφορά λειτουργίας και audit.",category:"REPORTS",commercialReady:true},
   {key:"INVENTORY",name:"Αποθήκη & Συνταγές",description:"Προϊόντα, barcode, προμηθευτές, αγορές, αποθέματα, αναλώσεις και συνταγές.",category:"OPERATIONS",commercialReady:true},
@@ -22,10 +22,10 @@ export const moduleKeys=moduleCatalog.map(module=>module.key);
 
 export const planDefaults={
   TRIAL:["CORE","PERSONNEL","SHIFTS","LEAVES"],
-  PILOT:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT"],
-  BASIC:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL"],
-  PRO:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT","ATTENDANCE"],
-  ENTERPRISE:["CORE","PERSONNEL","SHIFTS","LEAVES","CASH_CONTROL","STORE_MODE","PILOT_REPORT","ATTENDANCE"]
+  PILOT:["CORE","PERSONNEL","SHIFTS","LEAVES","STORE_MODE","PILOT_REPORT"],
+  BASIC:["CORE","PERSONNEL","SHIFTS","LEAVES"],
+  PRO:["CORE","PERSONNEL","SHIFTS","LEAVES","STORE_MODE","PILOT_REPORT","ATTENDANCE"],
+  ENTERPRISE:["CORE","PERSONNEL","SHIFTS","LEAVES","STORE_MODE","PILOT_REPORT","ATTENDANCE"]
 };
 
 export function catalogView(entitlements=[]){
