@@ -90,19 +90,23 @@ async function ensureTables(){
 
 export async function ensureCashControlSchema(){return ensureTables()}
 
-function requireCashAccess(req,res,next){
+async function requireCashAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
   const permissions=req.user?.permissions||[],path=String(req.originalUrl||"").split("?")[0];
   if(req.method==="GET"&&/\/api\/(?:cash|cash-control)\/stores\/[^/]+\/overview$/.test(path)&&permissions.includes("CASH_OVERVIEW"))return next();
   if(req.method==="POST"&&/\/stores\/[^/]+\/sessions\/open$/.test(path)){
-    if(permissions.includes("INITIAL_CASH"))return next();
+    const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;
+    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};
+    if(profile.initialCash===true)return next();
     return res.status(403).json({error:"Δεν έχεις δικαίωμα «με αρχικό Ταμείο» από το BackOffice."});
   }
   if(req.method==="POST"&&/\/sessions\/[^/]+\/close$/.test(path)){
-    if(permissions.includes("CASH_CONTROL"))return next();
-    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Εμφάνιση κεντρικού Ταμείου (PoS)» από το BackOffice."});
+    const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;
+    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};
+    if(profile.closeShift===true)return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο βάρδιας (PoS)» από το BackOffice."});
   }
   if(permissions.includes("CASH_CONTROL"))return next();
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});

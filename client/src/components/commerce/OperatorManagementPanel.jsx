@@ -18,7 +18,7 @@ const POS_PERMISSIONS=[
   ["hidePrinter","Απόκρυψη εκτυπωτή (PoS)"],["supplierReturn","έκδοση Δ-Α επιστροφής σε προμηθευτή (PoS)"],["supplierPayment","πληρωμή Προμηθευτή"],
   ["sameShiftPayments","Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"],["transferAmount","Μεταφορά ποσού"],["shiftTransactionsBackoffice","Συναλλαγές βάρδιας (backoffice)"],
   ["warehouseColumn","Εμφάνιση στήλης Αποθήκη (Παραγγελίες-BackOffice)"],["shiftTransactionsPos","Συναλλαγές βάρδιας (PoS)"],["allShiftTransactionsPos","Όλες οι συναλλαγές Βάρδιας (PoS)"],
-  ["cash","Μετρητά"],["initialCash","με αρχικό Ταμείο"],["cards","Κάρτες"]
+  ["cash","Μετρητά"],["initialCash","με αρχικό Ταμείο"],["closeShift","Κλείσιμο βάρδιας (PoS)"],["cards","Κάρτες"]
 ];
 const MENU_PERMISSIONS=[
   ["management","Διαχείριση"],["purchases","Αγορές"],["priceCatalog","Τιμοκατάλογος"],["cashDesk","Ταμείο"],
