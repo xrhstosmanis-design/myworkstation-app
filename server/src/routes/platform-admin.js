@@ -21,6 +21,8 @@ const licenseStatuses=["TRIAL","PILOT","ACTIVE","SUSPENDED","EXPIRED"];
 const planSchema=z.enum(plans);
 const licenseStatusSchema=z.enum(licenseStatuses);
 const dateValue=z.string().trim().optional().or(z.literal(""));
+const deletableTestCompanyNames=new Set(["KAT TEST"]);
+const permanentDeletePhrase="DELETE KAT TEST";
 const quickLabels=["ΝΕΡΟ 500ML","ΝΕΡΟ 1,5LT","ΚΟΥΛΟΥΡΙ ΘΕΣ/ΝΙΚΗΣ","ΠΟΤΗΡΙ ΜΕ ΠΑΓΟ","ΠΛΑΣΤΙΚΗ ΣΑΚΟΥΛΑ","ΜΑΣΚΑ 0,60","ΠΑΡΟΧΗ","ΜΠΑΝΑΝΑ ΤΜΧ.","ΣΑΝΤΟΥΙΤΣ","ΧΥΜΟΣ ΠΟΡΤΟΚΑΛΙ","FREDDO ESPRESSO","CAPPUCCINO","ΤΣΙΧΛΕΣ","ΑΝΑΨΥΚΤΙΚΟ 330ML","ENERGY DRINK","ΣΟΚΟΛΑΤΑ ΜΠΑΡΑ"];
 const categoryLabels=["ΖΕΣΤΑ ΡΟΦΗΜΑΤΑ","ΚΡΥΑ ΡΟΦΗΜΑΤΑ","ΑΝΑΨΥΚΤΙΚΑ","ΧΥΜΟΙ","ΝΕΡΑ","ΜΠΥΡΕΣ","ΚΡΑΣΙΑ","ΑΛΚΟΟΛΟΥΧΑ","PREMIUM BAKERY","ΑΡΤΟΠΟΙΙΑ","ΣΦΟΛΙΑΤΕΣ","ΣΑΝΤΟΥΙΤΣ","ΓΛΥΚΑ","ΠΑΓΩΤΑ","SNACKS","ΞΗΡΟΙ ΚΑΡΠΟΙ & ΣΠΟΡΟΙ","ΕΙΔΗ ΧΩΡΙΣ BARCODE","ΑΡΤΙΖΑΝ - ΠΕΡΕΚ","ΧΩΡΙΑΤΙΚΗ ΖΥΜΗ","ΔΙΑ ΧΕΙΡΟΣ","ΠΑΚΕΤΑ ΠΡΟΣΦΟΡΩΝ","ΥΠΗΡΕΣΙΕΣ","ΚΕΝΟ","ΚΕΝΟ"];
 const palette=["#1597a5","#287e9e","#4f8fbe","#dc7a27","#3978b8","#9aa82f","#9a5353","#76558e","#b99a42","#98734b","#b59336","#77983f","#aa526e","#467ba3","#38989a","#8b6b48","#498769","#397d78","#71925d","#79549a","#d3832e","#40779a","#c9cecc","#d7dad8"];
@@ -579,6 +581,47 @@ router.patch("/companies/:companyId",async(req,res,next)=>{
       data.subscriptionEndsAt=data.trialEndsAt;
     }
     res.json(await prisma.company.update({where:{id:company.id},data}));
+  }catch(error){next(error)}
+});
+
+router.delete("/companies/:companyId",async(req,res,next)=>{
+  try{
+    const body=z.object({
+      confirmationName:z.string().trim(),
+      confirmationPhrase:z.string().trim()
+    }).parse(req.body||{});
+    const company=await prisma.company.findUnique({
+      where:{id:req.params.companyId},
+      include:{
+        users:{select:{id:true}},
+        stores:{select:{id:true,_count:{select:{employees:true}}}}
+      }
+    });
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
+    if(!deletableTestCompanyNames.has(company.name)){
+      return res.status(403).json({error:"Η οριστική διαγραφή επιτρέπεται μόνο για ρητά εγκεκριμένες δοκιμαστικές εταιρείες."});
+    }
+    if(body.confirmationName!==company.name||body.confirmationPhrase!==permanentDeletePhrase){
+      return res.status(400).json({error:`Για οριστική διαγραφή γράψε ακριβώς «${company.name}» και «${permanentDeletePhrase}».`});
+    }
+    const counts={
+      stores:company.stores.length,
+      users:company.users.length,
+      employees:company.stores.reduce((sum,store)=>sum+(store._count?.employees||0),0)
+    };
+    await prisma.$transaction(async tx=>{
+      await tx.company.delete({where:{id:company.id}});
+      await tx.authAudit.create({data:{
+        userId:req.user.id,
+        email:req.user.email||"platform-admin",
+        event:`TEST_COMPANY_PERMANENTLY_DELETED:${company.id}:${company.name}:stores=${counts.stores}:users=${counts.users}:employees=${counts.employees}`,
+        success:true,
+        deviceName:req.headers["x-device-name"]||null,
+        userAgent:req.headers["user-agent"]||null,
+        ipAddress:req.ip||null
+      }});
+    });
+    res.json({ok:true,deleted:{id:company.id,name:company.name,...counts}});
   }catch(error){next(error)}
 });
 
