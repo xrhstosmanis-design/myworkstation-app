@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import { sendEmail } from "../services/mail.js";
 
 const router = Router();
 let tablesPromise;
@@ -134,7 +135,7 @@ async function requestTerminal(req){
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
 const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable()});
-const closeSchema=z.object({cashSales:amount,cardSales:amount,eftposTotal:amount,expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable()});
+const closeSchema=z.object({cashSales:amount,cardSales:amount,eftposTotal:amount,expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
 const reportDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reviewSchema=z.object({decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),amount:z.coerce.number().finite().min(0).max(999999999).default(0),note:z.string().trim().min(5).max(1000)}).superRefine((value,ctx)=>{if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."})});
 
@@ -295,20 +296,31 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId"
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
+    // KAT_SAFE_VAULT_CLOSE_ALERT_V1
+    const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
+    if(safeDelta < -0.009 && safeReason.length < 3){const error=new Error(`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν κλείσει η βάρδια.`);error.status=409;throw error}
     const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
     const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
     const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
+    if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
       WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
-    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId}:null;
+    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null}:null;
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
-  const {closed}=closeResult;
-  res.json({...closed,emailNotification:{status:"MANUAL_SEND_REQUIRED",recipients:[]}});
+  const {closed,storeId,safeChange}=closeResult;
+  const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);
+  const recipients=[...new Set([...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean))];
+  let safeEmailNotification={status:"SKIPPED",recipients:[]};
+  if(safeChange?.delta < -0.009){
+    const safeRecipients=[...new Set([...recipients,String(process.env.MAIL_TEST_RECIPIENT||"").trim()].filter(Boolean))];
+    if(safeRecipients.length){try{const subject=`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · ${store?.name||"Κατάστημα"}`;const text=[subject,"",`Κατάστημα: ${store?.name||"Κατάστημα"}`,`Βάρδια: ${closed.shiftLabel}`,`Χειριστής: ${actorName}`,`Προηγούμενο ποσό: ${Number(safeChange.previousSafe).toFixed(2)} €`,`Νέο ποσό: ${Number(safeChange.newSafe).toFixed(2)} €`,`Μείωση: ${Math.abs(Number(safeChange.delta)).toFixed(2)} €`,`Αιτιολογία: ${safeChange.reason||"—"}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");const sent=await sendEmail({to:safeRecipients,subject,text,html:`<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><p><b>Κατάστημα:</b> ${store?.name||"Κατάστημα"}</p><p><b>Βάρδια:</b> ${closed.shiftLabel}</p><p><b>Χειριστής:</b> ${actorName}</p><p><b>Προηγούμενο:</b> ${Number(safeChange.previousSafe).toFixed(2)} €</p><p><b>Νέο:</b> ${Number(safeChange.newSafe).toFixed(2)} €</p><p><b>Μείωση:</b> ${Math.abs(Number(safeChange.delta)).toFixed(2)} €</p><p><b>Αιτιολογία:</b> ${safeChange.reason||"—"}</p></div>`});safeEmailNotification={status:"SENT",recipients:sent.recipients}}catch(error){console.error("Safe close decrease email failed",error?.message||error);safeEmailNotification={status:"FAILED",recipients:safeRecipients}}}
+  }
+  res.json({...closed,emailNotification:{status:"MANUAL_SEND_REQUIRED",recipients:[]},safeChange,safeEmailNotification});
 }));
 
 export default router;
