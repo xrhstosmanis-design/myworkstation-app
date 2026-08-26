@@ -6,11 +6,11 @@ const pad=value=>String(value).padStart(2,"0");
 const durationLabel=seconds=>`${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
 const recordingName=()=>{
   const now=new Date(),stamp=[now.getFullYear(),pad(now.getMonth()+1),pad(now.getDate()),pad(now.getHours()),pad(now.getMinutes()),pad(now.getSeconds())].join("-");
-  return `myworkstation-pos-test-${stamp}.webm`;
+  return `myworkstation-screen-${stamp}.webm`;
 };
 const supportedMimeType=()=>["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>window.MediaRecorder?.isTypeSupported?.(type))||"";
 
-export default function ScreenRecorderControl(){
+export default function ScreenRecorderControl({contextLabel="MYWORKSTATION · POS"}){
   const recorderRef=useRef(null),streamRef=useRef(null),chunksRef=useRef([]),timerRef=useRef(null);
   const [recording,setRecording]=useState(false),[seconds,setSeconds]=useState(0),[preview,setPreview]=useState(null),[error,setError]=useState("");
 
@@ -55,7 +55,7 @@ export default function ScreenRecorderControl(){
     {recording?<button type="button" className="recording" onClick={stop}><CircleStop/> Διακοπή <b>{durationLabel(seconds)}</b></button>:<button type="button" onClick={start}><Video/> Εγγραφή οθόνης</button>}
     {error&&<div className="recorder-error">{error}</div>}
     {preview&&<div className="recorder-preview" onMouseDown={event=>event.target===event.currentTarget&&closePreview()}><section>
-      <header><div><small>MYWORKSTATION · TEST POS</small><h3>Η εγγραφή είναι έτοιμη</h3></div><button type="button" onClick={closePreview}><X/></button></header>
+      <header><div><small>{contextLabel}</small><h3>Η εγγραφή είναι έτοιμη</h3></div><button type="button" onClick={closePreview}><X/></button></header>
       <video src={preview.url} controls playsInline/>
       <div className="recorder-preview-actions"><button type="button" onClick={download}><Download/> Αποθήκευση στο PC</button><button type="button" className="publish" disabled title="Θα ενεργοποιηθεί μόλις συνδεθεί ο χώρος αποθήκευσης βίντεο του site"><MonitorUp/> Ανέβασμα στο site</button></div>
       <p><Play/> Έλεγξε πρώτα το βίντεο. Το ανέβασμα θα ενεργοποιηθεί με τον ασφαλή χώρο αποθήκευσης του myworkstation.gr.</p>
