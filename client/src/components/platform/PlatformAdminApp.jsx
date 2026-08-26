@@ -13,21 +13,27 @@ const when=value=>value?new Date(value).toLocaleDateString("el-GR"):"—";
 const athensTime=value=>value?new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value)):"—";
 const cashNumber=value=>Number(value||0);
 const cashMoney=value=>cashNumber(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const cashEventTime=value=>value?new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value)):"—";
 const cashConclusionLabels={AGREEMENT:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΣΥΜΦΩΝΙΑ",UNEXPLAINED_SHORTAGE:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΑΝΕΞΗΓΗΤΟ ΕΛΛΕΙΜΜΑ",SHORTAGE_WITH_FINDINGS:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΕΛΛΕΙΜΜΑ ΜΕ ΕΥΡΗΜΑΤΑ",UNEXPLAINED_SURPLUS:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΑΝΕΞΗΓΗΤΟ ΠΛΕΟΝΑΣΜΑ",SURPLUS_WITH_FINDINGS:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΠΛΕΟΝΑΣΜΑ ΜΕ ΕΥΡΗΜΑΤΑ",FINDINGS_WITHOUT_CASH_VARIANCE:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΒΡΕΘΗΚΑΝ ΣΥΜΒΑΝΤΑ"};
 const cashFindingLabel=finding=>{
   const code=String(finding?.code||"");
-  if(code==="EXPENSE_WITHOUT_DOCUMENT")return `Έξοδο ${cashMoney(finding.amount)} χωρίς παραστατικό.`;
-  if(code==="EXPENSE_DOCUMENT_MISMATCH")return `Το ποσό εξόδου ${cashMoney(finding.amount)} διαφέρει από το παραστατικό κατά ${cashMoney(finding.difference)}.`;
-  if(code==="REVERSED_TRANSACTION")return `Βρέθηκε αντιλογισμένη συναλλαγή ${cashMoney(finding.amount)}${finding.actorName?` από ${finding.actorName}`:""}.`;
-  if(code==="POS_EFTPOS_DIFFERENCE")return `Η διαφορά POS–EFTPOS είναι ${cashMoney(finding.amount)}.`;
-  if(code==="DUPLICATE_CANDIDATES"||/DUPLICATE|REPLAY/.test(code))return `Βρέθηκε ένδειξη διπλής ή επαναληφθείσας συναλλαγής${finding.count?` (${finding.count})`:""}.`;
-  if(code==="ACTION_AFTER_SHIFT_CLOSE")return "Βρέθηκε ενέργεια συναλλαγής μετά το κλείσιμο της βάρδιας.";
-  if(code==="ACTION_WITHOUT_ORIGINAL_SALE")return "Βρέθηκε ακύρωση ή επιστροφή χωρίς σύνδεση με την αρχική πώληση.";
-  if(code==="MULTIPLE_ACTIONS_ON_SAME_SALE")return "Βρέθηκαν πολλαπλές ακυρώσεις ή επιστροφές στην ίδια πώληση.";
-  if(code==="ACTION_BY_DIFFERENT_OPERATOR")return `Βρέθηκε ενέργεια από διαφορετικό χειριστή${finding.actorName?` (${finding.actorName})`:""}.`;
-  if(code==="AMOUNT_MATCHES_CASH_DIFFERENCE")return `Βρέθηκε συμβάν με ποσό ίσο με τη διαφορά ταμείου (${cashMoney(finding.amount)}).`;
-  if(/CANCEL|RETURN|VOID|REVERSE/.test(code))return "Βρέθηκε συμβάν ακύρωσης, επιστροφής ή αντιλογισμού.";
-  return `Βρέθηκε ελεγκτικό συμβάν: ${code.replace(/^AUDIT_/,"")}.`;
+  const at=`${cashEventTime(finding.at)} · `;
+  if(code==="SHIFT_VARIANCE_OFFSET")return `${at}Πιθανή μη καταμετρημένη φύλαξη μεταξύ βαρδιών: ${cashMoney(finding.previousVariance)} (${finding.previousOperator||"—"}) και ${cashMoney(finding.currentVariance)} (${finding.currentOperator||"—"}). Καθαρή διαφορά ${cashMoney(finding.netVariance)}${finding.finalOperator?` καταλογίζεται στον/στην ${finding.finalOperator}`:""}.`;
+  if(code==="EXPENSE_WITHOUT_DOCUMENT")return `${at}Έξοδο ${cashMoney(finding.amount)} χωρίς παραστατικό.`;
+  if(code==="EXPENSE_DOCUMENT_MISMATCH")return `${at}Πληρωμή ${cashMoney(finding.amount)} δεν συμφωνεί με το τιμολόγιο/παραστατικό ${cashMoney(finding.documentTotal)} (διαφορά ${cashMoney(finding.difference)})${finding.actorName?` · ${finding.actorName}`:""}.`;
+  if(code==="REVERSED_TRANSACTION")return `${at}Αντιλογισμένη συναλλαγή ${cashMoney(finding.amount)}${finding.actorName?` από ${finding.actorName}`:""}. Έχουν πάρει τα χρήματα;`;
+  if(code==="CASH_TRANSFER_DIFFERENCE")return `${at}SOS — ανεξήγητη διαφορά μεταφοράς ταμείου ${cashMoney(finding.amount)}${finding.delivery?" στην αλυσίδα DELIVERY":" στο ίδιο POS"}.`;
+  if(code==="CARD_RECORDED_CASH_PAID")return `${at}Πιθανή πώληση που καταχωρίστηκε ως κάρτα αλλά πληρώθηκε με μετρητά (${cashMoney(finding.amount)}).`;
+  if(code==="EFTPOS_CONFIRMED_AS_FAILED")return `${at}Πιθανή επιλογή «ΟΧΙ» αντί «ΝΑΙ» στην επιβεβαίωση «πέρασε η κάρτα;» (${cashMoney(finding.amount)}).`;
+  if(code==="POS_EFTPOS_DIFFERENCE")return `${at}Διαφορά POS–EFTPOS ${cashMoney(finding.amount)}.`;
+  if(code==="DUPLICATE_CANDIDATES"||/DUPLICATE|REPLAY/.test(code))return `${at}Ένδειξη διπλής ή επαναληφθείσας συναλλαγής${finding.count?` (${finding.count})`:""}.`;
+  if(code==="ACTION_AFTER_SHIFT_CLOSE")return `${at}Ενέργεια συναλλαγής μετά το κλείσιμο της βάρδιας.`;
+  if(code==="ACTION_WITHOUT_ORIGINAL_SALE")return `${at}Ακύρωση ή επιστροφή χωρίς σύνδεση με την αρχική πώληση.`;
+  if(code==="MULTIPLE_ACTIONS_ON_SAME_SALE")return `${at}Πολλαπλές ακυρώσεις ή επιστροφές στην ίδια πώληση.`;
+  if(code==="ACTION_BY_DIFFERENT_OPERATOR")return `${at}Ενέργεια από διαφορετικό χειριστή${finding.actorName?` (${finding.actorName})`:""}.`;
+  if(code==="AMOUNT_MATCHES_CASH_DIFFERENCE")return `${at}Συμβάν με ποσό ίσο με τη διαφορά ταμείου (${cashMoney(finding.amount)}).`;
+  if(/CANCEL|RETURN|VOID|REVERSE/.test(code))return `${at}Ακύρωση, επιστροφή ή αντιλογισμός.`;
+  return `${at}${code.replace(/^AUDIT_/,"").replaceAll("_"," ")}.`;
 };
 
 const cashWrittenReport=row=>{
@@ -39,14 +45,7 @@ const cashWrittenReport=row=>{
   const findings=Array.isArray(investigation.findings)?investigation.findings:[];
   const conclusion=investigation.conclusion||(variance<-.009?"UNEXPLAINED_SHORTAGE":variance>.009?"UNEXPLAINED_SURPLUS":"AGREEMENT");
   const result=variance<-.009?`έλλειμμα ${cashMoney(Math.abs(variance))}`:variance>.009?`πλεόνασμα ${cashMoney(variance)}`:"μηδενική διαφορά μετρητών";
-  const paragraphs=[];
-  paragraphs.push(`Η βάρδια ${row.shiftLabel||"—"} στο POS ${row.terminalPos||"MAIN"}, με χειριστή ${row.openedByName||"—"}, από ${athensTime(row.openedAt)} έως ${athensTime(row.closedAt)}, έκλεισε με ${result}.`);
-  paragraphs.push(`Ελέγχθηκαν τα σύνολα μετρητών, οι πωλήσεις, το POS με το EFTPOS, όλα τα έξοδα και τα παραστατικά, οι αντιλογισμοί, οι ακυρώσεις, οι επιστροφές, οι πιθανές διπλές συναλλαγές, οι ενέργειες χειριστών και τα συμβάντα μετά το κλείσιμο.`);
-  paragraphs.push(`Οι πωλήσεις καρτών ήταν ${cashMoney(row.cardSales)}, το σύνολο EFTPOS ${cashMoney(row.eftposTotal)} και η διαφορά POS–EFTPOS ${cashMoney(cardVariance)}. Έξοδα χωρίς παραστατικό: ${undocumented}. Πιθανές διπλές συναλλαγές: ${duplicates}.`);
-  if(findings.length)paragraphs.push(...findings.map(cashFindingLabel));
-  else if(variance<-.009)paragraphs.push("Δεν βρέθηκε συναλλαγή, ακύρωση, επιστροφή, διπλοχτύπημα, παραστατικό ή ύποπτο συμβάν που να εξηγεί το έλλειμμα. Το ποσό παραμένει ανεξήγητο μετά την ολοκλήρωση όλων των ελέγχων.");
-  else if(variance>.009)paragraphs.push("Δεν βρέθηκε συναλλαγή ή συμβάν που να εξηγεί το πλεόνασμα. Το ποσό παραμένει ανεξήγητο μετά την ολοκλήρωση όλων των ελέγχων.");
-  else paragraphs.push("Δεν εντοπίστηκε αριθμητική απόκλιση ή ύποπτο συμβάν.");
+  const paragraphs=findings.length?findings.map(cashFindingLabel):variance<-.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο έλλειμμα ${cashMoney(Math.abs(variance))}.`]:variance>.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο πλεόνασμα ${cashMoney(variance)}.`]:["Δεν εντοπίστηκε περίεργο συμβάν."];
   return{paragraphs,alert:conclusion!=="AGREEMENT",conclusion:cashConclusionLabels[conclusion]||cashConclusionLabels.AGREEMENT};
 };
 
@@ -87,6 +86,7 @@ export default function PlatformAdminApp(){
   const [cashFromTime,setCashFromTime]=useState("00:00");
   const [cashToTime,setCashToTime]=useState("23:59");
   const [cashOperator,setCashOperator]=useState("");
+  const [cashStoreId,setCashStoreId]=useState("");
   const [deleteCompany,setDeleteCompany]=useState(null);
 
   useEffect(()=>{
@@ -257,7 +257,7 @@ export default function PlatformAdminApp(){
 
   const loadCashReport=async(date=cashReportDate)=>{
     setBusy("cash-report");setError("");
-    try{setCashReport(await request(`/api/platform/cash-control/daily?${new URLSearchParams({date,fromTime:cashFromTime,toTime:cashToTime})}`))}catch(err){setError(err.message)}finally{setBusy("")}
+    try{setCashReport(await request(`/api/platform/cash-control/daily?${new URLSearchParams({date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})})}`))}catch(err){setError(err.message)}finally{setBusy("")}
   };
 
   const previewAndSendCashReport=async store=>{
@@ -339,10 +339,10 @@ export default function PlatformAdminApp(){
     {cashReport&&<div className="platform-modal"><section className="platform-security-dialog cash-report-dialog">
       <button type="button" className="modal-close" onClick={()=>setCashReport(null)}><X/></button>
       <h2>Αυτόματος Έλεγχος Ταμείων</h2><p>Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια</p>
-      <div className="cash-report-filters"><label>Ημερομηνία<input type="date" value={cashReportDate} onChange={event=>setCashReportDate(event.target.value)}/></label><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={()=>loadCashReport(cashReportDate)} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Από<input type="date" value={cashRangeFrom} onChange={event=>setCashRangeFrom(event.target.value)}/></label><label>Έως<input type="date" value={cashRangeTo} onChange={event=>setCashRangeTo(event.target.value)}/></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":"Excel ελλειμμάτων όλων"}</button></div>
-      <div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
+      <div className="cash-report-filters"><label>Κατάστημα<select value={cashStoreId} onChange={event=>setCashStoreId(event.target.value)}><option value="">Όλα τα καταστήματα</option>{(data?.companies||[]).flatMap(company=>company.stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>))}</select></label><label>Ημερομηνία<input type="date" value={cashReportDate} onChange={event=>setCashReportDate(event.target.value)}/></label><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={()=>loadCashReport(cashReportDate)} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Από<input type="date" value={cashRangeFrom} onChange={event=>setCashRangeFrom(event.target.value)}/></label><label>Έως<input type="date" value={cashRangeTo} onChange={event=>setCashRangeTo(event.target.value)}/></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":"Excel ελλειμμάτων όλων"}</button></div>
+      <div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
       <div className="cash-store-summaries">{(cashReport.stores||[]).map(store=><article key={store.storeId}><small>{store.companyName}</small><h3>{store.storeName}</h3><span>Βάρδιες <b>{store.shifts}</b></span><span>Έλλειμμα <b className="bad">{store.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b className="ok">{store.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{store.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{store.expensesWithoutDocument}</b></span><button type="button" className="secondary" onClick={()=>sendCashPreviewToMe(store)} disabled={busy===`cash-preview:${store.storeId}`}><Send/>{busy===`cash-preview:${store.storeId}`?"Αποστολή…":"Δοκιμή στο email μου"}</button><button type="button" onClick={()=>previewAndSendCashReport(store)} disabled={busy===`cash-email:${store.storeId}`}><Send/>{busy===`cash-email:${store.storeId}`?"Αποστολή…":"Προεπισκόπηση & email ιδιοκτητών"}</button><button type="button" className="secondary" onClick={()=>downloadShortages(store)} disabled={busy===`cash-export:${store.storeId}`}><Download/>{busy===`cash-export:${store.storeId}`?"Δημιουργία…":"Excel ελλειμμάτων"}</button></article>)}</div>
-      {cashReport.rows.length>0&&<section className="cash-written-reports"><div className="cash-written-reports-head"><div><small>ΓΡΑΠΤΟ ΠΟΡΙΣΜΑ ΑΝΑ ΒΑΡΔΙΑ</small><h3>Αναλυτική γραπτή αναφορά</h3></div><span>Ο αυτόματος έλεγχος ολοκληρώνεται πριν εμφανιστεί το πόρισμα.</span></div>{cashReport.rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"needs-review":"agreement"} key={`written:${row.sessionId}`}><header><div><b>{row.companyName} · {row.storeName}</b><small>{row.terminalPos||"MAIN"} · {row.shiftLabel||"Βάρδια"}</small></div><strong>{report.conclusion}</strong></header>{report.paragraphs.map((paragraph,index)=><p key={`${row.sessionId}:paragraph:${index}`}>{paragraph}</p>)}<footer>Τελικό συμπέρασμα: <b>{report.conclusion}</b></footer></article>})}</section>}
+      {cashReport.rows.length>0&&<section className="cash-written-reports"><div className="cash-written-reports-head"><div><small>ΣΥΜΒΑΝΤΑ ΕΛΕΓΧΟΥ ΤΑΜΕΙΩΝ</small><h3>Μόνο τα περίεργα συμβάντα</h3></div><span>Ελέγχθηκαν πληρωμές ↔ τιμολόγια/παραστατικά και όλα τα συμβάντα, με ακριβή ώρα.</span></div>{cashReport.rows.map(row=>{const report=cashWrittenReport(row);return <article className={report.alert?"needs-review":"agreement"} key={`written:${row.sessionId}`}><header><div><b>{row.storeName} · {row.openedByName||"Χωρίς χειριστή"}</b><small>{cashReport.date} · {row.terminalPos||"MAIN"} · {row.shiftLabel||"Βάρδια"} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></div><strong>{report.conclusion}</strong></header>{report.paragraphs.map((paragraph,index)=><p key={`${row.sessionId}:paragraph:${index}`}>{paragraph}</p>)}</article>})}</section>}
       <div className="cash-report-table"><div className="head"><span>Εταιρεία / Κατάστημα</span><span>POS / Βάρδια</span><span>Χειριστής</span><span>Μετρητά</span><span>Κάρτες / EFTPOS</span><span>Έλλειμμα / Διαφορά</span><span>Πόρισμα</span></div>{cashReport.rows.map(row=><div className="row" key={row.sessionId}><span><b>{row.companyName}</b><small>{row.storeName}</small></span><span><b>{row.terminalPos||"MAIN"}</b><small>{row.shiftLabel} · {athensTime(row.openedAt)}–{athensTime(row.closedAt)}</small></span><span>{row.openedByName||"—"}</span><span>{row.cashSales.toFixed(2)} €</span><span>{row.cardSales.toFixed(2)} / {row.eftposTotal.toFixed(2)} €</span><strong className={Math.abs(row.variance)>0.009?"bad":"ok"}>{row.variance.toFixed(2)} €</strong><span>{cashConclusionLabels[row.investigation?.conclusion]||cashWrittenReport(row).conclusion}</span></div>)}</div>
     </section></div>}
 
