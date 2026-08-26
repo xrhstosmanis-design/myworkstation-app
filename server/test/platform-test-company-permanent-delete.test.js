@@ -4,6 +4,9 @@ import {readFile} from "node:fs/promises";
 
 const route=await readFile(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
+const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
+const storePos=await readFile(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
+const commercialPos=await readFile(new URL("../../client/src/components/commerce/CommercialPosApp.jsx",import.meta.url),"utf8");
 
 test("permanent company deletion stays behind the platform super-admin router guard",()=>{
   assert.match(route,/isSuperAdmin===true\|\|req\.user\?\.platformRole==="SUPER_ADMIN"/);
@@ -28,4 +31,12 @@ test("platform UI exposes destructive flow only for KAT TEST",()=>{
   assert.match(ui,/Οριστική διαγραφή KAT TEST/);
   assert.match(ui,/DELETE KAT TEST/);
   assert.match(ui,/method:"DELETE"/);
+});
+
+test("deleted KAT TEST is not exposed by the production platform or POS chrome",()=>{
+  assert.doesNotMatch(entry,/KatTestQuickAccess/);
+  assert.doesNotMatch(entry,/window\.location\.(?:assign|replace)\("\/platform-admin\/kat-test"\)/);
+  assert.doesNotMatch(commercialPos,/window\.location\.assign\("\/platform-admin\/kat-test"\)/);
+  assert.doesNotMatch(storePos,/KAT TEST \/ PILOT/);
+  assert.match(storePos,/ΠΙΛΟΤΙΚΗ ΛΕΙΤΟΥΡΓΙΑ/);
 });
