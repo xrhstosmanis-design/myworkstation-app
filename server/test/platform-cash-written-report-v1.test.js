@@ -7,6 +7,7 @@ const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",impo
 
 test("platform cash control presents only concise suspicious events for every shift",()=>{
   assert.match(platformUi,/Συνολική αναφορά ελέγχου ταμείου/);
+  assert.match(platformUi,/Πραγματική ανάλυση/);
   assert.match(platformUi,/Ανάλυση ανά βάρδια/);
   assert.match(platformUi,/Τελικό αποτέλεσμα καταστήματος/);
   assert.match(platformUi,/Οι κανονικές κινήσεις δεν εμφανίζονται/);
