@@ -23,7 +23,7 @@ router.get("/sales-analysis",async(req,res,next)=>{try{
         COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",
         pc."supplierName"
       FROM "SaleLine" sl
-      JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
+      JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND COALESCE(sa."transactionMode",'NORMAL')<>'CREDIT'
       JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
       LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
@@ -72,7 +72,7 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
       COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",pc."supplierName",
       COALESCE(pay."methods",'') AS "paymentMethods"
     FROM "SaleLine" sl
-    JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
+    JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED' AND COALESCE(sa."transactionMode",'NORMAL')<>'CREDIT'
     JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
     JOIN "Store" s ON s."id"=sa."storeId" AND s."companyId"=${companyId}
     LEFT JOIN "Employee" e ON e."id"=sa."operatorEmployeeId"

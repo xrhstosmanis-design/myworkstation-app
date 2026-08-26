@@ -104,6 +104,7 @@ jobs:
           node server/e2e/eftpos-shift-close-flow.mjs
           node server/e2e/pos-to-shift-backoffice-flow.mjs
           node server/e2e/kat-pos-regression-flow.mjs
+          node server/e2e/kat-final-volume-regression-flow.mjs
           node server/e2e/multi-pos-shift-isolation-flow.mjs
           node server/e2e/kat-online-ordering-flow.mjs
           node server/e2e/kat-preparation-milk-stock-flow.mjs

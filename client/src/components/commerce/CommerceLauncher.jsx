@@ -1,11 +1,12 @@
 import React,{useEffect,useState} from "react";
-import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,X} from "lucide-react";
+import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
 import ManagementParametersPanel from "./ManagementParametersPanel.jsx";
 import SmartProductEntryBridge from "./SmartProductEntryBridge.jsx";
 import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
+import TableServiceBackofficePanel from "./TableServiceBackofficePanel.jsx";
 import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
@@ -43,6 +44,7 @@ export default function CommerceLauncher(){
   const [inventoryStoreId,setInventoryStoreId]=useState("");
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
   const [stores,setStores]=useState([]);
+  const [activeModules,setActiveModules]=useState([]);
   const [minimized,setMinimized]=useState(false);
   const [maximized,setMaximized]=useState(true);
   const [parametersOpen,setParametersOpen]=useState(false);
@@ -60,7 +62,7 @@ export default function CommerceLauncher(){
   },[visible]);
   const open=async()=>{
     setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
-    try{const list=await request("/api/stores");setStores(list);setInventoryStoreId(list[0]?.id||"")}catch{setStores([]);setInventoryStoreId("")}
+    try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
   };
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
   const interceptWarehouse=event=>{
@@ -93,8 +95,9 @@ export default function CommerceLauncher(){
         <div className="commerce-mode-switch">
           <button className={legacyView==="operations"?"active":""} onClick={()=>setLegacyView("operations")}>Εμπορικές λειτουργίες</button>
           <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
+          {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>} 
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}

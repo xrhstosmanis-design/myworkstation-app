@@ -1,19 +1,30 @@
 import {Router} from "express";
+import crypto from "node:crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {ensureKioskReportAuditSchema,insertKioskAuditEvent} from "../kiosk-report-audit.js";
+import {buildVendorClientFallback,videoAdapterFor} from "../services/video-adapters.js";
 
 const router=Router();
 const managementRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
 const dayStart=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date(Date.now()-30*86400000);return Number.isNaN(d.getTime())?new Date(Date.now()-30*86400000):d};
 const dayEndExclusive=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date();if(Number.isNaN(d.getTime()))return new Date(Date.now()+86400000);d.setDate(d.getDate()+1);return d};
-const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null});
+const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null,timeFrom:String(req.query.timeFrom||"").match(/^\d{2}:\d{2}$/)?.[0]||null,timeTo:String(req.query.timeTo||"").match(/^\d{2}:\d{2}$/)?.[0]||null,operatorId:String(req.query.operatorId||"").trim()||null,terminalPos:String(req.query.terminalPos||"").trim()||null,eventType:String(req.query.eventType||"").trim()||null,amountMin:req.query.amountMin===""||req.query.amountMin==null?null:n(req.query.amountMin),amountMax:req.query.amountMax===""||req.query.amountMax==null?null:n(req.query.amountMax)});
 
 function requireManagement(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!managementRoles.has(req.user?.role))return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
+async function hasVideoAccess(req){
+  if(req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN"||req.user?.role==="OWNER")return true;
+  if(req.user?.role!=="MANAGER")return false;
+  if(req.user?.permissions?.includes?.("VIDEO_EVENTS")||req.user?.permissions?.includes?.("VIDEO_VIEW"))return true;
+  if(!req.user?.employeeId)return false;
+  const rows=await prisma.$queryRaw`SELECT COALESCE("permissions",'{}'::jsonb) AS "permissions" FROM "StoreOperatorProfile" WHERE "companyId"=${req.user.companyId} AND "employeeId"=${req.user.employeeId} LIMIT 1`,permissions=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};
+  return permissions.videoEvents===true||permissions.videoView===true;
+}
+async function requireVideoAccess(req,res,next){try{if(await hasVideoAccess(req))return next();return res.status(403).json({error:"Η προβολή video επιτρέπεται μόνο σε Owner, Super Admin ή εξουσιοδοτημένο Manager."})}catch(error){next(error)}}
 
 router.use(async(req,res,next)=>{try{await ensureKioskReportAuditSchema();next()}catch(error){next(error)}});
 
@@ -87,13 +98,14 @@ router.get("/deactivations",requireManagement,async(req,res,next)=>{
 
 router.get("/audit-events",requireManagement,async(req,res,next)=>{
   try{
-    const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
+    const {companyId,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=filters(req),text=q?`%${q}%`:null;
     const transactionRows=await prisma.$queryRaw`
       SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
         t."sessionId" AS "shiftId",t."actorId",t."actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
-        s."name" AS "storeName"
+        s."name" AS "storeName",t."storeId",COALESCE(shift."terminalPos",'BACKOFFICE') AS "terminalPos"
       FROM "StoreTransaction" t
       LEFT JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId"
+      LEFT JOIN "CashShiftSession" shift ON shift."id"=t."sessionId" AND shift."companyId"=t."companyId"
       WHERE t."companyId"=${companyId}
         AND t."occurredAt">=${from} AND t."occurredAt"<${to}
         AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
@@ -106,7 +118,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       ORDER BY t."occurredAt" DESC LIMIT 10000`;
     const actionRows=await prisma.$queryRaw`
       SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorId",a."actorName",a."saleId",a."relatedSaleId",a."details",
-        s."name" AS "storeName"
+        s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
       WHERE a."companyId"=${companyId} AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION'))
@@ -138,11 +150,41 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       return {
         id:r.id,createdAt:r.createdAt,eventType,amount,description,
         supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:r.actorName,subtractFromShift:false,
-        reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
+        reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
     });
-    const items=[...transactionItems,...actionItems].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
-    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit"});
+    const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
+    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit",videoAccessAllowed:await hasVideoAccess(req)});
+  }catch(error){next(error)}
+});
+
+router.get("/audit-events/:sourceType/:sourceId/video-context",requireManagement,requireVideoAccess,async(req,res,next)=>{
+  try{
+    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId);
+    const events=await prisma.$queryRaw`
+      SELECT v."id",v."storeId",v."terminalPos",v."operatorId",v."operatorName",v."eventType",v."eventAt",v."nvrEventAt",v."timeOffsetSeconds",v."clipStartAt",v."clipEndAt",v."clipStatus",v."expiresAt",v."sourceType",v."sourceId",
+        s."name" AS "storeName",c."cameraKey",c."displayName" AS "cameraName",c."zone",c."streamReference",connection."protocol",connection."endpoint"
+      FROM "VideoOperationalEvent" v
+      JOIN "Store" s ON s."id"=v."storeId" AND s."companyId"=v."companyId"
+      JOIN "StoreVideoConnection" connection ON connection."companyId"=v."companyId" AND connection."storeId"=v."storeId" AND connection."active"=true
+      LEFT JOIN "StoreVideoCamera" c ON c."companyId"=v."companyId" AND c."storeId"=v."storeId" AND c."active"=true
+        AND c."zone"=CASE WHEN UPPER(v."terminalPos") LIKE '%2%' THEN 'POS_2' ELSE 'POS_1' END
+      WHERE v."companyId"=${req.user.companyId} AND v."sourceType"=${sourceType} AND v."sourceId"=${sourceId} AND v."expiresAt">NOW()
+      ORDER BY c."sortOrder" LIMIT 1`;
+    const event=events[0];
+    if(!event)return res.json({available:false,reason:"Το συμβάν δεν έχει ακόμη συνδεθεί με εγγραφή Video Events.",realVideoOpened:false});
+    const clipSupported=event.protocol==="VENDOR_API"&&videoAdapterFor(event.protocol).capabilities().clipExport,{endpoint,...publicEvent}=event,vendorClientFallback=event.protocol==="VENDOR_CLIENT"&&event.cameraKey?buildVendorClientFallback({endpoint,cameraKey:event.cameraKey,streamReference:event.streamReference,nvrEventAt:event.nvrEventAt}):null;
+    res.json({available:Boolean(event.cameraKey),reason:event.cameraKey?null:"Δεν έχει αντιστοιχιστεί ενεργή κάμερα στη ζώνη αυτού του POS.",clipSupported,clipWindow:{secondsBefore:30,secondsAfter:60,startAt:event.clipStartAt,endAt:event.clipEndAt},clipReason:clipSupported?null:"Το clip θα δημιουργηθεί μόνο όταν ο πραγματικός adapter του καταγραφικού δηλώσει υποστήριξη playback/export.",vendorClientFallback,event:publicEvent,realVideoOpened:false,clipCreated:false,configurationOnly:true});
+  }catch(error){next(error)}
+});
+
+router.post("/audit-events/:sourceType/:sourceId/video-access",requireManagement,requireVideoAccess,async(req,res,next)=>{
+  try{
+    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId),body=z.object({action:z.enum(["VIEW","EXPORT"]),outcome:z.enum(["CONTEXT_ONLY","OPENED","EXPORTED","UNAVAILABLE"])}).parse(req.body||{});
+    const events=await prisma.$queryRaw`SELECT "id","storeId","eventType" FROM "VideoOperationalEvent" WHERE "companyId"=${req.user.companyId} AND "sourceType"=${sourceType} AND "sourceId"=${sourceId} LIMIT 1`,event=events[0];
+    if(!event)return res.status(404).json({error:"Δεν βρέθηκε συνδεδεμένο Video Event."});
+    await prisma.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${event.storeId},${req.user.id||null},${body.action==="VIEW"?'VIDEO_VIEW':'VIDEO_EXPORT'},${JSON.stringify({videoEventId:event.id,eventType:event.eventType,sourceType,sourceId,outcome:body.outcome,actualVideoAccess:body.outcome==="OPENED"||body.outcome==="EXPORTED"})}::jsonb)`;
+    res.status(201).json({ok:true,audited:true,action:body.action,outcome:body.outcome});
   }catch(error){next(error)}
 });
 

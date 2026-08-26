@@ -3,7 +3,8 @@ import fs from "fs";
 const patch=(relativePath,changes)=>{
   const path=new URL(relativePath,import.meta.url);
   let src=fs.readFileSync(path,"utf8"),changed=false;
-  for(const {label,from,to} of changes){
+  for(const {label,from,to,already} of changes){
+    if(already&&src.includes(already)){console.log(`multi-pos: ${label} already installed`);continue}
     if(src.includes(to)){console.log(`multi-pos: ${label} already installed`);continue}
     if(!src.includes(from)){console.log(`multi-pos: ${label} anchor unavailable; skipped safely`);continue}
     src=src.replace(from,to);changed=true;console.log(`multi-pos: patched ${label}`);
@@ -95,6 +96,7 @@ patch("./routes/store-pos-pilot-actions.js",[
 patch("./routes/store-pos.js",[
   {
     label:"checkout terminal resolver",
+    already:'async function requestTerminal(req){',
     from:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}',
     to:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}\n'+terminalHelper
   },

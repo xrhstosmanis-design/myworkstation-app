@@ -7,6 +7,10 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const companyId=req=>req.user?.companyId||null;
+const normalizeAudienceCard=value=>String(value||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+const audienceCardHash=value=>crypto.createHash("sha256").update(normalizeAudienceCard(value)).digest("hex");
+let audienceDiscountTablesReady=false;
+async function ensureAudienceDiscountTables(){if(audienceDiscountTablesReady)return;await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscount" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"productId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"active" BOOLEAN NOT NULL DEFAULT TRUE,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("storeId","productId","audience"),CHECK ("audience" IN ('DOCTOR','NURSE','STAFF','CUSTOMER')),CHECK ("discountPercent">=0 AND "discountPercent"<=100))`);await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreProductAudienceDiscount_lookup_idx" ON "StoreProductAudienceDiscount"("companyId","storeId","audience","productId")`);await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscountAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"productIds" JSONB NOT NULL,"actorId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);audienceDiscountTablesReady=true}
 
 router.post("/new",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -44,6 +48,19 @@ router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=
     });res.json({ok:true,changed:ids.length});
   }catch(error){next(error)}
 });
+
+router.put("/bulk-audience-discount",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});await ensureAudienceDiscountTables();
+    const body=z.object({storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(1).max(500),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"]),discountPercent:z.coerce.number().min(0).max(100)}).parse(req.body||{}),ids=[...new Set(body.productIds)];
+    const [store,products]=await Promise.all([prisma.store.findFirst({where:{id:body.storeId,companyId:company},select:{id:true}}),prisma.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${body.storeId} WHERE p."companyId"=${company} AND p."id"=ANY(${ids}::text[])`]);
+    if(!store||products.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα ή προϊόν στην επιλογή."});
+    await prisma.$transaction(async tx=>{for(const productId of ids)await tx.$executeRaw`INSERT INTO "StoreProductAudienceDiscount" ("id","companyId","storeId","productId","audience","discountPercent","active","createdByUserId") VALUES (${uid()},${company},${body.storeId},${productId},${body.audience},${body.discountPercent},${body.discountPercent>0},${req.user.id||null}) ON CONFLICT ("storeId","productId","audience") DO UPDATE SET "discountPercent"=EXCLUDED."discountPercent","active"=EXCLUDED."active","createdByUserId"=EXCLUDED."createdByUserId","updatedAt"=NOW()`;await tx.$executeRaw`INSERT INTO "StoreProductAudienceDiscountAudit" ("id","companyId","storeId","audience","discountPercent","productIds","actorId") VALUES (${uid()},${company},${body.storeId},${body.audience},${body.discountPercent},${JSON.stringify(ids)}::jsonb,${req.user.id||null})`});
+    res.json({ok:true,changed:ids.length,storeId:body.storeId,audience:body.audience,discountPercent:body.discountPercent});
+  }catch(error){next(error)}
+});
+
+router.put("/audience-discount-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});await ensureAudienceDiscountTables();await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AudienceDiscountCard" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"cardHash" TEXT NOT NULL,"cardLast4" TEXT NOT NULL,"label" TEXT NOT NULL,"audience" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT TRUE,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("companyId","storeId","cardHash"),CHECK ("audience" IN ('DOCTOR','NURSE','STAFF','CUSTOMER')))`);const body=z.object({storeId:z.string().min(1),cardCode:z.string().trim().min(3).max(120),label:z.string().trim().min(2).max(160),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"])}).parse(req.body||{}),store=await prisma.store.findFirst({where:{id:body.storeId,companyId:company},select:{id:true}});if(!store)return res.status(400).json({error:"Μη έγκυρο κατάστημα."});const normalized=normalizeAudienceCard(body.cardCode);if(normalized.length<3)return res.status(400).json({error:"Η κάρτα δεν είναι έγκυρη."});const hash=audienceCardHash(normalized),last4=normalized.slice(-4);await prisma.$executeRaw`INSERT INTO "AudienceDiscountCard" ("id","companyId","storeId","cardHash","cardLast4","label","audience","createdByUserId") VALUES (${uid()},${company},${body.storeId},${hash},${last4},${body.label},${body.audience},${req.user.id||null}) ON CONFLICT ("companyId","storeId","cardHash") DO UPDATE SET "label"=EXCLUDED."label","audience"=EXCLUDED."audience","active"=true,"createdByUserId"=EXCLUDED."createdByUserId","updatedAt"=NOW()`;res.json({ok:true,label:body.label,audience:body.audience,cardLast4:last4})}catch(error){next(error)}});
 
 router.get("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{

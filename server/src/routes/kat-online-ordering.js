@@ -10,6 +10,23 @@ const money=value=>Math.round(Number(value||0)*100)/100;
 const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
 const ACTIVE_STATUSES=["NEW","ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY"];
 const NEXT_STATUS={NEW:"ACCEPTED",ACCEPTED:"PREPARING",PREPARING:"READY",READY:"OUT_FOR_DELIVERY",OUT_FOR_DELIVERY:"DELIVERED"};
+const ONLINE_MILK_SKU={
+  "ΦΡΕΣΚΟ":"MWS-PREP-MILK","ΦΡΕΣΚΟ ΓΑΛΑ":"MWS-PREP-MILK","ΓΑΛΑ ΦΡΕΣΚΟ":"MWS-PREP-MILK",
+  "ΓΑΛΑ ΕΒΑΠΟΡΕ":"MWS-PREP-MILK-EVAP","ΧΩΡΙΣ ΛΑΚΤΟΖΗ":"MWS-PREP-MILK-LF",
+  "ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ":"MWS-PREP-ALMOND","ΓΑΛΑ ΒΡΩΜΗΣ":"MWS-PREP-OAT","ΓΑΛΑ ΣΟΓΙΑΣ":"MWS-PREP-SOY"
+};
+const onlineMilkMl=sku=>({
+  "MWS-KAT-BEV-FREDDO-CAP-LATTE":140,"MWS-KAT-BEV-FREDDO-CAP":70,"MWS-KAT-BEV-DECAF-FREDDO-CAP":70,
+  "MWS-KAT-BEV-ICED-LATTE":160,"MWS-KAT-BEV-FRAPPE-MILK":30,"MWS-KAT-BEV-MOCHA-COLD":160,
+  "MWS-KAT-BEV-MACCHIATO-DOUBLE":25,"MWS-KAT-BEV-MACCHIATO":17.5,"MWS-KAT-BEV-CAP-LATTE-DOUBLE":180,
+  "MWS-KAT-BEV-CAP-LATTE-SINGLE":170,"MWS-KAT-BEV-CAP-DOUBLE":120,"MWS-KAT-BEV-CAP-SINGLE":100,
+  "MWS-KAT-BEV-DECAF-CAP":100,"MWS-KAT-BEV-FLAT-WHITE":120,"MWS-KAT-BEV-CORTADO":60,
+  "MWS-KAT-BEV-MOCHA-HOT":160,"MWS-KAT-BEV-LATTE-HOT":180,"MWS-KAT-BEV-DECAF-LATTE":180,
+  "MWS-KAT-BEV-CHOC-HOT":200,"MWS-KAT-BEV-CHOC-WHITE-HOT":200,"MWS-KAT-BEV-CHOC-HAZ-HOT":200,
+  "MWS-KAT-BEV-CHOC-CARAMEL-HOT":200,"MWS-KAT-BEV-CHOC-COLD":220,"MWS-KAT-BEV-CHOC-WHITE-COLD":220,
+  "MWS-KAT-BEV-CHOC-HAZ-COLD":220,"MWS-KAT-BEV-CHOC-CARAMEL-COLD":220,"MWS-KAT-BEV-MATCHA-HOT":200,
+  "MWS-KAT-BEV-MATCHA-COLD":220
+})[sku]||0;
 
 async function katStore(){
   const rows=await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",s."active" FROM "Store" s WHERE s."active"=TRUE AND LOWER(s."name")=LOWER(${KAT_STORE_NAME}) ORDER BY s."createdAt" ASC LIMIT 1`;
@@ -92,6 +109,21 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if(!changed){if(enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}continue}
     await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${stockProductId},'RECIPE_CONSUMPTION',${-qty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Κατανάλωση συνταγής ${line.productName}`},${movementUserId})`;
   }
+  const milkModifier=(Array.isArray(line.modifiers)?line.modifiers:[]).find(modifier=>ONLINE_MILK_SKU[String(modifier?.description||modifier?.name||"").trim().toLocaleUpperCase("el-GR")]);
+  const milkSku=milkModifier?ONLINE_MILK_SKU[String(milkModifier.description||milkModifier.name||"").trim().toLocaleUpperCase("el-GR")]:null;
+  const milkQty=Number(line.quantity||0)*onlineMilkMl(line.productSku);
+  if(milkSku&&milkQty>0){
+    const milk=(await tx.$queryRaw`SELECT p."id",p."name",sp."id" AS "storeProductId",COALESCE(sp."currentStock",0) AS "currentStock" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE p."companyId"=${store.companyId} AND p."sku"=${milkSku} AND p."active"=TRUE LIMIT 1`)[0];
+    if((!milk||!milk.storeProductId)&&enforceStock){const error=new Error(`Το επιλεγμένο γάλα της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
+    if(milk?.storeProductId&&enforceStock&&Number(milk.currentStock||0)<milkQty){const error=new Error(`Δεν υπάρχει αρκετό stock γάλακτος για ${line.productName}.`);error.status=409;throw error}
+    if(milk?.storeProductId){
+      const changed=enforceStock
+        ?await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${milkQty}`
+        :await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
+      if(!changed&&enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock γάλακτος: ${milk.name}`);error.status=409;throw error}
+      if(changed)await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${milk.id},'RECIPE_CONSUMPTION',${-milkQty},${null},'ONLINE_ORDER_RECIPE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · Γάλα modifier ${line.productName}`},${movementUserId})`;
+    }
+  }
   return true;
 }
 
@@ -99,7 +131,7 @@ async function postCommercialSale(tx,{order,store,user,config}){
   if(order.saleId||order.commercialPostedAt)return order.saleId||null;
   const open=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
   if(!open){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Η online παραγγελία δεν μπορεί να κλείσει ως παραδομένη.");error.status=409;throw error}
-  const lines=await tx.$queryRaw`SELECT l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
+  const lines=await tx.$queryRaw`SELECT l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."sku" AS "productSku",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
   if(!lines.length){const error=new Error("Η online παραγγελία δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
   const enforceStock=Boolean(config?.stockCheckEnabled);
   const saleId=crypto.randomUUID(),actorId=user.id,actorName=user.fullName||"Πωλητής",employeeId=user.employeeId||null,total=money(order.total),subtotal=money(order.total);

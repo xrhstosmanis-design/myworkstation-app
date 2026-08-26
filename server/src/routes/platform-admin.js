@@ -7,6 +7,8 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { catalogView,moduleCatalog,moduleKeys,planDefaults } from "../services/module-catalog.js";
 import { getMailStatus,sendCashControlDailyReportEmail } from "../services/mail.js";
+import { onlineUnitPrice } from "../kat-online-ordering-bootstrap.js";
+import {videoAdapterDescriptor} from "../services/video-adapters.js";
 import { ensureCashControlSchema } from "./cash-control.js";
 
 const router=Router();
@@ -22,6 +24,63 @@ const licenseStatuses=["TRIAL","PILOT","ACTIVE","SUSPENDED","EXPIRED"];
 const planSchema=z.enum(plans);
 const licenseStatusSchema=z.enum(licenseStatuses);
 const dateValue=z.string().trim().optional().or(z.literal(""));
+const videoSecretKey=()=>crypto.createHash("sha256").update(String(process.env.PARAMETERS_ENCRYPTION_KEY||process.env.JWT_SECRET||""),"utf8").digest();
+const encryptVideoSecret=value=>{if(!value)return null;const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv("aes-256-gcm",videoSecretKey(),iv),encrypted=Buffer.concat([cipher.update(String(value),"utf8"),cipher.final()]);return `v1:${iv.toString("base64")}:${cipher.getAuthTag().toString("base64")}:${encrypted.toString("base64")}`};
+let installationTablesPromise;
+async function ensureInstallationTables(){
+  if(!installationTablesPromise){
+    installationTablesPromise=(async()=>{
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreInstallationTerminal" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+        "terminalPos" TEXT NOT NULL,"displayName" TEXT NOT NULL,"tokenHash" TEXT,
+        "tokenExpiresAt" TIMESTAMPTZ,"active" BOOLEAN NOT NULL DEFAULT TRUE,
+        "activatedAt" TIMESTAMPTZ,"lastSeenAt" TIMESTAMPTZ,"createdBy" TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE ("storeId","terminalPos"))`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreInstallationTerminal_store_active_idx" ON "StoreInstallationTerminal" ("storeId","active")`);
+    })().catch(error=>{installationTablesPromise=undefined;throw error});
+  }
+  return installationTablesPromise;
+}
+async function installationStore(companyId,storeId){
+  const store=await prisma.store.findFirst({where:{id:storeId,companyId}});
+  if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη.");error.status=404;throw error}
+  return store;
+}
+async function onlineStoreContext(companyId,storeId){
+  const store=await installationStore(companyId,storeId);
+  const module=await prisma.companyModule.findFirst({where:{companyId,moduleKey:"ONLINE_ORDERING",active:true}});
+  if(!module){const error=new Error("Το module ONLINE STORE δεν είναι ενεργό για αυτόν τον πελάτη.");error.status=409;throw error}
+  return store;
+}
+async function videoStoreContext(companyId,storeId){
+  const store=await installationStore(companyId,storeId),module=await prisma.companyModule.findFirst({where:{companyId,moduleKey:"VIDEO_EVENTS",active:true}});
+  if(!module){const error=new Error("Το module VIDEO EVENTS δεν είναι τεχνικά ενεργό για αυτόν τον πελάτη.");error.status=409;throw error}return store;
+}
+async function tableServiceContext(companyId,storeId){
+  const store=await installationStore(companyId,storeId),module=await prisma.companyModule.findFirst({where:{companyId,moduleKey:"TABLE_SERVICE",active:true}});
+  if(!module){const error=new Error("Το module TABLE_SERVICE δεν είναι ενεργό για αυτόν τον πελάτη.");error.status=409;throw error}
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreTableServiceConfig" ("companyId" TEXT NOT NULL,"storeId" TEXT PRIMARY KEY,"enabled" BOOLEAN NOT NULL DEFAULT FALSE,"updatedBy" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  return store;
+}
+const onlineSettingsSchema=z.object({
+  enabled:z.boolean(),publicSlug:z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(2).max(80),
+  surchargeType:z.enum(["FIXED","PERCENT"]),surchargeValue:z.coerce.number().min(0).max(10000),stockCheckEnabled:z.boolean(),
+  pickupEnabled:z.boolean(),deliveryEnabled:z.boolean(),deliveryFee:z.coerce.number().min(0).max(10000),minimumOrderRetail:z.coerce.number().min(0).max(10000),
+  cashEnabled:z.boolean(),cardOnDeliveryEnabled:z.boolean(),timezone:z.literal("Europe/Athens").default("Europe/Athens"),
+  brandName:z.string().trim().min(2).max(120),brandTagline:z.string().trim().max(180),brandLogoUrl:z.string().trim().url().max(500).regex(/^https?:\/\//i).or(z.literal("")),
+  brandPrimaryColor:z.string().regex(/^#[0-9a-fA-F]{6}$/),brandSecondaryColor:z.string().regex(/^#[0-9a-fA-F]{6}$/),brandWelcomeMessage:z.string().trim().max(300),estimatedMinutes:z.coerce.number().int().min(5).max(180),
+  weeklyHours:z.record(z.enum(["MON","TUE","WED","THU","FRI","SAT","SUN"]),z.object({enabled:z.boolean(),start:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),end:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)}))
+}).refine(value=>value.pickupEnabled||value.deliveryEnabled,{message:"Ενεργοποίησε τουλάχιστον Παραλαβή ή Delivery."}).refine(value=>value.cashEnabled||value.cardOnDeliveryEnabled,{message:"Ενεργοποίησε τουλάχιστον έναν τρόπο πληρωμής."});
+function newActivation(terminal){
+  const token=crypto.randomBytes(32).toString("base64url");
+  const tokenHash=crypto.createHash("sha256").update(token).digest("hex");
+  const activationPath=`/store/${encodeURIComponent(terminal.storeId)}?terminal=${encodeURIComponent(terminal.terminalPos)}&activation=${encodeURIComponent(token)}`;
+  return {token,tokenHash,activationPath,expiresAt:new Date(Date.now()+24*60*60*1000)};
+}
+function terminalView(row){
+  return {id:row.id,companyId:row.companyId,storeId:row.storeId,terminalPos:row.terminalPos,displayName:row.displayName,active:row.active,activationPending:!!row.tokenHash,tokenExpiresAt:row.tokenExpiresAt,activatedAt:row.activatedAt,lastSeenAt:row.lastSeenAt,createdAt:row.createdAt};
+}
 const deletableTestCompanyNames=new Set(["KAT TEST"]);
 const permanentDeletePhrase="DELETE KAT TEST";
 const quickLabels=["ΝΕΡΟ 500ML","ΝΕΡΟ 1,5LT","ΚΟΥΛΟΥΡΙ ΘΕΣ/ΝΙΚΗΣ","ΠΟΤΗΡΙ ΜΕ ΠΑΓΟ","ΠΛΑΣΤΙΚΗ ΣΑΚΟΥΛΑ","ΜΑΣΚΑ 0,60","ΠΑΡΟΧΗ","ΜΠΑΝΑΝΑ ΤΜΧ.","ΣΑΝΤΟΥΙΤΣ","ΧΥΜΟΣ ΠΟΡΤΟΚΑΛΙ","FREDDO ESPRESSO","CAPPUCCINO","ΤΣΙΧΛΕΣ","ΑΝΑΨΥΚΤΙΚΟ 330ML","ENERGY DRINK","ΣΟΚΟΛΑΤΑ ΜΠΑΡΑ"];
@@ -109,7 +168,7 @@ async function platformCashInvestigation(session,tables){
   return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
-function companyView(company){
+function companyView(company,commercialTerms=[]){
   const owner=company.users.find(user=>user.role==="OWNER")||null;
   const employees=company.stores.reduce((total,store)=>total+(store._count?.employees||0),0);
   return {
@@ -127,7 +186,7 @@ function companyView(company){
     subscriptionEndsAt:company.subscriptionEndsAt,
     autoRenew:company.autoRenew,
     commercialNotes:company.commercialNotes,
-    modules:catalogView(company.modules),
+    modules:catalogView(company.modules,commercialTerms),
     activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
     stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,responsibleEmail:store.responsibleEmail,cashCloseEmailEnabled:store.cashCloseEmailEnabled,active:store.active,employees:store._count?.employees||0})),
@@ -140,7 +199,7 @@ function companyView(company){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const companies=await prisma.company.findMany({
+    const [companies,allTerms]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -150,8 +209,8 @@ router.get("/overview",async(req,res,next)=>{
         }
       },
       orderBy:{createdAt:"desc"}
-    });
-    const rows=companies.map(companyView);
+    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`]);
+    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id)));
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({
@@ -293,6 +352,67 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/companies/:companyId/stores/:storeId/installation-terminals",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const rows=await prisma.$queryRaw`
+      SELECT * FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}
+      ORDER BY "createdAt" ASC
+    `;
+    res.json({store:{id:store.id,name:store.name},terminals:rows.map(terminalView)});
+  }catch(error){next(error)}
+});
+
+router.post("/companies/:companyId/stores/:storeId/installation-terminals",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const body=z.object({terminalPos:z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/),displayName:z.string().trim().min(2).max(100)}).parse(req.body||{});
+    const terminal={id:crypto.randomUUID(),companyId:store.companyId,storeId:store.id,terminalPos:body.terminalPos.toUpperCase(),displayName:body.displayName};
+    const activation=newActivation(terminal);
+    const rows=await prisma.$queryRaw`
+      INSERT INTO "StoreInstallationTerminal" ("id","companyId","storeId","terminalPos","displayName","tokenHash","tokenExpiresAt","createdBy")
+      VALUES (${terminal.id},${terminal.companyId},${terminal.storeId},${terminal.terminalPos},${terminal.displayName},${activation.tokenHash},${activation.expiresAt},${req.user.id})
+      RETURNING *
+    `;
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_TERMINAL_CREATED",success:true,deviceName:`${store.name} · ${terminal.terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.status(201).json({...terminalView(rows[0]),activationPath:activation.activationPath});
+  }catch(error){
+    if(error?.code==="P2010"||String(error?.message||"").includes("unique constraint"))return res.status(409).json({error:"Υπάρχει ήδη τερματικό με αυτό το Terminal ID."});
+    next(error);
+  }
+});
+
+router.post("/companies/:companyId/stores/:storeId/installation-terminals/:terminalId/rotate-activation",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const existing=await prisma.$queryRaw`SELECT * FROM "StoreInstallationTerminal" WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} LIMIT 1`;
+    if(!existing[0])return res.status(404).json({error:"Δεν βρέθηκε το τερματικό."});
+    if(!existing[0].active)return res.status(409).json({error:"Ενεργοποιήστε πρώτα το τερματικό."});
+    const activation=newActivation(existing[0]);
+    await prisma.$executeRaw`UPDATE "StoreInstallationTerminal" SET "tokenHash"=${activation.tokenHash},"tokenExpiresAt"=${activation.expiresAt},"updatedAt"=NOW() WHERE "id"=${existing[0].id}`;
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_TERMINAL_ACTIVATION_ROTATED",success:true,deviceName:`${store.name} · ${existing[0].terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({...terminalView(existing[0]),activationPending:true,tokenExpiresAt:activation.expiresAt,activationPath:activation.activationPath});
+  }catch(error){next(error)}
+});
+
+router.patch("/companies/:companyId/stores/:storeId/installation-terminals/:terminalId",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const body=z.object({active:z.boolean()}).parse(req.body||{});
+    const rows=await prisma.$queryRaw`
+      UPDATE "StoreInstallationTerminal" SET "active"=${body.active},"tokenHash"=CASE WHEN ${body.active}=FALSE THEN NULL ELSE "tokenHash" END,"tokenExpiresAt"=CASE WHEN ${body.active}=FALSE THEN NULL ELSE "tokenExpiresAt" END,"updatedAt"=NOW()
+      WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} RETURNING *
+    `;
+    if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε το τερματικό."});
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:body.active?"STORE_TERMINAL_ENABLED":"STORE_TERMINAL_DISABLED",success:true,deviceName:`${store.name} · ${rows[0].terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json(terminalView(rows[0]));
+  }catch(error){next(error)}
+});
+
 router.get("/companies/:companyId/stores/:storeId/pilot-readiness",async(req,res,next)=>{
   try{
     const company=await prisma.company.findUnique({where:{id:req.params.companyId},include:{modules:true,users:{where:{role:"OWNER"},select:{id:true,email:true}},stores:{where:{id:req.params.storeId},include:{_count:{select:{employees:true}}}}}});
@@ -402,6 +522,41 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,n
     res.setHeader("Content-Disposition",`attachment; filename="MyWorkStation_${date}_pilot-safety-backup.json"`);
     res.setHeader("X-Backup-SHA256",checksum);
     res.send(document);
+  }catch(error){next(error)}
+});
+
+// PILOT_BACKUP_RESTORE_VERIFY_V1
+router.post("/companies/:companyId/stores/:storeId/pilot-backup/verify",async(req,res,next)=>{
+  try{
+    const document=req.body&&typeof req.body==="object"?req.body:null;
+    if(!document)return res.status(400).json({error:"Δεν δόθηκε έγκυρο backup JSON."});
+    if(document.format!=="MYWORKSTATION_PILOT_SAFETY_BACKUP_V1")return res.status(400).json({error:"Μη υποστηριζόμενη μορφή backup."});
+    if(document.scope?.companyId!==req.params.companyId||document.scope?.storeId!==req.params.storeId)return res.status(409).json({error:"Το backup ανήκει σε διαφορετικό πελάτη ή κατάστημα."});
+    const expected=String(document.integrity?.checksum||"").toLowerCase();
+    if(!/^[a-f0-9]{64}$/.test(expected))return res.status(400).json({error:"Το backup δεν περιέχει έγκυρο SHA-256 checksum."});
+    const snapshot={...document};delete snapshot.integrity;
+    const serialized=JSON.stringify(snapshot,(_key,value)=>typeof value==="bigint"?value.toString():value,2);
+    const actual=crypto.createHash("sha256").update(serialized).digest("hex");
+    if(actual!==expected)return res.status(409).json({error:"Αποτυχία ακεραιότητας backup — το αρχείο έχει αλλάξει ή αλλοιωθεί."});
+    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId},select:{id:true,name:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα προορισμού."});
+    const counts={
+      employees:Array.isArray(document.store?.employees)?document.store.employees.length:0,
+      shifts:Array.isArray(document.store?.shifts)?document.store.shifts.length:0,
+      schedules:Array.isArray(document.store?.schedules)?document.store.schedules.length:0,
+      categories:Array.isArray(document.commercial?.categories)?document.commercial.categories.length:0,
+      products:Array.isArray(document.commercial?.products)?document.commercial.products.length:0,
+      barcodes:Array.isArray(document.commercial?.barcodes)?document.commercial.barcodes.length:0,
+      storeProducts:Array.isArray(document.commercial?.storeProducts)?document.commercial.storeProducts.length:0,
+      suppliers:Array.isArray(document.commercial?.suppliers)?document.commercial.suppliers.length:0,
+      operators:Array.isArray(document.storeMode?.operators)?document.storeMode.operators.length:0,
+      layouts:Array.isArray(document.pos?.publishedLayouts)?document.pos.publishedLayouts.length:0
+    };
+    const warnings=[];
+    if(document.completeness?.productCatalog===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο Product table.");
+    if(document.completeness?.storeProducts===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο StoreProduct table.");
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"PILOT_SAFETY_BACKUP_RESTORE_VERIFIED",success:true,deviceName:`${store.name} · SHA256 ${actual.slice(0,16)}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,restorable:true,mode:"DRY_RUN_ONLY",checksum:actual,scope:document.scope,generatedAt:document.generatedAt||null,counts,warnings,security:{mutatedDatabase:false,secretsRestored:false}});
   }catch(error){next(error)}
 });
 
@@ -529,7 +684,8 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
       active:z.boolean(),
       startsAt:dateValue,
       endsAt:dateValue,
-      notes:z.string().trim().max(500).optional().or(z.literal(""))
+      notes:z.string().trim().max(500).optional().or(z.literal("")),
+      monthlyPrice:z.coerce.number().min(0).max(100000).default(0),setupFee:z.coerce.number().min(0).max(100000).default(0),billingCycle:z.enum(["MONTHLY","YEARLY","ONE_TIME"]).default("MONTHLY"),currency:z.literal("EUR").default("EUR")
     });
     const body=z.object({
       plan:planSchema,
@@ -588,9 +744,11 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
             notes:module.notes||null
           }
         });
+        await tx.$executeRaw`INSERT INTO "ModuleCommercialTerms" ("id","companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency") VALUES (${crypto.randomUUID()},${company.id},${module.key},${module.monthlyPrice},${module.setupFee},${module.billingCycle},${module.currency}) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "monthlyPrice"=EXCLUDED."monthlyPrice","setupFee"=EXCLUDED."setupFee","billingCycle"=EXCLUDED."billingCycle","currency"=EXCLUDED."currency","updatedAt"=CURRENT_TIMESTAMP`;
       }
       return result;
     });
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"COMMERCIAL_LICENSE_UPDATED",success:true,deviceName:`${updated.name} · ${body.modules.filter(module=>module.active).length} ενεργά modules`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
     res.json({ok:true,company:{id:updated.id,name:updated.name,active:updated.active,plan:updated.plan,licenseStatus:updated.licenseStatus}});
   }catch(error){next(error)}
 });
@@ -632,6 +790,89 @@ router.patch("/companies/:companyId",async(req,res,next)=>{
       data.subscriptionEndsAt=data.trialEndsAt;
     }
     res.json(await prisma.company.update({where:{id:company.id},data}));
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/table-service",async(req,res,next)=>{try{const store=await tableServiceContext(req.params.companyId,req.params.storeId),row=(await prisma.$queryRaw`SELECT "enabled","updatedAt" FROM "StoreTableServiceConfig" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];res.json({store:{id:store.id,name:store.name},enabled:Boolean(row?.enabled),updatedAt:row?.updatedAt||null})}catch(error){next(error)}});
+router.put("/companies/:companyId/stores/:storeId/table-service",async(req,res,next)=>{try{const store=await tableServiceContext(req.params.companyId,req.params.storeId),enabled=z.boolean().parse(req.body?.enabled);await prisma.$executeRaw`INSERT INTO "StoreTableServiceConfig" ("companyId","storeId","enabled","updatedBy") VALUES (${req.params.companyId},${store.id},${enabled},${req.user.id}) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=EXCLUDED."enabled","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:enabled?"TABLE_SERVICE_STORE_ENABLED":"TABLE_SERVICE_STORE_DISABLED",success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});res.json({ok:true,enabled})}catch(error){next(error)}});
+
+router.get("/companies/:companyId/stores/:storeId/online-store",async(req,res,next)=>{
+  try{
+    const store=await onlineStoreContext(req.params.companyId,req.params.storeId);
+    const configs=await prisma.$queryRaw`SELECT "enabled","publicSlug","surchargeType","surchargeValue","stockCheckEnabled","pickupEnabled","deliveryEnabled","deliveryFee","minimumOrderRetail","cashEnabled","cardOnDeliveryEnabled","timezone","weeklyHours","brandName","brandTagline","brandLogoUrl","brandPrimaryColor","brandSecondaryColor","brandWelcomeMessage","estimatedMinutes" FROM "OnlineOrderingConfig" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`;
+    const config=configs[0]||{enabled:false,publicSlug:"",surchargeType:"FIXED",surchargeValue:0,stockCheckEnabled:false,pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",weeklyHours:{},brandName:store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25};
+    config.brandName=config.brandName||store.name;config.brandTagline=config.brandTagline||"Online Παραγγελίες";config.brandLogoUrl=config.brandLogoUrl||"";config.brandPrimaryColor=config.brandPrimaryColor||"#7b1216";config.brandSecondaryColor=config.brandSecondaryColor||"#5d0c0f";config.brandWelcomeMessage=config.brandWelcomeMessage||"Γρήγορα, εύκολα, όποτε θέλεις!";config.estimatedMinutes=Number(config.estimatedMinutes||25);
+    const products=await prisma.$queryRaw`
+      SELECT p."id",p."sku",p."name",c."name" AS "categoryName",COALESCE(sp."salePrice",p."salePrice") AS "storePrice",COALESCE(v."visible",false) AS "visible"
+      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.params.companyId}
+      LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=${req.params.companyId}
+      LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=p."id" AND v."companyId"=${req.params.companyId}
+      WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;
+    res.json({store:{id:store.id,name:store.name},settings:{...config,surchargeValue:Number(config.surchargeValue||0),deliveryFee:Number(config.deliveryFee||0),minimumOrderRetail:Number(config.minimumOrderRetail||0)},products:products.map(row=>({...row,storePrice:Number(row.storePrice||0),onlinePrice:onlineUnitPrice(row.storePrice,config)}))});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/online-store/settings",async(req,res,next)=>{
+  try{
+    const store=await onlineStoreContext(req.params.companyId,req.params.storeId),body=onlineSettingsSchema.parse(req.body||{}),id=crypto.randomUUID();
+    try{
+      await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","publicSlug","surchargeType","surchargeValue","stockCheckEnabled","pickupEnabled","deliveryEnabled","deliveryFee","minimumOrderRetail","cashEnabled","cardOnDeliveryEnabled","timezone","weeklyHours","brandName","brandTagline","brandLogoUrl","brandPrimaryColor","brandSecondaryColor","brandWelcomeMessage","estimatedMinutes") VALUES (${id},${req.params.companyId},${store.id},${body.enabled},${body.publicSlug},${body.surchargeType},${body.surchargeValue},${body.stockCheckEnabled},${body.pickupEnabled},${body.deliveryEnabled},${body.deliveryFee},${body.minimumOrderRetail},${body.cashEnabled},${body.cardOnDeliveryEnabled},${body.timezone},${JSON.stringify(body.weeklyHours)}::jsonb,${body.brandName},${body.brandTagline},${body.brandLogoUrl||null},${body.brandPrimaryColor},${body.brandSecondaryColor},${body.brandWelcomeMessage},${body.estimatedMinutes}) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=EXCLUDED."enabled","publicSlug"=EXCLUDED."publicSlug","surchargeType"=EXCLUDED."surchargeType","surchargeValue"=EXCLUDED."surchargeValue","stockCheckEnabled"=EXCLUDED."stockCheckEnabled","pickupEnabled"=EXCLUDED."pickupEnabled","deliveryEnabled"=EXCLUDED."deliveryEnabled","deliveryFee"=EXCLUDED."deliveryFee","minimumOrderRetail"=EXCLUDED."minimumOrderRetail","cashEnabled"=EXCLUDED."cashEnabled","cardOnDeliveryEnabled"=EXCLUDED."cardOnDeliveryEnabled","timezone"=EXCLUDED."timezone","weeklyHours"=EXCLUDED."weeklyHours","brandName"=EXCLUDED."brandName","brandTagline"=EXCLUDED."brandTagline","brandLogoUrl"=EXCLUDED."brandLogoUrl","brandPrimaryColor"=EXCLUDED."brandPrimaryColor","brandSecondaryColor"=EXCLUDED."brandSecondaryColor","brandWelcomeMessage"=EXCLUDED."brandWelcomeMessage","estimatedMinutes"=EXCLUDED."estimatedMinutes","updatedAt"=CURRENT_TIMESTAMP`;
+    }catch(error){if(error?.code==="P2002"||error?.code==="23505")return res.status(409).json({error:"Αυτό το δημόσιο URL χρησιμοποιείται ήδη από άλλο κατάστημα."});throw error}
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"ONLINE_STORE_SETTINGS_UPDATED",success:true,deviceName:`${store.name} · ${body.publicSlug}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,settings:body});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/online-store/products",async(req,res,next)=>{
+  try{
+    const store=await onlineStoreContext(req.params.companyId,req.params.storeId),body=z.object({productIds:z.array(z.string().trim().min(1)).max(5000)}).parse(req.body||{}),productIds=[...new Set(body.productIds)];
+    if(productIds.length){const valid=await prisma.$queryRaw`SELECT p."id" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.params.companyId} WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true AND p."id"=ANY(${productIds}::text[])`;if(valid.length!==productIds.length)return res.status(400).json({error:"Κάποιο προϊόν δεν ανήκει στα ενεργά προϊόντα αυτού του καταστήματος."})}
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "OnlineProductVisibility" SET "visible"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id}`;
+      for(const productId of productIds)await tx.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") VALUES (${crypto.randomUUID()},${req.params.companyId},${store.id},${productId},true) ON CONFLICT ("storeId","productId") DO UPDATE SET "visible"=true,"updatedAt"=CURRENT_TIMESTAMP`;
+    });
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"ONLINE_STORE_PRODUCTS_UPDATED",success:true,deviceName:`${store.name} · ${productIds.length} προϊόντα`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,visibleProductCount:productIds.length});
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/video-connection",async(req,res,next)=>{
+  try{const store=await videoStoreContext(req.params.companyId,req.params.storeId),rows=await prisma.$queryRaw`SELECT "id","provider","protocol","endpoint","username","active","timeOffsetSeconds","retentionDays","privacyMode","audioEnabled",("privacyNoticeAcknowledgedAt" IS NOT NULL) AS "privacyNoticeAcknowledged","connectionStatus","lastTestedAt","timeSyncStatus","timeCheckSource","lastSystemTime","lastNvrTime","measuredOffsetSeconds","timeDeviationSeconds","lastTimeCheckedAt",("passwordEnc" IS NOT NULL) AS "passwordConfigured" FROM "StoreVideoConnection" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`,cameras=await prisma.$queryRaw`SELECT "cameraKey","displayName","zone","streamReference","active","sortOrder" FROM "StoreVideoCamera" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "sortOrder","displayName"`;res.json({store:{id:store.id,name:store.name},connection:rows[0]||{provider:"GENERIC",protocol:"ONVIF",endpoint:"",username:"",active:false,timeOffsetSeconds:0,retentionDays:30,privacyMode:"EVENT_ONLY",audioEnabled:false,privacyNoticeAcknowledged:false,connectionStatus:"NOT_TESTED",lastTestedAt:null,timeSyncStatus:"NOT_CHECKED",lastTimeCheckedAt:null,passwordConfigured:false},cameras,configurationOnly:true})}catch(error){next(error)}
+});
+
+router.post("/companies/:companyId/stores/:storeId/video-connection/time-check",async(req,res,next)=>{
+  try{
+    const store=await videoStoreContext(req.params.companyId,req.params.storeId),body=z.object({nvrTime:z.string().datetime({offset:true}),confirmation:z.literal(true)}).parse(req.body||{}),connection=(await prisma.$queryRaw`SELECT "id","timeOffsetSeconds" FROM "StoreVideoConnection" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];
+    if(!connection)return res.status(409).json({error:"Αποθήκευσε πρώτα τη σύνδεση του καταγραφικού."});
+    const checkedAt=new Date(),systemTime=new Date(),nvrTime=new Date(body.nvrTime),measuredOffsetSeconds=Math.round((nvrTime.getTime()-systemTime.getTime())/1000),timeDeviationSeconds=measuredOffsetSeconds-Number(connection.timeOffsetSeconds||0),absoluteDeviation=Math.abs(timeDeviationSeconds),timeSyncStatus=absoluteDeviation<=5?"IN_SYNC":absoluteDeviation<=60?"DRIFT":"OUT_OF_SYNC";
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreVideoConnection" SET "timeSyncStatus"=${timeSyncStatus},"timeCheckSource"='MANUAL_CONFIRMED',"lastSystemTime"=${systemTime},"lastNvrTime"=${nvrTime},"measuredOffsetSeconds"=${measuredOffsetSeconds},"timeDeviationSeconds"=${timeDeviationSeconds},"lastTimeCheckedAt"=${checkedAt},"updatedAt"=NOW() WHERE "id"=${connection.id} AND "companyId"=${req.params.companyId} AND "storeId"=${store.id}`;
+      await tx.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${req.params.companyId},${store.id},${req.user.id},'NVR_TIME_CHECKED',${JSON.stringify({source:"MANUAL_CONFIRMED",timeSyncStatus,measuredOffsetSeconds,timeDeviationSeconds,configuredOffsetSeconds:Number(connection.timeOffsetSeconds||0)})}::jsonb)`;
+    });
+    res.json({ok:true,timeSyncStatus,timeCheckSource:"MANUAL_CONFIRMED",lastSystemTime:systemTime,lastNvrTime:nvrTime,measuredOffsetSeconds,timeDeviationSeconds,lastTimeCheckedAt:checkedAt,realNvrConnectionPerformed:false});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/video-connection",async(req,res,next)=>{
+  try{
+    const store=await videoStoreContext(req.params.companyId,req.params.storeId),body=z.object({provider:z.string().trim().min(2).max(80),protocol:z.enum(["ONVIF","RTSP","VENDOR_API","VENDOR_CLIENT"]),endpoint:z.string().trim().min(5).max(500).refine(value=>/^(https?:\/\/|rtsp:\/\/)/i.test(value),"Το endpoint πρέπει να αρχίζει με http://, https:// ή rtsp://."),username:z.string().trim().max(160).optional().or(z.literal("")),password:z.string().max(500).optional().or(z.literal("")),active:z.boolean(),timeOffsetSeconds:z.coerce.number().int().min(-86400).max(86400),retentionDays:z.coerce.number().int().min(1).max(365).default(30),privacyNoticeAcknowledged:z.literal(true),audioEnabled:z.literal(false).default(false)}).parse(req.body||{}),existing=(await prisma.$queryRaw`SELECT "id","passwordEnc" FROM "StoreVideoConnection" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`)[0],id=existing?.id||crypto.randomUUID(),passwordEnc=body.password?encryptVideoSecret(body.password):existing?.passwordEnc||null;
+    await prisma.$executeRaw`INSERT INTO "StoreVideoConnection" ("id","companyId","storeId","provider","protocol","endpoint","username","passwordEnc","active","timeOffsetSeconds","retentionDays","privacyMode","audioEnabled","privacyNoticeAcknowledgedAt","connectionStatus") VALUES (${id},${req.params.companyId},${store.id},${body.provider},${body.protocol},${body.endpoint},${body.username||null},${passwordEnc},${body.active},${body.timeOffsetSeconds},${body.retentionDays},'EVENT_ONLY',false,NOW(),'NOT_TESTED') ON CONFLICT ("storeId") DO UPDATE SET "provider"=EXCLUDED."provider","protocol"=EXCLUDED."protocol","endpoint"=EXCLUDED."endpoint","username"=EXCLUDED."username","passwordEnc"=EXCLUDED."passwordEnc","active"=EXCLUDED."active","timeOffsetSeconds"=EXCLUDED."timeOffsetSeconds","retentionDays"=EXCLUDED."retentionDays","privacyMode"='EVENT_ONLY',"audioEnabled"=false,"privacyNoticeAcknowledgedAt"=NOW(),"connectionStatus"='NOT_TESTED',"timeSyncStatus"='NOT_CHECKED',"updatedAt"=NOW()`;
+    await prisma.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${req.params.companyId},${store.id},${req.user.id},'CONNECTION_CONFIG_UPDATED',${JSON.stringify({provider:body.provider,protocol:body.protocol,active:body.active,timeOffsetSeconds:body.timeOffsetSeconds,retentionDays:body.retentionDays,privacyMode:"EVENT_ONLY",audioEnabled:false,passwordChanged:Boolean(body.password)})}::jsonb)`;
+    const adapter=body.protocol==="VENDOR_CLIENT"?{protocol:"VENDOR_CLIENT",configured:true,capabilities:{discovery:false,liveStream:false,playback:false,clipExport:false,timeApi:false},realConnectionPerformed:false}:videoAdapterDescriptor({...body,passwordConfigured:Boolean(passwordEnc)});
+    res.json({ok:true,passwordConfigured:Boolean(passwordEnc),connectionStatus:"NOT_TESTED",adapter,configurationOnly:true});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/video-cameras",async(req,res,next)=>{
+  try{
+    const store=await videoStoreContext(req.params.companyId,req.params.storeId),body=z.object({cameras:z.array(z.object({cameraKey:z.string().trim().min(1).max(80),displayName:z.string().trim().min(1).max(120),zone:z.enum(["POS_1","POS_2","WAREHOUSE","ENTRANCE","DELIVERY","OTHER"]),streamReference:z.string().trim().max(500).optional().or(z.literal("")),active:z.boolean().default(true),sortOrder:z.coerce.number().int().min(0).max(999)})).max(64)}).superRefine((value,ctx)=>{const keys=value.cameras.map(camera=>camera.cameraKey.toLocaleLowerCase("en"));if(new Set(keys).size!==keys.length)ctx.addIssue({code:z.ZodIssueCode.custom,path:["cameras"],message:"Κάθε κάμερα πρέπει να έχει μοναδικό κανάλι / ID."})}).parse(req.body||{}),connection=(await prisma.$queryRaw`SELECT "id" FROM "StoreVideoConnection" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];
+    if(!connection)return res.status(409).json({error:"Αποθήκευσε πρώτα τη σύνδεση του καταγραφικού."});
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreVideoCamera" SET "active"=false,"updatedAt"=NOW() WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id}`;
+      for(const camera of body.cameras)await tx.$executeRaw`INSERT INTO "StoreVideoCamera" ("id","companyId","storeId","connectionId","cameraKey","displayName","zone","streamReference","active","sortOrder") VALUES (${crypto.randomUUID()},${req.params.companyId},${store.id},${connection.id},${camera.cameraKey},${camera.displayName},${camera.zone},${camera.streamReference||null},${camera.active},${camera.sortOrder}) ON CONFLICT ("storeId","cameraKey") DO UPDATE SET "connectionId"=EXCLUDED."connectionId","displayName"=EXCLUDED."displayName","zone"=EXCLUDED."zone","streamReference"=EXCLUDED."streamReference","active"=EXCLUDED."active","sortOrder"=EXCLUDED."sortOrder","updatedAt"=NOW()`;
+      await tx.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${req.params.companyId},${store.id},${req.user.id},'CAMERA_MAPPING_UPDATED',${JSON.stringify({cameraCount:body.cameras.filter(camera=>camera.active).length,zones:[...new Set(body.cameras.filter(camera=>camera.active).map(camera=>camera.zone))]})}::jsonb)`;
+    });
+    res.json({ok:true,cameras:body.cameras,configurationOnly:true});
   }catch(error){next(error)}
 });
 

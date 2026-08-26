@@ -151,8 +151,8 @@ function totals(rows){
   const deductedSupplierPayments=sumShiftExpense("SUPPLIER_PAYMENT");
   const deductedOtherExpenses=sumShiftExpense("OTHER_EXPENSE");
   return {
-    cashSales:sum("SALE_CASH"),
-    cardSales:sum("SALE_CARD"),
+    cashSales:sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),
+    cardSales:sum("SALE_CARD")+sum("CUSTOMER_RECEIPT_CARD"),
     transferIn:sum("TRANSFER_AMOUNT"),
     supplierPayments,
     otherExpenses,

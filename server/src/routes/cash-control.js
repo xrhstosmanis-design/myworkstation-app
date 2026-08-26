@@ -160,8 +160,8 @@ async function findConsecutiveDuplicateSales(db,companyId,storeId,from,to){
 
 async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
   const rows=await db.$queryRaw`
-    SELECT COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CASH' AND "reversedAt" IS NULL),0) AS "cashSales",
-      COALESCE(SUM("amount") FILTER (WHERE "type"='SALE_CARD' AND "reversedAt" IS NULL),0) AS "cardSales",
+    SELECT COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CASH','CUSTOMER_RECEIPT_CASH') AND "reversedAt" IS NULL),0) AS "cashSales",
+      COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CARD','CUSTOMER_RECEIPT_CARD') AND "reversedAt" IS NULL),0) AS "cardSales",
       COALESCE(SUM("amount") FILTER (WHERE "type"='TRANSFER_AMOUNT' AND "reversedAt" IS NULL),0) AS "transferIn",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
     FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}`;

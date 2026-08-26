@@ -10,12 +10,23 @@ const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
 const TEST_STORE_ID="kat-test-store";
 const TEST_COMPANY_ID="kat-test-company";
 const money=value=>Math.round(Number(value||0)*100)/100;
+const dayCodes={Mon:"MON",Tue:"TUE",Wed:"WED",Thu:"THU",Fri:"FRI",Sat:"SAT",Sun:"SUN"};
+export function onlineStoreOpen(config,now=new Date()){
+  const hours=config?.weeklyHours&&typeof config.weeklyHours==="object"?config.weeklyHours:{};
+  if(!Object.keys(hours).length)return true;
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-GB",{timeZone:config.timezone||"Europe/Athens",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).map(part=>[part.type,part.value]));
+  const rule=hours[dayCodes[parts.weekday]],current=`${parts.hour}:${parts.minute}`;
+  if(!rule?.enabled)return false;
+  return rule.start<=rule.end?current>=rule.start&&current<=rule.end:current>=rule.start||current<=rule.end;
+}
 
 async function ensure(){await ensureKatOnlineOrderingSchema()}
 function safe(handler){return async(req,res,next)=>{try{await ensure();await handler(req,res)}catch(error){next(error)}}}
 const isPlatformSuperAdmin=user=>user?.isSuperAdmin===true||user?.platformRole==="SUPER_ADMIN";
-async function context(){
-  const stores=await prisma.$queryRaw`SELECT "id","name","companyId" FROM "Store" WHERE "active"=TRUE AND LOWER("name")=LOWER(${KAT_STORE_NAME}) ORDER BY "createdAt" LIMIT 1`;
+async function context(publicSlug=null){
+  const stores=publicSlug
+    ?await prisma.$queryRaw`SELECT s."id",s."name",s."companyId" FROM "Store" s JOIN "OnlineOrderingConfig" oc ON oc."storeId"=s."id" WHERE s."active"=TRUE AND LOWER(oc."publicSlug")=LOWER(${publicSlug}) LIMIT 1`
+    :await prisma.$queryRaw`SELECT "id","name","companyId" FROM "Store" WHERE "active"=TRUE AND LOWER("name")=LOWER(${KAT_STORE_NAME}) ORDER BY "createdAt" LIMIT 1`;
   const store=stores[0];if(!store){const e=new Error("Το Κυλικείο ΚΑΤ δεν είναι διαθέσιμο.");e.status=503;throw e}
   const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
   const m=modules[0],now=Date.now(),active=Boolean(m?.active)&&(!m.startsAt||new Date(m.startsAt).getTime()<=now)&&(!m.endsAt||new Date(m.endsAt).getTime()>=now);
@@ -51,13 +62,13 @@ async function modifierCatalog(companyId){
 }
 function groupsForProduct(product,groups){const type=productType(product.name);return groups.filter(g=>groupAllowed(type,g.description)).map(g=>g.id)}
 
-router.get("/catalog-modifiers",safe(async(req,res)=>{
-  const {store,config}=await context();
+router.get(["/catalog-modifiers","/:publicSlug/catalog-modifiers"],safe(async(req,res)=>{
+  const {store,config}=await context(req.params.publicSlug||null);
   const [products,groups]=await Promise.all([
-    prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",p."trackStock",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ORDER BY p."name"`,
+    prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",p."trackStock",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=p."id" AND v."companyId"=${store.companyId} AND v."visible"=TRUE WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ORDER BY p."name"`,
     modifierCatalog(store.companyId)
   ]);
-  res.json({store:{id:store.id,name:store.name},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled)},modifierGroups:groups,products:products.map(p=>({id:p.id,sku:p.sku,name:p.name,vatRate:Number(p.vatRate||0),storePrice:money(p.storePrice),onlineSurcharge:onlineSurchargeAmount(p.storePrice,config),onlinePrice:onlineUnitPrice(p.storePrice,config),trackStock:Boolean(p.trackStock),stock:Number(p.currentStock||0),available:isPreparedProduct(p)||!p.trackStock||Number(p.currentStock||0)>0,modifierGroupIds:groupsForProduct(p,groups)}))});
+  res.json({store:{id:store.id,name:store.name},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),minimumOrderRetail:money(config.minimumOrderRetail),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled),timezone:config.timezone||"Europe/Athens",weeklyHours:config.weeklyHours||{},openNow:onlineStoreOpen(config),brandName:config.brandName||store.name,brandTagline:config.brandTagline||"Online Παραγγελίες",brandLogoUrl:config.brandLogoUrl||"",brandPrimaryColor:config.brandPrimaryColor||"#7b1216",brandSecondaryColor:config.brandSecondaryColor||"#5d0c0f",brandWelcomeMessage:config.brandWelcomeMessage||"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:Number(config.estimatedMinutes||25)},modifierGroups:groups,products:products.map(p=>({id:p.id,sku:p.sku,name:p.name,vatRate:Number(p.vatRate||0),storePrice:money(p.storePrice),onlineSurcharge:onlineSurchargeAmount(p.storePrice,config),onlinePrice:onlineUnitPrice(p.storePrice,config),trackStock:Boolean(p.trackStock),stock:Number(p.currentStock||0),available:isPreparedProduct(p)||!p.trackStock||Number(p.currentStock||0)>0,modifierGroupIds:groupsForProduct(p,groups)}))});
 }));
 
 const orderSchema=z.object({
@@ -66,19 +77,20 @@ const orderSchema=z.object({
   items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().int().min(1).max(50),modifierIds:z.array(z.string().min(1)).max(20).default([])})).min(1).max(50)
 });
 
-router.post("/orders-with-modifiers",safe(async(req,res)=>{
-  const body=orderSchema.parse(req.body||{}),{store,config}=await context();
+router.post(["/orders-with-modifiers","/:publicSlug/orders-with-modifiers"],safe(async(req,res)=>{
+  const body=orderSchema.parse(req.body||{}),{store,config}=await context(req.params.publicSlug||null);
+  if(!onlineStoreOpen(config))return res.status(409).json({error:"Το Online Store είναι κλειστό αυτή την ώρα."});
   if(body.fulfillmentType==="DELIVERY"&&!config.deliveryEnabled)return res.status(409).json({error:"Το Delivery δεν είναι διαθέσιμο αυτή τη στιγμή."});
   if(body.fulfillmentType==="PICKUP"&&!config.pickupEnabled)return res.status(409).json({error:"Η παραλαβή από το Κυλικείο δεν είναι διαθέσιμη αυτή τη στιγμή."});
   if(body.paymentMethod==="CASH"&&!config.cashEnabled)return res.status(409).json({error:"Η πληρωμή με μετρητά δεν είναι διαθέσιμη."});
   if(body.paymentMethod==="CARD"&&!config.cardOnDeliveryEnabled)return res.status(409).json({error:"Η πληρωμή με ασύρματο POS δεν είναι διαθέσιμη."});
   if(body.fulfillmentType==="DELIVERY"&&!body.department?.trim())return res.status(400).json({error:"Για Delivery χρειάζεται κλινική ή τμήμα."});
   const duplicate=await prisma.$queryRaw`SELECT "id","orderNumber","status","total","createdAt" FROM "OnlineOrder" WHERE "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`;if(duplicate[0])return res.json({ok:true,duplicate:true,order:duplicate[0]});
-  const productIds=[...new Set(body.items.map(i=>i.productId))],products=await prisma.$queryRaw`SELECT p."id",p."name",p."trackStock",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND p."id"=ANY(${productIds}::text[])`;
+  const productIds=[...new Set(body.items.map(i=>i.productId))],products=await prisma.$queryRaw`SELECT p."id",p."name",p."trackStock",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=p."id" AND v."companyId"=${store.companyId} AND v."visible"=TRUE WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND p."id"=ANY(${productIds}::text[])`;
   const byId=new Map(products.map(p=>[p.id,p])),groups=await modifierCatalog(store.companyId),modifierById=new Map();for(const g of groups)for(const m of g.items)modifierById.set(m.id,{...m,groupId:g.id,groupDescription:g.description});
   const lines=[];
   for(const item of body.items){const product=byId.get(item.productId);if(!product)return res.status(409).json({error:"Ένα προϊόν δεν είναι πλέον διαθέσιμο."});if(!isPreparedProduct(product)&&product.trackStock&&Number(product.currentStock||0)<item.quantity)return res.status(409).json({error:`Δεν υπάρχει αρκετό απόθεμα για: ${product.name}`});const allowedGroups=new Set(groupsForProduct(product,groups)),selected=[];for(const id of [...new Set(item.modifierIds)]){const m=modifierById.get(id);if(!m||!allowedGroups.has(m.groupId))return res.status(409).json({error:`Μη έγκυρη επιλογή για: ${product.name}`});selected.push({id:m.id,groupId:m.groupId,group:m.groupDescription,description:m.description,price:money(m.price)})}const modifierTotal=money(selected.reduce((s,m)=>s+m.price,0)),baseOnline=onlineUnitPrice(product.storePrice,config),unit=money(baseOnline+modifierTotal),lineTotal=money(unit*item.quantity);lines.push({productId:product.id,productName:product.name,quantity:item.quantity,storeUnitPrice:money(product.storePrice),onlineSurcharge:onlineSurchargeAmount(product.storePrice,config),onlineUnitPrice:unit,lineTotal,modifiers:selected})}
-  const subtotal=money(lines.reduce((s,l)=>s+l.lineTotal,0)),deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0,total=money(subtotal+deliveryFee),id=crypto.randomUUID();
+  const subtotal=money(lines.reduce((s,l)=>s+l.lineTotal,0)),minimum=money(config.minimumOrderRetail||0);if(subtotal<minimum)return res.status(409).json({error:`Η ελάχιστη παραγγελία είναι ${minimum.toFixed(2).replace(".",",")} €.`});const deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0,total=money(subtotal+deliveryFee),id=crypto.randomUUID();
   const serialRow=(await prisma.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "orderNumber" ~ '^KAT-[0-9]+$' THEN substring("orderNumber" from 5)::int ELSE 0 END),0)::int AS value FROM "OnlineOrder" WHERE "storeId"=${store.id}`)[0];
   const serial=Number(serialRow?.value||0)+1,orderNumber=`KAT-${String(serial).padStart(3,"0")}`;
   await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "OnlineOrder" ("id","companyId","storeId","orderNumber","channel","fulfillmentType","status","paymentMethod","customerName","customerPhone","building","floor","department","room","deliveryNotes","subtotal","deliveryFee","total","idempotencyKey") VALUES (${id},${store.companyId},${store.id},${orderNumber},${body.fulfillmentType==="DELIVERY"?"ONLINE_DELIVERY":"ONLINE"},${body.fulfillmentType},'NEW',${body.paymentMethod},${body.customerName},${body.customerPhone},${body.building||null},${body.floor||null},${body.department||null},${body.room||null},${body.deliveryNotes||null},${subtotal},${deliveryFee},${total},${body.idempotencyKey})`;for(const row of lines)await tx.$executeRaw`INSERT INTO "OnlineOrderLine" ("id","orderId","productId","productName","quantity","storeUnitPrice","onlineSurcharge","onlineUnitPrice","lineTotal","modifiersJson") VALUES (${crypto.randomUUID()},${id},${row.productId},${row.productName},${row.quantity},${row.storeUnitPrice},${row.onlineSurcharge},${row.onlineUnitPrice},${row.lineTotal},${JSON.stringify(row.modifiers)}::jsonb)`;await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","toStatus","note") VALUES (${crypto.randomUUID()},${id},'NEW','Online order submitted with authoritative modifiers')`});

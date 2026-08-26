@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "package": "MyWorkStation KAT Store Mode",
+  "files": [
+    {"name": "Preflight-KAT.ps1", "sha256": "fa502c4c5aa796ca187db157923583937c4b3985ee0bdb1381aaf2a224166c1e"},
+    {"name": "Recover-KAT.ps1", "sha256": "db14610ea17850bbbd39ab25b44afbbd1cee9c30961ef0fc1cf6656af3e34018"},
+    {"name": "PRECHECK_KAT.cmd", "sha256": "98fdf3743b5d6fa4bbf150440424d7ec27cb14f92f5e50f7911f86216c890e3a"},
+    {"name": "RECOVER_KAT.cmd", "sha256": "787da49f64d9034bfb9d9ee10fd00b5626db723e5341ef1065ad9b9263040f93"},
+    {"name": "KAT_REAL_TEST_CHECKLIST.txt", "sha256": "d62d153ab7cce5bc2420ff45a9854f14f7b04185bacfd35a39a285f948bf605c"}
+  ]
+}

@@ -38,6 +38,29 @@ jobs:
             exit 1
           fi
 
+      - name: Capture rollback checkpoint
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          (async()=>{
+            const url="https://myworkstation-app.onrender.com/api/health";
+            const response=await fetch(url);
+            if(!response.ok)throw new Error(`Pre-deploy health failed: ${response.status}`);
+            const health=await response.json();
+            if(health?.ok!==true||typeof health.revision!=="string"||!health.revision.trim())throw new Error("Pre-deploy health has no rollback revision");
+            const checkpoint={capturedAt:new Date().toISOString(),healthUrl:url,revision:health.revision,version:health.version||null};
+            fs.writeFileSync("render-rollback-checkpoint.json",JSON.stringify(checkpoint,null,2)+"\n");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`### Render rollback checkpoint\n\nPrevious healthy revision: \`${health.revision}\`\n`);
+          })().catch(error=>{console.error(error);process.exit(1)});
+          NODE
+
+      - name: Preserve rollback checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-rollback-checkpoint-${{ steps.revision.outputs.sha }}
+          path: render-rollback-checkpoint.json
+          retention-days: 30
+
       - name: Trigger Render deployment
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -51,7 +74,7 @@ jobs:
           for attempt in $(seq 1 90); do
             if curl --fail --silent --show-error https://myworkstation-app.onrender.com/api/health > /tmp/health.json; then
               cat /tmp/health.json
-              if grep -Fq "\"revision\":\"$EXPECTED_REVISION\"" /tmp/health.json; then
+              if HEALTH_FILE=/tmp/health.json node -e 'const fs=require("fs"),h=JSON.parse(fs.readFileSync(process.env.HEALTH_FILE,"utf8"));process.exit(h.ok===true&&h.revision===process.env.EXPECTED_REVISION?0:1)'; then
                 echo "Render is healthy on the expected revision."
                 exit 0
               fi
@@ -59,4 +82,5 @@ jobs:
             sleep 10
           done
           echo "Render did not reach expected revision $EXPECTED_REVISION in time."
+          echo "Use the preserved render-rollback-checkpoint artifact to identify the previous healthy revision."
           exit 1

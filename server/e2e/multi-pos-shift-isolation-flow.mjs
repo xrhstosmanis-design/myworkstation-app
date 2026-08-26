@@ -68,14 +68,10 @@ async function main(){
 
   const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,terminalPos:"POS-1",body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open1.response.status,201,JSON.stringify(open1.payload));
-  await prisma.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"='POS-1' WHERE "id"=${open1.payload.id}`;
-  open1.payload.terminalPos="POS-1";
   assert.equal(open1.payload.terminalPos,"POS-1");
 
   const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,terminalPos:"POS-2",body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open2.response.status,201,JSON.stringify(open2.payload));
-  await prisma.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"='POS-2' WHERE "id"=${open2.payload.id}`;
-  open2.payload.terminalPos="POS-2";
   assert.equal(open2.payload.terminalPos,"POS-2");
   assert.notEqual(open1.payload.id,open2.payload.id);
 

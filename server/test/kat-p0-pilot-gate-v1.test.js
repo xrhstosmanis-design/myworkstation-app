@@ -46,9 +46,9 @@ test("P0 stock gate: preparation consumes recipe stock and records movements",()
   assert.match(preparation,/PreparationRecipeLine/);
   assert.match(preparation,/StockMovement/);
   assert.match(preparation,/currentStock/);
-  assert.match(preparation,/MODIFIER_SUBSTITUTION/);
+  assert.match(preparation,/MODIFIER_MILK/);
   assert.match(prepDefaults,/ΦΡΑΠΕ ΜΕ ΓΑΛΑ/);
-  assert.match(prepDefaults,/ingredientSku\.milkEvap,30,"ML"/);
+  assert.match(preparation,/WHEN source_product_sku='MWS-KAT-BEV-FRAPPE-MILK' THEN 30/);
   assert.match(prepDefaults,/"ΜΕΤΡΙΟΣ",ingredientSku\.sugar,8,"GR"/);
   assert.match(prepDefaults,/"ΓΛΥΚΟΣ",ingredientSku\.sugar,16,"GR"/);
 });
