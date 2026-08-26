@@ -70,7 +70,25 @@ const tableStatements=[
   `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_operator_active_idx"
    ON "StoreOperatorSession" ("operatorId","expiresAt") WHERE "revokedAt" IS NULL`,
   `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_expiry_idx"
-   ON "StoreOperatorSession" ("expiresAt")`
+   ON "StoreOperatorSession" ("expiresAt")`,
+  `CREATE TABLE IF NOT EXISTS "StoreInstallationTerminal" (
+    "id" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "terminalPos" TEXT NOT NULL,
+    "displayName" TEXT NOT NULL,
+    "tokenHash" TEXT,
+    "tokenExpiresAt" TIMESTAMPTZ,
+    "active" BOOLEAN NOT NULL DEFAULT TRUE,
+    "activatedAt" TIMESTAMPTZ,
+    "lastSeenAt" TIMESTAMPTZ,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","terminalPos")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "StoreInstallationTerminal_store_active_idx"
+   ON "StoreInstallationTerminal" ("storeId","active")`
 ];
 
 async function ensureTables(){
@@ -110,6 +128,9 @@ function normalizeCard(value){
 }
 function cardHash(value){
   return crypto.createHash("sha256").update(normalizeCard(value)).digest("hex");
+}
+function activationHash(value){
+  return crypto.createHash("sha256").update(String(value||"")).digest("hex");
 }
 function loginSubject(kind,value){
   return `${kind}:${crypto.createHash("sha256").update(String(value||"")).digest("hex")}`;
@@ -170,6 +191,7 @@ function operatorToken(row,sessionId){
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
     operatorSessionId:sessionId,
+    terminalId:row.terminalId||null,
     terminalPos:row.terminalPos||row.terminalpos||null,
     permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
@@ -207,6 +229,43 @@ async function ownedStore(storeId,companyId){
   return store;
 }
 
+async function resolveLoginTerminal(storeId,terminalToken,fallbackTerminal){
+  if(!terminalToken)return {terminalPos:fallbackTerminal||null,terminalId:null};
+  let payload;
+  try{payload=jwt.verify(terminalToken,process.env.JWT_SECRET)}catch{
+    const error=new Error("Η εγκατάσταση αυτού του PC δεν είναι έγκυρη. Ζητήστε νέο link εγκατάστασης.");error.status=401;throw error;
+  }
+  if(payload.tokenType!=="STORE_TERMINAL"||payload.storeId!==storeId||!payload.terminalId){
+    const error=new Error("Η εγκατάσταση δεν ανήκει σε αυτό το κατάστημα.");error.status=403;throw error;
+  }
+  const rows=await prisma.$queryRaw`
+    UPDATE "StoreInstallationTerminal" SET "lastSeenAt"=NOW(),"updatedAt"=NOW()
+    WHERE "id"=${payload.terminalId} AND "storeId"=${storeId}
+      AND "terminalPos"=${payload.terminalPos} AND "active"=TRUE
+    RETURNING "terminalPos","displayName"
+  `;
+  if(!rows[0]){const error=new Error("Αυτό το τερματικό έχει απενεργοποιηθεί.");error.status=403;throw error}
+  return {terminalPos:rows[0].terminalPos,terminalId:payload.terminalId};
+}
+
+router.post("/stores/:storeId/activate-terminal",route(async(req,res)=>{
+  const body=z.object({terminalPos:z.string().trim().min(2).max(40),activationToken:z.string().min(32).max(200)}).parse(req.body||{});
+  const store=await activeStore(req.params.storeId);
+  const terminalPos=body.terminalPos.toUpperCase();
+  const rows=await prisma.$queryRaw`
+    UPDATE "StoreInstallationTerminal"
+    SET "tokenHash"=NULL,"tokenExpiresAt"=NULL,"activatedAt"=NOW(),"lastSeenAt"=NOW(),"updatedAt"=NOW()
+    WHERE "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "active"=TRUE
+      AND "tokenHash"=${activationHash(body.activationToken)} AND "tokenExpiresAt">NOW()
+    RETURNING "id","companyId","storeId","terminalPos","displayName"
+  `;
+  const terminal=rows[0];
+  if(!terminal){const error=new Error("Το link εγκατάστασης δεν είναι έγκυρο, έχει λήξει ή έχει ήδη χρησιμοποιηθεί.");error.status=410;throw error}
+  const terminalToken=jwt.sign({tokenType:"STORE_TERMINAL",terminalId:terminal.id,companyId:terminal.companyId,storeId:terminal.storeId,terminalPos:terminal.terminalPos},process.env.JWT_SECRET,{expiresIn:"365d"});
+  await audit({companyId:terminal.companyId,storeId:terminal.storeId,actorId:terminal.id,eventType:"TERMINAL_ACTIVATED",details:{terminalPos:terminal.terminalPos,displayName:terminal.displayName}});
+  res.json({terminalToken,terminal:{id:terminal.id,terminalPos:terminal.terminalPos,displayName:terminal.displayName}});
+}));
+
 router.get("/stores/:storeId/directory",route(async(req,res)=>{
   const store=await activeStore(req.params.storeId);
   const rows=await prisma.$queryRaw`
@@ -222,7 +281,7 @@ router.get("/stores/:storeId/directory",route(async(req,res)=>{
 }));
 
 router.post("/login/pin",route(async(req,res)=>{
-  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/)}).parse(req.body);
+  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/),terminalToken:z.string().optional().nullable()}).parse(req.body);
   await activeStore(body.storeId);
   const subjectKey=loginSubject("PIN",body.employeeId);
   await assertLoginAllowed(body.storeId,subjectKey);
@@ -242,20 +301,21 @@ router.post("/login/pin",route(async(req,res)=>{
     await recordLoginFailure(body.storeId,subjectKey);
     return res.status(401).json({error:"Λανθασμένο PIN."});
   }
+  Object.assign(operator,await resolveLoginTerminal(body.storeId,body.terminalToken,operator.terminalPos));
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   const operatorSessionId=await createOperatorSession(req,operator);
-  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId}});
+  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_PIN",details:{employeeId:operator.employeeId,terminalPos:operator.terminalPos}});
   res.json({
     token:operatorToken(operator,operatorSessionId),
     user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
-    store:{id:operator.storeId,name:operator.storeName},
+    store:{id:operator.storeId,name:operator.storeName,terminalPos:operator.terminalPos},
     company:{id:operator.companyId,name:operator.companyName}
   });
 }));
 
 router.post("/login/card",route(async(req,res)=>{
-  const body=z.object({storeId:z.string().min(2),cardCode:z.string().min(3).max(120)}).parse(req.body);
+  const body=z.object({storeId:z.string().min(2),cardCode:z.string().min(3).max(120),terminalToken:z.string().optional().nullable()}).parse(req.body);
   await activeStore(body.storeId);
   const normalized=normalizeCard(body.cardCode);
   if(normalized.length<3)return res.status(400).json({error:"Η κάρτα δεν είναι έγκυρη."});
@@ -278,14 +338,15 @@ router.post("/login/card",route(async(req,res)=>{
     await recordLoginFailure(body.storeId,subjectKey);
     return res.status(401).json({error:"Η κάρτα δεν αναγνωρίστηκε."});
   }
+  Object.assign(operator,await resolveLoginTerminal(body.storeId,body.terminalToken,operator.terminalPos));
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   const operatorSessionId=await createOperatorSession(req,operator);
-  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_CARD",details:{employeeId:operator.employeeId,cardLast4:operator.cardCodeLast4}});
+  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"OPERATOR_LOGIN_CARD",details:{employeeId:operator.employeeId,cardLast4:operator.cardCodeLast4,terminalPos:operator.terminalPos}});
   res.json({
     token:operatorToken(operator,operatorSessionId),
     user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:operatorPermissions(operator.role)},
-    store:{id:operator.storeId,name:operator.storeName},
+    store:{id:operator.storeId,name:operator.storeName,terminalPos:operator.terminalPos},
     company:{id:operator.companyId,name:operator.companyName}
   });
 }));

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
 const uid=()=>crypto.randomUUID();
-const RECIPE_PROFILE_VERSION=4;
+const RECIPE_PROFILE_VERSION=6;
 const GROUPS=[
  {name:"ΖΑΧΑΡΗ",items:[[10,"ΣΚΕΤΟΣ",0],[20,"ΜΕΤΡΙΟΣ",0],[30,"ΓΛΥΚΟΣ",0],[40,"ΚΑΣΤΑΝΗ ΖΑΧΑΡΗ",0],[50,"ΣΤΕΒΙΑ",0],[60,"ΖΑΧΑΡΙΝΗ",0]]},
  {name:"ΠΑΓΟΣ",items:[[10,"ΧΩΡΙΣ ΠΑΓΟ",0],[20,"ΛΙΓΟΣ ΠΑΓΟΣ",0],[30,"ΚΑΝΟΝΙΚΟΣ ΠΑΓΟΣ",0],[40,"ΠΟΛΥΣ ΠΑΓΟΣ",0]]},
@@ -46,38 +46,38 @@ async function ensureGroup(companyId,def){
  return {id:g.id,name:def.name,items};
 }
 
-const withColdPack=rows=>[...rows,[ingredientSku.ice,100,"GR"],[ingredientSku.cupL,1,"PCS"],[ingredientSku.lidL,1,"PCS"],[ingredientSku.straw,1,"PCS"]];
+const withColdPack=rows=>[...rows,[ingredientSku.cupL,1,"PCS"],[ingredientSku.lidL,1,"PCS"],[ingredientSku.straw,1,"PCS"]];
 const withHotPack=(rows,small=false)=>[...rows,[small?ingredientSku.cupS:ingredientSku.cupL,1,"PCS"],[small?ingredientSku.lidS:ingredientSku.lidL,1,"PCS"]];
 
 function recipeFor(name){
  const n=String(name||"").toLocaleUpperCase("el-GR");
  const decaf=/DECAF/.test(n),bean=decaf?ingredientSku.decaf:ingredientSku.beans;
- if(/FREDDO CAPPUCCINO LATTE/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.milk,140,"ML"]]);
- if(/FREDDO CAPPUCCINO/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.milk,70,"ML"]]);
+ if(/FREDDO CAPPUCCINO LATTE/.test(n))return withColdPack([[bean,18,"GR"]]);
+ if(/FREDDO CAPPUCCINO/.test(n))return withColdPack([[bean,18,"GR"]]);
  if(/FREDDO ESPRESSO/.test(n))return withColdPack([[bean,18,"GR"]]);
- if(/ICED LATTE/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.milk,160,"ML"]]);
+ if(/ICED LATTE/.test(n))return withColdPack([[bean,18,"GR"]]);
  if(/ICED AMERICANO/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.water,100,"ML"]]);
- if(/ΦΡΑΠΕ ΜΕ ΓΑΛΑ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,150,"ML"],[ingredientSku.milkEvap,30,"ML"]]);
+ if(/ΦΡΑΠΕ ΜΕ ΓΑΛΑ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,150,"ML"]]);
  if(/ΦΡΑΠΕ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,180,"ML"]]);
  if(/NESCAFE ΚΡΥ/.test(n))return withColdPack([[ingredientSku.instant,2,"GR"],[ingredientSku.water,180,"ML"]]);
- if(/MOCHA ΚΡΥ|ICED MOCHA/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.choc,25,"GR"],[ingredientSku.milk,160,"ML"]]);
+ if(/MOCHA ΚΡΥ|ICED MOCHA/.test(n))return withColdPack([[bean,18,"GR"],[ingredientSku.choc,25,"GR"]]);
 
  if(/ESPRESSO LUNGO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"]],true);
  if(/ESPRESSO LUNGO/.test(n))return withHotPack([[bean,9,"GR"]],true);
- if(/ESPRESSO MACCHIATO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,25,"ML"]],true);
- if(/ESPRESSO MACCHIATO/.test(n))return withHotPack([[bean,9,"GR"],[ingredientSku.milk,17.5,"ML"]],true);
+ if(/ESPRESSO MACCHIATO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"]],true);
+ if(/ESPRESSO MACCHIATO/.test(n))return withHotPack([[bean,9,"GR"]],true);
  if(/^AMERICANO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.water,120,"ML"]]);
  if(/^AMERICANO/.test(n))return withHotPack([[bean,9,"GR"],[ingredientSku.water,100,"ML"]]);
- if(/CAPPUCCINO LATTE ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,180,"ML"]]);
- if(/CAPPUCCINO LATTE/.test(n))return withHotPack([[bean,9,"GR"],[ingredientSku.milk,170,"ML"]]);
- if(/CAPPUCCINO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,120,"ML"]]);
- if(/CAPPUCCINO/.test(n))return withHotPack([[bean,9,"GR"],[ingredientSku.milk,100,"ML"]]);
- if(/FLAT WHITE/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,120,"ML"]]);
- if(/CORTADO/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,60,"ML"]]);
- if(/MOCHA ΖΕΣΤ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.choc,25,"GR"],[ingredientSku.milk,160,"ML"]]);
+ if(/CAPPUCCINO LATTE ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"]]);
+ if(/CAPPUCCINO LATTE/.test(n))return withHotPack([[bean,9,"GR"]]);
+ if(/CAPPUCCINO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"]]);
+ if(/CAPPUCCINO/.test(n))return withHotPack([[bean,9,"GR"]]);
+ if(/FLAT WHITE/.test(n))return withHotPack([[bean,18,"GR"]]);
+ if(/CORTADO/.test(n))return withHotPack([[bean,18,"GR"]]);
+ if(/MOCHA ΖΕΣΤ/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.choc,25,"GR"]]);
  if(/ESPRESSO ΔΙΠΛ/.test(n))return withHotPack([[bean,18,"GR"]],true);
  if(/ESPRESSO ΜΟΝ|ESPRESSO DECAF|RISTRETTO/.test(n))return withHotPack([[bean,9,"GR"]],true);
- if(/CAFFE LATTE|LATTE DECAF/.test(n))return withHotPack([[bean,18,"GR"],[ingredientSku.milk,180,"ML"]]);
+ if(/CAFFE LATTE|LATTE DECAF/.test(n))return withHotPack([[bean,18,"GR"]]);
 
  if(/ΕΛΛΗΝΙΚΟΣ ΔΙΠΛ/.test(n))return withHotPack([[ingredientSku.greek,14,"GR"],[ingredientSku.water,140,"ML"]],true);
  if(/ΕΛΛΗΝΙΚΟΣ/.test(n))return withHotPack([[ingredientSku.greek,7,"GR"],[ingredientSku.water,70,"ML"]],true);
@@ -86,9 +86,9 @@ function recipeFor(name){
  if(/ΦΙΛΤΡΟΥ/.test(n))return withHotPack([[ingredientSku.filter,12,"GR"],[ingredientSku.water,200,"ML"]]);
 
  const cold=/ΚΡΥ|COLD|ICED/.test(n),white=/ΛΕΥΚ/.test(n),mix=white?ingredientSku.whiteChoc:ingredientSku.choc;
- if(/ΣΟΚΟΛΑΤΑ ΦΟΥΝΤΟΥΚΙ/.test(n))return cold?withColdPack([[mix,35,"GR"],[ingredientSku.milk,220,"ML"],[ingredientSku.syrHaz,15,"ML"]]):withHotPack([[mix,30,"GR"],[ingredientSku.milk,200,"ML"],[ingredientSku.syrHaz,15,"ML"]]);
- if(/ΣΟΚΟΛΑΤΑ ΚΑΡΑΜΕΛΑ/.test(n))return cold?withColdPack([[mix,35,"GR"],[ingredientSku.milk,220,"ML"],[ingredientSku.syrCar,15,"ML"]]):withHotPack([[mix,30,"GR"],[ingredientSku.milk,200,"ML"],[ingredientSku.syrCar,15,"ML"]]);
- if(/ΣΟΚΟΛΑΤΑ/.test(n))return cold?withColdPack([[mix,35,"GR"],[ingredientSku.milk,220,"ML"]]):withHotPack([[mix,30,"GR"],[ingredientSku.milk,200,"ML"]]);
+ if(/ΣΟΚΟΛΑΤΑ ΦΟΥΝΤΟΥΚΙ/.test(n))return cold?withColdPack([[mix,35,"GR"],[ingredientSku.syrHaz,15,"ML"]]):withHotPack([[mix,30,"GR"],[ingredientSku.syrHaz,15,"ML"]]);
+ if(/ΣΟΚΟΛΑΤΑ ΚΑΡΑΜΕΛΑ/.test(n))return cold?withColdPack([[mix,35,"GR"],[ingredientSku.syrCar,15,"ML"]]):withHotPack([[mix,30,"GR"],[ingredientSku.syrCar,15,"ML"]]);
+ if(/ΣΟΚΟΛΑΤΑ/.test(n))return cold?withColdPack([[mix,35,"GR"]]):withHotPack([[mix,30,"GR"]]);
 
  return [];
 }
@@ -109,11 +109,6 @@ async function modifierConsumption(companyId,groups,ingredients){
  await set("ΣΙΡΟΠΙ","ΚΑΡΑΜΕΛΑ",ingredientSku.syrCar,15,"ML");
  await set("ΣΙΡΟΠΙ","ΒΑΝΙΛΙΑ",ingredientSku.syrVan,15,"ML");
  await set("ΣΙΡΟΠΙ","ΦΟΥΝΤΟΥΚΙ",ingredientSku.syrHaz,15,"ML");
- await set("ΓΑΛΑ","ΓΑΛΑ ΕΒΑΠΟΡΕ",ingredientSku.milkEvap,80,"ML");
- await set("ΓΑΛΑ","ΧΩΡΙΣ ΛΑΚΤΟΖΗ",ingredientSku.milkLf,80,"ML");
- await set("ΓΑΛΑ","ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ",ingredientSku.almond,80,"ML");
- await set("ΓΑΛΑ","ΓΑΛΑ ΒΡΩΜΗΣ",ingredientSku.oat,80,"ML");
- await set("ΓΑΛΑ","ΓΑΛΑ ΣΟΓΙΑΣ",ingredientSku.soy,80,"ML");
  await set("EXTRA","EXTRA ΔΟΣΗ",ingredientSku.beans,9,"GR");
  await set("EXTRA","DECAF",ingredientSku.decaf,9,"GR");
  await set("EXTRA","ΚΑΝΕΛΑ",ingredientSku.cinnamon,1,"GR");

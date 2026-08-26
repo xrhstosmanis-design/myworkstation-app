@@ -40,7 +40,7 @@ patchFile("./components/store/StoreShiftClosePanel.jsx",[
   {
     label:"central cash visibility only",
     from:'const canSee=Boolean(pos?.access?.initialCash);setShowExpectedAmounts(canSee);',
-    to:'const canSee=Boolean(pos?.access?.centralCashPos);setShowExpectedAmounts(canSee);'
+    to:'const canSee=Boolean(pos?.access?.initialCash);setShowExpectedAmounts(canSee);'
   }
 ]);
 

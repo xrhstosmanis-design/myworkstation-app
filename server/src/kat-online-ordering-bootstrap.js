@@ -1,6 +1,15 @@
 import {prisma} from "./prisma.js";
 
 const statements=[
+`CREATE TABLE IF NOT EXISTS "ModuleCommercialTerms" (
+  "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"moduleKey" TEXT NOT NULL,
+  "monthlyPrice" DECIMAL(14,2) NOT NULL DEFAULT 0,"setupFee" DECIMAL(14,2) NOT NULL DEFAULT 0,
+  "billingCycle" TEXT NOT NULL DEFAULT 'MONTHLY',"currency" TEXT NOT NULL DEFAULT 'EUR',
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "ModuleCommercialTerms_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE ("companyId","moduleKey")
+)`,
+`CREATE INDEX IF NOT EXISTS "ModuleCommercialTerms_company_idx" ON "ModuleCommercialTerms"("companyId")`,
 `CREATE TABLE IF NOT EXISTS "OnlineOrderingConfig" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
@@ -20,6 +29,17 @@ const statements=[
   "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "staffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0,
   "permanentStaffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0,
+  "publicSlug" TEXT,
+  "customDomain" TEXT,
+  "timezone" TEXT NOT NULL DEFAULT 'Europe/Athens',
+  "weeklyHours" JSONB NOT NULL DEFAULT '{}',
+  "brandName" TEXT,
+  "brandTagline" TEXT,
+  "brandLogoUrl" TEXT,
+  "brandPrimaryColor" TEXT NOT NULL DEFAULT '#7b1216',
+  "brandSecondaryColor" TEXT NOT NULL DEFAULT '#5d0c0f',
+  "brandWelcomeMessage" TEXT,
+  "estimatedMinutes" INTEGER NOT NULL DEFAULT 25,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "OnlineOrderingConfig_pkey" PRIMARY KEY ("id"),
@@ -32,6 +52,19 @@ const statements=[
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "staffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "permanentStaffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "publicSlug" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "customDomain" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'Europe/Athens'`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "weeklyHours" JSONB NOT NULL DEFAULT '{}'`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandName" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandTagline" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandLogoUrl" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandPrimaryColor" TEXT NOT NULL DEFAULT '#7b1216'`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandSecondaryColor" TEXT NOT NULL DEFAULT '#5d0c0f'`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "brandWelcomeMessage" TEXT`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "estimatedMinutes" INTEGER NOT NULL DEFAULT 25`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "OnlineOrderingConfig_public_slug_key" ON "OnlineOrderingConfig"(LOWER("publicSlug")) WHERE "publicSlug" IS NOT NULL`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "OnlineOrderingConfig_custom_domain_key" ON "OnlineOrderingConfig"(LOWER("customDomain")) WHERE "customDomain" IS NOT NULL`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "OnlineOrderingConfig_store_key" ON "OnlineOrderingConfig"("storeId")`,
 `CREATE INDEX IF NOT EXISTS "OnlineOrderingConfig_company_idx" ON "OnlineOrderingConfig"("companyId")`,
 `CREATE TABLE IF NOT EXISTS "OnlineProductVisibility" (
@@ -252,7 +285,7 @@ async function ensureKatPilotDefaults(){
     LIMIT 1`;
   const store=stores[0];if(!store){console.warn("KAT online ordering bootstrap: production KAT store not found; module not auto-enabled.");return}
   await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes","createdAt","updatedAt") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"notes"='KAT pilot online ordering',"updatedAt"=CURRENT_TIMESTAMP`;
-  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE) ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`;
+  await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled","publicSlug") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,'kat') ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"publicSlug"=COALESCE("OnlineOrderingConfig"."publicSlug",'kat'),"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
 export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await ensureOnlineActorProtection();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}

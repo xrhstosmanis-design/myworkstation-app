@@ -19,7 +19,8 @@ test("POS has a minimal company-scoped customer search endpoint",()=>{
   assert.match(backend,/"companyId"=\$\{req\.user\.companyId\}/);
   assert.match(backend,/"active"=true/);
   assert.match(backend,/LIMIT 30/);
-  assert.doesNotMatch(backend,/customerCategoryId|notes|points/);
+  assert.doesNotMatch(backend,/customerCategoryId|notes/);
+  assert.match(backend,/"points"/);
   assert.match(backend,/hasMemberCard:Boolean/);
   assert.match(backend,/memberCard:undefined/);
 });

@@ -35,7 +35,7 @@ const norm=value=>String(value||"").trim().toUpperCase().replace(/\s+/g," ");
 
 async function repairModifierConsumption(companyId){
  let repaired=0;
- for(const [groupName,modifierName,ingredientSku,quantity,unit] of MODIFIER_TARGETS){
+ for(const [groupName,modifierName,ingredientSku,quantity,unit] of MODIFIER_TARGETS.filter(row=>row[0]!=="ΓΑΛΑ")){
    const rows=await prisma.$queryRaw`
      SELECT m."id" AS "modifierId",p."id" AS "ingredientProductId"
      FROM "ManagementModifier" m

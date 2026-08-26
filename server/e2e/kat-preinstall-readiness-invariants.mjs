@@ -18,6 +18,7 @@ for(const flow of [
   "eftpos-shift-close-flow.mjs",
   "pos-to-shift-backoffice-flow.mjs",
   "kat-pos-regression-flow.mjs",
+  "kat-final-volume-regression-flow.mjs",
   "multi-pos-shift-isolation-flow.mjs",
   "kat-online-ordering-flow.mjs",
   "kat-preparation-milk-stock-flow.mjs",

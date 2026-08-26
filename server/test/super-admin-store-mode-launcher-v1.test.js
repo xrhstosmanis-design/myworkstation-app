@@ -11,7 +11,7 @@ test("Super Admin creates a store-specific Store Mode link and Windows shortcut"
   assert.match(platform,/\[InternetShortcut\]/);
   assert.match(platform,/MyWorkStation Store Mode - \$\{store\.name/);
   assert.match(platform,/>Store Mode</);
-  assert.match(platform,/>Συντόμευση PC</);
+  assert.match(platform,/>Απλή συντόμευση</);
 });
 
 test("direct Store Mode launch still requires personal PIN or card authentication",()=>{

@@ -8,11 +8,13 @@ const money=v=>Number(v||0);
 let preparationBatchReady=false;
 function assertStore(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const e=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");e.status=403;throw e}}
 async function storeFor(req,id){const store=await prisma.store.findFirst({where:{id,companyId:req.user.companyId,active:true},select:{id:true,companyId:true}});if(!store){const e=new Error("Δεν βρέθηκε ενεργό κατάστημα.");e.status=404;throw e}return store}
-async function ensurePreparationBatchTable(){
+export async function ensurePreparationBatchTable(){
  if(preparationBatchReady)return;
  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StorePreparationBatch" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"operatorName" TEXT,"productionStation" TEXT NOT NULL DEFAULT 'ΠΑΡΑΓΩΓΗ',"priority" TEXT NOT NULL DEFAULT 'NORMAL',"note" TEXT,"itemsJson" JSONB NOT NULL DEFAULT '[]'::jsonb,"status" TEXT NOT NULL DEFAULT 'SENT',"saleId" TEXT,"consumedAt" TIMESTAMPTZ,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
  await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "saleId" TEXT`);
  await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "consumedAt" TIMESTAMPTZ`);
+ await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "tableOrderId" TEXT`);
+ await prisma.$executeRawUnsafe(`ALTER TABLE "StorePreparationBatch" ADD COLUMN IF NOT EXISTS "readyAt" TIMESTAMPTZ`);
  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorePreparationBatch_store_created_idx" ON "StorePreparationBatch"("storeId","createdAt" DESC)`);
  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PreparationStockConsumption" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"saleId" TEXT NOT NULL,"batchId" TEXT NOT NULL,"sourceProductId" TEXT NOT NULL,"ingredientProductId" TEXT NOT NULL,"modifierId" TEXT,"quantity" NUMERIC(14,4) NOT NULL,"unit" TEXT NOT NULL DEFAULT 'PCS',"kind" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PreparationStockConsumption_sale_idx" ON "PreparationStockConsumption"("companyId","storeId","saleId")`);
@@ -36,6 +38,9 @@ async function ensurePreparationBatchTable(){
    mismatch BOOLEAN;
    milk_modifier_id TEXT;
    milk_target_ingredient_id TEXT;
+   milk_target_sku TEXT;
+   source_product_sku TEXT;
+   milk_qty NUMERIC;
    milk_target_unit TEXT;
    milk_fallback_qty NUMERIC;
    milk_base_qty NUMERIC;
@@ -60,7 +65,7 @@ async function ensurePreparationBatchTable(){
        IF batch_id = '' THEN CONTINUE; END IF;
 
        SELECT * INTO batch_row FROM "StorePreparationBatch"
-       WHERE "id"=batch_id AND "companyId"=NEW."companyId" AND "storeId"=NEW."storeId" AND "status"='SENT'
+       WHERE "id"=batch_id AND "companyId"=NEW."companyId" AND "storeId"=NEW."storeId" AND ("status"='SENT' OR "status"='READY')
        FOR UPDATE;
        IF NOT FOUND THEN CONTINUE; END IF;
 
@@ -82,14 +87,40 @@ async function ensurePreparationBatchTable(){
          product_qty := GREATEST(0,COALESCE((prep_item->>'quantity')::numeric,0));
          IF product_qty <= 0 THEN CONTINUE; END IF;
 
-         milk_modifier_id:=NULL;milk_target_ingredient_id:=NULL;milk_target_unit:=NULL;milk_fallback_qty:=NULL;milk_base_qty:=0;
-         SELECT m."id",c."ingredientProductId",c."unit",c."quantity" INTO milk_modifier_id,milk_target_ingredient_id,milk_target_unit,milk_fallback_qty
+         source_product_sku:=NULL;milk_qty:=0;
+         SELECT p."sku" INTO source_product_sku FROM "Product" p WHERE p."id"=prep_item->>'productId' AND p."companyId"=NEW."companyId" LIMIT 1;
+         milk_qty:=CASE
+           WHEN source_product_sku='MWS-KAT-BEV-FREDDO-CAP-LATTE' THEN 140
+           WHEN source_product_sku IN ('MWS-KAT-BEV-FREDDO-CAP','MWS-KAT-BEV-DECAF-FREDDO-CAP') THEN 70
+           WHEN source_product_sku='MWS-KAT-BEV-ICED-LATTE' THEN 160
+           WHEN source_product_sku='MWS-KAT-BEV-FRAPPE-MILK' THEN 30
+           WHEN source_product_sku='MWS-KAT-BEV-MOCHA-COLD' THEN 160
+           WHEN source_product_sku='MWS-KAT-BEV-MACCHIATO-DOUBLE' THEN 25
+           WHEN source_product_sku='MWS-KAT-BEV-MACCHIATO' THEN 17.5
+           WHEN source_product_sku='MWS-KAT-BEV-CAP-LATTE-DOUBLE' THEN 180
+           WHEN source_product_sku='MWS-KAT-BEV-CAP-LATTE-SINGLE' THEN 170
+           WHEN source_product_sku='MWS-KAT-BEV-CAP-DOUBLE' THEN 120
+           WHEN source_product_sku IN ('MWS-KAT-BEV-CAP-SINGLE','MWS-KAT-BEV-DECAF-CAP') THEN 100
+           WHEN source_product_sku='MWS-KAT-BEV-FLAT-WHITE' THEN 120
+           WHEN source_product_sku='MWS-KAT-BEV-CORTADO' THEN 60
+           WHEN source_product_sku='MWS-KAT-BEV-MOCHA-HOT' THEN 160
+           WHEN source_product_sku IN ('MWS-KAT-BEV-LATTE-HOT','MWS-KAT-BEV-DECAF-LATTE') THEN 180
+           WHEN source_product_sku IN ('MWS-KAT-BEV-CHOC-HOT','MWS-KAT-BEV-CHOC-WHITE-HOT','MWS-KAT-BEV-CHOC-HAZ-HOT','MWS-KAT-BEV-CHOC-CARAMEL-HOT') THEN 200
+           WHEN source_product_sku IN ('MWS-KAT-BEV-CHOC-COLD','MWS-KAT-BEV-CHOC-WHITE-COLD','MWS-KAT-BEV-CHOC-HAZ-COLD','MWS-KAT-BEV-CHOC-CARAMEL-COLD') THEN 220
+           WHEN source_product_sku='MWS-KAT-BEV-MATCHA-HOT' THEN 200
+           WHEN source_product_sku='MWS-KAT-BEV-MATCHA-COLD' THEN 220
+           ELSE 0 END;
+
+         milk_modifier_id:=NULL;milk_target_ingredient_id:=NULL;milk_target_sku:=NULL;milk_target_unit:='ML';milk_fallback_qty:=NULL;milk_base_qty:=0;
+         SELECT m."id",CASE UPPER(TRIM(m."description"))
+           WHEN 'ΦΡΕΣΚΟ' THEN 'MWS-PREP-MILK' WHEN 'ΦΡΕΣΚΟ ΓΑΛΑ' THEN 'MWS-PREP-MILK' WHEN 'ΓΑΛΑ ΦΡΕΣΚΟ' THEN 'MWS-PREP-MILK'
+           WHEN 'ΓΑΛΑ ΕΒΑΠΟΡΕ' THEN 'MWS-PREP-MILK-EVAP' WHEN 'ΧΩΡΙΣ ΛΑΚΤΟΖΗ' THEN 'MWS-PREP-MILK-LF'
+           WHEN 'ΓΑΛΑ ΑΜΥΓΔΑΛΟΥ' THEN 'MWS-PREP-ALMOND' WHEN 'ΓΑΛΑ ΒΡΩΜΗΣ' THEN 'MWS-PREP-OAT' WHEN 'ΓΑΛΑ ΣΟΓΙΑΣ' THEN 'MWS-PREP-SOY' END
+         INTO milk_modifier_id,milk_target_sku
          FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
          JOIN "ManagementModifier" m ON m."id"=j->>'id' AND m."companyId"=NEW."companyId" AND m."active"=TRUE
          JOIN "ManagementModifierGroup" g ON g."id"=m."groupId" AND g."companyId"=m."companyId" AND g."active"=TRUE
-         JOIN "PreparationModifierConsumption" c ON c."companyId"=m."companyId" AND c."modifierId"=m."id"
-         JOIN "Product" ip ON ip."id"=c."ingredientProductId" AND ip."companyId"=c."companyId" AND ip."active"=TRUE
-         WHERE UPPER(g."description")='ΓΑΛΑ' AND ip."sku" LIKE 'MWS-PREP-MILK-%' AND ip."sku" <> 'MWS-PREP-MILK' LIMIT 1;
+         WHERE UPPER(g."description")='ΓΑΛΑ' LIMIT 1;
 
          ice_modifier_id:=NULL;ice_description:=NULL;ice_target_qty:=NULL;ice_base_qty:=0;ice_target_ingredient_id:=NULL;
          SELECT UPPER(j->>'description') INTO ice_description FROM jsonb_array_elements(COALESCE(prep_item->'modifiers','[]'::jsonb)) j
@@ -139,10 +170,13 @@ async function ensurePreparationBatchTable(){
            UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty FROM "Product" p WHERE sp."storeId"=NEW."storeId" AND sp."productId"=coffee_base_ingredient_id AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
            INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind") VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',coffee_base_ingredient_id,extra_modifier_id,consume_qty,'GR','MODIFIER') ON CONFLICT DO NOTHING;
          END IF;
-         IF milk_modifier_id IS NOT NULL AND milk_target_ingredient_id IS NOT NULL THEN
-           consume_qty:=product_qty*CASE WHEN milk_base_qty>0 THEN milk_base_qty ELSE COALESCE(milk_fallback_qty,0) END;
-           IF consume_qty>0 THEN UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty FROM "Product" p WHERE sp."storeId"=NEW."storeId" AND sp."productId"=milk_target_ingredient_id AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
-             INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind") VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',milk_target_ingredient_id,milk_modifier_id,consume_qty,COALESCE(milk_target_unit,'ML'),'MODIFIER_SUBSTITUTION') ON CONFLICT DO NOTHING; END IF;
+         -- MODIFIER-ONLY MILK: one selected milk, product-specific ML, one stock write.
+         IF milk_qty>0 AND milk_target_sku IS NOT NULL THEN
+           SELECT p."id" INTO milk_target_ingredient_id FROM "Product" p WHERE p."companyId"=NEW."companyId" AND p."sku"=milk_target_sku AND p."active"=TRUE LIMIT 1;
+           IF milk_target_ingredient_id IS NULL THEN RAISE EXCEPTION 'Δεν βρέθηκε ενεργό υλικό για το επιλεγμένο γάλα (%).',milk_target_sku USING ERRCODE='P0001'; END IF;
+           consume_qty:=product_qty*milk_qty;
+           UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)-consume_qty FROM "Product" p WHERE sp."storeId"=NEW."storeId" AND sp."productId"=milk_target_ingredient_id AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=NEW."companyId" AND p."trackStock"=TRUE;
+           INSERT INTO "PreparationStockConsumption" ("id","companyId","storeId","saleId","batchId","sourceProductId","ingredientProductId","modifierId","quantity","unit","kind") VALUES (gen_random_uuid()::text,NEW."companyId",NEW."storeId",sale_id,batch_id,prep_item->>'productId',milk_target_ingredient_id,milk_modifier_id,consume_qty,'ML','MODIFIER_MILK') ON CONFLICT DO NOTHING;
          END IF;
          IF ice_target_qty IS NOT NULL AND ice_target_ingredient_id IS NOT NULL AND ice_target_qty>0 THEN
            consume_qty:=product_qty*ice_target_qty;
@@ -163,7 +197,7 @@ async function ensurePreparationBatchTable(){
          END LOOP;
        END LOOP;
 
-       UPDATE "StorePreparationBatch" SET "status"='CONSUMED',"saleId"=sale_id,"consumedAt"=NOW() WHERE "id"=batch_id AND "status"='SENT';
+       UPDATE "StorePreparationBatch" SET "status"='CONSUMED',"saleId"=sale_id,"consumedAt"=NOW() WHERE "id"=batch_id AND ("status"='SENT' OR "status"='READY');
      END IF;
    END LOOP;
    RETURN NEW;

@@ -1,0 +1,13 @@
+.terminal-manager-dialog{width:min(980px,100%)}
+.terminal-explainer{display:flex;gap:12px;align-items:flex-start;background:#eaf6ff;color:#174e75;padding:14px;border-radius:14px;margin:16px 0}
+.terminal-explainer svg{flex:0 0 22px}
+.platform-modal .terminal-create-form{width:auto;max-height:none;overflow:visible;box-shadow:none;border:1px solid #dbe4ef;border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr 1.4fr auto;gap:12px;align-items:end}
+.terminal-create-form button{height:46px}
+.terminal-activation-box{display:grid;grid-template-columns:1fr auto;gap:9px;background:#e5f8ee;border:1px solid #a8e4c5;border-radius:16px;padding:16px;margin:15px 0}
+.terminal-activation-box b,.terminal-activation-box small{grid-column:1/-1}
+.terminal-activation-box input{font-family:ui-monospace,monospace;font-size:12px}
+.terminal-list{margin-top:16px}
+.terminal-list article{grid-template-columns:auto minmax(220px,1fr) auto}
+.terminal-list>p{padding:20px;text-align:center}
+.terminal-list .platform-store-actions{justify-content:flex-end}
+@media(max-width:800px){.platform-modal .terminal-create-form{grid-template-columns:1fr}.terminal-activation-box{grid-template-columns:1fr}.terminal-list article{grid-template-columns:auto 1fr}.terminal-list .platform-store-actions{grid-column:1/-1;justify-content:flex-start}}

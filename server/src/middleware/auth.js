@@ -59,8 +59,10 @@ function enforceStorePosPermissions(req,res,permissions){
     const methods=method==="MIXED"?(Array.isArray(req.body?.payments)?req.body.payments.map(row=>String(row?.method||"").toUpperCase()):[]):[method];
     if(methods.includes("CASH")&&!permissions.includes("POS_CASH"))return deny("Δεν έχεις δικαίωμα «Μετρητά» από το BackOffice.");
     if(methods.some(x=>x==="CARD"||x==="IRIS")&&!permissions.includes("POS_CARDS"))return deny("Δεν έχεις δικαίωμα «Κάρτες» από το BackOffice.");
-    const manualPrice=(Array.isArray(req.body?.items)?req.body.items:[]).some(item=>item?.unitPriceOverride!==undefined&&item?.unitPriceOverride!==null);
-    if(manualPrice&&!permissions.includes("CHANGE_RETAIL"))return deny("Δεν έχεις δικαίωμα «Αλλαγή τιμής λιανικής» από το BackOffice.");
+    const checkoutItems=Array.isArray(req.body?.items)?req.body.items:[];
+    const offlineLockedPrice=checkoutItems.length>0&&checkoutItems.every(item=>item?.unitPriceOverride!==undefined&&item?.unitPriceOverride!==null&&item?.overrideReason==="OFFLINE_POS_LOCKED_PRICE");
+    const manualPrice=checkoutItems.some(item=>item?.unitPriceOverride!==undefined&&item?.unitPriceOverride!==null);
+    if(manualPrice&&!offlineLockedPrice&&!permissions.includes("CHANGE_RETAIL"))return deny("Δεν έχεις δικαίωμα «Αλλαγή τιμής λιανικής» από το BackOffice.");
   }
   if(req.method==="GET"&&/\/sales\/recent$/.test(path)&&!permissions.includes("RETURN_ITEMS")&&!permissions.includes("TRANSACTION_REVERSAL")){
     return deny("Δεν έχεις δικαίωμα προβολής πωλήσεων για επιστροφή/διόρθωση από το BackOffice.");
@@ -128,6 +130,14 @@ export async function auth(req,res,next){
       if(operator.role!==payload.role){
         return res.status(401).json({error:"Ο ρόλος Store Mode άλλαξε. Συνδεθείτε ξανά.",code:"STORE_OPERATOR_ROLE_CHANGED"});
       }
+      if(payload.terminalId){
+        const terminals=await prisma.$queryRaw`
+          SELECT "id" FROM "StoreInstallationTerminal"
+          WHERE "id"=${payload.terminalId} AND "storeId"=${operator.storeId}
+            AND "terminalPos"=${payload.terminalPos} AND "active"=TRUE LIMIT 1
+        `;
+        if(!terminals[0])return res.status(401).json({error:"Το τερματικό έχει απενεργοποιηθεί. Απαιτείται νέα εγκατάσταση.",code:"STORE_TERMINAL_DISABLED"});
+      }
       prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "lastSeenAt"=NOW() WHERE "id"=${payload.operatorSessionId} AND "lastSeenAt"<NOW()-INTERVAL '5 minutes'`.catch(()=>{});
       const rights=operator.profilePermissions&&typeof operator.profilePermissions==="object"?operator.profilePermissions:{};
       const permissions=storeRuntimePermissions({posAccess:operator.posAccess,permissions:rights});
@@ -135,7 +145,9 @@ export async function auth(req,res,next){
       if(!enforceStorePosPermissions(req,res,permissions))return;
       exposeStorePosRuntimeAccess(req,res,rights);
       req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
-      req.user.terminalPos=operator.terminalPos||operator.terminalpos||payload.terminalPos||payload.terminalpos||null;
+      // A verified device binding in the login token identifies the physical POS.
+      // Legacy sessions without one continue to use the operator profile terminal.
+      req.user.terminalPos=payload.terminalPos||payload.terminalpos||operator.terminalPos||operator.terminalpos||null;
       return next();
     }
 
