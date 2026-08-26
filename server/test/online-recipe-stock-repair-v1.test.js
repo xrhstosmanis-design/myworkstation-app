@@ -24,6 +24,9 @@ test("online recipe stock repair reconciles only the missing movement quantity",
 
 test("server start runs actor repair then stock repair before app start",()=>{
   const parsed=JSON.parse(pkg);
-  assert.equal(parsed.scripts.start,"node src/online-transaction-actor-fix.js && node src/online-recipe-stock-repair.js && node src/index.js");
+  const actor=parsed.scripts.start.indexOf("node src/online-transaction-actor-fix.js");
+  const stock=parsed.scripts.start.indexOf("node src/online-recipe-stock-repair.js");
+  const app=parsed.scripts.start.lastIndexOf("node src/index.js");
+  assert.ok(actor>=0&&stock>actor&&app>stock,"actor repair and stock repair must run in order before app start");
   assert.equal(parsed.dependencies.bcryptjs,"^2.4.3");
 });

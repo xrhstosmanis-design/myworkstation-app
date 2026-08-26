@@ -488,7 +488,7 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
       modules:z.array(moduleSchema)
     }).parse(req.body||{});
 
-    const company=await prisma.company.findUnique({where:{id:req.params.companyId}});
+    const company=await prisma.company.findUnique({where:{id:req.params.companyId},include:{modules:true}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
 
     const moduleByKey=new Map(moduleCatalog.map(module=>[module.key,module]));

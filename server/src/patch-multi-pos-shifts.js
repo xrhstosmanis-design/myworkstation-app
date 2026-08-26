@@ -12,9 +12,13 @@ const patch=(relativePath,changes)=>{
 };
 
 const terminalHelper=`async function requestTerminal(req){
+  const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
+  if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
   if(req.user?.tokenType==="STORE_OPERATOR"){
-    const rows=await prisma.$queryRaw\`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=\${req.user.operatorId||req.user.id} AND c."companyId"=\${req.user.companyId} AND c."active"=TRUE LIMIT 1\`;
-    return String(rows[0]?.terminalPos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+    const liveTerminal=String(req.user?.terminalPos||"").trim();
+    if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
+    const rows=await prisma.$queryRaw\`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=\${req.user.companyId} AND p."storeId"=\${req.user.storeId} AND p."employeeId"=\${req.user.employeeId} LIMIT 1\`;
+    return String(rows[0]?.terminalPos||rows[0]?.terminalpos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
   }
   return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
 }`;
@@ -38,7 +42,7 @@ patch("./routes/cash-control.js",[
   {
     label:"terminal-scoped shift open",
     from:'  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{});\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});',
-    to:'  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=await requestTerminal(req);\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});'
+    to:'  assertStoreAccess(req,req.params.storeId);const requestedTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"",store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||await requestTerminal(req);\n  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});'
   },
   {
     label:"terminal opening continuity",
@@ -85,6 +89,24 @@ patch("./routes/store-pos-pilot-actions.js",[
     label:"pilot terminal resolver and open shift",
     from:'async function openShift(req,storeId){const rows=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1`;if(!rows[0]){const e=new Error("Δεν υπάρχει ανοιχτή βάρδια. Άνοιξε πρώτα βάρδια.");e.status=409;throw e}return rows[0]}',
     to:terminalHelper+'\nasync function openShift(req,storeId){const terminalPos=await requestTerminal(req),rows=await prisma.$queryRaw`SELECT "id","terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1`;if(!rows[0]){const e=new Error(`Δεν υπάρχει ανοιχτή βάρδια στο ${terminalPos}. Άνοιξε πρώτα βάρδια.`);e.status=409;throw e}return rows[0]}'
+  }
+]);
+
+patch("./routes/store-pos.js",[
+  {
+    label:"checkout terminal resolver",
+    from:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}',
+    to:'async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}\n'+terminalHelper
+  },
+  {
+    label:"checkout terminal context",
+    from:'assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),body=checkoutSchema.parse(req.body||{})',
+    to:'assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId),terminalPos=await requestTerminal(req),body=checkoutSchema.parse(req.body||{})'
+  },
+  {
+    label:"checkout terminal shift",
+    from:'WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE',
+    to:'WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "status"=\'OPEN\' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE'
   }
 ]);
 

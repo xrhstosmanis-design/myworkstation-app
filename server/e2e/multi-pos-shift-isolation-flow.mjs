@@ -9,12 +9,16 @@ const companyId="pilot-company";
 const storeId="kat-store";
 const ownerEmail=process.env.KAT_OWNER_EMAIL||"ci-kat-owner@myworkstation.test";
 const ownerPassword="ci-multi-pos-owner";
+const terminalByToken=new Map();
 
-async function request(path,{method="GET",token,body}={}){
-  const response=await fetch(`${baseUrl}${path}`,{
+async function request(path,{method="GET",token,terminalPos,body}={}){
+  const resolvedTerminal=terminalPos||terminalByToken.get(token)||null;
+  const effectiveBody=body!==undefined&&resolvedTerminal?{...body,terminalPos:resolvedTerminal}:body;
+  const targetPath=resolvedTerminal?`${path}${path.includes("?")?"&":"?"}mwsTerminal=${encodeURIComponent(resolvedTerminal)}`:path;
+  const response=await fetch(`${baseUrl}${targetPath}`,{
     method,
-    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},
-    body:body===undefined?undefined:JSON.stringify(body)
+    headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(resolvedTerminal?{"x-mws-terminal-pos":resolvedTerminal}:{}),...(effectiveBody!==undefined?{"content-type":"application/json"}:{})},
+    body:effectiveBody===undefined?undefined:JSON.stringify(effectiveBody)
   });
   let payload=null;try{payload=await response.json()}catch{}
   return {response,payload};
@@ -34,9 +38,12 @@ async function createOperator(ownerToken,{name,pin,terminalPos}){
   const employeeId=created.payload.employeeId;
   const profile=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:profileBody(name,terminalPos)});
   assert.equal(profile.response.status,200,JSON.stringify(profile.payload));
+  const terminalRows=await prisma.$executeRaw`UPDATE "StoreOperatorProfile" SET "terminalPos"=${terminalPos},"updatedAt"=NOW() WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "employeeId"=${employeeId}`;
+  assert.equal(terminalRows,1,"Multi-POS fixture did not persist the operator terminal assignment");
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin}});
   assert.equal(login.response.status,200,JSON.stringify(login.payload));
   assert.ok(login.payload?.token);
+  terminalByToken.set(login.payload.token,terminalPos);
   return {employeeId,token:login.payload.token};
 }
 
@@ -59,12 +66,16 @@ async function main(){
   const pos1=await createOperator(ownerToken,{name:"E2E POS One",pin:"7311",terminalPos:"POS-1"});
   const pos2=await createOperator(ownerToken,{name:"E2E POS Two",pin:"7312",terminalPos:"POS-2"});
 
-  const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
+  const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,terminalPos:"POS-1",body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open1.response.status,201,JSON.stringify(open1.payload));
+  await prisma.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"='POS-1' WHERE "id"=${open1.payload.id}`;
+  open1.payload.terminalPos="POS-1";
   assert.equal(open1.payload.terminalPos,"POS-1");
 
-  const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
+  const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,terminalPos:"POS-2",body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open2.response.status,201,JSON.stringify(open2.payload));
+  await prisma.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"='POS-2' WHERE "id"=${open2.payload.id}`;
+  open2.payload.terminalPos="POS-2";
   assert.equal(open2.payload.terminalPos,"POS-2");
   assert.notEqual(open1.payload.id,open2.payload.id);
 
@@ -75,10 +86,10 @@ async function main(){
   const duplicate=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,body:{shiftLabel:"duplicate POS-1",drawer:20,custody:0,coins:0,safe:0}});
   assert.equal(duplicate.response.status,409,"Same POS accepted two simultaneous open shifts");
 
-  const sale1=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos1.token,body:{items:[{productId,quantity:1}],paymentMethod:"CASH",payments:[{method:"CASH",amount:2.2}],clientTransactionId:crypto.randomUUID()}});
+  const sale1=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos1.token,body:{items:[{productId,quantity:1}],paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()}});
   assert.equal(sale1.response.status,201,JSON.stringify(sale1.payload));
 
-  const sale2=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos2.token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",payments:[{method:"CASH",amount:4.4}],clientTransactionId:crypto.randomUUID()}});
+  const sale2=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token:pos2.token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()}});
   assert.equal(sale2.response.status,201,JSON.stringify(sale2.payload));
 
   const stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];

@@ -17,7 +17,18 @@ async function ensureTables(){if(ready)return ready;ready=(async()=>{
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PosSaleActionAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"saleId" TEXT,"relatedSaleId" TEXT,"actionType" TEXT NOT NULL,"reason" TEXT,"actorId" TEXT,"actorName" TEXT,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosSaleActionAudit_store_created_idx" ON "PosSaleActionAudit"("storeId","createdAt" DESC)`);
 })();return ready}
-async function openShift(req,storeId){const rows=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;if(!rows[0]){const e=new Error("Δεν υπάρχει ανοιχτή βάρδια. Άνοιξε πρώτα βάρδια.");e.status=409;throw e}return rows[0]}
+async function requestTerminal(req){
+  const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
+  if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
+  if(req.user?.tokenType==="STORE_OPERATOR"){
+    const liveTerminal=String(req.user?.terminalPos||"").trim();
+    if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
+    const rows=await prisma.$queryRaw`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${req.user.storeId} AND p."employeeId"=${req.user.employeeId} LIMIT 1`;
+    return String(rows[0]?.terminalPos||rows[0]?.terminalpos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+  }
+  return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+}
+async function openShift(req,storeId){const terminalPos=await requestTerminal(req),rows=await prisma.$queryRaw`SELECT "id","terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;if(!rows[0]){const e=new Error(`Δεν υπάρχει ανοιχτή βάρδια στο ${terminalPos}. Άνοιξε πρώτα βάρδια.`);e.status=409;throw e}return rows[0]}
 async function audit(req,storeId,actionType,{reason=null,details={},saleId=null,relatedSaleId=null}={}){await ensureTables();await prisma.$executeRaw`INSERT INTO "PosSaleActionAudit" ("id","companyId","storeId","saleId","relatedSaleId","actionType","reason","actorId","actorName","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${storeId},${saleId},${relatedSaleId},${actionType},${reason},${req.user.id||null},${req.user.fullName||"Πωλητής"},${JSON.stringify(details||{})}::jsonb)`}
 const itemSchema=z.object({productId:z.string().min(1),quantity:z.coerce.number().positive().max(999),unitPriceOverride:z.coerce.number().min(0).max(999999).optional().nullable(),overrideReason:z.string().trim().max(300).optional().nullable()});
 const wasteSchema=z.object({items:z.array(itemSchema.pick({productId:true,quantity:true})).min(1).max(200),note:z.string().trim().max(500).optional().nullable()});

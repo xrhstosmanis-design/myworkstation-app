@@ -14,6 +14,7 @@ export const moduleCatalog=[
   {key:"AI_READER",name:"AI Reader Τιμολογίων",description:"Τοπικό OCR χωρίς αυτόματη AI χρέωση, confidence ανά γραμμή και προαιρετικός χειροκίνητος επανέλεγχος όταν συνδεθεί provider.",category:"AI",commercialReady:true},
   {key:"DOCUMENTS",name:"Έγγραφα & Τιμολόγια",description:"Θυρίδα τιμολογίων, αρχεία ανά κατάστημα/προμηθευτή, υπεύθυνος και κατάσταση επεξεργασίας.",category:"OPERATIONS",commercialReady:true},
   {key:"ATTENDANCE",name:"Παρουσία & Ώρες Εργασίας",description:"Προσωπική είσοδος/έξοδος, πραγματικές ώρες, μηνιαία σύνολα και ελεγχόμενες διορθώσεις.",category:"HR",commercialReady:true},
+  {key:"NETLINK_PREPAID",name:"Netlink Prepaid",description:"Προπληρωμένες κάρτες μέσω Netlink με ξεχωριστή αξία κάρτας, χρέωση υπηρεσίας, προμήθεια και πλήρες transaction audit.",category:"CONNECTORS",commercialReady:false,requiresTechnicalActivation:true},
   {key:"CONNECTOR_RBS",name:"Connector RBS / CapDriver",description:"Τοπική διασύνδεση με CapDriver και φορολογική RBS.",category:"CONNECTORS",commercialReady:false,requiresTechnicalActivation:true},
   {key:"REMOTE_SUPPORT",name:"Remote Support",description:"Απομακρυσμένη υποστήριξη με audit και έγκριση χρήστη.",category:"SUPPORT",commercialReady:false,requiresTechnicalActivation:true}
 ];

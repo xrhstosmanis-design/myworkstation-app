@@ -170,6 +170,7 @@ function operatorToken(row,sessionId){
     fullName:row.displayName,
     tokenType:"STORE_OPERATOR",
     operatorSessionId:sessionId,
+    terminalPos:row.terminalPos||row.terminalpos||null,
     permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
 }
@@ -226,8 +227,9 @@ router.post("/login/pin",route(async(req,res)=>{
   const subjectKey=loginSubject("PIN",body.employeeId);
   await assertLoginAllowed(body.storeId,subjectKey);
   const rows=await prisma.$queryRaw`
-    SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
+    SELECT c.*,p."terminalPos" AS "terminalPos",e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
     FROM "StoreOperatorCredential" c
+    LEFT JOIN "StoreOperatorProfile" p ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
     JOIN "Employee" e ON e."id"=c."employeeId"
     JOIN "Store" s ON s."id"=c."storeId"
     JOIN "Company" co ON co."id"=c."companyId"
@@ -261,8 +263,9 @@ router.post("/login/card",route(async(req,res)=>{
   const subjectKey=loginSubject("CARD",hash);
   await assertLoginAllowed(body.storeId,subjectKey);
   const rows=await prisma.$queryRaw`
-    SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
+    SELECT c.*,p."terminalPos" AS "terminalPos",e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName"
     FROM "StoreOperatorCredential" c
+    LEFT JOIN "StoreOperatorProfile" p ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
     JOIN "Employee" e ON e."id"=c."employeeId"
     JOIN "Store" s ON s."id"=c."storeId"
     JOIN "Company" co ON co."id"=c."companyId"

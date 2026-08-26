@@ -23,6 +23,8 @@ test("preparation batch keeps store and company scope and validates modifiers",(
 });
 
 test("sending to production does not silently mutate ingredient stock before checkout",()=>{
- assert.doesNotMatch(route,/UPDATE "StoreProduct" SET "currentStock"/);
- assert.doesNotMatch(route,/StockMovement/);
+ const postStart=route.indexOf('router.post("/stores/:storeId/preparation"');
+ const postBody=route.slice(postStart);
+ assert.doesNotMatch(postBody,/UPDATE "StoreProduct" SET "currentStock"/);
+ assert.doesNotMatch(postBody,/StockMovement/);
 });

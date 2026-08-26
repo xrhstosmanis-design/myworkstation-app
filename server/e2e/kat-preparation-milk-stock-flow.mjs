@@ -62,7 +62,7 @@ async function main(){
   const created=await request(`/api/operator-management/stores/${storeId}/operators`,{method:"POST",token:ownerToken,body:{username:"e2e.kat.milk",fullName:"E2E KAT Milk",email:"",phone:"",role:"EMPLOYEE",active:true,pin:operatorPin}});
   assert.equal(created.response.status,201,JSON.stringify(created.payload));
   const employeeId=created.payload.employeeId;
-  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:profileBody({cash:true,cards:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
+  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:profileBody({cash:true,cards:true,initialCash:true,closeShift:true,changeRetail:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
   assert.equal(changed.response.status,200,JSON.stringify(changed.payload));
 
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin:operatorPin}});
@@ -84,13 +84,16 @@ async function main(){
     note:"KAT P0 fresh milk stock test",priority:"NORMAL",productionStation:"ΠΑΡΑΓΩΓΗ"
   }});
   assert.equal(preparation.response.status,201,JSON.stringify(preparation.payload));
-  const batchId=preparation.payload?.batchId;assert.ok(batchId);
+  const responseBatchId=preparation.payload?.batchId||preparation.payload?.id||null;
+  const storedBatch=(await prisma.$queryRaw`SELECT "id" FROM "StorePreparationBatch" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SENT' AND (${responseBatchId}::text IS NULL OR "id"=${responseBatchId}) ORDER BY "createdAt" DESC LIMIT 1`)[0]
+    ||(await prisma.$queryRaw`SELECT "id" FROM "StorePreparationBatch" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SENT' ORDER BY "createdAt" DESC LIMIT 1`)[0];
+  const batchId=storedBatch?.id;assert.ok(batchId,"Preparation response was not backed by a StorePreparationBatch");
 
   const unitPrice=Number(drink.storePrice||drink.salePrice||0);
   assert.ok(unitPrice>0,"FREDDO CAPPUCCINO has no sale price");
   const checkout=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{
     items:[{productId:drink.id,quantity:1,unitPriceOverride:unitPrice,overrideReason:`PREPARATION:${batchId}`}],
-    paymentMethod:"CASH",payments:[{method:"CASH",amount:unitPrice}],clientTransactionId:crypto.randomUUID()
+    paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()
   }});
   assert.equal(checkout.response.status,201,JSON.stringify(checkout.payload));
   const saleId=checkout.payload.id||checkout.payload.saleId;assert.ok(saleId);

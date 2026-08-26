@@ -68,7 +68,7 @@ async function main(){
   const created=await request(`/api/operator-management/stores/${storeId}/operators`,{method:"POST",token:ownerToken,body:{username:"e2e.kat.online",fullName:"E2E KAT Online",email:"",phone:"",role:"EMPLOYEE",active:true,pin:operatorPin}});
   assert.equal(created.response.status,201,JSON.stringify(created.payload));
   const employeeId=created.payload.employeeId;
-  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:operatorProfile({cash:true,cards:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
+  const changed=await request(`/api/operator-management/stores/${storeId}/operators/${employeeId}`,{method:"PATCH",token:ownerToken,body:operatorProfile({cash:true,cards:true,initialCash:true,closeShift:true,changeRetail:true,shiftTransactionsPos:true,allShiftTransactionsPos:false,sameShiftPayments:true})});
   assert.equal(changed.response.status,200,JSON.stringify(changed.payload));
 
   const login=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId,pin:operatorPin}});
@@ -110,8 +110,16 @@ async function main(){
   assert.ok(accepted.print,"Accept must return print payload");
   await setStatus(token,orderId,"PREPARING");
   await setStatus(token,orderId,"READY");
-  const delivered=await setStatus(token,orderId,"DELIVERED");
-  assert.ok(delivered.order?.saleId,"Delivered online order did not post a POS sale");
+  const checkout=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{
+    paymentMethod:"CASH",clientTransactionId:crypto.randomUUID(),onlineOrderId:orderId,
+    onlineOrderNumber:order.payload.order.orderNumber,onlineDeliveryFee:0,
+    items:[{productId,quantity:1,unitPriceOverride:2.6,overrideReason:`ONLINE:${order.payload.order.orderNumber}`}]
+  }});
+  assert.equal(checkout.response.status,201,JSON.stringify(checkout.payload));
+  const saleId=checkout.payload?.saleId||checkout.payload?.id;assert.ok(saleId,"Online POS checkout did not return a sale id");
+  const delivered=await request(`/api/public/kat/pos-handoff/stores/${storeId}/orders/${orderId}/complete-from-pos`,{method:"POST",token,body:{saleId,paymentMethod:"CASH"}});
+  assert.equal(delivered.response.status,200,JSON.stringify(delivered.payload));
+  assert.equal(delivered.payload?.status,"DELIVERED");
 
   const stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];
   assert.equal(Number(stock?.currentStock),9,"Delivered online order did not reduce stock exactly once");
@@ -125,7 +133,7 @@ async function main(){
   const sale=(await prisma.$queryRaw`SELECT "total","status","source","operatorEmployeeId" FROM "Sale" WHERE "id"=${stored.saleId} LIMIT 1`)[0];
   assert.equal(Number(sale?.total),2.6);
   assert.equal(sale?.status,"COMPLETED");
-  assert.equal(sale?.source,"ONLINE");
+  assert.equal(sale?.source,"ONLINE_POS");
   assert.equal(sale?.operatorEmployeeId,employeeId);
 
   const ledger=await request(`/api/transactions/stores/${storeId}/overview`,{token});

@@ -237,3 +237,19 @@ model LeaveRequest {
   note       String?
   createdAt  DateTime    @default(now())
 }
+
+model InvoiceSupplierReadingProfile {
+  supplierKey     String   @id
+  supplierTaxId   String?
+  supplierName    String?
+  normalizedName  String?
+  ruleKey         String?
+  profileVersion  Int      @default(1)
+  profile         Json     @default("{}")
+  isActive        Boolean  @default(true)
+  updatedByUserId String?
+  updatedAt       DateTime @default(now()) @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([normalizedName], map: "InvoiceSupplierReadingProfile_name_idx")
+}

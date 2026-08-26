@@ -15,6 +15,6 @@ test("production health exposes deployed git revision", async () => {
 
 test("Render deploy gate waits for the exact GitHub revision", async () => {
   const workflow = await text(".github/workflows/deploy-render.yml");
-  assert.match(workflow, /EXPECTED_REVISION: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /EXPECTED_REVISION: \$\{\{ steps\.revision\.outputs\.sha \}\}/);
   assert.match(workflow, /\\"revision\\":\\"\$EXPECTED_REVISION\\"/);
 });

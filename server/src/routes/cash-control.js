@@ -53,7 +53,9 @@ const tableStatements = [
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "eftposTotal" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "cardVariance" NUMERIC(14,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "duplicateReviewJson" JSONB NOT NULL DEFAULT '[]'::jsonb`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_store_idx" ON "CashShiftSession" ("storeId") WHERE "status"='OPEN'`,
+  `ALTER TABLE "CashShiftSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT NOT NULL DEFAULT 'MAIN'`,
+  `DROP INDEX IF EXISTS "CashShiftSession_one_open_per_store_idx"`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "CashShiftSession_one_open_per_terminal_idx" ON "CashShiftSession" ("storeId","terminalPos") WHERE "status"='OPEN'`,
   `CREATE INDEX IF NOT EXISTS "CashShiftSession_store_opened_idx" ON "CashShiftSession" ("storeId", "openedAt" DESC)`,
   `CREATE TABLE IF NOT EXISTS "StoreTransaction" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"sessionId" TEXT,
@@ -70,7 +72,7 @@ async function ensureTables(){
   return tablesPromise;
 }
 
-function requireCashAccess(req,res,next){
+async function requireCashAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
@@ -81,14 +83,34 @@ function requireCashAccess(req,res,next){
     return res.status(403).json({error:"Δεν έχεις δικαίωμα «με αρχικό Ταμείο» από το BackOffice."});
   }
   if(req.method==="POST"&&/\/sessions\/[^/]+\/close$/.test(path)){
-    if(permissions.includes("CASH_CONTROL"))return next();
-    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Εμφάνιση κεντρικού Ταμείου (PoS)» από το BackOffice."});
+    const rows=await prisma.$queryRaw`
+      SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions"
+      FROM "StoreOperatorCredential" c
+      LEFT JOIN "StoreOperatorProfile" p
+        ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
+      WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE
+      LIMIT 1
+    `;
+    const profile=rows[0]?.permissions&&typeof rows[0].permissions==="object"?rows[0].permissions:{};
+    if(profile.closeShift===true)return next();
+    return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο βάρδιας (PoS)» από το BackOffice."});
   }
-  if(permissions.includes("CASH_CONTROL"))return next();
+  if(permissions?.includes("CASH_CONTROL"))return next();
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
 }
 function assertStoreAccess(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
 async function ownedStore(storeId,companyId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
+async function requestTerminal(req){
+  const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
+  if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
+  if(req.user?.tokenType==="STORE_OPERATOR"){
+    const liveTerminal=String(req.user?.terminalPos||"").trim();
+    if(liveTerminal)return liveTerminal.toUpperCase().slice(0,120);
+    const rows=await prisma.$queryRaw`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${req.user.storeId} AND p."employeeId"=${req.user.employeeId} LIMIT 1`;
+    return String(rows[0]?.terminalPos||rows[0]?.terminalpos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+  }
+  return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+}
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
 const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable()});
@@ -127,24 +149,30 @@ function route(handler){return async(req,res)=>{try{await ensureTables();await h
 router.use(auth,requireCashAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
-  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId);
+  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
   const [openRows,recentRows,lastClosedRows]=await Promise.all([
-    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`,
-    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} ORDER BY "openedAt" DESC LIMIT 20`,
-    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`
+    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`,
+    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} ORDER BY "openedAt" DESC LIMIT 20`,
+    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`
   ]);
   const last=normalize(lastClosedRows[0]);res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
 
 router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
-  assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{});
-  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});
+  assertStoreAccess(req,req.params.storeId);
+  const assignedRows=req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`SELECT NULLIF(TRIM("terminalPos"),'') AS terminal FROM "StoreOperatorProfile" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.user.storeId} AND "employeeId"=${req.user.employeeId} LIMIT 1`:[];
+  const assignedTerminal=String(assignedRows[0]?.terminal||"").trim().toUpperCase();
+  const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
+  const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
+  if(assignedTerminal&&requestedTerminal&&assignedTerminal!==requestedTerminal)return res.status(403).json({error:"Το POS δεν αντιστοιχεί στην ενεργή καρτέλα χειριστή."});
+  const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=assignedTerminal||requestedTerminal||await requestTerminal(req);
+  const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
   const operational=body.drawer+body.custody+body.coins;
-  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
   const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
   const rows=await prisma.$queryRaw`
-    INSERT INTO "CashShiftSession" ("id","companyId","storeId","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
-    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
+    INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
+    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
   res.status(201).json(normalize(rows[0]));
 }));
 
@@ -155,7 +183,9 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId"
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
-    const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id),expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses,actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
+    const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
+    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
+    const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),

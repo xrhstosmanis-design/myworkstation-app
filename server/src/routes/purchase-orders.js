@@ -10,7 +10,7 @@ const n=value=>Number(value||0);
 const strip=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9α-ω]/g,"");
 
 let schemaPromise;
-async function ensureSchema(){
+export async function ensurePurchaseOrderSchema(){
   if(!schemaPromise){
     schemaPromise=(async()=>{
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PurchaseOrder" (
@@ -24,11 +24,15 @@ async function ensureSchema(){
         "createdByUserId" TEXT,
         "createdByName" TEXT,
         "updatedByName" TEXT,
+        "sourceType" TEXT,
+        "sourceDocumentId" TEXT,
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "finalizedAt" TIMESTAMPTZ,
         "invoicedAt" TIMESTAMPTZ
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceType" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceDocumentId" TEXT`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_company_date_idx" ON "PurchaseOrder" ("companyId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_store_idx" ON "PurchaseOrder" ("storeId","createdAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrder_supplier_idx" ON "PurchaseOrder" ("supplierId","createdAt" DESC)`);
@@ -69,7 +73,7 @@ function requireAccess(req,res,next){
   next();
 }
 router.use(requireAccess);
-router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{await ensurePurchaseOrderSchema();next()}catch(error){next(error)}});
 
 async function store(companyId,storeId){return prisma.store.findFirst({where:{id:String(storeId),companyId,active:true},select:{id:true,name:true}})}
 async function supplier(companyId,supplierId){if(!supplierId)return null;const rows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${String(supplierId)} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;return rows[0]||null}

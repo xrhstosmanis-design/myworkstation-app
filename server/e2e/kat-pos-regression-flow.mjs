@@ -60,14 +60,14 @@ async function main(){
   assert.equal(opened.response.status,201,JSON.stringify(opened.payload));
   const sessionId=opened.payload.id;
 
-  const cashSale=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",payments:[{method:"CASH",amount:5}],clientTransactionId:crypto.randomUUID()}});
+  const cashSale=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{items:[{productId,quantity:2}],paymentMethod:"CASH",clientTransactionId:crypto.randomUUID()}});
   assert.equal(cashSale.response.status,201,JSON.stringify(cashSale.payload));
   const cashSaleId=cashSale.payload.id||cashSale.payload.saleId;assert.ok(cashSaleId);
 
   let stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];
   assert.equal(Number(stock?.currentStock),18,"Cash sale did not reduce stock");
 
-  const cardSale=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{items:[{productId,quantity:1}],paymentMethod:"CARD",payments:[{method:"CARD",amount:2.5}],clientTransactionId:crypto.randomUUID()}});
+  const cardSale=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{items:[{productId,quantity:1}],paymentMethod:"CARD",clientTransactionId:crypto.randomUUID()}});
   assert.equal(cardSale.response.status,201,JSON.stringify(cardSale.payload));
   const cardSaleId=cardSale.payload.id||cardSale.payload.saleId;assert.ok(cardSaleId);
 
@@ -75,7 +75,7 @@ async function main(){
   assert.equal(Number(stock?.currentStock),17,"Card sale did not reduce stock");
 
   const cancelled=await request(`/api/store-pos/stores/${storeId}/sales/${cashSaleId}/reverse`,{method:"POST",token,body:{kind:"CANCEL",reason:"KAT P0 automated cancellation"}});
-  assert.equal(cancelled.response.status,200,JSON.stringify(cancelled.payload));
+  assert.equal(cancelled.response.status,201,JSON.stringify(cancelled.payload));
 
   stock=(await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=${productId} LIMIT 1`)[0];
   assert.equal(Number(stock?.currentStock),19,"Cancellation did not restore stock");

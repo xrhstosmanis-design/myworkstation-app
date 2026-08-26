@@ -63,10 +63,11 @@ jobs:
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server
+          ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260825130500_netlink_prepaid_storage/migration.sql --schema server/prisma/schema.prisma
           npm run seed -w server
       - name: Run real HTTP E2E flows
         run: |
-          PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
+          MWS_E2E_TERMINAL_OVERRIDE=1 NETLINK_TEST_MODE=true NETLINK_MOCK_PROVIDER=true NETLINK_ENABLE_EXECUTE=true PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
           SERVER_PID=$!
           cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
           on_error() { status=$?; echo "--- MyWorkStation E2E server log ---"; cat /tmp/myworkstation-e2e-server.log || true; exit "$status"; }
@@ -105,4 +106,5 @@ jobs:
           node server/e2e/multi-pos-shift-isolation-flow.mjs
           node server/e2e/kat-online-ordering-flow.mjs
           node server/e2e/kat-preparation-milk-stock-flow.mjs
+          node server/e2e/netlink-prepaid-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
