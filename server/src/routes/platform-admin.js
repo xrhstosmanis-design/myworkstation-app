@@ -66,13 +66,15 @@ function platformCashAuditAmount(details){
 
 async function platformCashInvestigation(session,tables){
   const auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
-  const [transactions,operatorEvents,actionEvents,safetyEvents]=await Promise.all([
+  const evidence=await Promise.allSettled([
     tables.purchaseDocuments?prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`:prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",NULL::numeric AS "documentTotal" FROM "StoreTransaction" t WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
     tables.operator?prisma.$queryRaw`SELECT "eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.actions?prisma.$queryRaw`SELECT "saleId","relatedSaleId","actionType","reason","actorId","actorName","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.safety?prisma.$queryRaw`SELECT "saleId","relatedSaleId","eventType","actorId","actorName","details","createdAt" FROM "PosSaleSafetyAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[]
   ]);
-  const findings=[];
+  const sources=["TRANSACTIONS_AND_DOCUMENTS","OPERATOR_EVENTS","POS_ACTION_EVENTS","POS_SAFETY_EVENTS"];
+  const [transactions,operatorEvents,actionEvents,safetyEvents]=evidence.map(result=>result.status==="fulfilled"?result.value:[]);
+  const findings=evidence.flatMap((result,index)=>result.status==="rejected"?[{code:"AUDIT_SOURCE_UNAVAILABLE",source:sources[index]}]:[]);
   for(const row of transactions){
     const amount=Number(row.amount||0),documentTotal=row.documentTotal==null?null:Number(row.documentTotal);
     if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&!row.hasEvidence)findings.push({code:"EXPENSE_WITHOUT_DOCUMENT",amount});
@@ -687,7 +689,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
         s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedBy",s."closedBy",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
         s."cashSales",s."cardSales",s."eftposTotal",s."cardVariance",s."expenses",s."expectedOperational",s."actualOperational",s."variance",
-        COALESCE(jsonb_array_length(s."duplicateReviewJson"),0) AS "duplicateCandidates",
+        CASE WHEN jsonb_typeof(s."duplicateReviewJson")='array' THEN jsonb_array_length(s."duplicateReviewJson") ELSE 0 END AS "duplicateCandidates",
         COUNT(t."id") FILTER (WHERE t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL) AS "expenseCount",
         COUNT(t."id") FILTER (WHERE t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL AND t."attachmentData" IS NULL AND COALESCE(t."attachmentMimeType",'')<>'application/vnd.myworkstation.purchase-document') AS "expensesWithoutDocument"
       FROM "CashShiftSession" s
