@@ -7,6 +7,7 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { catalogView,moduleCatalog,moduleKeys,planDefaults } from "../services/module-catalog.js";
 import { getMailStatus,sendCashControlDailyReportEmail } from "../services/mail.js";
+import { ensureCashControlSchema } from "./cash-control.js";
 
 const router=Router();
 router.use(auth);
@@ -66,7 +67,7 @@ function platformCashAuditAmount(details){
 async function platformCashInvestigation(session,tables){
   const auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   const [transactions,operatorEvents,actionEvents,safetyEvents]=await Promise.all([
-    prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
+    tables.purchaseDocuments?prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`:prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",NULL::numeric AS "documentTotal" FROM "StoreTransaction" t WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
     tables.operator?prisma.$queryRaw`SELECT "eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.actions?prisma.$queryRaw`SELECT "saleId","relatedSaleId","actionType","reason","actorId","actorName","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.safety?prisma.$queryRaw`SELECT "saleId","relatedSaleId","eventType","actorId","actorName","details","createdAt" FROM "PosSaleSafetyAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[]
@@ -678,6 +679,7 @@ router.post("/companies/:companyId/reset-owner-password",async(req,res,next)=>{
 
 router.get("/cash-control/daily",async(req,res,next)=>{
   try{
+    await ensureCashControlSchema();
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
     const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59")}).parse(req.query);
     const {date,fromTime,toTime}=filters;
@@ -698,7 +700,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       GROUP BY c."id",c."name",st."id",st."name",s."id"
       ORDER BY c."name",st."name",s."openedAt"`;
     const normalized=rows.map(row=>({...row,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),cardVariance:Number(row.cardVariance||0),expenses:Number(row.expenses||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),variance:Number(row.variance||0),duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}));
-    const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
+    const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety",to_regclass('"PurchaseDocument"') AS "purchaseDocuments"`;
     const investigated=await Promise.all(normalized.map(async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})})));
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();

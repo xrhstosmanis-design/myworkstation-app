@@ -20,6 +20,7 @@ test("a completed investigation returns a definitive conclusion instead of askin
 });
 
 test("the platform report exhausts transaction, document, operator and POS audit evidence",()=>{
+  assert.match(platformApi,/await ensureCashControlSchema\(\)/);
   assert.match(platformApi,/platformCashInvestigation/);
   assert.match(platformApi,/StoreOperatorAudit/);
   assert.match(platformApi,/PosSaleActionAudit/);
@@ -29,4 +30,5 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/MULTIPLE_ACTIONS_ON_SAME_SALE/);
   assert.match(platformApi,/UNEXPLAINED_SHORTAGE/);
   assert.match(platformApi,/completed:true/);
+  assert.match(platformApi,/to_regclass\('\"PurchaseDocument\"'\) AS "purchaseDocuments"/);
 });
