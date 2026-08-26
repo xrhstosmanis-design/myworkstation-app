@@ -56,6 +56,46 @@ function parseDate(value){
   return date;
 }
 
+function platformCashAuditAmount(details){
+  for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}
+  return null;
+}
+
+async function platformCashInvestigation(session,tables){
+  const auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
+  const [transactions,operatorEvents,actionEvents,safetyEvents]=await Promise.all([
+    prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
+    tables.operator?prisma.$queryRaw`SELECT "eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
+    tables.actions?prisma.$queryRaw`SELECT "saleId","relatedSaleId","actionType","reason","actorId","actorName","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
+    tables.safety?prisma.$queryRaw`SELECT "saleId","relatedSaleId","eventType","actorId","actorName","details","createdAt" FROM "PosSaleSafetyAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[]
+  ]);
+  const findings=[];
+  for(const row of transactions){
+    const amount=Number(row.amount||0),documentTotal=row.documentTotal==null?null:Number(row.documentTotal);
+    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&!row.hasEvidence)findings.push({code:"EXPENSE_WITHOUT_DOCUMENT",amount});
+    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&documentTotal!=null&&Math.abs(amount-documentTotal)>.01)findings.push({code:"EXPENSE_DOCUMENT_MISMATCH",amount,difference:Number((amount-documentTotal).toFixed(2))});
+    if(row.reversedAt)findings.push({code:"REVERSED_TRANSACTION",amount,actorName:row.reversedByName||row.actorName,at:row.reversedAt,reason:row.reversalReason});
+  }
+  for(const row of operatorEvents)if(/CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(row.eventType||"")))findings.push({code:`AUDIT_${row.eventType}`,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt});
+  const actionsByOriginal=new Map();
+  for(const row of actionEvents){
+    const amount=platformCashAuditAmount(row.details),type=String(row.actionType||"");
+    findings.push({code:`AUDIT_${type}`,saleId:row.saleId,relatedSaleId:row.relatedSaleId,actorName:row.actorName,amount,at:row.createdAt});
+    if(session.closedAt&&new Date(row.createdAt)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",saleId:row.saleId,amount,at:row.createdAt});
+    if(/RETURN|CANCEL|VOID/i.test(type)&&!row.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",saleId:row.saleId,amount,at:row.createdAt});
+    if(row.relatedSaleId){const related=actionsByOriginal.get(row.relatedSaleId)||[];related.push(row);actionsByOriginal.set(row.relatedSaleId,related)}
+    if(row.actorId&&row.actorId!==session.openedBy&&row.actorId!==session.closedBy)findings.push({code:"ACTION_BY_DIFFERENT_OPERATOR",saleId:row.saleId,actorName:row.actorName,amount,at:row.createdAt});
+    if(amount!=null&&Math.abs(Math.abs(amount)-Math.abs(Number(session.variance||0)))<=.01)findings.push({code:"AMOUNT_MATCHES_CASH_DIFFERENCE",saleId:row.saleId,amount,at:row.createdAt});
+  }
+  for(const [relatedSaleId,events] of actionsByOriginal)if(events.length>1)findings.push({code:"MULTIPLE_ACTIONS_ON_SAME_SALE",relatedSaleId,count:events.length});
+  for(const row of safetyEvents)if(/DUPLICATE|REPLAY|BLOCKED/i.test(String(row.eventType||"")))findings.push({code:`AUDIT_${row.eventType}`,saleId:row.saleId,relatedSaleId:row.relatedSaleId,actorName:row.actorName,amount:platformCashAuditAmount(row.details),at:row.createdAt});
+  if(Number(session.duplicateCandidates||0)>0)findings.push({code:"DUPLICATE_CANDIDATES",count:Number(session.duplicateCandidates)});
+  if(Math.abs(Number(session.cardVariance||0))>.009)findings.push({code:"POS_EFTPOS_DIFFERENCE",amount:Number(session.cardVariance)});
+  const variance=Number(session.variance||0);
+  const conclusion=variance<-.009?(findings.length?"SHORTAGE_WITH_FINDINGS":"UNEXPLAINED_SHORTAGE"):variance>.009?(findings.length?"SURPLUS_WITH_FINDINGS":"UNEXPLAINED_SURPLUS"):findings.length?"FINDINGS_WITHOUT_CASH_VARIANCE":"AGREEMENT";
+  return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
+}
+
 function companyView(company){
   const owner=company.users.find(user=>user.role==="OWNER")||null;
   const employees=company.stores.reduce((total,store)=>total+(store._count?.employees||0),0);
@@ -600,7 +640,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
     const {date,fromTime,toTime}=filters;
     const rows=await prisma.$queryRaw`
       SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
-        s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
+        s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedBy",s."closedBy",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
         s."cashSales",s."cardSales",s."eftposTotal",s."cardVariance",s."expenses",s."expectedOperational",s."actualOperational",s."variance",
         COALESCE(jsonb_array_length(s."duplicateReviewJson"),0) AS "duplicateCandidates",
         COUNT(t."id") FILTER (WHERE t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL) AS "expenseCount",
@@ -615,10 +655,12 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       GROUP BY c."id",c."name",st."id",st."name",s."id"
       ORDER BY c."name",st."name",s."openedAt"`;
     const normalized=rows.map(row=>({...row,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),cardVariance:Number(row.cardVariance||0),expenses:Number(row.expenses||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),variance:Number(row.variance||0),duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}));
+    const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
+    const investigated=await Promise.all(normalized.map(async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})})));
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
-    res.json({date,fromTime,toTime,timeZone:"Europe/Athens",rows:normalized,stores:[...byStore.values()],totals});
+    res.json({date,fromTime,toTime,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
   }catch(error){next(error)}
 });
 
