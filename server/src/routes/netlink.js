@@ -3,12 +3,13 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {netlinkClient} from "../integrations/netlink/client.js";
+import {isNetlinkTestMode} from "../integrations/netlink/environment.js";
 
 const router=Router();
 const money=value=>Number(Number(value||0).toFixed(2));
 const commissionRate=0.01;
 const defaultServiceFee=0.50;
-const isTestMode=()=>process.env.NODE_ENV!=="production"&&process.env.NETLINK_TEST_MODE==="true";
+const isTestMode=()=>isNetlinkTestMode();
 const isMockProvider=()=>process.env.NODE_ENV==="test"&&process.env.NETLINK_TEST_MODE==="true"&&process.env.NETLINK_MOCK_PROVIDER==="true";
 
 async function storeFor(req,storeId){
