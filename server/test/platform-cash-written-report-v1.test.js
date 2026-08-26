@@ -6,9 +6,10 @@ const platformUi=fs.readFileSync(new URL("../../client/src/components/platform/P
 const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 
 test("platform cash control presents only concise suspicious events for every shift",()=>{
-  assert.match(platformUi,/Μόνο τα περίεργα συμβάντα/);
-  assert.match(platformUi,/ΣΥΜΒΑΝΤΑ ΕΛΕΓΧΟΥ ΤΑΜΕΙΩΝ/);
-  assert.match(platformUi,/cashReport\.rows\.map\(row=>\{const report=cashWrittenReport\(row\)/);
+  assert.match(platformUi,/Συνολική αναφορά ελέγχου ταμείου/);
+  assert.match(platformUi,/Ανάλυση ανά βάρδια/);
+  assert.match(platformUi,/Τελικό αποτέλεσμα καταστήματος/);
+  assert.match(platformUi,/Οι κανονικές κινήσεις δεν εμφανίζονται/);
   assert.match(platformUi,/cashEventTime\(finding\.at\)/);
   assert.doesNotMatch(platformUi,/Αναλυτική γραπτή αναφορά/);
 });
