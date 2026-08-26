@@ -30,5 +30,6 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/MULTIPLE_ACTIONS_ON_SAME_SALE/);
   assert.match(platformApi,/UNEXPLAINED_SHORTAGE/);
   assert.match(platformApi,/completed:true/);
-  assert.match(platformApi,/to_regclass\('\"PurchaseDocument\"'\) AS "purchaseDocuments"/);
+  assert.match(platformApi,/to_regclass\('\"PurchaseDocument\"'\)::text AS "purchaseDocuments"/);
+  assert.match(platformApi,/to_regclass\('\"StoreOperatorAudit\"'\)::text AS "operator"/);
 });
