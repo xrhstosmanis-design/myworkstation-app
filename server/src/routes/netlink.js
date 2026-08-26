@@ -4,6 +4,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {netlinkClient} from "../integrations/netlink/client.js";
 import {isNetlinkTestMode} from "../integrations/netlink/environment.js";
+import {fiscalReceiptError,validFiscalReceipt} from "../integrations/netlink/fiscal-gate.js";
 
 const router=Router();
 const money=value=>Number(Number(value||0).toFixed(2));
@@ -81,21 +82,23 @@ router.post("/execute",async(req,res,next)=>{
     if(process.env.NETLINK_ENABLE_EXECUTE!=="true")return res.status(409).json({error:"Η εκτέλεση Netlink είναι κλειδωμένη από τη ρύθμιση του server.",code:"NETLINK_EXECUTE_LOCKED"});
     const body=executeSchema.parse(req.body||{});await storeFor(req,body.storeId);const testMode=isTestMode();
     if(body.testRun&&!testMode)return res.status(403).json({error:"Το Netlink test mode δεν επιτρέπεται σε production.",code:"NETLINK_TEST_MODE_FORBIDDEN"});
-    if(!testMode)return res.status(409).json({error:"Η παραγωγική έκδοση Netlink θα ενεργοποιηθεί μόνο μετά από server-side επιβεβαίωση φορολογικής απόδειξης.",code:"NETLINK_FISCAL_CONFIRMATION_REQUIRED"});
     const configRows=await prisma.$queryRaw`SELECT "serviceFeeAmount" FROM "NetlinkStoreConfig" WHERE "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;const serviceFeeAmount=money(configRows[0]?.serviceFeeAmount??defaultServiceFee);
-    const sales=await prisma.$queryRaw`SELECT "id","total","status" FROM "Sale" WHERE "id"=${body.saleId} AND "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} LIMIT 1`;const sale=sales[0];
+    const sales=await prisma.$queryRaw`SELECT "id","total","status","fiscalStatus" FROM "Sale" WHERE "id"=${body.saleId} AND "storeId"=${body.storeId} AND "companyId"=${req.user.companyId} LIMIT 1`;const sale=sales[0];
     if(!sale)return res.status(404).json({error:"Δεν βρέθηκε η συνδεδεμένη δοκιμαστική πώληση POS."});
     if(String(sale.status)!=="COMPLETED")return res.status(409).json({error:"Η Netlink δοκιμή επιτρέπεται μόνο αφού ολοκληρωθεί η κανονική πώληση POS.",code:"NETLINK_POS_SALE_NOT_COMPLETED"});
+    const fiscalRows=await prisma.$queryRaw`SELECT "id","provider","externalId","fiscalNumber","status","issuedAt","payloadHash" FROM "FiscalDocument" WHERE "saleId"=${body.saleId} LIMIT 1`;const fiscalDocument=fiscalRows[0]||null;
+    if(!validFiscalReceipt(fiscalDocument)){const error=fiscalReceiptError();return res.status(error.status).json({error:error.message,code:error.code})}
     const existingRows=await prisma.$queryRaw`SELECT "id","status","productId" FROM "NetlinkTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${body.storeId} AND "requestId"=${body.requestId} LIMIT 1`;const existing=existingRows[0]||null;
     if(existing&&existing.status!=="PREPARED")return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη εκτελεστεί ή δεν είναι διαθέσιμη.",code:"NETLINK_DUPLICATE_REQUEST",transaction:existing});
     if(existing&&String(existing.productId)!==String(body.productId))return res.status(409).json({error:"Το προϊόν της εκτέλεσης δεν συμφωνεί με το prepare.",code:"NETLINK_PRODUCT_MISMATCH"});
     ledgerId=existing?.id||crypto.randomUUID();
-    if(existing)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "saleId"=${body.saleId},"flow"='TEST_PREPARE_EXECUTE',"status"='EXECUTING',"paymentMethod"=${body.paymentMethod||null},"serviceFeeAmount"=${serviceFeeAmount},"updatedAt"=NOW() WHERE "id"=${ledgerId}`;
-    else await prisma.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","saleId","requestId","productId","flow","status","paymentMethod","serviceFeeAmount","operatorId","operatorName") VALUES (${ledgerId},${req.user.companyId},${body.storeId},${body.saleId},${body.requestId},${body.productId},'TEST_EXECUTE','EXECUTING',${body.paymentMethod||null},${serviceFeeAmount},${req.user.id||null},${req.user.fullName||null})`;
+    const flow=testMode?'TEST_PREPARE_EXECUTE':'RECEIPT_THEN_EXECUTE';
+    if(existing)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "saleId"=${body.saleId},"flow"=${flow},"status"='EXECUTING',"paymentMethod"=${body.paymentMethod||null},"serviceFeeAmount"=${serviceFeeAmount},"fiscalDocumentId"=${fiscalDocument.id},"fiscalNumber"=${fiscalDocument.fiscalNumber},"fiscalIssuedAt"=${fiscalDocument.issuedAt},"updatedAt"=NOW() WHERE "id"=${ledgerId}`;
+    else await prisma.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","saleId","requestId","productId","flow","status","paymentMethod","serviceFeeAmount","operatorId","operatorName","fiscalDocumentId","fiscalNumber","fiscalIssuedAt") VALUES (${ledgerId},${req.user.companyId},${body.storeId},${body.saleId},${body.requestId},${body.productId},${flow},'EXECUTING',${body.paymentMethod||null},${serviceFeeAmount},${req.user.id||null},${req.user.fullName||null},${fiscalDocument.id},${fiscalDocument.fiscalNumber},${fiscalDocument.issuedAt})`;
     const result=await netlinkClient().execute(body.productId,{requestId:body.requestId,payload:body.payload,confirmation:body.confirmation});
     const amount=txAmount(result),providerTransactionId=txId(result),reference=txReference(result),commissionAmount=money(amount*commissionRate),customerTotal=money(amount+serviceFeeAmount),saleTotal=money(sale.total),amountNeedsReview=Math.abs(customerTotal-saleTotal)>0.01;
     await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"=${amountNeedsReview?'AMOUNT_REVIEW':'COMPLETED'},"providerTransactionId"=${providerTransactionId},"providerReference"=${reference},"amount"=${amount},"serviceFeeAmount"=${serviceFeeAmount},"customerTotal"=${customerTotal},"commissionRate"=${commissionRate},"commissionAmount"=${commissionAmount},"completedAt"=NOW(),"updatedAt"=NOW(),"errorCode"=${amountNeedsReview?'POS_TOTAL_MISMATCH':null},"errorMessage"=${amountNeedsReview?`Expected POS total ${customerTotal.toFixed(2)} but sale is ${saleTotal.toFixed(2)}`:null} WHERE "id"=${ledgerId}`;
-    res.json({testRun:true,requestId:body.requestId,transactionLedgerId:ledgerId,status:amountNeedsReview?"AMOUNT_REVIEW":"COMPLETED",saleId:body.saleId,cardAmount:amount,serviceFeeAmount,customerTotal,saleTotal,commission:{rate:commissionRate,baseAmount:amount,amount:commissionAmount},result});
+    res.json({testRun:testMode,requestId:body.requestId,transactionLedgerId:ledgerId,status:amountNeedsReview?"AMOUNT_REVIEW":"COMPLETED",saleId:body.saleId,fiscalReceipt:{id:fiscalDocument.id,number:fiscalDocument.fiscalNumber,issuedAt:fiscalDocument.issuedAt},cardAmount:amount,serviceFeeAmount,customerTotal,saleTotal,commission:{rate:commissionRate,baseAmount:amount,amount:commissionAmount},result});
   }catch(error){if(ledgerId)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='FAILED',"errorCode"=${error.code||null},"errorMessage"=${String(error.message||"Netlink error").slice(0,500)},"updatedAt"=NOW() WHERE "id"=${ledgerId}`.catch(()=>{});next(error)}
 });
 
