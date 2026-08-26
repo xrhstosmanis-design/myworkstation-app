@@ -123,6 +123,12 @@ function platformCashAuditAmount(details){
   return null;
 }
 
+function platformCashStoreRule(storeName){
+  const name=String(storeName||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const differenceOnly=["ΕΣΤΙΑ","ΠΕΤΡΟΥΠΟΛΗ","ΓΑΛΑΤΣΙ"].some(label=>name.includes(label.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()));
+  return{mode:differenceOnly?"DIFFERENCE_ONLY":"FULL",carryOverEnabled:!differenceOnly,posEftposEnabled:!differenceOnly};
+}
+
 async function platformCashInvestigation(session,tables){
   const auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   const evidence=await Promise.allSettled([
@@ -136,15 +142,16 @@ async function platformCashInvestigation(session,tables){
   const findings=evidence.flatMap((result,index)=>result.status==="rejected"?[{code:"AUDIT_SOURCE_UNAVAILABLE",source:sources[index]}]:[]);
   for(const row of transactions){
     const amount=Number(row.amount||0),documentTotal=row.documentTotal==null?null:Number(row.documentTotal);
-    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&!row.hasEvidence)findings.push({code:"EXPENSE_WITHOUT_DOCUMENT",amount});
-    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&documentTotal!=null&&Math.abs(amount-documentTotal)>.01)findings.push({code:"EXPENSE_DOCUMENT_MISMATCH",amount,difference:Number((amount-documentTotal).toFixed(2))});
+    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&!row.hasEvidence)findings.push({code:"EXPENSE_WITHOUT_DOCUMENT",amount,actorName:row.actorName,at:row.occurredAt});
+    if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&documentTotal!=null&&Math.abs(amount-documentTotal)>.01)findings.push({code:"EXPENSE_DOCUMENT_MISMATCH",amount,documentTotal,difference:Number((amount-documentTotal).toFixed(2)),actorName:row.actorName,at:row.occurredAt});
     if(row.reversedAt)findings.push({code:"REVERSED_TRANSACTION",amount,actorName:row.reversedByName||row.actorName,at:row.reversedAt,reason:row.reversalReason});
   }
   for(const row of operatorEvents)if(/CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(row.eventType||"")))findings.push({code:`AUDIT_${row.eventType}`,actorId:row.actorId,operatorId:row.operatorId,at:row.createdAt});
   const actionsByOriginal=new Map();
   for(const row of actionEvents){
     const amount=platformCashAuditAmount(row.details),type=String(row.actionType||"");
-    findings.push({code:`AUDIT_${type}`,saleId:row.saleId,relatedSaleId:row.relatedSaleId,actorName:row.actorName,amount,at:row.createdAt});
+    const suspiciousAction=/CANCEL|RETURN|VOID|REVERSE|REFUND|DELETE|OVERRIDE|REOPEN|AFTER_CLOSE/i.test(type);
+    if(suspiciousAction)findings.push({code:`AUDIT_${type}`,saleId:row.saleId,relatedSaleId:row.relatedSaleId,actorName:row.actorName,amount,at:row.createdAt});
     if(session.closedAt&&new Date(row.createdAt)>new Date(session.closedAt))findings.push({code:"ACTION_AFTER_SHIFT_CLOSE",saleId:row.saleId,amount,at:row.createdAt});
     if(/RETURN|CANCEL|VOID/i.test(type)&&!row.relatedSaleId)findings.push({code:"ACTION_WITHOUT_ORIGINAL_SALE",saleId:row.saleId,amount,at:row.createdAt});
     if(row.relatedSaleId){const related=actionsByOriginal.get(row.relatedSaleId)||[];related.push(row);actionsByOriginal.set(row.relatedSaleId,related)}
@@ -154,7 +161,8 @@ async function platformCashInvestigation(session,tables){
   for(const [relatedSaleId,events] of actionsByOriginal)if(events.length>1)findings.push({code:"MULTIPLE_ACTIONS_ON_SAME_SALE",relatedSaleId,count:events.length});
   for(const row of safetyEvents)if(/DUPLICATE|REPLAY|BLOCKED/i.test(String(row.eventType||"")))findings.push({code:`AUDIT_${row.eventType}`,saleId:row.saleId,relatedSaleId:row.relatedSaleId,actorName:row.actorName,amount:platformCashAuditAmount(row.details),at:row.createdAt});
   if(Number(session.duplicateCandidates||0)>0)findings.push({code:"DUPLICATE_CANDIDATES",count:Number(session.duplicateCandidates)});
-  if(Math.abs(Number(session.cardVariance||0))>.009)findings.push({code:"POS_EFTPOS_DIFFERENCE",amount:Number(session.cardVariance)});
+  if(session.auditRule?.carryOverEnabled&&Math.abs(Number(session.openingVariance||0))>.02)findings.push({code:"CASH_TRANSFER_DIFFERENCE",amount:Number(session.openingVariance),at:session.openedAt,terminalPos:session.terminalPos,delivery:String(session.terminalPos||"").toUpperCase().includes("DELIVERY")});
+  if(session.auditRule?.posEftposEnabled&&Math.abs(Number(session.cardVariance||0))>.02){findings.push({code:"POS_EFTPOS_DIFFERENCE",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)>0&&Number(session.variance)>0)findings.push({code:"CARD_RECORDED_CASH_PAID",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)<0)findings.push({code:"EFTPOS_CONFIRMED_AS_FAILED",amount:Number(session.cardVariance),at:session.closedAt})}
   const variance=Number(session.variance||0);
   const conclusion=variance<-.009?(findings.length?"SHORTAGE_WITH_FINDINGS":"UNEXPLAINED_SHORTAGE"):variance>.009?(findings.length?"SURPLUS_WITH_FINDINGS":"UNEXPLAINED_SURPLUS"):findings.length?"FINDINGS_WITHOUT_CASH_VARIANCE":"AGREEMENT";
   return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
@@ -924,12 +932,12 @@ router.get("/cash-control/daily",async(req,res,next)=>{
   try{
     await ensureCashControlSchema();
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59")}).parse(req.query);
+    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional()}).parse(req.query);
     const {date,fromTime,toTime}=filters;
     const rows=await prisma.$queryRaw`
       SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
         s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedBy",s."closedBy",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
-        s."cashSales",s."cardSales",s."eftposTotal",s."cardVariance",s."expenses",s."expectedOperational",s."actualOperational",s."variance",
+        s."cashSales",s."cardSales",s."eftposTotal",s."cardVariance",s."expenses",s."openingOperational",s."expectedOpeningOperational",s."openingVariance",s."expectedOperational",s."actualOperational",s."variance",
         CASE WHEN jsonb_typeof(s."duplicateReviewJson")='array' THEN jsonb_array_length(s."duplicateReviewJson") ELSE 0 END AS "duplicateCandidates",
         COUNT(t."id") FILTER (WHERE t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL) AS "expenseCount",
         COUNT(t."id") FILTER (WHERE t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL AND t."attachmentData" IS NULL AND COALESCE(t."attachmentMimeType",'')<>'application/vnd.myworkstation.purchase-document') AS "expensesWithoutDocument"
@@ -938,17 +946,35 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
       LEFT JOIN "StoreTransaction" t ON t."sessionId"=s."id" AND t."companyId"=s."companyId" AND t."storeId"=s."storeId"
       WHERE s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date
+        AND (${filters.storeId||null}::text IS NULL OR st."id"=${filters.storeId||null})
         AND ((${fromTime}::time<=${toTime}::time AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
           OR (${fromTime}::time>${toTime}::time AND ((s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
       GROUP BY c."id",c."name",st."id",st."name",s."id"
       ORDER BY c."name",st."name",s."openedAt"`;
-    const normalized=rows.map(row=>({...row,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),cardVariance:Number(row.cardVariance||0),expenses:Number(row.expenses||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),variance:Number(row.variance||0),duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}));
+    const normalized=rows.map(row=>{const auditRule=platformCashStoreRule(row.storeName),actualVariance=Number(row.variance||0),actualCardVariance=Number(row.cardVariance||0);return {...row,auditRule,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),actualCardVariance,cardVariance:auditRule.posEftposEnabled?actualCardVariance:0,expenses:Number(row.expenses||0),openingOperational:Number(row.openingOperational||0),expectedOpeningOperational:Number(row.expectedOpeningOperational||0),openingVariance:Number(row.openingVariance||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),actualVariance,variance:auditRule.mode==="POS_EFTPOS_ONLY"?0:actualVariance,duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}});
     const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"')::text AS "operator",to_regclass('"PosSaleActionAudit"')::text AS "actions",to_regclass('"PosSaleSafetyAudit"')::text AS "safety",to_regclass('"PurchaseDocument"')::text AS "purchaseDocuments"`;
     const investigated=await Promise.all(normalized.map(async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})})));
+    const investigatedByStore=new Map();
+    for(const row of investigated){const list=investigatedByStore.get(row.storeId)||[];list.push(row);investigatedByStore.set(row.storeId,list)}
+    for(const storeRows of investigatedByStore.values()){
+      const ordered=[...storeRows].sort((a,b)=>new Date(a.openedAt)-new Date(b.openedAt));
+      const paired=new Set();
+      for(let index=0;index<ordered.length;index++){
+        const previous=ordered[index];if(previous.auditRule.mode!=="FULL"||paired.has(previous.sessionId)||Math.abs(previous.variance)<20)continue;
+        for(const current of ordered.slice(index+1,index+3)){
+          if(paired.has(current.sessionId)||previous.variance*current.variance>=0)continue;
+          const smaller=Math.min(Math.abs(previous.variance),Math.abs(current.variance)),larger=Math.max(Math.abs(previous.variance),Math.abs(current.variance)),ratio=larger?smaller/larger:0;
+          if(ratio<.8||ratio>1)continue;
+          const netVariance=Number((previous.variance+current.variance).toFixed(2)),finalOperator=netVariance<0?(previous.variance<0?previous.openedByName:current.openedByName):netVariance>0?(previous.variance>0?previous.openedByName:current.openedByName):null;
+          current.investigation.findings.push({code:"SHIFT_VARIANCE_OFFSET",at:current.openedAt,previousAt:previous.openedAt,previousVariance:previous.variance,currentVariance:current.variance,previousOperator:previous.openedByName,currentOperator:current.openedByName,netVariance,finalOperator,possibleUncountedCustody:true});
+          current.investigation.conclusion=current.variance<0?"SHORTAGE_WITH_FINDINGS":"SURPLUS_WITH_FINDINGS";paired.add(previous.sessionId);paired.add(current.sessionId);break;
+        }
+      }
+    }
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
-    res.json({date,fromTime,toTime,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
+    res.json({date,fromTime,toTime,storeId:filters.storeId||null,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
   }catch(error){next(error)}
 });
 
