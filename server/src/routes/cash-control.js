@@ -306,67 +306,21 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
     const rows=await tx.$queryRaw`
       UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),
-   …29286 tokens truncated…efoodEnabled"=${body.efoodEnabled},"woltEnabled"=${body.woltEnabled},"publishStock"=${body.publishStock},"publishPrices"=${body.publishPrices},"efoodPrice"=${body.efoodPrice??null},"woltPrice"=${body.woltPrice??null},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${company} AND "id"=${req.params.productId}`;
-    res.json({ok:true});
-  }catch(error){next(error)}
-});
-
-router.post("/:productId/stock-adjustment",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const body=z.object({storeId:z.string().min(1),mode:z.enum(["SET","ADD","SUBTRACT"]),quantity:z.coerce.number().min(0).max(100000000),logMovement:z.boolean().default(true)}).parse(req.body||{});
-    const rows=await prisma.$queryRaw`SELECT sp."currentStock",p."id" AS "productId",p."name",p."costPrice" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND s."id"=${body.storeId} LIMIT 1`;
-    const row=rows[0];if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const current=Number(row.currentStock||0);const next=body.mode==="SET"?body.quantity:body.mode==="ADD"?current+body.quantity:current-body.quantity;
-    if(next<0)return res.status(400).json({error:"Η διόρθωση θα δημιουργούσε αρνητικό stock."});
-    const delta=next-current;
-    await prisma.$transaction(async tx=>{
-      await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${next},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId}`;
-      if(body.logMovement&&delta!==0)await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${body.storeId},${req.params.productId},'MANUAL_ADJUSTMENT',${delta},${Number(row.costPrice||0)},'PRODUCT_CARD',${req.params.productId},${body.mode==="SET"?'Χειροκίνητη ακριβής διόρθωση stock':body.mode==="ADD"?'Χειροκίνητη αύξηση stock':'Χειροκίνητη μείωση stock'},${req.user.id})`;
-    });
-    res.json({ok:true,previousStock:current,currentStock:next,delta});
-  }catch(error){next(error)}
-});
-
-router.post("/:productId/destruction",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const body=z.object({storeId:z.string().min(1),quantity:z.coerce.number().positive().max(100000000),reason:z.string().trim().max(300).optional().default("Καταστροφή / φύρα")}).parse(req.body||{});
-    const rows=await prisma.$queryRaw`SELECT sp."currentStock",p."costPrice",p."name" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND s."id"=${body.storeId} LIMIT 1`;
-    const row=rows[0];if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const current=Number(row.currentStock||0);if(current<0||body.quantity>current)return res.status(400).json({error:"Η καταστροφή δεν μπορεί να ξεπερνά το διαθέσιμο stock."});
-    const nextStock=current-body.quantity;
-    await prisma.$transaction(async tx=>{
-      await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${nextStock},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId}`;
-      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${body.storeId},${req.params.productId},'WASTE',${-body.quantity},${Number(row.costPrice||0)},'PRODUCT_CARD',${req.params.productId},${body.reason},${req.user.id})`;
-    });
-    res.json({ok:true,previousStock:current,currentStock:nextStock,destroyed:body.quantity});
-  }catch(error){next(error)}
-});
-
-router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
-    const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;
-    const product=productRows[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?new Date(`${q.from}T00:00:00`):new Date(Date.now()-30*86400000),to=q.to?new Date(`${q.to}T23:59:59.999`):new Date();
-    if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
-    const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${req.params.productId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
-    let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
-    res.json({product:{id:product.id,name:product.name,currentStock:Number(product.currentStock||0),salePrice:Number(product.salePrice||0),costPrice:Number(product.costPrice||0)},from,to,movements});
-  }catch(error){next(error)}
-});
-
-router.get("/:productId/purchases",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
-    const exists=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;if(!exists[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?new Date(`${q.from}T00:00:00`):new Date(Date.now()-365*86400000),to=q.to?new Date(`${q.to}T23:59:59.999`):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
-    const rows=await prisma.$queryRaw`SELECT l."id",o."id" AS "orderId",o."status",o."invoiceNumber",o."createdAt",o."invoicedAt",COALESCE(sup."name",'Χωρίς προμηθευτή') AS "supplierName",l."quantity",l."unitCost",l."initialUnitCost",l."discount1",l."discount2",l."discount3",l."exciseTotal",l."vatRate",l."netAmount",l."vatAmount",l."grossAmount" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" LEFT JOIN "Supplier" sup ON sup."id"=o."supplierId" WHERE o."companyId"=${company} AND o."storeId"=${q.storeId} AND l."productId"=${req.params.productId} AND o."createdAt">=${from} AND o."createdAt"<=${to} ORDER BY o."createdAt" DESC LIMIT 1000`;
-    res.json({product:exists[0],from,to,purchases:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),initialUnitCost:Number(r.initialUnitCost||0),discount1:Number(r.discount1||0),discount2:Number(r.discount2||0),discount3:Number(r.discount3||0),exciseTotal:Number(r.exciseTotal||0),vatRate:Number(r.vatRate||0),netAmount:Number(r.netAmount||0),vatAmount:Number(r.vatAmount||0),grossAmount:Number(r.grossAmount||0)}))});
-  }catch(error){next(error)}
-});
+        "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
+        "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
+      WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
+    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null}:null;
+  });
+  if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
+  const {closed,storeId,safeChange}=closeResult;
+  const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);
+  const recipients=[...new Set([...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean))];
+  let safeEmailNotification={status:"SKIPPED",recipients:[]};
+  if(safeChange?.delta < -0.009){
+    const safeRecipients=[...new Set([...recipients,String(process.env.MAIL_TEST_RECIPIENT||"").trim()].filter(Boolean))];
+    if(safeRecipients.length){try{const subject=`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · ${store?.name||"Κατάστημα"}`;const text=[subject,"",`Κατάστημα: ${store?.name||"Κατάστημα"}`,`Βάρδια: ${closed.shiftLabel}`,`Χειριστής: ${actorName}`,`Προηγούμενο ποσό: ${Number(safeChange.previousSafe).toFixed(2)} €`,`Νέο ποσό: ${Number(safeChange.newSafe).toFixed(2)} €`,`Μείωση: ${Math.abs(Number(safeChange.delta)).toFixed(2)} €`,`Αιτιολογία: ${safeChange.reason||"—"}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");const sent=await sendEmail({to:safeRecipients,subject,text,html:`<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><p><b>Κατάστημα:</b> ${store?.name||"Κατάστημα"}</p><p><b>Βάρδια:</b> ${closed.shiftLabel}</p><p><b>Χειριστής:</b> ${actorName}</p><p><b>Προηγούμενο:</b> ${Number(safeChange.previousSafe).toFixed(2)} €</p><p><b>Νέο:</b> ${Number(safeChange.newSafe).toFixed(2)} €</p><p><b>Μείωση:</b> ${Math.abs(Number(safeChange.delta)).toFixed(2)} €</p><p><b>Αιτιολογία:</b> ${safeChange.reason||"—"}</p></div>`});safeEmailNotification={status:"SENT",recipients:sent.recipients}}catch(error){console.error("Safe close decrease email failed",error?.message||error);safeEmailNotification={status:"FAILED",recipients:safeRecipients}}}
+  }
+  res.json({...closed,emailNotification:{status:"MANUAL_SEND_REQUIRED",recipients:[]},safeChange,safeEmailNotification});
+}));
 
 export default router;

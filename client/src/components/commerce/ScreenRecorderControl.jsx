@@ -10,7 +10,7 @@ const recordingName=()=>{
 };
 const supportedMimeType=()=>["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>window.MediaRecorder?.isTypeSupported?.(type))||"";
 
-export default function ScreenRecorderControl({contextLabel="MYWORKSTATION · POS"}){
+export default function ScreenRecorderControl({contextLabel="MYWORKSTATION · POS",startLabel="Εγγραφή οθόνης"}){
   const recorderRef=useRef(null),streamRef=useRef(null),chunksRef=useRef([]),timerRef=useRef(null);
   const [recording,setRecording]=useState(false),[seconds,setSeconds]=useState(0),[preview,setPreview]=useState(null),[error,setError]=useState("");
 
@@ -52,7 +52,7 @@ export default function ScreenRecorderControl({contextLabel="MYWORKSTATION · PO
   const closePreview=()=>setPreview(old=>{if(old?.url)URL.revokeObjectURL(old.url);return null});
 
   return <div className="mws-screen-recorder">
-    {recording?<button type="button" className="recording" onClick={stop}><CircleStop/> Διακοπή <b>{durationLabel(seconds)}</b></button>:<button type="button" onClick={start}><Video/> Εγγραφή οθόνης</button>}
+    {recording?<button type="button" className="recording" onClick={stop}><CircleStop/> Διακοπή <b>{durationLabel(seconds)}</b></button>:<button type="button" onClick={start}><Video/> {startLabel}</button>}
     {error&&<div className="recorder-error">{error}</div>}
     {preview&&<div className="recorder-preview" onMouseDown={event=>event.target===event.currentTarget&&closePreview()}><section>
       <header><div><small>{contextLabel}</small><h3>Η εγγραφή είναι έτοιμη</h3></div><button type="button" onClick={closePreview}><X/></button></header>
