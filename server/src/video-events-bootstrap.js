@@ -85,9 +85,12 @@ export async function ensureVideoEventsSchema(){
     INSERT INTO "VideoOperationalEvent" ("id","companyId","storeId","terminalPos","operatorId","operatorName","eventType","eventAt","nvrEventAt","timeOffsetSeconds","clipStartAt","clipEndAt","sourceType","sourceId","amount","details","expiresAt")
     VALUES (md5(random()::text||clock_timestamp()::text),NEW."companyId",NEW."storeId",terminal_pos,actor_id,actor_name,mapped_type,event_time,event_time+(offset_seconds||' seconds')::interval,offset_seconds,event_time+(offset_seconds||' seconds')::interval-INTERVAL '30 seconds',event_time+(offset_seconds||' seconds')::interval+INTERVAL '60 seconds',TG_TABLE_NAME,source_id,event_amount,jsonb_build_object('capturedAutomatically',true),event_time+(retention_days||' days')::interval) ON CONFLICT DO NOTHING;RETURN NEW;
   END;$$ LANGUAGE plpgsql`);
-  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "StoreTransaction_video_event" ON "StoreTransaction";CREATE TRIGGER "StoreTransaction_video_event" AFTER INSERT OR UPDATE OF "reversedAt" ON "StoreTransaction" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
-  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "PosSaleActionAudit_video_event" ON "PosSaleActionAudit";CREATE TRIGGER "PosSaleActionAudit_video_event" AFTER INSERT ON "PosSaleActionAudit" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
-  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "CashShiftSession_video_event" ON "CashShiftSession";CREATE TRIGGER "CashShiftSession_video_event" AFTER INSERT OR UPDATE OF "status" ON "CashShiftSession" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
+  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "StoreTransaction_video_event" ON "StoreTransaction"`);
+  await prisma.$executeRawUnsafe(`CREATE TRIGGER "StoreTransaction_video_event" AFTER INSERT OR UPDATE OF "reversedAt" ON "StoreTransaction" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
+  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "PosSaleActionAudit_video_event" ON "PosSaleActionAudit"`);
+  await prisma.$executeRawUnsafe(`CREATE TRIGGER "PosSaleActionAudit_video_event" AFTER INSERT ON "PosSaleActionAudit" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
+  await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "CashShiftSession_video_event" ON "CashShiftSession"`);
+  await prisma.$executeRawUnsafe(`CREATE TRIGGER "CashShiftSession_video_event" AFTER INSERT OR UPDATE OF "status" ON "CashShiftSession" FOR EACH ROW EXECUTE FUNCTION "captureVideoOperationalEvent"()`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "VideoAccessAudit" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"actorId" TEXT,
     "action" TEXT NOT NULL,"details" JSONB,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
