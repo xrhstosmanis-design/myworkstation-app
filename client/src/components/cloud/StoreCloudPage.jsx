@@ -3,6 +3,7 @@ import {ArrowLeft,RefreshCw} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
+import ScreenRecorderControl from "../commerce/ScreenRecorderControl.jsx";
 
 const STORE_SYNC_KEY="myworkstation:store-sync";
 const SERVER_SYNC_MS=2000;
@@ -26,6 +27,7 @@ const ledgerFingerprint=result=>{
 };
 
 export default function StoreCloudPage({api,store,onBack}){
+  const isSuperAdminSupport=Boolean((()=>{try{return JSON.parse(localStorage.getItem("supportContext")||"null")}catch{return null}})());
   const [version,setVersion]=useState(0);
   const lastSyncValue=useRef(null);
   const lastServerFingerprint=useRef(null);
@@ -79,7 +81,10 @@ export default function StoreCloudPage({api,store,onBack}){
   return <section className="cloud-page store-operations-front">
     <div className="cloud-titlebar">
       <button className="cloud-back" onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
-      <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
+      <div className="cloud-titlebar-actions">
+        {isSuperAdminSupport&&<ScreenRecorderControl contextLabel="MYWORKSTATION · BACKOFFICE"/>}
+        <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
+      </div>
     </div>
 
     <div className="cloud-hero">

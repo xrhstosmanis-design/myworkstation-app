@@ -111,6 +111,17 @@ export async function sendCashShiftClosedEmail({to,storeName,session}){
   return sendEmail({to,subject,text,html});
 }
 
+export async function sendCashControlDailyReportEmail({to,storeName,date,rows,comment,auditorName}){
+  const shortage=rows.reduce((sum,row)=>sum+(Number(row.variance)<0?Math.abs(Number(row.variance)):0),0);
+  const surplus=rows.reduce((sum,row)=>sum+(Number(row.variance)>0?Number(row.variance):0),0);
+  const subject=`Αναφορά ελέγχου ταμείων · ${storeName} · ${date}`;
+  const lines=rows.map(row=>`${row.shiftLabel} · ${row.terminalPos||"MAIN"} · ${row.openedByName||"—"} · Διαφορά ${eur(row.variance)} · POS–EFTPOS ${eur(row.cardVariance)}`);
+  const text=[subject,"",...lines,"",`Συνολικό έλλειμμα: ${eur(shortage)}`,`Συνολικό πλεόνασμα: ${eur(surplus)}`,comment?`Σχόλιο ελέγχου: ${comment}`:"",`Ελέγχθηκε από: ${auditorName}`].filter(Boolean).join("\n");
+  const htmlRows=rows.map(row=>`<tr><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.shiftLabel)}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.terminalPos||"MAIN")}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.openedByName||"—")}</td><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:700">${escapeHtml(eur(row.variance))}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(eur(row.cardVariance))}</td></tr>`).join("");
+  const html=`<div style="font-family:Arial,sans-serif;max-width:760px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse"><tr><th>Βάρδια</th><th>POS</th><th>Χειριστής</th><th>Διαφορά</th><th>POS–EFTPOS</th></tr>${htmlRows}</table><p><strong>Συνολικό έλλειμμα:</strong> ${escapeHtml(eur(shortage))}<br><strong>Συνολικό πλεόνασμα:</strong> ${escapeHtml(eur(surplus))}</p>${comment?`<p><strong>Σχόλιο ελέγχου:</strong> ${escapeHtml(comment)}</p>`:""}<p><strong>Ελέγχθηκε από:</strong> ${escapeHtml(auditorName)}</p><p style="color:#64748b">Η αναφορά στάλθηκε χειροκίνητα από τον Super Admin.</p></div>`;
+  return sendEmail({to,subject,text,html});
+}
+
 export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,occurredAt,description,reason,originalType}){
   const at=occurredAt?new Date(occurredAt):new Date();
   const isReversal=kind==="REVERSAL";

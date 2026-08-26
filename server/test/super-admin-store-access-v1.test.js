@@ -8,11 +8,12 @@ const cash=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.u
 const admin=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
 const backoffice=fs.readFileSync(new URL("../../client/src/main.jsx",import.meta.url),"utf8");
 
-test("cash close email can be enabled or disabled independently per store",()=>{
+test("owner reports are sent manually by Super Admin",()=>{
   assert.match(bootstrap,/cashCloseEmailEnabled/);
   assert.match(platform,/cashCloseEmailEnabled:z\.boolean\(\)\.default\(true\)/);
-  assert.match(cash,/store\?\.cashCloseEmailEnabled!==false&&recipients\.length/);
-  assert.match(admin,/Αποστολή email στο κλείσιμο βάρδιας/);
+  assert.match(cash,/MANUAL_SEND_REQUIRED/);
+  assert.match(admin,/Προεπισκόπηση & email ιδιοκτητών/);
+  assert.doesNotMatch(admin,/Αποστολή email στο κλείσιμο βάρδιας/);
 });
 
 test("super admin support access is short lived, tenant targeted and audited",()=>{

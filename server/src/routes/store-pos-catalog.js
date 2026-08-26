@@ -18,7 +18,7 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true};
+const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true};
 async function operatorAccess(req,storeId){
   if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
   const rows=await prisma.$queryRaw`
@@ -30,7 +30,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    leftKeys:Boolean(p.leftKeys),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash)
+    leftKeys:Boolean(p.leftKeys),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
   };
 }
 async function audit(req,store,eventType,details={}){

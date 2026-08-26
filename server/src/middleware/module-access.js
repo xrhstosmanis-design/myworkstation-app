@@ -7,6 +7,14 @@ function isCurrentlyActive(row,now=new Date()){
   return true;
 }
 
+function isPlatformSuperAdmin(user){
+  return user?.role==="SUPER_ADMIN"||user?.platformRole==="SUPER_ADMIN"||user?.isSuperAdmin===true;
+}
+
+function hasPermanentSuperAdminAccess(user,moduleKey){
+  return moduleKey==="CASH_CONTROL"&&isPlatformSuperAdmin(user);
+}
+
 export function moduleKeyForPath(path="/"){
   if(path.startsWith("/employees"))return "PERSONNEL";
   if(path.startsWith("/shifts")||path.startsWith("/schedules"))return "SHIFTS";
@@ -37,6 +45,10 @@ export async function companyModuleState(companyId){
 export function requireCompanyModule(moduleKey){
   return async(req,res,next)=>{
     try{
+      if(hasPermanentSuperAdminAccess(req.user,moduleKey)){
+        req.license={superAdminBypass:true,activeModules:[moduleKey]};
+        return next();
+      }
       const companyId=req.user?.companyId;
       if(!companyId)return res.status(401).json({error:"Απαιτείται σύνδεση."});
       const state=await companyModuleState(companyId);
@@ -75,6 +87,11 @@ export function requireStoreModule(moduleKey){
       if(!storeTenantAccessAllowed(req.user,store)){
         return res.status(404).json({error:"Δεν βρέθηκε κατάστημα.",code:"TENANT_STORE_REJECTED"});
       }
+      if(hasPermanentSuperAdminAccess(req.user,moduleKey)){
+        req.license={superAdminBypass:true,activeModules:[moduleKey]};
+        req.targetStore=store;
+        return next();
+      }
       const state=await companyModuleState(store.companyId);
       if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
       if(!state.activeModules.includes(moduleKey))return res.status(403).json({error:"Το Store Mode δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
@@ -100,6 +117,11 @@ export function requireCompanyOrStoreModule(moduleKey){
       if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
       if(!storeTenantAccessAllowed(req.user,store)){
         return res.status(404).json({error:"Δεν βρέθηκε κατάστημα.",code:"TENANT_STORE_REJECTED"});
+      }
+      if(hasPermanentSuperAdminAccess(req.user,moduleKey)){
+        req.license={superAdminBypass:true,activeModules:[moduleKey]};
+        req.targetStore=store;
+        return next();
       }
       const state=await companyModuleState(store.companyId);
       if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
