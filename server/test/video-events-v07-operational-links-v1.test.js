@@ -22,4 +22,5 @@ test("V07 is idempotent and stores no credentials",()=>{
   assert.match(source,/ON CONFLICT DO NOTHING/);
   assert.match(source,/capturedAutomatically/);
   assert.doesNotMatch(source,/captureVideoOperationalEvent[\s\S]*passwordEnc/);
+  assert.doesNotMatch(source,/DROP TRIGGER[^`]*;CREATE TRIGGER/);
 });
