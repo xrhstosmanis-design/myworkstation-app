@@ -5,17 +5,17 @@ import fs from "node:fs";
 const platformUi=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
 const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 
-test("platform cash control presents a written finding for every shift",()=>{
-  assert.match(platformUi,/Αναλυτική γραπτή αναφορά/);
-  assert.match(platformUi,/ΓΡΑΠΤΟ ΠΟΡΙΣΜΑ ΑΝΑ ΒΑΡΔΙΑ/);
+test("platform cash control presents only concise suspicious events for every shift",()=>{
+  assert.match(platformUi,/Μόνο τα περίεργα συμβάντα/);
+  assert.match(platformUi,/ΣΥΜΒΑΝΤΑ ΕΛΕΓΧΟΥ ΤΑΜΕΙΩΝ/);
   assert.match(platformUi,/cashReport\.rows\.map\(row=>\{const report=cashWrittenReport\(row\)/);
-  assert.match(platformUi,/Τελικό συμπέρασμα:/);
-  assert.match(platformUi,/οι ακυρώσεις, οι επιστροφές, οι πιθανές διπλές συναλλαγές/);
+  assert.match(platformUi,/cashEventTime\(finding\.at\)/);
+  assert.doesNotMatch(platformUi,/Αναλυτική γραπτή αναφορά/);
 });
 
 test("a completed investigation returns a definitive conclusion instead of asking for review",()=>{
   assert.match(platformUi,/Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΑΝΕΞΗΓΗΤΟ ΕΛΛΕΙΜΜΑ/);
-  assert.match(platformUi,/Το ποσό παραμένει ανεξήγητο μετά την ολοκλήρωση όλων των ελέγχων/);
+  assert.match(platformUi,/Ανεξήγητο έλλειμμα/);
   assert.doesNotMatch(platformUi,/ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ/);
 });
 
@@ -26,6 +26,7 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/PosSaleActionAudit/);
   assert.match(platformApi,/PosSaleSafetyAudit/);
   assert.match(platformApi,/EXPENSE_DOCUMENT_MISMATCH/);
+  assert.match(platformApi,/documentTotal/);
   assert.match(platformApi,/ACTION_AFTER_SHIFT_CLOSE/);
   assert.match(platformApi,/MULTIPLE_ACTIONS_ON_SAME_SALE/);
   assert.match(platformApi,/UNEXPLAINED_SHORTAGE/);
@@ -35,4 +36,13 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/jsonb_typeof\(s\."duplicateReviewJson"\)='array'/);
   assert.match(platformApi,/to_regclass\('\"PurchaseDocument\"'\)::text AS "purchaseDocuments"/);
   assert.match(platformApi,/to_regclass\('\"StoreOperatorAudit\"'\)::text AS "operator"/);
+});
+
+test("daily report filters by store and flags near-offset variances between consecutive shifts",()=>{
+  assert.match(platformUi,/Κατάστημα<select value=\{cashStoreId\}/);
+  assert.match(platformUi,/Καθαρή διαφορά/);
+  assert.match(platformApi,/storeId:z\.string\(\)\.trim\(\)\.optional/);
+  assert.match(platformApi,/SHIFT_VARIANCE_OFFSET/);
+  assert.match(platformApi,/larger-smaller>Math\.max\(2,larger\*\.02\)/);
+  assert.match(platformApi,/suspiciousAction/);
 });
