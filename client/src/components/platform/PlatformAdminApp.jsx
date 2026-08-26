@@ -18,10 +18,13 @@ const cashConclusionLabels={AGREEMENT:"Ο ΕΛΕΓΧΟΣ ΟΛΟΚΛΗΡΩΘΗΚ�
 const cashFindingLabel=finding=>{
   const code=String(finding?.code||"");
   const at=`${cashEventTime(finding.at)} · `;
-  if(code==="SHIFT_VARIANCE_OFFSET")return `${at}Σχεδόν ίδιο αντίθετο ποσό σε διαδοχικές βάρδιες: ${cashMoney(finding.previousVariance)} (${finding.previousOperator||"—"}) και ${cashMoney(finding.currentVariance)} (${finding.currentOperator||"—"}). Καθαρή διαφορά ${cashMoney(finding.netVariance)}.`;
+  if(code==="SHIFT_VARIANCE_OFFSET")return `${at}Πιθανή μη καταμετρημένη φύλαξη μεταξύ βαρδιών: ${cashMoney(finding.previousVariance)} (${finding.previousOperator||"—"}) και ${cashMoney(finding.currentVariance)} (${finding.currentOperator||"—"}). Καθαρή διαφορά ${cashMoney(finding.netVariance)}${finding.finalOperator?` καταλογίζεται στον/στην ${finding.finalOperator}`:""}.`;
   if(code==="EXPENSE_WITHOUT_DOCUMENT")return `${at}Έξοδο ${cashMoney(finding.amount)} χωρίς παραστατικό.`;
   if(code==="EXPENSE_DOCUMENT_MISMATCH")return `${at}Πληρωμή ${cashMoney(finding.amount)} δεν συμφωνεί με το τιμολόγιο/παραστατικό ${cashMoney(finding.documentTotal)} (διαφορά ${cashMoney(finding.difference)})${finding.actorName?` · ${finding.actorName}`:""}.`;
-  if(code==="REVERSED_TRANSACTION")return `${at}Αντιλογισμένη συναλλαγή ${cashMoney(finding.amount)}${finding.actorName?` από ${finding.actorName}`:""}.`;
+  if(code==="REVERSED_TRANSACTION")return `${at}Αντιλογισμένη συναλλαγή ${cashMoney(finding.amount)}${finding.actorName?` από ${finding.actorName}`:""}. Έχουν πάρει τα χρήματα;`;
+  if(code==="CASH_TRANSFER_DIFFERENCE")return `${at}SOS — ανεξήγητη διαφορά μεταφοράς ταμείου ${cashMoney(finding.amount)}${finding.delivery?" στην αλυσίδα DELIVERY":" στο ίδιο POS"}.`;
+  if(code==="CARD_RECORDED_CASH_PAID")return `${at}Πιθανή πώληση που καταχωρίστηκε ως κάρτα αλλά πληρώθηκε με μετρητά (${cashMoney(finding.amount)}).`;
+  if(code==="EFTPOS_CONFIRMED_AS_FAILED")return `${at}Πιθανή επιλογή «ΟΧΙ» αντί «ΝΑΙ» στην επιβεβαίωση «πέρασε η κάρτα;» (${cashMoney(finding.amount)}).`;
   if(code==="POS_EFTPOS_DIFFERENCE")return `${at}Διαφορά POS–EFTPOS ${cashMoney(finding.amount)}.`;
   if(code==="DUPLICATE_CANDIDATES"||/DUPLICATE|REPLAY/.test(code))return `${at}Ένδειξη διπλής ή επαναληφθείσας συναλλαγής${finding.count?` (${finding.count})`:""}.`;
   if(code==="ACTION_AFTER_SHIFT_CLOSE")return `${at}Ενέργεια συναλλαγής μετά το κλείσιμο της βάρδιας.`;
