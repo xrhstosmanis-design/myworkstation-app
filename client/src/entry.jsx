@@ -78,7 +78,7 @@ const returnFromStaleTestPos=()=>{
   localStorage.removeItem("posReturnAuth");
   if(back?.token){localStorage.setItem("token",back.token);localStorage.setItem("user",JSON.stringify(back.user||{}))}
   else{localStorage.removeItem("token");localStorage.removeItem("user")}
-  window.location.replace("/platform-admin/kat-test");
+  window.location.replace("/platform-admin");
 };
 
 const storeApi=async(path,options={})=>{
@@ -90,8 +90,6 @@ const storeApi=async(path,options={})=>{
   if(posMatch&&response.status===404&&data.error==="Δεν βρέθηκε ενεργό κατάστημα."){returnFromStaleTestPos();return new Promise(()=>{})}
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data;
 };
-
-const KatTestQuickAccess=()=> <a href="/platform-admin/kat-test" style={{position:"fixed",right:24,top:86,zIndex:9999,display:"inline-flex",alignItems:"center",gap:8,padding:"13px 20px",borderRadius:12,background:"#0ea5e9",color:"#fff",fontWeight:900,textDecoration:"none",boxShadow:"0 10px 25px rgba(14,165,233,.28)",border:"2px solid rgba(255,255,255,.85)"}}>KAT TEST</a>;
 
 installPosCheckoutSafety();
 installTouchKeyboard();
@@ -121,7 +119,7 @@ const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely(
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
-else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><PlatformPromotionCenter/><KatTestQuickAccess/></>)}
+else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><PlatformPromotionCenter/></>)}
 else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<><CommercialPosApp api={storeApi} storeId={storeId}/><PosSaleActionsPanel api={storeApi} storeId={storeId}/></>)}
 else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
 else{installOwnerPasswordChangeGate();installModuleUiEnforcement();import("./main.jsx");const launcherRoot=document.getElementById("pilot-report-root");if(launcherRoot)createRoot(document.getElementById("pilot-report-root")).render(<PilotReportLauncherLive/>);const commerceRoot=document.createElement("div");commerceRoot.id="commerce-root";document.body.appendChild(commerceRoot);createRoot(commerceRoot).render(<CommerceLauncher/>)}
