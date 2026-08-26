@@ -273,7 +273,16 @@ router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
 
 router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
-  const assignedRows=req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`SELECT NULLIF(TRIM("terminalPos"),'') AS terminal FROM "StoreOperatorProfile" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.user.storeId} AND "employeeId"=${req.user.employeeId} LIMIT 1`:[];
+  const assignedRows=req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`
+    SELECT NULLIF(TRIM(p."terminalPos"),'') AS terminal
+    FROM "StoreOperatorCredential" c
+    LEFT JOIN "StoreOperatorProfile" p
+      ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
+    WHERE c."id"=${req.user.operatorId||req.user.id}
+      AND c."companyId"=${req.user.companyId}
+      AND c."storeId"=${req.params.storeId}
+      AND c."active"=TRUE
+    LIMIT 1`:[];
   const assignedTerminal=String(assignedRows[0]?.terminal||"").trim().toUpperCase();
   const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
   const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
