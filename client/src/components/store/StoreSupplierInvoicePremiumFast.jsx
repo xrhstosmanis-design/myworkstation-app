@@ -1,5 +1,6 @@
 import React,{useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
+import QRCode from "qrcode";
 import {finalizeV244ProductLines} from "../../lib/invoice-v244.js";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
@@ -41,7 +42,7 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
-  const [file,setFile]=useState(null),[fileDataUrl,setFileDataUrl]=useState(""),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false);
+  const [file,setFile]=useState(null),[fileDataUrl,setFileDataUrl]=useState(""),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false),[mobileQr,setMobileQr]=useState(""),[mobileRequest,setMobileRequest]=useState(null);
   const videoRef=useRef(null),canvasRef=useRef(null);
   const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
@@ -63,6 +64,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       else{const complete=Boolean(meta?.supplierId&&baseComplete);setStatus(complete?`FAST AI ολοκληρώθηκε (${Math.round(Number(meta?.confidence||0))}%). Έλεγξε τα 4 στοιχεία και πάτησε ΠΛΗΡΩΜΕΝΟ ή ΜΕ ΠΙΣΤΩΣΗ.`:"FAST AI ολοκληρώθηκε. Συμπλήρωσε μόνο όποιο από τα 4 βασικά στοιχεία λείπει και συνέχισε.")}
     }catch(error){setStatus(`FAST AI δεν ολοκληρώθηκε. Συμπλήρωσε τα βασικά στοιχεία χειροκίνητα και συνέχισε. ${error?.message||""}`)}finally{setReading(false)}
   };
+  const startMobileUpload=async()=>{try{setStatus("Δημιουργία προσωρινού QR για κινητό…");const request=await api("/api/commerce/ai-reader/mobile-upload-requests",{method:"POST",body:JSON.stringify({storeId:store.id})});setMobileRequest(request);setMobileQr(await QRCode.toDataURL(request.uploadUrl,{width:260,margin:1,errorCorrectionLevel:"M"}));setStatus("Σκάναρε το QR με το κινητό. Ο κωδικός λήγει σε 8 λεπτά.");const poll=async()=>{try{const result=await api(request.pollUrl);if(result.status==="UPLOADED"){setMobileQr("");setMobileRequest(null);await selectFile(new File([await (await fetch(result.file.dataUrl)).blob()],result.file.filename,{type:result.file.mimeType}));return}setTimeout(poll,1800)}catch(error){setMobileQr("");setMobileRequest(null);setStatus(`⚠️ ${error?.message||"Ο κωδικός QR έληξε."}`)}};setTimeout(poll,1800)}catch(error){setStatus(`⚠️ Δεν δημιουργήθηκε QR: ${error?.message||""}`)}};
   const saveNewSupplier=async()=>{
     const name=supplierCandidate.name.trim(),taxId=supplierCandidate.taxId.trim();
     if(name.length<2)return setMessage?.("❌ Συμπλήρωσε την επωνυμία του νέου προμηθευτή.");
@@ -108,7 +110,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   return <div className="pos-payment-form-v3-root">
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>PREMIUM FAST — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στο BackOffice.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
-    <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
+    <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><button type="button" onClick={startMobileUpload} disabled={busy||reading}>▣ QR από κινητό</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
+    {mobileQr&&<div style={{margin:"10px 0",padding:14,border:"1px solid #9bc4e8",borderRadius:12,background:"#f4faff",textAlign:"center"}}><b>Σκάναρε από το κινητό</b><div><img src={mobileQr} alt="Προσωρινό QR αποστολής παραστατικού" style={{width:220,height:220,marginTop:8}}/></div><small>Λήγει στις {new Date(mobileRequest?.expiresAt).toLocaleTimeString("el-GR",{hour:"2-digit",minute:"2-digit"})}. Μετά την αποστολή η φωτογραφία εμφανίζεται αυτόματα εδώ.</small></div>}
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     <label>Προμηθευτής<select value={supplierId} disabled={busy||savingSupplier} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
     {!supplierId&&fileDataUrl&&<div style={{padding:"10px 12px",border:"1px solid #c9a227",borderRadius:10,background:"#fff8dc",margin:"8px 0"}}>
