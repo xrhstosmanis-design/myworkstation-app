@@ -12,20 +12,20 @@ function Pad({value,onChange}){const press=k=>{const c=String(value??"");if(k===
 
 export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMessage,setError}){
  const storeKey=String(store?.id||"default"),initialType=paymentTabByStore.get(storeKey)||"OTHER_EXPENSE";
- const [busy,setBusy]=useState(false),[localError,setLocalError]=useState(""),[ledger,setLedger]=useState(null),[access,setAccess]=useState(null),[expenseCategories,setExpenseCategories]=useState([]),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
+ const [busy,setBusy]=useState(false),[localError,setLocalError]=useState(""),[ledger,setLedger]=useState(null),[expenseCategories,setExpenseCategories]=useState([]),[premiumInvoice,setPremiumInvoice]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
  const [form,setForm]=useState({type:initialType,amount:"",description:"",expenseCategoryId:"",subtractFromShift:true,file:null});
  const setPaymentType=type=>{paymentTabByStore.set(storeKey,type);setLocalError("");setPaymentError("");setForm(c=>({...c,type}))};
  const setPaymentError=message=>{setLocalError(String(message||""));setError?.(message||"")};
  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
  useEffect(()=>{
   api(`/api/transactions/stores/${store.id}/overview`).then(setLedger).catch(e=>setPaymentError(e.message));
-  api(`/api/store-pos/stores/${store.id}`).then(result=>setAccess(result?.access||{})).catch(e=>setPaymentError(e.message));
   api("/api/management/expense-categories").then(result=>setExpenseCategories((result?.items||[]).filter(x=>x.active!==false))).catch(()=>setExpenseCategories([]));
   api("/api/commerce/ai-reader/capability").then(()=>setPremiumInvoice(true)).catch(()=>setPremiumInvoice(false));
   return()=>stopCamera();
  },[]);
- useEffect(()=>{if(!access)return;const canSupplier=access.supplierPayment!==false,canOther=access.thirdPartyPayment!==false;if(form.type==="SUPPLIER_PAYMENT"&&!canSupplier&&canOther)setPaymentType("OTHER_EXPENSE");else if(form.type==="OTHER_EXPENSE"&&!canOther&&canSupplier)setPaymentType("SUPPLIER_PAYMENT");if(access.sameShiftPayments===false)setForm(c=>({...c,subtractFromShift:false}))},[access]);
- const canSupplier=access?.supplierPayment!==false,canOther=access?.thirdPartyPayment!==false,canSameShift=Boolean(access?.sameShiftPayments),hasPaymentAccess=canSupplier||canOther;
+ // Οι χειριστές ΚΑΤ έχουν καθολικό δικαίωμα πληρωμών. Δεν φορτώνουμε τον βαρύ
+ // κατάλογο POS πριν δείξουμε τη φόρμα: η καταχώριση συνεχίζει να ελέγχεται στον server.
+ const canSupplier=true,canOther=true,canSameShift=true;
  const openedAt=ledger?.openSession?.openedAt?new Date(ledger.openSession.openedAt):null;
  const shiftAgeHours=openedAt&&!Number.isNaN(openedAt.getTime())?(Date.now()-openedAt.getTime())/3600000:null;
  const staleShift=Boolean(ledger?.openSession&&shiftAgeHours!=null&&shiftAgeHours>STALE_SHIFT_HOURS);
@@ -47,7 +47,6 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
  return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION STANDARD POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
   {localError&&<div style={{margin:"0 0 10px",padding:"10px 12px",borderRadius:8,background:"#fee2e2",color:"#991b1b",fontWeight:800}}>{localError}</div>}
   {staleShift&&canSameShift&&<div style={{margin:"0 0 10px",padding:"10px 12px",borderRadius:8,background:"#fff5df",color:"#8a4b08",fontWeight:800}}>{staleShiftMessage}</div>}
-  {!access?<div style={{padding:16,fontWeight:800}}>Έλεγχος δικαιωμάτων χειριστή…</div>:!hasPaymentAccess?<div style={{padding:16,fontWeight:800}}>Δεν έχεις ενεργό δικαίωμα πληρωμών από το BackOffice.</div>:<>
   <div style={{marginBottom:8}}><small style={{fontWeight:800,color:"#47655d"}}>{premiumInvoice?"PREMIUM AI READER — FAST στοιχεία / πληρωμή, προϊόντα στο background":"STANDARD — απλή καταχώριση πληρωμής προμηθευτή"}</small></div>
   <div className="pos-payment-types">{canOther&&<button type="button" aria-pressed={!supplierMode} className={!supplierMode?"active":""} onClick={()=>setPaymentType("OTHER_EXPENSE")}>Λοιπά έξοδα</button>}{canSupplier&&<button type="button" aria-pressed={supplierMode} className={supplierMode?"active":""} onClick={()=>setPaymentType("SUPPLIER_PAYMENT")}>Πληρωμή προμηθευτή</button>}</div>
   {supplierMode?<div onClickCapture={blockPaidWithoutPermission}>{!canSameShift&&<div style={{padding:"8px 10px",marginBottom:8,borderRadius:8,background:"#fff5df",fontWeight:800}}>Δεν επιτρέπεται πληρωμή από τα μετρητά της βάρδιας. Μπορείς να καταχωρίσεις το τιμολόγιο με πίστωση.</div>}{supplierInvoice}</div>:<div className="pos-payment-form">
@@ -56,6 +55,6 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
    <div className="pos-photo-actions"><button type="button" onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><Camera/> Επιλογή αρχείου<input type="file" accept="image/*,application/pdf" onChange={e=>setForm(c=>({...c,file:e.target.files?.[0]||null}))}/></label><b>{form.file?.name||"Δεν επιλέχθηκε φωτογραφία"}</b></div>
    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
    {canSameShift?<label className="pos-check"><input type="checkbox" checked={form.subtractFromShift} onChange={e=>setForm(c=>({...c,subtractFromShift:e.target.checked}))}/>Αφαίρεση από τα μετρητά της βάρδιας</label>:<div style={{padding:"8px 10px",borderRadius:8,background:"#f3f6f8",fontWeight:800}}>Η πληρωμή θα καταχωριστεί εξωτερικά και δεν θα αφαιρεθεί από τη βάρδια.</div>}<button className="pos-primary-action" disabled={busy} onClick={submitOther}><Wallet/> {busy?"Καταχώριση…":"Καταχώριση εξόδου"}</button>
-  </div>}</>}
+  </div>}
  </div></main></section></div>
 }
