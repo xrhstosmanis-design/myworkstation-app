@@ -1,0 +1,6 @@
+/* Desktop POS: payment total must remain beside CASH, never wrap below it. */
+@media (min-width:1151px){
+  .standard-action-bar{grid-template-columns:repeat(12,minmax(0,1fr))}
+  .standard-action-bar .cash{grid-column:-2}
+  .standard-action-bar>strong{grid-column:-1}
+}
