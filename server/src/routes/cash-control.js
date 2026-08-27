@@ -134,7 +134,7 @@ async function requestTerminal(req){
 }
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
-const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
+const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable()});
 const closeSchema=z.object({cashSales:amount,cardSales:amount,eftposTotal:amount,expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
 const reportDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reviewSchema=z.object({decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),amount:z.coerce.number().finite().min(0).max(999999999).default(0),note:z.string().trim().min(5).max(1000)}).superRefine((value,ctx)=>{if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."})});
@@ -162,10 +162,11 @@ async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
   const rows=await db.$queryRaw`
     SELECT COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CASH','CUSTOMER_RECEIPT_CASH') AND "reversedAt" IS NULL),0) AS "cashSales",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CARD','CUSTOMER_RECEIPT_CARD') AND "reversedAt" IS NULL),0) AS "cardSales",
-      COALESCE(SUM("amount") FILTER (WHERE "type"='TRANSFER_AMOUNT' AND "reversedAt" IS NULL),0) AS "transferIn",
+      COALESCE(SUM("amount") FILTER (WHERE "type" IN ('TRANSFER_AMOUNT','TRANSFER_IN') AND "reversedAt" IS NULL),0) AS "transferIn",
+      COALESCE(SUM("amount") FILTER (WHERE "type"='TRANSFER_OUT' AND "reversedAt" IS NULL),0) AS "transferOut",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
     FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}`;
-  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),transferIn:money(rows[0]?.transferIn),expenses:money(rows[0]?.expenses)};
+  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),transferIn:money(rows[0]?.transferIn),transferOut:money(rows[0]?.transferOut),expenses:money(rows[0]?.expenses)};
 }
 async function existingAuditTables(db){
   const rows=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
@@ -273,51 +274,29 @@ router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
 
 router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
-  const assignedTerminal=req.user?.tokenType==="STORE_OPERATOR"?String(req.user.terminalPos||"").trim().toUpperCase():"";
+  const assignedRows=req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`
+    SELECT NULLIF(TRIM(p."terminalPos"),'') AS terminal
+    FROM "StoreOperatorCredential" c
+    LEFT JOIN "StoreOperatorProfile" p
+      ON p."companyId"=c."companyId" AND p."storeId"=c."storeId" AND p."employeeId"=c."employeeId"
+    WHERE c."id"=${req.user.operatorId||req.user.id}
+      AND c."companyId"=${req.user.companyId}
+      AND c."storeId"=${req.params.storeId}
+      AND c."active"=TRUE
+    LIMIT 1`:[];
+  const assignedTerminal=String(assignedRows[0]?.terminal||"").trim().toUpperCase();
   const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
   const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
   if(assignedTerminal&&requestedTerminal&&assignedTerminal!==requestedTerminal)return res.status(403).json({error:"Το POS δεν αντιστοιχεί στην ενεργή καρτέλα χειριστή."});
-  const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||assignedTerminal||await requestTerminal(req);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=assignedTerminal||requestedTerminal||await requestTerminal(req);
   const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
-  // KAT_SAFE_VAULT_ADJUSTMENT_ALERT_V2
-  const operational=body.drawer+body.custody+body.coins; // ΧΡΗΜΑΤΟΚΙΒΩΤΙΟ ΔΕΝ ΜΕΤΡΑΕΙ ΣΤΟ ΛΕΙΤΟΥΡΓΙΚΟ ΤΑΜΕΙΟ
-  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal","closingSafe" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
-  const previousSafe=lastClosedRows[0]?money(lastClosedRows[0].closingSafe):body.safe;
-  const safeDelta=Number((body.safe-previousSafe).toFixed(2));
-  const safeReason=String(body.safeReason||body.note||"").trim();
-  if(safeDelta < -0.009 && !safeReason){
-    return res.status(409).json({error:`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν ανοίξει η βάρδια.`,code:"SAFE_DECREASE_REASON_REQUIRED",previousSafe,newSafe:body.safe,delta:safeDelta});
-  }
+  const operational=body.drawer+body.custody+body.coins;
+  const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
   const expectedOpening=lastClosedRows[0]?money(lastClosedRows[0].nextOpeningTotal):operational,openingVariance=operational-expectedOpening,actorName=req.user.fullName||"Χρήστης";
-  const sessionId=crypto.randomUUID();
   const rows=await prisma.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
-    VALUES (${sessionId},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
-
-  let safeChange=null;
-  if(Math.abs(safeDelta)>0.009){
-    const description=[`Χρηματοκιβώτιο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");
-    await prisma.$executeRaw`
-      INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt")
-      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${sessionId},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())
-    `;
-    safeChange={previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null,emailAlerted:false};
-    if(safeDelta<0){
-      try{
-        const owners=await prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}});
-        const testRecipient=String(process.env.MAIL_TEST_RECIPIENT||"").trim();
-        const recipients=[...new Set([store.responsibleEmail,...owners.map(row=>row.email),testRecipient].map(value=>String(value||"").trim().toLowerCase()).filter(Boolean))];
-        if(recipients.length){
-          const now=new Date();
-          const subject=`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · ${store.name}`;
-          const text=[subject,"",`Κατάστημα: ${store.name}`,`Βάρδια: ${body.shiftLabel}`,`Χειριστής: ${actorName}`,`Ημερομηνία / ώρα: ${now.toLocaleString("el-GR")}`,`Προηγούμενο ποσό: ${previousSafe.toFixed(2)} €`,`Νέο ποσό: ${body.safe.toFixed(2)} €`,`Μείωση: ${Math.abs(safeDelta).toFixed(2)} €`,`Αιτιολογία: ${safeReason}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");
-          await sendEmail({to:recipients,subject,text,html:`<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><p><b>Κατάστημα:</b> ${store.name}</p><p><b>Βάρδια:</b> ${body.shiftLabel}</p><p><b>Χειριστής:</b> ${actorName}</p><p><b>Προηγούμενο:</b> ${previousSafe.toFixed(2)} €</p><p><b>Νέο:</b> ${body.safe.toFixed(2)} €</p><p><b>Μείωση:</b> ${Math.abs(safeDelta).toFixed(2)} €</p><p><b>Αιτιολογία:</b> ${safeReason}</p></div>`});
-          safeChange.emailAlerted=true;
-        }
-      }catch(mailError){console.error("Safe decrease email alert failed:",mailError?.message||mailError)}
-    }
-  }
-  res.status(201).json({...normalize(rows[0]),safeChange});
+    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
+  res.status(201).json(normalize(rows[0]));
 }));
 
 router.post("/sessions/:sessionId/close",route(async(req,res)=>{
@@ -331,7 +310,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
     if(safeDelta < -0.009 && safeReason.length < 3){const error=new Error(`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν κλείσει η βάρδια.`);error.status=409;throw error}
     const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
-    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
+    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.transferOut-ledger.expenses;
     const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
     if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
