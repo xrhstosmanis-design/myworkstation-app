@@ -92,9 +92,9 @@ export default function PlatformSecureLogin({onLogin}){
     {step==="password"&&<form className="platform-login-card" onSubmit={submitPassword}>
       <div className="platform-login-icon"><ShieldCheck/></div>
       <h2>Είσοδος ιδιοκτήτη πλατφόρμας</h2>
-      <label>Email<input type="email" data-keyboard="off" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
-      <label>Κωδικός<input type="password" data-keyboard="off" value={password} onChange={e=>setPassword(e.target.value)} required/></label>
-      <label>Όνομα αυτής της συσκευής<input data-keyboard="off" value={deviceName} onChange={e=>setDeviceName(e.target.value)} maxLength="80" placeholder="π.χ. HOME PC" required/></label>
+      <label>Email<input type="email" data-keyboard="off" value={email} onInput={e=>setEmail(e.currentTarget.value)} onChange={e=>setEmail(e.target.value)} required/></label>
+      <label>Κωδικός<input type="password" data-keyboard="off" value={password} onInput={e=>setPassword(e.currentTarget.value)} onChange={e=>setPassword(e.target.value)} required/></label>
+      <label>Όνομα αυτής της συσκευής<input data-keyboard="off" value={deviceName} onInput={e=>setDeviceName(e.currentTarget.value)} onChange={e=>setDeviceName(e.target.value)} maxLength="80" placeholder="π.χ. HOME PC" required/></label>
       {error&&<div className="platform-error">{error}</div>}
       <button disabled={busy}>{busy?"Έλεγχος…":"Συνέχεια"}</button>
       <a href="/">Κανονικό Backoffice</a>
@@ -106,7 +106,7 @@ export default function PlatformSecureLogin({onLogin}){
       <p>Άνοιξε στο κινητό το Google Authenticator ή Microsoft Authenticator και σκάναρε τον κωδικό.</p>
       {qr?<img className="totp-qr" src={qr} alt="QR ενεργοποίησης 2FA"/>:<div className="qr-loading">Δημιουργία QR…</div>}
       <details><summary>Χειροκίνητος κωδικός</summary><code className="totp-secret">{setup.secret}</code></details>
-      <label>Εξαψήφιος κωδικός Authenticator<input data-keyboard="off" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} minLength="6" maxLength="6" required autoFocus/></label>
+      <label>Εξαψήφιος κωδικός Authenticator<input data-keyboard="off" inputMode="numeric" autoComplete="one-time-code" value={code} onInput={e=>setCode(e.currentTarget.value.replace(/\D/g,"").slice(0,6))} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} minLength="6" maxLength="6" required autoFocus/></label>
       {error&&<div className="platform-error">{error}</div>}
       <button disabled={busy||code.length!==6}>{busy?"Επιβεβαίωση…":"Ενεργοποίηση 2FA"}</button>
       <button type="button" className="secondary-link" onClick={restart}>Ακύρωση</button>
@@ -116,7 +116,7 @@ export default function PlatformSecureLogin({onLogin}){
       <div className="platform-login-icon"><KeyRound/></div>
       <h2>Δεύτερο βήμα ασφαλείας</h2>
       <p>Γράψε τον εξαψήφιο κωδικό που εμφανίζει τώρα η εφαρμογή Authenticator.</p>
-      <label>Κωδικός 2FA ή κωδικός ανάκτησης<input data-keyboard="off" autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value.toUpperCase().slice(0,20))} minLength="6" required autoFocus/></label>
+      <label>Κωδικός 2FA ή κωδικός ανάκτησης<input data-keyboard="off" autoComplete="one-time-code" value={code} onInput={e=>setCode(e.currentTarget.value.toUpperCase().slice(0,20))} onChange={e=>setCode(e.target.value.toUpperCase().slice(0,20))} minLength="6" required autoFocus/></label>
       {error&&<div className="platform-error">{error}</div>}
       <button disabled={busy}>{busy?"Έλεγχος…":"Ασφαλής σύνδεση"}</button>
       <button type="button" className="secondary-link" onClick={restart}>Πίσω</button>
