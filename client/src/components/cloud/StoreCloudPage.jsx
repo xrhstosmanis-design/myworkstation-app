@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
-import {ArrowLeft,RefreshCw} from "lucide-react";
+import {ArrowLeft,BriefcaseBusiness,RefreshCw} from "lucide-react";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
@@ -32,6 +32,10 @@ export default function StoreCloudPage({api,store,onBack}){
   const serverCheckBusy=useRef(false);
   const refresh=()=>setVersion(value=>value+1);
 
+  useEffect(()=>{
+    document.body.classList.add("store-cloud-page-open");
+    return()=>document.body.classList.remove("store-cloud-page-open");
+  },[]);
   useEffect(()=>{
     const consumeSyncValue=value=>{
       if(!value||value===lastSyncValue.current)return;
@@ -79,7 +83,10 @@ export default function StoreCloudPage({api,store,onBack}){
   return <section className="cloud-page store-operations-front">
     <div className="cloud-titlebar">
       <button className="cloud-back" onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
-      <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
+      <div className="cloud-title-actions">
+        <button className="cloud-commerce" onClick={()=>window.dispatchEvent(new Event("myworkstation:open-commerce"))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
+        <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
+      </div>
     </div>
 
     <div className="cloud-hero">
