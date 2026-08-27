@@ -111,9 +111,10 @@ function requireLedgerAccess(req,res,next){
     permissions.includes("THIRD_PARTY_PAYMENT")||
     permissions.includes("TRANSFER_AMOUNT")
   );
-  const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
-  );
+  // ΚΑΤ policy: κάθε ενεργός χειριστής του δικού του καταστήματος καταχωρίζει
+  // πληρωμές. Η διασταύρωση καταστήματος, ενεργής βάρδιας και το audit γίνονται
+  // παρακάτω πριν γραφτεί οποιαδήποτε κίνηση.
+  const operator=req.user?.tokenType==="STORE_OPERATOR";
   if(!backoffice&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
 }
