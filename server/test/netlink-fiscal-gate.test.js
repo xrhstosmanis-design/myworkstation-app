@@ -29,3 +29,12 @@ test("execute verifies and audits the fiscal receipt before calling Netlink",()=
   assert.match(route,/"customerTotal"/);
   assert.match(route,/"commissionAmount"/);
 });
+
+test("Render startup repairs the raw-SQL Netlink fiscal columns",()=>{
+  const render=fs.readFileSync(new URL("../../render.yaml",import.meta.url),"utf8");
+  const compat=fs.readFileSync(new URL("../scripts/ensure-netlink-transaction-compat.js",import.meta.url),"utf8");
+  assert.match(render,/node server\/scripts\/ensure-netlink-transaction-compat\.js/);
+  assert.match(compat,/ADD COLUMN IF NOT EXISTS "fiscalDocumentId"/);
+  assert.match(compat,/ADD COLUMN IF NOT EXISTS "fiscalNumber"/);
+  assert.match(compat,/ADD COLUMN IF NOT EXISTS "fiscalIssuedAt"/);
+});
