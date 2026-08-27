@@ -112,3 +112,11 @@ Legacy PR: #210
 - Τα τρία failures ήταν αποκλειστικά UI regression assertions από τη συγχώνευση: ετικέτα POS cancellation, απουσία πρόσθετου `MutationObserver` στο audit installer και ακριβής ετικέτα φύρας στην ενεργή βάρδια.
 - Έγινε η ελάχιστη διόρθωση στα δύο UI αρχεία. Δεν άλλαξε Netlink auth/licensing/fiscal logic.
 - Τα τρία failing tests και τα σχετικά Netlink/licensing/structural tests πέρασαν τοπικά: `24/24 PASS`.
+
+
+## Isolated staging E2E window — 2026-08-27
+- Branch created from current `main` solely to provision a Render PR preview.
+- The preview must use the Netlink staging provider and an isolated preview database.
+- `NETLINK_TEST_MODE=true` is preview-only.
+- `NETLINK_ENABLE_EXECUTE=true` is allowed only for one controlled staging transaction and must be disabled immediately afterwards.
+- Production execute remains disabled.
