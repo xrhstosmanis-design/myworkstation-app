@@ -153,7 +153,8 @@ function totals(rows){
   return {
     cashSales:sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),
     cardSales:sum("SALE_CARD")+sum("CUSTOMER_RECEIPT_CARD"),
-    transferIn:sum("TRANSFER_AMOUNT"),
+    transferIn:sum("TRANSFER_AMOUNT")+sum("TRANSFER_IN"),
+    transferOut:sum("TRANSFER_OUT"),
     supplierPayments,
     otherExpenses,
     expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
@@ -166,7 +167,7 @@ function totals(rows){
 }
 
 const transactionSchema=z.object({
-  type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES","TRANSFER_AMOUNT"]),
+  type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES","TRANSFER_AMOUNT","TRANSFER_OUT","TRANSFER_IN"]),
   amount:z.coerce.number().finite().positive().max(999999999),
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
@@ -355,6 +356,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
   const isPayment=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
+  const isTransferOut=body.type==="TRANSFER_OUT";
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   const legacyPayment=isPayment&&!body.evidenceMode;
   let supplierName=body.supplierName||null;
@@ -388,7 +390,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const legacyAttachment=(legacyPayment||!isPayment)?parseAttachment(body.attachment):null;
   const actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
-  const subtractFromShift=isPayment
+  const subtractFromShift=isTransferOut?true:isPayment
     ?(legacyPayment?Boolean(body.subtractFromShift):body.paymentSource==="CASH_SHIFT")
     :Boolean(body.subtractFromShift);
   const externalPayment=isPayment&&!legacyPayment&&body.paymentSource==="EXTERNAL";
