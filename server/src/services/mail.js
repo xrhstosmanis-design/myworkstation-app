@@ -65,8 +65,22 @@ export async function sendEmail({to,subject,text,html,attachments=[]}){
     throw error;
   }
   const transport=createTransport(config);
-  const result=await transport.sendMail({from:`MyWorkStation <${config.from}>`,to:recipients,subject,text,html,attachments});
-  return {messageId:result.messageId,recipients};
+  try{
+    const result=await transport.sendMail({from:`MyWorkStation <${config.from}>`,to:recipients,subject,text,html,attachments});
+    return {messageId:result.messageId,recipients};
+  }catch(cause){
+    const code=String(cause?.code||"").toUpperCase();
+    const responseCode=Number(cause?.responseCode||0);
+    let reason="Ο διακομιστής email δεν δέχτηκε την αποστολή.";
+    if(["EAUTH","ENOAUTH"].includes(code)||[530,535].includes(responseCode))reason="Απέτυχε η πιστοποίηση SMTP. Ελέγξτε το όνομα χρήστη και τον κωδικό εφαρμογής email.";
+    else if(["ECONNECTION","ECONNREFUSED","ETIMEDOUT","ESOCKET","EDNS"].includes(code))reason="Δεν ήταν δυνατή η σύνδεση με τον διακομιστή SMTP. Ελέγξτε host, θύρα και ασφαλή σύνδεση.";
+    else if(responseCode>=500&&responseCode<600)reason="Ο διακομιστής email απέρριψε τον αποστολέα ή τον παραλήπτη.";
+    const error=new Error(`Η αναφορά δημιουργήθηκε, αλλά δεν στάλθηκε με email. ${reason}`);
+    error.status=502;
+    error.code="MAIL_DELIVERY_FAILED";
+    error.cause=cause;
+    throw error;
+  }
 }
 
 export async function sendTestEmail(){
