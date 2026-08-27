@@ -24,7 +24,7 @@ async function request(path,{method="GET",token,body}={}){
 const operatorProfile=permissions=>({
   username:"e2e.kat.online",fullName:"E2E KAT Online",stationPhone:null,mobilePhone:null,hourlyRate:null,
   role:"EMPLOYEE",active:true,posAccess:true,backofficeAccess:false,powerUser:false,permissions,
-  backofficeMenu:{},backofficeTabs:{},customerDisplay:{},terminalPos:null,cashLimit:null,notes:"KAT P0 online ordering",
+  backofficeMenu:{},backofficeTabs:{},customerDisplay:{},terminalPos:"POS2",cashLimit:null,notes:"KAT P0 online ordering",
   retailSaleSeries:null,retailReturnSeries:null,installationAddress:null,installationPhone:null
 });
 
