@@ -80,8 +80,8 @@ export default function CommercialPosApp({api,storeId}){
     if(!cashOverview?.openSession)return setError("Δεν υπάρχει ενεργή βάρδια για μεταφορά ποσού.");
     setBusy(true);setError("");setMessage("");
     try{
-      await api(`/api/transactions/stores/${encodeURIComponent(storeId)}`,{method:"POST",body:JSON.stringify({type:"TRANSFER_AMOUNT",amount,description:transferForm.description||"Μεταφορά ποσού",subtractFromShift:false})});
-      setMessage(`Μεταφορά ποσού ${money(amount)} καταχωρίστηκε στη βάρδια και στο BackOffice.`);
+      await api(`/api/transactions/stores/${encodeURIComponent(storeId)}`,{method:"POST",body:JSON.stringify({type:"TRANSFER_OUT",amount,description:transferForm.description||"Μεταφορά ποσού"})});
+      setMessage(`Μεταφορά ποσού ${money(amount)} αφαιρέθηκε από το αναμενόμενο ταμείο και καταγράφηκε στο BackOffice.`);
       setTransferPanel(false);setTransferForm({amount:"",description:"Μεταφορά ποσού"});
       await loadPos();
     }catch(err){setError(err.message)}finally{setBusy(false)}
