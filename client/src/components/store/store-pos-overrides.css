@@ -11,16 +11,16 @@
 .standard-category-strip>div>div{position:relative;height:100%}
 .standard-category-strip .pos-category-edit{position:absolute;right:4px;top:4px;width:23px;height:23px;min-height:23px;padding:0;border:1px solid #ffffff99;border-radius:6px;background:#173e36b8;color:#fff;display:grid;place-items:center;z-index:2}
 .standard-category-strip .pos-category-edit svg{width:14px;height:14px}
-.standard-quick-grid>div{position:relative}.standard-quick-grid .pos-quick-empty{background:#edf2f1!important;color:#6f827c!important;border:1px dashed #c8d5d1!important;opacity:1}.standard-quick-grid .pos-quick-edit{position:absolute;right:3px;top:3px;width:22px;height:22px;min-height:22px;padding:0;border:1px solid #ffffff80;border-radius:6px;background:#173e36aa;color:#fff;display:grid;place-items:center;z-index:3}.standard-quick-grid .pos-quick-edit svg{width:14px;height:14px}
+.standard-quick-grid>div{position:relative}.standard-quick-grid .pos-quick-empty{background:#f7faf9!important;color:#48625b!important;border:1px dashed #a9bbb5!important;opacity:1!important}.standard-quick-grid .pos-quick-edit{position:absolute;right:3px;top:3px;width:22px;height:22px;min-height:22px;padding:0;border:1px solid #ffffff80;border-radius:6px;background:#173e36aa;color:#fff;display:grid;place-items:center;z-index:3}.standard-quick-grid .pos-quick-edit svg{width:14px;height:14px}
 .pos-category-editor{padding:18px;display:grid;gap:12px;overflow:auto}.pos-category-editor label{display:grid;gap:6px;font-weight:900}.pos-category-editor input,.pos-category-editor select{min-height:46px;border:1px solid #cad8d4;border-radius:9px;padding:0 10px;background:#fff;font:inherit}.pos-category-editor>div{display:flex;gap:14px;flex-wrap:wrap}.pos-category-editor>div label{display:flex;align-items:center;gap:8px}.pos-category-editor>div input{min-height:34px;padding:2px}
 
 /* Keep the KAT POS fully usable inside the visible browser window. */
 @media (min-width:851px){
-  .store-pos-card{height:calc(100vh - 12px);margin:6px auto;display:flex;flex-direction:column}
+  .mws-standard-pos.store-pos-card{width:100vw!important;max-width:none!important;height:100vh!important;margin:0!important;border-radius:0;display:flex;flex-direction:column}
   .store-pos-top{min-height:50px;padding:7px 12px}.store-pos-top h2{font-size:20px}.store-pos-top button{height:36px;padding:0 10px}.store-pos-top small{font-size:11px}
   .pos-audience-selector{padding:5px 10px!important}.pos-audience-selector button{padding:5px 8px!important}
   .standard-pos-grid{height:auto!important;min-height:0!important;max-height:none!important;flex:1;padding:5px;gap:5px}
   .standard-sale-panel{grid-template-rows:54px auto 32px minmax(0,1fr) 124px}.standard-category-strip>div{height:88px;grid-auto-columns:128px}.standard-category-strip button{width:128px}
-  .standard-quick-panel{padding:6px}.standard-quick-panel>header{height:28px}.standard-quick-grid{gap:5px}.standard-quick-grid button{min-height:0;height:calc((100% - 45px)/10);padding:6px 3px 5px 23px;font-size:10px!important}
+  .standard-quick-panel{padding:6px;display:grid;grid-template-rows:28px minmax(0,1fr)}.standard-quick-panel>header{height:28px}.standard-quick-grid{height:100%;gap:5px;grid-auto-rows:minmax(0,1fr)}.standard-quick-grid>div{min-height:0}.standard-quick-grid button{min-height:0;height:100%;padding:6px 3px 5px 23px;font-size:10px!important}
   .standard-action-bar{flex:0 0 59px;padding:5px;gap:4px}.standard-action-bar button{height:49px!important}
 }
