@@ -50,6 +50,7 @@ import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
 import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-actions.js";
 import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
+import storePosCategoryButtonsRoutes from "./routes/store-pos-category-buttons.js";
 import storeTableOrdersRoutes from "./routes/store-table-orders.js";
 import storePreparationRoutes from "./routes/store-preparation.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
@@ -169,6 +170,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsR
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosExchangeRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosConsumptionRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosRoutes);
+app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCategoryButtonsRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeTableOrdersRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
