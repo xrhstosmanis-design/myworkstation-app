@@ -273,7 +273,9 @@ router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
 
 router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
-  const assignedRows=req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`
+  const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
+  const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
+  const assignedRows=!testRuntime&&req.user?.tokenType==="STORE_OPERATOR"?await prisma.$queryRaw`
     SELECT NULLIF(TRIM(p."terminalPos"),'') AS terminal
     FROM "StoreOperatorCredential" c
     LEFT JOIN "StoreOperatorProfile" p
@@ -284,10 +286,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
       AND c."active"=TRUE
     LIMIT 1`:[];
   const assignedTerminal=String(assignedRows[0]?.terminal||"").trim().toUpperCase();
-  const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
-  const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
-  if(!testRuntime&&assignedTerminal&&requestedTerminal&&assignedTerminal!==requestedTerminal)return res.status(403).json({error:"Το POS δεν αντιστοιχεί στην ενεργή καρτέλα χειριστή."});
-  const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=(testRuntime&&requestedTerminal)||assignedTerminal||await requestTerminal(req);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||assignedTerminal||await requestTerminal(req);
   const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
   const operational=body.drawer+body.custody+body.coins;
   const lastClosedRows=await prisma.$queryRaw`SELECT "nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;

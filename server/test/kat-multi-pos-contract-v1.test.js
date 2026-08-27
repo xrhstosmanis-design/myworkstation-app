@@ -13,7 +13,8 @@ test("each KAT POS opens and returns its own terminal-scoped shift",()=>{
   assert.match(cash,/CashShiftSession_one_open_per_terminal_idx/);
   assert.match(cash,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(cash,/INSERT INTO "CashShiftSession" \("id","companyId","storeId","terminalPos"/);
-  assert.match(cash,/terminalPos=\(testRuntime&&requestedTerminal\)\|\|assignedTerminal\|\|await requestTerminal\(req\)/);
+  assert.match(cash,/assignedRows=!testRuntime&&req\.user\?\.tokenType==="STORE_OPERATOR"/);
+  assert.match(cash,/terminalPos=requestedTerminal\|\|assignedTerminal\|\|await requestTerminal\(req\)/);
   assert.doesNotMatch(e2e,/UPDATE "CashShiftSession" SET "terminalPos"/);
   assert.match(e2e,/assert\.equal\(open1\.payload\.terminalPos,"POS-1"\)/);
   assert.match(e2e,/assert\.equal\(open2\.payload\.terminalPos,"POS-2"\)/);
