@@ -81,6 +81,7 @@ export default function CommerceLauncher(){
     const selector=document.querySelector(".commerce-hub > .panel label select");
     setInventoryStoreId(selector?.value||stores[0]?.id||"");setMode("inventory");
   };
+  useEffect(()=>{window.addEventListener("myworkstation:open-commerce",open);return()=>window.removeEventListener("myworkstation:open-commerce",open)},[authenticated]);
   if(!authenticated)return null;
   return <>
     <button className="commerce-launcher" onClick={open}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
