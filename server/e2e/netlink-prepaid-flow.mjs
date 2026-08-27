@@ -102,13 +102,14 @@ async function main(){
   const prepared=await request("/api/netlink/prepare",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId}});
   assert.equal(prepared.response.status,200,JSON.stringify(prepared.payload));
   assert.equal(prepared.payload.amount,20);
-  const executed=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId,paymentMethod:"CASH",saleId,testRun:true}});
+  const confirmation={phrase:"STAGING MOCK-20"};
+  const executed=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},confirmation,requestId,paymentMethod:"CASH",saleId,testRun:true}});
   assert.equal(executed.response.status,200,JSON.stringify(executed.payload));
   assert.deepEqual({status:executed.payload.status,cardAmount:executed.payload.cardAmount,serviceFeeAmount:executed.payload.serviceFeeAmount,customerTotal:executed.payload.customerTotal,commissionAmount:executed.payload.commission?.amount},{status:"COMPLETED",cardAmount:20,serviceFeeAmount:0.5,customerTotal:20.5,commissionAmount:0.2});
   assert.deepEqual({id:executed.payload.fiscalReceipt?.id,number:executed.payload.fiscalReceipt?.number},{id:fiscalDocumentId,number:fiscalNumber});
   assert.match(executed.payload.result?.data?.pin||"",/^TEST-/);
 
-  const duplicate=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId,paymentMethod:"CASH",saleId,testRun:true}});
+  const duplicate=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},confirmation,requestId,paymentMethod:"CASH",saleId,testRun:true}});
   assert.equal(duplicate.response.status,409,"A completed Netlink request must not execute twice");
 
   const transactions=await request(`/api/netlink/transactions?storeId=${storeId}`,{token:operatorToken});
