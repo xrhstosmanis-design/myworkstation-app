@@ -286,6 +286,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const rows=await prisma.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
+  if(process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")console.info("[multi-pos shift inserted]",{resolvedTerminal:terminalPos,returnedTerminal:rows[0]?.terminalPos||rows[0]?.terminalpos||null});
   res.status(201).json(normalize(rows[0]));
 }));
 
