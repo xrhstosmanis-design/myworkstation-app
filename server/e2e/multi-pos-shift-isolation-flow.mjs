@@ -68,7 +68,7 @@ async function main(){
 
   const open1=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos1.token,terminalPos:"POS-1",body:{shiftLabel:"POS-1 shift",drawer:20,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open1.response.status,201,JSON.stringify(open1.payload));
-  assert.equal(open1.payload.terminalPos,"POS-1");
+  assert.equal(open1.payload.terminalPos,"POS-1",JSON.stringify(open1.payload));
 
   const open2=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:pos2.token,terminalPos:"POS-2",body:{shiftLabel:"POS-2 shift",drawer:30,custody:0,coins:0,safe:0,note:"multi POS E2E"}});
   assert.equal(open2.response.status,201,JSON.stringify(open2.payload));
