@@ -1,6 +1,9 @@
 /* Desktop POS: payment total must remain beside CASH, never wrap below it. */
-@media (min-width:1151px){
+@media (min-width:851px){
   .standard-action-bar{grid-template-columns:repeat(12,minmax(0,1fr))}
   .standard-action-bar .cash{grid-column:-2}
   .standard-action-bar>strong{grid-column:-1}
+  .standard-action-bar button{height:clamp(46px,5vh,66px);font-size:clamp(8px,.72vw,12px);gap:3px}
+  .standard-action-bar button svg{width:clamp(14px,1.15vw,19px)}
+  .standard-action-bar>strong{font-size:clamp(17px,1.65vw,27px)}
 }
