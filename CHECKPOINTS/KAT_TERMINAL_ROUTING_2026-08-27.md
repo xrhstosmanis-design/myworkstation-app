@@ -1,6 +1,6 @@
 # KAT terminal routing — installation blocker
 
-Status: REQUIRED BEFORE KAT LIVE INSTALLATION
+Status: IMPLEMENTATION BRANCH ONLY — NOT LIVE
 
 ## Locked physical topology
 - Fiscal register 1: two EFTPOS terminals; immediate/non-delayed flow only.
@@ -17,6 +17,12 @@ Every order originating from the MyWorkStation online ordering site must, at com
 - Retry/reload must not duplicate sale, receipt, payment or stock.
 - Terminal 1 behavior must remain unchanged.
 - Manual terminal-2 normal sales and Delivery must remain distinguishable in audit/reporting.
+
+## Current branch progress
+- Added pure fail-closed terminal routing resolver.
+- Added tests for configured terminal 2, missing configuration, and rejection of terminal 1.
+- Added structural contract test confirming existing authenticated `terminalPos` identity and unique OnlineOrder -> Sale linkage.
+- The resolver is NOT YET wired into the commercial completion/fiscal execution path. Until that wiring and its regression tests are complete, this requirement remains a release blocker.
 
 ## Implementation rule
 Do not hard-code by UI label alone. Resolve routing through the existing authenticated terminal identity (`terminalPos`) and store-scoped configuration. Online completion must fail closed if the configured delayed terminal cannot be resolved.
