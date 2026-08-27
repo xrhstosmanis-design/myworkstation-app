@@ -5,6 +5,12 @@ import fs from "node:fs";
 const platformUi=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
 const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 
+test("cash report date formatter cannot be shadowed by the selected date state",()=>{
+  assert.match(platformUi,/const cashReportDateLabel=value=>/);
+  assert.match(platformUi,/cashReportDateLabel\(cashReport\.date\)/);
+  assert.doesNotMatch(platformUi,/const cashReportDate=value=>/);
+});
+
 test("platform cash control presents only concise suspicious events for every shift",()=>{
   assert.match(platformUi,/Συνολική αναφορά ελέγχου ταμείου/);
   assert.match(platformUi,/Πραγματική ανάλυση/);
