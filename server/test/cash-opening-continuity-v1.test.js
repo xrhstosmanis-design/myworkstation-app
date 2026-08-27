@@ -10,7 +10,7 @@ const reportUi=await readFile(new URL("../../client/src/components/cloud/PilotDa
 test("opening stores the previous handover expectation and the declared variance",()=>{
   assert.match(cash,/"expectedOpeningOperational" NUMERIC\(14,2\) NOT NULL DEFAULT 0/);
   assert.match(cash,/"openingVariance" NUMERIC\(14,2\) NOT NULL DEFAULT 0/);
-  assert.match(cash,/SELECT "nextOpeningTotal" FROM "CashShiftSession"[\s\S]*"status"='CLOSED'/);
+  assert.match(cash,/SELECT "nextOpeningTotal"(?:,"closingSafe")? FROM "CashShiftSession"[\s\S]*"terminalPos"=\$\{terminalPos\}[\s\S]*"status"='CLOSED'/);
   assert.match(cash,/expectedOpening=lastClosedRows\[0\]\?money\(lastClosedRows\[0\]\.nextOpeningTotal\):operational/);
   assert.match(cash,/openingVariance=operational-expectedOpening/);
   assert.match(cash,/\$\{expectedOpening\},\$\{openingVariance\}/);
