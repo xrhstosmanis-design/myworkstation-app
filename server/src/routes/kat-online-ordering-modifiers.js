@@ -1,5 +1,3 @@
-[agent/kat-online-staff-pricing-20260828 d98d65f] fix(online): require server secret for staff sessions
- 1 file changed, 7 insertions(+), 2 deletions(-)
 import {Router} from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
