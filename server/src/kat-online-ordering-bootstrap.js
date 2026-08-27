@@ -52,6 +52,17 @@ const statements=[
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "staffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "permanentStaffDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "doctorDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "nurseDiscountPercent" DECIMAL(8,4) NOT NULL DEFAULT 0`,
+`CREATE TABLE IF NOT EXISTS "OnlineStoreMember" (
+  "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+  "fullName" TEXT NOT NULL,"phoneNormalized" TEXT NOT NULL,"pinHash" TEXT NOT NULL,"memberType" TEXT NOT NULL,
+  "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT "OnlineStoreMember_member_type_check" CHECK ("memberType" IN ('DOCTOR','NURSE')),
+  UNIQUE ("storeId","phoneNormalized")
+)`,
+`ALTER TABLE "OnlineStoreMember" ADD COLUMN IF NOT EXISTS "pinHash" TEXT`,
+`CREATE INDEX IF NOT EXISTS "OnlineStoreMember_store_active_idx" ON "OnlineStoreMember"("storeId","active","memberType")`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "publicSlug" TEXT`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "customDomain" TEXT`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'Europe/Athens'`,
