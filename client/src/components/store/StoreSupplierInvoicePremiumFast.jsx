@@ -5,6 +5,20 @@ import {finalizeV244ProductLines} from "../../lib/invoice-v244.js";
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
+async function imageQuality(file){
+  if(!String(file?.type||"").startsWith("image/"))return {ok:true};
+  const source=await new Promise((resolve,reject)=>{const image=new Image(),url=URL.createObjectURL(file);image.onload=()=>{URL.revokeObjectURL(url);resolve(image)};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("Δεν διαβάστηκε η φωτογραφία."))};image.src=url});
+  if(source.naturalWidth<900||source.naturalHeight<600)return {ok:false,message:"Η φωτογραφία είναι μικρή. Φέρε το παραστατικό πιο κοντά και ξαναφωτογράφισε."};
+  const canvas=document.createElement("canvas"),width=120,height=Math.max(1,Math.round(source.naturalHeight*120/source.naturalWidth));canvas.width=width;canvas.height=height;
+  const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(source,0,0,width,height);
+  const pixels=context.getImageData(0,0,width,height).data;let light=0,contrast=0,count=0;
+  for(let i=0;i<pixels.length;i+=16){const value=(pixels[i]+pixels[i+1]+pixels[i+2])/3;light+=value;contrast+=value*value;count++}
+  const average=light/count,variance=contrast/count-average*average;
+  if(average<45)return {ok:false,message:"Η φωτογραφία είναι πολύ σκοτεινή. Βάλε περισσότερο φως και ξαναφωτογράφισε."};
+  if(variance<90)return {ok:false,message:"Η φωτογραφία δεν έχει αρκετή καθαρότητα/αντίθεση. Απόφυγε αντανάκλαση και κράτησε σταθερά την κάμερα."};
+  return {ok:true};
+}
+
 
 async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,supplierName}){
   let inboxId=null;
@@ -34,6 +48,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const selectFile=async next=>{
     if(!next)return;
+    try{const quality=await imageQuality(next);if(!quality.ok){setFile(null);setFileDataUrl("");setStatus(`⚠️ ${quality.message}`);return}}catch{setStatus("⚠️ Δεν έγινε έλεγχος ποιότητας· διάλεξε καθαρή και φωτεινή φωτογραφία.")}
     setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("PREMIUM FAST AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
     try{
       const dataUrl=await readFile(next);setFileDataUrl(dataUrl);
