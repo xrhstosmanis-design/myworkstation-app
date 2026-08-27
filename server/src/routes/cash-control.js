@@ -276,7 +276,6 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const assignedTerminal=req.user?.tokenType==="STORE_OPERATOR"?String(req.user.terminalPos||"").trim().toUpperCase():"";
   const testRuntime=process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1";
   const requestedTerminal=testRuntime?String(req.query?.mwsTerminal||req.body?.terminalPos||req.headers?.["x-mws-terminal-pos"]||"").trim().toUpperCase():"";
-  if(process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")console.info("[multi-pos shift open]",{assignedTerminal,requestedTerminal,queryTerminal:req.query?.mwsTerminal||null,bodyTerminal:req.body?.terminalPos||null,headerTerminal:req.headers?.["x-mws-terminal-pos"]||null});
   if(assignedTerminal&&requestedTerminal&&assignedTerminal!==requestedTerminal)return res.status(403).json({error:"Το POS δεν αντιστοιχεί στην ενεργή καρτέλα χειριστή."});
   const store=await ownedStore(req.params.storeId,req.user.companyId),body=openSchema.parse(req.body||{}),terminalPos=requestedTerminal||assignedTerminal||await requestTerminal(req);
   const existing=await prisma.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;if(existing[0])return res.status(409).json({error:`Υπάρχει ήδη ανοιχτή βάρδια στο ${terminalPos}.`});
@@ -286,8 +285,8 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
   const rows=await prisma.$queryRaw`
     INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","shiftLabel","openedBy","openedByName","openingDrawer","openingCustody","openingCoins","openingSafe","openingOperational","expectedOpeningOperational","openingVariance","openingNote")
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${terminalPos},${body.shiftLabel},${req.user.id},${actorName},${body.drawer},${body.custody},${body.coins},${body.safe},${operational},${expectedOpening},${openingVariance},${body.note||null}) RETURNING *`;
-  if(process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")console.info("[multi-pos shift inserted]",{resolvedTerminal:terminalPos,returnedTerminal:rows[0]?.terminalPos||rows[0]?.terminalpos||null});
-  res.status(201).json(normalize(rows[0]));
+  const persistedRows=await prisma.$queryRaw`UPDATE "CashShiftSession" SET "terminalPos"=${terminalPos} WHERE "id"=${rows[0].id} AND "companyId"=${req.user.companyId} RETURNING *`;
+  res.status(201).json(normalize(persistedRows[0]||rows[0]));
 }));
 
 router.post("/sessions/:sessionId/close",route(async(req,res)=>{
