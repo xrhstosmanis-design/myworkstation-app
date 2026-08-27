@@ -1,9 +1,25 @@
+import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import coreRouter from "./commerce-pos-v244-core.js";
 
 const router=Router();
+// A QR is a short-lived, single-use capability.  The phone never receives the
+// POS session token; it can only upload one document to the pending request.
+const mobileInvoiceUploads=new Map();
+const mobileUploadTtl=8*60*1000;
+const newMobileUpload=({companyId,storeId,userId})=>{
+  const id=crypto.randomUUID(),secret=crypto.randomBytes(24).toString("base64url");
+  mobileInvoiceUploads.set(id,{id,secret,companyId,storeId,userId,expiresAt:Date.now()+mobileUploadTtl,file:null});
+  return {id,secret};
+};
+const pendingMobileUpload=(id,secret)=>{
+  const item=mobileInvoiceUploads.get(String(id));
+  if(!item||item.expiresAt<Date.now()){mobileInvoiceUploads.delete(String(id));return null}
+  const supplied=Buffer.from(String(secret||"")),expected=Buffer.from(item.secret);
+  return supplied.length===expected.length&&crypto.timingSafeEqual(expected,supplied)?item:null;
+};
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const CANONICAL_VAT=new Set([0,6,13,24]);
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
@@ -42,6 +58,34 @@ const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
   documentDate:{type:"string"},
   totalGross:{type:"number",minimum:0}
 },required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
+
+router.post("/ai-reader/mobile-upload-requests",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const storeId=String(req.body?.storeId||"");
+  const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
+  if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+  const {id,secret}=newMobileUpload({companyId:req.user.companyId,storeId,userId:req.user.id});
+  const base=`${req.protocol}://${req.get("host")}`;
+  res.status(201).json({id,expiresAt:new Date(Date.now()+mobileUploadTtl).toISOString(),uploadUrl:`${base}/api/commerce/ai-reader/mobile-upload/${id}/${secret}`,pollUrl:`/api/commerce/ai-reader/mobile-upload-requests/${id}`});
+}catch(error){next(error)}});
+router.get("/ai-reader/mobile-upload-requests/:id",requireCompanyModule("AI_READER"),(req,res)=>{
+  const item=mobileInvoiceUploads.get(String(req.params.id));
+  if(!item||item.expiresAt<Date.now()){mobileInvoiceUploads.delete(String(req.params.id));return res.status(410).json({error:"Ο κωδικός QR έληξε."})}
+  if(item.companyId!==req.user.companyId||item.userId!==req.user.id)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτόν τον κωδικό QR."});
+  if(!item.file)return res.json({status:"WAITING",expiresAt:new Date(item.expiresAt).toISOString()});
+  const file=item.file;mobileInvoiceUploads.delete(item.id);res.json({status:"UPLOADED",file});
+});
+router.get("/ai-reader/mobile-upload/:id/:secret",(req,res)=>{
+  const item=pendingMobileUpload(req.params.id,req.params.secret);if(!item)return res.status(410).send("Ο προσωρινός κωδικός έχει λήξει.");
+  res.type("html").send(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>MyWorkStation</title><style>body{font-family:system-ui;margin:0;background:#f3f6fa;color:#172b4d}main{max-width:520px;margin:8vh auto;padding:24px;background:white;border-radius:18px;box-shadow:0 10px 30px #1232}input,button{width:100%;box-sizing:border-box;margin-top:14px;padding:14px;border-radius:10px;font-size:16px}button{background:#1559d6;color:white;border:0;font-weight:800}small{color:#65758b}</style><main><h2>Παραστατικό προμηθευτή</h2><p>Φωτογράφισε ή διάλεξε PDF. Η σύνδεση λήγει σε λίγα λεπτά.</p><input id=f type=file accept="image/*,application/pdf" capture="environment"><button id=b>Αποστολή στο POS</button><p id=s><small>Περιμένει αρχείο.</small></p></main><script>const f=document.querySelector('#f'),b=document.querySelector('#b'),s=document.querySelector('#s');b.onclick=async()=>{if(!f.files[0])return;s.textContent='Αποστολή…';b.disabled=true;const x=f.files[0];if(x.size>8e6){s.textContent='Το αρχείο είναι πολύ μεγάλο (μέγιστο 8 MB).';b.disabled=false;return}const r=new FileReader;r.onload=async()=>{const q=await fetch(location.href,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({filename:x.name,mimeType:x.type,dataUrl:r.result})});s.textContent=q.ok?'✓ Εστάλη. Γύρισε στο POS.':'Αποτυχία αποστολής.'};r.readAsDataURL(x)};</script>`);
+});
+router.post("/ai-reader/mobile-upload/:id/:secret",async(req,res)=>{
+  const item=pendingMobileUpload(req.params.id,req.params.secret);if(!item)return res.status(410).json({error:"Ο προσωρινός κωδικός έχει λήξει."});
+  const dataUrl=String(req.body?.dataUrl||""),mimeType=String(req.body?.mimeType||"");
+  if(!(/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl)||(/^data:application\/pdf;base64,/i.test(dataUrl)&&mimeType==="application/pdf")))return res.status(400).json({error:"Δέχεται μόνο φωτογραφία ή PDF."});
+  if(Buffer.byteLength(dataUrl,"utf8")>8*1024*1024)return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο."});
+  item.file={filename:String(req.body?.filename||"timologio").slice(0,180),mimeType,dataUrl};res.json({ok:true});
+});
 
 router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>{
   res.json({enabled:true,moduleKey:"AI_READER"});
