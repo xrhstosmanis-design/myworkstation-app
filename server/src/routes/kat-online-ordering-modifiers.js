@@ -1,3 +1,5 @@
+[agent/kat-online-staff-pricing-20260828 d98d65f] fix(online): require server secret for staff sessions
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 import {Router} from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -12,7 +14,12 @@ const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
 const TEST_STORE_ID="kat-test-store";
 const TEST_COMPANY_ID="kat-test-company";
 const money=value=>Math.round(Number(value||0)*100)/100;
-const memberTokenSecret=()=>String(process.env.JWT_SECRET||process.env.PARAMETERS_ENCRYPTION_KEY||"online-store-member-development-key");
+const memberTokenSecret=()=>String(process.env.JWT_SECRET||process.env.PARAMETERS_ENCRYPTION_KEY||"");
+const issueMemberToken=payload=>{
+  const secret=memberTokenSecret();
+  if(!secret){const error=new Error("Η ειδική τιμή προσωπικού δεν είναι διαθέσιμη: λείπει ασφαλής ρύθμιση server.");error.status=503;throw error}
+  return jwt.sign(payload,secret,{expiresIn:"12h"});
+};
 const phoneNormalized=value=>String(value||"").replace(/\D/g,"");
 const memberDiscount=(config,type)=>money(type==="DOCTOR"?config.doctorDiscountPercent:config.nurseDiscountPercent);
 const specialPrice=(price,config,type)=>money(Number(price||0)*(1-memberDiscount(config,type)/100));
@@ -73,7 +80,7 @@ async function modifierCatalog(companyId){
 function groupsForProduct(product,groups){const type=productType(product.name);return groups.filter(g=>groupAllowed(type,g.description)).map(g=>g.id)}
 
 router.post(["/member-session","/:publicSlug/member-session"],safe(async(req,res)=>{
-  const {store,config}=await context(req.params.publicSlug||null),body=z.object({phone:z.string().trim().min(6).max(40),pin:z.string().regex(/^\d{6}$/)}).parse(req.body||{}),phone=phoneNormalized(body.phone);const row=(await prisma.$queryRaw`SELECT "id","fullName","memberType","pinHash","active" FROM "OnlineStoreMember" WHERE "storeId"=${store.id} AND "phoneNormalized"=${phone} LIMIT 1`)[0];if(!row?.active||!row.pinHash||!(await bcrypt.compare(body.pin,row.pinHash)))return res.status(401).json({error:"Δεν βρέθηκε ενεργός δικαιούχος με αυτά τα στοιχεία."});const token=jwt.sign({memberId:row.id,storeId:store.id,memberType:row.memberType},memberTokenSecret(),{expiresIn:"12h"});res.json({token,member:{fullName:row.fullName,memberType:row.memberType,discountPercent:memberDiscount(config,row.memberType)}});
+  const {store,config}=await context(req.params.publicSlug||null),body=z.object({phone:z.string().trim().min(6).max(40),pin:z.string().regex(/^\d{6}$/)}).parse(req.body||{}),phone=phoneNormalized(body.phone);const row=(await prisma.$queryRaw`SELECT "id","fullName","memberType","pinHash","active" FROM "OnlineStoreMember" WHERE "storeId"=${store.id} AND "phoneNormalized"=${phone} LIMIT 1`)[0];if(!row?.active||!row.pinHash||!(await bcrypt.compare(body.pin,row.pinHash)))return res.status(401).json({error:"Δεν βρέθηκε ενεργός δικαιούχος με αυτά τα στοιχεία."});const token=issueMemberToken({memberId:row.id,storeId:store.id,memberType:row.memberType});res.json({token,member:{fullName:row.fullName,memberType:row.memberType,discountPercent:memberDiscount(config,row.memberType)}});
 }));
 
 router.get(["/catalog-modifiers","/:publicSlug/catalog-modifiers"],safe(async(req,res)=>{
