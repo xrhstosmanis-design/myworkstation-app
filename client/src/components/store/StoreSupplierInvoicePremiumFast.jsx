@@ -1,10 +1,12 @@
 import React,{useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
+import QRCode from "qrcode";
 import {finalizeV244ProductLines} from "../../lib/invoice-v244.js";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
+const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(file.size<70000)return "Η φωτογραφία είναι πολύ μικρή· βγάλε καθαρότερη φωτογραφία του παραστατικού.";const u=URL.createObjectURL(file);try{return await new Promise(resolve=>{const i=new Image();i.onload=()=>{const ok=Math.max(i.width,i.height)>=1000&&Math.min(i.width,i.height)>=600;URL.revokeObjectURL(u);resolve(ok?null:"Η ανάλυση είναι χαμηλή. Φωτογράφισε το παραστατικό από πιο κοντά και με καλό φωτισμό.")};i.onerror=()=>resolve(null);i.src=u})}catch{return null}};
 
 async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,supplierName}){
   let inboxId=null;
@@ -29,11 +31,14 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
   const [file,setFile]=useState(null),[fileDataUrl,setFileDataUrl]=useState(""),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε το τιμολόγιο."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false);
   const videoRef=useRef(null),canvasRef=useRef(null);
+  const [qr,setQr]=useState("");
+  const [qrUrl,setQrUrl]=useState("");
   const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const selectFile=async next=>{
     if(!next)return;
+    const qualityError=await checkPhoto(next);if(qualityError){setMessage?.(`⚠️ ${qualityError}`);return}
     setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("PREMIUM FAST AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
     try{
       const dataUrl=await readFile(next);setFileDataUrl(dataUrl);
@@ -62,6 +67,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   };
   const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.9)};
+  const createQr=async()=>{try{const r=await api("/api/commerce/mobile-invoice-upload-sessions",{method:"POST",body:JSON.stringify({storeId:store.id})});setQrUrl(r.url);setQr(await QRCode.toDataURL(r.url));const timer=setInterval(async()=>{try{const x=await api(`/api/commerce/mobile-invoice-upload-sessions/${r.id}`);if(x?.dataUrl){clearInterval(timer);const b=await fetch(x.dataUrl).then(v=>v.blob());selectFile(new File([b],x.filename,{type:x.mimeType}));setQr("");setQrUrl("")}}catch{}},2000)}catch(e){setMessage?.(`❌ ${e?.message||"Δεν δημιουργήθηκε QR."}`)}};
   const ready=Boolean(file&&fileDataUrl&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading&&!savingSupplier);
   const submit=async()=>{
     if(!ready)return;
@@ -93,7 +99,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   return <div className="pos-payment-form-v3-root">
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>PREMIUM FAST — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στο BackOffice.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
-    <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
+    <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><button type="button" onClick={createQr} disabled={busy||reading}>QR από κινητό</button><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{qr&&<div style={{textAlign:"center",padding:10}}><img src={qr} alt="QR upload τιμολογίου" style={{width:180}}/><div>Σκάναρε και ανέβασε μία φωτογραφία ή PDF.</div></div>}
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     <label>Προμηθευτής<select value={supplierId} disabled={busy||savingSupplier} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
     {!supplierId&&fileDataUrl&&<div style={{padding:"10px 12px",border:"1px solid #c9a227",borderRadius:10,background:"#fff8dc",margin:"8px 0"}}>

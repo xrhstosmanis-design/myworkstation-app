@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {mobileUploads} from "./mobile-invoice-upload.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -20,6 +21,9 @@ async function ownedStore(companyId,storeId){
   if(!storeId)return null;
   return prisma.store.findFirst({where:{id:String(storeId),companyId},select:{id:true,name:true}});
 }
+
+router.post("/mobile-invoice-upload-sessions",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{const store=await ownedStore(req.user.companyId,req.body?.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const token=crypto.randomBytes(24).toString("base64url"),sid=id();mobileUploads.set(sid,{companyId:req.user.companyId,storeId:store.id,token,expires:Date.now()+600000});res.status(201).json({id:sid,url:`${req.protocol}://${req.get("host")}/mobile-invoice-upload/${sid}/${token}`})}catch(e){next(e)}});
+router.get("/mobile-invoice-upload-sessions/:id",requireCompanyModule("DOCUMENTS"),(req,res)=>{const x=mobileUploads.get(req.params.id);if(!x||x.companyId!==req.user.companyId||x.expires<Date.now())return res.status(404).json({error:"Το QR έληξε."});res.json(x.dataUrl?{dataUrl:x.dataUrl,filename:x.filename,mimeType:x.mimeType}:{status:"WAITING"})});
 
 async function ownedProduct(companyId,productId){
   const rows=await prisma.$queryRaw`SELECT "id","name","trackStock" FROM "Product" WHERE "id"=${String(productId)} AND "companyId"=${companyId} LIMIT 1`;
