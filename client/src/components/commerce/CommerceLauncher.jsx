@@ -4,7 +4,6 @@ import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
 import ManagementParametersPanel from "./ManagementParametersPanel.jsx";
-import SmartProductEntryBridge from "./SmartProductEntryBridge.jsx";
 import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
 import TableServiceBackofficePanel from "./TableServiceBackofficePanel.jsx";
 import "./inventory-archive-delivery.css";
@@ -100,7 +99,6 @@ export default function CommerceLauncher(){
         </div>
         {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>}
       </>}
-      <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
       {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
       </>}
