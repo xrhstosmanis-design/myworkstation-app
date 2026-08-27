@@ -22,6 +22,9 @@ test("POS exposes a dedicated Netlink catalogue",()=>{
 test("POS staging execution keeps explicit confirmation and server gates",()=>{
   assert.match(panel,/\/api\/netlink\/prepare/);
   assert.match(panel,/\/api\/netlink\/execute/);
+  assert.match(panel,/selected\.flow\|\|""/);
+  assert.match(panel,/toLowerCase\(\)===\"prepare\"/);
+  assert.match(panel,/crypto\?\.randomUUID/);
   assert.match(panel,/STAGING \$\{selected\.productId\}/);
   assert.match(panel,/testRun:true/);
   assert.match(panel,/ΕΚΤΕΛΕΣΗ ΚΛΕΙΔΩΜΕΝΗ/);
@@ -33,5 +36,6 @@ test("Netlink execute route isolates staging from production receipt flow",()=>{
   assert.match(route,/NETLINK_TEST_RUN_REQUIRED/);
   assert.match(route,/NETLINK_STAGING_CONFIRMATION_REQUIRED/);
   assert.match(route,/NETLINK_POS_SALE_REQUIRED/);
+  assert.match(route,/TEST_EXECUTE_DIRECT/);
   assert.match(route,/!testMode&&!validFiscalReceipt/);
 });
