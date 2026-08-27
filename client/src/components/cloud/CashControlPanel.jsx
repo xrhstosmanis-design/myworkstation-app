@@ -19,7 +19,7 @@ export default function CashControlPanel({api,store}){
   const [eftposReview,setEftposReview]=useState(null);
   const [investigation,setInvestigation]=useState(null);
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
-  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});
+  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",transferOut:"0",...initialAmounts,note:""});
 
   const load=async()=>{
     setLoading(true);setError("");
@@ -44,6 +44,7 @@ export default function CashControlPanel({api,store}){
           cardSales:String(ledgerSummary?.cardSales??form.cardSales??0),
           expenses:String(ledgerSummary?.expensesTotal??form.expenses??0),
           transferIn:String(ledgerSummary?.transferIn??form.transferIn??0),
+          transferOut:String(ledgerSummary?.transferOut??form.transferOut??0),
           drawer:String(result.openSession.openingDrawer||0),
           custody:String(result.openSession.openingCustody||0),
           coins:String(result.openSession.openingCoins||0),
@@ -60,8 +61,8 @@ export default function CashControlPanel({api,store}){
   const closingOperational=useMemo(()=>number(closeForm.drawer)+number(closeForm.custody)+number(closeForm.coins),[closeForm]);
   const expectedOperational=useMemo(()=>{
     const opening=number(data?.openSession?.openingOperational);
-    return opening+number(closeForm.cashSales)+number(closeForm.transferIn)-number(closeForm.expenses);
-  },[data,closeForm.cashSales,closeForm.transferIn,closeForm.expenses]);
+    return opening+number(closeForm.cashSales)+number(closeForm.transferIn)-number(closeForm.transferOut)-number(closeForm.expenses);
+  },[data,closeForm.cashSales,closeForm.transferIn,closeForm.transferOut,closeForm.expenses]);
   const variance=closingOperational-expectedOperational;
   const lastClosed=(data?.recent||[]).find(row=>row.status==="CLOSED");
 
@@ -93,7 +94,7 @@ export default function CashControlPanel({api,store}){
       if(result.emailNotification?.status==="SENT")setMessage(`Η βάρδια έκλεισε και η αναφορά στάλθηκε με email. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
       if(result.emailNotification?.status==="FAILED")setError("Η βάρδια έκλεισε κανονικά, αλλά το email αναφοράς δεν στάλθηκε. Ενημέρωσε τον διαχειριστή.");
       setEftposReview(result);
-      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});await load();
+      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",transferOut:"0",...initialAmounts,note:""});await load();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
 
@@ -135,6 +136,7 @@ export default function CashControlPanel({api,store}){
         <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)} readOnly/>
         <MoneyField icon={<WalletCards/>} label="Σύνολο EFTPOS" value={closeForm.eftposTotal} onChange={value=>updateClose("eftposTotal",value)}/>
         <MoneyField icon={<TrendingUp/>} label="Μεταφορές προς βάρδια" value={closeForm.transferIn} onChange={value=>updateClose("transferIn",value)} readOnly/>
+        <MoneyField icon={<TrendingDown/>} label="Μεταφορές από βάρδια" value={closeForm.transferOut} onChange={value=>updateClose("transferOut",value)} readOnly/>
         <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)} readOnly/>
         <div className="cash-divider cash-wide">Πραγματική καταμέτρηση παράδοσης</div>
         <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={closeForm.drawer} onChange={value=>updateClose("drawer",value)}/>
