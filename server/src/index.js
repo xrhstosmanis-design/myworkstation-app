@@ -64,6 +64,7 @@ import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
+import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
 import connectorObserverRoutes from "./routes/connector-observer.js";
@@ -173,6 +174,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeTableOrder
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
+app.use("/mobile-invoice-upload",mobileInvoiceUploadRoutes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);

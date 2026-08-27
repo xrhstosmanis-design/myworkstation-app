@@ -1,0 +1,6 @@
+import {Router} from "express";
+const router=Router();
+export const mobileUploads=new Map();
+router.get("/:id/:token",(req,res)=>res.type("html").send(`<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><h2>Ανέβασε τιμολόγιο</h2><input id=f type=file accept='image/*,application/pdf' capture=environment><button onclick='go()'>Αποστολή</button><p id=s></p><script>async function go(){let f=document.querySelector('#f').files[0];if(!f)return;let r=new FileReader;r.onload=async()=>{let x=await fetch(location.pathname,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl:r.result,filename:f.name,mimeType:f.type})});document.querySelector('#s').textContent=x.ok?'Ολοκληρώθηκε. Επιστροφή στο POS.':'Αποτυχία αποστολής.'};r.readAsDataURL(f)}</script>`));
+router.post("/:id/:token",(req,res)=>{const x=mobileUploads.get(req.params.id),f=req.body||{};if(!x||x.token!==req.params.token||x.expires<Date.now())return res.status(404).json({error:"Το QR έληξε."});if(!/^data:(application\/pdf|image\/(jpeg|png|webp));base64,/.test(f.dataUrl||"")||String(f.dataUrl).length>4600000)return res.status(400).json({error:"Μη έγκυρο αρχείο."});Object.assign(x,{dataUrl:f.dataUrl,filename:String(f.filename||"timologio"),mimeType:String(f.mimeType||"image/jpeg")});res.json({ok:true})});
+export default router;
