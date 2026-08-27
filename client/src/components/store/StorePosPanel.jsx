@@ -6,6 +6,7 @@ import StoreConsumptionMenu from "./StoreConsumptionMenu.jsx";
 import ScreenRecorderControl from "../commerce/ScreenRecorderControl.jsx";
 import "../platform/pos-designer.css";
 import "./store-pos.css";
+import "./store-pos-overrides.css";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const KAT_OFFLINE_SALE_QUEUE_V2=true;
