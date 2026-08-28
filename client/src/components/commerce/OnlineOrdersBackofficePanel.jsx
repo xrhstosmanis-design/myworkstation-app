@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {ChevronDown,ChevronUp,Clock3,CreditCard,RefreshCw,Search,ShoppingBag} from "lucide-react";
+import {Box,ChevronDown,ChevronUp,Clock3,CreditCard,FileCheck2,RefreshCw,Search,ShoppingBag} from "lucide-react";
 import "./online-orders-backoffice.css";
 
 const TEST_STORE_ID="kat-test-store";
@@ -8,13 +8,17 @@ const stamp=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"shor
 const statusText=status=>({NEW:"ΝΕΑ",ACCEPTED:"ΑΠΟΔΟΧΗ",PREPARING:"ΕΤΟΙΜΑΖΕΤΑΙ",READY:"ΕΤΟΙΜΗ",OUT_FOR_DELIVERY:"ΣΤΟ DELIVERY",DELIVERED:"ΠΑΡΑΔΟΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"})[status]||status;
 
 function LinkSummary({order}){
-  const sale=order.sale,transaction=order.shiftTransaction;
+  const sale=order.sale,transaction=order.shiftTransaction,attempt=order.eftposAttempt,movements=order.stockMovements||[];
   if(!sale)return <div className="online-link-wait"><Clock3/><div><b>Εμπορική εγγραφή σε αναμονή</b><span>Η πώληση και η πραγματική αφαίρεση από την αποθήκη δημιουργούνται όταν η παραγγελία γίνει «ΠΑΡΑΔΟΘΗΚΕ».</span></div></div>;
-  return <div className="online-link-grid">
-    <article><ShoppingBag/><span>Πώληση</span><b>{sale.id}</b><small>{money(sale.total)} · {sale.status}</small></article>
-    <article><CreditCard/><span>Πληρωμή</span><b>{(sale.payments||[]).map(p=>p.method).join(" + ")||"—"}</b><small>{(sale.payments||[]).map(p=>money(p.amount)).join(" · ")||"—"}</small></article>
-    <article><Clock3/><span>Βάρδια</span><b>{transaction?.sessionId||"—"}</b><small>{transaction?`${transaction.type} · ${money(transaction.amount)}`:"Δεν βρέθηκε συνδεδεμένη συναλλαγή βάρδιας"}</small></article>
-  </div>;
+  const fiscalOk=sale.fiscalStatus&&!['NON_FISCAL','NOT_SUBMITTED','PENDING'].includes(sale.fiscalStatus),card=(sale.payments||[]).some(p=>p.method==='CARD');
+  const nodes=[
+    {Icon:ShoppingBag,label:'Order → Sale',ok:true,value:sale.id,detail:`${money(sale.total)} · ${sale.status}`},
+    {Icon:FileCheck2,label:'Fiscal Receipt',ok:fiscalOk,value:sale.fiscalStatus||'ΧΩΡΙΣ FISCAL',detail:fiscalOk?'Φορολογική ροή καταγεγραμμένη':'Απαιτείται fiscalization'},
+    {Icon:CreditCard,label:'EFTPOS Transaction',ok:card?attempt?.status==='SUCCESS':true,warn:card&&['PLANNED','TIMEOUT'].includes(attempt?.status),value:card?(attempt?.eftposDeviceCode||'ΧΩΡΙΣ EFTPOS ATTEMPT'):'Δεν απαιτείται',detail:card?(attempt?`${attempt.status} · προσπάθεια ${attempt.attemptNo||1}`:'Λείπει σύνδεση EFTPOS'):'Πληρωμή χωρίς κάρτα'},
+    {Icon:Box,label:'Stock Movement',ok:movements.length>0,value:movements.length?`${movements.length} κινήσεις`:'ΧΩΡΙΣ ΚΙΝΗΣΗ',detail:movements.length?`${movements.reduce((sum,row)=>sum+Number(row.quantity||0),0)} συνολική ποσότητα`:'Έλεγχος stock/συνταγής'},
+    {Icon:Clock3,label:'Βάρδια',ok:Boolean(transaction),value:transaction?.sessionId||'ΧΩΡΙΣ ΣΥΝΔΕΣΗ',detail:transaction?`${transaction.type} · ${money(transaction.amount)}`:'Λείπει συναλλαγή βάρδιας'}
+  ];
+  return <div className="online-reconciliation"><div className="online-reconciliation-title"><b>Order → Sale → Fiscal → EFTPOS → Stock</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
 
 export default function OnlineOrdersBackofficePanel({api}){
