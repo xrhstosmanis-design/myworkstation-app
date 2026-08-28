@@ -564,6 +564,7 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,n
     const generatedAt=new Date();
     const snapshot={
       format:"MYWORKSTATION_PILOT_SAFETY_BACKUP_V1",generatedAt:generatedAt.toISOString(),generatedBy:{id:req.user.id,email:req.user.email||"super-admin"},
+      revision:{app:String(process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||"UNKNOWN"),schema:"MYWORKSTATION_PILOT_SAFETY_BACKUP_V1"},
       scope:{companyId:company.id,companyName:company.name,storeId:store.id,storeName:store.name},
       security:{containsPasswords:false,containsPinOrCardSecrets:false,restorationRequiresSuperAdmin:true},
       completeness:{
@@ -619,7 +620,8 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup/verify",async(re
     if(document.completeness?.productCatalog===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο Product table.");
     if(document.completeness?.storeProducts===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο StoreProduct table.");
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"PILOT_SAFETY_BACKUP_RESTORE_VERIFIED",success:true,deviceName:`${store.name} · SHA256 ${actual.slice(0,16)}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
-    res.json({ok:true,restorable:true,mode:"DRY_RUN_ONLY",checksum:actual,scope:document.scope,generatedAt:document.generatedAt||null,counts,warnings,security:{mutatedDatabase:false,secretsRestored:false}});
+    const recoveryReport={backupChecksum:actual,backupSchemaRevision:String(document.revision?.schema||document.format),backupAppRevision:String(document.revision?.app||"UNKNOWN"),currentAppRevision:String(process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||"UNKNOWN"),dryRunResult:"PASSED",rollbackCheckpointRequired:true,nextManualAction:"Κατέβασε και φύλαξε το recovery report. Πραγματικό restore μόνο σε ελεγχόμενο maintenance window μετά από νέο backup και επιβεβαίωση rollback checkpoint."};
+    res.json({ok:true,restorable:true,mode:"DRY_RUN_ONLY",checksum:actual,scope:document.scope,generatedAt:document.generatedAt||null,counts,warnings,recoveryReport,security:{mutatedDatabase:false,secretsRestored:false}});
   }catch(error){next(error)}
 });
 

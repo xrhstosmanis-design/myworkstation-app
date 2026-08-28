@@ -10,7 +10,8 @@ MYWORKSTATION - KAT STORE MODE
 7. Για δεύτερο PC δημιουργήστε άλλο Terminal ID και χρησιμοποιήστε αποκλειστικά το δικό του link.
 
 RECOVERY
-Αν χαλάσει ή αλλαχθεί η συντόμευση, εκτελέστε RECOVER_KAT.cmd.
+Πριν από ανάκτηση εκτελέστε RECOVER_KAT_DRY_RUN.cmd. Δημιουργεί recovery report με app/schema revision και SHA-256 χωρίς αλλαγή συντόμευσης.
+Μόνο αν το dry-run γράψει DRY_RUN_PASSED και υπάρχει εγκεκριμένο maintenance window, εκτελέστε RECOVER_KAT.cmd.
 Η ανάκτηση χρησιμοποιεί μόνο το αποθηκευμένο, ελεγμένο HTTPS Store Mode URL.
 Πριν αντικαταστήσει υπάρχουσα συντόμευση κρατά αντίγραφο ασφαλείας.
 Αν δεν υπάρχει έγκυρο installation state, σταματά χωρίς αλλαγές.
