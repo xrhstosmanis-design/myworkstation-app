@@ -21,7 +21,8 @@ test("live expected display stays aligned with authoritative close formula",()=>
   assert.match(ledger,/row\.type===type&&row\.subtractFromShift/);
 });
 
-test("expected amounts remain behind the existing initialCash visibility permission",()=>{
-  assert.match(closeUi,/pos\?\.access\?\.initialCash/);
-  assert.match(closeUi,/showExpectedAmounts&&/);
+test("expected amounts follow the dedicated blind-close management policy",()=>{
+  assert.doesNotMatch(closeUi,/pos\?\.access\?\.initialCash/);
+  assert.match(closeUi,/shiftClosePolicy/);
+  assert.match(closeUi,/closePolicy\.showExpectedAmounts&&/);
 });
