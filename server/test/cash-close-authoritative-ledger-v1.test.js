@@ -14,9 +14,7 @@ test("cash close recalculates sales and deductible expenses from its complete te
   assert.match(cash,/"expenses"=\$\{ledger\.expenses\}/);
 });
 
-test("cashier enters EFTPOS and physical counts but cannot edit audited ledger totals",()=>{
-  assert.match(client,/label="Πωλήσεις μετρητών"[\s\S]{0,180}readOnly/);
-  assert.match(client,/label="Πωλήσεις καρτών"[\s\S]{0,180}readOnly/);
-  assert.match(client,/label="Έξοδα \/ πληρωμές"[\s\S]{0,180}readOnly/);
-  assert.doesNotMatch(client,/label="Σύνολο EFTPOS"[\s\S]{0,180}readOnly/);
+test("BackOffice does not duplicate the authoritative POS close form",()=>{
+  assert.doesNotMatch(client,/<form className="cash-form" onSubmit=\{closeShift\}>/);
+  assert.match(client,/Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS/);
 });

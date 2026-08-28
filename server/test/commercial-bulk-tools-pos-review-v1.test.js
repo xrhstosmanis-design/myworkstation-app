@@ -45,5 +45,6 @@ test("POS-EFTPOS variance only creates a review warning",()=>{
   assert.doesNotMatch(cash,/DELETE FROM "Sale"/);
   assert.doesNotMatch(cash,/UPDATE "Sale" SET "status"='CANCELLED'/);
   assert.match(cashUi,/Δεν έγινε αυτόματη ακύρωση ή αλλαγή συναλλαγής/);
-  assert.match(cashUi,/label="Σύνολο EFTPOS"/);
+  assert.match(cashUi,/POS–EFTPOS/);
+  assert.doesNotMatch(cashUi,/label="Σύνολο EFTPOS"/);
 });

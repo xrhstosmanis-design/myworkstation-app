@@ -17,9 +17,7 @@ test("opening stores the previous handover expectation and the declared variance
 });
 
 test("BackOffice keeps opening continuity visible but cannot open a shift",()=>{
-  assert.match(cashUi,/Η έναρξη βάρδιας δεν επιτρέπεται από το BackOffice/);
-  assert.match(cashUi,/Ανοίγει μόνο από το POS \/ Store Mode/);
-  assert.match(cashUi,/Διαφορά έναρξης/);
+  assert.match(cashUi,/Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS \/ Store Mode/);
   assert.doesNotMatch(cashUi,/<form className="cash-form" onSubmit=\{openShift\}>/);
 });
 

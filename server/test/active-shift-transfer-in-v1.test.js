@@ -29,9 +29,7 @@ test("authoritative Cash Control close includes active-session transfer-in",()=>
   assert.match(cash,/session\.openingOperational\+ledger\.cashSales\+ledger\.transferIn-ledger\.expenses/);
 });
 
-test("Cash Control preview shows transfer-in and uses the same expected formula",()=>{
-  assert.match(cashUi,/transferIn:"0"/);
-  assert.match(cashUi,/ledgerSummary\?\.transferIn/);
-  assert.match(cashUi,/opening\+number\(closeForm\.cashSales\)\+number\(closeForm\.transferIn\)-number\(closeForm\.expenses\)/);
-  assert.match(cashUi,/label="Μεταφορές προς βάρδια"/);
+test("BackOffice keeps transfer reconciliation server-side and delegates shift close to POS",()=>{
+  assert.match(cashUi,/Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS/);
+  assert.doesNotMatch(cashUi,/label="Μεταφορές προς βάρδια"/);
 });
