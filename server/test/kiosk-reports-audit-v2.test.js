@@ -55,3 +55,18 @@ test("events tab is permanent and shortage attempts are included in BackOffice a
   assert.match(route,/SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE/);
   assert.match(route,/StoreTransaction \+ PosSaleActionAudit \+ StoreOperatorAudit/);
 });
+
+test("cart removals and manual price changes are central audit events",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  const pilot=read("src/routes/store-pos-pilot-actions.js");
+  const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
+  assert.match(route,/CART_ITEM_REMOVE/);
+  assert.match(route,/PRICE_CHANGE/);
+  assert.match(route,/ΔΙΑΓΡΑΦΗ ΠΡΟΪΟΝΤΟΣ ΑΠΟ ΚΑΛΑΘΙ/);
+  assert.match(route,/ΧΕΙΡΟΚΙΝΗΤΗ ΑΛΛΑΓΗ ΤΙΜΗΣ/);
+  assert.match(route,/δεν ολοκληρώθηκε πώληση \/ δεν κινήθηκε stock/);
+  assert.match(pilot,/\["CART_ITEM_REMOVE","PRICE_CHANGE"\]/);
+  assert.match(pilot,/sessionId:shift\?\.id\|\|null/);
+  assert.match(client,/CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι"/);
+  assert.match(client,/PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής"/);
+});
