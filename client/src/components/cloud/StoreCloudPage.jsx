@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ArrowLeft,BriefcaseBusiness,RefreshCw} from "lucide-react";
+import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
@@ -82,6 +83,7 @@ export default function StoreCloudPage({api,store,onBack}){
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
         <button className="cloud-refresh" type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
+        <ScreenRecorderWindowLauncher/>
       </div>
     </div>
 

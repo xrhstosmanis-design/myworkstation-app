@@ -33,6 +33,7 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   const entry=fs.readFileSync(new URL('../../client/src/entry.jsx',import.meta.url),'utf8');
   const operator=fs.readFileSync(new URL('../../client/src/components/store/StoreOperatorApp.jsx',import.meta.url),'utf8');
   const shiftOpenCss=fs.readFileSync(new URL('../../client/src/components/store/store-shift-open.css',import.meta.url),'utf8');
+  const productCenter=fs.readFileSync(new URL('../../client/src/components/commerce/KioskStyleProductCenterWithStock.jsx',import.meta.url),'utf8');
   for(const token of ['pendingFiscalizations','eftposByDevice'])assert.match(engine,new RegExp(token));
   assert.match(route,/buildKatShiftReconciliation/);
   for(const label of ['KAT RECONCILIATION 52-57','Store','Delivery','Online','Returns / Voids','Pending fiscalizations','Fail-closed alerts','EFTPOS ανά συσκευή'])assert.match(panel,new RegExp(label));
@@ -45,6 +46,9 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   assert.doesNotMatch(panel,/BriefcaseBusiness\/>Εμπορική λειτουργία/);
   assert.match(storePage,/mws:commerce-open/);
   assert.match(storePage,/RefreshCw\/>Ανανέωση[\s\S]{0,300}BriefcaseBusiness\/>Εμπορική λειτουργία/);
+  assert.match(storePage,/ScreenRecorderWindowLauncher/);
+  assert.match(productCenter,/mws-audience-discount-layer[\s\S]{0,250}pointerEvents:"none"/);
+  assert.match(productCenter,/mws-audience-discount-btn[\s\S]{0,300}pointerEvents:"auto"/);
   assert.match(commerce,/addEventListener\("mws:commerce-open"/);
   assert.doesNotMatch(commerce,/className="commerce-launcher"/);
   assert.doesNotMatch(entry,/PilotReportLauncherLive|pilot-report-root/);
