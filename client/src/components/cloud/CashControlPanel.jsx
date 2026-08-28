@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {CheckCircle2,Coins,RefreshCw,ShieldCheck,TrendingDown,TrendingUp,WalletCards} from "lucide-react";
+import {BriefcaseBusiness,CheckCircle2,Coins,RefreshCw,ShieldCheck,TrendingDown,TrendingUp,WalletCards} from "lucide-react";
 import "./cash-control.css";
 
 const number=value=>Number(value||0);
@@ -100,7 +100,10 @@ export default function CashControlPanel({api,store}){
   return <article className="cloud-panel cash-module">
     <div className="cloud-panel-head cash-heading">
       <div><h3><WalletCards/>Αυτόματος Έλεγχος Ταμείων</h3><p>Αυτόματη διασταύρωση βαρδιών, POS–EFTPOS, εξόδων και παραστατικών. Η έναρξη βάρδιας γίνεται μόνο από το POS / Store Mode.</p></div>
-      <button className="cash-refresh" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
+      <div className="cash-heading-actions">
+        <button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
+        <button className="cash-refresh" type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
+      </div>
     </div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
@@ -126,7 +129,7 @@ export default function CashControlPanel({api,store}){
         <div><span>Idempotent replay</span><strong>{data?.offlineSync?.counts?.replays||0}</strong></div>
       </section>
       <section className={`cash-daily-summary ${daily?.reconciliation?.status==="AGREEMENT"?"agreement":"needs-review"}`} data-kat-reconciliation="true">
-        <div><span>KAT RECONCILIATION 52-57</span><strong>{daily?.reconciliation?.status==="AGREEMENT"?"ΣΥΜΦΩΝΙΑ":"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ"}</strong><small>Order / Sale / Fiscal / EFTPOS / Stock και κλείσιμο ανά terminal</small></div>
+        <div><span>KAT RECONCILIATION 52-57</span><strong>{daily?.reconciliation?.status==="AGREEMENT"?"ΣΥΜΦΩΝΙΑ":"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ"}</strong><small>Order / Sale / Fiscal / EFTPOS / Stock και κλείσιμο ανά terminal</small><small>{(daily?.sessions||[]).map(row=>`${row.closedByName||row.openedByName||"Χωρίς χειριστή"} · ${row.terminalPos||"MAIN"} · ${row.shiftLabel||"Βάρδια"}`).join(" | ")||"Δεν υπάρχει κλεισμένη βάρδια"}</small></div>
         <div><span>Store</span><strong>{money(daily?.reconciliation?.totals?.store)}</strong></div>
         <div><span>Delivery</span><strong>{money(daily?.reconciliation?.totals?.delivery)}</strong></div>
         <div><span>Online</span><strong>{money(daily?.reconciliation?.totals?.online)}</strong></div>
@@ -137,58 +140,7 @@ export default function CashControlPanel({api,store}){
         <div><span>EFTPOS ανά συσκευή</span><strong>{Object.entries(daily?.reconciliation?.totals?.eftposByDevice||{}).map(([device,total])=>`${device}: ${money(total)}`).join(" · ")||"—"}</strong></div>
       </section>
       {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
-      <div className="cash-metrics">
-        <article><span>Κατάσταση</span><strong className={data?.openSession?"cash-open":"cash-closed"}>{data?.openSession?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</strong></article>
-        <article><span>Λειτουργικό ποσό</span><strong>{money(data?.openSession?.openingOperational||data?.suggestedOpening?.operational)}</strong></article>
-        <article><span>Χρηματοκιβώτιο</span><strong>{money(data?.openSession?.openingSafe||data?.suggestedOpening?.safe)}</strong></article>
-        <article><span>Τελευταία διαφορά</span><strong className={number(lastClosed?.variance)<0?"cash-negative":"cash-positive"}>{lastClosed?money(lastClosed.variance):"—"}</strong></article>
-      </div>
-
-      {!data?.openSession?<div className="cloud-empty">
-        <b>Η βάρδια είναι κλειστή.</b><br/>
-        Η έναρξη βάρδιας δεν επιτρέπεται από το BackOffice. Ανοίγει μόνο από το POS / Store Mode από τον χειριστή του καταστήματος.
-      </div>:<form className="cash-form" onSubmit={closeShift}>
-        <div className="cash-open-summary"><div><span>{data.openSession.shiftLabel}</span><strong>Άνοιξε {when(data.openSession.openedAt)}</strong><small>Από: {data.openSession.openedByName||"Μη καταγεγραμμένος χρήστης"}</small></div><div><span>Έναρξη</span><strong>{money(data.openSession.openingOperational)}</strong></div></div>
-        <div className="cash-form-title"><WalletCards/><div><h4>Κλείσιμο βάρδιας</h4><p>Τα σύνολα μετρητών, καρτών, μεταφορών και εξόδων συμπληρώνονται αυτόματα από τις Συναλλαγές Βάρδιας και παραμένουν διαθέσιμα για τελικό έλεγχο.</p></div></div>
-        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις μετρητών" value={closeForm.cashSales} onChange={value=>updateClose("cashSales",value)} readOnly/>
-        <MoneyField icon={<TrendingUp/>} label="Πωλήσεις καρτών" value={closeForm.cardSales} onChange={value=>updateClose("cardSales",value)} readOnly/>
-        <MoneyField icon={<WalletCards/>} label="Σύνολο EFTPOS" value={closeForm.eftposTotal} onChange={value=>updateClose("eftposTotal",value)}/>
-        <MoneyField icon={<TrendingUp/>} label="Μεταφορές προς βάρδια" value={closeForm.transferIn} onChange={value=>updateClose("transferIn",value)} readOnly/>
-        <MoneyField icon={<TrendingDown/>} label="Έξοδα / πληρωμές" value={closeForm.expenses} onChange={value=>updateClose("expenses",value)} readOnly/>
-        <div className="cash-divider cash-wide">Πραγματική καταμέτρηση παράδοσης</div>
-        <MoneyField icon={<WalletCards/>} label="Συρτάρι" value={closeForm.drawer} onChange={value=>updateClose("drawer",value)}/>
-        <MoneyField icon={<ShieldCheck/>} label="Φύλαξη" value={closeForm.custody} onChange={value=>updateClose("custody",value)}/>
-        <MoneyField icon={<Coins/>} label="Κέρματα" value={closeForm.coins} onChange={value=>updateClose("coins",value)}/>
-        <MoneyField icon={<ShieldCheck/>} label="Χρηματοκιβώτιο" value={closeForm.safe} onChange={value=>updateClose("safe",value)}/>
-        <label className="cash-wide">Εκκρεμότητες επόμενης βάρδιας<input value={closeForm.note} onChange={e=>updateClose("note",e.target.value)} placeholder="Μήνυμα παράδοσης"/></label>
-        <div className="cash-calculation cash-wide">
-          <div><span>Αναμενόμενο</span><strong>{money(expectedOperational)}</strong></div>
-          <div><span>Πραγματικό</span><strong>{money(closingOperational)}</strong></div>
-          <div><span>Διαφορά</span><strong className={variance<0?"cash-negative":"cash-positive"}>{money(variance)}</strong></div>
-          <div><span>Έναρξη επόμενης</span><strong>{money(closingOperational)}</strong></div>
-        </div>
-        <button className="cash-submit" disabled={busy}>{busy?"Κλείσιμο…":"Κλείσιμο και παράδοση"}</button>
-      </form>}
-
-      <div className="cash-history">
-        <h4>Πρόσφατες βάρδιες</h4>
-        {(data?.recent||[]).length===0?<div className="cloud-empty">Δεν υπάρχουν ακόμη καταχωρίσεις ταμείου.</div>:<div className="cash-history-list">{data.recent.map(row=><div className="cash-history-row" key={row.id}>
-          <div><b>{row.shiftLabel}</b><small>{when(row.openedAt)} · {row.openedByName||"Χρήστης"}{row.closedByName?` → ${row.closedByName}`:""}</small></div>
-          <span className={`status-pill ${row.status==="OPEN"?"active":"revoked"}`}>{row.status==="OPEN"?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</span>
-          <div><span>Έναρξη</span><b>{money(row.openingOperational)}</b></div>
-          <div><span>Διαφορά έναρξης</span><b className={number(row.openingVariance)<0?"cash-negative":"cash-positive"}>{money(row.openingVariance)}</b></div>
-          <div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div>
-          <div><span>Κάρτες</span><b>{money(row.cardSales)}</b></div>
-          <div><span>EFTPOS</span><b>{row.status==="CLOSED"?money(row.eftposTotal):"—"}</b></div>
-          <div><span>Διαφορά</span><b className={number(row.variance)<0?"cash-negative":"cash-positive"}>{row.status==="CLOSED"?money(row.variance):"—"}</b></div>
-          {row.status==="CLOSED"&&<button type="button" className="cash-investigate" onClick={()=>investigate(row.id)} disabled={busy}>Πλήρης έλεγχος</button>}
-        </div>)}</div>}
-      </div>
-      {investigation&&<section className="cash-investigation"><header><div><span>ΔΙΕΡΕΥΝΗΣΗ ΒΑΡΔΙΑΣ</span><h4>{investigation.session.shiftLabel} · {investigation.session.terminalPos||"MAIN"}</h4></div><button type="button" onClick={()=>setInvestigation(null)}>Κλείσιμο</button></header>{investigation.recheckRequired&&<div className="cloud-alert cloud-error"><b>ΑΠΑΙΤΕΙΤΑΙ ΕΠΑΝΕΛΕΓΧΟΣ</b><br/>Προστέθηκε ή άλλαξε κίνηση, έξοδο, παραστατικό ή αντιλογισμός μετά τον προηγούμενο έλεγχο. Οι παλιές εξηγήσεις διατηρούνται στο ιστορικό αλλά δεν μειώνουν πλέον τη διαφορά.</div>}<div className="cash-investigation-totals"><span>Αρχική διαφορά <b>{money(investigation.initialVariance)}</b></span><span>POS–EFTPOS <b>{money(investigation.cardVariance)}</b></span><span>Τελική ανεξήγητη διαφορά <b>{money(investigation.unexplainedVariance)}</b></span></div><p>{investigation.rule}</p><div className="cash-review-actions"><button type="button" onClick={()=>addReview("EXPLANATION")} disabled={busy}>Καταχώριση εξήγησης</button>{number(investigation.unexplainedVariance)<-0.009&&<button type="button" className="danger" onClick={()=>addReview("CONFIRMED_SHORTAGE")} disabled={busy}>Οριστικοποίηση ελλείμματος</button>}</div>{(investigation.reviews||[]).length>0&&<div className="cash-reviews"><h4>Έλεγχος και επανέλεγχος</h4>{investigation.reviews.map(row=><article key={row.id}><b>{row.decision==="EXPLANATION"?`Εξήγηση ${money(row.amount)}`:row.decision==="CONFIRMED_SHORTAGE"?"Οριστικοποιημένο έλλειμμα":"Επανέλεγχος χωρίς αλλαγή"}</b><span>{row.note}</span><small>Ελέγχθηκε από {row.actorName} · {when(row.createdAt)}</small></article>)}</div>}{investigation.findings.length===0?<div className="cloud-empty">Δεν βρέθηκε ύποπτη κίνηση ή συμβάν.</div>:<div className="cash-findings">{investigation.findings.map((finding,index)=><article key={`${finding.code}-${index}`}><span className={finding.severity==="HIGH"?"high":"medium"}>{finding.severity==="HIGH"?"ΥΨΗΛΗ":"ΜΕΣΑΙΑ"}</span><b>{findingLabel(finding.code)}</b><small>{finding.actorName||"Σύστημα"}{finding.at?` · ${when(finding.at)}`:""}</small>{finding.amount!=null&&<strong>{money(finding.amount)}</strong>}{finding.reason&&<em>{finding.reason}</em>}</article>)}</div>}</section>}
+      <div className="cloud-alert"><b>Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS / Store Mode.</b><br/>Το BackOffice εμφανίζει μόνο τον αυτόματο έλεγχο, τη συμφωνία και τις αποκλίσεις.</div>
     </>}
   </article>;
-}
-
-function MoneyField({icon,label,value,onChange,readOnly=false}){
-  return <label className="cash-money-field"><span>{icon}{label}</span><div><input type="number" min="0" max="999999999" step="0.01" value={value} readOnly={readOnly} aria-readonly={readOnly} onChange={event=>onChange(event.target.value)}/><small>€</small></div></label>;
 }
