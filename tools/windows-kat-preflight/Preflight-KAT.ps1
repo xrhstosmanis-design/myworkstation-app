@@ -1,5 +1,5 @@
 param(
-  [string]$ApiBase="https://myworkstation.gr",
+  [string]$ApiBase="https://myworkstation-app.onrender.com",
   [string]$ObserverPath="C:\ProgramData\MyWorkStation\RbsObserver",
   [string]$CapturePath="C:\capture\micrelec"
 )
