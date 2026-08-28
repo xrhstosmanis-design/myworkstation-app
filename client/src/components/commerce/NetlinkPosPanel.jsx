@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {RefreshCw,X} from "lucide-react";
 import "./netlink-pos.css";
 const unwrap=value=>value?.data?.data||value?.data||value||{};
-const numericRequestId=()=>`${Date.now()}${Math.floor(Math.random()*1_000_000).toString().padStart(6,"0")}`;
+const numericRequestId=()=>`${Math.floor(Date.now()/1000)}`;
 export default function NetlinkPosPanel({api,storeId,onClose}){
  const [status,setStatus]=useState(null),[config,setConfig]=useState(null),[groups,setGroups]=useState([]),[selected,setSelected]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[confirming,setConfirming]=useState(false),[phrase,setPhrase]=useState(""),[busy,setBusy]=useState(false),[completed,setCompleted]=useState(null);
  const load=async()=>{setLoading(true);setError("");try{const [s,c,m]=await Promise.all([api("/api/netlink/status"),api(`/api/netlink/stores/${encodeURIComponent(storeId)}/config`),api("/api/netlink/menu")]);setStatus(s);setConfig(c);setGroups(unwrap(m).groups||[])}catch(e){setError(e.message||"Αποτυχία φόρτωσης Netlink.")}finally{setLoading(false)}};
