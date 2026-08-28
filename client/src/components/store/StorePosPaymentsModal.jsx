@@ -8,18 +8,19 @@ const num=v=>Number(String(v||"0").replace(",","."))||0;
 const fileToDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
 const paymentTabByStore=new Map();
 const STALE_SHIFT_HOURS=24;
+const cachedAccess=storeId=>{try{return JSON.parse(localStorage.getItem(`myworkstation:pos-runtime-access:${storeId}`)||"null")}catch{return null}};
 function Pad({value,onChange}){const press=k=>{const c=String(value??"");if(k==="⌫")return onChange(c.slice(0,-1));if(k==="C")return onChange("");if(k===","){if(c.includes(",")||c.includes("."))return;return onChange(`${c||"0"},`)}onChange(`${c}${k}`.replace(/^0+(?=\d)/,""))};return <div className="pos-inline-keypad">{[7,8,9,4,5,6,1,2,3,0,",","⌫"].map(k=><button key={k} type="button" onClick={()=>press(String(k))}>{k}</button>)}<button type="button" className="wide" onClick={()=>press("C")}>ΚΑΘΑΡΙΣΜΟΣ</button></div>}
 
 export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMessage,setError}){
  const storeKey=String(store?.id||"default"),initialType=paymentTabByStore.get(storeKey)||"OTHER_EXPENSE";
- const [busy,setBusy]=useState(false),[localError,setLocalError]=useState(""),[ledger,setLedger]=useState(null),[access,setAccess]=useState(null),[expenseCategories,setExpenseCategories]=useState([]),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
+ const [busy,setBusy]=useState(false),[localError,setLocalError]=useState(""),[ledger,setLedger]=useState(null),[access,setAccess]=useState(()=>cachedAccess(store?.id)),[expenseCategories,setExpenseCategories]=useState([]),[premiumInvoice,setPremiumInvoice]=useState(null),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
  const [form,setForm]=useState({type:initialType,amount:"",description:"",expenseCategoryId:"",subtractFromShift:true,file:null});
  const setPaymentType=type=>{paymentTabByStore.set(storeKey,type);setLocalError("");setPaymentError("");setForm(c=>({...c,type}))};
  const setPaymentError=message=>{setLocalError(String(message||""));setError?.(message||"")};
  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
  useEffect(()=>{
   api(`/api/transactions/stores/${store.id}/overview`).then(setLedger).catch(e=>setPaymentError(e.message));
-  api(`/api/store-pos/stores/${store.id}`).then(result=>setAccess(result?.access||{})).catch(e=>setPaymentError(e.message));
+  if(!cachedAccess(store.id))api(`/api/store-pos/stores/${store.id}/access`).then(result=>setAccess(result?.access||{})).catch(e=>setPaymentError(e.message));
   api("/api/management/expense-categories").then(result=>setExpenseCategories((result?.items||[]).filter(x=>x.active!==false))).catch(()=>setExpenseCategories([]));
   api("/api/commerce/ai-reader/capability").then(()=>setPremiumInvoice(true)).catch(()=>setPremiumInvoice(false));
   return()=>stopCamera();

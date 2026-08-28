@@ -7,7 +7,7 @@ const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝ
 const boolObject=value=>value&&typeof value==="object"?value:{};
 const POS_PERMISSIONS=[
   ["stockPos","στήλη Stock (PoS)"],["stockBackoffice","στήλη Stock (Backoffice)"],["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
-  ["mixedPaymentChange","Πάντα μικτή πληρωμή και ρέστα (PoS)"],["leftKeys","Εμφάνιση αριστερής στήλης πλήκτρων (PoS)"],["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
+  ["mixedPaymentChange","Πάντα μικτή πληρωμή και ρέστα (PoS)"],["leftKeys","Εμφάνιση αριστερής στήλης πλήκτρων (PoS)"],["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
   ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],["editDescription","Διόρθωση περιγραφής είδους (PoS)"],["fileItems","Αρχείο ειδών (BackOffice)"],
   ["onlineBarcode","Online αναζήτηση barcode (PoS)"],["itemCard","Καρτέλα είδους (PoS & BackOffice)"],["stocktakeColumn","Εμφάνιση στήλης Stock (Απογραφή)"],
   ["stocktakePos","Απογραφή ειδών (PoS)"],["stocktakeBackoffice","Απογραφή ειδών (BackOffice)"],["transactionDiscount","Έκπτωση συναλλαγής (PoS)"],
