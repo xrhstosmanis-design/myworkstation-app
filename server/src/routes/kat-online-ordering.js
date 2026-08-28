@@ -146,6 +146,8 @@ async function postCommercialSale(tx,{order,store,user,config}){
         ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
         : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE`;
       if(!changed){const error=new Error(enforceStock?`Δεν υπάρχει αρκετό stock για να ολοκληρωθεί: ${line.productName}`:`Δεν μπόρεσε να ενημερωθεί το stock: ${line.productName}`);error.status=409;throw error}
+      const movementUserId=user?.tokenType==="STORE_OPERATOR"?null:(user?.id||null);
+      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${crypto.randomUUID()},${store.id},${line.productId},'SALE',${-qty},${null},'ONLINE_ORDER_SALE',${order.id},${`ONLINE ΠΑΡΑΓΓΕΛΙΑ · ${order.orderNumber} · ${line.productName}`},${movementUserId})`;
     }
   }
   if(Number(order.deliveryFee||0)>0)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${null},'Delivery Online Παραγγελίας',1,${money(order.deliveryFee)},0,24,${money(order.deliveryFee)})`;
