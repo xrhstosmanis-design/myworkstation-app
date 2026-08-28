@@ -33,6 +33,7 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
     if(!["CASH","CARD"].includes(requestedMethod))return res.status(400).json({error:"Ο τρόπος πληρωμής POS δεν είναι έγκυρος."});
 
     const result=await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`KAT_ONLINE_COMPLETE:${req.params.orderId}`})) IS NULL) AS locked`;
       const configuredTerminalPos=await delayedTerminalForStore(tx,{companyId:req.user.companyId,storeId:req.params.storeId});
       const routing=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:req.user?.terminalPos});
       const openShift=(await tx.$queryRaw`SELECT "id","terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.params.storeId} AND "status"='OPEN' AND UPPER(TRIM("terminalPos"))=${routing.terminalPos} ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];

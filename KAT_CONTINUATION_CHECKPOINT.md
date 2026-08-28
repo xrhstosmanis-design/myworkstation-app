@@ -52,14 +52,17 @@ Production branch: `main`
 
 ## Ακριβές επόμενο βήμα
 
-Υλοποίησε και δοκίμασε το επόμενο software-only, fail-closed checkpoint:
+Τρέχον υποψήφιο checkpoint σε branch `agent/kat-exactly-once-guards-20260828`:
 
-1. Automated exactly-once fiscalization guard.
-2. Automated exactly-once stock movement guard.
-3. Αποτροπή δεύτερης sale σε ετεροχρονισμένη fiscal flow.
-4. Idempotent synchronization μετά από disconnect, reconnect ή application restart.
-5. Duplicate detection στο BackOffice reconciliation, χωρίς αυτόματη διόρθωση ή διαγραφή δεδομένων.
-6. Tests για concurrent/replayed requests και restart recovery.
+- exactly-once fiscalization guard μέσω της μοναδικής fiscal εγγραφής ανά sale,
+- exactly-once stock movement guard με σταθερό database idempotency key,
+- serialization/replay της delayed ολοκλήρωσης μετά από concurrent request ή restart,
+- read-only duplicate detection στο BackOffice χωρίς αυτόματη μεταβολή δεδομένων.
+
+1. Επιβεβαίωσε τα targeted tests και το πλήρες CI.
+2. Κάνε merge μόνο αν το CI είναι πράσινο.
+3. Επιβεβαίωσε το Render deployment του merge commit.
+4. Ενημέρωσε αυτό το αρχείο με PR, commits, CI, Render και το νέο επόμενο βήμα.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 

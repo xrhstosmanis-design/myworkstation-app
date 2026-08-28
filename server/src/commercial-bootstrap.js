@@ -158,6 +158,8 @@ const statements=[
 )`,
 `CREATE INDEX IF NOT EXISTS "StockMovement_store_product_idx" ON "StockMovement"("storeId","productId")`,
 `CREATE INDEX IF NOT EXISTS "StockMovement_createdAt_idx" ON "StockMovement"("createdAt")`,
+`ALTER TABLE "StockMovement" ADD COLUMN IF NOT EXISTS "idempotencyKey" TEXT`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "StockMovement_store_idempotency_key" ON "StockMovement"("storeId","idempotencyKey") WHERE "idempotencyKey" IS NOT NULL`,
 
 `CREATE TABLE IF NOT EXISTS "Recipe" (
   "id" TEXT NOT NULL,

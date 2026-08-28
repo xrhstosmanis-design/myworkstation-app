@@ -93,20 +93,21 @@ jobs:
           console.error("Server did not become healthy",lastError);
           process.exit(1);
           NODE
-          node server/e2e/payment-shift-flow.mjs
-          node server/e2e/ai-reader-payment-flow.mjs
-          node server/e2e/live-operator-permissions-flow.mjs
-          node server/e2e/reversal-tenant-isolation-flow.mjs
-          node server/e2e/operator-ledger-visibility-flow.mjs
-          node server/e2e/payment-boundaries-flow.mjs
-          node server/e2e/operator-shift-close-audit-flow.mjs
-          node server/e2e/close-shift-permission-separation-flow.mjs
-          node server/e2e/eftpos-shift-close-flow.mjs
-          node server/e2e/pos-to-shift-backoffice-flow.mjs
-          node server/e2e/kat-pos-regression-flow.mjs
-          node server/e2e/kat-final-volume-regression-flow.mjs
-          node server/e2e/multi-pos-shift-isolation-flow.mjs
-          node server/e2e/kat-online-ordering-flow.mjs
-          node server/e2e/kat-preparation-milk-stock-flow.mjs
-          node server/e2e/netlink-prepaid-flow.mjs
+          run_flow() { echo "Running $1"; node "$1" || { echo "::error title=E2E flow failed::$1"; return 1; }; }
+          run_flow server/e2e/payment-shift-flow.mjs
+          run_flow server/e2e/ai-reader-payment-flow.mjs
+          run_flow server/e2e/live-operator-permissions-flow.mjs
+          run_flow server/e2e/reversal-tenant-isolation-flow.mjs
+          run_flow server/e2e/operator-ledger-visibility-flow.mjs
+          run_flow server/e2e/payment-boundaries-flow.mjs
+          run_flow server/e2e/operator-shift-close-audit-flow.mjs
+          run_flow server/e2e/close-shift-permission-separation-flow.mjs
+          run_flow server/e2e/eftpos-shift-close-flow.mjs
+          run_flow server/e2e/pos-to-shift-backoffice-flow.mjs
+          run_flow server/e2e/kat-pos-regression-flow.mjs
+          run_flow server/e2e/kat-final-volume-regression-flow.mjs
+          run_flow server/e2e/multi-pos-shift-isolation-flow.mjs
+          run_flow server/e2e/kat-online-ordering-flow.mjs
+          run_flow server/e2e/kat-preparation-milk-stock-flow.mjs
+          run_flow server/e2e/netlink-prepaid-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
