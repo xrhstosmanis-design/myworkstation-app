@@ -28,6 +28,7 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   const route=fs.readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8');
   const engine=fs.readFileSync(new URL('../src/kat-shift-reconciliation.js',import.meta.url),'utf8');
   const panel=fs.readFileSync(new URL('../../client/src/components/cloud/CashControlPanel.jsx',import.meta.url),'utf8');
+  const storePage=fs.readFileSync(new URL('../../client/src/components/cloud/StoreCloudPage.jsx',import.meta.url),'utf8');
   const commerce=fs.readFileSync(new URL('../../client/src/components/commerce/CommerceLauncher.jsx',import.meta.url),'utf8');
   const entry=fs.readFileSync(new URL('../../client/src/entry.jsx',import.meta.url),'utf8');
   for(const token of ['pendingFiscalizations','eftposByDevice'])assert.match(engine,new RegExp(token));
@@ -39,8 +40,9 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   assert.doesNotMatch(panel,/<form className="cash-form" onSubmit=\{closeShift\}>/);
   assert.doesNotMatch(panel,/>Πρόσφατες βάρδιες</);
   assert.match(panel,/Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS \/ Store Mode/);
-  assert.match(panel,/mws:commerce-open/);
-  assert.match(panel,/BriefcaseBusiness\/>Εμπορική λειτουργία/);
+  assert.doesNotMatch(panel,/BriefcaseBusiness\/>Εμπορική λειτουργία/);
+  assert.match(storePage,/mws:commerce-open/);
+  assert.match(storePage,/RefreshCw\/>Ανανέωση[\s\S]{0,300}BriefcaseBusiness\/>Εμπορική λειτουργία/);
   assert.match(commerce,/addEventListener\("mws:commerce-open"/);
   assert.doesNotMatch(commerce,/className="commerce-launcher"/);
   assert.doesNotMatch(entry,/PilotReportLauncherLive|pilot-report-root/);

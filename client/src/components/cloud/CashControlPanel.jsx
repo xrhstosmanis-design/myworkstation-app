@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BriefcaseBusiness,CheckCircle2,Coins,RefreshCw,ShieldCheck,TrendingDown,TrendingUp,WalletCards} from "lucide-react";
+import {CheckCircle2,Coins,RefreshCw,ShieldCheck,TrendingDown,TrendingUp,WalletCards} from "lucide-react";
 import "./cash-control.css";
 
 const number=value=>Number(value||0);
@@ -100,10 +100,7 @@ export default function CashControlPanel({api,store}){
   return <article className="cloud-panel cash-module">
     <div className="cloud-panel-head cash-heading">
       <div><h3><WalletCards/>Αυτόματος Έλεγχος Ταμείων</h3><p>Αυτόματη διασταύρωση βαρδιών, POS–EFTPOS, εξόδων και παραστατικών. Η έναρξη βάρδιας γίνεται μόνο από το POS / Store Mode.</p></div>
-      <div className="cash-heading-actions">
-        <button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
-        <button className="cash-refresh" type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
-      </div>
+      <button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
     </div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
