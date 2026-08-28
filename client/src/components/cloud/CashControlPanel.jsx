@@ -125,6 +125,17 @@ export default function CashControlPanel({api,store}){
         <div><span>Συγχρονίστηκαν</span><strong className="cash-positive">{data?.offlineSync?.counts?.synced||0}</strong></div>
         <div><span>Idempotent replay</span><strong>{data?.offlineSync?.counts?.replays||0}</strong></div>
       </section>
+      <section className={`cash-daily-summary ${daily?.reconciliation?.status==="AGREEMENT"?"agreement":"needs-review"}`} data-kat-reconciliation="true">
+        <div><span>KAT RECONCILIATION 52-57</span><strong>{daily?.reconciliation?.status==="AGREEMENT"?"ΣΥΜΦΩΝΙΑ":"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ"}</strong><small>Order / Sale / Fiscal / EFTPOS / Stock και κλείσιμο ανά terminal</small></div>
+        <div><span>Store</span><strong>{money(daily?.reconciliation?.totals?.store)}</strong></div>
+        <div><span>Delivery</span><strong>{money(daily?.reconciliation?.totals?.delivery)}</strong></div>
+        <div><span>Online</span><strong>{money(daily?.reconciliation?.totals?.online)}</strong></div>
+        <div><span>Cash / Cards</span><strong>{money(daily?.reconciliation?.totals?.cash)} / {money(daily?.reconciliation?.totals?.cards)}</strong></div>
+        <div><span>Returns / Voids</span><strong>{money(daily?.reconciliation?.totals?.returns)} / {money(daily?.reconciliation?.totals?.voids)}</strong></div>
+        <div><span>Pending fiscalizations</span><strong className={daily?.reconciliation?.totals?.pendingFiscalizations?"cash-negative":"cash-positive"}>{daily?.reconciliation?.totals?.pendingFiscalizations||0}</strong></div>
+        <div><span>Fail-closed alerts</span><strong className={(daily?.reconciliation?.issues||[]).length?"cash-negative":"cash-positive"}>{(daily?.reconciliation?.issues||[]).length}</strong></div>
+        <div><span>EFTPOS ανά συσκευή</span><strong>{Object.entries(daily?.reconciliation?.totals?.eftposByDevice||{}).map(([device,total])=>`${device}: ${money(total)}`).join(" · ")||"—"}</strong></div>
+      </section>
       {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
       <div className="cash-metrics">
         <article><span>Κατάσταση</span><strong className={data?.openSession?"cash-open":"cash-closed"}>{data?.openSession?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</strong></article>

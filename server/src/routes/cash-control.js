@@ -5,6 +5,7 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { sendEmail } from "../services/mail.js";
 import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
+import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
 
 const router = Router();
 let tablesPromise;
@@ -82,7 +83,8 @@ const tableStatements = [
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentData" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
-  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
+  `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`,
+  `CREATE TABLE IF NOT EXISTS "PaymentDeviceRouteAttempt" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"saleId" TEXT NOT NULL,"sessionId" TEXT NOT NULL,"terminalPos" TEXT NOT NULL,"channel" TEXT NOT NULL,"fiscalDeviceCode" TEXT NOT NULL,"eftposDeviceCode" TEXT NOT NULL,"role" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'PLANNED',"fallbackUsed" BOOLEAN NOT NULL DEFAULT FALSE,"amount" NUMERIC(14,2) NOT NULL,"idempotencyKey" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("storeId","idempotencyKey"))`
 ];
 
 async function ensureTables(){
@@ -210,7 +212,8 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const date=reportDateSchema.parse(String(req.query.date||today));
-  const rule=await cashControlRule(store,req.user.companyId),[sessionRows,expenseRows]=await Promise.all([
+  await ensurePosSaleSafetySchema();
+  const rule=await cashControlRule(store,req.user.companyId),[sessionRows,expenseRows,auditRows,attemptRows,fiscalRows,actionRows]=await Promise.all([
     prisma.$queryRaw`
       SELECT * FROM "CashShiftSession"
       WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='CLOSED'
@@ -227,7 +230,11 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
       WHERE t."storeId"=${store.id} AND t."companyId"=${req.user.companyId}
         AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND t."reversedAt" IS NULL
         AND c."status"='CLOSED' AND (c."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date
-      ORDER BY t."occurredAt" ASC`
+      ORDER BY t."occurredAt" ASC`,
+    prisma.$queryRaw`SELECT "details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "eventType"='POS_SALE_COMPLETED' AND ("createdAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY "createdAt","id"`,
+    prisma.$queryRaw`SELECT "id","saleId","sessionId","terminalPos","channel","role","status","eftposDeviceCode","amount","createdAt" FROM "PaymentDeviceRouteAttempt" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND ("createdAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY "createdAt" DESC,"id"`,
+    prisma.$queryRaw`SELECT f."saleId" FROM "FiscalDocument" f JOIN "Sale" s ON s."id"=f."saleId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND (s."occurredAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date`,
+    prisma.$queryRaw`SELECT "actionType","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND ("createdAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY "createdAt","id"`
   ]);
   const sessions=sessionRows.map(row=>{const session=normalize(row),delivery=String(session.terminalPos||"").toUpperCase().includes(String(rule.deliveryTerminalPattern||"DELIVERY").toUpperCase());return {...session,delivery,varianceConsidered:rule.mode!=="POS_EFTPOS_ONLY",effectiveVariance:rule.mode==="POS_EFTPOS_ONLY"?0:money(session.variance)}}),expenseChecks=expenseRows.map(row=>{
     const amount=money(row.amount),documentTotal=row.documentTotal==null?null:money(row.documentTotal);
@@ -238,7 +245,8 @@ router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
   const alerts=[];
   for(const row of sessions){if(rule.carryOverEnabled&&Math.abs(money(row.openingVariance))>0.009)alerts.push({type:"OPENING_CONTINUITY",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.openingVariance),scope:row.delivery?"DELIVERY_TO_DELIVERY":"SAME_POS_ONLY"});if(row.varianceConsidered&&Math.abs(money(row.variance))>0.009)alerts.push({type:money(row.variance)<0?"SHORTAGE":"SURPLUS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.variance)});if(rule.posEftposEnabled&&Math.abs(money(row.cardVariance))>0.009)alerts.push({type:"POS_EFTPOS",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,amount:money(row.cardVariance)});if((row.duplicateReview||[]).length)alerts.push({type:"DUPLICATE_REVIEW",sessionId:row.id,terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,count:row.duplicateReview.length})}
   for(const expense of expenseChecks){if(expense.status!=="MATCHED")alerts.push({type:expense.status,transactionId:expense.id,sessionId:expense.sessionId,amount:expense.amount,difference:expense.difference})}
-  res.json({date,timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,recalculatedAt:new Date()});
+  const reconciliation=buildKatShiftReconciliation({sessions,auditEvents:auditRows,paymentAttempts:attemptRows,fiscalDocuments:fiscalRows,actionEvents:actionRows});
+  res.json({date,timeZone:"Europe/Athens",store:{id:store.id,name:store.name},rule,status:alerts.length||reconciliation.status!=="AGREEMENT"?"NEEDS_REVIEW":"AGREEMENT",sessions,expenseChecks,totals,alerts,reconciliation,recalculatedAt:new Date()});
 }));
 
 router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
