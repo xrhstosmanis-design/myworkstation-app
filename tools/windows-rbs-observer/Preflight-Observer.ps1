@@ -35,7 +35,11 @@ $report=@("MYWORKSTATION OBSERVER PRECHECK",("Date: "+(Get-Date -Format "yyyy-MM
 $report+=($results|ForEach-Object {"[{0}] {1} - {2}" -f $_.Status,$_.Check,$_.Detail})
 $failed=@($results|Where-Object {$_.Status -eq "FAIL"})
 $report+=""
-$report+=(if($failed.Count){"RESULT: NOT READY ($($failed.Count) checks failed)"}else{"RESULT: READY FOR READ-ONLY OBSERVER INSTALLATION"})
+if($failed.Count){
+  $report+="RESULT: NOT READY ($($failed.Count) checks failed)"
+}else{
+  $report+="RESULT: READY FOR READ-ONLY OBSERVER INSTALLATION"
+}
 $reportPath=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_Observer_Precheck.txt"
 $report|Set-Content -LiteralPath $reportPath -Encoding UTF8
 $report|ForEach-Object {Write-Host $_ -ForegroundColor $(if($_ -like "[FAIL]*"){"Red"}elseif($_ -like "[OK]*" -or $_ -like "RESULT: READY*"){"Green"}else{"White"})}
