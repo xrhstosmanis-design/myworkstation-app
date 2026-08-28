@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {Box,ChevronDown,ChevronUp,Clock3,CreditCard,FileCheck2,RefreshCw,Search,ShoppingBag} from "lucide-react";
+import {AlertTriangle,Box,ChevronDown,ChevronUp,Clock3,CreditCard,FileCheck2,RefreshCw,Search,ShoppingBag} from "lucide-react";
 import "./online-orders-backoffice.css";
 
 const TEST_STORE_ID="kat-test-store";
@@ -18,7 +18,7 @@ function LinkSummary({order}){
     {Icon:Box,label:'Stock Movement',ok:movements.length>0,value:movements.length?`${movements.length} κινήσεις`:'ΧΩΡΙΣ ΚΙΝΗΣΗ',detail:movements.length?`${movements.reduce((sum,row)=>sum+Number(row.quantity||0),0)} συνολική ποσότητα`:'Έλεγχος stock/συνταγής'},
     {Icon:Clock3,label:'Βάρδια',ok:Boolean(transaction),value:transaction?.sessionId||'ΧΩΡΙΣ ΣΥΝΔΕΣΗ',detail:transaction?`${transaction.type} · ${money(transaction.amount)}`:'Λείπει συναλλαγή βάρδιας'}
   ];
-  return <div className="online-reconciliation"><div className="online-reconciliation-title"><b>Order → Sale → Fiscal → EFTPOS → Stock</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
+  return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Order → Sale → Fiscal → EFTPOS → Stock</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
 
 export default function OnlineOrdersBackofficePanel({api}){
@@ -83,6 +83,7 @@ export default function OnlineOrdersBackofficePanel({api}){
       <article><span>Ενεργές</span><strong>{activeCount}</strong></article>
       <article><span>Παραδόθηκαν</span><strong>{deliveredCount}</strong></article>
       <article><span>Με εμπορική πώληση</span><strong>{rows.filter(order=>order.saleId).length}</strong></article>
+      <article><span>Πιθανά duplicates</span><strong>{rows.filter(order=>order.integrity?.issues?.length).length}</strong></article>
     </div>
 
     <div className="online-bo-toolbar">
