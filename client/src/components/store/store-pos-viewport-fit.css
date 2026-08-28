@@ -168,3 +168,8 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* The arrows are self-explanatory; never cover payment controls with a helper toast. */
+.pos-button-editor-hint {
+  display: none !important;
+}
