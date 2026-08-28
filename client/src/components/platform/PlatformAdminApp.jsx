@@ -6,6 +6,7 @@ import PosDesignerPanel from "./PosDesignerPanel.jsx";
 import OnlineStoreManager from "./OnlineStoreManager.jsx";
 import VideoConnectionManager from "./VideoConnectionManager.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
+import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
@@ -457,5 +458,6 @@ export default function PlatformAdminApp(){
     {onlineStoreManager&&<OnlineStoreManager manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}
     {storeCompany&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
+    {terminalManager&&<DeviceOperationsCenter manager={terminalManager} request={request}/>}
   </div>;
 }
