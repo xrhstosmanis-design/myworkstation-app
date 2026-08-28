@@ -7,14 +7,14 @@
 Τελευταία ενημέρωση: 28 Αυγούστου 2026  
 Repository: `xrhstosmanis-design/myworkstation-app`  
 Production branch: `main`  
-Τελευταίο επιβεβαιωμένο production commit: `c0922b740461c413f3492c34019615359a9a699e`
+Τελευταίο επιβεβαιωμένο functional production commit: `bd96070f64579f8b144dd18504513fe1e481a47e`
 
 ## Κατάσταση τελευταίου checkpoint
 
-- PR #280 — `feat(kat): add transaction reconciliation center`: **MERGED**.
-- Merge commit: `c0922b740461c413f3492c34019615359a9a699e`.
-- GitHub MyWorkStation CI #834: **SUCCESS**.
-- Render deployment #579: **SUCCESS**.
+- PR #282 — `feat(kat): enforce exactly-once reconciliation guards`: **MERGED**.
+- Merge commit: `bd96070f64579f8b144dd18504513fe1e481a47e`.
+- GitHub MyWorkStation CI #842: **SUCCESS**.
+- Render deployment #581: **SUCCESS**.
 - Κατάσταση: **LIVE**.
 
 ## Τι ολοκληρώθηκε
@@ -32,6 +32,12 @@ Production branch: `main`
 11. Η απουσία fiscal ή EFTPOS εγγραφής δεν θεωρείται επιτυχία.
 12. Οι online πωλήσεις απλών προϊόντων δημιουργούν auditable `StockMovement`, όπως ήδη γινόταν για υλικά συνταγών.
 13. Targeted tests 7/7 και πλήρες GitHub CI επιτυχές.
+14. Exactly-once fiscalization guard: μία `FiscalDocument` ανά sale με database unique constraint.
+15. Exactly-once online stock movement με σταθερό `idempotencyKey` και database unique index.
+16. Delayed Online → POS ολοκλήρωση με advisory lock, row lock και ασφαλές idempotent replay μετά από retry/restart.
+17. Read-only duplicate detection για fiscal documents, sale links και stock movements στο BackOffice.
+18. Τα duplicate alerts δεν διαγράφουν και δεν μεταβάλλουν αυτόματα δεδομένα.
+19. Targeted tests 15/15, PR CI #841 και main CI #842 επιτυχή.
 
 ## Ασφαλή όρια που παραμένουν ενεργά
 
@@ -46,23 +52,20 @@ Production branch: `main`
 - Τη δημιουργία `PaymentDeviceRouteAttempt` στο card checkout.
 - Το provider-result state machine, timeout reconciliation, retry και reversal rules.
 - Το Transaction Reconciliation Center.
-- Τα PR #277, #278, #279 και #280.
+- Τα PR #277, #278, #279, #280, #281 και #282.
 - Την καταγραφή stock movement για απλό online προϊόν.
+- Τους exactly-once fiscal/stock guards, το delayed completion lock και το duplicate detection.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
 
-Τρέχον υποψήφιο checkpoint σε branch `agent/kat-exactly-once-guards-20260828`:
+Επόμενο software checkpoint από την τελική λίστα δοκιμών:
 
-- exactly-once fiscalization guard μέσω της μοναδικής fiscal εγγραφής ανά sale,
-- exactly-once stock movement guard με σταθερό database idempotency key,
-- serialization/replay της delayed ολοκλήρωσης μετά από concurrent request ή restart,
-- read-only duplicate detection στο BackOffice χωρίς αυτόματη μεταβολή δεδομένων.
-
-1. Επιβεβαίωσε τα targeted tests και το πλήρες CI.
-2. Κάνε merge μόνο αν το CI είναι πράσινο.
-3. Επιβεβαίωσε το Render deployment του merge commit.
-4. Ενημέρωσε αυτό το αρχείο με PR, commits, CI, Render και το νέο επόμενο βήμα.
+1. Έλεγξε πρώτα την υπάρχουσα υλοποίηση ακύρωσης online/delivery order πριν από την παραγωγή.
+2. Συμπλήρωσε μόνο ό,τι λείπει για ασφαλή, idempotent ακύρωση χωρίς sale, fiscal εγγραφή ή stock movement.
+3. Έλεγξε ακύρωση/φύρα μετά την παραγωγή και πρόσθεσε auditable stock compensation μόνο όπου απαιτείται.
+4. Πρόσθεσε tests για replay, concurrent cancellation και απαγόρευση διπλής επιστροφής stock.
+5. Εμφάνισε το αποτέλεσμα στο BackOffice reconciliation χωρίς αυτόματη διαγραφή ιστορικού.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
