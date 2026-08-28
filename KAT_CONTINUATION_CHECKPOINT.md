@@ -163,6 +163,17 @@ Production branch: `main`
 - Οι εργασίες δεν εκτελούν ούτε αποστέλλουν εντολές προς RBS, EFTPOS, Netlink ή fiscal provider.
 - Επόμενο: CI/merge του Device Operations Center και μετά ολοκλήρωση inventory import/full audit και finalization report.
 
+### Installation & Device Operations — συγχωνεύτηκε
+
+- PR #316, CI #931 πράσινο, merge commit `282db10a26aae7403e8b3731a09b02e329df0cce`.
+- Device Health Dashboard, Remote Installation, Update Management και Recovery Dry-run planning βρίσκονται στο `main` με local confirmation, rollback checkpoint και χωρίς outbound fiscal commands.
+
+### Ενεργό checkpoint — Inventory import/finalization
+
+- Προστέθηκαν ξεχωριστά κουμπιά «Νέα Ολική Απογραφή» και «Νέα Μερική Απογραφή».
+- Προστέθηκε CSV import με Barcode ή SKU και ποσότητα. Κάθε γραμμή γράφεται ως `IMPORT_COUNT` ή `IMPORT_RECOUNT` στο immutable audit και δεν μπορεί να αγγίξει προϊόν εκτός του scope της απογραφής.
+- Επόμενο: targeted tests/build/CI/merge και full inventory audit/finalization report.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
