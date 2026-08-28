@@ -49,7 +49,11 @@ $report=@(
 $report+=($checks|ForEach-Object {"[{0}] [{1}] {2} - {3}" -f $_.Status,$_.Level,$_.Name,$_.Detail})
 $blockers=@($checks|Where-Object {$_.Status -eq "FAIL" -and $_.Level -eq "BLOCKER"})
 $report+=""
-$report+=(if($blockers.Count){"RESULT: NOT READY ($($blockers.Count) blockers)"}else{"RESULT: SOFTWARE PREFLIGHT READY"})
+if($blockers.Count){
+  $report+="RESULT: NOT READY ($($blockers.Count) blockers)"
+}else{
+  $report+="RESULT: SOFTWARE PREFLIGHT READY"
+}
 $path=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_Preflight.txt"
 $report|Set-Content -LiteralPath $path -Encoding UTF8
 $report|ForEach-Object {Write-Host $_}
