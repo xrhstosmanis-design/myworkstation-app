@@ -8,6 +8,7 @@ const [cash,pos,ledger,e2e]=await Promise.all([
   readFile(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8"),
   readFile(new URL("../e2e/multi-pos-shift-isolation-flow.mjs",import.meta.url),"utf8")
 ]);
+const backoffice=await readFile(new URL("../../client/src/components/store/StoreTransactionsPanel.jsx",import.meta.url),"utf8");
 
 test("each KAT POS opens and returns its own terminal-scoped shift",()=>{
   assert.match(cash,/CashShiftSession_one_open_per_terminal_idx/);
@@ -25,7 +26,7 @@ test("multiple KAT POS terminals share store stock but isolate sale ledgers",()=
   assert.match(pos,/NEGATIVE_STOCK_RECORDED/);
   assert.match(pos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(ledger,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
-  assert.match(ledger,/WHERE "sessionId"=\$\{openSession\.id\}/);
+  assert.match(ledger,/WHERE "sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
   assert.match(e2e,/assert\.equal\(Number\(stock\?\.currentStock\),7/);
   assert.match(e2e,/POS-1 ledger includes another terminal/);
   assert.match(e2e,/POS-2 ledger includes another terminal/);
@@ -35,4 +36,13 @@ test("one KAT POS cannot close another terminal shift",()=>{
   assert.match(e2e,/crossTerminalClose\.response\.status,403/);
   assert.match(e2e,/άλλου POS/);
   assert.match(e2e,/Closing POS-1 closed or hid POS-2 shift/);
+});
+
+test("BackOffice aggregates every open terminal shift instead of defaulting to MAIN",()=>{
+  assert.match(ledger,/isBackoffice=req\.user\?\.tokenType!=="STORE_OPERATOR"/);
+  assert.match(ledger,/openSessions:openRows/);
+  assert.match(ledger,/"sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
+  assert.match(backoffice,/data\?\.openSessions\?\.length/);
+  assert.match(backoffice,/Χειριστής \/ Terminal/);
+  assert.match(backoffice,/όλα τα ενεργά terminals/);
 });

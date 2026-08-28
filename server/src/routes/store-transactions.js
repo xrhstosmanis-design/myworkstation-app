@@ -297,15 +297,12 @@ router.use(auth,requireLedgerAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
-  const openRows=await prisma.$queryRaw`
-    SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos"
-    FROM "CashShiftSession"
-    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN'
-    ORDER BY "openedAt" DESC LIMIT 1
-  `;
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req),isBackoffice=req.user?.tokenType!=="STORE_OPERATOR";
+  const openRows=isBackoffice
+    ?await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' ORDER BY "openedAt" DESC`
+    :await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
   const openSession=openRows[0]||null;
-  await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession});
+  for(const session of openRows)await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession:session});
   const canReviewStoreLedger=req.user.tokenType!=="STORE_OPERATOR"||req.user.permissions?.includes("STORE_LEDGER_REVIEW");
   const canReverse=req.user.tokenType!=="STORE_OPERATOR"
     ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
@@ -334,14 +331,17 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${store.id} AND p."status" IN ('DRAFT','APPROVED')
     ORDER BY p."documentDate" DESC,p."id" DESC LIMIT 100
   `;
-  const sessionRows=openSession?(await prisma.$queryRaw`
-    SELECT "type","amount","subtractFromShift","reversedAt"
-    FROM "StoreTransaction"
-    WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
-  `).map(normalize):[];
+  const openSessionIds=openRows.map(row=>row.id),sessionRows=!openSession?[]:isBackoffice
+    ?(await prisma.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "sessionId"=ANY(${openSessionIds}::text[]) AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}`).map(normalize)
+    :(await prisma.$queryRaw`
+      SELECT "type","amount","subtractFromShift","reversedAt"
+      FROM "StoreTransaction"
+      WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+    `).map(normalize);
   res.json({
     store:{id:store.id,name:store.name},
     openSession,
+    openSessions:openRows,
     summary:totals(sessionRows),
     suppliers,
     purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross||0)})),
