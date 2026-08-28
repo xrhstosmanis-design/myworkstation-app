@@ -259,4 +259,26 @@ router.post("/pos/stores/:storeId/orders/:orderId/status",auth,operatorGuard,saf
   res.json({ok:true,order:{id:current.id,orderNumber:current.orderNumber,status:body.status,saleId},print:body.status==="ACCEPTED"?printPayload(updated,config):null});
 }));
 
+router.post("/pos/stores/:storeId/orders/:orderId/cancel",auth,operatorGuard,safe(async(req,res)=>{
+  const body=z.object({reason:z.string().trim().min(3).max(300)}).parse(req.body||{}),{store}=await onlineContext();
+  if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const result=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${'online-order-cancel:'+req.params.orderId})) IS NULL) AS locked`;
+    const order=(await tx.$queryRaw`SELECT * FROM "OnlineOrder" WHERE "id"=${req.params.orderId} AND "storeId"=${store.id} FOR UPDATE`)[0];
+    if(!order)return{status:404,error:"Δεν βρέθηκε η παραγγελία."};
+    if(order.status==="CANCELLED")return{status:200,replay:true,order};
+    if(order.status==="DELIVERED"||order.saleId||order.commercialPostedAt)return{status:409,error:"Η παραγγελία έχει ήδη οριστικοποιηθεί. Χρησιμοποίησε την ελεγχόμενη ροή ακύρωσης/επιστροφής πώλησης."};
+    const stage=["NEW","ACCEPTED"].includes(order.status)?"BEFORE_PRODUCTION":"AFTER_PRODUCTION";
+    const movementCount=Number((await tx.$queryRaw`SELECT COUNT(*)::int AS count FROM "StockMovement" WHERE "storeId"=${store.id} AND "sourceId"=${order.id}`)[0]?.count||0);
+    const disposition=stage==="BEFORE_PRODUCTION"?"NO_STOCK_MOVEMENT":movementCount?"MANUAL_RECONCILIATION_REQUIRED":"WASTE_RECORDED_NO_STOCK_REVERSAL";
+    await tx.$executeRaw`UPDATE "OnlineOrder" SET "status"='CANCELLED',"cancelledAt"=CURRENT_TIMESTAMP,"cancelReason"=${body.reason},"cancellationStage"=${stage},"cancellationDisposition"=${disposition},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${order.id}`;
+    await addOrderEvent(tx,{orderId:order.id,fromStatus:order.status,toStatus:"CANCELLED",userId:null,employeeId:req.user.employeeId||null,note:`CANCELLED · ${stage} · ${disposition} · ${body.reason}`});
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'ONLINE_ORDER_CANCELLED',${JSON.stringify({onlineOrderId:order.id,orderNumber:order.orderNumber,fromStatus:order.status,stage,disposition,reason:body.reason,stockMovementCount:movementCount,saleCreated:false,fiscalCreated:false})}::jsonb)`;
+    return{status:200,replay:false,order:{...order,status:"CANCELLED",cancelReason:body.reason,cancellationStage:stage,cancellationDisposition:disposition},movementCount};
+  });
+  if(result.error)return res.status(result.status).json({error:result.error});
+  res.json({ok:true,replay:result.replay,order:{id:result.order.id,orderNumber:result.order.orderNumber,status:"CANCELLED",cancelReason:result.order.cancelReason,cancellationStage:result.order.cancellationStage,cancellationDisposition:result.order.cancellationDisposition},stockMovementCount:result.movementCount||0});
+}));
+
 export default router;

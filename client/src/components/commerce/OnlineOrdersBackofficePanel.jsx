@@ -9,6 +9,7 @@ const statusText=status=>({NEW:"ΝΕΑ",ACCEPTED:"ΑΠΟΔΟΧΗ",PREPARING:"Ε�
 
 function LinkSummary({order}){
   const sale=order.sale,transaction=order.shiftTransaction,attempt=order.eftposAttempt,movements=order.stockMovements||[];
+  if(!sale&&order.status==="CANCELLED")return <div className="online-link-wait"><AlertTriangle/><div><b>Ακύρωση {order.cancellationStage==="BEFORE_PRODUCTION"?"πριν την παραγωγή":"μετά την έναρξη παραγωγής"}</b><span>{order.cancelReason||"Χωρίς αιτιολογία"} · {order.cancellationDisposition||"Απαιτείται έλεγχος"}. Δεν δημιουργήθηκε πώληση, fiscal ή αυτόματη επιστροφή stock.</span></div></div>;
   if(!sale)return <div className="online-link-wait"><Clock3/><div><b>Εμπορική εγγραφή σε αναμονή</b><span>Η πώληση και η πραγματική αφαίρεση από την αποθήκη δημιουργούνται όταν η παραγγελία γίνει «ΠΑΡΑΔΟΘΗΚΕ».</span></div></div>;
   const fiscalOk=sale.fiscalStatus&&!['NON_FISCAL','NOT_SUBMITTED','PENDING'].includes(sale.fiscalStatus),card=(sale.payments||[]).some(p=>p.method==='CARD');
   const nodes=[
