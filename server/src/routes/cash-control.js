@@ -345,6 +345,12 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
     const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
     const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
+    if(variance < -0.009){
+      const shortage=Math.abs(variance),attemptedAt=new Date(),details=JSON.stringify({sessionId:session.id,shiftLabel:session.shiftLabel,terminalPos:session.terminalPos,attemptedAt:attemptedAt.toISOString(),declared:{drawer:body.drawer,custody:body.custody,coins:body.coins,safe:body.safe,eftposTotal:body.eftposTotal},declaredOperational:actual,expectedOperational:expected,variance,shortage});
+      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${req.user.operatorId||req.user.id},${req.user.id},'SHIFT_CLOSE_SHORTAGE_ATTEMPT',${details}::jsonb,${attemptedAt})`;
+      return {recountRequired:true,sessionId:session.id,storeId:session.storeId,expectedOperational:expected,actualOperational:actual,variance,shortage};
+    }
     const duplicateReview=Math.abs(cardVariance)>0.009?await findConsecutiveDuplicateSales(tx,req.user.companyId,session.storeId,session.openedAt,new Date()):[],duplicateReviewJson=JSON.stringify(duplicateReview);
     if(Math.abs(safeDelta)>0.009){const description=[`Χρηματοκιβώτιο στο κλείσιμο: ${previousSafe.toFixed(2)} € → ${body.safe.toFixed(2)} €`,safeReason?`Αιτιολογία: ${safeReason}`:null].filter(Boolean).join(" · ");await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","actorId","actorName","occurredAt","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${session.id},'SAFE_ADJUSTMENT',${safeDelta},${description},false,${req.user.id},${actorName},NOW(),NOW())`}
     const rows=await tx.$queryRaw`
@@ -355,6 +361,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null}:null;
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
+  if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`ΚΛΕΙΣΙΜΟ ΔΕΝ ΕΓΙΝΕ — Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Η βάρδια παραμένει ανοιχτή. Ξαναμέτρησε το ταμείο και καταχώρισε νέα καταμέτρηση. Η απόπειρα και τα ποσά που δήλωσες καταγράφηκαν στα Συμβάντα.`,...closeResult});
   const {closed,storeId,safeChange}=closeResult;
   const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);
   const recipients=[...new Set([...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean))];
