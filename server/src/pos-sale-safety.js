@@ -31,10 +31,10 @@ export async function ensurePosSaleSafetySchema(){
   return readyPromise;
 }
 
-export function buildSaleFingerprint({customerId,items,paymentMethod,payments,total}){
+export function buildSaleFingerprint({customerId,items,paymentMethod,payments,total,terminalPos}){
   const normalizedItems=[...(items||[])].map(item=>[String(item.productId||item.id||""),Number(item.quantity||item.qty||0),Number(item.lineTotal||0)]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   const normalizedPayments=[...(payments||[])].map(item=>[String(item.method||""),Number(item.amount||0)]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  const payload={customerId:customerId||null,items:normalizedItems,paymentMethod:paymentMethod||null,payments:normalizedPayments,total:Number(total||0)};
+  const payload={customerId:customerId||null,items:normalizedItems,paymentMethod:paymentMethod||null,payments:normalizedPayments,total:Number(total||0),terminalPos:String(terminalPos||"MAIN").trim().toUpperCase()};
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
