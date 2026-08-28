@@ -87,8 +87,18 @@ router.use("/stores/:storeId",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
-router.get("/stores/:storeId/access",(req,res)=>{
-  res.json({access:req.storeOperatorAccess||adminAccess});
+router.get("/stores/:storeId/access",async(req,res)=>{
+  const rows=await prisma.$queryRaw`SELECT "settings" FROM "ManagementParameters" WHERE "companyId"=${req.user.companyId} LIMIT 1`.catch(()=>[]);
+  const shifts=rows[0]?.settings?.shifts||{};
+  res.json({
+    access:req.storeOperatorAccess||adminAccess,
+    shiftClosePolicy:{
+      showExpectedAmounts:shifts.showShiftCashAtClose===true,
+      notifyShortage:shifts.notifyShortage!==false,
+      showShortageAmount:shifts.showShortageSurplus!==false,
+      notifySurplus:shifts.notifySurplus===true
+    }
+  });
 });
 
 router.put("/stores/:storeId/layout",async(req,res,next)=>{
