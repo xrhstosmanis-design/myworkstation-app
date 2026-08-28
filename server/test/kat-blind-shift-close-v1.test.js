@@ -20,7 +20,9 @@ test("shortage offers recount or an explicitly confirmed audited close",()=>{
   assert.match(cashRoute,/SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE/);
   assert.match(cashRoute,/declared:\{drawer:body\.drawer,custody:body\.custody,coins:body\.coins,safe:body\.safe,eftposTotal:body\.eftposTotal\}/);
   assert.match(cashRoute,/Θέλεις να ξαναμετρήσεις/);
-  assert.match(closeUi,/ΟΡΙΣΤΙΚΗ ΕΠΙΒΕΒΑΙΩΣΗ/);
+  assert.match(closeUi,/ΝΑΙ — Ξαναμέτρηση/);
+  assert.match(closeUi,/ΟΧΙ — Κλείσιμο με έλλειμμα/);
+  assert.doesNotMatch(closeUi,/window\.confirm/);
   assert.match(closeUi,/forceCloseWithShortage:true/);
   assert.match(closeUi,/setCountConfirmed\(false\)/);
   assert.doesNotMatch(closeUi,/Η βάρδια έκλεισε και στάλθηκε για έλεγχο στο BackOffice/);

@@ -131,6 +131,17 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(a."saleId",'') ILIKE ${text}
           OR COALESCE(a."relatedSaleId",'') ILIKE ${text})
       ORDER BY a."createdAt" DESC LIMIT 10000`;
+    const operatorRows=await prisma.$queryRaw`
+      SELECT a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",
+        s."name" AS "storeName",a."storeId"
+      FROM "StoreOperatorAudit" a
+      LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
+      WHERE a."companyId"=${companyId}
+        AND a."eventType" IN ('SHIFT_CLOSE_SHORTAGE_ATTEMPT','SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE')
+        AND a."createdAt">=${from} AND a."createdAt"<${to}
+        AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
+        AND (${text}::text IS NULL OR COALESCE(a."eventType",'') ILIKE ${text} OR COALESCE(a."details"::text,'') ILIKE ${text})
+      ORDER BY a."createdAt" DESC LIMIT 10000`;
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
@@ -153,14 +164,15 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
     });
-    const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
-    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit",videoAccessAllowed:await hasVideoAccess(req)});
+    const operatorItems=operatorRows.map(r=>{const details=r.details&&typeof r.details==="object"?r.details:{},declared=details.declared||{},closed=r.eventType==="SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE";return{id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:n(details.shortage),description:`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`,supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"MAIN",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"}});
+    const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
+    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit",videoAccessAllowed:await hasVideoAccess(req)});
   }catch(error){next(error)}
 });
 
 router.get("/audit-events/:sourceType/:sourceId/video-context",requireManagement,requireVideoAccess,async(req,res,next)=>{
   try{
-    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId);
+    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","StoreOperatorAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId);
     const events=await prisma.$queryRaw`
       SELECT v."id",v."storeId",v."terminalPos",v."operatorId",v."operatorName",v."eventType",v."eventAt",v."nvrEventAt",v."timeOffsetSeconds",v."clipStartAt",v."clipEndAt",v."clipStatus",v."expiresAt",v."sourceType",v."sourceId",
         s."name" AS "storeName",c."cameraKey",c."displayName" AS "cameraName",c."zone",c."streamReference",connection."protocol",connection."endpoint"
