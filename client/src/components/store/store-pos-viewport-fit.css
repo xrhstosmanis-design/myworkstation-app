@@ -12,6 +12,8 @@
 .mws-standard-pos.store-pos-card {
   width: 100%;
   max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 100dvh;
   margin: 0;
   border-radius: 0;
@@ -19,20 +21,42 @@
   border-right: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .mws-standard-pos .standard-pos-grid {
   flex: 1 1 auto;
-  height: auto;
+  height: 0;
   min-height: 0;
   max-height: none;
 }
+
+.mws-standard-pos .standard-keypad {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.mws-standard-pos .standard-keypad > .customer-button { grid-row: 1; }
+.mws-standard-pos .standard-keypad > .money-cards { grid-row: 2; min-height: 64px; }
+.mws-standard-pos .standard-keypad > .number-grid {
+  grid-row: 3;
+  min-height: 0;
+  grid-template-rows: repeat(4, minmax(42px, 1fr));
+}
+.mws-standard-pos .standard-keypad > .clear-money { grid-row: 4; min-height: 42px; }
 
 .mws-standard-pos .standard-action-bar {
   flex: 0 0 auto;
   grid-template-columns: repeat(10, minmax(62px, 1fr)) minmax(190px, 2.25fr);
   gap: 5px;
   padding: 6px;
+}
+
+.mws-standard-pos .store-pos-nonfiscal {
+  flex: 0 0 auto;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 .mws-standard-pos .standard-action-bar > button {
@@ -113,8 +137,10 @@
 
   .mws-standard-pos .standard-action-bar > button,
   .mws-standard-pos .standard-payment-end > button {
-    height: 52px;
+    height: 46px;
   }
+
+  .mws-standard-pos .standard-action-bar { padding-top: 4px; padding-bottom: 4px; }
 }
 
 @media (max-width: 1250px) and (min-width: 851px) {
