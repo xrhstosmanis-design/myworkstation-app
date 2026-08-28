@@ -24,6 +24,7 @@ export default function InventoryV2Center({
     [zones, setZones] = useState([]),
     [selectedZones, setSelectedZones] = useState([]),
     [grant, setGrant] = useState(null),
+    [finalSummary, setFinalSummary] = useState(null),
     [query, setQuery] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -152,6 +153,10 @@ export default function InventoryV2Center({
         method: "POST",
         body: "{}",
       });
+      const report = await api(
+        `/api/inventory-v2/stocktakes/${current.id}/audit`,
+      );
+      setFinalSummary(report.summary);
       await open(current.id);
       await loadList();
     } catch (x) {
@@ -313,6 +318,17 @@ export default function InventoryV2Center({
   return (
     <div className="inv2">
       {error && <div className="op-alert error">{error}</div>}
+      {finalSummary && (
+        <div className="inv2-final-summary">
+          <b>Η απογραφή οριστικοποιήθηκε</b>
+          <span>
+            {finalSummary.lineCount} είδη · διαφορά{" "}
+            {finalSummary.totalDifference} · αξία διαφοράς{" "}
+            {euro(finalSummary.totalDifferenceValue)}
+          </span>
+          <button onClick={() => setFinalSummary(null)}>Κλείσιμο</button>
+        </div>
+      )}
       <div className="inv2-layout">
         <aside className="op-box">
           <h3>Inventory 2.0</h3>

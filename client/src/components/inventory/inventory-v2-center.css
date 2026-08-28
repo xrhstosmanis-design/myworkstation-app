@@ -3,6 +3,21 @@
   grid-template-columns: 310px minmax(0, 1fr);
   gap: 14px;
 }
+.inv2-final-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 2px solid #15956f;
+  border-radius: 10px;
+  background: #eafff6;
+  color: #075943;
+}
+.inv2-final-summary button {
+  margin-left: auto;
+}
 .inv2-new-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
