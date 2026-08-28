@@ -7,14 +7,14 @@
 Τελευταία ενημέρωση: 28 Αυγούστου 2026  
 Repository: `xrhstosmanis-design/myworkstation-app`  
 Production branch: `main`  
-Τελευταίο επιβεβαιωμένο functional production commit: `bd96070f64579f8b144dd18504513fe1e481a47e`
+Τελευταίο επιβεβαιωμένο functional production commit: `97d427bc86726b3e7f3e592b2b6ac86bc8c3ca85`
 
 ## Κατάσταση τελευταίου checkpoint
 
-- PR #282 — `feat(kat): enforce exactly-once reconciliation guards`: **MERGED**.
-- Merge commit: `bd96070f64579f8b144dd18504513fe1e481a47e`.
-- GitHub MyWorkStation CI #842: **SUCCESS**.
-- Render deployment #581: **SUCCESS**.
+- PR #284 — `feat(KAT): safe online cancellation and waste lifecycle`: **MERGED**.
+- Merge commit: `97d427bc86726b3e7f3e592b2b6ac86bc8c3ca85`.
+- GitHub MyWorkStation CI #846: **SUCCESS**.
+- Render deployment #583: **SUCCESS**.
 - Κατάσταση: **LIVE**.
 
 ## Τι ολοκληρώθηκε
@@ -38,6 +38,13 @@ Production branch: `main`
 17. Read-only duplicate detection για fiscal documents, sale links και stock movements στο BackOffice.
 18. Τα duplicate alerts δεν διαγράφουν και δεν μεταβάλλουν αυτόματα δεδομένα.
 19. Targeted tests 15/15, PR CI #841 και main CI #842 επιτυχή.
+20. Idempotent ακύρωση online/delivery order με advisory lock και row lock.
+21. Ακύρωση πριν την παραγωγή χωρίς sale, fiscal ή stock movement.
+22. Ακύρωση μετά την έναρξη παραγωγής με auditable waste disposition και χωρίς πλασματική επιστροφή stock.
+23. Ακύρωση μετά από οριστικοποιημένη πώληση απορρίπτεται και παραπέμπει στην ελεγχόμενη ροή return/reversal.
+24. POS ενέργεια ακύρωσης με υποχρεωτική αιτιολογία και BackOffice προβολή stage/disposition.
+25. Replay/concurrent cancellation δεν δημιουργεί δεύτερο event, audit ή stock reversal.
+26. Targeted tests 9/9, PR CI #845, main CI #846 και Render #583 επιτυχή.
 
 ## Ασφαλή όρια που παραμένουν ενεργά
 
@@ -52,20 +59,21 @@ Production branch: `main`
 - Τη δημιουργία `PaymentDeviceRouteAttempt` στο card checkout.
 - Το provider-result state machine, timeout reconciliation, retry και reversal rules.
 - Το Transaction Reconciliation Center.
-- Τα PR #277, #278, #279, #280, #281 και #282.
+- Τα PR #277, #278, #279, #280, #281, #282, #283 και #284.
 - Την καταγραφή stock movement για απλό online προϊόν.
 - Τους exactly-once fiscal/stock guards, το delayed completion lock και το duplicate detection.
+- Την online/delivery cancellation lifecycle, τα cancellation metadata και το waste disposition.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
 
 Επόμενο software checkpoint από την τελική λίστα δοκιμών:
 
-1. Έλεγξε πρώτα την υπάρχουσα υλοποίηση ακύρωσης online/delivery order πριν από την παραγωγή.
-2. Συμπλήρωσε μόνο ό,τι λείπει για ασφαλή, idempotent ακύρωση χωρίς sale, fiscal εγγραφή ή stock movement.
-3. Έλεγξε ακύρωση/φύρα μετά την παραγωγή και πρόσθεσε auditable stock compensation μόνο όπου απαιτείται.
-4. Πρόσθεσε tests για replay, concurrent cancellation και απαγόρευση διπλής επιστροφής stock.
-5. Εμφάνισε το αποτέλεσμα στο BackOffice reconciliation χωρίς αυτόματη διαγραφή ιστορικού.
+1. Έλεγξε την υπάρχουσα λειτουργία δύο ταμείων/terminals χωρίς να αλλάξεις τα ολοκληρωμένα fiscal/EFTPOS mappings.
+2. Πρόσθεσε deterministic concurrent tests για ταυτόχρονες πωλήσεις από Ταμειακή 1 και Ταμειακή 2.
+3. Επιβεβαίωσε κοινόχρηστο stock με row locking/atomic decrement και χωρίς lost update ή αρνητικό stock.
+4. Επιβεβαίωσε ξεχωριστές βάρδιες και σωστό mapping κάθε sale στο terminal, fiscal device και EFTPOS role (`STORE`/`DELIVERY`).
+5. Πρόσθεσε BackOffice evidence για cross-terminal reconciliation και fail-closed alerts σε λάθος mapping.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
