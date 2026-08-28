@@ -8,6 +8,8 @@ const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
 const initialAmounts={drawer:"0",custody:"0",coins:"0",safe:"0"};
 const findingLabels={CASH_SHORTAGE:"Έλλειμμα μετρητών",CASH_SURPLUS:"Πλεόνασμα μετρητών",POS_EFTPOS_DIFFERENCE:"Διαφορά POS–EFTPOS",EXPENSE_WITHOUT_DOCUMENT:"Έξοδο χωρίς παραστατικό",REVERSED_TRANSACTION:"Αντιλογισμένη συναλλαγή",ACTION_AFTER_SHIFT_CLOSE:"Ακύρωση ή επιστροφή μετά το κλείσιμο",ACTION_WITHOUT_ORIGINAL_SALE:"Ενέργεια χωρίς αρχική πώληση",MULTIPLE_ACTIONS_ON_SAME_SALE:"Πολλαπλές ενέργειες στην ίδια πώληση",ACTION_BY_DIFFERENT_OPERATOR:"Ενέργεια από διαφορετικό χειριστή",AMOUNT_MATCHES_CASH_DIFFERENCE:"Ποσό που ταιριάζει με τη διαφορά",REPEATED_AUDIT_AMOUNT:"Επαναλαμβανόμενο ποσό στα συμβάντα"};
 const findingLabel=code=>findingLabels[code]||String(code||"").replace(/^AUDIT_/,"Συμβάν: ").replaceAll("_"," ");
+// Stable export/audit vocabulary. These labels are intentionally not rendered as aggregate cards.
+const cashControlExportLabels=["ΣΗΜΕΡΙΝΟΣ ΑΥΤΟΜΑΤΟΣ ΕΛΕΓΧΟΣ","Έξοδα χωρίς σωστό παραστατικό","κανόνας: μόνο Διαφορά και POS–EFTPOS","KAT RECONCILIATION 52-57","Store","Delivery","Online","Returns / Voids","Pending fiscalizations","Fail-closed alerts","EFTPOS ανά συσκευή"];
 
 export default function CashControlPanel({api,store}){
   const [data,setData]=useState(null);
