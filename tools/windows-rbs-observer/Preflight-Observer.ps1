@@ -1,5 +1,5 @@
 param(
-  [string]$ApiBase="https://myworkstation.gr",
+  [string]$ApiBase="https://myworkstation-app.onrender.com",
   [string]$WatchPath="C:\capture\micrelec",
   [switch]$ForInstall
 )
