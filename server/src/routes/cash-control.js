@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { sendEmail } from "../services/mail.js";
+import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 
 const router = Router();
 let tablesPromise;
@@ -193,12 +194,15 @@ router.use(auth,requireCashAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
-  const [openRows,recentRows,lastClosedRows]=await Promise.all([
+  await ensurePosSaleSafetySchema();
+  const [openRows,recentRows,lastClosedRows,offlineRows,offlineCounts]=await Promise.all([
     prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`,
     prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} ORDER BY "openedAt" DESC LIMIT 20`,
-    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`
+    prisma.$queryRaw`SELECT * FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`,
+    prisma.$queryRaw`SELECT "clientTransactionId","status","saleId","attempts","lastErrorCode","idempotentReplay","firstReportedAt","lastReportedAt","syncedAt" FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} ORDER BY "lastReportedAt" DESC LIMIT 50`,
+    prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE "status"='PENDING')::int AS pending,COUNT(*) FILTER (WHERE "status"='FAILED')::int AS failed,COUNT(*) FILTER (WHERE "status"='SYNCED')::int AS synced,COUNT(*) FILTER (WHERE "idempotentReplay"=TRUE)::int AS replays FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`
   ]);
-  const last=normalize(lastClosedRows[0]);res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
 
 router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{

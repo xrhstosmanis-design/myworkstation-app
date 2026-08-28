@@ -118,6 +118,14 @@ export default function CashControlPanel({api,store}){
         <div><span>Έξοδα χωρίς σωστό παραστατικό</span><strong>{(daily?.expenseChecks||[]).filter(row=>row.status!=="MATCHED").length}</strong></div>
         <div><span>Πιθανές διπλές</span><strong>{daily?.totals?.duplicateCandidates||0}</strong></div>
       </section>
+      <section className={`cash-daily-summary ${(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"needs-review":"agreement"}`} data-offline-sync-evidence="true">
+        <div><span>OFFLINE ΣΥΓΧΡΟΝΙΣΜΟΣ</span><strong>{(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</strong><small>Αμετάβλητο audit ανά transaction ID</small></div>
+        <div><span>Αναμονή</span><strong>{data?.offlineSync?.counts?.pending||0}</strong></div>
+        <div><span>Αποτυχίες</span><strong className={data?.offlineSync?.counts?.failed?"cash-negative":"cash-positive"}>{data?.offlineSync?.counts?.failed||0}</strong></div>
+        <div><span>Συγχρονίστηκαν</span><strong className="cash-positive">{data?.offlineSync?.counts?.synced||0}</strong></div>
+        <div><span>Idempotent replay</span><strong>{data?.offlineSync?.counts?.replays||0}</strong></div>
+      </section>
+      {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
       <div className="cash-metrics">
         <article><span>Κατάσταση</span><strong className={data?.openSession?"cash-open":"cash-closed"}>{data?.openSession?"ΑΝΟΙΧΤΗ":"ΚΛΕΙΣΤΗ"}</strong></article>
         <article><span>Λειτουργικό ποσό</span><strong>{money(data?.openSession?.openingOperational||data?.suggestedOpening?.operational)}</strong></article>

@@ -26,9 +26,23 @@ export async function ensurePosSaleSafetySchema(){
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosSaleSafetyAudit_store_created_idx" ON "PosSaleSafetyAudit"("storeId","createdAt" DESC)`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OfflineSaleSyncEvidence" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+        "clientTransactionId" TEXT NOT NULL,"status" TEXT NOT NULL,"saleId" TEXT,
+        "attempts" INTEGER NOT NULL DEFAULT 0,"lastErrorCode" TEXT,
+        "idempotentReplay" BOOLEAN NOT NULL DEFAULT FALSE,
+        "firstReportedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"lastReportedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"syncedAt" TIMESTAMPTZ,
+        UNIQUE("storeId","clientTransactionId"),CHECK ("status" IN ('PENDING','FAILED','SYNCED'))
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OfflineSaleSyncEvidence_store_status_idx" ON "OfflineSaleSyncEvidence"("storeId","status","lastReportedAt" DESC)`);
     })().catch(error=>{readyPromise=undefined;throw error});
   }
   return readyPromise;
+}
+
+export async function upsertOfflineSyncEvidence(db,{companyId,storeId,clientTransactionId,status,saleId=null,attempts=0,lastErrorCode=null,idempotentReplay=false}){
+  const id=crypto.randomUUID(),synced=status==="SYNCED";
+  await db.$executeRaw`INSERT INTO "OfflineSaleSyncEvidence" ("id","companyId","storeId","clientTransactionId","status","saleId","attempts","lastErrorCode","idempotentReplay","syncedAt") VALUES (${id},${companyId},${storeId},${clientTransactionId},${status},${saleId},${Math.max(0,Number(attempts)||0)},${lastErrorCode},${Boolean(idempotentReplay)},${synced?new Date():null}) ON CONFLICT ("storeId","clientTransactionId") DO UPDATE SET "status"=CASE WHEN "OfflineSaleSyncEvidence"."status"='SYNCED' THEN 'SYNCED' ELSE EXCLUDED."status" END,"saleId"=COALESCE("OfflineSaleSyncEvidence"."saleId",EXCLUDED."saleId"),"attempts"=GREATEST("OfflineSaleSyncEvidence"."attempts",EXCLUDED."attempts"),"lastErrorCode"=CASE WHEN EXCLUDED."status"='SYNCED' THEN NULL ELSE EXCLUDED."lastErrorCode" END,"idempotentReplay"="OfflineSaleSyncEvidence"."idempotentReplay" OR EXCLUDED."idempotentReplay","lastReportedAt"=NOW(),"syncedAt"=COALESCE("OfflineSaleSyncEvidence"."syncedAt",EXCLUDED."syncedAt")`;
 }
 
 export function buildSaleFingerprint({customerId,items,paymentMethod,payments,total,terminalPos}){

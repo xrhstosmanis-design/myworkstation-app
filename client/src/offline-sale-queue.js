@@ -18,7 +18,7 @@ export function queueOfflineCashSale(storeId,payload,{storage=globalThis.localSt
   return row;
 }
 
-export async function syncOfflineSales({storeId,send,storage=globalThis.localStorage,online=()=>true,now=()=>new Date()}){
+export async function syncOfflineSales({storeId,send,report=async()=>{},storage=globalThis.localStorage,online=()=>true,now=()=>new Date()}){
   if(!online()||locks.has(storeId))return {skipped:true,synced:0,pending:readOfflineSaleQueue(storeId,storage).length};
   locks.add(storeId);
   try{
@@ -26,11 +26,12 @@ export async function syncOfflineSales({storeId,send,storage=globalThis.localSto
     for(const row of pending){
       const attemptedAt=now().toISOString();
       try{
+        await report({clientTransactionId:row.request.clientTransactionId,status:"PENDING",attempts:Number(row.attempts||0)}).catch(()=>{});
         const result=await send(row.request,row);
         if(!result?.saleId)throw new Error("Δεν επιστράφηκε saleId");
         history.push({...row,state:"SYNCED",saleId:result.saleId,idempotentReplay:Boolean(result.idempotentReplay),attempts:Number(row.attempts||0)+1,lastAttemptAt:attemptedAt,syncedAt:attemptedAt});
         synced+=1;
-      }catch(error){remaining.push({...row,state:"FAILED",attempts:Number(row.attempts||0)+1,lastError:String(error?.message||error),lastAttemptAt:attemptedAt})}
+      }catch(error){const attempts=Number(row.attempts||0)+1,lastError=String(error?.message||error);remaining.push({...row,state:"FAILED",attempts,lastError,lastAttemptAt:attemptedAt});await report({clientTransactionId:row.request.clientTransactionId,status:"FAILED",attempts,lastErrorCode:String(error?.code||"SYNC_FAILED").slice(0,120)}).catch(()=>{})}
     }
     if(!writeOfflineSaleQueue(storeId,remaining,storage))throw new Error("Η offline ουρά δεν ενημερώθηκε με ασφάλεια.");
     if(!persist(storage,historyKey(storeId),history.slice(-500)))throw new Error("Το ιστορικό offline συγχρονισμού δεν αποθηκεύτηκε.");
