@@ -1,5 +1,9 @@
 # MyWorkStation App v0.11 — Platform Admin & Commercial Pilot
 
+> **Συνέχεια εργασιών ΚΑΤ:** Κάθε νέα συνεδρία πρέπει να διαβάζει πρώτα το
+> [`KAT_CONTINUATION_CHECKPOINT.md`](KAT_CONTINUATION_CHECKPOINT.md). Εκεί καταγράφονται
+> όσα είναι ήδη LIVE, τι δεν πρέπει να επαναληφθεί και το ακριβές επόμενο βήμα.
+
 ## Ρόλοι εμπορικής πλατφόρμας
 
 - **Platform Super Admin**: ο ιδιοκτήτης του MyWorkStation. Διαχειρίζεται όλους τους πελάτες, τα καταστήματα, τα πακέτα και τους λογαριασμούς ιδιοκτητών.
