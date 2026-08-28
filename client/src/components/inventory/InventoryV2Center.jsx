@@ -139,6 +139,71 @@ export default function InventoryV2Center({
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  const exportAudit = async () => {
+    try {
+      const report = await api(
+        `/api/inventory-v2/stocktakes/${current.id}/audit`,
+      );
+      const rows = [
+        [
+          "SKU",
+          "Barcode",
+          "Περιγραφή",
+          "Ζώνη",
+          "Θεωρητικό",
+          "Καταμέτρηση",
+          "Διαφορά",
+          "Κόστος",
+          "Αξία διαφοράς",
+          "Καταμετρητής",
+          "Πηγή",
+          "Συμβάντα",
+        ],
+        ...report.lines.map((line) => [
+          line.sku || "",
+          line.barcode || "",
+          line.name,
+          line.zoneName || "",
+          line.expectedQuantity,
+          line.countedQuantity ?? "",
+          line.difference ?? "",
+          line.unitCost,
+          line.differenceValue ?? "",
+          line.countedBy,
+          line.countSource || "",
+          line.events
+            .map(
+              (event) =>
+                `${event.eventType} ${event.actorName} ${new Date(event.createdAt).toLocaleString("el-GR")}`,
+            )
+            .join(" | "),
+        ]),
+      ];
+      const blob = new Blob(
+          [
+            "\ufeff" +
+              rows
+                .map((row) =>
+                  row
+                    .map(
+                      (value) =>
+                        `"${String(value ?? "").replaceAll('"', '""')}"`,
+                    )
+                    .join(";"),
+                )
+                .join("\n"),
+          ],
+          { type: "text/csv;charset=utf-8" },
+        ),
+        link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `inventory-full-audit-${current.id}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (x) {
+      setError(x.message);
+    }
+  };
   const importCounts = async (file) => {
     if (!file || !current) return;
     setError("");
@@ -317,6 +382,10 @@ export default function InventoryV2Center({
                   <button onClick={exportCsv}>
                     <Download />
                     Excel / CSV
+                  </button>
+                  <button onClick={exportAudit}>
+                    <Download />
+                    Full Audit
                   </button>
                   {current.status === "DRAFT" && (
                     <label className="inv2-import">
