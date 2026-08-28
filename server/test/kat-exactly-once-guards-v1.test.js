@@ -23,6 +23,7 @@ test('online stock movements use stable database-enforced idempotency keys',()=>
 
 test('delayed completion serializes concurrent requests and replays one sale after restart',()=>{
   assert.match(handoff,/pg_advisory_xact_lock/);
+  assert.match(handoff,/IS NULL\) AS locked/);
   assert.match(handoff,/FOR UPDATE/);
   assert.match(handoff,/order\.saleId&&String\(order\.saleId\)!==saleId/);
   assert.match(handoff,/status:"DELIVERED",replay:true/);
