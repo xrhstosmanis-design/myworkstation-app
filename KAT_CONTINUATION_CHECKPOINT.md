@@ -174,6 +174,12 @@ Production branch: `main`
 - Προστέθηκε CSV import με Barcode ή SKU και ποσότητα. Κάθε γραμμή γράφεται ως `IMPORT_COUNT` ή `IMPORT_RECOUNT` στο immutable audit και δεν μπορεί να αγγίξει προϊόν εκτός του scope της απογραφής.
 - Επόμενο: targeted tests/build/CI/merge και full inventory audit/finalization report.
 
+### Inventory actions/import — συγχωνεύτηκε
+
+- PR #317, CI #933 πράσινο, merge commit `ed5ed2999c6a4b5819e29d31ddc5a26b279d8e1c`.
+- Τα κουμπιά «Νέα Ολική Απογραφή» και «Νέα Μερική Απογραφή» και το audited CSV import βρίσκονται πλέον στο `main`.
+- Ακριβές επόμενο βήμα: full inventory audit/finalization report και έπειτα οι υπόλοιπες εργασίες της λίστας go-live χωρίς επανάληψη των PR #315–#317.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
