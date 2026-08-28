@@ -28,6 +28,38 @@
   border-radius: 8px;
   padding: 6px;
 }
+.inv2-zones,
+.inv2-zone-create,
+.inv2-grant {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #cbd9e5;
+  border-radius: 9px;
+  background: #f8fbfd;
+}
+.inv2-zone-create {
+  margin-top: 12px;
+}
+.inv2-zone-create h4 {
+  margin: 0;
+}
+.inv2-grant {
+  grid-template-columns: auto 1fr 1fr auto;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.inv2-grant span {
+  grid-column: 1/-1;
+  background: #e9fff7;
+  padding: 8px;
+  border-radius: 6px;
+}
+@media (max-width: 900px) {
+  .inv2-grant {
+    grid-template-columns: 1fr;
+  }
+}
 .inv2-products label {
   display: flex;
   gap: 8px;

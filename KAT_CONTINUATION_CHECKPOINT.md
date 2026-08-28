@@ -186,6 +186,18 @@ Production branch: `main`
 - Προστέθηκε εξαγωγή Full Audit CSV από το BackOffice.
 - Επόμενο: targeted tests/build/CI/merge και Finalization summary.
 
+### Full Inventory Audit — συγχωνεύτηκε
+
+- PR #319, CI #937 πράσινο, merge commit `384b7b328f9fe598a02eee88321960fec8001437`.
+- Η πλήρης αναφορά και η εξαγωγή Full Audit βρίσκονται πλέον στο `main`.
+
+### Ενεργό checkpoint — Zones & Multi-user access
+
+- Προστέθηκε BackOffice δημιουργία και επιλογή ζωνών απογραφής.
+- Προστέθηκε έκδοση προσωρινού QR/PIN ανά απογραφή και προαιρετικά ανά ζώνη για πολλούς καταμετρητές.
+- Η πρόσβαση λήγει, περιορίζεται στο συγκεκριμένο scope και δεν δίνει πρόσβαση στο υπόλοιπο BackOffice.
+- Επόμενο: CI/merge και τελικό Inventory finalization summary.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.

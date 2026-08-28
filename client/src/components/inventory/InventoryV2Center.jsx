@@ -20,6 +20,10 @@ export default function InventoryV2Center({
     [selected, setSelected] = useState([]),
     [stocktakes, setStocktakes] = useState([]),
     [current, setCurrent] = useState(null),
+    [storeId, setStoreId] = useState(""),
+    [zones, setZones] = useState([]),
+    [selectedZones, setSelectedZones] = useState([]),
+    [grant, setGrant] = useState(null),
     [query, setQuery] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -35,12 +39,64 @@ export default function InventoryV2Center({
   }, [current, query]);
   const loadList = async () =>
       setStocktakes(await api("/api/inventory-v2/stocktakes")),
-    open = async (id) =>
-      setCurrent(await api(`/api/inventory-v2/stocktakes/${id}`));
+    open = async (id) => {
+      const result = await api(`/api/inventory-v2/stocktakes/${id}`);
+      setCurrent(result);
+      if (result.storeId && result.storeId !== storeId)
+        await loadZones(result.storeId);
+    };
   useEffect(() => {
     loadList().catch((e) => setError(e.message));
     loadCatalog?.();
   }, []);
+  const loadZones = async (value) => {
+    setStoreId(value);
+    setSelectedZones([]);
+    setZones(
+      value
+        ? await api(
+            `/api/inventory-v2/zones?storeId=${encodeURIComponent(value)}`,
+          )
+        : [],
+    );
+  };
+  const createZone = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    try {
+      await api("/api/inventory-v2/zones", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId,
+          code: f.get("code"),
+          name: f.get("name"),
+        }),
+      });
+      e.currentTarget.reset();
+      await loadZones(storeId);
+    } catch (x) {
+      setError(x.message);
+    }
+  };
+  const createGrant = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    try {
+      setGrant(
+        await api(`/api/inventory-v2/stocktakes/${current.id}/access-grants`, {
+          method: "POST",
+          body: JSON.stringify({
+            displayName: f.get("displayName"),
+            zoneId: f.get("zoneId") || null,
+            expiresMinutes: 480,
+            maxUses: 10,
+          }),
+        }),
+      );
+    } catch (x) {
+      setError(x.message);
+    }
+  };
   const create = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -50,12 +106,13 @@ export default function InventoryV2Center({
       const r = await api("/api/inventory-v2/stocktakes", {
         method: "POST",
         body: JSON.stringify({
-          storeId: f.get("storeId"),
+          storeId,
           name: f.get("name"),
           scopeType: scope,
           productIds: scope === "PARTIAL_PRODUCTS" ? selected : [],
           liveDuringTrading: f.get("live") === "on",
           recountPolicy: f.get("recountPolicy"),
+          zoneIds: selectedZones,
         }),
       });
       await loadList();
@@ -284,7 +341,12 @@ export default function InventoryV2Center({
           <form className="op-form" onSubmit={create}>
             <label>
               Κατάστημα
-              <select name="storeId" required>
+              <select
+                name="storeId"
+                required
+                value={storeId}
+                onChange={(e) => loadZones(e.target.value)}
+              >
                 <option value="">Επιλογή</option>
                 {stores
                   .filter((s) => s.active !== false)
@@ -295,6 +357,27 @@ export default function InventoryV2Center({
                   ))}
               </select>
             </label>
+            {storeId && (
+              <div className="inv2-zones">
+                <b>Ζώνες απογραφής</b>
+                {zones.map((zone) => (
+                  <label key={zone.id}>
+                    <input
+                      type="checkbox"
+                      checked={selectedZones.includes(zone.id)}
+                      onChange={(e) =>
+                        setSelectedZones((value) =>
+                          e.target.checked
+                            ? [...value, zone.id]
+                            : value.filter((id) => id !== zone.id),
+                        )
+                      }
+                    />
+                    {zone.code} · {zone.name}
+                  </label>
+                ))}
+              </div>
+            )}
             <label>
               Ονομασία
               <input
@@ -347,6 +430,14 @@ export default function InventoryV2Center({
               Έναρξη
             </button>
           </form>
+          {storeId && (
+            <form className="inv2-zone-create" onSubmit={createZone}>
+              <h4>Νέα ζώνη</h4>
+              <input name="code" placeholder="π.χ. ΡΑΦΙ-A" required />
+              <input name="name" placeholder="Ονομασία ζώνης" required />
+              <button>Προσθήκη</button>
+            </form>
+          )}
           <h4>Απογραφές</h4>
           <div className="inv2-history">
             {stocktakes.map((s) => (
@@ -413,6 +504,37 @@ export default function InventoryV2Center({
                 />
                 <span>{visible.length} είδη</span>
               </div>
+              {current.status === "DRAFT" && (
+                <form className="inv2-grant" onSubmit={createGrant}>
+                  <b>QR/PIN καταμετρητή</b>
+                  <input
+                    name="displayName"
+                    placeholder="Όνομα καταμετρητή"
+                    required
+                  />
+                  <select name="zoneId">
+                    <option value="">Όλες οι ζώνες</option>
+                    {zones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button>Έκδοση πρόσβασης</button>
+                  {grant && (
+                    <span>
+                      PIN: <strong>{grant.pin}</strong> ·{" "}
+                      <a
+                        href={grant.accessUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Άνοιγμα / QR link
+                      </a>
+                    </span>
+                  )}
+                </form>
+              )}
               <div className="inv2-table-wrap">
                 <table>
                   <thead>
