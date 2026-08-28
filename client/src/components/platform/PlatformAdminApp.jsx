@@ -254,7 +254,8 @@ export default function PlatformAdminApp(){
       let document;try{document=JSON.parse(await file.text())}catch{throw new Error("Το αρχείο backup δεν περιέχει έγκυρο JSON.")}
       const result=await request(`/api/platform/companies/${readiness.company.id}/stores/${readiness.store.id}/pilot-backup/verify`,{method:"POST",body:JSON.stringify(document)});
       const total=Object.values(result.counts||{}).reduce((sum,value)=>sum+Number(value||0),0);
-      setMessage(`Το backup επαληθεύτηκε χωρίς αλλαγή στη βάση · ${total} εγγραφές · SHA-256 ${result.checksum.slice(0,16)}.`);
+      const report=result.recoveryReport||{};
+      setMessage(`Το backup επαληθεύτηκε χωρίς αλλαγή στη βάση · ${total} εγγραφές · SHA-256 ${result.checksum.slice(0,16)} · schema ${report.backupSchemaRevision||"—"} · app ${String(report.backupAppRevision||"UNKNOWN").slice(0,12)} · dry-run ${report.dryRunResult||"PASSED"}. Επόμενο: ${report.nextManualAction||"φύλαξε το report και το rollback checkpoint."}`);
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
 

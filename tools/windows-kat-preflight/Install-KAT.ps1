@@ -29,6 +29,8 @@ $canonicalStoreModeUrl=$uri.GetLeftPart([UriPartial]::Authority)+$uri.AbsolutePa
 Write-Host "1/3 - Εκτέλεση read-only προελέγχου..."
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $preflight -ApiBase ($uri.GetLeftPart([UriPartial]::Authority))
 if($LASTEXITCODE -ne 0){throw "Η εγκατάσταση σταμάτησε επειδή ο προέλεγχος έχει blockers."}
+$health=Invoke-RestMethod -Uri (($uri.GetLeftPart([UriPartial]::Authority)).TrimEnd("/")+"/api/health") -Method Get -TimeoutSec 20
+if($health.ok -ne $true -or ![string]$health.revision){throw "Η εγκατάσταση σταμάτησε: δεν επιβεβαιώθηκε η ακριβής app revision."}
 
 Write-Host "2/3 - Δημιουργία ασφαλούς συντόμευσης Store Mode..."
 $desktop=[Environment]::GetFolderPath("CommonDesktopDirectory")
@@ -53,6 +55,8 @@ $stateFile=Join-Path $stateRoot "store-mode-installation.json"
   installedAt=(Get-Date).ToUniversalTime().ToString("o")
   storeModeUrl=$canonicalStoreModeUrl
   terminalPos=$terminalPos
+  appRevision=[string]$health.revision
+  appVersion=[string]$health.version
   shortcutPath=$shortcut
   shortcutName=$safeName
 }|ConvertTo-Json|Set-Content -LiteralPath $stateFile -Encoding UTF8
