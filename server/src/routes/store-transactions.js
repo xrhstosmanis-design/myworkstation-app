@@ -331,11 +331,13 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${store.id} AND p."status" IN ('DRAFT','APPROVED')
     ORDER BY p."documentDate" DESC,p."id" DESC LIMIT 100
   `;
-  const openSessionIds=openRows.map(row=>row.id),sessionRows=openSessionIds.length?(await prisma.$queryRaw`
-    SELECT "type","amount","subtractFromShift","reversedAt"
-    FROM "StoreTransaction"
-    WHERE "sessionId"=ANY(${openSessionIds}::text[]) AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
-  `).map(normalize):[];
+  const openSessionIds=openRows.map(row=>row.id),sessionRows=!openSession?[]:isBackoffice
+    ?(await prisma.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "sessionId"=ANY(${openSessionIds}::text[]) AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}`).map(normalize)
+    :(await prisma.$queryRaw`
+      SELECT "type","amount","subtractFromShift","reversedAt"
+      FROM "StoreTransaction"
+      WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+    `).map(normalize);
   res.json({
     store:{id:store.id,name:store.name},
     openSession,

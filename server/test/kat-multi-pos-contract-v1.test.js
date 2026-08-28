@@ -44,5 +44,5 @@ test("BackOffice aggregates every open terminal shift instead of defaulting to M
   assert.match(ledger,/"sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
   assert.match(backoffice,/data\?\.openSessions\?\.length/);
   assert.match(backoffice,/Χειριστής \/ Terminal/);
-  assert.match(backoffice,/όλων των ενεργών terminals/);
+  assert.match(backoffice,/όλα τα ενεργά terminals/);
 });
