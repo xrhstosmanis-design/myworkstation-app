@@ -7,14 +7,14 @@
 Τελευταία ενημέρωση: 28 Αυγούστου 2026  
 Repository: `xrhstosmanis-design/myworkstation-app`  
 Production branch: `main`  
-Τελευταίο επιβεβαιωμένο functional production commit: `97d427bc86726b3e7f3e592b2b6ac86bc8c3ca85`
+Τελευταίο επιβεβαιωμένο functional production commit: `d595927f2712f959b2c51451c6cc5fed539e068a`
 
 ## Κατάσταση τελευταίου checkpoint
 
-- PR #284 — `feat(KAT): safe online cancellation and waste lifecycle`: **MERGED**.
-- Merge commit: `97d427bc86726b3e7f3e592b2b6ac86bc8c3ca85`.
-- GitHub MyWorkStation CI #846: **SUCCESS**.
-- Render deployment #583: **SUCCESS**.
+- PR #286 — `feat(KAT): dual-terminal shared stock and reconciliation`: **MERGED**.
+- Merge commit: `d595927f2712f959b2c51451c6cc5fed539e068a`.
+- GitHub MyWorkStation CI #852: **SUCCESS**.
+- Render deployment #585: **SUCCESS**.
 - Κατάσταση: **LIVE**.
 
 ## Τι ολοκληρώθηκε
@@ -45,6 +45,12 @@ Production branch: `main`
 24. POS ενέργεια ακύρωσης με υποχρεωτική αιτιολογία και BackOffice προβολή stage/disposition.
 25. Replay/concurrent cancellation δεν δημιουργεί δεύτερο event, audit ή stock reversal.
 26. Targeted tests 9/9, PR CI #845, main CI #846 και Render #583 επιτυχή.
+27. Ταυτόχρονες πωλήσεις POS-1/POS-2 δεσμεύουν κοινό stock atomically και δεν επιτρέπουν αρνητικό απόθεμα.
+28. Τα παρασκευαζόμενα προϊόντα δεν αφαιρούν πλασματικό stock τελικού είδους· συνεχίζουν να καταναλώνουν τα υλικά συνταγής.
+29. Κάθε πώληση συνδέεται αποκλειστικά με την ανοιχτή βάρδια του φυσικού terminal που την εκτέλεσε.
+30. Ίδιες νόμιμες πωλήσεις σε διαφορετικά terminals έχουν διαφορετικό duplicate fingerprint, ενώ retry στο ίδιο terminal παραμένει idempotent.
+31. BackOffice cross-terminal evidence και alerts για `SHIFT_TERMINAL_MISMATCH`, `SHIFT_SESSION_MISMATCH` και `EFTPOS_ROLE_MISMATCH`.
+32. Full server tests 844/844, PR CI #851, main CI #852 και Render #585 επιτυχή.
 
 ## Ασφαλή όρια που παραμένουν ενεργά
 
@@ -59,21 +65,22 @@ Production branch: `main`
 - Τη δημιουργία `PaymentDeviceRouteAttempt` στο card checkout.
 - Το provider-result state machine, timeout reconciliation, retry και reversal rules.
 - Το Transaction Reconciliation Center.
-- Τα PR #277, #278, #279, #280, #281, #282, #283 και #284.
+- Τα PR #277, #278, #279, #280, #281, #282, #283, #284, #285 και #286.
 - Την καταγραφή stock movement για απλό online προϊόν.
 - Τους exactly-once fiscal/stock guards, το delayed completion lock και το duplicate detection.
 - Την online/delivery cancellation lifecycle, τα cancellation metadata και το waste disposition.
+- Τα dual-terminal shared-stock guards, terminal-scoped fingerprints και cross-terminal reconciliation alerts.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
 
 Επόμενο software checkpoint από την τελική λίστα δοκιμών:
 
-1. Έλεγξε την υπάρχουσα λειτουργία δύο ταμείων/terminals χωρίς να αλλάξεις τα ολοκληρωμένα fiscal/EFTPOS mappings.
-2. Πρόσθεσε deterministic concurrent tests για ταυτόχρονες πωλήσεις από Ταμειακή 1 και Ταμειακή 2.
-3. Επιβεβαίωσε κοινόχρηστο stock με row locking/atomic decrement και χωρίς lost update ή αρνητικό stock.
-4. Επιβεβαίωσε ξεχωριστές βάρδιες και σωστό mapping κάθε sale στο terminal, fiscal device και EFTPOS role (`STORE`/`DELIVERY`).
-5. Πρόσθεσε BackOffice evidence για cross-terminal reconciliation και fail-closed alerts σε λάθος mapping.
+1. Έλεγξε την υπάρχουσα offline cash-sale queue και μην ξαναγράψεις ό,τι ήδη είναι ασφαλές.
+2. Πρόσθεσε deterministic test διακοπής Internet → offline cash sale → restart εφαρμογής/PC → reconnect.
+3. Επιβεβαίωσε ότι card, IRIS, mixed payments και returns παραμένουν μπλοκαρισμένα offline.
+4. Επιβεβαίωσε exactly-once συγχρονισμό της offline πώλησης μετά το reconnect, ακόμη και με concurrent retry/restart.
+5. Πρόσθεσε BackOffice evidence για pending/synced/failed offline transactions και duplicate alerts χωρίς διαγραφή ιστορικού.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
