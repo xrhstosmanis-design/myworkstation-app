@@ -8,16 +8,16 @@ const stamp=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"shor
 const statusText=status=>({NEW:"ΝΕΑ",ACCEPTED:"ΑΠΟΔΟΧΗ",PREPARING:"ΕΤΟΙΜΑΖΕΤΑΙ",READY:"ΕΤΟΙΜΗ",OUT_FOR_DELIVERY:"ΣΤΟ DELIVERY",DELIVERED:"ΠΑΡΑΔΟΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"})[status]||status;
 
 function LinkSummary({order}){
-  const sale=order.sale,transaction=order.shiftTransaction,attempt=order.eftposAttempt,movements=order.stockMovements||[];
+  const sale=order.sale,transaction=order.shiftTransaction,attempt=order.eftposAttempt,terminal=order.terminalEvidence,movements=order.stockMovements||[];
   if(!sale&&order.status==="CANCELLED")return <div className="online-link-wait"><AlertTriangle/><div><b>Ακύρωση {order.cancellationStage==="BEFORE_PRODUCTION"?"πριν την παραγωγή":"μετά την έναρξη παραγωγής"}</b><span>{order.cancelReason||"Χωρίς αιτιολογία"} · {order.cancellationDisposition||"Απαιτείται έλεγχος"}. Δεν δημιουργήθηκε πώληση, fiscal ή αυτόματη επιστροφή stock.</span></div></div>;
   if(!sale)return <div className="online-link-wait"><Clock3/><div><b>Εμπορική εγγραφή σε αναμονή</b><span>Η πώληση και η πραγματική αφαίρεση από την αποθήκη δημιουργούνται όταν η παραγγελία γίνει «ΠΑΡΑΔΟΘΗΚΕ».</span></div></div>;
   const fiscalOk=sale.fiscalStatus&&!['NON_FISCAL','NOT_SUBMITTED','PENDING'].includes(sale.fiscalStatus),card=(sale.payments||[]).some(p=>p.method==='CARD');
   const nodes=[
-    {Icon:ShoppingBag,label:'Order → Sale',ok:true,value:sale.id,detail:`${money(sale.total)} · ${sale.status}`},
+    {Icon:ShoppingBag,label:'Order → Sale',ok:true,value:sale.id,detail:`${money(sale.total)} · ${sale.status} · ${terminal?.terminalPos||'terminal άγνωστο'}`},
     {Icon:FileCheck2,label:'Fiscal Receipt',ok:fiscalOk,value:sale.fiscalStatus||'ΧΩΡΙΣ FISCAL',detail:fiscalOk?'Φορολογική ροή καταγεγραμμένη':'Απαιτείται fiscalization'},
     {Icon:CreditCard,label:'EFTPOS Transaction',ok:card?attempt?.status==='SUCCESS':true,warn:card&&['PLANNED','TIMEOUT'].includes(attempt?.status),value:card?(attempt?.eftposDeviceCode||'ΧΩΡΙΣ EFTPOS ATTEMPT'):'Δεν απαιτείται',detail:card?(attempt?`${attempt.status} · προσπάθεια ${attempt.attemptNo||1}`:'Λείπει σύνδεση EFTPOS'):'Πληρωμή χωρίς κάρτα'},
     {Icon:Box,label:'Stock Movement',ok:movements.length>0,value:movements.length?`${movements.length} κινήσεις`:'ΧΩΡΙΣ ΚΙΝΗΣΗ',detail:movements.length?`${movements.reduce((sum,row)=>sum+Number(row.quantity||0),0)} συνολική ποσότητα`:'Έλεγχος stock/συνταγής'},
-    {Icon:Clock3,label:'Βάρδια',ok:Boolean(transaction),value:transaction?.sessionId||'ΧΩΡΙΣ ΣΥΝΔΕΣΗ',detail:transaction?`${transaction.type} · ${money(transaction.amount)}`:'Λείπει συναλλαγή βάρδιας'}
+    {Icon:Clock3,label:'Βάρδια',ok:Boolean(transaction)&&Boolean(terminal?.terminalPos),value:transaction?.sessionId||'ΧΩΡΙΣ ΣΥΝΔΕΣΗ',detail:transaction?`${terminal?.terminalPos||'ΑΓΝΩΣΤΟ TERMINAL'} · ${transaction.type} · ${money(transaction.amount)}`:'Λείπει συναλλαγή βάρδιας'}
   ];
   return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Order → Sale → Fiscal → EFTPOS → Stock</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
