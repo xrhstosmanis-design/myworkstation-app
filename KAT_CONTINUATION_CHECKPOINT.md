@@ -11,6 +11,12 @@ Production branch: `main`
 
 ## Κατάσταση τελευταίου checkpoint
 
+- PR #288 — `feat(KAT): offline restart and exactly-once reconnect`: **MERGED**.
+- Merge commit: `e3719ad98da3c54cd1a24877c9087a53eddc1abc`.
+- GitHub MyWorkStation PR CI #855: **SUCCESS**.
+- Main CI / Render deployment για το ακριβές commit: **ΕΚΚΡΕΜΕΙ ΕΠΙΒΕΒΑΙΩΣΗ**.
+- Μέχρι να επιβεβαιωθεί το deployment, τελευταίο πλήρως επιβεβαιωμένο LIVE functional commit παραμένει το `d595927f2712f959b2c51451c6cc5fed539e068a`.
+
 - PR #286 — `feat(KAT): dual-terminal shared stock and reconciliation`: **MERGED**.
 - Merge commit: `d595927f2712f959b2c51451c6cc5fed539e068a`.
 - GitHub MyWorkStation CI #852: **SUCCESS**.
@@ -51,6 +57,12 @@ Production branch: `main`
 30. Ίδιες νόμιμες πωλήσεις σε διαφορετικά terminals έχουν διαφορετικό duplicate fingerprint, ενώ retry στο ίδιο terminal παραμένει idempotent.
 31. BackOffice cross-terminal evidence και alerts για `SHIFT_TERMINAL_MISMATCH`, `SHIFT_SESSION_MISMATCH` και `EFTPOS_ROLE_MISMATCH`.
 32. Full server tests 844/844, PR CI #851, main CI #852 και Render #585 επιτυχή.
+33. Η offline cash queue αποσυνδέθηκε από το React UI σε ανεξάρτητη, επανεκκινήσιμη queue engine.
+34. Το `clientTransactionId` παραμένει σταθερό μετά από application/PC restart και σε κάθε retry.
+35. Ταυτόχρονα reconnect/retry ανά store εκτελούν ένα μόνο checkout και το server idempotency guard αποτρέπει δεύτερη πώληση.
+36. Αποτυχία συγχρονισμού παραμένει ως `FAILED` με attempts/error/timestamp· επιτυχία διατηρείται σε bounded `SYNCED` history αντί να διαγράφεται σιωπηλά.
+37. Card, IRIS, mixed payments και returns παραμένουν μπλοκαρισμένα offline.
+38. Full server tests 847/847, production client build και PR CI #855 επιτυχή.
 
 ## Ασφαλή όρια που παραμένουν ενεργά
 
@@ -65,22 +77,23 @@ Production branch: `main`
 - Τη δημιουργία `PaymentDeviceRouteAttempt` στο card checkout.
 - Το provider-result state machine, timeout reconciliation, retry και reversal rules.
 - Το Transaction Reconciliation Center.
-- Τα PR #277, #278, #279, #280, #281, #282, #283, #284, #285 και #286.
+- Τα PR #277 έως και #288.
 - Την καταγραφή stock movement για απλό online προϊόν.
 - Τους exactly-once fiscal/stock guards, το delayed completion lock και το duplicate detection.
 - Την online/delivery cancellation lifecycle, τα cancellation metadata και το waste disposition.
 - Τα dual-terminal shared-stock guards, terminal-scoped fingerprints και cross-terminal reconciliation alerts.
+- Την restart-safe offline queue, το stable client transaction ID και το serialized reconnect του PR #288.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
 
 Επόμενο software checkpoint από την τελική λίστα δοκιμών:
 
-1. Έλεγξε την υπάρχουσα offline cash-sale queue και μην ξαναγράψεις ό,τι ήδη είναι ασφαλές.
-2. Πρόσθεσε deterministic test διακοπής Internet → offline cash sale → restart εφαρμογής/PC → reconnect.
-3. Επιβεβαίωσε ότι card, IRIS, mixed payments και returns παραμένουν μπλοκαρισμένα offline.
-4. Επιβεβαίωσε exactly-once συγχρονισμό της offline πώλησης μετά το reconnect, ακόμη και με concurrent retry/restart.
-5. Πρόσθεσε BackOffice evidence για pending/synced/failed offline transactions και duplicate alerts χωρίς διαγραφή ιστορικού.
+1. Επιβεβαίωσε πρώτα main CI και Render deployment για το ακριβές commit `e3719ad98da3c54cd1a24877c9087a53eddc1abc`. Μην επαναλάβεις το PR #288.
+2. Συνέχισε μόνο με το υπόλοιπο κενό: server-side/BackOffice evidence για offline sync attempts.
+3. Κατέγραψε idempotently `PENDING`, `SYNCED` και `FAILED` ανά store + `clientTransactionId`, χωρίς να αποθηκεύεις στοιχεία κάρτας και χωρίς να μεταβάλλεις/διαγράφεις sales.
+4. Εμφάνισε στο BackOffice pending/failed counts, synced sale link και duplicate/idempotent-replay alert.
+5. Πρόσθεσε tenant/store guards και deterministic tests ότι repeated reports/restarts δεν δημιουργούν δεύτερο audit row ή δεύτερη πώληση.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
