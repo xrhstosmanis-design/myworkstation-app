@@ -180,6 +180,12 @@ Production branch: `main`
 - Τα κουμπιά «Νέα Ολική Απογραφή» και «Νέα Μερική Απογραφή» και το audited CSV import βρίσκονται πλέον στο `main`.
 - Ακριβές επόμενο βήμα: full inventory audit/finalization report και έπειτα οι υπόλοιπες εργασίες της λίστας go-live χωρίς επανάληψη των PR #315–#317.
 
+### Ενεργό checkpoint — Full Inventory Audit
+
+- Προστέθηκε tenant-scoped πλήρης αναφορά απογραφής με header/scope/snapshot, σύνολα, θεωρητικό και τελικό απόθεμα, διαφορές ποσότητας/αξίας και όλο το immutable count/recount/import event history ανά είδος.
+- Προστέθηκε εξαγωγή Full Audit CSV από το BackOffice.
+- Επόμενο: targeted tests/build/CI/merge και Finalization summary.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
