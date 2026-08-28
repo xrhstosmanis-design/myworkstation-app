@@ -10,4 +10,9 @@
 .terminal-list article{grid-template-columns:auto minmax(220px,1fr) auto}
 .terminal-list>p{padding:20px;text-align:center}
 .terminal-list .platform-store-actions{justify-content:flex-end}
+.terminal-created-notice{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;background:#e5f8ee;border:1px solid #78cfa4;border-radius:16px;padding:16px;margin:0 0 18px;color:#155c3b}
+.terminal-created-notice b,.terminal-created-notice span{grid-column:1/-1}
+.terminal-created-notice input{min-width:0;font-family:ui-monospace,monospace;font-size:12px}
+.terminal-created-notice button{white-space:nowrap}
+.terminal-created-notice .terminal-created-close{position:absolute;right:8px;top:8px;padding:5px;background:transparent;color:#155c3b}
 @media(max-width:800px){.platform-modal .terminal-create-form{grid-template-columns:1fr}.terminal-activation-box{grid-template-columns:1fr}.terminal-list article{grid-template-columns:auto 1fr}.terminal-list .platform-store-actions{grid-column:1/-1;justify-content:flex-start}}

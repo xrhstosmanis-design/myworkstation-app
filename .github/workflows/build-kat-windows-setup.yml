@@ -1,0 +1,39 @@
+name: Build KAT Windows Setup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/fix-windows-powershell5-preflight-20260828
+    paths:
+      - tools/windows-kat-setup-exe/**
+      - .github/workflows/build-kat-windows-setup.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile native Windows setup
+        shell: cmd
+        run: >-
+          C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
+          /nologo /target:winexe /optimize+
+          /reference:System.dll
+          /reference:System.Drawing.dll
+          /reference:System.Windows.Forms.dll
+          /out:MyWorkStation_Setup.exe
+          tools\windows-kat-setup-exe\MyWorkStationSetup.cs
+      - name: Record checksum
+        shell: powershell
+        run: Get-FileHash .\MyWorkStation_Setup.exe -Algorithm SHA256 | Format-List | Out-File .\MyWorkStation_Setup_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-Windows-Setup
+          path: |
+            MyWorkStation_Setup.exe
+            MyWorkStation_Setup_SHA256.txt
+          if-no-files-found: error

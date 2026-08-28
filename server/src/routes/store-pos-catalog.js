@@ -18,7 +18,7 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true};
+const adminAccess={leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true};
 async function operatorAccess(req,storeId){
   if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
   const rows=await prisma.$queryRaw`
@@ -30,7 +30,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    leftKeys:Boolean(p.leftKeys),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
+    leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
   };
 }
 async function audit(req,store,eventType,details={}){
@@ -84,6 +84,29 @@ router.use("/stores/:storeId",async(req,res,next)=>{
     if(req.method==="POST"&&/\/sales\/[^/]+\/reverse$/.test(req.path)&&!access.returnItems){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"returnItems",action:"SALE_REVERSE",saleId:req.path.split("/").at(-2)||null});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice."})}
     await persistProductAuditAction(req,store,access);
     next();
+  }catch(error){next(error)}
+});
+
+router.get("/stores/:storeId/access",(req,res)=>{
+  res.json({access:req.storeOperatorAccess||adminAccess});
+});
+
+router.put("/stores/:storeId/layout",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore,access=req.storeOperatorAccess||adminAccess;
+    if(!access.editPosButtons)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Ρύθμιση πλήκτρων POS» από το BackOffice."});
+    const layout=req.body?.layout;
+    if(!layout||typeof layout!=="object"||!Array.isArray(layout.quickKeys)||!Array.isArray(layout.categories))return res.status(400).json({error:"Η διάταξη πλήκτρων δεν είναι έγκυρη."});
+    if(layout.quickKeys.length>20||layout.categories.length>14)return res.status(400).json({error:"Επιτρέπονται έως 20 γρήγορα πλήκτρα και 14 κατηγορίες."});
+    const bytes=Buffer.byteLength(JSON.stringify(layout));
+    if(bytes>250000)return res.status(413).json({error:"Η διάταξη είναι υπερβολικά μεγάλη."});
+    const rows=await prisma.$queryRaw`
+      INSERT INTO "StorePosLayout" ("storeId","companyId","layoutJson","version","publishedBy","publishedAt")
+      VALUES (${store.id},${store.companyId},${JSON.stringify(layout)}::jsonb,1,${req.user.id},CURRENT_TIMESTAMP)
+      ON CONFLICT ("storeId") DO UPDATE SET "layoutJson"=EXCLUDED."layoutJson","version"="StorePosLayout"."version"+1,"publishedBy"=EXCLUDED."publishedBy","publishedAt"=CURRENT_TIMESTAMP
+      RETURNING "layoutJson","version","publishedAt"`;
+    await audit(req,store,"POS_BUTTON_LAYOUT_UPDATE",{version:Number(rows[0]?.version||0),quickKeys:layout.quickKeys.length,categories:layout.categories.length});
+    res.json({layout:layoutForAccess(rows[0]?.layoutJson||layout,access),version:Number(rows[0]?.version||0),publishedAt:rows[0]?.publishedAt});
   }catch(error){next(error)}
 });
 
@@ -161,6 +184,29 @@ router.get("/stores/:storeId/customers",async(req,res,next)=>{
 });
 
 router.get("/stores/:storeId",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);
+    const [layoutRows,products]=await Promise.all([
+      prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]),
+      prisma.$queryRaw`
+        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",mp."sourceCode" AS "masterCode",
+          COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
+          c."name" AS "categoryName",
+          COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",
+          COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=p."masterProductId"),'[]') AS "masterBarcodes"
+        FROM "StoreProduct" sp
+        JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId}
+        LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+        LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId" AND mp."active"=true
+        WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true
+        ORDER BY c."name" NULLS LAST,p."name" LIMIT 5000`
+    ]);
+    const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);
+    res.json({store,layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,sourceCode:row.masterCode||row.sku||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))});
+  }catch(error){next(error)}
+});
+
+router.get("/stores/:storeId/legacy-full",async(req,res,next)=>{
   try{const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id);const layoutRows=await prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]);const layout=layoutForAccess(layoutRows[0]?.layoutJson||null,access);const products=await prisma.$queryRaw`
       SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",resolved_mp."id" AS "resolvedMasterProductId",resolved_mp."sourceCode" AS "masterCode",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",c."name" AS "categoryName",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=resolved_mp."id"),'[]') AS "masterBarcodes"
       FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"

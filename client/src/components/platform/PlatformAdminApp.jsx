@@ -100,6 +100,7 @@ export default function PlatformAdminApp(){
   const [cashToTime,setCashToTime]=useState("23:59");
   const [cashOperator,setCashOperator]=useState("");
   const [terminalManager,setTerminalManager]=useState(null);
+  const [terminalActivationNotice,setTerminalActivationNotice]=useState(null);
   const [onlineStoreManager,setOnlineStoreManager]=useState(null);
   const [videoConnectionManager,setVideoConnectionManager]=useState(null);
   const [cashStoreId,setCashStoreId]=useState("");
@@ -296,7 +297,11 @@ export default function PlatformAdminApp(){
     const form=new FormData(event.currentTarget);
     try{
       const result=await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/installation-terminals`,{method:"POST",body:JSON.stringify({terminalPos:form.get("terminalPos"),displayName:form.get("displayName")})});
-      const activationUrl=`${window.location.origin}${result.activationPath}`;event.currentTarget.reset();await refreshTerminals();setTerminalManager(value=>({...value,activationUrl,activationTerminal:result.terminalPos}));setMessage(`Δημιουργήθηκε το ${result.terminalPos}. Το link ισχύει για 24 ώρες και χρησιμοποιείται μία φορά.`);
+      const activationUrl=`${window.location.origin}${result.activationPath}`;
+      event.currentTarget.reset();
+      setTerminalActivationNotice({activationUrl,terminalPos:result.terminalPos});
+      setTerminalManager(null);
+      setMessage(`Δημιουργήθηκε το ${result.terminalPos}. Το παράθυρο έκλεισε αυτόματα και το εφάπαξ link παραμένει διαθέσιμο παρακάτω.`);
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
   const rotateTerminalActivation=async terminal=>{
@@ -319,6 +324,7 @@ export default function PlatformAdminApp(){
     try{await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/device-routing`,{method:"PUT",body:JSON.stringify({fiscalDevices,eftposDevices})});event.currentTarget.reset();await refreshTerminals();setMessage(`Αποθηκεύτηκε ασφαλές Fiscal/EFTPOS mapping για ${terminalPos}.`)}catch(err){setError(err.message)}finally{setBusy("")}
   };
   const copyActivation=async()=>{try{await navigator.clipboard.writeText(terminalManager.activationUrl);setMessage(`Το link εγκατάστασης για ${terminalManager.activationTerminal} αντιγράφηκε.`)}catch{setError("Δεν ήταν δυνατή η αντιγραφή. Αντέγραψε χειροκίνητα το link.")}};
+  const copyActivationNotice=async()=>{try{await navigator.clipboard.writeText(terminalActivationNotice.activationUrl);setMessage(`Το link εγκατάστασης για ${terminalActivationNotice.terminalPos} αντιγράφηκε.`)}catch{setError("Δεν ήταν δυνατή η αντιγραφή. Αντέγραψε χειροκίνητα το link.")}};
   const openOnlineStore=async(company,store)=>{
     setBusy(`online-store:${store.id}`);setError("");
     try{const result=await request(`/api/platform/companies/${company.id}/stores/${store.id}/online-store`);setOnlineStoreManager({...result,company,store})}
@@ -384,6 +390,7 @@ export default function PlatformAdminApp(){
       <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
+      {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button></div>}
       <div className="platform-stats">
         <article><Building2/><div><span>Εταιρείες</span><strong>{data?.stats?.companies||0}</strong><small>{data?.stats?.activeCompanies||0} ενεργές</small></div></article>
         <article><Store/><div><span>Καταστήματα</span><strong>{data?.stats?.stores||0}</strong><small>Σε όλη την πλατφόρμα</small></div></article>

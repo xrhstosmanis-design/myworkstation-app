@@ -8,6 +8,7 @@ import {fileURLToPath} from "node:url";
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
 const read=file=>fs.readFileSync(path.join(repo,file),"utf8");
 const installer=read("tools/windows-kat-preflight/Install-KAT.ps1");
+const preflight=read("tools/windows-kat-preflight/Preflight-KAT.ps1");
 const launcher=read("tools/windows-kat-preflight/INSTALL_KAT.cmd");
 const guide=read("tools/windows-kat-preflight/README_KAT.txt");
 const recovery=read("tools/windows-kat-preflight/Recover-KAT.ps1");
@@ -15,14 +16,20 @@ const recoveryLauncher=read("tools/windows-kat-preflight/RECOVER_KAT.cmd");
 const manifest=JSON.parse(read("tools/windows-kat-preflight/package-manifest.json"));
 const realChecklist=read("tools/windows-kat-preflight/KAT_REAL_TEST_CHECKLIST.txt");
 
+test("Windows PowerShell 5 preflight does not use if as a parenthesized expression",()=>{
+  assert.doesNotMatch(preflight,/\+=\s*\(if\s*\(/);
+  assert.match(preflight,/https:\/\/myworkstation-app\.onrender\.com/);
+});
+
 test("KAT installer requires one exact HTTPS terminal activation URL",()=>{
   assert.match(installer,/Parameter\(Mandatory=\$true\).*StoreModeUrl/);
   assert.match(installer,/\$uri\.Scheme -ne "https"/);
   assert.match(installer,/AbsolutePath -notmatch '\^\/store\/\[\^\/\]\+\/\?\$'/);
   assert.match(installer,/terminal=\(\[A-Za-z0-9_-\]/);
   assert.match(installer,/activation=\(\[A-Za-z0-9_-\]/);
-  assert.match(launcher,/terminal=KAT-POS-01/);
-  assert.match(launcher,/activation=ONE_TIME_TOKEN/);
+  assert.match(launcher,/set \/p "installUrl=Installation link:/);
+  assert.match(launcher,/Start-Process -FilePath '%~f0' -Verb RunAs/);
+  assert.match(launcher,/-StoreModeUrl "%installUrl%"/);
 });
 
 test("permanent shortcut and recovery state never retain the one-time activation secret",()=>{
