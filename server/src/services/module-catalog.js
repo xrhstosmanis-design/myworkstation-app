@@ -2,6 +2,7 @@ export const moduleCatalog=[
   {key:"CORE",name:"MyWorkStation Core",description:"Βασική πλατφόρμα, χρήστες, καταστήματα και audit.",category:"CORE",commercialReady:true},
   {key:"PERSONNEL",name:"Προσωπικό",description:"Εργαζόμενοι, ρόλοι και κανόνες.",category:"CORE",commercialReady:true},
   {key:"SHIFTS",name:"Βάρδιες",description:"Πρόγραμμα και κατανομή βαρδιών.",category:"CORE",commercialReady:true},
+  {key:"AI_STAFF_SCHEDULER",name:"Πρόγραμμα Εργαζομένων με AI",description:"Αυτόματη δημιουργία προγράμματος ανά κατάστημα, PDF και αποστολή email στους εργαζομένους. Χρεώνεται ξεχωριστά ανά κατάστημα.",category:"AI",commercialReady:true,monthlyPriceEur:49},
   {key:"LEAVES",name:"Άδειες προσωπικού",description:"Άδειες, ασθένειες, απουσίες και διαθεσιμότητα εργαζομένων.",category:"CORE",commercialReady:true},
   {key:"CASH_CONTROL",name:"Αυτόματος Έλεγχος Ταμείων",description:"Αυτόματη διασταύρωση βαρδιών, μετρητών, POS–EFTPOS, εξόδων, παραστατικών, ακυρώσεων και επιστροφών.",category:"CONTROL",commercialReady:true,monthlyPriceEur:75},
   {key:"STORE_MODE",name:"Store Mode",description:"Προσωπική είσοδος εργαζομένων με PIN ή κάρτα.",category:"CONTROL",commercialReady:true},

@@ -3,9 +3,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import {isSuperAdmin,requireAiStaffScheduler,storePaidModuleState} from "../store-paid-modules.js";
+import {sendEmail} from "../services/mail.js";
 
 const router=Router();
 router.use(auth);
+const storeScope=(req,storeId)=>({id:storeId,...(isSuperAdmin(req.user)?{}:{companyId:req.user.companyId})});
 
 router.get("/dashboard",async(req,res,next)=>{
   try{
@@ -292,8 +295,9 @@ function buildMetrics({planned,employees,shifts,counts,warnings,explanations}){
 router.post("/schedules/generate",async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string(),weekStart:z.string().optional()}).parse(req.body);
+    await requireAiStaffScheduler(req,body.storeId);
     const store=await prisma.store.findFirst({
-      where:{id:body.storeId,companyId:req.user.companyId},
+      where:storeScope(req,body.storeId),
       include:{
         shifts:{where:{active:true}},
         employees:{
@@ -384,13 +388,14 @@ router.post("/schedules/generate",async(req,res,next)=>{
 router.get("/schedules/:id/report",async(req,res,next)=>{
   try{
     const schedule=await prisma.schedule.findFirst({
-      where:{id:req.params.id,store:{companyId:req.user.companyId}},
+      where:{id:req.params.id,...(isSuperAdmin(req.user)?{}:{store:{companyId:req.user.companyId}})},
       include:{
         store:true,
         assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{shiftType:{startTime:"asc"}}]}
       }
     });
     if(!schedule)return res.status(404).json({error:"Δεν βρέθηκε πρόγραμμα."});
+    await requireAiStaffScheduler(req,schedule.storeId);
     const map={};
     for(const a of schedule.assignments){
       if(!a.employee)continue;
@@ -412,10 +417,31 @@ router.get("/schedules/:id/report",async(req,res,next)=>{
   }catch(e){next(e)}
 });
 
+router.get("/schedules/module-state",async(req,res,next)=>{try{
+  const storeId=String(req.query.storeId||"");
+  const store=await prisma.store.findFirst({where:storeScope(req,storeId),select:{id:true}});
+  if(!store&&!isSuperAdmin(req.user))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  res.json(isSuperAdmin(req.user)?{active:true,superAdminBypass:true}:await storePaidModuleState(store.id));
+}catch(e){next(e)}});
+
+router.post("/schedules/:id/email",async(req,res,next)=>{try{
+  const schedule=await prisma.schedule.findFirst({where:{id:req.params.id,...(isSuperAdmin(req.user)?{}:{store:{companyId:req.user.companyId}})},include:{store:true,assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{shiftType:{startTime:"asc"}}]}}});
+  if(!schedule)return res.status(404).json({error:"Δεν βρέθηκε πρόγραμμα."});
+  await requireAiStaffScheduler(req,schedule.storeId);
+  const recipients=[...new Set(schedule.assignments.map(row=>row.employee?.email).filter(Boolean))];
+  if(!recipients.length)return res.status(422).json({error:"Δεν υπάρχουν email στους εργαζομένους του προγράμματος."});
+  const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const rows=schedule.assignments.filter(row=>row.employee).map(row=>`<tr><td>${esc(new Date(row.date).toLocaleDateString("el-GR"))}</td><td>${esc(row.shiftType.name)}</td><td>${esc(`${row.shiftType.startTime}-${row.shiftType.endTime}`)}</td><td><b>${esc(row.employee.fullName)}</b></td></tr>`).join("");
+  const week=new Date(schedule.weekStart).toLocaleDateString("el-GR");
+  const html=`<div style="font-family:Arial,sans-serif"><h2>Πρόγραμμα εργαζομένων · ${esc(schedule.store.name)}</h2><p>Εβδομάδα ${esc(week)}</p><table style="border-collapse:collapse;width:100%"><tr><th>Ημερομηνία</th><th>Βάρδια</th><th>Ώρα</th><th>Εργαζόμενος</th></tr>${rows}</table><p>Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
+  const result=await sendEmail({to:recipients,subject:`Πρόγραμμα εργασίας · ${schedule.store.name} · ${week}`,text:`Το πρόγραμμα εργασίας για την εβδομάδα ${week} είναι διαθέσιμο στο συνημμένο μήνυμα.`,html});
+  res.json({sent:true,recipients:result.recipients});
+}catch(e){next(e)}});
+
 router.get("/schedules/latest",async(req,res,next)=>{
   try{
     const storeId=String(req.query.storeId||"");
-    const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId}});
+    const store=await prisma.store.findFirst({where:storeScope(req,storeId)});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
     const schedule=await prisma.schedule.findFirst({
       where:{storeId},orderBy:{weekStart:"desc"},
