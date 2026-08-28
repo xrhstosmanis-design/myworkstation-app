@@ -10,7 +10,7 @@ test("central Audit includes explicit POS full-return events without replacing l
   assert.match(route,/FROM "PosSaleActionAudit" a/);
   assert.match(route,/a\."actionType" IN \('RETURN','CANCEL'\)/);
   assert.match(route,/eventType:isReturn\?"POS_RETURN":"POS_CANCEL"/);
-  assert.match(route,/sourceOfTruth:"StoreTransaction \+ PosSaleActionAudit"/);
+  assert.match(route,/sourceOfTruth:"StoreTransaction \+ PosSaleActionAudit \+ StoreOperatorAudit"/);
 });
 
 test("central Audit labels POS return events for operators",()=>{

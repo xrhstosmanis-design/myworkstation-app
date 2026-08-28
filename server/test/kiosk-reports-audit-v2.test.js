@@ -44,3 +44,14 @@ test("audit bootstrap is loaded by Vite index",()=>{
   const html=fs.readFileSync(new URL("../../client/index.html",import.meta.url),"utf8");
   assert.match(html,/report-audit-bootstrap\.js/);
 });
+
+test("events tab is permanent and shortage attempts are included in BackOffice audit",()=>{
+  const suite=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsSuite.js",import.meta.url),"utf8");
+  const entry=fs.readFileSync(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
+  const route=read("src/routes/kiosk-reports-audit.js");
+  assert.match(suite,/\["audit-events","🛡 Συμβάντα \/ Audit"\]/);
+  assert.match(entry,/installKioskReportsAuditV2\(\)/);
+  assert.match(route,/SHIFT_CLOSE_SHORTAGE_ATTEMPT/);
+  assert.match(route,/SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE/);
+  assert.match(route,/StoreTransaction \+ PosSaleActionAudit \+ StoreOperatorAudit/);
+});

@@ -24,6 +24,7 @@ import {installPromotionStoreGuard} from "./components/commerce/installPromotion
 import {installLeafletImport} from "./components/commerce/installLeafletImport.js";
 import {installBulkPricePreview} from "./components/commerce/installBulkPricePreview.js";
 import {installKioskReportsSuite} from "./components/commerce/installKioskReportsSuite.js";
+import {installKioskReportsAuditV2} from "./components/commerce/installKioskReportsAuditV2.js";
 import {installPosSaleAuditReport} from "./components/commerce/installPosSaleAuditReport.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
 import {installSupplierProductCatalog} from "./components/commerce/installSupplierProductCatalog.js";
@@ -104,6 +105,7 @@ installSalesAnalysisSuite();
 installOwnerPaymentsSuite();
 installKioskPaymentsImport();
 installOwnerShiftControlCenter();
+installKioskReportsAuditV2();
 const installReportsSafely=()=>{if(!document.querySelector(".commerce-hub"))return;if(!document.querySelector("[data-kiosk-reports-launch]"))installKioskReportsSuite();installPosSaleAuditReport()};
 const installPurchaseOrdersSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-purchase-orders-launch]"))return;const NativeObserver=window.MutationObserver;window.MutationObserver=class{observe(){}disconnect(){}};try{installPurchaseOrdersSuite()}finally{window.MutationObserver=NativeObserver}};
 const installSupplierControlSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-supplier-control-launch]"))return;installSupplierControlSuite()};
