@@ -11,6 +11,11 @@ Production branch: `main`
 
 ## Κατάσταση τελευταίου checkpoint
 
+- PR #292 — `feat(KAT): restart-safe backup recovery dry run`: **MERGED**.
+- Merge commit: `bd862b8e201f2265d579556101ca3e6f76806f5f`.
+- GitHub MyWorkStation PR CI #864: **SUCCESS**.
+- Main CI / Render deployment για το ακριβές commit: **ΕΚΚΡΕΜΕΙ ΕΠΙΒΕΒΑΙΩΣΗ**.
+
 - PR #290 — `feat(KAT): offline sync evidence in BackOffice`: **MERGED**.
 - Merge commit: `61579a8e2777b3ab9a8e5a929fd42dee1ca39221`.
 - GitHub MyWorkStation PR CI #859: **SUCCESS**.
@@ -74,6 +79,13 @@ Production branch: `main`
 42. BackOffice Cash Control εμφανίζει pending, failed, synced, replay counts, sale link, attempts και ασφαλή error code.
 43. Tenant/store guards, χωρίς στοιχεία κάρτας, χωρίς διαγραφή ή μεταβολή sales και χωρίς δεύτερο audit row.
 44. Targeted offline tests 13/13, full server tests 851/851, production client build και PR CI #859 επιτυχή.
+45. Το pilot backup περιλαμβάνει SHA-256, backup schema revision και ακριβή application revision μέσα στο προστατευμένο snapshot.
+46. Το dry-run verification επιστρέφει recovery report με checksum, backup/current app revision, schema, αποτέλεσμα και ακριβή επόμενη χειροκίνητη ενέργεια.
+47. Νέο `RECOVER_KAT_DRY_RUN.cmd` ελέγχει installation state και shortcut checksums χωρίς να αντικαθιστά τη συντόμευση.
+48. Το πραγματικό `RECOVER_KAT.cmd` παραμένει ελεγχόμενο και εκτελείται μόνο μετά από επιτυχημένο dry-run και εγκεκριμένο maintenance window.
+49. Το deployment workflow διατηρεί rollback checkpoint πριν το restart και απαιτεί ακριβή production revision μετά το deploy.
+50. Καμία production βάση, fiscal εφαρμογή, RBS υπηρεσία ή registry/scheduled task δεν μεταβλήθηκε.
+51. Targeted recovery tests 18/18, full server tests 856/856, production client build και PR CI #864 επιτυχή.
 
 ## Ασφαλή όρια που παραμένουν ενεργά
 
@@ -88,24 +100,25 @@ Production branch: `main`
 - Τη δημιουργία `PaymentDeviceRouteAttempt` στο card checkout.
 - Το provider-result state machine, timeout reconciliation, retry και reversal rules.
 - Το Transaction Reconciliation Center.
-- Τα PR #277 έως και #290.
+- Τα PR #277 έως και #292.
 - Την καταγραφή stock movement για απλό online προϊόν.
 - Τους exactly-once fiscal/stock guards, το delayed completion lock και το duplicate detection.
 - Την online/delivery cancellation lifecycle, τα cancellation metadata και το waste disposition.
 - Τα dual-terminal shared-stock guards, terminal-scoped fingerprints και cross-terminal reconciliation alerts.
 - Την restart-safe offline queue, το stable client transaction ID και το serialized reconnect του PR #288.
 - Το server-side/BackOffice offline sync evidence του PR #290.
+- Το revision-bound backup, recovery dry-run και rollback checkpoint του PR #292.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
 
 Επόμενο software checkpoint από την τελική λίστα δοκιμών:
 
-1. Επιβεβαίωσε πρώτα main CI και Render deployment για το ακριβές commit `61579a8e2777b3ab9a8e5a929fd42dee1ca39221`. Μην επαναλάβεις τα PR #288 και #290.
-2. Συνέχισε στα tests 44–51: restart εφαρμογής, restart PC, επαναφορά εφαρμογής, backup και backup integrity verification.
-3. Έλεγξε το υπάρχον Windows recovery package και μην ξαναγράψεις ασφαλείς installer/backup λειτουργίες.
-4. Πρόσθεσε deterministic dry-run restore/recovery και rollback-checkpoint test χωρίς καταστροφική επαναφορά production δεδομένων.
-5. Πρόσθεσε σαφές recovery report με backup checksum, schema/app revision, dry-run αποτέλεσμα και ακριβή επόμενη χειροκίνητη ενέργεια.
+1. Επιβεβαίωσε πρώτα main CI και Render deployment για το ακριβές commit `bd862b8e201f2265d579556101ca3e6f76806f5f`. Μην επαναλάβεις τα PR #288, #290 και #292.
+2. Συνέχισε στα tests 52–57: πλήρες audit trail, BackOffice reconciliation και κλείσιμο βάρδιας Ταμειακής 1 και Ταμειακής 2.
+3. Έλεγξε ότι Order, Sale, Fiscal Receipt, EFTPOS Transaction και Stock Movement συνδέονται χωρίς διαγραφή ή πλασματική επιτυχία.
+4. Επιβεβαίωσε ξεχωριστά totals για Store, Delivery, Online, Cash, Cards, κάθε EFTPOS συσκευή, Returns, Voids και Pending fiscalizations.
+5. Πρόσθεσε deterministic cross-terminal closing/reconciliation tests και εμφανή fail-closed alerts για κάθε ασυμφωνία.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
