@@ -8,15 +8,10 @@ import NetlinkPosPanel from "../commerce/NetlinkPosPanel.jsx";
 import "../commerce/netlink-button.css";
 import "../platform/pos-designer.css";
 import "./store-pos.css";
+import {queueOfflineCashSale,readOfflineSaleQueue,syncOfflineSales} from "../../offline-sale-queue.js";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const KAT_OFFLINE_SALE_QUEUE_V2=true;
-const offlineSaleQueueKey=storeId=>`myworkstation:offline-pos-sales:${storeId}`;
-const readOfflineSaleQueue=storeId=>{try{const rows=JSON.parse(localStorage.getItem(offlineSaleQueueKey(storeId))||"[]");return Array.isArray(rows)?rows:[]}catch{return[]}};
-const writeOfflineSaleQueue=(storeId,rows)=>{try{localStorage.setItem(offlineSaleQueueKey(storeId),JSON.stringify(rows));return true}catch{return false}};
-const offlineUuid=()=>globalThis.crypto?.randomUUID?.()||"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(Number(c)^crypto.getRandomValues(new Uint8Array(1))[0]&15>>Number(c)/4).toString(16));
-const queueOfflineCashSale=(storeId,payload)=>{const rows=readOfflineSaleQueue(storeId),id=offlineUuid(),row={id,createdAt:new Date().toISOString(),state:"PENDING",...payload,request:{...(payload.request||{}),clientTransactionId:id}};rows.push(row);if(!writeOfflineSaleQueue(storeId,rows))throw new Error("Δεν ήταν δυνατή η ασφαλής τοπική αποθήκευση της offline πώλησης.");return row;};
-const offlineSyncingStores=new Set();
 const KAT_OFFLINE_CATALOG_V1=true;
 const offlineCatalogKey=storeId=>`myworkstation:offline-pos-catalog:${storeId}`;
 const readOfflineCatalog=storeId=>{try{const row=JSON.parse(localStorage.getItem(offlineCatalogKey(storeId))||"null");return row&&row.data?row:null}catch{return null}};
@@ -46,18 +41,8 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   const load=async()=>{setError("");try{const [pos,holds,discounts]=await Promise.all([api(`/api/store-pos/stores/${store.id}`),api(`/api/store-pos/stores/${store.id}/holds`).catch(()=>({rows:[]})),api(`/api/store-pos/stores/${store.id}/audience-discounts`).catch(()=>({items:[]}))]);setData(pos);setAudienceDiscounts(discounts.items||[]);writeOfflineCatalog(store.id,pos);setHoldCount((holds.rows||[]).length)}catch(err){const cached=readOfflineCatalog(store.id);if(cached){setData(cached.data);setAudience("NORMAL");setAudienceDiscounts([]);setHoldCount(0);setMessage(`OFFLINE κατάλογος · τελευταία ενημέρωση ${new Date(cached.savedAt).toLocaleString("el-GR")}. Επιτρέπονται μόνο πωλήσεις μετρητών· κάρτα, IRIS, μικτή πληρωμή και επιστροφές παραμένουν μπλοκαρισμένες.`)}else setError(err.message)}};
   useEffect(()=>{load()},[store.id]);
   const flushOfflineSales=async()=>{
-    if(!navigator.onLine||offlineSyncingStores.has(store.id))return;
-    offlineSyncingStores.add(store.id);
-    try{
-    const pending=readOfflineSaleQueue(store.id);if(!pending.length)return;
-    const remaining=[];let synced=0;
-    for(const row of pending){
-      try{const result=await api(`/api/store-pos/stores/${store.id}/checkout`,{method:"POST",body:JSON.stringify(row.request)});if(result?.saleId)synced+=1;else remaining.push({...row,lastError:"Δεν επιστράφηκε saleId"})}
-      catch(err){remaining.push({...row,lastError:String(err?.message||err),lastAttemptAt:new Date().toISOString()})}
-    }
-    writeOfflineSaleQueue(store.id,remaining);
-    if(synced){setMessage(`Συγχρονίστηκαν με ασφάλεια ${synced} offline πωλήσεις. Εκκρεμούν ${remaining.length}.`);onChanged?.();await load()}
-    }finally{offlineSyncingStores.delete(store.id)}
+    const result=await syncOfflineSales({storeId:store.id,online:()=>navigator.onLine,send:request=>api(`/api/store-pos/stores/${store.id}/checkout`,{method:"POST",body:JSON.stringify(request)})});
+    if(result.synced){setMessage(`Συγχρονίστηκαν με ασφάλεια ${result.synced} offline πωλήσεις. Εκκρεμούν ${result.pending}.`);onChanged?.();await load()}
   };
   useEffect(()=>{const run=()=>flushOfflineSales().catch(()=>{});if(navigator.onLine)run();window.addEventListener("online",run);const timer=setInterval(()=>{if(navigator.onLine)run()},30000);return()=>{window.removeEventListener("online",run);clearInterval(timer)}},[store.id]);
   useEffect(()=>{let active=true;setNetlinkAvailable(false);api("/api/netlink/status").then(()=>{if(active)setNetlinkAvailable(true)}).catch(()=>{if(active){setNetlinkAvailable(false);setNetlinkPanel(false)}});return()=>{active=false}},[store.id]);
