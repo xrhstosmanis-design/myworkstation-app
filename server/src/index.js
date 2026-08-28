@@ -48,6 +48,7 @@ import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
 import inventoryV2Routes,{inventoryV2PublicRoutes} from "./routes/inventory-v2.js";
+import inventoryV2ImportRoutes from "./routes/inventory-v2-import.js";
 import posSaleActionsRoutes,{ensurePosSaleActionSchema} from "./routes/pos-sale-actions.js";
 import storePosCatalogRoutes from "./routes/store-pos-catalog.js";
 import storePosRoutes from "./routes/store-pos.js";
@@ -169,6 +170,7 @@ app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventor
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
 app.use("/api/inventory-ledger",auth,requireOwnerProductAccess,inventoryProductLedgerRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Routes);
+app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
