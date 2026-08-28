@@ -14,27 +14,28 @@ function sharedStockTx(openingStock){
     get stock(){return stock},
     $queryRaw(strings,...values){
       const quantity=Number(values[3]);
-      const operation=queue.then(()=>{const reserved=stock>=quantity;if(reserved)stock-=quantity;return[{trackStock:true,reserved}]});
+      const operation=queue.then(()=>{const previousStock=stock;stock-=quantity;return[{trackStock:true,reserved:true,previousStock,nextStock:stock}]});
       queue=operation.then(()=>undefined,()=>undefined);
       return operation;
     }
   };
 }
 
-test("two terminals consume one shared stock atomically without a negative result",async()=>{
+test("two terminals complete physical sales atomically and report a negative-stock warning",async()=>{
   const tx=sharedStockTx(1),sale=terminal=>reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"water",quantity:1,productName:`Νερό · ${terminal}`});
   const results=await Promise.allSettled([sale("POS-1"),sale("POS-2")]);
-  assert.equal(results.filter(row=>row.status==="fulfilled").length,1);
-  assert.equal(results.filter(row=>row.status==="rejected"&&row.reason?.code==="SHARED_STOCK_INSUFFICIENT").length,1);
-  assert.equal(tx.stock,0);
+  assert.equal(results.filter(row=>row.status==="fulfilled").length,2);
+  assert.equal(results.filter(row=>row.status==="rejected").length,0);
+  assert.equal(results.filter(row=>row.value?.warning?.code==="NEGATIVE_STOCK_RECORDED").length,1);
+  assert.equal(tx.stock,-1);
 });
 
 test("checkout binds each sale to its own terminal shift and fail-closed device route",()=>{
   assert.match(storePos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos,channel:paymentChannel\}\)/);
   assert.match(storePos,/sessionId:open\[0\]\.id,terminalPos/);
-  assert.match(storePos,/SHARED_STOCK_INSUFFICIENT/);
-  assert.match(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
+  assert.match(storePos,/NEGATIVE_STOCK_RECORDED/);
+  assert.doesNotMatch(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
   assert.match(storePos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
 });
 
