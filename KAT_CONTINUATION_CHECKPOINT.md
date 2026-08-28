@@ -151,6 +151,18 @@ Production branch: `main`
 
 Επόμενα χωρίς επανάληψη: ολοκλήρωση import αρχείου και full audit report, targeted tests, PR/CI/merge/deploy και μετά Installation Center, Device Health, Remote Installation και Update Management.
 
+### Inventory 2.0 — συγχωνεύτηκε
+
+- PR #315, CI #929 πράσινο, merge commit `139247a3b2a8173eb6c8b1f4c926e3cbe362770a`.
+- Πλήρης και μερική απογραφή, PWA/QR-PIN, zones, multi-user optimistic locking, recount, immutable audit evidence και ασφαλής οριστικοποίηση του επιλεγμένου scope βρίσκονται πλέον στο `main`.
+
+### Ενεργό checkpoint — Installation & Device Operations (σε υλοποίηση)
+
+- Προστέθηκε ενιαίο Device Health Dashboard ανά κατάστημα/τερματικό.
+- Προστέθηκε ασφαλής προγραμματισμός Remote Installation, App Update και Recovery Dry-run με κατάσταση `PLANNED`, επιβεβαίωση στο PC και υποχρεωτικό rollback checkpoint.
+- Οι εργασίες δεν εκτελούν ούτε αποστέλλουν εντολές προς RBS, EFTPOS, Netlink ή fiscal provider.
+- Επόμενο: CI/merge του Device Operations Center και μετά ολοκλήρωση inventory import/full audit και finalization report.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
