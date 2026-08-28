@@ -7,6 +7,7 @@ import OnlineStoreManager from "./OnlineStoreManager.jsx";
 import VideoConnectionManager from "./VideoConnectionManager.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
+import SuperAdminInstallationCenter from "./SuperAdminInstallationCenter.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
@@ -101,6 +102,9 @@ export default function PlatformAdminApp(){
   const [cashToTime,setCashToTime]=useState("23:59");
   const [cashOperator,setCashOperator]=useState("");
   const [terminalManager,setTerminalManager]=useState(null);
+  const [deviceOperationsManager,setDeviceOperationsManager]=useState(null);
+  const [showInstallationCenter,setShowInstallationCenter]=useState(false);
+  const [openDeviceCenter,setOpenDeviceCenter]=useState(false);
   const [terminalActivationNotice,setTerminalActivationNotice]=useState(null);
   const [onlineStoreManager,setOnlineStoreManager]=useState(null);
   const [videoConnectionManager,setVideoConnectionManager]=useState(null);
@@ -284,9 +288,9 @@ export default function PlatformAdminApp(){
     setMessage(`Η συντόμευση Store Mode για το «${store.name}» δημιουργήθηκε.`);
   };
 
-  const openTerminals=async(company,store)=>{
+  const openTerminals=async(company,store,openOperations=false)=>{
     setBusy(`terminals:${store.id}`);setError("");
-    try{const [result,routing]=await Promise.all([request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)]);setTerminalManager({company,store,terminals:result.terminals,routing,activationUrl:""})}
+    try{const [result,routing]=await Promise.all([request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)]);const manager={company,store,terminals:result.terminals,routing,activationUrl:""};setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);if(openOperations){setDeviceOperationsManager(manager);setTerminalManager(null)}else{setDeviceOperationsManager(null);setTerminalManager(manager)}}
     catch(err){setError(err.message)}finally{setBusy("")}
   };
   const refreshTerminals=async(current=terminalManager)=>{
@@ -388,7 +392,7 @@ export default function PlatformAdminApp(){
       <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><a href="/" target="_blank" rel="noreferrer" title="Ανοίγει σε νέα καρτέλα ώστε να συνεχίζεται η εγγραφή οθόνης"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
-      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
+      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Super Admin Installation Center</button><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button></div>}
@@ -458,6 +462,7 @@ export default function PlatformAdminApp(){
     {onlineStoreManager&&<OnlineStoreManager manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}
     {storeCompany&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
-    {terminalManager&&<DeviceOperationsCenter manager={terminalManager} request={request}/>}
+    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
+    {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }

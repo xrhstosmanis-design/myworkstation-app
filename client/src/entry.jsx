@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useState} from "react";
 import {createRoot} from "react-dom/client";
 import StoreOperatorApp from "./components/store/StoreOperatorWithOnlineOrders.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
@@ -70,6 +70,7 @@ const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/
 const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
 const inventoryMatch=window.location.pathname.match(/^\/inventory\/([^/]+)\/?$/);
+const remoteAssistMatch=window.location.pathname.match(/^\/remote-assist\/([^/]+)\/?$/);
 const TEST_COMPANY_ID="kat-test-company";
 const TEST_STORE_ID="kat-test-store";
 
@@ -92,6 +93,8 @@ const storeApi=async(path,options={})=>{
   if(posMatch&&response.status===404&&data.error==="Δεν βρέθηκε ενεργό κατάστημα."){returnFromStaleTestPos();return new Promise(()=>{})}
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data;
 };
+
+function RemoteAssistAcceptance({jobId}){const[code,setCode]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");const accept=async e=>{e.preventDefault();setError("");const response=await fetch(`/api/platform/device-operations/remote/${encodeURIComponent(jobId)}/accept`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});const data=await response.json();if(!response.ok)return setError(data.error||"Ο κωδικός δεν έγινε δεκτός.");setMessage(data.message)};return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#eef3f6",padding:24}}><form onSubmit={accept} style={{width:"min(480px,100%)",background:"white",padding:32,borderRadius:18,boxShadow:"0 20px 60px #1234",display:"grid",gap:16}}><h1>MyWorkStation REMOTE</h1><p>Γράψε τον εξαψήφιο κωδικό που σου έδωσε ο υπεύθυνος υποστήριξης. Η σύνδεση δεν ξεκινά χωρίς τη δική σου αποδοχή.</p><input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" pattern="\d{6}" placeholder="000000" required style={{fontSize:32,textAlign:"center",letterSpacing:8,padding:12}}/><button style={{padding:14,fontWeight:800}}>Αποδοχή REMOTE</button>{error&&<b style={{color:"#b91c1c"}}>{error}</b>}{message&&<b style={{color:"#047857"}}>{message}</b>}<small>Η αποδοχή καταγράφεται. Δεν στέλνονται εντολές σε RBS, EFTPOS ή φορολογικό μηχανισμό.</small></form></main>}
 
 installPosCheckoutSafety();
 installTouchKeyboard();
@@ -121,7 +124,8 @@ installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafel
 const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
-if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
+if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
+else if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
 else if(inventoryMatch){document.title="MyWorkStation Inventory";createRoot(document.getElementById("root")).render(<InventoryMobileApp stocktakeId={decodeURIComponent(inventoryMatch[1])}/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><PlatformPromotionCenter/></>)}
 else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<><CommercialPosApp api={storeApi} storeId={storeId}/><PosSaleActionsPanel api={storeApi} storeId={storeId}/></>)}

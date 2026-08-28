@@ -85,6 +85,7 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
+import platformStoreModulesRoutes from "./routes/platform-store-modules.js";
 import katTestRoutes from "./routes/kat-test.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
@@ -110,6 +111,7 @@ import { ensureKatPreparationCleanup } from "./kat-preparation-cleanup.js";
 import { ensureKatPreparationSeed } from "./kat-preparation-bootstrap.js";
 import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.js";
 import { ensureVideoEventsSchema } from "./video-events-bootstrap.js";
+import {ensureStorePaidModulesSchema} from "./store-paid-modules.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -132,6 +134,7 @@ app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
+app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
 app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
@@ -215,4 +218,5 @@ app.use(express.static(dist));
 app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+await ensureStorePaidModulesSchema();
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
