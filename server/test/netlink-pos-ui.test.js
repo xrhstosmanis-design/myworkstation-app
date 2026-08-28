@@ -23,8 +23,10 @@ test("POS staging execution keeps explicit confirmation and server gates",()=>{
   assert.match(panel,/\/api\/netlink\/prepare/);
   assert.match(panel,/\/api\/netlink\/execute/);
   assert.match(panel,/selected\.flow\|\|""/);
-  assert.match(panel,/toLowerCase\(\)===\"prepare\"/);
-  assert.match(panel,/crypto\?\.randomUUID/);
+  assert.match(panel,/toLowerCase\(\)==="prepare"/);
+  assert.match(panel,/numericRequestId/);
+  assert.match(panel,/Date\.now\(\)/);
+  assert.doesNotMatch(panel,/randomUUID/);
   assert.match(panel,/STAGING \$\{selected\.productId\}/);
   assert.match(panel,/testRun:true/);
   assert.match(panel,/ΕΚΤΕΛΕΣΗ ΚΛΕΙΔΩΜΕΝΗ/);
