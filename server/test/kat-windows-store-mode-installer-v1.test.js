@@ -18,6 +18,7 @@ const realChecklist=read("tools/windows-kat-preflight/KAT_REAL_TEST_CHECKLIST.tx
 
 test("Windows PowerShell 5 preflight does not use if as a parenthesized expression",()=>{
   assert.doesNotMatch(preflight,/\+=\s*\(if\s*\(/);
+  assert.match(preflight,/https:\/\/myworkstation-app\.onrender\.com/);
 });
 
 test("KAT installer requires one exact HTTPS terminal activation URL",()=>{
