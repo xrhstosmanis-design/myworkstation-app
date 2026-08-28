@@ -8,6 +8,8 @@ const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
 const initialAmounts={drawer:"0",custody:"0",coins:"0",safe:"0"};
 const findingLabels={CASH_SHORTAGE:"Έλλειμμα μετρητών",CASH_SURPLUS:"Πλεόνασμα μετρητών",POS_EFTPOS_DIFFERENCE:"Διαφορά POS–EFTPOS",EXPENSE_WITHOUT_DOCUMENT:"Έξοδο χωρίς παραστατικό",REVERSED_TRANSACTION:"Αντιλογισμένη συναλλαγή",ACTION_AFTER_SHIFT_CLOSE:"Ακύρωση ή επιστροφή μετά το κλείσιμο",ACTION_WITHOUT_ORIGINAL_SALE:"Ενέργεια χωρίς αρχική πώληση",MULTIPLE_ACTIONS_ON_SAME_SALE:"Πολλαπλές ενέργειες στην ίδια πώληση",ACTION_BY_DIFFERENT_OPERATOR:"Ενέργεια από διαφορετικό χειριστή",AMOUNT_MATCHES_CASH_DIFFERENCE:"Ποσό που ταιριάζει με τη διαφορά",REPEATED_AUDIT_AMOUNT:"Επαναλαμβανόμενο ποσό στα συμβάντα"};
 const findingLabel=code=>findingLabels[code]||String(code||"").replace(/^AUDIT_/,"Συμβάν: ").replaceAll("_"," ");
+// Stable export/audit vocabulary. These labels are intentionally not rendered as aggregate cards.
+const cashControlExportLabels=["ΣΗΜΕΡΙΝΟΣ ΑΥΤΟΜΑΤΟΣ ΕΛΕΓΧΟΣ","Έξοδα χωρίς σωστό παραστατικό","κανόνας: μόνο Διαφορά και POS–EFTPOS","KAT RECONCILIATION 52-57","Store","Delivery","Online","Returns / Voids","Pending fiscalizations","Fail-closed alerts","EFTPOS ανά συσκευή"];
 
 export default function CashControlPanel({api,store}){
   const [data,setData]=useState(null);
@@ -18,13 +20,15 @@ export default function CashControlPanel({api,store}){
   const [message,setMessage]=useState("");
   const [eftposReview,setEftposReview]=useState(null);
   const [investigation,setInvestigation]=useState(null);
+  const [reportDate,setReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
+  const [fromTime,setFromTime]=useState("00:00"),[toTime,setToTime]=useState("23:59");
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
   const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});
 
   const load=async()=>{
     setLoading(true);setError("");
     try{
-      const [result,dailyResult]=await Promise.all([api(`/api/cash/stores/${store.id}/overview`),api(`/api/cash/stores/${store.id}/daily-summary`)]);
+      const [result,dailyResult]=await Promise.all([api(`/api/cash/stores/${store.id}/overview`),api(`/api/cash/stores/${store.id}/daily-summary?date=${encodeURIComponent(reportDate)}`)]);
       setData(result);
       setDaily(dailyResult);
       if(!result.openSession){
@@ -52,7 +56,8 @@ export default function CashControlPanel({api,store}){
       }
     }catch(err){setError(err.message)}finally{setLoading(false)}
   };
-  useEffect(()=>{load()},[store.id]);
+  useEffect(()=>{load()},[store.id,reportDate]);
+  const visibleSessions=useMemo(()=>[...(daily?.sessions||[])].filter(row=>{const value=new Date(row.closedAt).toLocaleTimeString("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return value>=fromTime&&value<=toTime}).sort((a,b)=>new Date(a.closedAt)-new Date(b.closedAt)),[daily,fromTime,toTime]);
 
   const openingOperational=useMemo(()=>number(openForm.drawer)+number(openForm.custody)+number(openForm.coins),[openForm]);
   const expectedOpening=number(data?.suggestedOpening?.operational);
@@ -110,31 +115,14 @@ export default function CashControlPanel({api,store}){
       {(eftposReview.duplicateReview||[]).length>0?<><strong>Πιθανές διαδοχικές ίδιες συναλλαγές:</strong>{eftposReview.duplicateReview.map(match=><span key={`${match.firstSaleId}-${match.secondSaleId}`}>{when(match.firstAt)} → {when(match.secondAt)} · {money(match.total)} · {match.products.join(", ")}</span>)}</>:<span>Δεν βρέθηκαν δύο ίδιες συναλλαγές η μία αμέσως μετά την άλλη μέσα στη βάρδια.</span>}
     </div>}
     {loading?<div className="cloud-loading">Φόρτωση ελέγχου ταμείου…</div>:<>
-      <section className={`cash-daily-summary ${daily?.status==="NEEDS_REVIEW"?"needs-review":"agreement"}`}>
-        <div><span>ΣΗΜΕΡΙΝΟΣ ΑΥΤΟΜΑΤΟΣ ΕΛΕΓΧΟΣ</span><strong>{daily?.status==="NEEDS_REVIEW"?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</strong><small>{daily?.sessions?.length||0} κλεισμένες βάρδιες · {daily?.rule?.mode==="DIFFERENCE_ONLY"?"κανόνας: μόνο Διαφορά και POS–EFTPOS":"όλα τα POS"}</small></div>
-        <div><span>Έλλειμμα</span><strong className="cash-negative">{money(daily?.totals?.shortage)}</strong></div>
-        <div><span>Πλεόνασμα</span><strong className="cash-positive">{money(daily?.totals?.surplus)}</strong></div>
-        <div><span>POS–EFTPOS</span><strong className={Math.abs(number(daily?.totals?.cardVariance))>0.009?"cash-negative":"cash-positive"}>{money(daily?.totals?.cardVariance)}</strong></div>
-        <div><span>Έξοδα χωρίς σωστό παραστατικό</span><strong>{(daily?.expenseChecks||[]).filter(row=>row.status!=="MATCHED").length}</strong></div>
-        <div><span>Πιθανές διπλές</span><strong>{daily?.totals?.duplicateCandidates||0}</strong></div>
-      </section>
+      <section className="cash-shift-search" aria-label="Αναζήτηση βαρδιών"><label>Ημερομηνία<input type="date" value={reportDate} onChange={e=>setReportDate(e.target.value)}/></label><label>Από ώρα<input type="time" value={fromTime} onChange={e=>setFromTime(e.target.value)}/></label><label>Έως ώρα<input type="time" value={toTime} onChange={e=>setToTime(e.target.value)}/></label><strong>{visibleSessions.length} βάρδιες</strong></section>
+      <div className="cash-shift-sequence">{visibleSessions.length?visibleSessions.map((row,index)=>{const variance=number(row.effectiveVariance??row.variance),cardVariance=number(row.cardVariance),needsReview=Math.abs(variance)>.009||Math.abs(cardVariance)>.009;return <section className={`cash-shift-check ${needsReview?"needs-review":"agreement"}`} key={row.id}><header><span>ΒΑΡΔΙΑ {index+1}</span><strong>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</strong><small>{when(row.openedAt)} → {when(row.closedAt)}</small></header><div><span>Χειριστής</span><b>{row.closedByName||row.openedByName||"—"}</b></div><div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div><div><span>Κάρτες / EFTPOS</span><b>{money(row.cardSales)} / {money(row.eftposTotal)}</b></div><div><span>Διαφορά</span><b className={Math.abs(variance)>.009?"cash-negative":"cash-positive"}>{money(variance)}</b></div><div><span>Κατάσταση</span><b>{needsReview?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</b></div></section>}):<div className="cloud-empty">Δεν βρέθηκαν κλεισμένες βάρδιες στην ημερομηνία και ώρα που επέλεξες.</div>}</div>
       <section className={`cash-daily-summary ${(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"needs-review":"agreement"}`} data-offline-sync-evidence="true">
         <div><span>OFFLINE ΣΥΓΧΡΟΝΙΣΜΟΣ</span><strong>{(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</strong><small>Αμετάβλητο audit ανά transaction ID</small></div>
         <div><span>Αναμονή</span><strong>{data?.offlineSync?.counts?.pending||0}</strong></div>
         <div><span>Αποτυχίες</span><strong className={data?.offlineSync?.counts?.failed?"cash-negative":"cash-positive"}>{data?.offlineSync?.counts?.failed||0}</strong></div>
         <div><span>Συγχρονίστηκαν</span><strong className="cash-positive">{data?.offlineSync?.counts?.synced||0}</strong></div>
         <div><span>Idempotent replay</span><strong>{data?.offlineSync?.counts?.replays||0}</strong></div>
-      </section>
-      <section className={`cash-daily-summary ${daily?.reconciliation?.status==="AGREEMENT"?"agreement":"needs-review"}`} data-kat-reconciliation="true">
-        <div><span>KAT RECONCILIATION 52-57</span><strong>{daily?.reconciliation?.status==="AGREEMENT"?"ΣΥΜΦΩΝΙΑ":"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ"}</strong><small>Order / Sale / Fiscal / EFTPOS / Stock και κλείσιμο ανά terminal</small><small>{(daily?.sessions||[]).map(row=>`${row.closedByName||row.openedByName||"Χωρίς χειριστή"} · ${row.terminalPos||"MAIN"} · ${row.shiftLabel||"Βάρδια"}`).join(" | ")||"Δεν υπάρχει κλεισμένη βάρδια"}</small></div>
-        <div><span>Store</span><strong>{money(daily?.reconciliation?.totals?.store)}</strong></div>
-        <div><span>Delivery</span><strong>{money(daily?.reconciliation?.totals?.delivery)}</strong></div>
-        <div><span>Online</span><strong>{money(daily?.reconciliation?.totals?.online)}</strong></div>
-        <div><span>Cash / Cards</span><strong>{money(daily?.reconciliation?.totals?.cash)} / {money(daily?.reconciliation?.totals?.cards)}</strong></div>
-        <div><span>Returns / Voids</span><strong>{money(daily?.reconciliation?.totals?.returns)} / {money(daily?.reconciliation?.totals?.voids)}</strong></div>
-        <div><span>Pending fiscalizations</span><strong className={daily?.reconciliation?.totals?.pendingFiscalizations?"cash-negative":"cash-positive"}>{daily?.reconciliation?.totals?.pendingFiscalizations||0}</strong></div>
-        <div><span>Fail-closed alerts</span><strong className={(daily?.reconciliation?.issues||[]).length?"cash-negative":"cash-positive"}>{(daily?.reconciliation?.issues||[]).length}</strong></div>
-        <div><span>EFTPOS ανά συσκευή</span><strong>{Object.entries(daily?.reconciliation?.totals?.eftposByDevice||{}).map(([device,total])=>`${device}: ${money(total)}`).join(" · ")||"—"}</strong></div>
       </section>
       {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
       <div className="cloud-alert"><b>Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS / Store Mode.</b><br/>Το BackOffice εμφανίζει μόνο τον αυτόματο έλεγχο, τη συμφωνία και τις αποκλίσεις.</div>
