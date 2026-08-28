@@ -39,6 +39,21 @@ async function ensureInstallationTables(){
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE ("storeId","terminalPos"))`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreInstallationTerminal_store_active_idx" ON "StoreInstallationTerminal" ("storeId","active")`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreFiscalDevice" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+        "deviceCode" TEXT NOT NULL,"displayName" TEXT NOT NULL,"terminalPos" TEXT NOT NULL,
+        "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE ("storeId","deviceCode"),UNIQUE ("storeId","terminalPos"))`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreEftposDevice" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+        "deviceCode" TEXT NOT NULL,"displayName" TEXT NOT NULL,"fiscalDeviceCode" TEXT NOT NULL,
+        "role" TEXT NOT NULL CHECK ("role" IN ('STORE','DELIVERY')),
+        "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE ("storeId","deviceCode"),UNIQUE ("storeId","fiscalDeviceCode","role"))`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreFiscalDevice_store_active_idx" ON "StoreFiscalDevice" ("storeId","active")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreEftposDevice_store_active_idx" ON "StoreEftposDevice" ("storeId","active")`);
     })().catch(error=>{installationTablesPromise=undefined;throw error});
   }
   return installationTablesPromise;
@@ -84,6 +99,19 @@ function newActivation(terminal){
 function terminalView(row){
   return {id:row.id,companyId:row.companyId,storeId:row.storeId,terminalPos:row.terminalPos,displayName:row.displayName,active:row.active,activationPending:!!row.tokenHash,tokenExpiresAt:row.tokenExpiresAt,activatedAt:row.activatedAt,lastSeenAt:row.lastSeenAt,createdAt:row.createdAt};
 }
+const deviceCodeSchema=z.string().trim().min(2).max(80).regex(/^[A-Za-z0-9_-]+$/).transform(value=>value.toUpperCase());
+const terminalDeviceRoutingSchema=z.object({
+  fiscalDevices:z.array(z.object({deviceCode:deviceCodeSchema,displayName:z.string().trim().min(2).max(100),terminalPos:deviceCodeSchema,active:z.boolean().default(true)})).max(20),
+  eftposDevices:z.array(z.object({deviceCode:deviceCodeSchema,displayName:z.string().trim().min(2).max(100),fiscalDeviceCode:deviceCodeSchema,role:z.enum(["STORE","DELIVERY"]),active:z.boolean().default(true)})).max(40)
+}).superRefine((value,ctx)=>{
+  const fiscalCodes=new Set(value.fiscalDevices.map(row=>row.deviceCode));
+  const unique=(rows,key,message)=>{const values=rows.map(key);if(new Set(values).size!==values.length)ctx.addIssue({code:z.ZodIssueCode.custom,message})};
+  unique(value.fiscalDevices,row=>row.deviceCode,"Κάθε ταμειακή χρειάζεται μοναδικό κωδικό.");
+  unique(value.fiscalDevices,row=>row.terminalPos,"Κάθε terminal μπορεί να αντιστοιχιστεί σε μία μόνο ταμειακή.");
+  unique(value.eftposDevices,row=>row.deviceCode,"Κάθε EFTPOS χρειάζεται μοναδικό κωδικό.");
+  unique(value.eftposDevices,row=>`${row.fiscalDeviceCode}:${row.role}`,"Κάθε ταμειακή μπορεί να έχει ένα ενεργό EFTPOS ανά ρόλο.");
+  value.eftposDevices.forEach((row,index)=>{if(!fiscalCodes.has(row.fiscalDeviceCode))ctx.addIssue({code:z.ZodIssueCode.custom,path:["eftposDevices",index,"fiscalDeviceCode"],message:"Το EFTPOS δείχνει σε ταμειακή που δεν υπάρχει στο mapping."})});
+});
 const deletableTestCompanyNames=new Set(["KAT TEST"]);
 const permanentDeletePhrase="DELETE KAT TEST";
 const quickLabels=["ΝΕΡΟ 500ML","ΝΕΡΟ 1,5LT","ΚΟΥΛΟΥΡΙ ΘΕΣ/ΝΙΚΗΣ","ΠΟΤΗΡΙ ΜΕ ΠΑΓΟ","ΠΛΑΣΤΙΚΗ ΣΑΚΟΥΛΑ","ΜΑΣΚΑ 0,60","ΠΑΡΟΧΗ","ΜΠΑΝΑΝΑ ΤΜΧ.","ΣΑΝΤΟΥΙΤΣ","ΧΥΜΟΣ ΠΟΡΤΟΚΑΛΙ","FREDDO ESPRESSO","CAPPUCCINO","ΤΣΙΧΛΕΣ","ΑΝΑΨΥΚΤΙΚΟ 330ML","ENERGY DRINK","ΣΟΚΟΛΑΤΑ ΜΠΑΡΑ"];
@@ -413,6 +441,38 @@ router.patch("/companies/:companyId/stores/:storeId/installation-terminals/:term
     if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε το τερματικό."});
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:body.active?"STORE_TERMINAL_ENABLED":"STORE_TERMINAL_DISABLED",success:true,deviceName:`${store.name} · ${rows[0].terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
     res.json(terminalView(rows[0]));
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/device-routing",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const [fiscalDevices,eftposDevices]=await Promise.all([
+      prisma.$queryRaw`SELECT "id","deviceCode","displayName","terminalPos","active","createdAt","updatedAt" FROM "StoreFiscalDevice" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} ORDER BY "deviceCode"`,
+      prisma.$queryRaw`SELECT "id","deviceCode","displayName","fiscalDeviceCode","role","active","createdAt","updatedAt" FROM "StoreEftposDevice" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} ORDER BY "fiscalDeviceCode","role"`
+    ]);
+    res.json({store:{id:store.id,name:store.name},fiscalDevices,eftposDevices,fallbackAllowed:false});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/device-routing",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const body=terminalDeviceRoutingSchema.parse(req.body||{});
+    const terminalRows=await prisma.$queryRaw`SELECT "terminalPos" FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "active"=TRUE`;
+    const terminals=new Set(terminalRows.map(row=>String(row.terminalPos).toUpperCase()));
+    const missing=body.fiscalDevices.filter(row=>row.active&&!terminals.has(row.terminalPos)).map(row=>row.terminalPos);
+    if(missing.length){const error=new Error(`Δεν υπάρχουν ενεργά installation terminals: ${[...new Set(missing)].join(", ")}.`);error.status=409;throw error}
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`DELETE FROM "StoreEftposDevice" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+      await tx.$executeRaw`DELETE FROM "StoreFiscalDevice" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+      for(const row of body.fiscalDevices)await tx.$executeRaw`INSERT INTO "StoreFiscalDevice" ("id","companyId","storeId","deviceCode","displayName","terminalPos","active","createdBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${row.deviceCode},${row.displayName},${row.terminalPos},${row.active},${req.user.id})`;
+      for(const row of body.eftposDevices)await tx.$executeRaw`INSERT INTO "StoreEftposDevice" ("id","companyId","storeId","deviceCode","displayName","fiscalDeviceCode","role","active","createdBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${row.deviceCode},${row.displayName},${row.fiscalDeviceCode},${row.role},${row.active},${req.user.id})`;
+    });
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_PAYMENT_DEVICE_ROUTING_UPDATED",success:true,deviceName:`${store.name} · ${body.fiscalDevices.length} fiscal · ${body.eftposDevices.length} EFTPOS`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,fiscalDevices:body.fiscalDevices,eftposDevices:body.eftposDevices,fallbackAllowed:false});
   }catch(error){next(error)}
 });
 
