@@ -6,6 +6,7 @@ const preflight=fs.readFileSync(new URL("Preflight-Observer.ps1",dir),"utf8");
 
 test("observer preflight stays compatible with Windows PowerShell 5",()=>{
   assert.doesNotMatch(preflight,/\+=\s*\(if\s*\(/);
+  assert.match(preflight,/https:\/\/myworkstation-app\.onrender\.com/);
 });
 const observer=fs.readFileSync(new URL("Observer.ps1",dir),"utf8");
 const installer=fs.readFileSync(new URL("Install-Observer.ps1",dir),"utf8");
