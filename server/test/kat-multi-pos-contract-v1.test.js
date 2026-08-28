@@ -21,6 +21,7 @@ test("each KAT POS opens and returns its own terminal-scoped shift",()=>{
 test("multiple KAT POS terminals share store stock but isolate sale ledgers",()=>{
   assert.match(pos,/reserveSharedStock\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,productId:item\.productId,quantity:item\.quantity/);
   assert.match(pos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
+  assert.match(pos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
   assert.match(pos,/SHARED_STOCK_INSUFFICIENT/);
   assert.match(pos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(ledger,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);

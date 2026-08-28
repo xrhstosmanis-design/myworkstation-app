@@ -35,6 +35,7 @@ test("checkout binds each sale to its own terminal shift and fail-closed device 
   assert.match(storePos,/sessionId:open\[0\]\.id,terminalPos/);
   assert.match(storePos,/SHARED_STOCK_INSUFFICIENT/);
   assert.match(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
+  assert.match(storePos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
 });
 
 test("identical legitimate sales on POS-1 and POS-2 do not share the duplicate fingerprint",()=>{
