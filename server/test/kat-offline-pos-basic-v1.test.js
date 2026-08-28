@@ -10,6 +10,7 @@ const panel=read("client/src/components/store/StorePosPanel.jsx");
 const operator=read("client/src/components/store/StoreOperatorApp.jsx");
 const auth=read("server/src/middleware/auth.js");
 const checkout=read("server/src/routes/store-pos.js");
+const queue=read("client/src/offline-sale-queue.js");
 
 test("offline catalog and runtime permissions are persisted per store",()=>{
   assert.match(panel,/myworkstation:offline-pos-catalog:\$\{storeId\}/);
@@ -28,18 +29,18 @@ test("offline queue accepts cash only and never claims a card or return sale",()
 });
 
 test("offline cash replay keeps one stable idempotency key and cannot overlap",()=>{
-  assert.match(panel,/clientTransactionId:id/);
-  assert.match(panel,/offlineSyncingStores\.has\(store\.id\)/);
-  assert.match(panel,/offlineSyncingStores\.add\(store\.id\)/);
-  assert.match(panel,/finally\{offlineSyncingStores\.delete\(store\.id\)\}/);
-  assert.match(panel,/JSON\.stringify\(row\.request\)/);
+  assert.match(queue,/clientTransactionId:id/);
+  assert.match(queue,/locks\.has\(storeId\)/);
+  assert.match(queue,/locks\.add\(storeId\)/);
+  assert.match(queue,/finally\{locks\.delete\(storeId\)\}/);
+  assert.match(panel,/JSON\.stringify\(request\)/);
 });
 
 test("cart clears only after durable local queue write",()=>{
-  const write=panel.indexOf("if(!writeOfflineSaleQueue(storeId,rows))throw");
+  const write=queue.indexOf("if(!writeOfflineSaleQueue(storeId,rows,storage))throw");
   const queued=panel.indexOf("const offline=queueOfflineCashSale");
   const clear=panel.indexOf("clearCart()",queued);
-  assert.ok(write>=0&&queued>write&&clear>queued);
+  assert.ok(write>=0&&queued>=0&&clear>queued);
 });
 
 test("locked offline prices do not grant arbitrary retail-price changes",()=>{
