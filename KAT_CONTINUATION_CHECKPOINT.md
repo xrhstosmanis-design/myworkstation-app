@@ -4,17 +4,26 @@
 >
 > Διάβασε ολόκληρο αυτό το αρχείο πριν κάνεις οποιαδήποτε αλλαγή. Θεώρησε ολοκληρωμένα όσα αναφέρονται ως `LIVE`. Μην επαναλάβεις προηγούμενη υλοποίηση, PR, δοκιμή ή migration. Επιβεβαίωσε μόνο την τρέχουσα κατάσταση του `main`, του GitHub CI και του Render και συνέχισε αποκλειστικά από την ενότητα **Ακριβές επόμενο βήμα**.
 
-Τελευταία ενημέρωση: 28 Αυγούστου 2026 - merged checkpoint tests 52–57
+Τελευταία ενημέρωση: 28 Αυγούστου 2026 - RBS/Kiosk Manager preflight checkpoint
 Repository: `xrhstosmanis-design/myworkstation-app`  
 Production branch: `main`  
 Τελευταίο επιβεβαιωμένο functional production commit: `d595927f2712f959b2c51451c6cc5fed539e068a`
 
 ## Κατάσταση τελευταίου checkpoint
 
+- Επιβεβαιώθηκε από τον ιδιοκτήτη ότι οι ταμειακές, τα τέσσερα EFTPOS, το RBS και το Netlink είναι ήδη συνδεδεμένα και λειτουργούν μέσω **Kiosk Manager**.
+- Αύριο δεν επαναρυθμίζουμε συσκευές, IP/COM, RBS, CapDriver, Netlink ή EFTPOS. Το Kiosk Manager παραμένει η μοναδική ενεργή fiscal/provider διαδρομή.
+- Το MyWorkStation εγκαθίσταται πρώτα σε Store Mode και ο RBS/CapDriver Observer μόνο σε **READ ONLY / SHADOW MODE**. Πραγματική εντολή επιτρέπεται μόνο στο ελεγχόμενο πραγματικό test, με γνωστή συσκευή και άμεσο reconciliation.
+- Υπάρχουν έτοιμα τα `tools/windows-kat-preflight` (installation/recovery) και `tools/windows-rbs-observer` (read-only observer). Πρώτα εκτελούνται τα αντίστοιχα PRECHECK και κρατούνται τα reports.
+- PR #296 — `feat(platform): start Recovery Workflow Center`: **MERGED**.
+- Merge commit: `ef061797b4877fbb23721ae984953b2878c2d5f3`.
+- GitHub MyWorkStation PR CI #873: **SUCCESS**. Targeted recovery tests: **9/9 SUCCESS**. Full server tests: **861/861 SUCCESS**. Production client build: **SUCCESS**.
+- Το πραγματικό restore παραμένει κλειδωμένο. Το Recovery Workflow Center είναι dry-run foundation και δεν καλεί RBS/EFTPOS/fiscal provider.
+
 - Με ρητή επιλογή του χρήστη ξεκίνησε παράλληλα το μελλοντικό item **#5 Recovery Workflows**, χωρίς να αλλάζει η εκκρεμής KAT πύλη 58–62.
 - Branch `agent/recovery-workflows-20260828`: Recovery Workflow Center dry-run foundation. Δημιουργεί checksum-addressed Recovery Run, εμφανίζει revision evidence και κρατά το πραγματικό restore κλειδωμένο.
 - Το dry-run παραμένει απολύτως μη μεταβαλλόμενο: δεν γράφει επιχειρησιακά δεδομένα, δεν επαναφέρει secrets και δεν καλεί RBS/EFTPOS/fiscal provider.
-- Targeted recovery tests: **9/9 SUCCESS**. Production client build: **SUCCESS**. PR/CI/merge/deploy: **ΕΚΚΡΕΜΟΥΝ**.
+- Targeted recovery tests: **9/9 SUCCESS**. Production client build: **SUCCESS**. PR/CI/merge: **ΟΛΟΚΛΗΡΩΘΗΚΑΝ**.
 
 - PR #294 — `feat(KAT): reconcile dual-terminal shift totals`: **MERGED**.
 - Merge commit: `6b80509119feccb6ca1c9a9402eba523750b9e27`.
@@ -135,12 +144,13 @@ Production branch: `main`
 
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
-1. Μην επαναλάβεις τα tests 52–57 ή το PR #294.
-2. Επιβεβαίωσε main CI και Render deployment για το ακριβές merge commit `6b80509119feccb6ca1c9a9402eba523750b9e27` και ενημέρωσε εδώ τα run/deployment IDs.
-3. Μετά προχώρα στα tests 58-62: 10-20 πραγματικές δοκιμαστικές πωλήσεις, τελικό reconciliation και τελικό hardware/software health check.
-4. Τα tests 58-62 απαιτούν ελεγχόμενο φυσικό περιβάλλον, σωστές συσκευές και καταγραφή αποτελεσμάτων. Δεν επιτρέπεται να δηλωθούν επιτυχή μόνο από automated tests.
-5. Δήλωσε `ΚΑΤ READY FOR GO-LIVE` μόνο αν κάθε critical test είναι πράσινο και δεν υπάρχει pending fiscalization, mismatch, duplicate ή ανεξήγητη διαφορά.
-6. Για το παράλληλο item #5, ολοκλήρωσε πρώτα PR/CI/merge του `agent/recovery-workflows-20260828`. Μετά πρόσθεσε μόνο ελεγχόμενα maintenance-window/rollback approval gates· το πραγματικό restore παραμένει κλειστό μέχρι ξεχωριστή ασφαλή διαδικασία.
+1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
+2. Στο PC προετοιμασίας επαλήθευσε τα SHA-256 και εκτέλεσε τα automated/software tests, production build και recovery dry-run που δεν απαιτούν φυσικές συσκευές.
+3. Αύριο στο ΚΑΤ: εκτέλεσε πρώτα `PRECHECK_KAT.cmd` και `PRECHECK_OBSERVER_KAT.cmd`. Αν κάποιο report γράψει `FAIL`, σταμάτησε μόνο το αντίστοιχο installation και κατέγραψε το ακριβές failure· μην αλλάξεις Kiosk Manager/RBS/CapDriver για να το παρακάμψεις.
+4. Εγκατάστησε ξεχωριστά `KAT-POS-01` και `KAT-POS-02`. Ενεργοποίησε τον Observer μόνο σε READ ONLY / SHADOW MODE και επιβεβαίωσε ότι οι υπάρχουσες fiscal/provider υπηρεσίες συνεχίζουν να λειτουργούν αμετάβλητες.
+5. Κατέγραψε πριν από συναλλαγή το πραγματικό mapping: terminal → ταμειακή → EFTPOS role/device. Μην επιτρέψεις silent fallback σε άλλη συσκευή.
+6. Προχώρα στα tests 58–62: 10–20 πραγματικές δοκιμαστικές πωλήσεις, τελικό reconciliation και hardware/software health check. Μετά από timeout/άγνωστο αποτέλεσμα δεν επαναλαμβάνεται χρέωση στα τυφλά.
+7. Δήλωσε `ΚΑΤ READY FOR GO-LIVE` μόνο αν κάθε critical test είναι πράσινο και δεν υπάρχει pending fiscalization, mismatch, duplicate ή ανεξήγητη διαφορά.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
