@@ -29,6 +29,11 @@ test("business picture offers monthly summary daily drilldown and exports",()=>{
   assert.match(panel,/Αγορές \(χ\. ΦΠΑ\)/);
   assert.match(panel,/Ακαθ\. κέρδος/);
   assert.match(panel,/Καθ\. κέρδος/);
+  assert.match(panel,/Αγορές\/Πωλήσεις \(χ\.ΦΠΑ\)/);
+  assert.match(panel,/Έξοδα\/Πωλήσεις \(χ\.ΦΠΑ\)/);
+  assert.match(panel,/ΦΠΑ εξόδων/);
+  assert.match(panel,/Maximize2/);
+  assert.match(panel,/Minimize2/);
   assert.match(panel,/Excel \/ CSV/);
   assert.match(panel,/Εκτύπωση/);
 });
