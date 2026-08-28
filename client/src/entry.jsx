@@ -9,6 +9,7 @@ import KatTestCenter from "./components/platform/KatTestCenter.jsx";
 import CommerceLauncher from "./components/commerce/CommerceLauncher.jsx";
 import CommercialPosApp from "./components/commerce/CommercialPosApp.jsx";
 import PosSaleActionsPanel from "./components/commerce/PosSaleActionsPanel.jsx";
+import InventoryMobileApp from "./components/inventory/InventoryMobileApp.jsx";
 import {installAnalyticsTabs} from "./components/commerce/installAnalyticsTabs.js";
 import {installSalesAnalysisSuite} from "./components/commerce/installSalesAnalysisSuite.js";
 import {installOwnerPaymentsSuite} from "./components/commerce/installOwnerPaymentsSuite.js";
@@ -68,6 +69,7 @@ const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
 const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
+const inventoryMatch=window.location.pathname.match(/^\/inventory\/([^/]+)\/?$/);
 const TEST_COMPANY_ID="kat-test-company";
 const TEST_STORE_ID="kat-test-store";
 
@@ -120,6 +122,7 @@ const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely(
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
 if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
+else if(inventoryMatch){document.title="MyWorkStation Inventory";createRoot(document.getElementById("root")).render(<InventoryMobileApp stocktakeId={decodeURIComponent(inventoryMatch[1])}/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><PlatformPromotionCenter/></>)}
 else if(posMatch){const storeId=decodeURIComponent(posMatch[1]);const stored=readStored("storeOperatorSession");const staleTestSession=stored&&(stored.store?.id!==TEST_STORE_ID||stored.company?.id!==TEST_COMPANY_ID||stored.store?.name!=="TEST"||stored.company?.name!=="TEST"||storeId!==TEST_STORE_ID);document.title="MyWorkStation POS";if(staleTestSession)returnFromStaleTestPos();else createRoot(document.getElementById("root")).render(<><CommercialPosApp api={storeApi} storeId={storeId}/><PosSaleActionsPanel api={storeApi} storeId={storeId}/></>)}
 else if(storeMatch){const storeId=decodeURIComponent(storeMatch[1]);document.title="MyWorkStation Store Mode";createRoot(document.getElementById("root")).render(<StoreOperatorApp api={storeApi} storeId={storeId}/>)}
