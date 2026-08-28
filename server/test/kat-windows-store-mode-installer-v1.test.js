@@ -27,8 +27,9 @@ test("KAT installer requires one exact HTTPS terminal activation URL",()=>{
   assert.match(installer,/AbsolutePath -notmatch '\^\/store\/\[\^\/\]\+\/\?\$'/);
   assert.match(installer,/terminal=\(\[A-Za-z0-9_-\]/);
   assert.match(installer,/activation=\(\[A-Za-z0-9_-\]/);
-  assert.match(launcher,/terminal=KAT-POS-01/);
-  assert.match(launcher,/activation=ONE_TIME_TOKEN/);
+  assert.match(launcher,/set \/p "installUrl=Installation link:/);
+  assert.match(launcher,/Start-Process -FilePath '%~f0' -Verb RunAs/);
+  assert.match(launcher,/-StoreModeUrl "%installUrl%"/);
 });
 
 test("permanent shortcut and recovery state never retain the one-time activation secret",()=>{
