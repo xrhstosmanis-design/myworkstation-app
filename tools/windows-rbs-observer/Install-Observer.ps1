@@ -1,4 +1,4 @@
-param([string]$PairingCode,[string]$ApiBase="https://myworkstation.gr",[string]$WatchPath="C:\capture\micrelec")
+param([string]$PairingCode,[string]$ApiBase="https://myworkstation-app.onrender.com",[string]$WatchPath="C:\capture\micrelec")
 $ErrorActionPreference="Stop"
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if(!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw "Run INSTALL_OBSERVER_KAT.cmd as Administrator."}
