@@ -96,6 +96,45 @@ const statements=[
 )`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "StocktakeLine_stocktake_product_key" ON "StocktakeLine"("stocktakeId","productId")`,
 `CREATE INDEX IF NOT EXISTS "StocktakeLine_product_idx" ON "StocktakeLine"("productId")`
+,
+`CREATE TABLE IF NOT EXISTS "InventoryZone" (
+  "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"code" TEXT NOT NULL,"name" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true,
+  "createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT "InventoryZone_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE,
+  CONSTRAINT "InventoryZone_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE
+)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "InventoryZone_store_code_key" ON "InventoryZone"("storeId","code")`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "inventoryVersion" INTEGER NOT NULL DEFAULT 2`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "liveDuringTrading" BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "recountPolicy" TEXT NOT NULL DEFAULT 'DIFFERENCES'`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "snapshotJson" JSONB`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "scopeType" TEXT NOT NULL DEFAULT 'FULL'`,
+`ALTER TABLE "Stocktake" ADD COLUMN IF NOT EXISTS "scopeJson" JSONB`,
+`ALTER TABLE "StocktakeLine" ADD COLUMN IF NOT EXISTS "zoneId" TEXT`,
+`ALTER TABLE "StocktakeLine" ADD COLUMN IF NOT EXISTS "countVersion" INTEGER NOT NULL DEFAULT 0`,
+`ALTER TABLE "StocktakeLine" ADD COLUMN IF NOT EXISTS "recountRequired" BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE "StocktakeLine" ADD COLUMN IF NOT EXISTS "countSource" TEXT`,
+`CREATE INDEX IF NOT EXISTS "StocktakeLine_zone_idx" ON "StocktakeLine"("stocktakeId","zoneId")`,
+`CREATE TABLE IF NOT EXISTS "InventoryParticipant" (
+  "id" TEXT PRIMARY KEY,"stocktakeId" TEXT NOT NULL,"zoneId" TEXT,"userId" TEXT,"displayName" TEXT NOT NULL,"role" TEXT NOT NULL DEFAULT 'COUNTER',"active" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "InventoryParticipant_stocktake_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE
+)`,
+`CREATE INDEX IF NOT EXISTS "InventoryParticipant_stocktake_idx" ON "InventoryParticipant"("stocktakeId","active")`,
+`CREATE TABLE IF NOT EXISTS "InventoryAccessGrant" (
+  "id" TEXT PRIMARY KEY,"stocktakeId" TEXT NOT NULL,"zoneId" TEXT,"tokenHash" TEXT NOT NULL,"pinHash" TEXT NOT NULL,"displayName" TEXT NOT NULL,
+  "expiresAt" TIMESTAMPTZ NOT NULL,"maxUses" INTEGER NOT NULL DEFAULT 1,"usedCount" INTEGER NOT NULL DEFAULT 0,"revokedAt" TIMESTAMPTZ,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT "InventoryAccessGrant_stocktake_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE
+)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "InventoryAccessGrant_token_key" ON "InventoryAccessGrant"("tokenHash")`,
+`CREATE TABLE IF NOT EXISTS "InventoryCountEvent" (
+  "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"stocktakeId" TEXT NOT NULL,"lineId" TEXT NOT NULL,"zoneId" TEXT,
+  "eventType" TEXT NOT NULL,"previousQuantity" NUMERIC(14,4),"countedQuantity" NUMERIC(14,4) NOT NULL,"expectedQuantity" NUMERIC(14,4) NOT NULL,
+  "actorId" TEXT,"actorName" TEXT NOT NULL,"deviceId" TEXT,"source" TEXT NOT NULL,"clientEventId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT "InventoryCountEvent_stocktake_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE,
+  CONSTRAINT "InventoryCountEvent_line_fkey" FOREIGN KEY ("lineId") REFERENCES "StocktakeLine"("id") ON DELETE CASCADE
+)`,
+`CREATE UNIQUE INDEX IF NOT EXISTS "InventoryCountEvent_client_key" ON "InventoryCountEvent"("stocktakeId","clientEventId") WHERE "clientEventId" IS NOT NULL`,
+`CREATE INDEX IF NOT EXISTS "InventoryCountEvent_stocktake_created_idx" ON "InventoryCountEvent"("stocktakeId","createdAt")`
 ];
 
 export async function ensureOwnerProductSchema(){

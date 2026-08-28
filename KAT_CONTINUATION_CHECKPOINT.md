@@ -142,6 +142,15 @@ Production branch: `main`
 
 ## Ακριβές επόμενο βήμα
 
+### Ενεργό checkpoint — Inventory 2.0 (σε υλοποίηση)
+
+- Προστέθηκε foundation για Πλήρη και Μερική απογραφή. Η μερική απογραφή κρατά ρητό scope προϊόντων/κατηγοριών και κατά την οριστικοποίηση ενημερώνει αποκλειστικά τις γραμμές αυτού του scope.
+- Προστέθηκαν Inventory Zones, πολλαπλοί καταμετρητές, optimistic version ανά γραμμή, immutable count/recount events, QR/PIN grants περιορισμένα σε απογραφή/ζώνη και PWA mobile οθόνη.
+- Προστέθηκε νέα BackOffice οθόνη «Inventory 2.0» με επιλογή πλήρους/μερικής απογραφής, live counting, υποχρεωτική επανακαταμέτρηση διαφορών, αναζήτηση, CSV, εκτύπωση και ασφαλή οριστικοποίηση.
+- Το παρόν είναι checkpoint ανάπτυξης και δεν χαρακτηρίζεται LIVE πριν περάσουν CI, merge και deployment verification. Δεν στέλνει πραγματικές εντολές σε EFTPOS/RBS/Netlink/fiscal provider.
+
+Επόμενα χωρίς επανάληψη: ολοκλήρωση import αρχείου και full audit report, targeted tests, PR/CI/merge/deploy και μετά Installation Center, Device Health, Remote Installation και Update Management.
+
 Επόμενο checkpoint από την τελική λίστα δοκιμών:
 
 1. Μην επαναλάβεις τα tests 52–57, το PR #294 ή το Recovery Workflow foundation του PR #296.
