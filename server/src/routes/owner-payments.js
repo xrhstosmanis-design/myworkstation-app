@@ -63,6 +63,57 @@ function mergeByKey(primary,secondary,key,fields){
   return [...rows.values()];
 }
 
+router.get("/business-picture",async(req,res,next)=>{
+  try{
+    requireOwnerReport(req);
+    const query=reportQuery.pick({from:true,to:true,storeId:true}).parse(req.query||{});
+    const {from,to}=dateRange(query),companyId=req.user.companyId,storeId=query.storeId||null;
+    await verifyStore(companyId,storeId);
+    const [stores,sales,purchases,expenses]=await Promise.all([
+      prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
+      prisma.$queryRaw`
+        SELECT DATE_TRUNC('month',sa."occurredAt") AS month,DATE(sa."occurredAt") AS day,
+          COUNT(DISTINCT sa."id")::int AS transactions,COALESCE(SUM(sl."lineTotal"),0) AS "salesGross",
+          COALESCE(SUM(CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesNet",
+          COALESCE(SUM(sl."lineTotal"-CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesVat",
+          COALESCE(SUM(sl."quantity"*COALESCE(pc."unitCost",p."costPrice",0)),0) AS "costValue"
+        FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
+        LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
+        LEFT JOIN LATERAL (
+          SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost"
+          FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId"
+          WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=sa."occurredAt"
+          ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
+        ) pc ON true
+        WHERE sa."occurredAt">=${from} AND sa."occurredAt"<=${to} AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        GROUP BY DATE_TRUNC('month',sa."occurredAt"),DATE(sa."occurredAt") ORDER BY day`,
+      prisma.$queryRaw`
+        SELECT DATE_TRUNC('month',"documentDate") AS month,DATE("documentDate") AS day,COUNT(*)::int AS documents,
+          COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
+        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=${from} AND "documentDate"<=${to}
+          AND (${storeId}::text IS NULL OR "storeId"=${storeId})
+        GROUP BY DATE_TRUNC('month',"documentDate"),DATE("documentDate") ORDER BY day`,
+      prisma.$queryRaw`
+        SELECT DATE_TRUNC('month',"occurredAt") AS month,DATE("occurredAt") AS day,
+          COUNT(*) FILTER (WHERE "reversedAt" IS NULL)::int AS payments,
+          COALESCE(SUM("amount") FILTER (WHERE "reversedAt" IS NULL AND "type"='OTHER_EXPENSE'),0) AS expenses,
+          COALESCE(SUM("amount") FILTER (WHERE "reversedAt" IS NULL),0) AS "paymentTotal"
+        FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "occurredAt">=${from} AND "occurredAt"<=${to}
+          AND (${storeId}::text IS NULL OR "storeId"=${storeId})
+        GROUP BY DATE_TRUNC('month',"occurredAt"),DATE("occurredAt") ORDER BY day`
+    ]);
+    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0});return rows.get(id)};
+    for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
+    for(const row of purchases)Object.assign(ensure(row.day,row.month),{documents:n(row.documents),purchaseNet:n(row.purchaseNet),purchaseVat:n(row.purchaseVat),purchaseGross:n(row.purchaseGross)});
+    for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenses:n(row.expenses),paymentTotal:n(row.paymentTotal)});
+    const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(row=>({...row,grossProfit:row.salesNet-row.costValue,netProfit:row.salesNet-row.costValue-row.expenses}));
+    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
+    const finish=row=>({...row,margin:row.salesNet?(row.salesNet-row.costValue)/row.salesNet*100:0,grossProfit:row.salesNet-row.costValue,netProfit:row.salesNet-row.costValue-row.expenses,expenseSalesPercent:row.salesGross?row.expenses/row.salesGross*100:0});
+    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0}));
+    res.json({generatedAt:new Date().toISOString(),from,to,stores,monthly,daily,totals,calculationNotes:{grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+  }catch(error){next(error)}
+});
+
 router.get("/report",async(req,res,next)=>{
   try{
     requireOwnerReport(req);
