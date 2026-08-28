@@ -3,7 +3,7 @@ MYWORKSTATION - KAT STORE MODE
 1. Από το Super Admin ανοίξτε το κατάστημα ΚΑΤ.
 2. Πατήστε «Εγκαταστάσεις / Τερματικά», δημιουργήστε το συγκεκριμένο POS και αντιγράψτε το εφάπαξ link εγκατάστασης.
 3. Εκτελέστε:
-   INSTALL_KAT.cmd "https://myworkstation.gr/store/STORE_ID?terminal=KAT-POS-01&activation=ONE_TIME_TOKEN"
+   INSTALL_KAT.cmd "https://myworkstation-app.onrender.com/store/STORE_ID?terminal=KAT-POS-01&activation=ONE_TIME_TOKEN"
 4. Ο read-only προέλεγχος εκτελείται πρώτος. Αν βρει blocker, η εγκατάσταση σταματά.
 5. Πριν τον προέλεγχο επαληθεύονται τα SHA-256 του installation/recovery package.
 6. Με επιτυχία δημιουργείται συντόμευση χωρίς τον μυστικό κωδικό και ανοίγει μία φορά το link ενεργοποίησης στο συγκεκριμένο PC.
