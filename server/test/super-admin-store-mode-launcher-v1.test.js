@@ -14,6 +14,13 @@ test("Super Admin creates a store-specific Store Mode link and Windows shortcut"
   assert.match(platform,/>Απλή συντόμευση</);
 });
 
+test("terminal creation closes its dialog and preserves the one-time activation link",()=>{
+  assert.match(platform,/setTerminalActivationNotice\(\{activationUrl,terminalPos:result\.terminalPos\}\)/);
+  assert.match(platform,/setTerminalManager\(null\)/);
+  assert.match(platform,/terminal-created-notice/);
+  assert.match(platform,/Αντιγραφή link εγκατάστασης/);
+});
+
 test("direct Store Mode launch still requires personal PIN or card authentication",()=>{
   assert.match(entry,/const storeMatch=window\.location\.pathname\.match\(\/\^\\\/store\\\/\(\[\^\/\]\+\)/);
   assert.match(operators,/router\.post\("\/login\/pin"/);
