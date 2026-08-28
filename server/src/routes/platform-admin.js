@@ -54,6 +54,15 @@ async function ensureInstallationTables(){
         UNIQUE ("storeId","deviceCode"),UNIQUE ("storeId","fiscalDeviceCode","role"))`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreFiscalDevice_store_active_idx" ON "StoreFiscalDevice" ("storeId","active")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreEftposDevice_store_active_idx" ON "StoreEftposDevice" ("storeId","active")`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "RecoveryWorkflowRun" (
+        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+        "backupChecksum" TEXT NOT NULL,"backupSchemaRevision" TEXT NOT NULL,"backupAppRevision" TEXT NOT NULL,
+        "currentAppRevision" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'DRY_RUN_PASSED',
+        "countsJson" JSONB NOT NULL DEFAULT '{}'::jsonb,"warningsJson" JSONB NOT NULL DEFAULT '[]'::jsonb,
+        "rollbackCheckpointRequired" BOOLEAN NOT NULL DEFAULT TRUE,"realRestoreEnabled" BOOLEAN NOT NULL DEFAULT FALSE,
+        "createdBy" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE ("storeId","backupChecksum"))`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RecoveryWorkflowRun_store_created_idx" ON "RecoveryWorkflowRun" ("storeId","createdAt" DESC)`);
     })().catch(error=>{installationTablesPromise=undefined;throw error});
   }
   return installationTablesPromise;
@@ -592,6 +601,7 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup",async(req,res,n
 // PILOT_BACKUP_RESTORE_VERIFY_V1
 router.post("/companies/:companyId/stores/:storeId/pilot-backup/verify",async(req,res,next)=>{
   try{
+    await ensureInstallationTables();
     const document=req.body&&typeof req.body==="object"?req.body:null;
     if(!document)return res.status(400).json({error:"Δεν δόθηκε έγκυρο backup JSON."});
     if(document.format!=="MYWORKSTATION_PILOT_SAFETY_BACKUP_V1")return res.status(400).json({error:"Μη υποστηριζόμενη μορφή backup."});
@@ -620,8 +630,19 @@ router.post("/companies/:companyId/stores/:storeId/pilot-backup/verify",async(re
     if(document.completeness?.productCatalog===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο Product table.");
     if(document.completeness?.storeProducts===false)warnings.push("Το backup δημιουργήθηκε χωρίς διαθέσιμο StoreProduct table.");
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"PILOT_SAFETY_BACKUP_RESTORE_VERIFIED",success:true,deviceName:`${store.name} · SHA256 ${actual.slice(0,16)}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
-    const recoveryReport={backupChecksum:actual,backupSchemaRevision:String(document.revision?.schema||document.format),backupAppRevision:String(document.revision?.app||"UNKNOWN"),currentAppRevision:String(process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||"UNKNOWN"),dryRunResult:"PASSED",rollbackCheckpointRequired:true,nextManualAction:"Κατέβασε και φύλαξε το recovery report. Πραγματικό restore μόνο σε ελεγχόμενο maintenance window μετά από νέο backup και επιβεβαίωση rollback checkpoint."};
-    res.json({ok:true,restorable:true,mode:"DRY_RUN_ONLY",checksum:actual,scope:document.scope,generatedAt:document.generatedAt||null,counts,warnings,recoveryReport,security:{mutatedDatabase:false,secretsRestored:false}});
+    const backupSchemaRevision=String(document.revision?.schema||document.format),backupAppRevision=String(document.revision?.app||"UNKNOWN"),currentAppRevision=String(process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||"UNKNOWN");
+    const workflow={id:`REC-${actual.slice(0,16).toUpperCase()}`,status:"DRY_RUN_PASSED",backupChecksum:actual,backupSchemaRevision,backupAppRevision,currentAppRevision,rollbackCheckpointRequired:true,realRestoreEnabled:false,persisted:false};
+    const recoveryReport={workflowRunId:workflow.id,backupChecksum:actual,backupSchemaRevision,backupAppRevision,currentAppRevision,dryRunResult:"PASSED",rollbackCheckpointRequired:true,realRestoreEnabled:false,nextManualAction:"Κατέβασε και φύλαξε το recovery report. Πραγματικό restore μόνο σε ελεγχόμενο maintenance window μετά από νέο backup και επιβεβαίωση rollback checkpoint."};
+    res.json({ok:true,restorable:true,mode:"DRY_RUN_ONLY",checksum:actual,scope:document.scope,generatedAt:document.generatedAt||null,counts,warnings,workflow,recoveryReport,security:{mutatedDatabase:false,secretsRestored:false,externalProviderCalled:false}});
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/recovery-workflows",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const rows=await prisma.$queryRaw`SELECT "id","status","backupChecksum","backupSchemaRevision","backupAppRevision","currentAppRevision","countsJson","warningsJson","rollbackCheckpointRequired","realRestoreEnabled","createdAt","updatedAt" FROM "RecoveryWorkflowRun" WHERE "companyId"=${req.params.companyId} AND "storeId"=${store.id} ORDER BY "createdAt" DESC LIMIT 20`;
+    res.json({store:{id:store.id,name:store.name},mode:"DRY_RUN_ONLY",realRestoreEnabled:false,runs:rows});
   }catch(error){next(error)}
 });
 

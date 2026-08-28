@@ -11,6 +11,11 @@ Production branch: `main`
 
 ## Κατάσταση τελευταίου checkpoint
 
+- Με ρητή επιλογή του χρήστη ξεκίνησε παράλληλα το μελλοντικό item **#5 Recovery Workflows**, χωρίς να αλλάζει η εκκρεμής KAT πύλη 58–62.
+- Branch `agent/recovery-workflows-20260828`: Recovery Workflow Center dry-run foundation. Δημιουργεί checksum-addressed Recovery Run, εμφανίζει revision evidence και κρατά το πραγματικό restore κλειδωμένο.
+- Το dry-run παραμένει απολύτως μη μεταβαλλόμενο: δεν γράφει επιχειρησιακά δεδομένα, δεν επαναφέρει secrets και δεν καλεί RBS/EFTPOS/fiscal provider.
+- Targeted recovery tests: **9/9 SUCCESS**. Production client build: **SUCCESS**. PR/CI/merge/deploy: **ΕΚΚΡΕΜΟΥΝ**.
+
 - PR #294 — `feat(KAT): reconcile dual-terminal shift totals`: **MERGED**.
 - Merge commit: `6b80509119feccb6ca1c9a9402eba523750b9e27`.
 - GitHub MyWorkStation PR CI #869: **SUCCESS**.
@@ -123,6 +128,7 @@ Production branch: `main`
 - Την restart-safe offline queue, το stable client transaction ID και το serialized reconnect του PR #288.
 - Το server-side/BackOffice offline sync evidence του PR #290.
 - Το revision-bound backup, recovery dry-run και rollback checkpoint του PR #292.
+- Μην ξαναφτιάξεις δεύτερο backup verifier. Το Recovery Workflow Center επεκτείνει το υπάρχον `pilot-backup/verify`.
 - Πραγματική EFTPOS ή fiscal εκτέλεση χωρίς εγκεκριμένο test, σωστή συσκευή και διαθέσιμο provider/hardware.
 
 ## Ακριβές επόμενο βήμα
@@ -134,6 +140,7 @@ Production branch: `main`
 3. Μετά προχώρα στα tests 58-62: 10-20 πραγματικές δοκιμαστικές πωλήσεις, τελικό reconciliation και τελικό hardware/software health check.
 4. Τα tests 58-62 απαιτούν ελεγχόμενο φυσικό περιβάλλον, σωστές συσκευές και καταγραφή αποτελεσμάτων. Δεν επιτρέπεται να δηλωθούν επιτυχή μόνο από automated tests.
 5. Δήλωσε `ΚΑΤ READY FOR GO-LIVE` μόνο αν κάθε critical test είναι πράσινο και δεν υπάρχει pending fiscalization, mismatch, duplicate ή ανεξήγητη διαφορά.
+6. Για το παράλληλο item #5, ολοκλήρωσε πρώτα PR/CI/merge του `agent/recovery-workflows-20260828`. Μετά πρόσθεσε μόνο ελεγχόμενα maintenance-window/rollback approval gates· το πραγματικό restore παραμένει κλειστό μέχρι ξεχωριστή ασφαλή διαδικασία.
 
 Δεν πρέπει να σταλεί πραγματική εντολή σε EFTPOS, RBS, Netlink ή άλλο fiscal provider.
 
