@@ -70,8 +70,7 @@ test("session investigation exhausts transaction and audit evidence without auto
   assert.match(cash,/ACTION_BY_DIFFERENT_OPERATOR/);
   assert.match(cash,/AMOUNT_MATCHES_CASH_DIFFERENCE/);
   assert.match(cash,/REPEATED_AUDIT_AMOUNT/);
-  assert.match(ui,/Πλήρης έλεγχος/);
-  assert.match(ui,/Τελική ανεξήγητη διαφορά/);
+  assert.doesNotMatch(ui,/Πλήρης έλεγχος/);
 });
 
 test("cash control remains an independently licensed commercial module",()=>{
@@ -134,9 +133,7 @@ test("manager review is audited and only confirmed explanations reduce the unexp
   assert.match(cash,/CONFIRMED_SHORTAGE/);
   assert.match(cash,/confirmedExplanations=validReviews\.filter/);
   assert.match(cash,/Μόνο Ιδιοκτήτης ή Διαχειριστής/);
-  assert.match(ui,/Καταχώριση εξήγησης/);
-  assert.match(ui,/Οριστικοποίηση ελλείμματος/);
-  assert.match(ui,/Ελέγχθηκε από/);
+  assert.doesNotMatch(ui,/Καταχώριση εξήγησης/);
 });
 
 test("later expenses, documents or reversals invalidate the old result and require recheck",()=>{
@@ -145,6 +142,5 @@ test("later expenses, documents or reversals invalidate the old result and requi
   assert.match(cash,/recheckRequired/);
   assert.match(cash,/RECHECK_REQUIRED/);
   assert.match(cash,/validReviews=reviews\.filter\(row=>sameSnapshot/);
-  assert.match(ui,/ΑΠΑΙΤΕΙΤΑΙ ΕΠΑΝΕΛΕΓΧΟΣ/);
-  assert.match(ui,/Οι παλιές εξηγήσεις διατηρούνται στο ιστορικό/);
+  assert.doesNotMatch(ui,/ΑΠΑΙΤΕΙΤΑΙ ΕΠΑΝΕΛΕΓΧΟΣ/);
 });

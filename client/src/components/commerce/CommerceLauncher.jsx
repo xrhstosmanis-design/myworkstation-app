@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {BriefcaseBusiness,Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
+import {Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
@@ -64,6 +64,11 @@ export default function CommerceLauncher(){
     setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
   };
+  useEffect(()=>{
+    const handleOpen=()=>open();
+    window.addEventListener("mws:commerce-open",handleOpen);
+    return()=>window.removeEventListener("mws:commerce-open",handleOpen);
+  },[]);
   const toggleMax=()=>{setMinimized(false);setMaximized(v=>!v)};
   const interceptWarehouse=event=>{
     if(mode==="inventory"){
@@ -83,7 +88,6 @@ export default function CommerceLauncher(){
   };
   if(!authenticated)return null;
   return <>
-    <button className="commerce-launcher" onClick={open}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
       <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation BackOffice</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
