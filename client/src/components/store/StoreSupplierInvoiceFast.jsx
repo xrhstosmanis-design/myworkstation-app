@@ -29,10 +29,12 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 }
 
 export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChanged,setMessage}){
-  const [file,setFile]=useState(null),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(today()),[mode,setMode]=useState(""),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
+  const [file,setFile]=useState(null),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(today()),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
   const [qr,setQr]=useState("");
   const videoRef=useRef(null),canvasRef=useRef(null);
   const supplier=useMemo(()=>suppliers.find(x=>String(x.id)===String(supplierId))||null,[suppliers,supplierId]);
+  const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
+  const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{if(blob)setFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}));stopCamera()},"image/jpeg",.9)};
@@ -49,12 +51,12 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
       let paymentTransactionId=null;
       if(mode==="PAID"){
         const description=documentNumber?`Τιμολόγιο ${documentNumber} — FAST POS`:"Πληρωμή προμηθευτή FAST POS";
-        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description,evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:key})});
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key})});
         paymentTransactionId=payment?.id||null;
         if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
-        try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+        if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
       }
-      const successText=mode==="PAID"?"Η πληρωμή καταχωρίστηκε στη βάρδια":"Το τιμολόγιο καταχωρίστηκε με πίστωση";
+      const successText=mode==="PAID"?`Η πληρωμή καταχωρίστηκε με ${paymentMethodLabel}`:"Το τιμολόγιο καταχωρίστηκε με πίστωση";
       setMessage?.(`✅ ${successText}. Επιστροφή στο POS — ο έλεγχος συνεχίζεται στο BackOffice.`);
       onChanged?.();
       backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id,mode,paymentTransactionId});
@@ -69,7 +71,8 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     <label>Προμηθευτής<select value={supplierId} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><label>Ποσό<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αρ. τιμολογίου <small>(προαιρετικό)</small><input value={documentNumber} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} onChange={e=>setDocumentDate(e.target.value)}/></label></div>
-    <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ — από ταμείο</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
+    <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
+    {mode==="PAID"&&<div className="pos-expense-payment-sources"><b>Τρόπος πληρωμής προμηθευτή</b><div>{[["CASH_SHIFT","Μετρητά από ενεργή βάρδια"],["CORPORATE_CARD","Εταιρική κάρτα"],["BANK_TRANSFER","Τραπεζική μεταφορά"],["EMPLOYEE_REIMBURSEMENT","Πληρωμή υπαλλήλου προς επιστροφή"]].map(([value,label])=><button key={value} type="button" className={paymentMethod===value?"active":""} disabled={busy} onClick={()=>setPaymentMethod(value)}>{label}</button>)}</div><small>{paymentSource==="CASH_SHIFT"?"Το ποσό αφαιρείται από το ταμείο της ενεργής βάρδιας.":"Η πληρωμή καταχωρίζεται εξωτερικά και δεν αφαιρείται από τη βάρδια."}</small></div>}
     <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {busy?"Καταχώριση…":mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
   </div>;
 }
