@@ -9,12 +9,16 @@ test("central Audit includes explicit POS full-return events without replacing l
   assert.match(route,/FROM "StoreTransaction" t/);
   assert.match(route,/FROM "PosSaleActionAudit" a/);
   assert.match(route,/a\."actionType" IN \('RETURN','CANCEL'\)/);
-  assert.match(route,/eventType:isReturn\?"POS_RETURN":"POS_CANCEL"/);
+  assert.match(route,/eventType:isReturn\?"POS_RETURN":isCartCancel\?"CART_CANCEL":"POS_CANCEL"/);
+  assert.match(route,/CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE/);
+  assert.match(route,/ΑΚΥΡΩΣΗ ΛΙΣΤΑΣ ΠΩΛΗΣΗΣ/);
+  assert.match(route,/details\.items/);
   assert.match(route,/sourceOfTruth:"StoreTransaction \+ PosSaleActionAudit \+ StoreOperatorAudit"/);
 });
 
 test("central Audit labels POS return events for operators",()=>{
   assert.match(ui,/POS_RETURN:"Ολική επιστροφή"/);
   assert.match(ui,/POS_CANCEL:"Ακύρωση πώλησης"/);
+  assert.match(ui,/CART_CANCEL:"Ακύρωση λίστας πώλησης"/);
   assert.match(ui,/AUDIT_EVENT"\?"Συμβάν"/);
 });

@@ -121,7 +121,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      WHERE a."companyId"=${companyId} AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_REMOVE','PRICE_CHANGE'))
+      WHERE a."companyId"=${companyId} AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE'))
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
@@ -145,12 +145,14 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
-      const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isPriceChange=r.actionType==="PRICE_CHANGE";
-      const baseAction={eventType:isReturn?"POS_RETURN":"POS_CANCEL"};
-      const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):isCartRemoval?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
-      const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":baseAction.eventType;
+      const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isCartCancel=r.actionType==="CART_CANCEL",isPriceChange=r.actionType==="PRICE_CHANGE";
+      const baseAction={eventType:isReturn?"POS_RETURN":isCartCancel?"CART_CANCEL":"POS_CANCEL"};
+      const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):(isCartRemoval||isCartCancel)?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
+      const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isCartCancel?"CART_CANCEL":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":baseAction.eventType;
       const description=isPriceChange
         ?`ΧΕΙΡΟΚΙΝΗΤΗ ΑΛΛΑΓΗ ΤΙΜΗΣ · ${details.productName||"Άγνωστο προϊόν"} · από ${n(details.oldPrice).toFixed(2)} € σε ${n(details.newPrice).toFixed(2)} € · διαφορά ${(n(details.newPrice)-n(details.oldPrice)).toFixed(2)} €${r.reason?` · Αιτιολογία: ${r.reason}`:""} · μόνο για την τρέχουσα συναλλαγή`
+        :isCartCancel
+        ?`ΑΚΥΡΩΣΗ ΛΙΣΤΑΣ ΠΩΛΗΣΗΣ · ${(Array.isArray(details.items)?details.items:[]).map(item=>`${item.name||"Άγνωστο προϊόν"} · ${n(item.quantity||1)} × ${n(item.price||item.unitPrice||0).toFixed(2)} €`).join(" · ")||"Χωρίς γραμμές"} · Συνολική αξία ${n(details.total).toFixed(2)} €${r.reason?` · Αιτιολογία: ${r.reason}`:""} · δεν ολοκληρώθηκε πώληση / δεν κινήθηκε stock`
         :isCartRemoval
         ?`ΔΙΑΓΡΑΦΗ ΠΡΟΪΟΝΤΟΣ ΑΠΟ ΚΑΛΑΘΙ · ${details.productName||"Άγνωστο προϊόν"} · ${n(details.quantity)} × ${n(details.unitPrice).toFixed(2)} € · SKU ${details.sku||"—"} · δεν ολοκληρώθηκε πώληση / δεν κινήθηκε stock`
         :isPartialReturn
