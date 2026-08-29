@@ -140,7 +140,7 @@ export default function PlatformAdminApp(){
 
   const createCompany=async event=>{
     event.preventDefault();setBusy("create");setError("");setMessage("");
-    const formElement=event.currentTarget;\n    const form=new FormData(formElement);
+    const form=new FormData(event.currentTarget);
     const body=Object.fromEntries(form.entries());
     body.trialDays=Number(body.trialDays||14);
     try{
@@ -309,11 +309,12 @@ export default function PlatformAdminApp(){
   };
   const createTerminal=async event=>{
     event.preventDefault();setBusy("terminal-create");setError("");
-    const form=new FormData(event.currentTarget);
+    const formElement=event.currentTarget;
+    const form=new FormData(formElement);
     try{
       const result=await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/installation-terminals`,{method:"POST",body:JSON.stringify({terminalPos:form.get("terminalPos"),displayName:form.get("displayName")})});
       const activationUrl=`${window.location.origin}${result.activationPath}`;
-      event.currentTarget.reset();
+      formElement.reset();
       setTerminalActivationNotice({activationUrl,terminalPos:result.terminalPos});
       setTerminalManager(null);
       setMessage(`Δημιουργήθηκε το ${result.terminalPos}. Το παράθυρο έκλεισε αυτόματα και το εφάπαξ link παραμένει διαθέσιμο παρακάτω.`);
