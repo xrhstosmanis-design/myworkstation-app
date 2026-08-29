@@ -102,13 +102,14 @@ async function main(){
   const prepared=await request("/api/netlink/prepare",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId}});
   assert.equal(prepared.response.status,200,JSON.stringify(prepared.payload));
   assert.equal(prepared.payload.amount,20);
-  const executed=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId,paymentMethod:"CASH",saleId,testRun:true}});
+  const confirmation={phrase:"STAGING MOCK-20"};
+  const executed=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},confirmation,requestId,paymentMethod:"CASH",saleId,testRun:true}});
   assert.equal(executed.response.status,200,JSON.stringify(executed.payload));
   assert.deepEqual({status:executed.payload.status,cardAmount:executed.payload.cardAmount,serviceFeeAmount:executed.payload.serviceFeeAmount,customerTotal:executed.payload.customerTotal,commissionAmount:executed.payload.commission?.amount},{status:"COMPLETED",cardAmount:20,serviceFeeAmount:0.5,customerTotal:20.5,commissionAmount:0.2});
-  assert.deepEqual({id:executed.payload.fiscalReceipt?.id,number:executed.payload.fiscalReceipt?.number},{id:fiscalDocumentId,number:fiscalNumber});
+  assert.equal(executed.payload.fiscalReceipt,null,"Staging test mode must not attach or require a fiscal receipt");
   assert.match(executed.payload.result?.data?.pin||"",/^TEST-/);
 
-  const duplicate=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},requestId,paymentMethod:"CASH",saleId,testRun:true}});
+  const duplicate=await request("/api/netlink/execute",{method:"POST",token:operatorToken,body:{storeId,productId:"MOCK-20",payload:{amount:20},confirmation,requestId,paymentMethod:"CASH",saleId,testRun:true}});
   assert.equal(duplicate.response.status,409,"A completed Netlink request must not execute twice");
 
   const transactions=await request(`/api/netlink/transactions?storeId=${storeId}`,{token:operatorToken});
@@ -116,7 +117,7 @@ async function main(){
   const transaction=(transactions.payload?.items||[]).find(item=>item.requestId===requestId);
   assert.ok(transaction);assert.equal(transaction.status,"COMPLETED");assert.equal(transaction.saleId,saleId);assert.equal(transaction.customerTotal,20.5);
   const persisted=await prisma.$queryRaw`SELECT nt."status",nt."saleId",nt."fiscalDocumentId",nt."fiscalNumber",nt."fiscalIssuedAt",nt."amount",nt."commissionAmount",s."total",COUNT(sl."id")::int AS "saleLines" FROM "NetlinkTransaction" nt JOIN "Sale" s ON s."id"=nt."saleId" JOIN "SaleLine" sl ON sl."saleId"=s."id" WHERE nt."requestId"=${requestId} GROUP BY nt."status",nt."saleId",nt."fiscalDocumentId",nt."fiscalNumber",nt."fiscalIssuedAt",nt."amount",nt."commissionAmount",s."total"`;
-  assert.equal(persisted.length,1);assert.equal(persisted[0].status,"COMPLETED");assert.equal(persisted[0].fiscalDocumentId,fiscalDocumentId);assert.equal(persisted[0].fiscalNumber,fiscalNumber);assert.ok(persisted[0].fiscalIssuedAt);assert.equal(Number(persisted[0].amount),20);assert.equal(Number(persisted[0].commissionAmount),0.2);assert.equal(Number(persisted[0].total),20.5);assert.equal(persisted[0].saleLines,2);
+  assert.equal(persisted.length,1);assert.equal(persisted[0].status,"COMPLETED");assert.equal(persisted[0].fiscalDocumentId,null);assert.equal(persisted[0].fiscalNumber,null);assert.equal(persisted[0].fiscalIssuedAt,null);assert.equal(Number(persisted[0].amount),20);assert.equal(Number(persisted[0].commissionAmount),0.2);assert.equal(Number(persisted[0].total),20.5);assert.equal(persisted[0].saleLines,2);
 
   const from=encodeURIComponent(new Date(Date.now()-3600000).toISOString());
   const to=encodeURIComponent(new Date(Date.now()+3600000).toISOString());

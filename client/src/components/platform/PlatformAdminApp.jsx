@@ -218,6 +218,13 @@ export default function PlatformAdminApp(){
     }catch(err){setError(err.message);setBusy("")}
   };
 
+  const openPrimaryBackoffice=()=>{
+    const company=data?.companies?.[0];
+    const store=company?.stores?.[0];
+    if(!company||!store){setError("Δεν βρέθηκε διαθέσιμο κατάστημα για άνοιγμα Backoffice.");return}
+    openCustomer(company,store,"BACKOFFICE");
+  };
+
   const checkReadiness=async(company,store)=>{
     setBusy(`readiness:${store.id}`);setError("");
     try{setReadiness(await request(`/api/platform/companies/${company.id}/stores/${store.id}/pilot-readiness`));setRecoveryWorkflow(null)}
@@ -399,7 +406,7 @@ export default function PlatformAdminApp(){
   return <div className="platform-shell">
     <header className="platform-header">
       <div className="platform-brand"><div className="platform-logo">MW</div><div><b>MyWorkStation Platform Admin</b><span>Κεντρική εμπορική διαχείριση</span></div></div>
-      <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><a href="/" target="_blank" rel="noreferrer" title="Ανοίγει σε νέα καρτέλα ώστε να συνεχίζεται η εγγραφή οθόνης"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
+      <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><button onClick={openPrimaryBackoffice} disabled={!data||busy.startsWith("access:")} title="Ανοίγει το Backoffice με ασφαλή, ξεχωριστή συνεδρία υποστήριξης"><ExternalLink/>Backoffice ΚΑΤ</button><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
       <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Super Admin Installation Center</button><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
