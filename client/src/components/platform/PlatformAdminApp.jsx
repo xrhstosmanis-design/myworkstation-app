@@ -140,7 +140,7 @@ export default function PlatformAdminApp(){
 
   const createCompany=async event=>{
     event.preventDefault();setBusy("create");setError("");setMessage("");
-    const form=new FormData(event.currentTarget);
+    const formElement=event.currentTarget;\n    const form=new FormData(formElement);
     const body=Object.fromEntries(form.entries());
     body.trialDays=Number(body.trialDays||14);
     try{
