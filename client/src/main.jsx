@@ -1,104 +1,1282 @@
-
-import React,{useEffect,useMemo,useState} from "react";
-import {createRoot} from "react-dom/client";
-import {Users,CalendarDays,Building2,LayoutDashboard,LogOut,Plus,Settings2,Edit3,Power,Palmtree,Printer,Send,UserRoundCheck} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Users,
+  CalendarDays,
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Settings2,
+  Edit3,
+  Power,
+  Palmtree,
+  Printer,
+  Send,
+  UserRoundCheck,
+} from "lucide-react";
 import "./styles.css";
 import "./schedule-ai-chat.css";
 import StoreCloudPage from "./components/cloud/StoreCloudPage.jsx";
 
-const api=async(path,options={})=>{
-  const token=localStorage.getItem("token");
-  const r=await fetch(path,{headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},...options});
-  const data=await r.json(); if(!r.ok)throw new Error(data.error||"Σφάλμα"); return data;
+const api = async (path, options = {}) => {
+  const token = localStorage.getItem("token");
+  const r = await fetch(path, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...options,
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Σφάλμα");
+  return data;
 };
 
-function Login({onLogin}){
- const [email,setEmail]=useState("admin@myworkstationapp.gr"),[password,setPassword]=useState("ChangeMe123!"),[error,setError]=useState("");
- const submit=async e=>{e.preventDefault();try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});localStorage.setItem("token",d.token);localStorage.setItem("user",JSON.stringify(d.user));onLogin(d.user)}catch(x){setError(x.message)}};
- return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="mark">MW</div><h1>MyWorkStation</h1><p>Διαχείριση προσωπικού και βαρδιών</p><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Κωδικός<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error">{error}</div>}<button>Σύνδεση</button></form></div>
+function Login({ onLogin }) {
+  const [email, setEmail] = useState("admin@myworkstationapp.gr"),
+    [password, setPassword] = useState("ChangeMe123!"),
+    [error, setError] = useState("");
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      const d = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      localStorage.setItem("token", d.token);
+      localStorage.setItem("user", JSON.stringify(d.user));
+      onLogin(d.user);
+    } catch (x) {
+      setError(x.message);
+    }
+  };
+  return (
+    <div className="login-shell">
+      <form className="login-card" onSubmit={submit}>
+        <div className="mark">MW</div>
+        <h1>MyWorkStation</h1>
+        <p>Διαχείριση προσωπικού και βαρδιών</p>
+        <label>
+          Email
+          <input value={email} onChange={(e) => setEmail(e.target.value)} />
+        </label>
+        <label>
+          Κωδικός
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {error && <div className="error">{error}</div>}
+        <button>Σύνδεση</button>
+      </form>
+    </div>
+  );
 }
 
-function App(){
- const [user,setUser]=useState(()=>JSON.parse(localStorage.getItem("user")||"null"));
- const params=new URLSearchParams(window.location.search),supportPage=params.get("supportPage"),supportStore=params.get("supportStore");
- const [page,setPage]=useState(supportPage||"dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null);
- const supportContext=(()=>{try{return JSON.parse(localStorage.getItem("supportContext")||"null")}catch{return null}})();
- const companyName=user?.company?.name||supportContext?.companyName||"MyWorkStation";
- const returnToPlatform=async()=>{
-   const platformToken=sessionStorage.getItem("platformToken");
-   try{await api("/api/platform/support-access/exit",{method:"POST",body:"{}"})}catch(error){console.warn("Support access exit audit failed",error)}
-   if(platformToken)localStorage.setItem("token",platformToken);else localStorage.removeItem("token");
-   sessionStorage.removeItem("platformToken");localStorage.removeItem("supportContext");localStorage.removeItem("user");
-   window.location.href="/platform-admin";
- };
- const load=async()=>{const [st,emps,strs,lvs]=await Promise.all([api("/api/dashboard"),api("/api/employees"),api("/api/stores"),api("/api/leaves")]);setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);const target=strs.find(row=>row.id===supportStore);if(target&&supportPage==="stores")setSelectedStore(target);const scheduleStore=target||strs[0];if(scheduleStore){const sc=await api(`/api/schedules/latest?storeId=${scheduleStore.id}`);setSchedule(sc)}};
- useEffect(()=>{if(user)load().catch(()=>logout())},[user]);
- const logout=()=>{localStorage.clear();setUser(null)};
- if(!user)return <Login onLogin={setUser}/>;
- return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{companyName}</small></div></div>
- <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav><Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
- {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
- <main><header><div><h1>{({dashboard:"Αρχική",employees:"Προσωπικό",stores:"Καταστήματα",schedule:"Βάρδιες",leaves:"Άδειες & Απουσίες"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>
- {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
- {page==="employees"&&<Employees rows={employees} stores={stores} reload={load}/>} 
- {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
- {page==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} reload={load}/>} {page==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={load}/>} 
- </main></div>
+function App() {
+  const [user, setUser] = useState(() =>
+    JSON.parse(localStorage.getItem("user") || "null"),
+  );
+  const params = new URLSearchParams(window.location.search),
+    supportPage = params.get("supportPage"),
+    supportStore = params.get("supportStore");
+  const [page, setPage] = useState(supportPage || "dashboard"),
+    [stats, setStats] = useState(null),
+    [employees, setEmployees] = useState([]),
+    [stores, setStores] = useState([]),
+    [schedule, setSchedule] = useState(null),
+    [warnings, setWarnings] = useState([]),
+    [metrics, setMetrics] = useState(null),
+    [leaves, setLeaves] = useState([]),
+    [selectedStore, setSelectedStore] = useState(null);
+  const supportContext = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("supportContext") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const companyName =
+    user?.company?.name || supportContext?.companyName || "MyWorkStation";
+  const returnToPlatform = async () => {
+    const platformToken = sessionStorage.getItem("platformToken");
+    try {
+      await api("/api/platform/support-access/exit", {
+        method: "POST",
+        body: "{}",
+      });
+    } catch (error) {
+      console.warn("Support access exit audit failed", error);
+    }
+    if (platformToken) localStorage.setItem("token", platformToken);
+    else localStorage.removeItem("token");
+    sessionStorage.removeItem("platformToken");
+    localStorage.removeItem("supportContext");
+    localStorage.removeItem("user");
+    window.location.href = "/platform-admin";
+  };
+  const load = async () => {
+    const [st, emps, strs, lvs] = await Promise.all([
+      api("/api/dashboard"),
+      api("/api/employees"),
+      api("/api/stores"),
+      api("/api/leaves"),
+    ]);
+    setStats(st);
+    setEmployees(emps);
+    setStores(strs);
+    setLeaves(lvs);
+    const target = strs.find((row) => row.id === supportStore);
+    if (target && supportPage === "stores") setSelectedStore(target);
+    const scheduleStore = target || strs[0];
+    if (scheduleStore) {
+      const sc = await api(`/api/schedules/latest?storeId=${scheduleStore.id}`);
+      setSchedule(sc);
+    }
+  };
+  useEffect(() => {
+    if (user) load().catch(() => logout());
+  }, [user]);
+  const logout = () => {
+    localStorage.clear();
+    setUser(null);
+  };
+  if (!user) return <Login onLogin={setUser} />;
+  return (
+    <div className="app">
+      <aside>
+        <div className="brand">
+          <div className="mark">MW</div>
+          <div>
+            <b>MyWorkStation</b>
+            <small>{companyName}</small>
+          </div>
+        </div>
+        <nav>
+          <Nav
+            active={page === "dashboard"}
+            onClick={() => setPage("dashboard")}
+            icon={<LayoutDashboard />}
+          >
+            Αρχική
+          </Nav>
+          <Nav
+            active={page === "employees"}
+            onClick={() => setPage("employees")}
+            icon={<Users />}
+          >
+            Προσωπικό
+          </Nav>
+          <Nav
+            active={page === "stores"}
+            onClick={() => {
+              setSelectedStore(null);
+              setPage("stores");
+            }}
+            icon={<Building2 />}
+          >
+            Καταστήματα
+          </Nav>
+          <Nav
+            active={page === "schedule"}
+            onClick={() => setPage("schedule")}
+            icon={<CalendarDays />}
+          >
+            Βάρδιες
+          </Nav>
+          <Nav
+            active={page === "leaves"}
+            onClick={() => setPage("leaves")}
+            icon={<Palmtree />}
+          >
+            Άδειες
+          </Nav>
+        </nav>
+        {supportContext && (
+          <button className="logout" onClick={returnToPlatform}>
+            <LogOut />
+            Επιστροφή στο Super Admin
+          </button>
+        )}
+        {!supportContext && (
+          <button className="logout" onClick={logout}>
+            <LogOut />
+            Έξοδος
+          </button>
+        )}
+      </aside>
+      <main>
+        <header>
+          <div>
+            <h1>
+              {
+                {
+                  dashboard: "Αρχική",
+                  employees: "Προσωπικό",
+                  stores: "Καταστήματα",
+                  schedule: "Βάρδιες",
+                  leaves: "Άδειες & Απουσίες",
+                }[page]
+              }
+            </h1>
+            <p>
+              {supportContext
+                ? `ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName ? ` · ${supportContext.storeName}` : ""}`
+                : `Καλώς ήρθες, ${user.fullName}`}
+            </p>
+          </div>
+        </header>
+        {page === "dashboard" && (
+          <>
+            <div className="cards">
+              <Card t="Καταστήματα" v={stats?.stores || 0} />
+              <Card t="Ενεργοί εργαζόμενοι" v={stats?.employees || 0} />
+              <Card t="Έκτακτοι" v={stats?.temporary || 0} />
+              <Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered || 0} />
+            </div>
+            <section className="panel">
+              <h2>MyWorkStation v0.6</h2>
+              <p>
+                Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και
+                δείκτη ποιότητας.
+              </p>
+              <div className="notice">
+                Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα
+                και περιορίζει τη χρήση έκτακτων.
+              </div>
+            </section>
+          </>
+        )}
+        {page === "employees" && (
+          <Employees rows={employees} stores={stores} reload={load} />
+        )}
+        {page === "stores" &&
+          (selectedStore ? (
+            <StoreCloudPage
+              api={api}
+              store={selectedStore}
+              onBack={() => setSelectedStore(null)}
+            />
+          ) : (
+            <Stores rows={stores} onOpen={setSelectedStore} />
+          ))}
+        {page === "schedule" && (
+          <Schedule
+            stores={stores}
+            employees={employees}
+            schedule={schedule}
+            setSchedule={setSchedule}
+            warnings={warnings}
+            setWarnings={setWarnings}
+            metrics={metrics}
+            setMetrics={setMetrics}
+            reload={load}
+          />
+        )}{" "}
+        {page === "leaves" && (
+          <Leaves employees={employees} leaves={leaves} reload={load} />
+        )}
+      </main>
+    </div>
+  );
 }
-const Nav=({active,onClick,icon,children})=><button className={active?"active":""} onClick={onClick}>{icon}{children}</button>;
-const Card=({t,v})=><article className="card"><span>{t}</span><strong>{v}</strong></article>;
+const Nav = ({ active, onClick, icon, children }) => (
+  <button className={active ? "active" : ""} onClick={onClick}>
+    {icon}
+    {children}
+  </button>
+);
+const Card = ({ t, v }) => (
+  <article className="card">
+    <span>{t}</span>
+    <strong>{v}</strong>
+  </article>
+);
 
-function Employees({rows,stores,reload}){
- const [mode,setMode]=useState(null),[selected,setSelected]=useState(null),[shifts,setShifts]=useState([]);
- const openNew=()=>{setSelected(null);setMode("edit")};
- const openEdit=async e=>{setSelected(e);setShifts(await api(`/api/shifts?storeId=${e.storeId}`));setMode("edit")};
- const openRules=async e=>{setSelected(e);setShifts(await api(`/api/shifts?storeId=${e.storeId}`));setMode("rules")};
- const close=()=>{setMode(null);setSelected(null)};
- const save=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const body={fullName:f.get("fullName"),position:f.get("position"),phone:f.get("phone"),email:f.get("email"),type:f.get("type"),storeId:f.get("storeId"),maxDaysPerWeek:Number(f.get("maxDaysPerWeek")),allowSixthDay:f.get("allowSixthDay")==="on",maxHoursPerWeek:Number(f.get("maxHoursPerWeek"))};await api(selected?`/api/employees/${selected.id}`:"/api/employees",{method:selected?"PUT":"POST",body:JSON.stringify(body)});close();await reload()};
- const saveRules=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const rules=shifts.filter(s=>f.get(`allowed_${s.id}`)==="on").map(s=>({shiftTypeId:s.id,allowed:true,targetPerWeek:f.get(`target_${s.id}`)?Number(f.get(`target_${s.id}`)):null,priority:Number(f.get(`priority_${s.id}`)||0),note:f.get(`note_${s.id}`)||""}));await api(`/api/employees/${selected.id}/rules`,{method:"PUT",body:JSON.stringify({rules})});close();await reload()};
- const toggle=async id=>{await api(`/api/employees/${id}/status`,{method:"PATCH"});await reload()};
- return <section className="panel"><div className="panel-head"><div><h2>Προσωπικό</h2><p>Καρτέλες, κανόνες και έκτακτοι εργαζόμενοι.</p></div><button onClick={openNew}><Plus/>Προσθήκη</button></div>
- <div className="table"><div className="tr th"><span>Όνομα</span><span>Θέση</span><span>Κατάστημα</span><span>Τύπος</span><span>Ενέργειες</span></div>{rows.map(e=><div className={`tr ${!e.active?"muted":""}`} key={e.id}><span><b>{e.fullName}</b><small>{e.maxDaysPerWeek} ημέρες · {e.maxHoursPerWeek} ώρες</small></span><span>{e.position||"—"}</span><span>{e.store.name}</span><span className="pill">{e.type==="TEMPORARY"?"Έκτακτος":"Μόνιμος"}</span><span className="row-actions"><button title="Επεξεργασία" onClick={()=>openEdit(e)}><Edit3/></button><button title="Κανόνες" onClick={()=>openRules(e)}><Settings2/></button><button title="Ενεργός/Ανενεργός" onClick={()=>toggle(e.id)}><Power/></button></span></div>)}</div>
- {mode==="edit"&&<div className="modal"><form onSubmit={save}><h3>{selected?"Επεξεργασία εργαζομένου":"Νέος εργαζόμενος"}</h3><input name="fullName" placeholder="Ονοματεπώνυμο" defaultValue={selected?.fullName||""} required/><input name="position" placeholder="Θέση" defaultValue={selected?.position||""}/><input name="phone" placeholder="Τηλέφωνο" defaultValue={selected?.phone||""}/><input name="email" placeholder="Email" defaultValue={selected?.email||""}/><select name="storeId" defaultValue={selected?.storeId||stores[0]?.id}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select name="type" defaultValue={selected?.type||"PERMANENT"}><option value="PERMANENT">Μόνιμος</option><option value="TEMPORARY">Έκτακτος</option></select><label>Μέγιστες ημέρες<input name="maxDaysPerWeek" type="number" min="1" max="6" defaultValue={selected?.maxDaysPerWeek||5}/></label><label>Μέγιστες ώρες<input name="maxHoursPerWeek" type="number" min="8" max="72" defaultValue={selected?.maxHoursPerWeek||40}/></label><label className="check"><input name="allowSixthDay" type="checkbox" defaultChecked={selected?.allowSixthDay||false}/> Επιτρέπεται 6η ημέρα</label><div className="actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button>Αποθήκευση</button></div></form></div>}
- {mode==="rules"&&<div className="modal"><form className="rules-form" onSubmit={saveRules}><h3>Κανόνες: {selected.fullName}</h3><p>Επίλεξε τις βάρδιες που μπορεί να κάνει και τον εβδομαδιαίο στόχο.</p>{shifts.map(s=>{const r=selected.rules.find(x=>x.shiftTypeId===s.id);return <div className="rule-row" key={s.id}><label className="check"><input name={`allowed_${s.id}`} type="checkbox" defaultChecked={!!r}/> {s.name} <small>{s.startTime}-{s.endTime}</small></label><input name={`target_${s.id}`} type="number" min="0" max="7" placeholder="Στόχος/εβδ." defaultValue={r?.targetPerWeek??""}/><input name={`priority_${s.id}`} type="number" min="-100" max="100" placeholder="Προτεραιότητα" defaultValue={r?.priority??0}/></div>})}<div className="actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button>Αποθήκευση κανόνων</button></div></form></div>}</section>
+function Employees({ rows, stores, reload }) {
+  const [mode, setMode] = useState(null),
+    [selected, setSelected] = useState(null),
+    [shifts, setShifts] = useState([]);
+  const openNew = () => {
+    setSelected(null);
+    setMode("edit");
+  };
+  const openEdit = async (e) => {
+    setSelected(e);
+    setShifts(await api(`/api/shifts?storeId=${e.storeId}`));
+    setMode("edit");
+  };
+  const openRules = async (e) => {
+    setSelected(e);
+    setShifts(await api(`/api/shifts?storeId=${e.storeId}`));
+    setMode("rules");
+  };
+  const close = () => {
+    setMode(null);
+    setSelected(null);
+  };
+  const save = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const body = {
+      fullName: f.get("fullName"),
+      position: f.get("position"),
+      phone: f.get("phone"),
+      email: f.get("email"),
+      type: f.get("type"),
+      storeId: f.get("storeId"),
+      maxDaysPerWeek: Number(f.get("maxDaysPerWeek")),
+      allowSixthDay: f.get("allowSixthDay") === "on",
+      maxHoursPerWeek: Number(f.get("maxHoursPerWeek")),
+    };
+    await api(selected ? `/api/employees/${selected.id}` : "/api/employees", {
+      method: selected ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    close();
+    await reload();
+  };
+  const saveRules = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const rules = shifts
+      .filter((s) => f.get(`allowed_${s.id}`) === "on")
+      .map((s) => ({
+        shiftTypeId: s.id,
+        allowed: true,
+        targetPerWeek: f.get(`target_${s.id}`)
+          ? Number(f.get(`target_${s.id}`))
+          : null,
+        priority: Number(f.get(`priority_${s.id}`) || 0),
+        note: f.get(`note_${s.id}`) || "",
+      }));
+    await api(`/api/employees/${selected.id}/rules`, {
+      method: "PUT",
+      body: JSON.stringify({ rules }),
+    });
+    close();
+    await reload();
+  };
+  const toggle = async (id) => {
+    await api(`/api/employees/${id}/status`, { method: "PATCH" });
+    await reload();
+  };
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div>
+          <h2>Προσωπικό</h2>
+          <p>Καρτέλες, κανόνες και έκτακτοι εργαζόμενοι.</p>
+        </div>
+        <button onClick={openNew}>
+          <Plus />
+          Προσθήκη
+        </button>
+      </div>
+      <div className="table">
+        <div className="tr th">
+          <span>Όνομα</span>
+          <span>Θέση</span>
+          <span>Κατάστημα</span>
+          <span>Τύπος</span>
+          <span>Ενέργειες</span>
+        </div>
+        {rows.map((e) => (
+          <div className={`tr ${!e.active ? "muted" : ""}`} key={e.id}>
+            <span>
+              <b>{e.fullName}</b>
+              <small>
+                {e.maxDaysPerWeek} ημέρες · {e.maxHoursPerWeek} ώρες
+              </small>
+            </span>
+            <span>{e.position || "—"}</span>
+            <span>{e.store.name}</span>
+            <span className="pill">
+              {e.type === "TEMPORARY" ? "Έκτακτος" : "Μόνιμος"}
+            </span>
+            <span className="row-actions">
+              <button title="Επεξεργασία" onClick={() => openEdit(e)}>
+                <Edit3 />
+              </button>
+              <button title="Κανόνες" onClick={() => openRules(e)}>
+                <Settings2 />
+              </button>
+              <button title="Ενεργός/Ανενεργός" onClick={() => toggle(e.id)}>
+                <Power />
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+      {mode === "edit" && (
+        <div className="modal">
+          <form onSubmit={save}>
+            <h3>{selected ? "Επεξεργασία εργαζομένου" : "Νέος εργαζόμενος"}</h3>
+            <input
+              name="fullName"
+              placeholder="Ονοματεπώνυμο"
+              defaultValue={selected?.fullName || ""}
+              required
+            />
+            <input
+              name="position"
+              placeholder="Θέση"
+              defaultValue={selected?.position || ""}
+            />
+            <input
+              name="phone"
+              placeholder="Τηλέφωνο"
+              defaultValue={selected?.phone || ""}
+            />
+            <input
+              name="email"
+              placeholder="Email"
+              defaultValue={selected?.email || ""}
+            />
+            <select
+              name="storeId"
+              defaultValue={selected?.storeId || stores[0]?.id}
+            >
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <select name="type" defaultValue={selected?.type || "PERMANENT"}>
+              <option value="PERMANENT">Μόνιμος</option>
+              <option value="TEMPORARY">Έκτακτος</option>
+            </select>
+            <label>
+              Μέγιστες ημέρες
+              <input
+                name="maxDaysPerWeek"
+                type="number"
+                min="1"
+                max="6"
+                defaultValue={selected?.maxDaysPerWeek || 5}
+              />
+            </label>
+            <label>
+              Μέγιστες ώρες
+              <input
+                name="maxHoursPerWeek"
+                type="number"
+                min="8"
+                max="72"
+                defaultValue={selected?.maxHoursPerWeek || 40}
+              />
+            </label>
+            <label className="check">
+              <input
+                name="allowSixthDay"
+                type="checkbox"
+                defaultChecked={selected?.allowSixthDay || false}
+              />{" "}
+              Επιτρέπεται 6η ημέρα
+            </label>
+            <div className="actions">
+              <button type="button" className="secondary" onClick={close}>
+                Ακύρωση
+              </button>
+              <button>Αποθήκευση</button>
+            </div>
+          </form>
+        </div>
+      )}
+      {mode === "rules" && (
+        <div className="modal">
+          <form className="rules-form" onSubmit={saveRules}>
+            <h3>Κανόνες: {selected.fullName}</h3>
+            <p>
+              Επίλεξε τις βάρδιες που μπορεί να κάνει και τον εβδομαδιαίο στόχο.
+            </p>
+            {shifts.map((s) => {
+              const r = selected.rules.find((x) => x.shiftTypeId === s.id);
+              return (
+                <div className="rule-row" key={s.id}>
+                  <label className="check">
+                    <input
+                      name={`allowed_${s.id}`}
+                      type="checkbox"
+                      defaultChecked={!!r}
+                    />{" "}
+                    {s.name}{" "}
+                    <small>
+                      {s.startTime}-{s.endTime}
+                    </small>
+                  </label>
+                  <input
+                    name={`target_${s.id}`}
+                    type="number"
+                    min="0"
+                    max="7"
+                    placeholder="Στόχος/εβδ."
+                    defaultValue={r?.targetPerWeek ?? ""}
+                  />
+                  <input
+                    name={`priority_${s.id}`}
+                    type="number"
+                    min="-100"
+                    max="100"
+                    placeholder="Προτεραιότητα"
+                    defaultValue={r?.priority ?? 0}
+                  />
+                </div>
+              );
+            })}
+            <div className="actions">
+              <button type="button" className="secondary" onClick={close}>
+                Ακύρωση
+              </button>
+              <button>Αποθήκευση κανόνων</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
+  );
 }
-const Stores=({rows,onOpen})=><section className="panel"><div className="panel-head"><div><h2>Καταστήματα</h2><p>Άνοιξε ένα κατάστημα για Cloud Store Connector, συσκευές και συγχρονισμό.</p></div></div><div className="store-grid">{rows.map(s=><article className="store-card" key={s.id}><Building2/><h3>{s.name}</h3><p>{s.city||"Χωρίς πόλη"}</p><small>{s.shifts?.length||0} τύποι βαρδιών</small><button className="store-open" onClick={()=>onOpen(s)}>Άνοιγμα καταστήματος</button></article>)}</div></section>;
+const Stores = ({ rows, onOpen }) => (
+  <section className="panel">
+    <div className="panel-head">
+      <div>
+        <h2>Καταστήματα</h2>
+        <p>
+          Άνοιξε ένα κατάστημα για Cloud Store Connector, συσκευές και
+          συγχρονισμό.
+        </p>
+      </div>
+    </div>
+    <div className="store-grid">
+      {rows.map((s) => (
+        <article className="store-card" key={s.id}>
+          <Building2 />
+          <h3>{s.name}</h3>
+          <p>{s.city || "Χωρίς πόλη"}</p>
+          <small>{s.shifts?.length || 0} τύποι βαρδιών</small>
+          <button className="store-open" onClick={() => onOpen(s)}>
+            Άνοιγμα καταστήματος
+          </button>
+        </article>
+      ))}
+    </div>
+  </section>
+);
 
-function Schedule({stores,employees,schedule,setSchedule,warnings,setWarnings,metrics,setMetrics,reload}){
- const initialFrom=()=>new Date().toISOString().slice(0,10),initialTo=()=>new Date(Date.now()+6*86400000).toISOString().slice(0,10);
- const [storeId,setStoreId]=useState(stores[0]?.id||""),[loading,setLoading]=useState(false),[moduleState,setModuleState]=useState(null),[dateFrom,setDateFrom]=useState(initialFrom),[dateTo,setDateTo]=useState(initialTo),[instructions,setInstructions]=useState(""),[shiftOverrides,setShiftOverrides]=useState({}),[briefLoaded,setBriefLoaded]=useState(false),[interpretation,setInterpretation]=useState(null),[rulesConfirmed,setRulesConfirmed]=useState(false),[interpreting,setInterpreting]=useState(false),[chatOpen,setChatOpen]=useState(false),[chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatBusy,setChatBusy]=useState(false);
- useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores]);
- useEffect(()=>{if(storeId)api(`/api/schedules/module-state?storeId=${storeId}`).then(setModuleState).catch(()=>setModuleState({active:false}))},[storeId]);
- useEffect(()=>{if(!storeId||!dateFrom||!dateTo)return;setBriefLoaded(false);setInterpretation(null);setRulesConfirmed(false);api(`/api/schedules/brief?${new URLSearchParams({storeId,dateFrom,dateTo})}`).then(row=>{setInstructions(row.instructions||"");setShiftOverrides(row.shiftOverrides||{});setBriefLoaded(true)}).catch(()=>setBriefLoaded(true))},[storeId,dateFrom,dateTo]);
- const interpret=async()=>{if(!instructions.trim())return alert("Γράψε πρώτα τις αλλαγές και τους κανόνες.");setInterpreting(true);setRulesConfirmed(false);try{const d=await api("/api/schedules/interpret",{method:"POST",body:JSON.stringify({storeId,dateFrom,dateTo,instructions,shiftOverrides})});setInterpretation(d.interpretation)}catch(e){alert(e.message)}finally{setInterpreting(false)}};
- const sendChat=async()=>{const text=chatDraft.trim();if(!text||chatBusy)return;const messages=[...chatMessages,{role:"user",text}];setChatMessages(messages);setChatDraft("");setChatBusy(true);try{const d=await api("/api/schedules/chat",{method:"POST",body:JSON.stringify({storeId,dateFrom,dateTo,instructions,messages:messages.slice(-20)})});setChatMessages(current=>[...current,{role:"assistant",text:d.assistantText,suggestedInstructions:d.suggestedInstructions,warnings:d.warnings||[]}])}catch(e){setChatMessages(current=>[...current,{role:"assistant",text:`Σφάλμα: ${e.message}`}])}finally{setChatBusy(false)}};
- const useChatInstructions=text=>{setInstructions(current=>[current.trim(),text.trim()].filter(Boolean).join("\n"));setInterpretation(null);setRulesConfirmed(false);setChatOpen(false)};
- const generate=async()=>{if(instructions.trim()&&(!interpretation||!rulesConfirmed))return alert("Πάτησε πρώτα «Ανάλυση οδηγιών» και επιβεβαίωσε το «Τι κατάλαβα».");setLoading(true);try{const d=await api("/api/schedules/generate",{method:"POST",body:JSON.stringify({storeId,dateFrom,dateTo,instructions,shiftOverrides,...(interpretation?{interpretation}:{})})});setSchedule(d.schedule);setWarnings(d.warnings);setMetrics(d.metrics);await reload()}catch(e){alert(e.message)}finally{setLoading(false)}};
- const email=async()=>{if(!schedule)return;setLoading(true);try{const result=await api(`/api/schedules/${schedule.id}/email`,{method:"POST",body:"{}"});alert(`Το πρόγραμμα στάλθηκε σε ${result.recipients.length} εργαζομένους.`)}catch(e){alert(e.message)}finally{setLoading(false)}};
- const groups=useMemo(()=>{const map={};for(const a of schedule?.assignments||[]){const d=a.date.slice(0,10);(map[d]??=[]).push(a)}return map},[schedule]);
- const selected=stores.find(row=>row.id===storeId),shifts=selected?.shifts||[];
- return <section className="panel schedule-print-area"><div className="panel-head"><div><h2>Πρόγραμμα Εργαζομένων με AI</h2><p>Κανόνες, διαθεσιμότητα και δίκαιη κατανομή ανά κατάστημα. {moduleState?.superAdminBypass?"Super Admin: πάντα ενεργό.":moduleState?.active?"Ενεργό επί πληρωμή module.":"Το module δεν είναι ενεργό για αυτό το κατάστημα."}</p></div><div className="schedule-controls"><select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><label>Από<input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}/></label><label>Έως<input type="date" min={dateFrom} value={dateTo} onChange={e=>setDateTo(e.target.value)}/></label><button className="secondary" onClick={()=>setChatOpen(value=>!value)} disabled={moduleState?.active===false}>Συνομιλία με AI</button><button className="secondary" onClick={interpret} disabled={interpreting||!instructions.trim()||moduleState?.active===false}>{interpreting?"Διαβάζω…":"Ανάλυση οδηγιών"}</button><button onClick={generate} disabled={loading||!briefLoaded||moduleState?.active===false}>{loading?"Δημιουργία...":"Δημιουργία με AI"}</button>{schedule&&<button className="secondary" onClick={()=>window.print()}><Printer/> PDF / Εκτύπωση</button>}{schedule&&<button className="secondary" onClick={email} disabled={loading}><Send/> Email εργαζομένων</button>}</div></div><div className="schedule-brief"><div><h3>Αλλαγές και νέοι κανόνες περιόδου</h3><p>Γράψε τις οδηγίες όπως τις λες, με πεζά ή κεφαλαία και ακόμη και συνεχόμενα. Το πρόγραμμα θα εμφανίσει πρώτα τι κατάλαβε για να το επιβεβαιώσεις.</p><textarea value={instructions} onChange={e=>{setInstructions(e.target.value);setInterpretation(null);setRulesConfirmed(false)}} placeholder="Γράψε εδώ αλλαγές, ωράρια, ρεπό, άδειες και νέους κανόνες…"/></div><div className="schedule-shift-overrides"><h3>Ωράρια και άτομα ανά βάρδια</h3>{shifts.map(shift=>{const value=shiftOverrides[shift.id]||{};return <div key={shift.id}><b>{shift.name}</b><label>Από<input type="time" value={value.startTime??shift.startTime} onChange={e=>setShiftOverrides(old=>({...old,[shift.id]:{...old[shift.id],startTime:e.target.value}}))}/></label><label>Έως<input type="time" value={value.endTime??shift.endTime} onChange={e=>setShiftOverrides(old=>({...old,[shift.id]:{...old[shift.id],endTime:e.target.value}}))}/></label><label>Άτομα<input type="number" min="0" max="20" value={value.requiredCount??shift.requiredCount} onChange={e=>setShiftOverrides(old=>({...old,[shift.id]:{...old[shift.id],requiredCount:Number(e.target.value)}}))}/></label></div>})}</div><small>Οι οδηγίες αποθηκεύονται για το συγκεκριμένο κατάστημα και το διάστημα Από–Έως όταν δημιουργήσεις το πρόγραμμα.</small></div>{interpretation&&<div className="schedule-interpretation"><h3>Τι κατάλαβα</h3>{interpretation.understood.map((text,index)=><div className="understood" key={index}>✓ {text}</div>)}{interpretation.unresolved.length>0&&<div className="unresolved"><b>Χρειάζεται διόρθωση στο κείμενο και νέα ανάλυση:</b>{interpretation.unresolved.map((text,index)=><div key={index}>⚠ {text}</div>)}</div>}<label className="check"><input type="checkbox" checked={rulesConfirmed} disabled={interpretation.unresolved.length>0} onChange={e=>setRulesConfirmed(e.target.checked)}/> Επιβεβαιώνω ότι οι παραπάνω κανόνες διαβάστηκαν σωστά.</label></div>}{chatOpen&&<div className="schedule-ai-chat"><div className="schedule-ai-chat-head"><div><h3>Συνομιλία με AI</h3><small>Διαβάζει προσωπικό, εγκεκριμένες άδειες, κανόνες και το πρόγραμμα του «{selected?.name}».</small></div><button className="secondary" onClick={()=>setChatOpen(false)}>Κλείσιμο</button></div><div className="schedule-ai-chat-messages">{chatMessages.length===0&&<div className="chat-empty">Ρώτησε π.χ. «Ποιοι λείπουν με άδεια;» ή «Πώς μπορώ να καλύψω την Πέμπτη χωρίς να παραβιάσω τα ρεπό;»</div>}{chatMessages.map((message,index)=><div key={index} className={`chat-message ${message.role}`}><b>{message.role==="user"?"Εσείς":"AI"}</b><p>{message.text}</p>{message.warnings?.map((warning,i)=><small key={i}>⚠ {warning}</small>)}{message.suggestedInstructions&&<button onClick={()=>useChatInstructions(message.suggestedInstructions)}>Μεταφορά στις οδηγίες</button>}</div>)}</div><div className="schedule-ai-chat-compose"><textarea value={chatDraft} onChange={e=>setChatDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}}} placeholder="Γράψε την ερώτηση ή την αλλαγή που θέλεις…"/><button onClick={sendChat} disabled={chatBusy||!chatDraft.trim()}>{chatBusy?"Απαντά…":"Αποστολή"}</button></div><small>Το AI δεν αποθηκεύει αλλαγές αυτόματα. Μεταφέρετε πρώτα την πρόταση στις οδηγίες και επιβεβαιώστε το «Τι κατάλαβα».</small></div>}
- {metrics&&<div className="quality-panel"><div className="quality-score"><strong>{metrics.quality}%</strong><span>Ποιότητα προγράμματος</span></div><div><b>Κάλυψη {metrics.coveragePercent}%</b><p>{metrics.covered}/{metrics.totalSlots} θέσεις · {metrics.temporaryAssignments} αναθέσεις έκτακτων · διαφορά ωρών {metrics.hoursSpread}</p></div></div>}
- {warnings.length>0&&<div className="warning-box"><b>{warnings.length} προειδοποιήσεις</b>{warnings.slice(0,12).map((w,i)=><div key={i}>{w.message||w}{w.suggestions?.length?` · Προτάσεις: ${w.suggestions.join(", ")}`:""}</div>)}</div>}
- {!schedule?<div className="empty">Δεν έχει δημιουργηθεί πρόγραμμα.</div>:<div className="schedule-grid">{Object.entries(groups).map(([date,items])=><article className="day" key={date}><h3>{new Date(date+"T12:00:00").toLocaleDateString("el-GR",{weekday:"long",day:"2-digit",month:"2-digit"})}</h3>{items.map(a=><AssignmentCard a={a} onChanged={async()=>{const sc=await api(`/api/schedules/latest?storeId=${storeId}`);setSchedule(sc);await reload()}}/>)}</article>)}</div>}</section>
+function Schedule({
+  stores,
+  employees,
+  schedule,
+  setSchedule,
+  warnings,
+  setWarnings,
+  metrics,
+  setMetrics,
+  reload,
+}) {
+  const initialFrom = () => new Date().toISOString().slice(0, 10),
+    initialTo = () =>
+      new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10);
+  const [storeId, setStoreId] = useState(stores[0]?.id || ""),
+    [loading, setLoading] = useState(false),
+    [moduleState, setModuleState] = useState(null),
+    [dateFrom, setDateFrom] = useState(initialFrom),
+    [dateTo, setDateTo] = useState(initialTo),
+    [instructions, setInstructions] = useState(""),
+    [shiftOverrides, setShiftOverrides] = useState({}),
+    [briefLoaded, setBriefLoaded] = useState(false),
+    [interpretation, setInterpretation] = useState(null),
+    [rulesConfirmed, setRulesConfirmed] = useState(false),
+    [interpreting, setInterpreting] = useState(false),
+    [chatOpen, setChatOpen] = useState(false),
+    [chatMessages, setChatMessages] = useState([]),
+    [chatDraft, setChatDraft] = useState(""),
+    [chatBusy, setChatBusy] = useState(false);
+  useEffect(() => {
+    if (!storeId && stores[0]) setStoreId(stores[0].id);
+  }, [stores]);
+  useEffect(() => {
+    if (storeId)
+      api(`/api/schedules/module-state?storeId=${storeId}`)
+        .then(setModuleState)
+        .catch(() => setModuleState({ active: false }));
+  }, [storeId]);
+  useEffect(() => {
+    if (!storeId || !dateFrom || !dateTo) return;
+    setBriefLoaded(false);
+    setInterpretation(null);
+    setRulesConfirmed(false);
+    api(
+      `/api/schedules/brief?${new URLSearchParams({ storeId, dateFrom, dateTo })}`,
+    )
+      .then((row) => {
+        setInstructions(row.instructions || "");
+        setShiftOverrides(row.shiftOverrides || {});
+        setBriefLoaded(true);
+      })
+      .catch(() => setBriefLoaded(true));
+  }, [storeId, dateFrom, dateTo]);
+  const interpret = async () => {
+    if (!instructions.trim())
+      return alert("Γράψε πρώτα τις αλλαγές και τους κανόνες.");
+    setInterpreting(true);
+    setRulesConfirmed(false);
+    try {
+      const d = await api("/api/schedules/interpret", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId,
+          dateFrom,
+          dateTo,
+          instructions,
+          shiftOverrides,
+        }),
+      });
+      setInterpretation(d.interpretation);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setInterpreting(false);
+    }
+  };
+  const sendChat = async () => {
+    const text = chatDraft.trim();
+    if (!text || chatBusy) return;
+    const messages = [...chatMessages, { role: "user", text }];
+    setChatMessages(messages);
+    setChatDraft("");
+    setChatBusy(true);
+    try {
+      const d = await api("/api/schedules/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId,
+          dateFrom,
+          dateTo,
+          instructions,
+          shiftOverrides,
+          messages: messages
+            .slice(-8)
+            .map(({ role, text }) => ({ role, text })),
+        }),
+      });
+      setChatMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          text: d.assistantText,
+          scheduleRows: d.scheduleRows || [],
+          suggestedInstructions: d.suggestedInstructions,
+          warnings: d.warnings || [],
+        },
+      ]);
+    } catch (e) {
+      setChatMessages((current) => [
+        ...current,
+        { role: "assistant", text: `Σφάλμα: ${e.message}` },
+      ]);
+    } finally {
+      setChatBusy(false);
+    }
+  };
+  const useChatInstructions = (text) => {
+    setInstructions((current) =>
+      [current.trim(), text.trim()].filter(Boolean).join("\n"),
+    );
+    setInterpretation(null);
+    setRulesConfirmed(false);
+    setChatOpen(false);
+  };
+  const generate = async () => {
+    if (instructions.trim() && (!interpretation || !rulesConfirmed))
+      return alert(
+        "Πάτησε πρώτα «Ανάλυση οδηγιών» και επιβεβαίωσε το «Τι κατάλαβα».",
+      );
+    setLoading(true);
+    try {
+      const d = await api("/api/schedules/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId,
+          dateFrom,
+          dateTo,
+          instructions,
+          shiftOverrides,
+          ...(interpretation ? { interpretation } : {}),
+        }),
+      });
+      setSchedule(d.schedule);
+      setWarnings(d.warnings);
+      setMetrics(d.metrics);
+      await reload();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const email = async () => {
+    if (!schedule) return;
+    setLoading(true);
+    try {
+      const result = await api(`/api/schedules/${schedule.id}/email`, {
+        method: "POST",
+        body: "{}",
+      });
+      alert(
+        `Το πρόγραμμα στάλθηκε σε ${result.recipients.length} εργαζομένους.`,
+      );
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const groups = useMemo(() => {
+    const map = {};
+    for (const a of schedule?.assignments || []) {
+      const d = a.date.slice(0, 10);
+      (map[d] ??= []).push(a);
+    }
+    return map;
+  }, [schedule]);
+  const selected = stores.find((row) => row.id === storeId),
+    shifts = selected?.shifts || [];
+  return (
+    <section className="panel schedule-print-area">
+      <div className="panel-head">
+        <div>
+          <h2>Πρόγραμμα Εργαζομένων με AI</h2>
+          <p>
+            Κανόνες, διαθεσιμότητα και δίκαιη κατανομή ανά κατάστημα.{" "}
+            {moduleState?.superAdminBypass
+              ? "Super Admin: πάντα ενεργό."
+              : moduleState?.active
+                ? "Ενεργό επί πληρωμή module."
+                : "Το module δεν είναι ενεργό για αυτό το κατάστημα."}
+          </p>
+        </div>
+        <div className="schedule-controls">
+          <select value={storeId} onChange={(e) => setStoreId(e.target.value)}>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <label>
+            Από
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </label>
+          <label>
+            Έως
+            <input
+              type="date"
+              min={dateFrom}
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </label>
+          <button
+            className="secondary"
+            onClick={() => setChatOpen((value) => !value)}
+            disabled={moduleState?.active === false}
+          >
+            Συνομιλία με AI
+          </button>
+          <button
+            className="secondary"
+            onClick={interpret}
+            disabled={
+              interpreting ||
+              !instructions.trim() ||
+              moduleState?.active === false
+            }
+          >
+            {interpreting ? "Διαβάζω…" : "Ανάλυση οδηγιών"}
+          </button>
+          <button
+            onClick={generate}
+            disabled={loading || !briefLoaded || moduleState?.active === false}
+          >
+            {loading ? "Δημιουργία..." : "Δημιουργία με AI"}
+          </button>
+          {schedule && (
+            <button className="secondary" onClick={() => window.print()}>
+              <Printer /> PDF / Εκτύπωση
+            </button>
+          )}
+          {schedule && (
+            <button className="secondary" onClick={email} disabled={loading}>
+              <Send /> Email εργαζομένων
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="schedule-brief">
+        <div>
+          <h3>Αλλαγές και νέοι κανόνες περιόδου</h3>
+          <p>
+            Γράψε τις οδηγίες όπως τις λες, με πεζά ή κεφαλαία και ακόμη και
+            συνεχόμενα. Το πρόγραμμα θα εμφανίσει πρώτα τι κατάλαβε για να το
+            επιβεβαιώσεις.
+          </p>
+          <textarea
+            value={instructions}
+            onChange={(e) => {
+              setInstructions(e.target.value);
+              setInterpretation(null);
+              setRulesConfirmed(false);
+            }}
+            placeholder="Γράψε εδώ αλλαγές, ωράρια, ρεπό, άδειες και νέους κανόνες…"
+          />
+        </div>
+        <div className="schedule-shift-overrides">
+          <h3>Ωράρια και άτομα ανά βάρδια</h3>
+          {shifts.map((shift) => {
+            const value = shiftOverrides[shift.id] || {};
+            return (
+              <div key={shift.id}>
+                <b>{shift.name}</b>
+                <label>
+                  Από
+                  <input
+                    type="time"
+                    value={value.startTime ?? shift.startTime}
+                    onChange={(e) =>
+                      setShiftOverrides((old) => ({
+                        ...old,
+                        [shift.id]: {
+                          ...old[shift.id],
+                          startTime: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Έως
+                  <input
+                    type="time"
+                    value={value.endTime ?? shift.endTime}
+                    onChange={(e) =>
+                      setShiftOverrides((old) => ({
+                        ...old,
+                        [shift.id]: {
+                          ...old[shift.id],
+                          endTime: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Άτομα
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={value.requiredCount ?? shift.requiredCount}
+                    onChange={(e) =>
+                      setShiftOverrides((old) => ({
+                        ...old,
+                        [shift.id]: {
+                          ...old[shift.id],
+                          requiredCount: Number(e.target.value),
+                        },
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            );
+          })}
+        </div>
+        <small>
+          Οι οδηγίες αποθηκεύονται για το συγκεκριμένο κατάστημα και το διάστημα
+          Από–Έως όταν δημιουργήσεις το πρόγραμμα.
+        </small>
+      </div>
+      {interpretation && (
+        <div className="schedule-interpretation">
+          <h3>Τι κατάλαβα</h3>
+          {interpretation.understood.map((text, index) => (
+            <div className="understood" key={index}>
+              ✓ {text}
+            </div>
+          ))}
+          {interpretation.unresolved.length > 0 && (
+            <div className="unresolved">
+              <b>Χρειάζεται διόρθωση στο κείμενο και νέα ανάλυση:</b>
+              {interpretation.unresolved.map((text, index) => (
+                <div key={index}>⚠ {text}</div>
+              ))}
+            </div>
+          )}
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={rulesConfirmed}
+              disabled={interpretation.unresolved.length > 0}
+              onChange={(e) => setRulesConfirmed(e.target.checked)}
+            />{" "}
+            Επιβεβαιώνω ότι οι παραπάνω κανόνες διαβάστηκαν σωστά.
+          </label>
+        </div>
+      )}
+      {chatOpen && (
+        <div className="schedule-ai-chat">
+          <div className="schedule-ai-chat-head">
+            <div>
+              <h3>Συνομιλία με AI</h3>
+              <small>
+                Διαβάζει προσωπικό, εγκεκριμένες άδειες, κανόνες και το
+                πρόγραμμα του «{selected?.name}».
+              </small>
+            </div>
+            <button className="secondary" onClick={() => setChatOpen(false)}>
+              Κλείσιμο
+            </button>
+          </div>
+          <div className="schedule-ai-chat-messages">
+            {chatMessages.length === 0 && (
+              <div className="chat-empty">
+                Ρώτησε π.χ. «Ποιοι λείπουν με άδεια;» ή «Πώς μπορώ να καλύψω την
+                Πέμπτη χωρίς να παραβιάσω τα ρεπό;»
+              </div>
+            )}
+            {chatMessages.map((message, index) => (
+              <div key={index} className={`chat-message ${message.role}`}>
+                <b>{message.role === "user" ? "Εσείς" : "AI"}</b>
+                <p>{message.text}</p>
+                <ChatScheduleTable rows={message.scheduleRows} />
+                {message.warnings?.map((warning, i) => (
+                  <small key={i}>⚠ {warning}</small>
+                ))}
+                {message.suggestedInstructions && (
+                  <button
+                    onClick={() =>
+                      useChatInstructions(message.suggestedInstructions)
+                    }
+                  >
+                    Μεταφορά στις οδηγίες
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="schedule-ai-chat-compose">
+            <textarea
+              value={chatDraft}
+              onChange={(e) => setChatDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendChat();
+                }
+              }}
+              placeholder="Γράψε την ερώτηση ή την αλλαγή που θέλεις…"
+            />
+            <button onClick={sendChat} disabled={chatBusy || !chatDraft.trim()}>
+              {chatBusy ? "Απαντά…" : "Αποστολή"}
+            </button>
+          </div>
+          <small>
+            Το AI δεν αποθηκεύει αλλαγές αυτόματα. Μεταφέρετε πρώτα την πρόταση
+            στις οδηγίες και επιβεβαιώστε το «Τι κατάλαβα».
+          </small>
+        </div>
+      )}
+      {metrics && (
+        <div className="quality-panel">
+          <div className="quality-score">
+            <strong>{metrics.quality}%</strong>
+            <span>Ποιότητα προγράμματος</span>
+          </div>
+          <div>
+            <b>Κάλυψη {metrics.coveragePercent}%</b>
+            <p>
+              {metrics.covered}/{metrics.totalSlots} θέσεις ·{" "}
+              {metrics.temporaryAssignments} αναθέσεις έκτακτων · διαφορά ωρών{" "}
+              {metrics.hoursSpread}
+            </p>
+          </div>
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div className="warning-box">
+          <b>{warnings.length} προειδοποιήσεις</b>
+          {warnings.slice(0, 12).map((w, i) => (
+            <div key={i}>
+              {w.message || w}
+              {w.suggestions?.length
+                ? ` · Προτάσεις: ${w.suggestions.join(", ")}`
+                : ""}
+            </div>
+          ))}
+        </div>
+      )}
+      {!schedule ? (
+        <div className="empty">Δεν έχει δημιουργηθεί πρόγραμμα.</div>
+      ) : (
+        <div className="schedule-grid">
+          {Object.entries(groups).map(([date, items]) => (
+            <article className="day" key={date}>
+              <h3>
+                {new Date(date + "T12:00:00").toLocaleDateString("el-GR", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+              </h3>
+              {items.map((a) => (
+                <AssignmentCard
+                  a={a}
+                  onChanged={async () => {
+                    const sc = await api(
+                      `/api/schedules/latest?storeId=${storeId}`,
+                    );
+                    setSchedule(sc);
+                    await reload();
+                  }}
+                />
+              ))}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
-function AssignmentCard({a,onChanged}){
- const [editing,setEditing]=useState(false),[candidates,setCandidates]=useState([]);
- const open=async()=>{setCandidates(await api(`/api/assignments/${a.id}/candidates`));setEditing(true)};
- const change=async employeeId=>{await api(`/api/assignments/${a.id}`,{method:"PATCH",body:JSON.stringify({employeeId:employeeId||null})});setEditing(false);await onChanged()};
- const fixedTime=String(a.note||"").match(/^AI_FIXED_TIME:([0-2]\d:[0-5]\d)-([0-2]\d:[0-5]\d)/),hours=fixedTime?`${fixedTime[1]}-${fixedTime[2]}`:`${a.shiftType.startTime}-${a.shiftType.endTime}`;
- return <div className={`assignment ${!a.employee?"uncovered":""}`}><b>{a.shiftType.name} · {hours}</b><span>{a.employee?.fullName||"ΑΚΑΛΥΠΤΟ"}</span><button className="mini-action" onClick={open}><UserRoundCheck/> Αλλαγή</button>{editing&&<div className="candidate-pop"><button onClick={()=>change(null)}>Ακάλυπτο</button>{candidates.map(e=><button key={e.id} onClick={()=>change(e.id)}>{e.fullName} {e.type==="TEMPORARY"?"· Έκτακτος":""}</button>)}<button onClick={()=>setEditing(false)}>Κλείσιμο</button></div>}</div>
+function AssignmentCard({ a, onChanged }) {
+  const [editing, setEditing] = useState(false),
+    [candidates, setCandidates] = useState([]);
+  const open = async () => {
+    setCandidates(await api(`/api/assignments/${a.id}/candidates`));
+    setEditing(true);
+  };
+  const change = async (employeeId) => {
+    await api(`/api/assignments/${a.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ employeeId: employeeId || null }),
+    });
+    setEditing(false);
+    await onChanged();
+  };
+  const fixedTime = String(a.note || "").match(
+      /^AI_FIXED_TIME:([0-2]\d:[0-5]\d)-([0-2]\d:[0-5]\d)/,
+    ),
+    hours = fixedTime
+      ? `${fixedTime[1]}-${fixedTime[2]}`
+      : `${a.shiftType.startTime}-${a.shiftType.endTime}`;
+  return (
+    <div className={`assignment ${!a.employee ? "uncovered" : ""}`}>
+      <b>
+        {a.shiftType.name} · {hours}
+      </b>
+      <span>{a.employee?.fullName || "ΑΚΑΛΥΠΤΟ"}</span>
+      <button className="mini-action" onClick={open}>
+        <UserRoundCheck /> Αλλαγή
+      </button>
+      {editing && (
+        <div className="candidate-pop">
+          <button onClick={() => change(null)}>Ακάλυπτο</button>
+          {candidates.map((e) => (
+            <button key={e.id} onClick={() => change(e.id)}>
+              {e.fullName} {e.type === "TEMPORARY" ? "· Έκτακτος" : ""}
+            </button>
+          ))}
+          <button onClick={() => setEditing(false)}>Κλείσιμο</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function Leaves({employees,leaves,reload}){
- const [show,setShow]=useState(false),[availability,setAvailability]=useState(false);
- const saveLeave=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);await api("/api/leaves",{method:"POST",body:JSON.stringify({employeeId:f.get("employeeId"),startDate:f.get("startDate"),endDate:f.get("endDate"),type:f.get("type"),note:f.get("note")})});setShow(false);await reload()};
- const saveAvailability=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);await api("/api/availability",{method:"POST",body:JSON.stringify({employeeId:f.get("employeeId"),date:f.get("date"),available:false,note:f.get("note")})});setAvailability(false);alert("Η μη διαθεσιμότητα αποθηκεύτηκε.")};
- return <section className="panel"><div className="panel-head"><div><h2>Άδειες και απουσίες</h2><p>Άδεια, ασθένεια και μη διαθεσιμότητα ανά ημερομηνία.</p></div><div className="leave-actions"><button onClick={()=>setAvailability(true)}>Μη διαθεσιμότητα</button><button onClick={()=>setShow(true)}><Plus/> Νέα άδεια</button></div></div>
- <div className="leave-list">{leaves.length===0?<div className="empty">Δεν υπάρχουν καταχωρίσεις.</div>:leaves.map(l=><article key={l.id}><div><b>{l.employee.fullName}</b><span>{l.type==="LEAVE"?"Άδεια":l.type==="SICK"?"Ασθένεια":"Άλλο"}</span></div><div>{new Date(l.startDate).toLocaleDateString("el-GR")} – {new Date(l.endDate).toLocaleDateString("el-GR")}</div><span className="pill">{l.status==="APPROVED"?"Εγκεκριμένο":l.status}</span></article>)}</div>
- {show&&<div className="modal"><form onSubmit={saveLeave}><h3>Νέα άδεια ή απουσία</h3><select name="employeeId">{employees.filter(e=>e.active).map(e=><option value={e.id} key={e.id}>{e.fullName}</option>)}</select><select name="type"><option value="LEAVE">Άδεια</option><option value="SICK">Ασθένεια</option><option value="OTHER">Άλλο</option></select><label>Από<input name="startDate" type="date" required/></label><label>Έως<input name="endDate" type="date" required/></label><input name="note" placeholder="Σημείωση"/><div className="actions"><button type="button" className="secondary" onClick={()=>setShow(false)}>Ακύρωση</button><button>Αποθήκευση</button></div></form></div>}
- {availability&&<div className="modal"><form onSubmit={saveAvailability}><h3>Μη διαθεσιμότητα</h3><select name="employeeId">{employees.filter(e=>e.active).map(e=><option value={e.id} key={e.id}>{e.fullName}</option>)}</select><label>Ημερομηνία<input name="date" type="date" required/></label><input name="note" placeholder="Αιτία ή σημείωση"/><div className="actions"><button type="button" className="secondary" onClick={()=>setAvailability(false)}>Ακύρωση</button><button>Αποθήκευση</button></div></form></div>}</section>
+function ChatScheduleTable({ rows }) {
+  if (!rows?.length) return null;
+  return (
+    <div className="chat-schedule-table">
+      <div className="chat-schedule-row head">
+        <b>Ημερομηνία</b>
+        <b>Βάρδια</b>
+        <b>Ώρες</b>
+        <b>Εργαζόμενοι</b>
+      </div>
+      {rows.map((row, index) => (
+        <div className="chat-schedule-row" key={index}>
+          <span>{row.date}</span>
+          <b>{row.shift}</b>
+          <span>{row.hours}</span>
+          <span>
+            {row.employees?.join(", ") || "ΑΚΑΛΥΠΤΟ"}
+            {row.note && <small>{row.note}</small>}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-createRoot(document.getElementById("root")).render(<App/>);
+function Leaves({ employees, leaves, reload }) {
+  const [show, setShow] = useState(false),
+    [availability, setAvailability] = useState(false);
+  const saveLeave = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await api("/api/leaves", {
+      method: "POST",
+      body: JSON.stringify({
+        employeeId: f.get("employeeId"),
+        startDate: f.get("startDate"),
+        endDate: f.get("endDate"),
+        type: f.get("type"),
+        note: f.get("note"),
+      }),
+    });
+    setShow(false);
+    await reload();
+  };
+  const saveAvailability = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await api("/api/availability", {
+      method: "POST",
+      body: JSON.stringify({
+        employeeId: f.get("employeeId"),
+        date: f.get("date"),
+        available: false,
+        note: f.get("note"),
+      }),
+    });
+    setAvailability(false);
+    alert("Η μη διαθεσιμότητα αποθηκεύτηκε.");
+  };
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div>
+          <h2>Άδειες και απουσίες</h2>
+          <p>Άδεια, ασθένεια και μη διαθεσιμότητα ανά ημερομηνία.</p>
+        </div>
+        <div className="leave-actions">
+          <button onClick={() => setAvailability(true)}>
+            Μη διαθεσιμότητα
+          </button>
+          <button onClick={() => setShow(true)}>
+            <Plus /> Νέα άδεια
+          </button>
+        </div>
+      </div>
+      <div className="leave-list">
+        {leaves.length === 0 ? (
+          <div className="empty">Δεν υπάρχουν καταχωρίσεις.</div>
+        ) : (
+          leaves.map((l) => (
+            <article key={l.id}>
+              <div>
+                <b>{l.employee.fullName}</b>
+                <span>
+                  {l.type === "LEAVE"
+                    ? "Άδεια"
+                    : l.type === "SICK"
+                      ? "Ασθένεια"
+                      : "Άλλο"}
+                </span>
+              </div>
+              <div>
+                {new Date(l.startDate).toLocaleDateString("el-GR")} –{" "}
+                {new Date(l.endDate).toLocaleDateString("el-GR")}
+              </div>
+              <span className="pill">
+                {l.status === "APPROVED" ? "Εγκεκριμένο" : l.status}
+              </span>
+            </article>
+          ))
+        )}
+      </div>
+      {show && (
+        <div className="modal">
+          <form onSubmit={saveLeave}>
+            <h3>Νέα άδεια ή απουσία</h3>
+            <select name="employeeId">
+              {employees
+                .filter((e) => e.active)
+                .map((e) => (
+                  <option value={e.id} key={e.id}>
+                    {e.fullName}
+                  </option>
+                ))}
+            </select>
+            <select name="type">
+              <option value="LEAVE">Άδεια</option>
+              <option value="SICK">Ασθένεια</option>
+              <option value="OTHER">Άλλο</option>
+            </select>
+            <label>
+              Από
+              <input name="startDate" type="date" required />
+            </label>
+            <label>
+              Έως
+              <input name="endDate" type="date" required />
+            </label>
+            <input name="note" placeholder="Σημείωση" />
+            <div className="actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShow(false)}
+              >
+                Ακύρωση
+              </button>
+              <button>Αποθήκευση</button>
+            </div>
+          </form>
+        </div>
+      )}
+      {availability && (
+        <div className="modal">
+          <form onSubmit={saveAvailability}>
+            <h3>Μη διαθεσιμότητα</h3>
+            <select name="employeeId">
+              {employees
+                .filter((e) => e.active)
+                .map((e) => (
+                  <option value={e.id} key={e.id}>
+                    {e.fullName}
+                  </option>
+                ))}
+            </select>
+            <label>
+              Ημερομηνία
+              <input name="date" type="date" required />
+            </label>
+            <input name="note" placeholder="Αιτία ή σημείωση" />
+            <div className="actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setAvailability(false)}
+              >
+                Ακύρωση
+              </button>
+              <button>Αποθήκευση</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<App />);
