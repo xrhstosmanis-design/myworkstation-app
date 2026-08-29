@@ -20,7 +20,7 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
  useEffect(()=>{
   api(`/api/transactions/stores/${store.id}/overview`).then(setLedger).catch(e=>setPaymentError(e.message));
-  if(!cachedAccess(store.id))api(`/api/store-pos/stores/${store.id}/access`).then(result=>setAccess(result?.access||{})).catch(e=>setPaymentError(e.message));
+  api(`/api/store-pos/stores/${store.id}/access`).then(result=>setAccess(result?.access||{})).catch(e=>setPaymentError(e.message));
   api("/api/management/expense-categories").then(result=>setExpenseCategories((result?.items||[]).filter(x=>x.active!==false))).catch(()=>setExpenseCategories([]));
   api(`/api/transactions/stores/${store.id}/payroll-employees`).then(result=>setPayrollEmployees(result?.items||[])).catch(()=>setPayrollEmployees([]));
   api("/api/commerce/ai-reader/capability").then(()=>setPremiumInvoice(true)).catch(()=>setPremiumInvoice(false));
