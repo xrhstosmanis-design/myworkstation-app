@@ -7,6 +7,7 @@ const posRoute=await readFile(new URL("../src/routes/store-pos.js",import.meta.u
 const cashControl=await readFile(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const auditUi=await readFile(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
 const shiftModal=await readFile(new URL("../../client/src/components/store/StoreShiftTransactionsModal.jsx",import.meta.url),"utf8");
+const storeTransactions=await readFile(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8");
 
 test("pilot IRIS is an explicit online POS checkout route",()=>{
   assert.match(panel,/if\(action==="IRIS"\)return checkout\("IRIS"\)/);
@@ -19,6 +20,7 @@ test("pilot IRIS keeps a separate ledger type while retaining electronic shift t
   assert.match(posRoute,/if\(irisAmount>0\).*'SALE_IRIS'/);
   assert.match(posRoute,/IRIS \(ΠΙΛΟΤΙΚΟ\)/);
   assert.match(cashControl,/'SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD'/);
+  assert.match(storeTransactions,/cardSales:sum\("SALE_CARD"\)\+sum\("SALE_IRIS"\)\+sum\("CUSTOMER_RECEIPT_CARD"\),\s*irisSales:sum\("SALE_IRIS"\)/);
   assert.match(auditUi,/SALE_IRIS:"Πληρωμή IRIS \(πιλοτικό\)"/);
   assert.match(shiftModal,/\["SALE_CASH","SALE_CARD","SALE_IRIS"\]/);
 });
