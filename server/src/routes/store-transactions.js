@@ -57,7 +57,7 @@ const tableStatements=[
     "attachmentMimeType" TEXT,
     "attachmentFilename" TEXT,
     "attachmentChecksum" TEXT,
-    "paymentSource" TEXT,
+    "paymentMethod" TEXT,
     "subtractFromShift" BOOLEAN NOT NULL DEFAULT false,
     "actorId" TEXT NOT NULL,
     "actorName" TEXT NOT NULL,
@@ -76,7 +76,7 @@ const tableStatements=[
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentMimeType" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentFilename" TEXT`,
   `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "attachmentChecksum" TEXT`
-  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "paymentSource" TEXT`
+  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "supplierId" TEXT`
   ,`CREATE INDEX IF NOT EXISTS "StoreTransaction_supplier_idx" ON "StoreTransaction" ("companyId","supplierId","occurredAt" DESC)`
@@ -176,7 +176,8 @@ const transactionSchema=z.object({
   supplierId:z.string().optional().nullable(),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
   purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
-  paymentSource:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT","EXTERNAL"]).optional().nullable(),
+  paymentSource:z.enum(["CASH_SHIFT","EXTERNAL"]).optional().nullable(),
+  paymentMethod:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT"]).optional().nullable(),
   idempotencyKey:z.string().trim().min(8).max(180).optional().nullable(),
   subtractFromShift:z.coerce.boolean().optional().default(false),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
@@ -325,7 +326,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
            CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN 'DOCUMENT'
                 WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "attachmentData" IS NULL THEN 'NO_DOCUMENT'
                 ELSE 'LEGACY' END AS "evidenceMode",
-           COALESCE("paymentSource",CASE WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true THEN 'CASH_SHIFT'
+           COALESCE(CASE WHEN "paymentMethod" IS NOT NULL THEN "paymentMethod" END,CASE WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true THEN 'CASH_SHIFT'
                 WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') THEN 'EXTERNAL'
                 ELSE NULL END) AS "paymentSource"
     FROM "StoreTransaction"
@@ -401,32 +402,34 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
   const selectedPaymentSource=body.paymentSource||(body.subtractFromShift?"CASH_SHIFT":"EXTERNAL");
+  const selectedPaymentMethod=body.paymentMethod||(selectedPaymentSource==="CASH_SHIFT"?"CASH_SHIFT":"CORPORATE_CARD");
   const subtractFromShift=isPayment
     ?(legacyPayment?selectedPaymentSource==="CASH_SHIFT":body.paymentSource==="CASH_SHIFT")
     :Boolean(body.subtractFromShift);
-  const externalPayment=isPayment&&selectedPaymentSource!=="CASH_SHIFT";
+  const externalPayment=isPayment&&!legacyPayment&&body.paymentSource==="EXTERNAL";
+  const legacyExternalPayment=legacyPayment&&selectedPaymentSource==="EXTERNAL";
   const id=isPayment?paymentId(req.user.companyId,store.id,paymentKey):crypto.randomUUID();
   const documentMime=purchaseDocument?"application/vnd.myworkstation.purchase-document":null;
   const evidenceChecksum=isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null;
   let rows;
-  if(externalPayment){
+  if(externalPayment||legacyExternalPayment){
     rows=await prisma.$queryRaw`
       INSERT INTO "StoreTransaction" (
-        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentSource","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
       ) VALUES (
         ${id},${req.user.companyId},${store.id},${null},${body.type},${body.amount},
-        ${body.description||null},${body.supplierId||null},${supplierName},false,${selectedPaymentSource},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+        ${body.description||null},${body.supplierId||null},${supplierName},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
       )
       RETURNING *
     `;
   }else{
     rows=await prisma.$queryRaw`
       INSERT INTO "StoreTransaction" (
-        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentSource","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
       )
       SELECT
         ${id},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
-        ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${selectedPaymentSource},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+        ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
       FROM "CashShiftSession" shift
       WHERE shift."storeId"=${store.id}
         AND shift."companyId"=${req.user.companyId}
@@ -446,6 +449,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     purchaseDocumentId:purchaseDocument?.id||null,
     evidenceMode:isPayment?(body.evidenceMode||"LEGACY"):null,
     paymentSource:isPayment?selectedPaymentSource:null,
+    paymentMethod:isPayment?selectedPaymentMethod:null,
     emailNotification
   });
 }));
