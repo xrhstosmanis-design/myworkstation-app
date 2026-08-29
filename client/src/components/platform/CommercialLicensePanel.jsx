@@ -1,10 +1,26 @@
 import React,{useMemo,useState} from "react";
-import {CheckCircle2,LockKeyhole,PackageCheck,Save,XCircle} from "lucide-react";
+import {CheckCircle2,LockKeyhole,PackageCheck,Printer,Save,XCircle} from "lucide-react";
 import "./commercial-module-pricing.css";
+import "./managed-control.css";
 
-const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"Basic",PRO:"Pro",ENTERPRISE:"Enterprise"};
+const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"START — 69 €",PRO:"BUSINESS — 129 €",ENTERPRISE:"AI COMPLETE — 199 €"};
 const statusLabels={TRIAL:"Δοκιμή",PILOT:"Πιλοτικό",ACTIVE:"Ενεργό",SUSPENDED:"Σε αναστολή",EXPIRED:"Έληξε"};
 const toInput=value=>value?new Date(value).toISOString().slice(0,10):"";
+const controlPlans={NONE:{label:"Χωρίς ανθρώπινο έλεγχο",price:0},BASIC:{label:"Έλεγχος BASIC",price:149},COMPLETE:{label:"Έλεγχος COMPLETE",price:249},PREMIUM:{label:"Έλεγχος PREMIUM",price:349}};
+const softwarePlans={
+  BASIC:{label:"START",price:69,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT"]},
+  PRO:{label:"BUSINESS",price:129,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE"]},
+  ENTERPRISE:{label:"AI COMPLETE",price:199,keys:["CORE","PERSONNEL","SHIFTS","AI_STAFF_SCHEDULER","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE","AI_READER"]}
+};
+
+function printPriceList(){
+  const rows=Object.values(softwarePlans).map(item=>`<tr><td><b>${item.label}</b></td><td>${item.keys.length} λειτουργίες/modules</td><td>${item.price.toFixed(2)} € / μήνα</td></tr>`).join("");
+  const controls=Object.values(controlPlans).filter(item=>item.price>0).map(item=>`<tr><td><b>${item.label}</b></td><td>Ξεχωριστή υπηρεσία ανθρώπινου ελέγχου</td><td>${item.price.toFixed(2)} € / μήνα</td></tr>`).join("");
+  const popup=window.open("","_blank","width=1000,height=800");
+  if(!popup)return window.alert("Ο browser εμπόδισε την εκτύπωση. Επιτρέψτε τα αναδυόμενα παράθυρα και δοκιμάστε ξανά.");
+  popup.document.write(`<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Τιμοκατάλογος MyWorkStation</title><style>body{font-family:Arial,sans-serif;color:#17324a;padding:32px}h1{color:#123f5b}h2{margin-top:28px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #cbd7e5;padding:11px;text-align:left}th{background:#123f5b;color:#fff}.notice{margin:24px 0;padding:16px;border:2px solid #d97706;background:#fff8e8;font-size:17px;font-weight:800}.foot{margin-top:22px;color:#64748b;font-size:12px}@page{size:A4;margin:14mm}</style></head><body><h1>MyWorkStation — Τιμοκατάλογος</h1><p>Μηνιαίες τιμές ανά κατάστημα.</p><h2>1. Συνδρομές λογισμικού</h2><table><thead><tr><th>Πακέτο</th><th>Περιγραφή</th><th>Τιμή</th></tr></thead><tbody>${rows}</tbody></table><h2>2. Προαιρετικός ανθρώπινος έλεγχος</h2><table><thead><tr><th>Υπηρεσία</th><th>Περιγραφή</th><th>Τιμή</th></tr></thead><tbody>${controls}</tbody></table><div class="notice">Οι τιμές δεν περιλαμβάνουν φυσική απογραφή. Η φυσική καταμέτρηση των προϊόντων πραγματοποιείται από προσωπικό του καταστήματος.</div><p class="foot">Όλες οι αναγραφόμενες τιμές είναι προ ΦΠΑ. Η συνδρομή λογισμικού και η υπηρεσία ανθρώπινου ελέγχου χρεώνονται ξεχωριστά.</p></body></html>`);
+  popup.document.close();popup.focus();setTimeout(()=>popup.print(),250);
+}
 
 export default function CommercialLicensePanel({company,request,onSaved,onClose}){
   const [plan,setPlan]=useState(company.plan||"PILOT");
@@ -14,6 +30,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
   const [autoRenew,setAutoRenew]=useState(Boolean(company.autoRenew));
   const [commercialNotes,setCommercialNotes]=useState(company.commercialNotes||"");
   const [modules,setModules]=useState(()=>company.modules||[]);
+  const [managedControl,setManagedControl]=useState(()=>company.managedControl||{controlPlan:"NONE",monthlyPrice:0,notes:""});
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
 
@@ -39,6 +56,11 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
     }));
   };
   const updateModule=(key,field,value)=>setModules(current=>current.map(module=>module.key===key?{...module,[field]:value}:module));
+  const applySoftwarePlan=planKey=>{
+    const selected=softwarePlans[planKey],keys=new Set(selected.keys);
+    setPlan(planKey);
+    setModules(current=>current.map(module=>module.commercialReady||module.key==="CORE"?{...module,active:keys.has(module.key),monthlyPrice:module.key==="CORE"?selected.price:0}:module));
+  };
 
   const save=async event=>{
     event.preventDefault();setBusy(true);setError("");
@@ -52,6 +74,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
           subscriptionEndsAt,
           autoRenew,
           commercialNotes,
+          managedControl:{...managedControl,monthlyPrice:Number(managedControl.monthlyPrice||0)},
           modules:modules.map(module=>({
             key:module.key,
             active:Boolean(module.active),
@@ -74,6 +97,8 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
       <button type="button" className="modal-close" onClick={onClose}><XCircle/></button>
     </div>
 
+    <button type="button" className="price-list-print" onClick={printPriceList}><Printer/>Εκτύπωση τιμοκαταλόγου</button>
+
     {error&&<div className="platform-alert error">{error}</div>}
 
     <div className="license-summary">
@@ -91,6 +116,20 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
       <label className="license-checkbox"><input type="checkbox" checked={autoRenew} onChange={e=>setAutoRenew(e.target.checked)}/><span>Αυτόματη ανανέωση</span></label>
       <label className="license-notes">Εμπορικές σημειώσεις<textarea rows="3" value={commercialNotes} onChange={e=>setCommercialNotes(e.target.value)} placeholder="Συμφωνία, τιμή, ειδικοί όροι ή εκκρεμότητες..."/></label>
     </div>
+
+    <section className="software-plan-section">
+      <div className="module-section-head"><div><h3>Πακέτο λογισμικού</h3><p>Εφαρμόζει τα περιλαμβανόμενα modules και τη βασική μηνιαία τιμή ανά κατάστημα.</p></div></div>
+      <div className="software-plan-grid">{Object.entries(softwarePlans).map(([key,item])=><button type="button" key={key} className={plan===key?"selected":""} onClick={()=>applySoftwarePlan(key)}><b>{item.label}</b><strong>{item.price} €/μήνα</strong><small>{item.keys.length} λειτουργίες</small></button>)}</div>
+    </section>
+
+    <section className="managed-control-section">
+      <div className="module-section-head"><div><h3>Υπηρεσία ανθρώπινου ελέγχου</h3><p>Αποθηκεύεται και χρεώνεται ξεχωριστά από τη συνδρομή λογισμικού και τα modules.</p></div><b>{Number(managedControl.monthlyPrice||0).toLocaleString("el-GR",{minimumFractionDigits:2})} €/μήνα</b></div>
+      <div className="managed-control-grid">
+        <label>Πακέτο ελέγχου<select value={managedControl.controlPlan} onChange={e=>{const controlPlan=e.target.value;setManagedControl(current=>({...current,controlPlan,monthlyPrice:controlPlans[controlPlan].price}))}}>{Object.entries(controlPlans).map(([value,item])=><option key={value} value={value}>{item.label} — {item.price} €/μήνα</option>)}</select></label>
+        <label>Συμφωνημένη τιμή €/μήνα<input type="number" min="0" step="0.01" value={managedControl.monthlyPrice} onChange={e=>setManagedControl(current=>({...current,monthlyPrice:e.target.value}))}/></label>
+        <label className="managed-control-notes">Όροι ελέγχου<textarea rows="2" value={managedControl.notes||""} onChange={e=>setManagedControl(current=>({...current,notes:e.target.value}))} placeholder="Όριο τιμολογίων, συχνότητα ελέγχου και ειδικοί όροι..."/></label>
+      </div>
+    </section>
 
     <div className="module-section-head"><div><h3>Modules πελάτη</h3><p>Ενεργοποιούνται μόνο όσα είναι εμπορικά διαθέσιμα. Οι τιμές καταγράφουν τη συμφωνία και δεν πραγματοποιούν αυτόματη χρέωση.</p></div><b>{activeCount} ενεργά</b></div>
     <div className="commercial-module-grid">

@@ -1,0 +1,80 @@
+.managed-control-section,
+.software-plan-section {
+  margin-top: 24px;
+  padding: 0 16px 18px;
+  border: 1px solid #dbe4ef;
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.software-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.software-plan-grid button {
+  display: grid;
+  gap: 5px;
+  padding: 15px;
+  border: 1px solid #cbd7e5;
+  border-radius: 12px;
+  background: #fff;
+  color: #28405f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.software-plan-grid button.selected { border-color: #0f8a65; background: #effbf7; }
+.software-plan-grid strong { color: #0f766e; font-size: 18px; }
+.software-plan-grid small { color: #748298; }
+
+.managed-control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.managed-control-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #52647c;
+}
+
+.managed-control-grid input,
+.managed-control-grid select,
+.managed-control-grid textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd7e5;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+}
+
+.managed-control-notes { grid-column: 1 / -1; }
+
+.price-list-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 10px 13px;
+  border: 1px solid #b8c9dc;
+  border-radius: 10px;
+  background: #fff;
+  color: #17456b;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.price-list-print svg { width: 17px; }
+
+@media (max-width: 720px) {
+  .software-plan-grid,
+  .managed-control-grid { grid-template-columns: 1fr; }
+  .managed-control-notes { grid-column: auto; }
+}

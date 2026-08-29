@@ -208,7 +208,7 @@ async function platformCashInvestigation(session,tables){
   return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
-function companyView(company,commercialTerms=[]){
+function companyView(company,commercialTerms=[],managedControl=null){
   const owner=company.users.find(user=>user.role==="OWNER")||null;
   const employees=company.stores.reduce((total,store)=>total+(store._count?.employees||0),0);
   return {
@@ -226,6 +226,11 @@ function companyView(company,commercialTerms=[]){
     subscriptionEndsAt:company.subscriptionEndsAt,
     autoRenew:company.autoRenew,
     commercialNotes:company.commercialNotes,
+    managedControl:managedControl?{
+      controlPlan:managedControl.controlPlan,
+      monthlyPrice:Number(managedControl.monthlyPrice||0),
+      notes:managedControl.notes||""
+    }:{controlPlan:"NONE",monthlyPrice:0,notes:""},
     modules:catalogView(company.modules,commercialTerms),
     activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
@@ -239,7 +244,7 @@ function companyView(company,commercialTerms=[]){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const [companies,allTerms]=await Promise.all([prisma.company.findMany({
+    const [companies,allTerms,managedControls]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -249,8 +254,8 @@ router.get("/overview",async(req,res,next)=>{
         }
       },
       orderBy:{createdAt:"desc"}
-    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`]);
-    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id)));
+    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`]);
+    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id)));
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({
@@ -780,6 +785,11 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
       subscriptionEndsAt:dateValue,
       autoRenew:z.boolean().default(false),
       commercialNotes:z.string().trim().max(2000).optional().or(z.literal("")),
+      managedControl:z.object({
+        controlPlan:z.enum(["NONE","BASIC","COMPLETE","PREMIUM"]).default("NONE"),
+        monthlyPrice:z.coerce.number().min(0).max(100000).default(0),
+        notes:z.string().trim().max(1000).optional().or(z.literal(""))
+      }).optional(),
       modules:z.array(moduleSchema)
     }).parse(req.body||{});
 
@@ -832,6 +842,8 @@ router.put("/companies/:companyId/license",async(req,res,next)=>{
         });
         await tx.$executeRaw`INSERT INTO "ModuleCommercialTerms" ("id","companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency") VALUES (${crypto.randomUUID()},${company.id},${module.key},${module.monthlyPrice},${module.setupFee},${module.billingCycle},${module.currency}) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "monthlyPrice"=EXCLUDED."monthlyPrice","setupFee"=EXCLUDED."setupFee","billingCycle"=EXCLUDED."billingCycle","currency"=EXCLUDED."currency","updatedAt"=CURRENT_TIMESTAMP`;
       }
+      const control=body.managedControl||{controlPlan:"NONE",monthlyPrice:0,notes:""};
+      await tx.$executeRaw`INSERT INTO "CompanyManagedControlTerms" ("companyId","controlPlan","monthlyPrice","notes","updatedAt") VALUES (${company.id},${control.controlPlan},${control.monthlyPrice},${control.notes||null},CURRENT_TIMESTAMP) ON CONFLICT ("companyId") DO UPDATE SET "controlPlan"=EXCLUDED."controlPlan","monthlyPrice"=EXCLUDED."monthlyPrice","notes"=EXCLUDED."notes","updatedAt"=CURRENT_TIMESTAMP`;
       return result;
     });
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"COMMERCIAL_LICENSE_UPDATED",success:true,deviceName:`${updated.name} · ${body.modules.filter(module=>module.active).length} ενεργά modules`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});

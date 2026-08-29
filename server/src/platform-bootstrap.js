@@ -48,6 +48,16 @@ export async function ensurePlatformSchema(){
   `);
   await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CompanyModule_companyId_moduleKey_key" ON "CompanyModule"("companyId","moduleKey")`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CompanyModule_companyId_idx" ON "CompanyModule"("companyId")`);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CompanyManagedControlTerms" (
+      "companyId" TEXT PRIMARY KEY,
+      "controlPlan" TEXT NOT NULL DEFAULT 'NONE',
+      "monthlyPrice" DECIMAL(12,2) NOT NULL DEFAULT 0,
+      "notes" TEXT,
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "CompanyManagedControlTerms_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )
+  `);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PlatformPosDraft" ("id" TEXT PRIMARY KEY,"layoutJson" JSONB NOT NULL,"version" INTEGER NOT NULL DEFAULT 1,"updatedBy" TEXT,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StorePosLayout" ("storeId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"layoutJson" JSONB NOT NULL,"version" INTEGER NOT NULL DEFAULT 1,"publishedBy" TEXT,"publishedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorePosLayout_company_idx" ON "StorePosLayout"("companyId")`);
