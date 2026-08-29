@@ -86,6 +86,7 @@ import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoic
 import platformAdminRoutes from "./routes/platform-admin.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
 import platformStoreModulesRoutes from "./routes/platform-store-modules.js";
+import platformStoreIntegrationsRoutes from "./routes/platform-store-integrations.js";
 import katTestRoutes from "./routes/kat-test.js";
 import platformOwnerSecurityRoutes from "./routes/platform-owner-security.js";
 import platformAuditRoutes,{ensurePlatformAuditSchema,platformAuditCapture} from "./platform-commercial-audit.js";
@@ -133,6 +134,7 @@ app.use("/api/platform/master-catalog",masterCatalogRoutes);
 app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformAdminRoutes);
+app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
 app.use("/api/platform/mail",mailRoutes);

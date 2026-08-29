@@ -8,6 +8,7 @@ import VideoConnectionManager from "./VideoConnectionManager.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
 import SuperAdminInstallationCenter from "./SuperAdminInstallationCenter.jsx";
+import StoreFiscalIntegrations from "./StoreFiscalIntegrations.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
@@ -110,6 +111,7 @@ export default function PlatformAdminApp(){
   const [videoConnectionManager,setVideoConnectionManager]=useState(null);
   const [cashStoreId,setCashStoreId]=useState("");
   const [deleteCompany,setDeleteCompany]=useState(null);
+  const [fiscalIntegrations,setFiscalIntegrations]=useState(null);
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -293,6 +295,14 @@ export default function PlatformAdminApp(){
     try{const [result,routing]=await Promise.all([request(`/api/platform/companies/${company.id}/stores/${store.id}/installation-terminals`),request(`/api/platform/companies/${company.id}/stores/${store.id}/device-routing`)]);const manager={company,store,terminals:result.terminals,routing,activationUrl:""};setOpenDeviceCenter(openOperations);setShowInstallationCenter(false);if(openOperations){setDeviceOperationsManager(manager);setTerminalManager(null)}else{setDeviceOperationsManager(null);setTerminalManager(manager)}}
     catch(err){setError(err.message)}finally{setBusy("")}
   };
+  const openFiscalIntegrations=async(company,store)=>{
+    setBusy(`integrations:${store.id}`);setError("");
+    try{const result=await request(`/api/platform/companies/${company.id}/stores/${store.id}/integrations`);setFiscalIntegrations({company,store,integrations:result.integrations||[]})}catch(err){setError(err.message)}finally{setBusy("")}
+  };
+  const refreshFiscalIntegrations=async()=>{
+    const result=await request(`/api/platform/companies/${fiscalIntegrations.company.id}/stores/${fiscalIntegrations.store.id}/integrations`);
+    setFiscalIntegrations(value=>({...value,integrations:result.integrations||[]}));setMessage("Οι κωδικοί του καταστήματος αποθηκεύτηκαν με ασφάλεια.");
+  };
   const refreshTerminals=async(current=terminalManager)=>{
     const [result,routing]=await Promise.all([request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/installation-terminals`),request(`/api/platform/companies/${current.company.id}/stores/${current.store.id}/device-routing`)]);
     setTerminalManager(value=>({...value,terminals:result.terminals,routing}));
@@ -461,7 +471,9 @@ export default function PlatformAdminApp(){
     {terminalManager&&terminalManager.terminals.length>0&&<form className="readiness-manager-floating terminal-routing-floating" onSubmit={saveTerminalDeviceRouting}><b>Fiscal / EFTPOS mapping</b><select name="terminalPos" required defaultValue=""><option value="" disabled>Επίλεξε terminal</option>{terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.terminalPos}>{row.terminalPos} · {row.displayName}</option>)}</select><input name="fiscalDeviceCode" placeholder="KAT-FISCAL-01" pattern="[A-Za-z0-9_-]+" required/><input name="fiscalDisplayName" placeholder="Ταμειακή 1" required/><input name="storeEftposCode" placeholder="KAT-EFTPOS-01A" pattern="[A-Za-z0-9_-]+" required/><input name="storeEftposName" placeholder="EFTPOS καταστήματος" required/><input name="deliveryEftposCode" placeholder="KAT-EFTPOS-01B" pattern="[A-Za-z0-9_-]+" required/><input name="deliveryEftposName" placeholder="EFTPOS Delivery / Online" required/><button disabled={busy==="device-routing"}>{busy==="device-routing"?"Αποθήκευση…":"Αποθήκευση mapping"}</button><small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small></form>}
     {onlineStoreManager&&<OnlineStoreManager manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}
     {storeCompany&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
+    {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
+    {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
