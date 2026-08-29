@@ -13,3 +13,10 @@ test("staff scheduling chat uses store personnel, leave and schedule context wit
   assert.match(client,/Μεταφορά στις οδηγίες/);
   assert.match(client,/Το AI δεν αποθηκεύει αλλαγές αυτόματα/);
 });
+
+test("staff scheduling chat opens as an immediately visible modal",async()=>{
+  const css=await readFile(new URL("../../client/src/schedule-ai-chat.css",import.meta.url),"utf8");
+  assert.match(css,/position:fixed/);
+  assert.match(css,/z-index:10000/);
+  assert.match(css,/max-height:90vh/);
+});
