@@ -144,6 +144,35 @@ function mondayOf(date){
   return d;
 }
 function dateKey(d){return d.toISOString().slice(0,10)}
+let scheduleBriefSchemaPromise;
+async function ensureScheduleBriefSchema(){
+  if(!scheduleBriefSchemaPromise)scheduleBriefSchemaPromise=prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ScheduleGenerationBrief" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"dateFrom" TIMESTAMPTZ NOT NULL,"dateTo" TIMESTAMPTZ NOT NULL,
+    "instructions" TEXT NOT NULL DEFAULT '',"shiftOverrides" JSONB NOT NULL DEFAULT '{}'::jsonb,"updatedBy" TEXT,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE ("storeId","dateFrom","dateTo"))`).catch(error=>{scheduleBriefSchemaPromise=undefined;throw error});
+  return scheduleBriefSchemaPromise;
+}
+const briefSchema=z.object({storeId:z.string(),dateFrom:z.string().optional(),dateTo:z.string().optional(),instructions:z.string().max(12000).default(""),shiftOverrides:z.record(z.object({requiredCount:z.coerce.number().int().min(0).max(20).optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()})).default({})});
+const plain=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+const briefWeekdays=[["ΔΕΥΤΕΡ",0],["ΤΡΙΤ",1],["ΤΕΤΑΡΤ",2],["ΠΕΜΠΤ",3],["ΠΑΡΑΣΚΕΥ",4],["ΣΑΒΒΑΤ",5],["ΚΥΡΙΑΚ",6]];
+function applyWrittenRules(employees,shifts,instructions,dateFrom,dateTo){
+  const lines=String(instructions||"").split(/\r?\n|;/).map(plain).filter(Boolean);
+  for(const employee of employees){
+    const names=plain(employee.fullName).split(/\s+/).filter(x=>x.length>=3),ownLines=lines.filter(line=>names.some(name=>line.includes(name)));employee._briefUnavailableDates=new Set();
+    for(const line of ownLines){
+      if(line.includes("ΧΩΡΙΣ ΡΕΠΟ")){employee.maxDaysPerWeek=7;employee.allowSixthDay=true;employee.maxHoursPerWeek=Math.max(employee.maxHoursPerWeek,72)}
+      const mentioned=shifts.filter(shift=>line.includes(plain(shift.name))||line.includes(plain(shift.code)));
+      if(line.includes("ΜΟΝΟ")&&mentioned.length)employee.rules=employee.rules.filter(rule=>mentioned.some(shift=>shift.id===rule.shiftTypeId));
+      if((line.includes("ΠΑΝΤΑ")||line.includes("ΣΤΑΘΕΡ"))&&mentioned.length)for(const rule of employee.rules)if(mentioned.some(shift=>shift.id===rule.shiftTypeId))rule.priority=Math.max(rule.priority||0,100);
+      for(const [word,weekday] of briefWeekdays)if(line.includes("ΡΕΠΟ")&&line.includes(word)){for(let d=new Date(dateFrom);d<=dateTo;d.setUTCDate(d.getUTCDate()+1))if((d.getUTCDay()+6)%7===weekday)employee._briefUnavailableDates.add(dateKey(d))}
+    }
+  }
+}
+router.get("/schedules/brief",async(req,res,next)=>{try{
+  await ensureScheduleBriefSchema();const storeId=String(req.query.storeId||""),store=await prisma.store.findFirst({where:storeScope(req,storeId),select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const dateFrom=new Date(String(req.query.dateFrom||dateKey(mondayOf(new Date())))),dateTo=new Date(String(req.query.dateTo||dateKey(new Date(dateFrom.getTime()+6*86400000))));
+  const rows=await prisma.$queryRaw`SELECT "instructions","shiftOverrides","updatedAt" FROM "ScheduleGenerationBrief" WHERE "storeId"=${store.id} AND "dateFrom"=${dateFrom} AND "dateTo"=${dateTo} LIMIT 1`;res.json(rows[0]||{instructions:"",shiftOverrides:{},updatedAt:null});
+}catch(e){next(e)}});
 function hoursForShift(shift){
   const [sh,sm]=shift.startTime.split(":").map(Number);
   const [eh,em]=shift.endTime.split(":").map(Number);
@@ -158,7 +187,7 @@ function isUnavailable(emp,currentDate){
   const dayStart=new Date(currentDate); dayStart.setUTCHours(0,0,0,0);
   const unavailable=emp.availability?.some(a=>new Date(a.date).getTime()===dayStart.getTime() && !a.available);
   const onLeave=emp.leaveRequests?.some(l=>dayStart>=new Date(l.startDate) && dayStart<=new Date(l.endDate));
-  return unavailable||onLeave;
+  return unavailable||onLeave||emp._briefUnavailableDates?.has(dateKey(dayStart));
 }
 function violatesRest(emp,shift,currentDate,history){
   const previous=new Date(currentDate);
@@ -294,7 +323,7 @@ function buildMetrics({planned,employees,shifts,counts,warnings,explanations}){
 
 router.post("/schedules/generate",async(req,res,next)=>{
   try{
-    const body=z.object({storeId:z.string(),weekStart:z.string().optional()}).parse(req.body);
+    const body=briefSchema.parse(req.body);
     await requireAiStaffScheduler(req,body.storeId);
     const store=await prisma.store.findFirst({
       where:storeScope(req,body.storeId),
@@ -308,7 +337,13 @@ router.post("/schedules/generate",async(req,res,next)=>{
     });
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
 
-    const weekStart=mondayOf(body.weekStart?new Date(body.weekStart):new Date());
+    const dateFrom=body.dateFrom?new Date(body.dateFrom):mondayOf(new Date()),dateTo=body.dateTo?new Date(body.dateTo):new Date(dateFrom.getTime()+6*86400000);
+    dateFrom.setUTCHours(0,0,0,0);dateTo.setUTCHours(0,0,0,0);
+    const periodDays=Math.floor((dateTo-dateFrom)/86400000)+1;if(periodDays<1||periodDays>62)return res.status(400).json({error:"Η περίοδος πρέπει να είναι από 1 έως 62 ημέρες."});
+    const weekStart=dateFrom;
+    await ensureScheduleBriefSchema();const briefId=`${store.id}:${dateKey(dateFrom)}:${dateKey(dateTo)}`;
+    await prisma.$executeRaw`INSERT INTO "ScheduleGenerationBrief" ("id","companyId","storeId","dateFrom","dateTo","instructions","shiftOverrides","updatedBy") VALUES (${briefId},${store.companyId},${store.id},${dateFrom},${dateTo},${body.instructions},${JSON.stringify(body.shiftOverrides)}::jsonb,${req.user.id||req.user.email||req.user.role||null}) ON CONFLICT ("storeId","dateFrom","dateTo") DO UPDATE SET "instructions"=EXCLUDED."instructions","shiftOverrides"=EXCLUDED."shiftOverrides","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+    store.shifts=store.shifts.map(shift=>({...shift,...(body.shiftOverrides[shift.id]||{})}));applyWrittenRules(store.employees,store.shifts,body.instructions,dateFrom,dateTo);
     const counts=Object.fromEntries(store.employees.map(e=>[e.id,{
       days:0,hours:0,weekendDays:0,byShift:{},byCode:{}
     }]));
@@ -321,7 +356,7 @@ router.post("/schedules/generate",async(req,res,next)=>{
     const order={MANAGER:0,DELIVERY:1,NIGHT:2,MIDDLE:3,AFTERNOON:4,MORNING:5};
     const orderedShifts=[...store.shifts].sort((a,b)=>(order[a.code]??10)-(order[b.code]??10));
 
-    for(let offset=0;offset<7;offset++){
+    for(let offset=0;offset<periodDays;offset++){
       const date=new Date(weekStart);
       date.setUTCDate(weekStart.getUTCDate()+offset);
       const weekday=date.getUTCDay();
