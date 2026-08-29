@@ -363,7 +363,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
   const isPayment=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
-  if(body.amount<0&&(body.type!=="SUPPLIER_PAYMENT"||body.paymentSource!=="CASH_SHIFT"))return res.status(400).json({error:"Αρνητική πληρωμή επιτρέπεται μόνο ως επιστροφή προμηθευτή στο ταμείο της ενεργής βάρδιας."});
+  if(body.amount<0&&(!["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(body.type)||body.paymentSource!=="CASH_SHIFT"))return res.status(400).json({error:"Αρνητική κίνηση επιτρέπεται μόνο στο ταμείο της ενεργής βάρδιας."});
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   const legacyPayment=isPayment&&!body.evidenceMode;
   let supplierName=body.supplierName||null;
