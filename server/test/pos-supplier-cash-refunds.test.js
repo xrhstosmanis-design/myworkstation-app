@@ -8,7 +8,7 @@ const route=await readFile(new URL("../src/routes/store-transactions.js",import.
 test("negative other expense is a negative payment that returns money to shift cash",()=>{
   assert.match(ui,/Επιστροφή χρημάτων \/ αρνητικό έξοδο/);
   assert.match(ui,/Αρνητική πληρωμή/);
-  assert.match(ui,/amount:supplierRefund\?-amount:amount/);
+  assert.match(ui,/amount:genericRefund\?-amount:amount/);
   assert.match(ui,/paymentSource="CASH_SHIFT"/);
   assert.match(ui,/Δεν αφορά προμηθευτή/);
   assert.match(route,/body\.amount<0/);
