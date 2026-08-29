@@ -152,7 +152,9 @@ async function ensureScheduleBriefSchema(){
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE ("storeId","dateFrom","dateTo"))`).catch(error=>{scheduleBriefSchemaPromise=undefined;throw error});
   return scheduleBriefSchemaPromise;
 }
-const briefSchema=z.object({storeId:z.string(),dateFrom:z.string().optional(),dateTo:z.string().optional(),instructions:z.string().max(12000).default(""),shiftOverrides:z.record(z.object({requiredCount:z.coerce.number().int().min(0).max(20).optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()})).default({})});
+const interpretedRuleSchema=z.object({employeeId:z.string(),employeeName:z.string(),summary:z.string(),onlyShiftCodes:z.array(z.string()).default([]),onlyWeekdays:z.array(z.number().int().min(0).max(6)).default([]),unavailableDates:z.array(z.string()).default([]),fixedAssignments:z.array(z.object({date:z.string(),shiftCode:z.string(),startTime:z.string(),endTime:z.string(),note:z.string()})).default([])});
+const interpretationSchema=z.object({rules:z.array(interpretedRuleSchema).default([]),understood:z.array(z.string()).default([]),unresolved:z.array(z.string()).default([])});
+const briefSchema=z.object({storeId:z.string(),dateFrom:z.string().optional(),dateTo:z.string().optional(),instructions:z.string().max(12000).default(""),shiftOverrides:z.record(z.object({requiredCount:z.coerce.number().int().min(0).max(20).optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()})).default({}),interpretation:interpretationSchema.optional()});
 const plain=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
 const briefWeekdays=[["ΔΕΥΤΕΡ",0],["ΤΡΙΤ",1],["ΤΕΤΑΡΤ",2],["ΠΕΜΠΤ",3],["ΠΑΡΑΣΚΕΥ",4],["ΣΑΒΒΑΤ",5],["ΚΥΡΙΑΚ",6]];
 function writtenRuleSegments(employees,instructions){
@@ -189,10 +191,54 @@ function applyWrittenRules(employees,shifts,instructions,dateFrom,dateTo){
     }
   }
 }
+function applyInterpretedRules(employees,shifts,interpretation,dateFrom,dateTo){
+  const employeeById=new Map(employees.map(row=>[row.id,row])),shiftCodes=new Set(shifts.map(row=>row.code));
+  for(const rule of interpretation?.rules||[]){
+    const employee=employeeById.get(rule.employeeId);if(!employee)continue;
+    employee._briefUnavailableDates??=new Set();
+    if(rule.onlyShiftCodes?.length){const allowed=new Set(rule.onlyShiftCodes.filter(code=>shiftCodes.has(code)));employee.rules=employee.rules.filter(row=>shifts.some(shift=>shift.id===row.shiftTypeId&&allowed.has(shift.code)))}
+    if(rule.onlyWeekdays?.length){for(let d=new Date(dateFrom);d<=dateTo;d.setUTCDate(d.getUTCDate()+1))if(!rule.onlyWeekdays.includes((d.getUTCDay()+6)%7))employee._briefUnavailableDates.add(dateKey(d))}
+    for(const value of rule.unavailableDates||[]){const d=new Date(value);if(!Number.isNaN(d.getTime())&&d>=dateFrom&&d<=dateTo)employee._briefUnavailableDates.add(dateKey(d))}
+    employee._briefFixedAssignments=(rule.fixedAssignments||[]).filter(row=>{const d=new Date(row.date);return !Number.isNaN(d.getTime())&&d>=dateFrom&&d<=dateTo&&shiftCodes.has(row.shiftCode)});
+  }
+}
+const outputText=value=>value?.output_text||value?.output?.flatMap(item=>item?.content||[]).find(item=>item?.type==="output_text")?.text||"";
+const interpretationJsonSchema={
+  type:"object",additionalProperties:false,
+  properties:{
+    rules:{type:"array",items:{
+      type:"object",additionalProperties:false,
+      properties:{
+        employeeId:{type:"string"},employeeName:{type:"string"},summary:{type:"string"},
+        onlyShiftCodes:{type:"array",items:{type:"string"}},
+        onlyWeekdays:{type:"array",items:{type:"integer",minimum:0,maximum:6}},
+        unavailableDates:{type:"array",items:{type:"string"}},
+        fixedAssignments:{type:"array",items:{type:"object",additionalProperties:false,properties:{date:{type:"string"},shiftCode:{type:"string"},startTime:{type:"string"},endTime:{type:"string"},note:{type:"string"}},required:["date","shiftCode","startTime","endTime","note"]}}
+      },
+      required:["employeeId","employeeName","summary","onlyShiftCodes","onlyWeekdays","unavailableDates","fixedAssignments"]
+    }},
+    understood:{type:"array",items:{type:"string"}},
+    unresolved:{type:"array",items:{type:"string"}}
+  },
+  required:["rules","understood","unresolved"]
+};
 router.get("/schedules/brief",async(req,res,next)=>{try{
   await ensureScheduleBriefSchema();const storeId=String(req.query.storeId||""),store=await prisma.store.findFirst({where:storeScope(req,storeId),select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const dateFrom=new Date(String(req.query.dateFrom||dateKey(mondayOf(new Date())))),dateTo=new Date(String(req.query.dateTo||dateKey(new Date(dateFrom.getTime()+6*86400000))));
   const rows=await prisma.$queryRaw`SELECT "instructions","shiftOverrides","updatedAt" FROM "ScheduleGenerationBrief" WHERE "storeId"=${store.id} AND "dateFrom"=${dateFrom} AND "dateTo"=${dateTo} LIMIT 1`;res.json(rows[0]||{instructions:"",shiftOverrides:{},updatedAt:null});
+}catch(e){next(e)}});
+router.post("/schedules/interpret",async(req,res,next)=>{try{
+  const body=briefSchema.pick({storeId:true,dateFrom:true,dateTo:true,instructions:true,shiftOverrides:true}).parse(req.body||{});await requireAiStaffScheduler(req,body.storeId);
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για την ανάγνωση των κανόνων.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+  const store=await prisma.store.findFirst({where:storeScope(req,body.storeId),include:{shifts:{where:{active:true}},employees:{where:{active:true},include:{rules:true,leaveRequests:{where:{status:"APPROVED"}}}}}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const dateFrom=body.dateFrom||dateKey(mondayOf(new Date())),dateTo=body.dateTo||dateKey(new Date(new Date(dateFrom).getTime()+6*86400000));
+  const context={period:{dateFrom,dateTo},employees:store.employees.map(row=>({id:row.id,name:row.fullName,position:row.position||"",approvedLeaves:row.leaveRequests.map(leave=>({from:dateKey(leave.startDate),to:dateKey(leave.endDate),type:leave.type})),allowedShiftCodes:row.rules.filter(rule=>rule.allowed).map(rule=>store.shifts.find(shift=>shift.id===rule.shiftTypeId)?.code).filter(Boolean)})),shifts:store.shifts.map(row=>({code:row.code,name:row.name,startTime:row.startTime,endTime:row.endTime})),instructions:body.instructions};
+  const prompt=`Ανάλυσε τις ελληνικές οδηγίες προγράμματος εργαζομένων χωρίς να εφεύρεις στοιχεία. Τα employees και οι εγκεκριμένες άδειές τους προέρχονται από τις επίσημες σελίδες Προσωπικό και Άδειες προσωπικού και υπερισχύουν των ελεύθερων οδηγιών. Αν μία πρόταση συνδέει δύο εργαζομένους, μετέτρεψέ την σε ξεχωριστό κανόνα για κάθε εργαζόμενο. Αν αναφέρεται συγκεκριμένη ημερομηνία/ώρα, βάλε fixedAssignment. Οι ημέρες είναι 0=Δευτέρα έως 6=Κυριακή. Χρησιμοποίησε μόνο employeeId και shiftCode από το context. Αν κάτι δεν είναι σαφές ή συγκρούεται με εγκεκριμένη άδεια, βάλε το αυτούσιο στο unresolved. Οι ημερομηνίες να είναι YYYY-MM-DD και οι ώρες HH:MM. Context: ${JSON.stringify(context)}`;
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5",input:prompt,text:{format:{type:"json_schema",name:"staff_schedule_rules",strict:true,schema:interpretationJsonSchema}}})});
+  const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε η ανάγνωση των κανόνων.",code:"AI_PROVIDER_ERROR"});
+  let parsed;try{parsed=interpretationSchema.parse(JSON.parse(outputText(raw)))}catch{return res.status(502).json({error:"Το AI δεν επέστρεψε έγκυρη ανάλυση κανόνων."})}
+  const employeeIds=new Set(store.employees.map(row=>row.id)),shiftCodes=new Set(store.shifts.map(row=>row.code));parsed.rules=parsed.rules.filter(rule=>employeeIds.has(rule.employeeId)).map(rule=>({...rule,onlyShiftCodes:rule.onlyShiftCodes.filter(code=>shiftCodes.has(code)),fixedAssignments:rule.fixedAssignments.filter(row=>shiftCodes.has(row.shiftCode))}));
+  res.json({interpretation:parsed,model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5"});
 }catch(e){next(e)}});
 function hoursForShift(shift){
   const [sh,sm]=shift.startTime.split(":").map(Number);
@@ -364,7 +410,7 @@ router.post("/schedules/generate",async(req,res,next)=>{
     const weekStart=dateFrom;
     await ensureScheduleBriefSchema();const briefId=`${store.id}:${dateKey(dateFrom)}:${dateKey(dateTo)}`;
     await prisma.$executeRaw`INSERT INTO "ScheduleGenerationBrief" ("id","companyId","storeId","dateFrom","dateTo","instructions","shiftOverrides","updatedBy") VALUES (${briefId},${store.companyId},${store.id},${dateFrom},${dateTo},${body.instructions},${JSON.stringify(body.shiftOverrides)}::jsonb,${req.user.id||req.user.email||req.user.role||null}) ON CONFLICT ("storeId","dateFrom","dateTo") DO UPDATE SET "instructions"=EXCLUDED."instructions","shiftOverrides"=EXCLUDED."shiftOverrides","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
-    store.shifts=store.shifts.map(shift=>({...shift,...(body.shiftOverrides[shift.id]||{})}));applyWrittenRules(store.employees,store.shifts,body.instructions,dateFrom,dateTo);
+    store.shifts=store.shifts.map(shift=>({...shift,...(body.shiftOverrides[shift.id]||{})}));applyWrittenRules(store.employees,store.shifts,body.instructions,dateFrom,dateTo);if(body.interpretation)applyInterpretedRules(store.employees,store.shifts,body.interpretation,dateFrom,dateTo);
     const counts=Object.fromEntries(store.employees.map(e=>[e.id,{
       days:0,hours:0,weekendDays:0,byShift:{},byCode:{}
     }]));
@@ -384,9 +430,19 @@ router.post("/schedules/generate",async(req,res,next)=>{
       const isWeekend=weekday===0||weekday===6;
       const assignedToday=new Set();
 
+      const fixedForDate=[];
+      for(const emp of store.employees)for(const fixed of emp._briefFixedAssignments||[])if(fixed.date===dateKey(date)){
+        const shift=store.shifts.find(row=>row.code===fixed.shiftCode);if(!shift||assignedToday.has(emp.id))continue;
+        const slot=1+fixedForDate.filter(row=>row.shiftTypeId===shift.id).length,note=`AI_FIXED_TIME:${fixed.startTime}-${fixed.endTime} · ${fixed.note}`;
+        fixedForDate.push({date,shiftTypeId:shift.id,employeeId:emp.id,slot,note});assignedToday.add(emp.id);
+        counts[emp.id].days++;const customHours=hoursForShift({...shift,startTime:fixed.startTime,endTime:fixed.endTime});counts[emp.id].hours+=customHours;counts[emp.id].byShift[shift.id]=(counts[emp.id].byShift[shift.id]||0)+1;counts[emp.id].byCode[shift.code]=(counts[emp.id].byCode[shift.code]||0)+1;if(isWeekend)counts[emp.id].weekendDays++;history[emp.id][dateKey(date)]={code:shift.code,shiftTypeId:shift.id};explanations.push({date:dateKey(date),shift:shift.name,employee:emp.fullName,reason:`Επιβεβαιωμένη γραπτή οδηγία · ${fixed.startTime}-${fixed.endTime}`,score:1000});
+      }
+      planned.push(...fixedForDate);
+
       for(const shift of orderedShifts){
         if((shift.code==="DELIVERY"||shift.code==="MANAGER")&&isWeekend)continue;
-        for(let slot=1;slot<=shift.requiredCount;slot++){
+        const fixedCount=fixedForDate.filter(row=>row.shiftTypeId===shift.id).length;
+        for(let slot=fixedCount+1;slot<=shift.requiredCount;slot++){
           const {chosen,ranked}=chooseEmployee({
             employees:store.employees,shift,counts,assignedToday,isWeekend,currentDate:date,history
           });
