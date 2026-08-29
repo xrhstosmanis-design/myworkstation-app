@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,Building2,CalendarDays,Camera,CheckCircle2,Copy,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BarChart3,Building2,CalendarDays,Camera,CheckCircle2,Copy,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
@@ -9,6 +9,7 @@ import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLaunch
 import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
 import SuperAdminInstallationCenter from "./SuperAdminInstallationCenter.jsx";
 import StoreFiscalIntegrations from "./StoreFiscalIntegrations.jsx";
+import SuperAdminChecksAnalytics from "./SuperAdminChecksAnalytics.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
@@ -112,6 +113,7 @@ export default function PlatformAdminApp(){
   const [cashStoreId,setCashStoreId]=useState("");
   const [deleteCompany,setDeleteCompany]=useState(null);
   const [fiscalIntegrations,setFiscalIntegrations]=useState(null);
+  const [showChecksAnalytics,setShowChecksAnalytics]=useState(false);
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -404,6 +406,7 @@ export default function PlatformAdminApp(){
     </header>
     <main className="platform-main">
       <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Super Admin Installation Center</button><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
+      <button className="super-admin-analytics-launch" onClick={()=>setShowChecksAnalytics(true)}><BarChart3/>Έλεγχοι &amp; Αναλύσεις Super Admin</button>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button></div>}
@@ -475,7 +478,7 @@ export default function PlatformAdminApp(){
     {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
     {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
-    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
+    {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}\n    {showChecksAnalytics&&<SuperAdminChecksAnalytics companies={data?.companies||[]} onClose={()=>setShowChecksAnalytics(false)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }
