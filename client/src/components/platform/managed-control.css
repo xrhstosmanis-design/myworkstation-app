@@ -13,7 +13,7 @@
   gap: 10px;
 }
 
-.software-plan-grid button {
+.software-plan-grid article {
   display: grid;
   gap: 5px;
   padding: 15px;
@@ -22,11 +22,10 @@
   background: #fff;
   color: #28405f;
   text-align: left;
-  cursor: pointer;
 }
 
-.software-plan-grid button.selected { border-color: #0f8a65; background: #effbf7; }
-.software-plan-grid strong { color: #0f766e; font-size: 18px; }
+.software-plan-grid article.selected { border-color: #0f8a65; background: #effbf7; }
+.software-plan-grid label{display:grid;gap:4px;font-size:11px;font-weight:800;color:#52647c}.software-plan-grid input{box-sizing:border-box;width:100%;padding:9px;border:1px solid #b8c9dc;border-radius:8px;font:inherit;background:#fff}.software-plan-grid button{padding:9px;border:0;border-radius:8px;background:#176fb4;color:#fff;font-weight:800;cursor:pointer}
 .software-plan-grid small { color: #748298; }
 
 .managed-control-grid {

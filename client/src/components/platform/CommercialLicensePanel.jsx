@@ -3,18 +3,18 @@ import {CheckCircle2,LockKeyhole,PackageCheck,Printer,Save,XCircle} from "lucide
 import "./commercial-module-pricing.css";
 import "./managed-control.css";
 
-const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"START — 69 €",PRO:"BUSINESS — 129 €",ENTERPRISE:"AI COMPLETE — 199 €"};
+const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"START",PRO:"BUSINESS",ENTERPRISE:"AI COMPLETE"};
 const statusLabels={TRIAL:"Δοκιμή",PILOT:"Πιλοτικό",ACTIVE:"Ενεργό",SUSPENDED:"Σε αναστολή",EXPIRED:"Έληξε"};
 const toInput=value=>value?new Date(value).toISOString().slice(0,10):"";
 const controlPlans={NONE:{label:"Χωρίς ανθρώπινο έλεγχο",price:0},BASIC:{label:"Έλεγχος BASIC",price:149},COMPLETE:{label:"Έλεγχος COMPLETE",price:249},PREMIUM:{label:"Έλεγχος PREMIUM",price:349}};
 const softwarePlans={
-  BASIC:{label:"START",price:69,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT"]},
-  PRO:{label:"BUSINESS",price:129,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE"]},
-  ENTERPRISE:{label:"AI COMPLETE",price:199,keys:["CORE","PERSONNEL","SHIFTS","AI_STAFF_SCHEDULER","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE","AI_READER"]}
+  BASIC:{label:"START",price:100,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT"]},
+  PRO:{label:"BUSINESS",price:220,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE"]},
+  ENTERPRISE:{label:"AI COMPLETE",price:330,keys:["CORE","PERSONNEL","SHIFTS","AI_STAFF_SCHEDULER","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT","CASH_CONTROL","ONLINE_ORDERING","DOCUMENTS","SALES_ANALYTICS","SHIFT_HANDOVER","ATTENDANCE","AI_READER"]}
 };
 
-function printPriceList(){
-  const rows=Object.values(softwarePlans).map(item=>`<tr><td><b>${item.label}</b></td><td>${item.keys.length} λειτουργίες/modules</td><td>${item.price.toFixed(2)} € / μήνα</td></tr>`).join("");
+function printPriceList(planPrices){
+  const rows=Object.entries(softwarePlans).map(([key,item])=>`<tr><td><b>${item.label}</b></td><td>${item.keys.length} λειτουργίες/modules</td><td>${Number(planPrices[key]??item.price).toFixed(2)} € / μήνα</td></tr>`).join("");
   const controls=Object.values(controlPlans).filter(item=>item.price>0).map(item=>`<tr><td><b>${item.label}</b></td><td>Ξεχωριστή υπηρεσία ανθρώπινου ελέγχου</td><td>${item.price.toFixed(2)} € / μήνα</td></tr>`).join("");
   const popup=window.open("","_blank","width=1000,height=800");
   if(!popup)return window.alert("Ο browser εμπόδισε την εκτύπωση. Επιτρέψτε τα αναδυόμενα παράθυρα και δοκιμάστε ξανά.");
@@ -30,6 +30,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
   const [autoRenew,setAutoRenew]=useState(Boolean(company.autoRenew));
   const [commercialNotes,setCommercialNotes]=useState(company.commercialNotes||"");
   const [modules,setModules]=useState(()=>company.modules||[]);
+  const [planPrices,setPlanPrices]=useState(()=>{const prices=Object.fromEntries(Object.entries(softwarePlans).map(([key,item])=>[key,item.price]));const saved=Number((company.modules||[]).find(module=>module.key==="CORE")?.monthlyPrice||0);if(saved>0&&softwarePlans[company.plan])prices[company.plan]=saved;return prices});
   const [managedControl,setManagedControl]=useState(()=>company.managedControl||{controlPlan:"NONE",monthlyPrice:0,notes:""});
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -57,9 +58,9 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
   };
   const updateModule=(key,field,value)=>setModules(current=>current.map(module=>module.key===key?{...module,[field]:value}:module));
   const applySoftwarePlan=planKey=>{
-    const selected=softwarePlans[planKey],keys=new Set(selected.keys);
+    const selected=softwarePlans[planKey],keys=new Set(selected.keys),selectedPrice=Number(planPrices[planKey]??selected.price);
     setPlan(planKey);
-    setModules(current=>current.map(module=>module.commercialReady||module.key==="CORE"?{...module,active:keys.has(module.key),monthlyPrice:module.key==="CORE"?selected.price:0}:module));
+    setModules(current=>current.map(module=>module.commercialReady||module.key==="CORE"?{...module,active:keys.has(module.key),monthlyPrice:module.key==="CORE"?selectedPrice:0}:module));
   };
 
   const save=async event=>{
@@ -97,7 +98,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
       <button type="button" className="modal-close" onClick={onClose}><XCircle/></button>
     </div>
 
-    <button type="button" className="price-list-print" onClick={printPriceList}><Printer/>Εκτύπωση τιμοκαταλόγου</button>
+    <button type="button" className="price-list-print" onClick={()=>printPriceList(planPrices)}><Printer/>Εκτύπωση τιμοκαταλόγου</button>
 
     {error&&<div className="platform-alert error">{error}</div>}
 
@@ -119,7 +120,7 @@ export default function CommercialLicensePanel({company,request,onSaved,onClose}
 
     <section className="software-plan-section">
       <div className="module-section-head"><div><h3>Πακέτο λογισμικού</h3><p>Εφαρμόζει τα περιλαμβανόμενα modules και τη βασική μηνιαία τιμή ανά κατάστημα.</p></div></div>
-      <div className="software-plan-grid">{Object.entries(softwarePlans).map(([key,item])=><button type="button" key={key} className={plan===key?"selected":""} onClick={()=>applySoftwarePlan(key)}><b>{item.label}</b><strong>{item.price} €/μήνα</strong><small>{item.keys.length} λειτουργίες</small></button>)}</div>
+      <div className="software-plan-grid">{Object.entries(softwarePlans).map(([key,item])=><article key={key} className={plan===key?"selected":""}><b>{item.label}</b><label>Τιμή €/μήνα<input type="number" min="0" step="0.01" value={planPrices[key]} onChange={e=>setPlanPrices(current=>({...current,[key]:e.target.value}))}/></label><small>{item.keys.length} λειτουργίες</small><button type="button" onClick={()=>applySoftwarePlan(key)}>Εφαρμογή πακέτου</button></article>)}</div>
     </section>
 
     <section className="managed-control-section">
