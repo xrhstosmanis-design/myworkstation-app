@@ -155,16 +155,37 @@ async function ensureScheduleBriefSchema(){
 const briefSchema=z.object({storeId:z.string(),dateFrom:z.string().optional(),dateTo:z.string().optional(),instructions:z.string().max(12000).default(""),shiftOverrides:z.record(z.object({requiredCount:z.coerce.number().int().min(0).max(20).optional(),startTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),endTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()})).default({})});
 const plain=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
 const briefWeekdays=[["ΔΕΥΤΕΡ",0],["ΤΡΙΤ",1],["ΤΕΤΑΡΤ",2],["ΠΕΜΠΤ",3],["ΠΑΡΑΣΚΕΥ",4],["ΣΑΒΒΑΤ",5],["ΚΥΡΙΑΚ",6]];
-function applyWrittenRules(employees,shifts,instructions,dateFrom,dateTo){
-  const lines=String(instructions||"").split(/\r?\n|;/).map(plain).filter(Boolean);
+function writtenRuleSegments(employees,instructions){
+  const text=plain(instructions).replace(/\s+/g," ").trim();
+  if(!text)return [];
+  const hits=[];
   for(const employee of employees){
-    const names=plain(employee.fullName).split(/\s+/).filter(x=>x.length>=3),ownLines=lines.filter(line=>names.some(name=>line.includes(name)));employee._briefUnavailableDates=new Set();
+    const full=plain(employee.fullName).trim(),parts=full.split(/\s+/).filter(x=>x.length>=3);
+    const aliases=[full,...parts].sort((a,b)=>b.length-a.length);
+    for(const alias of aliases){
+      let at=text.indexOf(alias);
+      while(at>=0){hits.push({at,employee,alias});at=text.indexOf(alias,at+alias.length)}
+    }
+  }
+  hits.sort((a,b)=>a.at-b.at||b.alias.length-a.alias.length);
+  const unique=hits.filter((hit,index)=>!index||hit.at!==hits[index-1].at);
+  return unique.map((hit,index)=>({employee:hit.employee,text:text.slice(hit.at,unique[index+1]?.at??text.length).trim()}));
+}
+function applyWrittenRules(employees,shifts,instructions,dateFrom,dateTo){
+  const lines=String(instructions||"").split(/\r?\n|[;.]/).map(plain).filter(Boolean);
+  const segments=writtenRuleSegments(employees,instructions);
+  for(const employee of employees){
+    const names=plain(employee.fullName).split(/\s+/).filter(x=>x.length>=3),ownLines=[...lines.filter(line=>names.some(name=>line.includes(name))),...segments.filter(x=>x.employee.id===employee.id).map(x=>x.text)];employee._briefUnavailableDates=new Set();
     for(const line of ownLines){
       if(line.includes("ΧΩΡΙΣ ΡΕΠΟ")){employee.maxDaysPerWeek=7;employee.allowSixthDay=true;employee.maxHoursPerWeek=Math.max(employee.maxHoursPerWeek,72)}
       const mentioned=shifts.filter(shift=>line.includes(plain(shift.name))||line.includes(plain(shift.code)));
       if(line.includes("ΜΟΝΟ")&&mentioned.length)employee.rules=employee.rules.filter(rule=>mentioned.some(shift=>shift.id===rule.shiftTypeId));
       if((line.includes("ΠΑΝΤΑ")||line.includes("ΣΤΑΘΕΡ"))&&mentioned.length)for(const rule of employee.rules)if(mentioned.some(shift=>shift.id===rule.shiftTypeId))rule.priority=Math.max(rule.priority||0,100);
       for(const [word,weekday] of briefWeekdays)if(line.includes("ΡΕΠΟ")&&line.includes(word)){for(let d=new Date(dateFrom);d<=dateTo;d.setUTCDate(d.getUTCDate()+1))if((d.getUTCDay()+6)%7===weekday)employee._briefUnavailableDates.add(dateKey(d))}
+      const allowedWeekdays=briefWeekdays.filter(([word])=>line.includes(word)).map(([,weekday])=>weekday);
+      if(line.includes("ΜΟΝΟ")&&allowedWeekdays.length&&(line.includes("ΔΕΝ ΘΑ ΕΡΓΑΣΤ")||line.includes("ΔΕΝ ΕΡΓΑΖΕΤ")||line.includes("ΜΠΟΡΕΙ ΝΑ ΔΟΥΛΕΥ"))){
+        for(let d=new Date(dateFrom);d<=dateTo;d.setUTCDate(d.getUTCDate()+1))if(!allowedWeekdays.includes((d.getUTCDay()+6)%7))employee._briefUnavailableDates.add(dateKey(d));
+      }
     }
   }
 }
