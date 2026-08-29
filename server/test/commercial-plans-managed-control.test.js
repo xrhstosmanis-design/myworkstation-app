@@ -10,9 +10,11 @@ test("commercial plans and managed control remain separate",async()=>{
     readFile(new URL("server/src/routes/platform-admin.js",root),"utf8"),
     readFile(new URL("server/src/platform-bootstrap.js",root),"utf8")
   ]);
-  assert.match(ui,/START — 69 €/);
-  assert.match(ui,/BUSINESS — 129 €/);
-  assert.match(ui,/AI COMPLETE — 199 €/);
+  assert.match(ui,/label:"START",price:100/);
+  assert.match(ui,/label:"BUSINESS",price:220/);
+  assert.match(ui,/label:"AI COMPLETE",price:330/);
+  assert.match(ui,/setPlanPrices/);
+  assert.match(ui,/Εφαρμογή πακέτου/);
   assert.match(ui,/Έλεγχος BASIC.*149/s);
   assert.match(ui,/Έλεγχος COMPLETE.*249/s);
   assert.match(ui,/Έλεγχος PREMIUM.*349/s);
