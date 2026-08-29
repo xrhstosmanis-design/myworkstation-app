@@ -11,7 +11,7 @@ const shiftModal=await readFile(new URL("../../client/src/components/store/Store
 test("pilot IRIS is an explicit online POS checkout route",()=>{
   assert.match(panel,/if\(action==="IRIS"\)return checkout\("IRIS"\)/);
   assert.match(panel,/className="iris" onClick=\{\(\)=>standardAction\("IRIS"\)\}/);
-  assert.match(panel,/paymentMethod==="IRIS"\?"IRIS"/);
+  assert.match(panel,/p\.method==="IRIS"\?"IRIS"/);
   assert.match(panel,/Offline: επιτρέπεται μόνο πώληση ΜΕΤΡΗΤΩΝ\. Κάρτα\/IRIS/);
 });
 
