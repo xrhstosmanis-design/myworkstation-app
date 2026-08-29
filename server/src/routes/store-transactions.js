@@ -296,6 +296,13 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 
 router.use(auth,requireLedgerAccess);
 
+router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const items=await prisma.$queryRaw`SELECT "id","fullName","position" FROM "Employee" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "fullName"`;
+  res.json({items});
+}));
+
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req),isBackoffice=req.user?.tokenType!=="STORE_OPERATOR";
