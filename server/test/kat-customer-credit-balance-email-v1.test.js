@@ -44,7 +44,7 @@ test("POS employee sees balance and receives cash or card payments into the acti
   assert.match(posUi,/Υπόλοιπο \$\{euro\(customer\.balance\)\}/);
   assert.match(posUi,/CARD για κάρτα ή CASH για μετρητά/);
   assert.match(cashControl,/IN \('SALE_CASH','CUSTOMER_RECEIPT_CASH'\)/);
-  assert.match(cashControl,/IN \('SALE_CARD','CUSTOMER_RECEIPT_CARD'\)/);
+  assert.match(cashControl,/IN \('SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD'\)/);
   assert.match(storeTransactions,/sum\("SALE_CASH"\)\+sum\("CUSTOMER_RECEIPT_CASH"\)/);
   assert.match(storeTransactions,/sum\("SALE_CARD"\)\+sum\("CUSTOMER_RECEIPT_CARD"\)/);
 });
