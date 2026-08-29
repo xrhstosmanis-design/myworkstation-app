@@ -222,6 +222,8 @@ const interpretationJsonSchema={
   },
   required:["rules","understood","unresolved"]
 };
+const scheduleChatSchema=z.object({storeId:z.string(),dateFrom:z.string(),dateTo:z.string(),instructions:z.string().max(12000).default(""),messages:z.array(z.object({role:z.enum(["user","assistant"]),text:z.string().min(1).max(4000)})).min(1).max(20)});
+const scheduleChatOutputSchema={type:"object",additionalProperties:false,properties:{assistantText:{type:"string"},suggestedInstructions:{type:"string"},warnings:{type:"array",items:{type:"string"}}},required:["assistantText","suggestedInstructions","warnings"]};
 router.get("/schedules/brief",async(req,res,next)=>{try{
   await ensureScheduleBriefSchema();const storeId=String(req.query.storeId||""),store=await prisma.store.findFirst({where:storeScope(req,storeId),select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const dateFrom=new Date(String(req.query.dateFrom||dateKey(mondayOf(new Date())))),dateTo=new Date(String(req.query.dateTo||dateKey(new Date(dateFrom.getTime()+6*86400000))));
@@ -239,6 +241,18 @@ router.post("/schedules/interpret",async(req,res,next)=>{try{
   let parsed;try{parsed=interpretationSchema.parse(JSON.parse(outputText(raw)))}catch{return res.status(502).json({error:"Το AI δεν επέστρεψε έγκυρη ανάλυση κανόνων."})}
   const employeeIds=new Set(store.employees.map(row=>row.id)),shiftCodes=new Set(store.shifts.map(row=>row.code));parsed.rules=parsed.rules.filter(rule=>employeeIds.has(rule.employeeId)).map(rule=>({...rule,onlyShiftCodes:rule.onlyShiftCodes.filter(code=>shiftCodes.has(code)),fixedAssignments:rule.fixedAssignments.filter(row=>shiftCodes.has(row.shiftCode))}));
   res.json({interpretation:parsed,model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5"});
+}catch(e){next(e)}});
+router.post("/schedules/chat",async(req,res,next)=>{try{
+  const body=scheduleChatSchema.parse(req.body||{});await requireAiStaffScheduler(req,body.storeId);
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για τη συνομιλία.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+  const store=await prisma.store.findFirst({where:storeScope(req,body.storeId),include:{shifts:{where:{active:true}},employees:{where:{active:true},include:{rules:true,leaveRequests:{where:{status:"APPROVED"}}}}}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+  const latest=await prisma.schedule.findFirst({where:{storeId:store.id},orderBy:{weekStart:"desc"},include:{assignments:{include:{employee:true,shiftType:true},orderBy:[{date:"asc"},{slot:"asc"}]}}});
+  const context={store:{id:store.id,name:store.name},period:{dateFrom:body.dateFrom,dateTo:body.dateTo},employees:store.employees.map(row=>({id:row.id,name:row.fullName,position:row.position||"",maxDaysPerWeek:row.maxDaysPerWeek,maxHoursPerWeek:row.maxHoursPerWeek,approvedLeaves:row.leaveRequests.map(leave=>({from:dateKey(leave.startDate),to:dateKey(leave.endDate),type:leave.type})),allowedShiftCodes:row.rules.filter(rule=>rule.allowed).map(rule=>store.shifts.find(shift=>shift.id===rule.shiftTypeId)?.code).filter(Boolean)})),shifts:store.shifts.map(row=>({code:row.code,name:row.name,startTime:row.startTime,endTime:row.endTime,requiredCount:row.requiredCount})),currentInstructions:body.instructions,currentSchedule:(latest?.assignments||[]).map(row=>({date:dateKey(row.date),shift:row.shiftType.code,hours:`${row.shiftType.startTime}-${row.shiftType.endTime}`,employee:row.employee?.fullName||"ΑΚΑΛΥΠΤΟ"})),conversation:body.messages};
+  const prompt=`Είσαι ο βοηθός προγράμματος εργαζομένων του MyWorkStation. Απάντησε στα ελληνικά, απλά και συγκεκριμένα. Χρησιμοποίησε αποκλειστικά τα στοιχεία του επιλεγμένου καταστήματος. Οι εγκεκριμένες άδειες, τα όρια εργαζομένων και οι επίσημες βάρδιες είναι υποχρεωτικά και δεν επιτρέπεται να τα αγνοήσεις. Μην εφευρίσκεις εργαζομένους, άδειες ή ωράρια. Εξήγησε συγκρούσεις και ακάλυπτες βάρδιες. Αν ο χρήστης ζητά αλλαγή, δώσε στο suggestedInstructions ολοκληρωμένο κείμενο κανόνων που μπορεί να μεταφερθεί στο πεδίο οδηγιών. Αν είναι απλή ερώτηση, άφησε suggestedInstructions κενό. Δεν αποθηκεύεις και δεν αλλάζεις πρόγραμμα αυτόματα. Context: ${JSON.stringify(context)}`;
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_SCHEDULE_CHAT_MODEL||process.env.OPENAI_SCHEDULE_MODEL||"gpt-5-mini",input:prompt,text:{format:{type:"json_schema",name:"staff_schedule_chat",strict:true,schema:scheduleChatOutputSchema}}})});
+  const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε η συνομιλία με AI.",code:"AI_PROVIDER_ERROR"});
+  let result;try{result=JSON.parse(outputText(raw))}catch{return res.status(502).json({error:"Το AI δεν επέστρεψε έγκυρη απάντηση."})}
+  res.json({assistantText:String(result.assistantText||""),suggestedInstructions:String(result.suggestedInstructions||""),warnings:Array.isArray(result.warnings)?result.warnings.map(String):[],model:process.env.OPENAI_SCHEDULE_CHAT_MODEL||process.env.OPENAI_SCHEDULE_MODEL||"gpt-5-mini"});
 }catch(e){next(e)}});
 function hoursForShift(shift){
   const [sh,sm]=shift.startTime.split(":").map(Number);
