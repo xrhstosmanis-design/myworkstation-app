@@ -412,7 +412,17 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const documentMime=purchaseDocument?"application/vnd.myworkstation.purchase-document":null;
   const evidenceChecksum=isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null;
   let rows;
-  if(externalPayment||legacyExternalPayment){
+  if(externalPayment){
+    rows=await prisma.$queryRaw`
+      INSERT INTO "StoreTransaction" (
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+      ) VALUES (
+        ${id},${req.user.companyId},${store.id},${null},${body.type},${body.amount},
+        ${body.description||null},${body.supplierId||null},${supplierName},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+      )
+      RETURNING *
+    `;
+  }else if(legacyExternalPayment){
     rows=await prisma.$queryRaw`
       INSERT INTO "StoreTransaction" (
         "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
