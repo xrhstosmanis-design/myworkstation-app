@@ -7,10 +7,15 @@ test("staff scheduling chat uses store personnel, leave and schedule context wit
   const client=await readFile(new URL("../../client/src/main.jsx",import.meta.url),"utf8");
   assert.match(api,/router\.post\("\/schedules\/chat"/);
   assert.match(api,/approvedLeaves/);
+  assert.match(api,/employeeNames/);
+  assert.match(api,/shiftTable/);
+  assert.match(api,/scheduleRows/);
+  assert.match(api,/reasoning:\{effort:"minimal"\}/);
   assert.match(api,/currentSchedule/);
-  assert.match(api,/Δεν αποθηκεύεις και δεν αλλάζεις πρόγραμμα αυτόματα/);
+  assert.match(api,/Δεν αποθηκεύεις αλλαγές αυτόματα/);
   assert.match(client,/Συνομιλία με AI/);
   assert.match(client,/Μεταφορά στις οδηγίες/);
+  assert.match(client,/ChatScheduleTable/);
   assert.match(client,/Το AI δεν αποθηκεύει αλλαγές αυτόματα/);
 });
 
