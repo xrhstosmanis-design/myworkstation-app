@@ -80,6 +80,35 @@ const tableStatements=[
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "supplierId" TEXT`
   ,`CREATE INDEX IF NOT EXISTS "StoreTransaction_supplier_idx" ON "StoreTransaction" ("companyId","supplierId","occurredAt" DESC)`
+  ,`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`
+  ,`CREATE TABLE IF NOT EXISTS "SupplierPaymentSettlement" (
+    "id" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "transactionId" TEXT NOT NULL UNIQUE,
+    "supplierId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+    "paymentMethod" TEXT NOT NULL,
+    "paidAt" TIMESTAMPTZ NOT NULL,
+    "note" TEXT,
+    "createdBy" TEXT NOT NULL,
+    "createdByName" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "reviewedBy" TEXT,
+    "reviewedAt" TIMESTAMPTZ,
+    "reviewNote" TEXT
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "SupplierPaymentSettlement_company_status_idx" ON "SupplierPaymentSettlement" ("companyId","status","createdAt" DESC)`
+  ,`CREATE TABLE IF NOT EXISTS "SupplierPaymentAllocation" (
+    "id" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "settlementId" TEXT NOT NULL REFERENCES "SupplierPaymentSettlement"("id") ON DELETE CASCADE,
+    "purchaseDocumentId" TEXT NOT NULL REFERENCES "PurchaseDocument"("id") ON DELETE RESTRICT,
+    "amount" NUMERIC(14,2) NOT NULL CHECK ("amount">0),
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("settlementId","purchaseDocumentId")
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "SupplierPaymentAllocation_document_idx" ON "SupplierPaymentAllocation" ("companyId","purchaseDocumentId")`
 ];
 
 async function ensureTables(){
@@ -107,6 +136,7 @@ function route(handler){
 
 function requireLedgerAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
   const actionPermission=req.method==="POST"&&(
     permissions.includes("SUPPLIER_PAYMENT")||
@@ -116,7 +146,7 @@ function requireLedgerAccess(req,res,next){
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
     permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
   );
-  if(!backoffice&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
+  if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
 }
 function assertStoreAccess(req,storeId){
@@ -181,6 +211,16 @@ const transactionSchema=z.object({
   idempotencyKey:z.string().trim().min(8).max(180).optional().nullable(),
   subtractFromShift:z.coerce.boolean().optional().default(false),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable()
+});
+
+const supplierSettlementSchema=z.object({
+  supplierId:z.string().trim().min(1).max(180),
+  paymentMethod:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT"]),
+  paidAt:z.coerce.date(),
+  note:z.string().trim().max(500).optional().nullable(),
+  idempotencyKey:z.string().trim().min(8).max(180),
+  attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}),
+  allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:z.coerce.number().positive().max(999999999)})).min(1).max(80)
 });
 
 function parseAttachment(attachment){
@@ -305,6 +345,129 @@ router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const items=await prisma.$queryRaw`SELECT "id","fullName","position" FROM "Employee" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "fullName"`;
   res.json({items});
+}));
+
+// The operator sees only the still allocatable balance of credit invoices. Pending
+// settlements reserve their amount, so two terminals cannot pay the same balance.
+router.get("/stores/:storeId/supplier-open-invoices",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  await ownedStore(req.params.storeId,req.user.companyId);
+  const supplierId=z.string().trim().min(1).max(180).parse(req.query.supplierId);
+  const supplier=await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+  if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+  const rows=await prisma.$queryRaw`
+    SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",d."status",st."name" AS "storeName",
+      COALESCE(SUM(a."amount") FILTER (WHERE ss."status"<>'CANCELLED' AND tx."reversedAt" IS NULL),0) AS "reservedAmount"
+    FROM "PurchaseDocument" d
+    JOIN "Store" st ON st."id"=d."storeId"
+    LEFT JOIN "SupplierPaymentAllocation" a ON a."purchaseDocumentId"=d."id" AND a."companyId"=d."companyId"
+    LEFT JOIN "SupplierPaymentSettlement" ss ON ss."id"=a."settlementId" AND ss."companyId"=d."companyId"
+    LEFT JOIN "StoreTransaction" tx ON tx."id"=ss."transactionId" AND tx."companyId"=d."companyId"
+    WHERE d."companyId"=${req.user.companyId} AND d."supplierId"=${supplierId}
+      AND d."status" IN ('DRAFT','APPROVED') AND COALESCE(d."settlementMode",'')='CREDIT'
+    GROUP BY d."id",d."documentNumber",d."documentDate",d."totalGross",d."status",st."name"
+    HAVING d."totalGross">COALESCE(SUM(a."amount") FILTER (WHERE ss."status"<>'CANCELLED' AND tx."reversedAt" IS NULL),0)
+    ORDER BY d."documentDate" ASC,d."id" ASC
+  `;
+  res.json({supplier:{id:supplier[0].id,name:supplier[0].name},items:rows.map(row=>({
+    ...row,totalGross:Number(row.totalGross||0),reservedAmount:Number(row.reservedAmount||0),
+    outstandingAmount:Number((Number(row.totalGross||0)-Number(row.reservedAmount||0)).toFixed(2))
+  }))});
+}));
+
+router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),body=supplierSettlementSchema.parse(req.body||{});
+  const attachment=parseAttachment(body.attachment);
+  const total=Number(body.allocations.reduce((sum,row)=>sum+Number(row.amount||0),0).toFixed(2));
+  const distinct=new Set(body.allocations.map(row=>row.purchaseDocumentId));
+  if(distinct.size!==body.allocations.length)return res.status(400).json({error:"Κάθε τιμολόγιο μπορεί να επιλεγεί μία φορά στην ίδια πληρωμή."});
+  const paymentSource=body.paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
+  const transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey);
+  const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
+  const result=await prisma.$transaction(async tx=>{
+    const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
+    const documentIds=body.allocations.map(row=>row.purchaseDocumentId);
+    const documents=await tx.$queryRaw`
+      SELECT "id","documentNumber","totalGross" FROM "PurchaseDocument"
+      WHERE "companyId"=${req.user.companyId} AND "supplierId"=${body.supplierId}
+        AND "id"=ANY(${documentIds}::text[]) AND "status" IN ('DRAFT','APPROVED')
+        AND COALESCE("settlementMode",'')='CREDIT'
+      FOR UPDATE
+    `;
+    if(documents.length!==documentIds.length){const error=new Error("Επιλέχθηκε τιμολόγιο που δεν είναι πλέον ανοιχτή οφειλή του προμηθευτή.");error.status=409;throw error}
+    for(const allocation of body.allocations){
+      const document=documents.find(row=>row.id===allocation.purchaseDocumentId);
+      const allocated=await tx.$queryRaw`
+        SELECT COALESCE(SUM(a."amount"),0) AS "amount"
+        FROM "SupplierPaymentAllocation" a
+        JOIN "SupplierPaymentSettlement" ss ON ss."id"=a."settlementId" AND ss."companyId"=a."companyId"
+        JOIN "StoreTransaction" st ON st."id"=ss."transactionId" AND st."companyId"=ss."companyId"
+        WHERE a."companyId"=${req.user.companyId} AND a."purchaseDocumentId"=${allocation.purchaseDocumentId}
+          AND ss."status"<>'CANCELLED' AND st."reversedAt" IS NULL
+      `;
+      const remaining=Number(document.totalGross||0)-Number(allocated[0]?.amount||0);
+      if(Number(allocation.amount)>remaining+.005){const error=new Error(`Το τιμολόγιο ${document.documentNumber||document.id} έχει διαθέσιμο υπόλοιπο ${remaining.toFixed(2)} €.`);error.status=409;throw error}
+    }
+    let sessionId=null;
+    if(paymentSource==="CASH_SHIFT"){
+      const shifts=await tx.$queryRaw`
+        SELECT "id" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+          AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE
+      `;
+      if(!shifts[0]){const error=new Error("Η ενεργή βάρδια έχει κλείσει. Η πληρωμή δεν αποθηκεύτηκε.");error.status=409;throw error}
+      sessionId=shifts[0].id;
+    }
+    const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    if(existing[0]){const error=new Error("Η ίδια πληρωμή έχει ήδη καταχωρηθεί.");error.status=409;throw error}
+    const description=`Ετεροχρονισμένη πληρωμή ${suppliers[0].name} · ${body.allocations.length} τιμολόγιο${body.allocations.length===1?"":"α"}`;
+    const transaction=await tx.$queryRaw`
+      INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt")
+      VALUES (${transactionId},${req.user.companyId},${store.id},${sessionId},'SUPPLIER_PAYMENT',${total},${description},${body.supplierId},${suppliers[0].name},${paymentSource==="CASH_SHIFT"},${body.paymentMethod},${req.user.id},${actorName},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${attachment.checksum},${body.paidAt}) RETURNING *
+    `;
+    await tx.$executeRaw`
+      INSERT INTO "SupplierPaymentSettlement" ("id","companyId","storeId","transactionId","supplierId","status","paymentMethod","paidAt","note","createdBy","createdByName")
+      VALUES (${settlementId},${req.user.companyId},${store.id},${transactionId},${body.supplierId},'PENDING_REVIEW',${body.paymentMethod},${body.paidAt},${body.note||null},${req.user.id},${actorName})
+    `;
+    for(const allocation of body.allocations)await tx.$executeRaw`
+      INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount")
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${settlementId},${allocation.purchaseDocumentId},${allocation.amount})
+    `;
+    return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId};
+  });
+  res.status(201).json({...result,paymentSource,status:"PENDING_REVIEW",total});
+}));
+
+function requireSuperAdminSettlementReview(req,res,next){
+  if(req.user?.role!=="SUPER_ADMIN")return res.status(403).json({error:"Ο έλεγχος πληρωμών προμηθευτών είναι διαθέσιμος μόνο στον Super Admin."});
+  next();
+}
+
+router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const rows=await prisma.$queryRaw`
+    SELECT ss."id",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
+           t."id" AS "transactionId",t."amount",t."attachmentFilename",t."occurredAt",s."name" AS "supplierName",
+           COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
+    FROM "SupplierPaymentSettlement" ss
+    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
+    JOIN "Supplier" s ON s."id"=ss."supplierId" AND s."companyId"=ss."companyId"
+    LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId"
+    LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId"
+    WHERE ss."companyId"=${req.user.companyId} AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+    GROUP BY ss."id",t."id",s."name" ORDER BY ss."createdAt" ASC LIMIT 500
+  `;
+  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const rows=await prisma.$queryRaw`
+    UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+    WHERE "id"=${req.params.settlementId} AND "companyId"=${req.user.companyId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
+  `;
+  if(!rows[0])return res.status(409).json({error:"Η πληρωμή έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
+  res.json({ok:true,status:rows[0].status});
 }));
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{

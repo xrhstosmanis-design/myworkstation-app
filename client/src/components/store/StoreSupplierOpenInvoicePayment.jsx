@@ -1,0 +1,41 @@
+import React,{useEffect,useMemo,useRef,useState} from "react";
+import {Camera,FileText,Upload,Wallet} from "lucide-react";
+
+const num=value=>Number(String(value??"0").replace(",","."))||0;
+const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν διαβάστηκε το αποδεικτικό."));reader.readAsDataURL(file)});
+const key=()=>`supplier-settlement-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
+
+export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],onChanged,setMessage,allowCash=true}){
+  const [supplierId,setSupplierId]=useState(""),[items,setItems]=useState([]),[allocations,setAllocations]=useState({}),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[file,setFile]=useState(null),[paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10)),[note,setNote]=useState(""),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
+  const videoRef=useRef(null),canvasRef=useRef(null);
+  const selected=useMemo(()=>suppliers.find(row=>String(row.id)===String(supplierId))||null,[suppliers,supplierId]);
+  const total=useMemo(()=>Number(Object.values(allocations).reduce((sum,value)=>sum+num(value),0).toFixed(2)),[allocations]);
+  const stopCamera=()=>{stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};
+  useEffect(()=>()=>stopCamera(),[]);
+  useEffect(()=>{if(!allowCash&&paymentMethod==="CASH_SHIFT")setPaymentMethod("CORPORATE_CARD")},[allowCash,paymentMethod]);
+  useEffect(()=>{let cancelled=false;setItems([]);setAllocations({});if(!supplierId)return;setLoading(true);api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-open-invoices?supplierId=${encodeURIComponent(supplierId)}`).then(data=>{if(!cancelled)setItems(data.items||[])}).catch(error=>!cancelled&&setMessage?.(`❌ ${error?.message||"Δεν φορτώθηκαν τα ανοιχτά τιμολόγια."}`)).finally(()=>!cancelled&&setLoading(false));return()=>{cancelled=true}},[api,store.id,supplierId,setMessage]);
+  const startCamera=async()=>{try{stopCamera();const next=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=next},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
+  const capture=()=>{const video=videoRef.current,canvas=canvasRef.current;if(!video||!canvas)return;canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720;canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(blob)setFile(new File([blob],`apodeixi-${Date.now()}.jpg`,{type:"image/jpeg"}));stopCamera()},"image/jpeg",.9)};
+  const submit=async()=>{
+    const rows=items.map(item=>({purchaseDocumentId:item.id,amount:num(allocations[item.id])})).filter(row=>row.amount>0);
+    if(!selected)return setMessage?.("❌ Επίλεξε προμηθευτή.");
+    if(!rows.length)return setMessage?.("❌ Συμπλήρωσε ποσό σε τουλάχιστον ένα ανοιχτό τιμολόγιο.");
+    if(!file)return setMessage?.("❌ Ανέβασε το αποδεικτικό πληρωμής πριν την καταχώριση.");
+    if(rows.some(row=>row.amount>(items.find(item=>item.id===row.purchaseDocumentId)?.outstandingAmount||0)+.005))return setMessage?.("❌ Ένα ποσό υπερβαίνει το διαθέσιμο υπόλοιπο τιμολογίου.");
+    setBusy(true);
+    try{
+      const attachment={dataUrl:await readFile(file),filename:file.name||"apodeixi.jpg"};
+      const result=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-settlements`,{method:"POST",body:JSON.stringify({supplierId,paymentMethod,paidAt,note:note.trim()||null,attachment,allocations:rows,idempotencyKey:key()})});
+      if(paymentMethod==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:total,storeId:store.id,transactionId:result?.transaction?.id}}))}catch{}
+      setMessage?.(`✅ Πληρωμή ${euro(total)} για ${selected.name} καταχωρίστηκε σε αναμονή ελέγχου. Δεν αλλάζει δεύτερη φορά κανένα τιμολόγιο ή απόθεμα.`);
+      setItems([]);setAllocations({});setFile(null);setNote("");onChanged?.();
+    }catch(error){setMessage?.(`❌ ${error?.message||"Δεν καταχωρίστηκε η πληρωμή."}`)}finally{setBusy(false)}
+  };
+  return <div className="pos-payment-form-v3-root">
+    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Πληρωμή ανοιχτών τιμολογίων — βλέπεις μόνο τις οφειλές του επιλεγμένου προμηθευτή. Η επιβεβαίωση γίνεται στο BackOffice.</div>
+    <label>Προμηθευτής<select value={supplierId} disabled={busy} onChange={event=>setSupplierId(event.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select></label>
+    {supplierId&&<div style={{margin:"10px 0",border:"1px solid #cfe1d8",borderRadius:10,overflow:"hidden"}}>{loading?<div style={{padding:12,fontWeight:800}}>Φόρτωση ανοιχτών τιμολογίων…</div>:items.length?<>{items.map(item=><div key={item.id} style={{display:"grid",gridTemplateColumns:"1fr 120px",gap:10,padding:10,borderBottom:"1px solid #e4eee9",alignItems:"center"}}><div><b>{item.documentNumber||"Χωρίς αριθμό"}</b><small style={{display:"block"}}>{String(item.documentDate||"").slice(0,10)} · {item.storeName} · Υπόλοιπο {euro(item.outstandingAmount)}</small></div><input aria-label={`Ποσό για ${item.documentNumber||item.id}`} inputMode="decimal" value={allocations[item.id]||""} max={item.outstandingAmount} placeholder="0,00" disabled={busy} onChange={event=>setAllocations(current=>({...current,[item.id]:event.target.value}))}/></div>)}<div style={{padding:10,fontWeight:900,textAlign:"right"}}>Σύνολο επιλεγμένης πληρωμής: {euro(total)}</div></>:<div style={{padding:12,fontWeight:800}}>Δεν υπάρχουν απλήρωτα τιμολόγια με πίστωση για αυτόν τον προμηθευτή.</div>}</div>}
+    {Boolean(items.length)&&<><div className="pos-expense-payment-sources"><b>Τρόπος πληρωμής</b><div>{[["CASH_SHIFT","Μετρητά από ενεργή βάρδια"],["CORPORATE_CARD","Εταιρική κάρτα"],["BANK_TRANSFER","Τραπεζική μεταφορά"],["EMPLOYEE_REIMBURSEMENT","Πληρωμή υπαλλήλου προς επιστροφή"]].map(([value,label])=><button key={value} type="button" className={paymentMethod===value?"active":""} disabled={busy||(value==="CASH_SHIFT"&&!allowCash)} onClick={()=>setPaymentMethod(value)}>{label}</button>)}</div><small>{paymentMethod==="CASH_SHIFT"?"Μόνο αυτή η επιλογή αφαιρεί άμεσα το ποσό από την ενεργή βάρδια.":"Η καταχώριση είναι εξωτερική· το φυσικό ταμείο της βάρδιας δεν αλλάζει."}</small></div><label>Ημερομηνία πραγματικής πληρωμής<input type="date" value={paidAt} disabled={busy} onChange={event=>setPaidAt(event.target.value)}/></label><label>Σημείωση <small>(προαιρετική)</small><input value={note} disabled={busy} onChange={event=>setNote(event.target.value)} placeholder="π.χ. αριθμός μεταφοράς"/></label><div className="pos-photo-actions"><strong><Upload/> Αποδεικτικό πληρωμής</strong><div><label><Camera/> Φωτογραφία από PC<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>setFile(event.target.files?.[0]||null)}/></label><label><FileText/> PDF από PC<input type="file" accept="application/pdf" disabled={busy} onChange={event=>setFile(event.target.files?.[0]||null)}/></label><button type="button" disabled={busy} onClick={startCamera}><Camera/> Λήψη από κάμερα</button></div><b>{file?.name||"Δεν επιλέχθηκε αποδεικτικό"}</b></div>{cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}>Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}<button className="pos-primary-action" disabled={busy||!total||!file} onClick={submit}><Wallet/> {busy?"Καταχώριση…":"Καταχώριση πληρωμής προς έλεγχο"}</button></>}
+  </div>;
+}
