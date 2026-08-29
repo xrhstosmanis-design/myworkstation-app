@@ -135,7 +135,8 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
-  const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
   const actionPermission=req.method==="POST"&&(
     permissions.includes("SUPPLIER_PAYMENT")||
@@ -145,7 +146,7 @@ function requireLedgerAccess(req,res,next){
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
     permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
   );
-  if(!backoffice&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
+  if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
 }
 function assertStoreAccess(req,storeId){
