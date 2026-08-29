@@ -46,5 +46,5 @@ test("POS employee sees balance and receives cash or card payments into the acti
   assert.match(cashControl,/IN \('SALE_CASH','CUSTOMER_RECEIPT_CASH'\)/);
   assert.match(cashControl,/IN \('SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD'\)/);
   assert.match(storeTransactions,/sum\("SALE_CASH"\)\+sum\("CUSTOMER_RECEIPT_CASH"\)/);
-  assert.match(storeTransactions,/sum\("SALE_CARD"\)\+sum\("CUSTOMER_RECEIPT_CARD"\)/);
+  assert.match(storeTransactions,/sum\("SALE_CARD"\)\+sum\("SALE_IRIS"\)\+sum\("CUSTOMER_RECEIPT_CARD"\)/);
 });
