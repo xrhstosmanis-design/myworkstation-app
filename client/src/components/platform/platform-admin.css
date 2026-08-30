@@ -17,3 +17,12 @@
 .platform-title-actions button svg{width:17px;height:17px;flex:0 0 auto}
 @media(max-width:1180px){.platform-title{flex-direction:column}.platform-title-actions{grid-template-columns:repeat(4,minmax(132px,1fr))}}
 @media(max-width:780px){.platform-title-actions{grid-template-columns:repeat(2,minmax(132px,1fr))}.platform-title-actions button{min-height:50px}}
+
+/* Grouped Super Admin toolbar */
+.platform-title-actions{display:flex;flex:1;justify-content:flex-end;align-items:stretch;gap:10px;min-width:0}
+.platform-action-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px;padding:7px;border:1px solid #d9e3ef;border-radius:14px;background:#fff;min-width:0}
+.platform-action-group>small{grid-column:1/-1;font-size:10px;font-weight:900;letter-spacing:.08em;color:#63738b;text-transform:uppercase}
+.platform-action-group button{min-height:42px;padding:8px;font-size:11px}
+.platform-action-utility{grid-template-columns:minmax(98px,1fr)}
+@media(max-width:1250px){.platform-title-actions{width:100%;justify-content:stretch}.platform-action-group{flex:1}}
+@media(max-width:800px){.platform-action-group{grid-template-columns:repeat(2,minmax(100px,1fr))}.platform-action-utility{grid-template-columns:1fr}}
