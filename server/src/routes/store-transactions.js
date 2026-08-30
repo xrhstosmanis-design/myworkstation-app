@@ -822,6 +822,14 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id})
     ON CONFLICT ("transactionId") DO NOTHING
   `;
+  if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt)await prisma.$transaction(async tx=>{
+    const account=await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id});
+    await tx.$executeRaw`
+      INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},${selectedPaymentMethod},${-Math.abs(Number(transaction.amount||0))},'PENDING_REVIEW',${transaction.id},${legacyAttachment?.dataUrl||null},${legacyAttachment?.mimeType||null},${legacyAttachment?.filename||null},${transaction.occurredAt||new Date()},${req.user.id},${actorName})
+      ON CONFLICT ("sourceTransactionId") DO NOTHING
+    `;
+  });
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({
     ...transaction,
