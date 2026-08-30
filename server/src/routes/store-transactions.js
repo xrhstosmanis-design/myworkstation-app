@@ -462,10 +462,19 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
-  const rows=await prisma.$queryRaw`
-    UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
-    WHERE "id"=${req.params.settlementId} AND "companyId"=${req.user.companyId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
-  `;
+  const rows=await prisma.$transaction(async tx=>{
+    const updated=await tx.$queryRaw`
+      UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      WHERE "id"=${req.params.settlementId} AND "companyId"=${req.user.companyId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
+    `;
+    if(!updated[0])return updated;
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,status:body.status,note:body.note})}::jsonb)
+    `;
+    return updated;
+  });
   if(!rows[0])return res.status(409).json({error:"Η πληρωμή έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
   res.json({ok:true,status:rows[0].status});
 }));
