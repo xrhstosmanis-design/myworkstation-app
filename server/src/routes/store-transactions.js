@@ -526,6 +526,26 @@ router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
   res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
 }));
 
+router.get("/stores/:storeId/bank-deposits/pending-proof",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const rows=await prisma.$queryRaw`SELECT e."id",e."amount",e."occurredAt",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} AND e."status"='PENDING_PROOF' ORDER BY e."occurredAt" ASC`;
+  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
+  const body=z.object({attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)})}).parse(req.body||{});
+  const attachment=parseAttachment(body.attachment);
+  const rows=await prisma.$transaction(async tx=>{
+    const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    if(!found[0])return [];
+    assertStoreAccess(req,found[0].storeId);
+    return tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"status"='PENDING_REVIEW' WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' RETURNING "id","status"`;
+  });
+  if(!rows[0])return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
+  res.json({ok:true,status:rows[0].status});
+}));
+
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') ORDER BY e."createdAt" ASC LIMIT 500`;
   res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
