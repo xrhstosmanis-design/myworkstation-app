@@ -199,6 +199,21 @@ async function virtualBankAccount(tx,{companyId,storeId,userId}){
     throw error;
   }
 }
+async function syncVirtualBankInflows(tx,{companyId,storeId,userId}){
+  const account=await virtualBankAccount(tx,{companyId,storeId,userId});
+  await tx.$executeRaw`
+    INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","occurredAt","createdBy","createdByName")
+    SELECT 'bank-sale-' || t."id",t."companyId",t."storeId",${account.id},
+      CASE WHEN t."type"='SALE_IRIS' OR t."paymentMethod"='IRIS' THEN 'IRIS_SETTLEMENT' ELSE 'POS_SETTLEMENT' END,
+      t."amount",'CONFIRMED',t."id",t."occurredAt",
+      COALESCE(NULLIF(t."actorId",''),${userId}),COALESCE(NULLIF(t."actorName",''),'MyWorkStation')
+    FROM "StoreTransaction" t
+    WHERE t."companyId"=${companyId} AND t."storeId"=${storeId}
+      AND t."reversedAt" IS NULL AND t."amount">0
+      AND (t."type" IN ('SALE_CARD','SALE_IRIS') OR (t."type"='SALE_CARD' AND t."paymentMethod"='IRIS'))
+    ON CONFLICT ("sourceTransactionId") DO NOTHING
+  `;
+}
 async function ownedStore(storeId,companyId){
   const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
@@ -520,6 +535,7 @@ function requireSuperAdminSettlementReview(req,res,next){
 router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
+  await prisma.$transaction(tx=>syncVirtualBankInflows(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id}));
   const accounts=await prisma.$queryRaw`
     SELECT a."id",a."name",a."bankName",a."ibanMasked",
       COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
@@ -528,7 +544,7 @@ router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
     WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."name"='Ταμείο Τράπεζας' AND a."active"=true
     GROUP BY a."id" ORDER BY a."name"`;
   const entries=await prisma.$queryRaw`SELECT e."id",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} ORDER BY e."occurredAt" DESC LIMIT 100`;
-  res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
+  res.json({accounts:accounts.map(row=>{const availableBalance=Number(row.availableBalance||0),pendingAmount=Number(row.pendingAmount||0);return {...row,availableBalance,pendingAmount,projectedBalance:Number((availableBalance+pendingAmount).toFixed(2))}}),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
 }));
 
 router.get("/stores/:storeId/bank-deposits/pending-proof",route(async(req,res)=>{
@@ -552,6 +568,8 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
 }));
 
 router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const stores=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true`;
+  for(const store of stores)await prisma.$transaction(tx=>syncVirtualBankInflows(tx,{companyId:store.companyId,storeId:store.id,userId:req.user.id}));
   const rows=await prisma.$queryRaw`
     SELECT c."name" AS "companyName",s."name" AS "storeName",a."id" AS "bankAccountId",a."bankName",a."name" AS "accountName",
       COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
@@ -560,7 +578,8 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
     LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
     WHERE a."active"=true AND a."name"='Ταμείο Τράπεζας' GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name"`;
   const totals=rows.reduce((sum,row)=>({availableBalance:sum.availableBalance+Number(row.availableBalance||0),pendingAmount:sum.pendingAmount+Number(row.pendingAmount||0)}),{availableBalance:0,pendingAmount:0});
-  res.json({items:rows.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),totals});
+  totals.availableBalance=Number(totals.availableBalance.toFixed(2));totals.pendingAmount=Number(totals.pendingAmount.toFixed(2));totals.projectedBalance=Number((totals.availableBalance+totals.pendingAmount).toFixed(2));
+  res.json({items:rows.map(row=>{const availableBalance=Number(row.availableBalance||0),pendingAmount=Number(row.pendingAmount||0);return {...row,availableBalance,pendingAmount,projectedBalance:Number((availableBalance+pendingAmount).toFixed(2))}}),totals});
 }));
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
