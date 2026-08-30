@@ -568,7 +568,9 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(!found[0])return [];
     assertStoreAccess(req,found[0].storeId);
-    const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' FOR UPDATE`;
+    // Older entries may have been created as PENDING_REVIEW without a file.  They
+    // are still awaiting their first proof and must be uploadable exactly once.
+    const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
     if(!pending[0])return [];
     const expectedAmount=Number(pending[0].amount||0),proofAmount=Number(body.proofAmount??expectedAmount),difference=Number((proofAmount-expectedAmount).toFixed(2)),status=Math.abs(difference)>.005?'DISCREPANCY':'CONFIRMED';
     const note=status==='CONFIRMED'?'Αυτόματη αντιστοίχιση απόδειξης κατάθεσης':`Αυτόματη απόκλιση αποδεικτικού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount.toFixed(2)} €, διαφορά ${difference.toFixed(2)} €.`;
