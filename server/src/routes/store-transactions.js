@@ -446,19 +446,40 @@ function requireSuperAdminSettlementReview(req,res,next){
 }
 
 router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const filters=z.object({
+    companyId:z.string().trim().max(180).optional().default(""),
+    storeId:z.string().trim().max(180).optional().default(""),
+    from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+  }).parse(req.query||{});
+  if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const rows=await prisma.$queryRaw`
     SELECT ss."id",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
-           t."id" AS "transactionId",t."amount",t."attachmentFilename",t."occurredAt",s."name" AS "supplierName",
+           t."id" AS "transactionId",t."amount",t."attachmentFilename",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
     JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
     JOIN "Supplier" s ON s."id"=ss."supplierId" AND s."companyId"=ss."companyId"
+    JOIN "Store" st ON st."id"=ss."storeId" AND st."companyId"=ss."companyId"
+    JOIN "Company" c ON c."id"=ss."companyId"
+    LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId"
     LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId"
-    WHERE ss."companyId"=${req.user.companyId} AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
-    GROUP BY ss."id",t."id",s."name" ORDER BY ss."createdAt" ASC LIMIT 500
+    WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
+      AND (${filters.storeId}='' OR ss."storeId"=${filters.storeId})
+      AND (${filters.from||null}::date IS NULL OR ss."paidAt">=${filters.from||null}::date)
+      AND (${filters.to||null}::date IS NULL OR ss."paidAt"<(${filters.to||null}::date+INTERVAL '1 day'))
+    GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY ss."createdAt" ASC LIMIT 500
   `;
-  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+  const companies=await prisma.$queryRaw`
+    SELECT c."id",c."name",owner."fullName" AS "ownerName"
+    FROM "Company" c
+    LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
+    ORDER BY c."name"
+  `;
+  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" ORDER BY "name"`;
+  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)})),companies,stores});
 }));
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
@@ -466,13 +487,13 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`
       UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
-      WHERE "id"=${req.params.settlementId} AND "companyId"=${req.user.companyId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
+      WHERE "id"=${req.params.settlementId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
     `;
     if(!updated[0])return updated;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-      VALUES (${crypto.randomUUID()},${req.user.companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,status:body.status,note:body.note})}::jsonb)
+      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,status:body.status,note:body.note})}::jsonb)
     `;
     return updated;
   });
