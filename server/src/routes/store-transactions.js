@@ -904,6 +904,11 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   `;
   if(!rows[0])return res.status(409).json({error:"Η βάρδια της συναλλαγής έχει κλείσει. Δεν επιτρέπεται μεταγενέστερη αλλαγή στα οριστικοποιημένα στοιχεία."});
   const reversed=normalize(rows[0]);
+  if(["SALE_CARD","SALE_IRIS"].includes(reversed.type)||reversed.paymentMethod==="IRIS")await prisma.$executeRaw`
+    UPDATE "BankLedgerEntry"
+    SET "status"='CANCELLED',"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${`Ακύρωση αρχικής συναλλαγής: ${body.reason}`}
+    WHERE "companyId"=${req.user.companyId} AND "sourceTransactionId"=${reversed.id} AND "status"<>'CANCELLED'
+  `;
   const store=await ownedStore(transaction.storeId,req.user.companyId);
   const emailNotification=await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"REVERSAL",transaction:reversed,actorName,reason:body.reason});
   res.json({...reversed,emailNotification});
