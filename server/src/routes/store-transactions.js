@@ -213,6 +213,7 @@ function totals(rows){
   const otherExpenses=sum("OTHER_EXPENSE");
   const deductedSupplierPayments=sumShiftExpense("SUPPLIER_PAYMENT");
   const deductedOtherExpenses=sumShiftExpense("OTHER_EXPENSE");
+  const bankDeposits=sumShiftExpense("BANK_DEPOSIT");
   return {
     cashSales:sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),
     cardSales:sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),
@@ -220,10 +221,11 @@ function totals(rows){
     transferIn:sum("TRANSFER_AMOUNT"),
     supplierPayments,
     otherExpenses,
-    expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
+    expensesTotal:deductedSupplierPayments+deductedOtherExpenses+bankDeposits,
     recordedExpensesTotal:supplierPayments+otherExpenses,
     deductedSupplierPayments,
     deductedOtherExpenses,
+    bankDeposits,
     percentages:sum("PERCENTAGES"),
     count:active.length
   };
@@ -376,6 +378,25 @@ router.get("/stores/:storeId/bank-accounts",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const items=await prisma.$queryRaw`SELECT "id","name","bankName","ibanMasked","active" FROM "BankAccount" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "name"`;
   res.json({items});
+}));
+
+router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const body=z.object({bankAccountId:z.string().trim().min(1),amount:z.coerce.number().positive().max(999999999),depositedAt:z.coerce.date(),depositor:z.string().trim().min(2).max(160),note:z.string().trim().max(500).optional().nullable(),attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),idempotencyKey:z.string().trim().min(8).max(180)}).parse(req.body||{});
+  const attachment=parseAttachment(body.attachment);
+  const terminalPos=await requestTerminal(req),transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey),actorName=req.user.fullName||"Χρήστης";
+  const result=await prisma.$transaction(async tx=>{
+    const account=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "id"=${body.bankAccountId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`;
+    if(!account[0]){const error=new Error("Επίλεξε ενεργό τραπεζικό λογαριασμό του καταστήματος.");error.status=404;throw error}
+    const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} LIMIT 1`;if(existing[0]){const error=new Error("Η ίδια κατάθεση έχει ήδη καταχωρηθεί.");error.status=409;throw error}
+    const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt") SELECT ${transactionId},${req.user.companyId},${store.id},shift."id",'BANK_DEPOSIT',${body.amount},${`Κατάθεση τράπεζας · ${account[0].bankName} · ${body.depositor}`},true,'CASH_SHIFT',${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.depositedAt} FROM "CashShiftSession" shift WHERE shift."companyId"=${req.user.companyId} AND shift."storeId"=${store.id} AND shift."terminalPos"=${terminalPos} AND shift."status"='OPEN' ORDER BY shift."openedAt" DESC LIMIT 1 FOR KEY SHARE OF shift RETURNING *`;
+    if(!rows[0]){const error=new Error("Απαιτείται ενεργή βάρδια για κατάθεση μετρητών.");error.status=409;throw error}
+    const status=attachment?'PENDING_REVIEW':'PENDING_PROOF';
+    const ledger=await tx.$queryRaw`INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account[0].id},'CASH_DEPOSIT',${body.amount},${status},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.depositedAt},${req.user.id},${actorName}) RETURNING *`;
+    return {transaction:normalize(rows[0]),ledger:ledger[0],account:account[0]};
+  });
+  res.status(201).json({ok:true,...result,status:result.ledger.status});
 }));
 
 router.post("/stores/:storeId/bank-accounts",route(async(req,res)=>{
