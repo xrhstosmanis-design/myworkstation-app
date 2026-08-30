@@ -565,7 +565,7 @@ router.get("/stores/:storeId/bank-deposits/pending-proof",route(async(req,res)=>
 router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
   const body=z.object({attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}),proofAmount:z.coerce.number().positive().max(999999999).optional()}).parse(req.body||{});
   const attachment=parseAttachment(body.attachment);
-  const rows=await prisma.$transaction(async tx=>{
+  const result=await prisma.$transaction(async tx=>{
     const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(!found[0])return [];
     assertStoreAccess(req,found[0].storeId);
@@ -582,8 +582,8 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify(auditDetails)}::jsonb)`;
     return {...updated[0],difference};
   });
-  if(!rows[0])return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
-  res.json({ok:true,status:rows[0].status,automaticMatch:rows[0].status==="CONFIRMED",proofAmount:Number(rows[0].proofAmount||0),difference:Number(rows[0].difference||0)});
+  if(!result)return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
+  res.json({ok:true,status:result.status,automaticMatch:result.status==="CONFIRMED",proofAmount:Number(result.proofAmount||0),difference:Number(result.difference||0)});
 }));
 
 router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(req,res)=>{
