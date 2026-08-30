@@ -644,6 +644,11 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
       WHERE "id"=${req.params.settlementId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
     `;
     if(!updated[0])return updated;
+    await tx.$executeRaw`
+      UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
+        AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
+    `;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
@@ -682,6 +687,11 @@ router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
+    await tx.$executeRaw`
+      UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
+        AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
+    `;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${body.status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,status:body.status,note:body.note})}::jsonb)`;
     return updated;
