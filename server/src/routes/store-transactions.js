@@ -567,10 +567,15 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(!found[0])return [];
     assertStoreAccess(req,found[0].storeId);
-    return tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"status"='PENDING_REVIEW' WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' RETURNING "id","status"`;
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"status"='CONFIRMED',"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"='Αυτόματη αντιστοίχιση απόδειξης κατάθεσης' WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' RETURNING "id","status","companyId","storeId","amount"`;
+    if(updated[0]){
+      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},'BANK_DEPOSIT_AUTO_MATCHED',${JSON.stringify({bankLedgerEntryId:updated[0].id,amount:Number(updated[0].amount||0),attachmentFilename:attachment.filename})}::jsonb)`;
+    }
+    return updated;
   });
   if(!rows[0])return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
-  res.json({ok:true,status:rows[0].status});
+  res.json({ok:true,status:rows[0].status,automaticMatch:true});
 }));
 
 router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(req,res)=>{
