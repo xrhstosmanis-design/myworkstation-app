@@ -183,10 +183,13 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const expenseEvent=r.eventType.startsWith("OTHER_EXPENSE_");
       const supplierEvent=r.eventType.startsWith("SUPPLIER_SETTLEMENT_");
       const eventAmount=bankEvent?n(details.proofAmount??details.expectedAmount??details.amount):expenseEvent||supplierEvent?n(details.amount):n(details.shortage);
+      const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
+        ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
+        :"";
       const description=bankEvent
         ?`${r.eventType==="BANK_DEPOSIT_PROOF_UPLOADED"?"ΑΝΕΒΑΣΜΑ ΑΠΟΔΕΙΚΤΙΚΟΥ ΚΑΤΑΘΕΣΗΣ":r.eventType==="BANK_DEPOSIT_AUTO_MATCHED"?"ΑΥΤΟΜΑΤΗ ΑΝΤΙΣΤΟΙΧΙΣΗ ΚΑΤΑΘΕΣΗΣ":r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"?"ΑΠΟΚΛΙΣΗ ΑΠΟΔΕΙΚΤΙΚΟΥ ΚΑΤΑΘΕΣΗΣ":r.eventType.replaceAll("_"," ")} · κατάθεση ${n(details.expectedAmount).toFixed(2)} € · αποδεικτικό ${n(details.proofAmount??details.expectedAmount).toFixed(2)} € · διαφορά ${n(details.difference).toFixed(2)} €${details.attachmentFilename?` · ${details.attachmentFilename}`:""}`
         :expenseEvent||supplierEvent
-          ?`${r.eventType.replaceAll("_"," ")} · ${n(details.amount).toFixed(2)} €${details.note?` · ${details.note}`:""}`
+          ?`${r.eventType.replaceAll("_"," ")} · ${n(details.amount).toFixed(2)} €${supplierEvent&&details.supplierName?` · ${details.supplierName}`:""}${allocatedInvoices?` · ${allocatedInvoices}`:""}${details.note?` · ${details.note}`:""}`
           :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
       return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
