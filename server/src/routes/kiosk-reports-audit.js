@@ -11,6 +11,8 @@ const n=value=>Number(value||0);
 const dayStart=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date(Date.now()-30*86400000);return Number.isNaN(d.getTime())?new Date(Date.now()-30*86400000):d};
 const dayEndExclusive=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date();if(Number.isNaN(d.getTime()))return new Date(Date.now()+86400000);d.setDate(d.getDate()+1);return d};
 const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null,timeFrom:String(req.query.timeFrom||"").match(/^\d{2}:\d{2}$/)?.[0]||null,timeTo:String(req.query.timeTo||"").match(/^\d{2}:\d{2}$/)?.[0]||null,operatorId:String(req.query.operatorId||"").trim()||null,terminalPos:String(req.query.terminalPos||"").trim()||null,eventType:String(req.query.eventType||"").trim()||null,amountMin:req.query.amountMin===""||req.query.amountMin==null?null:n(req.query.amountMin),amountMax:req.query.amountMax===""||req.query.amountMax==null?null:n(req.query.amountMax)});
+const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
+const auditFilters=req=>{const superAdmin=isSuperAdmin(req),requestedCompanyId=String(req.query.companyId||"").trim()||null;return {...filters(req),companyId:superAdmin?requestedCompanyId:req.user.companyId,superAdmin}};
 
 function requireManagement(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!managementRoles.has(req.user?.role))return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
@@ -98,7 +100,7 @@ router.get("/deactivations",requireManagement,async(req,res,next)=>{
 
 router.get("/audit-events",requireManagement,async(req,res,next)=>{
   try{
-    const {companyId,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=filters(req),text=q?`%${q}%`:null;
+    const {companyId,superAdmin,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=auditFilters(req),text=q?`%${q}%`:null;
     const transactionRows=await prisma.$queryRaw`
       SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
         t."sessionId" AS "shiftId",t."actorId",t."actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
@@ -106,7 +108,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       FROM "StoreTransaction" t
       LEFT JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId"
       LEFT JOIN "CashShiftSession" shift ON shift."id"=t."sessionId" AND shift."companyId"=t."companyId"
-      WHERE t."companyId"=${companyId}
+      WHERE (${companyId}::text IS NULL OR t."companyId"=${companyId})
         AND t."occurredAt">=${from} AND t."occurredAt"<${to}
         AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
         AND (${text}::text IS NULL
@@ -121,7 +123,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      WHERE a."companyId"=${companyId} AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE'))
+      WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId}) AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE'))
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
@@ -136,7 +138,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName",a."storeId"
       FROM "StoreOperatorAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      WHERE a."companyId"=${companyId}
+      WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."eventType" IN (
           'SHIFT_CLOSE_SHORTAGE_ATTEMPT','SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE',
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
@@ -194,7 +196,9 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
     const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
-    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit",videoAccessAllowed:await hasVideoAccess(req)});
+    const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
+    const stores=superAdmin?await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (${companyId}::text IS NULL OR "companyId"=${companyId}) ORDER BY "name"`:[];
+    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
   }catch(error){next(error)}
 });
 
