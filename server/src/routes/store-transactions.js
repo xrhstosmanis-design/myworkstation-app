@@ -680,10 +680,11 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
     const transaction=await tx.$queryRaw`SELECT "amount","supplierName" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;
+    const allocations=await tx.$queryRaw`SELECT a."purchaseDocumentId",a."amount",p."documentNumber" FROM "SupplierPaymentAllocation" a JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=a."companyId" WHERE a."settlementId"=${updated[0].id} AND a."companyId"=${updated[0].companyId} ORDER BY p."documentDate",p."id"`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,supplierName:transaction[0]?.supplierName||null,amount:Number(transaction[0]?.amount||0),status:body.status,note:body.note})}::jsonb)
+      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,supplierName:transaction[0]?.supplierName||null,amount:Number(transaction[0]?.amount||0),allocations:allocations.map(row=>({purchaseDocumentId:row.purchaseDocumentId,documentNumber:row.documentNumber||null,amount:Number(row.amount||0)})),status:body.status,note:body.note})}::jsonb)
     `;
     return updated;
   });
