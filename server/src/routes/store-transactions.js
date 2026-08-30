@@ -121,6 +121,25 @@ const tableStatements=[
     "reviewNote" TEXT
   )`
   ,`CREATE INDEX IF NOT EXISTS "OtherExpenseReview_company_status_idx" ON "OtherExpenseReview" ("companyId","status","createdAt" DESC)`
+  ,`CREATE TABLE IF NOT EXISTS "BankAccount" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,"bankName" TEXT NOT NULL,"ibanMasked" TEXT,
+    "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","name")
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "BankAccount_store_active_idx" ON "BankAccount" ("companyId","storeId","active")`
+  ,`CREATE TABLE IF NOT EXISTS "BankLedgerEntry" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "bankAccountId" TEXT NOT NULL REFERENCES "BankAccount"("id") ON DELETE RESTRICT,
+    "type" TEXT NOT NULL CHECK ("type" IN ('CASH_DEPOSIT','POS_SETTLEMENT','IRIS_SETTLEMENT','BANK_TRANSFER','CORPORATE_CARD')),
+    "amount" NUMERIC(14,2) NOT NULL CHECK ("amount"<>0),
+    "status" TEXT NOT NULL DEFAULT 'PENDING_PROOF' CHECK ("status" IN ('PENDING_PROOF','PENDING_REVIEW','CONFIRMED','DISCREPANCY','CANCELLED')),
+    "sourceTransactionId" TEXT UNIQUE,"attachmentData" TEXT,"attachmentMimeType" TEXT,"attachmentFilename" TEXT,
+    "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"createdBy" TEXT NOT NULL,"createdByName" TEXT NOT NULL,
+    "reviewedBy" TEXT,"reviewedAt" TIMESTAMPTZ,"reviewNote" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "BankLedgerEntry_account_status_idx" ON "BankLedgerEntry" ("bankAccountId","status","occurredAt" DESC)`
 ];
 
 async function ensureTables(){
