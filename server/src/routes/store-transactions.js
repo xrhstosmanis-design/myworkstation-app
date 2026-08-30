@@ -109,6 +109,18 @@ const tableStatements=[
     UNIQUE ("settlementId","purchaseDocumentId")
   )`
   ,`CREATE INDEX IF NOT EXISTS "SupplierPaymentAllocation_document_idx" ON "SupplierPaymentAllocation" ("companyId","purchaseDocumentId")`
+  ,`CREATE TABLE IF NOT EXISTS "OtherExpenseReview" (
+    "id" TEXT PRIMARY KEY,
+    "companyId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "transactionId" TEXT NOT NULL UNIQUE,
+    "status" TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "reviewedBy" TEXT,
+    "reviewedAt" TIMESTAMPTZ,
+    "reviewNote" TEXT
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "OtherExpenseReview_company_status_idx" ON "OtherExpenseReview" ("companyId","status","createdAt" DESC)`
 ];
 
 async function ensureTables(){
@@ -501,6 +513,41 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
   res.json({ok:true,status:rows[0].status});
 }));
 
+router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const filters=z.object({companyId:z.string().trim().max(180).optional().default(""),storeId:z.string().trim().max(180).optional().default(""),from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()}).parse(req.query||{});
+  if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
+  const items=await prisma.$queryRaw`
+    SELECT er."id",er."status",er."createdAt",t."id" AS "transactionId",t."amount",t."description",t."paymentMethod",t."attachmentFilename",t."attachmentData" IS NOT NULL AS "hasAttachment",t."occurredAt",t."actorName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName"
+    FROM "OtherExpenseReview" er
+    JOIN "StoreTransaction" t ON t."id"=er."transactionId" AND t."companyId"=er."companyId" AND t."reversedAt" IS NULL
+    JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId"
+    JOIN "Company" c ON c."id"=er."companyId"
+    LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
+    WHERE er."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND (${filters.companyId}='' OR er."companyId"=${filters.companyId})
+      AND (${filters.storeId}='' OR er."storeId"=${filters.storeId})
+      AND (${filters.from||null}::date IS NULL OR t."occurredAt">=${filters.from||null}::date)
+      AND (${filters.to||null}::date IS NULL OR t."occurredAt"<(${filters.to||null}::date+INTERVAL '1 day'))
+    ORDER BY er."createdAt" ASC LIMIT 500
+  `;
+  const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`;
+  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" ORDER BY "name"`;
+  res.json({items:items.map(item=>({...item,amount:Number(item.amount||0),hasAttachment:Boolean(item.hasAttachment)})),companies,stores});
+}));
+
+router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const rows=await prisma.$transaction(async tx=>{
+    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    if(!updated[0])return updated;
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${body.status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,status:body.status,note:body.note})}::jsonb)`;
+    return updated;
+  });
+  if(!rows[0])return res.status(409).json({error:"Το έξοδο έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
+  res.json({ok:true,status:rows[0].status});
+}));
+
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req),isBackoffice=req.user?.tokenType!=="STORE_OPERATOR";
@@ -647,6 +694,11 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
   }
   const transaction=normalize(rows[0]);
+  if(body.type==="OTHER_EXPENSE")await prisma.$executeRaw`
+    INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId")
+    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id})
+    ON CONFLICT ("transactionId") DO NOTHING
+  `;
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({
     ...transaction,
