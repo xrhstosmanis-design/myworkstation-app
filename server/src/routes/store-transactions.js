@@ -139,6 +139,7 @@ const tableStatements=[
     "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"createdBy" TEXT NOT NULL,"createdByName" TEXT NOT NULL,
     "reviewedBy" TEXT,"reviewedAt" TIMESTAMPTZ,"reviewNote" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`
+  ,`ALTER TABLE "BankLedgerEntry" ADD COLUMN IF NOT EXISTS "proofAmount" NUMERIC(14,2)`
   ,`CREATE INDEX IF NOT EXISTS "BankLedgerEntry_account_status_idx" ON "BankLedgerEntry" ("bankAccountId","status","occurredAt" DESC)`
 ];
 
@@ -561,21 +562,23 @@ router.get("/stores/:storeId/bank-deposits/pending-proof",route(async(req,res)=>
 }));
 
 router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
-  const body=z.object({attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)})}).parse(req.body||{});
+  const body=z.object({attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}),proofAmount:z.coerce.number().positive().max(999999999).optional()}).parse(req.body||{});
   const attachment=parseAttachment(body.attachment);
   const rows=await prisma.$transaction(async tx=>{
     const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(!found[0])return [];
     assertStoreAccess(req,found[0].storeId);
-    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"status"='CONFIRMED',"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"='Αυτόματη αντιστοίχιση απόδειξης κατάθεσης' WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' RETURNING "id","status","companyId","storeId","amount"`;
-    if(updated[0]){
-      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},'BANK_DEPOSIT_AUTO_MATCHED',${JSON.stringify({bankLedgerEntryId:updated[0].id,amount:Number(updated[0].amount||0),attachmentFilename:attachment.filename})}::jsonb)`;
-    }
-    return updated;
+    const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status"='PENDING_PROOF' FOR UPDATE`;
+    if(!pending[0])return [];
+    const expectedAmount=Number(pending[0].amount||0),proofAmount=Number(body.proofAmount??expectedAmount),difference=Number((proofAmount-expectedAmount).toFixed(2)),status=Math.abs(difference)>.005?'DISCREPANCY':'CONFIRMED';
+    const note=status==='CONFIRMED'?'Αυτόματη αντιστοίχιση απόδειξης κατάθεσης':`Αυτόματη απόκλιση αποδεικτικού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount.toFixed(2)} €, διαφορά ${difference.toFixed(2)} €.`;
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"proofAmount"=${proofAmount},"status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${note} WHERE "id"=${pending[0].id} RETURNING "id","status","companyId","storeId","amount","proofAmount"`;
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify({bankLedgerEntryId:updated[0].id,expectedAmount,proofAmount,difference,attachmentFilename:attachment.filename})}::jsonb)`;
+    return {...updated[0],difference};
   });
   if(!rows[0])return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
-  res.json({ok:true,status:rows[0].status,automaticMatch:true});
+  res.json({ok:true,status:rows[0].status,automaticMatch:rows[0].status==="CONFIRMED",proofAmount:Number(rows[0].proofAmount||0),difference:Number(rows[0].difference||0)});
 }));
 
 router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(req,res)=>{
@@ -596,7 +599,7 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${scopeCompanyId}::text IS NULL OR e."companyId"=${scopeCompanyId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."proofAmount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${scopeCompanyId}::text IS NULL OR e."companyId"=${scopeCompanyId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
   res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
 }));
 
