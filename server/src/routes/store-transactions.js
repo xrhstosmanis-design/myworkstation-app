@@ -571,13 +571,15 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     assertStoreAccess(req,found[0].storeId);
     // Older entries may have been created as PENDING_REVIEW without a file.  They
     // are still awaiting their first proof and must be uploadable exactly once.
-    const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
+    const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount","sourceTransactionId" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
     if(!pending[0])return [];
     const expectedAmount=Number(pending[0].amount||0),proofAmount=Number(body.proofAmount??expectedAmount),difference=Number((proofAmount-expectedAmount).toFixed(2)),status=Math.abs(difference)>.005?'DISCREPANCY':'CONFIRMED';
     const note=status==='CONFIRMED'?'Αυτόματη αντιστοίχιση απόδειξης κατάθεσης':`Αυτόματη απόκλιση αποδεικτικού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount.toFixed(2)} €, διαφορά ${difference.toFixed(2)} €.`;
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"proofAmount"=${proofAmount},"status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${note} WHERE "id"=${pending[0].id} RETURNING "id","status","companyId","storeId","amount","proofAmount"`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify({bankLedgerEntryId:updated[0].id,expectedAmount,proofAmount,difference,attachmentFilename:attachment.filename})}::jsonb)`;
+    const auditDetails={bankLedgerEntryId:updated[0].id,transactionId:pending[0].sourceTransactionId,expectedAmount,proofAmount,difference,attachmentFilename:attachment.filename};
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},'BANK_DEPOSIT_PROOF_UPLOADED',${JSON.stringify(auditDetails)}::jsonb)`;
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify(auditDetails)}::jsonb)`;
     return {...updated[0],difference};
   });
   if(!rows[0])return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
@@ -616,7 +618,7 @@ router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,rou
     }
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,status:body.status,note:body.note})}::jsonb)`;
+    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,transactionId:updated[0].sourceTransactionId,expectedAmount:Number(updated[0].amount||0),proofAmount:updated[0].proofAmount==null?null:Number(updated[0].proofAmount),difference:updated[0].proofAmount==null?0:Number((Number(updated[0].proofAmount)-Number(updated[0].amount||0)).toFixed(2)),status:body.status,note:body.note})}::jsonb)`;
     return updated;
   });
   if(!rows[0])return res.status(409).json({error:"Η τραπεζική κίνηση έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
@@ -677,10 +679,11 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
+    const transaction=await tx.$queryRaw`SELECT "amount","supplierName" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,status:body.status,note:body.note})}::jsonb)
+      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,supplierName:transaction[0]?.supplierName||null,amount:Number(transaction[0]?.amount||0),status:body.status,note:body.note})}::jsonb)
     `;
     return updated;
   });
@@ -723,8 +726,9 @@ router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
+    const transaction=await tx.$queryRaw`SELECT "amount","description" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${body.status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,status:body.status,note:body.note})}::jsonb)`;
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${body.status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,amount:Number(transaction[0]?.amount||0),description:transaction[0]?.description||null,status:body.status,note:body.note})}::jsonb)`;
     return updated;
   });
   if(!rows[0])return res.status(409).json({error:"Το έξοδο έχει ήδη ελεγχθεί ή δεν βρέθηκε."});

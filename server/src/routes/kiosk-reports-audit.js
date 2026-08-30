@@ -137,7 +137,13 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       FROM "StoreOperatorAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
       WHERE a."companyId"=${companyId}
-        AND a."eventType" IN ('SHIFT_CLOSE_SHORTAGE_ATTEMPT','SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE')
+        AND a."eventType" IN (
+          'SHIFT_CLOSE_SHORTAGE_ATTEMPT','SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE',
+          'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
+          'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
+          'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY'
+        )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL OR COALESCE(a."eventType",'') ILIKE ${text} OR COALESCE(a."details"::text,'') ILIKE ${text})
@@ -170,7 +176,20 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
     });
-    const operatorItems=operatorRows.map(r=>{const details=r.details&&typeof r.details==="object"?r.details:{},declared=details.declared||{},closed=r.eventType==="SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE";return{id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:n(details.shortage),description:`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`,supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"MAIN",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"}});
+    const operatorItems=operatorRows.map(r=>{
+      const details=r.details&&typeof r.details==="object"?r.details:{},declared=details.declared||{};
+      const closed=r.eventType==="SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE";
+      const bankEvent=r.eventType.startsWith("BANK_");
+      const expenseEvent=r.eventType.startsWith("OTHER_EXPENSE_");
+      const supplierEvent=r.eventType.startsWith("SUPPLIER_SETTLEMENT_");
+      const eventAmount=bankEvent?n(details.proofAmount??details.expectedAmount??details.amount):expenseEvent||supplierEvent?n(details.amount):n(details.shortage);
+      const description=bankEvent
+        ?`${r.eventType==="BANK_DEPOSIT_PROOF_UPLOADED"?"ΑΝΕΒΑΣΜΑ ΑΠΟΔΕΙΚΤΙΚΟΥ ΚΑΤΑΘΕΣΗΣ":r.eventType==="BANK_DEPOSIT_AUTO_MATCHED"?"ΑΥΤΟΜΑΤΗ ΑΝΤΙΣΤΟΙΧΙΣΗ ΚΑΤΑΘΕΣΗΣ":r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"?"ΑΠΟΚΛΙΣΗ ΑΠΟΔΕΙΚΤΙΚΟΥ ΚΑΤΑΘΕΣΗΣ":r.eventType.replaceAll("_"," ")} · κατάθεση ${n(details.expectedAmount).toFixed(2)} € · αποδεικτικό ${n(details.proofAmount??details.expectedAmount).toFixed(2)} € · διαφορά ${n(details.difference).toFixed(2)} €${details.attachmentFilename?` · ${details.attachmentFilename}`:""}`
+        :expenseEvent||supplierEvent
+          ?`${r.eventType.replaceAll("_"," ")} · ${n(details.amount).toFixed(2)} €${details.note?` · ${details.note}`:""}`
+          :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
+      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
+    });
     const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit",videoAccessAllowed:await hasVideoAccess(req)});
   }catch(error){next(error)}
