@@ -512,6 +512,37 @@ function requireSuperAdminSettlementReview(req,res,next){
   next();
 }
 
+router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const accounts=await prisma.$queryRaw`
+    SELECT a."id",a."name",a."bankName",a."ibanMasked",
+      COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
+      COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
+    FROM "BankAccount" a LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
+    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."active"=true
+    GROUP BY a."id" ORDER BY a."name"`;
+  const entries=await prisma.$queryRaw`SELECT e."id",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} ORDER BY e."occurredAt" DESC LIMIT 100`;
+  res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') ORDER BY e."createdAt" ASC LIMIT 500`;
+  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const rows=await prisma.$transaction(async tx=>{
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,status:body.status,note:body.note})}::jsonb)`;
+    return updated;
+  });
+  if(!rows[0])return res.status(409).json({error:"Η τραπεζική κίνηση έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
+  res.json({ok:true,status:rows[0].status});
+}));
+
 router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const filters=z.object({
     companyId:z.string().trim().max(180).optional().default(""),
