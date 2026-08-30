@@ -13,8 +13,8 @@ export default function OwnerPendingApprovals({api,store,onChanged}){
      api(`/api/transactions/other-expenses/review?storeId=${encodeURIComponent(store.id)}`),
      api("/api/transactions/bank-ledger/review")
    ]);
-   const supplierItems=(suppliers.items||[]).map(item=>({...item,kind:"SUPPLIER",label:`Προμηθευτής · ${item.supplierName||"—"}`));
-   const expenseItems=(expenses.items||[]).map(item=>({...item,kind:"EXPENSE",label:`Λοιπό έξοδο · ${item.description||"—"}`));
+   const supplierItems=(suppliers.items||[]).map(item=>({...item,kind:"SUPPLIER",label:`Προμηθευτής · ${item.supplierName||"—"}`}));
+   const expenseItems=(expenses.items||[]).map(item=>({...item,kind:"EXPENSE",label:`Λοιπό έξοδο · ${item.description||"—"}`}));
    const linkedTransactions=new Set([...supplierItems,...expenseItems].map(item=>item.transactionId).filter(Boolean));
    setItems([...supplierItems,...expenseItems,...(bank.items||[]).filter(item=>item.storeId===store.id&&!linkedTransactions.has(item.sourceTransactionId)).map(item=>({...item,kind:"BANK",label:`Ταμείο Τράπεζας · ${item.type}`}))]);
  }catch(e){setError(e.message||"Δεν φορτώθηκαν οι εκκρεμείς επιβεβαιώσεις.")}finally{setBusy("")}};
