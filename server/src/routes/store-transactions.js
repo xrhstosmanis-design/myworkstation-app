@@ -371,6 +371,21 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 
 router.use(auth,requireLedgerAccess);
 
+router.get("/stores/:storeId/bank-accounts",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const items=await prisma.$queryRaw`SELECT "id","name","bankName","ibanMasked","active" FROM "BankAccount" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "name"`;
+  res.json({items});
+}));
+
+router.post("/stores/:storeId/bank-accounts",route(async(req,res)=>{
+  if(req.user?.tokenType==="STORE_OPERATOR"){const error=new Error("Η ρύθμιση τραπεζικών λογαριασμών γίνεται μόνο από BackOffice.");error.status=403;throw error}
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const body=z.object({name:z.string().trim().min(2).max(120),bankName:z.string().trim().min(2).max(120),ibanMasked:z.string().trim().max(40).optional().nullable()}).parse(req.body||{});
+  const rows=await prisma.$queryRaw`INSERT INTO "BankAccount" ("id","companyId","storeId","name","bankName","ibanMasked","createdBy") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${body.name},${body.bankName},${body.ibanMasked||null},${req.user.id}) RETURNING "id","name","bankName","ibanMasked","active"`;
+  res.status(201).json({item:rows[0]});
+}));
+
 router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
