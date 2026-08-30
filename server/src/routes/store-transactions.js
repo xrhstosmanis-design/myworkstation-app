@@ -591,7 +591,7 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${scopeCompanyId}::text IS NULL OR e."companyId"=${scopeCompanyId}) ORDER BY e."createdAt" ASC LIMIT 500`;
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."sourceTransactionId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${scopeCompanyId}::text IS NULL OR e."companyId"=${scopeCompanyId}) AND NOT EXISTS (SELECT 1 FROM "SupplierPaymentSettlement" ss WHERE ss."companyId"=e."companyId" AND ss."transactionId"=e."sourceTransactionId") AND NOT EXISTS (SELECT 1 FROM "OtherExpenseReview" er WHERE er."companyId"=e."companyId" AND er."transactionId"=e."sourceTransactionId") ORDER BY e."createdAt" ASC LIMIT 500`;
   res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
 }));
 
@@ -599,6 +599,10 @@ router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,rou
   const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const rows=await prisma.$transaction(async tx=>{
+    if(body.status==="CONFIRMED"){
+      const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status"='PENDING_PROOF' AND "attachmentData" IS NULL LIMIT 1`;
+      if(missingProof[0]){const error=new Error("Ανέβασε πρώτα την απόδειξη κατάθεσης πριν από την επιβεβαίωση.");error.status=409;throw error}
+    }
     const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,status:body.status,note:body.note})}::jsonb)`;
