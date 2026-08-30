@@ -116,6 +116,7 @@ export default function PlatformAdminApp(){
   const [fiscalIntegrations,setFiscalIntegrations]=useState(null);
   const [showSupplierSettlementReview,setShowSupplierSettlementReview]=useState(false);
   const [showOtherExpenseReview,setShowOtherExpenseReview]=useState(false);
+  const [analyticsResult,setAnalyticsResult]=useState(null);
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -141,6 +142,11 @@ export default function PlatformAdminApp(){
     }finally{setLoading(false)}
   };
   useEffect(()=>{if(user)load()},[user]);
+
+  const runSuperAdminAnalytics=async()=>{
+    setBusy("super-admin-analytics");setError("");setMessage("");
+    try{const result=await request("/api/platform/super-admin-analytics/execute",{method:"POST",body:JSON.stringify({})});setAnalyticsResult(result);setMessage(result.status==="ΟΚ"?"Ο έλεγχος ολοκληρώθηκε χωρίς διαφορές.":`Ο έλεγχος ολοκληρώθηκε: ${result.findings.length} εύρημα(τα) χρειάζονται έλεγχο.`)}catch(err){setError(err.message)}finally{setBusy("")}
+  };
 
   const createCompany=async event=>{
     event.preventDefault();setBusy("create");setError("");setMessage("");
@@ -407,7 +413,7 @@ export default function PlatformAdminApp(){
       <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><a href="/" target="_blank" rel="noreferrer" title="Ανοίγει σε νέα καρτέλα ώστε να συνεχίζεται η εγγραφή οθόνης"><ExternalLink/>Backoffice ΚΑΤ</a><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
-      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Super Admin Installation Center</button><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Έλεγχος πληρωμών</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έλεγχος εξόδων</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
+      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Super Admin Installation Center</button><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>{busy==="cash-report"?"Φόρτωση…":"Αναφορές Ταμείων"}</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Έλεγχος πληρωμών</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έλεγχος εξόδων</button><button className="secondary" onClick={runSuperAdminAnalytics} disabled={busy==="super-admin-analytics"}><AlertTriangle/>{busy==="super-admin-analytics"?"Έλεγχος…":"Έλεγχοι & Αναλύσεις"}</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button></div>}
@@ -479,6 +485,7 @@ export default function PlatformAdminApp(){
     {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
     {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
+    {analyticsResult&&<div className="platform-alert success">Έλεγχος Super Admin: {analyticsResult.rows.length} κατάστημα(τα), {analyticsResult.findings.length} εύρημα(τα). Η ανάλυση είναι μόνο για ανάγνωση και δεν άλλαξε ταμείο, τράπεζα, απόθεμα ή υπόλοιπα.</div>}
     {showSupplierSettlementReview&&<SupplierSettlementReviewCenter request={request} onClose={()=>setShowSupplierSettlementReview(false)} setMessage={setMessage}/>}
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
