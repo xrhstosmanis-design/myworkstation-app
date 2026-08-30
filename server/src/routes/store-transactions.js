@@ -186,7 +186,7 @@ function assertStoreAccess(req,storeId){
   }
 }
 async function virtualBankAccount(tx,{companyId,storeId,userId}){
-  const existing=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "active"=true ORDER BY "createdAt" ASC LIMIT 1`;
+  const existing=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "name"='Ταμείο Τράπεζας' AND "active"=true LIMIT 1`;
   if(existing[0])return existing[0];
   const id=crypto.randomUUID();
   try{
@@ -194,7 +194,7 @@ async function virtualBankAccount(tx,{companyId,storeId,userId}){
     return rows[0];
   }catch(error){
     if(error?.code!=="23505")throw error;
-    const rows=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "active"=true ORDER BY "createdAt" ASC LIMIT 1`;
+    const rows=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "name"='Ταμείο Τράπεζας' AND "active"=true LIMIT 1`;
     if(rows[0])return rows[0];
     throw error;
   }
@@ -387,13 +387,6 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 
 router.use(auth,requireLedgerAccess);
 
-router.get("/stores/:storeId/bank-accounts",route(async(req,res)=>{
-  assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const items=await prisma.$queryRaw`SELECT "id","name","bankName","ibanMasked","active" FROM "BankAccount" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "name"`;
-  res.json({items});
-}));
-
 router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
@@ -410,14 +403,6 @@ router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
     return {transaction:normalize(rows[0]),ledger:ledger[0],account};
   });
   res.status(201).json({ok:true,...result,status:result.ledger.status});
-}));
-
-router.post("/stores/:storeId/bank-accounts",route(async(req,res)=>{
-  if(req.user?.tokenType==="STORE_OPERATOR"){const error=new Error("Η ρύθμιση τραπεζικών λογαριασμών γίνεται μόνο από BackOffice.");error.status=403;throw error}
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const body=z.object({name:z.string().trim().min(2).max(120),bankName:z.string().trim().min(2).max(120),ibanMasked:z.string().trim().max(40).optional().nullable()}).parse(req.body||{});
-  const rows=await prisma.$queryRaw`INSERT INTO "BankAccount" ("id","companyId","storeId","name","bankName","ibanMasked","createdBy") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${body.name},${body.bankName},${body.ibanMasked||null},${req.user.id}) RETURNING "id","name","bankName","ibanMasked","active"`;
-  res.status(201).json({item:rows[0]});
 }));
 
 router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
@@ -540,7 +525,7 @@ router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
       COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
       COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
     FROM "BankAccount" a LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
-    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."active"=true
+    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."name"='Ταμείο Τράπεζας' AND a."active"=true
     GROUP BY a."id" ORDER BY a."name"`;
   const entries=await prisma.$queryRaw`SELECT e."id",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} ORDER BY e."occurredAt" DESC LIMIT 100`;
   res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
@@ -573,7 +558,7 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
       COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
     FROM "BankAccount" a JOIN "Company" c ON c."id"=a."companyId" JOIN "Store" s ON s."id"=a."storeId"
     LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
-    WHERE a."active"=true GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name",a."bankName",a."name"`;
+    WHERE a."active"=true AND a."name"='Ταμείο Τράπεζας' GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name"`;
   const totals=rows.reduce((sum,row)=>({availableBalance:sum.availableBalance+Number(row.availableBalance||0),pendingAmount:sum.pendingAmount+Number(row.pendingAmount||0)}),{availableBalance:0,pendingAmount:0});
   res.json({items:rows.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),totals});
 }));
