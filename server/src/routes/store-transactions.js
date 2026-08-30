@@ -251,6 +251,7 @@ function totals(rows){
     transferIn:sum("TRANSFER_AMOUNT"),
     supplierPayments,
     otherExpenses,
+    cashExpensesTotal:deductedSupplierPayments+deductedOtherExpenses,
     expensesTotal:deductedSupplierPayments+deductedOtherExpenses+bankDeposits,
     recordedExpensesTotal:supplierPayments+otherExpenses,
     deductedSupplierPayments,
