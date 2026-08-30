@@ -3,6 +3,7 @@ import {ArrowLeft,BriefcaseBusiness,RefreshCw} from "lucide-react";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
+import OwnerPendingApprovals from "./OwnerPendingApprovals.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
 
 const STORE_SYNC_KEY="myworkstation:store-sync";
@@ -96,6 +97,7 @@ export default function StoreCloudPage({api,store,onBack}){
     </div>
 
     <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
+    <OwnerPendingApprovals api={api} store={store} onChanged={refresh}/>
 
     <div id="backoffice-transactions" className="backoffice-anchor">
       <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>
