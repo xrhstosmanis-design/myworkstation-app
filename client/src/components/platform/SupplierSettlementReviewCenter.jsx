@@ -11,17 +11,24 @@ export default function SupplierSettlementReviewCenter({request,onClose,setMessa
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
   const [notes,setNotes]=useState({});
+  const [companies,setCompanies]=useState([]);
+  const [stores,setStores]=useState([]);
+  const [filters,setFilters]=useState({companyId:"",storeId:"",from:"",to:""});
 
   const load=async()=>{
     setLoading(true);setError("");
     try{
-      const result=await request("/api/transactions/supplier-settlements/review");
+      const query=new URLSearchParams(Object.entries(filters).filter(([,value])=>value));
+      const result=await request(`/api/transactions/supplier-settlements/review${query.size?`?${query}`:""}`);
       setItems(result.items||[]);
+      setCompanies(result.companies||[]);setStores(result.stores||[]);
     }catch(err){setError(err.message)}finally{setLoading(false)}
   };
   useEffect(()=>{load()},[]);
   const totals=useMemo(()=>({count:items.length,amount:items.reduce((sum,item)=>sum+Number(item.amount||0),0),discrepancies:items.filter(item=>item.status==="DISCREPANCY").length}),[items]);
   const changeNote=(id,value)=>setNotes(current=>({...current,[id]:value}));
+  const updateFilter=(key,value)=>setFilters(current=>({...current,[key]:value,...(key==="companyId"?{storeId:""}:{})}));
+  const visibleStores=stores.filter(store=>!filters.companyId||store.companyId===filters.companyId);
   const openEvidence=async item=>{
     const key=`evidence:${item.id}`;setBusy(key);setError("");
     try{
@@ -46,9 +53,10 @@ export default function SupplierSettlementReviewCenter({request,onClose,setMessa
     <button type="button" className="modal-close" onClick={onClose}><X/></button>
     <div className="supplier-review-head"><div><span>SUPER ADMIN ONLY</span><h2>Έλεγχος πληρωμών προμηθευτών</h2><p>Επιβεβαίωσε το αποδεικτικό πριν μειωθεί η οφειλή του προμηθευτή. Το ταμείο, η τράπεζα και η αποθήκη δεν αλλάζουν ξανά εδώ.</p></div><button type="button" className="secondary" onClick={load} disabled={loading||Boolean(busy)}><RefreshCw/>Ανανέωση</button></div>
     {error&&<div className="platform-alert error">{error}</div>}
+    <div className="supplier-review-filters"><label>Ιδιοκτήτης / εταιρεία<select value={filters.companyId} onChange={event=>updateFilter("companyId",event.target.value)}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=><option key={company.id} value={company.id}>{company.ownerName||"Χωρίς ιδιοκτήτη"} · {company.name}</option>)}</select></label><label>Κατάστημα<select value={filters.storeId} onChange={event=>updateFilter("storeId",event.target.value)}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label><label>Από<input type="date" value={filters.from} onChange={event=>updateFilter("from",event.target.value)}/></label><label>Έως<input type="date" value={filters.to} onChange={event=>updateFilter("to",event.target.value)}/></label><button type="button" onClick={load} disabled={loading||Boolean(busy)}><RefreshCw/>Εμφάνιση</button></div>
     <div className="supplier-review-totals"><span><small>Για έλεγχο</small><b>{totals.count}</b></span><span><small>Σύνολο δεσμεύσεων</small><b>{money(totals.amount)}</b></span><span className={totals.discrepancies?"warning":""}><small>Με απόκλιση</small><b>{totals.discrepancies}</b></span></div>
     <div className="supplier-review-list">{loading?<div className="platform-empty">Φόρτωση πληρωμών…</div>:items.length===0?<div className="platform-empty"><CheckCircle2/>Δεν υπάρχουν πληρωμές προμηθευτών για έλεγχο.</div>:items.map(item=><article key={item.id} className={item.status==="DISCREPANCY"?"discrepancy":""}>
-      <header><div><span className={`supplier-review-status ${item.status==="DISCREPANCY"?"discrepancy":"pending"}`}>{item.status==="DISCREPANCY"?"ΑΠΟΚΛΙΣΗ":"ΣΕ ΑΝΑΜΟΝΗ ΕΛΕΓΧΟΥ"}</span><h3>{item.supplierName}</h3><small>Καταχώριση {dateTime(item.createdAt)} · πραγματική πληρωμή {dateTime(item.paidAt)} · {item.createdByName||"—"}</small></div><strong>{money(item.amount)}</strong></header>
+      <header><div><span className={`supplier-review-status ${item.status==="DISCREPANCY"?"discrepancy":"pending"}`}>{item.status==="DISCREPANCY"?"ΑΠΟΚΛΙΣΗ":"ΣΕ ΑΝΑΜΟΝΗ ΕΛΕΓΧΟΥ"}</span><h3>{item.supplierName}</h3><small>{item.ownerName||"Χωρίς ιδιοκτήτη"} · {item.companyName} · {item.storeName}<br/>Καταχώριση {dateTime(item.createdAt)} · πραγματική πληρωμή {dateTime(item.paidAt)} · {item.createdByName||"—"}</small></div><strong>{money(item.amount)}</strong></header>
       <div className="supplier-review-meta"><span><b>Τρόπος:</b> {paymentMethod[item.paymentMethod]||item.paymentMethod}</span><span><b>Αποδεικτικό:</b> {item.attachmentFilename||"—"}</span></div>
       <div className="supplier-review-invoices"><b>Τιμολόγια που καλύπτει</b><div>{(item.allocations||[]).map(allocation=><span key={allocation.purchaseDocumentId}>{allocation.documentNumber||"Χωρίς αριθμό"} · {money(allocation.amount)}</span>)}</div></div>
       {item.note&&<p className="supplier-review-operator-note"><b>Σημείωση χειριστή:</b> {item.note}</p>}
