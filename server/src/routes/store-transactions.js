@@ -526,9 +526,15 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   res.status(201).json({...result,paymentSource,status:"PENDING_REVIEW",total});
 }));
 
+function isSuperAdminReview(req){
+  return req.user?.role==="SUPER_ADMIN"||req.user?.platformRole==="SUPER_ADMIN"||req.user?.isSuperAdmin===true;
+}
+function reviewScopeCompanyId(req){
+  return isSuperAdminReview(req)?null:req.user?.companyId||null;
+}
 function requireSuperAdminSettlementReview(req,res,next){
-  const superAdmin=req.user?.role==="SUPER_ADMIN"||req.user?.platformRole==="SUPER_ADMIN"||req.user?.isSuperAdmin===true;
-  if(!superAdmin)return res.status(403).json({error:"Ο έλεγχος πληρωμών προμηθευτών είναι διαθέσιμος μόνο στον Super Admin."});
+  const owner=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="OWNER";
+  if(!isSuperAdminReview(req)&&!owner)return res.status(403).json({error:"Η επιβεβαίωση πληρωμών είναι διαθέσιμη μόνο στον ιδιοκτήτη της εταιρείας ή στον Super Admin."});
   next();
 }
 
@@ -568,7 +574,8 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
 }));
 
 router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(req,res)=>{
-  const stores=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true`;
+  const scopeCompanyId=reviewScopeCompanyId(req);
+  const stores=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId})`;
   for(const store of stores)await prisma.$transaction(tx=>syncVirtualBankInflows(tx,{companyId:store.companyId,storeId:store.id,userId:req.user.id}));
   const rows=await prisma.$queryRaw`
     SELECT c."name" AS "companyName",s."name" AS "storeName",a."id" AS "bankAccountId",a."bankName",a."name" AS "accountName",
@@ -576,21 +583,23 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
       COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
     FROM "BankAccount" a JOIN "Company" c ON c."id"=a."companyId" JOIN "Store" s ON s."id"=a."storeId"
     LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
-    WHERE a."active"=true AND a."name"='Ταμείο Τράπεζας' GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name"`;
+    WHERE a."active"=true AND a."name"='Ταμείο Τράπεζας' AND (${scopeCompanyId}::text IS NULL OR a."companyId"=${scopeCompanyId}) GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name"`;
   const totals=rows.reduce((sum,row)=>({availableBalance:sum.availableBalance+Number(row.availableBalance||0),pendingAmount:sum.pendingAmount+Number(row.pendingAmount||0)}),{availableBalance:0,pendingAmount:0});
   totals.availableBalance=Number(totals.availableBalance.toFixed(2));totals.pendingAmount=Number(totals.pendingAmount.toFixed(2));totals.projectedBalance=Number((totals.availableBalance+totals.pendingAmount).toFixed(2));
   res.json({items:rows.map(row=>{const availableBalance=Number(row.availableBalance||0),pendingAmount=Number(row.pendingAmount||0);return {...row,availableBalance,pendingAmount,projectedBalance:Number((availableBalance+pendingAmount).toFixed(2))}}),totals});
 }));
 
 router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
-  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') ORDER BY e."createdAt" ASC LIMIT 500`;
+  const scopeCompanyId=reviewScopeCompanyId(req);
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') AND (${scopeCompanyId}::text IS NULL OR e."companyId"=${scopeCompanyId}) ORDER BY e."createdAt" ASC LIMIT 500`;
   res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
 }));
 
 router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const rows=await prisma.$transaction(async tx=>{
-    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,status:body.status,note:body.note})}::jsonb)`;
     return updated;
@@ -600,6 +609,7 @@ router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,rou
 }));
 
 router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
   const filters=z.object({
     companyId:z.string().trim().max(180).optional().default(""),
     storeId:z.string().trim().max(180).optional().default(""),
@@ -620,6 +630,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId"
     LEFT JOIN "PurchaseDocument" p ON p."id"=a."purchaseDocumentId" AND p."companyId"=ss."companyId"
     WHERE ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR ss."storeId"=${filters.storeId})
       AND (${filters.from||null}::date IS NULL OR ss."paidAt">=${filters.from||null}::date)
@@ -630,18 +641,20 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     SELECT c."id",c."name",owner."fullName" AS "ownerName"
     FROM "Company" c
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
+    WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId})
     ORDER BY c."name"
   `;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" ORDER BY "name"`;
+  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)})),companies,stores});
 }));
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`
       UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
-      WHERE "id"=${req.params.settlementId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
+      WHERE "id"=${req.params.settlementId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
     `;
     if(!updated[0])return updated;
     await tx.$executeRaw`
@@ -661,6 +674,7 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
 }));
 
 router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
   const filters=z.object({companyId:z.string().trim().max(180).optional().default(""),storeId:z.string().trim().max(180).optional().default(""),from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()}).parse(req.query||{});
   if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const items=await prisma.$queryRaw`
@@ -671,21 +685,23 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
     JOIN "Company" c ON c."id"=er."companyId"
     LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE
     WHERE er."status" IN ('PENDING_REVIEW','DISCREPANCY')
+      AND (${scopeCompanyId}::text IS NULL OR er."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR er."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR er."storeId"=${filters.storeId})
       AND (${filters.from||null}::date IS NULL OR t."occurredAt">=${filters.from||null}::date)
       AND (${filters.to||null}::date IS NULL OR t."occurredAt"<(${filters.to||null}::date+INTERVAL '1 day'))
     ORDER BY er."createdAt" ASC LIMIT 500
   `;
-  const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`;
-  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" ORDER BY "name"`;
+  const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
+  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
   res.json({items:items.map(item=>({...item,amount:Number(item.amount||0),hasAttachment:Boolean(item.hasAttachment)})),companies,stores});
 }));
 
 router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
   const rows=await prisma.$transaction(async tx=>{
-    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
     await tx.$executeRaw`
       UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
