@@ -121,6 +121,25 @@ const tableStatements=[
     "reviewNote" TEXT
   )`
   ,`CREATE INDEX IF NOT EXISTS "OtherExpenseReview_company_status_idx" ON "OtherExpenseReview" ("companyId","status","createdAt" DESC)`
+  ,`CREATE TABLE IF NOT EXISTS "BankAccount" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,"bankName" TEXT NOT NULL,"ibanMasked" TEXT,
+    "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","name")
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "BankAccount_store_active_idx" ON "BankAccount" ("companyId","storeId","active")`
+  ,`CREATE TABLE IF NOT EXISTS "BankLedgerEntry" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "bankAccountId" TEXT NOT NULL REFERENCES "BankAccount"("id") ON DELETE RESTRICT,
+    "type" TEXT NOT NULL CHECK ("type" IN ('CASH_DEPOSIT','POS_SETTLEMENT','IRIS_SETTLEMENT','BANK_TRANSFER','CORPORATE_CARD')),
+    "amount" NUMERIC(14,2) NOT NULL CHECK ("amount"<>0),
+    "status" TEXT NOT NULL DEFAULT 'PENDING_PROOF' CHECK ("status" IN ('PENDING_PROOF','PENDING_REVIEW','CONFIRMED','DISCREPANCY','CANCELLED')),
+    "sourceTransactionId" TEXT UNIQUE,"attachmentData" TEXT,"attachmentMimeType" TEXT,"attachmentFilename" TEXT,
+    "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"createdBy" TEXT NOT NULL,"createdByName" TEXT NOT NULL,
+    "reviewedBy" TEXT,"reviewedAt" TIMESTAMPTZ,"reviewNote" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`
+  ,`CREATE INDEX IF NOT EXISTS "BankLedgerEntry_account_status_idx" ON "BankLedgerEntry" ("bankAccountId","status","occurredAt" DESC)`
 ];
 
 async function ensureTables(){
@@ -194,6 +213,7 @@ function totals(rows){
   const otherExpenses=sum("OTHER_EXPENSE");
   const deductedSupplierPayments=sumShiftExpense("SUPPLIER_PAYMENT");
   const deductedOtherExpenses=sumShiftExpense("OTHER_EXPENSE");
+  const bankDeposits=sumShiftExpense("BANK_DEPOSIT");
   return {
     cashSales:sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),
     cardSales:sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),
@@ -201,10 +221,11 @@ function totals(rows){
     transferIn:sum("TRANSFER_AMOUNT"),
     supplierPayments,
     otherExpenses,
-    expensesTotal:deductedSupplierPayments+deductedOtherExpenses,
+    expensesTotal:deductedSupplierPayments+deductedOtherExpenses+bankDeposits,
     recordedExpensesTotal:supplierPayments+otherExpenses,
     deductedSupplierPayments,
     deductedOtherExpenses,
+    bankDeposits,
     percentages:sum("PERCENTAGES"),
     count:active.length
   };
@@ -352,6 +373,40 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 
 router.use(auth,requireLedgerAccess);
 
+router.get("/stores/:storeId/bank-accounts",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const items=await prisma.$queryRaw`SELECT "id","name","bankName","ibanMasked","active" FROM "BankAccount" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "name"`;
+  res.json({items});
+}));
+
+router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const body=z.object({bankAccountId:z.string().trim().min(1),amount:z.coerce.number().positive().max(999999999),depositedAt:z.coerce.date(),depositor:z.string().trim().min(2).max(160),note:z.string().trim().max(500).optional().nullable(),attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),idempotencyKey:z.string().trim().min(8).max(180)}).parse(req.body||{});
+  const attachment=parseAttachment(body.attachment);
+  const terminalPos=await requestTerminal(req),transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey),actorName=req.user.fullName||"Χρήστης";
+  const result=await prisma.$transaction(async tx=>{
+    const account=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "id"=${body.bankAccountId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`;
+    if(!account[0]){const error=new Error("Επίλεξε ενεργό τραπεζικό λογαριασμό του καταστήματος.");error.status=404;throw error}
+    const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} LIMIT 1`;if(existing[0]){const error=new Error("Η ίδια κατάθεση έχει ήδη καταχωρηθεί.");error.status=409;throw error}
+    const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt") SELECT ${transactionId},${req.user.companyId},${store.id},shift."id",'BANK_DEPOSIT',${body.amount},${`Κατάθεση τράπεζας · ${account[0].bankName} · ${body.depositor}`},true,'CASH_SHIFT',${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.depositedAt} FROM "CashShiftSession" shift WHERE shift."companyId"=${req.user.companyId} AND shift."storeId"=${store.id} AND shift."terminalPos"=${terminalPos} AND shift."status"='OPEN' ORDER BY shift."openedAt" DESC LIMIT 1 FOR KEY SHARE OF shift RETURNING *`;
+    if(!rows[0]){const error=new Error("Απαιτείται ενεργή βάρδια για κατάθεση μετρητών.");error.status=409;throw error}
+    const status=attachment?'PENDING_REVIEW':'PENDING_PROOF';
+    const ledger=await tx.$queryRaw`INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account[0].id},'CASH_DEPOSIT',${body.amount},${status},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.depositedAt},${req.user.id},${actorName}) RETURNING *`;
+    return {transaction:normalize(rows[0]),ledger:ledger[0],account:account[0]};
+  });
+  res.status(201).json({ok:true,...result,status:result.ledger.status});
+}));
+
+router.post("/stores/:storeId/bank-accounts",route(async(req,res)=>{
+  if(req.user?.tokenType==="STORE_OPERATOR"){const error=new Error("Η ρύθμιση τραπεζικών λογαριασμών γίνεται μόνο από BackOffice.");error.status=403;throw error}
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const body=z.object({name:z.string().trim().min(2).max(120),bankName:z.string().trim().min(2).max(120),ibanMasked:z.string().trim().max(40).optional().nullable()}).parse(req.body||{});
+  const rows=await prisma.$queryRaw`INSERT INTO "BankAccount" ("id","companyId","storeId","name","bankName","ibanMasked","createdBy") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${body.name},${body.bankName},${body.ibanMasked||null},${req.user.id}) RETURNING "id","name","bankName","ibanMasked","active"`;
+  res.status(201).json({item:rows[0]});
+}));
+
 router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
@@ -456,6 +511,37 @@ function requireSuperAdminSettlementReview(req,res,next){
   if(!superAdmin)return res.status(403).json({error:"Ο έλεγχος πληρωμών προμηθευτών είναι διαθέσιμος μόνο στον Super Admin."});
   next();
 }
+
+router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const accounts=await prisma.$queryRaw`
+    SELECT a."id",a."name",a."bankName",a."ibanMasked",
+      COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
+      COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
+    FROM "BankAccount" a LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
+    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."active"=true
+    GROUP BY a."id" ORDER BY a."name"`;
+  const entries=await prisma.$queryRaw`SELECT e."id",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} ORDER BY e."occurredAt" DESC LIMIT 100`;
+  res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const rows=await prisma.$queryRaw`SELECT e."id",e."companyId",e."storeId",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName",s."name" AS "storeName",c."name" AS "companyName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" JOIN "Store" s ON s."id"=e."storeId" JOIN "Company" c ON c."id"=e."companyId" WHERE e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') ORDER BY e."createdAt" ASC LIMIT 500`;
+  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)}))});
+}));
+
+router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const rows=await prisma.$transaction(async tx=>{
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,status:body.status,note:body.note})}::jsonb)`;
+    return updated;
+  });
+  if(!rows[0])return res.status(409).json({error:"Η τραπεζική κίνηση έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
+  res.json({ok:true,status:rows[0].status});
+}));
 
 router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const filters=z.object({
