@@ -249,6 +249,7 @@ const transactionSchema=z.object({
 const supplierSettlementSchema=z.object({
   supplierId:z.string().trim().min(1).max(180),
   paymentMethod:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT"]),
+  bankAccountId:z.string().trim().min(1).max(180).optional().nullable(),
   paidAt:z.coerce.date(),
   note:z.string().trim().max(500).optional().nullable(),
   idempotencyKey:z.string().trim().min(8).max(180),
@@ -455,6 +456,13 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
+    let bankAccount=null;
+    if(["CORPORATE_CARD","BANK_TRANSFER"].includes(body.paymentMethod)){
+      if(!body.bankAccountId){const error=new Error("Επίλεξε τον τραπεζικό λογαριασμό που χρεώθηκε.");error.status=400;throw error}
+      const accounts=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "id"=${body.bankAccountId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`;
+      bankAccount=accounts[0]||null;
+      if(!bankAccount){const error=new Error("Δεν βρέθηκε ενεργός τραπεζικός λογαριασμός του καταστήματος.");error.status=404;throw error}
+    }
     const documentIds=body.allocations.map(row=>row.purchaseDocumentId);
     const documents=await tx.$queryRaw`
       SELECT "id","documentNumber","totalGross" FROM "PurchaseDocument"
@@ -501,7 +509,11 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
       INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount")
       VALUES (${crypto.randomUUID()},${req.user.companyId},${settlementId},${allocation.purchaseDocumentId},${allocation.amount})
     `;
-    return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId};
+    if(bankAccount)await tx.$executeRaw`
+      INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},'PENDING_REVIEW',${transactionId},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${body.paidAt},${req.user.id},${actorName})
+    `;
+    return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId,bankAccount};
   });
   res.status(201).json({...result,paymentSource,status:"PENDING_REVIEW",total});
 }));
