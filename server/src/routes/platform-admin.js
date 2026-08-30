@@ -1143,4 +1143,14 @@ router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{t
 }catch(error){next(error)}});
 
 
+router.post("/super-admin-analytics/execute",async(req,res,next)=>{
+  try{
+    const body=z.object({companyId:z.string().optional(),storeId:z.string().optional(),from:z.string().optional(),to:z.string().optional()}).parse(req.body||{});
+    const rows=await prisma.$queryRaw`SELECT s."storeId",s."companyId",COUNT(*)::int AS "shifts",COALESCE(SUM(s."variance"),0)::float AS "cashVariance",COALESCE(SUM(s."cardVariance"),0)::float AS "cardVariance" FROM "CashShiftSession" s WHERE (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null}) AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null}) AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day')) GROUP BY s."storeId",s."companyId"`;
+    const findings=rows.filter(row=>Math.abs(Number(row.cashVariance||0))>.009||Math.abs(Number(row.cardVariance||0))>.02).map(row=>({storeId:row.storeId,companyId:row.companyId,cashVariance:Number(row.cashVariance||0),cardVariance:Number(row.cardVariance||0),status:"Χρειάζεται έλεγχος"}));
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_ANALYTICS_EXECUTED",success:true,deviceName:"Read-only cash and card analytics",userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,rows,findings,status:findings.length?"Χρειάζεται έλεγχος":"ΟΚ",readOnly:true,automaticEmployeeAccusation:false});
+  }catch(error){next(error)}
+});
+
 export default router;
