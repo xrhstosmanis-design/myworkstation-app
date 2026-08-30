@@ -147,7 +147,7 @@ export default function PlatformAdminApp(){
 
   const runSuperAdminAnalytics=async()=>{
     setBusy("super-admin-analytics");setError("");setMessage("");
-    try{const result=await request("/api/platform/super-admin-analytics/execute",{method:"POST",body:JSON.stringify({})});setAnalyticsResult(result);setMessage(result.status==="ΟΚ"?"Ο έλεγχος ολοκληρώθηκε χωρίς διαφορές.":`Ο έλεγχος ολοκληρώθηκε: ${result.findings.length} εύρημα(τα) χρειάζονται έλεγχο.`)}catch(err){setError(err.message)}finally{setBusy("")}
+    try{const [result,bank]=await Promise.all([request("/api/platform/super-admin-analytics/execute",{method:"POST",body:JSON.stringify({})}),request("/api/transactions/bank-ledger/summary")]);setAnalyticsResult({...result,bank});setMessage(result.status==="ΟΚ"?"Ο έλεγχος ολοκληρώθηκε χωρίς διαφορές.":`Ο έλεγχος ολοκληρώθηκε: ${result.findings.length} εύρημα(τα) χρειάζονται έλεγχο.`)}catch(err){setError(err.message)}finally{setBusy("")}
   };
 
   const createCompany=async event=>{
@@ -487,7 +487,7 @@ export default function PlatformAdminApp(){
     {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
     {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
-    {analyticsResult&&<div className="platform-alert success">Έλεγχος Super Admin: {analyticsResult.rows.length} κατάστημα(τα), {analyticsResult.findings.length} εύρημα(τα). Η ανάλυση είναι μόνο για ανάγνωση και δεν άλλαξε ταμείο, τράπεζα, απόθεμα ή υπόλοιπα.</div>}
+    {analyticsResult&&<div className="platform-alert success">Έλεγχος Super Admin: {analyticsResult.rows.length} κατάστημα(τα), {analyticsResult.findings.length} εύρημα(τα). Εικονικό Ταμείο Τράπεζας: λογιστικό {cashMoney(analyticsResult.bank?.totals?.projectedBalance)} · επιβεβαιωμένο {cashMoney(analyticsResult.bank?.totals?.availableBalance)} · σε αναμονή {cashMoney(analyticsResult.bank?.totals?.pendingAmount)}. Η ανάλυση είναι μόνο για ανάγνωση και δεν άλλαξε ταμείο, τράπεζα, απόθεμα ή υπόλοιπα.</div>}
     {showSupplierSettlementReview&&<SupplierSettlementReviewCenter request={request} onClose={()=>setShowSupplierSettlementReview(false)} setMessage={setMessage}/>}
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
     {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyName:company.name})))} />}
