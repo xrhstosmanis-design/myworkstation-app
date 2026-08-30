@@ -440,7 +440,8 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
 }));
 
 function requireSuperAdminSettlementReview(req,res,next){
-  if(req.user?.role!=="SUPER_ADMIN")return res.status(403).json({error:"Ο έλεγχος πληρωμών προμηθευτών είναι διαθέσιμος μόνο στον Super Admin."});
+  const superAdmin=req.user?.role==="SUPER_ADMIN"||req.user?.platformRole==="SUPER_ADMIN"||req.user?.isSuperAdmin===true;
+  if(!superAdmin)return res.status(403).json({error:"Ο έλεγχος πληρωμών προμηθευτών είναι διαθέσιμος μόνο στον Super Admin."});
   next();
 }
 
