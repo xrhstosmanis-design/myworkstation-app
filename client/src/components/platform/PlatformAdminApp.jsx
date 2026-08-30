@@ -490,7 +490,7 @@ export default function PlatformAdminApp(){
     {analyticsResult&&<div className="platform-alert success">Έλεγχος Super Admin: {analyticsResult.rows.length} κατάστημα(τα), {analyticsResult.findings.length} εύρημα(τα). Η ανάλυση είναι μόνο για ανάγνωση και δεν άλλαξε ταμείο, τράπεζα, απόθεμα ή υπόλοιπα.</div>}
     {showSupplierSettlementReview&&<SupplierSettlementReviewCenter request={request} onClose={()=>setShowSupplierSettlementReview(false)} setMessage={setMessage}/>}
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
-    {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage}/>}
+    {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyName:company.name})))} />}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
