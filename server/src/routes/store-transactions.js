@@ -185,6 +185,20 @@ function assertStoreAccess(req,storeId){
     const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error;
   }
 }
+async function virtualBankAccount(tx,{companyId,storeId,userId}){
+  const existing=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "name"='Ταμείο Τράπεζας' AND "active"=true LIMIT 1`;
+  if(existing[0])return existing[0];
+  const id=crypto.randomUUID();
+  try{
+    const rows=await tx.$queryRaw`INSERT INTO "BankAccount" ("id","companyId","storeId","name","bankName","createdBy") VALUES (${id},${companyId},${storeId},'Ταμείο Τράπεζας','Εικονικό',${userId}) RETURNING "id","name","bankName"`;
+    return rows[0];
+  }catch(error){
+    if(error?.code!=="23505")throw error;
+    const rows=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "name"='Ταμείο Τράπεζας' AND "active"=true LIMIT 1`;
+    if(rows[0])return rows[0];
+    throw error;
+  }
+}
 async function ownedStore(storeId,companyId){
   const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});
   if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
@@ -249,7 +263,6 @@ const transactionSchema=z.object({
 const supplierSettlementSchema=z.object({
   supplierId:z.string().trim().min(1).max(180),
   paymentMethod:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT"]),
-  bankAccountId:z.string().trim().min(1).max(180).optional().nullable(),
   paidAt:z.coerce.date(),
   note:z.string().trim().max(500).optional().nullable(),
   idempotencyKey:z.string().trim().min(8).max(180),
@@ -374,38 +387,22 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 
 router.use(auth,requireLedgerAccess);
 
-router.get("/stores/:storeId/bank-accounts",route(async(req,res)=>{
-  assertStoreAccess(req,req.params.storeId);
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const items=await prisma.$queryRaw`SELECT "id","name","bankName","ibanMasked","active" FROM "BankAccount" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "name"`;
-  res.json({items});
-}));
-
 router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const body=z.object({bankAccountId:z.string().trim().min(1),amount:z.coerce.number().positive().max(999999999),depositedAt:z.coerce.date(),depositor:z.string().trim().min(2).max(160),note:z.string().trim().max(500).optional().nullable(),attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),idempotencyKey:z.string().trim().min(8).max(180)}).parse(req.body||{});
+  const body=z.object({amount:z.coerce.number().positive().max(999999999),depositedAt:z.coerce.date(),depositor:z.string().trim().min(2).max(160),note:z.string().trim().max(500).optional().nullable(),attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),idempotencyKey:z.string().trim().min(8).max(180)}).parse(req.body||{});
   const attachment=parseAttachment(body.attachment);
   const terminalPos=await requestTerminal(req),transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey),actorName=req.user.fullName||"Χρήστης";
   const result=await prisma.$transaction(async tx=>{
-    const account=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "id"=${body.bankAccountId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`;
-    if(!account[0]){const error=new Error("Επίλεξε ενεργό τραπεζικό λογαριασμό του καταστήματος.");error.status=404;throw error}
+    const account=await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id});
     const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} LIMIT 1`;if(existing[0]){const error=new Error("Η ίδια κατάθεση έχει ήδη καταχωρηθεί.");error.status=409;throw error}
-    const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt") SELECT ${transactionId},${req.user.companyId},${store.id},shift."id",'BANK_DEPOSIT',${body.amount},${`Κατάθεση τράπεζας · ${account[0].bankName} · ${body.depositor}`},true,'CASH_SHIFT',${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.depositedAt} FROM "CashShiftSession" shift WHERE shift."companyId"=${req.user.companyId} AND shift."storeId"=${store.id} AND shift."terminalPos"=${terminalPos} AND shift."status"='OPEN' ORDER BY shift."openedAt" DESC LIMIT 1 FOR KEY SHARE OF shift RETURNING *`;
+    const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt") SELECT ${transactionId},${req.user.companyId},${store.id},shift."id",'BANK_DEPOSIT',${body.amount},${`Κατάθεση τράπεζας · ${account.bankName} · ${body.depositor}`},true,'CASH_SHIFT',${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.depositedAt} FROM "CashShiftSession" shift WHERE shift."companyId"=${req.user.companyId} AND shift."storeId"=${store.id} AND shift."terminalPos"=${terminalPos} AND shift."status"='OPEN' ORDER BY shift."openedAt" DESC LIMIT 1 FOR KEY SHARE OF shift RETURNING *`;
     if(!rows[0]){const error=new Error("Απαιτείται ενεργή βάρδια για κατάθεση μετρητών.");error.status=409;throw error}
     const status=attachment?'PENDING_REVIEW':'PENDING_PROOF';
-    const ledger=await tx.$queryRaw`INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account[0].id},'CASH_DEPOSIT',${body.amount},${status},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.depositedAt},${req.user.id},${actorName}) RETURNING *`;
-    return {transaction:normalize(rows[0]),ledger:ledger[0],account:account[0]};
+    const ledger=await tx.$queryRaw`INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},'CASH_DEPOSIT',${body.amount},${status},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.depositedAt},${req.user.id},${actorName}) RETURNING *`;
+    return {transaction:normalize(rows[0]),ledger:ledger[0],account};
   });
   res.status(201).json({ok:true,...result,status:result.ledger.status});
-}));
-
-router.post("/stores/:storeId/bank-accounts",route(async(req,res)=>{
-  if(req.user?.tokenType==="STORE_OPERATOR"){const error=new Error("Η ρύθμιση τραπεζικών λογαριασμών γίνεται μόνο από BackOffice.");error.status=403;throw error}
-  const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const body=z.object({name:z.string().trim().min(2).max(120),bankName:z.string().trim().min(2).max(120),ibanMasked:z.string().trim().max(40).optional().nullable()}).parse(req.body||{});
-  const rows=await prisma.$queryRaw`INSERT INTO "BankAccount" ("id","companyId","storeId","name","bankName","ibanMasked","createdBy") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${body.name},${body.bankName},${body.ibanMasked||null},${req.user.id}) RETURNING "id","name","bankName","ibanMasked","active"`;
-  res.status(201).json({item:rows[0]});
 }));
 
 router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
@@ -456,13 +453,9 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
-    let bankAccount=null;
-    if(["CORPORATE_CARD","BANK_TRANSFER"].includes(body.paymentMethod)){
-      if(!body.bankAccountId){const error=new Error("Επίλεξε τον τραπεζικό λογαριασμό που χρεώθηκε.");error.status=400;throw error}
-      const accounts=await tx.$queryRaw`SELECT "id","name","bankName" FROM "BankAccount" WHERE "id"=${body.bankAccountId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true LIMIT 1`;
-      bankAccount=accounts[0]||null;
-      if(!bankAccount){const error=new Error("Δεν βρέθηκε ενεργός τραπεζικός λογαριασμός του καταστήματος.");error.status=404;throw error}
-    }
+    const bankAccount=["CORPORATE_CARD","BANK_TRANSFER"].includes(body.paymentMethod)
+      ?await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id})
+      :null;
     const documentIds=body.allocations.map(row=>row.purchaseDocumentId);
     const documents=await tx.$queryRaw`
       SELECT "id","documentNumber","totalGross" FROM "PurchaseDocument"
@@ -532,7 +525,7 @@ router.get("/stores/:storeId/bank-ledger",route(async(req,res)=>{
       COALESCE(SUM(CASE WHEN e."status"='CONFIRMED' THEN e."amount" ELSE 0 END),0) AS "availableBalance",
       COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
     FROM "BankAccount" a LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
-    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."active"=true
+    WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${store.id} AND a."name"='Ταμείο Τράπεζας' AND a."active"=true
     GROUP BY a."id" ORDER BY a."name"`;
   const entries=await prisma.$queryRaw`SELECT e."id",e."bankAccountId",e."type",e."amount",e."status",e."occurredAt",e."attachmentFilename",e."createdByName",a."name" AS "accountName",a."bankName" FROM "BankLedgerEntry" e JOIN "BankAccount" a ON a."id"=e."bankAccountId" WHERE e."companyId"=${req.user.companyId} AND e."storeId"=${store.id} ORDER BY e."occurredAt" DESC LIMIT 100`;
   res.json({accounts:accounts.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),entries:entries.map(row=>({...row,amount:Number(row.amount||0)}))});
@@ -565,7 +558,7 @@ router.get("/bank-ledger/summary",requireSuperAdminSettlementReview,route(async(
       COALESCE(SUM(CASE WHEN e."status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') THEN e."amount" ELSE 0 END),0) AS "pendingAmount"
     FROM "BankAccount" a JOIN "Company" c ON c."id"=a."companyId" JOIN "Store" s ON s."id"=a."storeId"
     LEFT JOIN "BankLedgerEntry" e ON e."bankAccountId"=a."id" AND e."companyId"=a."companyId"
-    WHERE a."active"=true GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name",a."bankName",a."name"`;
+    WHERE a."active"=true AND a."name"='Ταμείο Τράπεζας' GROUP BY c."name",s."name",a."id" ORDER BY c."name",s."name"`;
   const totals=rows.reduce((sum,row)=>({availableBalance:sum.availableBalance+Number(row.availableBalance||0),pendingAmount:sum.pendingAmount+Number(row.pendingAmount||0)}),{availableBalance:0,pendingAmount:0});
   res.json({items:rows.map(row=>({...row,availableBalance:Number(row.availableBalance||0),pendingAmount:Number(row.pendingAmount||0)})),totals});
 }));
