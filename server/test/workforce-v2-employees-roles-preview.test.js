@@ -119,17 +119,18 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
   assert.ok(packageChildMount>=0&&packageSuperAdminGuard>packageChildMount,"Workforce package routes must be mounted before the package Super Admin-only guard");
 
-  assert.match(earlyPlatformGate,/import platformStoreModulesRoutes from "\.\/platform-store-modules\.js"/);
-  const earlyStoreModulesMount=earlyPlatformGate.indexOf('router.use("/store-modules",platformStoreModulesRoutes);');
+  assert.match(earlyPlatformGate,/import platformWorkforceV2Routes from "\.\/platform-workforce-v2\.js"/);
+  assert.doesNotMatch(earlyPlatformGate,/platformStoreModulesRoutes/);
+  const earlyWorkforceMount=earlyPlatformGate.indexOf('"/store-modules/companies/:companyId/stores/:storeId/workforce-v2"');
   const genericSuperAdminGate=earlyPlatformGate.indexOf('const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";');
-  assert.ok(earlyStoreModulesMount>=0&&genericSuperAdminGate>earlyStoreModulesMount,"Store-module routes must execute before the first generic Platform Super Admin gate");
+  assert.ok(earlyWorkforceMount>=0&&genericSuperAdminGate>earlyWorkforceMount,"The exact Workforce route must execute before the first generic Platform Super Admin gate");
   assert.doesNotMatch(earlyPlatformGate,/workforcePath|managementRole/);
 
   const firstSharedPlatformMount=serverEntry.indexOf('app.use("/api/platform",platformOwnerSecurityRoutes);');
   assert.ok(firstSharedPlatformMount>=0,"The shared Platform route must be mounted");
   for(const laterRouter of ["platformSuperAdminAnalyticsDetailsRoutes","platformAdminRoutes","platformStoreIntegrationsRoutes"]){
     const laterMount=serverEntry.indexOf(`app.use("/api/platform",${laterRouter});`);
-    assert.ok(laterMount>firstSharedPlatformMount,`${laterRouter} must stay after the shared store-module entry`);
+    assert.ok(laterMount>firstSharedPlatformMount,`${laterRouter} must stay after the shared Workforce entry`);
   }
 
   assert.match(ui,/ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΟΝΟ — ΚΑΜΙΑ ΜΕΤΑΦΟΡΑ/);
