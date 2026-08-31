@@ -740,7 +740,8 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
 
 router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});\n  const status="CONFIRMED";
+  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
+  const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
