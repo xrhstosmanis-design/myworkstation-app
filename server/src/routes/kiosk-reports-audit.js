@@ -184,7 +184,8 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const bankEvent=r.eventType.startsWith("BANK_");
       const expenseEvent=r.eventType.startsWith("OTHER_EXPENSE_");
       const supplierEvent=r.eventType.startsWith("SUPPLIER_SETTLEMENT_");
-      const eventAmount=bankEvent?n(details.proofAmount??details.expectedAmount??details.amount):expenseEvent||supplierEvent?n(details.amount):n(details.shortage);
+      const bankDifference=Math.abs(n(details.difference));
+      const eventAmount=bankEvent?(r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"||r.eventType==="BANK_LEDGER_DISCREPANCY"?bankDifference:n(details.proofAmount??details.expectedAmount??details.amount)):expenseEvent||supplierEvent?n(details.amount):n(details.shortage);
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
