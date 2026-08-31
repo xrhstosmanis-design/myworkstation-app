@@ -42,7 +42,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
     const amount=n(form.amount);
     if(amount<=0)return setError("Βάλε ποσό μεγαλύτερο από 0.");
     if(active.type==="SUPPLIER_PAYMENT"&&!form.supplierId)return setError("Επίλεξε προμηθευτή.");
-    if(active.document&&!form.purchaseDocumentId)return setError("Επίλεξε παραστατικό από την υπάρχουσα ροή παραστατικών / AI Reader.");
+    if(active.document&&!form.purchaseDocumentId)return setError("Επίλεξε παραστατικό από την υπάρχουσα ροή παραστατικών / ανάγνωση παραστατικού.");
     if(requiresShift&&!ledger?.openSession)return setError("Δεν υπάρχει ενεργή βάρδια για αυτή την κίνηση.");
     setBusy(true);setError("");setMessage("");
     try{
