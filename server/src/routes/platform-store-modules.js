@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import platformWorkforceV2Routes from "./platform-workforce-v2.js";
 import {
   AI_STAFF_SCHEDULER,
   PERSONNEL_PACKAGE_DEFINITIONS,
@@ -14,7 +15,13 @@ import {
 } from "../store-paid-modules.js";
 
 const router=Router();
-router.use(auth,(req,res,next)=>isSuperAdmin(req.user)?next():res.status(403).json({error:"Απαιτείται Platform Super Admin."}));
+router.use(auth);
+
+// Workforce v2 is also available to OWNER / ADMIN / MANAGER when the selected
+// store has an active personnel package. The child router performs the tenant,
+// role and package checks. Package activation below remains Super Admin only.
+router.use("/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes);
+router.use((req,res,next)=>isSuperAdmin(req.user)?next():res.status(403).json({error:"Απαιτείται Platform Super Admin."}));
 
 async function ownedStore(companyId,storeId){
   const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true,name:true,companyId:true}});
