@@ -35,7 +35,7 @@ test("analytics UI shows event date time store POS shift operator and reference"
 
 test("finding detail remains filtered bounded audited and read-only",()=>{
   for(const field of ["companyId","storeId","from","to"])assert.match(route,new RegExp(field));
-  assert.match(route,/const findingLimit=5000/);
+  assert.match(route,/const findingLimit=500/);
   assert.match(route,/event:"SUPER_ADMIN_ANALYTICS_EXECUTED"/);
   assert.match(route,/readOnly:true/);
   assert.match(route,/automaticEmployeeAccusation:false/);
