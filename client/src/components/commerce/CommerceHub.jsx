@@ -152,7 +152,7 @@ export default function CommerceHub({api,stores=[]}){
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
         <button disabled={!active.has("DOCUMENTS")} className={`${tab==="documents"?"active":""} ${!active.has("DOCUMENTS")?"locked":""}`} onClick={()=>setTab("documents")}><Files/> Θυρίδα Τιμολογίων</button>
-        <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> AI Reader</button>
+        <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> Ανάγνωση τιμολογίων</button>
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="dispatch"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("dispatch")}><Truck/> Δελτία / Πάροχος</button>
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
