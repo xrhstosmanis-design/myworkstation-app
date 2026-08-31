@@ -9,7 +9,7 @@ const primaryTabs=[
 ];
 const secondaryTabs=[
   ["pos","PoS",BadgeEuro],
-  ["backoffice","BackOffice",Database],
+  ["backoffice","Κεντρική Διαχείριση",Database],
   ["shifts","Βάρδιες",Clock3],
   ["customers","Πελάτες",Users],
   ["email","eMail",Mail],
