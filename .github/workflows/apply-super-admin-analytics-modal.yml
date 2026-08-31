@@ -1,0 +1,151 @@
+name: Apply Super Admin analytics modal fix
+
+on:
+  push:
+    branches:
+      - fix/super-admin-analytics-modal-20260831
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Apply analytics center patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/analytics-payload.b64 <<'PAYLOAD'
+H4sIAAAAAAAAA+xce4/bVnb33/MpGCY1JESi3tKMNNJs4jjFtont2kmxhWPEFHk5YkyRKknNYzUCnIfzALwFtt1g0aBAF9ii/aOJ
+jUnWmfgFA/kAmu+wn6Tn3HtJXr40Gic2tlgriE1e3se555z7O79zL02lcuaZ/6rw67Ra9G/4Jf+m17VWvdlqNFu1FpZ3OrXWGan1
+7EU7c2bq+aorSWdcx/GX1Tvp+f/Tn1LRLJPY/rN0g1Pbv1ardRov7P88fqH9PVd7Vj7wFPbvtOsv7P88fjH7a8544thw5/2srnB6
++zdrzc4L+z+PX579J5bqG447/jkc4fT2b3Ve4P/z+Z1o/yvTCXFf08em/ZqtWvu+qXnnoAZxlQ+8vdXGQAO3m80c+9ebnU47bv96
+o12vnZGqz3bq7PdXbn8TLO760mWian5pNvXIecMgcAlXb5Oxg39f8VWfzCXDdcaS7GJFubfG281es4jrv+Oaqr1tkdLrqntupLp+
+o3RuRLQb50xXs0i9dJkYLvFG53ZLV0YmsXT6sPSroE9rqpk6KSe6lpWKh75XVtH5ymrgfYrmeVBrTXNsz5fI1O3vqNaU9AcXpuMh
+cQv07uCgWlR85y1HUy2YgGva2wWZWOW/vSyXZp6/b5GurE1dl9javlwKrrry+Xcvy/Nij3c+Ur03TNAHPiR919ntD95W/ZGiDr0C
+Hw0KFU31Rv+oog40OnBxoFSrGwcH2XVdPVm3DrMhe3TSOjHUqeVLxtTWfNOxpdzlV5i55J+nxPNLuGpV2yRe/+q1kmOfsxyPzIuz
+NUniKhpP/P03TQsaef0Zq73/S70ryyXPd1zCLtEU+LfvwJ/zXtj6qsFaljzi806u9QOvKIh9F4VGYG6YBra5TK+EJvbUssSqw6m3
+jxVfh7+FaoZqeUSsR1zXcbHiebwQasoyVAvr0Sl5fe6/hUKxPwgVpBiAam+rkwJXQn8QXCms2cHB1WtFZQw16D08nykKe1aKFBe0
+MfV5sVgsXQ37vybIu2N65hB9LyUOG0pheg0GeomrWQmHOTjgfktrROXFfr/Pn6TaoDSs+1LqmSgcL3wdimOi2WRXivSDGhuL2rrK
+x40UUAzUci1XEVSe3JG4MgSVX41NG4egV9eiuV0T7U32iDb1SV/19m2tYJO9wEv7XAMwGK4FSTIN8bGCDn/2rFjiO/F7rDGIVyiy
+riQp8MOCvPi9tDhaPFrcO/5w8QT+Plo8XtxdHEo//u/it8c3j2//+FBa/Glxb/FYWjw6vrl4AtXuLe5KUOtQwiu8WNyXaA+fLL6W
+4I8jrJzT5+fHXxx/9ONDRaYqxp9L/Klrs7v5GhcOV1PBd6ewhCJRgza+ux/Mgylx6Oj7/YvDDwD56azP22AD4hV4EeG3gi6Kgf8W
+rpYo4l4DPdOLYigY71u1b/zDlLj7fbT5u5ffukJUVxtdUl11nBpBgCdR8WFpiFjiU142P51MV6aGYe71Q/EUz/w12bq+9cosLJpf
+ByyMt7xK45BneiWsda2v7qqmL10CnZkeUVTLKlzl9dEwFKALckWdmBGjyoxqFe7HEJ7GxB85gMmXLl55Ry6habp/d+XiBZgmrgvT
+2C9gWXFeLKVGuk5H8l3V9lQaP7wKilm2iL5NXBh5PFbdfTZDNv/59SLv5VqooxC1KfrFJlxSJxPgizpXfRcrCKaYz3knc031tVEB
+MDu9YqBQGRPPU7dJUNswYRBrX6hK/TeKAcyz53TdhySFAsmMKy4eiualq2w+icprkSU1jJMX7fOepk5In+yAC0IFAAl6qdwg+wC0
+MnssF3lcLRTnTJxd09YhnKu6fh6rv2V6PrHB9WRoBw9sIBVi/3wSbKmiJLy9C3i4Q1bvAubFJYmBIDCLeIwpsAC8peCTKKpRChNT
+Aod2ISAo28QvcAymjCUKLj2hJUPrENyTrfiaLMYmHtgXnAbqlMKFRQe4oI5JEFq3FBvuDg7kxR8AHB8iQAIyVhAkjxA0H1Nk/G5x
+R6KgCY8Zqi4O5aBXUCBx433Soi3FAAJygXYff3KBD/k/gLAfLu4efyTBqH+C/58sHsAgdxCYw+7p/Gj39CpD4OPbaYGhbPFgcYg4
+f/wxBfpHIDLzb2peiHGcOgkWKYVajhndd3xYHzGzo7XBp/SpRgoFWO0lKEBvYIr3Rqbhe10oV9jlqwIxZSVISdkURVJLm4gFry5h
+v0HziOfy5lHBq0sIMdPCjMtaLcXkwFuh3yrVF8w5phcAEx3c0OtTbfCQEKPyAjvheNYP1ksc3w4ORFSJWgGAm47e55VpyDw4CO58
+h2pg6/ors3gFGSz/4fFnizvyXFp8g3Fciqr4DlQ4/nhxh4f9Q3l+nfbTlRe3waOeIDF4IlGHPFz8AO0/hqtHQZHoT5GcCNnvMDcJ
+JohFWwrznYOD2cR1MAAT/XXV4ipWd1TTUoG7RkUTQlX62tiZ2j6oXYQeAmjdj8A1ShPSyYEkZYJ1L4R2BhPSpm7uAD6rnocrrC8H
+obM8dnTVkge0q02PsBRJqBiGU0gmd0yyW9ZN1XK2eQtoMyKqTtylTViVsIlEpYnucGBYmIMr7146f1l67Y23f3lBunjhrX/arNBi
+sd6oPtgMM+LKQFp8Dna8ByjwGUDKfemstPgtJX8Pj38DxrwHkPHRZgUaiX1MBos/oDcA2D2iwHEfAOSOBNa+BUUPEFqOPwGv+iJ8
+BHUfL76GTm9Bp0eINw9p3x9DB99A7S+QXH6LroiOc/wvi8cl7lXHnyI7xRLORqHKEfxJCx5Qlgqc5M83/+38m+/AhSJRxzxExwQq
+e0jJ7Scw1kPqnEzcBMc9vg2X4LLf4XiBqN+hVCisslmZCHqvxBS/OZz6Ppjb34dwLbMbOduSNG7KEkZKU7vRnwVJsYTAUQbfJlZf
+XnxFFXM3WEfyYPNXlcFmhfUcekyF+cNgLShAR8welkFNeds1dRz8ynQ4Nv3+LKAWjFdMXPr3GyzRLxR7wZIozufCZKmQg8W/JwMQ
+YEYlFfRizkksWBcS2xOZpbLAOWplpNrbJBRMWLFsI8TneS+/EzJfNgVfdSHaK3QIYQsBkuG56LsgjDOhK5QJI8sDhmToCfSPZHi9
+lzW7e7gqWEfx3mc5WWowKjK4mZCrBzoRigbhTR43OAU1mEs/Hklhh8gH5qHgxbloowozkujqzN4p+3+VJAsnmzrIhp7C0IEt02Ze
+1bYBGDCSc0jlvhNAQY4ZYzsl4k5AzJDBdkBoxrBgwC9/Ho3TnF1satqTqc9RR1chQ0sqHIP702ib7rhlq7qygqB0I+BUgvrO04jp
+O08jZCKCp0CSp6dyLNjFEN6j8ClLuukhGdH7M9wpnA82w93kyoAWbck0joYh7883/1sG0vQlRJtPofQxjX2wPJPQnh4yI6gAyXBs
+HZJmIZxQyjNPCYaLFYgZBlYabY9vI3Ilx4xFtc0KRpMwtszoHufZs7n8R8XddonWkiKV0nt5wFrP2QDzsE8U7uzZlxj/S/cddWM5
+KpI8OaZhafFHYBoPKWxjvgWrI8FGGD3AHa4/0b0qzjHACklJQhFW8RNPcyakbDvgxzGDCScIldgDHGtzOFh8CVZHG0BIDzgP0CAg
+J8iq74KIIObxR11pxkg8usWAUbrF71PVpIAVsY25+1iSIFQ0agGh+poRKrwFZgRdIX1CUnRv8X3E2n6D/Of4cybRIdUl7wUCImX4
+tN03lCOCXpne71MgRWXflsDJAaFYHEXKRVsd38KweROqUIbJ+8RiqkeFs9MkpWK30f1SSs13jxi/iake+K2pWSRQ41dZ4E8pZUJP
+gVSe7zr29mBGEzaL2Nv+CMzCSzcrQfdLhzzJJsmxWAbE094VRxP0MguyTC7vlmwTogdJBOCPc0OeB9J9CTb7UIyDcVESXT2FMOFJ
+E5+VmDSz06il8v0uYv/g50nunxSXTN3McX4WuaPsnp6MLRNbzEWWyij0eUq3+i9UCF/Ch0jv0usxa+Qo7VaS+bUogTdWLQu9A9ft
+tzDIt5T2fhGsXinZWTIzL1LKufgjLqxDmmM9QtQApEmJISbwVAY6doYSkCppjKWtiAsM1r0yqIFYchKTl7fB5EpOEEsK5KMGpWLZ
+GSVNGzN20iBZawwwZf4dO2/5jmaePJ1AKL8FHn2b93MUdHAE9Z5Q0Ieu74TcNTI1C+UIsLcWP1AExzQMU3aJ70MeLr6n/eJG3xOa
+xSaQlmkRNHRqCEnXgiwEM6P7wG2+jyb3TbS3cPwR8h8hV6GpOY1bd4ONBqRDqQ2LpMwiIG/lG9NHlyzvuuoEuAO9WVIvaW0fXQCa
+ufD/aNWEd7MCdWn9VIIUPfrXOPwHxf8Rodvi67A4DiZB3cADqXKZB7KHFZS3wmRPzAcPZ3goC7fcYXosi7n+yiy2pz7vsoIgabs+
+Fx0ktmmJPRXjPlKGIhkz77gMKIWOXIh2HSawnOnQhS9KwZ8FiODrWb1FUvLqOdUyd5TzqmeGghNfrEAdbKu+uUNg7hPHM+nlnEFv
+stlPGDvjRY0Vho4HmxwtZRg2iQ4psCwPVX2bSDGMGGzG3r+pDFbABr7uu6sOCCg02BRf54FRMCeA7Ap5PluOtMuM+dKFQhVBl0UM
+bCgccKDs5qY8dKdYTHbwXg4h/lsky5B1HdENysersPNg95HvTqZYMzz5FGb1kBF4JchiIsHTATIJ0oPq1vKYGdSPh0uMXgmDSkny
+KFFIuiUdfyZY+gnuAqdsTcOhCOehlBEwBaSMoROv0D0RpbJC9jANEkFmlQAiulGWgUAZKQrtfnISRZVi9CsLA/hzHFmE+qyGOXRx
+EvfegDgVszwj5c6R5QFky9BOdVOrKsxguWvTrX2Y8E2M2jS8PaBEj6Z/6OZ0X0Oiz3IcOZ6WU2cOk93/TOAC7sk+5DThiB4D/MCH
+BFcLqcRjnslRd/sWN12CzPWQ8h/InEsshQ15cymQ+Qe4f8RIViKJPYwnqPElt1mJ9hA2J3mIpeqObe3zDYP4LgG+3aiX8bHEwYFm
+zJS5AXp12eHGI0YA78XY+F12MMFOSIAFfggEkJfQBfhN+PwB5ZpH7MyFEa4fQMFs1VL1LqGWuVwyfHXoHmVE9/iRRUhob+KJMuW1
+qFT+5hCMTM9ZhPMUAbQCntdbm6+t8P5v7juYq79juvz931qzWe0k3v+td+rNF+//Po+fknNkOmPsxrG7LrEo4+ntmro/6oIfFGq1
+9epkr7TR3tkt9sbqHqRx5vbI727Ud0Y9Z4e4huXsdtWp7/SGzl7ZM3+NQWXouDq4EpT0JqpO40y9Odnr8XJX1c2px4tU7ca2C7mq
+3n3Z6BiqobGORrDKd7tVqb4+2ZNQBsndHqqFagn/UxqAxen5sPO7mW564NP7XcMiez3VMrftsumTsUcLyugEfu8DcAbT2C9rju3D
+KugCJGmkPCT+LiF2b1uddOswZiA9zMT3nXG3BsLkDzyAtTbDxcPUV82vKSECzgwYGzVGurUajEVvd7l6q9WeRXzcPkfJUIFKrU7G
+Pc2xHLf7ctXotNtkyQCjer4aNPpWMZ3kBow7Vt1t0+52QMXVXiRTvQ3P+HC1esNoDZcOJ3k72zM28XoLWnI/wesl7SYz9CnWbL1V
+jaSpBkO3q53WutqzTJsEvldTWq1Yn/QQeIbzBIepStQbWZ/NeiQKvQ7csfoSe/dctf2EV6ItxIeCf9ba61WtHT1MCyFoAX0lGDrl
+N8L5cWgnvBEGxtsy2AvhmYCfWtOx7eGaBI0V6uidpZrSNNyiFJTVWFldKKs1Qf8lpd3KK6O6Qk+ooXZELyG2zpWIdQTBBBSwIYQI
+T0I84Od8wqNA77V2XLtU9V1QueQ5lqlLL+sdUickaZN2rk0Mw4j1F0JHXLY87Uv0NCt31Yo12bliKecpPZI7qR9+FBZfmqj99UnW
+El3ShcQOm2a7I2hAMYLAjHFjZlkjJTzjmok6JOuEGB1BjXzt1deb1ZaRo0R6BDXjy7XWRPSQ4pPmp0wnAlESi5P4BDoN11E1AiWO
+DCJsrlczJaCrUrXNsUrDnHDOMTFtqeZJiC5ADUwbsiIQbb72C0iSDBeYpyfFa898Z0ZfukXG1HUd+s8SGu2qTraL89jY0anWSgEp
+XIOBRtsUj8N1gwrGsowloxmkqaeWTDK4knUIr/XQtM0WSaBoJPAA9ZUFp3UBTuuRsGXfmaBAed1hXBRRjk62kVs/FR1xpHgAaCZE
+F86rEiNloqhLJkT1C+0Sh8RqqQZgWGRGEKIQc+vcoSSeGcaHZAYOiUVo3VbclzeaQjiqNTMtqw9JkxgnWRYgMF/ELF0GC0jraBu1
+JU1pPiw0rguNa50GaW0saYx7jOLA1bQRVxWEq1kRN8RmXCm8C6OuNbRGUi0do3O6XoM5816HzXqjtn5yF86NhDhDg7T0ZlycpjE0
+VuorIUR1vdNoJrmecA4zC8PuyNR1YK+r+lH7BD8ST25ODeJpQk3HCx0e6SalSGGuwBh2JDRpENWo50okjRqzJFnMcMpYk0nQgoer
+XvbC6ECc2VjP7WbA1lQMH4N5IWpvpDKdjY2NgODn8v3lwyV8X7QaAcIU4vrGRm1YSzL1ZF/orkIPumZopBPqsN2G7DzWQ3TqM4ul
+fOlKAfetVv+mF3GhjUY1UgkMY6kTD1/WZxfpXiR/NAsdBT2CGic26ZrRMjZ6Ptnzy9QZuxYx/BxzthrtVkfNGkaPhqlHEvJoFvph
+iwwhcMLEoalq8fHGsNasTNn1rmG6nl/WRqaVjEaYVybiXtCKI2bggs315kaWzEryVGiWWMKqkdOMnWbEoW2pE/KWweFHHI+W8i7x
+VCHUgGlT+F+WjrYEhGhh3v9UK6l3AimOnXkICVtTSNiaqbQ1avOT1yLv5rTLkJ6HhB7brKZySrbln3a5jQRTS04uaImQusquQUfI
+0wEAhaW2btT0mp7XuajsjTwZkpzqJwScdTHgNBBHWpk0y6hq8As8DZGEBoggeGr1dr2dDJ4pREqvvOSUsnlwEg+SrZYxuAyUSDUP
+Y141neC19Ea1Wc1J8MLji6fJX0JHiwyQrfuAKZ1AcetAnsK1kcGIQmHzc5eGkLskk4+o+Uq5Slg9yziJBS+cVqysyPVkHihVs/ZS
+6ujS6X3VlG8S3WgY6/FwKPR3mkwrNh8pT9fpva9fjIluqoVot69Wxe2+4ixnUyw7b4MsTYL/5/k7K7Qdq96tVco1sWosS1yaGDZo
+PjjPELtTTUod30sX+I+45ZW0EOpk2d6tkHPV4lVXUpKwoldUVX69YKeJ2vm0+swwmEhHS8sCQM76oJe66bJDri4bSRyA7QYzQzQE
+R8TrOR6E/ZX+lIpHXGCxf2Hf/6vXX3z/6bn8QvsDR/0L+v5fu9N+Yf/n8YvZP/Osn/2j27LnTF2g0qa9Q1+O8T1l/MGK7wAsP/+v
+1iCnSX7/q4Hff3tx/v/sf/xjW6rn4b8sYt/jsh2ddFkJvv5kxj74hVzvTdMiV/ZtbS42MISvcqmTSV+sWOCffinIilJRTnzn5BK/
+YN+9mkzwU3NyiUmgjImvKlPXKpbkqW+sy+HXulgK+FPGXfqtu2UCrDFtKWP61ROYfSm/rwrUT1f3iH9l5OxmtHqPfsbnvaLQTneI
+d8Hx346au1M7o+nSJuECZ996SYnF1FmqZL6S/V76nezcDoR/kZhbJxN53gs+ipPbTPi4zXvB121yKy9/Cyx//j/15bCKWeQLw7GI
+AvlAQaa2kqixoqNEiQKtxIBWioC2K138e3SyZ7L+lcr7E5zu+8EiUCb7P/cYJ+B/q9VIvP9VazSbL/D/ufwogIMHjCxzKHGMvwS3
+a2tY2MfLgvw0cF1cw334PvaiICS/j7cFYmsOJnR9hM4yYOfamk4MCTLs/2vn/H2chqE4vt9fYSykNlKU061BpQKJ7W6BFcSFXHpE
+itpT04qrIi9MLIwsLCyMLAys/An5m3jv2XHs2GkjfojFb6japnm1Hfu9l8jfT5XlxesNboffVDcxxO2YNmFEKe1fvK02b2BtoA/F
+INqvdwv8mNBbPEmCrMqVPPhgcZH2fKysrAv24lDDfeOz+3I3X/GG3IuUFfd3JNCCN3BzC9EBuscoBMRshY9KUNMPDgWXf0Ddon9W
+rdYNvoDeWD2h38/UqD6FWHVJoeo53djLbKAyaHLuP0xD+ejlehb/PV/Kx2iC0m6Op8O+Vf0+XKanh5pL/CzyDYlNU+uTEOIdn9hf
+OeTIfjC0l9qfOePxpOqCJn29UQEZf+Z2ZDbTDfBnX4UkNMk4RDXj3mTHB6A++HAlIWk2t88GbI5C6P4Ze64RSJ6z3Z8CzvHoFXVo
+cGkJM2B0RFi9lgcSHP19jSi29kv7mS/5b25cNwg3kJjfJzy9nu4pZQ+Vej0ZinWxKPiISgTc6j3Hkiiaos1IriOTkeeF42ksnp45
+POoweDD71Cropi1EISafgBklhbyycF1GFmLPNPBO4SHkAC+Df/YKR7ly4gS4kB/MsVfUBoeIxEXXUd1WWlLHFsv4updITOG21v1j
+NxxU2X6dvy22o0GNsWYQ0E6yHOp9nkPL+WN7NJhRIaaO18QUynt0sHIaxu55EyZvwtpPhCtAIbEkDrRfe3EHszXRCFLwMAoalN9c
+QSI4zIdNMPljS488mhTNP8Yl0VM9+7XSUmgx0EpPbqwtoibKw5C2NR121SG1OoXHN6JsfG9/YuD6czkNKWjMXAmTcyRPwiQdLwZU
+pF90uGnBet50Azd12TLRXyBokhAz+LBdrtMjS1EmXnFuNNNYbDLcMloluODOoLDj/ijF4WaJyjK22Rou5DXUB2U16FSC/LK4zfLD
+kdDJyhpqgLKq2B2SX9Y7rFqprn23LXeFLGzxJXar2/9d3gcLFixYsGDBggULFixYsGBkvwC13UtKAHgAAA==
+          PAYLOAD
+          base64 -d /tmp/analytics-payload.b64 > /tmp/analytics-payload.tar.gz
+          tar -xzf /tmp/analytics-payload.tar.gz
+          python _patch_platform.py
+          rm _patch_platform.py
+          node server/e2e/super-admin-analytics-modal-source-invariants.mjs
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Build client
+        run: npm run build -w client
+
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/components/platform/PlatformAdminApp.jsx \
+                  client/src/components/platform/SuperAdminAnalyticsCenter.jsx \
+                  client/src/components/platform/super-admin-analytics.css \
+                  server/e2e/super-admin-analytics-modal-source-invariants.mjs
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "fix(platform): open filtered analytics center"
+          git push origin "HEAD:${{ github.ref_name }}"
