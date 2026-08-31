@@ -10,6 +10,7 @@ test("Super Admin analytics opens as a dedicated filtered review center",()=>{
   assert.match(app,/import SuperAdminChecksAnalytics from "\.\/SuperAdminChecksAnalytics\.jsx"/);
   assert.match(app,/onClick=\{\(\)=>setAnalyticsResult\(\{modal:true\}\)\}/);
   assert.match(app,/analyticsResult\?\.modal&&<SuperAdminChecksAnalytics/);
+  assert.match(app,/\{\(deviceOperationsManager\|\|terminalManager\)&&<DeviceOperationsCenter[^]*?\/>\}/);
   for(const label of ["Ιδιοκτήτης / εταιρεία","Κατάστημα","Από","Έως"])assert.match(analytics,new RegExp(label));
 });
 
