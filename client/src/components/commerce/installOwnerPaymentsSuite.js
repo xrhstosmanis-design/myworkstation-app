@@ -8,6 +8,7 @@ const yearStartValue=()=>{const d=new Date();return `${d.getFullYear()}-01-01`};
 const fmt=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const pct=value=>value===null||value===undefined?"—":`${Number(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
+const displayLedgerText=value=>String(value??"").replaceAll("PREMIUM FAST POS","Γρήγορη καταχώριση POS").replaceAll("FAST POS","Γρήγορη καταχώριση POS").replaceAll("AI Reader","Ανάγνωση παραστατικού").replaceAll("BackOffice","Κεντρική Διαχείριση").replaceAll("Background","Παρασκήνιο");
 const state={from:monthStartValue(),to:todayValue(),storeId:"",supplierId:"",q:"",supplier:true,other:true,report:null,loading:false,error:"",tab:"overview"};
 const canOpenOwnerPayments=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 
@@ -98,7 +99,7 @@ function suppliersHtml(report){
     ${rows.map(row=>`<div class="row"><span><b>${esc(row.name||"Χωρίς προμηθευτή")}</b></span><strong>${money(row.payments)}</strong><span>${row.count||0}</span><span>${money(row.purchases)}</span><span>${row.documents||0}</span><b>${money(number(row.purchases)-number(row.payments))}</b></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κινήσεις προμηθευτών.</div>'}</div></section>`;
 }
 function evidenceLabel(row){
-  if(row.evidenceMode==="DOCUMENT")return `AI Reader · ${esc(String(row.purchaseDocumentId||"").slice(0,8))}`;
+  if(row.evidenceMode==="DOCUMENT")return `Ανάγνωση παραστατικού · ${esc(String(row.purchaseDocumentId||"").slice(0,8))}`;
   if(row.evidenceMode==="LEGACY_PHOTO")return `<button data-op-photo="${esc(row.id)}">Προβολή φωτογραφίας</button>`;
   return "Χωρίς παραστατικό";
 }
@@ -111,7 +112,7 @@ function movementsHtml(report){
   const rows=report?.movements||[];
   return `<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Όλες οι κινήσεις</h3><small>${rows.length} εγγραφές · εμφανίζονται ενεργές και ακυρωμένες για πλήρες audit.</small></div>
     <div class="owner-payments-table movements"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Τύπος</span><span>Προμηθευτής / περιγραφή</span><span>Ποσό</span><span>Χειριστής</span><span>Βάρδια / Πηγή</span><span>Παραστατικό</span><span>Κατάσταση</span></div>
-    ${rows.map(row=>`<div class="row ${row.reversedAt?"reversed":""}"><span>${esc(fmt(row.occurredAt))}<small>#${esc(String(row.id).slice(0,8))}</small></span><span>${esc(row.storeName)}</span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτής":"Λοιπό έξοδο"}</span><span><b>${esc(row.supplierName||row.description||"Χωρίς περιγραφή")}</b>${row.supplierName&&row.description?`<small>${esc(row.description)}</small>`:""}</span><strong>${money(row.amount)}</strong><span>${esc(row.actorName)}</span><span>${shiftAudit(row)}</span><span>${evidenceLabel(row)}</span><span class="${row.reversedAt?"bad":"ok"}">${row.reversedAt?`ΑΚΥΡΩΜΕΝΗ${row.reversalReason?`<small>${esc(row.reversalReason)}</small>`:""}`:"ΕΝΕΡΓΗ"}</span></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κινήσεις για τα κριτήρια.</div>'}</div></section>`;
+    ${rows.map(row=>`<div class="row ${row.reversedAt?"reversed":""}"><span>${esc(fmt(row.occurredAt))}<small>#${esc(String(row.id).slice(0,8))}</small></span><span>${esc(row.storeName)}</span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτής":"Λοιπό έξοδο"}</span><span><b>${esc(displayLedgerText(row.supplierName||row.description||"Χωρίς περιγραφή"))}</b>${row.supplierName&&row.description?`<small>${esc(displayLedgerText(row.description))}</small>`:""}</span><strong>${money(row.amount)}</strong><span>${esc(row.actorName)}</span><span>${shiftAudit(row)}</span><span>${evidenceLabel(row)}</span><span class="${row.reversedAt?"bad":"ok"}">${row.reversedAt?`ΑΚΥΡΩΜΕΝΗ${row.reversalReason?`<small>${esc(row.reversalReason)}</small>`:""}`:"ΕΝΕΡΓΗ"}</span></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κινήσεις για τα κριτήρια.</div>'}</div></section>`;
 }
 function alertsHtml(report){
   const rows=report?.movements||[],s=report?.summary||{},avg=number(s.averageExpense);
@@ -126,7 +127,7 @@ function alertsHtml(report){
   if(number(s.changePercent)>20)alerts.push({level:"warn",title:`Αύξηση εξόδων ${pct(s.changePercent)}`,body:`Σε σχέση με την αμέσως προηγούμενη περίοδο ίσης διάρκειας.`});
   if(!alerts.length)alerts.push({level:"good",title:"Δεν εντοπίστηκε βασική απόκλιση",body:"Δεν υπάρχουν κινήσεις χωρίς παραστατικό, μεγάλες αποκλίσεις ή ακυρώσεις με τα τρέχοντα κριτήρια."});
   return `<div class="owner-payments-alerts">${alerts.map(a=>`<article class="${a.level}"><b>${esc(a.title)}</b><span>${esc(a.body)}</span></article>`).join("")}</div>
-    ${high.length?`<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Κινήσεις για έλεγχο ποσού</h3></div><div class="owner-payments-table alerts"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Περιγραφή</span><span>Χειριστής</span><span>Ποσό</span></div>${high.map(row=>`<div class="row"><span>${esc(fmt(row.occurredAt))}</span><span>${esc(row.storeName)}</span><span>${esc(row.supplierName||row.description||"—")}</span><span>${esc(row.actorName)}</span><strong>${money(row.amount)}</strong></div>`).join("")}</div></section>`:""}`;
+    ${high.length?`<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Κινήσεις για έλεγχο ποσού</h3></div><div class="owner-payments-table alerts"><div class="row head"><span>Ημερομηνία</span><span>Κατάστημα</span><span>Περιγραφή</span><span>Χειριστής</span><span>Ποσό</span></div>${high.map(row=>`<div class="row"><span>${esc(fmt(row.occurredAt))}</span><span>${esc(row.storeName)}</span><span>${esc(displayLedgerText(row.supplierName||row.description||"—"))}</span><span>${esc(row.actorName)}</span><strong>${money(row.amount)}</strong></div>`).join("")}</div></section>`:""}`;
 }
 function bodyHtml(report){
   if(state.tab==="categories")return categoriesHtml(report);
@@ -155,8 +156,8 @@ function exportCsv(){
   const rows=state.report?.movements||[];
   const lines=[["Ημερομηνία","Κατάστημα","Τύπος","Προμηθευτής","Περιγραφή","Ποσό","Χειριστής","Βάρδια","Πηγή πληρωμής","Παραστατικό","Κατάσταση"]];
   for(const row of rows){
-    const evidence=row.evidenceMode==="DOCUMENT"?`AI Reader ${row.purchaseDocumentId||""}`:row.evidenceMode==="LEGACY_PHOTO"?"Φωτογραφία":"Χωρίς παραστατικό";
-    lines.push([fmt(row.occurredAt),row.storeName,row.type,row.supplierName||"",row.description||"",number(row.amount).toFixed(2),row.actorName,row.sessionId||"",row.paymentSource==="CASH_SHIFT"?"ΑΠΟ ΒΑΡΔΙΑ":"ΕΞΩΤΕΡΙΚΗ",evidence,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"]);
+    const evidence=row.evidenceMode==="DOCUMENT"?`Ανάγνωση παραστατικού ${row.purchaseDocumentId||""}`:row.evidenceMode==="LEGACY_PHOTO"?"Φωτογραφία":"Χωρίς παραστατικό";
+    lines.push([fmt(row.occurredAt),row.storeName,row.type,row.supplierName||"",displayLedgerText(row.description||""),number(row.amount).toFixed(2),row.actorName,row.sessionId||"",row.paymentSource==="CASH_SHIFT"?"ΑΠΟ ΒΑΡΔΙΑ":"ΕΞΩΤΕΡΙΚΗ",evidence,row.reversedAt?"ΑΚΥΡΩΜΕΝΗ":"ΕΝΕΡΓΗ"]);
   }
   const csv="\ufeff"+lines.map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(";")).join("\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
