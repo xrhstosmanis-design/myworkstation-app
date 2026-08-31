@@ -13,7 +13,7 @@ const launcher="client/src/components/commerce/CommerceLauncher.jsx";
 const b=read(backend),c=read(panel),styles=read(css),l=read(launcher),index=read("server/src/index.js");
 
 test("parameters backend parses",()=>execFileSync(process.execPath,["--check",path.join(repo,backend)]));
-test("all photographed parameter tabs exist",()=>{for(const text of ["Αρχείο επιχείρησης","Τράπεζες","e-Delivery","PoS","BackOffice","Βάρδιες","Πελάτες","eMail","Λοιπά","Αγορές & παραγγελίες"])assert.ok(c.includes(text),text)});
+test("all photographed parameter tabs exist",()=>{for(const text of ["Αρχείο επιχείρησης","Τράπεζες","e-Delivery","PoS","Κεντρική Διαχείριση","Βάρδιες","Πελάτες","eMail","Λοιπά","Αγορές & παραγγελίες"])assert.ok(c.includes(text),text)});
 test("gear opens real parameters panel",()=>{assert.match(l,/commerce-parameters-gear/);assert.match(l,/ManagementParametersPanel/);assert.match(l,/Settings2/);assert.match(l,/SUPER_ADMIN/);assert.match(l,/OWNER/);assert.match(l,/ADMIN/);assert.match(l,/MANAGER/)});
 test("business profile uses real Company record",()=>{assert.match(b,/prisma\.company\.findUnique/);assert.match(b,/prisma\.company\.update/);for(const key of ["name","taxId","city","email","phone"])assert.ok(b.includes(key),key)});
 test("parameter sections are company scoped and audited",()=>{assert.match(b,/ManagementParameters/);assert.match(b,/companyId/);assert.match(b,/ManagementParameterAudit/);assert.match(b,/actorId/);assert.match(b,/section/)});
