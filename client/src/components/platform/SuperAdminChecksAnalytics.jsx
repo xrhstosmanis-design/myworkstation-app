@@ -1,11 +1,94 @@
-import React,{useMemo,useState} from "react";
-import {BarChart3,Eye,ShieldCheck,X} from "lucide-react";
+import React,{useEffect,useMemo,useState} from "react";
+import {AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,X} from "lucide-react";
 
-const packs=["BASIC ΕΛΕΓΧΟΣ","COMPLETE ΕΛΕΓΧΟΣ","PREMIUM ΕΛΕΓΧΟΣ","ΑΝΑΛΥΣΕΙΣ ΚΕΡΔΟΦΟΡΙΑΣ","ΕΛΕΓΧΟΣ ΤΙΜΩΝ ΚΑΤΑΣΤΗΜΑΤΩΝ","ΚΕΝΤΡΟ ΚΕΡΔΟΦΟΡΙΑΣ & ΑΠΩΛΕΙΩΝ","ΑΝΑΦΟΡΑ ΠΡΟΣ ΙΔΙΟΚΤΗΤΗ"];
-const categories=["Ταμεία & Βάρδιες","Αποθήκη & Τιμολόγια","Κόστος & Margin","Τιμές & Προμηθευτές","Απώλειες & Φύρες","Αναφορά ιδιοκτήτη"];
-export default function SuperAdminChecksAnalytics({companies=[],onClose}){
- const [company,setCompany]=useState("ALL"),[store,setStore]=useState("ALL"),[pack,setPack]=useState(packs[0]),[category,setCategory]=useState("ALL"),[from,setFrom]=useState(""),[to,setTo]=useState(""),[preview,setPreview]=useState(null),[running,setRunning]=useState(false);
- const stores=useMemo(()=>company==="ALL"?companies.flatMap(c=>(c.stores||[]).map(s=>({...s,companyId:c.id}))):(companies.find(c=>c.id===company)?.stores||[]),[companies,company]);
- const run=async()=>{setRunning(true);setPreview(null);await new Promise(resolve=>setTimeout(resolve,650));setPreview({pack,company:company==="ALL"?"Όλοι οι ιδιοκτήτες":companies.find(c=>c.id===company)?.name||"—",store:store==="ALL"?"Όλα τα καταστήματα":stores.find(s=>s.id===store)?.name||"—",category:category==="ALL"?"Όλες οι κατηγορίες":category,period:from&&to?`${from} έως ${to}`:"Όλο το διαθέσιμο διάστημα"});setRunning(false)};
- return <div className="sa-overlay"><section className="sa-modal"><header><div><span>SUPER ADMIN ONLY</span><h2><BarChart3/> Έλεγχοι & Αναλύσεις Super Admin</h2><p>Κεντρικός έλεγχος ανά ιδιοκτήτη και κατάστημα. Οι σοβαρές ενέργειες απαιτούν προεπισκόπηση και έγκριση.</p></div><button className="sa-close" onClick={onClose}><X/></button></header><div className="sa-filters"><label>Ιδιοκτήτης<select value={company} onChange={e=>{setCompany(e.target.value);setStore("ALL")}}><option value="ALL">Όλοι</option>{companies.map(c=><option key={c.id} value={c.id}>{c.owner?.fullName||c.ownerName||c.name}</option>)}</select></label><label>Κατάστημα<select value={store} onChange={e=>setStore(e.target.value)}><option value="ALL">Όλα</option>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>Από<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Έως<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label><label>Πακέτο ελέγχου<select value={pack} onChange={e=>setPack(e.target.value)}>{packs.map(p=><option key={p}>{p}</option>)}</select></label><label>Κατηγορία<select value={category} onChange={e=>setCategory(e.target.value)}><option value="ALL">Όλες</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label></div><div className="sa-actions"><button onClick={run} disabled={running}><ShieldCheck/> {running?"Εκτέλεση ελέγχου…":"Εκτέλεση ελέγχου"}</button><button className="secondary" onClick={()=>setPreview(null)}><Eye/> Καθαρισμός προεπισκόπησης</button></div>{running&&<div className="sa-preview"><h3><ShieldCheck/> Εκτελείται έλεγχος…</h3><p className="sa-note">Συλλογή δεδομένων για ταμεία, βάρδιες, αποθήκη, τιμολόγια, POS και συμβάντα.</p></div>}{preview&&<div className="sa-preview"><h3><Eye/> Προεπισκόπηση αποτελέσματος</h3><div className="sa-summary"><b>{preview.pack}</b><span>{preview.company}</span><span>{preview.store}</span><span>{preview.period}</span><span>{preview.category}</span></div><div className="sa-status-grid"><article><strong>Χρειάζεται έλεγχος</strong><span>Τα δεδομένα θα αναλυθούν από τα συνδεδεμένα ταμεία, βάρδιες, αποθήκη, τιμολόγια, POS και συμβάντα.</span></article><article><strong>Καμία αυτόματη κατηγορία υπαλλήλου</strong><span>Χρησιμοποιούνται μόνο οι ενδείξεις «Χρειάζεται έλεγχος», «Ύποπτη διαφορά» και «Ασυνήθιστη κίνηση».</span></article></div><p className="sa-note">Η εφαρμογή αλλαγών τιμών, διορθωτικών ενεργειών ή αποστολής αναφοράς θα εμφανίζεται ξεχωριστά σε προεπισκόπηση και θα απαιτεί έγκριση Super Admin.</p></div>}</section></div>;
+const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const number=value=>Number(value||0);
+const emptyFilters={companyId:"",storeId:"",from:"",to:""};
+
+export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage}){
+  const [filters,setFilters]=useState(emptyFilters);
+  const [result,setResult]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+
+  const stores=useMemo(()=>companies.flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name}))),[companies]);
+  const visibleStores=useMemo(()=>stores.filter(store=>!filters.companyId||String(store.companyId)===String(filters.companyId)),[stores,filters.companyId]);
+  const storeIndex=useMemo(()=>new Map(stores.map(store=>[String(store.id),store])),[stores]);
+  const companyIndex=useMemo(()=>new Map(companies.map(company=>[String(company.id),company])),[companies]);
+
+  useEffect(()=>{
+    const closeOnEscape=event=>{if(event.key==="Escape"&&!busy)onClose?.()};
+    window.addEventListener("keydown",closeOnEscape);
+    return()=>window.removeEventListener("keydown",closeOnEscape);
+  },[busy,onClose]);
+
+  const updateFilters=patch=>{
+    setFilters(current=>({...current,...patch}));
+    setResult(null);
+    setError("");
+  };
+
+  const run=async()=>{
+    if(filters.from&&filters.to&&filters.from>filters.to){
+      setError("Η ημερομηνία «Από» δεν μπορεί να είναι μεταγενέστερη από την ημερομηνία «Έως».");
+      return;
+    }
+    setBusy(true);setError("");setResult(null);
+    try{
+      const payload=Object.fromEntries(Object.entries(filters).filter(([,value])=>value));
+      const bankQuery=new URLSearchParams(Object.entries({companyId:filters.companyId,storeId:filters.storeId}).filter(([,value])=>value));
+      const bankSuffix=bankQuery.size?`?${bankQuery}`:"";
+      const [analytics,bank]=await Promise.all([
+        request("/api/platform/super-admin-analytics/execute",{method:"POST",body:JSON.stringify(payload)}),
+        request(`/api/transactions/bank-ledger/summary${bankSuffix}`)
+      ]);
+      setResult({analytics,bank,filters:{...filters},executedAt:new Date().toISOString()});
+      setMessage?.(analytics.status==="ΟΚ"?"Η φιλτραρισμένη ανάλυση ολοκληρώθηκε χωρίς διαφορές.":`Η φιλτραρισμένη ανάλυση ολοκληρώθηκε: ${(analytics.findings||[]).length} εύρημα(τα) χρειάζονται έλεγχο.`);
+    }catch(err){setError(err.message)}finally{setBusy(false)}
+  };
+
+  const clear=()=>{
+    setFilters(emptyFilters);
+    setResult(null);
+    setError("");
+  };
+
+  const analytics=result?.analytics||{};
+  const rows=analytics.rows||[];
+  const findings=analytics.findings||[];
+  const bank=result?.bank||{items:[],totals:{availableBalance:0,pendingAmount:0,projectedBalance:0}};
+  const totalShifts=rows.reduce((sum,row)=>sum+number(row.shifts),0);
+  const totalCashVariance=rows.reduce((sum,row)=>sum+number(row.cashVariance),0);
+  const totalCardVariance=rows.reduce((sum,row)=>sum+number(row.cardVariance),0);
+  const selectedCompany=result?.filters.companyId?companyIndex.get(String(result.filters.companyId)):null;
+  const selectedStore=result?.filters.storeId?storeIndex.get(String(result.filters.storeId)):null;
+  const scopeLabel=selectedStore?`${selectedStore.companyName} · ${selectedStore.name}`:selectedCompany?selectedCompany.name:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
+  const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
+
+  return <div className="platform-modal"><section className="sa-modal">
+    <header><div><span>SUPER ADMIN ONLY</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Πραγματική, κεντρική και αποκλειστικά read-only ανάλυση διαφορών ταμείου, POS–EFTPOS και Ταμείου Τράπεζας.</p></div><button type="button" className="sa-close" onClick={onClose} disabled={busy}><X/></button></header>
+    {error&&<div className="platform-alert error">{error}</div>}
+    <div className="supplier-review-filters">
+      <label>Ιδιοκτήτης / εταιρεία<select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
+      <label>Κατάστημα<select value={filters.storeId} onChange={event=>updateFilters({storeId:event.target.value})}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
+      <label>Από<input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
+      <label>Έως<input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
+      <button type="button" onClick={run} disabled={busy}><RefreshCw/>{busy?"Έλεγχος…":"Εμφάνιση"}</button>
+      <button type="button" className="secondary" onClick={clear} disabled={busy}>Καθαρισμός</button>
+    </div>
+    <section className="platform-panel" style={{marginBottom:14}}><b>Πεδίο ελέγχου</b><p>Οι ημερομηνίες εφαρμόζονται στις βάρδιες και στις διαφορές ταμείου/POS–EFTPOS. Το Ταμείο Τράπεζας είναι τρέχον λογιστικό υπόλοιπο και φιλτράρεται μόνο ανά ιδιοκτήτη και κατάστημα.</p></section>
+    {busy&&<section className="platform-panel" style={{marginBottom:14}}><b>Εκτελείται ο έλεγχος…</b><p>Συλλέγονται μόνο δεδομένα ανάγνωσης. Δεν αλλάζει βάρδια, ταμείο, τράπεζα, απόθεμα, παραστατικό ή υπόλοιπο.</p></section>}
+    {result&&<>
+      <section className="platform-panel" style={{marginBottom:14}}><b>{scopeLabel}</b><p>{periodLabel}</p><small>Εκτέλεση: {new Date(result.executedAt).toLocaleString("el-GR")} · Κατάσταση: {analytics.status||"—"}</small></section>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:14}}>
+        <article className="platform-panel"><small>Βάρδιες</small><h3>{totalShifts}</h3></article>
+        <article className="platform-panel"><small>Καθαρή διαφορά μετρητών</small><h3>{eur(totalCashVariance)}</h3></article>
+        <article className="platform-panel"><small>Διαφορά POS–EFTPOS</small><h3>{eur(totalCardVariance)}</h3></article>
+        <article className="platform-panel"><small>Ευρήματα για έλεγχο</small><h3>{findings.length}</h3></article>
+      </div>
+      <section className="platform-panel" style={{marginBottom:14}}><b>Ανάλυση ανά κατάστημα</b>{rows.length?rows.map(row=>{const store=storeIndex.get(String(row.storeId));const company=companyIndex.get(String(row.companyId));const needsReview=Math.abs(number(row.cashVariance))>.009||Math.abs(number(row.cardVariance))>.02;return <article key={`${row.companyId}:${row.storeId}`} style={{display:"grid",gridTemplateColumns:"minmax(220px,1fr) repeat(3,minmax(120px,.5fr))",gap:12,alignItems:"center",padding:"13px 0",borderBottom:"1px solid #e2e8f0"}}><div><b>{company?.name||store?.companyName||row.companyId}</b><small style={{display:"block"}}>{store?.name||row.storeId}</small></div><span>Βάρδιες <b>{number(row.shifts)}</b></span><span>Μετρητά <b>{eur(row.cashVariance)}</b></span><span>{needsReview?<AlertTriangle/>:<CheckCircle2/>} {needsReview?"Χρειάζεται έλεγχος":"Συμφωνία"} · POS–EFTPOS {eur(row.cardVariance)}</span></article>}):<div className="platform-empty">Δεν υπάρχουν κλεισμένες βάρδιες για τα επιλεγμένα φίλτρα.</div>}</section>
+      <section className="platform-panel" style={{marginBottom:14}}><b>Σύνοψη Εικονικού Ταμείου Τράπεζας</b><p>Λογιστικό: {eur(bank.totals?.projectedBalance)} · Επιβεβαιωμένο: {eur(bank.totals?.availableBalance)} · Σε αναμονή: {eur(bank.totals?.pendingAmount)}</p>{(bank.items||[]).map(item=><small key={item.bankAccountId} style={{display:"block",marginTop:5}}>{item.companyName} · {item.storeName} · {item.bankName} / {item.accountName}: Λογιστικό {eur(item.projectedBalance)} · Επιβεβαιωμένο {eur(item.availableBalance)} · Σε αναμονή {eur(item.pendingAmount)}</small>)}</section>
+      <section className="platform-panel"><ShieldCheck/><b> Μόνο για ανάγνωση</b><p>Η εκτέλεση καταγράφεται στο Audit, αλλά δεν πραγματοποιεί διορθώσεις και δεν αποδίδει αυτόματα ευθύνη σε εργαζόμενο. Τα ευρήματα σημαίνονται μόνο ως «Χρειάζεται έλεγχος».</p></section>
+    </>}
+  </section></div>;
 }
