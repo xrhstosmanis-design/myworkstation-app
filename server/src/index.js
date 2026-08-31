@@ -84,6 +84,7 @@ import masterCatalogMaintenanceRoutes from "./routes/master-catalog-maintenance.
 import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
 import platformStoreModulesRoutes from "./routes/platform-store-modules.js";
 import platformStoreIntegrationsRoutes from "./routes/platform-store-integrations.js";
@@ -133,6 +134,7 @@ app.use("/api/platform/master-catalog",masterCatalogMaintenanceRoutes);
 app.use("/api/platform/master-catalog",masterCatalogRoutes);
 app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
+app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
