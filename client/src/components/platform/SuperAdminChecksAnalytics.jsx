@@ -76,7 +76,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const totalCardVariance=rows.reduce((sum,row)=>sum+number(row.cardVariance),0);
   const selectedCompany=result?.filters.companyId?companyIndex.get(String(result.filters.companyId)):null;
   const selectedStore=result?.filters.storeId?storeIndex.get(String(result.filters.storeId)):null;
-  const scopeLabel=selectedStore?`${selectedStore.companyName} · ${selectedStore.name}`:selectedCompany?selectedCompany.name:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
+  const scopeLabel=selectedStore?`Εταιρεία: ${selectedStore.companyName} · Κατάστημα: ${selectedStore.name}`:selectedCompany?`Εταιρεία: ${selectedCompany.name} · Όλα τα καταστήματα`:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
   const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
 
   return <div className="platform-modal"><section className="sa-modal">
@@ -113,10 +113,12 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
           const reference=finding.referenceId||finding.sessionId||"—";
           return <article key={finding.id||`${finding.storeId||"finding"}:${reference}:${index}`} style={{border:"1px solid #d7e1ec",borderRadius:14,padding:14,background:"#fff"}}>
             <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}><div><small>{finding.eventSource||"Συμβάν βάρδιας"}</small><h3 style={{margin:"4px 0 0"}}>{findingTitle(finding)}</h3></div><span className="pending"><AlertTriangle/> Χρειάζεται έλεγχο</span></div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginTop:13}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginTop:13}}>
               <span><b>Ημερομηνία / ώρα</b><small style={{display:"block"}}>{athensDateTime(finding.occurredAt||finding.closedAt||finding.openedAt)}</small></span>
-              <span><b>Εταιρεία / Κατάστημα</b><small style={{display:"block"}}>{companyName} · {storeName}</small></span>
-              <span><b>POS / Βάρδια</b><small style={{display:"block"}}>{finding.terminalPos||"Χωρίς POS"} · {finding.shiftLabel||"Χωρίς ονομασία βάρδιας"}</small></span>
+              <span><b>Εταιρεία</b><small style={{display:"block"}}>{companyName}</small></span>
+              <span><b>Κατάστημα</b><small style={{display:"block"}}>{storeName}</small></span>
+              <span><b>POS / Τερματικό</b><small style={{display:"block"}}>{finding.terminalPos||"Χωρίς POS"}</small></span>
+              <span><b>Βάρδια</b><small style={{display:"block"}}>{finding.shiftLabel||"Χωρίς ονομασία βάρδιας"}</small></span>
               <span><b>Χειριστής κλεισίματος</b><small style={{display:"block"}}>{operator}</small></span>
               <span><b>Διαφορά μετρητών</b><small style={{display:"block"}}>{eur(finding.cashVariance)}</small></span>
               <span><b>Διαφορά POS–EFTPOS</b><small style={{display:"block"}}>{eur(finding.cardVariance)}</small></span>
@@ -126,9 +128,9 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
             <small style={{display:"block",marginTop:12}}>Αναφορά βάρδιας: {reference} · Κωδικός συμβάντος: {finding.eventCode||finding.code||"VARIANCE_REVIEW"}</small>
           </article>})}</div>:<div className="platform-empty">Δεν υπάρχουν συγκεκριμένα συμβάντα για έλεγχο στα επιλεγμένα φίλτρα.</div>}
       </section>
-      <section className="platform-panel" style={{marginBottom:14}}><b>Ανάλυση ανά κατάστημα</b>{rows.length?rows.map(row=>{const store=storeIndex.get(String(row.storeId));const company=companyIndex.get(String(row.companyId));const needsReview=Math.abs(number(row.cashVariance))>.009||Math.abs(number(row.cardVariance))>.02;return <article key={`${row.companyId}:${row.storeId}`} style={{display:"grid",gridTemplateColumns:"minmax(220px,1fr) repeat(3,minmax(120px,.5fr))",gap:12,alignItems:"center",padding:"13px 0",borderBottom:"1px solid #e2e8f0"}}><div><b>{company?.name||store?.companyName||row.companyId}</b><small style={{display:"block"}}>{store?.name||row.storeId}</small></div><span>Βάρδιες <b>{number(row.shifts)}</b></span><span>Μετρητά <b>{eur(row.cashVariance)}</b></span><span>{needsReview?<AlertTriangle/>:<CheckCircle2/>} {needsReview?"Χρειάζεται έλεγχος":"Συμφωνία"} · POS–EFTPOS {eur(row.cardVariance)}</span></article>}):<div className="platform-empty">Δεν υπάρχουν κλεισμένες βάρδιες για τα επιλεγμένα φίλτρα.</div>}</section>
-      <section className="platform-panel" style={{marginBottom:14}}><b>Σύνοψη Εικονικού Ταμείου Τράπεζας</b><p>Λογιστικό: {eur(bank.totals?.projectedBalance)} · Επιβεβαιωμένο: {eur(bank.totals?.availableBalance)} · Σε αναμονή: {eur(bank.totals?.pendingAmount)}</p>{(bank.items||[]).map(item=><small key={item.bankAccountId} style={{display:"block",marginTop:5}}>{item.companyName} · {item.storeName} · {item.bankName} / {item.accountName}: Λογιστικό {eur(item.projectedBalance)} · Επιβεβαιωμένο {eur(item.availableBalance)} · Σε αναμονή {eur(item.pendingAmount)}</small>)}</section>
-      <section className="platform-panel"><ShieldCheck/><b> Μόνο για ανάγνωση</b><p>Η εκτέλεση καταγράφεται στο Audit, αλλά δεν πραγματοποιεί διορθώσεις και δεν αποδίδει αυτόματα ευθύνη σε εργαζόμενο. Τα συμβάντα σημαίνονται μόνο ως «Χρειάζεται έλεγχος».</p></section>
+      <section className="platform-panel" style={{marginBottom:14}}><b>Ανάλυση ανά κατάστημα</b>{rows.length?rows.map(row=>{const store=storeIndex.get(String(row.storeId));const company=companyIndex.get(String(row.companyId));const needsReview=Math.abs(number(row.cashVariance))>.009||Math.abs(number(row.cardVariance))>.02;return <article key={`${row.companyId}:${row.storeId}`} style={{display:"grid",gridTemplateColumns:"minmax(220px,1fr) repeat(3,minmax(120px,.5fr))",gap:12,alignItems:"center",padding:"13px 0",borderBottom:"1px solid #e2e8f0"}}><div><b>Εταιρεία: {company?.name||store?.companyName||row.companyId}</b><small style={{display:"block"}}>Κατάστημα: {store?.name||row.storeId}</small></div><span>Βάρδιες <b>{number(row.shifts)}</b></span><span>Μετρητά <b>{eur(row.cashVariance)}</b></span><span>{needsReview?<AlertTriangle/>:<CheckCircle2/>} {needsReview?"Χρειάζεται έλεγχος":"Συμφωνία"} · POS–EFTPOS {eur(row.cardVariance)}</span></article>}):<div className="platform-empty">Δεν υπάρχουν κλεισμένες βάρδιες για τα επιλεγμένα φίλτρα.</div>}</section>
+      <section className="platform-panel" style={{marginBottom:14}}><b>Σύνοψη Εικονικού Ταμείου Τράπεζας</b><p>Λογιστικό: {eur(bank.totals?.projectedBalance)} · Επιβεβαιωμένο: {eur(bank.totals?.availableBalance)} · Σε αναμονή: {eur(bank.totals?.pendingAmount)}</p>{(bank.items||[]).map(item=><small key={item.bankAccountId} style={{display:"block",marginTop:5}}>Εταιρεία: {item.companyName} · Κατάστημα: {item.storeName} · {item.bankName} / {item.accountName}: Λογιστικό {eur(item.projectedBalance)} · Επιβεβαιωμένο {eur(item.availableBalance)} · Σε αναμονή {eur(item.pendingAmount)}</small>)}</section>
+      <section className="platform-panel"><ShieldCheck/><b> Μόνο για ανάγνωση</b><p>Η εκτέλεση καταγράφεται στο Audit, αλλά δεν πραγματοποιεί διορθώσεις και δεν αποδίδει αυτόματα ευθύνη σε εργαζόμενο. Τα συμβάντα σημαίνονται μόνο ως «Χρειάζεται έλεγχο».</p></section>
     </>}
   </section></div>;
 }

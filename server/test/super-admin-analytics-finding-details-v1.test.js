@@ -25,12 +25,22 @@ test("each review finding identifies the exact shift event and its context",()=>
 });
 
 test("analytics UI shows event date time store POS shift operator and reference",()=>{
-  for(const label of ["Συμβάντα που χρειάζονται έλεγχο","Ημερομηνία / ώρα","Εταιρεία / Κατάστημα","POS / Βάρδια","Χειριστής κλεισίματος","Άνοιγμα βάρδιας","Κλείσιμο βάρδιας","Αναφορά βάρδιας","Κωδικός συμβάντος"]){
+  for(const label of ["Συμβάντα που χρειάζονται έλεγχο","Ημερομηνία / ώρα","Εταιρεία","Κατάστημα","POS / Τερματικό","Βάρδια","Χειριστής κλεισίματος","Άνοιγμα βάρδιας","Κλείσιμο βάρδιας","Αναφορά βάρδιας","Κωδικός συμβάντος"]){
     assert.match(analytics,new RegExp(label));
   }
   assert.match(analytics,/timeZone:"Europe\/Athens"/);
   assert.match(analytics,/finding\.occurredAt\|\|finding\.closedAt\|\|finding\.openedAt/);
   assert.match(analytics,/finding\.operatorName\|\|finding\.closedByName\|\|finding\.openedByName/);
+});
+
+test("analytics labels distinguish company store terminal and shift even when names match",()=>{
+  assert.match(analytics,/Εταιρεία: \$\{selectedStore\.companyName\} · Κατάστημα: \$\{selectedStore\.name\}/);
+  assert.match(analytics,/<b>Εταιρεία<\/b>/);
+  assert.match(analytics,/<b>Κατάστημα<\/b>/);
+  assert.match(analytics,/<b>POS \/ Τερματικό<\/b>/);
+  assert.match(analytics,/<b>Βάρδια<\/b>/);
+  assert.doesNotMatch(analytics,/<b>Εταιρεία \/ Κατάστημα<\/b>/);
+  assert.doesNotMatch(analytics,/<b>POS \/ Βάρδια<\/b>/);
 });
 
 test("finding detail remains filtered bounded audited and read-only",()=>{
