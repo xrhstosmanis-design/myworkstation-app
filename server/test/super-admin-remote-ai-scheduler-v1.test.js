@@ -11,7 +11,8 @@ const acceptance=read("../../client/src/entry.jsx");
 const deviceCenter=read("../../client/src/components/platform/DeviceOperationsCenter.jsx");
 
 test("REMOTE is centrally visible, free and requires a short-lived local acceptance",()=>{
-  assert.match(platform,/Super Admin Installation Center/);
+  assert.match(platform,/setShowInstallationCenter\(true\)/);
+  assert.match(platform,/<SuperAdminInstallationCenter\b/);
   assert.match(remote,/REMOTE_ASSIST/);
   assert.match(remote,/AWAITING_DEVICE/);
   assert.match(remote,/supportCodeHash/);
