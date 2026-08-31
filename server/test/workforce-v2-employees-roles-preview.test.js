@@ -96,6 +96,7 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   ].map(read).join("\n");
   const packageMount=read("../src/routes/platform-store-modules.js");
   const earlyPlatformGate=read("../src/routes/platform-owner-security.js");
+  const serverEntry=read("../src/index.js");
   const ui=[
     "../../client/src/components/platform/WorkforceV2EmployeesPanel.jsx",
     "../../client/src/components/platform/WorkforceV2MigrationTab.jsx",
@@ -118,15 +119,18 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
   assert.ok(packageChildMount>=0&&packageSuperAdminGuard>packageChildMount,"Workforce package routes must be mounted before the package Super Admin-only guard");
 
-  assert.match(earlyPlatformGate,/req\.originalUrl\|\|req\.url/);
-  assert.match(earlyPlatformGate,/api\\\/platform\\\/store-modules/);
-  assert.match(earlyPlatformGate,/req\.user\?\.role\|\|req\.user\?\.platformRole/);
-  assert.match(earlyPlatformGate,/const managementRole=\["OWNER","ADMIN","MANAGER"\]/);
-  assert.match(earlyPlatformGate,/if\(workforcePath&&managementRole\)return next\(\);/);
-  assert.doesNotMatch(earlyPlatformGate,/platformWorkforceV2Routes/);
-  const delegatedOwnerGate=earlyPlatformGate.indexOf("if(workforcePath&&managementRole)return next();");
+  assert.match(earlyPlatformGate,/import platformStoreModulesRoutes from "\.\/platform-store-modules\.js"/);
+  const earlyStoreModulesMount=earlyPlatformGate.indexOf('router.use("/store-modules",platformStoreModulesRoutes);');
   const genericSuperAdminGate=earlyPlatformGate.indexOf('const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";');
-  assert.ok(delegatedOwnerGate>=0&&genericSuperAdminGate>delegatedOwnerGate,"Owner Workforce requests must delegate to the package-scoped Workforce router before the generic Platform Super Admin gate");
+  assert.ok(earlyStoreModulesMount>=0&&genericSuperAdminGate>earlyStoreModulesMount,"Store-module routes must execute before the first generic Platform Super Admin gate");
+  assert.doesNotMatch(earlyPlatformGate,/workforcePath|managementRole/);
+
+  const firstSharedPlatformMount=serverEntry.indexOf('app.use("/api/platform",platformOwnerSecurityRoutes);');
+  assert.ok(firstSharedPlatformMount>=0,"The shared Platform route must be mounted");
+  for(const laterRouter of ["platformSuperAdminAnalyticsDetailsRoutes","platformAdminRoutes","platformStoreIntegrationsRoutes"]){
+    const laterMount=serverEntry.indexOf(`app.use("/api/platform",${laterRouter});`);
+    assert.ok(laterMount>firstSharedPlatformMount,`${laterRouter} must stay after the shared store-module entry`);
+  }
 
   assert.match(ui,/ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΟΝΟ — ΚΑΜΙΑ ΜΕΤΑΦΟΡΑ/);
   assert.match(ui,/Δεν υπάρχει κουμπί εφαρμογής/);
