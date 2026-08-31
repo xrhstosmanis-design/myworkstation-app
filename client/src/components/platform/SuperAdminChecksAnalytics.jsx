@@ -162,7 +162,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
 
   return <div className="platform-modal"><section className="sa-modal">
-    <header><div><span>SUPER ADMIN ONLY</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Κεντρική ανάλυση διαφορών ταμείου, POS–EFTPOS και Ταμείου Τράπεζας, με καταγραφή ελέγχου χωρίς μεταβολή οικονομικών δεδομένων.</p></div><button type="button" className="sa-close" onClick={onClose} disabled={busy||reviewBusy}><X/></button></header>
+    <header><div><span>ΜΟΝΟ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Κεντρική ανάλυση διαφορών ταμείου, POS–EFTPOS και Ταμείου Τράπεζας, με καταγραφή ελέγχου χωρίς μεταβολή οικονομικών δεδομένων.</p></div><button type="button" className="sa-close" onClick={onClose} disabled={busy||reviewBusy}><X/></button></header>
     {error&&<div className="platform-alert error">{error}</div>}
     <div className="supplier-review-filters">
       <label>Ιδιοκτήτης / εταιρεία<select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
