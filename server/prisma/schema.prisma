@@ -46,6 +46,7 @@ model Company {
   users                User[]
   stores               Store[]
   modules              CompanyModule[]
+  storePaidModules     StorePaidModule[]
 }
 
 model CompanyModule {
@@ -127,6 +128,7 @@ model Store {
   employees Employee[]
   shifts    ShiftType[]
   schedules Schedule[]
+  paidModules StorePaidModule[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -252,4 +254,427 @@ model InvoiceSupplierReadingProfile {
   createdAt       DateTime @default(now())
 
   @@index([normalizedName], map: "InvoiceSupplierReadingProfile_name_idx")
+}
+
+// Workforce v2 is intentionally additive. The legacy Employee/ShiftType/Schedule
+// models remain available only for controlled data migration while the new module
+// is implemented and verified store by store.
+model StorePaidModule {
+  id           String   @id @default(cuid())
+  companyId    String
+  storeId      String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  moduleKey    String
+  active       Boolean  @default(false)
+  monthlyPrice Decimal  @default(0) @db.Decimal(12, 2)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  notes        String?
+  updatedBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([storeId, moduleKey])
+  @@index([companyId, moduleKey])
+}
+
+model WorkforceEmployee {
+  id                   String   @id @default(cuid())
+  companyId            String
+  baseStoreId          String?
+  userId               String?  @unique
+  legacyEmployeeId     String?  @unique
+  fullName             String
+  phone                String?
+  email                String?
+  paymentType          String   @default("HOURLY")
+  fixedMonthlyAmount   Decimal? @db.Decimal(12, 2)
+  maxDaysPerWeek       Int      @default(5)
+  maxHoursPerWeek      Decimal  @default(40) @db.Decimal(6, 2)
+  minimumDaysOff       Int      @default(1)
+  canChangeStore       Boolean  @default(false)
+  worksMorning         Boolean  @default(true)
+  worksAfternoon       Boolean  @default(true)
+  worksNight           Boolean  @default(false)
+  worksWeekend         Boolean  @default(true)
+  notes                String?
+  active               Boolean  @default(true)
+  createdByUserId      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  roleAssignments      WorkforceEmployeeRole[]
+  storeAccess          WorkforceEmployeeStoreAccess[]
+  rules                WorkforceEmployeeRule[]
+  hourlyRates          WorkforceHourlyRate[]
+  scheduleAssignments  WorkforceScheduleAssignment[]
+  leaveRequests        WorkforceLeaveRequest[]
+  absences             WorkforceAbsence[]
+  timeClockEntries     WorkforceTimeClockEntry[]
+  attendanceSessions   WorkforceAttendanceSession[]
+  payrollLines         WorkforcePayrollLine[]
+  payments             WorkforceEmployeePayment[]
+
+  @@index([companyId, active])
+  @@index([baseStoreId])
+  @@index([fullName])
+}
+
+model WorkforceRole {
+  id                  String   @id @default(cuid())
+  companyId           String
+  name                String
+  code                String
+  description         String?
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  employeeAssignments WorkforceEmployeeRole[]
+  requiredByTemplates WorkforceShiftTemplate[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+}
+
+model WorkforceEmployeeRole {
+  id         String            @id @default(cuid())
+  employeeId String
+  roleId     String
+  primary    Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  employee   WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  role       WorkforceRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, roleId])
+  @@index([roleId])
+}
+
+model WorkforceEmployeeStoreAccess {
+  id          String            @id @default(cuid())
+  employeeId  String
+  storeId     String
+  isBaseStore Boolean           @default(false)
+  canSchedule Boolean           @default(true)
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  employee    WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, storeId])
+  @@index([storeId, active])
+}
+
+model WorkforceShiftTemplate {
+  id                 String                        @id @default(cuid())
+  companyId          String
+  storeId            String
+  name               String
+  code               String
+  category           String                        @default("STANDARD")
+  startTime          String
+  endTime            String
+  minimumPeople      Int                           @default(1)
+  maximumPeople      Int?
+  requiredRoleId     String?
+  requiresSupervisor Boolean                       @default(false)
+  changeAllowed      Boolean                       @default(true)
+  active             Boolean                       @default(true)
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  requiredRole       WorkforceRole?                @relation(fields: [requiredRoleId], references: [id], onDelete: SetNull)
+  assignments        WorkforceScheduleAssignment[]
+
+  @@unique([storeId, code])
+  @@index([companyId, storeId, active])
+}
+
+model WorkforceEmployeeRule {
+  id                String            @id @default(cuid())
+  employeeId        String
+  ruleType          String
+  severity          String            @default("ERROR")
+  relatedEmployeeId String?
+  valueJson         Json?
+  note              String?
+  active            Boolean           @default(true)
+  validFrom         DateTime?
+  validTo           DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  employee          WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, active])
+  @@index([ruleType])
+}
+
+model WorkforceHourlyRate {
+  id              String            @id @default(cuid())
+  employeeId      String
+  hourlyRate      Decimal           @db.Decimal(12, 4)
+  validFrom       DateTime
+  validTo         DateTime?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime          @default(now())
+  employee        WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, validFrom])
+}
+
+model WorkforceSchedule {
+  id                String                        @id @default(cuid())
+  companyId         String
+  storeId           String
+  periodStart       DateTime
+  periodEnd         DateTime
+  periodType        String                        @default("WEEK")
+  status            String                        @default("DRAFT")
+  version           Int                           @default(1)
+  createdByUserId   String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  lockedAt          DateTime?
+  notes             String?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  assignments       WorkforceScheduleAssignment[]
+  chatCommands      WorkforceChatCommand[]
+
+  @@index([companyId, storeId, periodStart])
+  @@unique([storeId, periodStart, periodEnd, version])
+}
+
+model WorkforceScheduleAssignment {
+  id              String                  @id @default(cuid())
+  scheduleId      String
+  date            DateTime
+  shiftTemplateId String
+  employeeId      String?
+  slot            Int                     @default(1)
+  status          String                  @default("PLANNED")
+  warningState    String                  @default("OK")
+  warningJson     Json?
+  note            String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  schedule        WorkforceSchedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  shiftTemplate   WorkforceShiftTemplate  @relation(fields: [shiftTemplateId], references: [id], onDelete: Restrict)
+  employee        WorkforceEmployee?      @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleId, date, shiftTemplateId, slot])
+  @@index([employeeId, date])
+}
+
+model WorkforceLeaveRequest {
+  id                String            @id @default(cuid())
+  companyId         String
+  employeeId        String
+  storeId           String?
+  startDate         DateTime
+  endDate           DateTime
+  leaveType         String
+  status            String            @default("REQUESTED")
+  requestedByUserId String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectedReason    String?
+  comments          String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  employee          WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, startDate])
+  @@index([employeeId, startDate])
+}
+
+model WorkforceAbsence {
+  id               String            @id @default(cuid())
+  companyId        String
+  employeeId       String
+  storeId          String?
+  absenceType      String
+  startsAt         DateTime
+  endsAt           DateTime?
+  minutes          Int?
+  reason           String?
+  approvedByUserId String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  employee         WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, startsAt])
+  @@index([employeeId, startsAt])
+}
+
+model WorkforceTimeClockEntry {
+  id               String            @id @default(cuid())
+  companyId        String
+  storeId          String
+  employeeId       String
+  eventType        String
+  method           String            @default("PIN")
+  occurredAt       DateTime          @default(now())
+  sourceShiftId    String?
+  deviceId         String?
+  note             String?
+  correctionOfId   String?
+  correctionReason String?
+  approvedByUserId String?
+  createdByUserId  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  employee         WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, storeId, occurredAt])
+  @@index([employeeId, occurredAt])
+}
+
+model WorkforceAttendanceSession {
+  id                    String            @id @default(cuid())
+  companyId             String
+  storeId               String
+  employeeId            String
+  scheduledAssignmentId String?
+  clockInEntryId        String?
+  clockOutEntryId       String?
+  startedAt             DateTime
+  endedAt               DateTime?
+  workedMinutes         Int               @default(0)
+  lateMinutes           Int               @default(0)
+  earlyLeaveMinutes     Int               @default(0)
+  overtimeMinutes       Int               @default(0)
+  status                String            @default("OPEN")
+  issueJson             Json?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  employee              WorkforceEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, storeId, startedAt])
+  @@index([employeeId, startedAt])
+}
+
+model WorkforcePayrollPeriod {
+  id              String                     @id @default(cuid())
+  companyId       String
+  storeId         String?
+  name            String
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          String                     @default("DRAFT")
+  createdByUserId String?
+  closedByUserId  String?
+  closedAt        DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  lines           WorkforcePayrollLine[]
+  payments        WorkforceEmployeePayment[]
+  closing         WorkforcePayrollClosing?
+
+  @@index([companyId, periodStart])
+  @@unique([companyId, storeId, periodStart, periodEnd])
+}
+
+model WorkforcePayrollLine {
+  id              String                 @id @default(cuid())
+  payrollPeriodId String
+  employeeId      String
+  plannedMinutes  Int                    @default(0)
+  actualMinutes   Int                    @default(0)
+  overtimeMinutes Int                    @default(0)
+  absenceMinutes  Int                    @default(0)
+  hourlyRate      Decimal?               @db.Decimal(12, 4)
+  fixedAmount     Decimal?               @db.Decimal(12, 2)
+  grossAmount     Decimal                @default(0) @db.Decimal(12, 2)
+  paidAmount      Decimal                @default(0) @db.Decimal(12, 2)
+  balanceAmount   Decimal                @default(0) @db.Decimal(12, 2)
+  calculationJson Json?
+  issueJson       Json?
+  notes           String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  payrollPeriod   WorkforcePayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  employee        WorkforceEmployee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([payrollPeriodId, employeeId])
+  @@index([employeeId])
+}
+
+model WorkforceEmployeePayment {
+  id               String                  @id @default(cuid())
+  companyId        String
+  storeId          String?
+  employeeId       String
+  payrollPeriodId  String?
+  paymentDate      DateTime
+  paymentType      String
+  amount           Decimal                 @db.Decimal(12, 2)
+  paymentMethod    String
+  sourceType       String?
+  sourceId         String?
+  proofUrl         String?
+  note             String?
+  approvalStatus   String                  @default("APPROVED")
+  approvedByUserId String?
+  createdByUserId  String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  employee         WorkforceEmployee       @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payrollPeriod    WorkforcePayrollPeriod? @relation(fields: [payrollPeriodId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, paymentDate])
+  @@index([employeeId, paymentDate])
+}
+
+model WorkforcePayrollClosing {
+  id               String                 @id @default(cuid())
+  payrollPeriodId  String                 @unique
+  previewJson      Json
+  totalsJson       Json
+  reason           String?
+  closedByUserId   String
+  closedAt         DateTime               @default(now())
+  reopenedByUserId String?
+  reopenedAt       DateTime?
+  reopenReason     String?
+  payrollPeriod    WorkforcePayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+}
+
+model WorkforceAuditLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  storeId     String?
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  beforeJson  Json?
+  afterJson   Json?
+  reason      String?
+  deviceName  String?
+  userAgent   String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model WorkforceChatCommand {
+  id               String             @id @default(cuid())
+  companyId        String
+  storeId          String
+  scheduleId       String?
+  actorUserId      String
+  commandText      String
+  proposalJson     Json?
+  warningJson      Json?
+  status           String             @default("PROPOSED")
+  approvedByUserId String?
+  approvedAt       DateTime?
+  appliedAt        DateTime?
+  createdAt        DateTime           @default(now())
+  schedule         WorkforceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, storeId, createdAt])
 }
