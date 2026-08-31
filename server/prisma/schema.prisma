@@ -263,20 +263,20 @@ model StorePaidModule {
   id           String   @id @default(cuid())
   companyId    String
   storeId      String
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade, map: "StorePaidModule_company_fkey")
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade, map: "StorePaidModule_store_fkey")
   moduleKey    String
   active       Boolean  @default(false)
   monthlyPrice Decimal  @default(0) @db.Decimal(12, 2)
-  startsAt     DateTime?
-  endsAt       DateTime?
+  startsAt     DateTime? @db.Timestamptz(6)
+  endsAt       DateTime? @db.Timestamptz(6)
   notes        String?
   updatedBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
 
-  @@unique([storeId, moduleKey])
-  @@index([companyId, moduleKey])
+  @@unique([storeId, moduleKey], map: "StorePaidModule_store_key")
+  @@index([companyId, moduleKey], map: "StorePaidModule_company_key_idx")
 }
 
 model WorkforceEmployee {
