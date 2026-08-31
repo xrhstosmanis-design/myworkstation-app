@@ -1,0 +1,60 @@
+name: Retry Super Admin analytics modal fix
+
+on:
+  push:
+    branches:
+      - fix/super-admin-analytics-modal-20260831
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-and-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Extract and apply prepared patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk '/<<'"'"'PAYLOAD'"'"'/{copy=1;next} /^[[:space:]]*PAYLOAD$/{copy=0} copy{sub(/^[[:space:]]+/,"");print}' .github/workflows/apply-super-admin-analytics-modal.yml > /tmp/analytics-payload.b64
+          base64 -d /tmp/analytics-payload.b64 > /tmp/analytics-payload.tar.gz
+          tar -xzf /tmp/analytics-payload.tar.gz
+          python _patch_platform.py
+          rm _patch_platform.py
+          node server/e2e/super-admin-analytics-modal-source-invariants.mjs
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Build client
+        run: npm run build -w client
+
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/components/platform/PlatformAdminApp.jsx \
+                  client/src/components/platform/SuperAdminAnalyticsCenter.jsx \
+                  client/src/components/platform/super-admin-analytics.css \
+                  server/e2e/super-admin-analytics-modal-source-invariants.mjs
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "fix(platform): open filtered analytics center"
+          git push origin "HEAD:${{ github.ref_name }}"
