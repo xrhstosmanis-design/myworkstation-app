@@ -86,7 +86,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
           AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})
           AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
           AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
-          AND (ABS(COALESCE(s."variance",0))>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0))>${cardTolerance})
+          AND (ABS(COALESCE(s."variance",0)::float)>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0)::float)>${cardTolerance})
         ORDER BY COALESCE(s."closedAt",s."openedAt") DESC,s."id" DESC
         LIMIT ${findingLimit}`
     ]);
