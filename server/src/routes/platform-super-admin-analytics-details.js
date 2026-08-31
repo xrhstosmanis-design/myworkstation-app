@@ -5,7 +5,7 @@ import {prisma} from "../prisma.js";
 const router=Router();
 const cashTolerance=.009;
 const cardTolerance=.02;
-const findingLimit=5000;
+const findingLimit=500;
 const number=value=>Number(value||0);
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 
