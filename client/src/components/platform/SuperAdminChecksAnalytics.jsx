@@ -87,9 +87,8 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   };
 
   const openReview=finding=>{
-    const decision=number(finding.cashVariance)<-.009?"CONFIRMED_SHORTAGE":"REVIEWED_NO_CHANGE";
     setReviewingId(findingKey(finding));
-    setReviewDraft({decision,amount:decision==="REVIEWED_NO_CHANGE"?"":suggestedReviewAmount(finding),note:""});
+    setReviewDraft(emptyReviewDraft);
     setError("");
   };
 
