@@ -1143,13 +1143,100 @@ router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{t
 }catch(error){next(error)}});
 
 
+const automaticConclusionLabels={
+  AGREEMENT:"Συμφωνία ελέγχου",
+  UNEXPLAINED_SHORTAGE:"Έλλειμμα μετρητών χωρίς συσχετισμένο εύρημα",
+  SHORTAGE_WITH_FINDINGS:"Έλλειμμα μετρητών με ευρήματα προς επιβεβαίωση",
+  UNEXPLAINED_SURPLUS:"Πλεόνασμα μετρητών χωρίς συσχετισμένο εύρημα",
+  SURPLUS_WITH_FINDINGS:"Πλεόνασμα μετρητών με ευρήματα προς επιβεβαίωση",
+  FINDINGS_WITHOUT_CASH_VARIANCE:"Ευρήματα προς επιβεβαίωση χωρίς διαφορά μετρητών"
+};
+
 router.post("/super-admin-analytics/execute",async(req,res,next)=>{
   try{
-    const body=z.object({companyId:z.string().optional(),storeId:z.string().optional(),from:z.string().optional(),to:z.string().optional()}).parse(req.body||{});
-    const rows=await prisma.$queryRaw`SELECT s."storeId",s."companyId",COUNT(*)::int AS "shifts",COALESCE(SUM(s."variance"),0)::float AS "cashVariance",COALESCE(SUM(s."cardVariance"),0)::float AS "cardVariance" FROM "CashShiftSession" s WHERE (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null}) AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null}) AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day')) GROUP BY s."storeId",s."companyId"`;
-    const findings=rows.filter(row=>Math.abs(Number(row.cashVariance||0))>.009||Math.abs(Number(row.cardVariance||0))>.02).map(row=>({storeId:row.storeId,companyId:row.companyId,cashVariance:Number(row.cashVariance||0),cardVariance:Number(row.cardVariance||0),status:"Χρειάζεται έλεγχος"}));
-    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_ANALYTICS_EXECUTED",success:true,deviceName:"Read-only cash and card analytics",userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
-    res.json({ok:true,rows,findings,status:findings.length?"Χρειάζεται έλεγχος":"ΟΚ",readOnly:true,automaticEmployeeAccusation:false});
+    await ensureCashControlSchema();
+    const body=z.object({
+      companyId:z.string().trim().optional(),
+      storeId:z.string().trim().optional(),
+      from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+    }).parse(req.body||{});
+    if(body.from&&body.to&&body.from>body.to)return res.status(422).json({error:"Η ημερομηνία «Από» πρέπει να είναι πριν από την «Έως»."});
+    const sessions=await prisma.$queryRaw`
+      SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
+        s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedBy",s."closedBy",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
+        s."cashSales",s."cardSales",s."eftposTotal",s."cardVariance",s."expenses",s."openingOperational",s."expectedOpeningOperational",s."openingVariance",s."expectedOperational",s."actualOperational",s."variance",
+        CASE WHEN jsonb_typeof(s."duplicateReviewJson")='array' THEN jsonb_array_length(s."duplicateReviewJson") ELSE 0 END AS "duplicateCandidates",
+        r."id" AS "reviewId",r."decision" AS "reviewDecision",r."amount" AS "reviewAmount",r."note" AS "reviewNote",r."actorName" AS "reviewedBy",r."createdAt" AS "reviewedAt",
+        movement."lastMovementAt",
+        (r."id" IS NOT NULL AND (movement."lastMovementAt" IS NULL OR r."createdAt">=movement."lastMovementAt")) AS "reviewValid"
+      FROM "CashShiftSession" s
+      JOIN "Store" st ON st."id"=s."storeId"
+      JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
+      LEFT JOIN LATERAL (
+        SELECT cr."id",cr."decision",cr."amount",cr."note",cr."actorName",cr."createdAt"
+        FROM "CashControlReview" cr
+        WHERE cr."companyId"=s."companyId" AND cr."storeId"=s."storeId" AND cr."sessionId"=s."id"
+        ORDER BY cr."createdAt" DESC LIMIT 1
+      ) r ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT MAX(GREATEST(t."createdAt",COALESCE(t."reversedAt",t."createdAt"))) AS "lastMovementAt"
+        FROM "StoreTransaction" t
+        WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id"
+      ) movement ON TRUE
+      WHERE s."status"='CLOSED'
+        AND (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null})
+        AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})
+        AND (${body.from||null}::date IS NULL OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::date>=${body.from||null}::date)
+        AND (${body.to||null}::date IS NULL OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::date<=${body.to||null}::date)
+      ORDER BY s."closedAt" DESC
+      LIMIT 500`;
+    const auditTables=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"')::text AS "operator",to_regclass('"PosSaleActionAudit"')::text AS "actions",to_regclass('"PosSaleSafetyAudit"')::text AS "safety",to_regclass('"PurchaseDocument"')::text AS "purchaseDocuments"`;
+    const investigated=await Promise.all(sessions.map(async row=>{
+      const auditRule=platformCashStoreRule(row.storeName);
+      const session={...row,auditRule,variance:Number(row.variance||0),cardVariance:auditRule.posEftposEnabled?Number(row.cardVariance||0):0,openingVariance:Number(row.openingVariance||0),duplicateCandidates:Number(row.duplicateCandidates||0)};
+      return {...session,investigation:await platformCashInvestigation(session,auditTables[0]||{})};
+    }));
+    const rowsByStore=new Map();
+    for(const row of investigated){
+      const current=rowsByStore.get(row.storeId)||{companyId:row.companyId,storeId:row.storeId,shifts:0,cashVariance:0,cardVariance:0};
+      current.shifts++;current.cashVariance+=Number(row.variance||0);current.cardVariance+=Number(row.cardVariance||0);rowsByStore.set(row.storeId,current);
+    }
+    const rows=[...rowsByStore.values()].map(row=>({...row,cashVariance:Number(row.cashVariance.toFixed(2)),cardVariance:Number(row.cardVariance.toFixed(2))}));
+    const findings=investigated.filter(row=>row.investigation.conclusion!=="AGREEMENT").map(row=>({
+      id:row.sessionId,sessionId:row.sessionId,companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,
+      terminalPos:row.terminalPos,shiftLabel:row.shiftLabel,openedByName:row.openedByName,closedByName:row.closedByName,openedAt:row.openedAt,closedAt:row.closedAt,
+      occurredAt:row.closedAt,cashVariance:Number(row.variance||0),cardVariance:Number(row.cardVariance||0),
+      eventCode:row.investigation.conclusion,eventLabel:automaticConclusionLabels[row.investigation.conclusion]||"Αποτέλεσμα αυτόματου ελέγχου",
+      eventSource:"Αυτόματος έλεγχος βάρδιας",checks:row.investigation.checks,ruleFindings:row.investigation.findings,
+      reviewId:row.reviewId,reviewDecision:row.reviewDecision,reviewAmount:Number(row.reviewAmount||0),reviewNote:row.reviewNote||"",reviewedBy:row.reviewedBy,reviewedAt:row.reviewedAt,
+      reviewValid:Boolean(row.reviewValid),recheckRequired:Boolean(row.reviewId)&&!Boolean(row.reviewValid)
+    }));
+    const pendingFindingCount=findings.filter(row=>!row.reviewValid).length;
+    const conclusionCounts=investigated.reduce((all,row)=>{all[row.investigation.conclusion]=(all[row.investigation.conclusion]||0)+1;return all;},{});
+    const status=findings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται επιβεβαίωση":"Επιβεβαιωμένοι έλεγχοι";
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_AUTOMATIC_PROTECTION_CHECK_EXECUTED",success:true,deviceName:"Αυτόματος έλεγχος ταμείου, POS, πληρωμών και παραστατικών",userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({
+      ok:true,rows,findings,status,pendingFindingCount,reviewedFindingCount:findings.length-pendingFindingCount,
+      automaticConclusion:{status:findings.length?"REQUIRES_CONFIRMATION":"AGREEMENT",label:findings.length?"Υπάρχουν αποτελέσματα προς επιβεβαίωση":"Συμφωνία στους εφαρμοζόμενους κανόνες",summary:findings.length?`Ο αυτόματος έλεγχος ολοκληρώθηκε για ${investigated.length} βάρδιες και εντόπισε ${findings.length} αποτέλεσμα(τα) προς επιβεβαίωση.`:`Ο αυτόματος έλεγχος ολοκληρώθηκε για ${investigated.length} βάρδιες χωρίς απόκλιση που χρειάζεται επιβεβαίωση.`,conclusionCounts,checks:["Μετρητά και συνέχεια βάρδιας","POS–EFTPOS","Πληρωμές και αντιστοίχιση παραστατικών","Ακυρώσεις, επιστροφές και αντιστροφές","Διπλές ή μεταγενέστερες κινήσεις","Συμβάντα χειρισμών"]},
+      readOnly:true,automaticEmployeeAccusation:false,findingsTruncated:sessions.length===500,findingLimit:500
+    });
+  }catch(error){next(error)}
+});
+
+router.post("/super-admin-analytics/sessions/:sessionId/confirmation",async(req,res,next)=>{
+  try{
+    await ensureCashControlSchema();
+    const body=z.object({companyId:z.string().trim().min(1),storeId:z.string().trim().min(1),note:z.string().trim().max(1000).optional().default("")}).parse(req.body||{});
+    const rows=await prisma.$queryRaw`SELECT s."id",s."companyId",s."storeId" FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${body.companyId} AND s."storeId"=${body.storeId} LIMIT 1`;
+    const session=rows[0];if(!session)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια για επιβεβαίωση."});
+    const snapshotRows=await prisma.$queryRaw`SELECT COUNT(*)::int AS "transactionCount",COALESCE(SUM("amount") FILTER (WHERE "reversedAt" IS NULL),0) AS "activeTotal",MAX(GREATEST("createdAt",COALESCE("reversedAt","createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id}`;
+    const snapshot=snapshotRows[0]||{};
+    const actorName=req.user.fullName||req.user.email||"Υπερδιαχειριστής";
+    const saved=await prisma.$queryRaw`INSERT INTO "CashControlReview" ("id","companyId","storeId","sessionId","decision","amount","note","actorId","actorName","snapshotJson") VALUES (${crypto.randomUUID()},${session.companyId},${session.storeId},${session.id},'REVIEWED_NO_CHANGE',0,${body.note||"Επιβεβαιώθηκε χωρίς παρατήρηση."},${req.user.id},${actorName},${JSON.stringify({transactionCount:Number(snapshot.transactionCount||0),activeTotal:Number(snapshot.activeTotal||0),lastMovementAt:snapshot.lastMovementAt?snapshot.lastMovementAt.toISOString():null})}::jsonb) RETURNING "id","decision","amount","note","actorName","createdAt"`;
+    const review=saved[0];
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"SUPER_ADMIN_AUTOMATIC_CHECK_CONFIRMED",success:true,deviceName:`Βάρδια ${session.id}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({reviewId:review.id,reviewDecision:review.decision,reviewAmount:Number(review.amount||0),reviewNote:body.note||"",reviewedBy:review.actorName,reviewedAt:review.createdAt,reviewValid:true,recheckRequired:false,reviewLabel:"Επιβεβαιωμένος αυτόματος έλεγχος"});
   }catch(error){next(error)}
 });
 
