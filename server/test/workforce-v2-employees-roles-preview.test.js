@@ -95,7 +95,7 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
     "../src/routes/workforce-v2-validation.js"
   ].map(read).join("\n");
   const packageMount=read("../src/routes/platform-store-modules.js");
-  const earlyPlatformMount=read("../src/routes/platform-owner-security.js");
+  const earlyPlatformGate=read("../src/routes/platform-owner-security.js");
   const ui=[
     "../../client/src/components/platform/WorkforceV2EmployeesPanel.jsx",
     "../../client/src/components/platform/WorkforceV2MigrationTab.jsx",
@@ -118,9 +118,13 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
   assert.ok(packageChildMount>=0&&packageSuperAdminGuard>packageChildMount,"Workforce package routes must be mounted before the package Super Admin-only guard");
 
-  const earlyChildMount=earlyPlatformMount.indexOf('router.use("/store-modules/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes)');
-  const earlySuperAdminGuard=earlyPlatformMount.indexOf('router.use((req,res,next)=>{');
-  assert.ok(earlyChildMount>=0&&earlySuperAdminGuard>earlyChildMount,"Owner Workforce routes must be mounted before the generic Platform Super Admin gate");
+  assert.match(earlyPlatformGate,/const workforcePath=\/\^\\\/store-modules/);
+  assert.match(earlyPlatformGate,/const managementRole=\["OWNER","ADMIN","MANAGER"\]/);
+  assert.match(earlyPlatformGate,/if\(workforcePath&&managementRole\)return next\(\);/);
+  assert.doesNotMatch(earlyPlatformGate,/platformWorkforceV2Routes/);
+  const delegatedOwnerGate=earlyPlatformGate.indexOf("if(workforcePath&&managementRole)return next();");
+  const genericSuperAdminGate=earlyPlatformGate.indexOf('const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";');
+  assert.ok(delegatedOwnerGate>=0&&genericSuperAdminGate>delegatedOwnerGate,"Owner Workforce requests must delegate to the package-scoped Workforce router before the generic Platform Super Admin gate");
 
   assert.match(ui,/ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΟΝΟ — ΚΑΜΙΑ ΜΕΤΑΦΟΡΑ/);
   assert.match(ui,/Δεν υπάρχει κουμπί εφαρμογής/);
