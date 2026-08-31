@@ -4,7 +4,7 @@ import {AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,X} from "luci
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const number=value=>Number(value||0);
 const emptyFilters={companyId:"",storeId:"",from:"",to:""};
-const emptyReviewDraft={decision:"REVIEWED_NO_CHANGE",amount:"",note:""};
+const emptyReviewDraft={note:""};
 const reviewDecisionLabels={
   EXPLANATION:"Καταχωρισμένη εξήγηση",
   CONFIRMED_SHORTAGE:"Επιβεβαιωμένο έλλειμμα",
@@ -25,8 +25,6 @@ const findingTitle=finding=>{
   return "Συμβάν που χρειάζεται έλεγχο";
 };
 const findingKey=finding=>String(finding.id||`${finding.sessionId||"session"}:${finding.eventCode||"variance"}`);
-const suggestedReviewAmount=finding=>{
-  const value=Math.abs(number(finding.cashVariance))||Math.abs(number(finding.cardVariance));
   return value?value.toFixed(2):"";
 };
 
@@ -101,49 +99,23 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     setReviewDraft(emptyReviewDraft);
   };
 
-  const changeReviewDecision=(finding,decision)=>{
-    setReviewDraft(current=>({
-      ...current,
-      decision,
-      amount:decision==="REVIEWED_NO_CHANGE"?"":current.amount||suggestedReviewAmount(finding)
-    }));
-  };
 
   const saveReview=async finding=>{
-    const note=String(reviewDraft.note||"").trim(),amount=number(reviewDraft.amount);
-    if(note.length<5){setError("Γράψε σημείωση ελέγχου τουλάχιστον 5 χαρακτήρων.");return}
-    if(reviewDraft.decision==="EXPLANATION"&&amount<=0){setError("Η εξήγηση χρειάζεται θετικό ποσό.");return}
+    const note=String(reviewDraft.note||"").trim();
     setReviewBusy(true);setError("");
     try{
-      const saved=await request(`/api/platform/super-admin-analytics/sessions/${encodeURIComponent(finding.sessionId)}/reviews`,{
+      const saved=await request(`/api/platform/super-admin-analytics/sessions/${encodeURIComponent(finding.sessionId)}/confirmation`,{
         method:"POST",
-        body:JSON.stringify({
-          companyId:finding.companyId,
-          storeId:finding.storeId,
-          decision:reviewDraft.decision,
-          amount,
-          note
-        })
+        body:JSON.stringify({companyId:finding.companyId,storeId:finding.storeId,note})
       });
       setResult(current=>{
         if(!current)return current;
         const nextFindings=(current.analytics?.findings||[]).map(item=>String(item.sessionId)===String(finding.sessionId)?{...item,...saved}:item);
         const pendingFindingCount=nextFindings.filter(item=>item.reviewValid!==true).length;
-        const reviewedFindingCount=nextFindings.length-pendingFindingCount;
-        return{
-          ...current,
-          analytics:{
-            ...current.analytics,
-            findings:nextFindings,
-            pendingFindingCount,
-            reviewedFindingCount,
-            status:nextFindings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται έλεγχο":"Καταχωρισμένοι έλεγχοι"
-          }
-        };
+        return {...current,analytics:{...current.analytics,findings:nextFindings,pendingFindingCount,reviewedFindingCount:nextFindings.length-pendingFindingCount,status:nextFindings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται επιβεβαίωση":"Επιβεβαιωμένοι έλεγχοι"}};
       });
-      setReviewingId("");
-      setReviewDraft(emptyReviewDraft);
-      setMessage?.(`Καταχωρίστηκε ο έλεγχος: ${saved.reviewLabel||reviewDecisionLabels[reviewDraft.decision]||"Ολοκληρώθηκε"}.`);
+      setReviewingId("");setReviewDraft(emptyReviewDraft);
+      setMessage?.("Επιβεβαιώθηκε ο αυτόματος έλεγχος και καταγράφηκε στο Audit.");
     }catch(err){setError(err.message)}finally{setReviewBusy(false)}
   };
 
@@ -184,7 +156,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
       </div>
       <section className="platform-panel" style={{marginBottom:14}}>
         <b>Συμβάντα που χρειάζονται έλεγχο</b>
-        <p>Κάθε εγγραφή δείχνει το συγκεκριμένο κλείσιμο βάρδιας όπου καταγράφηκε η απόκλιση, με ημερομηνία, ώρα, κατάστημα, POS, βάρδια, χειριστή και ποσά. Δεν αποτελεί αυτόματη απόδοση αιτίας ή ευθύνης.</p>
+        <p>Κάθε εγγραφή είναι αποτέλεσμα των αυτόματων κανόνων. Δεν αποτελεί αυτόματη απόδοση αιτίας ή ευθύνης. Επιβεβαιώνεις μόνο το αποτέλεσμα και, αν θέλεις, προσθέτεις παρατήρηση.</p>
         {analytics.findingsTruncated&&<div className="platform-alert error">Εμφανίζονται τα νεότερα {analytics.findingLimit||500} συμβάντα. Περιόρισε τις ημερομηνίες για πλήρη λίστα.</div>}
         {findings.length?<div style={{display:"grid",gap:12,marginTop:12}}>{findings.map((finding,index)=>{
           const store=storeIndex.get(String(finding.storeId));
@@ -220,20 +192,15 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
               {needsRecheck&&<small style={{display:"block",marginTop:6,color:"#9a4b0b"}}>Μετά τον προηγούμενο έλεγχο καταγράφηκε νεότερη κίνηση στη βάρδια. Χρειάζεται νέα καταχώριση.</small>}
             </div>}
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
-              <button type="button" onClick={()=>openReview(finding)} disabled={reviewBusy} style={{border:0,borderRadius:9,padding:"9px 12px",background:"#147fc1",color:"#fff",fontWeight:800,cursor:"pointer"}}>{reviewed?"Νέος επανέλεγχος":"Καταχώριση ελέγχου"}</button>
+              <button type="button" onClick={()=>openReview(finding)} disabled={reviewBusy} style={{border:0,borderRadius:9,padding:"9px 12px",background:"#147fc1",color:"#fff",fontWeight:800,cursor:"pointer"}}>{reviewed?"Νέα επιβεβαίωση":"Επιβεβαίωση ελέγχου"}</button>
             </div>
-            {formOpen&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginTop:12,padding:12,borderRadius:12,background:"#f7fafc",border:"1px solid #d7e1ec"}}>
-              <label style={{display:"grid",gap:5,fontWeight:800,fontSize:12}}>Αποτέλεσμα ελέγχου<select value={reviewDraft.decision} onChange={event=>changeReviewDecision(finding,event.target.value)} disabled={reviewBusy} style={{padding:10,border:"1px solid #cbd5e1",borderRadius:8,background:"#fff"}}>
-                <option value="EXPLANATION">Καταχωρισμένη εξήγηση</option>
-                {number(finding.cashVariance)<-.009&&<option value="CONFIRMED_SHORTAGE">Επιβεβαιωμένο έλλειμμα</option>}
-                <option value="REVIEWED_NO_CHANGE">Ελεγμένο χωρίς αλλαγή</option>
-              </select></label>
-              {reviewDraft.decision!=="REVIEWED_NO_CHANGE"&&<label style={{display:"grid",gap:5,fontWeight:800,fontSize:12}}>{reviewDraft.decision==="EXPLANATION"?"Ποσό που εξηγείται":"Ποσό ελλείμματος"}<input type="number" min="0" step="0.01" value={reviewDraft.amount} onChange={event=>setReviewDraft(current=>({...current,amount:event.target.value}))} disabled={reviewBusy} style={{padding:10,border:"1px solid #cbd5e1",borderRadius:8}}/></label>}
-              <label style={{display:"grid",gap:5,fontWeight:800,fontSize:12,gridColumn:"1 / -1"}}>Αιτιολογία / σημείωση ελέγχου<textarea value={reviewDraft.note} onChange={event=>setReviewDraft(current=>({...current,note:event.target.value}))} disabled={reviewBusy} rows={3} maxLength={1000} placeholder="Γράψε τι ελέγχθηκε και ποιο ήταν το αποτέλεσμα." style={{padding:10,border:"1px solid #cbd5e1",borderRadius:8,resize:"vertical",font:"inherit"}}/></label>
-              <small style={{gridColumn:"1 / -1"}}>Η καταχώριση αποθηκεύει μόνο αποτέλεσμα, σημείωση, ελεγκτή και ώρα. Δεν αλλάζει ποσό βάρδιας, ταμείο, POS–EFTPOS ή τραπεζικό υπόλοιπο.</small>
-              <div style={{gridColumn:"1 / -1",display:"flex",justifyContent:"flex-end",gap:8}}>
+            {formOpen&&<div style={{display:"grid",gap:10,marginTop:12,padding:12,borderRadius:12,background:"#f7fafc",border:"1px solid #d7e1ec"}}>
+              <b>Επιβεβαίωση αυτόματου ελέγχου</b>
+              <label style={{display:"grid",gap:5,fontWeight:800,fontSize:12}}>Παρατήρηση (προαιρετική)<textarea value={reviewDraft.note} onChange={event=>setReviewDraft(current=>({...current,note:event.target.value}))} disabled={reviewBusy} rows={3} maxLength={1000} placeholder="Προαιρετική παρατήρηση για τον έλεγχο." style={{padding:10,border:"1px solid #cbd5e1",borderRadius:8,resize:"vertical",font:"inherit"}}/></label>
+              <small>Η επιβεβαίωση αποθηκεύει στο Audit μόνο τον ελεγκτή, την ώρα και την προαιρετική παρατήρηση. Δεν αλλάζει ποσά, ταμείο, POS–EFTPOS, τράπεζα ή απόθεμα.</small>
+              <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
                 <button type="button" className="secondary" onClick={cancelReview} disabled={reviewBusy}>Ακύρωση</button>
-                <button type="button" onClick={()=>saveReview(finding)} disabled={reviewBusy}>{reviewBusy?"Αποθήκευση…":"Αποθήκευση ελέγχου"}</button>
+                <button type="button" onClick={()=>saveReview(finding)} disabled={reviewBusy}>{reviewBusy?"Επιβεβαίωση…":"Επιβεβαίωση ελέγχου"}</button>
               </div>
             </div>}
           </article>})}</div>:<div className="platform-empty">Δεν υπάρχουν συγκεκριμένα συμβάντα για έλεγχο στα επιλεγμένα φίλτρα.</div>}
