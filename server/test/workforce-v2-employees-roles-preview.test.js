@@ -94,7 +94,8 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
     "../src/routes/workforce-v2-access.js",
     "../src/routes/workforce-v2-validation.js"
   ].map(read).join("\n");
-  const mount=read("../src/routes/platform-store-modules.js");
+  const packageMount=read("../src/routes/platform-store-modules.js");
+  const earlyPlatformMount=read("../src/routes/platform-owner-security.js");
   const ui=[
     "../../client/src/components/platform/WorkforceV2EmployeesPanel.jsx",
     "../../client/src/components/platform/WorkforceV2MigrationTab.jsx",
@@ -110,11 +111,16 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   assert.match(route,/readOnly:true/);
   assert.match(route,/applyAvailable:false/);
   assert.match(route,/applyEndpoint:null/);
+  assert.match(route,/WORKFORCE_ROUTE_NOT_FOUND/);
   assert.doesNotMatch(route,/router\.(?:post|put|patch)\("\/migration\/apply/);
 
-  const childMount=mount.indexOf('router.use("/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes)');
-  const superAdminGuard=mount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
-  assert.ok(childMount>=0&&superAdminGuard>childMount,"Workforce owner routes must be mounted before the Super Admin-only package guard");
+  const packageChildMount=packageMount.indexOf('router.use("/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes)');
+  const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
+  assert.ok(packageChildMount>=0&&packageSuperAdminGuard>packageChildMount,"Workforce package routes must be mounted before the package Super Admin-only guard");
+
+  const earlyChildMount=earlyPlatformMount.indexOf('router.use("/store-modules/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes)');
+  const earlySuperAdminGuard=earlyPlatformMount.indexOf('router.use((req,res,next)=>{');
+  assert.ok(earlyChildMount>=0&&earlySuperAdminGuard>earlyChildMount,"Owner Workforce routes must be mounted before the generic Platform Super Admin gate");
 
   assert.match(ui,/ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΟΝΟ — ΚΑΜΙΑ ΜΕΤΑΦΟΡΑ/);
   assert.match(ui,/Δεν υπάρχει κουμπί εφαρμογής/);
