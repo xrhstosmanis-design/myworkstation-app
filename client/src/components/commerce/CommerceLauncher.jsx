@@ -89,7 +89,7 @@ export default function CommerceLauncher(){
   if(!authenticated)return null;
   return <>
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
-      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation BackOffice</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
+      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
