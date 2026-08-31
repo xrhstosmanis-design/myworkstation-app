@@ -25,8 +25,6 @@ const findingTitle=finding=>{
   return "Συμβάν που χρειάζεται έλεγχο";
 };
 const findingKey=finding=>String(finding.id||`${finding.sessionId||"session"}:${finding.eventCode||"variance"}`);
-  return value?value.toFixed(2):"";
-};
 
 export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage}){
   const [filters,setFilters]=useState(emptyFilters);
