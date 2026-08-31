@@ -641,7 +641,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
   if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const rows=await prisma.$queryRaw`
     SELECT ss."id",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
-           t."id" AS "transactionId",t."amount",t."attachmentFilename",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
+           t."id" AS "transactionId",t."amount",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
     JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
@@ -667,20 +667,30 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     ORDER BY c."name"
   `;
   const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
-  res.json({items:rows.map(row=>({...row,amount:Number(row.amount||0)})),companies,stores});
+  const items=rows.map(row=>{
+    const amount=Number(row.amount||0),allocations=Array.isArray(row.allocations)?row.allocations:[];
+    const allocationTotal=Number(allocations.reduce((sum,item)=>sum+Number(item.amount||0),0).toFixed(2));
+    const checks=[];
+    if(!row.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό πληρωμής.");
+    if(!allocations.length)checks.push("Δεν έχει αντιστοιχιστεί τιμολόγιο ή παραστατικό.");
+    if(Math.abs(allocationTotal-amount)>.01)checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
+    return {...row,amount,automaticCheck:{matched:checks.length===0,allocationTotal,checks}};
+  });
+  res.json({items,companies,stores});
 }));
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
+  const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`
-      UPDATE "SupplierPaymentSettlement" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      UPDATE "SupplierPaymentSettlement" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
       WHERE "id"=${req.params.settlementId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *
     `;
     if(!updated[0])return updated;
     await tx.$executeRaw`
-      UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
@@ -689,7 +699,7 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${body.status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,supplierName:transaction[0]?.supplierName||null,amount:Number(transaction[0]?.amount||0),allocations:allocations.map(row=>({purchaseDocumentId:row.purchaseDocumentId,documentNumber:row.documentNumber||null,amount:Number(row.amount||0)})),status:body.status,note:body.note})}::jsonb)
+      VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`SUPPLIER_SETTLEMENT_${status}`},${JSON.stringify({settlementId:updated[0].id,transactionId:updated[0].transactionId,supplierId:updated[0].supplierId,supplierName:transaction[0]?.supplierName||null,amount:Number(transaction[0]?.amount||0),allocations:allocations.map(row=>({purchaseDocumentId:row.purchaseDocumentId,documentNumber:row.documentNumber||null,amount:Number(row.amount||0)})),status:status,note:body.note||"Επιβεβαιώθηκε χωρίς παρατήρηση."})}::jsonb)
     `;
     return updated;
   });
