@@ -11,21 +11,21 @@ const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(
 async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,supplierName}){
   let inboxId=null;
   try{
-    const note=`POS PREMIUM FAST • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${totalGross.toFixed(2)} € • Τιμολόγιο ${documentNumber} • Background V2.4.4`;
+    const note=`Γρήγορη καταχώριση με AI • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${totalGross.toFixed(2)} € • Τιμολόγιο ${documentNumber} • Παρασκήνιο V2.4.4`;
     const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName:"POS",note,file:{dataUrl:fileDataUrl,filename}})});
     inboxId=inbox?.id||null;
   }catch{}
   const patch=async(status,note)=>{if(!inboxId)return;try{await api(`/api/commerce/documents/inbox/${encodeURIComponent(inboxId)}`,{method:"PATCH",body:JSON.stringify({status,note})})}catch{}};
   try{
-    const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"POS PREMIUM FAST — background V2.4.4"}})});
+    const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"Γρήγορη καταχώριση με AI — background V2.4.4"}})});
     if(!job?.id)throw new Error("Δεν δημιουργήθηκε εργασία V2.4.4.");
     const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});
     const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
     if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");
     await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines})});
-    const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,note:`POS PREMIUM FAST${inboxId?` • Inbox ${inboxId}`:" • χωρίς DOCUMENTS archive"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
-    await patch("IN_REVIEW",`✅ Background V2.4.4 ολοκληρώθηκε • ${productLines.length} γραμμές • ${created?.purchaseOrderId||created?.id||"προς έλεγχο"}`);
-  }catch(error){await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο BackOffice • ${String(error?.message||error).slice(0,700)}`)}
+    const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,note:`Γρήγορη καταχώριση με AI${inboxId?` • εισερχόμενα ${inboxId}`:" • χωρίς θυρίδα εγγράφων"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
+    await patch("IN_REVIEW",`✅ Παρασκήνιο V2.4.4 ολοκληρώθηκε • ${productLines.length} γραμμές • ${created?.purchaseOrderId||created?.id||"προς έλεγχο"}`);
+  }catch(error){await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο Κεντρική Διαχείριση • ${String(error?.message||error).slice(0,700)}`)}
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
@@ -41,7 +41,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const selectFile=async next=>{
     if(!next)return;
     const qualityError=await checkPhoto(next);if(qualityError){setMessage?.(`⚠️ ${qualityError}`);return}
-    setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("PREMIUM FAST AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
+    setFile(next);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("Γρήγορη ανάγνωση με AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
     try{
       const dataUrl=await readFile(next);setFileDataUrl(dataUrl);
       const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",body:JSON.stringify({storeId:store.id,filename:next.name||"timologio.jpg",mimeType:next.type||"image/jpeg",dataUrl})});
@@ -83,7 +83,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       if(mode==="PAID"){
         stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
         setStatus("Καταχώριση πληρωμής στη βάρδια…");
-        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — PREMIUM FAST POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key})});
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key})});
         paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
         if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
       }
@@ -99,7 +99,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     }
   };
   return <div className="pos-payment-form-v3-root">
-    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>PREMIUM FAST — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στο BackOffice.</div>
+    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Γρήγορη καταχώριση — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στο Κεντρική Διαχείριση.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/*,application/pdf" disabled={busy||reading} onChange={e=>selectFile(e.target.files?.[0]||null)}/></label><button type="button" onClick={createQr} disabled={busy||reading}>QR από κινητό</button><b>{file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{qr&&<div style={{textAlign:"center",padding:10}}><img src={qr} alt="QR upload τιμολογίου" style={{width:180}}/><div>Σκάναρε και ανέβασε μία φωτογραφία ή PDF.</div></div>}
     {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
