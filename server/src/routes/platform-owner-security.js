@@ -9,8 +9,10 @@ const router=Router();
 router.use(auth);
 
 router.use((req,res,next)=>{
-  const workforcePath=/^\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2(?:\/|$)/.test(req.path);
-  const managementRole=["OWNER","ADMIN","MANAGER"].includes(String(req.user?.role||""));
+  const requestPath=String(req.originalUrl||req.url||"").split("?")[0];
+  const workforcePath=/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2(?:\/|$)/.test(requestPath);
+  const identityRole=String(req.user?.role||req.user?.platformRole||"");
+  const managementRole=["OWNER","ADMIN","MANAGER"].includes(identityRole);
 
   // Workforce v2 is mounted by the dedicated store-modules router, where the
   // tenant, target store, role and paid-package checks are enforced. Let only
