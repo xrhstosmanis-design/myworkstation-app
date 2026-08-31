@@ -12,6 +12,7 @@ import StoreFiscalIntegrations from "./StoreFiscalIntegrations.jsx";
 import SupplierSettlementReviewCenter from "./SupplierSettlementReviewCenter.jsx";
 import OtherExpenseReviewCenter from "./OtherExpenseReviewCenter.jsx";
 import BankLedgerReviewCenter from "./BankLedgerReviewCenter.jsx";
+import SuperAdminEventsCenter from "./SuperAdminEventsCenter.jsx";
 import SuperAdminChecksAnalytics from "./SuperAdminChecksAnalytics.jsx";
 import "./platform-admin.css";
 import "./platform-super-access.css";
@@ -119,6 +120,7 @@ export default function PlatformAdminApp(){
   const [showSupplierSettlementReview,setShowSupplierSettlementReview]=useState(false);
   const [showOtherExpenseReview,setShowOtherExpenseReview]=useState(false);
   const [showBankLedgerReview,setShowBankLedgerReview]=useState(false);
+  const [showEventsCenter,setShowEventsCenter]=useState(false);
   const [analyticsResult,setAnalyticsResult]=useState(null);
 
   useEffect(()=>{
@@ -416,7 +418,7 @@ export default function PlatformAdminApp(){
       <div className="platform-user"><div><small>Platform Owner</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
-      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setAnalyticsResult({modal:true})}><AlertTriangle/>Αναλύσεις</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
+      <div className="platform-title"><div><span>SUPER ADMIN CONTROL CENTER</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({modal:true})}><AlertTriangle/>Αναλύσεις</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button></div>}
@@ -492,6 +494,7 @@ export default function PlatformAdminApp(){
     {showSupplierSettlementReview&&<SupplierSettlementReviewCenter request={request} onClose={()=>setShowSupplierSettlementReview(false)} setMessage={setMessage}/>}
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
     {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
+    {showEventsCenter&&<SuperAdminEventsCenter request={request} companies={data?.companies||[]} onClose={()=>setShowEventsCenter(false)}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
