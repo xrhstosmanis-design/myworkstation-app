@@ -30,12 +30,14 @@ test("bank summary follows owner and store while dates remain shift-only",()=>{
 
 test("backend analytics remains filtered, audited and non-mutating",()=>{
   assert.match(route,/router\.post\("\/super-admin-analytics\/execute"/);
-  for(const field of ["companyId","storeId","from","to"])assert.match(route,new RegExp(`${field}:z\\.string\\(\\)\\.optional\\(\\)`));
+  assert.match(route,/await ensureCashControlSchema\(\)/);
+  for(const field of ["companyId","storeId"])assert.match(route,new RegExp(`${field}:z\\.string\\(\\)\\.trim\\(\\)\\.optional\\(\\)`));
+  for(const field of ["from","to"])assert.ok(route.includes(`${field}:z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional()`),field);
   assert.match(route,/s\."companyId"=\$\{body\.companyId\|\|null\}/);
   assert.match(route,/s\."storeId"=\$\{body\.storeId\|\|null\}/);
-  assert.match(route,/s\."openedAt">=\$\{body\.from\|\|null\}::date/);
-  assert.match(route,/INTERVAL '1 day'/);
-  assert.match(route,/event:"SUPER_ADMIN_ANALYTICS_EXECUTED"/);
+  assert.match(route,/\(s\."closedAt" AT TIME ZONE 'Europe\/Athens'\)::date>=\$\{body\.from\|\|null\}::date/);
+  assert.match(route,/\(s\."closedAt" AT TIME ZONE 'Europe\/Athens'\)::date<=\$\{body\.to\|\|null\}::date/);
+  assert.match(route,/event:"SUPER_ADMIN_AUTOMATIC_PROTECTION_CHECK_EXECUTED"/);
   assert.match(route,/readOnly:true,automaticEmployeeAccusation:false/);
   assert.match(analytics,/Μόνο για ανάγνωση/);
   assert.match(analytics,/δεν αποδίδει αυτόματα ευθύνη σε εργαζόμενο/);
