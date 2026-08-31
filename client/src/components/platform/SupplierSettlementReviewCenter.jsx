@@ -60,6 +60,6 @@ export default function SupplierSettlementReviewCenter({request,onClose,setMessa
       {item.note&&<p className="supplier-review-operator-note"><b>Σημείωση χειριστή:</b> {item.note}</p>}
       <label className="supplier-review-note">Παρατήρηση Υπερδιαχειριστή (προαιρετική)<textarea value={notes[item.id]||""} onChange={event=>changeNote(item.id,event.target.value)} maxLength="500" placeholder="Προαιρετική παρατήρηση για τον έλεγχο."/></label>
       <footer><button type="button" className="secondary" onClick={()=>openEvidence(item)} disabled={busy===`evidence:${item.id}`}><FileText/>{busy===`evidence:${item.id}`?"Άνοιγμα…":"Προβολή αποδεικτικού"}</button><button type="button" onClick={()=>review(item)} disabled={Boolean(busy)}><ShieldCheck/>Επιβεβαίωση ελέγχου</button></footer>
-    </article>})}</div></div>
+    </article>})}</div>
   </section></div>;
 }
