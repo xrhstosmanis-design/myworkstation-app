@@ -493,6 +493,6 @@ export default function PlatformAdminApp(){
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
     {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
-    {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>
+    {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }
