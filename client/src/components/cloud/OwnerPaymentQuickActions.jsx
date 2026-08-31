@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {Banknote,Building2,ChartNoAxesCombined,FileSpreadsheet,FileText,Landmark,ReceiptText,RefreshCw,Truck,UsersRound,WalletCards,X} from "lucide-react";
 import BankPaymentImportPanel from "../commerce/BankPaymentImportPanel.jsx";
 import OwnerBusinessPicture from "./OwnerBusinessPicture.jsx";
+import StorePosPaymentsModal from "../store/StorePosPaymentsModal.jsx";
 
 const categories=[
   {id:"INVOICE",label:"Πληρωμή Τιμολογίου",type:"SUPPLIER_PAYMENT",icon:FileText,document:true},
@@ -20,7 +21,7 @@ const storedUser=()=>{try{return JSON.parse(localStorage.getItem("user")||"null"
 const safeKey=()=>`owner-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
 export default function OwnerPaymentQuickActions({api,store,onChanged}){
-  const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[bankOpen,setBankOpen]=useState(false),[businessOpen,setBusinessOpen]=useState(false);
+  const [ledger,setLedger]=useState(null),[active,setActive]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[bankOpen,setBankOpen]=useState(false),[businessOpen,setBusinessOpen]=useState(false),[supplierPaymentsOpen,setSupplierPaymentsOpen]=useState(false);
   const [form,setForm]=useState({amount:"",supplierId:"",purchaseDocumentId:"",description:"",paymentSource:"EXTERNAL"});
   const user=storedUser();
   const allowed=ownerRoles.has(user?.role);
@@ -34,7 +35,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
   useEffect(()=>{if(selectedDocument?.supplierId)setForm(current=>({...current,supplierId:selectedDocument.supplierId}))},[selectedDocument?.id]);
   if(!allowed)return null;
 
-  const open=category=>{setActive(category);setError("");setMessage("");setForm({amount:"",supplierId:"",purchaseDocumentId:"",description:category.label,paymentSource:"EXTERNAL"})};
+  const open=category=>{setError("");setMessage("");if(category.type==="SUPPLIER_PAYMENT"){setSupplierPaymentsOpen(true);return}setActive(category);setForm({amount:"",supplierId:"",purchaseDocumentId:"",description:category.label,paymentSource:"EXTERNAL"})};
   const close=()=>{if(!busy)setActive(null)};
   const submit=async event=>{
     event.preventDefault();
@@ -77,6 +78,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
       <button type="button" onClick={()=>setBankOpen(true)} style={{...tileStyle,border:"2px solid #0f766e",background:"linear-gradient(180deg,#f0fdfa,#ecfdf5)"}}><span style={{width:44,height:44,borderRadius:13,display:"grid",placeItems:"center",background:"#d1fae5",color:"#047857"}}><FileSpreadsheet size={22}/></span><span><b style={{display:"block",fontSize:14,color:"#064e3b"}}>Εισαγωγή αρχείου τράπεζας</b><small style={{color:"#47766d"}}>Excel / CSV · matching προμηθευτή / τιμολογίου</small></span></button>
     </div>
     {businessOpen&&<OwnerBusinessPicture api={api} store={store} onClose={()=>setBusinessOpen(false)}/>}
+    {supplierPaymentsOpen&&<StorePosPaymentsModal api={api} store={store} initialPaymentType="SUPPLIER_PAYMENT" onClose={()=>setSupplierPaymentsOpen(false)} onChanged={async()=>{await load();onChanged?.()}} setMessage={setMessage} setError={setError}/>} 
     {bankOpen&&<div onMouseDown={e=>e.target===e.currentTarget&&setBankOpen(false)} style={{position:"fixed",inset:0,zIndex:5900,background:"rgba(10,24,43,.52)",display:"grid",placeItems:"center",padding:20}}><div style={{width:"min(1500px,97vw)",maxHeight:"92vh",overflow:"auto",background:"#f8fafc",borderRadius:20,boxShadow:"0 28px 90px rgba(0,0,0,.28)"}}><header style={{position:"sticky",top:0,zIndex:2,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#123b5d",color:"white"}}><div><b style={{fontSize:19}}>Εισαγωγή αρχείου τράπεζας</b><small style={{display:"block",opacity:.82,marginTop:3}}>{store.name} · προεπισκόπηση πριν από οποιαδήποτε πληρωμή</small></div><button type="button" onClick={()=>setBankOpen(false)} style={{border:0,background:"transparent",color:"white",cursor:"pointer"}}><X size={26}/></button></header><div style={{padding:18}}><BankPaymentImportPanel api={api} fixedStore={store}/></div></div></div>}
     {active&&<div onMouseDown={e=>e.target===e.currentTarget&&close()} style={{position:"fixed",inset:0,zIndex:5000,background:"rgba(10,24,43,.48)",display:"grid",placeItems:"center",padding:20}}><form onSubmit={submit} style={{width:"min(640px,96vw)",background:"white",borderRadius:20,boxShadow:"0 24px 80px rgba(0,0,0,.24)",overflow:"hidden"}}>
       <header style={{padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #e4ebf3"}}><div><small style={{color:"#6b7b91"}}>MYWORKSTATION · {store.name}</small><h2 style={{margin:"4px 0 0"}}>{active.label}</h2></div><button type="button" onClick={close} style={{border:0,background:"transparent",cursor:"pointer"}}><X/></button></header>
