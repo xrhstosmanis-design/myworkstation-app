@@ -118,7 +118,9 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
   assert.ok(packageChildMount>=0&&packageSuperAdminGuard>packageChildMount,"Workforce package routes must be mounted before the package Super Admin-only guard");
 
-  assert.match(earlyPlatformGate,/const workforcePath=\/\^\\\/store-modules/);
+  assert.match(earlyPlatformGate,/req\.originalUrl\|\|req\.url/);
+  assert.match(earlyPlatformGate,/api\\\/platform\\\/store-modules/);
+  assert.match(earlyPlatformGate,/req\.user\?\.role\|\|req\.user\?\.platformRole/);
   assert.match(earlyPlatformGate,/const managementRole=\["OWNER","ADMIN","MANAGER"\]/);
   assert.match(earlyPlatformGate,/if\(workforcePath&&managementRole\)return next\(\);/);
   assert.doesNotMatch(earlyPlatformGate,/platformWorkforceV2Routes/);
