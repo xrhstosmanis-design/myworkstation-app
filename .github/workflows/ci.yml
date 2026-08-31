@@ -42,12 +42,44 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
-      - name: Generate Prisma client
-        run: npm run prisma:generate -w server
+      - name: Prepare server sources and generate Prisma client
+        run: npm run build:server
       - name: Run security and licensing tests
         run: npm test -w server
-      - name: Build client and Prisma client
+      - name: Build Work-compatible client bundle
         run: npm run build
+      - name: Verify Work and Render build contracts
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const scripts = pkg.scripts || {};
+          const fail = message => {
+            console.error(message);
+            process.exit(1);
+          };
+
+          if (scripts.build !== "npm run build:client") {
+            fail("The default build must remain the Work-compatible client build.");
+          }
+          if (!scripts["build:client"]?.includes("npm run build -w client")) {
+            fail("build:client must produce the client workspace bundle.");
+          }
+          if (/prisma|database|db push/i.test(scripts.build + " " + scripts["build:client"])) {
+            fail("The Work-compatible build must not require Prisma or a database.");
+          }
+          if (!scripts["build:production"]?.includes("build:client") || !scripts["build:production"]?.includes("build:server")) {
+            fail("The production build must include both client and server preparation.");
+          }
+
+          const render = fs.readFileSync("render.yaml", "utf8");
+          if (!render.includes("buildCommand: npm install && npm run build:production")) {
+            fail("Render must use the full production build contract.");
+          }
+
+          console.log("Work and Render build contracts are separated correctly.");
+          NODE
       - name: Verify KAT production preparation invariants
         run: node server/e2e/kat-preparation-source-invariants.mjs
       - name: Verify KAT Windows observer safety invariants
