@@ -817,7 +817,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
     if(!body.idempotencyKey)return res.status(400).json({error:"Λείπει το αναγνωριστικό ασφαλούς καταχώρισης της πληρωμής."});
     if(!body.paymentSource)return res.status(400).json({error:"Δήλωσε αν η πληρωμή έγινε από το ταμείο της βάρδιας ή εξωτερικά."});
     if(body.evidenceMode==="DOCUMENT"){
-      if(!body.purchaseDocumentId)return res.status(400).json({error:"Επίλεξε το πρόχειρο/εγκεκριμένο παραστατικό από το AI Reader."});
+      if(!body.purchaseDocumentId)return res.status(400).json({error:"Επίλεξε το πρόχειρο/εγκεκριμένο παραστατικό από τη λειτουργία ανάγνωσης παραστατικού."});
       const docs=await prisma.$queryRaw`
         SELECT "id","supplierId","status"
         FROM "PurchaseDocument"
@@ -825,7 +825,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
           AND "status" IN ('DRAFT','APPROVED') LIMIT 1
       `;
       purchaseDocument=docs[0]||null;
-      if(!purchaseDocument)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμο παραστατικό του καταστήματος από τη ροή OCR/AI Reader."});
+      if(!purchaseDocument)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμο παραστατικό του καταστήματος από τη ροή OCR / λειτουργία ανάγνωσης παραστατικού."});
       if(body.type==="SUPPLIER_PAYMENT"&&body.supplierId&&purchaseDocument.supplierId!==body.supplierId)return res.status(400).json({error:"Ο προμηθευτής της πληρωμής δεν συμφωνεί με το παραστατικό."});
     }else{
       if(body.purchaseDocumentId)return res.status(400).json({error:"Καταχώριση χωρίς παραστατικό δεν μπορεί να συνδεθεί με PurchaseDocument."});

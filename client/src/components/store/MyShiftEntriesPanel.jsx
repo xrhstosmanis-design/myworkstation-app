@@ -4,7 +4,7 @@ const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",cur
 const when=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"short",timeStyle:"short"}):"—";
 const paymentTypes=new Set(["SUPPLIER_PAYMENT","OTHER_EXPENSE"]);
 const typeLabel=row=>row.type==="SUPPLIER_PAYMENT"?"Πληρωμή προμηθευτή":"Λοιπό έξοδο";
-const evidenceLabel=row=>row.evidenceMode==="DOCUMENT"?"Συνδεδεμένο παραστατικό AI Reader":row.evidenceMode==="NO_DOCUMENT"?"Χωρίς παραστατικό · πλήρες audit":"Καταχώριση με φωτογραφία/παραστατικό";
+const evidenceLabel=row=>row.evidenceMode==="DOCUMENT"?"Συνδεδεμένο παραστατικό από ανάγνωση":row.evidenceMode==="NO_DOCUMENT"?"Χωρίς παραστατικό · πλήρες audit":"Καταχώριση με φωτογραφία/παραστατικό";
 
 export default function MyShiftEntriesPanel({api,store,operator}){
   const [rows,setRows]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
