@@ -50,7 +50,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
       const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl,filename:file.name||"timologio.jpg"}})});
       let paymentTransactionId=null;
       if(mode==="PAID"){
-        const description=documentNumber?`Τιμολόγιο ${documentNumber} — FAST POS`:"Πληρωμή προμηθευτή FAST POS";
+        const description=documentNumber?`Τιμολόγιο ${documentNumber} — γρήγορη καταχώριση POS`:"Πληρωμή προμηθευτή γρήγορη καταχώριση POS";
         const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,description,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key})});
         paymentTransactionId=payment?.id||null;
         if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
