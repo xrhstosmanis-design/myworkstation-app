@@ -728,23 +728,31 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
   `;
   const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
   const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) ORDER BY "name"`;
-  res.json({items:items.map(item=>({...item,amount:Number(item.amount||0),hasAttachment:Boolean(item.hasAttachment)})),companies,stores});
+  const checkedItems=items.map(item=>{
+    const amount=Number(item.amount||0),checks=[];
+    if(!item.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό ή συνδεδεμένο παραστατικό.");
+    if(!String(item.description||"").trim())checks.push("Δεν υπάρχει αιτιολογία εξόδου.");
+    if(!item.paymentMethod)checks.push("Δεν έχει δηλωθεί τρόπος πληρωμής.");
+    return {...item,amount,hasAttachment:Boolean(item.hasAttachment),automaticCheck:{matched:checks.length===0,checks}};
+  });
+  res.json({items:checkedItems,companies,stores});
 }));
 
 router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
+  const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
-    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    const updated=await tx.$queryRaw`UPDATE "OtherExpenseReview" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.reviewId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(!updated[0])return updated;
     await tx.$executeRaw`
-      UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
+      UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
       WHERE "companyId"=${updated[0].companyId} AND "sourceTransactionId"=${updated[0].transactionId}
         AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY')
     `;
     const transaction=await tx.$queryRaw`SELECT "amount","description" FROM "StoreTransaction" WHERE "id"=${updated[0].transactionId} AND "companyId"=${updated[0].companyId} LIMIT 1`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${body.status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,amount:Number(transaction[0]?.amount||0),description:transaction[0]?.description||null,status:body.status,note:body.note})}::jsonb)`;
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${`OTHER_EXPENSE_${status}`},${JSON.stringify({otherExpenseReviewId:updated[0].id,transactionId:updated[0].transactionId,amount:Number(transaction[0]?.amount||0),description:transaction[0]?.description||null,status:status,note:body.note||"Επιβεβαιώθηκε χωρίς παρατήρηση."})}::jsonb)`;
     return updated;
   });
   if(!rows[0])return res.status(409).json({error:"Το έξοδο έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
