@@ -126,10 +126,14 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   assert.ok(earlyWorkforceMount>=0&&genericSuperAdminGate>earlyWorkforceMount,"The exact Workforce route must execute before the first generic Platform Super Admin gate");
   assert.doesNotMatch(earlyPlatformGate,/workforcePath|managementRole/);
 
-  const firstSharedPlatformMount=serverEntry.indexOf('app.use("/api/platform",platformOwnerSecurityRoutes);');
+  const mountIndex=routerName=>{
+    const match=new RegExp(`app\\.use\\([^;]*\\b${routerName}\\b[^;]*\\);`).exec(serverEntry);
+    return match?.index??-1;
+  };
+  const firstSharedPlatformMount=mountIndex("platformOwnerSecurityRoutes");
   assert.ok(firstSharedPlatformMount>=0,"The shared Platform route must be mounted");
   for(const laterRouter of ["platformSuperAdminAnalyticsDetailsRoutes","platformAdminRoutes","platformStoreIntegrationsRoutes"]){
-    const laterMount=serverEntry.indexOf(`app.use("/api/platform",${laterRouter});`);
+    const laterMount=mountIndex(laterRouter);
     assert.ok(laterMount>firstSharedPlatformMount,`${laterRouter} must stay after the shared Workforce entry`);
   }
 
