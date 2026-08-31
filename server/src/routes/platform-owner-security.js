@@ -4,9 +4,17 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
 import fixedPosDesignerRoutes from "./platform-pos-designer-fixed.js";
+import platformWorkforceV2Routes from "./platform-workforce-v2.js";
 
 const router=Router();
 router.use(auth);
+
+// This narrow Workforce v2 route must run before the generic Platform Super
+// Admin gate. Its child router independently enforces Owner/Admin/Manager
+// tenant access and the paid personnel package. Every other route below
+// remains exclusively available to Platform Super Admin.
+router.use("/store-modules/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes);
+
 router.use((req,res,next)=>{
   const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";
   if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
