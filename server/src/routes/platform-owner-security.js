@@ -4,22 +4,18 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
 import fixedPosDesignerRoutes from "./platform-pos-designer-fixed.js";
+import platformStoreModulesRoutes from "./platform-store-modules.js";
 
 const router=Router();
 router.use(auth);
 
+// This is the first generic /api/platform router in the server composition.
+// Handle store-module routes here before the generic Platform Super Admin gate.
+// The store-modules router keeps package activation Super Admin-only, while its
+// Workforce v2 child independently enforces tenant, role and paid-package access.
+router.use("/store-modules",platformStoreModulesRoutes);
+
 router.use((req,res,next)=>{
-  const requestPath=String(req.originalUrl||req.url||"").split("?")[0];
-  const workforcePath=/^\/api\/platform\/store-modules\/companies\/[^/]+\/stores\/[^/]+\/workforce-v2(?:\/|$)/.test(requestPath);
-  const identityRole=String(req.user?.role||req.user?.platformRole||"");
-  const managementRole=["OWNER","ADMIN","MANAGER"].includes(identityRole);
-
-  // Workforce v2 is mounted by the dedicated store-modules router, where the
-  // tenant, target store, role and paid-package checks are enforced. Let only
-  // eligible management identities continue to that router; every unrelated
-  // Platform Admin route remains protected by the Super Admin gate below.
-  if(workforcePath&&managementRole)return next();
-
   const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";
   if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
