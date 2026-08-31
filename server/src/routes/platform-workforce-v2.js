@@ -34,4 +34,9 @@ router.use("/roles",roleRoutes);
 router.use("/employees",employeeRoutes);
 router.use("/migration",migrationRoutes);
 
+// Deliberately terminate unknown Workforce routes here. This guarantees that
+// a non-existent migration/apply action remains an explicit 404 and can never
+// fall through into another Platform router or a broader privilege gate.
+router.use((req,res)=>res.status(404).json({error:"Δεν βρέθηκε η λειτουργία Workforce v2.",code:"WORKFORCE_ROUTE_NOT_FOUND"}));
+
 export default router;
