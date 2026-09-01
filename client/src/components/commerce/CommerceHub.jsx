@@ -9,7 +9,6 @@ import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
 import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
-import NetlinkReportsPanel from "./NetlinkReportsPanel.jsx";
 import "./commerce-hub.css";
 
 const money=value=>`${Number(value||0).toFixed(2)} €`;
@@ -157,15 +156,12 @@ export default function CommerceHub({api,stores=[]}){
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="dispatch"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("dispatch")}><Truck/> Δελτία / Πάροχος</button>
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
-        <button disabled={!active.has("NETLINK_PREPAID")} className={`${tab==="netlink"?"active":""} ${!active.has("NETLINK_PREPAID")?"locked":""}`} onClick={()=>setTab("netlink")}>NETLINK</button>
       </div>
       <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     </section>
 
     {tab==="modules"&&<section className="commerce-status-grid">{statusModules.map(module=><article key={module.key} className={`commerce-status-card ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><b>{module.name}</b><p>{module.description}</p><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ — ΑΝΕΝΕΡΓΟ":"ΥΠΟ ΑΝΑΠΤΥΞΗ / ΤΕΧΝΙΚΟ ΚΛΕΙΔΩΜΑ"}</em>{!module.commercialReady&&<LockKeyhole/>}</article>)}</section>}
-
-    {tab==="netlink"&&<NetlinkReportsPanel api={api} storeId={storeId}/>}
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
