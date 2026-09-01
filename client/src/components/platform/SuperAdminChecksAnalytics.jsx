@@ -26,7 +26,7 @@ const findingTitle=finding=>{
 };
 const findingKey=finding=>String(finding.id||`${finding.sessionId||"session"}:${finding.eventCode||"variance"}`);
 
-export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage}){
+export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage,embedded=false}){
   const [filters,setFilters]=useState(emptyFilters);
   const [result,setResult]=useState(null);
   const [busy,setBusy]=useState(false);
@@ -130,7 +130,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const scopeLabel=selectedStore?`Εταιρεία: ${selectedStore.companyName} · Κατάστημα: ${selectedStore.name}`:selectedCompany?`Εταιρεία: ${selectedCompany.name} · Όλα τα καταστήματα`:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
   const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
 
-  return <div className="platform-modal"><section className="sa-modal">
+  return <div className={embedded?"platform-checks-page":"platform-modal"}><section className={`sa-modal${embedded?" sa-page":""}`}>
     <header><div><span>ΜΟΝΟ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Κεντρική ανάλυση διαφορών ταμείου, POS–EFTPOS και Ταμείου Τράπεζας, με καταγραφή ελέγχου χωρίς μεταβολή οικονομικών δεδομένων.</p></div><button type="button" className="sa-close" onClick={onClose} disabled={busy||reviewBusy}><X/></button></header>
     {error&&<div className="platform-alert error">{error}</div>}
     <div className="supplier-review-filters">

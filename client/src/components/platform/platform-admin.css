@@ -37,3 +37,7 @@
 .platform-action-utility{grid-template-columns:1fr}
 @media(max-width:1380px){.platform-title{flex-direction:column}.platform-title-actions{width:100%;max-width:none;grid-template-columns:repeat(3,minmax(0,1fr));flex:1}.platform-action-group{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:880px){.platform-title-actions{grid-template-columns:1fr}.platform-action-group{grid-template-columns:repeat(2,minmax(0,1fr))}.platform-action-utility{grid-template-columns:1fr}}
+
+
+/* Κέντρο Ελέγχων Super Admin: κανονική σελίδα, όχι αναδυόμενο παράθυρο. */
+.platform-checks-page{min-height:calc(100vh - 64px);padding:24px;background:#eef5f8}.platform-checks-page .sa-page{width:min(1320px,100%);max-height:none;min-height:calc(100vh - 112px);margin:0 auto;border-radius:18px;box-shadow:0 12px 36px #16334a18}.platform-checks-page .supplier-review-filters{position:sticky;top:0;z-index:2;background:#f7fafc;padding:12px 0}@media(max-width:800px){.platform-checks-page{padding:12px}.platform-checks-page .sa-page{min-height:calc(100vh - 88px);border-radius:12px}.platform-checks-page .supplier-review-filters{position:static}}
