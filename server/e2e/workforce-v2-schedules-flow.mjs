@@ -85,6 +85,7 @@ async function main(){
   const blockedLeaveAssignment=await request(`${base}/schedules/${revision.payload.item.id}/assignments`,{method:"POST",token,body:{version:revision.payload.item.version,date:"2027-03-02",employeeId:employeeB,shiftTemplateId:morningId,confirmed:true,reason:"E2E άδεια block"}});assert.equal(blockedLeaveAssignment.response.status,409,JSON.stringify(blockedLeaveAssignment.payload));
   const validation=await request(`${base}/schedules/${revision.payload.item.id}/validation`,{token});assert.equal(validation.response.status,200,JSON.stringify(validation.payload));
   const audits=await prisma.workforceAuditLog.count({where:{companyId,action:{startsWith:"WORKFORCE_"}}});assert.ok(audits>=12,`expected Workforce audit rows, got ${audits}`);
+  const auditFeed=await request(`${base}/audit`,{token});assert.equal(auditFeed.response.status,200,JSON.stringify(auditFeed.payload));assert.ok(auditFeed.payload.items.some(item=>item.action==="WORKFORCE_EXCEPTION_APPROVED"&&item.reason));assert.ok(auditFeed.payload.items.some(item=>item.action==="WORKFORCE_LEAVE_APPROVED"&&item.employeeName));
   console.log("E2E Workforce v2 schedules flow passed",{scheduleId:schedule.id,revisionId:revision.payload.item.id,employeeA,employeeB,audits});
 }
 
