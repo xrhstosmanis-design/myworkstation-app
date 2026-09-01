@@ -51,6 +51,8 @@ test("Workforce v2 attendance keeps card entries isolated, audited and protected
   assert.match(route,/WORKFORCE_CLOCK_OUT/);
   assert.match(route,/WORKFORCE_OVER_8_HOURS_APPROVED/);
   assert.match(route,/approve-over-8-hours/);
+  assert.match(route,/scheduledMinutes/);
+  assert.match(route,/varianceMinutes/);
   assert.match(route,/Μόνο Super Admin ή Ιδιοκτήτης/);
   assert.match(route,/status:\"PUBLISHED\"/);
   assert.match(ui,/Παρουσίες και κάρτα εργασίας/);
