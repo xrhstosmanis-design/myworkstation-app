@@ -12,6 +12,7 @@ export default function WorkforceV2ScheduleTab({company,store,request,data}){
   const [items,setItems]=useState([]),[leaves,setLeaves]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
   const [date,setDate]=useState(today()),[periodType,setPeriodType]=useState("WEEK"),[selected,setSelected]=useState(""),[employeeId,setEmployeeId]=useState(""),[templateId,setTemplateId]=useState(""),[slot,setSlot]=useState("1"),[note,setNote]=useState("");
   const [view,setView]=useState("DAILY"),[validation,setValidation]=useState(null),[editing,setEditing]=useState(null),[leaveForm,setLeaveForm]=useState({employeeId:"",leaveType:"DAY_OFF",startDate:today(),endDate:today(),comments:""});
+  const [reasonDialog,setReasonDialog]=useState(null),[reasonText,setReasonText]=useState("");
   const selectedSchedule=useMemo(()=>items.find(item=>item.id===selected)||null,[items,selected]);
   const activeEmployees=useMemo(()=>data.employees.filter(item=>item.active),[data.employees]);
   const templates=useMemo(()=>data.shiftTemplates.filter(item=>item.active),[data.shiftTemplates]);
@@ -20,7 +21,13 @@ export default function WorkforceV2ScheduleTab({company,store,request,data}){
   const days=useMemo(()=>[...new Set(assignments.map(item=>item.date))].sort(),[assignments]);
   const byDay=useMemo(()=>Object.fromEntries(days.map(day=>[day,assignments.filter(item=>item.date===day)])),[assignments,days]);
   const dailyRows=byDay[date]||[];
-  const reason=label=>window.prompt(`${label} (καταγράφεται στο Audit):`);
+  const requestReason=(label,onConfirm)=>{setError("");setReasonText("");setReasonDialog({label,onConfirm})};
+  const confirmReason=async()=>{
+    const value=reasonText.trim();
+    if(!value)return setError("Γράψε υποχρεωτικά αιτιολογία πριν συνεχίσεις.");
+    const action=reasonDialog?.onConfirm;setReasonDialog(null);setReasonText("");
+    await action?.(value);
+  };
   const canEdit=Boolean(selectedSchedule&&["DRAFT","PREVIEWED"].includes(selectedSchedule.status));
 
   const load=async({keepNotice=false}={})=>{
@@ -38,62 +45,62 @@ export default function WorkforceV2ScheduleTab({company,store,request,data}){
     try{const result=await request(`${base}/schedules/${schedule.id}/validation`);setValidation({...result,scheduleId:schedule.id});setNotice("Ο έλεγχος προγράμματος ενημερώθηκε.");}
     catch(e){setError(e.message)}finally{setBusy(false)}
   };
-  const create=async()=>{
-    const value=reason("Αιτιολογία δημιουργίας προγράμματος");if(!value)return;
+  const create=()=>requestReason("Αιτιολογία δημιουργίας προγράμματος",async value=>{
     setBusy(true);setError("");
     try{const result=await request(`${base}/schedules`,{method:"POST",body:JSON.stringify({periodStart:date,periodType,confirmed:true,reason:value})});setSelected(result.item.id);setNotice(result.copiedFromPublished?"Δημιουργήθηκε νέα έκδοση από το δημοσιευμένο πρόγραμμα.":"Δημιουργήθηκε πρόχειρο πρόγραμμα.");await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
-  };
-  const transition=async(schedule,status)=>{
-    const value=reason(`Αιτιολογία για ${statusText[status]}`);if(!value)return;
+  });
+  const transition=(schedule,status)=>requestReason(`Αιτιολογία για ${statusText[status]}`,async value=>{
     setBusy(true);setError("");
     try{const result=await request(`${base}/schedules/${schedule.id}/transition`,{method:"POST",body:JSON.stringify({version:schedule.version,status,confirmed:true,reason:value})});setValidation({...result.validation,scheduleId:schedule.id});setNotice(`Το πρόγραμμα είναι πλέον ${statusText[status].toLowerCase()}.`);await load({keepNotice:true});}
     catch(e){setError(e.message);if(e.validation)setValidation({...e.validation,scheduleId:schedule.id});}finally{setBusy(false)}
-  };
+  });
   const payload=()=>({version:selectedSchedule.version,date,employeeId,shiftTemplateId:templateId,slot:Number(slot||1),note:note.trim()||null,confirmed:true});
   const resetAssignment=()=>{setEditing(null);setEmployeeId("");setTemplateId("");setSlot("1");setNote("")};
-  const assign=async()=>{
+  const assign=()=>{
     if(!canEdit||!employeeId||!templateId)return setError("Επίλεξε πρόχειρο πρόγραμμα, εργαζόμενο και πρότυπο βάρδιας.");
-    const value=reason(editing?"Αιτιολογία αλλαγής ανάθεσης":"Αιτιολογία ανάθεσης");if(!value)return;
+    requestReason(editing?"Αιτιολογία αλλαγής ανάθεσης":"Αιτιολογία ανάθεσης",async value=>{
     setBusy(true);setError("");
     try{const method=editing?"PUT":"POST",path=editing?`${base}/schedules/${selectedSchedule.id}/assignments/${editing.id}`:`${base}/schedules/${selectedSchedule.id}/assignments`;const result=await request(path,{method,body:JSON.stringify({...payload(),reason:value})});setNotice(result.warnings?.length?"Η ανάθεση καταχωρίστηκε ως «Χρειάζεται έγκριση».":"Η ανάθεση καταχωρίστηκε.");resetAssignment();await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
+    });
   };
   const editAssignment=assignment=>{setEditing(assignment);setDate(assignment.date);setEmployeeId(assignment.employee?.id||"");setTemplateId(assignment.shiftTemplate.id);setSlot(String(assignment.slot));setNote(assignment.note||"");setError("");setNotice("")};
-  const removeAssignment=async assignment=>{
-    const value=reason("Αιτιολογία αφαίρεσης ανάθεσης");if(!value)return;
+  const removeAssignment=assignment=>requestReason("Αιτιολογία αφαίρεσης ανάθεσης",async value=>{
     setBusy(true);setError("");
     try{await request(`${base}/schedules/${selectedSchedule.id}/assignments/${assignment.id}`,{method:"DELETE",body:JSON.stringify({version:selectedSchedule.version,confirmed:true,reason:value})});setNotice("Η ανάθεση αφαιρέθηκε.");await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
-  };
-  const approveException=async assignment=>{
+  });
+  const approveException=assignment=>{
     const approved=assignment.warningJson?.approvedRuleCodes||[];
     const warning=warningsFor(assignment).find(item=>!approved.includes(item.ruleCode));
     if(!warning)return;
-    const value=reason(`Υποχρεωτική αιτιολογία έγκρισης εξαίρεσης: ${warning.message}`);if(!value)return;
+    requestReason(`Υποχρεωτική αιτιολογία έγκρισης εξαίρεσης: ${warning.message}`,async value=>{
     setBusy(true);setError("");
     try{const result=await request(`${base}/schedules/${selectedSchedule.id}/exceptions`,{method:"POST",body:JSON.stringify({assignmentId:assignment.id,ruleCode:warning.ruleCode,confirmed:true,reason:value})});setNotice(result.allApproved?"Η εξαίρεση εγκρίθηκε.":"Εγκρίθηκε ένας έλεγχος· απομένει επόμενη εξαίρεση στην ίδια ανάθεση.");await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
+    });
   };
-  const submitLeave=async()=>{
+  const submitLeave=()=>{
     if(!leaveForm.employeeId)return setError("Επίλεξε εργαζόμενο για το αίτημα.");
-    const value=reason("Αιτιολογία αιτήματος άδειας ή ρεπό");if(!value)return;
+    requestReason("Αιτιολογία αιτήματος άδειας ή ρεπό",async value=>{
     setBusy(true);setError("");
     try{await request(`${base}/leaves`,{method:"POST",body:JSON.stringify({...leaveForm,storeId:store.id,comments:leaveForm.comments.trim()||null,confirmed:true,reason:value})});setNotice("Το αίτημα καταχωρίστηκε για έγκριση.");setLeaveForm({employeeId:"",leaveType:"DAY_OFF",startDate:date,endDate:date,comments:""});await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
+    });
   };
-  const decideLeave=async(item,status)=>{
-    const value=reason(`${status==="APPROVED"?"Έγκριση":status==="REJECTED"?"Απόρριψη":"Ακύρωση"} αιτήματος`);if(!value)return;
+  const decideLeave=(item,status)=>requestReason(`${status==="APPROVED"?"Έγκριση":status==="REJECTED"?"Απόρριψη":"Ακύρωση"} αιτήματος`,async value=>{
     setBusy(true);setError("");
     try{await request(`${base}/leaves/${item.id}/decision`,{method:"POST",body:JSON.stringify({status,confirmed:true,reason:value})});setNotice("Το αίτημα ενημερώθηκε.");await load({keepNotice:true});}
     catch(e){setError(e.message)}finally{setBusy(false)}
-  };
+  });
   const validationFor=validation?.scheduleId===shownSchedule?.id?validation:null;
   const assignedCount=assignments.filter(item=>item.employee).length;
 
   return <section className="workforce-v2-tab workforce-schedule-workspace">
     <div className="workforce-v2-section-title"><div><h3><CalendarDays/> Πρόγραμμα βαρδιών</h3><p>Ημερήσια και εβδομαδιαία προβολή, έλεγχοι ανάθεσης, εξαιρέσεις και έκδοση προγράμματος.</p></div><button className="secondary" onClick={()=>load()} disabled={busy}><RefreshCw/> Ανανέωση</button></div>
     {error&&<div className="platform-alert error">{error}</div>}{notice&&<div className="platform-alert success">{notice}</div>}
+    {reasonDialog&&<div className="workforce-reason-backdrop" role="dialog" aria-modal="true" aria-label="Αιτιολογία και επιβεβαίωση"><div className="workforce-reason-dialog"><h4>Αιτιολογία και επιβεβαίωση</h4><p>{reasonDialog.label}. Η αιτιολογία θα καταγραφεί στο Audit.</p><label>Υποχρεωτική αιτιολογία<textarea autoFocus value={reasonText} onChange={event=>setReasonText(event.target.value)} placeholder="Γράψε την αιτιολογία της ενέργειας"/></label><div><button className="secondary" onClick={()=>setReasonDialog(null)}>Ακύρωση</button><button className="primary" onClick={confirmReason} disabled={busy}>Επιβεβαίωση</button></div></div></div>}
     <div className="workforce-schedule-controlbar"><label>Ημερομηνία<input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label><label>Περίοδος<select value={periodType} onChange={event=>setPeriodType(event.target.value)}><option value="WEEK">Εβδομάδα</option><option value="MONTH">Μήνας</option></select></label><button className="primary" onClick={create} disabled={busy}><Plus/> Νέο πρόχειρο πρόγραμμα</button></div>
     <div className="workforce-schedule-overview"><div><small>Επιλεγμένο πρόγραμμα</small><select value={selected} onChange={event=>{setSelected(event.target.value);setValidation(null);resetAssignment();}}><option value="">Επίλεξε πρόγραμμα</option>{items.filter(item=>item.status!=="SUPERSEDED").map(item=><option key={item.id} value={item.id}>{item.periodStart} · έκδοση {item.version} · {statusText[item.status]}</option>)}</select></div><div className="workforce-view-switch"><button className={view==="DAILY"?"active":""} onClick={()=>setView("DAILY")}>Αναλυτική ημέρας</button><button className={view==="WEEK_SUMMARY"?"active":""} onClick={()=>setView("WEEK_SUMMARY")}>Συνοπτική εβδομάδας</button><button className={view==="WEEK_DETAILED"?"active":""} onClick={()=>setView("WEEK_DETAILED")}>Αναλυτική εβδομάδας</button></div></div>
     {shownSchedule&&<><div className="workforce-schedule-metrics"><article><CalendarDays/><div><small>Περίοδος</small><b>{shownSchedule.periodStart} – {shownSchedule.periodEnd}</b></div></article><article><UsersRound/><div><small>Κάλυψη</small><b>{assignedCount}/{assignments.length} αναθέσεις</b></div></article><article><AlertTriangle/><div><small>Έλεγχοι</small><b>{validationFor?`${validationFor.errors.length} σφάλματα · ${validationFor.approvals.length} εγκρίσεις`:"Πάτησε Έλεγχος"}</b></div></article><article><CheckCircle2/><div><small>Κατάσταση</small><b>{statusText[shownSchedule.status]}</b></div></article></div>
