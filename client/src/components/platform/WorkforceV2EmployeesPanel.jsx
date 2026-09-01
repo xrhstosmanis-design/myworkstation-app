@@ -6,6 +6,7 @@ import WorkforceV2MigrationTab from "./WorkforceV2MigrationTab.jsx";
 import WorkforceV2RoleTab from "./WorkforceV2RoleTab.jsx";
 import WorkforceV2RulesTab from "./WorkforceV2RulesTab.jsx";
 import WorkforceV2ShiftTemplatesTab from "./WorkforceV2ShiftTemplatesTab.jsx";
+import WorkforceV2ScheduleTab from "./WorkforceV2ScheduleTab.jsx";
 import useWorkforceV2Manager from "./useWorkforceV2Manager.js";
 import "./workforce-v2-employees.css";
 import "./workforce-v2-rules-shifts.css";
@@ -33,6 +34,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
       <button className={tab==="roles"?"active":""} onClick={()=>setTab("roles")}><Briefcase/> Ρόλοι</button>
       <button className={tab==="rules"?"active":""} onClick={()=>setTab("rules")}><AlertTriangle/> Κανόνες {data.capabilities?.rulesManagement?"":"🔒"}</button>
       <button className={tab==="shifts"?"active":""} onClick={()=>setTab("shifts")}><Clock3/> Πρότυπα βαρδιών</button>
+      <button className={tab==="schedule"?"active":""} onClick={()=>setTab("schedule")}><Clock3/> Πρόγραμμα & Άδειες</button>
       <button className={tab==="migration"?"active":""} onClick={()=>setTab("migration")}><Eye/> Προεπισκόπηση μεταφοράς</button>
     </nav>
     {error&&<div className="platform-alert error">{error}</div>}
@@ -41,6 +43,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
     {tab==="roles"&&<WorkforceV2RoleTab manager={manager}/>} 
     {tab==="rules"&&<WorkforceV2RulesTab manager={manager}/>} 
     {tab==="shifts"&&<WorkforceV2ShiftTemplatesTab manager={manager}/>} 
+    {tab==="schedule"&&<WorkforceV2ScheduleTab company={company} store={store} request={request} data={data}/>}
     {tab==="migration"&&<WorkforceV2MigrationTab manager={manager} store={store}/>} 
     <WorkforceV2ActionPreview manager={manager}/>
   </div>;
