@@ -126,7 +126,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId}) AND (a."actionType" IN ('RETURN','CANCEL') OR a."actionType" IN ('RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE'))
+      WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
@@ -154,13 +154,13 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL OR COALESCE(a."eventType",'') ILIKE ${text} OR COALESCE(a."details"::text,'') ILIKE ${text})
       ORDER BY a."createdAt" DESC LIMIT 10000`;
-    const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
+    const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),financialDetails:{amount:n(r.amount)},sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
       const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isCartCancel=r.actionType==="CART_CANCEL",isPriceChange=r.actionType==="PRICE_CHANGE";
       const baseAction={eventType:isReturn?"POS_RETURN":isCartCancel?"CART_CANCEL":"POS_CANCEL"};
       const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):(isCartRemoval||isCartCancel)?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
-      const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isCartCancel?"CART_CANCEL":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":baseAction.eventType;
+      const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isCartCancel?"CART_CANCEL":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":isReturn||r.actionType==="CANCEL"?baseAction.eventType:r.actionType;
       const description=isPriceChange
         ?`ΧΕΙΡΟΚΙΝΗΤΗ ΑΛΛΑΓΗ ΤΙΜΗΣ · ${details.productName||"Άγνωστο προϊόν"} · από ${n(details.oldPrice).toFixed(2)} € σε ${n(details.newPrice).toFixed(2)} € · διαφορά ${(n(details.newPrice)-n(details.oldPrice)).toFixed(2)} €${r.reason?` · Αιτιολογία: ${r.reason}`:""} · μόνο για την τρέχουσα συναλλαγή`
         :isCartCancel
@@ -175,11 +175,11 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
             ?`ΙΔΙΑ / ΠΡΟΣΩΠΙΚΗ ΚΑΤΑΝΑΛΩΣΗ · χωρίς απόδειξη · δεν μετρά στον τζίρο · ${r.saleId||"—"}`
             :isDestruction
               ?`ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ · χωρίς απόδειξη · δεν μετρά στον τζίρο · ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
-              :`ΑΚΥΡΩΣΗ ΠΩΛΗΣΗΣ · αρχική πώληση ${r.relatedSaleId||"—"} · αντιλογισμός ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`;
+              :`${greekAuditEventLabel(r.actionType)}${details.productName?` · ${details.productName}`:""}${details.sku?` · SKU ${details.sku}`:""}${r.reason?` · ${r.reason}`:""}`;
       return {
         id:r.id,createdAt:r.createdAt,eventType,amount,description,
         supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:r.actorName,subtractFromShift:false,
-        reversedAt:null,reversedByName:null,reversalReason:r.reason||null,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
+        reversedAt:null,reversedByName:null,reversalReason:r.reason||null,financialDetails:details,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
     });
     const operatorItems=operatorRows.map(r=>{
@@ -198,7 +198,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         :expenseEvent||supplierEvent
           ?`${greekAuditEventLabel(r.eventType)} · ${n(details.amount).toFixed(2)} €${supplierEvent&&details.supplierName?` · ${details.supplierName}`:""}${allocatedInvoices?` · ${allocatedInvoices}`:""}${details.note?` · ${details.note}`:""}`
           :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
-      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
+      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
     const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
