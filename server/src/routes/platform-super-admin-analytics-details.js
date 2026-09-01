@@ -40,6 +40,13 @@ const reviewDecisionLabel=decision=>({
   REVIEWED_NO_CHANGE:"Ελεγμένο χωρίς αλλαγή"
 }[decision]||"Καταχωρισμένος έλεγχος");
 
+async function requireBasicCheckPackage(companyId,storeId){
+  if(!companyId||!storeId)throw Object.assign(new Error("Για εκτέλεση BASIC ελέγχου επίλεξε συγκεκριμένο ιδιοκτήτη και κατάστημα."),{status:400});
+  const rows=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "moduleKey"='BASIC_CHECK' LIMIT 1`;
+  const row=rows[0],now=Date.now();
+  if(!row?.active||row.startsAt&&new Date(row.startsAt).getTime()>now||row.endsAt&&new Date(row.endsAt).getTime()<now)throw Object.assign(new Error("Το πακέτο BASIC Έλεγχος δεν είναι ενεργό για το επιλεγμένο κατάστημα."),{status:403});
+}
+
 function snapshotFromSession(session){
   return{
     transactionCount:Number(session.transactionCount||0),
@@ -129,6 +136,7 @@ function findingFromSession(session){
 router.post("/super-admin-analytics/execute",async(req,res,next)=>{
   try{
     const body=filterSchema.parse(req.body||{});
+    await requireBasicCheckPackage(body.companyId,body.storeId);
     const [rows,findingSessions]=await Promise.all([
       prisma.$queryRaw`
         SELECT s."storeId",s."companyId",COUNT(*)::int AS "shifts",
