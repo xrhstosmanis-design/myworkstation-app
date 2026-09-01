@@ -8,7 +8,9 @@ const ui=await readFile(new URL("../../client/src/components/commerce/installKio
 test("central Audit includes explicit POS full-return events without replacing ledger rows",()=>{
   assert.match(route,/FROM "StoreTransaction" t/);
   assert.match(route,/FROM "PosSaleActionAudit" a/);
-  assert.match(route,/a\."actionType" IN \('RETURN','CANCEL'\)/);
+  assert.match(route,/a\."actionType" IN \([^\n]*'RETURN'/);
+  assert.match(route,/a\."actionType" IN \([^\n]*'CANCEL'/);
+  assert.doesNotMatch(route,/a\."actionType" IN \([^\n]*'WASTE'/);
   assert.match(route,/eventType:isReturn\?"POS_RETURN":isCartCancel\?"CART_CANCEL":"POS_CANCEL"/);
   assert.match(route,/CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE/);
   assert.match(route,/ΑΚΥΡΩΣΗ ΛΙΣΤΑΣ ΠΩΛΗΣΗΣ/);
