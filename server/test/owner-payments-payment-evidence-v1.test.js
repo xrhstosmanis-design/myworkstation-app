@@ -39,6 +39,6 @@ test("BackOffice CSV preserves evidence and cash-source audit",()=>{
   assert.match(ui,/Πηγή πληρωμής/);
   assert.match(ui,/ΑΠΟ ΒΑΡΔΙΑ/);
   assert.match(ui,/ΕΞΩΤΕΡΙΚΗ/);
-  assert.match(ui,/AI Reader \$\{row\.purchaseDocumentId\|\|""\}/);
+  assert.match(ui,/Ανάγνωση παραστατικού \$\{row\.purchaseDocumentId\|\|""\}/);
   assert.match(ui,/row\.sessionId\|\|""/);
 });

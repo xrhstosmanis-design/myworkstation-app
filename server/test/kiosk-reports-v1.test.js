@@ -40,7 +40,7 @@ test("real report tabs use real ledgers and unavailable fiscal data is not inven
 
 test("Kiosk report UI includes the photographed report families and bottom actions",()=>{
   const c=read(client);
-  for(const label of ["Διαγραφές λίστας πώλησης","Αλλαγές τιμών","Απενεργοποιήσεις ειδών","Ζ Ταμειακής","Χρονολόγιο κινήσεων ειδών","Αναφορά τμημάτων","Παραστατικά","Απογραφές","Καταστροφές","Στιγμιότυπα αποθήκης","Στατιστικά αποθήκης","Στατιστικά πωλήσεων","LogIn"])assert.ok(c.includes(label),label);
+  for(const label of ["Διαγραφές λίστας πώλησης","Αλλαγές τιμών","Απενεργοποιήσεις ειδών","Ζ Ταμειακής","Χρονολόγιο κινήσεων ειδών","Αναφορά τμημάτων","Παραστατικά","Απογραφές","Καταστροφές","Στιγμιότυπα αποθήκης","Στατιστικά αποθήκης","Στατιστικά πωλήσεων","Συνδέσεις"])assert.ok(c.includes(label),label);
   for(const label of ["Κλείσιμο","Ανανέωση","Excel / CSV","PDF / Εκτύπωση"])assert.ok(c.includes(label),label);
 });
 

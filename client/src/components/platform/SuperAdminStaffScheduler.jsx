@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Banknote,CalendarClock,CheckCircle2,LockKeyhole,Printer,RefreshCw,Save,Send,ShieldCheck,Sparkles,Users,X} from "lucide-react";
+import WorkforceV2EmployeesPanel from "./WorkforceV2EmployeesPanel.jsx";
 import "./personnel-program.css";
 
 const FALLBACK_PACKAGES=[
@@ -124,6 +125,10 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
             </article>;
           })}
         </div>
+      </section>
+
+      <section className="workforce-v2-section">
+        <WorkforceV2EmployeesPanel company={company} store={store} request={request}/>
       </section>
 
       <section className="workforce-v2-section">

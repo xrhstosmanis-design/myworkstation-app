@@ -26,14 +26,14 @@ test("Platform Super Admin can append a review without changing financial record
   assert.doesNotMatch(route,/UPDATE "BankLedger"/);
 });
 
-test("analytics UI shows pending progress and an auditable review form",()=>{
-  for(const label of ["Εκκρεμή συμβάντα","Καταχώριση ελέγχου","Καταχωρισμένη εξήγηση","Επιβεβαιωμένο έλλειμμα","Ελεγμένο χωρίς αλλαγή","Αιτιολογία / σημείωση ελέγχου","Αποθήκευση ελέγχου","Τελευταίος έλεγχος"]){
-    assert.match(analytics,new RegExp(label));
+test("analytics UI shows pending progress and an auditable confirmation form",()=>{
+  for(const label of ["Εκκρεμή συμβάντα","Επιβεβαίωση αυτόματου ελέγχου","Καταχωρισμένη εξήγηση","Επιβεβαιωμένο έλλειμμα","Ελεγμένο χωρίς αλλαγή","Παρατήρηση (προαιρετική)","Επιβεβαίωση ελέγχου","Τελευταίος έλεγχος"]){
+    assert.ok(analytics.includes(label),`Missing UI label: ${label}`);
   }
-  assert.match(analytics,/\/api\/platform\/super-admin-analytics\/sessions\/\$\{encodeURIComponent\(finding\.sessionId\)\}\/reviews/);
+  assert.match(analytics,/\/api\/platform\/super-admin-analytics\/sessions\/\$\{encodeURIComponent\(finding\.sessionId\)\}\/confirmation/);
   assert.match(analytics,/finding\.reviewValid===true/);
   assert.match(analytics,/finding\.recheckRequired===true/);
-  assert.match(analytics,/Δεν αλλάζει ποσό βάρδιας, ταμείο, POS–EFTPOS ή τραπεζικό υπόλοιπο/);
+  assert.match(analytics,/Δεν αλλάζει ποσά, ταμείο, POS–EFTPOS, τράπεζα ή απόθεμα/);
 });
 
 test("review submission remains tenant scoped and requires a closed shift",()=>{

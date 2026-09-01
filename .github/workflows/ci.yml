@@ -142,4 +142,5 @@ jobs:
           run_flow server/e2e/kat-online-ordering-flow.mjs
           run_flow server/e2e/kat-preparation-milk-stock-flow.mjs
           run_flow server/e2e/netlink-prepaid-flow.mjs
+          run_flow server/e2e/workforce-v2-employees-roles-preview-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
