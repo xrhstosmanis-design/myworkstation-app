@@ -28,6 +28,8 @@ test("Workforce v2 schedule UI exposes all requested operational views",()=>{
   assert.match(ui,/Άδειες, ρεπό και απουσίες/);
   assert.match(ui,/Υποχρεωτική αιτιολογία έγκρισης εξαίρεσης/);
   assert.match(ui,/νέα έκδοση από το δημοσιευμένο πρόγραμμα/i);
+  assert.match(ui,/Αιτιολογία και επιβεβαίωση/);
+  assert.doesNotMatch(ui,/window\.prompt/);
 });
 
 test("Workforce schedule server route passes Node syntax check",()=>{
