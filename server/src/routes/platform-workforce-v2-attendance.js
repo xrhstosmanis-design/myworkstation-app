@@ -24,7 +24,8 @@ function issueSummary(session,assignment){
 }
 function serializeSession(session){
   const assignment=session.scheduledAssignmentId&&session.assignment?{id:session.assignment.id,date:iso(session.assignment.date),shiftTemplate:{id:session.assignment.shiftTemplate.id,name:session.assignment.shiftTemplate.name,startTime:session.assignment.shiftTemplate.startTime,endTime:session.assignment.shiftTemplate.endTime}}:null;
-  return {id:session.id,employee:{id:session.employee.id,fullName:session.employee.fullName},startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes:minutes(session.workedMinutes),lateMinutes:minutes(session.lateMinutes),earlyLeaveMinutes:minutes(session.earlyLeaveMinutes),overtimeMinutes:minutes(session.overtimeMinutes),status:session.status,issues:Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[],assignment};
+  const scheduledMinutes=assignment?shiftMinutes(session.assignment.shiftTemplate):null,workedMinutes=minutes(session.workedMinutes);
+  return {id:session.id,employee:{id:session.employee.id,fullName:session.employee.fullName},startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes,scheduledMinutes,varianceMinutes:scheduledMinutes===null?null:workedMinutes-scheduledMinutes,lateMinutes:minutes(session.lateMinutes),earlyLeaveMinutes:minutes(session.earlyLeaveMinutes),overtimeMinutes:minutes(session.overtimeMinutes),status:session.status,issues:Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[],assignment};
 }
 async function publishedAssignment(context,employeeId,date){
   const at=dayStart(date);
@@ -38,7 +39,8 @@ router.get("/",async(req,res,next)=>{try{
   const map=new Map(assignments.map(item=>[item.id,item]));
   const rows=sessions.map(item=>serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null}));
   const employees=await prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},select:{id:true,fullName:true},orderBy:{fullName:"asc"}});
-  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
+  const scheduledRows=rows.filter(row=>row.scheduledMinutes!==null);
+  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
 }catch(error){next(error)}});
 
 const clockBody=z.object({employeeId:z.string().min(1),eventType:z.enum(["IN","OUT"]),note:z.string().trim().max(500).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});
