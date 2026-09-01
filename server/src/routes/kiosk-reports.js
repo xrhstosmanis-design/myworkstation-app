@@ -65,7 +65,8 @@ router.get("/price-changes",async(req,res,next)=>{try{
       AND (${storeId}::text IS NULL OR h."storeId"=${storeId} OR h."storeId" IS NULL)
       AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
     ORDER BY h."createdAt" DESC LIMIT 5000`;
-  const items=rows.map(r=>{const oldPrice=n(r.oldPrice),newPrice=n(r.newPrice),difference=newPrice-oldPrice,differencePercent=oldPrice?difference/oldPrice*100:null;return {...r,oldPrice,newPrice,difference,differencePercent}});\n  res.json({items,purchasePriceChangesAvailable:false});
+  const items=rows.map(r=>{const oldPrice=n(r.oldPrice),newPrice=n(r.newPrice),difference=newPrice-oldPrice,differencePercent=oldPrice?difference/oldPrice*100:null;return {...r,oldPrice,newPrice,difference,differencePercent}});
+  res.json({items,purchasePriceChangesAvailable:false});
 }catch(error){next(error)}});
 
 router.get("/movements",async(req,res,next)=>{try{
