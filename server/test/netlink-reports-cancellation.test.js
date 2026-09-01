@@ -20,3 +20,7 @@ test("Netlink cancellation requests stay operational and auditable",()=>{
   assert.match(compat,/CREATE TABLE IF NOT EXISTS "NetlinkCancellationRequest"/);
   assert.match(render,/ensure-netlink-reports-compat\.js/);
 });
+
+test("Netlink report end date includes the complete selected day",()=>{
+  assert.match(route,/to\.setHours\(23,59,59,999\)/);
+});
