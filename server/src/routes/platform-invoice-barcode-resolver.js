@@ -3,7 +3,7 @@ import {prisma} from "../prisma.js";
 
 const router=Router();
 const isSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
-router.use((req,res,next)=>{if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});next()});
+const requireSuper=(req,res,next)=>{if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});next()};
 
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]+/g," ").replace(/\s+/g," ").trim();
 const greekToLatin={Α:"A",Β:"B",Γ:"G",Δ:"D",Ε:"E",Ζ:"Z",Η:"H",Θ:"TH",Ι:"I",Κ:"K",Λ:"L",Μ:"M",Ν:"N",Ξ:"X",Ο:"O",Π:"P",Ρ:"P",Σ:"S",Τ:"T",Υ:"Y",Φ:"F",Χ:"X",Ψ:"PS",Ω:"O"};
@@ -86,7 +86,7 @@ function scoreWeb(items,code,description){
   return [...counts.values()].sort((a,b)=>(b.mentions-a.mentions)||(b.score-a.score)).slice(0,5);
 }
 
-router.post("/invoice-learning/barcode-resolve",async(req,res,next)=>{try{
+router.post("/invoice-learning/barcode-resolve",requireSuper,async(req,res,next)=>{try{
   const {supplierItemCode="",description=""}=req.body||{};
   const local=await localRows(supplierItemCode,description);
   const ranked=local.map(r=>scoreLocal(r,supplierItemCode,description)).filter(x=>x.barcodes.length).sort((a,b)=>b.score-a.score);
