@@ -34,6 +34,8 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const [reviewingId,setReviewingId]=useState("");
   const [reviewDraft,setReviewDraft]=useState(emptyReviewDraft);
   const [reviewBusy,setReviewBusy]=useState(false);
+  const [checkPackages,setCheckPackages]=useState([]);
+  const [packagesBusy,setPackagesBusy]=useState(false);
 
   const stores=useMemo(()=>companies.flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name}))),[companies]);
   const visibleStores=useMemo(()=>stores.filter(store=>!filters.companyId||String(store.companyId)===String(filters.companyId)),[stores,filters.companyId]);
@@ -45,6 +47,20 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     window.addEventListener("keydown",closeOnEscape);
     return()=>window.removeEventListener("keydown",closeOnEscape);
   },[busy,reviewBusy,onClose]);
+
+  useEffect(()=>{
+    let active=true;
+    if(!filters.companyId||!filters.storeId){
+      setCheckPackages([]);
+      return()=>{active=false};
+    }
+    setPackagesBusy(true);
+    request(`/api/platform/store-modules/companies/${encodeURIComponent(filters.companyId)}/stores/${encodeURIComponent(filters.storeId)}/check-packages`)
+      .then(data=>{if(active)setCheckPackages(data.packages||[])})
+      .catch(err=>{if(active)setError(err.message)})
+      .finally(()=>{if(active)setPackagesBusy(false)});
+    return()=>{active=false};
+  },[filters.companyId,filters.storeId,request]);
 
   const updateFilters=patch=>{
     setFilters(current=>({...current,...patch}));
@@ -82,6 +98,19 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     setError("");
     setReviewingId("");
     setReviewDraft(emptyReviewDraft);
+  };
+
+  const toggleCheckPackage=async packageItem=>{
+    if(!filters.companyId||!filters.storeId)return;
+    const nextActive=!packageItem.active;
+    const action=nextActive?"ενεργοποίηση":"απενεργοποίηση";
+    if(!window.confirm(`Θέλεις ${action} του πακέτου «${packageItem.title}» για το επιλεγμένο κατάστημα; Η ενέργεια θα καταγραφεί στο Audit.`))return;
+    setPackagesBusy(true);setError("");
+    try{
+      const data=await request(`/api/platform/store-modules/companies/${encodeURIComponent(filters.companyId)}/stores/${encodeURIComponent(filters.storeId)}/check-packages/${encodeURIComponent(packageItem.key)}`,{method:"PUT",body:JSON.stringify({active:nextActive,monthlyPrice:packageItem.monthlyPrice||0,startsAt:packageItem.startsAt||null,endsAt:packageItem.endsAt||null,notes:packageItem.notes||""})});
+      setCheckPackages(data.packages||[]);
+      setMessage?.(`Το πακέτο «${packageItem.title}» ${nextActive?"ενεργοποιήθηκε":"απενεργοποιήθηκε"} και καταγράφηκε στο Audit.`);
+    }catch(err){setError(err.message)}finally{setPackagesBusy(false)}
   };
 
   const openReview=finding=>{
@@ -141,6 +170,10 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
       <button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Έλεγχος…":"Εμφάνιση"}</button>
       <button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>Καθαρισμός</button>
     </div>
+    <section className="platform-panel sa-package-panel">
+      <div><b>Πακέτα ελέγχων ανά κατάστημα</b><p>Η ενεργοποίηση γίνεται μόνο από Υπερδιαχειριστή και καταγράφεται στο Audit. Επιλέγεις πρώτα έναν ιδιοκτήτη και ένα συγκεκριμένο κατάστημα.</p></div>
+      {!filters.companyId||!filters.storeId?<div className="platform-empty">Επίλεξε ιδιοκτήτη / εταιρεία και συγκεκριμένο κατάστημα για να διαχειριστείς τα πακέτα ελέγχων.</div>:packagesBusy&&!checkPackages.length?<div className="platform-empty">Φόρτωση πακέτων…</div>:<div className="sa-package-grid">{checkPackages.map(packageItem=><article key={packageItem.key} className={`sa-package-card ${packageItem.active?"active":""}`}><div><small>{packageItem.active?"ΕΝΕΡΓΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</small><h3>{packageItem.title}</h3><p>{packageItem.description}</p></div><button type="button" onClick={()=>toggleCheckPackage(packageItem)} disabled={packagesBusy||busy||reviewBusy}>{packageItem.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></article>)}</div>}
+    </section>
     <section className="platform-panel" style={{marginBottom:14}}><b>Πεδίο ελέγχου</b><p>Οι ημερομηνίες εφαρμόζονται στις βάρδιες και στις διαφορές ταμείου/POS–EFTPOS. Το Ταμείο Τράπεζας είναι τρέχον λογιστικό υπόλοιπο και φιλτράρεται μόνο ανά ιδιοκτήτη και κατάστημα.</p></section>
     {busy&&<section className="platform-panel" style={{marginBottom:14}}><b>Εκτελείται ο έλεγχος…</b><p>Συλλέγονται δεδομένα ανάγνωσης. Δεν αλλάζει βάρδια, ταμείο, τράπεζα, απόθεμα, παραστατικό ή υπόλοιπο.</p></section>}
     {result&&<>
