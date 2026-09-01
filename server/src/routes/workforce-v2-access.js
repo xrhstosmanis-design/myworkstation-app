@@ -1,10 +1,12 @@
 import {prisma} from "../prisma.js";
 import {PERSONNEL_BASIC,isSuperAdmin,requirePersonnelPackage,storePaidModuleState,storePaidModuleStates} from "../store-paid-modules.js";
+import {serializeWorkforceRule} from "../workforce-v2-rules.js";
 
 export const managementRoles=new Set(["OWNER","ADMIN","MANAGER"]);
 export const employeeInclude={
   roleAssignments:{include:{role:true},orderBy:[{primary:"desc"},{createdAt:"asc"}]},
   storeAccess:{orderBy:[{isBaseStore:"desc"},{createdAt:"asc"}]},
+  rules:{orderBy:[{active:"desc"},{createdAt:"asc"}]},
   hourlyRates:{orderBy:{validFrom:"desc"},take:20}
 };
 
@@ -92,6 +94,7 @@ export function serializeEmployee(employee,storeMap=new Map()){
   const hourlyRates=(employee.hourlyRates||[]).map(rate=>({
     id:rate.id,hourlyRate:Number(rate.hourlyRate),validFrom:rate.validFrom,validTo:rate.validTo,note:rate.note||null
   }));
+  const rules=(employee.rules||[]).map(rule=>serializeWorkforceRule(rule,{employeeName:employee.fullName}));
   return {
     id:employee.id,companyId:employee.companyId,baseStoreId:employee.baseStoreId||null,
     baseStoreName:storeMap.get(employee.baseStoreId)?.name||null,userId:employee.userId||null,
@@ -101,7 +104,7 @@ export function serializeEmployee(employee,storeMap=new Map()){
     maxDaysPerWeek:employee.maxDaysPerWeek,maxHoursPerWeek:Number(employee.maxHoursPerWeek),minimumDaysOff:employee.minimumDaysOff,
     canChangeStore:employee.canChangeStore,worksMorning:employee.worksMorning,worksAfternoon:employee.worksAfternoon,
     worksNight:employee.worksNight,worksWeekend:employee.worksWeekend,notes:employee.notes||null,active:employee.active,
-    roles,primaryRole:roles.find(role=>role.primary)||null,storeAccess,
+    roles,primaryRole:roles.find(role=>role.primary)||null,storeAccess,rules,
     currentHourlyRate:hourlyRates.find(rate=>!rate.validTo)||hourlyRates[0]||null,hourlyRates,
     createdAt:employee.createdAt,updatedAt:employee.updatedAt
   };
