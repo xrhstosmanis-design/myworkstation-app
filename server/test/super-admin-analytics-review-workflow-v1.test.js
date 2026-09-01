@@ -28,7 +28,7 @@ test("Platform Super Admin can append a review without changing financial record
 
 test("analytics UI shows pending progress and an auditable confirmation form",()=>{
   for(const label of ["Εκκρεμή συμβάντα","Επιβεβαίωση αυτόματου ελέγχου","Καταχωρισμένη εξήγηση","Επιβεβαιωμένο έλλειμμα","Ελεγμένο χωρίς αλλαγή","Παρατήρηση (προαιρετική)","Επιβεβαίωση ελέγχου","Τελευταίος έλεγχος"]){
-    assert.match(analytics,new RegExp(label));
+    assert.ok(analytics.includes(label),`Missing UI label: ${label}`);
   }
   assert.match(analytics,/\/api\/platform\/super-admin-analytics\/sessions\/\$\{encodeURIComponent\(finding\.sessionId\)\}\/confirmation/);
   assert.match(analytics,/finding\.reviewValid===true/);
