@@ -21,6 +21,32 @@ import {
 const router=Router({mergeParams:true});
 router.use(managementGuard);
 
+const auditObject=value=>value&&typeof value==="object"&&!Array.isArray(value)?value:{};
+const auditDate=value=>value?String(value).slice(0,10):null;
+
+router.get("/audit",async(req,res,next)=>{
+  try{
+    const context=await contextFor(req);
+    const rows=await prisma.workforceAuditLog.findMany({where:{companyId:context.company.id,storeId:context.store.id},orderBy:{createdAt:"desc"},take:100});
+    const contexts=rows.map(row=>({row,before:auditObject(row.beforeJson),after:auditObject(row.afterJson)}));
+    const actorIds=[...new Set(rows.map(row=>row.actorUserId).filter(Boolean))];
+    const employeeIds=[...new Set(contexts.map(item=>item.after.employeeId||item.before.employeeId).filter(Boolean))];
+    const templateIds=[...new Set(contexts.map(item=>item.after.shiftTemplateId||item.before.shiftTemplateId).filter(Boolean))];
+    const [actors,employees,templates]=await Promise.all([
+      actorIds.length?prisma.user.findMany({where:{id:{in:actorIds}},select:{id:true,fullName:true}}):[],
+      employeeIds.length?prisma.workforceEmployee.findMany({where:{id:{in:employeeIds}},select:{id:true,fullName:true}}):[],
+      templateIds.length?prisma.workforceShiftTemplate.findMany({where:{id:{in:templateIds}},select:{id:true,name:true,startTime:true,endTime:true}}):[]
+    ]);
+    const actorMap=new Map(actors.map(item=>[item.id,item.fullName]));
+    const employeeMap=new Map(employees.map(item=>[item.id,item.fullName]));
+    const templateMap=new Map(templates.map(item=>[item.id,item]));
+    res.json({items:contexts.map(({row,before,after})=>{
+      const source={...before,...after},employeeId=source.employeeId||null,shiftTemplateId=source.shiftTemplateId||null,template=templateMap.get(shiftTemplateId);
+      return {id:row.id,action:row.action,entityType:row.entityType,createdAt:row.createdAt,actorName:actorMap.get(row.actorUserId)||"Χρήστης συστήματος",storeName:context.store.name,employeeName:employeeMap.get(employeeId)||null,date:auditDate(source.date||source.startDate),shift:template?`${template.name} · ${template.startTime}–${template.endTime}`:null,ruleCode:source.ruleCode||null,reason:row.reason||null};
+    })});
+  }catch(error){next(error)}
+});
+
 router.get("/bootstrap",async(req,res,next)=>{
   try{
     const context=await contextFor(req);
