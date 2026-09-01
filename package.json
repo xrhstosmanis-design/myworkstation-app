@@ -17,7 +17,7 @@
     "build:client": "npm run prepare:client && npm run build -w client",
     "build:server": "npm run prepare:server && npm run prisma:generate -w server",
     "build:production": "npm run build:client && npm run build:server",
-    "start": "npm run start -w server",
+    "start": "npm run prisma:push -w server && npm run start -w server",
     "seed": "npm run seed -w server"
   },
   "devDependencies": {
