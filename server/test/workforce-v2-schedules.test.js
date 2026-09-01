@@ -29,8 +29,19 @@ test("Workforce v2 schedule UI exposes all requested operational views",()=>{
   assert.match(ui,/Υποχρεωτική αιτιολογία έγκρισης εξαίρεσης/);
   assert.match(ui,/νέα έκδοση από το δημοσιευμένο πρόγραμμα/i);
   assert.match(ui,/Αιτιολογία και επιβεβαίωση/);
+  assert.match(ui,/Audit Workforce/);
+  assert.match(ui,/Ανανέωση Audit/);
   assert.doesNotMatch(ui,/window\.prompt/);
   assert.match(ui,/await load\(\{keepNotice:true\}\);setSelected\(result\.item\.id\)/);
+});
+
+test("Workforce audit route exposes the required recorded fields",()=>{
+  const route=read("../src/routes/platform-workforce-v2.js");
+  assert.match(route,/router\.get\("\/audit"/);
+  assert.match(route,/actorName/);
+  assert.match(route,/employeeName/);
+  assert.match(route,/ruleCode/);
+  assert.match(route,/reason/);
 });
 
 test("Workforce schedule server route passes Node syntax check",()=>{
