@@ -615,15 +615,16 @@ router.get("/bank-ledger/review",requireSuperAdminSettlementReview,route(async(r
 
 router.post("/bank-ledger/:entryId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY","CANCELLED"]),note:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
+  const status="CONFIRMED";
   const rows=await prisma.$transaction(async tx=>{
-    if(body.status==="CONFIRMED"){
+    if(status==="CONFIRMED"){
       const missingProof=await tx.$queryRaw`SELECT "id" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status"='PENDING_PROOF' AND "attachmentData" IS NULL LIMIT 1`;
       if(missingProof[0]){const error=new Error("Ανέβασε πρώτα την απόδειξη κατάθεσης πριν από την επιβεβαίωση.");error.status=409;throw error}
     }
-    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${body.status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note} WHERE "id"=${req.params.entryId} AND (${scopeCompanyId}::text IS NULL OR "companyId"=${scopeCompanyId}) AND "status" IN ('PENDING_PROOF','PENDING_REVIEW','DISCREPANCY') RETURNING *`;
     if(updated[0])await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${body.status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,transactionId:updated[0].sourceTransactionId,expectedAmount:Number(updated[0].amount||0),proofAmount:updated[0].proofAmount==null?null:Number(updated[0].proofAmount),difference:updated[0].proofAmount==null?0:Number((Number(updated[0].proofAmount)-Number(updated[0].amount||0)).toFixed(2)),status:body.status,note:body.note})}::jsonb)`;
+    if(updated[0])await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.id},${`BANK_LEDGER_${status}`},${JSON.stringify({bankLedgerEntryId:updated[0].id,transactionId:updated[0].sourceTransactionId,expectedAmount:Number(updated[0].amount||0),proofAmount:updated[0].proofAmount==null?null:Number(updated[0].proofAmount),difference:updated[0].proofAmount==null?0:Number((Number(updated[0].proofAmount)-Number(updated[0].amount||0)).toFixed(2)),status:status,note:body.note||"Επιβεβαιώθηκε χωρίς παρατήρηση."})}::jsonb)`;
     return updated;
   });
   if(!rows[0])return res.status(409).json({error:"Η τραπεζική κίνηση έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
