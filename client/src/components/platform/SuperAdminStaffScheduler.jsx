@@ -138,17 +138,6 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
         </div>
       </section>
 
-      <section className="workforce-v2-section workforce-existing-scheduler">
-        <div className="workforce-v2-section-title"><div><h3>Υπάρχουσα δημιουργία προγράμματος</h3><p>Παραμένει διαθέσιμη προσωρινά, ώστε να μη χαθεί λειτουργία μέχρι να ολοκληρωθεί ο νέος editor.</p></div></div>
-        <div className="platform-title-actions">
-          <input type="date" value={weekStart} onChange={e=>setWeekStart(e.target.value)}/>
-          <button onClick={generate} disabled={Boolean(busy)}>{busy==="generate"?"Δημιουργία…":"Δημιουργία προγράμματος"}</button>
-          {schedule&&<button className="secondary" onClick={()=>window.print()}><Printer/> PDF / Εκτύπωση</button>}
-          {schedule&&<button className="secondary" onClick={email} disabled={Boolean(busy)}><Send/> Email εργαζομένων</button>}
-        </div>
-        {warnings.length>0&&<div className="platform-alert error">{warnings.length} ακάλυπτες ή προβληματικές θέσεις.</div>}
-        {!schedule?<div className="platform-empty">Θα χρησιμοποιηθούν μόνο οι εργαζόμενοι, οι άδειες, οι διαθεσιμότητες και οι βάρδιες του «{store.name}».</div>:<div className="schedule-grid super-admin-schedule-grid">{Object.entries(days).map(([date,rows])=><article className="day" key={date}><h3>{new Date(`${date}T12:00:00`).toLocaleDateString("el-GR",{weekday:"long",day:"2-digit",month:"2-digit"})}</h3>{rows.map(row=><div className={`assignment ${!row.employee?"uncovered":""}`} key={row.id}><b>{row.shiftType.name} · {row.shiftType.startTime}-{row.shiftType.endTime}</b><span>{row.employee?.fullName||"ΑΚΑΛΥΠΤΟ"}</span></div>)}</article>)}</div>}
-      </section>
     </section>
   </div>;
 }
