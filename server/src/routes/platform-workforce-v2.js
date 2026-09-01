@@ -12,6 +12,8 @@ import migrationRoutes from "./platform-workforce-v2-migration.js";
 import roleRoutes from "./platform-workforce-v2-roles.js";
 import ruleRoutes from "./platform-workforce-v2-rules.js";
 import shiftTemplateRoutes from "./platform-workforce-v2-shift-templates.js";
+import scheduleRoutes from "./platform-workforce-v2-schedules.js";
+import leaveRoutes from "./platform-workforce-v2-leaves.js";
 import {
   contextFor,employeeInclude,managementGuard,rolesForCompany,serializeEmployee,serializeRole,storePaidModuleStates,storesForContext
 } from "./workforce-v2-access.js";
@@ -53,6 +55,8 @@ router.use("/roles",roleRoutes);
 router.use("/employees",employeeRoutes);
 router.use("/rules",ruleRoutes);
 router.use("/shift-templates",shiftTemplateRoutes);
+router.use("/schedules",scheduleRoutes);
+router.use("/leaves",leaveRoutes);
 router.use("/migration",migrationRoutes);
 
 // Deliberately terminate unknown Workforce routes here. This guarantees that
