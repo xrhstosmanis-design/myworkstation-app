@@ -47,7 +47,7 @@ export default function WorkforceV2ScheduleTab({company,store,request,data}){
   };
   const create=()=>requestReason("Αιτιολογία δημιουργίας προγράμματος",async value=>{
     setBusy(true);setError("");
-    try{const result=await request(`${base}/schedules`,{method:"POST",body:JSON.stringify({periodStart:date,periodType,confirmed:true,reason:value})});setSelected(result.item.id);setNotice(result.copiedFromPublished?"Δημιουργήθηκε νέα έκδοση από το δημοσιευμένο πρόγραμμα.":"Δημιουργήθηκε πρόχειρο πρόγραμμα.");await load({keepNotice:true});}
+    try{const result=await request(`${base}/schedules`,{method:"POST",body:JSON.stringify({periodStart:date,periodType,confirmed:true,reason:value})});setNotice(result.copiedFromPublished?"Δημιουργήθηκε νέα έκδοση από το δημοσιευμένο πρόγραμμα.":"Δημιουργήθηκε πρόχειρο πρόγραμμα.");await load({keepNotice:true});setSelected(result.item.id);}
     catch(e){setError(e.message)}finally{setBusy(false)}
   });
   const transition=(schedule,status)=>requestReason(`Αιτιολογία για ${statusText[status]}`,async value=>{
