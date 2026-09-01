@@ -24,3 +24,10 @@ test("POS preview does not execute or weaken Netlink gates",()=>{
   assert.match(panel,/ΕΚΤΕΛΕΣΗ ΚΛΕΙΔΩΜΕΝΗ/);
   assert.match(index,/"\/api\/netlink",auth,requireCompanyModule\("NETLINK_PREPAID"\),netlinkRoutes/);
 });
+
+test("Netlink transaction history and cancellation request stay inside the POS panel",()=>{
+  assert.match(panel,/Συναλλαγές \/ Αναφορές/);
+  assert.match(panel,/\/api\/netlink\/reports\/daily/);
+  assert.match(panel,/\/api\/netlink\/cancellation-requests/);
+  assert.match(panel,/Αίτημα/);
+});
