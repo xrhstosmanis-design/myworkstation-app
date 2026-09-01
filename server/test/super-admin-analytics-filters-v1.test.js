@@ -6,10 +6,11 @@ const route=await readFile(new URL("../src/routes/platform-admin.js",import.meta
 const app=await readFile(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
 const analytics=await readFile(new URL("../../client/src/components/platform/SuperAdminChecksAnalytics.jsx",import.meta.url),"utf8");
 
-test("Super Admin analytics opens as a dedicated filtered review center",()=>{
+test("Super Admin analytics opens as a dedicated filtered review page",()=>{
   assert.match(app,/import SuperAdminChecksAnalytics from "\.\/SuperAdminChecksAnalytics\.jsx"/);
-  assert.match(app,/onClick=\{\(\)=>setAnalyticsResult\(\{modal:true\}\)\}/);
-  assert.match(app,/analyticsResult\?\.modal&&<SuperAdminChecksAnalytics/);
+  assert.match(app,/onClick=\{\(\)=>setAnalyticsResult\(\{page:true\}\)\}/);
+  assert.match(app,/analyticsResult\?\.page&&<SuperAdminChecksAnalytics embedded/);
+  assert.match(app,/onClose=\{\(\)=>setAnalyticsResult\(null\)\}/);
   assert.match(app,/\{\(deviceOperationsManager\|\|terminalManager\)&&<DeviceOperationsCenter[^]*?\/>\}/);
   for(const label of ["Ιδιοκτήτης / εταιρεία","Κατάστημα","Από","Έως"])assert.match(analytics,new RegExp(label));
 });
