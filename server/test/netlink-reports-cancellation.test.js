@@ -9,6 +9,8 @@ const render=fs.readFileSync(new URL("../../render.yaml",import.meta.url),"utf8"
 test("Netlink reports expose daily detail and weekly settlement without provider cancellation execution",()=>{
   assert.match(route,/router\.get\("\/reports\/daily"/);
   assert.match(route,/router\.get\("\/reports\/weekly-settlement"/);
+  assert.match(route,/router\.get\("\/reports\/daily-summary"/);
+  assert.match(route,/ensureCancellationRequestStorage/);
   assert.match(route,/AWAITING_NETLINK_STATEMENT/);
   assert.doesNotMatch(route,/netlinkClient\(\)\.cancel/);
 });
