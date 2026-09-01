@@ -130,7 +130,7 @@ app.use("/api/platform",platformAuditRoutes);
 app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoutes);
 app.use("/api/platform",platformInvoiceLearningProductSearchRoutes);
 app.use("/api/platform/master-catalog",masterCatalogPreviewRoutes);
-app.use("/api/platform/master-catalog",platformMasterCatalogMaintenanceRoutes);
+app.use("/api/platform/master-catalog",masterCatalogMaintenanceRoutes);
 app.use("/api/platform/master-catalog",masterCatalogRoutes);
 app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
