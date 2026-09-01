@@ -30,6 +30,10 @@ async function clean(){
   }
   const employees=await prisma.workforceEmployee.findMany({where:{companyId,email:{in:employeeEmails}},select:{id:true}}),employeeIds=employees.map(item=>item.id);
   if(employeeIds.length){
+    const sessions=await prisma.workforceAttendanceSession.findMany({where:{employeeId:{in:employeeIds}},select:{id:true}});
+    await prisma.workforceAuditLog.deleteMany({where:{entityId:{in:sessions.map(item=>item.id)}}});
+    await prisma.workforceAttendanceSession.deleteMany({where:{employeeId:{in:employeeIds}}});
+    await prisma.workforceTimeClockEntry.deleteMany({where:{employeeId:{in:employeeIds}}});
     const leaves=await prisma.workforceLeaveRequest.findMany({where:{employeeId:{in:employeeIds}},select:{id:true}});
     await prisma.workforceAuditLog.deleteMany({where:{entityId:{in:[...employeeIds,...leaves.map(item=>item.id)]}}});
     await prisma.workforceLeaveRequest.deleteMany({where:{employeeId:{in:employeeIds}}});
@@ -86,6 +90,14 @@ async function main(){
   const validation=await request(`${base}/schedules/${revision.payload.item.id}/validation`,{token});assert.equal(validation.response.status,200,JSON.stringify(validation.payload));
   const audits=await prisma.workforceAuditLog.count({where:{companyId,action:{startsWith:"WORKFORCE_"}}});assert.ok(audits>=12,`expected Workforce audit rows, got ${audits}`);
   const auditFeed=await request(`${base}/audit`,{token});assert.equal(auditFeed.response.status,200,JSON.stringify(auditFeed.payload));assert.ok(auditFeed.payload.items.some(item=>item.action==="WORKFORCE_EXCEPTION_APPROVED"&&item.reason));assert.ok(auditFeed.payload.items.some(item=>item.action==="WORKFORCE_LEAVE_APPROVED"&&item.employeeName));
+  const clockIn=await request(`${base}/attendance/clock`,{method:"POST",token,body:{employeeId:employeeA,eventType:"IN",confirmed:true,reason:"E2E έναρξη παρουσίας"}});assert.equal(clockIn.response.status,201,JSON.stringify(clockIn.payload));
+  const attendanceOpen=await request(`${base}/attendance?date=${new Date().toISOString().slice(0,10)}`,{token});assert.equal(attendanceOpen.response.status,200,JSON.stringify(attendanceOpen.payload));assert.ok(attendanceOpen.payload.items.some(item=>item.id===clockIn.payload.item.id&&item.status==="OPEN"));
+  const clockOut=await request(`${base}/attendance/clock`,{method:"POST",token,body:{employeeId:employeeA,eventType:"OUT",confirmed:true,reason:"E2E λήξη παρουσίας"}});assert.equal(clockOut.response.status,201,JSON.stringify(clockOut.payload));
+  await prisma.workforceAttendanceSession.update({where:{id:clockIn.payload.item.id},data:{workedMinutes:481,status:"NEEDS_APPROVAL",issueJson:{issues:[{code:"OVER_8_HOURS",message:"E2E υπέρβαση 8 ωρών."}]}}});
+  const overEight=await request(`${base}/attendance?date=${new Date().toISOString().slice(0,10)}`,{token});assert.equal(overEight.response.status,200,JSON.stringify(overEight.payload));assert.ok(overEight.payload.items.some(item=>item.id===clockIn.payload.item.id&&item.status==="NEEDS_APPROVAL"));
+  const overEightApproval=await request(`${base}/attendance/${clockIn.payload.item.id}/approve-over-8-hours`,{method:"POST",token,body:{confirmed:true,reason:"E2E έγκριση υπέρβασης 8 ωρών"}});assert.equal(overEightApproval.response.status,200,JSON.stringify(overEightApproval.payload));assert.equal(overEightApproval.payload.item.status,"APPROVED");
+  const attendanceClosed=await request(`${base}/attendance?date=${new Date().toISOString().slice(0,10)}`,{token});assert.equal(attendanceClosed.response.status,200,JSON.stringify(attendanceClosed.payload));assert.ok(attendanceClosed.payload.items.some(item=>item.id===clockIn.payload.item.id&&item.status==="APPROVED"));
+  const attendanceAudit=await request(`${base}/audit`,{token});assert.equal(attendanceAudit.response.status,200,JSON.stringify(attendanceAudit.payload));assert.ok(attendanceAudit.payload.items.some(item=>item.action==="WORKFORCE_CLOCK_IN"&&item.reason));assert.ok(attendanceAudit.payload.items.some(item=>item.action==="WORKFORCE_CLOCK_OUT"&&item.reason));assert.ok(attendanceAudit.payload.items.some(item=>item.action==="WORKFORCE_OVER_8_HOURS_APPROVED"&&item.reason));
   console.log("E2E Workforce v2 schedules flow passed",{scheduleId:schedule.id,revisionId:revision.payload.item.id,employeeA,employeeB,audits});
 }
 

@@ -44,6 +44,19 @@ test("Workforce audit route exposes the required recorded fields",()=>{
   assert.match(route,/reason/);
 });
 
+test("Workforce v2 attendance keeps card entries isolated, audited and protected",()=>{
+  const route=read("../src/routes/platform-workforce-v2-attendance.js");
+  const ui=read("../../client/src/components/platform/WorkforceV2AttendanceTab.jsx");
+  assert.match(route,/WORKFORCE_CLOCK_IN/);
+  assert.match(route,/WORKFORCE_CLOCK_OUT/);
+  assert.match(route,/WORKFORCE_OVER_8_HOURS_APPROVED/);
+  assert.match(route,/approve-over-8-hours/);
+  assert.match(route,/Μόνο Super Admin ή Ιδιοκτήτης/);
+  assert.match(route,/status:\"PUBLISHED\"/);
+  assert.match(ui,/Παρουσίες και κάρτα εργασίας/);
+  assert.match(ui,/Υποχρεωτική αιτιολογία/);
+});
+
 test("Workforce schedule server route passes Node syntax check",()=>{
   const path=fileURLToPath(new URL("../src/routes/platform-workforce-v2-schedules.js",import.meta.url));
   const result=spawnSync(process.execPath,["--check",path],{encoding:"utf8"});

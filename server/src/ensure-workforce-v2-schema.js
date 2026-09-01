@@ -55,6 +55,12 @@ const statements=[
   `CREATE TABLE IF NOT EXISTS "WorkforceAuditLog" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT,"actorUserId" TEXT,"action" TEXT NOT NULL,"entityType" TEXT NOT NULL,"entityId" TEXT,"beforeJson" JSONB,"afterJson" JSONB,"reason" TEXT,"deviceName" TEXT,"userAgent" TEXT,"ipAddress" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS "WorkforceTimeClockEntry" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"method" TEXT NOT NULL DEFAULT 'PIN',"occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"sourceShiftId" TEXT,"deviceId" TEXT,"note" TEXT,"correctionOfId" TEXT,"correctionReason" TEXT,"approvedByUserId" TEXT,"createdByUserId" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS "WorkforceAttendanceSession" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"scheduledAssignmentId" TEXT,"clockInEntryId" TEXT,"clockOutEntryId" TEXT,"startedAt" TIMESTAMP(3) NOT NULL,"endedAt" TIMESTAMP(3),"workedMinutes" INTEGER NOT NULL DEFAULT 0,"lateMinutes" INTEGER NOT NULL DEFAULT 0,"earlyLeaveMinutes" INTEGER NOT NULL DEFAULT 0,"overtimeMinutes" INTEGER NOT NULL DEFAULT 0,"status" TEXT NOT NULL DEFAULT 'OPEN',"issueJson" JSONB,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS "WorkforceChatCommand" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"scheduleId" TEXT,"actorUserId" TEXT NOT NULL,"commandText" TEXT NOT NULL,"proposalJson" JSONB,"warningJson" JSONB,"status" TEXT NOT NULL DEFAULT 'PROPOSED',"approvedByUserId" TEXT,"approvedAt" TIMESTAMP(3),"appliedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -69,6 +75,10 @@ const statements=[
   `CREATE INDEX IF NOT EXISTS "WorkforceShiftTemplate_companyId_storeId_active_idx" ON "WorkforceShiftTemplate" ("companyId","storeId","active")`,
   `CREATE INDEX IF NOT EXISTS "WorkforceLeaveRequest_companyId_status_startDate_idx" ON "WorkforceLeaveRequest" ("companyId","status","startDate")`,
   `CREATE INDEX IF NOT EXISTS "WorkforceAuditLog_companyId_createdAt_idx" ON "WorkforceAuditLog" ("companyId","createdAt")`
+  ,`CREATE INDEX IF NOT EXISTS "WorkforceTimeClockEntry_companyId_storeId_occurredAt_idx" ON "WorkforceTimeClockEntry" ("companyId","storeId","occurredAt")`
+  ,`CREATE INDEX IF NOT EXISTS "WorkforceTimeClockEntry_employeeId_occurredAt_idx" ON "WorkforceTimeClockEntry" ("employeeId","occurredAt")`
+  ,`CREATE INDEX IF NOT EXISTS "WorkforceAttendanceSession_companyId_storeId_startedAt_idx" ON "WorkforceAttendanceSession" ("companyId","storeId","startedAt")`
+  ,`CREATE INDEX IF NOT EXISTS "WorkforceAttendanceSession_employeeId_startedAt_idx" ON "WorkforceAttendanceSession" ("employeeId","startedAt")`
 ];
 
 try{
