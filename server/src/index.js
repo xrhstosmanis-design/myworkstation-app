@@ -32,6 +32,7 @@ import purchaseOrderPostingGuardRoutes from "./routes/purchase-order-posting-gua
 import purchaseOrderRoutes,{ensurePurchaseOrderSchema} from "./routes/purchase-orders.js";
 import purchaseOrderOcrResolutionRoutes from "./routes/purchase-order-ocr-resolution.js";
 import purchaseOrderTotalReconciliationGuardRoutes from "./routes/purchase-order-total-reconciliation-guard.js";
+import purchaseDocumentAdjustmentRoutes from "./routes/purchase-document-adjustments.js";
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
 import customerControlReversalAwareRoutes from "./routes/customer-control-reversal-aware.js";
 import customerControlRoutes from "./routes/customer-control-v2.js";
@@ -162,6 +163,7 @@ app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOr
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderPostingGuardRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderActionRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);
+app.use("/api/purchase-document-adjustments",auth,requireCompanyModule("INVENTORY"),purchaseDocumentAdjustmentRoutes);
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
