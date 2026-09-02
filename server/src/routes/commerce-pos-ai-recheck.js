@@ -10,6 +10,9 @@ const THRESHOLD=65;
 const TOTAL_TOLERANCE=0.05;
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+const greekLatinFold=value=>norm(value).replace(/[ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]/g,c=>({Α:"A",Β:"B",Ε:"E",Ζ:"Z",Η:"H",Ι:"I",Κ:"K",Μ:"M",Ν:"N",Ο:"O",Ρ:"P",Τ:"T",Υ:"Y",Χ:"X"}[c]||c));
+const validGreekTaxId=value=>{const v=cleanTaxId(value);if(v.length!==9||/^0+$/.test(v))return false;let sum=0;for(let i=0;i<8;i++)sum+=Number(v[i])*2**(8-i);return (sum%11)%10===Number(v[8]);};
+const editSimilarity=(a,b)=>{const x=greekLatinFold(a),y=greekLatinFold(b);if(!x||!y)return 0;if(x===y)return 1;const prev=Array.from({length:y.length+1},(_,i)=>i);for(let i=1;i<=x.length;i++){let left=i;for(let j=1;j<=y.length;j++){const next=prev[j];prev[j]=Math.min(prev[j]+1,left+1,prev[j-1]+(x[i-1]===y[j-1]?0:1));left=next;}}return 1-(prev[y.length]/Math.max(x.length,y.length));};
 const decimalText=value=>Math.max(0,Number(value||0)).toFixed(4).replace(".",",");
 const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 
@@ -20,7 +23,7 @@ function outputText(response){
 }
 
 async function supplierMatch(companyId,candidate={}){
-  const taxId=cleanTaxId(candidate.taxId);
+  const rawTaxId=cleanTaxId(candidate.taxId),taxId=validGreekTaxId(rawTaxId)?rawTaxId:"";
   if(taxId){
     const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
     if(rows[0])return rows[0];
@@ -30,6 +33,11 @@ async function supplierMatch(companyId,candidate={}){
     const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
     const exact=rows.find(row=>norm(row.name)===key);if(exact)return exact;
     const close=rows.find(row=>{const k=norm(row.name);return key.length>=7&&k.length>=7&&(k.includes(key)||key.includes(k));});if(close)return close;
+    const ranked=rows.map(row=>({row,score:editSimilarity(candidate.name,row.name)})).sort((a,b)=>b.score-a.score);
+    const best=ranked[0],second=ranked[1];
+    // OCR may mix Greek and Latin glyphs; only auto-link when the name is
+    // sufficiently close and clearly beats the next supplier.
+    if(best&&best.score>=0.76&&(!second||best.score-(second.score||0)>=0.08))return best.row;
   }
   return null;
 }
