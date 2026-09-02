@@ -10,6 +10,8 @@ const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(
 
 async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,supplierName}){
   let inboxId=null;
+  let jobId=null;
+  let stage="Δημιουργία αρχείου στη Θυρίδα";
   try{
     const note=`Γρήγορη καταχώριση με AI • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${totalGross.toFixed(2)} € • Τιμολόγιο ${documentNumber} • Παρασκήνιο V2.4.4`;
     const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName:"POS",note,file:{dataUrl:fileDataUrl,filename}})});
@@ -17,15 +19,21 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
   }catch{}
   const patch=async(status,note)=>{if(!inboxId)return;try{await api(`/api/commerce/documents/inbox/${encodeURIComponent(inboxId)}`,{method:"PATCH",body:JSON.stringify({status,note})})}catch{}};
   try{
+    stage="Δημιουργία εργασίας AI Reader";
     const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"Γρήγορη καταχώριση με AI — στο παρασκήνιο V2.4.4"}})});
     if(!job?.id)throw new Error("Δεν δημιουργήθηκε εργασία V2.4.4.");
+    jobId=job.id;
+    stage="Azure/AI επανέλεγχος γραμμών";
     const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});
+    stage="Επικύρωση γραμμών προϊόντων";
     const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
     if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");
+    stage="Αποθήκευση V2.4.4 γραμμών";
     await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines})});
+    stage="Δημιουργία πρόχειρου BackOffice";
     const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,note:`Γρήγορη καταχώριση με AI${inboxId?` • εισερχόμενα ${inboxId}`:" • χωρίς θυρίδα εγγράφων"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
     await patch("IN_REVIEW",`✅ Παρασκήνιο V2.4.4 ολοκληρώθηκε • ${productLines.length} γραμμές • ${created?.purchaseOrderId||created?.id||"προς έλεγχο"}`);
-  }catch(error){await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο Κεντρική Διαχείριση • ${String(error?.message||error).slice(0,700)}`)}
+  }catch(error){await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο Κεντρική Διαχείριση • Στάδιο: ${stage}${jobId?` • AI job: ${jobId}`:""} • ${String(error?.message||error).slice(0,520)}`)}
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
