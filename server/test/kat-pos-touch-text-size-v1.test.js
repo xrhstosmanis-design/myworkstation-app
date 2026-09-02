@@ -10,6 +10,7 @@ test("POS exposes a touch text-size control with three choices",()=>{
   assert.match(panel,/Κανονικά/);
   assert.match(panel,/Μεγάλα/);
   assert.match(panel,/Πολύ μεγάλα/);
+  assert.match(panel,/id:"XL",label:"Πολύ μεγάλα",scale:1\.3/);
   assert.match(panel,/Αλλάζει μόνο τα γράμματα — όχι τη διάταξη/);
 });
 
