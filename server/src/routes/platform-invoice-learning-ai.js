@@ -58,7 +58,6 @@ function isCaseUnit(value=""){
 const tableText=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 const tableNumber=v=>{const raw=String(v??"").trim().replace(",",".");const n=Number(raw);return Number.isFinite(n)?n:0};
 const isAntzoulatos=supplier=>/ANTZOULAT|ΑΝΤΖΟΥΛΑΤ/.test(tableText(supplier));
-const isOhonos=supplier=>/OHONOS|ΟΧΟΝΟΣ/.test(tableText(supplier));
 
 function tableHeader(cells,matcher){return cells.find(cell=>matcher(String(cell?.content||""),tableText(cell?.content)))}
 
@@ -275,7 +274,12 @@ function normalizeAzure(payload){
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
   const supplierName=textField(f.VendorName)||textField(f.VendorAddressRecipient);
   const antzoulatosRows=isAntzoulatos(supplierName)?antzoulatosTableRows(result):[];
-  const ohonosRows=isOhonos(supplierName)?ohonosTableRows(result):[];
+  // VendorName is not reliable on some OHONOS scans.  The table itself has a
+  // distinctive set of financial columns, and every selected row must still
+  // match the invoice product code or description before it can override OCR.
+  // Therefore this is intentionally detected from table geometry, not gated
+  // by the supplier label returned by Azure.
+  const ohonosRows=ohonosTableRows(result);
   const productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
     const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
