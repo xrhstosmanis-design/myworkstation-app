@@ -16,4 +16,19 @@ router.get("/preview",async(req,res,next)=>{
     res.json({from,to,entries,totalAmount:Number(entries.reduce((sum,item)=>sum+(item.grossAmount||0),0).toFixed(2)),note:"Προεπισκόπηση από ολοκληρωμένες πραγματικές ώρες. Η τελική μισθοδοσία απαιτεί έλεγχο και κλείδωμα."});
   }catch(error){next(error)}
 });
+
+router.post("/periods",async(req,res,next)=>{
+  try{
+    const context=await contextFor(req),from=dateValue(req.body?.from),to=dateValue(req.body?.to),name=String(req.body?.name||"").trim();
+    if(!from||!to||to<=from||!name)return res.status(400).json({error:"Συμπλήρωσε όνομα και έγκυρο διάστημα μισθοδοσίας."});
+    const existing=await prisma.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,periodStart:from,periodEnd:to}});
+    if(existing)return res.status(409).json({error:"Υπάρχει ήδη περίοδος για το ίδιο διάστημα."});
+    const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:from,lt:to},status:"COMPLETED"},include:{employee:{include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}}}});
+    const grouped=new Map(); for(const s of sessions){const e=s.employee,r=e.hourlyRates[0]?.hourlyRate??null,row=grouped.get(e.id)||{employeeId:e.id,actualMinutes:0,overtimeMinutes:0,hourlyRate:r,fixedAmount:e.paymentType==="FIXED_MONTHLY"?e.fixedMonthlyAmount:null};row.actualMinutes+=s.workedMinutes;row.overtimeMinutes+=s.overtimeMinutes;grouped.set(e.id,row);}
+    const period=await prisma.workforcePayrollPeriod.create({data:{companyId:context.company.id,storeId:context.store.id,name,periodStart:from,periodEnd:to,createdByUserId:req.user?.id||null,lines:{create:[...grouped.values()].map(row=>({employeeId:row.employeeId,actualMinutes:row.actualMinutes,overtimeMinutes:row.overtimeMinutes,hourlyRate:row.hourlyRate,fixedAmount:row.fixedAmount,grossAmount:row.hourlyRate?Number((row.actualMinutes/60*Number(row.hourlyRate)).toFixed(2)):Number(row.fixedAmount||0),calculationJson:{source:"WORKFORCE_ATTENDANCE"}}))}}});
+    res.status(201).json({id:period.id,status:period.status,message:"Η περίοδος μισθοδοσίας δημιουργήθηκε ως προσχέδιο."});
+  }catch(error){next(error)}
+});
+
+router.get("/periods",async(req,res,next)=>{try{const context=await contextFor(req);res.json(await prisma.workforcePayrollPeriod.findMany({where:{companyId:context.company.id,storeId:context.store.id},include:{_count:{select:{lines:true}}},orderBy:{periodStart:"desc"},take:100}));}catch(error){next(error)}});
 export default router;
