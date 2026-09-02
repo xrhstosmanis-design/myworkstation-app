@@ -1,6 +1,6 @@
 param([switch]$Once)
 $ErrorActionPreference="Stop"
-$Version="1.1.0"
+$Version="1.1.1"
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
 $ConfigPath=Join-Path $Root "observer.config.json"
 $LogPath=Join-Path $Root "observer.log"
@@ -83,6 +83,7 @@ $queue=New-Object Collections.Concurrent.ConcurrentQueue[string]
 $action={if(!$Event.SourceEventArgs.FullPath){return};$Event.MessageData.Enqueue($Event.SourceEventArgs.FullPath)}
 Register-ObjectEvent $watcher Created -SourceIdentifier "MWS.Observer.Created" -Action $action -MessageData $queue|Out-Null
 Register-ObjectEvent $watcher Renamed -SourceIdentifier "MWS.Observer.Renamed" -Action $action -MessageData $queue|Out-Null
+Register-ObjectEvent $watcher Changed -SourceIdentifier "MWS.Observer.Changed" -Action $action -MessageData $queue|Out-Null
 $watcher.EnableRaisingEvents=$true
 $lastHeartbeat=[DateTime]::MinValue
 try{
@@ -97,4 +98,4 @@ try{
     }
     Start-Sleep -Milliseconds 500
   }
-}finally{$watcher.Dispose();Unregister-Event "MWS.Observer.Created" -ErrorAction SilentlyContinue;Unregister-Event "MWS.Observer.Renamed" -ErrorAction SilentlyContinue}
+}finally{$watcher.Dispose();Unregister-Event "MWS.Observer.Created" -ErrorAction SilentlyContinue;Unregister-Event "MWS.Observer.Renamed" -ErrorAction SilentlyContinue;Unregister-Event "MWS.Observer.Changed" -ErrorAction SilentlyContinue}

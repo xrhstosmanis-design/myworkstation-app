@@ -1,42 +1,42 @@
 param(
   [Parameter(Mandatory=$true)][string]$StoreModeUrl,
-  [string]$ShortcutName="MyWorkStation - Κυλικείο ΚΑΤ"
+  [string]$ShortcutName="MyWorkStation - KAT"
 )
 $ErrorActionPreference="Stop"
 $installerRoot=Split-Path -Parent $MyInvocation.MyCommand.Path
 $preflight=Join-Path $installerRoot "Preflight-KAT.ps1"
 $manifestPath=Join-Path $installerRoot "package-manifest.json"
 
-if(!(Test-Path -LiteralPath $preflight)){throw "Δεν βρέθηκε το επίσημο Preflight-KAT.ps1."}
-if(!(Test-Path -LiteralPath $manifestPath)){throw "Δεν βρέθηκε το package-manifest.json. Η εγκατάσταση σταμάτησε χωρίς αλλαγές."}
+if(!(Test-Path -LiteralPath $preflight)){throw "Official Preflight-KAT.ps1 was not found."}
+if(!(Test-Path -LiteralPath $manifestPath)){throw "package-manifest.json was not found. Installation stopped without changes."}
 $manifest=Get-Content -LiteralPath $manifestPath -Raw|ConvertFrom-Json
-if($manifest.schemaVersion -ne 1 -or !($manifest.files -is [array]) -or $manifest.files.Count -lt 1){throw "Το package manifest δεν είναι έγκυρο."}
+if($manifest.schemaVersion -ne 1 -or !($manifest.files -is [array]) -or $manifest.files.Count -lt 1){throw "The package manifest is invalid."}
 foreach($entry in $manifest.files){
   $name=[string]$entry.name
-  if(!$name -or [IO.Path]::GetFileName($name) -ne $name){throw "Το package manifest περιέχει μη ασφαλές όνομα αρχείου."}
+  if(!$name -or [IO.Path]::GetFileName($name) -ne $name){throw "The package manifest contains an unsafe file name."}
   $file=Join-Path $installerRoot $name
-  if(!(Test-Path -LiteralPath $file)){throw "Λείπει αρχείο του πακέτου: $name"}
+  if(!(Test-Path -LiteralPath $file)){throw "A package file is missing: $name"}
   $actual=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
-  if($actual -ne ([string]$entry.sha256).ToLowerInvariant()){throw "Αποτυχία ελέγχου ακεραιότητας: $name. Η εγκατάσταση σταμάτησε χωρίς αλλαγές."}
+  if($actual -ne ([string]$entry.sha256).ToLowerInvariant()){throw "Package integrity check failed: $name. Installation stopped without changes."}
 }
 $uri=$null
 if(![Uri]::TryCreate($StoreModeUrl,[UriKind]::Absolute,[ref]$uri) -or $uri.Scheme -ne "https" -or $uri.AbsolutePath -notmatch '^/store/[^/]+/?$' -or $uri.Query -notmatch '^\?terminal=([A-Za-z0-9_-]{2,40})&activation=([A-Za-z0-9_-]{32,200})$'){
-  throw "Δώσε το εφάπαξ HTTPS link εγκατάστασης από Super Admin > Εγκαταστάσεις / Τερματικά."
+  throw "Enter the one-time HTTPS installation link from Super Admin > Installations / Terminals."
 }
 $terminalPos=$Matches[1].ToUpperInvariant()
 $canonicalStoreModeUrl=$uri.GetLeftPart([UriPartial]::Authority)+$uri.AbsolutePath
 
-Write-Host "1/3 - Εκτέλεση read-only προελέγχου..."
+Write-Host "1/3 - Running read-only preflight..."
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $preflight -ApiBase ($uri.GetLeftPart([UriPartial]::Authority))
-if($LASTEXITCODE -ne 0){throw "Η εγκατάσταση σταμάτησε επειδή ο προέλεγχος έχει blockers."}
+if($LASTEXITCODE -ne 0){throw "Installation stopped because preflight found blockers."}
 $health=Invoke-RestMethod -Uri (($uri.GetLeftPart([UriPartial]::Authority)).TrimEnd("/")+"/api/health") -Method Get -TimeoutSec 20
-if($health.ok -ne $true -or ![string]$health.revision){throw "Η εγκατάσταση σταμάτησε: δεν επιβεβαιώθηκε η ακριβής app revision."}
+if($health.ok -ne $true -or ![string]$health.revision){throw "Installation stopped because the exact app revision was not confirmed."}
 
-Write-Host "2/3 - Δημιουργία ασφαλούς συντόμευσης Store Mode..."
+Write-Host "2/3 - Creating the safe Store Mode shortcut..."
 $desktop=[Environment]::GetFolderPath("CommonDesktopDirectory")
 if(!$desktop -or !(Test-Path -LiteralPath $desktop)){$desktop=[Environment]::GetFolderPath("Desktop")}
 $safeName=($ShortcutName -replace '[\\/:*?"<>|]','-').Trim()
-if(!$safeName){$safeName="MyWorkStation - Κυλικείο ΚΑΤ"}
+if(!$safeName){$safeName="MyWorkStation - KAT"}
 $shortcut=Join-Path $desktop ($safeName+".url")
 $backupRoot=Join-Path $env:ProgramData "MyWorkStation\InstallerBackups"
 New-Item -ItemType Directory -Path $backupRoot -Force|Out-Null
@@ -61,7 +61,7 @@ $stateFile=Join-Path $stateRoot "store-mode-installation.json"
   shortcutName=$safeName
 }|ConvertTo-Json|Set-Content -LiteralPath $stateFile -Encoding UTF8
 
-Write-Host "3/3 - Καταγραφή αποτελέσματος..."
+Write-Host "3/3 - Recording the installation result..."
 $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_Installation.txt"
 @(
   "MYWORKSTATION KAT STORE MODE INSTALLATION",
@@ -75,8 +75,8 @@ $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_I
   "Safety: NO RBS / NO KIOSK MANAGER / NO CAPDRIVER CHANGES",
   "Observer: NOT INSTALLED - separate technical activation required"
 )|Set-Content -LiteralPath $report -Encoding UTF8
-Write-Host "Άνοιγμα εφάπαξ ενεργοποίησης για το $terminalPos..."
+Write-Host "Opening one-time activation for $terminalPos..."
 Start-Process $uri.AbsoluteUri
-Write-Host "Η εγκατάσταση Store Mode ολοκληρώθηκε."
+Write-Host "Store Mode installation completed."
 Write-Host "Shortcut: $shortcut"
 Write-Host "Report: $report"

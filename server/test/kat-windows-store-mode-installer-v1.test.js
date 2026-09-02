@@ -43,7 +43,7 @@ test("permanent shortcut and recovery state never retain the one-time activation
 
 test("read-only preflight must pass before the shortcut is written",()=>{
   const preflight=installer.indexOf("Preflight-KAT.ps1");
-  const blocker=installer.indexOf("προέλεγχος έχει blockers");
+  const blocker=installer.indexOf("preflight found blockers");
   const shortcut=installer.indexOf("[InternetShortcut]");
   assert.ok(preflight>=0&&blocker>preflight&&shortcut>blocker);
   assert.match(installer,/if\(\$LASTEXITCODE -ne 0\)/);
