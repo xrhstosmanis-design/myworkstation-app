@@ -1,6 +1,7 @@
 param([switch]$Once)
 $ErrorActionPreference="Stop"
-$Version="1.1.1"
+Add-Type -AssemblyName System.Security
+$Version="1.1.2"
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
 $ConfigPath=Join-Path $Root "observer.config.json"
 $LogPath=Join-Path $Root "observer.log"
@@ -14,7 +15,7 @@ function Write-SafeLog([string]$Message){
 }
 function Unprotect-Token([string]$Cipher){
   $bytes=[Convert]::FromBase64String($Cipher)
-  $plain=[Security.Cryptography.ProtectedData]::Unprotect($bytes,$null,[Security.Cryptography.DataProtectionScope]::LocalMachine)
+  $plain=[System.Security.Cryptography.ProtectedData]::Unprotect($bytes,$null,[System.Security.Cryptography.DataProtectionScope]::LocalMachine)
   return [Text.Encoding]::UTF8.GetString($plain)
 }
 function Invoke-ObserverApi([string]$Path,[object]$Body){
@@ -48,7 +49,7 @@ function Get-SharedHash([string]$Path){
   for($attempt=0;$attempt -lt 8;$attempt++){
     try{
       $stream=New-Object IO.FileStream($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
-      try{$sha=[Security.Cryptography.SHA256]::Create();try{$hash=$sha.ComputeHash($stream)}finally{$sha.Dispose()};return @{hash=([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant());length=$stream.Length}}finally{$stream.Dispose()}
+      try{$sha=[System.Security.Cryptography.SHA256]::Create();try{$hash=$sha.ComputeHash($stream)}finally{$sha.Dispose()};return @{hash=([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant());length=$stream.Length}}finally{$stream.Dispose()}
     }catch{Start-Sleep -Milliseconds 100}
   }
   return $null
