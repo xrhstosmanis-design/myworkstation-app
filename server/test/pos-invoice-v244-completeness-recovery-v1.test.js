@@ -22,3 +22,10 @@ test("V2.4.4 records completeness totals before and after recovery",()=>{
   assert.match(source,/productLinesTotalDifference/);
   assert.match(source,/productLinesComplete/);
 });
+
+test("supplier OCR matching validates VAT and tolerates Greek/Latin OCR glyphs",()=>{
+  assert.match(source,/validGreekTaxId/);
+  assert.match(source,/greekLatinFold/);
+  assert.match(source,/best\.score>=0\.76/);
+  assert.match(source,/best\.score-\(second\.score\|\|0\)>=0\.08/);
+});
