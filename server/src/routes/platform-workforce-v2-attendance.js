@@ -25,7 +25,8 @@ function issueSummary(session,assignment){
 function serializeSession(session){
   const assignment=session.scheduledAssignmentId&&session.assignment?{id:session.assignment.id,date:iso(session.assignment.date),shiftTemplate:{id:session.assignment.shiftTemplate.id,name:session.assignment.shiftTemplate.name,startTime:session.assignment.shiftTemplate.startTime,endTime:session.assignment.shiftTemplate.endTime}}:null;
   const scheduledMinutes=assignment?shiftMinutes(session.assignment.shiftTemplate):null,workedMinutes=minutes(session.workedMinutes);
-  return {id:session.id,employee:{id:session.employee.id,fullName:session.employee.fullName},startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes,scheduledMinutes,varianceMinutes:scheduledMinutes===null?null:workedMinutes-scheduledMinutes,lateMinutes:minutes(session.lateMinutes),earlyLeaveMinutes:minutes(session.earlyLeaveMinutes),overtimeMinutes:minutes(session.overtimeMinutes),status:session.status,issues:Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[],assignment};
+  const hourlyRate=session.hourlyRate===null||session.hourlyRate===undefined?null:Number(session.hourlyRate),workedAmount=hourlyRate===null?null:Number((workedMinutes/60*hourlyRate).toFixed(2));
+  return {id:session.id,employee:{id:session.employee.id,fullName:session.employee.fullName,paymentType:session.employee.paymentType},startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes,scheduledMinutes,varianceMinutes:scheduledMinutes===null?null:workedMinutes-scheduledMinutes,hourlyRate,workedAmount,lateMinutes:minutes(session.lateMinutes),earlyLeaveMinutes:minutes(session.earlyLeaveMinutes),overtimeMinutes:minutes(session.overtimeMinutes),status:session.status,issues:Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[],assignment};
 }
 async function publishedAssignment(context,employeeId,date){
   const at=dayStart(date);
@@ -37,10 +38,14 @@ router.get("/",async(req,res,next)=>{try{
   const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:start,lt:end}},include:{employee:true},orderBy:[{startedAt:"asc"}]});
   const sessionIds=sessions.map(item=>item.scheduledAssignmentId).filter(Boolean),assignments=sessionIds.length?await prisma.workforceScheduleAssignment.findMany({where:{id:{in:sessionIds}},include:assignmentInclude}):[];
   const map=new Map(assignments.map(item=>[item.id,item]));
-  const rows=sessions.map(item=>serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null}));
+  const employeeIds=[...new Set(sessions.map(item=>item.employeeId))];
+  const rates=employeeIds.length?await prisma.workforceHourlyRate.findMany({where:{employeeId:{in:employeeIds},validFrom:{lt:end},OR:[{validTo:null},{validTo:{gte:start}}]},orderBy:{validFrom:"desc"}}):[];
+  const rateMap=new Map();
+  for(const rate of rates)if(!rateMap.has(rate.employeeId))rateMap.set(rate.employeeId,rate);
+  const rows=sessions.map(item=>serializeSession({...item,assignment:map.get(item.scheduledAssignmentId)||null,hourlyRate:rateMap.has(item.employeeId)?rateMap.get(item.employeeId).hourlyRate:null}));
   const employees=await prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},select:{id:true,fullName:true},orderBy:{fullName:"asc"}});
   const scheduledRows=rows.filter(row=>row.scheduledMinutes!==null);
-  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
+  res.json({date:query.date,employees,items:rows,canApprove:isApprovalUser(req.user),summary:{open:rows.filter(row=>row.status==="OPEN").length,closed:rows.filter(row=>!["OPEN","NEEDS_APPROVAL"].includes(row.status)).length,workedMinutes:rows.reduce((total,row)=>total+row.workedMinutes,0),workedAmount:Number(rows.reduce((total,row)=>total+(row.workedAmount??0),0).toFixed(2)),scheduledMinutes:scheduledRows.reduce((total,row)=>total+row.scheduledMinutes,0),varianceMinutes:scheduledRows.reduce((total,row)=>total+row.varianceMinutes,0),scheduledSessions:scheduledRows.length,review:rows.filter(row=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(row.status)).length}});
 }catch(error){next(error)}});
 
 const clockBody=z.object({employeeId:z.string().min(1),eventType:z.enum(["IN","OUT"]),note:z.string().trim().max(500).optional().nullable(),confirmed,reason:z.string().trim().min(3).max(500)});
