@@ -235,6 +235,9 @@ function normalizeAzure(payload){
     // line total reconcile, so a carton price is never mistaken for a piece price.
     const tmxIsActualQuantity=Boolean(supplierTableRow&&printedPiecesQuantity>kibQuantity&&unitPrice>0&&netAmount>0&&Math.abs(printedPiecesQuantity*unitPrice-netAmount)<=Math.max(.05,netAmount*.02));
     if(tmxIsActualQuantity)quantity=printedPiecesQuantity;
+    // If the multiplication does not reconcile, the TMX cell is the printed
+    // pack size (for example 1 KIB / 10 TMX / €14.50), not the stock quantity.
+    const unitsPerPackage=tmxIsActualQuantity?0:(Math.max(0,printedPiecesQuantity>kibQuantity?printedPiecesQuantity:0)||packageFromText(`${description} ${item?.content||""}`));
     const originalNetAmount=netAmount;
     const netRecovery=recoverNetAmountFromRow(item?.content,quantity,unitPrice,netAmount,description,supplierItemCode);
     netAmount=netRecovery.amount;
@@ -252,7 +255,7 @@ function normalizeAzure(payload){
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
-    return normalizeRetailPackaging({supplierItemCode,description,quantity,invoiceQuantity:quantity,unit:tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoiceUnit:tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:tmxIsActualQuantity?0:packageFromText(`${description} ${item?.content||""}`),unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
+    return normalizeRetailPackaging({supplierItemCode,description,quantity,invoiceQuantity:quantity,unit:tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoiceUnit:tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
