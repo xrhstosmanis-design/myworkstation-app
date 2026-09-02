@@ -23,8 +23,8 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     for(const x of centralProducts||[]){
       const k=x.knowledge&&typeof x.knowledge==='object'?x.knowledge:{};
       const key=productKey(x.supplierTaxId,x.supplierName,x.supplierItemCode,x.description);
-      const cur=map.get(key)||{key,supplierName:x.supplierName||'',supplierTaxId:x.supplierTaxId||'',supplierItemCode:x.supplierItemCode||'',description:x.description||'',barcode:'',category:'',subcategory:'',vatRate:'',invoiceUnit:'',stockUnit:'',unitsPerPackage:'',conversionFactor:'',purchasePrice:'',retailPrice:'',initialStock:'',internalCode:'',active:true,trackStock:true,knowledgeId:'',central:true};
-      Object.assign(cur,{central:true,knowledgeId:x.id||cur.knowledgeId,supplierName:x.supplierName||cur.supplierName,supplierTaxId:x.supplierTaxId||cur.supplierTaxId,supplierItemCode:x.supplierItemCode||cur.supplierItemCode,description:x.description||cur.description,barcode:x.barcode||cur.barcode,category:k.category??cur.category,subcategory:k.subcategory??cur.subcategory,vatRate:x.vatRate??k.vatRate??cur.vatRate,invoiceUnit:x.invoiceUnit||k.invoiceUnit||cur.invoiceUnit,stockUnit:x.stockUnit||k.stockUnit||cur.stockUnit,unitsPerPackage:x.unitsPerPackage??k.unitsPerPackage??cur.unitsPerPackage,conversionFactor:x.conversionFactor??k.conversionFactor??cur.conversionFactor,purchasePrice:k.purchasePrice??cur.purchasePrice,retailPrice:k.retailPrice??cur.retailPrice,initialStock:k.initialStock??cur.initialStock,internalCode:k.internalCode||x.masterProductId||cur.internalCode,active:k.active!==false,trackStock:k.trackStock!==false});
+      const cur=map.get(key)||{key,supplierName:x.supplierName||'',supplierTaxId:x.supplierTaxId||'',supplierItemCode:x.supplierItemCode||'',description:x.description||'',barcode:'',category:'',subcategory:'',vatRate:'',invoiceUnit:'',stockUnit:'',unitsPerPackage:'',conversionFactor:'',purchasePrice:'',retailPrice:'',initialStock:'',internalCode:'',active:true,trackStock:true,knowledgeId:'',masterProductId:'',central:true};
+      Object.assign(cur,{central:true,knowledgeId:x.id||cur.knowledgeId,masterProductId:x.masterProductId||cur.masterProductId||'',supplierName:x.supplierName||cur.supplierName,supplierTaxId:x.supplierTaxId||cur.supplierTaxId,supplierItemCode:x.supplierItemCode||cur.supplierItemCode,description:x.description||cur.description,barcode:x.barcode||cur.barcode,category:k.category??cur.category,subcategory:k.subcategory??cur.subcategory,vatRate:x.vatRate??k.vatRate??cur.vatRate,invoiceUnit:x.invoiceUnit||k.invoiceUnit||cur.invoiceUnit,stockUnit:x.stockUnit||k.stockUnit||cur.stockUnit,unitsPerPackage:x.unitsPerPackage??k.unitsPerPackage??cur.unitsPerPackage,conversionFactor:x.conversionFactor??k.conversionFactor??cur.conversionFactor,purchasePrice:k.purchasePrice??cur.purchasePrice,retailPrice:k.retailPrice??cur.retailPrice,initialStock:k.initialStock??cur.initialStock,internalCode:k.internalCode||x.masterProductId||cur.internalCode,active:k.active!==false,trackStock:k.trackStock!==false});
       map.set(key,cur);
     }
     return [...map.values()].sort((a,b)=>Number(Boolean(a.barcode))-Number(Boolean(b.barcode))||String(a.supplierName).localeCompare(String(b.supplierName),'el')||String(a.description).localeCompare(String(b.description),'el'));
@@ -48,6 +48,10 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     if(item.knowledgeId){
       const r=await fetch(`/api/platform/invoice-learning/product-knowledge/${encodeURIComponent(item.knowledgeId)}`,{method:'PUT',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Σφάλμα ${r.status}`);
       const i=centralProducts.findIndex(x=>x.id===item.knowledgeId);if(i>=0)centralProducts[i]={...centralProducts[i],...(d.product||{})};centralChanged=1;
+      if(!item.masterProductId){
+        const mr=await fetch(`/api/platform/invoice-learning/product-knowledge/${encodeURIComponent(item.knowledgeId)}/master-catalog`,{method:'POST',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify(data)});const md=await mr.json().catch(()=>({}));if(!mr.ok)throw new Error(md.error||`Σφάλμα Master Catalog ${mr.status}`);
+        if(md.masterProduct?.id){item.masterProductId=md.masterProduct.id;const i2=centralProducts.findIndex(x=>x.id===item.knowledgeId);if(i2>=0)centralProducts[i2]={...centralProducts[i2],masterProductId:md.masterProduct.id,masterProductName:md.masterProduct.name};}
+      }
     }
     if(!localChanged&&!centralChanged)throw new Error('Δεν βρέθηκε το προϊόν στο Learning.');return localChanged+centralChanged;
   }
@@ -103,3 +107,4 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
   const nativeSet=Storage.prototype.setItem;let busy=false;Storage.prototype.setItem=function(k,v){nativeSet.call(this,k,v);if(this===localStorage&&k===KEY&&!busy){busy=true;queueMicrotask(()=>{busy=false;render()})}};
   const start=async()=>{try{await loadCentral()}catch(e){console.warn('Central Learning unavailable',e)}render()};const timer=setInterval(()=>{if(document.querySelector('.ill main')){clearInterval(timer);start()}},300);window.addEventListener('load',start,{once:true});
 }
+

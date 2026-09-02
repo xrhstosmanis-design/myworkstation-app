@@ -73,6 +73,36 @@ router.put("/invoice-learning/product-knowledge/:id",async(req,res,next)=>{try{
   res.json({ok:true,product:rows[0]});
 }catch(error){next(error)}});
 
+router.post("/invoice-learning/product-knowledge/:id/master-catalog",async(req,res,next)=>{try{
+  const knowledgeId=String(req.params?.id||"").trim();
+  if(!knowledgeId)return res.status(400).json({error:"Λείπει το προϊόν Learning."});
+  const body=req.body&&typeof req.body==="object"?req.body:{};
+  const description=String(body.description||"").trim().replace(/\s+/g," ");
+  if(description.length<2)return res.status(400).json({error:"Η περιγραφή είναι υποχρεωτική για το Master Catalog."});
+  const barcode=String(body.barcode||"").replace(/\D/g,"");
+  if(barcode&&(barcode.length<8||barcode.length>14))return res.status(400).json({error:"Το barcode πρέπει να έχει 8 έως 14 ψηφία."});
+  const row=(await prisma.$queryRawUnsafe(`SELECT * FROM "InvoiceLearningProductKnowledge" WHERE "id"=$1 LIMIT 1`,knowledgeId))[0];
+  if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο κεντρικό Learning."});
+  const existing=(await prisma.$queryRawUnsafe(`SELECT mp."id",mp."sourceCode",mp."name" FROM "MasterProduct" mp LEFT JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id" WHERE ($1<>'' AND mb."barcode"=$1) OR ($2<>'' AND UPPER(TRIM(mp."name"))=UPPER(TRIM($2))) LIMIT 1`,barcode,description))[0];
+  if(existing){
+    await prisma.$executeRawUnsafe(`UPDATE "InvoiceLearningProductKnowledge" SET "masterProductId"=$1,"masterProductName"=$2,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$3`,existing.id,existing.name,knowledgeId);
+    return res.json({ok:true,created:false,masterProduct:existing});
+  }
+  const sourceBase=String(body.internalCode||row.supplierItemCode||`LEARN-${knowledgeId.slice(0,12)}`).trim().replace(/\s+/g,"-").slice(0,180)||`LEARN-${knowledgeId.slice(0,12)}`;
+  let sourceCode=sourceBase;
+  for(let i=2;;i++){
+    const clash=(await prisma.$queryRawUnsafe(`SELECT "id" FROM "MasterProduct" WHERE "sourceCode"=$1 LIMIT 1`,sourceCode))[0];
+    if(!clash)break;sourceCode=`${sourceBase}-${i}`.slice(0,180);
+  }
+  const num=v=>v==null||v===""?null:Number(v),masterId=crypto.randomUUID(),vat=num(body.vatRate??row.vatRate),retail=num(body.retailPrice),cost=num(body.purchasePrice);
+  await prisma.$transaction(async tx=>{
+    await tx.$executeRawUnsafe(`INSERT INTO "MasterProduct" ("id","sourceCode","name","categoryName","subcategoryName","supplierName","defaultRetailPrice","defaultCostPrice","vatRate","vatVerified","active","reviewStatus","importVersion") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,'INVOICE_LEARNING','INVOICE_LEARNING')`,masterId,sourceCode,description,String(body.category||row.knowledge?.category||'').trim()||null,String(body.subcategory||row.knowledge?.subcategory||'').trim()||null,row.supplierName||null,retail,cost,vat,vat!==null);
+    if(barcode)await tx.$executeRawUnsafe(`INSERT INTO "MasterProductBarcode" ("id","masterProductId","barcode","scanEnabled","sourceRow") VALUES ($1,$2,$3,TRUE,NULL)`,crypto.randomUUID(),masterId,barcode);
+    await tx.$executeRawUnsafe(`UPDATE "InvoiceLearningProductKnowledge" SET "masterProductId"=$1,"masterProductName"=$2,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$3`,masterId,description,knowledgeId);
+  });
+  res.status(201).json({ok:true,created:true,masterProduct:{id:masterId,sourceCode,name:description,barcode:barcode||null}});
+}catch(error){next(error)}});
+
 router.put("/invoice-learning/product-knowledge/:id/barcode",async(req,res,next)=>{try{
   const id=String(req.params?.id||"").trim(),barcode=String(req.body?.barcode||"").replace(/\D/g,"");
   if(!id)return res.status(400).json({error:"Λείπει το προϊόν Learning."});
@@ -86,3 +116,4 @@ router.get("/invoice-learning/workspace",async(req,res,next)=>{try{const rows=aw
 router.put("/invoice-learning/workspace",async(req,res,next)=>{try{const state=req.body?.state;if(!state||typeof state!=="object"||Array.isArray(state))return res.status(400).json({error:"Μη έγκυρη κατάσταση Invoice Learning Lab."});const normalized={documents:Array.isArray(state.documents)?state.documents:[],profiles:state.profiles&&typeof state.profiles==="object"&&!Array.isArray(state.profiles)?state.profiles:{},master:Array.isArray(state.master)?state.master:[]},json=JSON.stringify(normalized);if(Buffer.byteLength(json,"utf8")>8*1024*1024)return res.status(413).json({error:"Τα δεδομένα του Learning Lab είναι πολύ μεγάλα για συγχρονισμό."});const userId=String(req.user?.id||req.user?.userId||req.user?.sub||"")||null;await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceLearningWorkspaceState" ("scopeKey","state","updatedByUserId","updatedAt") VALUES ($1,$2::jsonb,$3,CURRENT_TIMESTAMP) ON CONFLICT ("scopeKey") DO UPDATE SET "state"=EXCLUDED."state","updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,SCOPE,json,userId);await upsertSupplierProfiles(normalized.profiles,userId);res.json({ok:true,documents:normalized.documents.length,profiles:Object.keys(normalized.profiles).length,centralSupplierProfiles:Object.keys(normalized.profiles).length,updatedAt:new Date().toISOString()})}catch(error){next(error)}});
 router.get("/invoice-learning/supplier-profiles",async(req,res,next)=>{try{const rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "isActive"=TRUE ORDER BY "supplierName" NULLS LAST,"updatedAt" DESC`);res.json({ok:true,profiles:rows.map(r=>({supplierKey:r.supplierKey,supplierTaxId:r.supplierTaxId,supplierName:r.supplierName,ruleKey:r.ruleKey,profileVersion:r.profileVersion,...(r.profile||{}),updatedAt:r.updatedAt}))})}catch(error){next(error)}});
 export default router;
+
