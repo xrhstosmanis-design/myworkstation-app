@@ -37,6 +37,12 @@ function explicitDiscounts(p){
 
 function packageFromText(text=""){
   const s=String(text).toUpperCase().replace(/,/g,".");
+  // A nested beverage pack such as "6 X (4 X 330ML)" contains 24 pieces.
+  // This is deliberately limited to explicit x/× multipliers next to a size
+  // marker, so a product code can never be mistaken for a pack size.
+  for(const re of [/(\d{1,3})\s*[XΧ]\s*\(?\s*(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\b/,/(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/]){
+    const m=s.match(re);if(m){const n=Number(m[1])*Number(m[2]);if(n>1&&n<=500)return n}
+  }
   // Suppliers use both "330ML X 24" and "24 X 330ML".  The second form
   // is common on beverage invoices and used to be missed completely.
   for(const re of [/\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/,/(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\b/,/(\d{1,3})\s*(?:ΤΜΧ|TEM|ΤΕΜ|PCS)\b/,/[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/]){
@@ -47,6 +53,52 @@ function packageFromText(text=""){
 
 function isCaseUnit(value=""){
   return /(?:^|\s)(?:ΚΙΒ|Κ\.Β\.?|ΚΒ|KIB|KIV|CASE|BOX|CTN)(?:\s|$)/i.test(String(value||""));
+}
+
+const tableText=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+const tableNumber=v=>{const raw=String(v??"").trim().replace(",",".");const n=Number(raw);return Number.isFinite(n)?n:0};
+const isAntzoulatos=supplier=>/ANTZOULAT|ΑΝΤΖΟΥΛΑΤ/.test(tableText(supplier));
+
+/*
+ * The Antzoulatos invoice has explicit KIB and TMX columns.  Azure's generic
+ * prebuilt-invoice model frequently returns only the latter as Quantity, so
+ * retain the table geometry as a supplier template and use KIB as the invoice
+ * quantity.  TMX stays as audit information; the final retail quantity comes
+ * from KIB × the clearly printed pack size.
+ */
+function antzoulatosTableRows(result){
+  const tables=Array.isArray(result?.tables)?result.tables:[];
+  for(const table of tables){
+    const cells=Array.isArray(table?.cells)?table.cells:[];
+    const headers=cells.filter(c=>/(?:ΚΙΒ|KIB|ΚΒ)/.test(tableText(c?.content))||/(?:ΤΜΧ|TMX|TEM|PCS)/.test(tableText(c?.content)));
+    const kib=headers.find(c=>/(?:ΚΙΒ|KIB|ΚΒ)/.test(tableText(c?.content)));
+    const tmx=headers.find(c=>/(?:ΤΜΧ|TMX|TEM|PCS)/.test(tableText(c?.content)));
+    const description=headers.length&&cells.find(c=>/(?:ΠΕΡΙΓΡΑΦΗ|DESCRIPTION)/.test(tableText(c?.content)));
+    if(!kib||!description)continue;
+    const headerRow=Math.max(kib.rowIndex??0,description.rowIndex??0,tmx?.rowIndex??0);
+    const rows=new Map();
+    for(const cell of cells){
+      if((cell?.rowIndex??0)<=headerRow)continue;
+      const row=rows.get(cell.rowIndex)||{};rows.set(cell.rowIndex,row);
+      if(cell.columnIndex===kib.columnIndex)row.kibQuantity=tableNumber(cell.content);
+      if(tmx&&cell.columnIndex===tmx.columnIndex)row.tmxQuantity=tableNumber(cell.content);
+      if(cell.columnIndex===description.columnIndex)row.description=String(cell.content||"").trim();
+    }
+    const valid=[...rows.values()].filter(r=>r.description&&r.kibQuantity>0);
+    if(valid.length)return valid;
+  }
+  return [];
+}
+
+function findAntzoulatosRow(rows,description){
+  const wanted=tableText(description);if(!wanted)return null;
+  let best=null,bestScore=0;
+  for(const row of rows){
+    const candidate=tableText(row.description);if(!candidate)continue;
+    const score=candidate===wanted?1000:(candidate.includes(wanted)||wanted.includes(candidate)?800:[...wanted.matchAll(/[A-ZΑ-Ω0-9]{4,}/g)].filter(m=>candidate.includes(m[0])).length*50);
+    if(score>bestScore){best=row;bestScore=score}
+  }
+  return bestScore>=100?best:null;
 }
 
 /*
@@ -164,11 +216,15 @@ async function callAzure(fileData,mimeType){
 function normalizeAzure(payload){
   const result=payload?.analyzeResult||{},doc=result.documents?.[0]||{},f=doc.fields||{};
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
+  const supplierName=textField(f.VendorName)||textField(f.VendorAddressRecipient);
+  const antzoulatosRows=isAntzoulatos(supplierName)?antzoulatosTableRows(result):[];
   const productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
     const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
     const description=textField(p.Description)||textField(p.ProductName)||textField(p.ItemDescription);
-    const quantity=Math.max(0,numberField(p.Quantity));
+    const extractedQuantity=Math.max(0,numberField(p.Quantity));
+    const supplierTableRow=findAntzoulatosRow(antzoulatosRows,description);
+    const quantity=Math.max(0,Number(supplierTableRow?.kibQuantity||extractedQuantity));
     let netAmount=Math.max(0,numberField(p.Amount));
     let unitPrice=Math.max(0,numberField(p.UnitPrice));
     if(!unitPrice)unitPrice=recoverUnitPriceFromRow(item?.content,quantity,netAmount,description,supplierItemCode);
@@ -189,13 +245,13 @@ function normalizeAzure(payload){
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
-    return normalizeRetailPackaging({supplierItemCode,description,quantity,invoiceQuantity:quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoiceUnit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
+    return normalizeRetailPackaging({supplierItemCode,description,quantity,invoiceQuantity:quantity,unit:supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoiceUnit:supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:supplierTableRow?.tmxQuantity||0,unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
   const lineConfs=productLines.map(x=>x.confidence).filter(Boolean);
   const aiConfidence=Math.round((lineConfs.reduce((a,b)=>a+b,0)+(headerConfidence||0))/(lineConfs.length+1));
-  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:textField(f.VendorName)||textField(f.VendorAddressRecipient),taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
+  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 function learnedScore(line,k){
