@@ -37,10 +37,38 @@ function explicitDiscounts(p){
 
 function packageFromText(text=""){
   const s=String(text).toUpperCase().replace(/,/g,".");
-  for(const re of [/\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/,/[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/]){
+  // Suppliers use both "330ML X 24" and "24 X 330ML".  The second form
+  // is common on beverage invoices and used to be missed completely.
+  for(const re of [/\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/,/(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\b/,/(\d{1,3})\s*(?:ΤΜΧ|TEM|ΤΕΜ|PCS)\b/,/[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/]){
     const m=s.match(re);if(m){const n=Number(m[1]);if(n>1&&n<=500)return n}
   }
   return 0;
+}
+
+function isCaseUnit(value=""){
+  return /(?:^|\s)(?:ΚΙΒ|Κ\.Β\.?|ΚΒ|KIB|KIV|CASE|BOX|CTN)(?:\s|$)/i.test(String(value||""));
+}
+
+/*
+ * Retail stock is always posted in pieces.  OCR values remain visible for
+ * audit (invoiceQuantity/invoiceUnit/packageUnitPrice), while quantity and
+ * unitPrice become the values that are safe to send to stock/costing.
+ */
+function normalizeRetailPackaging(line){
+  const raw=String(line?.azureRawRow||line?.rawText||"");
+  const invoiceUnit=String(line?.invoiceUnit||line?.unit||"").trim();
+  const caseInvoice=isCaseUnit(`${invoiceUnit} ${raw}`);
+  const pack=Math.max(0,Number(line?.unitsPerPackage||0))||packageFromText(`${line?.description||""} ${raw}`);
+  const invoiceQuantity=Math.max(0,Number(line?.invoiceQuantity??line?.quantity??0));
+  const packageUnitPrice=Math.max(0,Number(line?.packageUnitPrice??line?.unitPrice??0));
+  if(!(caseInvoice&&invoiceQuantity>0&&pack>1&&packageUnitPrice>0))return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||null,packageUnitPrice:packageUnitPrice||null,unitsPerPackage:pack||0};
+
+  const quantity=money4(invoiceQuantity*pack);
+  const unitPrice=money4(packageUnitPrice/pack);
+  const netAmount=Math.max(0,Number(line?.netAmount||0));
+  const netUnitCost=netAmount>0?money4(netAmount/quantity):applyDiscounts(unitPrice,[line?.discount1,line?.discount2,line?.discount3]);
+  const grossAmount=Math.max(0,Number(line?.grossAmount||0));
+  return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||"ΚΙΒ",packageUnitPrice,quantity,unit:"PCS",stockUnit:"PCS",unitsPerPackage:pack,unitPrice,netUnitCost,netAmount,grossAmount,packageConversionApplied:true,conversionFactor:pack,needsReview:Boolean(line?.needsReview)};
 }
 
 function rowTail(content,description,supplierItemCode){
@@ -161,7 +189,7 @@ function normalizeAzure(payload){
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
-    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)};
+    return normalizeRetailPackaging({supplierItemCode,description,quantity,invoiceQuantity:quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoiceUnit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
@@ -179,11 +207,11 @@ function learnedScore(line,k){
 async function applyLearnedKnowledge(result){
   try{
     const learned=await knowledgeForSupplier({taxId:result?.supplier?.taxId,name:result?.supplier?.name});
-    if(!learned?.length)return result;
+    const supplierKnowledge=Array.isArray(learned)?learned:[];
     result.productLines=(result.productLines||[]).map(line=>{
-      let best=null,score=0;for(const k of learned){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
-      if(!best||score<120)return line;
-      return {...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",unit:best.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score};
+      let best=null,score=0;for(const k of supplierKnowledge){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
+      if(!best||score<120)return normalizeRetailPackaging(line);
+      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
     });
   }catch(error){console.warn("Invoice Learning knowledge apply skipped:",error?.message||error)}
   return result;
