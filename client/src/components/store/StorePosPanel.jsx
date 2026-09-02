@@ -18,7 +18,7 @@ const KAT_OFFLINE_CATALOG_V1=true;
 const offlineCatalogKey=storeId=>`myworkstation:offline-pos-catalog:${storeId}`;
 const readOfflineCatalog=storeId=>{try{const row=JSON.parse(localStorage.getItem(offlineCatalogKey(storeId))||"null");return row&&row.data?row:null}catch{return null}};
 const writeOfflineCatalog=(storeId,data)=>{try{localStorage.setItem(offlineCatalogKey(storeId),JSON.stringify({savedAt:Date.now(),data}))}catch{}};
-const POS_TEXT_SIZES=[{id:"NORMAL",label:"Κανονικά",scale:1},{id:"LARGE",label:"Μεγάλα",scale:1.12},{id:"XL",label:"Πολύ μεγάλα",scale:1.22}];
+const POS_TEXT_SIZES=[{id:"NORMAL",label:"Κανονικά",scale:1},{id:"LARGE",label:"Μεγάλα",scale:1.12},{id:"XL",label:"Πολύ μεγάλα",scale:1.3}];
 const posTextSizeKey=storeId=>`myworkstation:pos-text-size:${storeId||"default"}`;
 const isKatStoreValue=store=>String(store?.id||"").toLocaleLowerCase("el-GR")==="kat-store"||String(store?.name||"").toLocaleUpperCase("el-GR").includes("ΚΥΛΙΚΕΙΟ ΚΑΤ");
 const readPosTextSize=store=>{try{const saved=localStorage.getItem(posTextSizeKey(store?.id));if(POS_TEXT_SIZES.some(option=>option.id===saved))return saved}catch{}return isKatStoreValue(store)?"LARGE":"NORMAL"};
