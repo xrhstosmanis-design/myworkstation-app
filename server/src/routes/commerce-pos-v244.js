@@ -75,7 +75,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 
 Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
     const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({
-      model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",
+      model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
       input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
       text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
     })});
