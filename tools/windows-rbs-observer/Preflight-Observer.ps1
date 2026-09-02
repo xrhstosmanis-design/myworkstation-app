@@ -1,6 +1,6 @@
 param(
   [string]$ApiBase="https://myworkstation-app.onrender.com",
-  [string]$WatchPath="C:\capture\micrelec",
+  [string]$WatchPath="C:\capture",
   [switch]$ForInstall
 )
 $ErrorActionPreference="Stop"
