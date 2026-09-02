@@ -10,6 +10,34 @@ const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase(
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v||0)));
 
+// The POS V2.4.4 routes are mounted before the legacy intake routes.  They
+// therefore cannot rely on the legacy route's per-request compatibility
+// bootstrap.  Without these columns an uploaded invoice reaches the document
+// inbox but fails while the draft purchase order is being created.
+let intakeSchemaPromise;
+async function ensureV244IntakeSchema(){
+  if(!intakeSchemaPromise){
+    intakeSchemaPromise=(async()=>{
+      const statements=[
+        `ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`,
+        `ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "paymentTransactionId" TEXT`,
+        `ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "purchaseOrderId" TEXT`,
+        `ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceType" TEXT`,
+        `ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceDocumentId" TEXT`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "supplierCode" TEXT`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrRawText" TEXT`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrConfidence" NUMERIC(6,3)`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "detectedBarcode" TEXT`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrSequence" INTEGER`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`
+      ];
+      for(const statement of statements)await prisma.$executeRawUnsafe(statement);
+    })().catch(error=>{intakeSchemaPromise=undefined;throw error});
+  }
+  return intakeSchemaPromise;
+}
+
 const lineSchema=z.object({
   rawText:z.string().max(4000).optional().default(""),
   code:z.string().trim().max(80).optional().default(""),
@@ -72,6 +100,8 @@ async function productsForLines(tx,companyId,supplierId,lines){
     return {...line,product};
   });
 }
+
+router.use(async(req,res,next)=>{try{await ensureV244IntakeSchema();next()}catch(error){next(error)}});
 
 router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
