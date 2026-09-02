@@ -1,20 +1,28 @@
 /* Keep every primary POS control inside the visible browser viewport. */
-.compact-store-mode,
-.compact-store-main {
-  min-height: 100dvh;
+.compact-store-mode {
+  position: fixed;
+  inset: 0;
   width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .compact-store-main {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   padding: 0 !important;
+  overflow: hidden;
 }
 
 .mws-standard-pos.store-pos-card {
   width: 100%;
   max-width: none;
-  height: 100dvh;
-  max-height: 100dvh;
-  min-height: 100dvh;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   margin: 0;
   border-radius: 0;
   border-left: 0;
@@ -186,6 +194,7 @@
 .mws-standard-pos .pos-audience-card-row,
 .mws-standard-pos .pos-audience-selector,
 .mws-standard-pos .pos-operation-channel-row { font-size: calc(13px * var(--pos-text-scale)); }
+.mws-standard-pos .pos-audience-selector button { font-size: calc(14px * var(--pos-text-scale)); }
 .mws-standard-pos .pos-audience-card-row input { font-size: calc(14px * var(--pos-text-scale)); }
 .mws-standard-pos .standard-quick > header { font-size: calc(13px * var(--pos-text-scale)); }
 .mws-standard-pos .standard-quick > div > button span { font-size: calc(12px * var(--pos-button-font) * var(--pos-text-scale)); }
@@ -206,8 +215,8 @@
 .mws-standard-pos .money-cards b { font-size: calc(20px * var(--pos-text-scale)); }
 .mws-standard-pos .clear-money { font-size: calc(13px * var(--pos-text-scale)); }
 .mws-standard-pos .standard-action-bar > button,
-.mws-standard-pos .standard-payment-end > button { font-size: calc(10px * var(--pos-text-scale)); }
-.mws-standard-pos .standard-payment-end > strong small { font-size: calc(9px * var(--pos-text-scale)); }
+.mws-standard-pos .standard-payment-end > button { font-size: calc(12px * var(--pos-text-scale)); }
+.mws-standard-pos .standard-payment-end > strong small { font-size: calc(11px * var(--pos-text-scale)); }
 .mws-standard-pos .store-pos-nonfiscal { font-size: calc(11px * var(--pos-text-scale)); }
 
 .mws-standard-pos .pos-text-size-trigger {
