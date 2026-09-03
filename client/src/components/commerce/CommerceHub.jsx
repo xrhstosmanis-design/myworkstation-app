@@ -29,6 +29,7 @@ export default function CommerceHub({api,stores=[]}){
   const [report,setReport]=useState(null);
   const [handover,setHandover]=useState([]);
   const [aiStatus,setAiStatus]=useState(null);
+  const [aiFocusJobId,setAiFocusJobId]=useState("");
   const [cart,setCart]=useState([]);
   const [posLayout,setPosLayout]=useState({title:"OPERATOR POS",productColumns:6,showSku:true,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},quickKeys:[],categories:[],buttons:[{id:"cash",label:"ΜΕΤΡΗΤΑ",action:"CASH",color:"#078a4d",visible:true},{id:"card",label:"ΚΑΡΤΑ",action:"CARD",color:"#3979cc",visible:true}]});
   const [posCategory,setPosCategory]=useState("");
@@ -183,9 +184,9 @@ export default function CommerceHub({api,stores=[]}){
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 
-    {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores}/>}
+    {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
-    {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi}/>}
+    {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 
     {tab==="attendance"&&<AttendanceManagementPanel api={api} stores={stores} initialStoreId={storeId}/>}
 
