@@ -273,7 +273,7 @@ router.get("/handover/:handoverId/attachment",requireCompanyModule("SHIFT_HANDOV
 });
 
 router.get("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT i."id",i."status",i."receivedAt",i."processedAt",i."note",i."responsibleName",i."updatedAt",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment" FROM "DocumentInbox" i LEFT JOIN "Supplier" s ON s."id"=i."supplierId" LEFT JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" WHERE i."companyId"=${req.user.companyId} AND i."storeId"=${store.id} ORDER BY CASE WHEN i."status"='PROCESSED' THEN 1 ELSE 0 END,i."receivedAt" DESC LIMIT 300`;res.json(rows)}catch(error){next(error)}
+  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT i."id",i."status",i."receivedAt",i."processedAt",i."note",i."responsibleName",i."updatedAt",i."supplierId",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment" FROM "DocumentInbox" i LEFT JOIN "Supplier" s ON s."id"=i."supplierId" LEFT JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" WHERE i."companyId"=${req.user.companyId} AND i."storeId"=${store.id} ORDER BY CASE WHEN i."status"='PROCESSED' THEN 1 ELSE 0 END,i."receivedAt" DESC LIMIT 300`;res.json(rows)}catch(error){next(error)}
 });
 
 router.post("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
