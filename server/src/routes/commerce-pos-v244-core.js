@@ -30,7 +30,9 @@ async function ensureV244IntakeSchema(){
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "detectedBarcode" TEXT`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrSequence" INTEGER`,
-        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "invoiceUnit" TEXT`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`
       ];
       for(const statement of statements)await prisma.$executeRawUnsafe(statement);
     })().catch(error=>{intakeSchemaPromise=undefined;throw error});
@@ -89,15 +91,17 @@ async function productsForLines(tx,companyId,supplierId,lines){
     FROM "Product" p WHERE p."companyId"=${companyId} AND p."active"=true`;
   const byBarcode=new Map();
   for(const p of products)for(const barcode of p.barcodes||[])byBarcode.set(String(barcode),p);
-  const mappings=await tx.$queryRaw`SELECT "supplierItemCode","productId" FROM "SupplierProductMapping" WHERE "companyId"=${companyId} AND "supplierId"=${supplierId}`;
-  const bySupplierCode=new Map(mappings.map(m=>[norm(m.supplierItemCode),m.productId]));
+  const mappings=await tx.$queryRaw`SELECT "supplierItemCode","productId","unitsPerPackage" FROM "SupplierProductMapping" WHERE "companyId"=${companyId} AND "supplierId"=${supplierId}`;
+  const bySupplierCode=new Map(mappings.map(m=>[norm(m.supplierItemCode),m]));
   const byId=new Map(products.map(p=>[p.id,p]));
   return lines.map(line=>{
     let product=null;
-    if(line.code){const mapped=bySupplierCode.get(norm(line.code));if(mapped)product=byId.get(mapped)||null;}
+    const learned=line.code?bySupplierCode.get(norm(line.code)):null;
+    if(learned)product=byId.get(learned.productId)||null;
     if(!product&&line.barcode)product=byBarcode.get(String(line.barcode))||null;
     if(!product){const key=norm(line.description);if(key.length>=4)product=products.find(p=>norm(p.name)===key)||products.find(p=>{const pk=norm(p.name);return key.length>=6&&pk.length>=6&&(pk.includes(key)||key.includes(pk))})||null;}
-    return {...line,product};
+    const learnedPack=Math.max(0,Number(learned?.unitsPerPackage||0)),useLearnedPack=learnedPack>1&&Number(line.unitsPerPackage||0)<=1;
+    return {...line,product,...(useLearnedPack?{unit:"PACKAGE",unitsPerPackage:learnedPack,packRule:`LEARNED_SUPPLIER_CODE_${learnedPack}`}:{})};
   });
 }
 
@@ -167,8 +171,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR V2.4.4 τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
       for(const [index,line] of matched.entries()){
         const net=Math.max(0,Number(line.netAmount||0)),gross=Math.max(net,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net);
+        const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit),stockUnitsPerInvoiceUnit=invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1;
         stage=`create-purchase-line-${index+1}`;
-        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","supplierCode") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},0,${line.vatRate},false,${line.unitCost},0,${Number(line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${line.product?'MATCHED':'UNRESOLVED'},${line.barcode||null},${index+1},'PRODUCT',${line.code||null})`;
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},0,${line.vatRate},false,${line.unitCost},0,${Number(line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${line.product?'MATCHED':'UNRESOLVED'},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;
       }
       let paymentTransactionId=null;
       if(body.settlementMode==="PAID"){
