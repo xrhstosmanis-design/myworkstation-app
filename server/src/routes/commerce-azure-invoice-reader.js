@@ -181,6 +181,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       console.warn("Azure Document Intelligence returned invoice header without product lines; falling back to AI table reader.",{jobId:job.id,confidence:parsed.aiConfidence});
       return next();
     }
+    parsed=reconcileAzureInvoice(parsed);
+    if(parsed.reconciliation?.headerReview?.includes("INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM")){
+      parsed.azurePartial=true;
+      parsed.azureFallbackReason="INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM";
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AZURE',"status"='LOCAL_COMPLETE',"aiConfidence"=${parsed.aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+      console.warn("Azure returned an incomplete invoice table; falling back to the full AI table reader.",{jobId:job.id,lineGrossSum:parsed.reconciliation.lineGrossSum,invoiceTotal:parsed.reconciliation.invoiceTotal});
+      return next();
+    }
     await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
     parsed=reconcileAzureInvoice(parsed);
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
