@@ -30,6 +30,12 @@ test("line editor supports the three discounts excise VAT gift markup and propos
   assert.match(route,/grossUnit\*\(1\+markupPercent\/100\)/);
   assert.match(route,/calculateFrom==="RETAIL"/);
   assert.match(route,/\(proposedSalePrice\/grossUnit\)-1/);
+  assert.match(client,/Έκπτωση\$\{i\} \(€\)/);
+  assert.match(client,/name="finalUnitCost"/);
+  assert.match(client,/source==="AMOUNT"/);
+  assert.match(client,/source==="FINAL"/);
+  assert.match(client,/totalDiscount\/initial\*100/);
+  assert.match(client,/amount\/running\*100/);
 });
 
 test("Kiosk-style drilldowns are wired to real actions",()=>{
