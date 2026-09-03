@@ -21,6 +21,11 @@ const statements=[
   "lastDescription" TEXT,
   "unitsPerPackage" DECIMAL(14,4),
   "lastUnitCost" DECIMAL(14,4),
+  "lastDiscount1" DECIMAL(8,4),
+  "lastDiscount2" DECIMAL(8,4),
+  "lastDiscount3" DECIMAL(8,4),
+  "lastExcisePerInvoiceUnit" DECIMAL(14,6),
+  "lastMarkupPercent" DECIMAL(12,6),
   "usageCount" INTEGER NOT NULL DEFAULT 1,
   "confirmedByUserId" TEXT,
   "confirmedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -37,6 +42,11 @@ const statements=[
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_supplier_idx" ON "SupplierProductMapping"("supplierId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_product_idx" ON "SupplierProductMapping"("productId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_barcode_idx" ON "SupplierProductMapping"("supplierBarcode")`,
+`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount1" DECIMAL(8,4)`,
+`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount2" DECIMAL(8,4)`,
+`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount3" DECIMAL(8,4)`,
+`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastExcisePerInvoiceUnit" DECIMAL(14,6)`,
+`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastMarkupPercent" DECIMAL(12,6)`,
 `CREATE OR REPLACE FUNCTION mws_preserve_ai_reader_lines() RETURNS trigger AS $$
 DECLARE
   v_new_products JSONB;
