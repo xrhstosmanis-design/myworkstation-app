@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
@@ -109,23 +110,60 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const storeId=String(req.body?.storeId||"");
     const supplierId=String(req.body?.supplierId||"");
     const documentNumber=normalizeDocumentNumber(req.body?.documentNumber);
+    const documentToken=norm(req.body?.documentNumber);
+    const dataUrl=String(req.body?.dataUrl||"");
     if(!storeId||!supplierId||!documentNumber)return res.status(400).json({error:"Χρειάζονται κατάστημα, προμηθευτής και αριθμός τιμολογίου για τον γρήγορο έλεγχο duplicate."});
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    const fileMatch=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+    const checksum=fileMatch?crypto.createHash("sha256").update(Buffer.from(fileMatch[2],"base64")).digest("hex"):null;
+    if(checksum){
+      const attachments=await prisma.$queryRaw`
+        SELECT a."id",a."filename",COALESCE(i."status",j."status",'UPLOADED') AS "status",
+          COALESCE(i."receivedAt",j."createdAt",a."createdAt") AS "receivedAt"
+        FROM "DocumentAttachment" a
+        LEFT JOIN "DocumentInbox" i ON i."attachmentId"=a."id" AND i."companyId"=a."companyId"
+        LEFT JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId"
+        WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${checksum}
+        ORDER BY COALESCE(i."receivedAt",j."createdAt",a."createdAt") DESC LIMIT 1`;
+      if(attachments[0])return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη ανέβει. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
+      const paymentByFile=await prisma.$queryRaw`
+        SELECT t."id",t."occurredAt",t."amount",t."description"
+        FROM "StoreTransaction" t
+        WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."supplierId"=${supplierId}
+          AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."attachmentChecksum"=${checksum}
+        ORDER BY t."occurredAt" DESC LIMIT 1`;
+      if(paymentByFile[0])return res.status(409).json({error:"Η πληρωμή αυτού του τιμολογίου υπάρχει ήδη. Δεν έγινε δεύτερη οικονομική κίνηση.",code:"DUPLICATE_INVOICE_PAYMENT",existing:paymentByFile[0]});
+    }
     const docs=await prisma.$queryRaw`
-      SELECT d."id",d."status",d."documentNumber",d."documentDate"
+      SELECT d."id",d."status",d."documentNumber",d."documentDate",s."name" AS "storeName"
       FROM "PurchaseDocument" d
-      WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."supplierId"=${supplierId}
+      LEFT JOIN "Store" s ON s."id"=d."storeId"
+      WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
         AND d."status" IN ('DRAFT','APPROVED')
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY d."documentDate" DESC LIMIT 1`;
     if(docs[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:docs[0]});
     const orders=await prisma.$queryRaw`
-      SELECT o."id",o."status",o."invoiceNumber" AS "documentNumber",o."updatedAt"
+      SELECT o."id",o."status",o."invoiceNumber" AS "documentNumber",o."updatedAt",s."name" AS "storeName"
       FROM "PurchaseOrder" o
-      WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."supplierId"=${supplierId}
+      LEFT JOIN "Store" s ON s."id"=o."storeId"
+      WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
         AND o."status" IN ('NEW','FINAL','INVOICED')
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
+    if(documentToken){
+      const payments=await prisma.$queryRaw`
+        SELECT t."id",t."occurredAt",t."amount",t."description"
+        FROM "StoreTransaction" t
+        WHERE t."companyId"=${companyId} AND t."supplierId"=${supplierId}
+          AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+          AND POSITION(${documentToken} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g'))) > 0
+        ORDER BY t."occurredAt" DESC LIMIT 1`;
+      if(payments[0])return res.status(409).json({error:`Υπάρχει ήδη πληρωμή για το τιμολόγιο ${String(req.body?.documentNumber||"").trim()}. Δεν έγινε δεύτερη πληρωμή ή πίστωση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:payments[0]});
+    }
     res.json({ok:true,duplicate:false});
   }catch(error){next(error)}
 });
