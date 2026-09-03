@@ -6,6 +6,9 @@ import coreRouter from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
 
 const router=Router();
+// The POS must hand the invoice off quickly. Small OCR reconciliation differences
+// remain visible for management review in BackOffice and do not block the operator.
+const POS_HANDOFF_TOLERANCE=5;
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const CANONICAL_VAT=new Set([0,6,13,24]);
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
@@ -212,7 +215,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const structuredNet=round2(normalizedLines.reduce((sum,line)=>sum+Number(line?.netAmount||0),0));
     if(!(structuredGross>0))return res.status(409).json({error:"Οι γραμμές V2.4.4 δεν έχουν έγκυρα σύνολα. Απαιτείται επανέλεγχος του τιμολογίου."});
     const diff=round2(Math.abs(structuredGross-requestedTotal));
-    if(diff>0.05)return res.status(409).json({error:`ΜΠΛΟΚΑΡΙΣΤΗΚΕ: το σύνολο των γραμμών (${structuredGross.toFixed(2)} €) δεν συμφωνεί με το σύνολο τιμολογίου (${requestedTotal.toFixed(2)} €). Διαφορά ${diff.toFixed(2)} €. Κάνε επανέλεγχο πριν από την καταχώριση.`,code:"V244_TOTAL_MISMATCH",structuredGross,structuredNet,invoiceGross:round2(requestedTotal),difference:diff,correctedGrossLines});
+    if(diff>POS_HANDOFF_TOLERANCE)return res.status(409).json({error:`ΜΠΛΟΚΑΡΙΣΤΗΚΕ: το σύνολο των γραμμών (${structuredGross.toFixed(2)} €) δεν συμφωνεί με το σύνολο τιμολογίου (${requestedTotal.toFixed(2)} €). Διαφορά ${diff.toFixed(2)} € — πάνω από το όριο γρήγορης καταχώρισης ${POS_HANDOFF_TOLERANCE.toFixed(2)} €. Κάνε επανέλεγχο πριν από την καταχώριση.`,code:"V244_TOTAL_MISMATCH",structuredGross,structuredNet,invoiceGross:round2(requestedTotal),difference:diff,tolerance:POS_HANDOFF_TOLERANCE,correctedGrossLines});
 
     if(correctedGrossLines>0){
       const repaired={...result,productLines:normalizedLines,grossNormalizedAt:new Date().toISOString(),grossNormalization:"NET_PLUS_CANONICAL_VAT"};
