@@ -98,7 +98,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
-      await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate})});
+      await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,dataUrl:fileDataUrl})});
       const key=paymentKey(),totalGross=num(amount);
       let paymentTransactionId=null;
       if(mode==="PAID"){
