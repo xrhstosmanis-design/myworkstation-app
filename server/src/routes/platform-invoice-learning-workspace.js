@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
@@ -15,6 +16,8 @@ const ALFA_SEED_KEY="ALFA_AFOI_MANTOU";
 const ALFA_SEED_PROFILE={supplierName:"ALFA / ΑΦΟΙ ΜΑΝΤΟΥ Α.Ε.",supplierTaxId:"",ruleKey:ALFA_SEED_KEY,central:true,source:"MANUAL_VERIFIED_INVOICE_LEARNING",mappings:{"U_ROLO_TYRI_120GR":{supplierItemCode:"",description:"U ΡΟΛΟ ΤΥΡΙ 120gr",invoiceUnit:"Κ.Β.",stockUnit:"ΤΜΧ",unitsPerPackage:75,packageUnitPrice:28.25,pieceNetCost:0.3767,discount1:0,discount2:0,discount3:0,vatRate:13,barcode:"",barcodeType:"MWS_INTERNAL_PENDING",verified:true}}};
 const ALFA_TASTY_KEY="998862155";
 const ALFA_TASTY_PROFILE={supplierName:"ALFA TASTY ΕΠΕ",supplierTaxId:"998862155",ruleKey:"ALFA_TASTY",central:true,source:"MANUAL_VERIFIED_INVOICE_LEARNING",mappings:{"010206":{supplierItemCode:"010206",description:"ΠΑΤΗΤΗ ΑΛΛΑΝΤΙΚΩΝ ΘΡΑΚΙΩΤΙΚΗ 32Τ",invoiceUnit:"ΤΜΧ",stockUnit:"ΤΜΧ",unitsPerPackage:1,quantityExample:32,unitPrice:1.10,netAmountExample:35.20,discount1:0,discount2:0,discount3:0,vatRate:13,grossAmountExample:39.78,barcode:"",barcodeType:"MWS_INTERNAL_PENDING",verified:true}}};
+const uid=()=>crypto.randomUUID();
+const asNumber=(value,{min=0,max=10000000}={})=>{const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
 
 export async function ensureInvoiceLearningWorkspaceSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceLearningWorkspaceState" ("scopeKey" TEXT PRIMARY KEY,"state" JSONB NOT NULL DEFAULT '{"documents":[],"profiles":{},"master":[]}'::jsonb,"updatedByUserId" TEXT,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
@@ -80,6 +83,32 @@ router.put("/invoice-learning/product-knowledge/:id/barcode",async(req,res,next)
   const rows=await prisma.$queryRawUnsafe(`UPDATE "InvoiceLearningProductKnowledge" SET "barcode"=$1,"barcodeStatus"='KNOWN',"knowledge"=COALESCE("knowledge",'{}'::jsonb)||$2::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$3 RETURNING "id","supplierKey","supplierTaxId","supplierName","supplierItemCode","description","barcode","barcodeStatus","masterProductId","masterProductName","invoiceUnit","stockUnit","unitsPerPackage","conversionFactor","vatRate","knowledge","verified","updatedAt"`,barcode,JSON.stringify({barcodeSource:"MANUAL_CONFIRMED",barcodeConfirmedAt:new Date().toISOString()}),id);
   if(!rows?.length)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο κεντρικό Learning."});
   res.json({ok:true,product:rows[0]});
+}catch(error){next(error)}});
+
+
+router.get("/invoice-learning/catalog-targets",async(req,res,next)=>{try{
+  const companies=await prisma.company.findMany({where:{active:true},select:{id:true,name:true,stores:{where:{active:true},select:{id:true,name:true,city:true},orderBy:{name:"asc"}}},orderBy:{name:"asc"}});
+  res.json({ok:true,companies});
+}catch(error){next(error)}});
+
+router.post("/invoice-learning/master-products",async(req,res,next)=>{try{
+  const body=req.body&&typeof req.body==="object"?req.body:{},name=String(body.description||body.name||"").trim().replace(/\s+/g," "),supplierName=String(body.supplierName||"").trim().replace(/\s+/g," "),supplierCode=String(body.supplierItemCode||"").trim(),barcode=String(body.barcode||"").replace(/\D/g,""),vatRate=asNumber(body.vatRate,{min:0,max:100}),cost=asNumber(body.defaultCostPrice??body.unitCost,{min:0}),retail=asNumber(body.defaultRetailPrice,{min:0}),storeIds=[...new Set(Array.isArray(body.storeIds)?body.storeIds.map(String).filter(Boolean):[])];
+  if(name.length<2||name.length>250)return res.status(400).json({error:"Συμπλήρωσε σωστή περιγραφή προϊόντος."});
+  if(barcode&&(barcode.length<8||barcode.length>14))return res.status(400).json({error:"Το barcode πρέπει να έχει 8 έως 14 ψηφία."});
+  if(body.vatRate!==undefined&&body.vatRate!==""&&vatRate===null)return res.status(400).json({error:"Έλεγξε τον ΦΠΑ."});
+  if((body.defaultCostPrice!==undefined||body.unitCost!==undefined)&&cost===null)return res.status(400).json({error:"Έλεγξε την τιμή αγοράς."});
+  if(body.defaultRetailPrice!==undefined&&body.defaultRetailPrice!==""&&retail===null)return res.status(400).json({error:"Έλεγξε τη λιανική τιμή."});
+  if(storeIds.length>200)return res.status(400).json({error:"Επίλεξε έως 200 καταστήματα."});
+  const stores=storeIds.length?await prisma.store.findMany({where:{id:{in:storeIds},active:true},select:{id:true,companyId:true}}):[];if(stores.length!==storeIds.length)return res.status(400).json({error:"Κάποιο επιλεγμένο κατάστημα δεν είναι ενεργό."});
+  const sourceCode=`IL-${cleanTaxId(body.supplierTaxId)||normName(supplierName).slice(0,20)||"SUPPLIER"}-${supplierCode||barcode||normName(name).slice(0,60)||"ITEM"}`.replace(/[^A-ZΑ-Ω0-9_-]/g,"").slice(0,120);
+  const exists=await prisma.$queryRawUnsafe(`SELECT mp."id",mp."sourceCode",mp."name" FROM "MasterProduct" mp WHERE mp."sourceCode"=$1 OR ($2<>'' AND EXISTS(SELECT 1 FROM "MasterProductBarcode" b WHERE b."masterProductId"=mp."id" AND b."barcode"=$2)) LIMIT 1`,sourceCode,barcode);
+  let master=exists?.[0]||null,created=false,createdProducts=0,activatedMappings=0;
+  await prisma.$transaction(async tx=>{
+    if(!master){const id=uid();await tx.$executeRaw`INSERT INTO "MasterProduct" ("id","sourceCode","name","supplierName","defaultRetailPrice","defaultCostPrice","vatRate","vatVerified","active","reviewStatus","importVersion") VALUES (${id},${sourceCode},${name},${supplierName||null},${retail},${cost},${vatRate},${vatRate!==null},true,'LEARNING_CONFIRMED','INVOICE_LEARNING')`;if(barcode)await tx.$executeRaw`INSERT INTO "MasterProductBarcode" ("id","masterProductId","barcode","scanEnabled","duplicateBarcode") VALUES (${uid()},${id},${barcode},true,false)`;master={id,sourceCode,name};created=true}
+    const byCompany=new Map();for(const store of stores){const xs=byCompany.get(store.companyId)||[];xs.push(store);byCompany.set(store.companyId,xs)}
+    for(const [companyId,companyStores] of byCompany){let product=(await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "masterProductId"=${master.id} LIMIT 1`)[0];if(!product){const id=uid();await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","masterProductId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${id},${companyId},${master.id},${master.sourceCode},${master.name},'PIECE',${vatRate||0},${vatRate!==null},${retail||0},${cost||0},true,true)`;if(barcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${id},${barcode},1) ON CONFLICT DO NOTHING`;product={id};createdProducts++}for(const store of companyStores){const before=await tx.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"=${store.id} AND "productId"=${product.id} LIMIT 1`;await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${product.id},${retail||0},0,true) ON CONFLICT ("storeId","productId") DO UPDATE SET "active"=true,"updatedAt"=CURRENT_TIMESTAMP`;if(!before[0])activatedMappings++}}
+  });
+  res.status(created?201:200).json({ok:true,master:{...master,created},stores:stores.length,createdProducts,activatedMappings});
 }catch(error){next(error)}});
 
 router.get("/invoice-learning/workspace",async(req,res,next)=>{try{const rows=await prisma.$queryRawUnsafe(`SELECT "state","updatedAt" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"=$1 LIMIT 1`,SCOPE),row=rows?.[0];res.json({ok:true,state:row?.state||{documents:[],profiles:{},master:[]},updatedAt:row?.updatedAt||null})}catch(error){next(error)}});
