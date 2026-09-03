@@ -20,15 +20,18 @@ const optimizeImage=async file=>{
 };
 const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(file.size<70000)return "Η φωτογραφία είναι πολύ μικρή· βγάλε καθαρότερη φωτογραφία του παραστατικού.";const u=URL.createObjectURL(file);try{return await new Promise(resolve=>{const i=new Image();i.onload=()=>{const ok=Math.max(i.width,i.height)>=1000&&Math.min(i.width,i.height)>=600;URL.revokeObjectURL(u);resolve(ok?null:"Η ανάλυση είναι χαμηλή. Φωτογράφισε το παραστατικό από πιο κοντά και με καλό φωτισμό.")};i.onerror=()=>resolve(null);i.src=u})}catch{return null}};
 
-async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,supplierName}){
-  let jobId=null;
+async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,resumeJobId=null}){
+  let jobId=resumeJobId||null;
   let stage="Δημιουργία εργασίας AI Reader";
   try{
-    const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"Γρήγορη καταχώριση με AI — στο παρασκήνιο V2.4.4"}})});
+    const existingJobs=resumeJobId?await api(`/api/commerce/ai-reader/jobs?storeId=${encodeURIComponent(store.id)}`):[];
+    const existing=Array.isArray(existingJobs)?existingJobs.find(row=>row.id===resumeJobId):null;
+    const job=existing||await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"Γρήγορη καταχώριση με AI — στο παρασκήνιο V2.4.4"}})});
     if(!job?.id)throw new Error("Δεν δημιουργήθηκε εργασία V2.4.4.");
     jobId=job.id;
     stage="Azure/AI επανέλεγχος γραμμών";
-    const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});
+    const completedLines=Array.isArray(existing?.result?.productLines)?existing.result.productLines:[];
+    const ai=completedLines.length?{result:existing.result}:await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true}),signal:new AbortController().signal});
     stage="Επικύρωση γραμμών προϊόντων";
     const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
     if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");
@@ -89,20 +92,22 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
-      await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,dataUrl:fileDataUrl})});
+      const duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,dataUrl:fileDataUrl})});
       const key=paymentKey(),totalGross=num(amount);
-      let paymentTransactionId=null;
+      let paymentTransactionId=duplicateCheck?.paymentTransactionId||null;
       if(mode==="PAID"){
-        stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
-        setStatus("Καταχώριση πληρωμής στη βάρδια…");
-        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key,attachment:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
-        paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
-        if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+        if(!paymentTransactionId){
+          stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
+          setStatus("Καταχώριση πληρωμής στη βάρδια…");
+          const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key,attachment:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
+          paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
+          if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+        }
       }
       setStatus("Η πληρωμή παραλήφθηκε. Αναγνώριση γραμμών και καταχώριση τιμολογίου στο BackOffice σε εξέλιξη…");
       const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η αναγνώριση και η καταχώριση του τιμολογίου συνεχίζονται στο background.`:"Η αναγνώριση γραμμών και η καταχώριση του τιμολογίου συνεχίζονται στο background.";
       setMessage?.(success);onChanged?.();
-      backgroundV244({api,store,fileDataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,supplierName:supplier?.name||null})
+      backgroundV244({api,store,fileDataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,resumeJobId:duplicateCheck?.resumeJobId||null})
         .then(created=>{setStatus(`✅ Το τιμολόγιο καταχωρίστηκε με ${created?.lineCount||0} γραμμές και μετά αρχειοθετήθηκε στη Θυρίδα.`);setMessage?.(`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές και αρχειοθετήθηκε στη Θυρίδα για αναζήτηση και αντιστοίχιση πληρωμής.`);onChanged?.()})
         .catch(error=>{setStatus(`⚠️ Δεν ολοκληρώθηκε η καταχώριση τιμολογίου. ${error?.message||error}`);setMessage?.(`⚠️ Η πληρωμή διατηρήθηκε, αλλά το τιμολόγιο δεν καταχωρίστηκε ούτε αρχειοθετήθηκε: ${error?.message||error}`)});
     }catch(error){
