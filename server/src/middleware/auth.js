@@ -149,7 +149,8 @@ export async function auth(req,res,next){
         path==="/api/commerce/documents/inbox"||
         path==="/api/commerce/ai-reader/jobs"
       );
-      req.user={...payload,id:writesNullableUserFk?null:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
+      req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
+      if(writesNullableUserFk)req.user.id=null;
       // A verified device binding in the login token identifies the physical POS.
       // Legacy sessions without one continue to use the operator profile terminal.
       req.user.terminalPos=payload.terminalPos||payload.terminalpos||operator.terminalPos||operator.terminalpos||null;
