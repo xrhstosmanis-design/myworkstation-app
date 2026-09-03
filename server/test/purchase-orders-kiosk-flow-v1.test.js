@@ -39,6 +39,11 @@ test("line editor supports the three discounts excise VAT gift markup and propos
   assert.match(client,/inputmode="decimal"/);
   assert.match(client,/replace\(",","\."\)/);
   assert.match(client,/!input\.matches\('\[name\^="discountAmount"\],\[name="finalUnitCost"\]'\)/);
+  assert.match(client,/name="discount1" type="number" step="any"/);
+  assert.match(client,/percent\.toFixed\(8\)/);
+  assert.match(client,/amount\.toFixed\(6\)/);
+  assert.match(route,/"discount1" NUMERIC\(12,8\)/);
+  assert.match(route,/ALTER COLUMN "discount1" TYPE NUMERIC\(12,8\)/);
 });
 
 test("Kiosk-style drilldowns are wired to real actions",()=>{

@@ -44,9 +44,9 @@ export async function ensurePurchaseOrderSchema(){
         "description" TEXT NOT NULL,
         "quantity" NUMERIC(14,4) NOT NULL DEFAULT 1,
         "unitCost" NUMERIC(14,6) NOT NULL DEFAULT 0,
-        "discount1" NUMERIC(8,4) NOT NULL DEFAULT 0,
-        "discount2" NUMERIC(8,4) NOT NULL DEFAULT 0,
-        "discount3" NUMERIC(8,4) NOT NULL DEFAULT 0,
+        "discount1" NUMERIC(12,8) NOT NULL DEFAULT 0,
+        "discount2" NUMERIC(12,8) NOT NULL DEFAULT 0,
+        "discount3" NUMERIC(12,8) NOT NULL DEFAULT 0,
         "exciseTotal" NUMERIC(14,6) NOT NULL DEFAULT 0,
         "vatRate" NUMERIC(8,4) NOT NULL DEFAULT 24,
         "gift" BOOLEAN NOT NULL DEFAULT false,
@@ -59,6 +59,7 @@ export async function ensurePurchaseOrderSchema(){
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ALTER COLUMN "discount1" TYPE NUMERIC(12,8), ALTER COLUMN "discount2" TYPE NUMERIC(12,8), ALTER COLUMN "discount3" TYPE NUMERIC(12,8)`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderLine_order_idx" ON "PurchaseOrderLine" ("orderId")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderLine_product_idx" ON "PurchaseOrderLine" ("productId")`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
