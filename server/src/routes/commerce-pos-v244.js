@@ -1,9 +1,14 @@
+import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import coreRouter from "./commerce-pos-v244-core.js";
+import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
 
 const router=Router();
+// The POS must hand the invoice off quickly. Small OCR reconciliation differences
+// remain visible for management review in BackOffice and do not block the operator.
+const POS_HANDOFF_TOLERANCE=5;
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const CANONICAL_VAT=new Set([0,6,13,24]);
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
@@ -49,6 +54,11 @@ router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>
 
 router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
+    if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+      const parsed=normalizeAzure(await callAzure({contentData:req.body?.dataUrl,mimeType:req.body?.mimeType||"image/jpeg"}));
+      const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
+      return res.json({confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE"});
+    }
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const storeId=String(req.body?.storeId||"");
     const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
@@ -63,7 +73,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
     const filePart=isPdf
       ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
-      :{type:"input_image",image_url:dataUrl,detail:"high"};
+      :{type:"input_image",image_url:dataUrl,detail:"low"};
     const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού και την κάτω περιοχή για τα τελικά σύνολα. ΜΗΝ αναλύσεις προϊόντα και ΜΗΝ επιστρέψεις γραμμές ειδών.
 
 Χρειάζομαι ΜΟΝΟ αυτά τα 5 στοιχεία:
@@ -75,7 +85,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 
 Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
     const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({
-      model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",
+      model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
       input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
       text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
     })});
@@ -103,23 +113,61 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const storeId=String(req.body?.storeId||"");
     const supplierId=String(req.body?.supplierId||"");
     const documentNumber=normalizeDocumentNumber(req.body?.documentNumber);
+    const documentToken=norm(req.body?.documentNumber);
+    const dataUrl=String(req.body?.dataUrl||"");
     if(!storeId||!supplierId||!documentNumber)return res.status(400).json({error:"Χρειάζονται κατάστημα, προμηθευτής και αριθμός τιμολογίου για τον γρήγορο έλεγχο duplicate."});
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    const fileMatch=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+    const checksum=fileMatch?crypto.createHash("sha256").update(Buffer.from(fileMatch[2],"base64")).digest("hex"):null;
+    if(checksum){
+      const attachments=await prisma.$queryRaw`
+        SELECT a."id",a."filename",i."id" AS "inboxId",j."id" AS "jobId",j."purchaseDocumentId",COALESCE(i."status",j."status",'UPLOADED') AS "status",
+          COALESCE(i."receivedAt",j."createdAt",a."createdAt") AS "receivedAt"
+        FROM "DocumentAttachment" a
+        LEFT JOIN "DocumentInbox" i ON i."attachmentId"=a."id" AND i."companyId"=a."companyId"
+        LEFT JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId"
+        WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${checksum}
+        ORDER BY COALESCE(i."receivedAt",j."createdAt",a."createdAt") DESC LIMIT 1`;
+      const paymentByFile=await prisma.$queryRaw`
+        SELECT t."id",t."occurredAt",t."amount",t."description"
+        FROM "StoreTransaction" t
+        WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."supplierId"=${supplierId}
+          AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."attachmentChecksum"=${checksum}
+        ORDER BY t."occurredAt" DESC LIMIT 1`;
+      if(attachments[0]?.purchaseDocumentId||attachments[0]?.inboxId)return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη καταχωριστεί. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
+      if(attachments[0]?.jobId)return res.json({ok:true,duplicate:false,resumable:true,resumeJobId:attachments[0].jobId,resumeStatus:attachments[0].status,paymentTransactionId:paymentByFile[0]?.id||null,message:"Βρέθηκε η προηγούμενη ανολοκλήρωτη ανάγνωση και θα συνεχιστεί χωρίς νέο upload ή πληρωμή."});
+      if(paymentByFile[0])return res.status(409).json({error:"Η πληρωμή αυτού του τιμολογίου υπάρχει ήδη. Δεν έγινε δεύτερη οικονομική κίνηση.",code:"DUPLICATE_INVOICE_PAYMENT",existing:paymentByFile[0]});
+    }
     const docs=await prisma.$queryRaw`
-      SELECT d."id",d."status",d."documentNumber",d."documentDate"
+      SELECT d."id",d."status",d."documentNumber",d."documentDate",s."name" AS "storeName"
       FROM "PurchaseDocument" d
-      WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."supplierId"=${supplierId}
+      LEFT JOIN "Store" s ON s."id"=d."storeId"
+      WHERE d."companyId"=${companyId} AND d."supplierId"=${supplierId}
         AND d."status" IN ('DRAFT','APPROVED')
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(d."documentNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY d."documentDate" DESC LIMIT 1`;
     if(docs[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:docs[0]});
     const orders=await prisma.$queryRaw`
-      SELECT o."id",o."status",o."invoiceNumber" AS "documentNumber",o."updatedAt"
+      SELECT o."id",o."status",o."invoiceNumber" AS "documentNumber",o."updatedAt",s."name" AS "storeName"
       FROM "PurchaseOrder" o
-      WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."supplierId"=${supplierId}
+      LEFT JOIN "Store" s ON s."id"=o."storeId"
+      WHERE o."companyId"=${companyId} AND o."supplierId"=${supplierId}
         AND o."status" IN ('NEW','FINAL','INVOICED')
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
+    if(documentToken){
+      const payments=await prisma.$queryRaw`
+        SELECT t."id",t."occurredAt",t."amount",t."description"
+        FROM "StoreTransaction" t
+        WHERE t."companyId"=${companyId} AND t."supplierId"=${supplierId}
+          AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+          AND POSITION(${documentToken} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g'))) > 0
+        ORDER BY t."occurredAt" DESC LIMIT 1`;
+      if(payments[0])return res.status(409).json({error:`Υπάρχει ήδη πληρωμή για το τιμολόγιο ${String(req.body?.documentNumber||"").trim()}. Δεν έγινε δεύτερη πληρωμή ή πίστωση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:payments[0]});
+    }
     res.json({ok:true,duplicate:false});
   }catch(error){next(error)}
 });
@@ -145,7 +193,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const settlementMode=source.settlementMode==="PAID"?"PAID":"CREDIT";
     const note=source.note==null?null:String(source.note).trim().slice(0,500);
     const requestedTotal=totalFromRequest>0?totalFromRequest:totalFromResult;
-    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,note};
+    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,paymentTransactionId:source.paymentTransactionId||null,note};
     const missing=[];
     if(!supplierId)missing.push("Προμηθευτής");
     if(!documentNumber)missing.push("Αρ. τιμολογίου");
@@ -167,7 +215,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const structuredNet=round2(normalizedLines.reduce((sum,line)=>sum+Number(line?.netAmount||0),0));
     if(!(structuredGross>0))return res.status(409).json({error:"Οι γραμμές V2.4.4 δεν έχουν έγκυρα σύνολα. Απαιτείται επανέλεγχος του τιμολογίου."});
     const diff=round2(Math.abs(structuredGross-requestedTotal));
-    if(diff>0.05)return res.status(409).json({error:`ΜΠΛΟΚΑΡΙΣΤΗΚΕ: το σύνολο των γραμμών (${structuredGross.toFixed(2)} €) δεν συμφωνεί με το σύνολο τιμολογίου (${requestedTotal.toFixed(2)} €). Διαφορά ${diff.toFixed(2)} €. Κάνε επανέλεγχο πριν από την καταχώριση.`,code:"V244_TOTAL_MISMATCH",structuredGross,structuredNet,invoiceGross:round2(requestedTotal),difference:diff,correctedGrossLines});
+    if(diff>POS_HANDOFF_TOLERANCE)return res.status(409).json({error:`ΜΠΛΟΚΑΡΙΣΤΗΚΕ: το σύνολο των γραμμών (${structuredGross.toFixed(2)} €) δεν συμφωνεί με το σύνολο τιμολογίου (${requestedTotal.toFixed(2)} €). Διαφορά ${diff.toFixed(2)} € — πάνω από το όριο γρήγορης καταχώρισης ${POS_HANDOFF_TOLERANCE.toFixed(2)} €. Κάνε επανέλεγχο πριν από την καταχώριση.`,code:"V244_TOTAL_MISMATCH",structuredGross,structuredNet,invoiceGross:round2(requestedTotal),difference:diff,tolerance:POS_HANDOFF_TOLERANCE,correctedGrossLines});
 
     if(correctedGrossLines>0){
       const repaired={...result,productLines:normalizedLines,grossNormalizedAt:new Date().toISOString(),grossNormalization:"NET_PLUS_CANONICAL_VAT"};

@@ -13,6 +13,10 @@ function canApprove(req){
   return req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
 }
 
+function canReprocess(req){
+  return req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+}
+
 const lineSchema=z.object({
   productId:z.string(),
   supplierItemCode:z.string().trim().max(120).optional().nullable(),
@@ -76,6 +80,43 @@ router.post("/documents/inbox",requireCompanyModule("DOCUMENTS"),async(req,res,n
   }catch(error){next(error)}
 });
 
+router.post("/documents/inbox/:inboxId/reprocess",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  try{
+    if(!canReprocess(req))return res.status(403).json({error:"Η επανεπεξεργασία τιμολογίου γίνεται μόνο από εξουσιοδοτημένο BackOffice χρήστη."});
+    const result=await prisma.$transaction(async tx=>{
+      const rows=await tx.$queryRaw`
+        SELECT i."id",i."storeId",i."supplierId",i."attachmentId",i."status",a."filename",a."mimeType",a."contentData"
+        FROM "DocumentInbox" i
+        JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId"
+        WHERE i."id"=${req.params.inboxId} AND i."companyId"=${req.user.companyId}
+        LIMIT 1 FOR UPDATE OF i`;
+      const inbox=rows[0];
+      if(!inbox){const error=new Error("Δεν βρέθηκε το παλιό τιμολόγιο στη Θυρίδα.");error.status=404;throw error}
+      if(!inbox.contentData){const error=new Error("Το παλιό τιμολόγιο δεν έχει διαθέσιμο αρχείο για επανεπεξεργασία.");error.status=409;throw error}
+      const jobs=await tx.$queryRaw`
+        SELECT "id","status","purchaseDocumentId","resultJson"
+        FROM "AiReaderJob"
+        WHERE "companyId"=${req.user.companyId} AND "storeId"=${inbox.storeId} AND "attachmentId"=${inbox.attachmentId}
+        ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`;
+      const existing=jobs[0]||null;
+      if(existing?.purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(existing?.status)){
+        const error=new Error("Το τιμολόγιο έχει ήδη μεταφερθεί για έλεγχο. Δεν δημιουργήθηκε δεύτερη αγορά.");error.status=409;throw error;
+      }
+      const productLines=Array.isArray(existing?.resultJson?.productLines)?existing.resultJson.productLines:[];
+      const jobId=existing?.id||id();
+      if(!existing)await tx.$executeRaw`
+        INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId")
+        VALUES (${jobId},${req.user.companyId},${inbox.storeId},${inbox.attachmentId},'LOCAL','LOCAL_COMPLETE',0,${JSON.stringify({rawText:"",lines:[],pageCount:null,pdfNote:"Επανεπεξεργασία υπάρχοντος τιμολογίου από τη Θυρίδα"})}::jsonb,${req.user.id})`;
+      await tx.$executeRaw`
+        UPDATE "DocumentInbox"
+        SET "status"='IN_REVIEW',"note"=${`Επανεπεξεργασία υπάρχοντος αρχείου • AI job ${jobId} • χωρίς νέα πληρωμή ή upload`},"updatedAt"=CURRENT_TIMESTAMP
+        WHERE "id"=${inbox.id} AND "companyId"=${req.user.companyId}`;
+      return {jobId,reused:Boolean(existing),needsRecheck:productLines.length===0,productLineCount:productLines.length,filename:inbox.filename,supplierId:inbox.supplierId||null};
+    });
+    res.status(result.reused?200:201).json({ok:true,...result,paymentCreated:false,uploadCreated:false});
+  }catch(error){next(error)}
+});
+
 router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const body=z.object({
@@ -84,7 +125,7 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
       documentDate:z.coerce.date().optional(),
       lines:z.array(lineSchema).min(1).max(500)
     }).parse(req.body||{});
-    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Η ανάγνωση έχει ήδη σταλεί για έλεγχο ή εγκριθεί."});
@@ -110,6 +151,12 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
         await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","supplierBarcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.supplierItemCode||null},${item.supplierBarcode||null},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;
       }
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${docId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
+      if(job.attachmentId){
+        const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${job.attachmentId} LIMIT 1 FOR UPDATE`;
+        const inboxId=existingInbox[0]?.id||id(),archiveNote=`Καταχωρίστηκε στα Τιμολόγια • Παραστατικό ${body.documentNumber||docId} • Αναμονή τελικού ελέγχου αποθήκης`;
+        if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${req.user.fullName||"BackOffice"},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${req.user.companyId}`;
+        else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${job.storeId},${body.supplierId},${job.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${req.user.fullName||"BackOffice"},${req.user.id})`;
+      }
     });
     res.status(201).json({id:docId,status:"DRAFT",stockUpdated:false,awaitingApproval:true,...totals});
   }catch(error){next(error)}

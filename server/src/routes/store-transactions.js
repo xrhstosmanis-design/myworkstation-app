@@ -851,7 +851,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       if(!body.description||body.description.trim().length<3)return res.status(400).json({error:"Η αιτιολογία/περιγραφή είναι υποχρεωτική όταν δεν υπάρχει παραστατικό."});
     }
   }
-  const legacyAttachment=(legacyPayment||!isPayment)?parseAttachment(body.attachment):null;
+  const legacyAttachment=parseAttachment(body.attachment);
   const actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
   const selectedPaymentSource=body.paymentSource||(body.subtractFromShift?"CASH_SHIFT":"EXTERNAL");

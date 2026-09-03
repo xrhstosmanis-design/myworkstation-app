@@ -16,7 +16,9 @@ const normalizedText=value=>String(value||"")
 
 // Κανόνες stock σε ΤΜΧ. Η quantity του τιμολογίου παραμένει οικονομική
 // ποσότητα (π.χ. κιβώτια). Μόνο το StoreProduct/StockMovement γίνεται ΤΜΧ.
-function stockPackSize(description){
+function stockPackSize(description,explicitSize=0){
+  const hasExplicit=explicitSize!==null&&explicitSize!==undefined&&String(explicitSize)!=="",selected=Math.max(1,n(explicitSize));
+  if(hasExplicit)return {size:selected,rule:selected>1?`Χειροκίνητη μετατροπή · ${selected} τμχ/ΚΒ`:"Χειροκίνητη επιλογή · ήδη σε ΤΜΧ"};
   const text=normalizedText(description);
   if(!text)return {size:1,rule:"Χωρίς μετατροπή"};
 
@@ -37,6 +39,7 @@ function stockPackSize(description){
 async function ensureSchema(){
   if(schemaReady)return;
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PurchaseOrderPackCorrection" (
     "orderId" TEXT PRIMARY KEY,
     "companyId" TEXT NOT NULL,
@@ -80,7 +83,7 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName}){
     }
 
     const lines=await tx.$queryRaw`
-      SELECT "productId","description","quantity","netAmount","exciseTotal"
+      SELECT "productId","description","quantity","netAmount","exciseTotal","stockUnitsPerInvoiceUnit"
       FROM "PurchaseOrderLine"
       WHERE "orderId"=${orderId} AND "productId" IS NOT NULL
       ORDER BY "createdAt","id"`;
@@ -90,7 +93,7 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName}){
       const productId=String(row.productId||"");
       if(!productId)continue;
       const financialQty=n(row.quantity);
-      const pack=stockPackSize(row.description);
+      const pack=stockPackSize(row.description,row.stockUnitsPerInvoiceUnit);
       const stockQty=financialQty*pack.size;
       const current=byProduct.get(productId)||{postedQty:0,stockQty:0,net:0,excise:0,details:[]};
       current.postedQty+=financialQty;

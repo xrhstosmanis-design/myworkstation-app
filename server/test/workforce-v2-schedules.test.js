@@ -53,10 +53,15 @@ test("Workforce v2 attendance keeps card entries isolated, audited and protected
   assert.match(route,/approve-over-8-hours/);
   assert.match(route,/scheduledMinutes/);
   assert.match(route,/varianceMinutes/);
+  assert.match(route,/hourlyRate/);
+  assert.match(route,/workedAmount/);
+  assert.match(route,/validFrom/);
   assert.match(route,/Μόνο Super Admin ή Ιδιοκτήτης/);
   assert.match(route,/status:\"PUBLISHED\"/);
   assert.match(ui,/Παρουσίες και κάρτα εργασίας/);
   assert.match(ui,/Υποχρεωτική αιτιολογία/);
+  assert.match(ui,/Ωρομίσθιο/);
+  assert.match(ui,/Αξία πραγματικών ωρών/);
 });
 
 test("Workforce schedule server route passes Node syntax check",()=>{

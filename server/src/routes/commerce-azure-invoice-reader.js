@@ -64,7 +64,7 @@ function parseDataUrl(contentData,mimeType){
   const detected=(meta.match(/^data:([^;]+)/)||[])[1]||mimeType||"application/octet-stream";
   return {bytes:Buffer.from(payload,"base64"),mimeType:detected};
 }
-async function supplierMatch(companyId,candidate={}){
+export async function supplierMatch(companyId,candidate={}){
   const taxId=cleanTaxId(candidate.taxId);
   if(taxId){
     const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
@@ -106,7 +106,7 @@ function normalizeItem(item,index){
   const confidence=confidences.length?Math.max(...confidences):0;
   return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
-async function callAzure({contentData,mimeType}){
+export async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
   const {bytes,mimeType:detected}=parseDataUrl(contentData,mimeType);
@@ -126,7 +126,7 @@ async function callAzure({contentData,mimeType}){
   }
   throw new Error("AZURE_TIMEOUT");
 }
-function normalizeAzure(payload){
+export function normalizeAzure(payload){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
@@ -179,6 +179,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     let parsed=normalizeAzure(payload);
     if(!parsed.productLines.length){
       console.warn("Azure Document Intelligence returned invoice header without product lines; falling back to AI table reader.",{jobId:job.id,confidence:parsed.aiConfidence});
+      return next();
+    }
+    parsed=reconcileAzureInvoice(parsed);
+    if(parsed.reconciliation?.headerReview?.includes("INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM")){
+      parsed.azurePartial=true;
+      parsed.azureFallbackReason="INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM";
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AZURE',"status"='LOCAL_COMPLETE',"aiConfidence"=${parsed.aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+      console.warn("Azure returned an incomplete invoice table; falling back to the full AI table reader.",{jobId:job.id,lineGrossSum:parsed.reconciliation.lineGrossSum,invoiceTotal:parsed.reconciliation.invoiceTotal});
       return next();
     }
     await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});

@@ -12,7 +12,7 @@ test("Store Mode uses a lightweight access endpoint instead of reloading the ful
   assert.match(payments,/pos-runtime-access/);
   assert.match(payments,/stores\/\$\{store\.id\}\/access/);
   assert.match(route,/router\.get\("\/stores\/:storeId\/access"/);
-  assert.match(operator,/12000/);
+  assert.match(operator,/30000/);
 });
 
 test("cash and total stay together at the right edge",async()=>{

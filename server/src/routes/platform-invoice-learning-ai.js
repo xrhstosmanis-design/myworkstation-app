@@ -37,10 +37,146 @@ function explicitDiscounts(p){
 
 function packageFromText(text=""){
   const s=String(text).toUpperCase().replace(/,/g,".");
-  for(const re of [/\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/,/[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/]){
+  // A nested beverage pack such as "6 X (4 X 330ML)" contains 24 pieces.
+  // This is deliberately limited to explicit x/× multipliers next to a size
+  // marker, so a product code can never be mistaken for a pack size.
+  for(const re of [/(\d{1,3})\s*[XΧ]\s*\(?\s*(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\b/,/(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/]){
+    const m=s.match(re);if(m){const n=Number(m[1])*Number(m[2]);if(n>1&&n<=500)return n}
+  }
+  // Suppliers use both "330ML X 24" and "24 X 330ML".  The second form
+  // is common on beverage invoices and used to be missed completely.
+  for(const re of [/\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\s*[XΧ]\s*(\d{1,3})\b/,/(\d{1,3})\s*[XΧ]\s*\d+(?:\.\d+)?\s*(?:G|GR|ΓΡ|ML|LT|L|KG)\b/,/(\d{1,3})\s*(?:ΤΜΧ|TEM|ΤΕΜ|PCS)\b/,/[XΧ]\s*(\d{1,3})\s*(?:T|Τ|ΤΜΧ|PCS)\b/]){
     const m=s.match(re);if(m){const n=Number(m[1]);if(n>1&&n<=500)return n}
   }
   return 0;
+}
+
+function isCaseUnit(value=""){
+  return /(?:^|\s)(?:ΚΙΒ|Κ\.Β\.?|ΚΒ|KIB|KIV|CASE|BOX|CTN)(?:\s|$)/i.test(String(value||""));
+}
+
+const tableText=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+const tableNumber=v=>{const raw=String(v??"").trim().replace(",",".");const n=Number(raw);return Number.isFinite(n)?n:0};
+const isAntzoulatos=supplier=>/ANTZOULAT|ΑΝΤΖΟΥΛΑΤ/.test(tableText(supplier));
+
+function tableHeader(cells,matcher){return cells.find(cell=>matcher(String(cell?.content||""),tableText(cell?.content)))}
+
+/* OHONOS prints financial columns explicitly.  The generic invoice model can
+ * confuse decimal commas and carton dimensions in descriptions, therefore this
+ * template reads only the cells below Quantity / Final Price / Net Value. */
+function ohonosTableRows(result){
+  for(const table of Array.isArray(result?.tables)?result.tables:[]){
+    const cells=Array.isArray(table?.cells)?table.cells:[];
+    const code=tableHeader(cells,(_,t)=>t==="ΚΩΔΙΚΟΣ"||t==="KODIKOS");
+    const description=tableHeader(cells,(_,t)=>t.includes("ΠΕΡΙΓΡΑΦΗ")||t.includes("DESCRIPTION"));
+    const quantity=tableHeader(cells,(_,t)=>t.includes("ΠΟΣΟΤΗΤΑ")||t.includes("QUANTITY"));
+    // Depending on the OCR geometry, these headers arrive either merged or
+    // as the first word of a two-line header (e.g. "ΤΕΛΙΚΗ" / "ΤΙΜΗ").
+    const finalPrice=tableHeader(cells,(_,t)=>t.includes("ΤΕΛΙΚΗΤΙΜΗ")||t.includes("FINALPRICE")||t==="ΤΕΛΙΚΗ");
+    const netValue=tableHeader(cells,(_,t)=>t.includes("ΚΑΘΑΡΗΑΞΙΑ")||t.includes("NETVALUE")||t==="ΚΑΘΑΡΗ");
+    const grossValue=tableHeader(cells,(_,t)=>t.includes("ΜΙΚΤΗΑΞΙΑ")||t.includes("GROSSVALUE")||t==="ΜΙΚΤΗ");
+    const vat=tableHeader(cells,(_,t)=>t==="ΦΠΑ"||t==="VAT");
+    const discountRate=tableHeader(cells,(raw,t)=>t.includes("ΕΚΠΤΩΣΗ")&&/%/.test(raw));
+    if(!description||!quantity||!finalPrice||!netValue)continue;
+    const headerRow=Math.max(description.rowIndex??0,quantity.rowIndex??0,finalPrice.rowIndex??0,netValue.rowIndex??0);
+    const rows=new Map();
+    for(const cell of cells){
+      if((cell?.rowIndex??0)<=headerRow)continue;
+      const row=rows.get(cell.rowIndex)||{};rows.set(cell.rowIndex,row);
+      if(code&&cell.columnIndex===code.columnIndex)row.supplierItemCode=String(cell.content||"").trim();
+      if(cell.columnIndex===description.columnIndex)row.description=String(cell.content||"").trim();
+      if(cell.columnIndex===quantity.columnIndex)row.quantity=tableNumber(cell.content);
+      if(cell.columnIndex===finalPrice.columnIndex)row.unitPrice=tableNumber(cell.content);
+      if(cell.columnIndex===netValue.columnIndex)row.netAmount=tableNumber(cell.content);
+      if(grossValue&&cell.columnIndex===grossValue.columnIndex)row.grossAmount=tableNumber(cell.content);
+      if(discountRate&&cell.columnIndex===discountRate.columnIndex)row.discount1=tableNumber(cell.content);
+      if(vat&&cell.columnIndex===vat.columnIndex)row.vatRate=tableNumber(cell.content);
+    }
+    for(const row of rows.values()){
+      // The rate can be visually split over two header cells.  The printed
+      // values still give a safer deterministic recovery than generic OCR.
+      if(!(row.discount1>0)&&row.grossAmount>0&&row.netAmount>=0&&row.netAmount<row.grossAmount){
+        row.discount1=money4((1-row.netAmount/row.grossAmount)*100);
+      }
+    }
+    const valid=[...rows.values()].filter(row=>row.description&&row.quantity>0&&row.unitPrice>=0&&row.netAmount>=0);
+    if(valid.length)return valid;
+  }
+  return [];
+}
+
+function findOhonosRow(rows,supplierItemCode,description){
+  const code=tableText(supplierItemCode),wanted=tableText(description);let best=null,bestScore=0;
+  for(const row of rows){
+    const rowCode=tableText(row.supplierItemCode),rowDescription=tableText(row.description);
+    const score=code&&rowCode&&code===rowCode?1000:(rowDescription===wanted?900:(rowDescription.includes(wanted)||wanted.includes(rowDescription)?700:0));
+    if(score>bestScore){best=row;bestScore=score}
+  }
+  return bestScore>=700?best:null;
+}
+
+/*
+ * The Antzoulatos invoice has explicit KIB and TMX columns.  Azure's generic
+ * prebuilt-invoice model frequently returns only the latter as Quantity, so
+ * retain the table geometry as a supplier template and use KIB as the invoice
+ * quantity.  TMX stays as audit information; the final retail quantity comes
+ * from KIB × the clearly printed pack size.
+ */
+function antzoulatosTableRows(result){
+  const tables=Array.isArray(result?.tables)?result.tables:[];
+  for(const table of tables){
+    const cells=Array.isArray(table?.cells)?table.cells:[];
+    const headers=cells.filter(c=>/(?:ΚΙΒ|KIB|ΚΒ)/.test(tableText(c?.content))||/(?:ΤΜΧ|TMX|TEM|PCS)/.test(tableText(c?.content)));
+    const kib=headers.find(c=>/(?:ΚΙΒ|KIB|ΚΒ)/.test(tableText(c?.content)));
+    const tmx=headers.find(c=>/(?:ΤΜΧ|TMX|TEM|PCS)/.test(tableText(c?.content)));
+    const description=headers.length&&cells.find(c=>/(?:ΠΕΡΙΓΡΑΦΗ|DESCRIPTION)/.test(tableText(c?.content)));
+    if(!kib||!description)continue;
+    const headerRow=Math.max(kib.rowIndex??0,description.rowIndex??0,tmx?.rowIndex??0);
+    const rows=new Map();
+    for(const cell of cells){
+      if((cell?.rowIndex??0)<=headerRow)continue;
+      const row=rows.get(cell.rowIndex)||{};rows.set(cell.rowIndex,row);
+      if(cell.columnIndex===kib.columnIndex)row.kibQuantity=tableNumber(cell.content);
+      if(tmx&&cell.columnIndex===tmx.columnIndex)row.tmxQuantity=tableNumber(cell.content);
+      if(cell.columnIndex===description.columnIndex)row.description=String(cell.content||"").trim();
+    }
+    const valid=[...rows.values()].filter(r=>r.description&&r.kibQuantity>0);
+    if(valid.length)return valid;
+  }
+  return [];
+}
+
+function findAntzoulatosRow(rows,description){
+  const wanted=tableText(description);if(!wanted)return null;
+  let best=null,bestScore=0;
+  for(const row of rows){
+    const candidate=tableText(row.description);if(!candidate)continue;
+    const score=candidate===wanted?1000:(candidate.includes(wanted)||wanted.includes(candidate)?800:[...wanted.matchAll(/[A-ZΑ-Ω0-9]{4,}/g)].filter(m=>candidate.includes(m[0])).length*50);
+    if(score>bestScore){best=row;bestScore=score}
+  }
+  return bestScore>=100?best:null;
+}
+
+/*
+ * Retail stock is always posted in pieces.  OCR values remain visible for
+ * audit (invoiceQuantity/invoiceUnit/packageUnitPrice), while quantity and
+ * unitPrice become the values that are safe to send to stock/costing.
+ */
+function normalizeRetailPackaging(line){
+  const raw=String(line?.azureRawRow||line?.rawText||"");
+  const invoiceUnit=String(line?.invoiceUnit||line?.unit||"").trim();
+  const caseInvoice=isCaseUnit(`${invoiceUnit} ${raw}`);
+  const pack=Math.max(0,Number(line?.unitsPerPackage||0))||packageFromText(`${line?.description||""} ${raw}`);
+  const invoiceQuantity=Math.max(0,Number(line?.invoiceQuantity??line?.quantity??0));
+  const packageUnitPrice=Math.max(0,Number(line?.packageUnitPrice??line?.unitPrice??0));
+  if(!(caseInvoice&&invoiceQuantity>0&&pack>1&&packageUnitPrice>0))return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||null,packageUnitPrice:packageUnitPrice||null,unitsPerPackage:pack||0};
+
+  const quantity=money4(invoiceQuantity*pack);
+  const unitPrice=money4(packageUnitPrice/pack);
+  const netAmount=Math.max(0,Number(line?.netAmount||0));
+  const netUnitCost=netAmount>0?money4(netAmount/quantity):applyDiscounts(unitPrice,[line?.discount1,line?.discount2,line?.discount3]);
+  const grossAmount=Math.max(0,Number(line?.grossAmount||0));
+  return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||"ΚΙΒ",packageUnitPrice,quantity,unit:"PCS",stockUnit:"PCS",unitsPerPackage:pack,unitPrice,netUnitCost,netAmount,grossAmount,packageConversionApplied:true,conversionFactor:pack,needsReview:Boolean(line?.needsReview)};
 }
 
 function rowTail(content,description,supplierItemCode){
@@ -136,20 +272,41 @@ async function callAzure(fileData,mimeType){
 function normalizeAzure(payload){
   const result=payload?.analyzeResult||{},doc=result.documents?.[0]||{},f=doc.fields||{};
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
+  const supplierName=textField(f.VendorName)||textField(f.VendorAddressRecipient);
+  const antzoulatosRows=isAntzoulatos(supplierName)?antzoulatosTableRows(result):[];
+  // VendorName is not reliable on some OHONOS scans.  The table itself has a
+  // distinctive set of financial columns, and every selected row must still
+  // match the invoice product code or description before it can override OCR.
+  // Therefore this is intentionally detected from table geometry, not gated
+  // by the supplier label returned by Azure.
+  const ohonosRows=ohonosTableRows(result);
   const productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
     const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
     const description=textField(p.Description)||textField(p.ProductName)||textField(p.ItemDescription);
-    const quantity=Math.max(0,numberField(p.Quantity));
-    let netAmount=Math.max(0,numberField(p.Amount));
-    let unitPrice=Math.max(0,numberField(p.UnitPrice));
+    const extractedQuantity=Math.max(0,numberField(p.Quantity));
+    const supplierTableRow=findAntzoulatosRow(antzoulatosRows,description);
+    const ohonosTableRow=findOhonosRow(ohonosRows,supplierItemCode,description);
+    const kibQuantity=Math.max(0,Number(supplierTableRow?.kibQuantity||extractedQuantity));
+    const printedPiecesQuantity=Math.max(0,Number(supplierTableRow?.tmxQuantity||0));
+    let quantity=Math.max(0,Number(ohonosTableRow?.quantity||kibQuantity));
+    let netAmount=Math.max(0,Number(ohonosTableRow?.netAmount??numberField(p.Amount)));
+    let unitPrice=Math.max(0,Number(ohonosTableRow?.unitPrice??numberField(p.UnitPrice)));
     if(!unitPrice)unitPrice=recoverUnitPriceFromRow(item?.content,quantity,netAmount,description,supplierItemCode);
+    // In this supplier's template, TMX can be the actual stock quantity while
+    // KIB is only the ordering unit.  Use it only when the printed price and
+    // line total reconcile, so a carton price is never mistaken for a piece price.
+    const tmxIsActualQuantity=Boolean(supplierTableRow&&printedPiecesQuantity>kibQuantity&&unitPrice>0&&netAmount>0&&Math.abs(printedPiecesQuantity*unitPrice-netAmount)<=Math.max(.05,netAmount*.02));
+    if(tmxIsActualQuantity)quantity=printedPiecesQuantity;
+    // If the multiplication does not reconcile, the TMX cell is the printed
+    // pack size (for example 1 KIB / 10 TMX / €14.50), not the stock quantity.
+    const unitsPerPackage=tmxIsActualQuantity?0:(Math.max(0,printedPiecesQuantity>kibQuantity?printedPiecesQuantity:0)||packageFromText(`${description} ${item?.content||""}`));
     const originalNetAmount=netAmount;
     const netRecovery=recoverNetAmountFromRow(item?.content,quantity,unitPrice,netAmount,description,supplierItemCode);
     netAmount=netRecovery.amount;
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.round(Math.max(0,numberField(p.TaxRate)));if(![0,6,13,24].includes(vatRate))vatRate=0;
-    let discounts=explicitDiscounts(p);
+    let discounts=ohonosTableRow?.discount1>0?[ohonosTableRow.discount1]:explicitDiscounts(p);
     if(discounts.length&&!discountsReconcile(discounts,quantity,unitPrice,netAmount))discounts=[];
     if(!discounts.length)discounts=recoverDiscountsFromMath(item?.content,quantity,unitPrice,netAmount);
     const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
@@ -158,16 +315,17 @@ function normalizeAzure(payload){
     if(!mathematicallyValid&&quantity>0&&unitPrice>0){
       netAmount=money4(quantity*netUnitCost);
     }
+    if(ohonosTableRow){vatRate=Math.round(Number(ohonosTableRow.vatRate||vatRate));if(![0,6,13,24].includes(vatRate))vatRate=0}
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
-    return {supplierItemCode,description,quantity,unit:textField(p.Unit)||textField(p.UnitOfMeasure)||"",unitsPerPackage:packageFromText(`${description} ${item?.content||""}`),unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)};
+    return normalizeRetailPackaging({supplierItemCode:ohonosTableRow?.supplierItemCode||supplierItemCode,description:ohonosTableRow?.description||description,quantity,invoiceQuantity:quantity,unit:ohonosTableRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",stockUnit:ohonosTableRow?"PCS":"",invoiceUnit:ohonosTableRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:ohonosTableRow?0:unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
   const lineConfs=productLines.map(x=>x.confidence).filter(Boolean);
   const aiConfidence=Math.round((lineConfs.reduce((a,b)=>a+b,0)+(headerConfidence||0))/(lineConfs.length+1));
-  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:textField(f.VendorName)||textField(f.VendorAddressRecipient),taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
+  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 function learnedScore(line,k){
@@ -179,11 +337,11 @@ function learnedScore(line,k){
 async function applyLearnedKnowledge(result){
   try{
     const learned=await knowledgeForSupplier({taxId:result?.supplier?.taxId,name:result?.supplier?.name});
-    if(!learned?.length)return result;
+    const supplierKnowledge=Array.isArray(learned)?learned:[];
     result.productLines=(result.productLines||[]).map(line=>{
-      let best=null,score=0;for(const k of learned){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
-      if(!best||score<120)return line;
-      return {...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",unit:best.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score};
+      let best=null,score=0;for(const k of supplierKnowledge){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
+      if(!best||score<120)return normalizeRetailPackaging(line);
+      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
     });
   }catch(error){console.warn("Invoice Learning knowledge apply skipped:",error?.message||error)}
   return result;
