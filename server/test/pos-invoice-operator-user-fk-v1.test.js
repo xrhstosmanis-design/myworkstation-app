@@ -8,6 +8,6 @@ test("POS invoice document and AI job writes do not use operator credential as U
   assert.match(auth,/writesNullableUserFk/);
   assert.match(auth,/\/api\/commerce\/documents\/inbox/);
   assert.match(auth,/\/api\/commerce\/ai-reader\/jobs/);
-  assert.match(auth,/id:writesNullableUserFk\?null:operator\.id/);
+  assert.match(auth,/if\(writesNullableUserFk\)req\.user\.id=null/);
   assert.match(auth,/operatorId:operator\.id/);
 });
