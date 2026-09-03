@@ -162,6 +162,104 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
   }catch(error){next(error)}
 });
 
+
+// An explicit operator action creates an unknown product from the reviewed invoice line.
+// It never creates stock: the invoice remains a separate draft until BackOffice approval.
+router.post("/ai-reader/jobs/:jobId/create-product",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const body=z.object({
+      supplierId:z.string().min(1),
+      description:z.string().trim().min(2).max(250),
+      supplierItemCode:z.string().trim().max(120).optional().nullable(),
+      supplierBarcode:z.string().trim().max(120).optional().nullable(),
+      unit:z.enum(["PIECE","PACKAGE"]).default("PIECE"),
+      unitCost:z.coerce.number().min(0).max(10000000),
+      vatRate:z.coerce.number().min(0).max(100)
+    }).parse(req.body||{});
+    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const job=jobs[0];
+    if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
+    if(job.purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο. Το νέο προϊόν δημιουργείται πριν από την αποστολή στα Πρόχειρα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
+    const supplier=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+
+    const supplierItemCode=normalizeSupplierItemCode(body.supplierItemCode);
+    const barcode=String(body.supplierBarcode||"").trim();
+    const product=await prisma.$transaction(async tx=>{
+      const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
+      if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί για έλεγχο.");error.status=409;throw error}
+      if(supplierItemCode){
+        const mapped=await tx.$queryRaw`SELECT p."id",p."name",p."sku" FROM "SupplierProductMapping" m JOIN "Product" p ON p."id"=m."productId" WHERE m."companyId"=${req.user.companyId} AND m."supplierId"=${body.supplierId} AND m."supplierItemCode"=${supplierItemCode} AND p."active"=true LIMIT 1`;
+        if(mapped[0])return {...mapped[0],barcode:null,reused:true};
+      }
+      if(barcode){
+        const existing=await tx.$queryRaw`SELECT p."id",p."name",p."sku" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${barcode} AND p."active"=true LIMIT 1`;
+        if(existing[0])return {...existing[0],barcode,reused:true};
+      }
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.companyId+':product-sku'}))`;
+      const nextSkuRows=await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+,requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    if(!canApprove(req))return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να εγκρίνει παραστατικό για την αποθήκη."});
+    const result=await prisma.$transaction(async tx=>{
+      const docs=await tx.$queryRaw`SELECT * FROM "PurchaseDocument" WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} FOR UPDATE`;
+      const doc=docs[0];
+      if(!doc){const error=new Error("Δεν βρέθηκε το παραστατικό.");error.status=404;throw error}
+      if(doc.status==="APPROVED")return {alreadyApproved:true,id:doc.id};
+      if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
+      const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;
+      if(!lines.length){const error=new Error("Το παραστατικό δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
+      let learnedMappings=0;
+      for(const line of lines){
+        if(!line.productId)continue;
+        const quantity=Number(line.quantity||0),unitsPerPackage=Number(line.unitsPerPackage||1),stockQuantity=line.unit==="PACKAGE"?quantity*unitsPerPackage:quantity;
+        const perPieceCost=line.unit==="PACKAGE"?Number(line.unitCost||0)/unitsPerPackage:Number(line.unitCost||0);
+        if(line.trackStock){
+          await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${doc.storeId},${line.productId},${stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${stockQuantity},"updatedAt"=CURRENT_TIMESTAMP`;
+          await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${doc.storeId},${line.productId},'PURCHASE',${stockQuantity},${perPieceCost},'PURCHASE_APPROVAL',${doc.id},'Έγκριση πρόχειρου παραστατικού από BackOffice',${req.user.id})`;
+        }
+        const supplierItemCode=normalizeSupplierItemCode(line.supplierItemCode);
+        if(doc.supplierId&&supplierItemCode){
+          await tx.$executeRaw`
+            INSERT INTO "SupplierProductMapping" ("id","companyId","supplierId","supplierItemCode","productId","supplierBarcode","lastDescription","unitsPerPackage","lastUnitCost","usageCount","confirmedByUserId","confirmedAt","lastSeenAt")
+            VALUES (${id()},${req.user.companyId},${doc.supplierId},${supplierItemCode},${line.productId},${line.supplierBarcode||null},${line.description||null},${line.unit==="PACKAGE"?unitsPerPackage:null},${perPieceCost},1,${req.user.id},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+            ON CONFLICT ("companyId","supplierId","supplierItemCode") DO UPDATE SET
+              "productId"=EXCLUDED."productId",
+              "supplierBarcode"=COALESCE(EXCLUDED."supplierBarcode","SupplierProductMapping"."supplierBarcode"),
+              "lastDescription"=COALESCE(EXCLUDED."lastDescription","SupplierProductMapping"."lastDescription"),
+              "unitsPerPackage"=COALESCE(EXCLUDED."unitsPerPackage","SupplierProductMapping"."unitsPerPackage"),
+              "lastUnitCost"=COALESCE(EXCLUDED."lastUnitCost","SupplierProductMapping"."lastUnitCost"),
+              "usageCount"="SupplierProductMapping"."usageCount"+1,
+              "confirmedByUserId"=EXCLUDED."confirmedByUserId",
+              "confirmedAt"=CURRENT_TIMESTAMP,
+              "lastSeenAt"=CURRENT_TIMESTAMP,
+              "updatedAt"=CURRENT_TIMESTAMP`;
+          learnedMappings++;
+        }
+      }
+      await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${doc.id} AND "companyId"=${req.user.companyId}`;
+      await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='CONFIRMED',"updatedAt"=CURRENT_TIMESTAMP WHERE "purchaseDocumentId"=${doc.id} AND "companyId"=${req.user.companyId}`;
+      return {alreadyApproved:false,id:doc.id,learnedMappings};
+    });
+    res.json({ok:true,...result,status:"APPROVED",stockUpdated:true});
+  }catch(error){next(error)}
+});
+
+export default router;
+ THEN "sku"::bigint END),10000)+1 AS "next" FROM "Product" WHERE "companyId"=${req.user.companyId}`;
+      const productId=id(),sku=String(nextSkuRows[0]?.next||10001);
+      await tx.$executeRaw`INSERT INTO "Product" ("id","companyId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","trackStock","active") VALUES (${productId},${req.user.companyId},${sku},${body.description},${body.unit},${body.vatRate},true,0,${body.unitCost},true,true)`;
+      if(barcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${id()},${productId},${barcode},1)`;
+      await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${id()},${job.storeId},${productId},0,0,true) ON CONFLICT ("storeId","productId") DO NOTHING`;
+      if(supplierItemCode)await tx.$executeRaw`
+        INSERT INTO "SupplierProductMapping" ("id","companyId","supplierId","supplierItemCode","productId","supplierBarcode","lastDescription","lastUnitCost","usageCount","confirmedByUserId","confirmedAt","lastSeenAt")
+        VALUES (${id()},${req.user.companyId},${body.supplierId},${supplierItemCode},${productId},${barcode||null},${body.description},${body.unitCost},1,${req.user.id},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        ON CONFLICT ("companyId","supplierId","supplierItemCode") DO UPDATE SET "productId"=EXCLUDED."productId","supplierBarcode"=COALESCE(EXCLUDED."supplierBarcode","SupplierProductMapping"."supplierBarcode"),"lastDescription"=EXCLUDED."lastDescription","lastUnitCost"=EXCLUDED."lastUnitCost","usageCount"="SupplierProductMapping"."usageCount"+1,"confirmedByUserId"=EXCLUDED."confirmedByUserId","confirmedAt"=CURRENT_TIMESTAMP,"lastSeenAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP`;
+      return {id:productId,name:body.description,sku,barcode,reused:false};
+    });
+    res.status(product.reused?200:201).json({ok:true,product,message:product.reused?"Υπήρχε ήδη προϊόν για τη γραμμή και συνδέθηκε.":"Το νέο προϊόν δημιουργήθηκε. Η ποσότητα θα περάσει στην αποθήκη μόνο μετά την έγκριση του πρόχειρου."});
+  }catch(error){next(error)}
+});
 router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     if(!canApprove(req))return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να εγκρίνει παραστατικό για την αποθήκη."});
