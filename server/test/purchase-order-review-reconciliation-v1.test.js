@@ -10,7 +10,8 @@ test("OCR review API exposes economic purchase rows as PRODUCT",()=>{
   const source=read("server/src/routes/purchase-order-ocr-resolution.js");
   assert.match(source,/economicProduct/);
   assert.match(source,/ocrLineType:economicProduct\?"PRODUCT":"INFO"/);
-  assert.match(source,/ocrSequence:Number\(r\.ocrLineIndex\|\|index\+1\)/);
+  assert.match(source,/ORDER BY COALESCE\(l\."ocrSequence",l\."ocrLineIndex",2147483647\),l\."createdAt",l\."id"/);
+  assert.match(source,/ocrSequence:Number\(r\.ocrSequence\|\|r\.ocrLineIndex\|\|index\+1\)/);
 });
 
 test("BackOffice review shows invoice total reconciliation with 0.05 tolerance",()=>{
