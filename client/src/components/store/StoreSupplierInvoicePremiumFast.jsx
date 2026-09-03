@@ -31,7 +31,8 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
     jobId=job.id;
     stage="Azure/AI επανέλεγχος γραμμών";
     const completedLines=Array.isArray(existing?.result?.productLines)?existing.result.productLines:[];
-    const ai=completedLines.length?{result:existing.result}:await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true}),signal:new AbortController().signal});
+    const existingTotalMismatch=Array.isArray(existing?.result?.reconciliation?.headerReview)&&existing.result.reconciliation.headerReview.includes("INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM");
+    const ai=completedLines.length&&!existingTotalMismatch?{result:existing.result}:await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true}),signal:new AbortController().signal});
     stage="Επικύρωση γραμμών προϊόντων";
     const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
     if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");
