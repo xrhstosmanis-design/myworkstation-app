@@ -124,7 +124,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
   try{
     const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
     stage="load-ai-job";
-    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
     if(job.purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
@@ -186,9 +186,18 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       }
       stage="confirm-ai-job";
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
-      return {documentId,orderId,paymentTransactionId,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length};
+      let inboxId=null;
+      if(job.attachmentId){
+        stage="archive-after-registration";
+        const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${job.attachmentId} LIMIT 1 FOR UPDATE`;
+        inboxId=existingInbox[0]?.id||id();
+        const archiveNote=`Καταχωρίστηκε στις Παραγγελίες & Αγορές • Τιμολόγιο ${body.documentNumber} • Αγορά ${orderId}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:" • Με πίστωση"}`;
+        if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${req.user.companyId}`;
+        else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${job.storeId},${body.supplierId},${job.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${actor},${createdByUserId})`;
+      }
+      return {documentId,orderId,paymentTransactionId,inboxId,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length};
     });
-    res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
+    res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
   }catch(error){
     console.error("V2.4.4 invoice intake failed",{jobId:req.params.jobId,stage,message:error?.message||String(error),code:error?.code||null,metaCode:error?.meta?.code||null});
     next(error);
