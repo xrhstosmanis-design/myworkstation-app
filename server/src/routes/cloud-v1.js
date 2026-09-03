@@ -320,7 +320,7 @@ router.post("/device/observer/register",deviceAuth,route(async(req,res)=>{
     RETURNING "id","storeId","connectorType","deviceName","version","status","observerMode"
   `;
   await audit({companyId:req.device.companyId,storeId:req.device.storeId,actorType:"DEVICE",actorId:req.device.id,eventType:"RBS_OBSERVER_REGISTERED",details:{connectorDeviceId:rows[0].id,version:body.version,sources:body.sources,readOnly:true}});
-  send(res,{observer:rows[0],capabilities:{readOnly:true,captureMetadataOnly:true,rawPayloadUpload:false,outboundCommands:false,fiscalIssuance:false}},201);
+  send(res,{observer:rows[0],capabilities:{readOnly:true,captureMetadataOnly:true,rawPayloadUpload:false,outboundCommands:false,fiscalIssuance:false,fiscalConfirmation:false}},201);
 }));
 
 router.post("/device/observer/heartbeat",deviceAuth,route(async(req,res)=>{

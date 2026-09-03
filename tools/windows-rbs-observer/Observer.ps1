@@ -1,11 +1,14 @@
 param([switch]$Once)
 $ErrorActionPreference="Stop"
 Add-Type -AssemblyName System.Security
-$Version="1.1.2"
+$Version="1.1.3"
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
 $ConfigPath=Join-Path $Root "observer.config.json"
 $LogPath=Join-Path $Root "observer.log"
 $SpoolPath=Join-Path $Root "pending-metadata"
+$DiagnosticLogPattern="(?i)^CapDriverSVC_log(?:\..*)?$"
+$DuplicateWindowSeconds=5
+$RecentObservations=@{}
 
 function Write-SafeLog([string]$Message){
   $line="{0:u} {1}" -f (Get-Date),$Message
@@ -49,17 +52,41 @@ function Get-SharedHash([string]$Path){
   for($attempt=0;$attempt -lt 8;$attempt++){
     try{
       $stream=New-Object IO.FileStream($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
-      try{$sha=[System.Security.Cryptography.SHA256]::Create();try{$hash=$sha.ComputeHash($stream)}finally{$sha.Dispose()};return @{hash=([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant());length=$stream.Length}}finally{$stream.Dispose()}
+      try{
+        $lengthBefore=$stream.Length
+        $sha=[System.Security.Cryptography.SHA256]::Create()
+        try{$hash=$sha.ComputeHash($stream)}finally{$sha.Dispose()}
+        $lengthAfter=$stream.Length
+        if($lengthBefore -eq $lengthAfter){return @{hash=([BitConverter]::ToString($hash).Replace("-","").ToLowerInvariant());length=$lengthAfter}}
+      }finally{$stream.Dispose()}
+      Start-Sleep -Milliseconds 100
     }catch{Start-Sleep -Milliseconds 100}
   }
   return $null
 }
+function Test-IgnoredObserverFile([string]$Path){
+  $name=[IO.Path]::GetFileName($Path)
+  return $name -match $DiagnosticLogPattern
+}
+function Test-DuplicateObservation([string]$Path,[object]$Meta,[DateTime]$Stamp){
+  foreach($key in @($RecentObservations.Keys)){
+    if(($Stamp-$RecentObservations[$key]).TotalMinutes -ge 5){$RecentObservations.Remove($key)}
+  }
+  $name=[IO.Path]::GetFileName($Path).ToLowerInvariant()
+  $observationKey="{0}:{1}:{2}" -f $name,$Meta.length,$Meta.hash
+  if($RecentObservations.ContainsKey($observationKey) -and ($Stamp-$RecentObservations[$observationKey]).TotalSeconds -lt $DuplicateWindowSeconds){return $true}
+  $RecentObservations[$observationKey]=$Stamp
+  return $false
+}
 function Send-ObservedFile([string]$Path){
+  if(Test-IgnoredObserverFile $Path){Write-SafeLog "SKIP CapDriver diagnostic log";return}
+  if(Test-Path -LiteralPath $Path -PathType Container){return}
   $meta=Get-SharedHash $Path
   if($null -eq $meta){Write-SafeLog "SKIP file unavailable before metadata capture";return}
   $stamp=[DateTime]::UtcNow
+  if(Test-DuplicateObservation $Path $meta $stamp){Write-SafeLog ("SKIP duplicate metadata burst bytes={0} hash={1}" -f $meta.length,$meta.hash.Substring(0,12));return}
   $eventKey="{0}:{1}:{2}" -f $meta.hash,$meta.length,$stamp.Ticks
-  $event=@{eventKey=$eventKey;source="CAPDRIVER";direction="OUTBOUND";observedAt=$stamp.ToString("o");payloadHash=$meta.hash;byteLength=$meta.length;messageType="CP1253_FILE";success=$true}
+  $event=@{eventKey=$eventKey;source="CAPDRIVER";direction="OUTBOUND";observedAt=$stamp.ToString("o");payloadHash=$meta.hash;byteLength=$meta.length;messageType="CAPDRIVER_COMMAND_OBSERVED";success=$true}
   Save-PendingMetadata $event|Out-Null
   Write-SafeLog ("EVENT metadata queued bytes={0} hash={1}" -f $meta.length,$meta.hash.Substring(0,12))
   Flush-PendingMetadata
@@ -90,7 +117,9 @@ $lastHeartbeat=[DateTime]::MinValue
 try{
   while($true){
     $path=$null
-    while($queue.TryDequeue([ref]$path)){try{Send-ObservedFile $path}catch{Write-SafeLog ("EVENT upload failed: "+$_.Exception.Message)}}
+    $pendingPaths=@{}
+    while($queue.TryDequeue([ref]$path)){if($path){$pendingPaths[$path]=$true}}
+    foreach($pendingPath in @($pendingPaths.Keys)){try{Send-ObservedFile $pendingPath}catch{Write-SafeLog ("EVENT upload failed: "+$_.Exception.Message)}}
     if(([DateTime]::UtcNow-$lastHeartbeat).TotalSeconds -ge 60){
       Flush-PendingMetadata
       $running=Test-Path -LiteralPath $watchPath
