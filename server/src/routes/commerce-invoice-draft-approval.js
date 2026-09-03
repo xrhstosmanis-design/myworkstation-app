@@ -125,7 +125,7 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
       documentDate:z.coerce.date().optional(),
       lines:z.array(lineSchema).min(1).max(500)
     }).parse(req.body||{});
-    const jobs=await prisma.$queryRaw`SELECT "id","storeId","status" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Η ανάγνωση έχει ήδη σταλεί για έλεγχο ή εγκριθεί."});
@@ -151,6 +151,12 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
         await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","supplierBarcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.supplierItemCode||null},${item.supplierBarcode||null},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;
       }
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${docId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
+      if(job.attachmentId){
+        const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${job.attachmentId} LIMIT 1 FOR UPDATE`;
+        const inboxId=existingInbox[0]?.id||id(),archiveNote=`Καταχωρίστηκε στα Τιμολόγια • Παραστατικό ${body.documentNumber||docId} • Αναμονή τελικού ελέγχου αποθήκης`;
+        if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${req.user.fullName||"BackOffice"},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${req.user.companyId}`;
+        else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${job.storeId},${body.supplierId},${job.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${req.user.fullName||"BackOffice"},${req.user.id})`;
+      }
     });
     res.status(201).json({id:docId,status:"DRAFT",stockUpdated:false,awaitingApproval:true,...totals});
   }catch(error){next(error)}
