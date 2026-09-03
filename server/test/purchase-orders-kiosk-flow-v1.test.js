@@ -5,6 +5,7 @@ import {readFile} from "node:fs/promises";
 const route=await readFile(new URL("../src/routes/purchase-orders.js",import.meta.url),"utf8");
 const actions=await readFile(new URL("../src/routes/purchase-order-actions.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/commerce/installPurchaseOrdersSuite.js",import.meta.url),"utf8");
+const intake=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
 const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
 const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
 
@@ -55,6 +56,13 @@ test("Kiosk-style drilldowns are wired to real actions",()=>{
   assert.match(client,/data-barcodes/);
   assert.match(client,/data-calc-markup/);
   assert.match(client,/data-calc-retail/);
+});
+
+test("invoice lines keep the exact OCR document order during review",()=>{
+  assert.match(route,/ADD COLUMN IF NOT EXISTS "ocrSequence" INTEGER/);
+  assert.match(route,/ORDER BY COALESCE\(l\."ocrSequence",l\."ocrLineIndex",2147483647\),l\."createdAt",l\."id"/);
+  assert.match(intake,/"ocrSequence"/);
+  assert.match(intake,/\$\{index\+1\}/);
 });
 
 test("all main order actions are functional endpoints or exports",()=>{
