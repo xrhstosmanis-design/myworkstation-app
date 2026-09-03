@@ -16,6 +16,14 @@ test("POS invoice checks the exact uploaded file before any payment",()=>{
   assert.match(route,/Δεν έγινε νέα πληρωμή ή πίστωση/);
 });
 
+test("an incomplete AI job is resumed without a second upload or payment",()=>{
+  assert.match(route,/resumable:true,resumeJobId:attachments\[0\]\.jobId/);
+  assert.match(route,/paymentTransactionId:paymentByFile\[0\]\?\.id\|\|null/);
+  assert.match(client,/resumeJobId:duplicateCheck\?\.resumeJobId\|\|null/);
+  assert.match(client,/signal:new AbortController\(\)\.signal/);
+  assert.match(route,/paymentTransactionId:source\.paymentTransactionId\|\|null/);
+});
+
 test("POS invoice blocks an existing supplier payment even when no purchase draft exists",()=>{
   assert.match(route,/FROM "StoreTransaction" t[\s\S]*t\."type"='SUPPLIER_PAYMENT'/);
   assert.match(route,/t\."attachmentChecksum"=\$\{checksum\}/);
