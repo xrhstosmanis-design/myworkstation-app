@@ -193,7 +193,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const settlementMode=source.settlementMode==="PAID"?"PAID":"CREDIT";
     const note=source.note==null?null:String(source.note).trim().slice(0,500);
     const requestedTotal=totalFromRequest>0?totalFromRequest:totalFromResult;
-    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,paymentTransactionId:source.paymentTransactionId||null,note};
+    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,paymentTransactionId:source.paymentTransactionId||null,note,additionalPageJobIds:Array.isArray(source.additionalPageJobIds)?source.additionalPageJobIds:[]};
     const missing=[];
     if(!supplierId)missing.push("Προμηθευτής");
     if(!documentNumber)missing.push("Αρ. τιμολογίου");
