@@ -20,9 +20,9 @@ test("POS recognizes and registers the invoice before archiving it",()=>{
 
 test("archive reuses the AI attachment and records invoice-payment linkage",()=>{
   assert.match(intake,/"attachmentId"/);
-  assert.match(intake,/"attachmentId"=\$\{job\.attachmentId\}/);
+  assert.match(intake,/"attachmentId"=\$\{pageJob\.attachmentId\}/);
   assert.match(intake,/Πληρωμή \$\{paymentTransactionId\}/);
-  assert.match(intake,/inboxId:result\.inboxId,archived:Boolean\(result\.inboxId\)/);
+  assert.match(intake,/inboxId:result\.inboxId,inboxIds:result\.inboxIds,pageCount:result\.pageCount,archived:Boolean\(result\.inboxId\)/);
   assert.doesNotMatch(intake,/archive-after-registration[\s\S]{0,1800}INSERT INTO "DocumentAttachment"/);
 });
 

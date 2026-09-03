@@ -126,7 +126,7 @@ router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READE
 router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   let stage="validation";
   try{
-    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
+    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable(),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([])}).parse(req.body||{});
     stage="load-ai-job";
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
@@ -144,6 +144,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
+      const additionalPageJobs=pageJobIds.length?await tx.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId" FROM "AiReaderJob" WHERE "companyId"=${req.user.companyId} AND "id"=ANY(${pageJobIds}::text[]) FOR UPDATE`:[];
+      if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||pageJob.purchaseDocumentId||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
       let shift=null,existingPayment=null;
@@ -191,18 +194,24 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       }
       stage="confirm-ai-job";
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
+      for(const pageJob of additionalPageJobs)await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='MERGED_PAGE',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJob.id} AND "companyId"=${req.user.companyId}`;
       let inboxId=null;
-      if(job.attachmentId){
+      const inboxIds=[];
+      const archiveJobs=[job,...pageJobIds.map(pageJobId=>additionalPageJobs.find(pageJob=>pageJob.id===pageJobId)).filter(Boolean)];
+      for(const [pageIndex,pageJob] of archiveJobs.entries())if(pageJob.attachmentId){
         stage="archive-after-registration";
-        const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${job.attachmentId} LIMIT 1 FOR UPDATE`;
-        inboxId=existingInbox[0]?.id||id();
-        const archiveNote=`Καταχωρίστηκε στις Παραγγελίες & Αγορές • Τιμολόγιο ${body.documentNumber} • Αγορά ${orderId}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:" • Με πίστωση"}`;
-        if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${req.user.companyId}`;
-        else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${job.storeId},${body.supplierId},${job.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${actor},${createdByUserId})`;
+        const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${pageJob.attachmentId} LIMIT 1 FOR UPDATE`;
+        const pageInboxId=existingInbox[0]?.id||id();
+        if(pageIndex===0)inboxId=pageInboxId;
+        inboxIds.push(pageInboxId);
+        const pageLabel=archiveJobs.length>1?` • Σελίδα ${pageIndex+1}/${archiveJobs.length}`:"";
+        const archiveNote=`Καταχωρίστηκε στις Παραγγελίες & Αγορές • Τιμολόγιο ${body.documentNumber}${pageLabel} • Αγορά ${orderId}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:" • Με πίστωση"}`;
+        if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageInboxId} AND "companyId"=${req.user.companyId}`;
+        else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${pageInboxId},${req.user.companyId},${job.storeId},${body.supplierId},${pageJob.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${actor},${createdByUserId})`;
       }
-      return {documentId,orderId,paymentTransactionId,inboxId,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length};
+      return {documentId,orderId,paymentTransactionId,inboxId,inboxIds,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length,pageCount:archiveJobs.length};
     });
-    res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
+    res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,inboxIds:result.inboxIds,pageCount:result.pageCount,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 από ${result.pageCount} ${result.pageCount===1?"σελίδα":"σελίδες"} και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
   }catch(error){
     console.error("V2.4.4 invoice intake failed",{jobId:req.params.jobId,stage,message:error?.message||String(error),code:error?.code||null,metaCode:error?.meta?.code||null});
     next(error);

@@ -293,7 +293,7 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
 });
 
 router.get("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} ORDER BY j."createdAt" DESC LIMIT 100`;res.json(rows)}catch(error){next(error)}
+  try{const store=await ownedStore(req.user.companyId,req.query.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT j."id",j."stage",j."status",j."localConfidence",j."aiConfidence",j."resultJson" AS "result",j."createdAt",a."filename",a."mimeType" FROM "AiReaderJob" j LEFT JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."companyId"=${req.user.companyId} AND j."storeId"=${store.id} AND COALESCE(j."status",'')<>'MERGED_PAGE' ORDER BY j."createdAt" DESC LIMIT 100`;res.json(rows)}catch(error){next(error)}
 });
 
 router.post("/ai-reader/jobs",requireCompanyModule("AI_READER"),async(req,res,next)=>{
