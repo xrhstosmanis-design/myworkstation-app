@@ -144,7 +144,12 @@ export async function auth(req,res,next){
       if(!enforceStorePaymentPermissions(req,res,permissions))return;
       if(!enforceStorePosPermissions(req,res,permissions))return;
       exposeStorePosRuntimeAccess(req,res,rights);
-      req.user={...payload,id:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
+      const path=String(req.originalUrl||"").split("?")[0];
+      const writesNullableUserFk=req.method==="POST"&&(
+        path==="/api/commerce/documents/inbox"||
+        path==="/api/commerce/ai-reader/jobs"
+      );
+      req.user={...payload,id:writesNullableUserFk?null:operator.id,operatorId:operator.id,employeeId:operator.employeeId,companyId:operator.companyId,storeId:operator.storeId,fullName:operator.displayName,role:operator.role,permissions};
       // A verified device binding in the login token identifies the physical POS.
       // Legacy sessions without one continue to use the operator profile terminal.
       req.user.terminalPos=payload.terminalPos||payload.terminalpos||operator.terminalPos||operator.terminalpos||null;
