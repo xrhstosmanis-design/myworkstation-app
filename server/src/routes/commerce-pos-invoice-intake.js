@@ -155,7 +155,7 @@ router.use(async(req,res,next)=>{try{await ensureColumns();next()}catch(error){n
 
 router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
-    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
+    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
@@ -195,8 +195,12 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
 
       let paymentTransactionId=null;
       if(body.settlementMode==="PAID"){
-        paymentTransactionId=`pay_${crypto.createHash("sha256").update(`${req.user.companyId}:${job.storeId}:invoice:${documentId}`).digest("hex")}`;
-        await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum") VALUES (${paymentTransactionId},${req.user.companyId},${job.storeId},${shift.id},'SUPPLIER_PAYMENT',${body.totalGross},${body.note||`Πληρωμένο με μετρητά τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},true,${req.user.id},${actor},NULL,'application/vnd.myworkstation.purchase-document',${documentId},${crypto.createHash("sha256").update(`invoice:${documentId}`).digest("hex")})`;
+        paymentTransactionId=body.paymentTransactionId||`pay_${crypto.createHash("sha256").update(`${req.user.companyId}:${job.storeId}:invoice:${documentId}`).digest("hex")}`;
+        if(body.paymentTransactionId){
+          const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId} AND "storeId"=${job.storeId} AND "type"='SUPPLIER_PAYMENT' LIMIT 1 FOR UPDATE`;
+          if(!existing[0]){const error=new Error("Δεν βρέθηκε η αρχική πληρωμή του τιμολογίου.");error.status=409;throw error;}
+          await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"description"=COALESCE("description",${body.note||`Πληρωμένο μετρητά τιμολόγιο ${body.documentNumber}`}) WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId}`;
+        }else await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum") VALUES (${paymentTransactionId},${req.user.companyId},${job.storeId},${shift.id},'SUPPLIER_PAYMENT',${body.totalGross},${body.note||`Πληρωμένο μετρητά τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},true,${req.user.id},${actor},NULL,'application/vnd.myworkstation.purchase-document',${documentId},${crypto.createHash("sha256").update(`invoice:${documentId}`).digest("hex")})`;
         await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=${paymentTransactionId} WHERE "id"=${documentId}`;
       }
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='AWAITING_APPROVAL',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id}`;
