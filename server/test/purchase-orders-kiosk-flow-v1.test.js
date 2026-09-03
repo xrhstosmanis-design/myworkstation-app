@@ -36,6 +36,9 @@ test("line editor supports the three discounts excise VAT gift markup and propos
   assert.match(client,/source==="FINAL"/);
   assert.match(client,/totalDiscount\/initial\*100/);
   assert.match(client,/amount\/running\*100/);
+  assert.match(client,/inputmode="decimal"/);
+  assert.match(client,/replace\(",","\."\)/);
+  assert.match(client,/!input\.matches\('\[name\^="discountAmount"\],\[name="finalUnitCost"\]'\)/);
 });
 
 test("Kiosk-style drilldowns are wired to real actions",()=>{
