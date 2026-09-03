@@ -120,20 +120,21 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const checksum=fileMatch?crypto.createHash("sha256").update(Buffer.from(fileMatch[2],"base64")).digest("hex"):null;
     if(checksum){
       const attachments=await prisma.$queryRaw`
-        SELECT a."id",a."filename",COALESCE(i."status",j."status",'UPLOADED') AS "status",
+        SELECT a."id",a."filename",i."id" AS "inboxId",j."id" AS "jobId",j."purchaseDocumentId",COALESCE(i."status",j."status",'UPLOADED') AS "status",
           COALESCE(i."receivedAt",j."createdAt",a."createdAt") AS "receivedAt"
         FROM "DocumentAttachment" a
         LEFT JOIN "DocumentInbox" i ON i."attachmentId"=a."id" AND i."companyId"=a."companyId"
         LEFT JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId"
         WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${checksum}
         ORDER BY COALESCE(i."receivedAt",j."createdAt",a."createdAt") DESC LIMIT 1`;
-      if(attachments[0])return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη ανέβει. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
       const paymentByFile=await prisma.$queryRaw`
         SELECT t."id",t."occurredAt",t."amount",t."description"
         FROM "StoreTransaction" t
         WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."supplierId"=${supplierId}
           AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."attachmentChecksum"=${checksum}
         ORDER BY t."occurredAt" DESC LIMIT 1`;
+      if(attachments[0]?.purchaseDocumentId||attachments[0]?.inboxId)return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη καταχωριστεί. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
+      if(attachments[0]?.jobId)return res.json({ok:true,duplicate:false,resumable:true,resumeJobId:attachments[0].jobId,resumeStatus:attachments[0].status,paymentTransactionId:paymentByFile[0]?.id||null,message:"Βρέθηκε η προηγούμενη ανολοκλήρωτη ανάγνωση και θα συνεχιστεί χωρίς νέο upload ή πληρωμή."});
       if(paymentByFile[0])return res.status(409).json({error:"Η πληρωμή αυτού του τιμολογίου υπάρχει ήδη. Δεν έγινε δεύτερη οικονομική κίνηση.",code:"DUPLICATE_INVOICE_PAYMENT",existing:paymentByFile[0]});
     }
     const docs=await prisma.$queryRaw`
@@ -189,7 +190,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const settlementMode=source.settlementMode==="PAID"?"PAID":"CREDIT";
     const note=source.note==null?null:String(source.note).trim().slice(0,500);
     const requestedTotal=totalFromRequest>0?totalFromRequest:totalFromResult;
-    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,note};
+    req.body={supplierId,documentNumber,documentDate,totalGross:requestedTotal,settlementMode,paymentTransactionId:source.paymentTransactionId||null,note};
     const missing=[];
     if(!supplierId)missing.push("Προμηθευτής");
     if(!documentNumber)missing.push("Αρ. τιμολογίου");
