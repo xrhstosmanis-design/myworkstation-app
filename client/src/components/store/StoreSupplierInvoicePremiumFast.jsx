@@ -61,7 +61,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const selectFile=async next=>{
     if(!next)return;
     const qualityError=await checkPhoto(next);if(qualityError){setMessage?.(`⚠️ ${qualityError}`);return}
-    const prepared=await optimizeImage(next);\n    setFile(prepared);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("Γρήγορη ανάγνωση με AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
+    const prepared=await optimizeImage(next);
+    setFile(prepared);setFileDataUrl("");setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""});setReading(true);setStatus("Γρήγορη ανάγνωση με AI — διαβάζω μόνο προμηθευτή, αριθμό, ημερομηνία και ποσό…");
     try{
       const dataUrl=await readFile(prepared);setFileDataUrl(dataUrl);
       const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",body:JSON.stringify({storeId:store.id,filename:prepared.name||"timologio.jpg",mimeType:next.type||"image/jpeg",dataUrl})});
