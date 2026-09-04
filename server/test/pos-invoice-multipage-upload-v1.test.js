@@ -38,6 +38,18 @@ test("a multipage invoice is blocked rather than saved empty when no product lin
   assert.match(intake,/rawLines\.length===0\)return res\.status\(409\)/);
 });
 
+test("a total mismatch is created as a BackOffice draft without stock posting",()=>{
+  assert.match(wrapper,/const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE/);
+  assert.doesNotMatch(wrapper,/if\(diff>POS_HANDOFF_TOLERANCE\)return res\.status\(409\)/);
+  assert.match(wrapper,/ΕΛΕΓΧΟΣ BACKOFFICE/);
+  assert.match(intake,/reconciliationRequired:z\.boolean\(\)\.optional\(\)\.default\(false\)/);
+  assert.match(intake,/reconciliationDifference:z\.coerce\.number\(\)\.min\(0\)\.optional\(\)\.default\(0\)/);
+  assert.match(intake,/reconciliationRequired:body\.reconciliationRequired/);
+  assert.match(intake,/stockUpdated:false/);
+  assert.match(client,/created\?\.reconciliationRequired/);
+  assert.match(client,/Η πληρωμή έχει ήδη επαναχρησιμοποιηθεί/);
+});
+
 test("all page attachments are archived only after the single purchase is created",()=>{
   assert.match(wrapper,/additionalPageJobIds:Array\.isArray\(source\.additionalPageJobIds\)/);
   assert.match(intake,/additionalPageJobIds:z\.array\(z\.string\(\)\.min\(1\)\)\.max\(4\)/);
