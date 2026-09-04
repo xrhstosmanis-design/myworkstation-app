@@ -60,6 +60,17 @@ function recoverIfantisLine(line){
   };
 }
 
+// A profile rule is enabled only by an explicit Super Admin learning action.
+function recoverQuantityFromLineTotal(line){
+  const price=Number(line?.unitPrice??line?.unitCost??0),net=Number(line?.netAmount??line?.netValue??0);
+  if(!(price>0&&net>0&&price<=100000))return line;
+  const candidates=numberTokens(line?.rawText).map(x=>x.value).filter(q=>q>0&&q<=100000&&close(q*price,net,Math.max(.03,net*.012)));
+  const unique=[...new Set(candidates.map(q=>Math.round(q*10000)/10000))];
+  if(unique.length!==1||close(unique[0],Number(line?.quantity||0),.0001))return line;
+  const quantity=unique[0];
+  return {...line,quantity,invoiceQuantity:quantity,supplierProfileRecovered:true,supplierProfileRule:"LINE_TOTAL_MATCH",supplierProfileEvidence:{quantity,unitPrice:money4(price),netAmount:money2(net)}};
+}
+
 function applyMappings(lines,profile){
   const mappings=profile?.mappings&&typeof profile.mappings==="object"?profile.mappings:{};
   return (lines||[]).map(line=>{
@@ -74,6 +85,7 @@ export async function applyCentralSupplierProfile(parsed){
   if(!profile)return {...parsed,supplierReadingProfile:null};
   let productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(x=>({...x})):[];
   if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(recoverIfantisLine);
+  if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(recoverQuantityFromLineTotal);
   productLines=applyMappings(productLines,profile);
   return {
     ...parsed,
