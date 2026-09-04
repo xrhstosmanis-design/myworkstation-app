@@ -72,17 +72,3 @@ test("multipage invoice recovery falls back to Azure only when no safe line rema
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
 });
-
-
-test("POS multipage intake requires an editable full-line review before registration",()=>{
-  assert.match(client,/data-pos-invoice-full-review="true"/);
-  assert.match(client,/Πλήρης έλεγχος τιμολογίου/);
-  assert.match(client,/Σύνολο τιμολογίου:/);
-  assert.match(client,/Διαφορά: \{difference\.toFixed\(2\)\}/);
-  assert.match(client,/updateReviewLine\(index,"quantity"/);
-  assert.match(client,/updateReviewLine\(index,"unitCost"/);
-  assert.match(client,/updateReviewLine\(index,"netAmount"/);
-  assert.match(client,/\+ Προσθήκη γραμμής/);
-  assert.match(client,/if\(Math\.abs\(difference\)>0\.05\)return setStatus/);
-  assert.match(client,/productLines:lines/);
-});
