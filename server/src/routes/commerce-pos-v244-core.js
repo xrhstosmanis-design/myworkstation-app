@@ -145,7 +145,11 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
-      const additionalPageJobs=pageJobIds.length?await tx.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId" FROM "AiReaderJob" WHERE "companyId"=${req.user.companyId} AND "id"=ANY(${pageJobIds}::text[]) FOR UPDATE`:[];
+      const additionalPageJobs=[];
+      for(const pageJobId of pageJobIds){
+        const pageJobs=await tx.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId" FROM "AiReaderJob" WHERE "companyId"=${req.user.companyId} AND "id"=${pageJobId} LIMIT 1 FOR UPDATE`;
+        if(pageJobs[0])additionalPageJobs.push(pageJobs[0]);
+      }
       if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||pageJob.purchaseDocumentId||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
@@ -214,7 +218,10 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,inboxIds:result.inboxIds,pageCount:result.pageCount,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 από ${result.pageCount} ${result.pageCount===1?"σελίδα":"σελίδες"} και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
   }catch(error){
     console.error("V2.4.4 invoice intake failed",{jobId:req.params.jobId,stage,message:error?.message||String(error),code:error?.code||null,metaCode:error?.meta?.code||null});
-    next(error);
+    if(error?.status)return next(error);
+    const safeError=new Error(`Η καταχώριση τιμολογίου απέτυχε στο στάδιο ${stage}. Η πληρωμή διατηρήθηκε και δεν πρέπει να επαναληφθεί.`);
+    safeError.status=500;safeError.code="V244_INTAKE_INTERNAL";
+    next(safeError);
   }
 });
 
