@@ -41,3 +41,11 @@ test("all page attachments are archived only after the single purchase is create
   assert.match(jobs,/COALESCE\(j\."status",''\)<>'MERGED_PAGE'/);
   assert.ok(intake.indexOf('INSERT INTO "PurchaseOrder"')<intake.indexOf('const archiveJobs='));
 });
+
+test("additional page jobs are locked individually and internal intake errors identify their stage",()=>{
+  assert.match(intake,/for\(const pageJobId of pageJobIds\)/);
+  assert.match(intake,/"id"=\$\{pageJobId\} LIMIT 1 FOR UPDATE/);
+  assert.doesNotMatch(intake,/ANY\(\$\{pageJobIds\}::text\[\]\)/);
+  assert.match(intake,/Η καταχώριση τιμολογίου απέτυχε στο στάδιο \$\{stage\}/);
+  assert.match(intake,/safeError\.code="V244_INTAKE_INTERNAL"/);
+});
