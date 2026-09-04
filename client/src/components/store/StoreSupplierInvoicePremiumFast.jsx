@@ -28,6 +28,7 @@ async function backgroundV244({api,store,pages,supplierId,documentNumber,documen
     const existing=Array.isArray(existingJobs)?existingJobs.find(row=>row.id===resumeJobId):null;
     const pageJobs=[];
     const combinedLines=[];
+    const pagesWithoutLines=[];
     for(const [pageIndex,page] of pages.entries()){
       onProgress?.(`Ανάγνωση σελίδας ${pageIndex+1}/${pages.length}…`);
       const resumed=pageIndex===0?existing:null;
@@ -40,15 +41,16 @@ async function backgroundV244({api,store,pages,supplierId,documentNumber,documen
       const existingTotalMismatch=Array.isArray(resumed?.result?.reconciliation?.headerReview)&&resumed.result.reconciliation.headerReview.includes("INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM");
       const ai=completedLines.length&&!existingTotalMismatch?{result:resumed.result}:await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true}),signal:new AbortController().signal});
       const pageLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
-      if(!pageLines.length)throw new Error(`Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στη σελίδα ${pageIndex+1}.`);
+      if(!pageLines.length){pagesWithoutLines.push(pageIndex+1);onProgress?.(`Η σελίδα ${pageIndex+1}/${pages.length} δεν είχε ασφαλείς γραμμές· συνεχίζεται ο έλεγχος των υπόλοιπων σελίδων…`);continue}
       combinedLines.push(...pageLines);
     }
     stage="Επικύρωση γραμμών προϊόντων";
-    if(!combinedLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");
+    if(!combinedLines.length)throw new Error(`Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων σε καμία από τις ${pages.length} σελίδες.`);
     stage="Αποθήκευση V2.4.4 γραμμών";
     await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(pageJobs[0].id)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines:combinedLines})});
     stage="Καταχώριση τιμολογίου στο BackOffice και κατόπιν αρχειοθέτηση";
-    return await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(pageJobs[0].id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,additionalPageJobIds:pageJobs.slice(1).map(pageJob=>pageJob.id),note:`Γρήγορη καταχώριση με AI • ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
+    const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(pageJobs[0].id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,additionalPageJobIds:pageJobs.slice(1).map(pageJob=>pageJob.id),note:`Γρήγορη καταχώριση με AI • ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
+    return {...created,pagesWithoutLines};
   }catch(error){throw new Error(`${stage}${jobId?` • AI job ${jobId}`:""}: ${String(error?.message||error).slice(0,520)}`)}
 }
 
@@ -134,7 +136,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η αναγνώριση και η καταχώριση του τιμολογίου συνεχίζονται στο background.`:"Η αναγνώριση γραμμών και η καταχώριση του τιμολογίου συνεχίζονται στο background.";
       setMessage?.(success);onChanged?.();
       backgroundV244({api,store,pages,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,resumeJobId:duplicateCheck?.resumeJobId||null,onProgress:setStatus})
-        .then(created=>{setStatus(`✅ Το τιμολόγιο καταχωρίστηκε από ${created?.pageCount||pages.length} ${pages.length===1?"σελίδα":"σελίδες"}, με ${created?.lineCount||0} γραμμές, και μετά αρχειοθετήθηκε στη Θυρίδα.`);setMessage?.(`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές από ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} και αρχειοθετήθηκε στη Θυρίδα.`);onChanged?.()})
+        .then(created=>{const emptyPages=Array.isArray(created?.pagesWithoutLines)?created.pagesWithoutLines:[],reviewNote=emptyPages.length?` Οι σελίδες ${emptyPages.join(", ")} δεν έδωσαν γραμμές προϊόντων, αλλά αρχειοθετήθηκαν κανονικά για έλεγχο.`:"";setStatus(`✅ Το τιμολόγιο καταχωρίστηκε από ${created?.pageCount||pages.length} ${pages.length===1?"σελίδα":"σελίδες"}, με ${created?.lineCount||0} γραμμές, και μετά αρχειοθετήθηκε στη Θυρίδα.${reviewNote}`);setMessage?.(`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές από ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} και αρχειοθετήθηκε στη Θυρίδα.${reviewNote}`);onChanged?.()})
         .catch(error=>{setStatus(`⚠️ Δεν ολοκληρώθηκε η καταχώριση τιμολογίου. ${error?.message||error}`);setMessage?.(`⚠️ Η πληρωμή διατηρήθηκε, αλλά το τιμολόγιο δεν καταχωρίστηκε ούτε αρχειοθετήθηκε: ${error?.message||error}`)});
     }catch(error){
       const detail=error?.message||"Η καταχώριση απέτυχε.";

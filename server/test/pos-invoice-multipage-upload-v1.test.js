@@ -23,6 +23,15 @@ test("multipage OCR concatenates product lines in the selected page order",()=>{
   assert.match(background,/additionalPageJobIds:pageJobs\.slice\(1\)/);
 });
 
+test("a page without product lines does not block the remaining invoice pages",()=>{
+  const background=client.slice(client.indexOf("async function backgroundV244"),client.indexOf("export default function"));
+  assert.match(background,/if\(!pageLines\.length\)\{pagesWithoutLines\.push\(pageIndex\+1\);.*continue\}/s);
+  assert.doesNotMatch(background,/if\(!pageLines\.length\)throw/);
+  assert.match(background,/if\(!combinedLines\.length\)throw new Error\(`Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων σε καμία/);
+  assert.match(background,/return \{\.\.\.created,pagesWithoutLines\}/);
+  assert.match(client,/δεν έδωσαν γραμμές προϊόντων, αλλά αρχειοθετήθηκαν κανονικά για έλεγχο/);
+});
+
 test("all page attachments are archived only after the single purchase is created",()=>{
   assert.match(wrapper,/additionalPageJobIds:Array\.isArray\(source\.additionalPageJobIds\)/);
   assert.match(intake,/additionalPageJobIds:z\.array\(z\.string\(\)\.min\(1\)\)\.max\(4\)/);
