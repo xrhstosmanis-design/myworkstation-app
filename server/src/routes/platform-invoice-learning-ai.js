@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import {Router} from "express";
 import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {mobileUploads} from "./mobile-invoice-upload.js";
 
 const router=Router();
 const AZURE_API_VERSION="2024-11-30";
@@ -350,6 +352,25 @@ async function applyLearnedKnowledge(result){
 
 const lineProperties={supplierItemCode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount2:{type:"number",minimum:0,maximum:100},discount3:{type:"number",minimum:0,maximum:100},netUnitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},barcode:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}};
 const schema={type:"object",additionalProperties:false,properties:{aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
+
+const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
+const platformUploadOwner=req=>String(req.user?.id||req.user?.userId||req.user?.sub||"");
+
+router.post("/invoice-learning/mobile-upload-sessions",(req,res)=>{
+  if(!isPlatformSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
+  const ownerKey=platformUploadOwner(req);
+  if(!ownerKey)return res.status(401).json({error:"Απαιτείται σύνδεση."});
+  const id=crypto.randomUUID(),token=crypto.randomBytes(24).toString("base64url");
+  mobileUploads.set(id,{ownerKey,companyId:req.user?.companyId||null,token,expires:Date.now()+600000,source:"INVOICE_LEARNING_LAB"});
+  res.status(201).json({id,url:`${req.protocol}://${req.get("host")}/mobile-invoice-upload/${id}/${token}`,expiresInSeconds:600});
+});
+
+router.get("/invoice-learning/mobile-upload-sessions/:id",(req,res)=>{
+  if(!isPlatformSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
+  const upload=mobileUploads.get(req.params.id),ownerKey=platformUploadOwner(req);
+  if(!upload||upload.ownerKey!==ownerKey||upload.source!=="INVOICE_LEARNING_LAB"||upload.expires<Date.now())return res.status(404).json({error:"Το QR έληξε."});
+  res.json(upload.dataUrl?{status:"READY",dataUrl:upload.dataUrl,filename:upload.filename,mimeType:upload.mimeType}:{status:"WAITING"});
+});
 
 router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
 
