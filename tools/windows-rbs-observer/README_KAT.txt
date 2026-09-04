@@ -1,10 +1,13 @@
-MYWORKSTATION RBS / CAPDRIVER OBSERVER 1.0 - PC KAT
+MYWORKSTATION RBS / CAPDRIVER OBSERVER 1.1.3 - PC KAT
 
 SAFETY
 - READ ONLY / SHADOW MODE.
 - Does not issue, cancel or resend receipts.
 - Does not send commands to Kiosk Manager, CapDriver or RBS.
 - Does not upload/store raw fiscal content or filenames.
+- Ignores CapDriverSVC_log.txt and its rotated diagnostic copies.
+- Collapses repeated Windows notifications for the same unchanged file.
+- "Command observed" never means that a receipt was issued or accepted.
 - If Internet is temporarily unavailable, only hash, byte length, source and
   timestamp are queued locally and delivered automatically after reconnection.
 - Kiosk Manager / RBS remains the only fiscal route.

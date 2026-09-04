@@ -26,12 +26,16 @@ test("operator API is tenant scoped and returns no raw payload",()=>{
   assert.match(api,/d\."companyId"=\$\{req\.user\.companyId\}/);
   assert.doesNotMatch(api,/e\."rawPayload"/);
   assert.match(api,/outboundCommands:false,fiscalIssuance:false/);
+  assert.match(api,/fiscalConfirmation:false/);
 });
 
 test("UI states read-only limits and preserves Kiosk Manager RBS as fiscal path",()=>{
   assert.match(ui,/ΜΟΝΟ ΑΝΑΓΝΩΣΗ/);
   assert.match(ui,/Καμία αποθήκευση raw payload/);
   assert.match(ui,/Καμία εξερχόμενη εντολή/);
+  assert.match(ui,/Παρατηρήσεις \(όχι αποδείξεις\)/);
+  assert.match(ui,/Παλαιό μη ταξινομημένο συμβάν/);
+  assert.match(ui,/Καμία εγγραφή δεν επιβεβαιώνει ότι η απόδειξη εκδόθηκε/);
   assert.match(ui,/Μοναδική φορολογική διαδρομή:<\/b> Kiosk Manager \/ RBS/);
 });
 
