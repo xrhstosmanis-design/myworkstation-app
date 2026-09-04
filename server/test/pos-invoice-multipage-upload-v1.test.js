@@ -17,6 +17,14 @@ test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/movePage\(index,1\)/);
 });
 
+test("camera preview attaches and plays the acquired stream before capture",()=>{
+  assert.match(client,/useEffect\(\(\)=>\{if\(!cameraOpen\|\|!stream\|\|!videoRef\.current\)return/);
+  assert.match(client,/video\.srcObject=stream/);
+  assert.match(client,/video\.play\(\)\.catch/);
+  assert.match(client,/facingMode:\{ideal:"environment"\}/);
+  assert.match(client,/Η προεπισκόπηση κάμερας δεν είναι ακόμη έτοιμη/);
+});
+
 test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
   const background=client.slice(client.indexOf("async function backgroundV244"),client.indexOf("export default function"));
   assert.match(background,/for\(const \[pageIndex,page\] of pages\.entries\(\)\)/);
