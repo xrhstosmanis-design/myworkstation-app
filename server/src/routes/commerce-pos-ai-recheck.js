@@ -84,17 +84,27 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
 }catch(error){next(error)}});
 
 router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const body=z.object({force:z.boolean().optional(),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([])}).parse(req.body||{});
   const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-  if(Number(job.localConfidence||0)>=THRESHOLD&&!req.body?.force)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
+  if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 
+  const pageJobs=[job];
+  for(const pageJobId of [...new Set(body.additionalPageJobIds)].filter(id=>id!==job.id)){
+    const rows=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${pageJobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+    const pageJob=rows[0];
+    if(!pageJob||pageJob.storeId!==job.storeId||!pageJob.contentData)return res.status(409).json({error:"Δεν βρέθηκαν όλες οι σελίδες του ενιαίου τιμολογίου."});
+    pageJobs.push(pageJob);
+  }
   const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
-  const localRawText=String(previous.rawText||"").slice(0,60000);
-  const filePart=job.mimeType==="application/pdf"?{type:"input_file",filename:job.filename||"invoice.pdf",file_data:String(job.contentData).split(",").pop()}:{type:"input_image",image_url:job.contentData,detail:"high"};
+  const localRawText=pageJobs.map((page,index)=>`ΣΕΛΙΔΑ ${index+1}:\n${String(page.resultJson?.rawText||"").slice(0,12000)}`).join("\n\n").slice(0,60000);
+  const fileParts=pageJobs.map((page,index)=>page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||`invoice-page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()}:{type:"input_image",image_url:page.contentData,detail:"high"});
   const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα στο πρωτότυπο. Βρες τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ, ΑΦΜ, αριθμό παραστατικού, ημερομηνία και τελικό πληρωτέο ποσό. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
+
+Οι ${pageJobs.length} πηγές που ακολουθούν είναι διαδοχικές σελίδες του ΙΔΙΟΥ τιμολογίου, με την ακριβή σειρά που δόθηκαν. Αν μία πηγή είναι πολυσέλιδο PDF, κράτησε και την εσωτερική σειρά των σελίδων του. Διάβασε το σύνολο ως ένα ενιαίο παραστατικό και επέστρεψε τις γραμμές πρώτα από τη σελίδα 1, μετά από τη σελίδα 2 κ.ο.κ.
 
 Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές για audit. Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται.
 
@@ -103,7 +113,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΙΝ επιστρέψεις JSON, μέτρησε οπτικά πόσες πραγματικές σειρές προϊόντων υπάρχουν και βεβαιώσου ότι το productLines έχει τον ίδιο αριθμό. Έπειτα σύγκρινε νοητά το άθροισμα των τελικών αξιών γραμμών με το τελικό πληρωτέο ποσό. Αν υπάρχει εμφανής μεγάλη διαφορά, ξανακοίτα τον πίνακα για γραμμή που παρέλειψες πριν απαντήσεις.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
-  const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+  const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
   const payload=await apiResponse.json().catch(()=>({}));if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
   let parsed;try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
@@ -123,7 +133,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
 
 Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | Μ.Μ. | ΤΜΧ | Τιμή ΤΜΧ | Αξία | Εκπτώσεις | Καθ Αξία | ΦΠΑ. quantity=ΤΜΧ, unit=Μ.Μ., unitCost=Τιμή ΤΜΧ, netAmount=Καθ Αξία, vatRate=%ΦΠΑ. Αριθμοί συσκευασίας μέσα στην περιγραφή δεν είναι quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή. Αν quantity>0 και netAmount>0 αλλά unitCost δεν φαίνεται, unitCost=netAmount/quantity. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount.`;
-    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
     const tablePayload=await tableResponse.json().catch(()=>({}));
     if(tableResponse.ok){try{
       const tableParsed=JSON.parse(outputText(tablePayload));

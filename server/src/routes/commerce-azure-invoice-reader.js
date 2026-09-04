@@ -168,6 +168,9 @@ router.post("/ai-reader/azure-direct",requireCompanyModule("AI_READER"),async(re
 });
 
 router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  // Separate image uploads are pages of one invoice. Azure accepts one source
+  // document per request, so let the full AI reader inspect all pages together.
+  if(Array.isArray(req.body?.additionalPageJobIds)&&req.body.additionalPageJobIds.length)return next();
   if(!configured())return next();
   try{
     const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
