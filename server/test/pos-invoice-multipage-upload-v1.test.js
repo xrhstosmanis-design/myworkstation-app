@@ -62,3 +62,13 @@ test("empty initial invoice extraction triggers the table recovery pass",()=>{
   assert.match(aiRecheck,/if\(needsTablePass\)/);
   assert.match(aiRecheck,/const recovered=Array\.isArray\(tableParsed\.productLines\)/);
 });
+
+
+test("multipage invoice recovery falls back to Azure only when no safe line remains",()=>{
+  assert.match(aiRecheck,/import \{callAzure,normalizeAzure\} from ".\/commerce-azure-invoice-reader\.js"/);
+  assert.match(aiRecheck,/const hasSafeLine=parsed\.productLines\.some/);
+  assert.match(aiRecheck,/if\(!hasSafeLine&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
+  assert.match(aiRecheck,/for\(const page of pageJobs\)/);
+  assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
+  assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
+});

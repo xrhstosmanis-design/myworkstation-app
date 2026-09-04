@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -142,6 +143,23 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
     }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
     else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}
+  }
+
+  // Some supplier layouts are read more reliably by Azure per page. This is
+  // a last recovery path only: the unified OpenAI pass and table pass remain
+  // primary, and no empty invoice may pass through.
+  const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0);
+  if(!hasSafeLine&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+    const azureRecovered=[];
+    for(const page of pageJobs){
+      try{
+        const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType}));
+        azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(normalizeProductLine));
+      }catch{}
+    }
+    parsed.productLines=mergeRecoveredLines(parsed.productLines,azureRecovered);
+    parsed.azurePageRecoveryCalled=true;
+    parsed.azurePageRecoveryRecovered=azureRecovered.length;
   }
 
   parsed.productLinesGrossBeforeRecovery=initialLinesTotal;
