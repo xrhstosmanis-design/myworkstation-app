@@ -118,6 +118,25 @@ function findOhonosRow(rows,supplierItemCode,description){
   return bestScore>=700?best:null;
 }
 
+
+/* Some OHONOS scans arrive without a usable Azure table, but their product
+ * row text still preserves the printed financial sequence:
+ * quantity, list price, catalogue discount, final price, gross, discount %,
+ * discount amount, net, VAT. Accept it only when all printed arithmetic
+ * reconciles; this is deliberately not a generic OCR-number heuristic. */
+function ohonosRawRow(content,description,supplierItemCode){
+  const raw=rowTail(content,description,supplierItemCode);
+  const values=[...raw.matchAll(/-?\d+(?:[.,]\d+)?/g)].map(m=>tableNumber(m[0]));
+  for(let i=0;i+8<values.length;i++){
+    const [quantity,, ,unitPrice,grossAmount,discount1,discountAmount,netAmount,vatRate]=values.slice(i,i+9);
+    if(!(quantity>0&&unitPrice>0&&unitPrice<100&&grossAmount>0&&discount1>0&&discount1<60&&netAmount>=0&&[0,6,13,24].includes(Math.round(vatRate))))continue;
+    const priceMatches=Math.abs(quantity*unitPrice-grossAmount)<=Math.max(.03,grossAmount*.02);
+    const netMatches=Math.abs(grossAmount*(1-discount1/100)-netAmount)<=Math.max(.03,Math.max(netAmount,1)*.02);
+    const discountMatches=Math.abs((grossAmount-netAmount)-discountAmount)<=Math.max(.03,Math.max(discountAmount,1)*.03);
+    if(priceMatches&&netMatches&&discountMatches)return {quantity,unitPrice,grossAmount,discount1,netAmount,vatRate:Math.round(vatRate)};
+  }
+  return null;
+}
 /*
  * The Antzoulatos invoice has explicit KIB and TMX columns.  Azure's generic
  * prebuilt-invoice model frequently returns only the latter as Quantity, so
@@ -290,11 +309,12 @@ function normalizeAzure(payload){
     const extractedQuantity=Math.max(0,numberField(p.Quantity));
     const supplierTableRow=findAntzoulatosRow(antzoulatosRows,description);
     const ohonosTableRow=findOhonosRow(ohonosRows,supplierItemCode,description);
+    const ohonosRow=ohonosTableRow||ohonosRawRow(item?.content,description,supplierItemCode);
     const kibQuantity=Math.max(0,Number(supplierTableRow?.kibQuantity||extractedQuantity));
     const printedPiecesQuantity=Math.max(0,Number(supplierTableRow?.tmxQuantity||0));
-    let quantity=Math.max(0,Number(ohonosTableRow?.quantity||kibQuantity));
-    let netAmount=Math.max(0,Number(ohonosTableRow?.netAmount??numberField(p.Amount)));
-    let unitPrice=Math.max(0,Number(ohonosTableRow?.unitPrice??numberField(p.UnitPrice)));
+    let quantity=Math.max(0,Number(ohonosRow?.quantity||kibQuantity));
+    let netAmount=Math.max(0,Number(ohonosRow?.netAmount??numberField(p.Amount)));
+    let unitPrice=Math.max(0,Number(ohonosRow?.unitPrice??numberField(p.UnitPrice)));
     if(!unitPrice)unitPrice=recoverUnitPriceFromRow(item?.content,quantity,netAmount,description,supplierItemCode);
     // In this supplier's template, TMX can be the actual stock quantity while
     // KIB is only the ordering unit.  Use it only when the printed price and
@@ -309,7 +329,7 @@ function normalizeAzure(payload){
     netAmount=netRecovery.amount;
     const tax=Math.max(0,numberField(p.Tax));
     let vatRate=Math.round(Math.max(0,numberField(p.TaxRate)));if(![0,6,13,24].includes(vatRate))vatRate=0;
-    let discounts=ohonosTableRow?.discount1>0?[ohonosTableRow.discount1]:explicitDiscounts(p);
+    let discounts=ohonosRow?.discount1>0?[ohonosRow.discount1]:explicitDiscounts(p);
     if(discounts.length&&!discountsReconcile(discounts,quantity,unitPrice,netAmount))discounts=[];
     if(!discounts.length)discounts=recoverDiscountsFromMath(item?.content,quantity,unitPrice,netAmount);
     const discount1=discounts[0]||0,discount2=discounts[1]||0,discount3=discounts[2]||0;
@@ -318,11 +338,11 @@ function normalizeAzure(payload){
     if(!mathematicallyValid&&quantity>0&&unitPrice>0){
       netAmount=money4(quantity*netUnitCost);
     }
-    if(ohonosTableRow){vatRate=Math.round(Number(ohonosTableRow.vatRate||vatRate));if(![0,6,13,24].includes(vatRate))vatRate=0}
+    if(ohonosRow){vatRate=Math.round(Number(ohonosRow.vatRate||vatRate));if(![0,6,13,24].includes(vatRate))vatRate=0}
     const grossAmount=netAmount>0?money4(netAmount+(tax>0?tax:netAmount*vatRate/100)):0;
     const confidence=Math.max(pct(item?.confidence),pct(p.Description?.confidence),pct(p.Quantity?.confidence),pct(p.UnitPrice?.confidence),pct(p.Amount?.confidence));
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
-    return normalizeRetailPackaging({supplierItemCode:ohonosTableRow?.supplierItemCode||supplierItemCode,description:ohonosTableRow?.description||description,quantity,invoiceQuantity:quantity,unit:ohonosTableRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",stockUnit:ohonosTableRow?"PCS":"",invoiceUnit:ohonosTableRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:ohonosTableRow?0:unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
+    return normalizeRetailPackaging({supplierItemCode:ohonosTableRow?.supplierItemCode||supplierItemCode,description:ohonosTableRow?.description||description,quantity,invoiceQuantity:quantity,unit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",stockUnit:ohonosRow?"PCS":"",invoiceUnit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:ohonosRow?0:unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));

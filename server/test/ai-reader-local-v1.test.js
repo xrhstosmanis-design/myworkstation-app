@@ -4,6 +4,7 @@ import test from "node:test";
 
 const route=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
 const panel=await readFile(new URL("../../client/src/components/commerce/AiReaderPanel.jsx",import.meta.url),"utf8");
+const draftApproval=await readFile(new URL("../src/routes/commerce-invoice-draft-approval.js",import.meta.url),"utf8");
 const catalog=await readFile(new URL("../src/services/module-catalog.js",import.meta.url),"utf8");
 
 test("local OCR jobs are tenant and store scoped",()=>{
@@ -43,4 +44,13 @@ test("review UI sends invoice to drafts and waits for approval before stock",()=
   assert.match(panel,/περιμένει έγκριση/);
   assert.doesNotMatch(panel,/Επιβεβαίωση παραστατικού & ενημέρωση αποθήκης/);
   assert.doesNotMatch(panel,/Μόνο το παρακάτω κουμπί δημιουργεί αγορά και ενημερώνει απόθεμα/);
+});
+
+
+test("unknown invoice line can create a product without adding stock",()=>{
+  assert.match(panel,/Νέο προϊόν/);
+  assert.match(panel,/create-product/);
+  assert.match(draftApproval,/\/ai-reader\/jobs\/:jobId\/create-product/);
+  assert.match(draftApproval,/"currentStock","active"\) VALUES \([^\n]+,0,0,true\)/);
+  assert.match(draftApproval,/SupplierProductMapping/);
 });
