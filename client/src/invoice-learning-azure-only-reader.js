@@ -22,12 +22,17 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     finally{running=false;if(button){button.disabled=false;button.textContent=old}}
   }
 
-  async function selected(e){
-    const file=e.target.files?.[0];if(!file)return;
+  async function acceptFile(file){
+    if(!file)return;
     selectedFile=file;selectedDataUrl=await readFile(file);
     const b=document.querySelector('[data-azure-only-read]');
     setTimeout(()=>run(b),0);
   }
+
+  async function selected(e){
+    return acceptFile(e.target.files?.[0]);
+  }
+  window.__MWS_INVOICE_LEARNING_ACCEPT_FILE__=acceptFile;
 
   function install(){
     document.querySelectorAll('#pdfFile,#photoFile').forEach(input=>{if(input.dataset.azureOnlyReader)return;input.dataset.azureOnlyReader='1';input.addEventListener('change',selected)});
