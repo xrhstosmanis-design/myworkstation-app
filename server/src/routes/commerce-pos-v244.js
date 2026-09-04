@@ -215,7 +215,16 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const structuredNet=round2(normalizedLines.reduce((sum,line)=>sum+Number(line?.netAmount||0),0));
     if(!(structuredGross>0))return res.status(409).json({error:"Οι γραμμές V2.4.4 δεν έχουν έγκυρα σύνολα. Απαιτείται επανέλεγχος του τιμολογίου."});
     const diff=round2(Math.abs(structuredGross-requestedTotal));
-    if(diff>POS_HANDOFF_TOLERANCE)return res.status(409).json({error:`ΜΠΛΟΚΑΡΙΣΤΗΚΕ: το σύνολο των γραμμών (${structuredGross.toFixed(2)} €) δεν συμφωνεί με το σύνολο τιμολογίου (${requestedTotal.toFixed(2)} €). Διαφορά ${diff.toFixed(2)} € — πάνω από το όριο γρήγορης καταχώρισης ${POS_HANDOFF_TOLERANCE.toFixed(2)} €. Κάνε επανέλεγχο πριν από την καταχώριση.`,code:"V244_TOTAL_MISMATCH",structuredGross,structuredNet,invoiceGross:round2(requestedTotal),difference:diff,tolerance:POS_HANDOFF_TOLERANCE,correctedGrossLines});
+    const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE;
+    if(reconciliationRequired){
+      const reviewNote=`⚠️ ΕΛΕΓΧΟΣ BACKOFFICE: σύνολο γραμμών ${structuredGross.toFixed(2)} €, τιμολόγιο ${requestedTotal.toFixed(2)} €, διαφορά ${diff.toFixed(2)} €. Διόρθωσε τις γραμμές πριν από την έγκριση και την ενημέρωση αποθήκης.`;
+      req.body.note=[note,reviewNote].filter(Boolean).join(" • ").slice(0,500);
+      req.body.reconciliationRequired=true;
+      req.body.reconciliationDifference=diff;
+    }else{
+      req.body.reconciliationRequired=false;
+      req.body.reconciliationDifference=0;
+    }
 
     if(correctedGrossLines>0){
       const repaired={...result,productLines:normalizedLines,grossNormalizedAt:new Date().toISOString(),grossNormalization:"NET_PLUS_CANONICAL_VAT"};
