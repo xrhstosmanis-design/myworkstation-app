@@ -33,6 +33,12 @@ if(labPath){
     return {total:rows.length,accepted,candidates};
   };
   const applyResult=data=>{
+    // Rebuild the Learning rows from the fresh result. Updating existing DOM
+    // fields left old Master/barcode selections visible after a recheck.
+    if(typeof window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__==='function'){
+      window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__(data);
+      return;
+    }
     if(data?.supplier?.name)change(document.querySelector('#supplierName'),data.supplier.name);
     if(data?.supplier?.taxId)change(document.querySelector('#supplierTaxId'),data.supplier.taxId);
     if(data?.documentNumber)change(document.querySelector('#invoiceNo'),data.documentNumber);
