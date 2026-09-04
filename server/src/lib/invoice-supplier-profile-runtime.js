@@ -25,8 +25,6 @@ export async function resolveCentralSupplierProfile(supplier={}){
 // so the learned column map is applied to the same columns the supplier printed.
 const sourceRow=line=>line?.azureRawRow||line?.rawText||"";
 
-const sourceRow=line=>line?.azureRawRow||line?.rawText||"";
-
 function numberTokens(raw){
   return (String(raw||"").match(/\d+(?:[.,]\d+)?/g)||[]).map((raw,index)=>({raw,value:Number(raw.replace(",",".")),index})).filter(x=>Number.isFinite(x.value));
 }
