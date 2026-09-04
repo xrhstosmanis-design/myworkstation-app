@@ -5,11 +5,13 @@ router.get("/:id/:token",(req,res)=>res.type("html").send(`<!doctype html><meta 
 const status=t=>document.querySelector("#s").textContent=t;
 const read=f=>new Promise((ok,no)=>{const r=new FileReader;r.onload=()=>ok(String(r.result||""));r.onerror=no;r.readAsDataURL(f)});
 async function prepare(file){
-  if(!file.type.startsWith("image/")||file.size<900000)return file;
+  if(!file.type.startsWith("image/")||file.size<1400000)return file;
   const src=await read(file),img=await new Promise((ok,no)=>{const i=new Image;i.onload=()=>ok(i);i.onerror=no;i.src=src});
-  const scale=Math.min(1,2200/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
-  const c=document.createElement("canvas");c.width=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));c.height=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-  const blob=await new Promise(ok=>c.toBlob(ok,"image/jpeg",.82));
+  const width=img.naturalWidth||img.width,height=img.naturalHeight||img.height;
+  const scale=Math.min(1,3000/Math.max(width,height));
+  const c=document.createElement("canvas");c.width=Math.max(1,Math.round(width*scale));c.height=Math.max(1,Math.round(height*scale));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  let blob=await new Promise(ok=>c.toBlob(ok,"image/jpeg",.92));
+  if(blob&&blob.size>3200000)blob=await new Promise(ok=>c.toBlob(ok,"image/jpeg",.84));
   return blob?new File([blob],"timologio-kinito.jpg",{type:"image/jpeg"}):file;
 }
 async function go(){
