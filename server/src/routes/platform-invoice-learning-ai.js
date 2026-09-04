@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js";
+import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
 
 const router=Router();
 const AZURE_API_VERSION="2024-11-30";
@@ -356,7 +357,12 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
   if(azureConfigured()){
-    try{const azure=await applyLearnedKnowledge(normalizeAzure(await callAzure(fileData,mimeType)));if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)}catch(error){console.error("Azure Invoice Learning fallback:",error?.message||error)}
+    try{
+      let azure=normalizeAzure(await callAzure(fileData,mimeType));
+      azure=await applyCentralSupplierProfile(azure);
+      azure=await applyLearnedKnowledge(azure);
+      if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)
+    }catch(error){console.error("Azure Invoice Learning fallback:",error?.message||error)}
   }
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
