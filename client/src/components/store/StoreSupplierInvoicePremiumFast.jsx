@@ -43,10 +43,8 @@ async function backgroundV244({api,store,pages,supplierId,documentNumber,documen
     const combinedLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
     stage="Επικύρωση γραμμών προϊόντων";
     if(!combinedLines.length)throw new Error(`Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο ενιαίο τιμολόγιο ${pages.length} ${pages.length===1?"σελίδας":"σελίδων"}.`);
-    stage="Αποθήκευση V2.4.4 γραμμών";
-    await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(pageJobs[0].id)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines:combinedLines})});
-    stage="Καταχώριση τιμολογίου στο BackOffice και κατόπιν αρχειοθέτηση";
-    return api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(pageJobs[0].id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,additionalPageJobIds:pageJobs.slice(1).map(pageJob=>pageJob.id),note:`Γρήγορη καταχώριση με AI • ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
+    stage="Προετοιμασία πλήρους ελέγχου γραμμών";
+    return {jobId:pageJobs[0].id,additionalPageJobIds:pageJobs.slice(1).map(pageJob=>pageJob.id),productLines:combinedLines};
   }catch(error){throw new Error(`${stage}${jobId?` • AI job ${jobId}`:""}: ${String(error?.message||error).slice(0,520)}`)}
 }
 
@@ -55,6 +53,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const videoRef=useRef(null),canvasRef=useRef(null);
   const [qr,setQr]=useState("");
   const [qrUrl,setQrUrl]=useState("");
+  const [review,setReview]=useState(null);
   const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
@@ -110,37 +109,46 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFiles([new File([blob],`timologio-selida-${pages.length+1}-${Date.now()}.jpg`,{type:"image/jpeg"})])},"image/jpeg",.9)};
   const createQr=async()=>{if(pages.length>=5)return setMessage?.("⚠️ Έχουν ήδη επιλεγεί 5 σελίδες.");try{const r=await api("/api/commerce/mobile-invoice-upload-sessions",{method:"POST",body:JSON.stringify({storeId:store.id})});setQrUrl(r.url);setQr(await QRCode.toDataURL(r.url));const timer=setInterval(async()=>{try{const x=await api(`/api/commerce/mobile-invoice-upload-sessions/${r.id}`);if(x?.dataUrl){clearInterval(timer);const b=await fetch(x.dataUrl).then(v=>v.blob());selectFiles([new File([b],x.filename,{type:x.mimeType})]);setQr("");setQrUrl("")}}catch{}},2000)}catch(e){setMessage?.(`❌ ${e?.message||"Δεν δημιουργήθηκε QR."}`)}};
   const ready=Boolean(pages.length&&pages.every(page=>page.dataUrl)&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&mode&&!busy&&!reading&&!savingSupplier);
+  const updateReviewLine=(index,field,value)=>setReview(current=>{if(!current)return current;const numeric=["quantity","unitCost","netAmount","vatRate","grossAmount"].includes(field);return {...current,productLines:current.productLines.map((line,rowIndex)=>{if(rowIndex!==index)return line;const next={...line,[field]:numeric?num(value):value};if(field==="netAmount"||field==="vatRate")next.grossAmount=Math.round((Number(next.netAmount||0)*(1+Number(next.vatRate||0)/100)+Number.EPSILON)*100)/100;return next})}});
+  const removeReviewLine=index=>setReview(current=>current?{...current,productLines:current.productLines.filter((_,rowIndex)=>rowIndex!==index)}:current);
+  const addReviewLine=()=>setReview(current=>current?{...current,productLines:[...current.productLines,{rawText:"Χειροκίνητη γραμμή",code:"",barcode:"",description:"",quantity:1,unit:"ΤΜΧ",unitsPerPackage:0,unitCost:0,netAmount:0,vatRate:24,grossAmount:0,confidence:100}]}:current);
+  const confirmReview=async()=>{
+    if(!review||busy)return;
+    const totalGross=num(amount),lines=review.productLines||[],linesGross=Math.round((lines.reduce((sum,line)=>sum+Number(line.grossAmount||0),0)+Number.EPSILON)*100)/100,difference=Math.round((linesGross-totalGross+Number.EPSILON)*100)/100;
+    if(!lines.length||lines.some(line=>!String(line.description||"").trim()||Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0))return setStatus("Συμπλήρωσε περιγραφή, ποσότητα και τιμή σε κάθε γραμμή πριν την καταχώριση.");
+    if(Math.abs(difference)>0.05)return setStatus(`Η διαφορά είναι ${difference.toFixed(2)} €. Διόρθωσε τις γραμμές μέχρι το σύνολό τους να συμφωνεί με το τιμολόγιο.`);
+    setBusy(true);let stage="Αποθήκευση τελικών γραμμών";
+    try{
+      let paymentTransactionId=review.paymentTransactionId||null;
+      if(mode==="PAID"&&!paymentTransactionId){
+        stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";const key=paymentKey();
+        const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — έλεγχος γραμμών POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key,attachment:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
+        paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
+        if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+      }
+      await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(review.jobId)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines:lines})});
+      stage="Καταχώριση τιμολογίου";
+      const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(review.jobId)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,additionalPageJobIds:review.additionalPageJobIds||[],note:`Ελεγμένες γραμμές POS • ${lines.length} προϊόντα • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
+      setReview(null);setStatus(`✅ Το τιμολόγιο καταχωρίστηκε με ${created?.lineCount||lines.length} ελεγμένες γραμμές και αρχειοθετήθηκε στη Θυρίδα.`);setMessage?.(`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε για έλεγχο BackOffice.`);onChanged?.();
+    }catch(error){setStatus(`⚠️ Δεν ολοκληρώθηκε η καταχώριση στο στάδιο ${stage}. ${error?.message||error}`);setMessage?.(`⚠️ Η πληρωμή διατηρήθηκε και δεν πρέπει να επαναληφθεί: ${error?.message||error}`)}finally{setBusy(false)}
+  };
   const submit=async()=>{
     if(!ready)return;
-    setBusy(true);
-    let stage="DUPLICATE CHECK";
+    setBusy(true);let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
       const duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,dataUrl:fileDataUrl})});
-      const key=paymentKey(),totalGross=num(amount);
-      let paymentTransactionId=duplicateCheck?.paymentTransactionId||null;
-      if(mode==="PAID"){
-        if(!paymentTransactionId){
-          stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
-          setStatus("Καταχώριση πληρωμής στη βάρδια…");
-          const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:totalGross,supplierId,supplierName:supplier?.name||null,description:`Τιμολόγιο ${documentNumber.trim()} — Γρήγορη καταχώριση POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key,attachment:{dataUrl:fileDataUrl,filename:file.name||"timologio.jpg"}})});
-          paymentTransactionId=payment?.id||null;if(!paymentTransactionId)throw new Error("Η πληρωμή γράφτηκε χωρίς αναγνωριστικό συναλλαγής.");
-          if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
-        }
-      }
-      setStatus("Η πληρωμή παραλήφθηκε. Αναγνώριση γραμμών και καταχώριση τιμολογίου στο BackOffice σε εξέλιξη…");
-      const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η αναγνώριση και η καταχώριση του τιμολογίου συνεχίζονται στο background.`:"Η αναγνώριση γραμμών και η καταχώριση του τιμολογίου συνεχίζονται στο background.";
-      setMessage?.(success);onChanged?.();
-      backgroundV244({api,store,pages,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,resumeJobId:duplicateCheck?.resumeJobId||null,onProgress:setStatus})
-        .then(created=>{setStatus(`✅ Το ενιαίο τιμολόγιο καταχωρίστηκε από ${created?.pageCount||pages.length} ${pages.length===1?"σελίδα":"σελίδες"}, με ${created?.lineCount||0} γραμμές στην αρχική τους σειρά, και μετά αρχειοθετήθηκε στη Θυρίδα.`);setMessage?.(`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές ως ένα παραστατικό από ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} και αρχειοθετήθηκε στη Θυρίδα.`);onChanged?.()})
-        .catch(error=>{setStatus(`⚠️ Δεν ολοκληρώθηκε η καταχώριση τιμολογίου. ${error?.message||error}`);setMessage?.(`⚠️ Η πληρωμή διατηρήθηκε, αλλά το τιμολόγιο δεν καταχωρίστηκε ούτε αρχειοθετήθηκε: ${error?.message||error}`)});
-    }catch(error){
-      const detail=error?.message||"Η καταχώριση απέτυχε.";
-      setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);
-      setMessage?.(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ ${stage}: ${detail}`);
-      setBusy(false);
-    }
+      const prepared=await backgroundV244({api,store,pages,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),mode,paymentTransactionId:duplicateCheck?.paymentTransactionId||null,resumeJobId:duplicateCheck?.resumeJobId||null,onProgress:setStatus});
+      setReview({...prepared,paymentTransactionId:duplicateCheck?.paymentTransactionId||null});setStatus(`Έλεγχος ${prepared.productLines.length} γραμμών. Διόρθωσε ό,τι χρειάζεται πριν την καταχώριση.`);
+    }catch(error){const detail=error?.message||"Η καταχώριση απέτυχε.";setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);setMessage?.(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ ${stage}: ${detail}`)}finally{setBusy(false)}
   };
+  if(review){const lines=review.productLines||[],invoiceGross=num(amount),linesGross=Math.round((lines.reduce((sum,line)=>sum+Number(line.grossAmount||0),0)+Number.EPSILON)*100)/100,difference=Math.round((linesGross-invoiceGross+Number.EPSILON)*100)/100,balanced=Math.abs(difference)<=0.05;return <div className="pos-payment-form-v3-root" data-pos-invoice-full-review="true">
+    <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Πλήρης έλεγχος τιμολογίου — διόρθωσε τις γραμμές όπως στην κανονική καταχώριση. Η αποθήκη δεν ενημερώνεται τώρα.</div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginBottom:10}}><label>Προμηθευτής<input value={supplier?.name||""} readOnly/></label><label>Αρ. τιμολογίου<input value={documentNumber} readOnly/></label><label>Ημερομηνία<input value={documentDate} readOnly/></label></div>
+    <div style={{padding:"10px 12px",borderRadius:9,background:balanced?"#dcfce7":"#fff4e5",fontWeight:900,marginBottom:10}}>Σύνολο τιμολογίου: {invoiceGross.toFixed(2)} € · Σύνολο γραμμών: {linesGross.toFixed(2)} € · Διαφορά: {difference.toFixed(2)} € {balanced?"✓":"— χρειάζεται διόρθωση"}</div>
+    <div style={{overflow:"auto",maxHeight:430,border:"1px solid #cbdbe6",borderRadius:10}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:1180,fontSize:12}}><thead style={{position:"sticky",top:0,background:"#143f61",color:"#fff"}}><tr><th>#</th><th>Κωδ.</th><th>Περιγραφή</th><th>Ποσ.</th><th>Μον.</th><th>Τιμή</th><th>Καθ. αξία</th><th>ΦΠΑ</th><th>Σύνολο</th><th/></tr></thead><tbody>{lines.map((line,index)=><tr key={index}><td>{index+1}</td><td><input value={line.code||""} onChange={e=>updateReviewLine(index,"code",e.target.value)}/></td><td><input value={line.description||""} onChange={e=>updateReviewLine(index,"description",e.target.value)} style={{minWidth:230}}/></td><td><input inputMode="decimal" value={line.quantity||""} onChange={e=>updateReviewLine(index,"quantity",e.target.value)}/></td><td><input value={line.unit||"ΤΜΧ"} onChange={e=>updateReviewLine(index,"unit",e.target.value)}/></td><td><input inputMode="decimal" value={line.unitCost||""} onChange={e=>updateReviewLine(index,"unitCost",e.target.value)}/></td><td><input inputMode="decimal" value={line.netAmount||""} onChange={e=>updateReviewLine(index,"netAmount",e.target.value)}/></td><td><input inputMode="decimal" value={line.vatRate||0} onChange={e=>updateReviewLine(index,"vatRate",e.target.value)}/></td><td><input inputMode="decimal" value={line.grossAmount||""} onChange={e=>updateReviewLine(index,"grossAmount",e.target.value)}/></td><td><button type="button" onClick={()=>removeReviewLine(index)} disabled={busy}>×</button></td></tr>)}</tbody></table></div>
+    <div style={{display:"flex",gap:8,marginTop:10}}><button type="button" onClick={addReviewLine} disabled={busy}>+ Προσθήκη γραμμής</button><button type="button" className="pos-primary-action" onClick={confirmReview} disabled={busy||!balanced}>{busy?"Καταχώριση…":mode==="PAID"?"ΕΠΙΒΕΒΑΙΩΣΗ & ΠΛΗΡΩΜΗ":"ΕΠΙΒΕΒΑΙΩΣΗ ΤΙΜΟΛΟΓΙΟΥ"}</button></div>
+  </div>};
   return <div className="pos-payment-form-v3-root">
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Γρήγορη καταχώριση — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στην Κεντρική Διαχείριση.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
