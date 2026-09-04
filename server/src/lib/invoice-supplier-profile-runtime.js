@@ -21,13 +21,17 @@ export async function resolveCentralSupplierProfile(supplier={}){
   }
 }
 
+// Azure keeps the printed source row separately. Prefer it over assembled OCR text,
+// so the learned column map is applied to the same columns the supplier printed.
+const sourceRow=line=>line?.azureRawRow||line?.rawText||"";
+
 function numberTokens(raw){
   return (String(raw||"").match(/\d+(?:[.,]\d+)?/g)||[]).map((raw,index)=>({raw,value:Number(raw.replace(",",".")),index})).filter(x=>Number.isFinite(x.value));
 }
 
 function recoverIfantisLine(line){
   const quantity=Number(line?.quantity||0);if(!(quantity>0))return line;
-  const tokens=numberTokens(line?.rawText);if(tokens.length<3)return line;
+  const tokens=numberTokens(sourceRow(line));if(tokens.length<3)return line;
   const commonDiscounts=[0,5,10,15,20,25,30,35,40,45,50];
   let best=null;
   for(let i=0;i<tokens.length;i++){
@@ -64,7 +68,7 @@ function recoverIfantisLine(line){
 function recoverQuantityFromLineTotal(line){
   const price=Number(line?.unitPrice??line?.unitCost??0),net=Number(line?.netAmount??line?.netValue??0);
   if(!(price>0&&net>0&&price<=100000))return line;
-  const candidates=numberTokens(line?.rawText).map(x=>x.value).filter(q=>q>0&&q<=100000&&close(q*price,net,Math.max(.03,net*.012)));
+  const candidates=numberTokens(sourceRow(line)).map(x=>x.value).filter(q=>q>0&&q<=100000&&close(q*price,net,Math.max(.03,net*.012)));
   const unique=[...new Set(candidates.map(q=>Math.round(q*10000)/10000))];
   if(unique.length!==1||close(unique[0],Number(line?.quantity||0),.0001))return line;
   const quantity=unique[0];
@@ -73,7 +77,7 @@ function recoverQuantityFromLineTotal(line){
 
 const unitWords=new Set(["TEM","ΤΕΜ","TMX","ΤΜΧ","PCS","PC","KIB","ΚΙΒ","KΒ","ΚΒ","KG","ΚG","ΚΙΛΑ","LT","LIT","ΦΑΚ"]);
 const parseNumber=value=>{const n=Number(String(value||"").replace(",","."));return Number.isFinite(n)?n:null};
-const wordsOf=line=>String(line?.rawText||line?.azureRawRow||"").trim().split(/\s+/).filter(Boolean);
+const wordsOf=line=>String(sourceRow(line)).trim().split(/\s+/).filter(Boolean);
 const numericNear=(words,start,direction)=>{
   for(let i=start;i>=0&&i<words.length;i+=direction){const n=parseNumber(words[i]);if(n!==null)return n}
   return null;
