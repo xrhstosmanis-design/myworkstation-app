@@ -73,7 +73,7 @@ function recoverQuantityFromLineTotal(line){
 
 const unitWords=new Set(["TEM","ΤΕΜ","TMX","ΤΜΧ","PCS","PC","KIB","ΚΙΒ","KΒ","ΚΒ","KG","ΚG","ΚΙΛΑ","LT","LIT","ΦΑΚ"]);
 const parseNumber=value=>{const n=Number(String(value||"").replace(",","."));return Number.isFinite(n)?n:null};
-const wordsOf=line=>String(line?.rawText||"").trim().split(/\s+/).filter(Boolean);
+const wordsOf=line=>String(line?.rawText||line?.azureRawRow||"").trim().split(/\s+/).filter(Boolean);
 const numericNear=(words,start,direction)=>{
   for(let i=start;i>=0&&i<words.length;i+=direction){const n=parseNumber(words[i]);if(n!==null)return n}
   return null;
