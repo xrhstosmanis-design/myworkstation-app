@@ -55,3 +55,10 @@ test("additional page jobs are locked individually and internal intake errors id
   assert.match(intake,/Η καταχώριση τιμολογίου απέτυχε στο στάδιο \$\{stage\}/);
   assert.match(intake,/safeError\.code="V244_INTAKE_INTERNAL"/);
 });
+
+
+test("empty initial invoice extraction triggers the table recovery pass",()=>{
+  assert.match(aiRecheck,/const needsTablePass=parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch/);
+  assert.match(aiRecheck,/if\(needsTablePass\)/);
+  assert.match(aiRecheck,/const recovered=Array\.isArray\(tableParsed\.productLines\)/);
+});
