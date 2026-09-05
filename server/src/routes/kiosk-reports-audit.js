@@ -127,6 +127,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
+        AND a."actionType" IN ('RETURN','CANCEL','RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_ADD','CART_QTY_CHANGE','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE','AUDIENCE_DISCOUNT_SELECTED','ITEM_CHANGE_REQUEST','ITEM_EXCHANGE_COMPLETED','HOLD_RESTORE','HOLD_SAVE')
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
