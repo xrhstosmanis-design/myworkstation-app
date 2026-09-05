@@ -51,6 +51,7 @@ import "./components/commerce/supplier-control-suite.css";
 import "./components/commerce/customer-control-suite.css";
 import "./components/commerce/price-catalog-suite.css";
 import "./components/commerce/kiosk-reports-suite.css";
+import "./components/commerce/kiosk-reports-audit-fixes.css";
 import "./components/commerce/video-audit-context.css";
 import "./components/commerce/pos-sale-audit-report.css";
 import "./components/commerce/supplier-product-transfer.css";
