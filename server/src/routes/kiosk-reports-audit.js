@@ -7,6 +7,7 @@ import {buildVendorClientFallback,videoAdapterFor} from "../services/video-adapt
 
 const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",SALE_CASH:"Πώληση με μετρητά",SALE_CARD:"Πώληση με κάρτα",SALE_IRIS:"Πληρωμή με IRIS",PERCENTAGES:"Ποσοστά",TRANSFER_AMOUNT:"Μεταφορά ποσού",SAFE_ADJUSTMENT:"Διόρθωση χρηματοκιβωτίου",SALE_MIXED:"Μικτή πώληση",SALE_CREDIT:"Πώληση με πίστωση",BANK_DEPOSIT:"Κατάθεση τράπεζας",BANK_WITHDRAWAL:"Ανάληψη τράπεζας",POS_RETURN:"Ολική επιστροφή",POS_RETURN_ITEMS:"Μερική επιστροφή",POS_SELF_CONSUMPTION:"Προσωπική κατανάλωση",POS_PRODUCT_DESTRUCTION:"Καταστροφή προϊόντων",POS_CANCEL:"Ακύρωση πώλησης",CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι",CART_CANCEL:"Ακύρωση λίστας πώλησης",PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής",SHIFT_CLOSE_SHORTAGE_ATTEMPT:"Προσπάθεια κλεισίματος με έλλειμμα",SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE:"Κλείσιμο με επιβεβαιωμένο έλλειμμα",BANK_DEPOSIT_PROOF_UPLOADED:"Ανέβασμα αποδεικτικού κατάθεσης",BANK_DEPOSIT_AUTO_MATCHED:"Αυτόματη αντιστοίχιση κατάθεσης",BANK_DEPOSIT_PROOF_DISCREPANCY:"Απόκλιση αποδεικτικού κατάθεσης",BANK_LEDGER_CONFIRMED:"Επιβεβαίωση τραπεζικής κίνησης",BANK_LEDGER_DISCREPANCY:"Απόκλιση τραπεζικής κίνησης",BANK_LEDGER_CANCELLED:"Ακύρωση τραπεζικής κίνησης",OTHER_EXPENSE_CONFIRMED:"Επιβεβαίωση λοιπού εξόδου",OTHER_EXPENSE_DISCREPANCY:"Απόκλιση λοιπού εξόδου",SUPPLIER_SETTLEMENT_CONFIRMED:"Επιβεβαίωση πληρωμής προμηθευτή",SUPPLIER_SETTLEMENT_DISCREPANCY:"Απόκλιση πληρωμής προμηθευτή"};
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
+const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 
 const router=Router();
 const managementRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -135,7 +136,8 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(a."actorName",'') ILIKE ${text}
           OR COALESCE(a."actionType",'') ILIKE ${text}
           OR COALESCE(a."saleId",'') ILIKE ${text}
-          OR COALESCE(a."relatedSaleId",'') ILIKE ${text})
+          OR COALESCE(a."relatedSaleId",'') ILIKE ${text}
+          OR COALESCE(a."details"::text,'') ILIKE ${text})
       ORDER BY a."createdAt" DESC LIMIT 10000`;
     const operatorRows=await prisma.$queryRaw`
       SELECT a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",u."fullName" AS "actorName",
@@ -149,7 +151,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
           'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
-          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY'
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
@@ -198,10 +200,12 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         ?`${greekAuditEventLabel(r.eventType)} · κατάθεση ${n(details.expectedAmount).toFixed(2)} € · αποδεικτικό ${n(details.proofAmount??details.expectedAmount).toFixed(2)} € · διαφορά ${n(details.difference).toFixed(2)} €${details.attachmentFilename?` · ${details.attachmentFilename}`:""}`
         :expenseEvent||supplierEvent
           ?`${greekAuditEventLabel(r.eventType)} · ${n(details.amount).toFixed(2)} €${supplierEvent&&details.supplierName?` · ${details.supplierName}`:""}${allocatedInvoices?` · ${allocatedInvoices}`:""}${details.note?` · ${details.note}`:""}`
-          :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
+          :r.eventType==="POS_SALE_COMPLETED"
+            ?`ΟΛΟΚΛΗΡΩΣΗ ΠΩΛΗΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"} · ${details.paymentMethod||"—"} · ${n(details.total).toFixed(2)} €`
+            :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
       return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
-    const inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&(!operatorId||row.actorId===operatorId)&&(!terminalPos||row.terminalPos===terminalPos)&&(!eventType||row.eventType===eventType)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
+    const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
     const stores=superAdmin?await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (${companyId}::text IS NULL OR "companyId"=${companyId}) ORDER BY "name"`:[];
     res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
