@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node src/patch-pos-online-orders-host.js && node src/patch-pos-transfer-amount.js && node src/patch-pos-close-shift-permission.js && vite",
     "build": "node src/patch-pos-online-orders-host.js && node src/patch-pos-transfer-amount.js && node src/patch-pos-close-shift-permission.js && vite build",
+    "test:greek-search": "node scripts/test-greek-search.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

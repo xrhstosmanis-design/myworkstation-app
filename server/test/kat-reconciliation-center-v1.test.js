@@ -13,7 +13,7 @@ test('KAT BackOffice reconciles order sale fiscal EFTPOS and stock evidence',()=
   assert.match(route,/attemptBySale/);
   assert.match(route,/movementsByOrder/);
   assert.match(ordering,/ONLINE_ORDER_SALE/);
-  assert.match(panel,/Order → Sale → Fiscal → EFTPOS → Stock/);
+  assert.match(panel,/Παραγγελία → Πώληση → Φορολογική → EFTPOS → Απόθεμα/);
 });
 
 test('missing critical evidence is visible and never silently green',()=>{

@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Eye,Inbox,RefreshCw,RotateCw,Search} from "lucide-react";
 import "./invoice-inbox.css";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const labels={RECEIVED:"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"};
 const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
@@ -21,12 +22,11 @@ export default function InvoiceInboxPanel({api,stores=[],onOpenAi}){
   const load=async()=>{if(!storeId)return;setLoading(true);setError("");try{setItems(await api(`/api/commerce/documents/inbox?storeId=${encodeURIComponent(storeId)}`))}catch(err){setError(err.message)}finally{setLoading(false)}};
   useEffect(()=>{load()},[storeId]);
   const supplierOptions=useMemo(()=>[...new Set(items.map(x=>x.supplierName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")),[items]);
-  const filtered=useMemo(()=>{const q=query.trim().toLocaleLowerCase("el-GR");return items.filter(item=>{
+  const filtered=useMemo(()=>items.filter(item=>{
     if(supplierFilter&&item.supplierName!==supplierFilter)return false;
     if(dateFilter&&isoDay(item.receivedAt)!==dateFilter)return false;
-    if(!q)return true;
-    return [item.supplierName,item.filename,item.note,item.responsibleName,dayKey(item.receivedAt)].some(value=>String(value||"").toLocaleLowerCase("el-GR").includes(q));
-  })},[items,query,supplierFilter,dateFilter]);
+    return matchesGreekSearch(query,[item.supplierName,item.filename,item.note,item.responsibleName,dayKey(item.receivedAt)]);
+  }),[items,query,supplierFilter,dateFilter]);
   const groups=useMemo(()=>{const supplierMap=new Map();for(const item of filtered){const supplier=item.supplierName||"Χωρίς αντιστοίχιση προμηθευτή";if(!supplierMap.has(supplier))supplierMap.set(supplier,new Map());const days=supplierMap.get(supplier),day=dayKey(item.receivedAt);if(!days.has(day))days.set(day,[]);days.get(day).push(item)}return [...supplierMap.entries()].sort((a,b)=>a[0].localeCompare(b[0],"el")).map(([supplier,days])=>({supplier,days:[...days.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([day,rows])=>({day,rows:rows.sort((a,b)=>new Date(b.receivedAt||0)-new Date(a.receivedAt||0))}))}))},[filtered]);
   const view=async item=>{try{const result=await api(`/api/commerce/documents/inbox/${item.id}/file`);const popup=window.open();if(!popup)return;popup.document.write(result.mimeType==="application/pdf"?`<title>${result.filename}</title><iframe src="${result.dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`:`<title>${result.filename}</title><img src="${result.dataUrl}" style="max-width:100%;height:auto;display:block;margin:auto">`)}catch(err){setError(err.message)}};
   const reprocess=async item=>{setWorkingId(item.id);setError("");setMessage("");try{const prepared=await api(`/api/commerce/documents/inbox/${item.id}/reprocess`,{method:"POST",body:"{}"});let lineCount=Number(prepared.productLineCount||0);if(prepared.needsRecheck){const ai=await api(`/api/commerce/ai-reader/jobs/${prepared.jobId}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});lineCount=Array.isArray(ai?.result?.productLines)?ai.result.productLines.length:0}await api(`/api/commerce/documents/inbox/${item.id}`,{method:"PATCH",body:JSON.stringify({status:"IN_REVIEW",note:`✅ Αναγνώριση ολοκληρώθηκε • ${lineCount} γραμμές • AI job ${prepared.jobId} • χωρίς νέα πληρωμή`})});setMessage(`Το παλιό τιμολόγιο αναγνώστηκε ξανά με ${lineCount} γραμμές. Άνοιξε τον έλεγχο και την αντιστοίχιση προϊόντων.`);await load();onOpenAi?.(prepared.jobId)}catch(err){setError(err.message||"Η επανεπεξεργασία απέτυχε.")}finally{setWorkingId("")}};

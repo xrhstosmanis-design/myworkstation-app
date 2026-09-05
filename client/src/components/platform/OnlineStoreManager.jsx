@@ -3,6 +3,7 @@ import {ExternalLink,Search,ShoppingBag,X} from "lucide-react";
 import "./online-store-manager.css";
 import "./online-store-fulfillment.css";
 import "./online-store-branding.css";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 const money=v=>Number(v||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const onlinePrice=(p,t,v)=>Math.round((Number(p||0)+(t==="PERCENT"?Number(p||0)*Number(v||0)/100:Number(v||0)))*100)/100;
 const days=[["MON","Δευτέρα"],["TUE","Τρίτη"],["WED","Τετάρτη"],["THU","Πέμπτη"],["FRI","Παρασκευή"],["SAT","Σάββατο"],["SUN","Κυριακή"]];
@@ -13,7 +14,7 @@ export default function OnlineStoreManager({manager,setManager,request,onClose,s
  const [members,setMembers]=useState([]),[member,setMember]=useState({fullName:"",phone:"",memberType:"DOCTOR",pin:""}),[memberLoading,setMemberLoading]=useState(false);
  const settings={pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",brandName:manager.store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25,...manager.settings,weeklyHours:{...defaultHours,...(manager.settings.weeklyHours||{})}};
  const categories=useMemo(()=>[...new Set(manager.products.map(p=>p.categoryName||"Χωρίς κατηγορία"))].sort((a,b)=>a.localeCompare(b,"el")),[manager.products]);
- const filtered=useMemo(()=>manager.products.filter(p=>(category==="ALL"||(p.categoryName||"Χωρίς κατηγορία")===category)&&`${p.name} ${p.sku||""}`.toLocaleLowerCase("el").includes(search.toLocaleLowerCase("el"))),[manager.products,category,search]);
+ const filtered=useMemo(()=>manager.products.filter(p=>(category==="ALL"||(p.categoryName||"Χωρίς κατηγορία")===category)&&matchesGreekSearch(search,[p.name,p.sku,p.categoryName,...(p.barcodes||[])])),[manager.products,category,search]);
  const updateSettings=(key,value)=>setManager(current=>{const next={pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",brandName:current.store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25,weeklyHours:defaultHours,...current.settings,[key]:value};return {...current,settings:next,products:key==="surchargeType"||key==="surchargeValue"?current.products.map(p=>({...p,onlinePrice:onlinePrice(p.storePrice,next.surchargeType,next.surchargeValue)})):current.products}});
  const updateHours=(day,key,value)=>updateSettings("weeklyHours",{...settings.weeklyHours,[day]:{...settings.weeklyHours[day],[key]:value}});
  const toggle=id=>setManager(c=>({...c,products:c.products.map(p=>p.id===id?{...p,visible:!p.visible}:p)}));

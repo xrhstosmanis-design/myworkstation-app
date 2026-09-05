@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {History,RefreshCw,Search,X} from "lucide-react";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const labels={
   AUDIT_ENABLED:"Ενεργοποίηση ιστορικού",
@@ -56,12 +57,9 @@ export default function PlatformAuditCenter(){
   useEffect(()=>{if(open)load()},[open]);
 
   const filtered=useMemo(()=>{
-    const q=search.trim().toLocaleLowerCase("el-GR");
     return rows.filter(row=>{
       if(action&&row.action!==action)return false;
-      if(!q)return true;
-      const haystack=[row.actorName,row.actorEmail,row.targetName,labels[row.action],describe(row)].join(" ").toLocaleLowerCase("el-GR");
-      return haystack.includes(q);
+      return matchesGreekSearch(search,[row.actorName,row.actorEmail,row.targetName,labels[row.action],describe(row)]);
     });
   },[rows,search,action]);
 

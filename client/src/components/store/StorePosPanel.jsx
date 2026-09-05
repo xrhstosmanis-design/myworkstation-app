@@ -11,6 +11,7 @@ import "../platform/pos-designer.css";
 import "./store-pos.css";
 import "./store-pos-viewport-fit.css";
 import {queueOfflineCashSale,readOfflineSaleQueue,syncOfflineSales} from "../../offline-sale-queue.js";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const KAT_OFFLINE_SALE_QUEUE_V2=true;
@@ -60,7 +61,7 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   const selectedPosTextSize=POS_TEXT_SIZES.find(option=>option.id===posTextSize)||POS_TEXT_SIZES[0];
   const choosePosTextSize=next=>{setPosTextSize(next);setPosTextSizeMenu(false);try{localStorage.setItem(posTextSizeKey(store.id),next)}catch{}};
   const quickButtons=(layout.quickKeys||[]).filter(x=>x.visible),categoryButtons=(layout.categories||[]).filter(x=>x.visible),fontScale=Math.max(.8,Math.min(1.8,Number(layout.buttonFontScale||titleMeta.fontScale||1)));
-  const searchRows=useMemo(()=>{const q=query.trim().toLocaleLowerCase("el-GR");if(!q)return[];return products.filter(product=>product.name.toLocaleLowerCase("el-GR").includes(q)||String(product.sku||"").toLocaleLowerCase("el-GR").includes(q)||(product.barcodes||[]).some(code=>String(code).includes(q))).slice(0,48)},[products,query]);
+  const searchRows=useMemo(()=>query.trim()?products.filter(product=>matchesGreekSearch(query,[product.name,product.sku,product.sourceCode,product.masterCode,...(product.barcodes||[])])).slice(0,48):[],[products,query]);
   const resolveCategoryProducts=button=>{const codes=storedCodes(button);if(codes.length)return products.filter(product=>productMatchesCodes(product,codes));const name=storedCategoryName(button)||button?.label;return products.filter(product=>String(product.categoryName||"").toLocaleLowerCase("el-GR")===String(name||"").toLocaleLowerCase("el-GR"))};
   const categoryChildren=categoryModal?storedChildren(categoryModal):[];
   const modalProducts=useMemo(()=>categoryModal&&!storedChildren(categoryModal).length?resolveCategoryProducts(categoryModal):[],[products,categoryModal]);
