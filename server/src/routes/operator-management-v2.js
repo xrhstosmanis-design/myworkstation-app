@@ -121,6 +121,21 @@ router.get("/stores/:storeId/operators",route(async(req,res)=>{
   res.json({store:{id:store.id,name:store.name},operators:rows});
 }));
 
+router.post("/stores/:storeId/operators/copy-permissions",route(async(req,res)=>{
+  const store=await scopedStore(req,req.params.storeId);
+  const body=z.object({sourceEmployeeId:z.string().min(1),confirm:z.literal("COPY_SOURCE_TO_EMPLOYEES")}).parse(req.body||{});
+  const sourceRows=await prisma.$queryRaw`SELECT c."employeeId",p."posAccess",p."backofficeAccess",p."powerUser",p."permissions",p."backofficeMenu",p."backofficeTabs",p."customerDisplay" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."storeId"=${store.id} AND c."employeeId"=${body.sourceEmployeeId} LIMIT 1`;
+  const source=sourceRows[0];
+  if(!source){const error=new Error("Δεν βρέθηκε ο χειριστής-πρότυπο.");error.status=404;throw error}
+  const targets=await prisma.$queryRaw`SELECT c."id" AS "credentialId",c."employeeId",c."displayName" FROM "StoreOperatorCredential" c WHERE c."storeId"=${store.id} AND c."employeeId"<>${body.sourceEmployeeId} AND UPPER(TRIM(c."displayName"))<>UPPER('ΧΡΗΣΤΟΣ ΜΑΝΗΣ')`;
+  for(const target of targets){
+    await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "role"='EMPLOYEE',"active"=TRUE,"updatedAt"=NOW() WHERE "id"=${target.credentialId}`;
+    await prisma.$executeRaw`INSERT INTO "StoreOperatorProfile" ("id","companyId","storeId","employeeId","posAccess","backofficeAccess","powerUser","permissions","backofficeMenu","backofficeTabs","customerDisplay","createdBy","updatedAt") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${target.employeeId},${source.posAccess!==false},${source.backofficeAccess===true},${source.powerUser===true},CAST(${JSON.stringify(source.permissions||{})} AS jsonb),CAST(${JSON.stringify(source.backofficeMenu||{})} AS jsonb),CAST(${JSON.stringify(source.backofficeTabs||{})} AS jsonb),CAST(${JSON.stringify(source.customerDisplay||{})} AS jsonb),${req.user.id},NOW()) ON CONFLICT ("storeId","employeeId") DO UPDATE SET "posAccess"=EXCLUDED."posAccess","backofficeAccess"=EXCLUDED."backofficeAccess","powerUser"=EXCLUDED."powerUser","permissions"=EXCLUDED."permissions","backofficeMenu"=EXCLUDED."backofficeMenu","backofficeTabs"=EXCLUDED."backofficeTabs","customerDisplay"=EXCLUDED."customerDisplay","updatedAt"=NOW()`;
+    await audit({store,operatorId:target.credentialId,actorId:req.user.id,eventType:"OPERATOR_PERMISSIONS_COPIED",details:{sourceEmployeeId:body.sourceEmployeeId,targetEmployeeId:target.employeeId,sourceDisplayName:"Αθηνά Μάρη"}});
+  }
+  res.json({ok:true,updated:targets.length,sourceEmployeeId:body.sourceEmployeeId});
+}));
+
 router.post("/stores/:storeId/operators",route(async(req,res)=>{
   const store=await scopedStore(req,req.params.storeId);
   const body=z.object({
