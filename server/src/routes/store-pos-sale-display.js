@@ -3,6 +3,7 @@ import crypto from "crypto";
 import {prisma} from "../prisma.js";
 
 const router=Router();
+let audienceColumnReady=false;
 const money=value=>Number(value||0);
 const uid=()=>crypto.randomUUID();
 
@@ -44,6 +45,8 @@ async function ensureCategorySchema(){
 }
 
 const methodLabel=method=>method==="CASH"?"ΜΕΤΡΗΤΑ":method==="CARD"?"ΚΑΡΤΑ":method==="IRIS"?"IRIS":String(method||"ΠΛΗΡΩΜΗ");
+const audienceLabel=audience=>({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[String(audience||"NORMAL")]||String(audience||"Κανονική τιμή"));
+async function ensureAudienceColumn(){if(audienceColumnReady)return;await prisma.$executeRawUnsafe(`ALTER TABLE "Sale" ADD COLUMN IF NOT EXISTS "audience" TEXT NOT NULL DEFAULT 'NORMAL'`);audienceColumnReady=true}
 const euroPlain=value=>`${Number(value||0).toFixed(2).replace(".",",")} €`;
 
 function normalizeSale(row){
@@ -54,12 +57,14 @@ function normalizeSale(row){
     :(payments[0]?`${methodLabel(payments[0].method)} ${euroPlain(payments[0].amount)}`:"ΧΩΡΙΣ ΠΛΗΡΩΜΗ");
   const productSummary=lines.length?lines.map(line=>`${Math.abs(Number(line.quantity||0))}× ${line.description}`).join(" · "):"Χωρίς προϊόντα";
   const movementType=row.source==="POS_REVERSAL"?(row.reversalKind==="RETURN"?"RETURN":"CANCEL"):row.source==="EXCHANGE"?"EXCHANGE":row.source==="WASTE"?"WASTE":"SALE";
-  return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary,paymentMethod:`${productSummary} · ${paymentSummary}`,productSummary,movementType};
+  const audience=row.audience||"NORMAL", audienceText=audienceLabel(audience), paymentSummaryWithAudience=`${audienceText} · ${paymentSummary}`;
+  return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary:paymentSummaryWithAudience,paymentMethod:`${productSummary} · ${paymentSummaryWithAudience}`,productSummary,audience,audienceLabel:audienceText,movementType};
 }
 
 router.get("/stores/:storeId/online-product-options",async(req,res,next)=>{
   try{
     const store=await ownedStore(req,req.params.storeId);
+    await ensureAudienceColumn();
     if(!await canOnlineCreate(req,store.id))return res.status(403).json({error:"Δεν έχεις δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
     await ensureCategorySchema();
     const categories=await prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
@@ -70,6 +75,7 @@ router.get("/stores/:storeId/online-product-options",async(req,res,next)=>{
 
 router.post("/stores/:storeId/online-product-create",async(req,res,next)=>{
   try{
+    await ensureAudienceColumn();
     const store=await ownedStore(req,req.params.storeId);
     if(!await canOnlineCreate(req,store.id))return res.status(403).json({error:"Δεν έχεις δικαίωμα «Online αναζήτηση barcode (PoS)» από το BackOffice."});
     await ensureCategorySchema();
@@ -107,7 +113,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
   try{
     const store=await ownedStore(req,req.params.storeId);
     const rows=await prisma.$queryRaw`
-      SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."occurredAt",s."createdAt",
+      SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
              s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",c."name" AS "customerName",
              COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
              COALESCE((SELECT st."actorName" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
@@ -124,6 +130,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
 
 router.get("/sales/journal",async(req,res,next)=>{
   try{
+    await ensureAudienceColumn();
     const storeId=req.query.storeId?String(req.query.storeId):null;
     if(req.user?.tokenType==="STORE_OPERATOR"){
       if(storeId&&req.user.storeId!==storeId)return res.status(403).json({error:"Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα."});
@@ -134,7 +141,7 @@ router.get("/sales/journal",async(req,res,next)=>{
     if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     const operatorStoreId=req.user?.tokenType==="STORE_OPERATOR"?req.user.storeId:null;
     const rows=await prisma.$queryRaw`
-      SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."occurredAt",s."createdAt",s."status",
+      SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",s."status",
              s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",st."name" AS "storeName",c."name" AS "customerName",
              COALESCE((SELECT tx."actorName" FROM "StoreTransaction" tx WHERE tx."companyId"=s."companyId" AND tx."storeId"=s."storeId" AND COALESCE(tx."description",'') LIKE ('%'||s."id"||'%') ORDER BY tx."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
              COALESCE((SELECT json_agg(json_build_object('method',p."method",'amount',p."amount") ORDER BY p."createdAt",p."id") FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json) AS "payments",

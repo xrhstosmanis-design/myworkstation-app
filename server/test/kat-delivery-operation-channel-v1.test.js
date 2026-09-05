@@ -8,7 +8,7 @@ const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosP
 test("KAT checkout records counter or delivery-delayed channel without issuing fiscal commands",()=>{
   assert.match(pos,/operationChannel:z\.enum\(\["COUNTER","DELIVERY_DELAYED"\]\)/);
   assert.match(pos,/"operationChannel" TEXT NOT NULL DEFAULT 'COUNTER'/);
-  assert.match(pos,/"transactionMode","operationChannel"\) VALUES/);
+  assert.match(pos,/"transactionMode","operationChannel","audience"\) VALUES/);
   assert.doesNotMatch(pos,/operationChannel[\s\S]{0,500}(?:CapDriver|RBS.*(?:issue|send)|sendToAade)/i);
 });
 

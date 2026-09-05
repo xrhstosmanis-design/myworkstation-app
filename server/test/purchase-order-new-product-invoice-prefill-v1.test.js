@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-const root=path.resolve(process.cwd(),"..");
+const root=path.resolve(process.cwd());
 const read=relative=>fs.readFileSync(path.join(root,relative),"utf8");
 
 test("new product modal keeps the selected invoice line values",()=>{

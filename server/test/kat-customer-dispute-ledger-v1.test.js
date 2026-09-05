@@ -25,7 +25,7 @@ test("ledger exposes item quantity price store method operator debit payment and
 });
 
 test("credit sale changes stock and customer ledger but is excluded from collected turnover",()=>{
-  assert.match(pos,/"transactionMode","operationChannel"\) VALUES.*creditAmount>0\?"CREDIT":"NORMAL".*body\.operationChannel/s);
+  assert.match(pos,/"transactionMode","operationChannel","audience"\) VALUES.*creditAmount>0\?"CREDIT":"NORMAL".*body\.operationChannel/s);
   assert.match(pos,/UPDATE "StoreProduct" sp SET "currentStock"/);
   assert.match(pos,/'SALE_CREDIT'/);
   assert.match(customers,/COALESCE\(s\."transactionMode",'NORMAL'\)<>'CREDIT'/);
