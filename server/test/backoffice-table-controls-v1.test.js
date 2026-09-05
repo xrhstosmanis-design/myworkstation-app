@@ -17,6 +17,8 @@ test("column popdowns expose conditions and real distinct values",()=>{
   assert.match(source,/Μεγαλύτερο από/);
   assert.match(source,/new Set\(meta\.rows\(\)/);
   assert.match(source,/mws-col-filter-values/);
+  assert.match(source,/activePopup&&!activePopup\.contains\(e\.target\)/);
+  assert.doesNotMatch(source,/addEventListener\("scroll",closePopup,true\)/);
 });
 
 test("header click cycles ascending descending and original order",()=>{

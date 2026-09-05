@@ -142,11 +142,12 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(a."details"::text,'') ILIKE ${text})
       ORDER BY a."createdAt" DESC LIMIT 10000`;
     const operatorRows=await prisma.$queryRaw`
-      SELECT a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",u."fullName" AS "actorName",
+      SELECT a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",COALESCE(u."fullName",operator."displayName") AS "actorName",
         s."name" AS "storeName",a."storeId"
       FROM "StoreOperatorAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      LEFT JOIN "User" u ON u."id"=a."actorId"
+      LEFT JOIN "User" u ON u."id"=a."actorId" AND u."companyId"=a."companyId"
+      LEFT JOIN "StoreOperatorCredential" operator ON operator."id"=COALESCE(a."operatorId",a."actorId") AND operator."companyId"=a."companyId" AND operator."storeId"=a."storeId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."eventType" IN (
           'SHIFT_CLOSE_SHORTAGE_ATTEMPT','SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE',
@@ -162,7 +163,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),financialDetails:{amount:n(r.amount)},sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
-      const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isCartCancel=r.actionType==="CART_CANCEL",isPriceChange=r.actionType==="PRICE_CHANGE";
+      const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isCartCancel=r.actionType==="CART_CANCEL",isPriceChange=r.actionType==="PRICE_CHANGE",isAudienceSelection=r.actionType==="AUDIENCE_DISCOUNT_SELECTED";
       const baseAction={eventType:isReturn?"POS_RETURN":isCartCancel?"CART_CANCEL":"POS_CANCEL"};
       const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):r.actionType==="CART_ITEM_ADD"?n(details.lineTotal||n(details.quantity||1)*n(details.effectiveUnitPrice??details.unitPrice)):r.actionType==="CART_QTY_CHANGE"?n(details.newTotal??details.total):(isCartRemoval||isCartCancel)?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
       const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isCartCancel?"CART_CANCEL":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":isReturn||r.actionType==="CANCEL"?baseAction.eventType:r.actionType;
@@ -180,6 +181,8 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
             ?`ΙΔΙΑ / ΠΡΟΣΩΠΙΚΗ ΚΑΤΑΝΑΛΩΣΗ · χωρίς απόδειξη · δεν μετρά στον τζίρο · ${r.saleId||"—"}`
             :isDestruction
               ?`ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ · χωρίς απόδειξη · δεν μετρά στον τζίρο · ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
+              :isAudienceSelection
+                ?`ΕΠΙΛΟΓΗ ΔΙΚΑΙΟΥΧΟΥ ΕΚΠΤΩΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"}`
               :`${greekAuditEventLabel(r.actionType)}${details.productName?` · ${details.productName}`:""}${details.sku?` · SKU ${details.sku}`:""}${r.reason?` · ${r.reason}`:""}`;
       return {
         id:r.id,createdAt:r.createdAt,eventType,amount,description,
