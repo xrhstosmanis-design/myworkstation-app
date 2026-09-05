@@ -1,0 +1,2 @@
+.kr-table{cursor:grab;touch-action:pan-x;overscroll-behavior:contain}
+.kr-table.is-dragging{cursor:grabbing;user-select:none}
