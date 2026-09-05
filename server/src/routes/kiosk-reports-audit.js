@@ -164,7 +164,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
       const isReturn=r.actionType==="RETURN",isPartialReturn=r.actionType==="RETURN_ITEMS",isSelfConsumption=r.actionType==="SELF_CONSUMPTION",isDestruction=r.actionType==="PRODUCT_DESTRUCTION",isCartRemoval=r.actionType==="CART_ITEM_REMOVE",isCartCancel=r.actionType==="CART_CANCEL",isPriceChange=r.actionType==="PRICE_CHANGE";
       const baseAction={eventType:isReturn?"POS_RETURN":isCartCancel?"CART_CANCEL":"POS_CANCEL"};
-      const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):(isCartRemoval||isCartCancel)?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
+      const amount=isPriceChange?n(details.newPrice)-n(details.oldPrice):r.actionType==="CART_ITEM_ADD"?n(details.lineTotal||n(details.quantity||1)*n(details.effectiveUnitPrice??details.unitPrice)):r.actionType==="CART_QTY_CHANGE"?n(details.newTotal??details.total):(isCartRemoval||isCartCancel)?n(details.total):isPartialReturn?-Math.abs(n(details.refund||0)):(isSelfConsumption||isDestruction)?n(details.referenceValue||0):-Math.abs(n(details.originalTotal||details.reversalTotal||0));
       const eventType=isPriceChange?"PRICE_CHANGE":isCartRemoval?"CART_ITEM_REMOVE":isCartCancel?"CART_CANCEL":isPartialReturn?"POS_RETURN_ITEMS":isSelfConsumption?"POS_SELF_CONSUMPTION":isDestruction?"POS_PRODUCT_DESTRUCTION":isReturn||r.actionType==="CANCEL"?baseAction.eventType:r.actionType;
       const description=isPriceChange
         ?`ΧΕΙΡΟΚΙΝΗΤΗ ΑΛΛΑΓΗ ΤΙΜΗΣ · ${details.productName||"Άγνωστο προϊόν"} · από ${n(details.oldPrice).toFixed(2)} € σε ${n(details.newPrice).toFixed(2)} € · διαφορά ${(n(details.newPrice)-n(details.oldPrice)).toFixed(2)} €${r.reason?` · Αιτιολογία: ${r.reason}`:""} · μόνο για την τρέχουσα συναλλαγή`
@@ -194,7 +194,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const expenseEvent=r.eventType.startsWith("OTHER_EXPENSE_");
       const supplierEvent=r.eventType.startsWith("SUPPLIER_SETTLEMENT_");
       const bankDifference=Math.abs(n(details.difference));
-      const eventAmount=bankEvent?(r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"||r.eventType==="BANK_LEDGER_DISCREPANCY"?bankDifference:n(details.proofAmount??details.expectedAmount??details.amount)):expenseEvent||supplierEvent?n(details.amount):n(details.shortage);
+      const eventAmount=bankEvent?(r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"||r.eventType==="BANK_LEDGER_DISCREPANCY"?bankDifference:n(details.proofAmount??details.expectedAmount??details.amount)):expenseEvent||supplierEvent?n(details.amount):r.eventType==="POS_SALE_COMPLETED"?n(details.total??details.amount):n(details.shortage);
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
