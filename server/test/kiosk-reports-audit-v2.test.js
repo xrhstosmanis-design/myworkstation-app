@@ -70,3 +70,11 @@ test("cart removals and manual price changes are central audit events",()=>{
   assert.match(client,/CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι"/);
   assert.match(client,/PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής"/);
 });
+
+test("central audit shows the selected discount audience and store operator name",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  assert.match(route,/ΕΠΙΛΟΓΗ ΔΙΚΑΙΟΥΧΟΥ ΕΚΠΤΩΣΗΣ/);
+  assert.match(route,/audienceLabel\(details\)/);
+  assert.match(route,/StoreOperatorCredential/);
+  assert.match(route,/COALESCE\(u\."fullName",operator\."displayName"\)/);
+});
