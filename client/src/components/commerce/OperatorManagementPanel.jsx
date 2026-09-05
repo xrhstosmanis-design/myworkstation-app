@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Check,FileText,Filter,KeyRound,LockKeyhole,MoreHorizontal,Pencil,Plus,Printer,RefreshCw,Save,Search,ShieldCheck,Trash2,UserRound,UsersRound,X} from "lucide-react";
 import "./operator-management.css";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
 const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝΟΣ)":"ΧΡΗΣΤΗΣ (ΥΠΑΛΛΗΛΟΣ)";
@@ -47,8 +48,7 @@ export default function OperatorManagementPanel({api,store,onClose}){
   const load=async()=>{setLoading(true);setError("");try{setData(await api(`/api/operator-management/stores/${store.id}/operators`))}catch(e){setError(e.message)}finally{setLoading(false)}};
   useEffect(()=>{load()},[store.id]);
   const rows=useMemo(()=>{
-    const needle=q.trim().toLocaleLowerCase("el-GR");
-    return (data?.operators||[]).filter(r=>(!onlyActive||r.active)&&(!needle||[r.username,r.userEmail,r.employeeEmail,r.displayName,r.role,r.stationPhone,r.mobilePhone,r.employeePhone].some(v=>String(v||"").toLocaleLowerCase("el-GR").includes(needle))));
+    return (data?.operators||[]).filter(r=>(!onlyActive||r.active)&&matchesGreekSearch(q,[r.username,r.userEmail,r.employeeEmail,r.displayName,r.role,r.stationPhone,r.mobilePhone,r.employeePhone]));
   },[data,q,onlyActive]);
   const selectedRow=(data?.operators||[]).find(r=>r.employeeId===selected)||null;
 
@@ -71,7 +71,7 @@ export default function OperatorManagementPanel({api,store,onClose}){
       <div className="om-card-head"><div><UsersRound/><b>Καταχωρημένοι χειριστές</b><span>{rows.length}</span></div><div className="om-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Αναζήτηση…"/><button><Filter/>Φίλτρα</button></div></div>
       {error&&<div className="om-alert error">{error}</div>}{message&&<div className="om-alert success">{message}</div>}
       {loading?<div className="om-empty">Φόρτωση χειριστών…</div>:<div className="om-table-wrap"><div className="om-table">
-        <div className="om-row head"><span>Ενέργειες</span><span>username</span><span>όνομα</span><span>Δικαιώματα</span><span>τηλ. σταθ</span><span>τηλ. κιν</span><span>τελευταία είσοδος</span><span>ημ/νία εγγραφής</span></div>
+        <div className="om-row head"><span>Ενέργειες</span><span>Όνομα χρήστη</span><span>Όνομα</span><span>Δικαιώματα</span><span>Τηλ. σταθμού</span><span>Κινητό</span><span>Τελευταία είσοδος</span><span>Ημ/νία εγγραφής</span></div>
         {rows.map(row=><button key={row.employeeId} className={`om-row data ${selected===row.employeeId?"selected":""}`} onClick={()=>setSelected(row.employeeId)}>
           <span className="om-actions" onClick={e=>e.stopPropagation()}><i onClick={()=>edit(row)} title="Διόρθωση"><Pencil/></i><i className="danger" onClick={()=>deactivate(row)} title="Απενεργοποίηση"><Trash2/></i><i onClick={()=>openPin(row)} title="Αλλαγή PIN"><LockKeyhole/></i></span>
           <span>{row.username||row.userEmail||row.employeeEmail||"—"}</span><span>{row.displayName}</span><span>{roleLabel(row.role)}</span><span>{row.stationPhone||"—"}</span><span>{row.mobilePhone||row.employeePhone||"—"}</span><span>{when(row.lastLoginAt)}</span><span>{when(row.createdAt)}</span>

@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {AlertTriangle,Box,ChevronDown,ChevronUp,Clock3,CreditCard,FileCheck2,RefreshCw,Search,ShoppingBag} from "lucide-react";
 import "./online-orders-backoffice.css";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const TEST_STORE_ID="kat-test-store";
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -13,13 +14,13 @@ function LinkSummary({order}){
   if(!sale)return <div className="online-link-wait"><Clock3/><div><b>Εμπορική εγγραφή σε αναμονή</b><span>Η πώληση και η πραγματική αφαίρεση από την αποθήκη δημιουργούνται όταν η παραγγελία γίνει «ΠΑΡΑΔΟΘΗΚΕ».</span></div></div>;
   const fiscalOk=sale.fiscalStatus&&!['NON_FISCAL','NOT_SUBMITTED','PENDING'].includes(sale.fiscalStatus),card=(sale.payments||[]).some(p=>p.method==='CARD');
   const nodes=[
-    {Icon:ShoppingBag,label:'Order → Sale',ok:true,value:sale.id,detail:`${money(sale.total)} · ${sale.status} · ${terminal?.terminalPos||'terminal άγνωστο'}`},
-    {Icon:FileCheck2,label:'Fiscal Receipt',ok:fiscalOk,value:sale.fiscalStatus||'ΧΩΡΙΣ FISCAL',detail:fiscalOk?'Φορολογική ροή καταγεγραμμένη':'Απαιτείται fiscalization'},
-    {Icon:CreditCard,label:'EFTPOS Transaction',ok:card?attempt?.status==='SUCCESS':true,warn:card&&['PLANNED','TIMEOUT'].includes(attempt?.status),value:card?(attempt?.eftposDeviceCode||'ΧΩΡΙΣ EFTPOS ATTEMPT'):'Δεν απαιτείται',detail:card?(attempt?`${attempt.status} · προσπάθεια ${attempt.attemptNo||1}`:'Λείπει σύνδεση EFTPOS'):'Πληρωμή χωρίς κάρτα'},
-    {Icon:Box,label:'Stock Movement',ok:movements.length>0,value:movements.length?`${movements.length} κινήσεις`:'ΧΩΡΙΣ ΚΙΝΗΣΗ',detail:movements.length?`${movements.reduce((sum,row)=>sum+Number(row.quantity||0),0)} συνολική ποσότητα`:'Έλεγχος stock/συνταγής'},
+    {Icon:ShoppingBag,label:'Παραγγελία → Πώληση',ok:true,value:sale.id,detail:`${money(sale.total)} · ${sale.status} · ${terminal?.terminalPos||'terminal άγνωστο'}`},
+    {Icon:FileCheck2,label:'Φορολογική απόδειξη',ok:fiscalOk,value:sale.fiscalStatus||'ΧΩΡΙΣ FISCAL',detail:fiscalOk?'Φορολογική ροή καταγεγραμμένη':'Απαιτείται fiscalization'},
+    {Icon:CreditCard,label:'Συναλλαγή EFTPOS',ok:card?attempt?.status==='SUCCESS':true,warn:card&&['PLANNED','TIMEOUT'].includes(attempt?.status),value:card?(attempt?.eftposDeviceCode||'ΧΩΡΙΣ EFTPOS ATTEMPT'):'Δεν απαιτείται',detail:card?(attempt?`${attempt.status} · προσπάθεια ${attempt.attemptNo||1}`:'Λείπει σύνδεση EFTPOS'):'Πληρωμή χωρίς κάρτα'},
+    {Icon:Box,label:'Κίνηση αποθέματος',ok:movements.length>0,value:movements.length?`${movements.length} κινήσεις`:'ΧΩΡΙΣ ΚΙΝΗΣΗ',detail:movements.length?`${movements.reduce((sum,row)=>sum+Number(row.quantity||0),0)} συνολική ποσότητα`:'Έλεγχος stock/συνταγής'},
     {Icon:Clock3,label:'Βάρδια',ok:Boolean(transaction)&&Boolean(terminal?.terminalPos),value:transaction?.sessionId||'ΧΩΡΙΣ ΣΥΝΔΕΣΗ',detail:transaction?`${terminal?.terminalPos||'ΑΓΝΩΣΤΟ TERMINAL'} · ${transaction.type} · ${money(transaction.amount)}`:'Λείπει συναλλαγή βάρδιας'}
   ];
-  return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Order → Sale → Fiscal → EFTPOS → Stock</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
+  return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Παραγγελία → Πώληση → Φορολογική → EFTPOS → Απόθεμα</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
 
 export default function OnlineOrdersBackofficePanel({api}){
@@ -66,9 +67,7 @@ export default function OnlineOrdersBackofficePanel({api}){
 
   const filtered=useMemo(()=>rows.filter(order=>{
     if(status!=="ALL"&&order.status!==status)return false;
-    const needle=query.trim().toLocaleLowerCase("el-GR");
-    if(!needle)return true;
-    return [order.orderNumber,order.customerName,order.customerPhone,order.department,order.room,order.saleId].some(value=>String(value||"").toLocaleLowerCase("el-GR").includes(needle));
+    return matchesGreekSearch(query,[order.orderNumber,order.customerName,order.customerPhone,order.department,order.room,order.saleId]);
   }),[rows,query,status]);
   const activeCount=rows.filter(order=>!["DELIVERED","CANCELLED"].includes(order.status)).length;
   const deliveredCount=rows.filter(order=>order.status==="DELIVERED").length;

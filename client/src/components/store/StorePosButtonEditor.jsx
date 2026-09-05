@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Search,Settings2,X} from "lucide-react";
 import "./store-pos-button-editor.css";
+import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const CHILD_SEP="::MWSCHILD::";
 const codesOf=product=>[product?.sourceCode,product?.masterCode,product?.sku,...(product?.barcodes||[])].map(String).filter(Boolean);
@@ -10,7 +11,7 @@ const packChildren=(name,children)=>`${name}${CHILD_SEP}${encodeURIComponent(JSO
 
 export default function StorePosButtonEditor({api,store,layout,products,enabled,onSaved}){
  const [target,setTarget]=useState(null),[draft,setDraft]=useState(null),[query,setQuery]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
- const rows=useMemo(()=>{const q=query.trim().toLocaleLowerCase("el-GR");if(!q)return products.slice(0,80);return products.filter(p=>String(p.name||"").toLocaleLowerCase("el-GR").includes(q)||codesOf(p).some(c=>c.toLocaleLowerCase("el-GR").includes(q))).slice(0,80)},[products,query]);
+ const rows=useMemo(()=>query.trim()?products.filter(p=>matchesGreekSearch(query,[p.name,...codesOf(p)])).slice(0,80):products.slice(0,80),[products,query]);
  const open=(kind,index)=>{const button=(kind==="quick"?layout.quickKeys:layout.categories)[index];if(!button)return;setTarget({kind,index});setDraft({...button,children:parseChildren(button)});setQuery("");setError("")};
  useEffect(()=>{if(!enabled)return;const bind=(selector,kind)=>{const panel=document.querySelector(selector);if(!panel)return()=>{};const click=event=>{const button=event.target.closest("button");if(!button||!panel.contains(button))return;const rect=button.getBoundingClientRect();if(event.clientX<rect.right-30||event.clientY>rect.top+30)return;const buttons=[...panel.querySelectorAll(":scope > button")],index=buttons.indexOf(button);if(index<0)return;event.preventDefault();event.stopPropagation();open(kind,index)};panel.addEventListener("click",click,true);return()=>panel.removeEventListener("click",click,true)};const cleanQuick=bind(".mws-standard-pos .standard-quick > div","quick"),cleanCategories=bind(".mws-standard-pos .standard-category-strip > div","category");return()=>{cleanQuick();cleanCategories()}},[enabled,layout]);
  const choose=product=>{const code=codesOf(product)[0];if(!code)return;setDraft(current=>({...current,label:product.name,productQuery:code,productCodes:[code],visible:true}));setQuery(product.name)};

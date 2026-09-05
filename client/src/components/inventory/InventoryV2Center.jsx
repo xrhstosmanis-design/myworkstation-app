@@ -8,6 +8,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import "./inventory-v2-center.css";
+import { matchesGreekSearch } from "../../utils/greek-search.js";
 const num = (v) => Number(v || 0),
   euro = (v) => `${num(v).toFixed(2)} €`;
 export default function InventoryV2Center({
@@ -29,13 +30,8 @@ export default function InventoryV2Center({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const visible = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase("el");
     return (current?.lines || []).filter(
-      (x) =>
-        !q ||
-        `${x.name} ${x.sku || ""} ${x.barcode || ""}`
-          .toLocaleLowerCase("el")
-          .includes(q),
+      (x) => matchesGreekSearch(query, [x.name, x.sku, x.barcode]),
     );
   }, [current, query]);
   const loadList = async () =>
@@ -555,7 +551,7 @@ export default function InventoryV2Center({
                 <table>
                   <thead>
                     <tr>
-                      <th>Barcode</th>
+                      <th>Γραμμωτός κώδικας</th>
                       <th>Περιγραφή</th>
                       <th>Απόθεμα</th>
                       <th>Καταμέτρηση</th>
