@@ -42,4 +42,8 @@ export function installKioskReportsAuditV2(){
     if(event.target.closest("[data-kr-export]")){event.preventDefault();event.stopImmediatePropagation();exportCsv(mode);return}
   },true);
   document.addEventListener("click",async event=>{const exportButton=event.target.closest("[data-video-export]");if(exportButton){exportButton.disabled=true;try{await auditVideoAccess(exportButton,"EXPORT","UNAVAILABLE");alert("Το αίτημα εξαγωγής καταγράφηκε στο Audit. Δεν δημιουργήθηκε αρχείο χωρίς πραγματικό adapter NVR.")}catch(error){alert(error.message)}finally{exportButton.disabled=false}return}if(event.target.closest("[data-video-close]")||event.target.classList.contains("kr-video-modal"))event.target.closest(".kr-video-modal")?.remove()});
+  let dragTable=null,dragX=0,dragScroll=0;
+  document.addEventListener("pointerdown",event=>{const table=event.target.closest(".kr-table");if(!table||event.target.closest("button,input,select,a"))return;dragTable=table;dragX=event.clientX;dragScroll=table.scrollLeft;table.classList.add("is-dragging")});
+  document.addEventListener("pointermove",event=>{if(!dragTable)return;dragTable.scrollLeft=dragScroll-(event.clientX-dragX)});
+  document.addEventListener("pointerup",()=>{dragTable?.classList.remove("is-dragging");dragTable=null});
 }
