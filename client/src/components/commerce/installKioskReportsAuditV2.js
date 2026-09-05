@@ -1,6 +1,6 @@
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 // CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι"
-// POS_CANCEL:"Ακύρωση πώλησης"
+// POS_CANCEL:"Ακύρωση πώλησης" · SALE_IRIS:"Πληρωμή IRIS (πιλοτικό)"
 const n=v=>Number(v||0),money=v=>n(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"}),num=v=>n(v).toLocaleString("el-GR",{maximumFractionDigits:3}),fmt=v=>v?new Date(v).toLocaleString("el-GR"):"—";
 let currentItems=[];
 async function api(path,options={}){const t=localStorage.getItem("token"),r=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(t?{Authorization:`Bearer ${t}`}:{}) ,...(options.headers||{})}}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Σφάλμα ${r.status}`);return d}
