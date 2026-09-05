@@ -5,7 +5,7 @@ import {prisma} from "../prisma.js";
 import {ensureKioskReportAuditSchema,insertKioskAuditEvent} from "../kiosk-report-audit.js";
 import {buildVendorClientFallback,videoAdapterFor} from "../services/video-adapters.js";
 
-const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",SALE_CASH:"Πώληση με μετρητά",SALE_CARD:"Πώληση με κάρτα",SALE_IRIS:"Πληρωμή με IRIS",PERCENTAGES:"Ποσοστά",TRANSFER_AMOUNT:"Μεταφορά ποσού",SAFE_ADJUSTMENT:"Διόρθωση χρηματοκιβωτίου",SALE_MIXED:"Μικτή πώληση",SALE_CREDIT:"Πώληση με πίστωση",BANK_DEPOSIT:"Κατάθεση τράπεζας",BANK_WITHDRAWAL:"Ανάληψη τράπεζας",POS_RETURN:"Ολική επιστροφή",POS_RETURN_ITEMS:"Μερική επιστροφή",POS_SELF_CONSUMPTION:"Προσωπική κατανάλωση",POS_PRODUCT_DESTRUCTION:"Καταστροφή προϊόντων",POS_CANCEL:"Ακύρωση πώλησης",CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι",CART_CANCEL:"Ακύρωση λίστας πώλησης",PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής",SHIFT_CLOSE_SHORTAGE_ATTEMPT:"Προσπάθεια κλεισίματος με έλλειμμα",SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE:"Κλείσιμο με επιβεβαιωμένο έλλειμμα",BANK_DEPOSIT_PROOF_UPLOADED:"Ανέβασμα αποδεικτικού κατάθεσης",BANK_DEPOSIT_AUTO_MATCHED:"Αυτόματη αντιστοίχιση κατάθεσης",BANK_DEPOSIT_PROOF_DISCREPANCY:"Απόκλιση αποδεικτικού κατάθεσης",BANK_LEDGER_CONFIRMED:"Επιβεβαίωση τραπεζικής κίνησης",BANK_LEDGER_DISCREPANCY:"Απόκλιση τραπεζικής κίνησης",BANK_LEDGER_CANCELLED:"Ακύρωση τραπεζικής κίνησης",OTHER_EXPENSE_CONFIRMED:"Επιβεβαίωση λοιπού εξόδου",OTHER_EXPENSE_DISCREPANCY:"Απόκλιση λοιπού εξόδου",SUPPLIER_SETTLEMENT_CONFIRMED:"Επιβεβαίωση πληρωμής προμηθευτή",SUPPLIER_SETTLEMENT_DISCREPANCY:"Απόκλιση πληρωμής προμηθευτή"};
+const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",SALE_CASH:"Πώληση με μετρητά",SALE_CARD:"Πώληση με κάρτα",SALE_IRIS:"Πληρωμή με IRIS",PERCENTAGES:"Ποσοστά",TRANSFER_AMOUNT:"Μεταφορά ποσού",SAFE_ADJUSTMENT:"Διόρθωση χρηματοκιβωτίου",SALE_MIXED:"Μικτή πώληση",SALE_CREDIT:"Πώληση με πίστωση",BANK_DEPOSIT:"Κατάθεση τράπεζας",BANK_WITHDRAWAL:"Ανάληψη τράπεζας",POS_SALE_COMPLETED:"Ολοκλήρωση πώλησης",AUDIENCE_DISCOUNT_SELECTED:"Επιλογή δικαιούχου έκπτωσης",CART_ITEM_ADD:"Προσθήκη προϊόντος στο καλάθι",CART_QTY_CHANGE:"Αλλαγή ποσότητας στο καλάθι",ITEM_CHANGE_REQUEST:"Αίτημα αλλαγής είδους",ITEM_EXCHANGE_COMPLETED:"Ολοκλήρωση αλλαγής είδους",HOLD_RESTORE:"Επαναφορά αναμονής",HOLD_SAVE:"Αποθήκευση αναμονής",POS_RETURN:"Ολική επιστροφή",POS_RETURN_ITEMS:"Μερική επιστροφή",POS_SELF_CONSUMPTION:"Προσωπική κατανάλωση",POS_PRODUCT_DESTRUCTION:"Καταστροφή προϊόντων",POS_CANCEL:"Ακύρωση πώλησης",CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι",CART_CANCEL:"Ακύρωση λίστας πώλησης",PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής",SHIFT_CLOSE_SHORTAGE_ATTEMPT:"Προσπάθεια κλεισίματος με έλλειμμα",SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE:"Κλείσιμο με επιβεβαιωμένο έλλειμμα",BANK_DEPOSIT_PROOF_UPLOADED:"Ανέβασμα αποδεικτικού κατάθεσης",BANK_DEPOSIT_AUTO_MATCHED:"Αυτόματη αντιστοίχιση κατάθεσης",BANK_DEPOSIT_PROOF_DISCREPANCY:"Απόκλιση αποδεικτικού κατάθεσης",BANK_LEDGER_CONFIRMED:"Επιβεβαίωση τραπεζικής κίνησης",BANK_LEDGER_DISCREPANCY:"Απόκλιση τραπεζικής κίνησης",BANK_LEDGER_CANCELLED:"Ακύρωση τραπεζικής κίνησης",OTHER_EXPENSE_CONFIRMED:"Επιβεβαίωση λοιπού εξόδου",OTHER_EXPENSE_DISCREPANCY:"Απόκλιση λοιπού εξόδου",SUPPLIER_SETTLEMENT_CONFIRMED:"Επιβεβαίωση πληρωμής προμηθευτή",SUPPLIER_SETTLEMENT_DISCREPANCY:"Απόκλιση πληρωμής προμηθευτή"};
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 
@@ -107,10 +107,11 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const {companyId,superAdmin,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=auditFilters(req),text=q?`%${q}%`:null;
     const transactionRows=await prisma.$queryRaw`
       SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
-        t."sessionId" AS "shiftId",t."actorId",t."actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
+        t."sessionId" AS "shiftId",t."actorId",COALESCE(t."actorName",tu."fullName") AS "actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
         s."name" AS "storeName",t."storeId",COALESCE(shift."terminalPos",'BACKOFFICE') AS "terminalPos"
       FROM "StoreTransaction" t
       LEFT JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId"
+      LEFT JOIN "User" tu ON tu."id"=t."actorId" AND tu."companyId"=t."companyId"
       LEFT JOIN "CashShiftSession" shift ON shift."id"=t."sessionId" AND shift."companyId"=t."companyId"
       WHERE (${companyId}::text IS NULL OR t."companyId"=${companyId})
         AND t."occurredAt">=${from} AND t."occurredAt"<${to}
@@ -123,10 +124,11 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(t."id",'') ILIKE ${text})
       ORDER BY t."occurredAt" DESC LIMIT 10000`;
     const actionRows=await prisma.$queryRaw`
-      SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorId",a."actorName",a."saleId",a."relatedSaleId",a."details",
+      SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorId",COALESCE(a."actorName",au."fullName") AS "actorName",a."saleId",a."relatedSaleId",a."details",
         s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
+      LEFT JOIN "User" au ON au."id"=a."actorId" AND au."companyId"=a."companyId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."actionType" IN ('RETURN','CANCEL','RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_ADD','CART_QTY_CHANGE','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE','AUDIENCE_DISCOUNT_SELECTED','ITEM_CHANGE_REQUEST','ITEM_EXCHANGE_COMPLETED','HOLD_RESTORE','HOLD_SAVE')
         AND a."createdAt">=${from} AND a."createdAt"<${to}
