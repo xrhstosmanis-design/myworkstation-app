@@ -119,6 +119,8 @@
 - 2026-09-06: PR #550 merged (`e393ae96`) with tenant-scoped read-only promotion listing. CI 1.020/1.020 PASS. No POS, stock, price or transaction changes.
 - 2026-09-06: PR #551 adds regression coverage for the promotion listing; merge pending green CI.
 
+- 2026-09-06: PR #555 fixes MOD-01 promotion center undefined-list runtime error; checkpoint and user screenshot recorded. CI #1500 failed because the active-list update was not included in the validator-visible diff; rerun required.
+
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
 Το ΚΑΤ είναι έτοιμο μόνο όταν οι κρίσιμες ροές ολοκληρώνονται χωρίς διπλή πώληση, διπλή απόδειξη, λάθος stock, οικονομική απόκλιση, pending fiscalization ή μη αντιστοιχισμένο Audit/Video συμβάν.
