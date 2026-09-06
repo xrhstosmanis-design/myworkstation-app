@@ -1,0 +1,1 @@
+ALTER TABLE "WorkforceEmployee" ADD COLUMN IF NOT EXISTS "pinHash" TEXT;

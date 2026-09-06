@@ -12,6 +12,7 @@ export default function WorkforceV2EmployeeTab({manager,store}){
         <label className="span-2">Ονοματεπώνυμο<input value={form.fullName} onChange={e=>setField("fullName",e.target.value)} placeholder="π.χ. Αθηνά Μάρκου"/></label>
         <label>Τηλέφωνο<input value={form.phone} onChange={e=>setField("phone",e.target.value)}/></label>
         <label>Email<input type="email" value={form.email} onChange={e=>setField("email",e.target.value)}/></label>
+        <label>PIN χειριστή <input type="password" inputMode="numeric" autoComplete="new-password" maxLength="8" value={form.pin} onChange={e=>setField("pin",e.target.value.replace(/\D/g,""))} placeholder={editingId?"Κενό = διατήρηση PIN":"4–8 ψηφία"}/><small>Δεν εμφανίζεται ούτε αποθηκεύεται σε απλή μορφή.</small></label>
         <label>Κατάστημα βάσης<select value={form.baseStoreId} onChange={e=>chooseBaseStore(e.target.value)}>{data.stores.map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
         <label>Τύπος πληρωμής<select value={form.paymentType} onChange={e=>setField("paymentType",e.target.value)}><option value="HOURLY">Ανά ώρα</option><option value="FIXED_MONTHLY">Σταθερό ποσό</option></select></label>
         {form.paymentType==="HOURLY"?<label>Ωρομίσθιο<input type="number" min="0" step="0.01" value={form.hourlyRate} onChange={e=>setField("hourlyRate",e.target.value)}/></label>:<label>Μηνιαίο ποσό<input type="number" min="0" step="0.01" value={form.fixedMonthlyAmount} onChange={e=>setField("fixedMonthlyAmount",e.target.value)}/></label>}

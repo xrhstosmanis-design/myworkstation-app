@@ -18,6 +18,7 @@ const storeAccessSchema=z.object({storeId:z.string().min(1),canSchedule:z.boolea
 export const employeeSchema=z.object({
   fullName:z.string().trim().min(2).max(160),phone:z.string().trim().max(50).optional().nullable(),
   email:z.union([z.string().trim().email(),z.literal(""),z.null()]).optional(),baseStoreId:z.string().min(1),
+  pin:z.union([z.string().regex(/^\d{4,8}$/,"Ο PIN πρέπει να έχει 4 έως 8 ψηφία."),z.literal(""),z.null()]).optional(),
   paymentType:z.enum(["HOURLY","FIXED_MONTHLY"]),hourlyRate:z.coerce.number().positive().max(10000).optional().nullable(),
   fixedMonthlyAmount:z.coerce.number().positive().max(10000000).optional().nullable(),effectiveFrom:z.coerce.date(),
   maxDaysPerWeek:z.coerce.number().int().min(1).max(7),maxHoursPerWeek:z.coerce.number().min(1).max(168),
