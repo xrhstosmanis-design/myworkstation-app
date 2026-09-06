@@ -22,11 +22,12 @@ export default function DeviceOperationsCenter({manager,request,initialOpen=fals
   const launch=()=>{onLaunch?.();setOpen(true)};
   const plan=async event=>{
     event.preventDefault();
-    const form=new FormData(event.currentTarget);
+    const formElement=event.currentTarget;
+    const form=new FormData(formElement);
     try{
       const result=await request(`${base}/deployments`,{method:"POST",body:JSON.stringify({terminalId:form.get("terminalId")||null,jobType:form.get("jobType"),targetRevision:form.get("targetRevision")||null,notes:form.get("notes")||""})});
       if(result.supportCode)setRemote(result);
-      event.currentTarget.reset();await load();
+      formElement.reset();await load();
     }catch(e){setError(e.message)}
   };
 
