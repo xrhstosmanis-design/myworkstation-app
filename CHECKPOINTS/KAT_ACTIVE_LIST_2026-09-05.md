@@ -115,6 +115,7 @@
 - 2026-09-06: Workforce v2 PIN field implemented with bcrypt-only storage and additive migration; secure entry remains pending on the lab employee card.
 - 2026-09-06: Workforce v2 live bootstrap repair added so existing deployments create the PIN column before loading Workforce data; PR #548 pending CI.
 - 2026-09-06: Workforce-to-POS PIN bridge identified and implemented; next validation is lab Store Mode PIN login.
+- 2026-09-06: PR #553 adds read-only existing-promotions display in the Platform Promotion Center for user verification.
 - 2026-09-06: PR #550 merged (`e393ae96`) with tenant-scoped read-only promotion listing. CI 1.020/1.020 PASS. No POS, stock, price or transaction changes.
 - 2026-09-06: PR #551 adds regression coverage for the promotion listing; merge pending green CI.
 
