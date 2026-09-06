@@ -17,7 +17,7 @@
 | HOME-01 | Πρακτικός έλεγχος ελληνικών πινάκων, φίλτρων, ανανέωσης, ποσών, ρόλων και στηλών με προσωρινά δεδομένα. Επιβεβαιώθηκαν live αναζήτηση χωρίς τόνους, ποσά, διατήρηση φίλτρου μετά από ανανέωση, κύλιση popdown, κατηγορία δικαιούχου, όνομα χειριστή και read-only role matrix πραγματικού καταστήματος. Απομένει πρακτικό resize όλων των βασικών πινάκων. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-02 | Συνέχιση NON_FISCAL δοκιμών POS1/POS2 με προσωρινά δεδομένα. Το reset θα γίνει μόνο στο τέλος, πριν το go-live. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-03 | Ημερήσια επιβεβαίωση Observer 1.1.3 χωρίς διπλές εγγραφές. Παραμένει READ_ONLY / SHADOW MODE. | ΣΕ ΑΝΑΜΟΝΗ |
-| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, idempotency key και payload hash, χωρίς εξωτερική εντολή. | PR #538 / CI #1463 MERGED · LIVE SAFE LOCK ΕΝΕΡΓΟ · ΑΝΑΜΟΝΗ ΕΠΙΛΕΞΙΜΗΣ NON_FISCAL ΠΩΛΗΣΗΣ ΚΑΙ ΔΙΠΛΟΥ HOME TEST |
+| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, idempotency key και payload hash, χωρίς εξωτερική εντολή. | PR #538 / CI #1463 MERGED · LIVE SAFE LOCK ΕΝΕΡΓΟ · ΤΟ `MAIN` ΣΤΑΜΑΤΗΣΕ FAIL-CLOSED ΧΩΡΙΣ ΠΩΛΗΣΗ · ΑΠΑΙΤΕΙΤΑΙ `KAT-HOME-TEST` MAPPING/ACTIVATION Ή ΤΟ ΗΔΗ ΧΑΡΤΟΓΡΑΦΗΜΕΝΟ `KAT-POS-02` |
 | HOME-05 | Προεπισκόπηση Master Catalog. Καμία οριστική εισαγωγή, μεταφορά stock ή ενεργοποίηση μη επιβεβαιωμένου ΦΠΑ. | ΑΝΑΜΟΝΗ ΕΓΚΡΙΣΗΣ |
 | HOME-06 | Έλεγχος και ομαδοποίηση GitHub workflows ώστε να μειωθούν τα περιττά Render builds. | ΕΚΚΡΕΜΕΙ |
 
@@ -111,6 +111,7 @@
 - PR #538: προστατευμένη οθόνη Platform Super Admin Fiscal Bridge DRY RUN - CI #1463 πράσινο - squash merge `09b6d364`. Στις 6/9/2026 ενεργοποιήθηκε στο Render μόνο το `FISCAL_BRIDGE_TEST_MODE=true` και το νεότερο `main` `c14787c` έγινε Live. Η οθόνη επιβεβαίωσε `DRY_RUN`, RBS write ΟΧΙ, CapDriver write ΟΧΙ και έκδοση απόδειξης ΟΧΙ. Δεν εκτελέστηκε DRY RUN επειδή δεν υπάρχει ακόμη επιλέξιμη ολοκληρωμένη `NON_FISCAL` πώληση με POS/RBS mapping.
 - PR #540: generic terminal HTTP contract και HOME-04 live readiness - CI #1469 πράσινο - squash merge `40799b8d`.
 - PR #542: read-only matrix δικαιωμάτων ανά κατάστημα - CI #1471 πράσινο - squash merge `bfd8e430` - Render LIVE. Στον πραγματικό πελάτη/κατάστημα `Κυλικείο ΚΑΤ` επιβεβαιώθηκαν Super Admin `ΠΑΝΤΑ`, 21 modules ιδιοκτήτη και αποκλεισμός ευαίσθητων modules εργαζομένου χωρίς ειδικό δικαίωμα. Ο έλεγχος παρέμεινε μόνο ανάγνωσης και δεν άλλαξε άδεια, module ή δικαίωμα.
+- HOME-04 live prerequisite check: το ασφαλές κλείδωμα επιβεβαιώθηκε ξανά (`DRY_RUN`, RBS/CapDriver/έκδοση απόδειξης `ΟΧΙ`). Η δοκιμή POS με χειριστή `ΑΘΗΝΑ ΜΑΡΗ` επιλύθηκε σε terminal `MAIN` και σταμάτησε fail-closed με «Δεν έχει αντιστοιχιστεί ενεργή ταμειακή στο MAIN». Δεν δημιουργήθηκε πώληση, πληρωμή, route attempt ή DRY RUN. Το `KAT-HOME-TEST` είναι ενεργό αλλά χωρίς mapping· το `KAT-POS-02` έχει αποθηκευμένο mapping `KAT-FISCAL-02` / `KAT-EFTPOS-02A` / `KAT-EFTPOS-02B`. Μην επαναλάβεις από `MAIN`.
 
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
