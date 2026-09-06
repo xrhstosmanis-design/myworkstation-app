@@ -288,6 +288,7 @@ model WorkforceEmployee {
   fullName             String
   phone                String?
   email                String?
+  pinHash              String?
   paymentType          String   @default("HOURLY")
   fixedMonthlyAmount   Decimal? @db.Decimal(12, 2)
   maxDaysPerWeek       Int      @default(5)

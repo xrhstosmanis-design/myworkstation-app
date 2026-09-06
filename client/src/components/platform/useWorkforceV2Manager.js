@@ -55,6 +55,7 @@ export default function useWorkforceV2Manager({company,store,request}){
       effectiveFrom:workforceToday(),maxDaysPerWeek:String(employee.maxDaysPerWeek??5),maxHoursPerWeek:String(employee.maxHoursPerWeek??40),minimumDaysOff:String(employee.minimumDaysOff??1),
       canChangeStore:Boolean(employee.canChangeStore),worksMorning:Boolean(employee.worksMorning),worksAfternoon:Boolean(employee.worksAfternoon),worksNight:Boolean(employee.worksNight),worksWeekend:Boolean(employee.worksWeekend),
       notes:employee.notes||"",roleIds:activeEmployeeRoles.map(role=>role.id),primaryRoleId:activeEmployeeRoles.find(role=>role.primary)?.id||activeEmployeeRoles[0]?.id||"",
+      pin:"",
       storeIds:[...new Set([employee.baseStoreId,...accessIds].filter(Boolean))]
     });
     setTab("employees");setPending(null);setMessage("");setError("");
@@ -67,7 +68,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     effectiveFrom:new Date(`${form.effectiveFrom}T00:00:00`).toISOString(),maxDaysPerWeek:Number(form.maxDaysPerWeek),
     maxHoursPerWeek:Number(form.maxHoursPerWeek),minimumDaysOff:Number(form.minimumDaysOff),canChangeStore:Boolean(form.canChangeStore),
     worksMorning:Boolean(form.worksMorning),worksAfternoon:Boolean(form.worksAfternoon),worksNight:Boolean(form.worksNight),worksWeekend:Boolean(form.worksWeekend),
-    notes:form.notes.trim()||null,roleIds:form.roleIds,primaryRoleId:form.primaryRoleId,
+    notes:form.notes.trim()||null,pin:form.pin.trim()||null,roleIds:form.roleIds,primaryRoleId:form.primaryRoleId,
     storeAccess:[...new Set([form.baseStoreId,...form.storeIds])].map(storeId=>({storeId,canSchedule:true}))
   });
   const previewEmployee=()=>{
@@ -77,6 +78,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     if(!form.roleIds.length||!form.primaryRoleId)return setError("Επίλεξε τουλάχιστον έναν ρόλο και κύριο ρόλο.");
     if(form.paymentType==="HOURLY"&&!(Number(form.hourlyRate)>0))return setError("Συμπλήρωσε έγκυρο ωρομίσθιο.");
     if(form.paymentType==="FIXED_MONTHLY"&&!(Number(form.fixedMonthlyAmount)>0))return setError("Συμπλήρωσε σταθερό μηνιαίο ποσό.");
+    if(form.pin.trim()&&!/^\d{4,8}$/.test(form.pin.trim()))return setError("Ο PIN πρέπει να έχει 4 έως 8 ψηφία.");
     setPending({type:"employee",payload:employeePayload(),reason:editingId?"Ενημέρωση καρτέλας εργαζομένου":"Δημιουργία νέου εργαζομένου"});
   };
   const confirmEmployee=async()=>{

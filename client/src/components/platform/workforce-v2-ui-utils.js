@@ -2,7 +2,7 @@ export const workforceToday=()=>new Date().toISOString().slice(0,10);
 export const emptyWorkforceEmployee=storeId=>({
   fullName:"",phone:"",email:"",baseStoreId:storeId||"",paymentType:"HOURLY",hourlyRate:"",fixedMonthlyAmount:"",effectiveFrom:workforceToday(),
   maxDaysPerWeek:"5",maxHoursPerWeek:"40",minimumDaysOff:"2",canChangeStore:false,worksMorning:true,worksAfternoon:true,worksNight:false,worksWeekend:true,
-  notes:"",roleIds:[],primaryRoleId:"",storeIds:storeId?[storeId]:[]
+  notes:"",pin:"",roleIds:[],primaryRoleId:"",storeIds:storeId?[storeId]:[]
 });
 export const emptyWorkforceRule=employeeId=>({
   employeeId:employeeId||"",ruleType:"NO_WEEKEND",severity:"ERROR",relatedEmployeeId:"",numericValue:"",validFrom:"",validTo:"",note:""
