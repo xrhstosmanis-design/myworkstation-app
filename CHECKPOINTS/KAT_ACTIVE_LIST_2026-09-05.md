@@ -67,7 +67,7 @@
 | LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
 | LAB-04 | LAB-POS-01 και LAB-POS-02 με κοινή αποθήκη και ξεχωριστά ταμεία/βάρδιες. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
 | LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
-| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΟΚ - 1014 tests PASS |
+| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΟΚ - HTTP validation ευθυγραμμισμένο και regression PASS (`2026-09-06-fiscal-generic-terminal-ci-hotfix`) |
 | LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΕΚΚΡΕΜΕΙ - απαιτεί owner-account επιλογή |
 | LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΕΚΚΡΕΜΕΙ μετά το LAB-07 |
 
