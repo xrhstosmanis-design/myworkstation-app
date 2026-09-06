@@ -21,10 +21,10 @@ export function fiscalEnvelopeHash(envelope){
 
 export function buildFiscalDryRunEnvelope({sale,lines,payments,route}){
   return {
-    schemaVersion:"KAT_FISCAL_DRY_RUN_V1",
+    schemaVersion:"MWS_FISCAL_DRY_RUN_V1",
     mode:"DRY_RUN",
     externalExecution:false,
-    idempotencyKey:`fiscal-dry-run:${sale.id}:v1`,
+    idempotencyKey:`fiscal-dry-run:${sale.id}:mws-v1`,
     sale:{
       id:sale.id,
       source:sale.source,

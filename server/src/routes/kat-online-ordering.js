@@ -35,8 +35,7 @@ async function katStore(){
   return store;
 }
 
-async function onlineContext(){
-  const store=await katStore();
+async function onlineContextForStore(store){
   const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
   const module=modules[0],now=Date.now();
   const moduleActive=Boolean(module?.active)&&(!module.startsAt||new Date(module.startsAt).getTime()<=now)&&(!module.endsAt||new Date(module.endsAt).getTime()>=now);
@@ -44,6 +43,19 @@ async function onlineContext(){
   const config=await getOnlineOrderingConfig(store.id);
   if(!config?.enabled){const error=new Error("Το Online κατάστημα είναι προσωρινά κλειστό.");error.status=503;throw error}
   return{store,config};
+}
+
+async function onlineContext(){return onlineContextForStore(await katStore())}
+
+async function storeById(companyId,storeId){
+  const rows=await prisma.$queryRaw`SELECT s."id",s."name",s."companyId",s."active" FROM "Store" s WHERE s."id"=${storeId} AND s."companyId"=${companyId} AND s."active"=TRUE LIMIT 1`;
+  return rows[0]||null;
+}
+
+async function onlineContextById(companyId,storeId){
+  const store=await storeById(companyId,storeId);
+  if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
+  return onlineContextForStore(store);
 }
 
 function safe(handler){return async(req,res,next)=>{try{await handler(req,res)}catch(error){next(error)}}}
@@ -57,8 +69,8 @@ async function orderRows(storeId,statuses=ACTIVE_STATUSES){
   return prisma.$queryRaw`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'productName',l."productName",'quantity',l."quantity",'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items" FROM "OnlineOrder" o WHERE o."storeId"=${storeId} AND o."status"=ANY(${statuses}::text[]) ORDER BY CASE o."status" WHEN 'NEW' THEN 0 WHEN 'ACCEPTED' THEN 1 WHEN 'PREPARING' THEN 2 WHEN 'READY' THEN 3 WHEN 'OUT_FOR_DELIVERY' THEN 4 ELSE 9 END,o."createdAt" ASC`;
 }
 
-function printPayload(order,config){
-  return{title:"ΚΥΛΙΚΕΙΟ ΚΑΤ · ONLINE",orderNumber:order.orderNumber,createdAt:order.createdAt,fulfillmentType:order.fulfillmentType,paymentMethod:order.paymentMethod,customerName:order.customerName,customerPhone:order.customerPhone,location:[order.building,order.floor,order.department,order.room].filter(Boolean).join(" · "),deliveryNotes:order.deliveryNotes||null,items:(order.items||[]).map(row=>({productName:row.productName,quantity:Number(row.quantity||0),unitPrice:money(row.onlineUnitPrice),lineTotal:money(row.lineTotal),modifiers:Array.isArray(row.modifiers)?row.modifiers:[]})),subtotal:money(order.subtotal),deliveryFee:money(order.deliveryFee),total:money(order.total),autoPrint:Boolean(config?.autoPrintOnAccept)};
+function printPayload(order,config,store){
+  return{title:`${String(store?.name||"ONLINE STORE").toLocaleUpperCase("el-GR")} · ONLINE`,orderNumber:order.orderNumber,createdAt:order.createdAt,fulfillmentType:order.fulfillmentType,paymentMethod:order.paymentMethod,customerName:order.customerName,customerPhone:order.customerPhone,location:[order.building,order.floor,order.department,order.room].filter(Boolean).join(" · "),deliveryNotes:order.deliveryNotes||null,items:(order.items||[]).map(row=>({productName:row.productName,quantity:Number(row.quantity||0),unitPrice:money(row.onlineUnitPrice),lineTotal:money(row.lineTotal),modifiers:Array.isArray(row.modifiers)?row.modifiers:[]})),subtotal:money(order.subtotal),deliveryFee:money(order.deliveryFee),total:money(order.total),autoPrint:Boolean(config?.autoPrintOnAccept)};
 }
 
 async function addOrderEvent(tx,{orderId,fromStatus,toStatus,userId=null,employeeId=null,note=null}){
@@ -215,7 +227,7 @@ router.post("/orders",async(req,res)=>{
 });
 
 router.get("/backoffice/stores/:storeId/orders",auth,safe(async(req,res)=>{
-  const {store}=await onlineContext();
+  const {store}=await onlineContextById(req.user.companyId,req.params.storeId);
   if(req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Η προβολή BackOffice δεν είναι διαθέσιμη από λογαριασμό POS."});
   if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const limit=Math.min(Math.max(Number(req.query.limit||150),1),300);
@@ -225,23 +237,23 @@ router.get("/backoffice/stores/:storeId/orders",auth,safe(async(req,res)=>{
 }));
 
 router.get("/pos/stores/:storeId/orders",auth,operatorGuard,safe(async(req,res)=>{
-  const {store,config}=await onlineContext();
+  const {store,config}=await onlineContextById(req.user.companyId,req.params.storeId);
   if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const rows=await orderRows(store.id),newCount=rows.filter(row=>row.status==="NEW").length;
   res.json({module:{key:"ONLINE_ORDERING",active:true},store:{id:store.id,name:store.name},newCount,activeCount:rows.length,autoPrintOnAccept:Boolean(config.autoPrintOnAccept),stockCheckEnabled:Boolean(config.stockCheckEnabled),rows:rows.map(row=>({...row,subtotal:money(row.subtotal),deliveryFee:money(row.deliveryFee),total:money(row.total),items:(row.items||[]).map(item=>({...item,quantity:Number(item.quantity||0),onlineUnitPrice:money(item.onlineUnitPrice),lineTotal:money(item.lineTotal)}))}))});
 }));
 
 router.get("/pos/stores/:storeId/orders/:orderId/print",auth,operatorGuard,safe(async(req,res)=>{
-  const {store,config}=await onlineContext();
+  const {store,config}=await onlineContextById(req.user.companyId,req.params.storeId);
   if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const rows=await prisma.$queryRaw`SELECT o.*,COALESCE((SELECT json_agg(json_build_object('productName',l."productName",'quantity',l."quantity",'onlineUnitPrice',l."onlineUnitPrice",'lineTotal',l."lineTotal",'modifiers',COALESCE(l."modifiersJson",'[]'::jsonb)) ORDER BY l."createdAt") FROM "OnlineOrderLine" l WHERE l."orderId"=o."id"),'[]') AS "items" FROM "OnlineOrder" o WHERE o."id"=${req.params.orderId} AND o."storeId"=${store.id} LIMIT 1`;
   if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
   await addOrderEvent(prisma,{orderId:rows[0].id,fromStatus:rows[0].status,toStatus:rows[0].status,employeeId:req.user.employeeId||null,note:"PRINT_REQUESTED"});
-  res.json({print:printPayload(rows[0],config)});
+  res.json({print:printPayload(rows[0],config,store)});
 }));
 
 router.post("/pos/stores/:storeId/orders/:orderId/status",auth,operatorGuard,safe(async(req,res)=>{
-  const body=z.object({status:z.enum(["ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY","DELIVERED"]),note:z.string().trim().max(300).optional().nullable()}).parse(req.body||{}),{store,config}=await onlineContext();
+  const body=z.object({status:z.enum(["ACCEPTED","PREPARING","READY","OUT_FOR_DELIVERY","DELIVERED"]),note:z.string().trim().max(300).optional().nullable()}).parse(req.body||{}),{store,config}=await onlineContextById(req.user.companyId,req.params.storeId);
   if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const current=(await prisma.$queryRaw`SELECT * FROM "OnlineOrder" WHERE "id"=${req.params.orderId} AND "storeId"=${store.id} LIMIT 1`)[0];
   if(!current)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
@@ -256,11 +268,11 @@ router.post("/pos/stores/:storeId/orders/:orderId/status",auth,operatorGuard,saf
     if(body.status==="ACCEPTED"&&config.autoPrintOnAccept)await addOrderEvent(tx,{orderId:current.id,fromStatus:body.status,toStatus:body.status,employeeId:req.user.employeeId||null,note:"AUTO_PRINT_REQUESTED"});
   });
   const updated=(await orderRows(store.id,[body.status]))?.find(row=>row.id===current.id)||{...current,status:body.status};
-  res.json({ok:true,order:{id:current.id,orderNumber:current.orderNumber,status:body.status,saleId},print:body.status==="ACCEPTED"?printPayload(updated,config):null});
+  res.json({ok:true,order:{id:current.id,orderNumber:current.orderNumber,status:body.status,saleId},print:body.status==="ACCEPTED"?printPayload(updated,config,store):null});
 }));
 
 router.post("/pos/stores/:storeId/orders/:orderId/cancel",auth,operatorGuard,safe(async(req,res)=>{
-  const body=z.object({reason:z.string().trim().min(3).max(300)}).parse(req.body||{}),{store}=await onlineContext();
+  const body=z.object({reason:z.string().trim().min(3).max(300)}).parse(req.body||{}),{store}=await onlineContextById(req.user.companyId,req.params.storeId);
   if(store.id!==req.params.storeId||store.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
   const result=await prisma.$transaction(async tx=>{
     await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${'online-order-cancel:'+req.params.orderId})) IS NULL) AS locked`;
