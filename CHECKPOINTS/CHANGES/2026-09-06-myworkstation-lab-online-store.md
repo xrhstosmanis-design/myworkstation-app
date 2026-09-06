@@ -56,3 +56,4 @@ Base revision: `8aeb9b934f88b763d0e568ca88ee9a96596aab06`
 - Workforce v2 PIN implementation added: optional 4–8 digit PIN field, bcrypt hash only, `hasPin` status only, and additive migration `20260906120000_workforce_employee_pin`.
 - After deployment set the PIN from Workforce v2 → Εργαζόμενοι → Εργαστήριο Χειριστής 1 → Επεξεργασία. Leave blank when editing to retain the current PIN.
 - Fiscal Bridge DRY RUN now accepts generic lab terminal identifiers such as `LAB-POS-01`/`LAB-POS-02` while remaining strictly non-fiscal and non-executing.
+- Live fix queued in PR #548: Workforce bootstrap now creates `WorkforceEmployee.pinHash` idempotently before Prisma reads the employee table; this resolves the live internal error on deployments where migrations have not run.
