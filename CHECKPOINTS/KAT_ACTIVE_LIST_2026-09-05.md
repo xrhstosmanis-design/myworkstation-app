@@ -113,6 +113,7 @@
 - Νέα επίσημη σειρά modules καταγράφηκε ως `MOD-01` έως `MOD-17`. Πρώτο ενεργό βήμα: `MOD-01` / `DEV-12`.
 - Ενεργοποιήθηκε κανόνας CI: κάθε αλλαγή κώδικα/ρύθμισης απαιτεί ενημέρωση ενιαίας λίστας και νέο checkpoint.
 - 2026-09-06: Workforce v2 PIN field implemented with bcrypt-only storage and additive migration; secure entry remains pending on the lab employee card.
+- 2026-09-06: Workforce v2 live bootstrap repair added so existing deployments create the PIN column before loading Workforce data; PR #548 pending CI.
 
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
