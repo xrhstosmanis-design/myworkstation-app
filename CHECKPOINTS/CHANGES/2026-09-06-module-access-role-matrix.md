@@ -24,8 +24,13 @@ Date: 2026-09-06
 - Client production build: PASS.
 - KAT pre-install readiness invariants: PASS.
 - Checkpoint policy and `git diff --check`: PASS.
-- GitHub CI remains required before merge.
+- GitHub CI #1471: PASS.
+- Squash merge to `main`: `bfd8e430` (PR #542).
+- Render production deploy: LIVE on commit `bfd8e430`.
+- Live Platform Admin verification: PASS for `Κυλικείο ΚΑΤ`.
+- The matrix loaded the real module catalog, displayed Super Admin as `ΠΑΝΤΑ`, respected owner entitlements and kept sensitive employee modules blocked unless explicitly permitted.
+- The screen confirmed that the check is read-only and no entitlement, license or permission was changed.
 
 ## Next step
 
-After deployment, open a real store from Platform Admin and run `Έλεγχος δικαιωμάτων`. Confirm that Super Admin is `ΠΑΝΤΑ`, owner access follows active entitlements and employee access excludes sensitive owner-only modules. Then mark `MOD-01` / `DEV-12` complete and continue with `MOD-02`.
+`MOD-01` / `DEV-12` are complete. Continue with the controlled NON_FISCAL Fiscal DRY RUN prerequisite and then `MOD-02`.
