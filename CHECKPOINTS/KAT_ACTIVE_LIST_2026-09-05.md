@@ -58,6 +58,19 @@
 | DEV-14 | myDATA/e-invoicing: sandbox, MARK, PDF, webhooks, ακυρώσεις, πιστωτικά και Δελτία Αποστολής. | ΣΕ ΑΝΑΜΟΝΗ ΠΑΡΟΧΟΥ |
 | DEV-15 | Backup/rollback εφαρμογής και βάσης, offline ανάκτηση, έλεγχος secrets και τελικό εγχειρίδιο εγκατάστασης. | ΕΚΚΡΕΜΕΙ |
 
+## 3A. MYWORKSTATION LAB — μόνιμο εργαστήριο δοκιμών για όλα τα καταστήματα
+
+| Κωδικός | Εργασία / κριτήριο ολοκλήρωσης | Κατάσταση |
+| --- | --- | --- |
+| LAB-01 | Γενικός tenant/store σχεδιασμός χωρίς εξάρτηση από το όνομα ΚΑΤ. | ΟΚ - checkpoint `2026-09-06-myworkstation-lab-online-store` |
+| LAB-02 | Ξεχωριστό Online Store ανά κατάστημα μέσω μοναδικού `publicSlug`, με tenant/store isolation. | ΟΚ - server/client build και 1014 tests PASS |
+| LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
+| LAB-04 | LAB-POS-01 και LAB-POS-02 με κοινή αποθήκη και ξεχωριστά ταμεία/βάρδιες. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
+| LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
+| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΟΚ - 1014 tests PASS |
+| LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΕΚΚΡΕΜΕΙ - απαιτεί owner-account επιλογή |
+| LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΕΚΚΡΕΜΕΙ μετά το LAB-07 |
+
 ## 4. Εγκεκριμένη σειρά νέων modules
 
 Η σειρά προέρχεται από τη νέα ενιαία λίστα του χρήστη. Τα modules παραμένουν εμπορικά κλειδωμένα μέχρι να ολοκληρωθούν, να δοκιμαστούν και να γίνουν ενεργά από Super Admin.

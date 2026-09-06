@@ -17,7 +17,7 @@ test("dry-run envelope is deterministic and explicitly non-executing",()=>{
   const second=buildFiscalDryRunEnvelope({sale:{...sale},lines:[{...lines[0]}],payments:[{...payments[0]}],route:{...paymentRoute}});
   assert.equal(first.mode,"DRY_RUN");
   assert.equal(first.externalExecution,false);
-  assert.equal(first.idempotencyKey,"fiscal-dry-run:sale-1:v1");
+  assert.equal(first.idempotencyKey,"fiscal-dry-run:sale-1:mws-v1");
   assert.equal(canonicalJson(first),canonicalJson(second));
   assert.equal(fiscalEnvelopeHash(first),fiscalEnvelopeHash(second));
   assert.match(fiscalEnvelopeHash(first),/^[a-f0-9]{64}$/);
@@ -27,6 +27,12 @@ test("validation blocks totals, route and already-fiscal sales",()=>{
   assert.equal(validateFiscalDryRun({sale,lines,payments,route:paymentRoute,terminalPos:"POS1"}).ok,true);
   const failed=validateFiscalDryRun({sale:{...sale,fiscalStatus:"ISSUED"},lines,payments:[{method:"CASH",amount:9}],route:paymentRoute,terminalPos:"POS2"});
   assert.deepEqual(failed.errors,["SALE_NOT_NON_FISCAL","TERMINAL_ROUTE_MISMATCH","PAYMENT_TOTAL_MISMATCH"]);
+});
+
+test("dry-run accepts generic laboratory terminal identifiers",()=>{
+  assert.equal(validateFiscalDryRun({sale,lines,payments,route:{...paymentRoute,terminalPos:"LAB-POS-01"},terminalPos:"LAB-POS-01"}).ok,true);
+  assert.match(route,/terminalPos:z\.string\(\)/);
+  assert.doesNotMatch(route,/z\.enum\(\["POS1","POS2"\]\)/);
 });
 
 test("HTTP contract is tenant-scoped, gated and cannot issue a fiscal command",()=>{
