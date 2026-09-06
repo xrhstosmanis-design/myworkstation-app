@@ -19,6 +19,9 @@ test("terminal creation closes its dialog and preserves the one-time activation 
   assert.match(platform,/setTerminalManager\(null\)/);
   assert.match(platform,/terminal-created-notice/);
   assert.match(platform,/Αντιγραφή link εγκατάστασης/);
+  assert.match(platform,/openActivationOnThisPc/);
+  assert.match(platform,/Άνοιγμα σε αυτό το PC/);
+  assert.match(platform,/window\.location\.assign\(activationUrl\)/);
 });
 
 test("direct Store Mode launch still requires personal PIN or card authentication",()=>{
