@@ -4,6 +4,8 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
 import {moduleCatalog,moduleKeys} from "../services/module-catalog.js";
+import {companyModuleState} from "../middleware/module-access.js";
+import {buildModuleAccessMatrix} from "../services/module-access-matrix.js";
 import platformWorkforceV2Routes from "./platform-workforce-v2.js";
 import {
   AI_STAFF_SCHEDULER,
@@ -60,6 +62,28 @@ router.get("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   try{
     const store=await ownedStore(req.params.companyId,req.params.storeId);
     res.json(await moduleResponse(store));
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/access-matrix",async(req,res,next)=>{
+  try{
+    const store=await ownedStore(req.params.companyId,req.params.storeId);
+    const [license,storeModules]=await Promise.all([
+      companyModuleState(store.companyId),
+      storePaidModuleCatalogStates(store.id)
+    ]);
+    if(!license)return res.status(404).json({error:"Δεν βρέθηκε η εταιρεία."});
+    res.json({
+      company:{id:license.id,name:license.name},
+      store,
+      checkedAt:new Date().toISOString(),
+      ...buildModuleAccessMatrix({
+        catalog:moduleCatalog,
+        licenseAllowed:license.licenseAllowed,
+        companyActiveModules:license.activeModules,
+        storeModules
+      })
+    });
   }catch(error){next(error)}
 });
 
