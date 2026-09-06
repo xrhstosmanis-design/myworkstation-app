@@ -56,14 +56,14 @@ router.put("/promotions/:promotionId/stores",async(req,res,next)=>{try{
 
 router.get("/promotions/scoped",async(req,res,next)=>{try{
   const companyId=req.user.companyId;
-  const rows=await prisma.$queryRaw\`SELECT pr."id",pr."productId",p."name" AS "productName",p."sku",pr."promotionType",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
+  const rows=await prisma.$queryRaw`SELECT pr."id",pr."productId",p."name" AS "productName",p."sku",pr."promotionType",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
     FROM "PriceCatalogPromotion" pr
     JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
     LEFT JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
     LEFT JOIN "Store" s ON s."id"=ps."storeId" AND s."companyId"=pr."companyId"
     WHERE pr."companyId"=\${companyId}
     GROUP BY pr."id",p."name",p."sku"
-    ORDER BY pr."validFrom" DESC,pr."createdAt" DESC LIMIT 1000\`;
+    ORDER BY pr."validFrom" DESC,pr."createdAt" DESC LIMIT 1000`;
   res.json({items:rows,count:rows.length});
 }catch(error){next(error)}});
 
