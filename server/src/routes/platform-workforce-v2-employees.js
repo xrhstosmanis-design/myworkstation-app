@@ -10,6 +10,22 @@ import {confirmed,employeeSchema,ensureEmployeeNameAvailable,validateEmployeeRef
 
 const router=Router({mergeParams:true});
 
+async function syncPosCredential(tx,employee,storeId,pinHash,actorId){
+  if(!pinHash||!employee?.id||!storeId)return;
+  const table=await tx.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"')::text AS "tableName"`;
+  if(!table[0]?.tableName)return;
+  let legacyId=employee.legacyEmployeeId;
+  if(!legacyId){
+    const legacy=await tx.employee.findFirst({where:{storeId,fullName:employee.fullName},select:{id:true}});
+    const row=legacy||await tx.employee.create({data:{fullName:employee.fullName,phone:employee.phone||null,email:employee.email||null,position:"Χειριστής",storeId,active:true}});
+    legacyId=row.id;
+    await tx.workforceEmployee.update({where:{id:employee.id},data:{legacyEmployeeId:legacyId}});
+  }
+  const existing=await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "companyId"=${employee.companyId} AND "storeId"=${storeId} AND "employeeId"=${legacyId} LIMIT 1`;
+  if(existing[0])await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "displayName"=${employee.fullName},"pinHash"=${pinHash},"active"=TRUE,"updatedAt"=NOW() WHERE "id"=${existing[0].id}`;
+  else await tx.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","pinHash","active","createdBy","createdAt","updatedAt") VALUES (${crypto.randomUUID()},${employee.companyId},${storeId},${legacyId},${employee.fullName},'EMPLOYEE',${pinHash},TRUE,${actorId||null},NOW(),NOW())`;
+}
+
 router.get("/",async(req,res,next)=>{
   try{
     const context=await contextFor(req);
@@ -25,6 +41,7 @@ router.get("/",async(req,res,next)=>{
       },
       include:employeeInclude,orderBy:[{active:"desc"},{fullName:"asc"}],take:500
     });
+    await prisma.$transaction(async tx=>{for(const item of items)if(item.pinHash)await syncPosCredential(tx,item,item.baseStoreId,item.pinHash,req.user?.id)});
     res.json({items:items.map(item=>serializeEmployee(item,storeMap)),count:items.length});
   }catch(error){next(error)}
 });
@@ -54,6 +71,7 @@ router.post("/",async(req,res,next)=>{
       await tx.workforceEmployeeStoreAccess.createMany({data:refs.storeAccess.map(access=>({id:crypto.randomUUID(),employeeId:employee.id,storeId:access.storeId,isBaseStore:access.storeId===body.baseStoreId,canSchedule:access.canSchedule,active:true}))});
       if(body.paymentType==="HOURLY")await tx.workforceHourlyRate.create({data:{id:crypto.randomUUID(),employeeId:employee.id,hourlyRate:body.hourlyRate,validFrom:body.effectiveFrom,createdByUserId:req.user?.id||null,note:"Αρχικό ωρομίσθιο"}});
       const result=await tx.workforceEmployee.findUnique({where:{id:employee.id},include:employeeInclude});
+      if(body.pin)await syncPosCredential(tx,result,body.baseStoreId,result.pinHash,req.user?.id);
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_EMPLOYEE_CREATED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,after:result,reason:body.reason});
       return result;
     });
@@ -90,6 +108,7 @@ router.put("/:employeeId",async(req,res,next)=>{
         }
       }else if(currentRate)await tx.workforceHourlyRate.update({where:{id:currentRate.id},data:{validTo:new Date(body.effectiveFrom.getTime()-1)}});
       const result=await tx.workforceEmployee.findUnique({where:{id:existing.id},include:employeeInclude});
+      if(body.pin)await syncPosCredential(tx,result,body.baseStoreId,result.pinHash,req.user?.id);
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_EMPLOYEE_UPDATED",entityType:"WORKFORCE_EMPLOYEE",entityId:existing.id,before:existing,after:result,reason:body.reason});
       return result;
     });
