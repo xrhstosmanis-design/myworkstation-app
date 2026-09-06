@@ -1,1 +1,1 @@
-NEXT: require green CI and merge PR #538, wait for deployment, then open Platform Admin → Fiscal DRY RUN. Confirm the green safety lock and execute one eligible NON_FISCAL sale twice to verify the second call is an idempotent replay. No RBS/CapDriver command or receipt may occur.
+NEXT: require green CI and squash-merge the generic-terminal hotfix, then continue the read-only module access matrix checkpoint. Run the real Fiscal DRY RUN only when the user is asked to test; no RBS/CapDriver/EFTPOS command or receipt may occur.
