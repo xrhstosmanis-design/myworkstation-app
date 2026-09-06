@@ -17,7 +17,7 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
   const getState=()=>parse(localStorage.getItem(KEY),{documents:[],profiles:{},master:[]});
   const savedLineFor=tr=>{
     const state=getState(),parts=docParts(),docs=Array.isArray(state.documents)?state.documents:[];
-    const d=docs.find(x=>[x.supplierTaxId||'',x.invoiceNumber||'',x.invoiceDate||'',x.supplierName||''].join('|')===parts.join('|'));
+    const d=docs.find(x=>[x.supplierTaxId||'',x.invoiceNo||x.invoiceNumber||'',x.invoiceDate||'',x.supplierName||''].join('|')===parts.join('|'));
     return d?.lines?.find(x=>String(x.lineNo||'')===lineNo(tr)&&String(x.supplierItemCode||'')===supplierCode(tr))||null;
   };
   const valuesFor=tr=>({...savedLineFor(tr),...(meta[rowKey(tr)]||{})});
@@ -88,7 +88,7 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
   function captureVisible(){document.querySelectorAll('#lines tr').forEach(persist)}
   function mergeIntoMainState(){
     const state=getState(),docs=Array.isArray(state.documents)?state.documents:[];
-    for(const d of docs){const dk=[d.supplierTaxId||'',d.invoiceNumber||'',d.invoiceDate||'',d.supplierName||''].join('|');if(!Array.isArray(d.lines))continue;for(const line of d.lines){const m=meta[`${dk}|${line.lineNo||''}|${line.supplierItemCode||''}`];if(!m)continue;line.category=m.category||line.category||'';line.subcategory=m.subcategory||line.subcategory||'';line.unit=m.unit||line.unit||'';line.packaging=m.packaging||line.packaging||'';if(m.vatRate!==undefined&&m.vatRate!=='')line.vatRate=Number(m.vatRate)}}
+    for(const d of docs){const dk=[d.supplierTaxId||'',d.invoiceNo||d.invoiceNumber||'',d.invoiceDate||'',d.supplierName||''].join('|');if(!Array.isArray(d.lines))continue;for(const line of d.lines){const m=meta[`${dk}|${line.lineNo||''}|${line.supplierItemCode||''}`];if(!m)continue;line.category=m.category||line.category||'';line.subcategory=m.subcategory||line.subcategory||'';line.unit=m.unit||line.unit||'';line.packaging=m.packaging||line.packaging||'';if(m.vatRate!==undefined&&m.vatRate!=='')line.vatRate=Number(m.vatRate)}}
     localStorage.setItem(KEY,JSON.stringify(state));
   }
   const obs=new MutationObserver(scan);obs.observe(document.documentElement,{subtree:true,childList:true});scan();
