@@ -1,7 +1,7 @@
-Active checkpoint: `CHECKPOINTS/KAT_ACTIVE_HOME_PC_2026-08-29.md`
+Active checkpoint: `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`
 
-Current branch: `agent/kat-active-checkpoint-20260829`
+Current branch: `agent/paid-module-access-foundation-20260906`
 
-Current goal: complete HOME PC acceptance for KAT first; leave the KAT PC only for protected backup, RBS/EFTPOS mapping and controlled fiscal smoke tests.
+Current goal: complete `MOD-01` / `DEV-12`, the central paid-module and role-access foundation. Super Admin must always have access; owners require an active entitlement; employees are denied sensitive financial, analytics and evaluation modules unless an explicit limited permission exists.
 
-Rule: update the active checkpoint after every meaningful test or implementation block. Completed, evidenced items are removed from the active pending list; untested work remains `ΣΕ ΔΟΚΙΜΗ`.
+Rule: every code/configuration PR must update the active unified list and add a checkpoint under `CHECKPOINTS/CHANGES/`. CI enforces the rule. Completed, evidenced items are marked `ΟΚ`; untested work remains `ΣΕ ΔΟΚΙΜΗ`.
