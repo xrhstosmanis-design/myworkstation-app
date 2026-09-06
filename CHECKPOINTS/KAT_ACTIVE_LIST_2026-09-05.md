@@ -81,8 +81,8 @@
 
 | Κωδικός | Εργασία | Κατάσταση |
 | --- | --- | --- |
-| MOD-01 | Δικαιώματα / πληρωμένα modules ανά ιδιοκτήτη, εταιρεία, κατάστημα, πακέτο και ημερομηνία λήξης. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION ΟΚ |
-| MOD-02 | Επέκταση της υπάρχουσας ενότητας Προσφορών με αναλύσεις, επιστροφές, προμηθευτές και Excel/PDF. | ΣΕ ΕΞΕΛΙΞΗ - PR #550 / merge `e393ae96` · read-only λίστα προσφορών ΟΚ |
+| MOD-01 | Δικαιώματα / πληρωμένα modules ανά ιδιοκτήτη, εταιρεία, κατάστημα, πακέτο και ημερομηνία λήξης. | ΣΕ ΕΞΕΛΙΞΗ |
+| MOD-02 | Επέκταση της υπάρχουσας ενότητας Προσφορών με αναλύσεις, επιστροφές, προμηθευτές και Excel/PDF. | ΕΚΚΡΕΜΕΙ |
 | MOD-03 | Ποσά προμηθευτών και εξαγωγές Excel/PDF στις Προσφορές. | ΕΚΚΡΕΜΕΙ |
 | MOD-04 | Κανάλι/ομάδα τιμολογίων ανά κατάστημα με καταστάσεις και περιορισμένη ορατότητα. | ΕΚΚΡΕΜΕΙ |
 | MOD-05 | Κουμπί POS «Αποστολή Τιμολογίου» για εικόνες/PDF με αυτόματα μεταδεδομένα. | ΕΚΚΡΕΜΕΙ |
@@ -114,9 +114,8 @@
 - Ενεργοποιήθηκε κανόνας CI: κάθε αλλαγή κώδικα/ρύθμισης απαιτεί ενημέρωση ενιαίας λίστας και νέο checkpoint.
 - 2026-09-06: Workforce v2 PIN field implemented with bcrypt-only storage and additive migration; secure entry remains pending on the lab employee card.
 - 2026-09-06: Workforce v2 live bootstrap repair added so existing deployments create the PIN column before loading Workforce data; PR #548 pending CI.
-- 2026-09-06: Workforce-to-POS PIN bridge identified and implemented; next validation is lab Store Mode PIN login.
-- 2026-09-06: PR #550 merged (`e393ae96`) with tenant-scoped read-only promotion listing. CI 1.020/1.020 PASS. No POS, stock, price or transaction changes.
-- 2026-09-06: PR #551 adds regression coverage for the promotion listing; merge pending green CI.
+- 2026-09-06: Workforce-to-POS PIN bridge identified and implemented; lab Store Mode now resolves the Workforce employee after PIN assignment.
+- 2026-09-06: REMOTE installation form fixed to preserve the form reference during async job submission; next validation is actual lab PC acceptance.
 
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
