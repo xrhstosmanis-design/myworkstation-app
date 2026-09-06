@@ -9,6 +9,7 @@ Date: 2026-09-06
 - Verified the subsequent current-main deployment `c14787c` reached Live.
 - Opened Platform Admin → Fiscal DRY RUN with Platform Super Admin + 2FA.
 - Verified the safe lock is active and the server reports `DRY_RUN`, `externalExecution=false`, `fiscalIssuance=false`, `capDriverWrite=false` and `rbsWrite=false`.
+- Replaced the stale `POS1`/`POS2` request enum with a bounded terminal identifier so the current generic LAB terminal mapping can pass the same route-match safety validation.
 
 ## Safety result
 
