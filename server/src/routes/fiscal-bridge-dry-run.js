@@ -59,7 +59,7 @@ router.get("/stores/:storeId/fiscal-bridge/candidates",async(req,res,next)=>{try
 
 router.post("/stores/:storeId/fiscal-bridge/dry-runs",async(req,res,next)=>{try{
   if(!enabled())return res.status(403).json({error:"Το Fiscal Bridge TEST MODE δεν είναι ενεργό.",code:"FISCAL_BRIDGE_TEST_MODE_DISABLED"});
-  const body=z.object({saleId:z.string().min(1).max(160),terminalPos:z.enum(["POS1","POS2"]),confirmNoFiscalExecution:z.literal(true)}).parse(req.body||{});
+  const body=z.object({saleId:z.string().min(1).max(160),terminalPos:z.string().trim().min(1).max(80).regex(/^[A-Za-z0-9._:-]+$/),confirmNoFiscalExecution:z.literal(true)}).parse(req.body||{});
   const store=await accessibleStore(req.user,req.params.storeId);if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   await ensureSchema();
   const [sales,lines,payments,routes]=await Promise.all([
