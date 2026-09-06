@@ -1,1 +1,1 @@
-NEXT: finish and test `MOD-01` / `DEV-12`, open its PR, require green CI, merge/deploy, then verify Super Admin, owner and employee access without touching fiscal/RBS execution. Start from `CHECKPOINTS/ACTIVE.md`, the active unified list and the latest file in `CHECKPOINTS/CHANGES/`.
+NEXT: require green CI and merge PR #538, wait for deployment, then open Platform Admin → Fiscal DRY RUN. Confirm the green safety lock and execute one eligible NON_FISCAL sale twice to verify the second call is an idempotent replay. No RBS/CapDriver command or receipt may occur.
