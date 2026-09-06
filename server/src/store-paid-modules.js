@@ -1,4 +1,5 @@
 import {prisma} from "./prisma.js";
+import {moduleCatalog} from "./services/module-catalog.js";
 import {
   AI_STAFF_SCHEDULER,
   PERSONNEL_AI,
@@ -52,6 +53,24 @@ async function storePaidModuleRows(storeId){
   return prisma.$queryRaw`SELECT "moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedAt" FROM "StorePaidModule" WHERE "storeId"=${storeId}`;
 }
 
+export async function storePaidModuleCatalogStates(storeId,now=new Date()){
+  const rows=await storePaidModuleRows(storeId);
+  const byKey=new Map(rows.map(row=>[row.moduleKey,row]));
+  return moduleCatalog.map(definition=>{
+    const row=byKey.get(definition.key);
+    return {
+      ...definition,
+      configured:Boolean(row),
+      active:isPaidModuleRowActive(row,now),
+      monthlyPrice:Number(row?.monthlyPrice||definition.monthlyPriceEur||0),
+      startsAt:row?.startsAt||null,
+      endsAt:row?.endsAt||null,
+      notes:row?.notes||null,
+      updatedAt:row?.updatedAt||null
+    };
+  });
+}
+
 export async function storePaidModuleStates(storeId){
   const rows=await storePaidModuleRows(storeId);
   return resolvePersonnelPackageStates(rows);
@@ -75,6 +94,7 @@ export async function storePaidModuleState(storeId,moduleKey=AI_STAFF_SCHEDULER)
   const row=rows.find(item=>item.moduleKey===moduleKey);
   return {
     moduleKey,
+    configured:Boolean(row),
     active:isPaidModuleRowActive(row),
     effectiveActive:isPaidModuleRowActive(row),
     inherited:false,

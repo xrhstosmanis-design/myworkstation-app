@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import { ownerRestrictedModuleKeys } from "../services/module-catalog.js";
 
 function isCurrentlyActive(row,now=new Date()){
   if(!row?.active)return false;
@@ -7,12 +8,40 @@ function isCurrentlyActive(row,now=new Date()){
   return true;
 }
 
-function isPlatformSuperAdmin(user){
+export function isPlatformSuperAdmin(user){
   return user?.role==="SUPER_ADMIN"||user?.platformRole==="SUPER_ADMIN"||user?.isSuperAdmin===true;
 }
 
 function hasPermanentSuperAdminAccess(user,moduleKey){
-  return moduleKey==="CASH_CONTROL"&&isPlatformSuperAdmin(user);
+  return Boolean(moduleKey)&&isPlatformSuperAdmin(user);
+}
+
+const ownerRestrictedModules=new Set(ownerRestrictedModuleKeys);
+
+export function userMayAccessModule(user,moduleKey){
+  if(isPlatformSuperAdmin(user))return true;
+  const employee=user?.role==="EMPLOYEE"||user?.tokenType==="STORE_OPERATOR";
+  if(!employee||!ownerRestrictedModules.has(moduleKey))return true;
+  const permissions=Array.isArray(user?.permissions)?user.permissions:[];
+  return permissions.includes(moduleKey)||permissions.includes(`MODULE:${moduleKey}`);
+}
+
+export function effectiveModuleEnabled(companyActive,storeOverride){
+  return storeOverride?.configured?isCurrentlyActive(storeOverride):Boolean(companyActive);
+}
+
+async function storeModuleOverride(storeId,moduleKey){
+  const rows=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`;
+  const row=rows[0];
+  return row?{...row,configured:true}:{configured:false};
+}
+
+function denyRoleModule(res,moduleKey){
+  return res.status(403).json({
+    error:"Ο ρόλος εργαζομένου δεν έχει πρόσβαση σε οικονομικά στοιχεία, αναλύσεις ή αξιολόγηση χωρίς ειδικό δικαίωμα.",
+    code:"ROLE_MODULE_DENIED",
+    moduleKey
+  });
 }
 
 export function moduleKeyForPath(path="/"){
@@ -49,6 +78,7 @@ export function requireCompanyModule(moduleKey){
         req.license={superAdminBypass:true,activeModules:[moduleKey]};
         return next();
       }
+      if(!userMayAccessModule(req.user,moduleKey))return denyRoleModule(res,moduleKey);
       const companyId=req.user?.companyId;
       if(!companyId)return res.status(401).json({error:"Απαιτείται σύνδεση."});
       const state=await companyModuleState(companyId);
@@ -92,10 +122,13 @@ export function requireStoreModule(moduleKey){
         req.targetStore=store;
         return next();
       }
+      if(!userMayAccessModule(req.user,moduleKey))return denyRoleModule(res,moduleKey);
       const state=await companyModuleState(store.companyId);
       if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
-      if(!state.activeModules.includes(moduleKey))return res.status(403).json({error:"Το Store Mode δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
+      const override=await storeModuleOverride(store.id,moduleKey);
+      if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
       req.license=state;
+      req.storeModuleOverride=override;
       req.targetStore=store;
       next();
     }catch(error){next(error)}
@@ -123,10 +156,13 @@ export function requireCompanyOrStoreModule(moduleKey){
         req.targetStore=store;
         return next();
       }
+      if(!userMayAccessModule(req.user,moduleKey))return denyRoleModule(res,moduleKey);
       const state=await companyModuleState(store.companyId);
       if(!state?.licenseAllowed)return res.status(403).json({error:"Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.",code:"LICENSE_INACTIVE"});
-      if(!state.activeModules.includes(moduleKey))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
+      const override=await storeModuleOverride(store.id,moduleKey);
+      if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override))return res.status(403).json({error:"Το συγκεκριμένο module δεν είναι ενεργό για το κατάστημα.",code:"MODULE_DISABLED",moduleKey});
       req.license=state;
+      req.storeModuleOverride=override;
       req.targetStore=store;
       next();
     }catch(error){next(error)}

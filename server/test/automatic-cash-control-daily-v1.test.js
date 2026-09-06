@@ -85,8 +85,8 @@ test("cash control remains an independently licensed commercial module",()=>{
   assert.match(ui,/Έξοδα χωρίς σωστό παραστατικό/);
 });
 
-test("platform super admin always has cash control while customers still require the paid module",()=>{
-  assert.match(moduleAccess,/moduleKey==="CASH_CONTROL"&&isPlatformSuperAdmin\(user\)/);
+test("platform super admin always has every module while customers still require paid entitlements",()=>{
+  assert.match(moduleAccess,/Boolean\(moduleKey\)&&isPlatformSuperAdmin\(user\)/);
   assert.match(moduleAccess,/platformRole==="SUPER_ADMIN"/);
   assert.match(moduleAccess,/superAdminBypass:true/);
   assert.match(moduleAccess,/if\(!state\.activeModules\.includes\(moduleKey\)\)return res\.status\(403\)/);

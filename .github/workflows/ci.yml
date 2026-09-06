@@ -36,12 +36,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Verify active list and checkpoint were updated
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node tools/verify-checkpoint-policy.mjs "$BASE_SHA" "$HEAD_SHA"
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
       - name: Run security and licensing tests

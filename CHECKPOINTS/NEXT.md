@@ -1,1 +1,1 @@
-NEXT: open PR for item-level sales journal changes, run CI, fix any failures, merge/deploy to Render, perform KAT live verification, then move immediately to return flow integrity.
+NEXT: finish and test `MOD-01` / `DEV-12`, open its PR, require green CI, merge/deploy, then verify Super Admin, owner and employee access without touching fiscal/RBS execution. Start from `CHECKPOINTS/ACTIVE.md`, the active unified list and the latest file in `CHECKPOINTS/CHANGES/`.
