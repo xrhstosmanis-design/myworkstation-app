@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import {moduleCatalog,moduleKeys} from "../services/module-catalog.js";
 import platformWorkforceV2Routes from "./platform-workforce-v2.js";
 import {
   AI_STAFF_SCHEDULER,
@@ -11,7 +12,8 @@ import {
   ensureStorePaidModulesSchema,
   isSuperAdmin,
   storePaidModuleState,
-  storePaidModuleStates
+  storePaidModuleStates,
+  storePaidModuleCatalogStates
 } from "../store-paid-modules.js";
 
 const router=Router();
@@ -31,8 +33,21 @@ async function ownedStore(companyId,storeId){
 
 async function moduleResponse(store){
   const resolved=await storePaidModuleStates(store.id);
+  const [storeModules,companyModules]=await Promise.all([
+    storePaidModuleCatalogStates(store.id),
+    prisma.companyModule.findMany({where:{companyId:store.companyId},select:{moduleKey:true,active:true,startsAt:true,endsAt:true}})
+  ]);
+  const now=new Date();
+  const companyActive=new Set(companyModules.filter(row=>row.active&&(!row.startsAt||row.startsAt<=now)&&(!row.endsAt||row.endsAt>=now)).map(row=>row.moduleKey));
   return {
     store,
+    catalog:moduleCatalog,
+    modules:storeModules.map(module=>({
+      ...module,
+      companyActive:companyActive.has(module.key),
+      effectiveActive:module.configured?module.active:companyActive.has(module.key),
+      inheritedFromCompany:!module.configured&&companyActive.has(module.key)
+    })),
     packages:PERSONNEL_PACKAGE_DEFINITIONS,
     states:resolved.states,
     legacyState:resolved.legacy,
@@ -53,7 +68,7 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     await ensureStorePaidModulesSchema();
     const store=await ownedStore(req.params.companyId,req.params.storeId);
     const body=z.object({
-      moduleKey:z.enum(PERSONNEL_WRITABLE_MODULE_KEYS).optional().default(AI_STAFF_SCHEDULER),
+      moduleKey:z.enum([...new Set([...PERSONNEL_WRITABLE_MODULE_KEYS,...moduleKeys])]).optional().default(AI_STAFF_SCHEDULER),
       active:z.boolean(),
       monthlyPrice:z.coerce.number().min(0).max(100000),
       startsAt:z.string().datetime().nullable().optional(),
@@ -62,6 +77,13 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     }).superRefine((value,ctx)=>{
       if(value.startsAt&&value.endsAt&&new Date(value.endsAt)<new Date(value.startsAt))ctx.addIssue({code:z.ZodIssueCode.custom,path:["endsAt"],message:"Η λήξη δεν μπορεί να είναι πριν από την έναρξη."});
     }).parse(req.body||{});
+
+    if(body.moduleKey==="CORE"&&!body.active)return res.status(400).json({error:"Το MyWorkStation Core δεν μπορεί να απενεργοποιηθεί για κατάστημα."});
+    const catalogModule=moduleCatalog.find(module=>module.key===body.moduleKey);
+    if(body.active&&catalogModule&&!catalogModule.commercialReady){
+      const companyModule=await prisma.companyModule.findUnique({where:{companyId_moduleKey:{companyId:store.companyId,moduleKey:body.moduleKey}},select:{active:true}});
+      if(!companyModule?.active)return res.status(400).json({error:`Το module «${catalogModule.name}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`});
+    }
 
     await prisma.$executeRaw`INSERT INTO "StorePaidModule" ("id","companyId","storeId","moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${body.moduleKey},${body.active},${body.monthlyPrice},${body.startsAt?new Date(body.startsAt):null},${body.endsAt?new Date(body.endsAt):null},${body.notes||null},${req.user.id}) ON CONFLICT ("storeId","moduleKey") DO UPDATE SET "active"=EXCLUDED."active","monthlyPrice"=EXCLUDED."monthlyPrice","startsAt"=EXCLUDED."startsAt","endsAt"=EXCLUDED."endsAt","notes"=EXCLUDED."notes","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
 
