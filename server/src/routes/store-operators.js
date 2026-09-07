@@ -371,6 +371,12 @@ router.post("/logout",auth,route(async(req,res)=>{
   res.json({ok:true});
 }));
 
+router.get("/inspection/:storeId",route(async(req,res)=>{
+  const token=String(req.query.token||"");let payload;try{payload=jwt.verify(token,process.env.JWT_SECRET)}catch{return res.status(401).json({error:"Ο σύνδεσμος ελέγχου έληξε ή δεν είναι έγκυρος."})}
+  if(payload?.tokenType!=="POS_INSPECTOR"||payload.storeId!==req.params.storeId||payload.isSuperAdmin!==true)return res.status(403).json({error:"Δεν επιτρέπεται πρόσβαση ελέγχου."});
+  const store=await prisma.store.findFirst({where:{id:payload.storeId,companyId:payload.companyId},select:{id:true,name:true}});const terminal=await prisma.$queryRaw`SELECT "terminalPos","displayName" FROM "StoreInstallationTerminal" WHERE "id"=${payload.terminalId} AND "storeId"=${payload.storeId} LIMIT 1`;const shift=await prisma.$queryRaw`SELECT "openedAt" FROM "CashShiftSession" WHERE "companyId"=${payload.companyId} AND "storeId"=${payload.storeId} AND "terminalPos"=${payload.terminalPos} AND "status"='OPEN' LIMIT 1`;if(!store||!terminal[0])return res.status(404).json({error:"Το τερματικό δεν είναι διαθέσιμο."});res.json({store,terminal:terminal[0],openShift:Boolean(shift[0]),openedAt:shift[0]?.openedAt||null,readOnly:true});
+}));
+
 router.use(auth,requireAdmin);
 
 router.get("/stores/:storeId",route(async(req,res)=>{
