@@ -148,3 +148,5 @@
 - 2026-09-07: Το `supportStore` εφαρμόζεται πλέον ως υποχρεωτική αρχική επιλογή σε Εμπορικές λειτουργίες και Τραπέζια/Σερβιτόρους, ώστε κανένα BackOffice module να μην ανοίγει σε άλλο κατάστημα.
 
 - 2026-09-07: Αυστηρό `supportStore` scope: Online Παραγγελίες δεν εμφανίζουν κανένα άλλο κατάστημα όταν το ενεργό store δεν έχει Online Store· το Audit στέλνει πάντα το URL storeId και δεν επιτρέπει «Όλα τα καταστήματα» σε store context.
+
+- 2026-09-07: LAB-POS-01/LAB-POS-02 single-operator rule implemented: a new Store Mode login for the same operator at the same store revokes every prior active operator session before issuing the new token. Shared store stock/ledger remains unchanged; sessions/terminals remain distinct.
