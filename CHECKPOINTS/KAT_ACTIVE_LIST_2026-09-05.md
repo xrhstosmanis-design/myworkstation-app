@@ -17,7 +17,7 @@
 | HOME-01 | Πρακτικός έλεγχος ελληνικών πινάκων, φίλτρων, ανανέωσης, ποσών, ρόλων και στηλών με προσωρινά δεδομένα. Επιβεβαιώθηκαν live αναζήτηση χωρίς τόνους, ποσά, διατήρηση φίλτρου μετά από ανανέωση, κύλιση popdown, κατηγορία δικαιούχου και όνομα χειριστή. Απομένουν role matrix και πρακτικό resize όλων των βασικών πινάκων. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-02 | Συνέχιση NON_FISCAL δοκιμών POS1/POS2 με προσωρινά δεδομένα. Το reset θα γίνει μόνο στο τέλος, πριν το go-live. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-03 | Ημερήσια επιβεβαίωση Observer 1.1.3 χωρίς διπλές εγγραφές. Παραμένει READ_ONLY / SHADOW MODE. | ΣΕ ΑΝΑΜΟΝΗ |
-| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, idempotency key και payload hash, χωρίς εξωτερική εντολή. | ΟΘΟΝΗ SUPER ADMIN ΥΛΟΠΟΙΗΘΗΚΕ ΤΟΠΙΚΑ · ΑΝΑΜΟΝΗ CI/MERGE ΚΑΙ HOME TEST |
+| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, generic terminal validation, idempotency key και payload hash, χωρίς εξωτερική εντολή. | ΣΕ ΕΞΕΛΙΞΗ - καθαρό PR από σημερινό main, αναμονή CI/merge και HOME test |
 | HOME-05 | Προεπισκόπηση Master Catalog. Καμία οριστική εισαγωγή, μεταφορά stock ή ενεργοποίηση μη επιβεβαιωμένου ΦΠΑ. | ΑΝΑΜΟΝΗ ΕΓΚΡΙΣΗΣ |
 | HOME-06 | Έλεγχος και ομαδοποίηση GitHub workflows ώστε να μειωθούν τα περιττά Render builds. | ΕΚΚΡΕΜΕΙ |
 
@@ -67,7 +67,7 @@
 | LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
 | LAB-04 | LAB-POS-01 και LAB-POS-02 με κοινή αποθήκη και ξεχωριστά ταμεία/βάρδιες. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
 | LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
-| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΟΚ - 1014 tests PASS |
+| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - νέο καθαρό PR από σημερινό main |
 | LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΕΚΚΡΕΜΕΙ - απαιτεί owner-account επιλογή |
 | LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΕΚΚΡΕΜΕΙ μετά το LAB-07 |
 
