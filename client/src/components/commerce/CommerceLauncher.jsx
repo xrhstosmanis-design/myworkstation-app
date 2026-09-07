@@ -102,7 +102,7 @@ export default function CommerceLauncher(){
           <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub api={request} stores={stores} activeStoreId={supportStoreId}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
