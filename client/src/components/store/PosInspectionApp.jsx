@@ -1,0 +1,6 @@
+import React,{useEffect,useState} from "react";
+export default function PosInspectionApp({storeId}){
+ const [data,setData]=useState(null),[error,setError]=useState("");
+ useEffect(()=>{const token=new URLSearchParams(location.search).get("token")||"";fetch(`/api/operators/inspection/${encodeURIComponent(storeId)}?token=${encodeURIComponent(token)}`).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error);setData(d)}).catch(e=>setError(e.message))},[storeId]);
+ return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",fontFamily:"system-ui",background:"#eef4f2"}}><section style={{maxWidth:680,background:"white",padding:32,borderRadius:18}}><b style={{color:"#a15b00"}}>SUPER ADMIN · ΜΟΝΟ ΓΙΑ ΕΛΕΓΧΟ</b><h1>{data?.store?.name||"Έλεγχος POS"}</h1>{error?<p style={{color:"#b42318"}}>{error}</p>:!data?<p>Φόρτωση…</p>:<><p><b>{data.terminal.displayName} · {data.terminal.terminalPos}</b></p><p>Ενεργή βάρδια: <b>{data.openShift?"ΝΑΙ":"ΟΧΙ"}</b></p><p>Δεν επιτρέπονται πωλήσεις, πληρωμές, αλλαγή χειριστή ή μεταβολή βάρδιας/ταμείου.</p></>}</section></main>
+}
