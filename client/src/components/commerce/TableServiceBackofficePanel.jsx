@@ -7,9 +7,9 @@ const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",cur
 const stamp=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"short",timeStyle:"short"}):"—";
 const statusLabel={OPEN:"ΑΝΟΙΚΤΗ",SENT:"ΣΤΑΛΘΗΚΕ",READY:"ΕΤΟΙΜΗ",PAID:"ΠΛΗΡΩΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"};
 
-export default function TableServiceBackofficePanel({api,stores=[]}){
+export default function TableServiceBackofficePanel({api,stores=[],activeStoreId=""}){
   const [storeId,setStoreId]=useState(stores[0]?.id||""),[rows,setRows]=useState([]),[waste,setWaste]=useState([]),[queue,setQueue]=useState([]),[query,setQuery]=useState(""),[status,setStatus]=useState("ALL"),[loading,setLoading]=useState(false),[error,setError]=useState("");
-  useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores]);
+  useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,storeId,activeStoreId]);
   const load=async()=>{if(!storeId)return;setLoading(true);setError("");try{const [result,preparation]=await Promise.all([api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/table-service/history`),api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/table-service/preparation-queue`)]);setRows(result.orders||[]);setWaste(result.waste||[]);setQueue(preparation.rows||[])}catch(err){setRows([]);setWaste([]);setQueue([]);setError(err.message)}finally{setLoading(false)}};
   useEffect(()=>{load();const timer=setInterval(()=>load(),10000);return()=>clearInterval(timer)},[storeId]);
   const ready=async batch=>{setLoading(true);setError("");try{await api(`/api/store-pos/stores/${encodeURIComponent(storeId)}/table-service/preparation-queue/${encodeURIComponent(batch.id)}/ready`,{method:"PATCH",body:"{}"});await load()}catch(err){setError(err.message);setLoading(false)}};
