@@ -41,7 +41,7 @@ export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
     api("/api/public/kat/backoffice-managed/stores",{cache:"no-store"})
       .then(data=>{
         if(!active)return;
-        const stores=Array.isArray(data?.stores)?data.stores:[];
+        const stores=(Array.isArray(data?.stores)?data.stores:[]).filter(store=>!activeStoreId||store.id===activeStoreId);
         setManagedStores(stores);
         const realKat=stores.find(store=>store.id!==TEST_STORE_ID&&/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||"")));
         const preferred=realKat||stores.find(store=>store.id===TEST_STORE_ID)||stores[0]||null;
