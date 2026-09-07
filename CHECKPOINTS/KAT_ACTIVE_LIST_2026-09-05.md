@@ -132,3 +132,5 @@
 - 2026-09-07: PR #560 αντικαθιστά το legacy generic Commercial POS με το ίδιο StoreOperatorApp/StorePosPanel runtime του ΚΑΤ. Τερματικό = συσκευή μέσω activation token, χειριστής = φορητός με PIN/κάρτα. Κοινή αποθήκη και store-level τζίρος/χρήματα, με ξεχωριστή βάρδια ανά terminal. Αναμονή CI/Render και LAB επιβεβαίωση.
 
 - 2026-09-07: Η οθόνη ΚΑΤ ορίστηκε ως δεσμευτικό POS reference: γρήγορα σε δύο στήλες αριστερά, συναλλαγή στο κέντρο, keypad δεξιά, κατηγορίες κάτω και πληρωμές στη βάση. Η Surface διόρθωση δεν επιτρέπει responsive αναδιάταξη αυτών των περιοχών.
+
+- 2026-09-07: LAB/KAT visual comparison found the actual POS fault: JSX rendered `standard-quick` while CSS targeted `standard-quick-panel` / `standard-quick-grid`. The correction applies the real two-column quick-key layout styles to the rendered terminal DOM. CI/Render and screenshot verification remain required.
