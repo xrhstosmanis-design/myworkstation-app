@@ -13,7 +13,7 @@ const filterRows=(rows,filters)=>{const q=txt(filters.search).toLocaleUpperCase(
 const materialUnit=p=>{const sku=txt(p?.sku).toUpperCase();if(/(?:WATER|MILK|SYRUP)/.test(sku))return "ML";if(/(?:CUP|LID|STRAW|SWEETENER)/.test(sku))return "PCS";return "GR"};
 const blankInventoryBulk=()=>({categoryName:"",vatRate:"",salePrice:"",active:"KEEP",trackStock:"KEEP",stockStoreId:"",stockMode:"KEEP",stockQuantity:""});
 
-export default function KioskStyleProductCenterWithStock({api,stores=[]}){
+export default function KioskStyleProductCenterWithStock({api,stores=[],activeStoreId=""}){
  const hostRef=useRef(null);
  const [catalog,setCatalog]=useState([]),[target,setTarget]=useState(null),[mode,setMode]=useState("SET"),[quantity,setQuantity]=useState(""),[logMovement,setLogMovement]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[reloadKey,setReloadKey]=useState(0),[deliveryTarget,setDeliveryTarget]=useState(null),[deliveryDraft,setDeliveryDraft]=useState(null),[preparationTarget,setPreparationTarget]=useState(null);
  const [bulkOpen,setBulkOpen]=useState(false),[bulkAction,setBulkAction]=useState("ADD"),[bulkMaterials,setBulkMaterials]=useState([]),[bulkCategory,setBulkCategory]=useState("ALL"),[bulkSubcategory,setBulkSubcategory]=useState("ALL"),[bulkSearch,setBulkSearch]=useState(""),[bulkApplied,setBulkApplied]=useState({category:"ALL",subcategory:"ALL",search:""}),[bulkSearched,setBulkSearched]=useState(false),[bulkIds,setBulkIds]=useState([]),[bulkResult,setBulkResult]=useState(""),[bulkError,setBulkError]=useState("");
@@ -22,6 +22,7 @@ export default function KioskStyleProductCenterWithStock({api,stores=[]}){
 
  const loadCatalog=async()=>{try{const rows=await api("/api/owner-products/catalog?q=");setCatalog(Array.isArray(rows)?rows:[])}catch{setCatalog([])}};
  useEffect(()=>{loadCatalog()},[reloadKey]);
+ useEffect(()=>{const refresh=()=>{if(document.visibilityState==="visible"&&!target&&!inventoryBulkOpen)setReloadKey(key=>key+1)};const timer=window.setInterval(refresh,10000);window.addEventListener("focus",refresh);document.addEventListener("visibilitychange",refresh);return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);document.removeEventListener("visibilitychange",refresh)}},[target,inventoryBulkOpen,activeStoreId]);
  const bySku=useMemo(()=>{const m=new Map();for(const r of catalog)if(r.sku)m.set(String(r.sku).trim(),r);return m},[catalog]);
  const preparationProducts=useMemo(()=>catalog.filter(p=>p?.active!==false&&!isPrepMaterial(p)),[catalog]);
  const categories=useMemo(()=>[...new Set(preparationProducts.map(categoryOf))].sort((a,b)=>a.localeCompare(b,"el")),[preparationProducts]);
