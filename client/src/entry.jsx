@@ -1,6 +1,7 @@
 import React,{useState} from "react";
 import {createRoot} from "react-dom/client";
 import StoreOperatorApp from "./components/store/StoreOperatorWithOnlineOrders.jsx";
+import PosInspectionApp from "./components/store/PosInspectionApp.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
@@ -70,6 +71,7 @@ const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
 const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
 const storeMatch=window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
+const inspectionMatch=window.location.pathname.match(/^\/pos-inspection\/([^/]+)\/?$/);
 const inventoryMatch=window.location.pathname.match(/^\/inventory\/([^/]+)\/?$/);
 const remoteAssistMatch=window.location.pathname.match(/^\/remote-assist\/([^/]+)\/?$/);
 const TEST_COMPANY_ID="kat-test-company";
@@ -125,7 +127,8 @@ installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafel
 const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
 
-if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
+if(inspectionMatch){document.title="MyWorkStation POS Inspection";createRoot(document.getElementById("root")).render(<PosInspectionApp storeId={decodeURIComponent(inspectionMatch[1])}/>)}
+else if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
 else if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
 else if(inventoryMatch){document.title="MyWorkStation Inventory";createRoot(document.getElementById("root")).render(<InventoryMobileApp stocktakeId={decodeURIComponent(inventoryMatch[1])}/>)}
 else if(platformMatch){document.title="MyWorkStation Platform Admin";createRoot(document.getElementById("root")).render(<><PlatformAdminApp/><CommercialLicenseCenter/><MasterCatalogCenter/><PlatformPromotionCenter/></>)}
