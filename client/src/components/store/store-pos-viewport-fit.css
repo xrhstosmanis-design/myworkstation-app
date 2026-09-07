@@ -147,7 +147,7 @@
   }
 
   .mws-standard-pos .standard-sale-panel {
-    grid-template-rows: 54px auto 32px minmax(220px, 1fr) 128px;
+    grid-template-rows: 54px auto 32px minmax(200px, 1fr) 150px;
   }
 
   .mws-standard-pos .standard-search {
@@ -155,7 +155,7 @@
   }
 
   .mws-standard-pos .standard-category-strip > div {
-    height: 92px;
+    height: 114px;
   }
 
   .mws-standard-pos .standard-action-bar > button,
