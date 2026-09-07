@@ -109,4 +109,20 @@ function LegacyCommercialPosApp({api,storeId}){
 
 
 // The live Store Mode must use the same KAT runtime, shift control, terminal binding and shared ledger.
-export default function CommercialPosApp(props){return <StoreOperatorApp {...props}/>;}
+export default function CommercialPosApp(props){
+  const [ready,setReady]=useState(false);
+  useEffect(()=>{
+    // The legacy runtime did not bind the login to the activated device.
+    // Clear that one-time stale session before loading the KAT runtime.
+    const migrationKey=`myworkstation:kat-runtime-session-reset:${props.storeId}`;
+    try{
+      if(!localStorage.getItem(migrationKey)){
+        sessionStorage.removeItem("storeOperatorToken");
+        sessionStorage.removeItem("storeOperatorSession");
+        localStorage.setItem(migrationKey,"1");
+      }
+    }catch{}
+    setReady(true);
+  },[props.storeId]);
+  return ready?<StoreOperatorApp {...props}/>:<div className="operator-login-shell"><div className="operator-login-main"><div className="operator-login-card"><h2>Προετοιμασία ασφαλούς σύνδεσης POS…</h2></div></div></div>;
+}
