@@ -15,7 +15,8 @@ const normalize=value=>({
 export default function PosDesignerPanel({request,onClose}){
   const [data,setData]=useState(null),[layout,setLayout]=useState(null),[section,setSection]=useState("quickKeys"),[selected,setSelected]=useState(new Set()),[busy,setBusy]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");
   const [picker,setPicker]=useState(null),[pickerQuery,setPickerQuery]=useState(""),[pickerRows,setPickerRows]=useState([]),[pickerBusy,setPickerBusy]=useState(false),[pickerError,setPickerError]=useState("");
-  const [groupSelected,setGroupSelected]=useState(new Set()),[selectedDetails,setSelectedDetails]=useState({});\n  const [templateStoreId,setTemplateStoreId]=useState(""),[templateBusy,setTemplateBusy]=useState(false);
+  const [groupSelected,setGroupSelected]=useState(new Set()),[selectedDetails,setSelectedDetails]=useState({});
+  const [templateStoreId,setTemplateStoreId]=useState(""),[templateBusy,setTemplateBusy]=useState(false);
 
   const load=async()=>{setError("");try{const result=await request("/api/platform/pos-designer-fixed");setData(result);setLayout(normalize(result.draft))}catch(err){setError(err.message)}};
   useEffect(()=>{load()},[]);
