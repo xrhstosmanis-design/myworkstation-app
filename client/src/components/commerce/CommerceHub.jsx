@@ -16,7 +16,7 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[]}){
+export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [activeModules,setActiveModules]=useState(readActive);
   const [catalog,setCatalog]=useState([]);
   const [tab,setTab]=useState("modules");
@@ -37,7 +37,7 @@ export default function CommerceHub({api,stores=[]}){
   const [error,setError]=useState("");
   const active=new Set(activeModules);
 
-  useEffect(()=>{if(!storeId&&stores[0])setStoreId(stores[0].id)},[stores,storeId]);
+  useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,storeId,activeStoreId]);
   useEffect(()=>{
     const onModules=e=>setActiveModules(e.detail?.activeModules||readActive());
     window.addEventListener("myworkstation:modules-updated",onModules);
