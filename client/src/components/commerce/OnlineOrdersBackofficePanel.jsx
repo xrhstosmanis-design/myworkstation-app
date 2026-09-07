@@ -23,7 +23,7 @@ function LinkSummary({order}){
   return <div className="online-reconciliation">{order.integrity?.issues?.length>0&&<div className="online-integrity-alert"><AlertTriangle/><div><b>ΠΙΘΑΝΟ DUPLICATE — απαιτείται χειροκίνητος έλεγχος</b><span>{order.integrity.issues.join(' · ')}. Δεν έγινε αυτόματη διαγραφή ή διόρθωση.</span></div></div>}<div className="online-reconciliation-title"><b>Παραγγελία → Πώληση → Φορολογική → EFTPOS → Απόθεμα</b><span>Κάθε κόκκινος κρίκος χρειάζεται συμφωνία πριν το go-live.</span></div><div className="online-link-grid">{nodes.map(({Icon,label,ok,warn,value,detail})=><article className={ok?'link-ok':warn?'link-warn':'link-missing'} key={label}><Icon/><span>{label}</span><b>{value}</b><small>{detail}</small><i>{ok?'OK':warn?'ΑΝΑΜΟΝΗ':'ΛΕΙΠΕΙ'}</i></article>)}</div></div>;
 }
 
-export default function OnlineOrdersBackofficePanel({api}){
+export default function OnlineOrdersBackofficePanel({api,activeStoreId=""}){
   const [managedStores,setManagedStores]=useState([]);
   const [storeId,setStoreId]=useState("");
   const [rows,setRows]=useState([]);
@@ -46,12 +46,12 @@ export default function OnlineOrdersBackofficePanel({api}){
         const realKat=stores.find(store=>store.id!==TEST_STORE_ID&&/ΚΥΛΙΚΕΙΟ\s*ΚΑΤ/i.test(String(store.name||"")));
         const preferred=realKat||stores.find(store=>store.id===TEST_STORE_ID)||stores[0]||null;
         setStoreId(preferred?.id||"");
-        if(!preferred)setError("Δεν βρέθηκε κατάστημα με Online Παραγγελίες.");
+        if(!preferred)setError(activeStoreId?"Δεν υπάρχουν Online Παραγγελίες για το επιλεγμένο κατάστημα.":"Επίλεξε κατάστημα για Online Παραγγελίες.");
       })
       .catch(e=>{if(active){setManagedStores([]);setStoreId("");setError(e?.message||"Δεν ήταν δυνατή η φόρτωση των καταστημάτων Online Παραγγελιών.")}})
       .finally(()=>{if(active)setStoreLoading(false)});
     return()=>{active=false};
-  },[api]);
+  },[api,activeStoreId]);
 
   const selectedStore=useMemo(()=>managedStores.find(store=>store.id===storeId)||null,[managedStores,storeId]);
 
