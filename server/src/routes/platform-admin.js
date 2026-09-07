@@ -409,6 +409,9 @@ router.get("/companies/:companyId/stores/:storeId/installation-terminals",async(
   }catch(error){next(error)}
 });
 
+router.post("/companies/:companyId/stores/:storeId/installation-terminals/:terminalId/inspect",async(req,res,next)=>{
+  try{await ensureInstallationTables();const store=await installationStore(req.params.companyId,req.params.storeId);const rows=await prisma.$queryRaw`SELECT * FROM "StoreInstallationTerminal" WHERE "id"=${req.params.terminalId} AND "companyId"=${store.companyId} AND "storeId"=${store.id} AND "active"=TRUE LIMIT 1`;const terminal=rows[0];if(!terminal)return res.status(404).json({error:"Δεν βρέθηκε ενεργό τερματικό."});const token=jwt.sign({tokenType:"POS_INSPECTOR",isSuperAdmin:true,companyId:store.companyId,storeId:store.id,terminalId:terminal.id,terminalPos:terminal.terminalPos},process.env.JWT_SECRET,{expiresIn:"10m"});await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:`POS_INSPECTION_OPENED:${store.id}:${terminal.terminalPos}`,success:true,deviceName:`${store.name} · ${terminal.terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});res.json({inspectionPath:`/pos-inspection/${encodeURIComponent(store.id)}?token=${encodeURIComponent(token)}`})}catch(error){next(error)}
+});
 router.post("/companies/:companyId/stores/:storeId/installation-terminals",async(req,res,next)=>{
   try{
     await ensureInstallationTables();
