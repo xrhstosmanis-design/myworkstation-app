@@ -206,6 +206,10 @@ async function createOperatorSession(req,row){
   `;
   return sessionId;
 }
+async function assertOperatorTerminalAvailable(operator){
+  const active=(await prisma.$queryRaw`SELECT "terminalPos" FROM "CashShiftSession" WHERE "companyId"=${operator.companyId} AND "storeId"=${operator.storeId} AND "openedBy"=${operator.id} AND "status"='OPEN' AND "terminalPos"<>${operator.terminalPos} ORDER BY "openedAt" DESC LIMIT 1`)[0];
+  if(active){const error=new Error(`Ο χειριστής έχει ήδη ενεργή βάρδια στο ${active.terminalPos}. Μόνο Super Admin μπορεί να εγκρίνει αλλαγή POS.`);error.status=409;throw error;}
+}
 function operatorPermissions(role){
   const common=["CASH_CONTROL","ATTENDANCE","STORE_LEDGER"];
   return role==="MANAGER"?[...common,"STORE_LEDGER_REVIEW","TRANSACTION_REVERSAL"]:common;
@@ -302,6 +306,7 @@ router.post("/login/pin",route(async(req,res)=>{
     return res.status(401).json({error:"Λανθασμένο PIN."});
   }
   Object.assign(operator,await resolveLoginTerminal(body.storeId,body.terminalToken,operator.terminalPos));
+  await assertOperatorTerminalAvailable(operator);
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   const operatorSessionId=await createOperatorSession(req,operator);
@@ -339,6 +344,7 @@ router.post("/login/card",route(async(req,res)=>{
     return res.status(401).json({error:"Η κάρτα δεν αναγνωρίστηκε."});
   }
   Object.assign(operator,await resolveLoginTerminal(body.storeId,body.terminalToken,operator.terminalPos));
+  await assertOperatorTerminalAvailable(operator);
   await clearLoginFailures(body.storeId,subjectKey);
   await prisma.$executeRaw`UPDATE "StoreOperatorCredential" SET "lastLoginAt"=NOW() WHERE "id"=${operator.id}`;
   const operatorSessionId=await createOperatorSession(req,operator);
