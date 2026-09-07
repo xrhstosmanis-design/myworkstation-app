@@ -134,3 +134,5 @@
 - 2026-09-07: Η οθόνη ΚΑΤ ορίστηκε ως δεσμευτικό POS reference: γρήγορα σε δύο στήλες αριστερά, συναλλαγή στο κέντρο, keypad δεξιά, κατηγορίες κάτω και πληρωμές στη βάση. Η Surface διόρθωση δεν επιτρέπει responsive αναδιάταξη αυτών των περιοχών.
 
 - 2026-09-07: LAB/KAT visual comparison found the actual POS fault: JSX rendered `standard-quick` while CSS targeted `standard-quick-panel` / `standard-quick-grid`. The correction applies the real two-column quick-key layout styles to the rendered terminal DOM. CI/Render and screenshot verification remain required.
+
+- 2026-09-07: Live LAB screenshot diagnosis: permission `leftKeys=false` hid the fixed quick-key panel, causing the sale panel and keypad to shift columns. Correction keeps the KAT left panel structurally visible on every terminal; permissions never alter POS geometry. CI/Render/screenshot gate pending.
