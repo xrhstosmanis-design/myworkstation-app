@@ -22,7 +22,7 @@ function applyPosPermissionStyle(access){
  if(!style){style=document.createElement("style");style.id=POS_PERMISSION_STYLE_ID;document.head.appendChild(style)}
  if(!access){style.textContent="";return}
  const rules=[];
- if(!access.leftKeys)rules.push(".compact-store-mode .standard-quick{display:none!important}");
+ // Quick keys are part of the fixed KAT terminal geometry; permission controls editing, never visibility.
  if(!access.stockPos)rules.push(".compact-store-mode .standard-table-head>:nth-child(3),.compact-store-mode .standard-line>:nth-child(3),.compact-store-mode .pos-product-facts>:nth-child(3){display:none!important}");
  if(!access.customersPos)rules.push(".compact-store-mode .customer-button{display:none!important}");
  if(!access.changeRetail)rules.push(".compact-store-mode .line-price-action{pointer-events:none!important;cursor:default!important}.compact-store-mode .line-price-action svg{display:none!important}");
