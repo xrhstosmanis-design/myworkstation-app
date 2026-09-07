@@ -54,6 +54,21 @@
 }
 .mws-standard-pos .standard-keypad > .clear-money { grid-row: 4; min-height: 42px; }
 
+
+/* The 14 category keys must never be cut off horizontally. Desktop POS uses a fixed 7 × 2 grid. */
+.mws-standard-pos .standard-category-strip > div {
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  grid-auto-flow:row;
+  grid-auto-columns:auto;
+  justify-content:stretch;
+  overflow:hidden;
+}
+.mws-standard-pos .standard-category-strip > div > button { width:auto; min-width:0; }
+@media (max-width: 1150px) and (min-width: 851px) {
+  .mws-standard-pos .standard-category-strip > div { grid-template-columns:repeat(7,minmax(0,1fr)); }
+  .mws-standard-pos .standard-category-strip > div > button { font-size:calc(10px * var(--pos-button-font) * var(--pos-text-scale)); padding-left:20px; }
+}
 .mws-standard-pos .standard-action-bar {
   flex: 0 0 auto;
   grid-template-columns: repeat(10, minmax(62px, 1fr)) minmax(190px, 2.25fr);
