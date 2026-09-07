@@ -65,7 +65,7 @@ router.post("/sale-list-deletions",async(req,res,next)=>{
 router.get("/sale-deletions",requireManagement,async(req,res,next)=>{
   try{
     const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
-    const rows=await prisma.$queryRaw`
+    const kioskRows=await prisma.$queryRaw`
       SELECT a."id",a."createdAt",a."eventType",a."productId",a."productName",a."sku",a."quantity",a."unitPrice",a."reason",a."shiftId",a."actorName",a."details",
         s."name" AS "storeName",p."salePrice",c."name" AS "categoryName",mp."subcategoryName"
       FROM "KioskAuditEvent" a
@@ -78,8 +78,27 @@ router.get("/sale-deletions",requireManagement,async(req,res,next)=>{
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL OR COALESCE(a."productName",'') ILIKE ${text} OR COALESCE(a."sku",'') ILIKE ${text})
       ORDER BY a."createdAt" DESC LIMIT 10000`;
-    const items=rows.map(r=>({...r,quantity:n(r.quantity),unitPrice:n(r.unitPrice),salePrice:n(r.salePrice),lineTotal:n(r.quantity)*n(r.unitPrice)}));
-    res.json({items,count:items.length,totalValue:items.reduce((a,r)=>a+r.lineTotal,0),auditFromNow:true});
+    const posRows=await prisma.$queryRaw`
+      SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorName",a."details",a."storeId",s."name" AS "storeName"
+      FROM "PosSaleActionAudit" a
+      LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
+      WHERE a."companyId"=${companyId} AND a."actionType" IN ('CART_ITEM_REMOVE','CART_CANCEL')
+        AND a."createdAt">=${from} AND a."createdAt"<${to}
+        AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
+      ORDER BY a."createdAt" DESC LIMIT 10000`;
+    const fromKiosk=kioskRows.map(r=>({...r,sourceType:"KioskAuditEvent",quantity:n(r.quantity),unitPrice:n(r.unitPrice),salePrice:n(r.salePrice),lineTotal:n(r.quantity)*n(r.unitPrice)}));
+    const fromPos=posRows.flatMap(r=>{
+      const details=r.details&&typeof r.details==="object"?r.details:{};
+      const rawItems=Array.isArray(details.items)&&details.items.length?details.items:[details];
+      return rawItems.map((item,index)=>{
+        const productName=item.productName||item.name||details.productName||details.name||"Μη αναγνωρισμένο είδος";
+        const sku=item.sku||item.productSku||details.sku||details.productSku||null;
+        const quantity=n(item.quantity??details.quantity??1),unitPrice=n(item.unitPrice??item.price??item.effectiveUnitPrice??details.unitPrice??details.price??details.effectiveUnitPrice);
+        return {id:`pos-${r.id}-${index}`,createdAt:r.createdAt,eventType:r.actionType,productId:item.productId||details.productId||null,productName,sku,quantity,unitPrice,salePrice:unitPrice,lineTotal:quantity*unitPrice,reason:r.reason||null,shiftId:details.sessionId||null,actorName:r.actorName||details.actorName||"—",details,storeName:r.storeName||"—",sourceType:"PosSaleActionAudit"};
+      });
+    }).filter(r=>!text||`${r.productName} ${r.sku||""}`.toLocaleLowerCase("el-GR").includes(String(q).toLocaleLowerCase("el-GR")));
+    const items=[...fromKiosk,...fromPos].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10000);
+    res.json({items,count:items.length,totalValue:items.reduce((a,r)=>a+r.lineTotal,0),sources:["KioskAuditEvent","PosSaleActionAudit"]});
   }catch(error){next(error)}
 });
 

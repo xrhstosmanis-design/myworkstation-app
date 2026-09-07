@@ -100,8 +100,9 @@ router.get("/stocktakes",async(req,res,next)=>{try{
   res.json({items,count:items.length,totalDifferenceValue:items.reduce((a,r)=>a+n(r.differenceValue),0)});
 }catch(error){next(error)}});
 
-router.get("/stock-snapshot",async(req,res,next)=>{try{
+async function stockSnapshot(req,res,{itemOnly=false}={}){
   const {companyId,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
+  if(itemOnly&&!q)return res.status(400).json({error:"Γράψε είδος, SKU ή barcode για στιγμιότυπο ανά είδος."});
   const snapshotAt=new Date(to.getTime()-1);
   const rows=await prisma.$queryRaw`
     WITH qty AS (
@@ -125,8 +126,10 @@ router.get("/stock-snapshot",async(req,res,next)=>{try{
       AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
     ORDER BY p."name",s."name" LIMIT 10000`;
   const items=rows.map(r=>{const quantity=n(r.quantity),salePrice=n(r.salePrice),purchasePrice=n(r.purchasePrice),vatRate=n(r.vatRate),saleNet=salePrice/(1+vatRate/100);return {...r,quantity,salePrice,purchasePrice,saleValue:quantity*salePrice,costValue:quantity*purchasePrice,marginNet:saleNet?((saleNet-purchasePrice)/saleNet)*100:0}});
-  res.json({snapshotAt,items,count:items.length,totalSaleValue:items.reduce((a,r)=>a+r.saleValue,0),totalCostValue:items.reduce((a,r)=>a+r.costValue,0),ledgerBased:true});
-}catch(error){next(error)}});
+  res.json({snapshotAt,items,count:items.length,totalSaleValue:items.reduce((a,r)=>a+r.saleValue,0),totalCostValue:items.reduce((a,r)=>a+r.costValue,0),ledgerBased:true,itemScoped:itemOnly});
+}
+router.get("/stock-snapshot",async(req,res,next)=>{try{await stockSnapshot(req,res)}catch(error){next(error)}});
+router.get("/item-snapshot",async(req,res,next)=>{try{await stockSnapshot(req,res,{itemOnly:true})}catch(error){next(error)}});
 
 router.get("/stock-stats",async(req,res,next)=>{try{
   const {companyId,from,to,storeId,q}=filters(req),text=q?`%${q}%`:null;
