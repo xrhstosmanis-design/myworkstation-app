@@ -1,3 +1,4 @@
+import StoreOperatorApp from "../store/StoreOperatorApp.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {LogOut,RefreshCw,ShoppingCart,WalletCards} from "lucide-react";
 import "./commerce-hub.css";
@@ -12,7 +13,7 @@ const fallbackLayout={title:"OPERATOR POS",productColumns:6,showSku:true,theme:{
 const parseStored=key=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
 const priceBadge=source=>source==="WHOLESALE"?"Χονδρική":source==="LEAFLET"?"Φυλλάδιο":source==="GIFT"?"Δώρο":"";
 
-export default function CommercialPosApp({api,storeId}){
+function LegacyCommercialPosApp({api,storeId}){
   const [session,setSession]=useState(()=>{const s=parseStored("storeOperatorSession"),u=parseStored("user");return u?.operator===true&&s?.store?.id===storeId?s:null});
   const [directory,setDirectory]=useState(null),[employeeId,setEmployeeId]=useState(""),[pin,setPin]=useState("");
   const [layout,setLayout]=useState(fallbackLayout),[products,setProducts]=useState([]),[category,setCategory]=useState(""),[cart,setCart]=useState([]);
@@ -105,3 +106,7 @@ export default function CommercialPosApp({api,storeId}){
     {customerPanel&&<div className="pos-customer-panel"><section><header><div><small>ΠΕΛΑΤΗΣ ΣΥΝΑΛΛΑΓΗΣ</small><h3>Αναζήτηση πελάτη</h3></div><button onClick={()=>setCustomerPanel(false)}>✕</button></header><form onSubmit={searchCustomers}><input autoFocus value={customerQuery} onChange={e=>setCustomerQuery(e.target.value)} placeholder="Όνομα, ΑΦΜ, τηλέφωνο ή email"/><button disabled={customerBusy}>{customerBusy?"Αναζήτηση…":"Αναζήτηση"}</button></form><button className="pos-customer-none" disabled={customerBusy} onClick={()=>chooseCustomer(null)}>Χωρίς πελάτη</button><div className="pos-customer-results">{customerResults.map(item=><button key={item.id} disabled={customerBusy} onClick={()=>chooseCustomer(item)}><b>{item.name}</b><span>{[item.taxId&&`ΑΦΜ ${item.taxId}`,item.phone,item.email].filter(Boolean).join(" · ")||"Χωρίς επιπλέον στοιχεία"}</span><small>Υπόλοιπο: {money(item.balance)}{item.hasMemberCard?" · Κάρτα loyalty":""}</small></button>)}{customerQuery.trim().length>=2&&!customerBusy&&!customerResults.length&&<div className="pos-customer-empty">Δεν βρέθηκαν ενεργοί πελάτες.</div>}</div></section></div>}
   </div>;
 }
+
+
+// The live Store Mode must use the same KAT runtime, shift control, terminal binding and shared ledger.
+export default function CommercialPosApp(props){return <StoreOperatorApp {...props}/>;}
