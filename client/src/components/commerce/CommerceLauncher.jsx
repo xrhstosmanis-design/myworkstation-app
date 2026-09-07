@@ -38,6 +38,7 @@ const enhanceChildWindows=()=>{
 };
 
 export default function CommerceLauncher(){
+  const supportStoreId=new URLSearchParams(window.location.search).get("supportStore")||"";
   const [visible,setVisible]=useState(false);
   const [mode,setMode]=useState("products");
   const [legacyView,setLegacyView]=useState("operations");
@@ -62,7 +63,7 @@ export default function CommerceLauncher(){
   },[visible]);
   const open=async()=>{
     setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
-    try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
+    try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list.find(store=>store.id===supportStoreId)?.id||list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
   };
   useEffect(()=>{
     const handleOpen=()=>open();
@@ -95,13 +96,13 @@ export default function CommerceLauncher(){
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>{setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
       </div>
-      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>{setMode("legacy");setLegacyView("operations")}}/>:<>
+      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} onClose={()=>{setMode("legacy");setLegacyView("operations")}}/>:<>
         <div className="commerce-mode-switch">
           <button className={legacyView==="operations"?"active":""} onClick={()=>setLegacyView("operations")}>Εμπορικές λειτουργίες</button>
           <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores}/>:<CommerceHub api={request} stores={stores}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
