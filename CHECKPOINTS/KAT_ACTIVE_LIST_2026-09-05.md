@@ -138,3 +138,5 @@
 - 2026-09-07: Live LAB screenshot diagnosis: permission `leftKeys=false` hid the fixed quick-key panel, causing the sale panel and keypad to shift columns. Correction keeps the KAT left panel structurally visible on every terminal; permissions never alter POS geometry. CI/Render/screenshot gate pending.
 
 - 2026-09-07: Η ροή «Κανονική πώληση» / «Delivery / Ετεροχρονισμένη» εμφανίζεται μόνο σε Store Mode POS καταστήματος με ενεργό Online Store και ενεργό Delivery· δεν εξαρτάται από το όνομα ΚΑΤ. Το κουμπί «Κάρτα» συνεχίζει να ελέγχεται αποκλειστικά από το live BackOffice δικαίωμα `cards`, με class-based selector ώστε να μην κρύβεται λάθος ενέργεια.
+
+- 2026-09-07: Η περιοχή κατηγοριών του POS έγινε σταθερό πλέγμα 7×2 για τις 14 θέσεις, χωρίς οριζόντια αποκοπή δεύτερης σειράς σε Windows/Suface desktop οθόνες. Η προσαρμογή παραμένει responsive για μικρότερα πλάτη.
