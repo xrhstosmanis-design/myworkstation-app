@@ -197,6 +197,8 @@ function operatorToken(row,sessionId){
   },process.env.JWT_SECRET,{expiresIn:"12h"});
 }
 async function createOperatorSession(req,row){
+  // One operator may move between terminals, but cannot remain active on two POS terminals.
+  await prisma.$executeRaw`UPDATE "StoreOperatorSession" SET "revokedAt"=NOW() WHERE "operatorId"=${row.id} AND "storeId"=${row.storeId} AND "revokedAt" IS NULL AND "expiresAt">NOW()`;
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
   await prisma.$executeRaw`
