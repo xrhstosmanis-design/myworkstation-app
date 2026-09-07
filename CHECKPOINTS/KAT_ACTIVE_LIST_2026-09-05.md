@@ -136,3 +136,5 @@
 - 2026-09-07: LAB/KAT visual comparison found the actual POS fault: JSX rendered `standard-quick` while CSS targeted `standard-quick-panel` / `standard-quick-grid`. The correction applies the real two-column quick-key layout styles to the rendered terminal DOM. CI/Render and screenshot verification remain required.
 
 - 2026-09-07: Live LAB screenshot diagnosis: permission `leftKeys=false` hid the fixed quick-key panel, causing the sale panel and keypad to shift columns. Correction keeps the KAT left panel structurally visible on every terminal; permissions never alter POS geometry. CI/Render/screenshot gate pending.
+
+- 2026-09-07: Η ροή «Κανονική πώληση» / «Delivery / Ετεροχρονισμένη» εμφανίζεται μόνο σε Store Mode POS καταστήματος με ενεργό Online Store και ενεργό Delivery· δεν εξαρτάται από το όνομα ΚΑΤ. Το κουμπί «Κάρτα» συνεχίζει να ελέγχεται αποκλειστικά από το live BackOffice δικαίωμα `cards`, με class-based selector ώστε να μην κρύβεται λάθος ενέργεια.
