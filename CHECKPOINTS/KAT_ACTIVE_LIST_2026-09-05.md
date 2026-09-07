@@ -65,7 +65,7 @@
 | LAB-01 | Γενικός tenant/store σχεδιασμός χωρίς εξάρτηση από το όνομα ΚΑΤ. | ΟΚ - checkpoint `2026-09-06-myworkstation-lab-online-store` |
 | LAB-02 | Ξεχωριστό Online Store ανά κατάστημα μέσω μοναδικού `publicSlug`, με tenant/store isolation. | ΟΚ - server/client build και 1014 tests PASS |
 | LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
-| LAB-04 | LAB-POS-01 και LAB-POS-02 με κοινή αποθήκη και ξεχωριστά ταμεία/βάρδιες. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
+| LAB-04 | LAB-POS-01 και LAB-POS-02 με κοινή αποθήκη, κοινό store ledger και ξεχωριστά terminal sessions/βάρδιες. Το runtime POS ενοποιήθηκε με του ΚΑΤ· απομένει CI, Render και πραγματική LAB δοκιμή. | ΣΕ ΕΛΕΓΧΟ - PR #560 |
 | LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
 | LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - νέο καθαρό PR από σημερινό main |
 | LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΕΚΚΡΕΜΕΙ - απαιτεί owner-account επιλογή |
@@ -129,3 +129,4 @@
 
 
 - [ ] Πρότυπο POS: αντιγραφή δημοσιευμένης διάταξης σε επιλεγμένα καταστήματα, χωρίς μεταφορά λειτουργικών δεδομένων (PR #556).
+- 2026-09-07: PR #560 αντικαθιστά το legacy generic Commercial POS με το ίδιο StoreOperatorApp/StorePosPanel runtime του ΚΑΤ. Τερματικό = συσκευή μέσω activation token, χειριστής = φορητός με PIN/κάρτα. Κοινή αποθήκη και store-level τζίρος/χρήματα, με ξεχωριστή βάρδια ανά terminal. Αναμονή CI/Render και LAB επιβεβαίωση.
