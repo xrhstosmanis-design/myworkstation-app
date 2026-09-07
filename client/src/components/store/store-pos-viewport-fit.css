@@ -357,3 +357,34 @@
   font-size:12px;
   font-weight:700;
 }
+
+
+/* KAT reference layout: every Windows POS, including Surface, keeps the same
+   three-panel geometry. Text size changes without moving quick keys, keypad,
+   categories or payment controls. */
+@media (min-width: 851px) {
+  .mws-standard-pos .standard-pos-grid {
+    grid-template-columns: minmax(180px, 14%) minmax(0, 1fr) minmax(250px, 19%);
+  }
+
+  .mws-standard-pos .standard-quick > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mws-standard-pos .standard-category-strip > div {
+    height: 126px;
+    grid-auto-columns: 150px;
+  }
+
+  .mws-standard-pos .standard-category-strip button {
+    width: 150px;
+  }
+
+  .mws-standard-pos .standard-action-bar {
+    grid-template-columns: repeat(10, minmax(62px, 1fr)) minmax(190px, 2.25fr);
+  }
+
+  .mws-standard-pos .standard-payment-end {
+    grid-column: -2 / -1;
+  }
+}
