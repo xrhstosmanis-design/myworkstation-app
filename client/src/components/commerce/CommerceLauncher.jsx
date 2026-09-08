@@ -67,6 +67,9 @@ export default function CommerceLauncher(){
     // Some shell controls dispatch the opening event more than once.  Never
     // reset the user's active BackOffice tab while the window is already open.
     if(visibleRef.current)return;
+    // Set it synchronously as events can be emitted twice before React commits
+    // the visible state. A second open must not reset the workspace.
+    visibleRef.current=true;
     setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list.find(store=>store.id===supportStoreId)?.id||list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
   };
@@ -95,7 +98,7 @@ export default function CommerceLauncher(){
   if(!authenticated)return null;
   return <>
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
-      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
+      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{visibleRef.current=false;setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
