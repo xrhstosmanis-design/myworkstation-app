@@ -96,14 +96,15 @@ export default function StoreCloudPage({api,store,onBack}){
       </div>
     </div>
 
-    <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
-    <OwnerPendingApprovals api={api} store={store} onChanged={refresh}/>
-
     <div id="backoffice-transactions" className="backoffice-anchor">
       <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>
     </div>
     <div id="backoffice-cash" className="backoffice-anchor">
       <CashControlPanel key={`cash-${version}`} api={api} store={store}/>
+    </div>
+    <div className="store-operations-actions">
+      <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
+      <OwnerPendingApprovals api={api} store={store} onChanged={refresh}/>
     </div>
   </section>;
 }
