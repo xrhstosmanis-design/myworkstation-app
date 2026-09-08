@@ -22,6 +22,12 @@ CI #182: SUCCESS.
 Render: SUCCESS.
 Checkpoint: `docs/checkpoints/PROJECT_CHECKPOINT_2026-08-11_0135_MANAGEMENT_PARAMETERS.md`.
 
+## Automated regression checkpoint — 08/09/2026
+
+Με βάση το τελευταίο `main` (`f2c96e59`), ο production build και το πλήρες server test suite ολοκληρώθηκαν επιτυχώς: **1.021/1.021 tests PASS**. Η επιτυχία αυτή καλύπτει μόνο automated/static contracts· δεν αποτελεί LAB acceptance και δεν αλλάζει την κατάσταση των χειροκίνητων checkbox παρακάτω.
+
+Επιβεβαιώθηκε επίσης ότι τα ενεργά POS promotions και το duplicate SKU/barcode preview υπάρχουν ήδη στο `main`, ώστε να μην δημιουργηθεί δεύτερη υλοποίηση.
+
 ## REMOTE P0 — Πρέπει να κλείσουν πριν πάμε ΚΑΤ
 
 ### 1. Συνολική λειτουργική αποδοχή TEST
