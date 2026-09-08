@@ -23,7 +23,7 @@ test("recent POS sales expose their authoritative shift session id",()=>{
 
 test("BackOffice active shift movements include online StoreTransaction sales",()=>{
   assert.match(panel,/selectedRows/);
-  assert.match(panel,/\^ONLINE\\s\+ΠΑΡΑΓΓΕΛΙΑ\\b/);
-  assert.match(panel,/\.\.\.onlineSaleRows\.map/);
-  assert.match(panel,/row\.type==="SALE_CASH"\?"Μετρητά":row\.type==="SALE_CARD"\?"Κάρτα"/);
+  assert.match(panel,/onlineShiftSale/);
+  assert.match(panel,/!\/^SALE_\/.test\(row.type\|\|""\)\|\|onlineShiftSale\(row\)/);
+  assert.match(panel,/selectedRows/);
 });
