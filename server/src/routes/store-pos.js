@@ -119,7 +119,7 @@ await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId"
       if(paymentRoute){await ensurePaymentRouteAttemptTable(tx);await tx.$executeRaw`INSERT INTO "PaymentDeviceRouteAttempt" ("id","companyId","storeId","saleId","sessionId","terminalPos","channel","fiscalDeviceCode","eftposDeviceCode","role","status","fallbackUsed","amount","idempotencyKey") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${saleId},${open[0].id},${paymentRoute.terminalPos},${paymentRoute.channel},${paymentRoute.fiscalDeviceCode},${paymentRoute.eftposDeviceCode},${paymentRoute.role},'PLANNED',FALSE,${cardAmount},${clientTransactionId})`}
       const inventoryWarnings=[];
       for(const item of items){
-        await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},${item.discount},${item.vatRate},${item.lineTotal})`;
+        await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal","promotionId","promotionType") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},${item.discount},${item.vatRate},${item.lineTotal},${item.promotionId||null},${item.promotionType||null})`;
         const stockResult=await reserveSharedStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:item.quantity,productName:item.name});
         if(stockResult.warning)inventoryWarnings.push(stockResult.warning);
       }

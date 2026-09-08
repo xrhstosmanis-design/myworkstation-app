@@ -249,6 +249,9 @@ const statements=[
 )`,
 `CREATE INDEX IF NOT EXISTS "SaleLine_saleId_idx" ON "SaleLine"("saleId")`,
 `CREATE INDEX IF NOT EXISTS "SaleLine_productId_idx" ON "SaleLine"("productId")`,
+`ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "promotionId" TEXT`,
+`ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "promotionType" TEXT`,
+`CREATE INDEX IF NOT EXISTS "SaleLine_promotionId_idx" ON "SaleLine"("promotionId")`,
 
 `CREATE TABLE IF NOT EXISTS "Payment" (
   "id" TEXT NOT NULL,

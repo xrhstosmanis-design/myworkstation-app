@@ -67,4 +67,25 @@ router.get("/promotions/scoped",async(req,res,next)=>{try{
   res.json({items:rows,count:rows.length});
 }catch(error){next(error)}});
 
+router.get("/promotions/analysis",async(req,res,next)=>{try{
+  const companyId=req.user.companyId;
+  const rows=await prisma.$queryRaw`SELECT pr."id",p."name" AS "productName",pr."promotionType",pr."active",pr."validFrom",pr."validUntil",
+    COUNT(DISTINCT sl."saleId") FILTER (WHERE s."id" IS NOT NULL AND sl."quantity">0)::int AS "salesCount",
+    COALESCE(SUM(CASE WHEN s."id" IS NOT NULL AND sl."quantity">0 THEN sl."quantity" ELSE 0 END),0) AS "soldQuantity",
+    COALESCE(SUM(CASE WHEN s."id" IS NOT NULL AND sl."quantity">0 THEN sl."lineTotal" ELSE 0 END),0) AS "salesAmount",
+    COALESCE(SUM(CASE WHEN s."id" IS NOT NULL AND sl."quantity">0 THEN sl."discount" ELSE 0 END),0) AS "discountAmount",
+    COALESCE(SUM(CASE WHEN s."id" IS NOT NULL AND sl."quantity"<0 THEN -sl."quantity" ELSE 0 END),0) AS "returnedQuantity",
+    COALESCE(SUM(CASE WHEN s."id" IS NOT NULL AND sl."quantity"<0 THEN -sl."lineTotal" ELSE 0 END),0) AS "returnedAmount"
+    FROM "PriceCatalogPromotion" pr
+    JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
+    LEFT JOIN "SaleLine" sl ON sl."promotionId"=pr."id"
+    LEFT JOIN "Sale" s ON s."id"=sl."saleId" AND s."companyId"=pr."companyId" AND s."status"='COMPLETED'
+    WHERE pr."companyId"=${companyId}
+    GROUP BY pr."id",p."name"
+    ORDER BY "salesAmount" DESC,pr."validFrom" DESC
+    LIMIT 1000`;
+  const totals=rows.reduce((sum,row)=>({salesCount:sum.salesCount+Number(row.salesCount||0),soldQuantity:sum.soldQuantity+Number(row.soldQuantity||0),salesAmount:sum.salesAmount+Number(row.salesAmount||0),discountAmount:sum.discountAmount+Number(row.discountAmount||0),returnedQuantity:sum.returnedQuantity+Number(row.returnedQuantity||0),returnedAmount:sum.returnedAmount+Number(row.returnedAmount||0)}),{salesCount:0,soldQuantity:0,salesAmount:0,discountAmount:0,returnedQuantity:0,returnedAmount:0});
+  res.json({items:rows,totals,captureStartsNow:true,note:"Η ανάλυση συνδέει μόνο πωλήσεις που καταγράφηκαν με συγκεκριμένο promotionId. Παλαιότερες πωλήσεις δεν αποδίδονται αναδρομικά σε προσφορά."});
+}catch(error){next(error)}});
+
 export default router;
