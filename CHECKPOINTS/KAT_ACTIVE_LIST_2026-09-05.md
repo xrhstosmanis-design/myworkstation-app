@@ -123,6 +123,8 @@
 
 - 2026-09-07: LAB invoice-check readiness checkpoint added. Existing Super Admin Checks & Analytics and invoice flows were verified; no duplicate page created. End-to-end LAB PASS remains pending user execution.
 
+- 2026-09-08: DEV-15 rollout backup/rollback gate added. Existing backup/restore and installer tests were reused; no duplicate backup engine created. LAB execution remains pending.
+
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
 Το ΚΑΤ είναι έτοιμο μόνο όταν οι κρίσιμες ροές ολοκληρώνονται χωρίς διπλή πώληση, διπλή απόδειξη, λάθος stock, οικονομική απόκλιση, pending fiscalization ή μη αντιστοιχισμένο Audit/Video συμβάν.
