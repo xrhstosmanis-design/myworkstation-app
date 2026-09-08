@@ -101,6 +101,8 @@
 
 ## Τελευταίο checkpoint
 
+- 2026-09-08: MOD-02 resilience guard κρατά ενεργή την οθόνη Προσφορών όταν η προαιρετική read-only ανάλυση δεν είναι προσωρινά διαθέσιμη.
+
 - 2026-09-08: MOD-02 schema guard προστέθηκε ώστε η read-only ανάλυση προσφορών να προετοιμάζει additive τα πεδία των νέων γραμμών πώλησης πριν από τον υπολογισμό.
 
 - PR #525: ελληνικοί πίνακες και αξιόπιστα φίλτρα - CI #1434 πράσινο - squash merge `f8f3be98`.
@@ -124,8 +126,6 @@
 - 2026-09-06: PR #555 fixes MOD-01 promotion center undefined-list runtime error; checkpoint and user screenshot recorded. CI #1500 failed because the active-list update was not included in the validator-visible diff; rerun required.
 
 - 2026-09-07: LAB invoice-check readiness checkpoint added. Existing Super Admin Checks & Analytics and invoice flows were verified; no duplicate page created. End-to-end LAB PASS remains pending user execution.
-
-- 2026-09-08: DEV-15 rollout backup/rollback gate added. Existing backup/restore and installer tests were reused; no duplicate backup engine created. LAB execution remains pending.
 
 ## Κριτήριο ολοκλήρωσης πιλοτικού ΚΑΤ
 
