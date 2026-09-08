@@ -168,3 +168,5 @@
 - 2026-09-08: Η δοκιμή read-only Super Admin έφτασε στο ασφαλές inspection link, αλλά ο module guard δεν αναγνώριζε το storeId στη δημόσια inspection διαδρομή. Διορθώθηκε χωρίς διεύρυνση πρόσβασης.
 
 - 2026-09-08: Μετά από δοκιμή LAB, ο read-only έλεγχος POS Super Admin αφαιρέθηκε από την ορατή διεπαφή επειδή δεν προσφέρει χρήσιμη λειτουργία. Δεν αλλάζουν PIN/κάρτες, βάρδιες, ταμεία ή πωλήσεις.
+
+- 2026-09-08: LAB Fiscal DRY RUN μπλοκαρίστηκε επειδή η ολοκληρωμένη πώληση μετρητών δεν κατέγραφε POS/RBS route. Προστέθηκε καταγραφή fiscal-only route για cash πώληση όταν υπάρχει ενεργό StoreFiscalDevice mapping, με `eftposDeviceCode=NOT_APPLICABLE`. Δεν στέλνεται εντολή σε RBS/CapDriver και απαιτούνται CI + νέα LAB δοκιμή.
