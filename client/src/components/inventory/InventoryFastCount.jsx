@@ -47,11 +47,31 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     if (current.status === "DRAFT") barcodeRef.current?.focus();
   }, [current.id, current.status]);
 
+  useEffect(() => {
+    const productCreated = async (event) => {
+      const productId = event.detail?.id;
+      if (!productId || current.status !== "DRAFT") return;
+      try {
+        await api(`/api/inventory-v2/stocktakes/${current.id}/lines`, {
+          method: "POST",
+          body: JSON.stringify({ productId }),
+        });
+        await reload(current.id);
+        setLookup("");
+        setTimeout(() => barcodeRef.current?.focus());
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+    window.addEventListener("mws:product-created", productCreated);
+    return () => window.removeEventListener("mws:product-created", productCreated);
+  }, [api, current.id, current.status, reload, setError]);
+
   const choose = (line) => {
     setSelected(line);
     setMatches([]);
     setLookup(line.barcode || line.sku || line.name);
-    setQuantity(line.countedQuantity === null ? "1" : String(line.countedQuantity));
+    setQuantity("1");
     setTimeout(() => {
       quantityRef.current?.focus();
       quantityRef.current?.select();
@@ -80,11 +100,12 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     setSaving(true);
     setError("");
     try {
+      const previous = selected.countedQuantity === null ? 0 : n(selected.countedQuantity);
       await api(`/api/inventory-v2/stocktakes/${current.id}/count`, {
         method: "POST",
         body: JSON.stringify({
           lineId: selected.id,
-          quantity: Number(quantity),
+          quantity: previous + Number(quantity),
           expectedVersion: selected.countVersion,
           clientEventId: crypto.randomUUID(),
           source: "SCANNER",
@@ -140,7 +161,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               </span>
             </label>
             <label>
-              <b>2. Ποσότητα</b>
+              <b>2. Νέα ποσότητα που βρήκες</b>
               <span className="inv2-quantity-row">
                 <input
                   ref={quantityRef}
@@ -166,7 +187,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               <span>Απόθεμα {selected.expectedQuantity}</span>
               <span>Αγορά {euro(selected.unitCost)}</span>
               <span>Λιανική {euro(selected.salePrice)}</span>
-              {selected.countedQuantity !== null && <strong>Υπάρχει καταμέτρηση: {selected.countedQuantity}</strong>}
+              {selected.countedQuantity !== null && <strong>Προηγούμενα {selected.countedQuantity} + νέα {n(quantity)} = σύνολο {n(selected.countedQuantity) + n(quantity)}</strong>}
             </div>
           )}
           {matches.length > 1 && (
