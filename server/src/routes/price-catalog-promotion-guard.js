@@ -66,7 +66,7 @@ router.get("/promotions/scoped",async(req,res,next)=>{try{
     JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
     LEFT JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
     LEFT JOIN "Store" s ON s."id"=ps."storeId" AND s."companyId"=pr."companyId"
-    WHERE pr."companyId"=\${companyId}
+    WHERE pr."companyId"=${companyId}
     GROUP BY pr."id",p."name",p."sku"
     ORDER BY pr."validFrom" DESC,pr."createdAt" DESC LIMIT 1000`;
   res.json({items:rows,count:rows.length});
