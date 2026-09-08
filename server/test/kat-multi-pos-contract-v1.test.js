@@ -38,11 +38,13 @@ test("one KAT POS cannot close another terminal shift",()=>{
   assert.match(e2e,/Closing POS-1 closed or hid POS-2 shift/);
 });
 
-test("BackOffice aggregates every open terminal shift instead of defaulting to MAIN",()=>{
+test("BackOffice keeps every open terminal available but shows one selected shift at a time",()=>{
   assert.match(ledger,/isBackoffice=req\.user\?\.tokenType!=="STORE_OPERATOR"/);
   assert.match(ledger,/openSessions:openRows/);
   assert.match(ledger,/"sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
   assert.match(backoffice,/data\?\.openSessions\?\.length/);
-  assert.match(backoffice,/Χειριστής \/ Terminal/);
-  assert.match(backoffice,/όλα τα ενεργά terminals/);
+  assert.match(backoffice,/Ενεργά ταμεία · πάτησε τη βάρδια που θέλεις/);
+  assert.match(backoffice,/selectedSessionId/);
+  assert.match(backoffice,/selectedRows/);
+  assert.match(backoffice,/Πωλήσεις βάρδιας ανά κατηγορία/);
 });
