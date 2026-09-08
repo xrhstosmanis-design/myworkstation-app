@@ -14,7 +14,9 @@ export default function SmartProductEntryBridge({api,stores=[]}){
     setOptions(data);setDraft(d=>({...d,sku:data.nextSku||d.sku,categoryId:d.categoryId||data.categories?.[0]?.id||"",vatDepartmentId:d.vatDepartmentId||data.vats?.[0]?.id||"",vatRate:d.vatRate||String(data.vats?.[0]?.vatRate??13)}));
     return data;
   };
-  const begin=async()=>{setOpen(true);setError("");setMessage("");setCreator(null);setDraft(emptyDraft());try{await loadOptions()}catch(e){setError(e.message)}};
+  const begin=async(barcode="")=>{setOpen(true);setError("");setMessage("");setCreator(null);setDraft({...emptyDraft(),barcode});try{const data=await loadOptions();setDraft(d=>({...d,barcode}));if(barcode.length>=6)setTimeout(()=>lookupBarcode(barcode,data),0)}catch(e){setError(e.message)}};
+
+  const lookupBarcode=async(code,knownOptions=options)=>{setLooking(true);try{const data=await api(`/api/owner-products/smart-entry/barcode/${encodeURIComponent(code)}`);if(!data.found){setMessage("Το barcode δεν βρέθηκε online. Συμπλήρωσε τα στοιχεία χειροκίνητα.");return}const p=data.product||{};let categoryId="";if(p.categoryName)categoryId=knownOptions.categories.find(c=>String(c.name).toLocaleLowerCase("el")===String(p.categoryName).toLocaleLowerCase("el"))?.id||"";setDraft(d=>({...d,name:p.name||d.name,categoryId:categoryId||d.categoryId}));setMessage("Βρέθηκαν διαθέσιμα στοιχεία. Έλεγξέ τα πριν την καταχώρηση.")}catch(e){setError(e.message)}finally{setLooking(false)}};
 
   useEffect(()=>{
     const capture=event=>{
@@ -23,7 +25,8 @@ export default function SmartProductEntryBridge({api,stores=[]}){
       if(!button.closest(".kiosk-shell"))return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();begin();
     };
-    document.addEventListener("click",capture,true);return()=>document.removeEventListener("click",capture,true);
+    const external=event=>begin(String(event.detail?.barcode||""));
+    document.addEventListener("click",capture,true);window.addEventListener("mws:new-product",external);return()=>{document.removeEventListener("click",capture,true);window.removeEventListener("mws:new-product",external)};
   },[]);
 
   const lookup=async()=>{

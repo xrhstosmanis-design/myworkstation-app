@@ -1,14 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Boxes,
   Download,
   Printer,
   RefreshCw,
-  Search,
   Smartphone,
 } from "lucide-react";
 import "./inventory-v2-center.css";
-import { matchesGreekSearch } from "../../utils/greek-search.js";
+import InventoryFastCount from "./InventoryFastCount.jsx";
 const num = (v) => Number(v || 0),
   euro = (v) => `${num(v).toFixed(2)} €`;
 export default function InventoryV2Center({
@@ -26,19 +25,17 @@ export default function InventoryV2Center({
     [selectedZones, setSelectedZones] = useState([]),
     [grant, setGrant] = useState(null),
     [finalSummary, setFinalSummary] = useState(null),
-    [query, setQuery] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const visible = useMemo(() => {
-    return (current?.lines || []).filter(
-      (x) => matchesGreekSearch(query, [x.name, x.sku, x.barcode]),
-    );
-  }, [current, query]);
   const loadList = async () =>
       setStocktakes(await api("/api/inventory-v2/stocktakes")),
     open = async (id) => {
       const result = await api(`/api/inventory-v2/stocktakes/${id}`);
       setCurrent(result);
+      if (result.status === "FINALIZED") {
+        const report = await api(`/api/inventory-v2/stocktakes/${id}/audit`);
+        setFinalSummary(report.summary);
+      } else setFinalSummary(null);
       if (result.storeId && result.storeId !== storeId)
         await loadZones(result.storeId);
     };
@@ -118,23 +115,6 @@ export default function InventoryV2Center({
       setError(x.message);
     } finally {
       setBusy(false);
-    }
-  };
-  const count = async (line, value) => {
-    try {
-      await api(`/api/inventory-v2/stocktakes/${current.id}/count`, {
-        method: "POST",
-        body: JSON.stringify({
-          lineId: line.id,
-          quantity: Number(value),
-          expectedVersion: line.countVersion,
-          clientEventId: crypto.randomUUID(),
-          source: "BACKOFFICE",
-        }),
-      });
-      await open(current.id);
-    } catch (x) {
-      setError(x.message);
     }
   };
   const finalize = async () => {
@@ -316,12 +296,13 @@ export default function InventoryV2Center({
       {error && <div className="op-alert error">{error}</div>}
       {finalSummary && (
         <div className="inv2-final-summary">
-          <b>Η απογραφή οριστικοποιήθηκε</b>
-          <span>
-            {finalSummary.lineCount} είδη · διαφορά{" "}
-            {finalSummary.totalDifference} · αξία διαφοράς{" "}
-            {euro(finalSummary.totalDifferenceValue)}
-          </span>
+          <div><b>Αποτέλεσμα Απογραφής</b><small>{finalSummary.countedCount} από {finalSummary.lineCount} είδη</small></div>
+          <span><small>Καταμέτρηση</small><b>{finalSummary.countedQuantity}</b></span>
+          <span><small>Συνολική διαφορά</small><b>{finalSummary.totalDifference}</b></span>
+          <span className="shortage"><small>Έλλειμμα</small><b>{finalSummary.shortageQuantity} · {euro(finalSummary.shortageCostValue)}</b></span>
+          <span className="surplus"><small>Πλεόνασμα</small><b>{finalSummary.surplusQuantity} · {euro(finalSummary.surplusCostValue)}</b></span>
+          <span><small>Λιανική αξία</small><b>{euro(finalSummary.totalRetailValue)}</b></span>
+          <span><small>Αξία κόστους</small><b>{euro(finalSummary.totalCostValue)}</b></span>
           <button onClick={() => setFinalSummary(null)}>Κλείσιμο</button>
         </div>
       )}
@@ -507,15 +488,6 @@ export default function InventoryV2Center({
                   </button>
                 </div>
               </header>
-              <div className="inv2-search">
-                <Search />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Barcode, SKU ή περιγραφή"
-                />
-                <span>{visible.length} είδη</span>
-              </div>
               {current.status === "DRAFT" && (
                 <form className="inv2-grant" onSubmit={createGrant}>
                   <b>QR/PIN καταμετρητή</b>
@@ -547,71 +519,7 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              <div className="inv2-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Γραμμωτός κώδικας</th>
-                      <th>Περιγραφή</th>
-                      <th>Απόθεμα</th>
-                      <th>Καταμέτρηση</th>
-                      <th>Διαφορά</th>
-                      <th>Αξία απογραφής</th>
-                      <th>Κατάσταση</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((line) => {
-                      const diff =
-                        (line.countedQuantity ?? line.expectedQuantity) -
-                        line.expectedQuantity;
-                      return (
-                        <tr
-                          key={line.id}
-                          className={line.recountRequired ? "recount" : ""}
-                        >
-                          <td>{line.barcode || "—"}</td>
-                          <td>
-                            <b>{line.name}</b>
-                            <small>{line.sku || "—"}</small>
-                          </td>
-                          <td>{line.expectedQuantity}</td>
-                          <td>
-                            {current.status === "DRAFT" ? (
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                defaultValue={line.countedQuantity ?? ""}
-                                onBlur={(e) =>
-                                  e.target.value !== "" &&
-                                  count(line, e.target.value)
-                                }
-                              />
-                            ) : (
-                              line.countedQuantity
-                            )}
-                          </td>
-                          <td>{diff}</td>
-                          <td>
-                            {euro(
-                              (line.countedQuantity ?? line.expectedQuantity) *
-                                line.unitCost,
-                            )}
-                          </td>
-                          <td>
-                            {line.recountRequired
-                              ? "Χρειάζεται επανακαταμέτρηση"
-                              : line.countedQuantity === null
-                                ? "Αναμονή"
-                                : "Μετρήθηκε"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <InventoryFastCount api={api} current={current} reload={open} setError={setError} />
               <footer>
                 <span>
                   <Smartphone />
@@ -619,7 +527,7 @@ export default function InventoryV2Center({
                 </span>
                 {current.status === "DRAFT" && (
                   <button className="primary" onClick={finalize}>
-                    Οριστικοποίηση & ενημέρωση αποθήκης
+                    Οριστικοποίηση & αποτέλεσμα απογραφής
                   </button>
                 )}
               </footer>
