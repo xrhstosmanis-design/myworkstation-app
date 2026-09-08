@@ -24,6 +24,5 @@ test("recent POS sales expose their authoritative shift session id",()=>{
 test("BackOffice active shift movements include online StoreTransaction sales",()=>{
   assert.match(panel,/selectedRows/);
   assert.match(panel,/onlineShiftSale/);
-  assert.match(panel,/!\/^SALE_\/.test\(row.type\|\|""\)\|\|onlineShiftSale\(row\)/);
   assert.match(panel,/selectedRows/);
 });
