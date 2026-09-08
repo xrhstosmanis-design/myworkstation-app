@@ -165,8 +165,7 @@ export default function OwnerProductCenter({api,stores=[]}){
       <button className={tab==="bulk"?"active":""} onClick={()=>setTab("bulk")}><Tag/>Μαζική αλλαγή τιμών</button>
       <button className={tab==="promotions"?"active":""} onClick={()=>setTab("promotions")}><BadgePercent/>Προσφορές</button>
       <button className={tab==="promotion-import"?"active":""} onClick={()=>setTab("promotion-import")}><Upload/>Excel / Barcode</button>
-      <button className={tab==="stocktake"?"active":""} onClick={()=>setTab("stocktake")}><ClipboardList/>Απογραφή</button>
-      <button className={tab==="inventory2"?"active":""} onClick={()=>setTab("inventory2")}><Boxes/>Inventory 2.0</button>
+      <button className={tab==="inventory2"?"active":""} onClick={()=>setTab("inventory2")}><ClipboardList/>Απογραφή</button>
     </div>
     {error&&<div className="op-alert error">{error}</div>}{message&&<div className="op-alert success">{message}</div>}
     {tab==="bulk"&&<form className="op-box op-form" onSubmit={saveBulkPrices}>
