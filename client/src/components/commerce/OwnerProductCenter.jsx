@@ -13,7 +13,7 @@ const localInputDate=value=>{
 };
 
 export default function OwnerProductCenter({api,stores=[]}){
-  const [tab,setTab]=useState("master");
+  const [tab,setTab]=useState(()=>sessionStorage.getItem("mws:owner-products-tab")||"master");
   const [masterQuery,setMasterQuery]=useState("");
   const [masterResults,setMasterResults]=useState([]);
   const [selectedMaster,setSelectedMaster]=useState(null);
@@ -40,6 +40,7 @@ export default function OwnerProductCenter({api,stores=[]}){
   const [message,setMessage]=useState("");
 
   const activeStores=useMemo(()=>stores.filter(s=>s.active!==false),[stores]);
+  useEffect(()=>{sessionStorage.setItem("mws:owner-products-tab",tab)},[tab]);
   const clearStatus=()=>{setError("");setMessage("")};
 
   const searchMaster=async event=>{
