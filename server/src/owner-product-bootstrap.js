@@ -134,7 +134,35 @@ const statements=[
   CONSTRAINT "InventoryCountEvent_line_fkey" FOREIGN KEY ("lineId") REFERENCES "StocktakeLine"("id") ON DELETE CASCADE
 )`,
 `CREATE UNIQUE INDEX IF NOT EXISTS "InventoryCountEvent_client_key" ON "InventoryCountEvent"("stocktakeId","clientEventId") WHERE "clientEventId" IS NOT NULL`,
-`CREATE INDEX IF NOT EXISTS "InventoryCountEvent_stocktake_created_idx" ON "InventoryCountEvent"("stocktakeId","createdAt")`
+`CREATE INDEX IF NOT EXISTS "InventoryCountEvent_stocktake_created_idx" ON "InventoryCountEvent"("stocktakeId","createdAt")`,
+`CREATE TABLE IF NOT EXISTS "StocktakeMovementAdjustment" (
+  "id" TEXT PRIMARY KEY,"stocktakeId" TEXT NOT NULL,"lineId" TEXT NOT NULL,"movementId" TEXT NOT NULL,
+  "quantity" NUMERIC(14,4) NOT NULL,"expectedBefore" NUMERIC(14,4) NOT NULL,"expectedAfter" NUMERIC(14,4) NOT NULL,
+  "movementType" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT "StocktakeMovementAdjustment_stocktake_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE,
+  CONSTRAINT "StocktakeMovementAdjustment_line_fkey" FOREIGN KEY ("lineId") REFERENCES "StocktakeLine"("id") ON DELETE CASCADE,
+  UNIQUE ("stocktakeId","movementId")
+)`,
+`CREATE INDEX IF NOT EXISTS "StocktakeMovementAdjustment_stocktake_created_idx" ON "StocktakeMovementAdjustment"("stocktakeId","createdAt" DESC)`,
+`CREATE OR REPLACE FUNCTION "mws_adjust_live_stocktake_expected"() RETURNS trigger AS $$
+DECLARE adjustment RECORD;
+BEGIN
+  FOR adjustment IN
+    SELECT sl."id" AS "lineId",sl."stocktakeId",sl."expectedQuantity"
+    FROM "StocktakeLine" sl
+    JOIN "Stocktake" st ON st."id"=sl."stocktakeId"
+    WHERE st."storeId"=NEW."storeId" AND st."status"='DRAFT' AND st."liveDuringTrading"=TRUE AND sl."productId"=NEW."productId"
+  LOOP
+    UPDATE "StocktakeLine" SET "expectedQuantity"="expectedQuantity"+NEW."quantity","updatedAt"=NOW() WHERE "id"=adjustment."lineId";
+    INSERT INTO "StocktakeMovementAdjustment" ("id","stocktakeId","lineId","movementId","quantity","expectedBefore","expectedAfter","movementType")
+    VALUES (md5(random()::text||clock_timestamp()::text),adjustment."stocktakeId",adjustment."lineId",NEW."id",NEW."quantity",adjustment."expectedQuantity",adjustment."expectedQuantity"+NEW."quantity",NEW."movementType")
+    ON CONFLICT ("stocktakeId","movementId") DO NOTHING;
+  END LOOP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql`,
+`DROP TRIGGER IF EXISTS "mws_live_stocktake_expected_after_movement" ON "StockMovement"`,
+`CREATE TRIGGER "mws_live_stocktake_expected_after_movement" AFTER INSERT ON "StockMovement" FOR EACH ROW EXECUTE FUNCTION "mws_adjust_live_stocktake_expected"()`
 ];
 
 export async function ensureOwnerProductSchema(){
