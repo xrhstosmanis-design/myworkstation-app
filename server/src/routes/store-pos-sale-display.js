@@ -118,7 +118,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
              COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
              COALESCE((SELECT st."actorName" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
              COALESCE((SELECT json_agg(json_build_object('method',p."method",'amount',p."amount") ORDER BY p."createdAt",p."id") FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json) AS "payments",
-             COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal") ORDER BY l."createdAt",l."id") FROM "SaleLine" l WHERE l."saleId"=s."id"),'[]'::json) AS "lines"
+             COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal",'categoryName',COALESCE(ca."name",'Χωρίς κατηγορία')) ORDER BY l."createdAt",l."id") FROM "SaleLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=s."companyId" LEFT JOIN "ProductCategory" ca ON ca."id"=p."categoryId" WHERE l."saleId"=s."id"),'[]'::json) AS "lines"
       FROM "Sale" s
       LEFT JOIN "Customer" c ON c."id"=s."customerId" AND c."companyId"=s."companyId"
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id}
