@@ -45,7 +45,7 @@ test("supplier payments and other expenses use one StoreTransaction and CashShif
 
 test("Store shift transactions UI is active-shift read-only and does not duplicate payment entry",()=>{
   assert.match(shiftUi,/Κινήσεις βάρδιας/);
-  assert.match(shiftUi,/Αναμενόμενο/);
+  assert.match(shiftUi,/Επιλεγμένη βάρδια/);
   assert.match(shiftUi,/openSession/);
   assert.doesNotMatch(shiftUi,/Με παραστατικό από AI Reader/);
   assert.doesNotMatch(shiftUi,/purchaseDocumentId/);
