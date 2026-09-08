@@ -110,7 +110,7 @@ export function storeTenantAccessAllowed(user,store){
 export function requireStoreModule(moduleKey){
   return async(req,res,next)=>{
     try{
-      const storeId=String(req.body?.storeId||req.params?.storeId||req.path.match(/\/stores\/([^/]+)/)?.[1]||"");
+      const storeId=String(req.body?.storeId||req.params?.storeId||req.path.match(/\/stores\/([^/]+)/)?.[1]||req.path.match(/\/inspection\/([^/]+)/)?.[1]||"");
       if(!storeId)return res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});
       const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,companyId:true}});
       if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
