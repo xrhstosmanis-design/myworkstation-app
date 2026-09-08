@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useRef,useState} from "react";
 import {Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
@@ -40,6 +40,7 @@ const enhanceChildWindows=()=>{
 export default function CommerceLauncher(){
   const supportStoreId=new URLSearchParams(window.location.search).get("supportStore")||"";
   const [visible,setVisible]=useState(false);
+  const visibleRef=useRef(false);
   const [mode,setMode]=useState("products");
   const [legacyView,setLegacyView]=useState("operations");
   const [inventoryStoreId,setInventoryStoreId]=useState("");
@@ -61,7 +62,11 @@ export default function CommerceLauncher(){
     observer.observe(document.body,{childList:true,subtree:true});
     return()=>observer.disconnect();
   },[visible]);
+  useEffect(()=>{visibleRef.current=visible},[visible]);
   const open=async()=>{
+    // Some shell controls dispatch the opening event more than once.  Never
+    // reset the user's active BackOffice tab while the window is already open.
+    if(visibleRef.current)return;
     setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
     try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list.find(store=>store.id===supportStoreId)?.id||list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
   };
