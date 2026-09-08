@@ -9,6 +9,11 @@ const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const id=()=>crypto.randomUUID();
 const n=value=>Number(value||0);
 const round4=value=>Number(Number(value||0).toFixed(4));
+async function ensurePromotionUsageColumns(){
+  await prisma.$executeRawUnsafe(`ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "promotionId" TEXT`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "promotionType" TEXT`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SaleLine_promotionId_idx" ON "SaleLine"("promotionId")`);
+}
 
 function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η διαχείριση προσφορών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});next()}
 router.use(requireAccess);
@@ -68,6 +73,7 @@ router.get("/promotions/scoped",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.get("/promotions/analysis",async(req,res,next)=>{try{
+  await ensurePromotionUsageColumns();
   const companyId=req.user.companyId;
   const rows=await prisma.$queryRaw`SELECT pr."id",p."name" AS "productName",pr."promotionType",pr."active",pr."validFrom",pr."validUntil",
     COUNT(DISTINCT sl."saleId") FILTER (WHERE s."id" IS NOT NULL AND sl."quantity">0)::int AS "salesCount",
