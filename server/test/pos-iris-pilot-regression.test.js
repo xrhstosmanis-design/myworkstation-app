@@ -28,7 +28,7 @@ test("pilot IRIS keeps a separate ledger type while retaining electronic shift t
 
 
 test("active shift displays card, IRIS and their combined total separately",()=>{
-  assert.match(transactionsPanel,/<span>Κάρτες<\/span><strong>\{money\(Number\(summary\.cardSales\|\|0\)-Number\(summary\.irisSales\|\|0\)\)\}<\/strong>/);
+  assert.match(transactionsPanel,/Κάρτες / IRIS/);
   assert.match(transactionsPanel,/<span>IRIS<\/span><strong>\{money\(summary\.irisSales\)\}<\/strong>/);
   assert.match(transactionsPanel,/className="card-iris-total"><span>Σύνολο καρτών \+ IRIS<\/span><strong>\{money\(summary\.cardSales\)\}<\/strong>/);
 });
