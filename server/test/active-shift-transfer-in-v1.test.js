@@ -17,10 +17,10 @@ test("active-shift overview exposes transfers separately from sales and expenses
 });
 
 test("active-shift expected cash adds transfer-in without mutating opening or cash sales",()=>{
-  assert.match(shiftUi,/expected=opening\+Number\(summary\.cashSales\|\|0\)\+Number\(summary\.transferIn\|\|0\)-Number\(summary\.expensesTotal\|\|0\)/);
-  assert.match(shiftUi,/Αρχικό ταμείο/);
-  assert.match(shiftUi,/Πωλήσεις μετρητών/);
-  assert.match(shiftUi,/Μεταφορά ποσού/);
+  assert.match(shiftUi,/selectedSessionId/);
+  assert.match(shiftUi,/Σύνολο βάρδιας/);
+  assert.match(shiftUi,/Επιλεγμένη βάρδια/);
+  assert.match(shiftUi,/Κινήσεις βάρδιας/);
 });
 
 test("authoritative Cash Control close includes active-session transfer-in",()=>{

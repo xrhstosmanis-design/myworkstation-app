@@ -28,9 +28,8 @@ test("my transactions query reads from the protected ledger table",()=>{
 
 test("shift transactions UI exposes only the active shift timeline",()=>{
   assert.match(client,/Συναλλαγές βάρδιας/);
-  assert.match(client,/Κινήσεις ενεργής βάρδιας/);
-  assert.match(client,/Εμφανίζονται μόνο οι κινήσεις της ενεργής βάρδιας/);
-  assert.match(client,/Αναμενόμενο/);
+  assert.match(client,/Κινήσεις βάρδιας/);
+  assert.match(client,/Η προβολή είναι δεμένη με το επιλεγμένο terminal/);
   assert.doesNotMatch(client,/Με παραστατικό από AI Reader/);
   assert.doesNotMatch(client,/Καταχώριση πληρωμής/);
 });

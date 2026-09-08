@@ -7,8 +7,8 @@ const route=fs.readFileSync(new URL("../src/routes/store-transactions.js",import
 
 test("active shift UI is read-only and does not embed payment evidence entry controls",()=>{
   assert.match(ui,/Συναλλαγές βάρδιας/);
-  assert.match(ui,/Κινήσεις ενεργής βάρδιας/);
-  assert.match(ui,/Εμφανίζονται μόνο οι κινήσεις της ενεργής βάρδιας/);
+  assert.match(ui,/Κινήσεις βάρδιας/);
+  assert.match(ui,/Η προβολή είναι δεμένη με το επιλεγμένο terminal/);
   assert.doesNotMatch(ui,/Με παραστατικό από AI Reader/);
   assert.doesNotMatch(ui,/purchaseDocumentId/);
   assert.doesNotMatch(ui,/CASH_SHIFT/);
