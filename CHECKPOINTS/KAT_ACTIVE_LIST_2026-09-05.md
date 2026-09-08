@@ -65,7 +65,7 @@
 | LAB-01 | Γενικός tenant/store σχεδιασμός χωρίς εξάρτηση από το όνομα ΚΑΤ. | ΟΚ - checkpoint `2026-09-06-myworkstation-lab-online-store` |
 | LAB-02 | Ξεχωριστό Online Store ανά κατάστημα μέσω μοναδικού `publicSlug`, με tenant/store isolation. | ΟΚ - server/client build και 1014 tests PASS |
 | LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
-| LAB-04 | LAB-POS-01 και LAB-POS-02: ακριβής διάταξη ΚΑΤ σε κάθε Windows terminal, κοινή αποθήκη και store ledger, ξεχωριστές terminal sessions/βάρδιες. Η BackOffice αρχική προβολή βαρδιών γίνεται ανά επιλεγμένο terminal, με ανάλυση κατηγοριών. | ΣΕ ΕΞΕΛΙΞΗ - PR βαρδιών ανά terminal |
+| LAB-04 | LAB-POS-01 και LAB-POS-02: ακριβής διάταξη ΚΑΤ σε κάθε Windows terminal, κοινή αποθήκη και store ledger, ξεχωριστές terminal sessions/βάρδιες. Η BackOffice αρχική προβολή βαρδιών γίνεται ανά επιλεγμένο terminal, με πτυσσόμενες κινήσεις και ανάλυση κατηγορίας με πάτημα. | ΣΕ ΕΞΕΛΙΞΗ - PR βελτίωσης ταμπλό βαρδιών |
 | LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
 | LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - νέο καθαρό PR από σημερινό main |
 | LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΕΚΚΡΕΜΕΙ - απαιτεί owner-account επιλογή |
@@ -177,3 +177,5 @@
 - 2026-09-08: LAB Fiscal DRY RUN μπλοκαρίστηκε επειδή η ολοκληρωμένη πώληση μετρητών δεν κατέγραφε POS/RBS route. Προστέθηκε καταγραφή fiscal-only route για cash πώληση όταν υπάρχει ενεργό StoreFiscalDevice mapping, με `eftposDeviceCode=NOT_APPLICABLE`. Δεν στέλνεται εντολή σε RBS/CapDriver και απαιτούνται CI + νέα LAB δοκιμή.
 
 - 2026-09-08: LAB-POS-02 δοκιμαστική πώληση `ΝΕΡΟ 1,5LT` με μετρητά `1,00 €` καταγράφηκε στο σωστό terminal, στο Audit και στην κοινή αποθήκη. Η νέα συνέχεια LAB-04 εμφανίζει πρώτα τις ενεργές βάρδιες, επιτρέπει επιλογή ενός terminal χωρίς ανάμειξη κινήσεων και προσθέτει ανάλυση πωλήσεων της επιλεγμένης βάρδιας ανά κατηγορία. Οι ενέργειες πληρωμών παραμένουν χαμηλά στη σελίδα. Αναμονή PR/CI/Render/LAB οπτικής αποδοχής.
+
+- 2026-09-08: Η διάταξη βαρδιών γίνεται συμπαγές ταμπλό: οι αναλυτικές κινήσεις δεν ανοίγουν από μόνες τους και οι κατηγορίες ανοίγουν την ανάλυσή τους με πάτημα. Αναμονή PR/CI/Render/LAB οπτικής αποδοχής.

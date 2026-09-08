@@ -43,8 +43,10 @@ test("BackOffice keeps every open terminal available but shows one selected shif
   assert.match(ledger,/openSessions:openRows/);
   assert.match(ledger,/"sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
   assert.match(backoffice,/data\?\.openSessions\?\.length/);
-  assert.match(backoffice,/Ενεργά ταμεία · πάτησε τη βάρδια που θέλεις/);
+  assert.match(backoffice,/Κέντρο βαρδιών/);
+  assert.match(backoffice,/Ενεργά ταμεία/);
   assert.match(backoffice,/selectedSessionId/);
   assert.match(backoffice,/selectedRows/);
-  assert.match(backoffice,/Πωλήσεις βάρδιας ανά κατηγορία/);
+  assert.match(backoffice,/Πωλήσεις ανά κατηγορία/);
+  assert.match(backoffice,/selectedCategory/);
 });
