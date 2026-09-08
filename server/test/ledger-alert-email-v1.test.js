@@ -13,7 +13,7 @@ test("percentages keep the scoped backend alert but are not an entry control in 
   assert.match(route,/companyId,role:"OWNER"/);
   assert.match(route,/store\.responsibleEmail/);
   assert.doesNotMatch(ui,/id:"PERCENTAGES",label:"Ποσοστά"/);
-  assert.match(ui,/Κινήσεις ενεργής βάρδιας/);
+  assert.match(ui,/Κινήσεις βάρδιας/);
 });
 
 test("every reversal is persisted before its email is attempted",()=>{
