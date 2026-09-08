@@ -21,7 +21,7 @@ export default function InventoryV2Center({
     [selected, setSelected] = useState([]),
     [stocktakes, setStocktakes] = useState([]),
     [current, setCurrent] = useState(null),
-    [storeId, setStoreId] = useState(""),
+    [storeId, setStoreId] = useState(() => sessionStorage.getItem("mws:inventory-store-id") || ""),
     [zones, setZones] = useState([]),
     [selectedZones, setSelectedZones] = useState([]),
     [grant, setGrant] = useState(null),
@@ -34,6 +34,9 @@ export default function InventoryV2Center({
       (x) => matchesGreekSearch(query, [x.name, x.sku, x.barcode]),
     );
   }, [current, query]);
+  useEffect(() => {
+    sessionStorage.setItem("mws:inventory-store-id", storeId);
+  }, [storeId]);
   const loadList = async () =>
       setStocktakes(await api("/api/inventory-v2/stocktakes")),
     open = async (id) => {
