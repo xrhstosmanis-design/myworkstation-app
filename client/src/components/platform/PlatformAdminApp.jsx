@@ -18,6 +18,7 @@ import SuperAdminChecksAnalytics from "./SuperAdminChecksAnalytics.jsx";
 import FiscalBridgeDryRunCenter from "./FiscalBridgeDryRunCenter.jsx";
 import {deviceRoutingFormValues} from "./device-routing-form.js";
 import "./platform-admin.css";
+import "./platform-superadmin-inspection.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
 
