@@ -34,6 +34,16 @@ test("stock report extension replaces the existing stock stats tab without a sec
   assert.match(client,/Margin/);
 });
 
+test("stock report warns clearly about negative stock without blocking sales",()=>{
+  const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsStockV3.js",import.meta.url),"utf8");
+  const css=fs.readFileSync(new URL("../../client/src/components/commerce/kiosk-reports-stock-v3.css",import.meta.url),"utf8");
+  assert.match(client,/ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΑΡΝΗΤΙΚΟΥ ΑΠΟΘΕΜΑΤΟΣ/);
+  assert.match(client,/Η πώληση δεν μπλοκάρεται/);
+  assert.match(client,/kr-negative-stock/);
+  assert.match(css,/kr-stock-negative-alert/);
+  assert.match(css,/kr-negative-stock/);
+});
+
 test("stock report route is mounted before generic reports and bootstrap is loaded",()=>{
   const index=read("src/index.js"),html=fs.readFileSync(new URL("../../client/index.html",import.meta.url),"utf8");
   assert.ok(index.indexOf("kioskReportsStockV3Routes")<index.indexOf("kioskReportsRoutes"));
