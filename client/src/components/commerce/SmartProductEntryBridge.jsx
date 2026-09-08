@@ -76,7 +76,7 @@ export default function SmartProductEntryBridge({api,stores=[]}){
     setBusy(true);setError("");
     try{
       const result=await api("/api/owner-products/smart-entry",{method:"POST",body:JSON.stringify({...draft,barcode:draft.barcode.trim(),vatRate:Number(draft.vatRate||0),costPrice:Number(draft.costPrice||0),salePrice:Number(draft.salePrice||0),initialStock:Number(draft.initialStock||0),storeIds:stores.filter(s=>s.active!==false).map(s=>s.id)})});
-      setMessage(`Το προϊόν καταχωρήθηκε με εσωτερικό κωδικό ${result.sku}.`);setTimeout(()=>{setOpen(false);window.location.reload()},650);
+      setMessage(`Το προϊόν καταχωρήθηκε με εσωτερικό κωδικό ${result.sku}.`);window.dispatchEvent(new CustomEvent("mws:product-created",{detail:result}));setTimeout(()=>setOpen(false),650);
     }catch(e){setError(e.message)}finally{setBusy(false)}
   };
 
