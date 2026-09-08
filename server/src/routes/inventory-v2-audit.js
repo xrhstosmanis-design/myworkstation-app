@@ -16,7 +16,7 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
     const st = await access(req, req.params.stocktakeId);
     if (!st) return res.status(404).json({ error: "Δεν βρέθηκε η απογραφή." });
     const [lines, events] = await Promise.all([
-      prisma.$queryRaw`SELECT sl."id",p."sku",p."name",pb."barcode",c."name" AS "categoryName",sc."name" AS "subcategoryName",z."name" AS "zoneName",sl."expectedQuantity",sl."countedQuantity",sl."unitCost",sl."countedAt",sl."countSource",COALESCE(u."fullName",'—') AS "countedBy" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`,
+      prisma.$queryRaw`SELECT sl."id",p."sku",p."name",pb."barcode",c."name" AS "categoryName",sc."name" AS "subcategoryName",z."name" AS "zoneName",sl."expectedQuantity",sl."countedQuantity",sl."unitCost",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",sl."countedAt",sl."countSource",COALESCE(u."fullName",'—') AS "countedBy" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "StoreProduct" sp ON sp."storeId"=${st.storeId} AND sp."productId"=p."id" LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`,
       prisma.$queryRaw`SELECT "lineId","eventType","previousQuantity","countedQuantity","expectedQuantity","actorName","deviceId","source","createdAt" FROM "InventoryCountEvent" WHERE "stocktakeId"=${st.id} ORDER BY "createdAt","id"`,
     ]);
     const grouped = new Map();
@@ -36,14 +36,17 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
       const expected = n(x.expectedQuantity),
         counted = x.countedQuantity === null ? null : n(x.countedQuantity),
         difference = counted === null ? null : counted - expected,
-        unitCost = n(x.unitCost);
+        unitCost = n(x.unitCost),
+        salePrice = n(x.salePrice);
       return {
         ...x,
         expectedQuantity: expected,
         countedQuantity: counted,
         difference,
         differenceValue: difference === null ? null : difference * unitCost,
+        differenceRetailValue: difference === null ? null : difference * salePrice,
         unitCost,
+        salePrice,
         events: grouped.get(x.id) || [],
       };
     });
@@ -61,17 +64,28 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
         finalizedBy: st.finalizedByName || null,
         snapshot: st.snapshotJson,
       },
-      summary: {
+      summary: (() => {
+        const counted = normalized.filter((x) => x.countedQuantity !== null),
+          shortages = counted.filter((x) => n(x.difference) < 0),
+          surpluses = counted.filter((x) => n(x.difference) > 0),
+          total = (items, field) => items.reduce((sum, x) => sum + n(x[field]), 0);
+        return {
         lineCount: normalized.length,
-        countedCount: normalized.filter((x) => x.countedQuantity !== null)
-          .length,
+        countedCount: counted.length,
         eventCount: events.length,
-        totalDifference: normalized.reduce((s, x) => s + n(x.difference), 0),
-        totalDifferenceValue: normalized.reduce(
-          (s, x) => s + n(x.differenceValue),
-          0,
-        ),
-      },
+        expectedQuantity: total(counted,"expectedQuantity"),
+        countedQuantity: total(counted,"countedQuantity"),
+        totalDifference: total(counted,"difference"),
+        totalDifferenceValue: total(counted,"differenceValue"),
+        totalRetailValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.salePrice),0),
+        totalCostValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.unitCost),0),
+        shortageQuantity: Math.abs(total(shortages,"difference")),
+        shortageCostValue: Math.abs(total(shortages,"differenceValue")),
+        shortageRetailValue: Math.abs(total(shortages,"differenceRetailValue")),
+        surplusQuantity: total(surpluses,"difference"),
+        surplusCostValue: total(surpluses,"differenceValue"),
+        surplusRetailValue: total(surpluses,"differenceRetailValue"),
+      };})(),
       lines: normalized,
     });
   } catch (e) {
