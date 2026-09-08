@@ -1,3 +1,8 @@
+# 2026-09-08 — BackOffice workspace stability
+
+- Keep the Owner BackOffice mounted during catalogue refreshes so navigation, selected stores and unsaved form state do not reset.
+- Deduplicate opening events synchronously; LAB-only verification before user acceptance.
+
 # MyWorkStation ΚΑΤ - Ενιαία ενεργή λίστα
 
 Ενημέρωση: 6 Σεπτεμβρίου 2026
