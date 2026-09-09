@@ -97,6 +97,7 @@ test("stock movements are included in central audit without a video action",()=>
   const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
   assert.match(route,/FROM "StockMovement" m/);
   assert.match(route,/STOCK_MANUAL_ADJUSTMENT/);
+  assert.match(route,/STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή"/);
   assert.match(route,/\.\.\.stockItems/);
   assert.match(route,/StoreOperatorAudit \+ StockMovement/);
   assert.match(client,/canVideo&&r\.sourceType!=="StockMovement"/);
