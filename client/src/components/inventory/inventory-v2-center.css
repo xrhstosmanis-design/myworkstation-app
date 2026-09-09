@@ -72,10 +72,12 @@
   padding: 8px;
   border-radius: 6px;
 }
+.inv2-grant-result{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px;border:2px solid #15956f;border-radius:10px;background:#e9fff7}.inv2-grant-result img{width:180px;height:180px;background:#fff;border:8px solid #fff;border-radius:8px}.inv2-grant-result>div{display:grid;gap:8px}.inv2-grant-pin{font-size:26px;color:#075943}.inv2-grant-result small{font-size:14px}.inv2-grant-result a{font-weight:800}.inv2-grant-actions{display:flex!important;gap:8px;padding:0!important;background:transparent!important}.inv2-grant-actions button{display:flex;align-items:center;gap:5px;min-height:40px}.inv2-grant-actions svg{width:17px}
 @media (max-width: 900px) {
   .inv2-grant {
     grid-template-columns: 1fr;
   }
+  .inv2-grant-result{align-items:stretch;flex-direction:column}.inv2-grant-result img{align-self:center}.inv2-grant-actions{flex-direction:column}
 }
 .inv2-products label {
   display: flex;

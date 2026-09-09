@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import {
   Boxes,
+  ClipboardCopy,
   Download,
   Printer,
   RefreshCw,
+  Share2,
   Smartphone,
 } from "lucide-react";
 import "./inventory-v2-center.css";
@@ -24,9 +27,23 @@ export default function InventoryV2Center({
     [zones, setZones] = useState([]),
     [selectedZones, setSelectedZones] = useState([]),
     [grant, setGrant] = useState(null),
+    [grantQr, setGrantQr] = useState(""),
     [finalSummary, setFinalSummary] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
+  useEffect(() => {
+    if (!grantUrl) return setGrantQr("");
+    QRCode.toDataURL(grantUrl, { width: 260, margin: 1, errorCorrectionLevel: "M" })
+      .then(setGrantQr)
+      .catch(() => setError("Δεν ήταν δυνατή η δημιουργία του QR."));
+  }, [grantUrl]);
+  const copyGrant = async () => navigator.clipboard.writeText(`${grantUrl}\nPIN: ${grant.pin}`);
+  const shareGrant = async () => {
+    const text = `MyWorkStation Απογραφή\nPIN: ${grant.pin}`;
+    if (navigator.share) await navigator.share({ title: "Πρόσβαση απογραφής", text, url: grantUrl });
+    else await navigator.clipboard.writeText(`${text}\n${grantUrl}`);
+  };
   const loadList = async () =>
       setStocktakes(await api("/api/inventory-v2/stocktakes")),
     open = async (id) => {
@@ -520,16 +537,19 @@ export default function InventoryV2Center({
                   </select>
                   <button>Έκδοση πρόσβασης</button>
                   {grant && (
-                    <span>
-                      PIN: <strong>{grant.pin}</strong> ·{" "}
-                      <a
-                        href={grant.accessUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Άνοιγμα / QR link
-                      </a>
-                    </span>
+                    <section className="inv2-grant-result">
+                      {grantQr && <img src={grantQr} alt="QR πρόσβασης απογραφής" />}
+                      <div>
+                        <b>Έτοιμη πρόσβαση απογραφέα</b>
+                        <strong className="inv2-grant-pin">PIN: {grant.pin}</strong>
+                        <small>Σκάναρε το QR από κινητό ή tablet και πληκτρολόγησε το PIN.</small>
+                        <a href={grantUrl} target="_blank" rel="noreferrer">Άνοιγμα συνδέσμου</a>
+                        <span className="inv2-grant-actions">
+                          <button type="button" onClick={copyGrant}><ClipboardCopy /> Αντιγραφή link & PIN</button>
+                          <button type="button" onClick={shareGrant}><Share2 /> Αποστολή</button>
+                        </span>
+                      </div>
+                    </section>
                   )}
                 </form>
               )}

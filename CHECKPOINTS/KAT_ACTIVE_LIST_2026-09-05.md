@@ -1,3 +1,8 @@
+## 2026-09-09 — Inventory QR / πολλαπλοί απογραφείς
+
+- Πραγματικό QR, αντιγραφή και αποστολή προσωρινού link μαζί με PIN.
+- Ίδια γρήγορη ροή σάρωσης/ποσότητας στο κινητό, tablet και laptop, με αθροιστική καταμέτρηση και τελευταία σάρωση πρώτη.
+
 # 2026-09-08 — BackOffice workspace stability
 
 - Keep the Owner BackOffice mounted during catalogue refreshes so navigation, selected stores and unsaved form state do not reset.
