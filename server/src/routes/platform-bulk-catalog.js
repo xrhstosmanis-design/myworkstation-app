@@ -19,6 +19,7 @@ async function ensureSchema(){
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PlatformBulkCatalogAudit" (
       "id" TEXT PRIMARY KEY,"actorId" TEXT,"productIdsJson" JSONB NOT NULL,"storeIdsJson" JSONB NOT NULL,
       "createdProducts" INTEGER NOT NULL DEFAULT 0,"activatedMappings" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PlatformBulkPromotionAudit" (
       "id" TEXT PRIMARY KEY,"actorId" TEXT,"promotionType" TEXT NOT NULL,"masterProductIdsJson" JSONB NOT NULL,"storeIdsJson" JSONB NOT NULL,
       "createdPromotions" INTEGER NOT NULL DEFAULT 0,"createdProducts" INTEGER NOT NULL DEFAULT 0,"activatedMappings" INTEGER NOT NULL DEFAULT 0,
@@ -113,6 +114,7 @@ router.post("/dispatch",async(req,res,next)=>{
         for(const master of masters){const ensured=await ensureTenantProduct(tx,companyId,master,targetStores);if(ensured.createdProduct)createdProducts++;activatedMappings+=ensured.activatedMappings}
       }
       await tx.$executeRaw`INSERT INTO "PlatformBulkCatalogAudit" ("id","actorId","productIdsJson","storeIdsJson","createdProducts","activatedMappings") VALUES (${uid()},${req.user.id},${JSON.stringify(productIds)}::jsonb,${JSON.stringify(storeIds)}::jsonb,${createdProducts},${activatedMappings})`;
+      for(const store of stores)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","actorId","eventType","details") VALUES (${uid()},${store.companyId},${store.id},${req.user.id},'MASTER_PRODUCTS_DISPATCHED',${JSON.stringify({productCount:masters.length,productNames:masters.map(product=>product.name),masterProductIds:productIds,createdProducts,activatedMappings})}::jsonb)`;
     });
     res.json({ok:true,products:masters.length,stores:stores.length,createdProducts,activatedMappings});
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε την επιλογή προϊόντων και καταστημάτων.",details:error.issues});next(error)}

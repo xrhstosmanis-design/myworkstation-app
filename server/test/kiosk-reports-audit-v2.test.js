@@ -78,3 +78,16 @@ test("central audit shows the selected discount audience and store operator name
   assert.match(route,/StoreOperatorCredential/);
   assert.match(route,/COALESCE\(u\."fullName",operator\."displayName"\)/);
 });
+
+test("Master Catalog dispatch is audited per store and events are grouped by category",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  const dispatch=read("src/routes/platform-bulk-catalog.js");
+  const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
+  assert.match(dispatch,/MASTER_PRODUCTS_DISPATCHED/);
+  assert.match(dispatch,/for\(const store of stores\).*StoreOperatorAudit/);
+  assert.match(route,/MASTER_PRODUCTS_DISPATCHED/);
+  assert.match(route,/ΑΠΟΣΤΟΛΗ ΑΠΟ MASTER CATALOG/);
+  assert.match(client,/function groupedAudit/);
+  assert.match(client,/class="kr-audit-group"/);
+  assert.match(client,/κατηγορίες/);
+});

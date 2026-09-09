@@ -1,3 +1,4 @@
 .kr-table{cursor:grab;touch-action:pan-x;overscroll-behavior:contain;scrollbar-gutter:stable;user-select:none}
 .kr-table.audit-events .kr-row{grid-template-columns:155px 190px 245px 330px 330px 105px 175px 175px 130px 130px 180px 140px;min-width:2295px}
+.kr-audit-groups{max-height:54vh;overflow:auto;background:#fff}.kr-audit-group{border-bottom:1px solid #b8cbe0}.kr-audit-group>summary{display:grid;grid-template-columns:90px 1fr;align-items:center;min-height:42px;padding:0 14px;cursor:pointer;background:#f2f2f2;color:#172b4d;font-size:14px}.kr-audit-group:nth-child(even)>summary{background:#fff}.kr-audit-group>summary:hover,.kr-audit-group[open]>summary{background:#ffc978;color:#0759a8}.kr-audit-group>summary strong{font-size:16px;color:#0759a8}.kr-audit-group>.kr-table{max-height:38vh;border-top:1px solid #9db9d8}
 .kr-table.is-dragging{cursor:grabbing;user-select:none}
