@@ -109,16 +109,57 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
       SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",
-             c."name" AS "categoryName",
-             COALESCE((SELECT json_agg(jsonb_build_object('barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
+             p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
+             c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",lp."supplierName",
+             COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
              COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
       FROM "Product" p
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
+      LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId"
+      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN LATERAL (
+        SELECT sup."name" AS "supplierName"
+        FROM "PurchaseDocumentLine" line
+        JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${company}
+        LEFT JOIN "Supplier" sup ON sup."id"=doc."supplierId"
+        WHERE line."productId"=p."id" AND doc."status"='APPROVED'
+        ORDER BY doc."documentDate" DESC,doc."createdAt" DESC LIMIT 1
+      ) lp ON true
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
       WHERE p."companyId"=${company} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
-      GROUP BY p."id",c."name" ORDER BY p."name" LIMIT 500`;
+      GROUP BY p."id",c."name",sc."name",pc."name",mp."brandName",lp."supplierName" ORDER BY p."name" LIMIT 500`;
     res.json(rows);
+  }catch(error){next(error)}
+});
+
+router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req),productId=String(req.params.productId);
+    if(!await ownedProduct(company,productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    const [supplierCodes,purchases,stats,lastEvents]=await Promise.all([
+      prisma.$queryRaw`SELECT spl."id",spl."supplierId",s."name" AS "supplierName",spl."supplierCode",spl."updatedAt",
+        COALESCE(lp."unitCost",0) AS "lastCost",lp."documentDate" AS "lastPurchaseAt"
+        FROM "SupplierProductLink" spl JOIN "Supplier" s ON s."id"=spl."supplierId" AND s."companyId"=${company}
+        LEFT JOIN LATERAL (SELECT l."unitCost",d."documentDate" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=spl."supplierId" AND d."companyId"=${company} AND d."status"='APPROVED' ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
+        WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."active"=true ORDER BY s."name"`,
+      prisma.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount"
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId"
+        WHERE l."productId"=${productId} AND d."status"='APPROVED' ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 250`,
+      prisma.$queryRaw`SELECT
+        COALESCE(SUM(sl."quantity") FILTER (WHERE sale."status"='COMPLETED'),0) AS "soldQuantity",
+        COALESCE(SUM(sl."lineTotal") FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesGross",
+        COALESCE(SUM(sl."lineTotal"/(1+sl."vatRate"/100)) FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesNet",
+        MAX(sale."occurredAt") FILTER (WHERE sale."status"='COMPLETED') AS "lastSaleAt"
+        FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=${company} WHERE sl."productId"=${productId}`,
+      prisma.$queryRaw`SELECT
+        (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND st."status"='FINALIZED') AS "lastStocktakeAt",
+        (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company}) AS "lastPriceChangeAt",
+        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company}) AS "currentStock"`
+    ]);
+    const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
+    res.json({supplierCodes,purchases,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
   }catch(error){next(error)}
 });
 
@@ -131,7 +172,10 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),
       categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
       vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
-      barcodes:z.array(z.object({barcode:z.string().trim().min(3).max(80),unitMultiplier:z.coerce.number().positive().max(100000)})).max(30),
+      staffPrice:z.coerce.number().min(0).nullable().optional(),deliveryPrice:z.coerce.number().min(0).nullable().optional(),minOrderQuantity:z.coerce.number().min(0).nullable().optional(),capacity:z.coerce.number().min(0).nullable().optional(),
+      allowDiscount:z.boolean().default(true),allowPosPriceChange:z.boolean().default(false),freeSalePrice:z.boolean().default(false),negativeStockWarning:z.boolean().default(false),isSet:z.boolean().default(false),isRecipe:z.boolean().default(false),
+      discountA:z.coerce.number().min(0).max(100).default(0),discountB:z.coerce.number().min(0).max(100).default(0),discountC:z.coerce.number().min(0).max(100).default(0),
+      barcodes:z.array(z.object({barcode:z.string().trim().min(3).max(80),unitMultiplier:z.coerce.number().positive().max(100000),salePrice:z.coerce.number().min(0).nullable().optional(),name:z.string().trim().max(120).nullable().optional()})).max(30),
       stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0),minStock:z.coerce.number().min(0).nullable()})).max(500)
     }).parse(req.body||{});
     const storeIds=[...new Set(body.stores.map(row=>row.storeId))];
@@ -145,9 +189,9 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       let categoryId=null;
       if(body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
       if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${req.user.id})`;
-      await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
+      await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"staffPrice"=${body.staffPrice??null},"deliveryPrice"=${body.deliveryPrice??null},"minOrderQuantity"=${body.minOrderQuantity??null},"capacity"=${body.capacity??null},"allowDiscount"=${body.allowDiscount},"allowPosPriceChange"=${body.allowPosPriceChange},"freeSalePrice"=${body.freeSalePrice},"negativeStockWarning"=${body.negativeStockWarning},"isSet"=${body.isSet},"isRecipe"=${body.isRecipe},"discountA"=${body.discountA},"discountB"=${body.discountB},"discountC"=${body.discountC},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
       await tx.$executeRaw`DELETE FROM "ProductBarcode" WHERE "productId"=${product.id}`;
-      for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier})`;
+      for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier","salePrice","name","updatedAt") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier},${row.salePrice??null},${row.name||null},CURRENT_TIMESTAMP)`;
       for(const row of body.stores)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","minStock","active") VALUES (${uid()},${row.storeId},${product.id},${row.salePrice},${row.minStock},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","minStock"=EXCLUDED."minStock","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
     });
     res.json({ok:true,id:product.id});
