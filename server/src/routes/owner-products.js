@@ -193,6 +193,18 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     const barcodeValues=[...new Set(body.barcodes.map(row=>row.barcode))];
     if(barcodeValues.length!==body.barcodes.length)return res.status(400).json({error:"Το ίδιο barcode έχει καταχωριστεί περισσότερες από μία φορές."});
     if(barcodeValues.length){const duplicate=await prisma.$queryRaw`SELECT pb."barcode" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${company} AND pb."productId"<>${product.id} AND pb."barcode"=ANY(${barcodeValues}::text[]) LIMIT 1`;if(duplicate[0])return res.status(409).json({error:`Το barcode ${duplicate[0].barcode} ανήκει ήδη σε άλλο προϊόν.`})}
+    /* MWS_STORE_PRICE_SYNC_V1 */
+    // If a store followed the old base retail price, keep it aligned with the new
+    // base retail price. Deliberate store-specific overrides stay untouched.
+    const previousBasePrice=money(product.salePrice)??0;
+    if(Math.abs(previousBasePrice-body.salePrice)>0.000001){
+      for(const row of body.stores){
+        const currentStorePrice=money(row.salePrice);
+        if(currentStorePrice===null||Math.abs(currentStorePrice-previousBasePrice)<=0.000001){
+          row.salePrice=body.salePrice;
+        }
+      }
+    }
     await prisma.$transaction(async tx=>{
       let categoryId=selectedCategoryId;
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
