@@ -33,12 +33,13 @@ router.get("/",async(req,res,next)=>{
       FROM "StoreProduct" sp
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       WHERE sp."storeId"=${storeId}
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
-        AND (${subcategory}::text IS NULL OR COALESCE(mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
     `;
     const total=Number(countRows[0]?.count||0);
@@ -46,13 +47,14 @@ router.get("/",async(req,res,next)=>{
     const rows=await prisma.$queryRaw`
       SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
-        c."name" AS "categoryName",mp."subcategoryName",mp."brandName",
+        c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",mp."brandName",
         sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",
         pb."barcode",lp."unitCost" AS "lastPurchasePrice",lp."documentDate" AS "lastPurchaseAt",lp."supplierName",lp."documentNumber" AS "lastPurchaseDocument",
         ap."averagePurchasePrice",COALESCE(sa."sales15Qty",0) AS "sales15Qty",sa."lastSaleAt"
       FROM "StoreProduct" sp
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
+      LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
@@ -82,7 +84,7 @@ router.get("/",async(req,res,next)=>{
         AND (${text}::text IS NULL OR p."name" ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text}
           OR EXISTS (SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${text}))
         AND (${category}::text IS NULL OR COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ')=${category})
-        AND (${subcategory}::text IS NULL OR COALESCE(mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
+        AND (${subcategory}::text IS NULL OR COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ')=${subcategory})
         AND (${status}='ALL' OR (${status}='ACTIVE' AND p."active"=TRUE AND sp."active"=TRUE) OR (${status}='INACTIVE' AND (p."active"=FALSE OR sp."active"=FALSE)))
       ORDER BY p."name",p."sku" NULLS LAST
       LIMIT ${pageSize} OFFSET ${offset}
@@ -105,21 +107,25 @@ router.get("/",async(req,res,next)=>{
       };
     });
 
-    const [categories,subcategories]=await Promise.all([
+    const [categories,subcategories,taxonomyCategories,taxonomySubcategories]=await Promise.all([
       prisma.$queryRaw`
         SELECT DISTINCT COALESCE(c."name",'ΧΩΡΙΣ ΚΑΤΗΓΟΡΙΑ') AS name
         FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
         LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
         WHERE sp."storeId"=${storeId} ORDER BY name`,
       prisma.$queryRaw`
-        SELECT DISTINCT COALESCE(mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ') AS name
+        SELECT DISTINCT COALESCE(sc."name",mp."subcategoryName",'ΧΩΡΙΣ ΥΠΟΚΑΤΗΓΟΡΙΑ') AS name
         FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
+        LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
         LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
-        WHERE sp."storeId"=${storeId} ORDER BY name`
+        WHERE sp."storeId"=${storeId} ORDER BY name`,
+      prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
+      prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`
     ]);
 
     res.json({store,page,pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize)),items,
       categories:categories.map(r=>r.name),subcategories:subcategories.map(r=>r.name),
+      taxonomy:{categories:taxonomyCategories,subcategories:taxonomySubcategories},
       totals:{retailStockValue:items.reduce((a,r)=>a+r.retailStockValue,0),costStockValue:items.reduce((a,r)=>a+r.costStockValue,0),stock:items.reduce((a,r)=>a+r.currentStock,0)}});
   }catch(error){next(error)}
 });

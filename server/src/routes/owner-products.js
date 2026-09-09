@@ -108,7 +108,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const q=String(req.query.q||"").trim();
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",
+      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
              p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
              c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",lp."supplierName",
              COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
@@ -138,7 +138,7 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
   try{
     const company=companyId(req),productId=String(req.params.productId);
     if(!await ownedProduct(company,productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
-    const [supplierCodes,purchases,stats,lastEvents]=await Promise.all([
+    const [supplierCodes,purchases,stats,lastEvents,suppliers]=await Promise.all([
       prisma.$queryRaw`SELECT spl."id",spl."supplierId",s."name" AS "supplierName",spl."supplierCode",spl."updatedAt",
         COALESCE(lp."unitCost",0) AS "lastCost",lp."documentDate" AS "lastPurchaseAt"
         FROM "SupplierProductLink" spl JOIN "Supplier" s ON s."id"=spl."supplierId" AND s."companyId"=${company}
@@ -156,10 +156,11 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
       prisma.$queryRaw`SELECT
         (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND st."status"='FINALIZED') AS "lastStocktakeAt",
         (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company}) AS "lastPriceChangeAt",
-        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company}) AS "currentStock"`
+        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company}) AS "currentStock"`,
+      prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`
     ]);
     const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
-    res.json({supplierCodes,purchases,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
+    res.json({supplierCodes,purchases,suppliers,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
   }catch(error){next(error)}
 });
 
@@ -170,28 +171,49 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
     const body=z.object({
       name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),
-      categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
+      categoryId:z.string().min(1).nullable().optional(),subcategoryId:z.string().min(1).nullable().optional(),categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
       vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
       staffPrice:z.coerce.number().min(0).nullable().optional(),deliveryPrice:z.coerce.number().min(0).nullable().optional(),minOrderQuantity:z.coerce.number().min(0).nullable().optional(),capacity:z.coerce.number().min(0).nullable().optional(),
       allowDiscount:z.boolean().default(true),allowPosPriceChange:z.boolean().default(false),freeSalePrice:z.boolean().default(false),negativeStockWarning:z.boolean().default(false),isSet:z.boolean().default(false),isRecipe:z.boolean().default(false),
       discountA:z.coerce.number().min(0).max(100).default(0),discountB:z.coerce.number().min(0).max(100).default(0),discountC:z.coerce.number().min(0).max(100).default(0),
+      supplierCodes:z.array(z.object({supplierId:z.string().min(1),supplierCode:z.string().trim().min(1).max(120)})).max(100).default([]),
       barcodes:z.array(z.object({barcode:z.string().trim().min(3).max(80),unitMultiplier:z.coerce.number().positive().max(100000),salePrice:z.coerce.number().min(0).nullable().optional(),name:z.string().trim().max(120).nullable().optional()})).max(30),
       stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0),minStock:z.coerce.number().min(0).nullable()})).max(500)
     }).parse(req.body||{});
     const storeIds=[...new Set(body.stores.map(row=>row.storeId))];
     const validStores=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});
     if(validStores.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
+    let selectedCategoryId=body.categoryId||null,selectedSubcategoryId=body.subcategoryId||null;
+    if(selectedCategoryId){const category=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${selectedCategoryId} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!category[0])return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."})}
+    if(selectedSubcategoryId){const subcategory=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${selectedSubcategoryId} AND "categoryId"=${selectedCategoryId||''} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!subcategory[0])return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία."})}
+    const supplierIds=[...new Set(body.supplierCodes.map(row=>row.supplierId))];
+    if(supplierIds.length!==body.supplierCodes.length)return res.status(400).json({error:"Ο ίδιος προμηθευτής έχει επιλεγεί περισσότερες από μία φορές."});
+    if(supplierIds.length){const validSuppliers=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND "id"=ANY(${supplierIds}::text[])`;if(validSuppliers.length!==supplierIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρος προμηθευτής."})}
     if(body.sku){const duplicate=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "sku"=${body.sku} AND "id"<>${product.id} LIMIT 1`;if(duplicate[0])return res.status(409).json({error:"Ο κωδικός/SKU χρησιμοποιείται ήδη σε άλλο προϊόν."})}
     const barcodeValues=[...new Set(body.barcodes.map(row=>row.barcode))];
     if(barcodeValues.length!==body.barcodes.length)return res.status(400).json({error:"Το ίδιο barcode έχει καταχωριστεί περισσότερες από μία φορές."});
     if(barcodeValues.length){const duplicate=await prisma.$queryRaw`SELECT pb."barcode" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${company} AND pb."productId"<>${product.id} AND pb."barcode"=ANY(${barcodeValues}::text[]) LIMIT 1`;if(duplicate[0])return res.status(409).json({error:`Το barcode ${duplicate[0].barcode} ανήκει ήδη σε άλλο προϊόν.`})}
+    /* MWS_STORE_PRICE_SYNC_V1 */
+    // If a store followed the old base retail price, keep it aligned with the new
+    // base retail price. Deliberate store-specific overrides stay untouched.
+    const previousBasePrice=money(product.salePrice)??0;
+    if(Math.abs(previousBasePrice-body.salePrice)>0.000001){
+      for(const row of body.stores){
+        const currentStorePrice=money(row.salePrice);
+        if(currentStorePrice===null||Math.abs(currentStorePrice-previousBasePrice)<=0.000001){
+          row.salePrice=body.salePrice;
+        }
+      }
+    }
     await prisma.$transaction(async tx=>{
-      let categoryId=null;
-      if(body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
+      let categoryId=selectedCategoryId;
+      if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
       if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${req.user.id})`;
-      await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"staffPrice"=${body.staffPrice??null},"deliveryPrice"=${body.deliveryPrice??null},"minOrderQuantity"=${body.minOrderQuantity??null},"capacity"=${body.capacity??null},"allowDiscount"=${body.allowDiscount},"allowPosPriceChange"=${body.allowPosPriceChange},"freeSalePrice"=${body.freeSalePrice},"negativeStockWarning"=${body.negativeStockWarning},"isSet"=${body.isSet},"isRecipe"=${body.isRecipe},"discountA"=${body.discountA},"discountB"=${body.discountB},"discountC"=${body.discountC},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
+      await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"subcategoryId"=${selectedSubcategoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"staffPrice"=${body.staffPrice??null},"deliveryPrice"=${body.deliveryPrice??null},"minOrderQuantity"=${body.minOrderQuantity??null},"capacity"=${body.capacity??null},"allowDiscount"=${body.allowDiscount},"allowPosPriceChange"=${body.allowPosPriceChange},"freeSalePrice"=${body.freeSalePrice},"negativeStockWarning"=${body.negativeStockWarning},"isSet"=${body.isSet},"isRecipe"=${body.isRecipe},"discountA"=${body.discountA},"discountB"=${body.discountB},"discountC"=${body.discountC},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
       await tx.$executeRaw`DELETE FROM "ProductBarcode" WHERE "productId"=${product.id}`;
       for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier","salePrice","name","updatedAt") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier},${row.salePrice??null},${row.name||null},CURRENT_TIMESTAMP)`;
+      await tx.$executeRaw`UPDATE "SupplierProductLink" SET "active"=false,"updatedBy"=${req.user.id},"updatedAt"=NOW() WHERE "companyId"=${company} AND "productId"=${product.id} AND NOT ("supplierId"=ANY(${supplierIds}::text[]))`;
+      for(const row of body.supplierCodes)await tx.$executeRaw`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","updatedBy","updatedByName") VALUES (${uid()},${company},${row.supplierId},${product.id},${row.supplierCode},true,'PRODUCT_CARD',${req.user.id},${req.user.fullName||req.user.email||'BackOffice'}) ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET "supplierCode"=EXCLUDED."supplierCode","active"=true,"source"='PRODUCT_CARD',"updatedBy"=EXCLUDED."updatedBy","updatedByName"=EXCLUDED."updatedByName","updatedAt"=NOW()`;
       for(const row of body.stores)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","minStock","active") VALUES (${uid()},${row.storeId},${product.id},${row.salePrice},${row.minStock},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","minStock"=EXCLUDED."minStock","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
     });
     res.json({ok:true,id:product.id});
