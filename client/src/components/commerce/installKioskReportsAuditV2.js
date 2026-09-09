@@ -51,10 +51,10 @@ export function installKioskReportsAuditV2(){
     if(event.target.closest("[data-kr-export]")){event.preventDefault();event.stopImmediatePropagation();exportCsv(mode);return}
   },true);
   document.addEventListener("click",async event=>{const exportButton=event.target.closest("[data-video-export]");if(exportButton){exportButton.disabled=true;try{await auditVideoAccess(exportButton,"EXPORT","UNAVAILABLE");alert("Το αίτημα εξαγωγής καταγράφηκε στο Audit. Δεν δημιουργήθηκε αρχείο χωρίς πραγματικό adapter NVR.")}catch(error){alert(error.message)}finally{exportButton.disabled=false}return}if(event.target.closest("[data-video-close]")||event.target.classList.contains("kr-video-modal"))event.target.closest(".kr-video-modal")?.remove()});
-  let dragTable=null,dragX=0,dragScroll=0;
-  const startDrag=event=>{const table=event.target.closest?.(".kr-table");if(!table||event.target.closest?.("button,input,select,a"))return;dragTable=table;dragX=event.clientX;dragScroll=table.scrollLeft;table.classList.add("is-dragging");table.setPointerCapture?.(event.pointerId)};
-  const moveDrag=event=>{if(!dragTable)return;event.preventDefault();dragTable.scrollLeft=dragScroll-(event.clientX-dragX)};
-  const stopDrag=event=>{if(!dragTable)return;dragTable.releasePointerCapture?.(event.pointerId);dragTable.classList.remove("is-dragging");dragTable=null};
-  document.addEventListener("pointerdown",startDrag,true);document.addEventListener("pointermove",moveDrag,{capture:true,passive:false});document.addEventListener("pointerup",stopDrag,true);document.addEventListener("pointercancel",stopDrag,true);
-  document.addEventListener("mousedown",startDrag,true);document.addEventListener("mousemove",moveDrag,{capture:true,passive:false});document.addEventListener("mouseup",stopDrag,true);
+  let dragTable=null,dragPointerId=null,dragX=0,dragScroll=0;
+  const startDrag=event=>{const table=event.target.closest?.(".kr-table");if(!table||table.scrollWidth<=table.clientWidth||event.target.closest?.("button,input,select,a")||event.pointerType==="mouse"&&event.button!==0)return;dragTable=table;dragPointerId=event.pointerId;dragX=event.clientX;dragScroll=table.scrollLeft;table.classList.add("is-dragging")};
+  const moveDrag=event=>{if(!dragTable||event.pointerId!==dragPointerId)return;const distance=event.clientX-dragX;if(Math.abs(distance)<2)return;event.preventDefault();dragTable.scrollLeft=dragScroll-distance};
+  const stopDrag=event=>{if(!dragTable||event.pointerId!==dragPointerId)return;dragWriteEnd()};
+  const dragWriteEnd=()=>{dragTable?.classList.remove("is-dragging");dragTable=null;dragPointerId=null};
+  document.addEventListener("pointerdown",startDrag,true);document.addEventListener("pointermove",moveDrag,{capture:true,passive:false});document.addEventListener("pointerup",stopDrag,true);document.addEventListener("pointercancel",stopDrag,true);window.addEventListener("blur",dragWriteEnd);
 }
