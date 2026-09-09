@@ -103,7 +103,7 @@ router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{res.json(await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","city","active" FROM "Supplier" WHERE "companyId"=${req.user.companyId} ORDER BY "name"`)}catch(error){next(error)}
 });
 
-router.get("/supplier-price-comparison",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+router.get("/supplier-price-comparison",requireCompanyModule("SUPPLIER_COMPARISON"),async(req,res,next)=>{
   try{const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",s."id" AS "supplierId",s."name" AS "supplierName",MIN(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "bestPieceCost",(array_agg(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END ORDER BY d."documentDate" DESC))[1] AS "lastPieceCost",MAX(d."documentDate") AS "lastPurchaseAt",COUNT(*)::int AS "purchaseCount",DENSE_RANK() OVER (PARTITION BY p."id" ORDER BY MIN(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END))::int AS "priceRank" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" JOIN "Product" p ON p."id"=l."productId" JOIN "Supplier" s ON s."id"=d."supplierId" WHERE d."companyId"=${req.user.companyId} AND d."status"='APPROVED' GROUP BY p."id",p."name",p."sku",s."id",s."name" ORDER BY p."name","priceRank",s."name"`;res.json(rows)}catch(error){next(error)}
 });
 
