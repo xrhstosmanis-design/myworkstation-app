@@ -7,6 +7,7 @@ const commerce=fs.readFileSync(new URL("../src/routes/commerce-v1.js",import.met
 const cash=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const ownerUi=fs.readFileSync(new URL("../../client/src/components/commerce/OwnerProductCenter.jsx",import.meta.url),"utf8");
 const supplierUi=fs.readFileSync(new URL("../../client/src/components/commerce/SupplierPriceComparisonPanel.jsx",import.meta.url),"utf8");
+const commerceHub=fs.readFileSync(new URL("../../client/src/components/commerce/CommerceHub.jsx",import.meta.url),"utf8");
 const cashUi=fs.readFileSync(new URL("../../client/src/components/cloud/CashControlPanel.jsx",import.meta.url),"utf8");
 
 test("bulk pricing is tenant scoped, selected and audited",()=>{
@@ -29,11 +30,13 @@ test("promotions accept barcode and Excel source-store fanout",()=>{
 
 test("supplier comparison ranks normalized approved purchase costs",()=>{
   assert.match(commerce,/supplier-price-comparison/);
+  assert.match(commerce,/supplier-price-comparison",requireCompanyModule\("SUPPLIER_COMPARISON"\)/);
   assert.match(commerce,/unitsPerPackage/);
   assert.match(commerce,/DENSE_RANK/);
   assert.match(commerce,/d\."companyId"=\$\{req\.user\.companyId\}/);
   assert.match(commerce,/d\."status"='APPROVED'/);
   assert.match(supplierUi,/ΦΘΗΝΟΤΕΡΟΣ/);
+  assert.match(commerceHub,/active\.has\("SUPPLIER_COMPARISON"\).*SupplierPriceComparisonPanel/);
 });
 
 test("POS-EFTPOS variance only creates a review warning",()=>{
