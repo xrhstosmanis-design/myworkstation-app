@@ -28,7 +28,7 @@ test("catalog view merges customer entitlements",()=>{
 });
 
 test("new owner modules are registered but cannot be sold before implementation",()=>{
-  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","PENDING_CENTER","CASHIER_PERFORMANCE","PROFITABILITY","LOSS_DETECTION","AI_OWNER_ASSISTANT","SUPPLIER_COMPARISON","ORDER_SUGGESTIONS","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
+  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","PENDING_CENTER","CASHIER_PERFORMANCE","PROFITABILITY","AI_OWNER_ASSISTANT","SUPPLIER_COMPARISON","ORDER_SUGGESTIONS","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
   for(const key of expected){
     const module=moduleCatalog.find(row=>row.key===key);
     assert.ok(module,`${key} must be registered`);
@@ -37,4 +37,7 @@ test("new owner modules are registered but cannot be sold before implementation"
   for(const key of ["PROFITABILITY","CASHIER_PERFORMANCE","LOSS_DETECTION","AI_OWNER_ASSISTANT"]){
     assert.ok(ownerRestrictedModuleKeys.includes(key),`${key} must be owner restricted`);
   }
+  const lossDetection=moduleCatalog.find(row=>row.key==="LOSS_DETECTION");
+  assert.equal(lossDetection.commercialReady,true);
+  assert.equal(lossDetection.monthlyPriceEur,29.9);
 });

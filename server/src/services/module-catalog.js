@@ -26,7 +26,7 @@ export const moduleCatalog=[
   {key:"PENDING_CENTER",name:"Κέντρο Εκκρεμοτήτων",description:"Κεντρική διαχείριση εκκρεμοτήτων τιμολογίων, πληρωμών, αποθήκης και ελέγχων.",category:"CONTROL",commercialReady:false,ownerOnly:true},
   {key:"CASHIER_PERFORMANCE",name:"Μηνιαία Στατιστικά Ταμείων",description:"Στατιστικά ανά εργαζόμενο και βαθμολογία μόνο μετά από ανθρώπινη επιβεβαίωση.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"PROFITABILITY",name:"Κερδοφορία Καταστήματος",description:"Έσοδα, κόστος, μικτό κέρδος, έξοδα και καθαρή εικόνα ανά κατάστημα.",category:"REPORTS",commercialReady:false,ownerOnly:true},
-  {key:"LOSS_DETECTION",name:"Έλεγχος Απωλειών",description:"Εντοπισμός αποκλίσεων, φύρας και ύποπτων μοτίβων χωρίς αυτόματη ενοχοποίηση εργαζομένου.",category:"CONTROL",commercialReady:false,ownerOnly:true},
+  {key:"LOSS_DETECTION",name:"Έλεγχος Απωλειών",description:"Τεκμηριωμένη διερεύνηση διαφορών απογραφής με παραστατικά, κινήσεις, ημερομηνίες και χειριστές, χωρίς αυτόματη ενοχοποίηση εργαζομένου.",category:"CONTROL",commercialReady:true,monthlyPriceEur:29.9,ownerOnly:true},
   {key:"AI_OWNER_ASSISTANT",name:"AI Βοηθός Ιδιοκτήτη",description:"Απαντήσεις μόνο πάνω στα δεδομένα και στα δικαιώματα του συγκεκριμένου ιδιοκτήτη.",category:"AI",commercialReady:false,ownerOnly:true},
   {key:"SUPPLIER_COMPARISON",name:"Σύγκριση Προμηθευτών",description:"Σύγκριση τιμών, συσκευασιών, εκπτώσεων και πραγματικού κόστους.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"ORDER_SUGGESTIONS",name:"Προτάσεις Παραγγελίας",description:"Προτεινόμενες ποσότητες βάσει stock, πωλήσεων και χρόνου παράδοσης.",category:"AI",commercialReady:false,ownerOnly:true},
