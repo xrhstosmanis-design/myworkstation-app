@@ -44,4 +44,8 @@ test("owner UI exposes a read-only LAB product quality audit",()=>{
   for(const label of ["Έλεγχος ποιότητας LAB","Μόνο προβλήματα","Αναμονή πρώτης αγοράς","Μη έγκυρο barcode","Barcode μέσα στο SKU","Κόστος ≥ λιανική"])assert.match(client,new RegExp(label));
   assert.match(client,/productQualityIssues/);
   assert.match(client,/^const barcodeLooksValid=/m);
+  assert.match(client,/activeStoreSalePrices/);
+  assert.match(client,/effectiveSalePrice/);
+  assert.match(client,/money\(effectiveSalePrice\(row\)\)/);
+  assert.match(client,/encodeURIComponent\(catalogQuery\.trim\(\)\).*setCatalog\(fresh\)/);
 });
