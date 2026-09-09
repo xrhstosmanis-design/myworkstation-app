@@ -117,6 +117,20 @@ export default function InventoryV2Center({
       setBusy(false);
     }
   };
+  const deleteStocktake = async (stocktake) => {
+    if (stocktake.status !== "DRAFT") return;
+    if (!confirm(`Διαγραφή της μη οριστικοποιημένης απογραφής «${stocktake.name}»;`)) return;
+    try {
+      await api(`/api/inventory-v2/stocktakes/${stocktake.id}`, { method: "DELETE" });
+      if (current?.id === stocktake.id) {
+        setCurrent(null);
+        setFinalSummary(null);
+      }
+      await loadList();
+    } catch (x) {
+      setError(x.message);
+    }
+  };
   const finalize = async () => {
     if (
       !confirm(
@@ -434,13 +448,13 @@ export default function InventoryV2Center({
           <h4>Απογραφές</h4>
           <div className="inv2-history">
             {stocktakes.map((s) => (
-              <button key={s.id} onClick={() => open(s.id)}>
-                <b>{s.name}</b>
-                <small>
-                  {s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} ·{" "}
-                  {s.countedCount}/{s.lineCount}
-                </small>
-              </button>
+              <div key={s.id} className="inv2-history-row">
+                <button className="inv2-history-open" onClick={() => open(s.id)}>
+                  <b>{s.name}</b>
+                  <small>{s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.countedCount}/{s.lineCount}</small>
+                </button>
+                {s.status === "DRAFT" && <button className="inv2-history-delete" title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
+              </div>
             ))}
           </div>
         </aside>
