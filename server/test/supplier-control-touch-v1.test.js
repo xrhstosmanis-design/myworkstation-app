@@ -46,8 +46,10 @@ test("supplier payment compatibility exists before report queries",()=>{
   assert.match(entry,/ensure|installSupplierControlSafely/);
 });
 
-test("touch keyboard opens only after touch or pen interaction and supports text and numeric layouts",()=>{
-  assert.match(keyboard,/pointerType==="touch"\|\|pointerType==="pen"/);
+test("touch keyboard opens only from its field button and supports text and numeric layouts",()=>{
+  assert.match(keyboard,/mws-touch-field-trigger/);
+  assert.match(keyboard,/event\.stopPropagation\(\);open\(input\)/);
+  assert.doesNotMatch(keyboard,/lastTouchAt|isTouchLikePointer/);
   assert.match(keyboard,/inputmode","none"/);
   assert.match(keyboard,/Αριθμητικό πληκτρολόγιο/);
   assert.match(keyboard,/Πληκτρολόγιο αφής/);
