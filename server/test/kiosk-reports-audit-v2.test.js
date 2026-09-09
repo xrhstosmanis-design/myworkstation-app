@@ -91,3 +91,12 @@ test("Master Catalog dispatch is audited per store and events are grouped by cat
   assert.match(client,/class="kr-audit-group"/);
   assert.match(client,/κατηγορίες/);
 });
+
+test("grouped audit rows support horizontal pointer dragging",()=>{
+  const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
+  const css=fs.readFileSync(new URL("../../client/src/components/commerce/kiosk-reports-audit-fixes.css",import.meta.url),"utf8");
+  assert.match(client,/table\.scrollWidth<=table\.clientWidth/);
+  assert.match(client,/dragTable\.scrollLeft=dragScroll-distance/);
+  assert.doesNotMatch(client,/addEventListener\("mousedown",startDrag/);
+  assert.match(css,/touch-action:pan-y/);
+});
