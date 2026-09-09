@@ -27,6 +27,8 @@ test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/companyId"=\$\{company\}/);
   assert.match(route,/PRODUCT_CARD/);
   assert.match(route,/ProductBarcode/);
+  assert.match(route,/"subcategoryName"/);
+  assert.match(route,/"supplierName"/);
   assert.match(route,/unitMultiplier/);
   assert.match(route,/minStock/);
   assert.match(route,/Ο κωδικός\/SKU χρησιμοποιείται ήδη/);

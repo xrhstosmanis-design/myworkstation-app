@@ -55,6 +55,12 @@ test("inventory UI follows photographed archive workflow and bottom actions",()=
   assert.match(panel,/ProductDeliveryFields/);
 });
 
+test("inventory edit pencil opens the complete product card",()=>{
+  for(const text of ["Καρτέλα είδους","Βασικά στοιχεία","Barcodes","Κωδικοί προμηθευτών","Στατιστικά","Αγορές","Υποκατηγορία","Εταιρεία / Brand","Τελευταίος προμηθευτής","Τιμή προσωπικού","Τιμή delivery","Ελάχιστη παραγγελία","Ειδοποίηση αρνητικού stock","Επιτρέπεται έκπτωση","Αλλαγή τιμής στο POS","Ελεύθερη τιμή στο POS"])
+    assert.ok(panel.includes(text),text);
+  assert.match(panel,/\/api\/owner-products\/\$\{row\.productId\}\/details/);
+});
+
 test("Excel import is preview first and stock overwrite is explicit",()=>{
   assert.match(importer,/router\.post\("\/import-preview"/);
   assert.match(importer,/router\.post\("\/import"/);
