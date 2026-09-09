@@ -21,3 +21,12 @@ test("audit export is tenant scoped CSV", () => {
   assert.match(source, /audit\.csv/);
   assert.match(source, /text\/csv/);
 });
+test("finalized inventory exposes a paid evidence-only loss investigation", () => {
+  assert.match(source, /stocktakes\/:stocktakeId\/investigation/);
+  assert.match(source, /LOSS_DETECTION/);
+  assert.match(source, /storePaidModuleState/);
+  assert.match(source, /PurchaseDocumentLine/);
+  assert.match(source, /POSSIBLE_DUPLICATE_SALE/);
+  assert.match(source, /δεν αποδεικνύουν υπαιτιότητα εργαζομένου/);
+  assert.match(source, /readOnly:\s*true/);
+});

@@ -29,6 +29,7 @@ export default function InventoryV2Center({
     [grant, setGrant] = useState(null),
     [grantQr, setGrantQr] = useState(""),
     [finalSummary, setFinalSummary] = useState(null),
+    [investigation, setInvestigation] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
@@ -49,6 +50,7 @@ export default function InventoryV2Center({
     open = async (id) => {
       const result = await api(`/api/inventory-v2/stocktakes/${id}`);
       setCurrent(result);
+      setInvestigation(null);
       if (result.status === "FINALIZED") {
         const report = await api(`/api/inventory-v2/stocktakes/${id}/audit`);
         setFinalSummary(report.summary);
@@ -208,6 +210,19 @@ export default function InventoryV2Center({
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  const loadInvestigation = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      setInvestigation(
+        await api(`/api/inventory-v2/stocktakes/${current.id}/investigation`),
+      );
+    } catch (x) {
+      setError(x.message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const exportAudit = async () => {
     try {
       const report = await api(
@@ -334,8 +349,44 @@ export default function InventoryV2Center({
           <span className="surplus"><small>Πλεόνασμα</small><b>{finalSummary.surplusQuantity} · {euro(finalSummary.surplusCostValue)}</b></span>
           <span><small>Λιανική αξία</small><b>{euro(finalSummary.totalRetailValue)}</b></span>
           <span><small>Αξία κόστους</small><b>{euro(finalSummary.totalCostValue)}</b></span>
+          <button className="primary" disabled={busy} onClick={loadInvestigation}>Έλεγχος αιτιών διαφορών</button>
           <button onClick={() => setFinalSummary(null)}>Κλείσιμο</button>
         </div>
+      )}
+      {investigation && (
+        <section className="inv2-investigation">
+          <header>
+            <div>
+              <h3>Τεκμηριωμένος έλεγχος διαφορών</h3>
+              <p>{investigation.disclaimer}</p>
+            </div>
+            <button onClick={() => setInvestigation(null)}>Κλείσιμο</button>
+          </header>
+          <div className="inv2-investigation-totals">
+            <b>{investigation.summary.differenceItems} είδη με διαφορά</b>
+            <span>{investigation.summary.evidenceItems} με ένδειξη προς έλεγχο</span>
+            <span>{investigation.summary.shortageItems} ελλείμματα</span>
+            <span>{investigation.summary.surplusItems} πλεονάσματα</span>
+          </div>
+          {investigation.items.length ? investigation.items.map((item) => (
+            <article key={item.productId} className={item.reviewStatus === "EVIDENCE_FOUND" ? "has-evidence" : ""}>
+              <div className="inv2-investigation-product">
+                <b>{item.name}</b>
+                <small>{item.barcode || item.sku || "Χωρίς κωδικό"}</small>
+                <strong>Διαφορά {item.difference > 0 ? "+" : ""}{item.difference} · {euro(item.differenceCostValue)}</strong>
+              </div>
+              <div className="inv2-evidence-list">
+                {item.evidence.length ? item.evidence.map((row, index) => (
+                  <div key={`${row.type}-${row.reference}-${index}`} className={`severity-${row.severity.toLowerCase()}`}>
+                    <b>{row.title}</b>
+                    <span>{row.details}</span>
+                    <small>{new Date(row.at).toLocaleString("el-GR")} · {row.actorName} · {row.reference}</small>
+                  </div>
+                )) : <p>Δεν βρέθηκε καταγεγραμμένο στοιχείο που να εξηγεί τη διαφορά.</p>}
+              </div>
+            </article>
+          )) : <p>Δεν υπάρχουν διαφορές προς διερεύνηση.</p>}
+        </section>
       )}
       <div className="inv2-layout">
         <aside className="op-box">
