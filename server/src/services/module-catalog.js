@@ -28,7 +28,7 @@ export const moduleCatalog=[
   {key:"PROFITABILITY",name:"Κερδοφορία Καταστήματος",description:"Έσοδα, κόστος, μικτό κέρδος, έξοδα και καθαρή εικόνα ανά κατάστημα.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"LOSS_DETECTION",name:"Έλεγχος Απωλειών",description:"Τεκμηριωμένη διερεύνηση διαφορών απογραφής με παραστατικά, κινήσεις, ημερομηνίες και χειριστές, χωρίς αυτόματη ενοχοποίηση εργαζομένου.",category:"CONTROL",commercialReady:true,monthlyPriceEur:29.9,ownerOnly:true},
   {key:"AI_OWNER_ASSISTANT",name:"AI Βοηθός Ιδιοκτήτη",description:"Απαντήσεις μόνο πάνω στα δεδομένα και στα δικαιώματα του συγκεκριμένου ιδιοκτήτη.",category:"AI",commercialReady:false,ownerOnly:true},
-  {key:"SUPPLIER_COMPARISON",name:"Σύγκριση Προμηθευτών",description:"Σύγκριση τιμών, συσκευασιών, εκπτώσεων και πραγματικού κόστους.",category:"REPORTS",commercialReady:false,ownerOnly:true},
+  {key:"SUPPLIER_COMPARISON",name:"Σύγκριση Προμηθευτών",description:"Σύγκριση πραγματικού κόστους ανά τεμάχιο, συσκευασιών, τελευταίας τιμής και διαθέσιμου οφέλους από εγκεκριμένα παραστατικά.",category:"REPORTS",commercialReady:true,monthlyPriceEur:14.9,ownerOnly:true},
   {key:"ORDER_SUGGESTIONS",name:"Προτάσεις Παραγγελίας",description:"Προτεινόμενες ποσότητες βάσει stock, πωλήσεων και χρόνου παράδοσης.",category:"AI",commercialReady:false,ownerOnly:true},
   {key:"LOW_VALUE_PRODUCTS",name:"Προϊόντα Χαμηλής Απόδοσης",description:"Προϊόντα με χαμηλή κίνηση ή κερδοφορία και τεκμηριωμένες προτάσεις.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"OWNER_MONTHLY_REPORT",name:"Μηνιαία Αναφορά Ιδιοκτήτη",description:"PDF/email μόνο μετά από έγκριση Ιδιοκτήτη ή Super Admin.",category:"REPORTS",commercialReady:false,ownerOnly:true},
