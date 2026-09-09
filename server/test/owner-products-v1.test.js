@@ -39,3 +39,9 @@ test("owner UI exposes the complete central product card",()=>{
   assert.match(client,/unitMultiplier/);
   assert.match(client,/minStock/);
 });
+
+test("owner UI exposes a read-only LAB product quality audit",()=>{
+  for(const label of ["Έλεγχος ποιότητας LAB","Μόνο προβλήματα","Αναμονή πρώτης αγοράς","Μη έγκυρο barcode","Barcode μέσα στο SKU","Κόστος ≥ λιανική"])assert.match(client,new RegExp(label));
+  assert.match(client,/productQualityIssues/);
+  assert.match(client,/^const barcodeLooksValid=/m);
+});
