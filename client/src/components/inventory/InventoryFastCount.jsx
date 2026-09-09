@@ -32,11 +32,19 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   const [saving, setSaving] = useState(false);
 
   const countedLines = useMemo(
-    () => (current.lines || []).filter((line) => line.countedQuantity !== null),
+    () => (current.lines || [])
+      .filter((line) => line.countedQuantity !== null)
+      .sort((a, b) => new Date(b.countedAt || 0) - new Date(a.countedAt || 0)),
     [current.lines],
   );
   const rows = useMemo(() => {
-    const base = showAll ? current.lines || [] : countedLines;
+    const base = showAll
+      ? [...(current.lines || [])].sort((a, b) => {
+          if (a.countedQuantity !== null && b.countedQuantity === null) return -1;
+          if (a.countedQuantity === null && b.countedQuantity !== null) return 1;
+          return new Date(b.countedAt || 0) - new Date(a.countedAt || 0);
+        })
+      : countedLines;
     return base.filter((line) =>
       matchesGreekSearch(lookup, [line.name, line.sku, line.barcode]),
     );

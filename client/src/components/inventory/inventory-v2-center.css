@@ -95,7 +95,7 @@
   display: grid;
   gap: 6px;
 }
-.inv2-history button {
+.inv2-history-row{display:grid;grid-template-columns:1fr auto;gap:5px}.inv2-history-open {
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -104,6 +104,7 @@
   border-radius: 8px;
   background: white;
 }
+.inv2-history-delete{width:36px;border:1px solid #efb4b4;border-radius:8px;background:#fff2f2;color:#a21d1d;font-size:22px;font-weight:900;cursor:pointer}.inv2-history-delete:hover{background:#a21d1d;color:#fff}
 .inv2-work {
   min-width: 0;
 }
