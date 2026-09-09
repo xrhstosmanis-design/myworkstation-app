@@ -61,6 +61,23 @@ test("inventory edit pencil opens the complete product card",()=>{
   assert.match(panel,/\/api\/owner-products\/\$\{row\.productId\}\/details/);
 });
 
+test("complete product card uses dependent taxonomy and live retail calculations",()=>{
+  assert.match(archive,/taxonomy:\{categories:taxonomyCategories,subcategories:taxonomySubcategories\}/);
+  assert.match(archive,/ProductSubcategory/);
+  assert.match(panel,/taxonomySubcategories\.filter\(row=>row\.categoryId===edit\.draft\.categoryId\)/);
+  assert.match(panel,/retailFromMargin/);
+  assert.match(panel,/retailFromMarkup/);
+  assert.match(panel,/editPriceChange\("margin"/);
+  assert.match(panel,/editPriceChange\("markup"/);
+});
+
+test("all product switches and supplier codes are editable and saved",()=>{
+  for(const field of ["active","trackStock","negativeStockWarning","allowDiscount","allowPosPriceChange","freeSalePrice","isSet","isRecipe"])
+    assert.match(panel,new RegExp(`\\[\\"${field}\\"`));
+  assert.match(panel,/supplierCodes:edit\.draft\.supplierCodes/);
+  assert.match(panel,/Νέος κωδικός προμηθευτή/);
+});
+
 test("Excel import is preview first and stock overwrite is explicit",()=>{
   assert.match(importer,/router\.post\("\/import-preview"/);
   assert.match(importer,/router\.post\("\/import"/);
