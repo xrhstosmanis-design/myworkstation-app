@@ -12,14 +12,17 @@ const managementFiles=fs.readdirSync(commerceDir).filter(name=>/^Management.*Pan
 const managementCss=managementFiles.filter(name=>name.endsWith(".css"));
 const managementCode=managementFiles.filter(name=>/\.(jsx|js)$/.test(name));
 
-test("global touch keyboard is installed once and supports touch + pen",()=>{
+test("global touch keyboard is installed once and opens only from its explicit button",()=>{
   const keyboard=read("client/src/components/commerce/installTouchKeyboard.js");
   const entry=read("client/src/entry.jsx");
-  assert.match(keyboard,/pointerType==="touch"\|\|pointerType==="pen"/);
   assert.match(keyboard,/input\.setAttribute\("inputmode","none"\)/);
+  assert.match(keyboard,/button\.addEventListener\("pointerdown",event=>\{event\.preventDefault\(\);event\.stopPropagation\(\);open\(input\)\}/);
+  assert.doesNotMatch(keyboard,/lastTouchAt|isTouchLikePointer/);
+  assert.doesNotMatch(keyboard,/focusin[\s\S]{0,220}open\(el\)/);
   assert.match(keyboard,/TEXT_TYPES/);
   assert.match(keyboard,/NUMERIC_TYPES/);
   assert.equal((entry.match(/installTouchKeyboard\(\);/g)||[]).length,1);
+  assert.doesNotMatch(read("client/src/components/commerce/ProductDeliveryFields.jsx"),/touch-keyboard-bootstrap/);
 });
 
 test("management screens keep MyWorkStation navy/teal palette and reject Kiosk orange structural colors",()=>{

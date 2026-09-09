@@ -2,11 +2,10 @@ import {installBackofficeColumnFilters} from "../../backoffice-column-filters.js
 
 const TEXT_TYPES=new Set(["text","search","email","tel","password","url"]);
 const NUMERIC_TYPES=new Set(["number"]);
-let activeInput=null,lastTouchAt=0,lang="EL",shift=false,activeButton=null,dialogPosition=null;
+let activeInput=null,lang="EL",shift=false,activeButton=null,dialogPosition=null;
 
 const editable=el=>{if(!(el instanceof HTMLElement)||el.disabled||el.readOnly||el.dataset?.keyboard==="off")return false;if(el.matches("textarea,[contenteditable='true']"))return true;if(!(el instanceof HTMLInputElement))return false;const type=(el.type||"text").toLowerCase();return TEXT_TYPES.has(type)||NUMERIC_TYPES.has(type)};
 const isNumeric=input=>input instanceof HTMLInputElement&&(NUMERIC_TYPES.has((input.type||"").toLowerCase())||input.dataset.mwsNumeric==="1");
-const isTouchLikePointer=pointerType=>pointerType==="touch"||pointerType==="pen";
 const labels={EL:["ς","ε","ρ","τ","υ","θ","ι","ο","π","α","σ","δ","φ","γ","η","ξ","κ","λ","ζ","χ","ψ","ω","β","ν","μ"],EN:["q","w","e","r","t","y","u","i","o","p","a","s","d","f","g","h","j","k","l","z","x","c","v","b","n","m"]};
 const rows={EL:[9,9,7],EN:[10,9,7]};
 
@@ -108,13 +107,9 @@ export function installTouchKeyboard(){
   document.addEventListener("pointerdown",event=>{
     const el=event.target;
     if(editable(el)){
-      prepareInput(el);
-      if(isTouchLikePointer(event.pointerType)){
-        lastTouchAt=Date.now();
-        event.preventDefault();
-        open(el);
-        return;
-      }
+      if(activeInput&&activeInput!==el)close();
+      makeButton(el);
+      return;
     }
     if(!activeInput)return;
     if(el.closest?.("#mws-touch-keyboard,.mws-touch-field-trigger"))return;
@@ -124,8 +119,7 @@ export function installTouchKeyboard(){
   document.addEventListener("focusin",event=>{
     const el=event.target;
     if(!editable(el)){removeButton();return}
-    prepareInput(el);makeButton(el);
-    if(Date.now()-lastTouchAt<2200)open(el);
+    makeButton(el);
   },true);
   document.addEventListener("focusout",()=>setTimeout(syncButton,0),true);
   window.addEventListener("resize",()=>{dialogPosition=null;scheduleSync()});
