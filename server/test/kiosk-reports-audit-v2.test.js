@@ -92,6 +92,16 @@ test("Master Catalog dispatch is audited per store and events are grouped by cat
   assert.match(client,/κατηγορίες/);
 });
 
+test("stock movements are included in central audit without a video action",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
+  assert.match(route,/FROM "StockMovement" m/);
+  assert.match(route,/STOCK_MANUAL_ADJUSTMENT/);
+  assert.match(route,/\.\.\.stockItems/);
+  assert.match(route,/StoreOperatorAudit \+ StockMovement/);
+  assert.match(client,/canVideo&&r\.sourceType!=="StockMovement"/);
+});
+
 test("grouped audit rows support horizontal pointer dragging",()=>{
   const client=fs.readFileSync(new URL("../../client/src/components/commerce/installKioskReportsAuditV2.js",import.meta.url),"utf8");
   const css=fs.readFileSync(new URL("../../client/src/components/commerce/kiosk-reports-audit-fixes.css",import.meta.url),"utf8");
