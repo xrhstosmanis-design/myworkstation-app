@@ -24,6 +24,11 @@
 .op-search input{flex:1}
 .op-search input,.op-form input,.op-form select,.op-box>label input,.store-price input,.vat-row input{border:1px solid #ccd8e4;border-radius:10px;padding:10px;font:inherit;box-sizing:border-box}
 .op-list{display:grid;gap:6px;margin-top:12px;max-height:520px;overflow:auto}
+.product-quality-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;border-radius:11px}
+.product-quality-summary>div{display:grid;gap:2px}.product-quality-summary small{color:inherit;opacity:.85}
+.product-quality-summary.warning{background:#fff3cd;color:#765800}.product-quality-summary.ok{background:#dcfce7;color:#166534}
+.product-quality-summary button{border:1px solid currentColor;background:#fff;border-radius:9px;padding:7px 10px;color:inherit;font-weight:800;cursor:pointer}
+.quality-issues{color:#b45309!important;font-weight:800}
 .op-product{width:100%;border:1px solid #e2e8f0;background:#fff;border-radius:11px;padding:10px 12px;display:flex;justify-content:space-between;gap:14px;text-align:left;cursor:pointer}
 .op-product.selected{border-color:#0f766e;background:#effbf7}
 .op-product span{display:grid;gap:3px}
