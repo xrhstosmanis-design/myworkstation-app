@@ -85,7 +85,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     if(tab==="ai")loadAi().catch(e=>setError(e.message));
   },[tab,storeId,activeModules.join("|")]);
 
-  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
+  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","AI_READER","DOCUMENTS","ATTENDANCE","SUPPLIER_COMPARISON","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
 
   const addProduct=async event=>{
     event.preventDefault();setError("");setMessage("");
