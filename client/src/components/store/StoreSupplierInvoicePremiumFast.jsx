@@ -20,7 +20,7 @@ const optimizeImage=async file=>{
 };
 const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(file.size<70000)return "Η φωτογραφία είναι πολύ μικρή· βγάλε καθαρότερη φωτογραφία του παραστατικού.";const u=URL.createObjectURL(file);try{return await new Promise(resolve=>{const i=new Image();i.onload=()=>{const ok=Math.max(i.width,i.height)>=1000&&Math.min(i.width,i.height)>=600;URL.revokeObjectURL(u);resolve(ok?null:"Η ανάλυση είναι χαμηλή. Φωτογράφισε το παραστατικό από πιο κοντά και με καλό φωτισμό.")};i.onerror=()=>resolve(null);i.src=u})}catch{return null}};
 
-async function backgroundV244({api,store,pages,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,resumeJobId=null,onProgress}){
+async function backgroundV244({api,store,pages,supplierId,documentNumber,documentDate,totalGross,mode,paymentTransactionId,resumeJobId=null,queuedJobs=[],onProgress}){
   let jobId=resumeJobId||null;
   let stage="Δημιουργία εργασίας AI Reader";
   try{
@@ -29,7 +29,7 @@ async function backgroundV244({api,store,pages,supplierId,documentNumber,documen
     const pageJobs=[];
     for(const [pageIndex,page] of pages.entries()){
       onProgress?.(`Προετοιμασία σελίδας ${pageIndex+1}/${pages.length}…`);
-      const resumed=pageIndex===0?existing:null;
+      const resumed=queuedJobs[pageIndex]||(pageIndex===0?existing:null);
       const job=resumed||await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename:page.file.name||`timologio-selida-${pageIndex+1}.jpg`,mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:pages.length,pdfNote:`Γρήγορη καταχώριση με AI — σελίδα ${pageIndex+1}/${pages.length} στο παρασκήνιο V2.4.4`}})});
       if(!job?.id)throw new Error(`Δεν δημιουργήθηκε εργασία V2.4.4 για τη σελίδα ${pageIndex+1}.`);
       if(pageIndex===0)jobId=job.id;
@@ -140,10 +140,13 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
           if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:totalGross,storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
         }
       }
-      setStatus("Η πληρωμή παραλήφθηκε. Αναγνώριση γραμμών και καταχώριση τιμολογίου στο BackOffice σε εξέλιξη…");
+      stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
+      setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl}))})});
+      setStatus(handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
       const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η αναγνώριση και η καταχώριση του τιμολογίου συνεχίζονται στο background.`:"Η αναγνώριση γραμμών και η καταχώριση του τιμολογίου συνεχίζονται στο background.";
       setMessage?.(success);onChanged?.();
-      backgroundV244({api,store,pages,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,resumeJobId:duplicateCheck?.resumeJobId||null,onProgress:setStatus})
+      backgroundV244({api,store,pages,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,mode,paymentTransactionId,resumeJobId:duplicateCheck?.resumeJobId||null,queuedJobs:Array.isArray(handoff?.jobs)?handoff.jobs:[],onProgress:setStatus})
         .then(created=>{const review=Boolean(created?.reconciliationRequired);const difference=Number(created?.reconciliationDifference||0);setStatus(review?`⚠️ Το ενιαίο τιμολόγιο μεταφέρθηκε ως ΠΡΟΧΕΙΡΟ για έλεγχο BackOffice: διαφορά ${difference.toFixed(2)} €. Η αποθήκη δεν ενημερώθηκε.`:`✅ Το ενιαίο τιμολόγιο καταχωρίστηκε από ${created?.pageCount||pages.length} ${pages.length===1?"σελίδα":"σελίδες"}, με ${created?.lineCount||0} γραμμές στην αρχική τους σειρά, και μετά αρχειοθετήθηκε στη Θυρίδα.`);setMessage?.(review?`⚠️ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές ως ΠΡΟΧΕΙΡΟ. Άνοιξέ το στο BackOffice, διόρθωσε τις γραμμές και έγκρινέ το. Η πληρωμή έχει ήδη επαναχρησιμοποιηθεί.`:`✅ Το τιμολόγιο ${documentNumber.trim()} καταχωρίστηκε στις Παραγγελίες & Αγορές ως ένα παραστατικό από ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"} και αρχειοθετήθηκε στη Θυρίδα.`);onChanged?.()})
         .catch(error=>{setStatus(`⚠️ Δεν ολοκληρώθηκε η καταχώριση τιμολογίου. ${error?.message||error}`);setMessage?.(`⚠️ Η πληρωμή διατηρήθηκε, αλλά το τιμολόγιο δεν καταχωρίστηκε ούτε αρχειοθετήθηκε: ${error?.message||error}`)});
     }catch(error){
