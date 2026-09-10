@@ -26,7 +26,8 @@ router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
-  const existing=await prisma.supplier.findFirst({where:{companyId:req.user.companyId,taxId},select:{id:true,name:true,taxId:true}});
+  const existingRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
+  const existing=existingRows[0]||null;
   if(existing)return res.json({valid:true,taxId,name:existing.name,address:"",source:"MYWORKSTATION",existingSupplier:existing,readOnly:true});
   await ensureStoreIntegrationSchema();
   const configured=await prisma.$queryRaw`SELECT "credentialsEnc","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='VAT_LOOKUP' LIMIT 1`;
