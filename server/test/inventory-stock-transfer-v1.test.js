@@ -28,3 +28,8 @@ test("stock transfer has replay protection and a BackOffice action",()=>{
   assert.match(panel,/>Μεταφορά</);
   assert.match(panel,/Καταχώρηση μεταφοράς/);
 });
+
+test("checking one inventory row also selects it for transfer",()=>{
+  assert.match(panel,/const row=data\.items\.find\(item=>item\.productId===id\)/);
+  assert.match(panel,/setSelected\(current=>current\?\.productId===id\?null:\(row\|\|null\)\)/);
+});
