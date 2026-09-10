@@ -1,5 +1,7 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {z} from "zod";
+import crypto from "crypto";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -10,6 +12,34 @@ function requireAccess(req,res,next){
   next();
 }
 router.use(requireAccess);
+
+router.post("/stock-transfer",async(req,res,next)=>{
+  try{
+    const body=z.object({sourceStoreId:z.string().min(1),destinationStoreId:z.string().min(1),productId:z.string().min(1),quantity:z.coerce.number().positive().max(1000000),reason:z.string().trim().min(3).max(300),idempotencyKey:z.string().min(8).max(160)}).parse(req.body||{});
+    if(body.sourceStoreId===body.destinationStoreId)return res.status(400).json({error:"Το κατάστημα προορισμού πρέπει να είναι διαφορετικό."});
+    const stores=await prisma.store.findMany({where:{companyId:req.user.companyId,id:{in:[body.sourceStoreId,body.destinationStoreId]},active:true},select:{id:true,name:true}});
+    if(stores.length!==2)return res.status(404).json({error:"Η μεταφορά επιτρέπεται μόνο μεταξύ ενεργών καταστημάτων της ίδιας εταιρείας."});
+    const product=await prisma.product.findFirst({where:{id:body.productId,companyId:req.user.companyId,active:true},select:{id:true,name:true,costPrice:true,salePrice:true}});
+    if(!product)return res.status(404).json({error:"Δεν βρέθηκε ενεργό προϊόν της εταιρείας."});
+    const transferId=`inventory-transfer:${body.idempotencyKey}`;
+    const result=await prisma.$transaction(async tx=>{
+      const duplicate=await tx.$queryRaw`SELECT "id" FROM "StockMovement" WHERE "sourceType"='INVENTORY_TRANSFER' AND "sourceId"=${transferId} LIMIT 1`;
+      if(duplicate[0])return {duplicate:true};
+      const sourceRows=await tx.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${body.sourceStoreId} AND "productId"=${body.productId} FOR UPDATE`;
+      const sourceStock=n(sourceRows[0]?.currentStock);
+      if(!sourceRows[0]||sourceStock<body.quantity)throw Object.assign(new Error(`Μη επαρκές απόθεμα. Διαθέσιμο: ${sourceStock}.`),{statusCode:409});
+      const updated=await tx.$queryRaw`UPDATE "StoreProduct" SET "currentStock"="currentStock"-${body.quantity},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.sourceStoreId} AND "productId"=${body.productId} AND "currentStock">=${body.quantity} RETURNING "currentStock"`;
+      if(!updated[0])throw Object.assign(new Error("Το απόθεμα άλλαξε. Κάνε ανανέωση και προσπάθησε ξανά."),{statusCode:409});
+      await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${crypto.randomUUID()},${body.destinationStoreId},${body.productId},${product.salePrice??null},${body.quantity},true) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${body.quantity},"updatedAt"=CURRENT_TIMESTAMP`;
+      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId","idempotencyKey") VALUES (${crypto.randomUUID()},${body.sourceStoreId},${body.productId},'TRANSFER_OUT',${-body.quantity},${product.costPrice??null},'INVENTORY_TRANSFER',${transferId},${body.reason},${req.user.id},${`${transferId}:out`})`;
+      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId","idempotencyKey") VALUES (${crypto.randomUUID()},${body.destinationStoreId},${body.productId},'TRANSFER_IN',${body.quantity},${product.costPrice??null},'INVENTORY_TRANSFER',${transferId},${body.reason},${req.user.id},${`${transferId}:in`})`;
+      return {duplicate:false,sourceStock:n(updated[0].currentStock)};
+    });
+    if(result.duplicate)return res.json({ok:true,duplicate:true,message:"Η μεταφορά είχε ήδη καταχωριστεί και δεν επαναλήφθηκε."});
+    const destination=await prisma.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${body.destinationStoreId} AND "productId"=${body.productId} LIMIT 1`;
+    res.status(201).json({ok:true,transferId,sourceStock:result.sourceStock,destinationStock:n(destination[0]?.currentStock),message:"Η μεταφορά ολοκληρώθηκε και γράφτηκε μία φορά και στα δύο καταστήματα."});
+  }catch(error){if(error?.statusCode)return res.status(error.statusCode).json({error:error.message});next(error)}
+});
 
 router.get("/",async(req,res,next)=>{
   try{
