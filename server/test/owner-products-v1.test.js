@@ -5,6 +5,8 @@ import fs from "node:fs";
 const bootstrap=fs.readFileSync(new URL("../src/owner-product-bootstrap.js",import.meta.url),"utf8");
 const route=fs.readFileSync(new URL("../src/routes/owner-products.js",import.meta.url),"utf8");
 const activeCatalog=fs.readFileSync(new URL("../src/routes/owner-products-active-catalog.js",import.meta.url),"utf8");
+const smartEntry=fs.readFileSync(new URL("../src/routes/owner-product-smart-entry.js",import.meta.url),"utf8");
+const serverIndex=fs.readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
 const client=fs.readFileSync(new URL("../../client/src/components/commerce/OwnerProductCenter.jsx",import.meta.url),"utf8");
 
 test("owner product schema is additive",()=>{
@@ -52,9 +54,11 @@ test("owner UI exposes the complete central product card",()=>{
 test("active catalog reloads every editable product-card switch",()=>{
   for(const field of ["allowDiscount","allowPosPriceChange","freeSalePrice","negativeStockWarning","isSet","isRecipe"]){
     assert.match(activeCatalog,new RegExp(`p\\.\"${field}\"`));
+    assert.match(smartEntry,new RegExp(`p\\.\"${field}\"`));
   }
   assert.match(activeCatalog,/p\."subcategoryId"/);
   assert.match(activeCatalog,/ProductSubcategory/);
+  assert.match(serverIndex,/app\.use\([^\n]+ownerProductSmartEntryRoutes\);[\s\S]*app\.use\([^\n]+ownerProductsActiveCatalogRoutes\);/);
 });
 
 test("owner UI exposes a read-only LAB product quality audit",()=>{
