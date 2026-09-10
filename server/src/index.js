@@ -63,6 +63,7 @@ import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-approval.js";
+import commerceMyDataInboxRoutes from "./routes/commerce-mydata-inbox.js";
 import commercePosV244Routes from "./routes/commerce-pos-v244.js";
 import commerceAzureInvoiceReaderRoutes from "./routes/commerce-azure-invoice-reader.js";
 import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
@@ -213,6 +214,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commerceAzureInvoiceReaderRoute
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosAiRecheckRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataInboxRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,supplierItemLearningRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceV1Routes);
 app.use("/api/attendance",auth,requireCompanyModule("ATTENDANCE"),attendanceRoutes);
