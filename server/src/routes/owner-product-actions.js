@@ -114,6 +114,29 @@ router.post("/:productId/destruction",requireCompanyModule("INVENTORY"),async(re
   }catch(error){next(error)}
 });
 
+router.post("/:productId/supplier-return",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+    const body=z.object({storeId:z.string().min(1),supplierId:z.string().min(1),quantity:z.coerce.number().positive().max(100000000),reason:z.string().trim().min(3).max(300)}).parse(req.body||{});
+    const [rows,supplierRows]=await Promise.all([
+      prisma.$queryRaw`SELECT sp."currentStock",p."costPrice",p."name" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND s."id"=${body.storeId} LIMIT 1`,
+      prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "id"=${body.supplierId} AND "active"=true LIMIT 1`
+    ]);
+    const row=rows[0],supplier=supplierRows[0];
+    if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
+    if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ενεργός προμηθευτής."});
+    const current=Number(row.currentStock||0);if(current<0||body.quantity>current)return res.status(400).json({error:"Η επιστροφή δεν μπορεί να ξεπερνά το διαθέσιμο stock."});
+    const nextStock=current-body.quantity,returnId=uid(),note=`Επιστροφή σε προμηθευτή: ${supplier.name} · ${body.reason}`;
+    await prisma.$transaction(async tx=>{
+      const locked=await tx.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId} FOR UPDATE`;
+      const liveStock=Number(locked[0]?.currentStock||0);if(body.quantity>liveStock)throw Object.assign(new Error("Η επιστροφή δεν μπορεί να ξεπερνά το διαθέσιμο stock."),{status:400});
+      await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${liveStock-body.quantity},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId}`;
+      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId","idempotencyKey") VALUES (${uid()},${body.storeId},${req.params.productId},'SUPPLIER_RETURN',${-body.quantity},${Number(row.costPrice||0)},'MANUAL_SUPPLIER_RETURN',${returnId},${note},${req.user.id},${`manual-supplier-return:${returnId}`})`;
+    });
+    res.status(201).json({ok:true,returnId,supplierId:supplier.id,supplierName:supplier.name,previousStock:current,currentStock:nextStock,returned:body.quantity});
+  }catch(error){next(error)}
+});
+
 router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
