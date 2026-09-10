@@ -40,18 +40,21 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId,q=String(req.query.q||"").trim(),like=`%${q}%`;await ensureSchema();
     const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",
-             c."name" AS "categoryName",sc."name" AS "subcategoryName",vd."id" AS "vatDepartmentId",vd."description" AS "vatDepartmentName",
-             COALESCE((SELECT json_agg(jsonb_build_object('barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
+      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
+             p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
+             c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",vd."id" AS "vatDepartmentId",vd."description" AS "vatDepartmentName",
+             COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
              COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
       FROM "Product" p
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" AND sc."companyId"=${companyId}
+      LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId" AND pc."companyId"=${companyId}
+      LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${companyId}
       WHERE p."companyId"=${companyId} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pbx WHERE pbx."productId"=p."id" AND pbx."barcode" ILIKE ${like}))
-      GROUP BY p."id",c."name",sc."name",vd."id",vd."description" ORDER BY p."name" LIMIT 500`;
+      GROUP BY p."id",c."name",sc."name",pc."name",mp."brandName",vd."id",vd."description" ORDER BY p."name" LIMIT 500`;
     res.json(rows.map(row=>({...row,salePrice:Number(row.salePrice||0),costPrice:Number(row.costPrice||0),vatRate:Number(row.vatRate||0)})));
   }catch(error){next(error)}
 });
