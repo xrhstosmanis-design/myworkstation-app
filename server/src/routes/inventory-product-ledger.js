@@ -24,7 +24,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
     const product=productRows[0];
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
 
-    const [manual,purchases,sales,onlineRecipe]=await Promise.all([
+    const [manual,purchases,sales,onlineRecipe,ledgerTotals,duplicateRows]=await Promise.all([
       prisma.$queryRaw`
         SELECT sm."id",sm."createdAt",sm."movementType",sm."quantity",sm."unitCost",NULL::numeric AS "salePrice",sm."note",
                COALESCE(u."fullName",'—') AS "actorName",sm."sourceType",sm."sourceId"
@@ -88,7 +88,25 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
               AND sm."productId"=r."ingredientProductId"
               AND sm."sourceType"='ONLINE_ORDER_RECIPE'
               AND sm."sourceId"=o."id"
-          )`
+          )`,
+      prisma.$queryRaw`
+        SELECT COUNT(*)::int AS "movementCount",COALESCE(SUM(sm."quantity"),0) AS "ledgerStock"
+        FROM "StockMovement" sm
+        JOIN "Store" st ON st."id"=sm."storeId"
+        JOIN "Product" p ON p."id"=sm."productId"
+        WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
+          AND st."companyId"=${companyId} AND p."companyId"=${companyId}`,
+      prisma.$queryRaw`
+        SELECT sm."sourceType",sm."sourceId",sm."movementType",sm."quantity",COUNT(*)::int AS "count"
+        FROM "StockMovement" sm
+        JOIN "Store" st ON st."id"=sm."storeId"
+        JOIN "Product" p ON p."id"=sm."productId"
+        WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
+          AND st."companyId"=${companyId} AND p."companyId"=${companyId}
+          AND sm."sourceType" IS NOT NULL AND sm."sourceId" IS NOT NULL
+        GROUP BY sm."sourceType",sm."sourceId",sm."movementType",sm."quantity"
+        HAVING COUNT(*)>1
+        ORDER BY COUNT(*) DESC`
     ]);
 
     const combined=[...manual,...purchases,...sales,...onlineRecipe].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -98,7 +116,9 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
       running-=delta;
       return {...row,inQty:delta>0?delta:0,outQty:delta<0?Math.abs(delta):0,stockAfter};
     });
-    res.json({product:{id:product.id,name:product.name,sku:product.sku,currentStock:n(product.currentStock)},movements});
+    const ledgerStock=n(ledgerTotals[0]?.ledgerStock),currentStock=n(product.currentStock),difference=currentStock-ledgerStock;
+    const reconciliation={status:Math.abs(difference)<0.0001&&duplicateRows.length===0?"AGREEMENT":"NEEDS_REVIEW",currentStock,ledgerStock,difference,movementCount:Number(ledgerTotals[0]?.movementCount||0),duplicateCandidates:duplicateRows.map(row=>({...row,quantity:n(row.quantity),count:Number(row.count||0)}))};
+    res.json({product:{id:product.id,name:product.name,sku:product.sku,currentStock},reconciliation,movements});
   }catch(error){next(error)}
 });
 
