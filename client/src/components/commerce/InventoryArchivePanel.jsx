@@ -42,7 +42,11 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose}){
   const search=event=>{event?.preventDefault();setPage(1);load(1)};
   const allVisible=data.items.length>0&&data.items.every(row=>checked.includes(row.productId));
   const toggleAll=()=>setChecked(allVisible?checked.filter(id=>!data.items.some(r=>r.productId===id)):[...new Set([...checked,...data.items.map(r=>r.productId)])]);
-  const toggleOne=id=>setChecked(ids=>ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
+  const toggleOne=id=>{
+    const row=data.items.find(item=>item.productId===id);
+    setChecked(ids=>ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);
+    setSelected(current=>current?.productId===id?null:(row||null));
+  };
 
   const createNew=async()=>{
     if(!newDraft.name.trim())return setError("Συμπλήρωσε περιγραφή είδους.");
