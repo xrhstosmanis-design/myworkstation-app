@@ -24,3 +24,9 @@ test("POS exposes draft and finalization actions with an honest provider warning
   assert.match(pos,/Οριστικοποίηση δελτίου/);
   assert.match(pos,/δεν εμφανίζεται MARK και δεν αφαιρείται stock/);
 });
+
+test("dispatch number is generated automatically and overwritten by the server",()=>{
+  assert.match(route,/documentNumber:`ΔΑ-ΕΠ-/);
+  assert.match(route,/crypto\.randomUUID\(\)\.slice\(0,8\)/);
+  assert.match(pos,/documentNumber:automaticDispatchNumber\(\)/);
+});
