@@ -7,6 +7,11 @@ test("normalizes verified VIES supplier data without writing it",()=>{
   assert.deepEqual(normalizeViesResult({isValid:true,name:"  ΔΟΚΙΜΗ ΑΕ ",address:"ΑΘΗΝΑ\nΕΛΛΑΔΑ",requestDate:"2026-09-10"},"123456789"),{valid:true,taxId:"123456789",name:"ΔΟΚΙΜΗ ΑΕ",address:"ΑΘΗΝΑ ΕΛΛΑΔΑ",source:"EU_VIES",requestDate:"2026-09-10"});
 });
 
+test("keeps the fullest official VIES name when aliases are pipe-separated",()=>{
+  const result=normalizeViesResult({isValid:true,name:"ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ||ΣΤΕΦΑΝΙΔΗΣ Ι ΑΕ"},"998878583");
+  assert.equal(result.name,"ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ");
+});
+
 test("VAT lookup is read-only and tenant/store scoped",()=>{
   const source=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
   assert.match(source,/companyId:req\.user\.companyId/);
