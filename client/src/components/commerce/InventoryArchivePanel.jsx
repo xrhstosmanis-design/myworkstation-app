@@ -33,6 +33,11 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose}){
     }catch(e){setError(e.message)}finally{setLoading(false)}
   };
   useEffect(()=>{setPage(1);load(1)},[storeId,pageSize]);
+  useEffect(()=>{
+    const refresh=async event=>{await load();setMessage(event.detail?.message||"Η αποθήκη ανανεώθηκε.")};
+    window.addEventListener("mws:inventory-archive-refresh",refresh);
+    return()=>window.removeEventListener("mws:inventory-archive-refresh",refresh);
+  });
   const search=event=>{event?.preventDefault();setPage(1);load(1)};
   const allVisible=data.items.length>0&&data.items.every(row=>checked.includes(row.productId));
   const toggleAll=()=>setChecked(allVisible?checked.filter(id=>!data.items.some(r=>r.productId===id)):[...new Set([...checked,...data.items.map(r=>r.productId)])]);
