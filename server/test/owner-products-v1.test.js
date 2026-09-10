@@ -36,7 +36,9 @@ test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία/);
   assert.match(route,/SupplierProductLink/);
   assert.match(route,/PRODUCT_CARD_UPDATED/);
-  assert.match(route,/changes,actorName/);
+  assert.match(route,/changes:storeChanges,actorName/);
+  assert.match(route,/Λιανική καταστήματος/);
+  assert.match(route,/oldRow\?\.salePrice\?\?product\.salePrice/);
 });
 
 test("owner UI exposes the complete central product card",()=>{

@@ -208,14 +208,12 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     changed("category","Κατηγορία",product.categoryName,selectedCategory[0]?.name||body.categoryName||null);
     changed("subcategory","Υποκατηγορία",product.subcategoryName,selectedSubcategory[0]?.name||null);
     changed("unit","Μονάδα",product.unit,body.unit);
-    changed("salePrice","Λιανική",money(product.salePrice),body.salePrice);
     changed("costPrice","Τιμή αγοράς",money(product.costPrice),body.costPrice);
     changed("vatRate","ΦΠΑ",money(product.vatRate),body.vatRate);
     for(const [field,label] of [["vatVerified","ΦΠΑ επιβεβαιωμένος"],["trackStock","Παρακολούθηση stock"],["active","Ενεργό"],["allowDiscount","Επιτρέπεται έκπτωση"],["allowPosPriceChange","Αλλαγή τιμής στο POS"],["freeSalePrice","Ελεύθερη τιμή στο POS"],["negativeStockWarning","Ειδοποίηση αρνητικού stock"],["isSet","SET"],["isRecipe","Συνταγή"]])changed(field,label,Boolean(product[field]),Boolean(body[field]));
     const normalizeRows=(rows,keys)=>rows.map(row=>Object.fromEntries(keys.map(key=>[key,comparable(key==="salePrice"||key==="minStock"||key==="unitMultiplier"?money(row[key]):row[key])]))).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
     changed("barcodes","Barcodes",normalizeRows(oldBarcodes,["barcode","unitMultiplier","salePrice","name"]),normalizeRows(body.barcodes,["barcode","unitMultiplier","salePrice","name"]));
     changed("supplierCodes","Κωδικοί προμηθευτών",normalizeRows(oldSupplierCodes,["supplierId","supplierCode"]),normalizeRows(body.supplierCodes,["supplierId","supplierCode"]));
-    changed("stores","Καταστήματα / τιμές / alarm stock",normalizeRows(oldStores,["storeId","active","salePrice","minStock"]),normalizeRows(body.stores,["storeId","active","salePrice","minStock"]));
     /* MWS_STORE_PRICE_SYNC_V1 */
     // If a store followed the old base retail price, keep it aligned with the new
     // base retail price. Deliberate store-specific overrides stay untouched.
@@ -228,6 +226,14 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
         }
       }
     }
+    const auditChangesByStore=new Map(body.stores.map(row=>{
+      const storeChanges=[...changes],oldRow=oldStores.find(item=>item.storeId===row.storeId);
+      const storeChanged=(field,label,before,after)=>{const oldValue=comparable(before),newValue=comparable(after);if(JSON.stringify(oldValue)!==JSON.stringify(newValue))storeChanges.push({field,label,before:oldValue,after:newValue})};
+      storeChanged("storeSalePrice","Λιανική καταστήματος",money(oldRow?.salePrice??product.salePrice),money(row.salePrice));
+      storeChanged("storeActive","Ενεργό στο κατάστημα",Boolean(oldRow?.active),Boolean(row.active));
+      storeChanged("minStock","Alarm stock",money(oldRow?.minStock),money(row.minStock));
+      return [row.storeId,storeChanges];
+    }));
     await prisma.$transaction(async tx=>{
       let categoryId=selectedCategoryId;
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
@@ -238,7 +244,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       await tx.$executeRaw`UPDATE "SupplierProductLink" SET "active"=false,"updatedBy"=${req.user.id},"updatedAt"=NOW() WHERE "companyId"=${company} AND "productId"=${product.id} AND NOT ("supplierId"=ANY(${supplierIds}::text[]))`;
       for(const row of body.supplierCodes)await tx.$executeRaw`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","updatedBy","updatedByName") VALUES (${uid()},${company},${row.supplierId},${product.id},${row.supplierCode},true,'PRODUCT_CARD',${req.user.id},${req.user.fullName||req.user.email||'BackOffice'}) ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET "supplierCode"=EXCLUDED."supplierCode","active"=true,"source"='PRODUCT_CARD',"updatedBy"=EXCLUDED."updatedBy","updatedByName"=EXCLUDED."updatedByName","updatedAt"=NOW()`;
       for(const row of body.stores)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","minStock","active") VALUES (${uid()},${row.storeId},${product.id},${row.salePrice},${row.minStock},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","minStock"=EXCLUDED."minStock","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
-      if(changes.length)for(const storeId of storeIds)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${company},${storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_CARD_UPDATED',${JSON.stringify({productId:product.id,productName:body.name,sku:body.sku||product.sku||null,changes,actorName:req.user.fullName||req.user.name||req.user.email||'BackOffice',terminalPos:'BACKOFFICE'})}::jsonb)`;
+      for(const storeId of storeIds){const storeChanges=auditChangesByStore.get(storeId)||[];if(storeChanges.length)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${company},${storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_CARD_UPDATED',${JSON.stringify({productId:product.id,productName:body.name,sku:body.sku||product.sku||null,changes:storeChanges,actorName:req.user.fullName||req.user.name||req.user.email||'BackOffice',terminalPos:'BACKOFFICE'})}::jsonb)`}
     });
     res.json({ok:true,id:product.id});
   }catch(error){next(error)}
