@@ -11,10 +11,10 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
   const [error,setError]=useState("");
   const current=kind=>manager.integrations.find(row=>row.kind===kind);
   const submit=kind=>async event=>{
-    event.preventDefault();setSaving(kind);setError("");const form=new FormData(event.currentTarget);
+    event.preventDefault();setSaving(kind);setError("");const formElement=event.currentTarget;const form=new FormData(formElement);
     try{
       await request(`/api/platform/companies/${manager.company.id}/stores/${manager.store.id}/integrations/${kind}`,{method:"PUT",body:JSON.stringify({providerName:form.get("providerName"),environment:form.get("environment"),accountId:form.get("accountId"),secret:form.get("secret"),enabled:true})});
-      event.currentTarget.reset();await onChanged();
+      formElement.reset();await onChanged();
     }catch(err){setError(err.message)}finally{setSaving("")}
   };
   const toggle=async row=>{
