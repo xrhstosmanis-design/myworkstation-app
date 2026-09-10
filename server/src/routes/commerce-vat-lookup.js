@@ -8,7 +8,9 @@ const clean=value=>String(value||"").toUpperCase().replace(/^EL/,"").replace(/\D
 
 export function normalizeViesResult(payload,taxId){
   const valid=payload?.isValid===true||payload?.valid===true;
-  return {valid,taxId,name:String(payload?.name||"").trim(),address:String(payload?.address||"").replace(/\s+/g," ").trim(),source:"EU_VIES",requestDate:payload?.requestDate||null};
+  const names=[...new Set(String(payload?.name||"").split(/\|+/).map(value=>value.replace(/\s+/g," ").trim()).filter(Boolean))];
+  const name=names.sort((a,b)=>b.length-a.length)[0]||"";
+  return {valid,taxId,name,address:String(payload?.address||"").replace(/\s+/g," ").trim(),source:"EU_VIES",requestDate:payload?.requestDate||null};
 }
 
 const xmlEscape=value=>String(value||"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[char]));
