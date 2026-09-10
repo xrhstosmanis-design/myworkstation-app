@@ -105,6 +105,8 @@ test("stock movements are included in central audit without a video action",()=>
   assert.match(route,/FROM "StockMovement" m/);
   assert.match(route,/STOCK_MANUAL_ADJUSTMENT/);
   assert.match(route,/STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή"/);
+  assert.match(route,/STOCK_WASTE="Καταστροφή \/ Φύρα είδους"/);
+  assert.match(client,/STOCK_WASTE:"Καταστροφή \/ Φύρα είδους"/);
   assert.match(route,/\.\.\.stockItems/);
   assert.match(route,/StoreOperatorAudit \+ StockMovement/);
   assert.match(route,/COALESCE\(u\."fullName",operator\."displayName"\) AS "actorName"/);

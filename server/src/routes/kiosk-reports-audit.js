@@ -10,6 +10,7 @@ auditEventLabels.PRODUCT_CARD_UPDATED="Διόρθωση είδους";
 auditEventLabels.MASTER_PRODUCTS_DISPATCHED="Αποστολή προϊόντων από Master Catalog";
 auditEventLabels.STOCK_MANUAL_ADJUSTMENT="Χειροκίνητη διόρθωση αποθέματος";
 auditEventLabels.STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή";
+auditEventLabels.STOCK_WASTE="Καταστροφή / Φύρα είδους";
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 
