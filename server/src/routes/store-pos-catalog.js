@@ -199,7 +199,7 @@ router.get("/stores/:storeId",async(req,res,next)=>{
     const [layoutRows,products]=await Promise.all([
       prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]),
       prisma.$queryRaw`
-        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",mp."sourceCode" AS "masterCode",
+        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",p."freeSalePrice",p."negativeStockWarning",mp."sourceCode" AS "masterCode",
           COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
           c."name" AS "categoryName",
           COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",
