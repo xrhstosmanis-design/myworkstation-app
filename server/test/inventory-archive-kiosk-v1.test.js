@@ -6,12 +6,14 @@ import {spawnSync} from "node:child_process";
 const archivePath=new URL("../src/routes/inventory-archive.js",import.meta.url);
 const importPath=new URL("../src/routes/inventory-archive-import.js",import.meta.url);
 const panelPath=new URL("../../client/src/components/commerce/InventoryArchivePanel.jsx",import.meta.url);
+const actionsPath=new URL("../../client/src/components/commerce/inventoryProductActionsV2.js",import.meta.url);
 const cssPath=new URL("../../client/src/components/commerce/inventory-archive.css",import.meta.url);
 const launcherPath=new URL("../../client/src/components/commerce/CommerceLauncher.jsx",import.meta.url);
 const indexPath=new URL("../src/index.js",import.meta.url);
 const archive=fs.readFileSync(archivePath,"utf8");
 const importer=fs.readFileSync(importPath,"utf8");
 const panel=fs.readFileSync(panelPath,"utf8");
+const actions=fs.readFileSync(actionsPath,"utf8");
 const css=fs.readFileSync(cssPath,"utf8");
 const launcher=fs.readFileSync(launcherPath,"utf8");
 const index=fs.readFileSync(indexPath,"utf8");
@@ -94,6 +96,13 @@ test("new archive reuses existing navigation without an observer",()=>{
   assert.match(launcher,/Αποθήκη/);
   assert.match(launcher,/data-purchase-orders-launch/);
   assert.doesNotMatch(panel,/MutationObserver/);
+});
+
+test("stock, destruction and price saves refresh the open archive without leaving BackOffice",()=>{
+  assert.match(panel,/mws:inventory-archive-refresh/);
+  assert.match(actions,/refreshArchive\('Η διόρθωση αποθέματος καταχωρίστηκε\.'/);
+  assert.match(actions,/refreshArchive\('Η καταστροφή ποσότητας καταχωρίστηκε\.'/);
+  assert.doesNotMatch(actions,/location\.reload\(\)/);
 });
 
 test("archive uses canonical MyWorkStation structural colors",()=>{
