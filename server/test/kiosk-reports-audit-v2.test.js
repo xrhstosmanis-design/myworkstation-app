@@ -86,6 +86,14 @@ test("product-card corrections appear in central audit with field changes",()=>{
   assert.match(route,/details\.changes/);
 });
 
+test("deleted draft invoices appear in the central events ledger",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  assert.match(route,/PURCHASE_ORDER_DELETED="Διαγραφή πρόχειρου τιμολογίου"/);
+  assert.match(route,/ΔΙΑΓΡΑΦΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(route,/details\.invoiceNumber/);
+  assert.match(route,/details\.supplierName/);
+});
+
 test("Master Catalog dispatch is audited per store and events are grouped by category",()=>{
   const route=read("src/routes/kiosk-reports-audit.js");
   const dispatch=read("src/routes/platform-bulk-catalog.js");
