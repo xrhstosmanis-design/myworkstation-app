@@ -121,6 +121,7 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
   try{
     const body=z.object({
       supplierId:z.string(),
+      documentType:z.enum(["INVOICE","CREDIT_NOTE"]).default("INVOICE"),
       documentNumber:z.string().trim().max(80).optional().nullable(),
       documentDate:z.coerce.date().optional(),
       lines:z.array(lineSchema).min(1).max(500)
@@ -145,7 +146,7 @@ router.post("/ai-reader/jobs/:jobId/confirm",requireCompanyModule("AI_READER"),r
         error.status=409;
         throw error;
       }
-      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId") VALUES (${docId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber||null},${body.documentDate||new Date()},${totals.net},${totals.vat},${totals.gross},'OCR_DRAFT','DRAFT',${req.user.id})`;
+      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId") VALUES (${docId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber||null},${body.documentDate||new Date()},${totals.net},${totals.vat},${totals.gross},'OCR_DRAFT','DRAFT',${req.user.id})`;
       for(const item of body.lines){
         const net=item.quantity*item.unitCost,vat=net*item.vatRate/100;
         await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","supplierBarcode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${docId},${item.productId},${item.supplierItemCode||null},${item.supplierBarcode||null},${item.description},${item.quantity},${item.unit},${item.unit==="PACKAGE"?item.unitsPerPackage:null},${item.unitCost},${net},${item.vatRate},${vat},${net+vat})`;
@@ -221,16 +222,17 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
       if(!doc){const error=new Error("Δεν βρέθηκε το παραστατικό.");error.status=404;throw error}
       if(doc.status==="APPROVED")return {alreadyApproved:true,id:doc.id};
       if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
+      const creditNote=doc.documentType==="CREDIT_NOTE",stockSign=creditNote?-1:1;
       const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;
       if(!lines.length){const error=new Error("Το παραστατικό δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
       let learnedMappings=0;
       for(const line of lines){
         if(!line.productId)continue;
-        const quantity=Number(line.quantity||0),unitsPerPackage=Number(line.unitsPerPackage||1),stockQuantity=line.unit==="PACKAGE"?quantity*unitsPerPackage:quantity;
+        const quantity=Number(line.quantity||0),unitsPerPackage=Number(line.unitsPerPackage||1),stockQuantity=stockSign*(line.unit==="PACKAGE"?quantity*unitsPerPackage:quantity);
         const perPieceCost=line.unit==="PACKAGE"?Number(line.unitCost||0)/unitsPerPackage:Number(line.unitCost||0);
         if(line.trackStock){
           await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${doc.storeId},${line.productId},${stockQuantity}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${stockQuantity},"updatedAt"=CURRENT_TIMESTAMP`;
-          await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${doc.storeId},${line.productId},'PURCHASE',${stockQuantity},${perPieceCost},'PURCHASE_APPROVAL',${doc.id},'Έγκριση πρόχειρου παραστατικού από BackOffice',${req.user.id})`;
+          await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${doc.storeId},${line.productId},${creditNote?'SUPPLIER_RETURN':'PURCHASE'},${stockQuantity},${perPieceCost},${creditNote?'CREDIT_NOTE_APPROVAL':'PURCHASE_APPROVAL'},${doc.id},${creditNote?'Πιστωτικό προμηθευτή — επιστροφή από αποθήκη':'Έγκριση πρόχειρου παραστατικού από BackOffice'},${req.user.id})`;
         }
         const supplierItemCode=normalizeSupplierItemCode(line.supplierItemCode);
         if(doc.supplierId&&supplierItemCode){
@@ -253,7 +255,7 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
       }
       await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${doc.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='CONFIRMED',"updatedAt"=CURRENT_TIMESTAMP WHERE "purchaseDocumentId"=${doc.id} AND "companyId"=${req.user.companyId}`;
-      return {alreadyApproved:false,id:doc.id,learnedMappings};
+      return {alreadyApproved:false,id:doc.id,documentType:doc.documentType,creditNote,learnedMappings};
     });
     res.json({ok:true,...result,status:"APPROVED",stockUpdated:true});
   }catch(error){next(error)}
