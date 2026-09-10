@@ -1,9 +1,19 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin,requireCompanyModule} from "../middleware/module-access.js";
+import {storePaidModuleState} from "../store-paid-modules.js";
 
 const router=Router();
 const n=value=>Number(value||0);
+const reconciliationEntitlement=async(req,companyId,storeId)=>{
+  if(isPlatformSuperAdmin(req.user))return {allowed:true,moduleKey:"LOSS_DETECTION",superAdminBypass:true};
+  const [company,storeModule]=await Promise.all([companyModuleState(companyId),storePaidModuleState(storeId,"LOSS_DETECTION")]);
+  return {
+    allowed:Boolean(company?.licenseAllowed&&effectiveModuleEnabled(company.activeModules.includes("LOSS_DETECTION"),storeModule)),
+    moduleKey:"LOSS_DETECTION",
+    moduleName:"Έλεγχος Απωλειών"
+  };
+};
 
 router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -23,6 +33,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         AND p."id"=${productId} AND sp."storeId"=${storeId} LIMIT 1`;
     const product=productRows[0];
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
+    const reconciliationAccess=await reconciliationEntitlement(req,companyId,storeId);
 
     const [manual,purchases,sales,onlineRecipe,ledgerTotals,duplicateRows]=await Promise.all([
       prisma.$queryRaw`
@@ -89,14 +100,14 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
               AND sm."sourceType"='ONLINE_ORDER_RECIPE'
               AND sm."sourceId"=o."id"
           )`,
-      prisma.$queryRaw`
+      reconciliationAccess.allowed?prisma.$queryRaw`
         SELECT COUNT(*)::int AS "movementCount",COALESCE(SUM(sm."quantity"),0) AS "ledgerStock"
         FROM "StockMovement" sm
         JOIN "Store" st ON st."id"=sm."storeId"
         JOIN "Product" p ON p."id"=sm."productId"
         WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
-          AND st."companyId"=${companyId} AND p."companyId"=${companyId}`,
-      prisma.$queryRaw`
+          AND st."companyId"=${companyId} AND p."companyId"=${companyId}`:Promise.resolve([]),
+      reconciliationAccess.allowed?prisma.$queryRaw`
         SELECT sm."sourceType",sm."sourceId",sm."movementType",sm."quantity",COUNT(*)::int AS "count"
         FROM "StockMovement" sm
         JOIN "Store" st ON st."id"=sm."storeId"
@@ -106,7 +117,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
           AND sm."sourceType" IS NOT NULL AND sm."sourceId" IS NOT NULL
         GROUP BY sm."sourceType",sm."sourceId",sm."movementType",sm."quantity"
         HAVING COUNT(*)>1
-        ORDER BY COUNT(*) DESC`
+        ORDER BY COUNT(*) DESC`:Promise.resolve([])
     ]);
 
     const combined=[...manual,...purchases,...sales,...onlineRecipe].map(row=>({...row,quantity:n(row.quantity),unitCost:n(row.unitCost),salePrice:row.salePrice===null?null:n(row.salePrice)})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -116,9 +127,13 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
       running-=delta;
       return {...row,inQty:delta>0?delta:0,outQty:delta<0?Math.abs(delta):0,stockAfter};
     });
-    const ledgerStock=n(ledgerTotals[0]?.ledgerStock),currentStock=n(product.currentStock),difference=currentStock-ledgerStock;
-    const reconciliation={status:Math.abs(difference)<0.0001&&duplicateRows.length===0?"AGREEMENT":"NEEDS_REVIEW",currentStock,ledgerStock,difference,movementCount:Number(ledgerTotals[0]?.movementCount||0),duplicateCandidates:duplicateRows.map(row=>({...row,quantity:n(row.quantity),count:Number(row.count||0)}))};
-    res.json({product:{id:product.id,name:product.name,sku:product.sku,currentStock},reconciliation,movements});
+    const currentStock=n(product.currentStock);
+    let reconciliation=null;
+    if(reconciliationAccess.allowed){
+      const ledgerStock=n(ledgerTotals[0]?.ledgerStock),difference=currentStock-ledgerStock;
+      reconciliation={status:Math.abs(difference)<0.0001&&duplicateRows.length===0?"AGREEMENT":"NEEDS_REVIEW",currentStock,ledgerStock,difference,movementCount:Number(ledgerTotals[0]?.movementCount||0),duplicateCandidates:duplicateRows.map(row=>({...row,quantity:n(row.quantity),count:Number(row.count||0)}))};
+    }
+    res.json({product:{id:product.id,name:product.name,sku:product.sku,currentStock},reconciliationAccess,reconciliation,movements});
   }catch(error){next(error)}
 });
 
