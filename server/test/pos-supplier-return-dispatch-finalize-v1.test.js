@@ -26,7 +26,14 @@ test("POS exposes draft and finalization actions with an honest provider warning
 });
 
 test("dispatch number is generated automatically and overwritten by the server",()=>{
-  assert.match(route,/documentNumber:`ΔΑ-ΕΠ-/);
+  assert.match(route,/documentNumber=`ΔΑ-ΕΠ-/);
   assert.match(route,/crypto\.randomUUID\(\)\.slice\(0,8\)/);
   assert.match(pos,/documentNumber:automaticDispatchNumber\(\)/);
+});
+
+test("successful POS finalization clears the sale screen and confirms the server number",()=>{
+  assert.match(route,/res\.json=body=>sendJson\(\{\.\.\.body,documentNumber\}\)/);
+  assert.match(pos,/if\(finalize\)clearCart\(\)/);
+  assert.match(pos,/Αριθμός δελτίου: \$\{documentNumber\}/);
+  assert.doesNotMatch(pos,/if\(!finalize\)clearCart\(\)/);
 });
