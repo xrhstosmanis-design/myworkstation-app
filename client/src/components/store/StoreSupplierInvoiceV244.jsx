@@ -1,39 +1,1111 @@
-import React,{useEffect,useMemo,useRef,useState} from "react";
-import {Camera,FileUp,Wallet} from "lucide-react";
-import {finalizeV244ProductLines} from "../../lib/invoice-v244.js";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Camera, FileUp, Wallet } from "lucide-react";
+import { finalizeV244ProductLines } from "../../lib/invoice-v244.js";
 
-const AI_THRESHOLD=65;
-const today=()=>new Date().toISOString().slice(0,10);
-const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const parseMoney=value=>{const n=Number(String(value??"").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
-const normalize=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
-const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν ήταν δυνατή η ανάγνωση του τιμολογίου."));reader.readAsDataURL(file)});
+const AI_THRESHOLD = 65;
+const today = () => new Date().toISOString().slice(0, 10);
+const euro = (value) =>
+  Number(value || 0).toLocaleString("el-GR", {
+    style: "currency",
+    currency: "EUR",
+  });
+const parseMoney = (value) => {
+  const n = Number(
+    String(value ?? "")
+      .replace(/\s/g, "")
+      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.-]/g, ""),
+  );
+  return Number.isFinite(n) ? n : 0;
+};
+const normalize = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("el-GR")
+    .replace(/[^A-ZΑ-Ω0-9]/g, "");
+const readFile = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () =>
+      reject(new Error("Δεν ήταν δυνατή η ανάγνωση του τιμολογίου."));
+    reader.readAsDataURL(file);
+  });
 
-function collectLines(data){const found=[];const visit=node=>{if(!node)return;if(Array.isArray(node)){node.forEach(visit);return}if(node.text&&node.words&&String(node.text).trim())found.push({text:String(node.text).trim(),confidence:Math.max(0,Math.min(100,Math.round(Number(node.confidence)||0)))});for(const key of ["blocks","paragraphs","lines"])visit(node[key])};visit(data?.blocks);if(found.length)return found;return String(data?.text||"").split(/\r?\n/).map(text=>text.trim()).filter(Boolean).map(text=>({text,confidence:Math.round(Number(data?.confidence)||0)}))}
-async function pdfPreview(file){const pdfjs=await import("pdfjs-dist/legacy/build/pdf.mjs");pdfjs.GlobalWorkerOptions.workerSrc=new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs",import.meta.url).toString();const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const page=await pdf.getPage(1),viewport=page.getViewport({scale:2}),canvas=document.createElement("canvas");canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;return {source:canvas.toDataURL("image/jpeg",.92),pageCount:pdf.numPages,pdfNote:pdf.numPages>1?`Το OCR διάβασε την πρώτη σελίδα από ${pdf.numPages}. Αν χρειαστεί AI, ελέγχεται το αρχικό PDF.`:"Αναγνώστηκε η πρώτη σελίδα του PDF."}}
-async function localOcr(file){const dataUrl=await readFile(file);let source=file,pageCount=null,pdfNote=null;if(file.type==="application/pdf"){const preview=await pdfPreview(file);source=preview.source;pageCount=preview.pageCount;pdfNote=preview.pdfNote}const {createWorker}=await import("tesseract.js"),worker=await createWorker("ell+eng");let result;try{result=await worker.recognize(source)}finally{await worker.terminate()}return {dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",confidence:Math.max(0,Math.min(100,Math.round(Number(result?.data?.confidence)||0))),rawText:result?.data?.text||"",lines:collectLines(result?.data||{}),pageCount,pdfNote}}
-function localMeta(rawText,suppliers=[]){const raw=String(rawText||""),lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),joined=normalize(raw);let supplier=null,best=0;for(const item of suppliers){for(const name of [String(item.name||""),String(item.name||"").replace(/\s*\([^)]*\)\s*$/g,"")]){const key=normalize(name);if(key.length>=4&&joined.includes(key)&&key.length>best){supplier=item;best=key.length}}}let documentNumber="";for(const line of lines){const match=line.match(/(?:ΤΙΜΟΛΟΓΙΟ|ΤΙΜ|INVOICE|ΠΑΡΑΣΤΑΤΙΚΟ).{0,30}?(?:ΑΡ\.?|ΑΡΙΘΜ(?:ΟΣ)?|NO\.?|#)?\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/]{2,})/i)||line.match(/(?:ΑΡ\.?\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|ΑΡΙΘΜΟΣ\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|INVOICE\s*NO\.?)\s*[:\-]?\s*([A-ZΑ-Ω0-9\-/]{3,})/i);if(match){documentNumber=match[1].trim();break}}let documentDate="";for(const line of lines){const match=line.match(/(?:ΗΜΕΡΟΜΗΝΙΑ|DATE)?\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:20)?\d{2})/i);if(match){let[d,m,y]=match[1].split(/[\/\-.]/).map(Number);if(y<100)y+=2000;documentDate=`${String(y).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;break}}let totalGross=0;const totalWords=/(ΓΕΝΙΚΟ\s*ΣΥΝΟΛΟ|ΠΛΗΡΩΤΕΟ|ΤΕΛΙΚΟ\s*ΣΥΝΟΛΟ|ΣΥΝΟΛΟ\s*ΜΕ\s*ΦΠΑ|TOTAL\s*DUE|GRAND\s*TOTAL|TOTAL)/i;for(const line of lines.filter(x=>totalWords.test(x)).reverse()){const values=(line.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2})|\d+(?:[.,]\d{2})/g)||[]).map(parseMoney).filter(v=>v>0);if(values.length){totalGross=values.at(-1);break}}const taxId=(raw.match(/(?:ΑΦΜ|VAT)\s*[:\-]?\s*([0-9]{9,12})/i)||[])[1]||"";return {supplierId:supplier?.id||"",supplierName:supplier?.name||"",documentNumber,documentDate:documentDate||today(),totalGross,supplierCandidate:{name:supplier?.name||"",taxId,email:"",phone:"",address:"",city:""}}}
+function collectLines(data) {
+  const found = [];
+  const visit = (node) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (node.text && node.words && String(node.text).trim())
+      found.push({
+        text: String(node.text).trim(),
+        confidence: Math.max(
+          0,
+          Math.min(100, Math.round(Number(node.confidence) || 0)),
+        ),
+      });
+    for (const key of ["blocks", "paragraphs", "lines"]) visit(node[key]);
+  };
+  visit(data?.blocks);
+  if (found.length) return found;
+  return String(data?.text || "")
+    .split(/\r?\n/)
+    .map((text) => text.trim())
+    .filter(Boolean)
+    .map((text) => ({
+      text,
+      confidence: Math.round(Number(data?.confidence) || 0),
+    }));
+}
+async function pdfPreview(file) {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
+  const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() })
+    .promise;
+  const page = await pdf.getPage(1),
+    viewport = page.getViewport({ scale: 2 }),
+    canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport })
+    .promise;
+  return {
+    source: canvas.toDataURL("image/jpeg", 0.92),
+    pageCount: pdf.numPages,
+    pdfNote:
+      pdf.numPages > 1
+        ? `Το OCR διάβασε την πρώτη σελίδα από ${pdf.numPages}. Αν χρειαστεί AI, ελέγχεται το αρχικό PDF.`
+        : "Αναγνώστηκε η πρώτη σελίδα του PDF.",
+  };
+}
+async function localOcr(file) {
+  const dataUrl = await readFile(file);
+  let source = file,
+    pageCount = null,
+    pdfNote = null;
+  if (file.type === "application/pdf") {
+    const preview = await pdfPreview(file);
+    source = preview.source;
+    pageCount = preview.pageCount;
+    pdfNote = preview.pdfNote;
+  }
+  const { createWorker } = await import("tesseract.js"),
+    worker = await createWorker("ell+eng");
+  let result;
+  try {
+    result = await worker.recognize(source);
+  } finally {
+    await worker.terminate();
+  }
+  return {
+    dataUrl,
+    filename: file.name || "timologio.jpg",
+    mimeType: file.type || "image/jpeg",
+    confidence: Math.max(
+      0,
+      Math.min(100, Math.round(Number(result?.data?.confidence) || 0)),
+    ),
+    rawText: result?.data?.text || "",
+    lines: collectLines(result?.data || {}),
+    pageCount,
+    pdfNote,
+  };
+}
+function localMeta(rawText, suppliers = []) {
+  const raw = String(rawText || ""),
+    lines = raw
+      .split(/\r?\n/)
+      .map((x) => x.trim())
+      .filter(Boolean),
+    joined = normalize(raw);
+  let supplier = null,
+    best = 0;
+  for (const item of suppliers) {
+    for (const name of [
+      String(item.name || ""),
+      String(item.name || "").replace(/\s*\([^)]*\)\s*$/g, ""),
+    ]) {
+      const key = normalize(name);
+      if (key.length >= 4 && joined.includes(key) && key.length > best) {
+        supplier = item;
+        best = key.length;
+      }
+    }
+  }
+  let documentNumber = "";
+  for (const line of lines) {
+    const match =
+      line.match(
+        /(?:ΤΙΜΟΛΟΓΙΟ|ΤΙΜ|INVOICE|ΠΑΡΑΣΤΑΤΙΚΟ).{0,30}?(?:ΑΡ\.?|ΑΡΙΘΜ(?:ΟΣ)?|NO\.?|#)?\s*[:\-]?\s*([A-ZΑ-Ω0-9][A-ZΑ-Ω0-9\-/]{2,})/i,
+      ) ||
+      line.match(
+        /(?:ΑΡ\.?\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|ΑΡΙΘΜΟΣ\s*(?:ΤΙΜΟΛΟΓΙΟΥ)?|INVOICE\s*NO\.?)\s*[:\-]?\s*([A-ZΑ-Ω0-9\-/]{3,})/i,
+      );
+    if (match) {
+      documentNumber = match[1].trim();
+      break;
+    }
+  }
+  let documentDate = "";
+  for (const line of lines) {
+    const match = line.match(
+      /(?:ΗΜΕΡΟΜΗΝΙΑ|DATE)?\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:20)?\d{2})/i,
+    );
+    if (match) {
+      let [d, m, y] = match[1].split(/[\/\-.]/).map(Number);
+      if (y < 100) y += 2000;
+      documentDate = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      break;
+    }
+  }
+  let totalGross = 0;
+  const totalWords =
+    /(ΓΕΝΙΚΟ\s*ΣΥΝΟΛΟ|ΠΛΗΡΩΤΕΟ|ΤΕΛΙΚΟ\s*ΣΥΝΟΛΟ|ΣΥΝΟΛΟ\s*ΜΕ\s*ΦΠΑ|TOTAL\s*DUE|GRAND\s*TOTAL|TOTAL)/i;
+  for (const line of lines.filter((x) => totalWords.test(x)).reverse()) {
+    const values = (
+      line.match(/\d{1,3}(?:\.\d{3})*(?:,\d{2})|\d+(?:[.,]\d{2})/g) || []
+    )
+      .map(parseMoney)
+      .filter((v) => v > 0);
+    if (values.length) {
+      totalGross = values.at(-1);
+      break;
+    }
+  }
+  const taxId =
+    (raw.match(/(?:ΑΦΜ|VAT)\s*[:\-]?\s*([0-9]{9,12})/i) || [])[1] || "";
+  return {
+    supplierId: supplier?.id || "",
+    supplierName: supplier?.name || "",
+    documentNumber,
+    documentDate: documentDate || today(),
+    totalGross,
+    supplierCandidate: {
+      name: supplier?.name || "",
+      taxId,
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+    },
+  };
+}
 
-const deriveCode=line=>String(line?.code||"").trim()||(String(line?.rawText||"").match(/^\s*(\d{5,14})\b/)||[])[1]||"";
-const normLine=value=>normalize(value);
-function findMatch(base,c){const cc=deriveCode(c);if(cc){const x=base.find(b=>deriveCode(b)===cc);if(x)return x}const cd=normLine(c?.description||c?.rawText);if(!cd)return null;return base.find(b=>{const bd=normLine(b.description||b.rawText);return bd&&(bd.includes(cd)||cd.includes(bd))})||null}
-function mergeLines(base,candidates){const out=(base||[]).map(x=>({...x}));for(const c of candidates||[]){let target=findMatch(out,c);if(!target){const valid=deriveCode(c)||String(c?.description||"").trim();if(valid&&!/^anchor\s*\d+$/i.test(String(c?.description||c?.rawText||"").trim()))out.push({...c});continue}for(const k of ["code","barcode","description","unit"])if(String(c?.[k]||"").trim()&&!String(target?.[k]||"").trim())target[k]=c[k];const candidateRaw=String(c?.rawText||"").trim(),targetRaw=String(target?.rawText||"").trim();if(candidateRaw.length>targetRaw.length)target.rawText=candidateRaw;for(const k of ["quantity","unitCost","netAmount","vatRate","grossAmount","confidence"])if(Number(c?.[k]||0)>0&&Number(target?.[k]||0)<=0)target[k]=Number(c[k])}return out}
-const incomplete=lines=>(lines||[]).filter(line=>{const x=finalizeV244ProductLines([line])[0];return !x||Number(x.quantity||0)<=0||Number(x.unitCost||0)<=0}).length;
-async function makeCrops(file){if(!String(file.type||"").startsWith("image/"))return[];const bitmap=await createImageBitmap(file);const specs=[{name:"μεσαίο-πάνω",y0:.16,y1:.48},{name:"μεσαίο",y0:.23,y1:.62},{name:"μεσαίο-χαμηλό",y0:.34,y1:.76},{name:"χαμηλό",y0:.46,y1:.92}],crops=[];for(const s of specs){const sy=Math.max(0,Math.floor(bitmap.height*s.y0)),sh=Math.max(1,Math.floor(bitmap.height*(s.y1-s.y0))),targetW=Math.min(3400,Math.max(2200,bitmap.width*2.4)),scale=targetW/bitmap.width,targetH=Math.max(700,Math.round(sh*scale)),canvas=document.createElement("canvas");canvas.width=targetW;canvas.height=targetH;const ctx=canvas.getContext("2d");ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.fillStyle="#fff";ctx.fillRect(0,0,targetW,targetH);ctx.drawImage(bitmap,0,sy,bitmap.width,sh,0,0,targetW,targetH);crops.push({name:s.name,dataUrl:canvas.toDataURL("image/jpeg",.98)})}bitmap.close?.();return crops}
+const deriveCode = (line) =>
+  String(line?.code || "").trim() ||
+  (String(line?.rawText || "").match(/^\s*(\d{5,14})\b/) || [])[1] ||
+  "";
+const normLine = (value) => normalize(value);
+function findMatch(base, c) {
+  const cc = deriveCode(c);
+  if (cc) {
+    const x = base.find((b) => deriveCode(b) === cc);
+    if (x) return x;
+  }
+  const cd = normLine(c?.description || c?.rawText);
+  if (!cd) return null;
+  return (
+    base.find((b) => {
+      const bd = normLine(b.description || b.rawText);
+      return bd && (bd.includes(cd) || cd.includes(bd));
+    }) || null
+  );
+}
+function mergeLines(base, candidates) {
+  const out = (base || []).map((x) => ({ ...x }));
+  for (const c of candidates || []) {
+    let target = findMatch(out, c);
+    if (!target) {
+      const valid = deriveCode(c) || String(c?.description || "").trim();
+      if (
+        valid &&
+        !/^anchor\s*\d+$/i.test(
+          String(c?.description || c?.rawText || "").trim(),
+        )
+      )
+        out.push({ ...c });
+      continue;
+    }
+    for (const k of ["code", "barcode", "description", "unit"])
+      if (String(c?.[k] || "").trim() && !String(target?.[k] || "").trim())
+        target[k] = c[k];
+    const candidateRaw = String(c?.rawText || "").trim(),
+      targetRaw = String(target?.rawText || "").trim();
+    if (candidateRaw.length > targetRaw.length) target.rawText = candidateRaw;
+    for (const k of [
+      "quantity",
+      "unitCost",
+      "netAmount",
+      "vatRate",
+      "grossAmount",
+      "confidence",
+    ])
+      if (Number(c?.[k] || 0) > 0 && Number(target?.[k] || 0) <= 0)
+        target[k] = Number(c[k]);
+  }
+  return out;
+}
+const incomplete = (lines) =>
+  (lines || []).filter((line) => {
+    const x = finalizeV244ProductLines([line])[0];
+    return !x || Number(x.quantity || 0) <= 0 || Number(x.unitCost || 0) <= 0;
+  }).length;
+async function makeCrops(file) {
+  if (!String(file.type || "").startsWith("image/")) return [];
+  const bitmap = await createImageBitmap(file);
+  const specs = [
+      { name: "μεσαίο-πάνω", y0: 0.16, y1: 0.48 },
+      { name: "μεσαίο", y0: 0.23, y1: 0.62 },
+      { name: "μεσαίο-χαμηλό", y0: 0.34, y1: 0.76 },
+      { name: "χαμηλό", y0: 0.46, y1: 0.92 },
+    ],
+    crops = [];
+  for (const s of specs) {
+    const sy = Math.max(0, Math.floor(bitmap.height * s.y0)),
+      sh = Math.max(1, Math.floor(bitmap.height * (s.y1 - s.y0))),
+      targetW = Math.min(3400, Math.max(2200, bitmap.width * 2.4)),
+      scale = targetW / bitmap.width,
+      targetH = Math.max(700, Math.round(sh * scale)),
+      canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.drawImage(bitmap, 0, sy, bitmap.width, sh, 0, 0, targetW, targetH);
+    crops.push({ name: s.name, dataUrl: canvas.toDataURL("image/jpeg", 0.98) });
+  }
+  bitmap.close?.();
+  return crops;
+}
 
-const emptyInvoice=()=>({file:null,jobId:"",stage:"IDLE",confidence:null,aiCalled:false,documentType:"INVOICE",supplierId:"",documentNumber:"",documentDate:today(),totalGross:"",settlementMode:"",note:"",productLines:[],status:"Περιμένει τιμολόγιο.",working:false,done:false});
+const emptyInvoice = () => ({
+  file: null,
+  jobId: "",
+  stage: "IDLE",
+  confidence: null,
+  aiCalled: false,
+  documentType: "INVOICE",
+  supplierId: "",
+  documentNumber: "",
+  documentDate: today(),
+  totalGross: "",
+  settlementMode: "",
+  note: "",
+  productLines: [],
+  status: "Περιμένει τιμολόγιο.",
+  working: false,
+  done: false,
+});
 
-export default function StoreSupplierInvoiceV244({api,store,suppliers=[],onChanged,setMessage}){
- const [invoice,setInvoice]=useState(emptyInvoice),[candidate,setCandidate]=useState({name:"",taxId:"",phone:"",email:"",address:"",city:""});const [cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);const selectedSupplier=useMemo(()=>suppliers.find(row=>String(row.id)===String(invoice.supplierId))||null,[suppliers,invoice.supplierId]);const stopCamera=()=>{stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};useEffect(()=>()=>stream?.getTracks?.().forEach(track=>track.stop()),[stream]);
- const setFailure=message=>setInvoice(current=>({...current,stage:"ERROR",working:false,status:`❌ ${message}`}));
- const startCamera=async()=>{try{stopCamera();const next=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=next},0)}catch{setFailure("Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.")}};
- const runAiJob=async({dataUrl,filename,mimeType,rawText=""})=>{const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl,localConfidence:0,result:{rawText,lines:[],pageCount:null,pdfNote:"POS V2.4.4 structured pass"}})});if(!job?.id)throw new Error("Ο server δεν επέστρεψε κωδικό ανάγνωσης τιμολογίου.");const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});return {job,ai}};
- const finalizeResult=async({base,file,jobId,result,supplierMatch,aiCalled,confidence})=>{let lines=Array.isArray(result?.productLines)?result.productLines:[];if(String(file?.type||"").startsWith("image/")&&(incomplete(lines)>0||lines.length<7)){setInvoice(current=>({...current,stage:"AI",status:"V2.4.4 · crop/zoom στις γραμμές προϊόντων…"}));const crops=await makeCrops(file);for(let i=0;i<crops.length;i++){try{setInvoice(current=>({...current,status:`V2.4.4 · crop/zoom ${i+1}/${crops.length}…`}));const x=await runAiJob({dataUrl:crops[i].dataUrl,filename:`pos-v244-${i+1}.jpg`,mimeType:"image/jpeg",rawText:lines.map(l=>l.rawText||l.description||"").join("\n")});lines=mergeLines(lines,Array.isArray(x.ai?.result?.productLines)?x.ai.result.productLines:[])}catch{}}}const productLines=finalizeV244ProductLines(lines);if(!productLines.length)throw new Error("Η V2.4.4 δεν βρήκε ασφαλείς πραγματικές γραμμές προϊόντων. Δεν θα σταλούν raw OCR/IBAN στο BackOffice.");const supplierCandidate=result?.supplier||base.supplierCandidate||{};setCandidate({name:supplierCandidate.name||"",taxId:supplierCandidate.taxId||"",phone:supplierCandidate.phone||"",email:supplierCandidate.email||"",address:supplierCandidate.address||"",city:supplierCandidate.city||""});setInvoice(current=>({...current,jobId,stage:"READY",working:false,aiCalled,confidence:Number(confidence??current.confidence??0),documentType:result?.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",settlementMode:result?.documentType==="CREDIT_NOTE"?"CREDIT":current.settlementMode,supplierId:supplierMatch?.id||base.supplierId||current.supplierId||"",documentNumber:String(result?.documentNumber||base.documentNumber||current.documentNumber||""),documentDate:String(result?.documentDate||base.documentDate||current.documentDate||today()).slice(0,10),totalGross:Number(result?.totalGross||base.totalGross||0)>0?String(Number(result?.totalGross||base.totalGross).toFixed(2)).replace(".",","):current.totalGross,productLines,status:`Έτοιμο V2.4.4 · ${productLines.length} πραγματικές γραμμές`}))};
- const processFile=async file=>{if(!file)return;setCandidate({name:"",taxId:"",phone:"",email:"",address:"",city:""});setInvoice({...emptyInvoice(),file,stage:"AI",working:true,status:"Azure Document Intelligence · διαβάζω το πρωτότυπο τιμολόγιο…"});try{const dataUrl=await readFile(file),filename=file.name||"timologio.jpg",mimeType=file.type||"image/jpeg";const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"Azure Document Intelligence — έλεγχος πρωτότυπου παραστατικού"}})});if(!job?.id)throw new Error("Ο server δεν επέστρεψε κωδικό ανάγνωσης τιμολογίου.");setInvoice(current=>({...current,jobId:job.id,status:"Azure Document Intelligence → AI επανέλεγχος γραμμών…"}));const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});const result=ai?.result||{},base={supplierId:"",supplierName:"",documentNumber:String(result.documentNumber||""),documentDate:String(result.documentDate||today()).slice(0,10),totalGross:Number(result.totalGross||0),supplierCandidate:result.supplier||{name:"",taxId:"",phone:"",email:"",address:"",city:""}};await finalizeResult({base,file,jobId:job.id,result,supplierMatch:ai?.supplierMatch||null,aiCalled:Boolean(ai?.aiCalled),confidence:Number(ai?.confidence??0)})}catch(error){setFailure(error.message||"Η ανάγνωση του τιμολογίου απέτυχε.")}};
- const manualAiRecheck=async()=>{if(!invoice.jobId||invoice.working||invoice.done)return;const base={supplierId:invoice.supplierId,supplierName:selectedSupplier?.name||"",documentNumber:invoice.documentNumber,documentDate:invoice.documentDate,totalGross:parseMoney(invoice.totalGross),supplierCandidate:candidate};setInvoice(current=>({...current,stage:"AI",working:true,status:"V2.4.4 επανέλεγχος με AI…"}));try{const ai=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/ai-recheck`,{method:"POST",body:JSON.stringify({force:true})});await finalizeResult({base,file:invoice.file,jobId:invoice.jobId,result:ai?.result||{},supplierMatch:ai?.supplierMatch||null,aiCalled:true,confidence:Number(ai?.confidence??invoice.confidence??0)})}catch(error){setFailure(error.message||"Ο επανέλεγχος με AI απέτυχε.")}};
- const capture=()=>{const video=videoRef.current,canvas=canvasRef.current;if(!video||!canvas)return;canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720;canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob)return;stopCamera();processFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.92)};
- const saveSupplier=async()=>{if(!invoice.jobId)return setFailure("Η ενεργή ανάγνωση τιμολογίου χάθηκε. Επίλεξε ξανά το αρχείο.");if(candidate.name.trim().length<2)return setFailure("Συμπλήρωσε την επωνυμία του νέου προμηθευτή.");setInvoice(current=>({...current,working:true,status:"Καταχωρίζω τον νέο προμηθευτή…"}));try{const data=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/supplier`,{method:"POST",body:JSON.stringify(candidate)});setInvoice(current=>({...current,supplierId:data.supplier.id,working:false,stage:"READY",status:`Έτοιμο V2.4.4 · ${current.productLines.length} πραγματικές γραμμές`}));onChanged?.()}catch(error){setFailure(error.message||"Δεν αποθηκεύτηκε ο προμηθευτής.")}};
- const ready=Boolean(invoice.stage==="READY"&&invoice.jobId&&invoice.supplierId&&invoice.documentNumber.trim()&&invoice.documentDate&&parseMoney(invoice.totalGross)>0&&invoice.productLines.length>0&&["PAID","CREDIT"].includes(invoice.settlementMode)&&!invoice.working&&!invoice.done);
- const submit=async()=>{if(!ready)return;const totalGross=parseMoney(invoice.totalGross),documentNumber=invoice.documentNumber.trim();setInvoice(current=>({...current,stage:"SUBMITTING",working:true,status:`Αποθηκεύω ${current.productLines.length} τελικές γραμμές V2.4.4…`}));try{await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/product-lines`,{method:"PUT",body:JSON.stringify({source:"V2.4.4",productLines:invoice.productLines})});const data=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/pos-intake`,{method:"POST",body:JSON.stringify({documentType:invoice.documentType,supplierId:invoice.supplierId,documentNumber,documentDate:invoice.documentDate,totalGross,settlementMode:invoice.settlementMode,note:invoice.note.trim()||null})});if(data?.stockUpdated===true)throw new Error("Η αποθήκη ενημερώθηκε πριν την Οριστικοποίηση. Η καταχώριση σταμάτησε για έλεγχο.");if(data?.v244!==true)throw new Error("Η καταχώριση δεν πέρασε από το structured V2.4.4 intake.");const success=invoice.settlementMode==="PAID"?`✅ Πληρωμή ${euro(totalGross)} · ${data.lineCount} γραμμές V2.4.4 στάλθηκαν για έλεγχο`:`✅ Τιμολόγιο ${documentNumber} ΜΕ ΠΙΣΤΩΣΗ · ${data.lineCount} γραμμές V2.4.4 στάλθηκαν για έλεγχο`;setInvoice(current=>({...current,stage:"DONE",working:false,done:true,status:success}));setMessage?.(success);onChanged?.()}catch(error){setFailure(error.message||"Η καταχώριση απέτυχε.")}};
- return <div className="pos-invoice-v3" data-pos-supplier-invoice-v244="true" style={{border:"2px solid #d8b45b",borderRadius:12,padding:14,marginTop:12,background:"#fffaf0"}}><div style={{fontWeight:900,fontSize:18}}>Αυτόματη καταχώριση τιμολογίου <small style={{fontSize:12,background:"#dcfce7",padding:"4px 7px",borderRadius:12}}>V2.4.4 · SAFE</small></div><div style={{padding:"10px 12px",borderRadius:9,background:invoice.stage==="ERROR"?"#fff1f2":invoice.stage==="DONE"?"#ecfdf5":"#fff",fontWeight:800,margin:"10px 0"}}>{invoice.status}</div><div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={invoice.working||invoice.done}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" disabled={invoice.working||invoice.done} onChange={event=>processFile(event.target.files?.[0]||null)}/></label><b>{invoice.file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}{invoice.confidence!==null&&<small style={{display:"block",margin:"8px 0",fontWeight:700}}>Ανάγνωση {Math.round(Number(invoice.confidence)||0)}%{invoice.aiCalled?` · V2.4.4 AI · ${invoice.productLines.length} γραμμές`:" · τοπικό OCR"}</small>}{invoice.jobId&&invoice.stage==="READY"&&invoice.productLines.length===0&&!invoice.done&&<button type="button" onClick={manualAiRecheck} disabled={invoice.working} style={{margin:"0 0 10px",fontWeight:800}}>Επανέλεγχος με AI για γραμμές V2.4.4</button>}<label>Τύπος παραστατικού<select value={invoice.documentType} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,documentType:event.target.value,settlementMode:event.target.value==="CREDIT_NOTE"?"CREDIT":current.settlementMode}))}><option value="INVOICE">Τιμολόγιο αγοράς</option><option value="CREDIT_NOTE">Πιστωτικό τιμολόγιο</option></select></label><label>Προμηθευτής<select value={invoice.supplierId} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,supplierId:event.target.value}))}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select></label>{!invoice.supplierId&&invoice.jobId&&candidate.name&&<div style={{border:"1px solid #f59e0b",borderRadius:9,padding:10,margin:"8px 0",background:"#fff7ed"}}><b>Νέος προμηθευτής — δεν βρέθηκε στο BackOffice</b><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:8}}><input placeholder="Επωνυμία" value={candidate.name} onChange={e=>setCandidate(x=>({...x,name:e.target.value}))}/><input placeholder="ΑΦΜ" value={candidate.taxId} onChange={e=>setCandidate(x=>({...x,taxId:e.target.value}))}/><input placeholder="Τηλέφωνο" value={candidate.phone} onChange={e=>setCandidate(x=>({...x,phone:e.target.value}))}/><input placeholder="Email" value={candidate.email} onChange={e=>setCandidate(x=>({...x,email:e.target.value}))}/><input placeholder="Διεύθυνση" value={candidate.address} onChange={e=>setCandidate(x=>({...x,address:e.target.value}))}/><input placeholder="Πόλη" value={candidate.city} onChange={e=>setCandidate(x=>({...x,city:e.target.value}))}/></div><button type="button" style={{width:"100%",marginTop:8,fontWeight:800}} disabled={invoice.working} onClick={saveSupplier}>Καταχώριση στους Προμηθευτές</button></div>}<label>Αριθμός τιμολογίου<input value={invoice.documentNumber} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,documentNumber:event.target.value}))}/></label><label>Ημερομηνία<input type="date" value={invoice.documentDate} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,documentDate:event.target.value}))}/></label><label>Συνολικό ποσό<input inputMode="decimal" value={invoice.totalGross} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,totalGross:event.target.value}))}/></label><label>Παρατηρήσεις<input value={invoice.note} disabled={invoice.working||invoice.done} onChange={event=>setInvoice(current=>({...current,note:event.target.value}))}/></label><div style={{display:"flex",gap:8,margin:"12px 0"}}><button type="button" style={{flex:1,fontWeight:invoice.settlementMode==="PAID"?900:600}} disabled={invoice.working||invoice.done||invoice.documentType==="CREDIT_NOTE"} aria-pressed={invoice.settlementMode==="PAID"} onClick={()=>setInvoice(current=>({...current,settlementMode:"PAID"}))}>ΠΛΗΡΩΜΕΝΟ</button><button type="button" style={{flex:1,fontWeight:invoice.settlementMode==="CREDIT"?900:600}} disabled={invoice.working||invoice.done} aria-pressed={invoice.settlementMode==="CREDIT"} onClick={()=>setInvoice(current=>({...current,settlementMode:"CREDIT"}))}>ΜΕ ΠΙΣΤΩΣΗ</button></div><small style={{display:"block",marginBottom:10}}><b>V2.4.4:</b> στο BackOffice μεταφέρονται μόνο οι τελικές structured γραμμές προϊόντων. Raw OCR, anchors, IBAN, headers και σύνολα δεν μπορούν να δημιουργήσουν είδος. Το stock παραμένει ανέγγιχτο μέχρι την Οριστικοποίηση.</small>{!selectedSupplier&&invoice.supplierId&&<small style={{display:"block",marginBottom:8}}>Ο επιλεγμένος προμηθευτής θα επιβεβαιωθεί από τον server.</small>}<button className="pos-primary-action" type="button" disabled={!ready} onClick={submit}><Wallet/> {invoice.stage==="SUBMITTING"?"Καταχώριση σε εξέλιξη…":`Καταχώριση ${invoice.productLines.length||""} γραμμών για έλεγχο`}</button></div>
+export default function StoreSupplierInvoiceV244({
+  api,
+  store,
+  suppliers = [],
+  onChanged,
+  setMessage,
+}) {
+  const [invoice, setInvoice] = useState(emptyInvoice),
+    [candidate, setCandidate] = useState({
+      name: "",
+      taxId: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+    }),
+    [vatLookup, setVatLookup] = useState({
+      busy: false,
+      message: "",
+      verified: false,
+    });
+  const [cameraOpen, setCameraOpen] = useState(false),
+    [stream, setStream] = useState(null);
+  const videoRef = useRef(null),
+    canvasRef = useRef(null);
+  const selectedSupplier = useMemo(
+    () =>
+      suppliers.find((row) => String(row.id) === String(invoice.supplierId)) ||
+      null,
+    [suppliers, invoice.supplierId],
+  );
+  const stopCamera = () => {
+    stream?.getTracks?.().forEach((track) => track.stop());
+    setStream(null);
+    setCameraOpen(false);
+  };
+  useEffect(
+    () => () => stream?.getTracks?.().forEach((track) => track.stop()),
+    [stream],
+  );
+  const setFailure = (message) =>
+    setInvoice((current) => ({
+      ...current,
+      stage: "ERROR",
+      working: false,
+      status: `❌ ${message}`,
+    }));
+  const startCamera = async () => {
+    try {
+      stopCamera();
+      const next = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      setStream(next);
+      setCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = next;
+      }, 0);
+    } catch {
+      setFailure(
+        "Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.",
+      );
+    }
+  };
+  const runAiJob = async ({ dataUrl, filename, mimeType, rawText = "" }) => {
+    const job = await api("/api/commerce/ai-reader/jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        storeId: store.id,
+        filename,
+        mimeType,
+        dataUrl,
+        localConfidence: 0,
+        result: {
+          rawText,
+          lines: [],
+          pageCount: null,
+          pdfNote: "POS V2.4.4 structured pass",
+        },
+      }),
+    });
+    if (!job?.id)
+      throw new Error("Ο server δεν επέστρεψε κωδικό ανάγνωσης τιμολογίου.");
+    const ai = await api(
+      `/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,
+      { method: "POST", body: JSON.stringify({ force: true }) },
+    );
+    return { job, ai };
+  };
+  const finalizeResult = async ({
+    base,
+    file,
+    jobId,
+    result,
+    supplierMatch,
+    aiCalled,
+    confidence,
+  }) => {
+    let lines = Array.isArray(result?.productLines) ? result.productLines : [];
+    if (
+      String(file?.type || "").startsWith("image/") &&
+      (incomplete(lines) > 0 || lines.length < 7)
+    ) {
+      setInvoice((current) => ({
+        ...current,
+        stage: "AI",
+        status: "V2.4.4 · crop/zoom στις γραμμές προϊόντων…",
+      }));
+      const crops = await makeCrops(file);
+      for (let i = 0; i < crops.length; i++) {
+        try {
+          setInvoice((current) => ({
+            ...current,
+            status: `V2.4.4 · crop/zoom ${i + 1}/${crops.length}…`,
+          }));
+          const x = await runAiJob({
+            dataUrl: crops[i].dataUrl,
+            filename: `pos-v244-${i + 1}.jpg`,
+            mimeType: "image/jpeg",
+            rawText: lines
+              .map((l) => l.rawText || l.description || "")
+              .join("\n"),
+          });
+          lines = mergeLines(
+            lines,
+            Array.isArray(x.ai?.result?.productLines)
+              ? x.ai.result.productLines
+              : [],
+          );
+        } catch {}
+      }
+    }
+    const productLines = finalizeV244ProductLines(lines);
+    if (!productLines.length)
+      throw new Error(
+        "Η V2.4.4 δεν βρήκε ασφαλείς πραγματικές γραμμές προϊόντων. Δεν θα σταλούν raw OCR/IBAN στο BackOffice.",
+      );
+    const supplierCandidate = result?.supplier || base.supplierCandidate || {};
+    setCandidate({
+      name: supplierCandidate.name || "",
+      taxId: supplierCandidate.taxId || "",
+      phone: supplierCandidate.phone || "",
+      email: supplierCandidate.email || "",
+      address: supplierCandidate.address || "",
+      city: supplierCandidate.city || "",
+    });
+    setInvoice((current) => ({
+      ...current,
+      jobId,
+      stage: "READY",
+      working: false,
+      aiCalled,
+      confidence: Number(confidence ?? current.confidence ?? 0),
+      documentType:
+        result?.documentType === "CREDIT_NOTE" ? "CREDIT_NOTE" : "INVOICE",
+      settlementMode:
+        result?.documentType === "CREDIT_NOTE"
+          ? "CREDIT"
+          : current.settlementMode,
+      supplierId:
+        supplierMatch?.id || base.supplierId || current.supplierId || "",
+      documentNumber: String(
+        result?.documentNumber ||
+          base.documentNumber ||
+          current.documentNumber ||
+          "",
+      ),
+      documentDate: String(
+        result?.documentDate ||
+          base.documentDate ||
+          current.documentDate ||
+          today(),
+      ).slice(0, 10),
+      totalGross:
+        Number(result?.totalGross || base.totalGross || 0) > 0
+          ? String(
+              Number(result?.totalGross || base.totalGross).toFixed(2),
+            ).replace(".", ",")
+          : current.totalGross,
+      productLines,
+      status: `Έτοιμο V2.4.4 · ${productLines.length} πραγματικές γραμμές`,
+    }));
+  };
+  const processFile = async (file) => {
+    if (!file) return;
+    setCandidate({
+      name: "",
+      taxId: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+    });
+    setInvoice({
+      ...emptyInvoice(),
+      file,
+      stage: "AI",
+      working: true,
+      status: "Azure Document Intelligence · διαβάζω το πρωτότυπο τιμολόγιο…",
+    });
+    try {
+      const dataUrl = await readFile(file),
+        filename = file.name || "timologio.jpg",
+        mimeType = file.type || "image/jpeg";
+      const job = await api("/api/commerce/ai-reader/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          storeId: store.id,
+          filename,
+          mimeType,
+          dataUrl,
+          localConfidence: 0,
+          result: {
+            rawText: "",
+            lines: [],
+            pageCount: null,
+            pdfNote:
+              "Azure Document Intelligence — έλεγχος πρωτότυπου παραστατικού",
+          },
+        }),
+      });
+      if (!job?.id)
+        throw new Error("Ο server δεν επέστρεψε κωδικό ανάγνωσης τιμολογίου.");
+      setInvoice((current) => ({
+        ...current,
+        jobId: job.id,
+        status: "Azure Document Intelligence → AI επανέλεγχος γραμμών…",
+      }));
+      const ai = await api(
+        `/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/ai-recheck`,
+        { method: "POST", body: JSON.stringify({ force: true }) },
+      );
+      const result = ai?.result || {},
+        base = {
+          supplierId: "",
+          supplierName: "",
+          documentNumber: String(result.documentNumber || ""),
+          documentDate: String(result.documentDate || today()).slice(0, 10),
+          totalGross: Number(result.totalGross || 0),
+          supplierCandidate: result.supplier || {
+            name: "",
+            taxId: "",
+            phone: "",
+            email: "",
+            address: "",
+            city: "",
+          },
+        };
+      await finalizeResult({
+        base,
+        file,
+        jobId: job.id,
+        result,
+        supplierMatch: ai?.supplierMatch || null,
+        aiCalled: Boolean(ai?.aiCalled),
+        confidence: Number(ai?.confidence ?? 0),
+      });
+    } catch (error) {
+      setFailure(error.message || "Η ανάγνωση του τιμολογίου απέτυχε.");
+    }
+  };
+  const manualAiRecheck = async () => {
+    if (!invoice.jobId || invoice.working || invoice.done) return;
+    const base = {
+      supplierId: invoice.supplierId,
+      supplierName: selectedSupplier?.name || "",
+      documentNumber: invoice.documentNumber,
+      documentDate: invoice.documentDate,
+      totalGross: parseMoney(invoice.totalGross),
+      supplierCandidate: candidate,
+    };
+    setInvoice((current) => ({
+      ...current,
+      stage: "AI",
+      working: true,
+      status: "V2.4.4 επανέλεγχος με AI…",
+    }));
+    try {
+      const ai = await api(
+        `/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/ai-recheck`,
+        { method: "POST", body: JSON.stringify({ force: true }) },
+      );
+      await finalizeResult({
+        base,
+        file: invoice.file,
+        jobId: invoice.jobId,
+        result: ai?.result || {},
+        supplierMatch: ai?.supplierMatch || null,
+        aiCalled: true,
+        confidence: Number(ai?.confidence ?? invoice.confidence ?? 0),
+      });
+    } catch (error) {
+      setFailure(error.message || "Ο επανέλεγχος με AI απέτυχε.");
+    }
+  };
+  const capture = () => {
+    const video = videoRef.current,
+      canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        stopCamera();
+        processFile(
+          new File([blob], `timologio-${Date.now()}.jpg`, {
+            type: "image/jpeg",
+          }),
+        );
+      },
+      "image/jpeg",
+      0.92,
+    );
+  };
+  const saveSupplier = async () => {
+    if (!invoice.jobId)
+      return setFailure(
+        "Η ενεργή ανάγνωση τιμολογίου χάθηκε. Επίλεξε ξανά το αρχείο.",
+      );
+    if (candidate.name.trim().length < 2)
+      return setFailure("Συμπλήρωσε την επωνυμία του νέου προμηθευτή.");
+    setInvoice((current) => ({
+      ...current,
+      working: true,
+      status: "Καταχωρίζω τον νέο προμηθευτή…",
+    }));
+    try {
+      const data = await api(
+        `/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/supplier`,
+        { method: "POST", body: JSON.stringify(candidate) },
+      );
+      setInvoice((current) => ({
+        ...current,
+        supplierId: data.supplier.id,
+        working: false,
+        stage: "READY",
+        status: `Έτοιμο V2.4.4 · ${current.productLines.length} πραγματικές γραμμές`,
+      }));
+      onChanged?.();
+    } catch (error) {
+      setFailure(error.message || "Δεν αποθηκεύτηκε ο προμηθευτής.");
+    }
+  };
+  const lookupVat = async () => {
+    const taxId = String(candidate.taxId || "").replace(/\D/g, "");
+    if (taxId.length !== 9)
+      return setVatLookup({
+        busy: false,
+        verified: false,
+        message: "Το ΑΦΜ πρέπει να έχει 9 ψηφία.",
+      });
+    setVatLookup({
+      busy: true,
+      verified: false,
+      message: "Έλεγχος επίσημων στοιχείων…",
+    });
+    try {
+      const data = await api(
+        `/api/commerce/vat-lookup?storeId=${encodeURIComponent(store.id)}&taxId=${encodeURIComponent(taxId)}`,
+      );
+      if (data.existingSupplier) {
+        setInvoice((current) => ({
+          ...current,
+          supplierId: data.existingSupplier.id,
+        }));
+        setVatLookup({
+          busy: false,
+          verified: true,
+          message: `Υπάρχει ήδη: ${data.existingSupplier.name}`,
+        });
+        return;
+      }
+      setCandidate((current) => ({
+        ...current,
+        taxId: data.taxId,
+        name: data.name || current.name,
+        address: data.address || current.address,
+        city: data.city || current.city,
+      }));
+      setVatLookup({
+        busy: false,
+        verified: true,
+        message: `Επιβεβαιώθηκε από ${data.source}: ${data.name}`,
+      });
+    } catch (error) {
+      setVatLookup({
+        busy: false,
+        verified: false,
+        message: error.message || "Δεν ολοκληρώθηκε η αναζήτηση ΑΦΜ.",
+      });
+    }
+  };
+  const ready = Boolean(
+    invoice.stage === "READY" &&
+    invoice.jobId &&
+    invoice.supplierId &&
+    invoice.documentNumber.trim() &&
+    invoice.documentDate &&
+    parseMoney(invoice.totalGross) > 0 &&
+    invoice.productLines.length > 0 &&
+    ["PAID", "CREDIT"].includes(invoice.settlementMode) &&
+    !invoice.working &&
+    !invoice.done,
+  );
+  const submit = async () => {
+    if (!ready) return;
+    const totalGross = parseMoney(invoice.totalGross),
+      documentNumber = invoice.documentNumber.trim();
+    setInvoice((current) => ({
+      ...current,
+      stage: "SUBMITTING",
+      working: true,
+      status: `Αποθηκεύω ${current.productLines.length} τελικές γραμμές V2.4.4…`,
+    }));
+    try {
+      await api(
+        `/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/product-lines`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            source: "V2.4.4",
+            productLines: invoice.productLines,
+          }),
+        },
+      );
+      const data = await api(
+        `/api/commerce/ai-reader/jobs/${encodeURIComponent(invoice.jobId)}/pos-intake`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            documentType: invoice.documentType,
+            supplierId: invoice.supplierId,
+            documentNumber,
+            documentDate: invoice.documentDate,
+            totalGross,
+            settlementMode: invoice.settlementMode,
+            note: invoice.note.trim() || null,
+          }),
+        },
+      );
+      if (data?.stockUpdated === true)
+        throw new Error(
+          "Η αποθήκη ενημερώθηκε πριν την Οριστικοποίηση. Η καταχώριση σταμάτησε για έλεγχο.",
+        );
+      if (data?.v244 !== true)
+        throw new Error(
+          "Η καταχώριση δεν πέρασε από το structured V2.4.4 intake.",
+        );
+      const success =
+        invoice.settlementMode === "PAID"
+          ? `✅ Πληρωμή ${euro(totalGross)} · ${data.lineCount} γραμμές V2.4.4 στάλθηκαν για έλεγχο`
+          : `✅ Τιμολόγιο ${documentNumber} ΜΕ ΠΙΣΤΩΣΗ · ${data.lineCount} γραμμές V2.4.4 στάλθηκαν για έλεγχο`;
+      setInvoice((current) => ({
+        ...current,
+        stage: "DONE",
+        working: false,
+        done: true,
+        status: success,
+      }));
+      setMessage?.(success);
+      onChanged?.();
+    } catch (error) {
+      setFailure(error.message || "Η καταχώριση απέτυχε.");
+    }
+  };
+  return (
+    <div
+      className="pos-invoice-v3"
+      data-pos-supplier-invoice-v244="true"
+      style={{
+        border: "2px solid #d8b45b",
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 12,
+        background: "#fffaf0",
+      }}
+    >
+      <div style={{ fontWeight: 900, fontSize: 18 }}>
+        Αυτόματη καταχώριση τιμολογίου{" "}
+        <small
+          style={{
+            fontSize: 12,
+            background: "#dcfce7",
+            padding: "4px 7px",
+            borderRadius: 12,
+          }}
+        >
+          V2.4.4 · SAFE
+        </small>
+      </div>
+      <div
+        style={{
+          padding: "10px 12px",
+          borderRadius: 9,
+          background:
+            invoice.stage === "ERROR"
+              ? "#fff1f2"
+              : invoice.stage === "DONE"
+                ? "#ecfdf5"
+                : "#fff",
+          fontWeight: 800,
+          margin: "10px 0",
+        }}
+      >
+        {invoice.status}
+      </div>
+      <div className="pos-photo-actions">
+        <button
+          type="button"
+          onClick={startCamera}
+          disabled={invoice.working || invoice.done}
+        >
+          <Camera /> Λήψη από κάμερα
+        </button>
+        <label>
+          <FileUp /> Επιλογή αρχείου / PDF
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            capture="environment"
+            disabled={invoice.working || invoice.done}
+            onChange={(event) => processFile(event.target.files?.[0] || null)}
+          />
+        </label>
+        <b>{invoice.file?.name || "Δεν επιλέχθηκε τιμολόγιο"}</b>
+      </div>
+      {cameraOpen && (
+        <div className="pos-camera-live">
+          <video ref={videoRef} autoPlay playsInline />
+          <canvas ref={canvasRef} hidden />
+          <div>
+            <button type="button" onClick={capture}>
+              <Camera /> Φωτογράφιση
+            </button>
+            <button type="button" onClick={stopCamera}>
+              Κλείσιμο κάμερας
+            </button>
+          </div>
+        </div>
+      )}
+      {invoice.confidence !== null && (
+        <small style={{ display: "block", margin: "8px 0", fontWeight: 700 }}>
+          Ανάγνωση {Math.round(Number(invoice.confidence) || 0)}%
+          {invoice.aiCalled
+            ? ` · V2.4.4 AI · ${invoice.productLines.length} γραμμές`
+            : " · τοπικό OCR"}
+        </small>
+      )}
+      {invoice.jobId &&
+        invoice.stage === "READY" &&
+        invoice.productLines.length === 0 &&
+        !invoice.done && (
+          <button
+            type="button"
+            onClick={manualAiRecheck}
+            disabled={invoice.working}
+            style={{ margin: "0 0 10px", fontWeight: 800 }}
+          >
+            Επανέλεγχος με AI για γραμμές V2.4.4
+          </button>
+        )}
+      <label>
+        Τύπος παραστατικού
+        <select
+          value={invoice.documentType}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({
+              ...current,
+              documentType: event.target.value,
+              settlementMode:
+                event.target.value === "CREDIT_NOTE"
+                  ? "CREDIT"
+                  : current.settlementMode,
+            }))
+          }
+        >
+          <option value="INVOICE">Τιμολόγιο αγοράς</option>
+          <option value="CREDIT_NOTE">Πιστωτικό τιμολόγιο</option>
+        </select>
+      </label>
+      <label>
+        Προμηθευτής
+        <select
+          value={invoice.supplierId}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({
+              ...current,
+              supplierId: event.target.value,
+            }))
+          }
+        >
+          <option value="">Επίλεξε προμηθευτή</option>
+          {suppliers.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.name}
+              {row.taxId ? ` · ${row.taxId}` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {!invoice.supplierId && invoice.jobId && (candidate.name || candidate.taxId) && (
+        <div
+          style={{
+            border: "1px solid #f59e0b",
+            borderRadius: 9,
+            padding: 10,
+            margin: "8px 0",
+            background: "#fff7ed",
+          }}
+        >
+          <b>Νέος προμηθευτής — δεν βρέθηκε στο BackOffice</b>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 6,
+              marginTop: 8,
+            }}
+          >
+            <input
+              placeholder="Επωνυμία"
+              value={candidate.name}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, name: e.target.value }))
+              }
+            />
+            <input
+              placeholder="ΑΦΜ"
+              value={candidate.taxId}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, taxId: e.target.value }))
+              }
+            />
+            <input
+              placeholder="Τηλέφωνο"
+              value={candidate.phone}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, phone: e.target.value }))
+              }
+            />
+            <input
+              placeholder="Email"
+              value={candidate.email}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, email: e.target.value }))
+              }
+            />
+            <input
+              placeholder="Διεύθυνση"
+              value={candidate.address}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, address: e.target.value }))
+              }
+            />
+            <input
+              placeholder="Πόλη"
+              value={candidate.city}
+              onChange={(e) =>
+                setCandidate((x) => ({ ...x, city: e.target.value }))
+              }
+            />
+          </div>
+          <button
+            type="button"
+            style={{ width: "100%", marginTop: 8, fontWeight: 800 }}
+            disabled={invoice.working || vatLookup.busy || String(candidate.taxId || "").replace(/\D/g, "").length !== 9}
+            onClick={lookupVat}
+          >
+            {vatLookup.busy ? "Έλεγχος ΑΦΜ…" : "Έλεγχος επίσημης επωνυμίας από ΑΦΜ"}
+          </button>
+          {vatLookup.message && (
+            <div style={{ marginTop: 6, padding: 8, borderRadius: 7, background: vatLookup.verified ? "#dcfce7" : "#fee2e2", fontWeight: 800 }}>
+              {vatLookup.message}
+            </div>
+          )}
+          <button
+            type="button"
+            style={{ width: "100%", marginTop: 8, fontWeight: 800 }}
+            disabled={invoice.working}
+            onClick={saveSupplier}
+          >
+            Καταχώριση στους Προμηθευτές
+          </button>
+        </div>
+      )}
+      <label>
+        Αριθμός τιμολογίου
+        <input
+          value={invoice.documentNumber}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({
+              ...current,
+              documentNumber: event.target.value,
+            }))
+          }
+        />
+      </label>
+      <label>
+        Ημερομηνία
+        <input
+          type="date"
+          value={invoice.documentDate}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({
+              ...current,
+              documentDate: event.target.value,
+            }))
+          }
+        />
+      </label>
+      <label>
+        Συνολικό ποσό
+        <input
+          inputMode="decimal"
+          value={invoice.totalGross}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({
+              ...current,
+              totalGross: event.target.value,
+            }))
+          }
+        />
+      </label>
+      <label>
+        Παρατηρήσεις
+        <input
+          value={invoice.note}
+          disabled={invoice.working || invoice.done}
+          onChange={(event) =>
+            setInvoice((current) => ({ ...current, note: event.target.value }))
+          }
+        />
+      </label>
+      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
+        <button
+          type="button"
+          style={{
+            flex: 1,
+            fontWeight: invoice.settlementMode === "PAID" ? 900 : 600,
+          }}
+          disabled={
+            invoice.working ||
+            invoice.done ||
+            invoice.documentType === "CREDIT_NOTE"
+          }
+          aria-pressed={invoice.settlementMode === "PAID"}
+          onClick={() =>
+            setInvoice((current) => ({ ...current, settlementMode: "PAID" }))
+          }
+        >
+          ΠΛΗΡΩΜΕΝΟ
+        </button>
+        <button
+          type="button"
+          style={{
+            flex: 1,
+            fontWeight: invoice.settlementMode === "CREDIT" ? 900 : 600,
+          }}
+          disabled={invoice.working || invoice.done}
+          aria-pressed={invoice.settlementMode === "CREDIT"}
+          onClick={() =>
+            setInvoice((current) => ({ ...current, settlementMode: "CREDIT" }))
+          }
+        >
+          ΜΕ ΠΙΣΤΩΣΗ
+        </button>
+      </div>
+      <small style={{ display: "block", marginBottom: 10 }}>
+        <b>V2.4.4:</b> στο BackOffice μεταφέρονται μόνο οι τελικές structured
+        γραμμές προϊόντων. Raw OCR, anchors, IBAN, headers και σύνολα δεν
+        μπορούν να δημιουργήσουν είδος. Το stock παραμένει ανέγγιχτο μέχρι την
+        Οριστικοποίηση.
+      </small>
+      {!selectedSupplier && invoice.supplierId && (
+        <small style={{ display: "block", marginBottom: 8 }}>
+          Ο επιλεγμένος προμηθευτής θα επιβεβαιωθεί από τον server.
+        </small>
+      )}
+      <button
+        className="pos-primary-action"
+        type="button"
+        disabled={!ready}
+        onClick={submit}
+      >
+        <Wallet />{" "}
+        {invoice.stage === "SUBMITTING"
+          ? "Καταχώριση σε εξέλιξη…"
+          : `Καταχώριση ${invoice.productLines.length || ""} γραμμών για έλεγχο`}
+      </button>
+    </div>
+  );
 }
