@@ -107,6 +107,8 @@ test("stock movements are included in central audit without a video action",()=>
   assert.match(route,/STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή"/);
   assert.match(route,/\.\.\.stockItems/);
   assert.match(route,/StoreOperatorAudit \+ StockMovement/);
+  assert.match(route,/COALESCE\(u\."fullName",operator\."displayName"\) AS "actorName"/);
+  assert.match(route,/LEFT JOIN "StoreOperatorCredential" operator ON operator\."id"=m\."createdByUserId"/);
   assert.match(client,/canVideo&&r\.sourceType!=="StockMovement"/);
 });
 

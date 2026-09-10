@@ -185,11 +185,12 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       ORDER BY a."createdAt" DESC LIMIT 10000`;
     const stockRows=await prisma.$queryRaw`
       SELECT m."id",m."createdAt",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdByUserId" AS "actorId",
-        p."name" AS "productName",p."sku",u."fullName" AS "actorName",s."name" AS "storeName",s."id" AS "storeId"
+        p."name" AS "productName",p."sku",COALESCE(u."fullName",operator."displayName") AS "actorName",s."name" AS "storeName",s."id" AS "storeId"
       FROM "StockMovement" m
       JOIN "Store" s ON s."id"=m."storeId"
       JOIN "Product" p ON p."id"=m."productId" AND p."companyId"=s."companyId"
       LEFT JOIN "User" u ON u."id"=m."createdByUserId" AND u."companyId"=s."companyId"
+      LEFT JOIN "StoreOperatorCredential" operator ON operator."id"=m."createdByUserId" AND operator."companyId"=s."companyId" AND operator."storeId"=m."storeId"
       WHERE (${companyId}::text IS NULL OR s."companyId"=${companyId})
         AND m."createdAt">=${from} AND m."createdAt"<${to}
         AND (${storeId}::text IS NULL OR m."storeId"=${storeId})
