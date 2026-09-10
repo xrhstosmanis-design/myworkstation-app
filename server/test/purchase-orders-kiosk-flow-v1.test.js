@@ -8,6 +8,7 @@ const client=await readFile(new URL("../../client/src/components/commerce/instal
 const intake=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
 const entry=await readFile(new URL("../../client/src/entry.jsx",import.meta.url),"utf8");
 const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
+const postingGuard=await readFile(new URL("../src/routes/purchase-order-posting-guard.js",import.meta.url),"utf8");
 
 test("purchase orders use an additive ledger separate from purchase invoices",()=>{
   assert.match(route,/CREATE TABLE IF NOT EXISTS "PurchaseOrder"/);
@@ -96,4 +97,16 @@ test("purchase suite is mounted without an internal observer render loop",()=>{
   assert.match(entry,/window\.MutationObserver=class\{observe\(\)\{\}disconnect\(\)\{\}\}/);
   assert.match(server,/purchaseOrderActionRoutes/);
   assert.match(server,/purchaseOrderRoutes/);
+});
+
+test("draft invoice deletion is durable in audit and removes its archived source",()=>{
+  assert.match(postingGuard,/PURCHASE_ORDER_DELETED/);
+  assert.match(postingGuard,/invoiceNumber:found\.invoiceNumber/);
+  assert.match(postingGuard,/supplierName:found\.supplierName/);
+  assert.match(postingGuard,/lineCount:Number\(totals\.lineCount/);
+  assert.match(postingGuard,/DELETE FROM "PurchaseDocument"/);
+  assert.match(postingGuard,/DELETE FROM "DocumentInbox"/);
+  assert.match(postingGuard,/DELETE FROM "AiReaderJob"/);
+  assert.match(postingGuard,/DELETE FROM "DocumentAttachment"/);
+  assert.match(postingGuard,/ενεργή πληρωμή/);
 });

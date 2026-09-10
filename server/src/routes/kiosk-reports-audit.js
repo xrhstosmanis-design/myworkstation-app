@@ -12,6 +12,7 @@ auditEventLabels.STOCK_MANUAL_ADJUSTMENT="Χειροκίνητη διόρθωσ�
 auditEventLabels.STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή";
 auditEventLabels.STOCK_WASTE="Καταστροφή / Φύρα είδους";
 auditEventLabels.STOCK_SUPPLIER_RETURN="Επιστροφή σε προμηθευτή";
+auditEventLabels.PURCHASE_ORDER_DELETED="Διαγραφή πρόχειρου τιμολογίου";
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 
@@ -179,7 +180,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
           'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
-          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED'
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
@@ -239,8 +240,10 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
-      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED";
-      const description=productCorrection
+      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED";
+      const description=purchaseOrderDeleted
+        ?`ΔΙΑΓΡΑΦΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${details.invoiceNumber||details.orderId||"—"} · ${details.supplierName||"Χωρίς προμηθευτή"} · ${n(details.lineCount)} γραμμές · ${n(details.totalGross).toFixed(2)} €`
+        :productCorrection
         ?`ΔΙΟΡΘΩΣΗ ΕΙΔΟΥΣ · ${details.productName||"Άγνωστο προϊόν"} · ${(Array.isArray(details.changes)?details.changes:[]).map(change=>`${change.label}: ${change.before??"—"} → ${change.after??"—"}`).join(" · ")||"Αποθήκευση καρτέλας"}`
         :catalogDispatch
         ?`ΑΠΟΣΤΟΛΗ ΑΠΟ MASTER CATALOG · ${n(details.productCount)} προϊόντα · ${(Array.isArray(details.productNames)?details.productNames:[]).join(", ")||"—"} · νέες αντιστοιχίσεις ${n(details.activatedMappings)}`

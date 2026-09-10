@@ -146,7 +146,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
         WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."supplierId"=${supplierId}
           AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."attachmentChecksum"=${checksum}
         ORDER BY t."occurredAt" DESC LIMIT 1`;
-      if(attachments[0]?.purchaseDocumentId||attachments[0]?.inboxId)return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη καταχωριστεί. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
+      if(attachments[0]?.purchaseDocumentId)return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη καταχωριστεί. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
       if(attachments[0]?.jobId)return res.json({ok:true,duplicate:false,resumable:true,resumeJobId:attachments[0].jobId,resumeStatus:attachments[0].status,paymentTransactionId:paymentByFile[0]?.id||null,message:"Βρέθηκε η προηγούμενη ανολοκλήρωτη ανάγνωση και θα συνεχιστεί χωρίς νέο upload ή πληρωμή."});
       if(paymentByFile[0])return res.status(409).json({error:"Η πληρωμή αυτού του τιμολογίου υπάρχει ήδη. Δεν έγινε δεύτερη οικονομική κίνηση.",code:"DUPLICATE_INVOICE_PAYMENT",existing:paymentByFile[0]});
     }

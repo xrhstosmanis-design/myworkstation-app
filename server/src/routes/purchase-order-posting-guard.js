@@ -25,6 +25,7 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PurchaseOrderPosting_company_idx" ON "PurchaseOrderPosting" ("companyId","postedAt" DESC)`);
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PurchaseOrderPosting_fingerprint_key" ON "PurchaseOrderPosting" ("companyId","documentFingerprint") WHERE "documentFingerprint" IS NOT NULL`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" (
         "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,
         "supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',
@@ -93,7 +94,14 @@ router.delete("/:orderId",async(req,res,next)=>{
     if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Δεν έχεις δικαίωμα διαγραφής παραγγελίας."});
     const companyId=req.user.companyId;
     const result=await prisma.$transaction(async tx=>{
-      const rows=await tx.$queryRaw`SELECT "id","status","invoiceNumber" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} FOR UPDATE`;
+      const rows=await tx.$queryRaw`
+        SELECT o."id",o."status",o."invoiceNumber",o."storeId",o."supplierId",o."sourceType",o."sourceDocumentId",
+          o."description",s."name" AS "supplierName",st."name" AS "storeName"
+        FROM "PurchaseOrder" o
+        LEFT JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId"
+        LEFT JOIN "Store" st ON st."id"=o."storeId" AND st."companyId"=o."companyId"
+        WHERE o."id"=${req.params.orderId} AND o."companyId"=${companyId}
+        FOR UPDATE OF o`;
       const found=rows[0];
       if(!found){const error=new Error("Δεν βρέθηκε η παραγγελία.");error.status=404;throw error}
       if(found.status!=="NEW"){
@@ -107,8 +115,34 @@ router.delete("/:orderId",async(req,res,next)=>{
         error.status=409;
         throw error;
       }
+      const totals=(await tx.$queryRaw`SELECT COUNT("id")::int AS "lineCount",COALESCE(SUM("netAmount"),0) AS "totalNet",COALESCE(SUM("grossAmount"),0) AS "totalGross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`)[0]||{};
+      let linkedDocument=null;
+      if(found.sourceDocumentId){
+        const documents=await tx.$queryRaw`SELECT "id","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} FOR UPDATE`;
+        linkedDocument=documents[0]||null;
+        if(linkedDocument?.status&&linkedDocument.status!=="DRAFT"){
+          const error=new Error("Το συνδεδεμένο παραστατικό δεν είναι πλέον πρόχειρο και δεν μπορεί να διαγραφεί.");error.status=409;throw error;
+        }
+        if(linkedDocument?.paymentTransactionId){
+          const payments=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${linkedDocument.paymentTransactionId} AND "companyId"=${companyId} AND "reversedAt" IS NULL LIMIT 1`;
+          if(payments[0]){const error=new Error("Το τιμολόγιο έχει ενεργή πληρωμή. Ακύρωσε πρώτα την πληρωμή και μετά διέγραψε το πρόχειρο.");error.status=409;throw error}
+        }
+      }
+      const actorId=req.user.id||req.user.operatorId;
+      const actorName=req.user.fullName||req.user.name||req.user.email||"Χρήστης";
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${actorId},'PURCHASE_ORDER_DELETED',${JSON.stringify({orderId:found.id,invoiceNumber:found.invoiceNumber,supplierId:found.supplierId,supplierName:found.supplierName,storeName:found.storeName,status:found.status,lineCount:Number(totals.lineCount||0),totalNet:n(totals.totalNet),totalGross:n(totals.totalGross),sourceType:found.sourceType,sourceDocumentId:found.sourceDocumentId,actorName,sourceFileDeleted:Boolean(linkedDocument)})}::jsonb)`;
       await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
       await tx.$executeRaw`DELETE FROM "PurchaseOrder" WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+      if(linkedDocument){
+        const sourceAttachments=await tx.$queryRaw`SELECT DISTINCT "attachmentId" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "purchaseDocumentId"=${linkedDocument.id} AND "attachmentId" IS NOT NULL`;
+        await tx.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${linkedDocument.id}`;
+        await tx.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${linkedDocument.id} AND "companyId"=${companyId} AND "status"='DRAFT'`;
+        for(const source of sourceAttachments){
+          await tx.$executeRaw`DELETE FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${source.attachmentId}`;
+          await tx.$executeRaw`DELETE FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "attachmentId"=${source.attachmentId}`;
+          await tx.$executeRaw`DELETE FROM "DocumentAttachment" WHERE "id"=${source.attachmentId} AND "companyId"=${companyId}`;
+        }
+      }
       return {ok:true,deleted:true,id:found.id,invoiceNumber:found.invoiceNumber};
     });
     res.json(result);
