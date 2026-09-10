@@ -4,19 +4,18 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import coreRouter from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
+import {reconcileInvoiceLines} from "../invoice-line-reconciliation.js";
 
 const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
-const CANONICAL_VAT=new Set([0,6,13,24]);
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const m=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`:null};
 const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
-const normalizedLineGross=line=>{const net=Number(line?.netAmount||0),vat=Number(line?.vatRate||0),stored=Number(line?.grossAmount||0);if(net>0&&CANONICAL_VAT.has(Math.round(vat)))return round2(net*(1+Math.round(vat)/100));return round2(stored)};
 const id=()=>crypto.randomUUID();
 
 async function ensureFastHandoffSchema(){
@@ -271,14 +270,11 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     // Never trust a stale Azure grossAmount when netAmount + canonical VAT are known.
     // The verified discounts are already reflected in netAmount; therefore gross must
     // be rebuilt from that net. This also repairs older jobs already saved in resultJson.
-    let correctedGrossLines=0;
-    const normalizedLines=lines.map(line=>{
-      const grossAmount=normalizedLineGross(line);
-      if(Math.abs(grossAmount-Number(line?.grossAmount||0))>0.005)correctedGrossLines+=1;
-      return {...line,grossAmount};
-    });
-    const structuredGross=round2(normalizedLines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
-    const structuredNet=round2(normalizedLines.reduce((sum,line)=>sum+Number(line?.netAmount||0),0));
+    const reconciliation=reconcileInvoiceLines(lines,requestedTotal);
+    const normalizedLines=reconciliation.normalizedLines;
+    const correctedGrossLines=reconciliation.correctedLines;
+    const structuredGross=reconciliation.grossTotal;
+    const structuredNet=reconciliation.netTotal;
     if(!(structuredGross>0))return res.status(409).json({error:"Οι γραμμές V2.4.4 δεν έχουν έγκυρα σύνολα. Απαιτείται επανέλεγχος του τιμολογίου."});
     const diff=round2(Math.abs(structuredGross-requestedTotal));
     const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE;
@@ -293,7 +289,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     }
 
     if(correctedGrossLines>0){
-      const repaired={...result,productLines:normalizedLines,grossNormalizedAt:new Date().toISOString(),grossNormalization:"NET_PLUS_CANONICAL_VAT"};
+      const repaired={...result,productLines:normalizedLines,grossNormalizedAt:new Date().toISOString(),grossNormalization:reconciliation.strategy};
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(repaired)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId}`;
     }
     next();

@@ -1,4 +1,4 @@
-Active checkpoint: `CHECKPOINTS/CHANGES/2026-09-06-home-04-safe-terminal-self-activation.md` (with unified list `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`)
+Active checkpoint: `CHECKPOINTS/CHANGES/2026-09-10-pos-invoice-header-total-reconciliation.md` (with unified list `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`)
 
 Current branch: `agent/home-04-open-activation-link`
 
