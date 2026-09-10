@@ -157,19 +157,20 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
 router.post("/:sessionId/force-close",async(req,res,next)=>{
   try{
     await ensureSchema();
-    if(req.user?.role!=="SUPER_ADMIN"||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο ο Super Admin μπορεί να κλείσει διοικητικά παλιά ανοικτή βάρδια."});
-    const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),companyId=req.user.companyId,actorName=req.user.fullName||req.user.email||"Super Admin";
+    const canForceClose=req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER"].includes(req.user?.role);
+    if(!canForceClose)return res.status(403).json({error:"Μόνο ο Super Admin ή ο ιδιοκτήτης μπορεί να κλείσει διοικητικά παλιά ανοικτή βάρδια."});
+    const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),companyId=req.user.companyId,actorName=req.user.fullName||req.user.email||(req.user.role==="OWNER"?"Ιδιοκτήτης":"Super Admin"),actorRole=req.user.role;
     const result=await prisma.$transaction(async tx=>{
       const rows=await tx.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
       const shift=rows[0];if(!shift)return null;
       const ledger=await tx.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${shift.storeId} AND "sessionId"=${shift.id}`;
       const active=ledger.filter(row=>!row.reversedAt),sum=(type,predicate=()=>true)=>active.filter(row=>row.type===type&&predicate(row)).reduce((total,row)=>total+n(row.amount),0);
       const cashSales=sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),cardSales=sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),transferIn=sum("TRANSFER_AMOUNT"),expenses=sum("SUPPLIER_PAYMENT",row=>row.subtractFromShift)+sum("OTHER_EXPENSE",row=>row.subtractFromShift)+sum("BANK_DEPOSIT",row=>row.subtractFromShift),expected=n(shift.openingOperational)+cashSales+transferIn-expenses;
-      const note=`Διοικητικό κλείσιμο Super Admin χωρίς φυσική καταμέτρηση · ${body.reason}`;
+      const note=`Διοικητικό κλείσιμο ${actorRole==="OWNER"?"Ιδιοκτήτη":"Super Admin"} χωρίς φυσική καταμέτρηση · ${body.reason}`;
       const closed=await tx.$queryRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),"cashSales"=${cashSales},"cardSales"=${cardSales},"eftposTotal"=${cardSales},"cardVariance"=0,"expenses"=${expenses},"closingDrawer"=${expected},"closingCustody"=0,"closingCoins"=0,"closingSafe"=${n(shift.openingSafe)},"expectedOperational"=${expected},"actualOperational"=${expected},"variance"=0,"nextOpeningTotal"=${expected},"closingNote"=${note},"updatedAt"=NOW() WHERE "id"=${shift.id} AND "companyId"=${companyId} AND "status"='OPEN' RETURNING *`;
       if(!closed[0])return null;
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${companyId},${shift.storeId},${null},${req.user.id},'SHIFT_FORCE_CLOSED_BY_SUPER_ADMIN',${JSON.stringify({sessionId:shift.id,terminalPos:shift.terminalPos,shiftLabel:shift.shiftLabel,openedAt:shift.openedAt,reason:body.reason,physicalCount:false,expectedOperational:expected,cashSales,cardSales,expenses})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${companyId},${shift.storeId},${null},${req.user.id},'SHIFT_FORCE_CLOSED_BY_MANAGEMENT',${JSON.stringify({sessionId:shift.id,terminalPos:shift.terminalPos,shiftLabel:shift.shiftLabel,openedAt:shift.openedAt,reason:body.reason,actorRole,physicalCount:false,expectedOperational:expected,cashSales,cardSales,expenses})}::jsonb)`;
       return closed[0];
     });
     if(!result)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή."});
