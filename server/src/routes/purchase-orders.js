@@ -136,6 +136,24 @@ router.get("/:orderId/detail",async(req,res,next)=>{try{
   const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:n(r.markupPercent),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net+=r.netAmount;a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});res.json({order:found,lines,totals});
 }catch(error){next(error)}});
 
+router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{
+  const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});editable(found);
+  if(found.sourceType!=="POS_OCR_DRAFT"||!found.sourceDocumentId)return res.json({ok:true,repaired:false,reason:"NOT_POS_OCR_DRAFT"});
+  const result=await prisma.$transaction(async tx=>{
+    const documents=await tx.$queryRaw`SELECT "id","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`;
+    if(!documents[0])return {repaired:false,reason:"DOCUMENT_NOT_EDITABLE"};
+    const totals=await tx.$queryRaw`SELECT COALESCE(SUM("netAmount"),0) AS "net",COALESCE(SUM("grossAmount"),0) AS "gross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
+    const headerTotal=n(documents[0].totalGross),netTotal=n(totals[0]?.net),grossTotal=n(totals[0]?.gross);
+    if(headerTotal<=0||Math.abs(headerTotal-netTotal)>0.05||Math.abs(headerTotal-grossTotal)<=0.05)return {repaired:false,reason:"NO_SAFE_HEADER_MATCH",headerTotal,netTotal,grossTotal};
+    const changed=await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "vatRate"=0,"vatAmount"=0,"grossAmount"="netAmount","updatedAt"=NOW() WHERE "orderId"=${found.id}`;
+    const marker=`Αυτόματη συμφωνία OCR με σύνολο τιμολογίου ${headerTotal.toFixed(2)} €`;
+    await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=CASE WHEN COALESCE("description",'') LIKE ${`%${marker}%`} THEN "description" ELSE CONCAT_WS(' • ',NULLIF("description",''),${marker}) END,"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+    await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${netTotal},"totalVat"=0,"updatedAt"=NOW() WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId}`;
+    return {repaired:true,changed:Number(changed),headerTotal,netTotal,grossTotalBefore:grossTotal,grossTotalAfter:netTotal};
+  });
+  res.json({ok:true,...result});
+}catch(error){next(error)}});
+
 router.post("/:orderId/lines",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});editable(found);const body=lineSchema.parse(req.body||{});const p=body.productId?await product(companyId,body.productId):null;if(body.productId&&!p)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});const c=calc({...body,vatRate:body.vatRate??p?.vatRate??24,proposedSalePrice:body.proposedSalePrice??p?.salePrice??0,calculateFrom:body.calculateFrom||"NONE"});const lineId=id();
   await prisma.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","supplierCode","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount") VALUES (${lineId},${found.id},${body.productId||null},${body.supplierCode||null},${body.description||p?.name||"Είδος"},${c.quantity},${c.unitCost},${c.discount1},${c.discount2},${c.discount3},${c.exciseTotal},${c.vatRate},${body.gift||false},${c.unitCost},${c.markupPercent},${c.proposedSalePrice},${c.netAmount},${c.vatAmount},${c.grossAmount})`;res.status(201).json({id:lineId,...c});
