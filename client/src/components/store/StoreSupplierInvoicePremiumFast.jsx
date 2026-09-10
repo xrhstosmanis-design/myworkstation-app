@@ -51,7 +51,7 @@ async function backgroundV244({api,store,pages,supplierId,documentNumber,documen
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
-  const [pages,setPages]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε έως 5 σελίδες του ίδιου τιμολογίου."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false);
+  const [pages,setPages]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε έως 5 σελίδες του ίδιου τιμολογίου."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false),[vatLookup,setVatLookup]=useState({busy:false,verified:false,message:""});
   const videoRef=useRef(null),canvasRef=useRef(null);
   useEffect(()=>{if(!cameraOpen||!stream||!videoRef.current)return;const video=videoRef.current;video.srcObject=stream;const play=()=>video.play().catch(()=>{});if(video.readyState>=2)play();else video.addEventListener("loadedmetadata",play,{once:true});return()=>video.removeEventListener("loadedmetadata",play)},[cameraOpen,stream]);
   const [qr,setQr]=useState("");
@@ -107,6 +107,17 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       onChanged?.();
     }catch(error){setMessage?.(`❌ ${error?.message||"Δεν καταχωρίστηκε ο νέος προμηθευτής."}`)}finally{setSavingSupplier(false)}
   };
+  const lookupVat=async()=>{
+    const taxId=String(supplierCandidate.taxId||"").replace(/\D/g,"");
+    if(taxId.length!==9)return setVatLookup({busy:false,verified:false,message:"Το ΑΦΜ πρέπει να έχει 9 ψηφία."});
+    setVatLookup({busy:true,verified:false,message:"Έλεγχος επίσημων στοιχείων…"});
+    try{
+      const data=await api(`/api/commerce/vat-lookup?storeId=${encodeURIComponent(store.id)}&taxId=${encodeURIComponent(taxId)}`);
+      if(data.existingSupplier){setCreatedSupplier(data.existingSupplier);setSupplierId(data.existingSupplier.id);setVatLookup({busy:false,verified:true,message:`Υπάρχει ήδη: ${data.existingSupplier.name}`});return}
+      setSupplierCandidate(current=>({...current,taxId:data.taxId,name:data.name||current.name}));
+      setVatLookup({busy:false,verified:true,message:`Πλήρης επωνυμία (${data.source==="AADE_BASIC_REGISTRY"?"από ΑΑΔΕ":"από VIES"}): ${data.name}`});
+    }catch(error){setVatLookup({busy:false,verified:false,message:error?.message||"Δεν ολοκληρώθηκε η αναζήτηση ΑΦΜ."})}
+  };
   const startCamera=async()=>{try{stopCamera();let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false})}catch{s=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}setStream(s);setCameraOpen(true)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του Chrome και ξαναδοκίμασε.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c||!v.videoWidth||!v.videoHeight){setMessage?.("⚠️ Η προεπισκόπηση κάμερας δεν είναι ακόμη έτοιμη. Περίμενε μια στιγμή και ξαναπάτησε Φωτογράφιση.");return}c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFiles([new File([blob],`timologio-selida-${pages.length+1}-${Date.now()}.jpg`,{type:"image/jpeg"})])},"image/jpeg",.9)};
   const createQr=async()=>{if(pages.length>=5)return setMessage?.("⚠️ Έχουν ήδη επιλεγεί 5 σελίδες.");try{const r=await api("/api/commerce/mobile-invoice-upload-sessions",{method:"POST",body:JSON.stringify({storeId:store.id})});setQrUrl(r.url);setQr(await QRCode.toDataURL(r.url));const timer=setInterval(async()=>{try{const x=await api(`/api/commerce/mobile-invoice-upload-sessions/${r.id}`);if(x?.dataUrl){clearInterval(timer);const b=await fetch(x.dataUrl).then(v=>v.blob());selectFiles([new File([b],x.filename,{type:x.mimeType})]);setQr("");setQrUrl("")}}catch{}},2000)}catch(e){setMessage?.(`❌ ${e?.message||"Δεν δημιουργήθηκε QR."}`)}};
@@ -154,6 +165,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
         <label>Επωνυμία<input value={supplierCandidate.name} disabled={savingSupplier||busy} onChange={e=>setSupplierCandidate(c=>({...c,name:e.target.value}))} placeholder="Επωνυμία προμηθευτή"/></label>
         <label>ΑΦΜ<input value={supplierCandidate.taxId} disabled={savingSupplier||busy} onChange={e=>setSupplierCandidate(c=>({...c,taxId:e.target.value}))} placeholder="ΑΦΜ"/></label>
       </div>
+      <button type="button" onClick={lookupVat} disabled={savingSupplier||busy||vatLookup.busy||String(supplierCandidate.taxId||"").replace(/\D/g,"").length!==9} style={{marginTop:8,fontWeight:900}}>{vatLookup.busy?"ΕΛΕΓΧΟΣ ΑΦΜ…":"ΕΛΕΓΧΟΣ ΕΠΙΣΗΜΗΣ ΕΠΩΝΥΜΙΑΣ ΑΠΟ ΑΦΜ"}</button>
+      {vatLookup.message&&<div style={{marginTop:7,padding:8,borderRadius:7,background:vatLookup.verified?"#dcfce7":"#fee2e2",fontWeight:900}}>{vatLookup.message}</div>}
       <button type="button" onClick={saveNewSupplier} disabled={savingSupplier||busy||supplierCandidate.name.trim().length<2} style={{marginTop:8,fontWeight:900}}>{savingSupplier?"Καταχώριση…":"ΚΑΤΑΧΩΡΙΣΗ ΝΕΟΥ ΠΡΟΜΗΘΕΥΤΗ"}</button>
     </div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><label>Συνολικό ποσό<input inputMode="decimal" value={amount} disabled={busy} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αριθμός τιμολογίου<input value={documentNumber} disabled={busy} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} disabled={busy} onChange={e=>setDocumentDate(e.target.value)}/></label></div>

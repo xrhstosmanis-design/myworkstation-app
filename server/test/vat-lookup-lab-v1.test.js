@@ -19,6 +19,13 @@ test("POS requires explicit lookup before supplier creation",()=>{
   assert.match(source,/Έλεγχος επίσημης επωνυμίας από ΑΦΜ/);
 });
 
+test("actual fast POS invoice screen exposes explicit VAT lookup",()=>{
+  const source=fs.readFileSync(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
+  assert.match(source,/ΕΛΕΓΧΟΣ ΕΠΙΣΗΜΗΣ ΕΠΩΝΥΜΙΑΣ ΑΠΟ ΑΦΜ/);
+  assert.match(source,/api\/commerce\/vat-lookup/);
+  assert.match(source,/ΚΑΤΑΧΩΡΙΣΗ ΝΕΟΥ ΠΡΟΜΗΘΕΥΤΗ/);
+});
+
 test("normalizes full AADE supplier identity",async()=>{
   const {normalizeAadeResult}=await import("../src/routes/commerce-vat-lookup.js");
   const xml="<result><onomasia>ΠΡΟΜΗΘΕΥΤΗΣ ΑΕ</onomasia><postal_address>ΚΗΦΙΣΙΑΣ</postal_address><postal_address_no>10</postal_address_no><postal_zip_code>11526</postal_zip_code><postal_area_description>ΑΘΗΝΑ</postal_area_description><firm_act_descr>ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ</firm_act_descr></result>";
