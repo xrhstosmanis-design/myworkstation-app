@@ -811,7 +811,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     suppliers,
     purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross||0)})),
     recent,
-    access:{canReviewStoreLedger,canReverse}
+    access:{canReviewStoreLedger,canReverse,canForceClose:req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN"}
   });
 }));
 
