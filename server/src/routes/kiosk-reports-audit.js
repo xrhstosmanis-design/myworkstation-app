@@ -6,6 +6,7 @@ import {ensureKioskReportAuditSchema,insertKioskAuditEvent} from "../kiosk-repor
 import {buildVendorClientFallback,videoAdapterFor} from "../services/video-adapters.js";
 
 const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",SALE_CASH:"Πώληση με μετρητά",SALE_CARD:"Πώληση με κάρτα",SALE_IRIS:"Πληρωμή με IRIS",PERCENTAGES:"Ποσοστά",TRANSFER_AMOUNT:"Μεταφορά ποσού",SAFE_ADJUSTMENT:"Διόρθωση χρηματοκιβωτίου",SALE_MIXED:"Μικτή πώληση",SALE_CREDIT:"Πώληση με πίστωση",BANK_DEPOSIT:"Κατάθεση τράπεζας",BANK_WITHDRAWAL:"Ανάληψη τράπεζας",POS_SALE_COMPLETED:"Ολοκλήρωση πώλησης",AUDIENCE_DISCOUNT_SELECTED:"Επιλογή δικαιούχου έκπτωσης",CART_ITEM_ADD:"Προσθήκη προϊόντος στο καλάθι",CART_QTY_CHANGE:"Αλλαγή ποσότητας στο καλάθι",ITEM_CHANGE_REQUEST:"Αίτημα αλλαγής είδους",ITEM_EXCHANGE_COMPLETED:"Ολοκλήρωση αλλαγής είδους",HOLD_RESTORE:"Επαναφορά αναμονής",HOLD_SAVE:"Αποθήκευση αναμονής",POS_RETURN:"Ολική επιστροφή",POS_RETURN_ITEMS:"Μερική επιστροφή",POS_SELF_CONSUMPTION:"Προσωπική κατανάλωση",POS_PRODUCT_DESTRUCTION:"Καταστροφή προϊόντων",POS_CANCEL:"Ακύρωση πώλησης",CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι",CART_CANCEL:"Ακύρωση λίστας πώλησης",PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής",SHIFT_CLOSE_SHORTAGE_ATTEMPT:"Προσπάθεια κλεισίματος με έλλειμμα",SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE:"Κλείσιμο με επιβεβαιωμένο έλλειμμα",BANK_DEPOSIT_PROOF_UPLOADED:"Ανέβασμα αποδεικτικού κατάθεσης",BANK_DEPOSIT_AUTO_MATCHED:"Αυτόματη αντιστοίχιση κατάθεσης",BANK_DEPOSIT_PROOF_DISCREPANCY:"Απόκλιση αποδεικτικού κατάθεσης",BANK_LEDGER_CONFIRMED:"Επιβεβαίωση τραπεζικής κίνησης",BANK_LEDGER_DISCREPANCY:"Απόκλιση τραπεζικής κίνησης",BANK_LEDGER_CANCELLED:"Ακύρωση τραπεζικής κίνησης",OTHER_EXPENSE_CONFIRMED:"Επιβεβαίωση λοιπού εξόδου",OTHER_EXPENSE_DISCREPANCY:"Απόκλιση λοιπού εξόδου",SUPPLIER_SETTLEMENT_CONFIRMED:"Επιβεβαίωση πληρωμής προμηθευτή",SUPPLIER_SETTLEMENT_DISCREPANCY:"Απόκλιση πληρωμής προμηθευτή"};
+auditEventLabels.PRODUCT_CARD_UPDATED="Διόρθωση είδους";
 auditEventLabels.MASTER_PRODUCTS_DISPATCHED="Αποστολή προϊόντων από Master Catalog";
 auditEventLabels.STOCK_MANUAL_ADJUSTMENT="Χειροκίνητη διόρθωση αποθέματος";
 auditEventLabels.STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή";
@@ -176,7 +177,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
           'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
-          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED'
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
@@ -235,8 +236,10 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
-      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED";
-      const description=catalogDispatch
+      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED";
+      const description=productCorrection
+        ?`ΔΙΟΡΘΩΣΗ ΕΙΔΟΥΣ · ${details.productName||"Άγνωστο προϊόν"} · ${(Array.isArray(details.changes)?details.changes:[]).map(change=>`${change.label}: ${change.before??"—"} → ${change.after??"—"}`).join(" · ")||"Αποθήκευση καρτέλας"}`
+        :catalogDispatch
         ?`ΑΠΟΣΤΟΛΗ ΑΠΟ MASTER CATALOG · ${n(details.productCount)} προϊόντα · ${(Array.isArray(details.productNames)?details.productNames:[]).join(", ")||"—"} · νέες αντιστοιχίσεις ${n(details.activatedMappings)}`
         :bankEvent
         ?`${greekAuditEventLabel(r.eventType)} · κατάθεση ${n(details.expectedAmount).toFixed(2)} € · αποδεικτικό ${n(details.proofAmount??details.expectedAmount).toFixed(2)} € · διαφορά ${n(details.difference).toFixed(2)} €${details.attachmentFilename?` · ${details.attachmentFilename}`:""}`
