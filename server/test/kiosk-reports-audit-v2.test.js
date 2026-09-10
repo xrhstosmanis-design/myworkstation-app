@@ -79,6 +79,13 @@ test("central audit shows the selected discount audience and store operator name
   assert.match(route,/COALESCE\(u\."fullName",operator\."displayName"\)/);
 });
 
+test("product-card corrections appear in central audit with field changes",()=>{
+  const route=read("src/routes/kiosk-reports-audit.js");
+  assert.match(route,/PRODUCT_CARD_UPDATED/);
+  assert.match(route,/Διόρθωση είδους/);
+  assert.match(route,/details\.changes/);
+});
+
 test("Master Catalog dispatch is audited per store and events are grouped by category",()=>{
   const route=read("src/routes/kiosk-reports-audit.js");
   const dispatch=read("src/routes/platform-bulk-catalog.js");
