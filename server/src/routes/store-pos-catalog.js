@@ -199,11 +199,12 @@ router.get("/stores/:storeId",async(req,res,next)=>{
     const [layoutRows,products]=await Promise.all([
       prisma.$queryRawUnsafe(`SELECT "layoutJson","version","publishedAt" FROM "StorePosLayout" WHERE "storeId"=$1 LIMIT 1`,store.id).catch(()=>[]),
       prisma.$queryRaw`
-        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",p."freeSalePrice",p."negativeStockWarning",mp."sourceCode" AS "masterCode",
+        SELECT p."id",p."sku",p."name",p."vatRate",p."masterProductId",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",mp."sourceCode" AS "masterCode",
           COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
           c."name" AS "categoryName",
           COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes",
-          COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=p."masterProductId"),'[]') AS "masterBarcodes"
+          COALESCE((SELECT json_agg(mpb."barcode" ORDER BY mpb."barcode") FROM "MasterProductBarcode" mpb WHERE mpb."masterProductId"=p."masterProductId"),'[]') AS "masterBarcodes",
+          COALESCE((SELECT json_agg(jsonb_build_object('id',rp."id",'name',rp."name",'sku',rp."sku",'quantity',si."quantity",'salePrice',COALESCE(si."salePrice",rsp."salePrice",rp."salePrice"),'currentStock',COALESCE(rsp."currentStock",0),'freeSalePrice',false,'negativeStockWarning',rp."negativeStockWarning") ORDER BY rp."name") FROM "ProductSetItem" si JOIN "Product" rp ON rp."id"=si."relatedProductId" LEFT JOIN "StoreProduct" rsp ON rsp."productId"=rp."id" AND rsp."storeId"=${store.id} WHERE si."companyId"=${req.user.companyId} AND si."productId"=p."id" AND rp."active"=true AND COALESCE(rsp."active",false)=true),'[]') AS "setItems"
         FROM "StoreProduct" sp
         JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId}
         LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
