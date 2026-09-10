@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {normalizeDeviceCode,resolvePaymentDeviceRoute} from "./payment-device-routing.js";
 
 function normalizedNumber(value){
   const number=Number(value||0);
@@ -17,6 +18,21 @@ export function canonicalJson(value){
 
 export function fiscalEnvelopeHash(envelope){
   return crypto.createHash("sha256").update(canonicalJson(envelope)).digest("hex");
+}
+
+export function resolveFiscalDryRunRoute({recordedRoute,terminalPos,payments=[],operationChannel,fiscalDevices=[],eftposDevices=[]}={}){
+  if(recordedRoute)return {...recordedRoute,routeOrigin:"RECORDED"};
+  const terminal=normalizeDeviceCode(terminalPos),methods=new Set(payments.map(payment=>String(payment.method||"").toUpperCase()));
+  if(!terminal||!methods.size)return null;
+  const hasElectronic=methods.has("CARD")||methods.has("IRIS");
+  if(hasElectronic){
+    const channel=operationChannel==="DELIVERY_DELAYED"?"DELIVERY":"IN_STORE";
+    try{return {...resolvePaymentDeviceRoute({terminalPos:terminal,channel,fiscalDevices,eftposDevices}),routeOrigin:"RECOVERED_CURRENT_MAPPING"}}catch{return null}
+  }
+  if([...methods].some(method=>method!=="CASH"))return null;
+  const matches=fiscalDevices.filter(row=>row.active!==false&&normalizeDeviceCode(row.terminalPos)===terminal);
+  if(matches.length!==1)return null;
+  return {terminalPos:terminal,channel:"IN_STORE",role:"STORE",fiscalDeviceCode:normalizeDeviceCode(matches[0].deviceCode),eftposDeviceCode:"NOT_APPLICABLE",fallback:false,routeOrigin:"RECOVERED_CURRENT_MAPPING"};
 }
 
 export function buildFiscalDryRunEnvelope({sale,lines,payments,route}){

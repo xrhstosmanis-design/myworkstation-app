@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {buildFiscalDryRunEnvelope,canonicalJson,fiscalEnvelopeHash,validateFiscalDryRun} from "../src/fiscal-bridge-dry-run.js";
+import {buildFiscalDryRunEnvelope,canonicalJson,fiscalEnvelopeHash,resolveFiscalDryRunRoute,validateFiscalDryRun} from "../src/fiscal-bridge-dry-run.js";
 
 const route=fs.readFileSync(new URL("../src/routes/fiscal-bridge-dry-run.js",import.meta.url),"utf8");
 const index=fs.readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
@@ -35,6 +35,17 @@ test("dry-run accepts generic laboratory terminal identifiers",()=>{
   assert.doesNotMatch(route,/z\.enum\(\["POS1","POS2"\]\)/);
 });
 
+test("dry-run safely recovers an unambiguous cash route from the sale shift",()=>{
+  const recovered=resolveFiscalDryRunRoute({terminalPos:"lab-pos-02",payments:[{method:"CASH",amount:1}],operationChannel:"IN_STORE",fiscalDevices:[{deviceCode:"LAB-FISCAL-02",terminalPos:"LAB-POS-02",active:true}]});
+  assert.deepEqual(recovered,{terminalPos:"LAB-POS-02",channel:"IN_STORE",role:"STORE",fiscalDeviceCode:"LAB-FISCAL-02",eftposDeviceCode:"NOT_APPLICABLE",fallback:false,routeOrigin:"RECOVERED_CURRENT_MAPPING"});
+});
+
+test("dry-run refuses ambiguous or incomplete recovered routes",()=>{
+  const fiscalDevices=[{deviceCode:"LAB-FISCAL-02",terminalPos:"LAB-POS-02",active:true}];
+  assert.equal(resolveFiscalDryRunRoute({terminalPos:"LAB-POS-02",payments:[{method:"CASH",amount:1}],fiscalDevices:[...fiscalDevices,{deviceCode:"LAB-FISCAL-X",terminalPos:"LAB-POS-02",active:true}]}),null);
+  assert.equal(resolveFiscalDryRunRoute({terminalPos:"LAB-POS-02",payments:[{method:"CARD",amount:1}],fiscalDevices,eftposDevices:[]}),null);
+});
+
 test("HTTP contract is tenant-scoped, gated and cannot issue a fiscal command",()=>{
   assert.match(index,/fiscalBridgeDryRunRoutes/);
   assert.match(route,/FISCAL_BRIDGE_TEST_MODE/);
@@ -49,7 +60,9 @@ test("Platform Super Admin screen is protected, fail closed and uses eligible NO
   const screen=fs.readFileSync(new URL("../../client/src/components/platform/FiscalBridgeDryRunCenter.jsx",import.meta.url),"utf8");
   const platform=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
   assert.match(route,/new Set\(\["SUPER_ADMIN","OWNER","ADMIN"\]\)/);
-  assert.match(route,/s\."status"='COMPLETED' AND s\."fiscalStatus"='NON_FISCAL'/);
+  assert.match(route,/"status"='COMPLETED' AND "fiscalStatus"='NON_FISCAL'/);
+  assert.match(route,/resolveFiscalDryRunRoute/);
+  assert.match(route,/"CashShiftSession"/);
   assert.match(route,/isSuperAdmin\(user\)\?\{\}:\{companyId:user\.companyId\}/);
   assert.match(screen,/status\?\.externalExecution===false/);
   assert.match(screen,/status\?\.fiscalIssuance===false/);

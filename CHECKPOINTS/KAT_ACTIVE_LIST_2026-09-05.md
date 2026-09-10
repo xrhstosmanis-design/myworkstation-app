@@ -1,3 +1,10 @@
+## 2026-09-10 — LAB Fiscal DRY RUN ανάκτηση route πώλησης
+
+- Η NON_FISCAL πώληση μετρητών 1,00 € της 10/09/2026 καταγράφηκε σωστά, αλλά δεν εμφανιζόταν στο Fiscal DRY RUN επειδή έλειπε το `PaymentDeviceRouteAttempt`.
+- Το DRY RUN ανακτά πλέον το πραγματικό Terminal ID από το audit ή τη βάρδια της πώλησης και επαληθεύει ξανά το τρέχον fiscal/EFTPOS mapping.
+- Η ανάκτηση παραμένει fail-closed: απαιτεί μοναδική ενεργή ταμειακή και, για κάρτα/delivery, μοναδικό EFTPOS σωστού ρόλου. Δεν στέλνεται εντολή σε RBS, CapDriver ή EFTPOS και δεν εκδίδεται απόδειξη.
+- Client build PASS, 21/21 στοχευμένα tests και 1.040/1.040 server tests PASS. PR #623 σε αναμονή CI/merge και live DRY RUN της υπάρχουσας πώλησης.
+
 ## 2026-09-10 — Σωστή προηγούμενη λιανική ανά κατάστημα στο Audit
 
 - Η «Διόρθωση είδους» συγκρίνει πλέον την προηγούμενη λιανική του συγκεκριμένου καταστήματος και όχι τη βασική λιανική του κεντρικού προϊόντος.
@@ -49,7 +56,7 @@
 | HOME-01 | Πρακτικός έλεγχος ελληνικών πινάκων, φίλτρων, ανανέωσης, ποσών, ρόλων και στηλών με προσωρινά δεδομένα. Επιβεβαιώθηκαν live αναζήτηση χωρίς τόνους, ποσά, διατήρηση φίλτρου μετά από ανανέωση, κύλιση popdown, κατηγορία δικαιούχου και όνομα χειριστή. Απομένουν role matrix και πρακτικό resize όλων των βασικών πινάκων. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-02 | Συνέχιση NON_FISCAL δοκιμών POS1/POS2 με προσωρινά δεδομένα. Το reset θα γίνει μόνο στο τέλος, πριν το go-live. | ΣΕ ΕΞΕΛΙΞΗ |
 | HOME-03 | Ημερήσια επιβεβαίωση Observer 1.1.3 χωρίς διπλές εγγραφές. Παραμένει READ_ONLY / SHADOW MODE. | ΣΕ ΑΝΑΜΟΝΗ |
-| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, generic terminal validation, idempotency key και payload hash, χωρίς εξωτερική εντολή. | ΣΕ ΕΞΕΛΙΞΗ - καθαρό PR από σημερινό main, αναμονή CI/merge και HOME test |
+| HOME-04 | Fiscal Bridge DRY RUN: έλεγχος πώλησης, γραμμών, πληρωμών, POS/RBS mapping, generic terminal validation, idempotency key και payload hash, χωρίς εξωτερική εντολή. | ΣΕ ΕΞΕΛΙΞΗ - PR #623, automated PASS, αναμονή CI/merge και live LAB test |
 | HOME-05 | Προεπισκόπηση Master Catalog. Καμία οριστική εισαγωγή, μεταφορά stock ή ενεργοποίηση μη επιβεβαιωμένου ΦΠΑ. | ΑΝΑΜΟΝΗ ΕΓΚΡΙΣΗΣ |
 | HOME-06 | Έλεγχος και ομαδοποίηση GitHub workflows ώστε να μειωθούν τα περιττά Render builds. | ΕΚΚΡΕΜΕΙ |
 
@@ -99,7 +106,7 @@
 | LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
 | LAB-04 | LAB-POS-01 και LAB-POS-02: ακριβής διάταξη ΚΑΤ σε κάθε Windows terminal, κοινή αποθήκη και store ledger, ξεχωριστές terminal sessions/βάρδιες. Η BackOffice αρχική προβολή βαρδιών γίνεται ανά επιλεγμένο terminal, με πτυσσόμενες κινήσεις και ανάλυση κατηγορίας με πάτημα. | ΟΚ - PR #588 / #589 · CI #1577 / #1580 · LAB acceptance 08/09/2026 |
 | LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
-| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - νέο καθαρό PR από σημερινό main |
+| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - PR #623 ανακτά fail-closed το route από την πραγματική βάρδια· αναμονή CI/merge και live test |
 | LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΟΚ - tenant/store υπάρχουν και χρησιμοποιούνται |
 | LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΟΚ - LAB-POS-01 / LAB-POS-02 υπάρχουν, συνέχεια στα Gate 1–8 |
 
