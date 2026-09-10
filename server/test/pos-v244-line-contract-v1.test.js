@@ -16,3 +16,15 @@ test("normalizes AI lines to the server V2.4.4 contract",()=>{
   assert.equal(line.unitsPerPackage,100000);
   assert.ok(line.packRule.length<=120);
 });
+
+test("keeps invoice retail separate from purchase cost and sends it as the Backoffice proposal",async()=>{
+  const [line]=finalizeV244ProductLines([{rawText:"01740 TEREA",code:"01740",description:"TEREA TURQUOISE",quantity:30,unit:"ΤΕΜ",unitCost:3.70278,retailPrice:4,netAmount:111.08,vatRate:0,grossAmount:111.08}]);
+  assert.equal(line.unitCost,3.70278);
+  assert.equal(line.retailPrice,4);
+  const fs=await import("node:fs/promises");
+  const source=await fs.readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
+  const ai=await fs.readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+  assert.match(source,/retailPrice:z\.coerce\.number/);
+  assert.match(source,/Number\(line\.retailPrice\|\|line\.product\?\.salePrice\|\|0\)/);
+  assert.match(ai,/ΛΙΑΝΙΚΗ ΤΙΜΗ=retailPrice/);
+});

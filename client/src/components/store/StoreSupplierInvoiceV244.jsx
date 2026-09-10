@@ -244,6 +244,7 @@ function mergeLines(base, candidates) {
     for (const k of [
       "quantity",
       "unitCost",
+      "retailPrice",
       "netAmount",
       "vatRate",
       "grossAmount",
