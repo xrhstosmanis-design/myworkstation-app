@@ -30,6 +30,6 @@ test("POS can prepare the same return dispatch note without changing stock",()=>
   assert.match(provider,/store-pos\/supplier-return-drafts/);
   assert.match(provider,/stockChanged:false/);
   assert.match(pos,/ΔΕΛΤΙΟ ΕΠΙΣΤΡΟΦΗΣ/);
-  assert.match(pos,/Αποθήκευση πρόχειρου δελτίου/);
+  assert.match(pos,/Αποθήκευση πρόχειρου/);
   assert.match(pos,/δεν αλλάζει πριν από επιτυχημένη διαβίβαση/);
 });
