@@ -1,4 +1,5 @@
 import {Router} from "express";
+import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 
@@ -151,6 +152,29 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
     const alerts=[];if(Math.abs(difference.openingVariance)>.009)alerts.push({kind:"OPENING_VARIANCE",amount:difference.openingVariance,label:"Διαφορά έναρξης"});if(Math.abs(difference.cardVariance)>.009)alerts.push({kind:"CARD_VARIANCE",amount:difference.cardVariance,label:"Διαφορά Καρτών − EFTPOS"});if(Math.abs(difference.variance)>.009)alerts.push({kind:"CLOSING_VARIANCE",amount:difference.variance,label:"Διαφορά κλεισίματος"});for(const row of transactions.filter(row=>row.reversedAt))alerts.push({kind:"REVERSAL",amount:n(row.amount),label:`Αντιλογισμός: ${row.auditDescription||row.description||row.type}`,transactionId:row.id});for(const item of shift.duplicateReview||[])alerts.push({kind:"DUPLICATE_REVIEW",amount:n(item.total),label:"Πιθανή διαδοχική ίδια πώληση για έλεγχο",detail:item});
     res.json({shift,transactions,categories,paymentMethods,sales,difference,alerts,sourceStatus:{vatFiscal:false,note:"Η ανάλυση Τμήματος ΦΠΑ παραμένει κλειδωμένη μέχρι πραγματική φορολογική πηγή/Connector."}});
   }catch(error){next(error)}
+});
+
+router.post("/:sessionId/force-close",async(req,res,next)=>{
+  try{
+    await ensureSchema();
+    if(req.user?.role!=="SUPER_ADMIN"||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Μόνο ο Super Admin μπορεί να κλείσει διοικητικά παλιά ανοικτή βάρδια."});
+    const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{}),companyId=req.user.companyId,actorName=req.user.fullName||req.user.email||"Super Admin";
+    const result=await prisma.$transaction(async tx=>{
+      const rows=await tx.$queryRaw`SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" AND st."companyId"=s."companyId" WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
+      const shift=rows[0];if(!shift)return null;
+      const ledger=await tx.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${shift.storeId} AND "sessionId"=${shift.id}`;
+      const active=ledger.filter(row=>!row.reversedAt),sum=(type,predicate=()=>true)=>active.filter(row=>row.type===type&&predicate(row)).reduce((total,row)=>total+n(row.amount),0);
+      const cashSales=sum("SALE_CASH")+sum("CUSTOMER_RECEIPT_CASH"),cardSales=sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),transferIn=sum("TRANSFER_AMOUNT"),expenses=sum("SUPPLIER_PAYMENT",row=>row.subtractFromShift)+sum("OTHER_EXPENSE",row=>row.subtractFromShift)+sum("BANK_DEPOSIT",row=>row.subtractFromShift),expected=n(shift.openingOperational)+cashSales+transferIn-expenses;
+      const note=`Διοικητικό κλείσιμο Super Admin χωρίς φυσική καταμέτρηση · ${body.reason}`;
+      const closed=await tx.$queryRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedBy"=${req.user.id},"closedByName"=${actorName},"closedAt"=NOW(),"cashSales"=${cashSales},"cardSales"=${cardSales},"eftposTotal"=${cardSales},"cardVariance"=0,"expenses"=${expenses},"closingDrawer"=${expected},"closingCustody"=0,"closingCoins"=0,"closingSafe"=${n(shift.openingSafe)},"expectedOperational"=${expected},"actualOperational"=${expected},"variance"=0,"nextOpeningTotal"=${expected},"closingNote"=${note},"updatedAt"=NOW() WHERE "id"=${shift.id} AND "companyId"=${companyId} AND "status"='OPEN' RETURNING *`;
+      if(!closed[0])return null;
+      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${companyId},${shift.storeId},${null},${req.user.id},'SHIFT_FORCE_CLOSED_BY_SUPER_ADMIN',${JSON.stringify({sessionId:shift.id,terminalPos:shift.terminalPos,shiftLabel:shift.shiftLabel,openedAt:shift.openedAt,reason:body.reason,physicalCount:false,expectedOperational:expected,cashSales,cardSales,expenses})}::jsonb)`;
+      return closed[0];
+    });
+    if(!result)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή."});
+    res.json({ok:true,shift:normalizeShift(result),administrativeClose:true,physicalCount:false});
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Γράψε αιτιολογία τουλάχιστον 3 χαρακτήρων."});next(error)}
 });
 
 export default router;
