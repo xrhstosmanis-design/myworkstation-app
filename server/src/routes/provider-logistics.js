@@ -14,7 +14,7 @@ router.get("/store-pos/suppliers",async(req,res,next)=>{
 });
 
 router.use("/store-pos/supplier-return-drafts",(req,res,next)=>{
-  if(req.method==="POST"&&req.path==="/"){const now=new Date(),parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(now).reduce((out,part)=>(out[part.type]=part.value,out),{});req.body={...(req.body||{}),documentNumber:`ΔΑ-ΕΠ-${parts.year}${parts.month}${parts.day}-${parts.hour}${parts.minute}${parts.second}-${crypto.randomUUID().slice(0,8).toUpperCase()}`}}
+  if(req.method==="POST"&&req.path==="/"){const now=new Date(),parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(now).reduce((out,part)=>(out[part.type]=part.value,out),{}),documentNumber=`ΔΑ-ΕΠ-${parts.year}${parts.month}${parts.day}-${parts.hour}${parts.minute}${parts.second}-${crypto.randomUUID().slice(0,8).toUpperCase()}`,sendJson=res.json.bind(res);req.body={...(req.body||{}),documentNumber};res.json=body=>sendJson({...body,documentNumber})}
   next();
 });
 
