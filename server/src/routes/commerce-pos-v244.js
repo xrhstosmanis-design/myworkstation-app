@@ -17,6 +17,17 @@ const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,
 const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const m=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`:null};
 const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
 const normalizedLineGross=line=>{const net=Number(line?.netAmount||0),vat=Number(line?.vatRate||0),stored=Number(line?.grossAmount||0);if(net>0&&CANONICAL_VAT.has(Math.round(vat)))return round2(net*(1+Math.round(vat)/100));return round2(stored)};
+const id=()=>crypto.randomUUID();
+
+async function ensureFastHandoffSchema(){
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "MyDataInboundDocument" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"inboxId" TEXT NOT NULL,
+    "mark" TEXT NOT NULL,"uid" TEXT,"issuerVat" TEXT,"counterpartVat" TEXT,"series" TEXT,"documentNumber" TEXT,
+    "issueDate" DATE,"invoiceType" TEXT,"currency" TEXT,"totalNet" DECIMAL(14,4) NOT NULL DEFAULT 0,
+    "totalVat" DECIMAL(14,4) NOT NULL DEFAULT 0,"totalGross" DECIMAL(14,4) NOT NULL DEFAULT 0,
+    "rawPayload" JSONB NOT NULL,"fetchedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("companyId","mark"), UNIQUE ("inboxId"))`);
+}
 
 function outputText(response){
   if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
@@ -169,6 +180,61 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
       if(payments[0])return res.status(409).json({error:`Υπάρχει ήδη πληρωμή για το τιμολόγιο ${String(req.body?.documentNumber||"").trim()}. Δεν έγινε δεύτερη πληρωμή ή πίστωση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:payments[0]});
     }
     res.json({ok:true,duplicate:false});
+  }catch(error){next(error)}
+});
+
+// Durable POS handoff: the till may close immediately after this response. Every
+// source page and the operator-confirmed header are already stored on the server.
+// Full line recognition remains a BackOffice concern and may safely be retried.
+router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  try{
+    const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),supplierId=String(req.body?.supplierId||"");
+    const documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80),documentDate=normalizeIntakeDate(req.body?.documentDate);
+    const totalGross=round2(intakeNumber(req.body?.totalGross)),settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
+    const paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
+    const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
+    if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||!pages.length)return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
+    const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
+    const supplier=supplierRows[0];if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    const normalizedPages=pages.map((page,index)=>{
+      const filename=String(page?.filename||`timologio-selida-${index+1}.jpg`).slice(0,180),mimeType=String(page?.mimeType||"image/jpeg"),dataUrl=String(page?.dataUrl||"");
+      const escaped=mimeType.replace("/","\\/");const match=new RegExp(`^data:${escaped};base64,([A-Za-z0-9+/=]+)$`).exec(dataUrl);
+      if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(mimeType)||!match)throw Object.assign(new Error(`Μη έγκυρη σελίδα ${index+1}.`),{status:400});
+      const bytes=Buffer.from(match[1],"base64");if(bytes.length<100||bytes.length>6500000)throw Object.assign(new Error(`Η σελίδα ${index+1} πρέπει να είναι έως 6,5 MB.`),{status:400});
+      return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
+    });
+    await ensureFastHandoffSchema();
+    const taxId=cleanTaxId(supplier.taxId),normalizedNumber=normalizeDocumentNumber(documentNumber);
+    const myDataRows=taxId?await prisma.$queryRaw`
+      SELECT m."id",m."inboxId",m."mark",m."documentNumber",m."issueDate",m."totalGross"
+      FROM "MyDataInboundDocument" m
+      WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
+        AND REGEXP_REPLACE(COALESCE(m."issuerVat",''),'\\D','','g')=${taxId}
+        AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(m."documentNumber",'')),'\\s+','','g'))=${normalizedNumber}
+        AND (m."issueDate" IS NULL OR m."issueDate"=${new Date(`${documentDate}T00:00:00Z`)})
+        AND ABS(COALESCE(m."totalGross",0)-${totalGross})<=0.05
+      ORDER BY m."fetchedAt" DESC LIMIT 1`:[];
+    const myData=myDataRows[0]||null;
+    const result=await prisma.$transaction(async tx=>{
+      const jobs=[];
+      for(const [index,page] of normalizedPages.entries()){
+        const existingAttachments=await tx.$queryRaw`SELECT "id" FROM "DocumentAttachment" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "checksum"=${page.checksum} LIMIT 1`;
+        const attachmentId=existingAttachments[0]?.id||id();
+        if(!existingAttachments[0])await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${companyId},${storeId},'AI_READER_SOURCE',${page.filename},${page.mimeType},${`DATABASE:${page.checksum}`},${page.checksum},${page.dataUrl})`;
+        const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} ORDER BY "createdAt" DESC LIMIT 1`;
+        const jobId=existingJobs[0]?.id||id();
+        const handoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+        if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
+        else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
+        jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
+      }
+      if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
+      return jobs;
+    });
+    res.status(202).json({ok:true,accepted:true,jobId:result[0].id,jobs:result,myDataMatched:Boolean(myData),myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,message:myData?"Το παραστατικό παραλήφθηκε και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice.":"Το παραστατικό παραλήφθηκε ως ασφαλές πρόχειρο. Θα συνδεθεί αυτόματα όταν εμφανιστεί στο myDATA."});
   }catch(error){next(error)}
 });
 
