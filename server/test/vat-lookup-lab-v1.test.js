@@ -14,6 +14,13 @@ test("VAT lookup is read-only and tenant/store scoped",()=>{
   assert.doesNotMatch(source,/INSERT INTO|UPDATE "Supplier"|DELETE FROM/);
 });
 
+test("VAT lookup reads dynamically bootstrapped suppliers through SQL",()=>{
+  const source=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
+  assert.match(source,/FROM "Supplier"/);
+  assert.match(source,/REGEXP_REPLACE/);
+  assert.doesNotMatch(source,/prisma\.supplier/);
+});
+
 test("POS requires explicit lookup before supplier creation",()=>{
   const source=fs.readFileSync(new URL("../../client/src/components/store/StoreSupplierInvoiceV244.jsx",import.meta.url),"utf8");
   assert.match(source,/Έλεγχος επίσημης επωνυμίας από ΑΦΜ/);
