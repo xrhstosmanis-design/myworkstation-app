@@ -131,6 +131,18 @@ test("one complete 25 percent line repairs sibling lines only when every net val
   assert.ok(productLines.every(line=>String(line.discountSource||'').includes('VERIFIED')));
 });
 
+test("rounded net values snap an AI-derived 24.9524 percent back to the verified invoice 25 percent",async()=>{
+  const productLines=[
+    {quantity:10,unitCost:1.4,netAmount:10.5,discount1:25,discount1Amount:3.5},
+    {quantity:10,unitCost:1.05,netAmount:7.88,discount1:24.9524,discount1Amount:2.62},
+    {quantity:10,unitCost:1.05,netAmount:7.88,discount1:24.9524,discount1Amount:2.62},
+    {quantity:12,unitCost:1.5,netAmount:13.5,discount1:25,discount1Amount:4.5}
+  ];
+  await verifyInvoiceDiscounts({productLines});
+  assert.deepEqual(productLines.map(line=>line.discount1),[25,25,25,25]);
+  assert.deepEqual(productLines.map(line=>line.discount1Amount),[3.5,2.625,2.625,4.5]);
+});
+
 test("V2.4.4 does not accept net value as the initial value when quantity times price disagrees",()=>{
   const [line]=finalizeV244ProductLines([{description:'COOKIE',rawText:'COOKIE ΤΜΧ 10 1,40 10,50',quantity:10,unitCost:1.4,netAmount:10.5,vatRate:13}]);
   assert.equal(line.initialAmount,14);

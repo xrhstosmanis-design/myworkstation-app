@@ -171,10 +171,13 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
     if(active.length===1)verifiedPercents.push(active[0]);
   }
   const unique=[...new Set(verifiedPercents.map(value=>money4(value)))];
-  if(unique.length!==1)return;
-  const percent=unique[0];
+  if(!unique.length||Math.max(...unique)-Math.min(...unique)>0.1)return;
+  const percent=[...unique].sort((a,b)=>Math.abs(a-Math.round(a))-Math.abs(b-Math.round(b))||a-b)[0];
   for(const line of productLines){
-    if(linePairs(line).some(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0))continue;
+    const active=linePairs(line).filter(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0);
+    if(active.length>1)continue;
+    const currentPercent=active.length?safePercent(active[0].percent):0;
+    if(currentPercent&&Math.abs(currentPercent-percent)>0.1)continue;
     const quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),net=Number(line?.netAmount||0),base=quantity*unitCost;
     if(!(quantity>0&&unitCost>0&&net>0&&net<base))continue;
     const amount=money4(base*percent/100);
@@ -184,7 +187,7 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
     line.discountSource='SIBLING_PERCENT_MATH_VERIFIED';
     line.discountConfidence=99;
     line.discountEvidence=`Ίδιο επαληθευμένο ποσοστό ${percent}% στο παραστατικό και συμφωνία καθαρής αξίας`;
-    diagnostics.accepted+=1;diagnostics.rawAccepted+=1;
+    if(!currentPercent||Math.abs(currentPercent-percent)>0.0001){diagnostics.accepted+=1;diagnostics.rawAccepted+=1}
   }
 }
 
@@ -236,6 +239,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       line.discountSource='AI_PERCENT_AMOUNT_VERIFIED';line.discountConfidence=confidence;line.discountEvidence=String(candidate?.evidence||'').slice(0,180);
       diagnostics.accepted+=1;diagnostics.aiAccepted+=1;
     }
+    applySiblingDiscountConsensus(productLines,diagnostics);
     diagnostics.status='OK';diagnostics.reason=diagnostics.accepted>0?'DISCOUNT_PAIRS_VERIFIED':'NO_CONFIDENT_DISCOUNT_PAIRS';
   }catch(error){diagnostics.status='FAILED';diagnostics.reason=error?.message||'UNKNOWN_ERROR';console.warn('Discount verifier error:',error?.message||error)}
   return stamp(productLines,diagnostics);
