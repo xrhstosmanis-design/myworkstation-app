@@ -1,0 +1,3 @@
+.commerce-hub.commerce-external-tab-active > .commerce-status-grid {
+  display: none !important;
+}

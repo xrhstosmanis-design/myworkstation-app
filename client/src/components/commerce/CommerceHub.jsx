@@ -10,6 +10,7 @@ import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
 import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
 import "./commerce-hub.css";
+import "./commerce-external-tabs.css";
 
 const money=value=>`${Number(value||0).toFixed(2)} €`;
 const number=value=>Number(value||0);
