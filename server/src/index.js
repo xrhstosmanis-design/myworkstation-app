@@ -82,6 +82,7 @@ import ownerProductRoutes from "./routes/owner-products.js";
 import ownerProductsActiveCatalogRoutes from "./routes/owner-products-active-catalog.js";
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
 import ownerProductSmartEntryRoutes from "./routes/owner-product-smart-entry.js";
+import storeChatRoutes,{ensureStoreChatSchema} from "./routes/store-chat.js";
 import ownerProductCompositionRoutes from "./routes/owner-product-compositions.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
@@ -204,6 +205,7 @@ app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashContro
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
+app.use("/api/store-chat",auth,requireStoreModule("STORE_CHAT"),storeChatRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductCompositionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductsActiveCatalogRoutes);
@@ -233,4 +235,5 @@ app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.ht
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
+await ensureStoreChatSchema();
 app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
