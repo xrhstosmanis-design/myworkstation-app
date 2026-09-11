@@ -7,7 +7,7 @@ const source = readFileSync(new URL("../../client/src/components/commerce/instal
 test("Enter advances through editable purchase-order line fields", () => {
   assert.match(source, /function installLineEnterNavigation\(\)/);
   assert.match(source, /event\.key!=="Enter"/);
-  assert.match(source, /closest\?\.\("form\.po-line-form"\)/);
+  assert.match(source, /closest\?\.\("form\.po-line-form,form\.po-entry-row"\)/);
   assert.match(source, /querySelectorAll\("input\[name\],select\[name\]"\)/);
   assert.match(source, /fields\[fields\.indexOf\(current\)\+1\]/);
   assert.match(source, /button\.primary\[type="submit"\]/);
@@ -33,4 +33,15 @@ test("the current invoice lines remain visible and refresh after every entry", (
   assert.match(source, /data-entry-lines/);
   assert.match(source, /Γραμμές τιμολογίου/);
   assert.match(source, /await refreshEntryLines\(\);form\.reset\(\)/);
+});
+
+test("live invoice lines are fully editable in the large entry workspace", () => {
+  assert.match(source, /workspace\.style\.width="min\(1850px,99vw\)"/);
+  assert.match(source, /form class="row po-entry-row"/);
+  for (const field of ["description", "gift", "quantity", "unitCost", "discount1", "discount2", "discount3", "exciseTotal", "vatRate", "markupPercent", "proposedSalePrice"]) {
+    assert.match(source, new RegExp(`name="${field}"`));
+  }
+  assert.match(source, /method:"PATCH"/);
+  assert.match(source, /data-entry-delete/);
+  assert.match(source, /form\.po-line-form,form\.po-entry-row/);
 });
