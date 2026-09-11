@@ -27,3 +27,10 @@ test("new-line entry stays open and resets for the next product", () => {
   assert.match(source, /Η γραμμή καταχωρήθηκε\. Συνέχισε με το επόμενο είδος\./);
   assert.match(source, /parent\.remove\(\);await openOrder\(root,orderId\)/);
 });
+
+test("the current invoice lines remain visible and refresh after every entry", () => {
+  assert.match(source, /function entryLinesGrid\(data\)/);
+  assert.match(source, /data-entry-lines/);
+  assert.match(source, /Γραμμές τιμολογίου/);
+  assert.match(source, /await refreshEntryLines\(\);form\.reset\(\)/);
+});
