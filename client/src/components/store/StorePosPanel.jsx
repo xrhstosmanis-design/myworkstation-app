@@ -64,7 +64,7 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   useEffect(()=>{let active=true;setNetlinkAvailable(false);api("/api/netlink/status").then(()=>{if(active)setNetlinkAvailable(true)}).catch(()=>{if(active){setNetlinkAvailable(false);setNetlinkPanel(false)}});return()=>{active=false}},[store.id]);
   const layout=data?.layout||fallbackLayout,products=data?.products||[],titleMeta=decodeTitle(layout.title);
   const isKatStore=isKatStoreValue(store);
-  const screenRecordingEnabled=isKatStore;
+  const screenRecordingEnabled=true;
   const deliveryChannelsEnabled=Boolean(data?.deliveryEnabled);
   const selectedPosTextSize=POS_TEXT_SIZES.find(option=>option.id===posTextSize)||POS_TEXT_SIZES[0];
   const choosePosTextSize=next=>{setPosTextSize(next);setPosTextSizeMenu(false);try{localStorage.setItem(posTextSizeKey(store.id),next)}catch{}};
