@@ -101,12 +101,38 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
               AND sm."sourceId"=o."id"
           )`,
       reconciliationAccess.allowed?prisma.$queryRaw`
-        SELECT COUNT(*)::int AS "movementCount",COALESCE(SUM(sm."quantity"),0) AS "ledgerStock"
-        FROM "StockMovement" sm
-        JOIN "Store" st ON st."id"=sm."storeId"
-        JOIN "Product" p ON p."id"=sm."productId"
-        WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
-          AND st."companyId"=${companyId} AND p."companyId"=${companyId}`:Promise.resolve([]),
+        SELECT COUNT(*)::int AS "movementCount",COALESCE(SUM(x."quantity"),0) AS "ledgerStock"
+        FROM (
+          SELECT sm."id"::text AS "id",sm."quantity" AS "quantity"
+          FROM "StockMovement" sm
+          JOIN "Store" st ON st."id"=sm."storeId"
+          JOIN "Product" p ON p."id"=sm."productId"
+          WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
+            AND st."companyId"=${companyId} AND p."companyId"=${companyId}
+            AND COALESCE(sm."movementType",'') NOT IN ('SALE','PURCHASE')
+          UNION ALL
+          SELECT l."id"::text,
+            CASE WHEN l."unit"='PACKAGE' THEN l."quantity"*COALESCE(NULLIF(l."unitsPerPackage",0),1) ELSE l."quantity" END
+          FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+          WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=${productId}
+          UNION ALL
+          SELECT sl."id"::text,
+            CASE WHEN s."source"='POS_REVERSAL' THEN ABS(sl."quantity") ELSE -ABS(sl."quantity") END
+          FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId"
+          WHERE s."companyId"=${companyId} AND s."storeId"=${storeId} AND s."status"='COMPLETED' AND sl."productId"=${productId}
+          UNION ALL
+          SELECT CONCAT(ool."id",':',r."ingredientProductId"),-(ABS(ool."quantity")*ABS(r."quantity"))
+          FROM "OnlineOrder" o
+          JOIN "OnlineOrderLine" ool ON ool."orderId"=o."id"
+          JOIN "PreparationRecipeLine" r ON r."companyId"=o."companyId" AND r."productId"=ool."productId" AND r."automatic"=TRUE
+          WHERE o."companyId"=${companyId} AND o."storeId"=${storeId} AND o."status"='DELIVERED'
+            AND r."ingredientProductId"=${productId}
+            AND NOT EXISTS (
+              SELECT 1 FROM "StockMovement" sm
+              WHERE sm."storeId"=o."storeId" AND sm."productId"=r."ingredientProductId"
+                AND sm."sourceType"='ONLINE_ORDER_RECIPE' AND sm."sourceId"=o."id"
+            )
+        ) x`:Promise.resolve([]),
       reconciliationAccess.allowed?prisma.$queryRaw`
         SELECT sm."sourceType",sm."sourceId",sm."movementType",sm."quantity",COUNT(*)::int AS "count"
         FROM "StockMovement" sm
