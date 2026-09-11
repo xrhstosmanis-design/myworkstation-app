@@ -464,8 +464,9 @@
 # Εργασία 19 — Chat ανά κατάστημα / Εσωτερική επικοινωνία
 
 - [ ] Πλήρης υλοποίηση και LAB PASS.
-- [x] Foundation branch/module/isolation/server-side/basic audit υλοποιήθηκαν στο PR #658.
-- [ ] Εκκρεμούν merge, deploy LAB και δοκιμή χρήστη.
+- [x] Foundation branch/module/isolation/server-side/basic audit υλοποιήθηκαν.
+- [x] PR #669: διόρθωση αποστολής χωρίς ψευδές σφάλμα, πράσινο CI και merge στο main.
+- [ ] Εκκρεμούν deploy LAB και δοκιμή χρήστη.
 
 
 ## 11/09/2026 — Διόρθωση θέσης Chat POS
@@ -499,4 +500,5 @@
 - Εκκρεμούν CI, deploy και επανάληψη LAB.
 
 
-- [ ] Προσθήκη «Εγγραφή οθόνης» σε κάθε POS καταστήματος — PR σε εξέλιξη, αναμονή LAB δοκιμής.
+- [x] Προσθήκη «Εγγραφή οθόνης» σε κάθε POS καταστήματος — PR #671, CI #1754 και merge στο main.
+- [ ] Εκκρεμεί μόνο Render deploy και δοκιμή χρήστη στο LAB.
