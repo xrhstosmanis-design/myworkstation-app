@@ -30,6 +30,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   const [showAll, setShowAll] = useState(current.status !== "DRAFT");
   const [matches, setMatches] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const countedLines = useMemo(
     () => (current.lines || [])
@@ -50,6 +51,8 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     );
   }, [current.lines, countedLines, lookup, showAll]);
   const totals = useMemo(() => inventoryTotals(rows), [rows]);
+  const selectedRows = useMemo(() => (current.lines || []).filter((line) => selectedIds.has(line.id)), [current.lines, selectedIds]);
+  const allVisibleSelected = rows.length > 0 && rows.every((line) => selectedIds.has(line.id));
 
   useEffect(() => {
     if (current.status === "DRAFT") barcodeRef.current?.focus();
@@ -145,6 +148,41 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     }
   };
 
+  const toggleLine = (lineId) => setSelectedIds((previous) => {
+    const next = new Set(previous);
+    if (next.has(lineId)) next.delete(lineId); else next.add(lineId);
+    return next;
+  });
+
+  const toggleAllVisible = () => setSelectedIds((previous) => {
+    const next = new Set(previous);
+    if (allVisibleSelected) rows.forEach((line) => next.delete(line.id));
+    else rows.forEach((line) => next.add(line.id));
+    return next;
+  });
+
+  const bulkZero = async () => {
+    if (!selectedRows.length || !confirm(`Να καταχωριστεί ποσότητα 0 σε ${selectedRows.length} επιλεγμένα είδη; Το stock θα αλλάξει μόνο μετά την οριστικοποίηση της απογραφής.`)) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api(`/api/inventory-v2/stocktakes/${current.id}/count/bulk-zero`, {
+        method: "POST",
+        body: JSON.stringify({
+          lines: selectedRows.map((line) => ({ lineId: line.id, expectedVersion: line.countVersion })),
+          clientBatchId: crypto.randomUUID(),
+        }),
+      });
+      setSelectedIds(new Set());
+      await reload(current.id);
+    } catch (error) {
+      setError(error.message);
+      await reload(current.id);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const createProduct = () => {
     window.dispatchEvent(new CustomEvent("mws:new-product", { detail: { barcode: lookup.trim() } }));
   };
@@ -214,13 +252,21 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
         <span>{countedLines.length} από {current.lines.length} καταμετρήθηκαν</span>
         <button type="button" onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
       </div>
+      {current.status === "DRAFT" && (
+        <div className="inv2-bulk-tools">
+          <label><input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} /> Επιλογή όλων των εμφανιζόμενων</label>
+          <span>{selectedRows.length} επιλεγμένα</span>
+          <button type="button" disabled={!selectedRows.length || saving} onClick={bulkZero}>{saving ? "Καταχώρηση…" : "Ομαδική καταμέτρηση: Μηδενισμός"}</button>
+        </div>
+      )}
       <div className="inv2-table-wrap">
         <table>
-          <thead><tr><th>Barcode</th><th>Περιγραφή</th><th>Απόθεμα</th><th>Καταμέτρηση</th><th>Διαφορά</th><th>Αξία λιανικής</th><th>Αξία κόστους</th><th>Ενέργειες</th></tr></thead>
+          <thead><tr><th className="inv2-select-column">Επιλογή</th><th>Barcode</th><th>Περιγραφή</th><th>Απόθεμα</th><th>Καταμέτρηση</th><th>Διαφορά</th><th>Αξία λιανικής</th><th>Αξία κόστους</th><th>Ενέργειες</th></tr></thead>
           <tbody>
             {rows.map((line) => {
               const counted = line.countedQuantity === null ? 0 : n(line.countedQuantity);
               return <tr key={line.id} className={line.recountRequired ? "recount" : ""}>
+                <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>
                 <td>{line.barcode || "—"}</td>
                 <td><b>{line.name}</b><small>{line.sku || "—"} · {line.categoryName || "Χωρίς κατηγορία"}</small></td>
                 <td>{line.expectedQuantity}</td><td>{line.countedQuantity ?? "—"}</td><td>{counted - n(line.expectedQuantity)}</td>
@@ -232,7 +278,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               </tr>;
             })}
           </tbody>
-          <tfoot><tr><th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th><th>{totals.expected}</th><th>{totals.counted}</th><th>{totals.difference}</th><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th><th /></tr></tfoot>
+          <tfoot><tr><th /><th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th><th>{totals.expected}</th><th>{totals.counted}</th><th>{totals.difference}</th><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th><th /></tr></tfoot>
         </table>
       </div>
     </>
