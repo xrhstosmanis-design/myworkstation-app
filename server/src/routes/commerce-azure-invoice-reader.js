@@ -89,14 +89,14 @@ function normalizeItem(item,index){
   const code=fieldText(p.ProductCode)||fieldText(p.ItemCode)||fieldText(p.Code);
   const quantity=Math.max(0,numericField(p.Quantity));
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
-  let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost));
+  let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost)),azureUnitCostDerivedFromNet=false;
   const [discount1,discount2,discount3]=itemDiscounts(p);
   const tax=Math.max(0,numericField(p.Tax)||numericField(p.TaxAmount));
   const azureAmount=Math.max(0,numericField(p.Amount));
   const azureNetAmount=Math.max(0,numericField(p.NetAmount)||numericField(p.SubTotal)||numericField(p.NetPrice));
   let netAmount=azureNetAmount||azureAmount;
   if(netAmount<=0&&quantity>0&&unitCost>0){const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);netAmount=money2(quantity*unitCost*factor)}
-  if(unitCost<=0&&quantity>0&&netAmount>0){const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);unitCost=money4(factor>0?netAmount/(quantity*factor):netAmount/quantity)}
+  if(unitCost<=0&&quantity>0&&netAmount>0){const factor=(1-discount1/100)*(1-discount2/100)*(1-discount3/100);unitCost=money4(factor>0?netAmount/(quantity*factor):netAmount/quantity);azureUnitCostDerivedFromNet=true}
   let vatRate=validVatRate(p.TaxRate)||validVatRate(p.VATRate)||validVatRate(p.VatRate);
   if(!vatRate&&netAmount>0&&tax>0)vatRate=inferVatRate(netAmount,tax);
   if(netAmount>0&&tax>0&&azureAmount>0&&Math.abs(azureAmount-(netAmount+tax))<0.03)netAmount=money2(azureAmount-tax);
@@ -104,7 +104,7 @@ function normalizeItem(item,index){
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
   const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
-  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
+  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
 export async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");

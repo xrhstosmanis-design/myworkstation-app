@@ -97,7 +97,7 @@ function deriveEconomicsFromAzureContent(line){
 }
 function applyRawContentEconomics(productLines,diagnostics){
   for(const line of productLines){
-    if(Number(line.unitCost||0)>0)continue;
+    if(Number(line.unitCost||0)>0&&!line.azureUnitCostDerivedFromNet)continue;
     const derived=deriveEconomicsFromAzureContent(line);if(!derived)continue;
     line.unitCost=money4(derived.price);
     line.unitPrice=money4(derived.price);
