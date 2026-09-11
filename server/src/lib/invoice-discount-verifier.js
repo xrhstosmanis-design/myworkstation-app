@@ -24,9 +24,12 @@ function validateDiscountPairs(line,pairs){
   if(quantity<=0||unitCost<=0)return null;
   const grossBase=quantity*unitCost;let base=grossBase;const percents=[],amounts=[];
   for(const pair of pairs){
-    const percent=safePercent(pair?.percent),amount=safeAmount(pair?.amount);
+    let percent=safePercent(pair?.percent),amount=safeAmount(pair?.amount);
     if(!percent&&!amount){percents.push(0);amounts.push(0);continue}
-    if(!percent||!amount||base<=0)return null;
+    if(base<=0)return null;
+    if(percent&&!amount)amount=money4(base*percent/100);
+    else if(amount&&!percent)percent=safePercent(amount/base*100);
+    if(!percent||!amount)return null;
     const expectedAmount=base*percent/100;
     if(Math.abs(expectedAmount-amount)>Math.max(0.025,Math.abs(amount)*0.025))return null;
     percents.push(percent);amounts.push(amount);base-=amount;
@@ -159,6 +162,32 @@ function applyRawContentDiscounts(productLines,diagnostics){
   }
 }
 
+function applySiblingDiscountConsensus(productLines,diagnostics){
+  const verifiedPercents=[];
+  for(const line of productLines){
+    const validated=validateDiscountPairs(line,linePairs(line));
+    if(!validated)continue;
+    const active=validated.percents.filter(value=>value>0);
+    if(active.length===1)verifiedPercents.push(active[0]);
+  }
+  const unique=[...new Set(verifiedPercents.map(value=>money4(value)))];
+  if(unique.length!==1)return;
+  const percent=unique[0];
+  for(const line of productLines){
+    if(linePairs(line).some(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0))continue;
+    const quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),net=Number(line?.netAmount||0),base=quantity*unitCost;
+    if(!(quantity>0&&unitCost>0&&net>0&&net<base))continue;
+    const amount=money4(base*percent/100);
+    const validated=validateDiscountPairs(line,[{percent,amount},{percent:0,amount:0},{percent:0,amount:0}]);
+    if(!validated)continue;
+    applyValidatedPairs(line,validated);
+    line.discountSource='SIBLING_PERCENT_MATH_VERIFIED';
+    line.discountConfidence=99;
+    line.discountEvidence=`Ίδιο επαληθευμένο ποσοστό ${percent}% στο παραστατικό και συμφωνία καθαρής αξίας`;
+    diagnostics.accepted+=1;diagnostics.rawAccepted+=1;
+  }
+}
+
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
@@ -178,6 +207,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     line.discountAmount1=0;line.discountAmount2=0;line.discountAmount3=0;
     diagnostics.rejectedMath+=1;
   }
+  applySiblingDiscountConsensus(productLines,diagnostics);
   const unresolved=productLines.map((line,index)=>({line,index})).filter(({line})=>!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0));
   if(!unresolved.length){diagnostics.status='OK';diagnostics.reason='AZURE_CONTENT_DISCOUNTS_VERIFIED';return stamp(productLines,diagnostics)}
   if(!apiKey){diagnostics.reason=diagnostics.rawAccepted>0?'PARTIAL_AZURE_CONTENT_NO_OPENAI_KEY':'NO_OPENAI_KEY';return stamp(productLines,diagnostics)}

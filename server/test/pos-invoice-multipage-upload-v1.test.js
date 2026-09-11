@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import {verifyInvoiceDiscounts} from "../src/lib/invoice-discount-verifier.js";
+import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-core.js";
 
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
 const intake=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
@@ -115,4 +117,23 @@ test("main AI extraction carries original prices, discount pairs, and verifies l
   assert.match(verifier,/line\.discount1Amount=0/);
   assert.match(verifier,/applyValidatedPairs\(line,validated\)/);
   assert.match(v244Client,/structuredVerified=String\(line\?\.discountSource/);
+});
+
+test("one complete 25 percent line repairs sibling lines only when every net value balances",async()=>{
+  const productLines=[
+    {quantity:10,unitCost:1.4,netAmount:10.5,discount1:0,discount1Amount:0},
+    {quantity:10,unitCost:1.05,netAmount:7.88,discount1:0,discount1Amount:0},
+    {quantity:12,unitCost:1.5,netAmount:13.5,discount1:25,discount1Amount:0}
+  ];
+  await verifyInvoiceDiscounts({productLines});
+  assert.deepEqual(productLines.map(line=>line.discount1),[25,25,25]);
+  assert.deepEqual(productLines.map(line=>line.discount1Amount),[3.5,2.625,4.5]);
+  assert.ok(productLines.every(line=>String(line.discountSource||'').includes('VERIFIED')));
+});
+
+test("V2.4.4 does not accept net value as the initial value when quantity times price disagrees",()=>{
+  const [line]=finalizeV244ProductLines([{description:'COOKIE',rawText:'COOKIE ΤΜΧ 10 1,40 10,50',quantity:10,unitCost:1.4,netAmount:10.5,vatRate:13}]);
+  assert.equal(line.initialAmount,14);
+  assert.equal(line.discount1,25);
+  assert.equal(line.discount1Amount,3.5);
 });
