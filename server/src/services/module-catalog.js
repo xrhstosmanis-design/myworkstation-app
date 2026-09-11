@@ -14,6 +14,7 @@ export const moduleCatalog=[
   {key:"ADVANCED_ONLINE_PRODUCT_SEARCH",name:"Προηγμένη αναζήτηση προϊόντων στο διαδίκτυο",description:"Βαθιά online αναζήτηση barcode μετά από Master Catalog και OpenFoodFacts, με Google search provider, quota και καταγραφή χρήσης.",category:"POS",commercialReady:true,requiresTechnicalActivation:true},
   {key:"SALES_ANALYTICS",name:"Αναλυτική Πωλήσεων",description:"Τζίρος, προϊόντα, τρόποι πληρωμής και συγκρίσεις περιόδων.",category:"REPORTS",commercialReady:true,ownerOnly:true},
   {key:"SHIFT_HANDOVER",name:"Παράδοση Βάρδιας",description:"Εκκρεμότητες, προτεραιότητες και επιβεβαίωση από την επόμενη βάρδια.",category:"CONTROL",commercialReady:true},
+  {key:"STORE_CHAT",name:"Chat ανά κατάστημα",description:"Εσωτερική επικοινωνία ανά κατάστημα με audit και συνδέσεις λειτουργιών.",category:"COMMUNICATION",commercialReady:true,monthlyPriceEur:9.9},
   {key:"AI_READER",name:"Ανάγνωση τιμολογίων με AI",description:"Τοπικό OCR χωρίς αυτόματη AI χρέωση, βεβαιότητα ανά γραμμή και προαιρετικός χειροκίνητος επανέλεγχος όταν συνδεθεί provider.",category:"AI",commercialReady:true},
   {key:"DOCUMENTS",name:"Έγγραφα & Τιμολόγια",description:"Θυρίδα τιμολογίων, αρχεία ανά κατάστημα/προμηθευτή, υπεύθυνος και κατάσταση επεξεργασίας.",category:"OPERATIONS",commercialReady:true},
   {key:"ATTENDANCE",name:"Παρουσία & Ώρες Εργασίας",description:"Προσωπική είσοδος/έξοδος, πραγματικές ώρες, μηνιαία σύνολα και ελεγχόμενες διορθώσεις.",category:"HR",commercialReady:true},
