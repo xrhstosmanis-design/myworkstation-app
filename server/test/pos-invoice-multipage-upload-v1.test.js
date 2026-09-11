@@ -98,4 +98,7 @@ test("Azure-derived net unit cost does not hide invoice discounts",async()=>{
   assert.match(azure,/azureUnitCostDerivedFromNet=true/);
   assert.match(azure,/azureUnitCostDerivedFromNet,azureSequence/);
   assert.match(verifier,/Number\(line\.unitCost\|\|0\)>0&&!line\.azureUnitCostDerivedFromNet/);
+  assert.match(verifier,/originalUnitPrice/);
+  assert.match(verifier,/validationLine=originalUnitPrice>0/);
+  assert.match(verifier,/line\.unitCost=originalUnitPrice/);
 });
