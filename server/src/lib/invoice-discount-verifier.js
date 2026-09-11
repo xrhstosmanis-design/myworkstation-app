@@ -34,6 +34,16 @@ function validateDiscountPairs(line,pairs){
   if(net>0&&Math.abs(base-net)>Math.max(0.05,net*0.02))return null;
   return {percents,amounts,grossBase,expectedNet:base};
 }
+function linePairs(line){return [
+  {percent:line?.discount1,amount:line?.discount1Amount??line?.discountAmount1},
+  {percent:line?.discount2,amount:line?.discount2Amount??line?.discountAmount2},
+  {percent:line?.discount3,amount:line?.discount3Amount??line?.discountAmount3}
+]}
+function applyValidatedPairs(line,validated){
+  [line.discount1,line.discount2,line.discount3]=validated.percents;
+  [line.discount1Amount,line.discount2Amount,line.discount3Amount]=validated.amounts;
+  [line.discountAmount1,line.discountAmount2,line.discountAmount3]=validated.amounts;
+}
 function parseLocaleNumber(text){
   const raw=String(text||'').trim();
   if(!raw)return null;
@@ -105,8 +115,8 @@ function applyRawContentEconomics(productLines,diagnostics){
     line.rawEconomicsConfidence=99;
     line.rawEconomicsEvidence=derived.evidence;
     if(derived.pairs.length&&!(Number(line.discount1||0)>0||Number(line.discount2||0)>0||Number(line.discount3||0)>0)){
-      line.discount1=derived.pairs[0].percent;line.discountAmount1=derived.pairs[0].amount;
-      line.discount2=0;line.discountAmount2=0;line.discount3=0;line.discountAmount3=0;
+      line.discount1=derived.pairs[0].percent;line.discount1Amount=derived.pairs[0].amount;line.discountAmount1=derived.pairs[0].amount;
+      line.discount2=0;line.discount2Amount=0;line.discountAmount2=0;line.discount3=0;line.discount3Amount=0;line.discountAmount3=0;
       line.discountSource='AZURE_CONTENT_MATH_VERIFIED';line.discountConfidence=99;line.discountEvidence=derived.evidence;
       diagnostics.accepted+=1;diagnostics.rawAccepted+=1;
     }
@@ -141,8 +151,7 @@ function applyRawContentDiscounts(productLines,diagnostics){
   for(const line of productLines){
     if(Number(line.discount1||0)>0||Number(line.discount2||0)>0||Number(line.discount3||0)>0)continue;
     const derived=derivePairsFromAzureContent(line);if(!derived)continue;
-    [line.discount1,line.discount2,line.discount3]=derived.validated.percents;
-    [line.discountAmount1,line.discountAmount2,line.discountAmount3]=derived.validated.amounts;
+    applyValidatedPairs(line,derived.validated);
     line.discountSource='AZURE_CONTENT_MATH_VERIFIED';
     line.discountConfidence=99;
     line.discountEvidence=derived.evidence;
@@ -158,6 +167,17 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
   // Recover them only when quantity × price and discount arithmetic prove the candidate values.
   applyRawContentEconomics(productLines,diagnostics);
   applyRawContentDiscounts(productLines,diagnostics);
+  // Structured extraction is evidence, not arithmetic truth. Reject a mapped
+  // price/discount set unless qty × original price - discounts reproduces net.
+  for(const line of productLines){
+    if(!linePairs(line).some(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0))continue;
+    const validated=validateDiscountPairs(line,linePairs(line));
+    if(validated){applyValidatedPairs(line,validated);line.discountSource=line.discountSource||'AI_STRUCTURED_MATH_VERIFIED';continue}
+    line.discount1=0;line.discount2=0;line.discount3=0;
+    line.discount1Amount=0;line.discount2Amount=0;line.discount3Amount=0;
+    line.discountAmount1=0;line.discountAmount2=0;line.discountAmount3=0;
+    diagnostics.rejectedMath+=1;
+  }
   const unresolved=productLines.map((line,index)=>({line,index})).filter(({line})=>!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0));
   if(!unresolved.length){diagnostics.status='OK';diagnostics.reason='AZURE_CONTENT_DISCOUNTS_VERIFIED';return stamp(productLines,diagnostics)}
   if(!apiKey){diagnostics.reason=diagnostics.rawAccepted>0?'PARTIAL_AZURE_CONTENT_NO_OPENAI_KEY':'NO_OPENAI_KEY';return stamp(productLines,diagnostics)}
@@ -182,7 +202,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       const originalUnitPrice=safeAmount(candidate.originalUnitPrice),validationLine=originalUnitPrice>0?{...line,unitCost:originalUnitPrice}:line;
       const validated=validateDiscountPairs(validationLine,pairs);if(!validated){diagnostics.rejectedMath+=1;continue}
       if(originalUnitPrice>0){line.unitCost=originalUnitPrice;line.unitPrice=originalUnitPrice;line.azureUnitCostDerivedFromNet=false;line.originalUnitPriceSource='AI_DISCOUNT_MATH_VERIFIED'}
-      [line.discount1,line.discount2,line.discount3]=validated.percents;[line.discountAmount1,line.discountAmount2,line.discountAmount3]=validated.amounts;
+      applyValidatedPairs(line,validated);
       line.discountSource='AI_PERCENT_AMOUNT_VERIFIED';line.discountConfidence=confidence;line.discountEvidence=String(candidate?.evidence||'').slice(0,180);
       diagnostics.accepted+=1;diagnostics.aiAccepted+=1;
     }
