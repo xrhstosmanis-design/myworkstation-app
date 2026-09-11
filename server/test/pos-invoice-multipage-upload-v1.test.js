@@ -92,3 +92,10 @@ test("multipage invoice recovery falls back to Azure only when no safe line rema
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
 });
+
+test("Azure-derived net unit cost does not hide invoice discounts",async()=>{
+  const verifier=await readFile(new URL("../src/lib/invoice-discount-verifier.js",import.meta.url),"utf8");
+  assert.match(azure,/azureUnitCostDerivedFromNet=true/);
+  assert.match(azure,/azureUnitCostDerivedFromNet,azureSequence/);
+  assert.match(verifier,/Number\(line\.unitCost\|\|0\)>0&&!line\.azureUnitCostDerivedFromNet/);
+});
