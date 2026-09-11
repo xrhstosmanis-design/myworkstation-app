@@ -517,4 +517,5 @@
 ## 11/09/2026 — Mobile responsive foundation
 
 - [x] Προστέθηκε κοινό responsive επίπεδο στην υπάρχουσα εφαρμογή για mobile login, μενού, κάρτες, panels, πίνακες, modals και βασικές φόρμες.
-- [ ] Εκκρεμεί έλεγχος σε πραγματικό Android/iPhone LAB.
+- [x] LAB PASS: ο χρήστης επιβεβαίωσε τη responsive λειτουργία από κινητό.
+- [x] Πρώτο mobile βήμα ολοκληρώθηκε.
