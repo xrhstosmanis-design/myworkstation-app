@@ -9,7 +9,9 @@ test("inventory reconciliation compares current stock with the complete tenant-s
   assert.match(route,/storePaidModuleState\(storeId,"LOSS_DETECTION"\)/);
   assert.match(route,/isPlatformSuperAdmin\(req\.user\)/);
   assert.match(route,/reconciliationAccess\.allowed\?prisma\.\$queryRaw/);
-  assert.match(route,/COALESCE\(SUM\(sm\."quantity"\),0\) AS "ledgerStock"/);
+  assert.match(route,/COALESCE\(SUM\(x\."quantity"\),0\) AS "ledgerStock"/);
+  assert.match(route,/FROM "SaleLine" sl JOIN "Sale" s/);
+  assert.match(route,/CASE WHEN s\."source"='POS_REVERSAL' THEN ABS\(sl\."quantity"\) ELSE -ABS\(sl\."quantity"\) END/);
   assert.match(route,/st\."companyId"=\$\{companyId\}/);
   assert.match(route,/p\."companyId"=\$\{companyId\}/);
   assert.match(route,/difference=currentStock-ledgerStock/);
