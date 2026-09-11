@@ -17,6 +17,9 @@ const installers=[
 test("external commerce tabs hide the module cards",()=>{
   assert.match(hub,/import "\.\/commerce-external-tabs\.css"/);
   assert.match(css,/\.commerce-hub\.commerce-external-tab-active\s*>\s*\.commerce-status-grid/);
+  for(const suite of ["purchase-orders","price-catalog","supplier-control","customer-control","kiosk-reports"]){
+    assert.match(css,new RegExp(`\\.commerce-hub:has\\(> \\.${suite}-suite:not\\(\\[hidden\\]\\)\\) > \\.commerce-status-grid`),suite);
+  }
   assert.match(css,/display:\s*none\s*!important/);
 
   for(const filename of installers){
