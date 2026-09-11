@@ -1,3 +1,8 @@
-.commerce-hub.commerce-external-tab-active > .commerce-status-grid {
+.commerce-hub.commerce-external-tab-active > .commerce-status-grid,
+.commerce-hub:has(> .purchase-orders-suite:not([hidden])) > .commerce-status-grid,
+.commerce-hub:has(> .price-catalog-suite:not([hidden])) > .commerce-status-grid,
+.commerce-hub:has(> .supplier-control-suite:not([hidden])) > .commerce-status-grid,
+.commerce-hub:has(> .customer-control-suite:not([hidden])) > .commerce-status-grid,
+.commerce-hub:has(> .kiosk-reports-suite:not([hidden])) > .commerce-status-grid {
   display: none !important;
 }
