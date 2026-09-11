@@ -27,6 +27,16 @@ test("new product modal keeps the selected invoice line values",()=>{
   assert.match(source,/unitCost:num\(cost\)/);
 });
 
+test("invoice order review formats money and discounts and permits description correction",()=>{
+  const source=fs.readFileSync(new URL("../../client/src/components/commerce/installPurchaseOrdersSuite.js",import.meta.url),"utf8");
+  assert.match(source,/const roundMoney=value=>Math\.round\(\(Number\(value\|\|0\)\+Number\.EPSILON\)\*100\)\/100/);
+  assert.match(source,/const compactNumber=/);
+  assert.match(source,/compactNumber\(l\.discount1\)/);
+  assert.doesNotMatch(source,/l\.discount1\.toFixed\(8\)/);
+  assert.match(source,/name="description" maxlength="250" value="\$\{esc\(l\.description\)\}"/);
+  assert.match(source,/description:String\(f\.get\("description"\)\|\|""\)\.trim\(\)/);
+});
+
 test("create-product persists invoice supplier code and purchase economics",()=>{
   const source=read("server/src/routes/purchase-order-ocr-resolution.js");
   assert.match(source,/supplierCode:z\.string\(\)\.trim\(\)\.max\(100\)/);
