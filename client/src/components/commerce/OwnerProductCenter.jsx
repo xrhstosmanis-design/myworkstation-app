@@ -99,7 +99,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
 
   const loadCatalog=async()=>{
     clearStatus();setBusy(true);
-    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(catalogQuery.trim())}`))}catch(e){setError(e.message)}finally{setBusy(false)}
+    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(catalogQuery.trim())}&_=${Date.now()}`))}catch(e){setError(e.message)}finally{setBusy(false)}
   };
 
   const chooseProduct=row=>{
