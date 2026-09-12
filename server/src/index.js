@@ -83,6 +83,7 @@ import ownerProductsActiveCatalogRoutes from "./routes/owner-products-active-cat
 import ownerProductActionRoutes from "./routes/owner-product-actions.js";
 import ownerProductSmartEntryRoutes from "./routes/owner-product-smart-entry.js";
 import storeChatRoutes,{ensureStoreChatSchema} from "./routes/store-chat.js";
+import pendingCenterRoutes from "./routes/pending-center.js";
 import ownerProductCompositionRoutes from "./routes/owner-product-compositions.js";
 import masterCatalogPreviewRoutes from "./routes/master-catalog-preview.js";
 import masterCatalogRoutes from "./routes/master-catalog.js";
@@ -206,6 +207,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPrevi
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
 app.use("/api/store-chat",auth,requireStoreModule("STORE_CHAT"),storeChatRoutes);
+app.use("/api/pending-center",auth,requireCompanyModule("PENDING_CENTER"),pendingCenterRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductCompositionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductActionRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductsActiveCatalogRoutes);
