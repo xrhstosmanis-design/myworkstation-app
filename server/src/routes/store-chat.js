@@ -31,7 +31,27 @@ function parseAttachment(value){
   return {name,mimeType,size:buffer.length,checksum:crypto.createHash("sha256").update(buffer).digest("hex"),data:match[2]};
 }
 
-router.get("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const limit=Math.min(Math.max(Number(req.query.limit||100),1),200);const fetched=await prisma.$queryRaw`SELECT m."id",m."senderId",m."category",m."body",m."important",m."pinned",m."completed",m."createdAt",m."attachmentName",m."attachmentMimeType",m."attachmentSize",(m."attachmentData" IS NOT NULL) AS "hasAttachment",(m."senderId"=${req.user.id} OR EXISTS(SELECT 1 FROM "StoreChatRead" mine WHERE mine."messageId"=m."id" AND mine."userId"=${req.user.id})) AS "readByMe",(SELECT COALESCE(json_agg(json_build_object('id',r."userId",'name',COALESCE(NULLIF(u."fullName",''),NULLIF(u."email",''),NULLIF(o."displayName",''),r."userId")) ORDER BY r."readAt"),'[]'::json) FROM "StoreChatRead" r LEFT JOIN "User" u ON u."id"=r."userId" AND u."companyId"=m."companyId" LEFT JOIN "StoreOperatorCredential" o ON o."id"=r."userId" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId" WHERE r."messageId"=m."id") AS "readers" FROM "StoreChatMessage" m WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id} ORDER BY "readByMe" ASC,m."pinned" DESC,m."createdAt" DESC`;res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");res.json({store,rows:fetched.slice(0,limit),permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user)}})}catch(e){next(e)}});
+router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
+  const store=await storeFor(req,res);if(!store)return;
+  const limit=Math.min(Math.max(Number(req.query.limit||100),1),200);
+  const fetched=await prisma.$queryRaw`
+    SELECT m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
+      m."category",m."body",m."important",m."pinned",m."completed",m."createdAt",m."attachmentName",m."attachmentMimeType",m."attachmentSize",
+      (m."attachmentData" IS NOT NULL) AS "hasAttachment",
+      (m."senderId"=${req.user.id} OR EXISTS(SELECT 1 FROM "StoreChatRead" mine WHERE mine."messageId"=m."id" AND mine."userId"=${req.user.id})) AS "readByMe",
+      (SELECT COALESCE(json_agg(json_build_object('id',r."userId",'name',COALESCE(NULLIF(u."fullName",''),NULLIF(u."email",''),NULLIF(o."displayName",''),r."userId")) ORDER BY r."readAt"),'[]'::json)
+        FROM "StoreChatRead" r
+        LEFT JOIN "User" u ON u."id"=r."userId" AND u."companyId"=m."companyId"
+        LEFT JOIN "StoreOperatorCredential" o ON o."id"=r."userId" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
+        WHERE r."messageId"=m."id") AS "readers"
+    FROM "StoreChatMessage" m
+    LEFT JOIN "User" su ON su."id"=m."senderId" AND su."companyId"=m."companyId"
+    LEFT JOIN "StoreOperatorCredential" so ON so."id"=m."senderId" AND so."companyId"=m."companyId" AND so."storeId"=m."storeId"
+    WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id}
+    ORDER BY "readByMe" ASC,m."pinned" DESC,m."createdAt" DESC`;
+  res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
+  res.json({store,rows:fetched.slice(0,limit),permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user)}});
+}catch(e){next(e)}});
 
 router.get("/stores/:storeId/messages/:messageId/attachment",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const id=String(req.params.messageId),download=req.query.download==="1";if(download&&!canDownload(req.user))return res.status(403).json({error:"Κατέβασμα αρχείου επιτρέπεται μόνο σε Ιδιοκτήτη ή Super Admin."});const rows=await prisma.$queryRaw`SELECT "attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData" FROM "StoreChatMessage" WHERE "id"=${id} AND "companyId"=${store.companyId} AND "storeId"=${store.id} LIMIT 1`;const row=rows[0];if(!row?.attachmentData)return res.status(404).json({error:"Δεν βρέθηκε αρχείο."});const buffer=Buffer.from(row.attachmentData,"base64");res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");res.setHeader("Pragma","no-cache");res.setHeader("Expires","0");res.setHeader("Content-Type",row.attachmentMimeType);res.setHeader("Content-Length",String(buffer.length));res.setHeader("Content-Disposition",`${download?"attachment":"inline"}; filename*=UTF-8''${encodeURIComponent(row.attachmentName||"chat-file")}`);await audit(req,store,download?"STORE_CHAT_ATTACHMENT_DOWNLOADED":"STORE_CHAT_ATTACHMENT_OPENED",{messageId:id,filename:row.attachmentName,mimeType:row.attachmentMimeType,size:row.attachmentSize,checksum:row.attachmentChecksum});res.end(buffer)}catch(e){next(e)}});
 
