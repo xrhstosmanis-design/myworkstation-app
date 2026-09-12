@@ -14,6 +14,10 @@ auditEventLabels.STOCK_WASTE="Καταστροφή / Φύρα είδους";
 auditEventLabels.STOCK_SUPPLIER_RETURN="Επιστροφή σε προμηθευτή";
 auditEventLabels.PURCHASE_ORDER_DELETED="Διαγραφή πρόχειρου τιμολογίου";
 auditEventLabels.INVOICE_LINE_CORRECTED="Διόρθωση γραμμής τιμολογίου";
+auditEventLabels.PURCHASE_ORDER_DRAFT_CREATED="Δημιουργία πρόχειρου τιμολογίου";
+auditEventLabels.PURCHASE_ORDER_DRAFT_UPDATED="Ενημέρωση πρόχειρου τιμολογίου";
+auditEventLabels.PURCHASE_ORDER_LINE_ADDED="Προσθήκη γραμμής τιμολογίου";
+auditEventLabels.PURCHASE_ORDER_LINE_DELETED="Διαγραφή γραμμής τιμολογίου";
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 
@@ -181,7 +185,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
           'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
-          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED'
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
