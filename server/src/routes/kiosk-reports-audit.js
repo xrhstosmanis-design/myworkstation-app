@@ -20,6 +20,16 @@ auditEventLabels.PURCHASE_ORDER_LINE_ADDED="Προσθήκη γραμμής τι
 auditEventLabels.PURCHASE_ORDER_LINE_DELETED="Διαγραφή γραμμής τιμολογίου";
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
+const invoiceAuditDescription=(eventType,details={})=>{
+  const invoiceNumber=details.invoiceNumber||details.after?.invoiceNumber||details.before?.invoiceNumber||details.orderId||"—";
+  if(eventType==="PURCHASE_ORDER_DRAFT_CREATED")return `ΔΗΜΙΟΥΡΓΙΑ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${invoiceNumber} · χωρίς κίνηση stock`;
+  if(eventType==="PURCHASE_ORDER_DRAFT_UPDATED")return `ΕΝΗΜΕΡΩΣΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${invoiceNumber} · χωρίς κίνηση stock`;
+  const line=details.after||details.line||details.before||{};
+  if(eventType==="PURCHASE_ORDER_LINE_ADDED")return `ΠΡΟΣΘΗΚΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ · ${invoiceNumber} · ${line.description||line.supplierCode||details.lineId||"—"} · ποσότητα ${n(line.quantity)} · χωρίς κίνηση stock`;
+  if(eventType==="PURCHASE_ORDER_LINE_DELETED")return `ΔΙΑΓΡΑΦΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ · ${invoiceNumber} · ${line.description||line.supplierCode||details.lineId||"—"} · ποσότητα ${n(line.quantity)} · χωρίς κίνηση stock`;
+  if(eventType==="INVOICE_LINE_CORRECTED")return `ΔΙΟΡΘΩΣΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ · ${invoiceNumber} · ${line.description||line.supplierCode||details.lineId||"—"} · ποσότητα ${n(line.quantity)} · καθαρή αξία ${n(line.netAmount).toFixed(2)} € · χωρίς κίνηση stock`;
+  return null;
+};
 
 const router=Router();
 const managementRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -245,8 +255,9 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
-      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED";
-      const description=purchaseOrderDeleted
+      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED",invoiceDescription=invoiceAuditDescription(r.eventType,details);
+      const description=invoiceDescription
+        ||(purchaseOrderDeleted
         ?`ΔΙΑΓΡΑΦΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${details.invoiceNumber||details.orderId||"—"} · ${details.supplierName||"Χωρίς προμηθευτή"} · ${n(details.lineCount)} γραμμές · ${n(details.totalGross).toFixed(2)} €`
         :productCorrection
         ?`ΔΙΟΡΘΩΣΗ ΕΙΔΟΥΣ · ${details.productName||"Άγνωστο προϊόν"} · ${(Array.isArray(details.changes)?details.changes:[]).map(change=>`${change.label}: ${change.before??"—"} → ${change.after??"—"}`).join(" · ")||"Αποθήκευση καρτέλας"}`
@@ -258,7 +269,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           ?`${greekAuditEventLabel(r.eventType)} · ${n(details.amount).toFixed(2)} €${supplierEvent&&details.supplierName?` · ${details.supplierName}`:""}${allocatedInvoices?` · ${allocatedInvoices}`:""}${details.note?` · ${details.note}`:""}`
           :r.eventType==="POS_SALE_COMPLETED"
             ?`ΟΛΟΚΛΗΡΩΣΗ ΠΩΛΗΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"} · ${details.paymentMethod||"—"} · ${n(details.total).toFixed(2)} €`
-            :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`;
+            :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`);
       return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
     const stockItems=stockRows.map(r=>{const quantity=n(r.quantity),eventType=r.movementType==="MANUAL_ADJUSTMENT"?"STOCK_MANUAL_ADJUSTMENT":`STOCK_${r.movementType}`;return {id:r.id,createdAt:r.createdAt,eventType,amount:null,description:`${r.note||greekAuditEventLabel(eventType)} · ${r.productName} · SKU ${r.sku||"—"} · ${quantity>=0?"IN":"OUT"} ${Math.abs(quantity)}`,supplierId:null,supplierName:null,shiftId:null,actorId:r.actorId,actorName:r.actorName||r.actorId||"—",subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:"BACKOFFICE",financialDetails:{productName:r.productName,sku:r.sku,quantity,unitCost:n(r.unitCost),movementType:r.movementType,sourceType:r.sourceType,sourceId:r.sourceId},sourceType:"StockMovement",paymentSource:"AUDIT_EVENT"}});
