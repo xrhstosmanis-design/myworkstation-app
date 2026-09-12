@@ -156,3 +156,14 @@ test("central audit renders nested invoice financial details and before-after va
   assert.match(platform,/Οικονομικά στοιχεία/);
   assert.match(platform,/invoiceAuditFinancialText\(item\)/);
 });
+
+test("platform invoice audit uses a full-size table with resizable read-only columns",()=>{
+  const component=read("client/src/components/platform/SuperAdminEventsCenter.jsx");
+  const css=read("client/src/components/platform/platform-admin.css");
+  assert.match(component,/platform-events-dialog/);
+  assert.match(component,/platform-events-table/);
+  assert.match(component,/Σύρε τη δεξιά άκρη κάθε τίτλου/);
+  assert.match(css,/\.platform-events-dialog\{width:calc\(100vw - 24px\)/);
+  assert.match(css,/\.platform-events-table th\{[^}]*resize:horizontal/);
+  assert.match(css,/\.platform-events-table-wrap\{[^}]*overflow:auto/);
+});
