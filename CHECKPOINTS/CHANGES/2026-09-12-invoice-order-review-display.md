@@ -18,9 +18,18 @@
 ## Safety
 
 - No stock, payment, fiscal or finalized-order behavior changes.
-- The Nature Tech order remains `NEW`; do not finalize until the corrected production UI is retested.
+- The Nature Tech order was kept `NEW` until the corrected production UI passed the final LAB retest.
 
 ## Verification
 
 - 22 focused invoice/purchase-order tests: PASS.
 - Client production build: PASS.
+
+## Final LAB result
+
+- PR #708, CI #1829 and merge `44f9b570` into `main` completed successfully.
+- Initial prices `1.40 / 1.05 / 1.05 / 1.50`, first discount `25%`, net line values `10.50 / 7.88 / 7.88 / 13.50` and VAT `13%` matched the source document.
+- The economic control reported invoice total `44.92`, four-line total `44.92`, difference `0.00` and status `ΣΥΜΦΩΝΕΙ`.
+- The footer displayed net `39.76` and gross `44.92` after deploy.
+- Order `ΤΔΑ-XV2-00758` was finalized only after the PASS and stock increased exactly once by `10 + 10 + 10 + 12 = 42` units.
+- Final status: `ΟΚ`. The test does not require the separate `Τιμολόγηση` action.
