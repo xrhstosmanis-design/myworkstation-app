@@ -99,3 +99,13 @@ test("matched invoice line editor persists and learns package to pieces conversi
   assert.match(client,/name="stockUnitsPerInvoiceUnit"/);
   assert.match(client,/invoiceUnit:selectedUnit,stockUnitsPerInvoiceUnit:selectedPack/);
 });
+
+test("matched invoice line correction is audited atomically without changing stock",()=>{
+  const route=read("server/src/routes/purchase-orders.js");
+  const report=read("server/src/routes/kiosk-reports-audit.js");
+  assert.match(route,/'INVOICE_LINE_CORRECTED'/);
+  assert.match(route,/before:auditLineState\(current\),after:auditLineState\(corrected\)/);
+  assert.match(route,/supplierMappingLearned:learned,stockChanged:false/);
+  assert.match(route,/INSERT INTO "StoreOperatorAudit"/);
+  assert.match(report,/INVOICE_LINE_CORRECTED="Διόρθωση γραμμής τιμολογίου"/);
+});
