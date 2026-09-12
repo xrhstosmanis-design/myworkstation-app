@@ -9,6 +9,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   const platform=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
   assert.match(route,/StoreChatMessage/);
   assert.match(route,/LEFT JOIN "StoreOperatorCredential"/);
+  assert.match(route,/AS "senderName"/);
+  assert.match(route,/LEFT JOIN "User" su/);
+  assert.match(route,/LEFT JOIN "StoreOperatorCredential" so/);
   assert.match(route,/o\."displayName"/);
   assert.match(route,/m\."companyId"=\$\{store\.companyId\}/);
   assert.match(route,/AS "readByMe"/);
@@ -32,6 +35,10 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/permissions\.canPin/);
   assert.match(panel,/permissions\.canDownload/);
   assert.match(panel,/Φωτογραφία \/ PDF/);
+  assert.match(panel,/Από: \{row\.senderName/);
+  assert.match(panel,/Φίλτρο ημερομηνίας/);
+  assert.match(panel,/Όλοι οι αποστολείς/);
+  assert.match(panel,/setSenderFilter/);
   assert.match(panel,/cache:"no-store"/);
   assert.match(panel,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
   assert.doesNotMatch(panel,/<iframe/);

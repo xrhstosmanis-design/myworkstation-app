@@ -8,4 +8,5 @@
 - Upload, προβολή και download αφήνουν ξεχωριστό audit event.
 - MIME allowlist, έλεγχος magic bytes, όριο μεγέθους και tenant/store scope εφαρμόζονται server-side.
 - Στοχευμένο test, 1111/1111 server tests και client production build: PASS.
-- Εκκρεμούν CI, deploy και LAB retest.
+- PR #737 / CI #1888 / merge `a6fd787c` και deploy Render: PASS.
+- LAB PASS από Super Admin και υπάλληλο: η προβολή λειτουργεί και το δικαίωμα download περιορίζεται σωστά.
