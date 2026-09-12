@@ -61,6 +61,7 @@ test("inventory edit pencil opens the complete product card",()=>{
   for(const text of ["Καρτέλα είδους","Βασικά στοιχεία","Barcodes","Κωδικοί προμηθευτών","Στατιστικά","Αγορές","Υποκατηγορία","Εταιρεία / Brand","Τελευταίος προμηθευτής","Τιμή προσωπικού","Τιμή delivery","Ελάχιστη παραγγελία","Ειδοποίηση αρνητικού stock","Επιτρέπεται έκπτωση","Αλλαγή τιμής στο POS","Ελεύθερη τιμή στο POS"])
     assert.ok(panel.includes(text),text);
   assert.match(panel,/\/api\/owner-products\/\$\{row\.productId\}\/details/);
+  assert.match(panel,/details\.supplierCodes\?\.\[0\]\?\.supplierName\|\|product\.supplierName/);
 });
 
 test("complete product card uses dependent taxonomy and live retail calculations",()=>{
