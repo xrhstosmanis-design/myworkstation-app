@@ -139,15 +139,20 @@ test("manual invoice draft lifecycle is audited in the same database transaction
 });
 
 test("central audit renders nested invoice financial details and before-after values",()=>{
-  const client=read("client/src/components/commerce/installKioskReportsAuditV2.js");
+  const client=read("client/src/components/commerce/invoiceAuditFinancials.js");
+  const reports=read("client/src/components/commerce/installKioskReportsAuditV2.js");
+  const platform=read("client/src/components/platform/SuperAdminEventsCenter.jsx");
   for(const event of ["PURCHASE_ORDER_DRAFT_CREATED","PURCHASE_ORDER_DRAFT_UPDATED","PURCHASE_ORDER_LINE_ADDED","PURCHASE_ORDER_LINE_DELETED","INVOICE_LINE_CORRECTED"]){
     assert.match(client,new RegExp(`"${event}"`));
   }
-  assert.match(client,/const invoiceAuditText=/);
+  assert.match(client,/export function invoiceAuditFinancialText/);
   assert.match(client,/Χωρίς αλλαγή πεδίων/);
-  assert.match(client,/Πριν:.*invoiceLineSummary\(d\.before\).*Μετά:.*invoiceLineSummary\(d\.after\)/);
+  assert.match(client,/Πριν:.*lineSummary\(details\.before\).*Μετά:.*lineSummary\(details\.after\)/);
   assert.match(client,/Εκπτ\.1\/2\/3/);
   assert.match(client,/Καθαρή:/);
   assert.match(client,/ΦΠΑ:/);
   assert.match(client,/Stock: αμετάβλητο/);
+  assert.match(reports,/invoiceAuditFinancialText\(r\)/);
+  assert.match(platform,/Οικονομικά στοιχεία/);
+  assert.match(platform,/invoiceAuditFinancialText\(item\)/);
 });
