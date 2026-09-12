@@ -74,3 +74,14 @@ test("package conversion is learned and reused for later supplier invoices",()=>
   assert.match(posting,/if\(hasExplicit\)return \{size:selected/);
   assert.match(posting,/stockPackSize\(row\.description,row\.stockUnitsPerInvoiceUnit\)/);
 });
+
+test("confirmed edits of matched invoice lines update supplier learning",()=>{
+  const source=read("server/src/routes/purchase-orders.js");
+  assert.match(source,/async function learnConfirmedLineCorrection/);
+  assert.match(source,/ON CONFLICT \("companyId","supplierId","supplierItemCode"\) DO UPDATE SET/);
+  assert.match(source,/"lastDiscount1"=EXCLUDED\."lastDiscount1"/);
+  assert.match(source,/"lastDiscount2"=EXCLUDED\."lastDiscount2"/);
+  assert.match(source,/"lastDiscount3"=EXCLUDED\."lastDiscount3"/);
+  assert.match(source,/learnConfirmedLineCorrection\(tx,\{companyId,supplierId:found\.supplierId,line:corrected,userId:req\.user\.id\}\)/);
+  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,mappingLearned\}\)/);
+});
