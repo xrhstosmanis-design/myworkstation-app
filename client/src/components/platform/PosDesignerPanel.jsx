@@ -20,7 +20,7 @@ export default function PosDesignerPanel({request,onClose}){
 
   const load=async()=>{setError("");try{const result=await request("/api/platform/pos-designer-fixed");setData(result);setLayout(normalize(result.draft))}catch(err){setError(err.message)}};
   useEffect(()=>{load()},[]);
-  const stores=useMemo(()=>(data?.companies||[]).flatMap(company=>company.stores.map(store=>({...store,companyName:company.name,published:(data?.published||[]).find(row=>row.storeId===store.id)}))),[data]);
+  const stores=useMemo(()=>(data?.companies||[]).flatMap(company=>company.stores.map(store=>({...store,companyName:company.name,published:(data?.published||[]).find(row=>String(row.storeId)===String(store.id))}))),[data]);
   const updateSection=(kind,id,patch)=>setLayout(current=>({...current,[kind]:current[kind].map(button=>button.id===id?{...button,...patch}:button)}));
   const update=(id,patch)=>updateSection(section,id,patch);
 
