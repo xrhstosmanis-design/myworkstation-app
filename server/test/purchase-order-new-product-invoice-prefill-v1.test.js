@@ -129,4 +129,11 @@ test("manual invoice draft lifecycle is audited in the same database transaction
     assert.match(report,new RegExp(`${event}=`));
   }
   assert.match(route,/JSON\.stringify\(\{\.\.\.details,stockChanged:false\}\)/);
+  assert.match(report,/invoiceAuditDescription/);
+  assert.match(report,/ΔΗΜΙΟΥΡΓΙΑ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(report,/ΕΝΗΜΕΡΩΣΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(report,/ΠΡΟΣΘΗΚΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(report,/ΔΙΑΓΡΑΦΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(report,/ΔΙΟΡΘΩΣΗ ΓΡΑΜΜΗΣ ΤΙΜΟΛΟΓΙΟΥ/);
+  assert.match(report,/χωρίς κίνηση stock/);
 });
