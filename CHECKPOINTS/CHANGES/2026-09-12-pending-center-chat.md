@@ -8,4 +8,5 @@
 - Η πρόσβαση είναι μόνο για Ιδιοκτήτη με ενεργό module ή Super Admin· ο υπάλληλος αποκλείεται server-side.
 - Το `PENDING_CENTER` γίνεται εμπορικά διαθέσιμο, χωρίς αυτόματη ενεργοποίηση ή αλλαγή τιμής.
 - 7/7 στοχευμένες δοκιμές, 1117/1117 πλήρης server suite, syntax checks και client production build: PASS.
-- Εκκρεμούν CI, Render deploy και LAB επιβεβαίωση.
+- PR #751, CI #1916 και merge `9080739a`: PASS.
+- Render deploy και LAB επιβεβαίωση από τον χρήστη: PASS.
