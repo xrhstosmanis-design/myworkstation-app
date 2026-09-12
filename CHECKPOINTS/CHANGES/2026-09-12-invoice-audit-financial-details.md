@@ -17,5 +17,5 @@
 - [x] 11/11 στοχευμένες δοκιμές invoice flow.
 - [x] Πλήρης server test suite 1110/1110.
 - [x] Client production build και syntax/diff checks.
-- [ ] Πράσινο CI και merge προς `main`.
+- [x] PR #730 / CI #1874 / merge `5f897cb7`: PASS.
 - [ ] LAB επιβεβαίωση από τον χρήστη μετά το deploy.
