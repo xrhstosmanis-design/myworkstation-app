@@ -111,7 +111,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
              p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
              c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",lp."supplierName",
-             EXISTS(SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=p."id" AND spl."active"=true) AS "hasSupplier",
+             (EXISTS(SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=p."id" AND spl."active"=true) OR lp."supplierName" IS NOT NULL) AS "hasSupplier",
              COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
              COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
       FROM "Product" p
@@ -120,12 +120,15 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN LATERAL (
-        SELECT sup."name" AS "supplierName"
-        FROM "PurchaseDocumentLine" line
-        JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${company}
-        LEFT JOIN "Supplier" sup ON sup."id"=doc."supplierId"
-        WHERE line."productId"=p."id" AND doc."status"='APPROVED'
-        ORDER BY doc."documentDate" DESC,doc."createdAt" DESC LIMIT 1
+        SELECT history."supplierName" FROM (
+          SELECT sup."name" AS "supplierName",doc."createdAt" AS at
+          FROM "PurchaseDocumentLine" line JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${company} LEFT JOIN "Supplier" sup ON sup."id"=doc."supplierId"
+          WHERE line."productId"=p."id" AND doc."status"='APPROVED'
+          UNION ALL
+          SELECT sup."name" AS "supplierName",ord."createdAt" AS at
+          FROM "PurchaseOrderLine" line JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${company} LEFT JOIN "Supplier" sup ON sup."id"=ord."supplierId"
+          WHERE line."productId"=p."id" AND ord."status" IN ('FINAL','INVOICED')
+        ) history ORDER BY history.at DESC LIMIT 1
       ) lp ON true
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
@@ -140,14 +143,28 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
     const company=companyId(req),productId=String(req.params.productId);
     if(!await ownedProduct(company,productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
     const [supplierCodes,purchases,stats,lastEvents,suppliers]=await Promise.all([
-      prisma.$queryRaw`SELECT spl."id",spl."supplierId",s."name" AS "supplierName",spl."supplierCode",spl."updatedAt",
-        COALESCE(lp."unitCost",0) AS "lastCost",lp."documentDate" AS "lastPurchaseAt"
-        FROM "SupplierProductLink" spl JOIN "Supplier" s ON s."id"=spl."supplierId" AND s."companyId"=${company}
-        LEFT JOIN LATERAL (SELECT l."unitCost",d."documentDate" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=spl."supplierId" AND d."companyId"=${company} AND d."status"='APPROVED' ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1) lp ON true
-        WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."active"=true ORDER BY s."name"`,
-      prisma.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount"
-        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId"
-        WHERE l."productId"=${productId} AND d."status"='APPROVED' ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 250`,
+      prisma.$queryRaw`WITH links AS (
+        SELECT spl."id",spl."supplierId",spl."supplierCode",spl."updatedAt",0 AS priority FROM "SupplierProductLink" spl
+        WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."active"=true
+        UNION ALL
+        SELECT m."id",m."supplierId",m."supplierItemCode" AS "supplierCode",m."updatedAt",1 AS priority FROM "SupplierProductMapping" m
+        WHERE m."companyId"=${company} AND m."productId"=${productId} AND NOT EXISTS (SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."supplierId"=m."supplierId" AND spl."active"=true)
+      ) SELECT DISTINCT ON (links."supplierId") links."id",links."supplierId",s."name" AS "supplierName",links."supplierCode",links."updatedAt",
+        COALESCE(lp."unitCost",pm."lastUnitCost",0) AS "lastCost",COALESCE(lp."documentDate",pm."lastSeenAt") AS "lastPurchaseAt"
+        FROM links JOIN "Supplier" s ON s."id"=links."supplierId" AND s."companyId"=${company}
+        LEFT JOIN "SupplierProductMapping" pm ON pm."companyId"=${company} AND pm."supplierId"=links."supplierId" AND pm."productId"=${productId}
+        LEFT JOIN LATERAL (SELECT history."unitCost",history."documentDate" FROM (
+          SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND d."status"='APPROVED'
+          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND o."status" IN ('FINAL','INVOICED')
+        ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
+        ORDER BY links."supplierId",links.priority,s."name"`,
+      prisma.$queryRaw`SELECT * FROM (
+        SELECT d."id",d."documentNumber",d."documentDate",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
+        UNION ALL
+        SELECT o."id",o."invoiceNumber",o."createdAt",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
+        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=o."supplierId" WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED')
+      ) purchase_history ORDER BY "documentDate" DESC,"createdAt" DESC LIMIT 250`,
       prisma.$queryRaw`SELECT
         COALESCE(SUM(sl."quantity") FILTER (WHERE sale."status"='COMPLETED'),0) AS "soldQuantity",
         COALESCE(SUM(sl."lineTotal") FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesGross",

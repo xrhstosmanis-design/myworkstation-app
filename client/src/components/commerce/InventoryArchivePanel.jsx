@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRightLeft,Barcode,ChevronLeft,ChevronRight,ClipboardList,Edit3,FileSpreadsheet,PackagePlus,Printer,RefreshCw,Search,Truck,X} from "lucide-react";
 import ProductDeliveryFields,{deliveryDefaults} from "./ProductDeliveryFields.jsx";
 import "./inventory-archive.css";
@@ -14,7 +14,8 @@ const newBlank=()=>({name:"",sku:"",barcode:"",categoryName:"",salePrice:"",cost
 
 function Modal({title,children,onClose,wide=false}){return <div className="ia-modal-backdrop"><section className={`ia-modal ${wide?"wide":""}`}><header><b>{title}</b><button onClick={onClose}><X/></button></header>{children}</section></div>}
 
-export default function InventoryArchivePanel({api,storeId,stores=[],onClose}){
+export default function InventoryArchivePanel({api,storeId,stores=[],onClose,initialProduct=null,onInitialProductHandled}){
+  const openingProductRef=useRef("");
   const [data,setData]=useState({items:[],categories:[],subcategories:[],taxonomy:{categories:[],subcategories:[]},page:1,pages:1,total:0,totals:{}});
   const [query,setQuery]=useState(""),[category,setCategory]=useState(""),[subcategory,setSubcategory]=useState(""),[status,setStatus]=useState("ACTIVE"),[page,setPage]=useState(1),[pageSize,setPageSize]=useState(100);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
@@ -73,6 +74,12 @@ export default function InventoryArchivePanel({api,storeId,stores=[],onClose}){
       const local=product.stores?.find(s=>s.storeId===storeId),cost=Number(product.costPrice||0),sale=Number(local?.salePrice??product.salePrice??0),metrics=priceMetrics(cost,sale);setEdit({product,draft:{name:product.name||"",sku:product.sku||"",description:product.description||"",categoryId:product.categoryId||"",subcategoryId:product.subcategoryId||"",categoryName:product.categoryName||"",subcategoryName:product.subcategoryName||"",productCompanyName:product.productCompanyName||"",supplierName:product.supplierName||"",unit:product.unit||"PIECE",costPrice:String(cost),salePrice:String(sale),margin:metrics.margin.toFixed(2),markup:metrics.markup.toFixed(2),staffPrice:product.staffPrice==null?"":String(Number(product.staffPrice)),deliveryPrice:product.deliveryPrice==null?"":String(Number(product.deliveryPrice)),minOrderQuantity:product.minOrderQuantity==null?"":String(Number(product.minOrderQuantity)),capacity:product.capacity==null?"":String(Number(product.capacity)),vatRate:String(Number(product.vatRate||0)),vatVerified:Boolean(product.vatVerified),trackStock:product.trackStock!==false,active:product.active!==false,allowDiscount:product.allowDiscount!==false,allowPosPriceChange:Boolean(product.allowPosPriceChange),freeSalePrice:Boolean(product.freeSalePrice),negativeStockWarning:Boolean(product.negativeStockWarning),isSet:Boolean(product.isSet),isRecipe:Boolean(product.isRecipe),discountA:String(Number(product.discountA||0)),discountB:String(Number(product.discountB||0)),discountC:String(Number(product.discountC||0)),barcodes:(product.barcodes||[]).map(x=>({barcode:x.barcode||"",unitMultiplier:String(Number(x.unitMultiplier||1)),salePrice:x.salePrice==null?"":String(Number(x.salePrice)),name:x.name||"",updatedAt:x.updatedAt})),supplierCodes:(details.supplierCodes||[]).map(x=>({supplierId:x.supplierId,supplierCode:x.supplierCode||""}))}});setProductDetails(details);setEditTab("basic");setEditStock(String(Number(local?.currentStock??row.currentStock??0)));setModal("edit");
     }catch(e){setError(e.message)}finally{setLoading(false)}
   };
+  useEffect(()=>{
+    const productId=initialProduct?.productId;
+    if(!productId||!storeId||openingProductRef.current===productId)return;
+    openingProductRef.current=productId;
+    openEdit(initialProduct).finally(()=>onInitialProductHandled?.());
+  },[initialProduct?.productId,storeId]);
   const editChange=(key,value)=>setEdit(x=>({...x,draft:{...x.draft,[key]:value}}));
   const loadComposition=async(productId)=>{const result=await api(`/api/owner-products/${productId}/composition`);setComposition(result);return result};
   const compositionTab=async tab=>{setEditTab(tab);setError("");try{await loadComposition(edit.product.id)}catch(e){setError(e.message)}};
