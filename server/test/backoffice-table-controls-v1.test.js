@@ -6,9 +6,19 @@ const source=fs.readFileSync(new URL("../../client/src/backoffice-column-filters
 
 test("BackOffice columns resize horizontally and persist per table",()=>{
   assert.match(source,/mws-col-resizer/);
+  assert.match(source,/mws-col-resizer:after/);
   assert.match(source,/pointermove/);
+  assert.match(source,/setPointerCapture/);
+  assert.match(source,/applyTableWidths/);
+  assert.match(source,/tableLayout="fixed"/);
   assert.match(source,/mws:backoffice:columns:v1/);
   assert.match(source,/localStorage\.setItem\(storageKey\(meta\)/);
+});
+
+test("native BackOffice tables receive the shared resize controls automatically",()=>{
+  assert.match(source,/querySelectorAll\("table"\)/);
+  assert.match(source,/if\(headers\.length<2\)return/);
+  assert.match(source,/decorateHeaders\(headers,\{container:table/);
 });
 
 test("column popdowns expose conditions and real distinct values",()=>{
