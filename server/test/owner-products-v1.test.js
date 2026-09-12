@@ -91,6 +91,8 @@ test("invoice-created products retain their supplier relationship",()=>{
   assert.match(route,/SupplierProductMapping/);
   assert.match(route,/lp\."supplierName" IS NOT NULL/);
   assert.match(route,/SupplierProductMapping[\s\S]*history\.priority/);
+  assert.match(route,/PurchaseOrderLine[\s\S]*NOT EXISTS[\s\S]*document_line\."purchaseOrderLineId"=l\."id"/);
+  assert.match(route,/document\."documentNumber"[\s\S]*o\."invoiceNumber"/);
   assert.match(supplierLearningBootstrap,/INSERT INTO "SupplierProductLink"[\s\S]*FROM "SupplierProductMapping"/);
   assert.match(supplierLearningBootstrap,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
   assert.doesNotMatch(supplierLearningBootstrap,/\b(?:DELETE\s+FROM|TRUNCATE)\s+"SupplierProductLink"/i);
