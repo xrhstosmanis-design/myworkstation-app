@@ -24,6 +24,11 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/STORE_CHAT_MESSAGE_SENT/);
   assert.match(route,/STORE_CHAT_ATTACHMENT_OPENED/);
   assert.match(route,/STORE_CHAT_ATTACHMENT_DOWNLOADED/);
+  assert.match(route,/STORE_CHAT_MESSAGE_COMPLETED/);
+  assert.match(route,/STORE_CHAT_MESSAGE_REOPENED/);
+  assert.match(route,/"completedBy"/);
+  assert.match(route,/"completedAt"/);
+  assert.match(route,/canComplete:canPin/);
   assert.match(route,/Cache-Control","no-store/);
   assert.match(route,/MAX_ATTACHMENT_BYTES=7\*1024\*1024/);
   assert.match(route,/download&&!canDownload/);
@@ -39,6 +44,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/Φίλτρο ημερομηνίας/);
   assert.match(panel,/Όλοι οι αποστολείς/);
   assert.match(panel,/setSenderFilter/);
+  assert.match(panel,/permissions\.canComplete/);
+  assert.match(panel,/Ολοκληρώθηκε από:/);
+  assert.match(panel,/JSON\.stringify\(\{completed:!row\.completed\}\)/);
   assert.match(panel,/cache:"no-store"/);
   assert.match(panel,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
   assert.doesNotMatch(panel,/<iframe/);
