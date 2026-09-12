@@ -42,6 +42,16 @@ const statements=[
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_supplier_idx" ON "SupplierProductMapping"("supplierId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_product_idx" ON "SupplierProductMapping"("productId")`,
 `CREATE INDEX IF NOT EXISTS "SupplierProductMapping_barcode_idx" ON "SupplierProductMapping"("supplierBarcode")`,
+`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","createdAt","updatedAt")
+ SELECT md5(random()::text||clock_timestamp()::text),m."companyId",m."supplierId",m."productId",NULLIF(TRIM(m."supplierItemCode"),''),true,'INVOICE_LEARNING',m."createdAt",m."updatedAt"
+ FROM "SupplierProductMapping" m
+ JOIN "Product" p ON p."id"=m."productId" AND p."companyId"=m."companyId"
+ JOIN "Supplier" s ON s."id"=m."supplierId" AND s."companyId"=m."companyId"
+ ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET
+   "supplierCode"=COALESCE(NULLIF(EXCLUDED."supplierCode",''),"SupplierProductLink"."supplierCode"),
+   "active"=true,
+   "source"=CASE WHEN "SupplierProductLink"."source"='PRODUCT_CARD' THEN "SupplierProductLink"."source" ELSE 'INVOICE_LEARNING' END,
+   "updatedAt"=GREATEST("SupplierProductLink"."updatedAt",EXCLUDED."updatedAt")`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount1" DECIMAL(8,4)`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount2" DECIMAL(8,4)`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount3" DECIMAL(8,4)`,

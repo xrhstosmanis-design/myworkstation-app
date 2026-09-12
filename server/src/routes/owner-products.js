@@ -121,14 +121,22 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
       LEFT JOIN LATERAL (
         SELECT history."supplierName" FROM (
-          SELECT sup."name" AS "supplierName",doc."createdAt" AS at
+          SELECT sup."name" AS "supplierName",0 AS priority,spl."updatedAt" AS at
+          FROM "SupplierProductLink" spl JOIN "Supplier" sup ON sup."id"=spl."supplierId" AND sup."companyId"=${company}
+          WHERE spl."companyId"=${company} AND spl."productId"=p."id" AND spl."active"=true
+          UNION ALL
+          SELECT sup."name" AS "supplierName",1 AS priority,mapping."lastSeenAt" AS at
+          FROM "SupplierProductMapping" mapping JOIN "Supplier" sup ON sup."id"=mapping."supplierId" AND sup."companyId"=${company}
+          WHERE mapping."companyId"=${company} AND mapping."productId"=p."id"
+          UNION ALL
+          SELECT sup."name" AS "supplierName",2 AS priority,doc."createdAt" AS at
           FROM "PurchaseDocumentLine" line JOIN "PurchaseDocument" doc ON doc."id"=line."purchaseDocumentId" AND doc."companyId"=${company} LEFT JOIN "Supplier" sup ON sup."id"=doc."supplierId"
           WHERE line."productId"=p."id" AND doc."status"='APPROVED'
           UNION ALL
-          SELECT sup."name" AS "supplierName",ord."createdAt" AS at
+          SELECT sup."name" AS "supplierName",3 AS priority,ord."createdAt" AS at
           FROM "PurchaseOrderLine" line JOIN "PurchaseOrder" ord ON ord."id"=line."orderId" AND ord."companyId"=${company} LEFT JOIN "Supplier" sup ON sup."id"=ord."supplierId"
           WHERE line."productId"=p."id" AND ord."status" IN ('FINAL','INVOICED')
-        ) history ORDER BY history.at DESC LIMIT 1
+        ) history WHERE history."supplierName" IS NOT NULL ORDER BY history.priority,history.at DESC LIMIT 1
       ) lp ON true
       LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id"
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
@@ -163,7 +171,12 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
         UNION ALL
         SELECT o."id",o."invoiceNumber",o."createdAt",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
-        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=o."supplierId" WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED')
+        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
+        WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT EXISTS (
+          SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
+          WHERE document."companyId"=${company} AND document."status"='APPROVED' AND document_line."productId"=${productId}
+            AND (document_line."purchaseOrderLineId"=l."id" OR (document."supplierId"=o."supplierId" AND NULLIF(TRIM(document."documentNumber"),'')=NULLIF(TRIM(o."invoiceNumber"),'')))
+        )
       ) purchase_history ORDER BY "documentDate" DESC,"createdAt" DESC LIMIT 250`,
       prisma.$queryRaw`SELECT
         COALESCE(SUM(sl."quantity") FILTER (WHERE sale."status"='COMPLETED'),0) AS "soldQuantity",

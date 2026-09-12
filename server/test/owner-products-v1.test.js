@@ -11,6 +11,7 @@ const client=fs.readFileSync(new URL("../../client/src/components/commerce/Owner
 const launcher=fs.readFileSync(new URL("../../client/src/components/commerce/CommerceLauncher.jsx",import.meta.url),"utf8");
 const inventoryCard=fs.readFileSync(new URL("../../client/src/components/commerce/InventoryArchivePanel.jsx",import.meta.url),"utf8");
 const invoiceResolution=fs.readFileSync(new URL("../src/routes/purchase-order-ocr-resolution.js",import.meta.url),"utf8");
+const supplierLearningBootstrap=fs.readFileSync(new URL("../src/supplier-item-learning-bootstrap.js",import.meta.url),"utf8");
 
 test("owner product schema is additive",()=>{
   assert.doesNotMatch(bootstrap,/\b(DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i);
@@ -89,4 +90,10 @@ test("invoice-created products retain their supplier relationship",()=>{
   assert.match(route,/PurchaseOrderLine/);
   assert.match(route,/SupplierProductMapping/);
   assert.match(route,/lp\."supplierName" IS NOT NULL/);
+  assert.match(route,/SupplierProductMapping[\s\S]*history\.priority/);
+  assert.match(route,/PurchaseOrderLine[\s\S]*NOT EXISTS[\s\S]*document_line\."purchaseOrderLineId"=l\."id"/);
+  assert.match(route,/document\."documentNumber"[\s\S]*o\."invoiceNumber"/);
+  assert.match(supplierLearningBootstrap,/INSERT INTO "SupplierProductLink"[\s\S]*FROM "SupplierProductMapping"/);
+  assert.match(supplierLearningBootstrap,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
+  assert.doesNotMatch(supplierLearningBootstrap,/\b(?:DELETE\s+FROM|TRUNCATE)\s+"SupplierProductLink"/i);
 });
