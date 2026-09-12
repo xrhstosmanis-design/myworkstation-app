@@ -50,6 +50,9 @@ router.get("/master",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       WHERE mp."active"=true AND (mp."name" ILIKE ${like} OR mp."sourceCode" ILIKE ${like} OR mb."barcode" ILIKE ${like})
       GROUP BY mp."id",p."id"
       ORDER BY mp."name" LIMIT 100`;
+    res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma","no-cache");
+    res.setHeader("Expires","0");
     res.json(rows);
   }catch(error){next(error)}
 });
@@ -142,6 +145,9 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       LEFT JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=${company}
       WHERE p."companyId"=${company} AND (${q===""} OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like})
       GROUP BY p."id",c."name",sc."name",pc."name",mp."brandName",lp."supplierName" ORDER BY p."name" LIMIT 500`;
+    res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma","no-cache");
+    res.setHeader("Expires","0");
     res.json(rows);
   }catch(error){next(error)}
 });

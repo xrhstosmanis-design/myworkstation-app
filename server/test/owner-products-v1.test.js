@@ -28,6 +28,11 @@ test("owner product flow preserves master catalog and store pricing rules",()=>{
   assert.match(route,/vatVerified/);
 });
 
+test("product quality catalogue never reuses stale supplier data",()=>{
+  assert.match(route,/router\.get\("\/catalog"[\s\S]*Cache-Control","no-store, no-cache, must-revalidate, private/);
+  assert.match(client,/owner-products\/catalog\?q=\$\{encodeURIComponent\(catalogQuery\.trim\(\)\)\}&_=\$\{Date\.now\(\)\}/);
+});
+
 test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/router\.patch\("\/:productId\/card"/);
   assert.match(route,/ownedProduct\(company,req\.params\.productId\)/);
