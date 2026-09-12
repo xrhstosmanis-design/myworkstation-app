@@ -111,6 +111,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
       SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
              p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
              c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",lp."supplierName",
+             EXISTS(SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=p."id" AND spl."active"=true) AS "hasSupplier",
              COALESCE((SELECT json_agg(jsonb_build_object('id',pb."id",'barcode',pb."barcode",'unitMultiplier',pb."unitMultiplier",'salePrice',pb."salePrice",'name',pb."name",'updatedAt',pb."updatedAt") ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS barcodes,
              COALESCE(json_agg(DISTINCT jsonb_build_object('storeId',s."id",'storeName',s."name",'salePrice',sp."salePrice",'active',sp."active",'currentStock',sp."currentStock",'minStock',sp."minStock")) FILTER (WHERE s."id" IS NOT NULL),'[]') AS stores
       FROM "Product" p
