@@ -17,6 +17,9 @@ const productQualityIssues=product=>{
   const storePrices=activeStoreSalePrices(product),sales=storePrices.length?storePrices:[n(product.salePrice)],cost=n(product.costPrice),barcodes=product.barcodes||[];
   if(!String(product.sku||"").trim())issues.push("Χωρίς SKU");
   if(!String(product.categoryName||"").trim())issues.push("Χωρίς κατηγορία");
+  if(!String(product.subcategoryName||"").trim())issues.push("Χωρίς υποκατηγορία");
+  if(!product.hasSupplier&&!String(product.supplierName||"").trim())issues.push("Χωρίς προμηθευτή");
+  if(!["PIECE","KG","LITER","PACKAGE"].includes(String(product.unit||"")))issues.push("Μονάδα μη ορισμένη");
   if(cost<=0)issues.push("Αναμονή πρώτης αγοράς");
   if(!sales.some(sale=>sale>0))issues.push("Χωρίς λιανική");
   if(cost>0&&sales.some(sale=>sale>0&&cost>=sale))issues.push("Κόστος ≥ λιανική");

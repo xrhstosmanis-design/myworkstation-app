@@ -62,11 +62,13 @@ test("active catalog reloads every editable product-card switch",()=>{
 });
 
 test("owner UI exposes a read-only LAB product quality audit",()=>{
-  for(const label of ["Έλεγχος ποιότητας LAB","Μόνο προβλήματα","Αναμονή πρώτης αγοράς","Μη έγκυρο barcode","Barcode μέσα στο SKU","Κόστος ≥ λιανική"])assert.match(client,new RegExp(label));
+  for(const label of ["Έλεγχος ποιότητας LAB","Μόνο προβλήματα","Αναμονή πρώτης αγοράς","Μη έγκυρο barcode","Barcode μέσα στο SKU","Κόστος ≥ λιανική","Χωρίς υποκατηγορία","Χωρίς προμηθευτή","Μονάδα μη ορισμένη"])assert.match(client,new RegExp(label));
   assert.match(client,/productQualityIssues/);
   assert.match(client,/^const barcodeLooksValid=/m);
   assert.match(client,/activeStoreSalePrices/);
   assert.match(client,/effectiveSalePrice/);
   assert.match(client,/money\(effectiveSalePrice\(row\)\)/);
+  assert.match(client,/product\.hasSupplier/);
+  assert.match(route,/SupplierProductLink[\s\S]*"hasSupplier"/);
   assert.match(client,/encodeURIComponent\(catalogQuery\.trim\(\)\).*setCatalog\(fresh\)/);
 });
