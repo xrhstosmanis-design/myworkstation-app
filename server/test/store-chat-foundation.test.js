@@ -33,6 +33,10 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/STORE_CHAT_TASK_CREATED/);
   assert.match(route,/ON CONFLICT \("messageId"\) DO NOTHING/);
   assert.match(route,/canCreateTask:true/);
+  assert.match(route,/canManageTask:canPin\(req\.user\)/);
+  assert.match(route,/STORE_CHAT_TASK_COMPLETED/);
+  assert.match(route,/STORE_CHAT_TASK_REOPENED/);
+  assert.match(route,/tasks\/:taskId/);
   assert.match(route,/Cache-Control","no-store/);
   assert.match(route,/MAX_ATTACHMENT_BYTES=7\*1024\*1024/);
   assert.match(route,/download&&!canDownload/);
@@ -52,6 +56,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/Ολοκληρώθηκε από:/);
   assert.match(panel,/JSON\.stringify\(\{completed:!row\.completed\}\)/);
   assert.match(panel,/Δημιουργία εκκρεμότητας/);
+  assert.match(panel,/Κλείσιμο εκκρεμότητας/);
+  assert.match(panel,/Επαναφορά εκκρεμότητας/);
+  assert.match(panel,/taskCompletedByName/);
   assert.match(panel,/Εκκρεμότητες \(\{taskCount\}\)/);
   assert.match(panel,/store-chat-category/);
   assert.match(panel,/cache:"no-store"/);
