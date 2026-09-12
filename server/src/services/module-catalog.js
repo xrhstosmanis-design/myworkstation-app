@@ -24,7 +24,7 @@ export const moduleCatalog=[
   {key:"REMOTE_SUPPORT",name:"Απομακρυσμένη υποστήριξη",description:"Απομακρυσμένη υποστήριξη με audit και έγκριση χρήστη.",category:"SUPPORT",commercialReady:false,requiresTechnicalActivation:true},
   {key:"OFFERS_ADVANCED",name:"Προσφορές & Προωθητικές Ενέργειες",description:"Αναλύσεις προσφορών, προμηθευτών, επιστροφών και εξαγωγές Excel/PDF.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"INVOICE_CHANNEL",name:"Κανάλι Τιμολογίων Καταστήματος",description:"Αποστολή εικόνων/PDF τιμολογίων από το POS, παρακολούθηση κατάστασης και σύνδεση με BackOffice.",category:"OPERATIONS",commercialReady:false},
-  {key:"PENDING_CENTER",name:"Κέντρο Εκκρεμοτήτων",description:"Κεντρική διαχείριση εκκρεμοτήτων τιμολογίων, πληρωμών, αποθήκης και ελέγχων.",category:"CONTROL",commercialReady:false,ownerOnly:true},
+  {key:"PENDING_CENTER",name:"Κέντρο Εκκρεμοτήτων",description:"Κεντρική διαχείριση εκκρεμοτήτων Chat ανά κατάστημα, με φίλτρα, ολοκλήρωση και audit.",category:"CONTROL",commercialReady:true,ownerOnly:true},
   {key:"CASHIER_PERFORMANCE",name:"Μηνιαία Στατιστικά Ταμείων",description:"Στατιστικά ανά εργαζόμενο και βαθμολογία μόνο μετά από ανθρώπινη επιβεβαίωση.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"PROFITABILITY",name:"Κερδοφορία Καταστήματος",description:"Έσοδα, κόστος, μικτό κέρδος, έξοδα και καθαρή εικόνα ανά κατάστημα.",category:"REPORTS",commercialReady:false,ownerOnly:true},
   {key:"LOSS_DETECTION",name:"Έλεγχος Απωλειών",description:"Τεκμηριωμένη διερεύνηση διαφορών απογραφής με παραστατικά, κινήσεις, ημερομηνίες και χειριστές, χωρίς αυτόματη ενοχοποίηση εργαζομένου.",category:"CONTROL",commercialReady:true,monthlyPriceEur:29.9,ownerOnly:true},
