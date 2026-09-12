@@ -7,6 +7,7 @@ const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const id=()=>crypto.randomUUID();
 const n=value=>Number(value||0);
+const money2=value=>Math.round((n(value)+Number.EPSILON)*100)/100;
 const strip=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9α-ω]/g,"");
 
 let schemaPromise;
@@ -133,7 +134,7 @@ router.patch("/:orderId",async(req,res,next)=>{try{
 router.get("/:orderId/detail",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
   const rows=await prisma.$queryRaw`SELECT l.*,p."name" AS "productName",p."sku",p."salePrice" AS "currentSalePrice",p."vatRate" AS "productVatRate",c."name" AS "categoryName",sp."currentStock",(SELECT b."barcode" FROM "ProductBarcode" b WHERE b."productId"=p."id" ORDER BY b."createdAt" LIMIT 1) AS "primaryBarcode" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${found.storeId} WHERE l."orderId"=${found.id} ORDER BY COALESCE(l."ocrSequence",l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
-  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:n(r.markupPercent),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net+=r.netAmount;a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});res.json({order:found,lines,totals});
+  const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:n(r.markupPercent),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});res.json({order:found,lines,totals});
 }catch(error){next(error)}});
 
 router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{

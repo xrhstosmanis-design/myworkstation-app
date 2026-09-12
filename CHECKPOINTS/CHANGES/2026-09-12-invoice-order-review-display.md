@@ -6,12 +6,14 @@
 - The OCR/resolution view confirms item `0172` as `NO SUGAR PRO PLUS BANANA 80g`.
 - The order grid exposed discounts as database-scale values such as `25.00000000`.
 - The line editor preview exposed the binary-decimal edge `15.255` as `15,25 €` instead of the expected two-decimal half-up display `15,26 €`.
+- After deploy, the four visible net values added to `39,76 €`, while the footer added their hidden extra decimals and displayed `39,75 €`.
 
 ## Change
 
 - Monetary presentation is normalized to two decimals with explicit half-up rounding.
 - VAT, discount and markup percentages are displayed without redundant trailing zeroes.
 - The standard line editor now permits correction and persistence of the invoice-line description before finalization.
+- The detail footer adds the same two-decimal net line values that are displayed to the user.
 
 ## Safety
 

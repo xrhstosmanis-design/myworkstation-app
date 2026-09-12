@@ -37,6 +37,12 @@ test("invoice order review formats money and discounts and permits description c
   assert.match(source,/description:String\(f\.get\("description"\)\|\|""\)\.trim\(\)/);
 });
 
+test("invoice detail subtotal adds the same rounded net values shown per line",()=>{
+  const source=read("server/src/routes/purchase-orders.js");
+  assert.match(source,/const money2=value=>Math\.round/);
+  assert.match(source,/a\.net=money2\(a\.net\+money2\(r\.netAmount\)\)/);
+});
+
 test("create-product persists invoice supplier code and purchase economics",()=>{
   const source=read("server/src/routes/purchase-order-ocr-resolution.js");
   assert.match(source,/supplierCode:z\.string\(\)\.trim\(\)\.max\(100\)/);
