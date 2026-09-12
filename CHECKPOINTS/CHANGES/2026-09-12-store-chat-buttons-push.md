@@ -21,4 +21,5 @@
 - LAB retest μετά το PR #715: η ένδειξη δεν εμφανίστηκε για χειριστή POS.
 - Αιτία: το reader id του Store Mode ανήκει στο `StoreOperatorCredential`, ενώ το API έκανε εσωτερικό join μόνο στο `User` και απέκλειε την εγγραφή.
 - Διόρθωση: tenant/store-scoped LEFT JOIN σε `User` και `StoreOperatorCredential`, με ασφαλές fallback ονόματος και σωστό client-side έλεγχο της κανονικοποιημένης λίστας readers.
-- Στοχευμένο test και client production build: PASS. Εκκρεμούν CI, deploy και επανάληψη με δύο λογαριασμούς.
+- PR #720 / CI #1856 / merge `24f74bb8`: PASS και deploy στο Render.
+- Τελικό LAB retest με δύο διαφορετικούς λογαριασμούς: PASS. Εμφανίστηκε «Διαβάστηκε από: Εργαστήριο Χειριστής 1, LAB POS 2».
