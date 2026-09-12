@@ -1,3 +1,12 @@
+## 2026-09-13 — efood / Pelican Indirect POS — Phase A
+
+- [x] Εγκρίθηκε και υλοποιήθηκε σε ξεχωριστό branch η fail-closed βάση της Indirect POS διασύνδεσης μέσω Pelican.
+- [x] Προστέθηκαν μόνο SANDBOX ρυθμίσεις ανά εταιρεία/κατάστημα, κρυπτογράφηση credentials/raw payload, idempotency, tenant/store isolation, local mock validation, product mappings και Catalog/Promo/Orders previews χωρίς εξωτερική κλήση.
+- [x] Το live webhook, η δημιουργία OnlineOrder/πώλησης, το stock, οι τιμές/προσφορές, οι πληρωμές, RBS/CapDriver/EFTPOS και η φορολογική έκδοση παραμένουν ρητά ανενεργά.
+- [x] Τοπικοί έλεγχοι: server syntax PASS, JSX parse PASS και `efood-pelican-foundation-v1.test.js` 9/9 PASS.
+- [ ] Εκκρεμούν πλήρες GitHub CI, draft PR review και μετά local mock LAB έλεγχος.
+- [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization. Απαιτείται νέα ρητή έγκριση πριν από live sandbox webhook ή πραγματικό API call.
+
 ## 2026-09-10 — Ανθεκτική παραλαβή τιμολογίου POS / LAB
 
 - Πριν επιστρέψει ο χειριστής στο POS, αποθηκεύονται στον server όλες οι σελίδες, τα βασικά στοιχεία, ο τρόπος εξόφλησης και ο σύνδεσμος πληρωμής.
