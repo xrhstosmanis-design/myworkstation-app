@@ -109,3 +109,14 @@ test("matched invoice line correction is audited atomically without changing sto
   assert.match(route,/INSERT INTO "StoreOperatorAudit"/);
   assert.match(report,/INVOICE_LINE_CORRECTED="Διόρθωση γραμμής τιμολογίου"/);
 });
+
+test("manual invoice draft lifecycle is audited in the same database transactions",()=>{
+  const route=read("server/src/routes/purchase-orders.js");
+  const report=read("server/src/routes/kiosk-reports-audit.js");
+  assert.match(route,/async function writePurchaseAudit/);
+  for(const event of ["PURCHASE_ORDER_DRAFT_CREATED","PURCHASE_ORDER_DRAFT_UPDATED","PURCHASE_ORDER_LINE_ADDED","PURCHASE_ORDER_LINE_DELETED"]){
+    assert.match(route,new RegExp(`eventType:\"${event}\"`));
+    assert.match(report,new RegExp(`${event}=`));
+  }
+  assert.match(route,/JSON\.stringify\(\{\.\.\.details,stockChanged:false\}\)/);
+});
