@@ -46,8 +46,9 @@ test("invoice detail subtotal adds the same rounded net values shown per line",(
 test("invoice report and summary add the same rounded line values shown to the operator",()=>{
   const source=read("server/src/routes/purchase-orders.js");
   assert.match(source,/SUM\(ROUND\(l\."netAmount",2\)\)/);
-  assert.match(source,/SUM\(ROUND\(l\."vatAmount",2\)\)/);
-  assert.match(source,/SUM\(ROUND\(l\."grossAmount",2\)\)/);
+  assert.match(source,/SUM\(l\."vatAmount"\)/);
+  assert.match(source,/SUM\(l\."grossAmount"\)/);
+  assert.doesNotMatch(source,/SUM\(ROUND\(l\."grossAmount",2\)\)/);
   assert.match(source,/a\.net=money2\(a\.net\+r\.totalNet\)/);
   assert.match(source,/a\.gross=money2\(a\.gross\+r\.totalGross\)/);
 });
