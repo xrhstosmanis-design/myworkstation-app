@@ -11,11 +11,17 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/m\."companyId"=\$\{store\.companyId\}/);
   assert.match(route,/AS "readByMe"/);
   assert.match(route,/ORDER BY "readByMe" ASC/);
+  assert.match(route,/m\."pinned" DESC/);
+  assert.match(route,/function canPin/);
+  assert.match(route,/STORE_CHAT_ANNOUNCEMENT_PINNED/);
+  assert.match(route,/found\[0\]\.category!=="ANNOUNCEMENT"/);
   assert.match(route,/STORE_OPERATOR/);
   assert.match(route,/STORE_CHAT_MESSAGE_SENT/);
   assert.match(route,/STOCK_SHORTAGE/);
   assert.match(panel,/const openMessage=/);
   assert.match(panel,/row\.readByMe/);
   assert.match(panel,/ΝΕΟ/);
+  assert.match(panel,/permissions\.canPin/);
+  assert.match(panel,/ΚΑΡΦΙΤΣΩΜΕΝΗ/);
   assert.doesNotMatch(panel,/Promise\.allSettled\(nextRows\.map/);
 });
