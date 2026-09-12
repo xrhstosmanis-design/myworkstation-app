@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,Building2,CalendarDays,Camera,CheckCircle2,Copy,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,Building2,CalendarDays,Camera,CheckCircle2,Copy,Download,ExternalLink,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
@@ -16,6 +16,7 @@ import BankLedgerReviewCenter from "./BankLedgerReviewCenter.jsx";
 import SuperAdminEventsCenter from "./SuperAdminEventsCenter.jsx";
 import SuperAdminChecksAnalytics from "./SuperAdminChecksAnalytics.jsx";
 import FiscalBridgeDryRunCenter from "./FiscalBridgeDryRunCenter.jsx";
+import StoreChatPanel from "../store/StoreChatPanel.jsx";
 import {deviceRoutingFormValues} from "./device-routing-form.js";
 import "./platform-admin.css";
 import "./platform-superadmin-inspection.css";
@@ -130,6 +131,7 @@ export default function PlatformAdminApp(){
   const [showEventsCenter,setShowEventsCenter]=useState(false);
   const [analyticsResult,setAnalyticsResult]=useState(null);
   const [showFiscalDryRun,setShowFiscalDryRun]=useState(false);
+  const [chatStore,setChatStore]=useState(null);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
   const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName].join("|");
 
@@ -522,6 +524,8 @@ export default function PlatformAdminApp(){
       <small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small>
     </form>}
     {onlineStoreManager&&<OnlineStoreManager manager={onlineStoreManager} setManager={setOnlineStoreManager} request={request} onClose={()=>setOnlineStoreManager(null)} setBusy={setBusy} busy={busy} setError={setError} setMessage={setMessage}/>}
+    {storeCompany&&!storeEdit&&!terminalManager&&!chatStore&&<div className="platform-chat-launchers">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>setChatStore(store)}><MessageCircle/>Chat · {store.name}</button>)}</div>}
+    {chatStore&&<StoreChatPanel api={request} store={chatStore} onClose={()=>setChatStore(null)}/>}
     {storeCompany&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
     {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
     {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
