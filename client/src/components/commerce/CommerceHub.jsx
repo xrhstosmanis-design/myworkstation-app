@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BarChart3,Boxes,ClipboardCheck,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
+import {BarChart3,Boxes,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
@@ -9,6 +9,7 @@ import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
 import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
+import PendingCenterPanel from "./PendingCenterPanel.jsx";
 import "./commerce-hub.css";
 import "./commerce-external-tabs.css";
 
@@ -86,7 +87,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     if(tab==="ai")loadAi().catch(e=>setError(e.message));
   },[tab,storeId,activeModules.join("|")]);
 
-  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
+  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","STORE_CHAT","PENDING_CENTER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
 
   const addProduct=async event=>{
     event.preventDefault();setError("");setMessage("");
@@ -153,6 +154,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("POS")} className={`${tab==="pos"?"active":""} ${!active.has("POS")?"locked":""}`} onClick={()=>setTab("pos")}><ShoppingCart/> POS</button>
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
+        <button disabled={!active.has("PENDING_CENTER")} className={`${tab==="pending"?"active":""} ${!active.has("PENDING_CENTER")?"locked":""}`} onClick={()=>setTab("pending")}><ClipboardList/> Κέντρο Εκκρεμοτήτων</button>
         <button disabled={!active.has("DOCUMENTS")} className={`${tab==="documents"?"active":""} ${!active.has("DOCUMENTS")?"locked":""}`} onClick={()=>setTab("documents")}><Files/> Θυρίδα Τιμολογίων</button>
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> Ανάγνωση τιμολογίων</button>
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
@@ -184,6 +186,8 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="analytics"&&<AdvancedSalesAnalytics api={api} stores={stores} initialStoreId={storeId}/>}
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
+
+    {tab==="pending"&&<PendingCenterPanel api={api} stores={stores}/>}
 
     {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
