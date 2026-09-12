@@ -21,6 +21,14 @@ test("native BackOffice tables receive the shared resize controls automatically"
   assert.match(source,/decorateHeaders\(headers,\{container:table/);
 });
 
+test("CSS grid column pixel widths are parsed as numbers before dragging",()=>{
+  assert.match(source,/const gridWidths=/);
+  assert.match(source,/Number\.parseFloat\(value\)/);
+  assert.match(source,/parsed\.every\(Number\.isFinite\)/);
+  assert.doesNotMatch(source,/gridTemplateColumns\.split\(\/\\s\+\/\)\.map\(Number\)/);
+  assert.match(source,/gridWidths\(meta\)/);
+});
+
 test("column popdowns expose conditions and real distinct values",()=>{
   assert.match(source,/Περιέχει/);
   assert.match(source,/Δεν είναι ίσο/);
