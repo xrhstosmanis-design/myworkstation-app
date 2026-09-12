@@ -78,6 +78,7 @@ test("all product switches and supplier codes are editable and saved",()=>{
   for(const field of ["active","trackStock","negativeStockWarning","allowDiscount","allowPosPriceChange","freeSalePrice","isSet","isRecipe"])
     assert.match(panel,new RegExp(`\\[\\"${field}\\"`));
   assert.match(panel,/supplierCodes:edit\.draft\.supplierCodes/);
+  assert.match(panel,/supplierCodes:edit\.draft\.supplierCodes\.filter\(x=>x\.supplierId\)/);
   assert.match(panel,/Νέος κωδικός προμηθευτή/);
   assert.match(panel,/error&&<div className="ia-alert error ia-modal-error" role="alert">/);
   assert.match(panel,/loading\?"Αποθήκευση…":"Καταχώρηση"/);
