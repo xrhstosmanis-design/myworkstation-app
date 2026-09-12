@@ -30,5 +30,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(owner,/Chat ανά κατάστημα/);
   assert.match(owner,/<StoreChatPanel api=\{api\}/);
   assert.match(platform,/<StoreChatPanel api=\{request\}/);
-  assert.match(platform,/Chat · \{store\.name\}/);
+  assert.match(platform,/setShowChatChooser\(true\)/);
+  assert.match(platform,/Επίλεξε κατάστημα…/);
+  assert.doesNotMatch(platform,/platform-chat-launchers/);
 });
