@@ -31,6 +31,7 @@ async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount3" NUMERIC(8,4)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastExcisePerInvoiceUnit" NUMERIC(14,6)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastMarkupPercent" NUMERIC(12,6)`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SupplierProductLink" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"supplierId" TEXT NOT NULL,"productId" TEXT NOT NULL,"supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',"updatedBy" TEXT,"updatedByName" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("companyId","supplierId","productId"))`);
 }
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 
@@ -48,7 +49,9 @@ async function ownedLine(companyId,orderId,lineId){
 
 async function learnSupplierMapping(tx,{companyId,supplierId,supplierCode,productId,barcode,description,userId,unitCost,unitsPerPackage,discount1,discount2,discount3,excisePerInvoiceUnit,markupPercent}){
   const code=String(supplierCode||"").trim();
-  if(!supplierId||!code||!productId)return;
+  if(!supplierId||!productId)return;
+  await tx.$executeRaw`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","updatedBy") VALUES (${id()},${companyId},${supplierId},${productId},${code||null},true,'INVOICE',${userId||null}) ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET "supplierCode"=COALESCE(NULLIF(EXCLUDED."supplierCode",''),"SupplierProductLink"."supplierCode"),"active"=true,"source"='INVOICE',"updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+  if(!code)return;
   await tx.$executeRaw`
     INSERT INTO "SupplierProductMapping" (
       "id","companyId","supplierId","supplierItemCode","productId","supplierBarcode","lastDescription","unitsPerPackage","lastUnitCost","lastDiscount1","lastDiscount2","lastDiscount3","lastExcisePerInvoiceUnit","lastMarkupPercent","usageCount","confirmedByUserId","confirmedAt","lastSeenAt","createdAt","updatedAt"

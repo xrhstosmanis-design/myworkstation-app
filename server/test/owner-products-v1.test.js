@@ -8,6 +8,9 @@ const activeCatalog=fs.readFileSync(new URL("../src/routes/owner-products-active
 const smartEntry=fs.readFileSync(new URL("../src/routes/owner-product-smart-entry.js",import.meta.url),"utf8");
 const serverIndex=fs.readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
 const client=fs.readFileSync(new URL("../../client/src/components/commerce/OwnerProductCenter.jsx",import.meta.url),"utf8");
+const launcher=fs.readFileSync(new URL("../../client/src/components/commerce/CommerceLauncher.jsx",import.meta.url),"utf8");
+const inventoryCard=fs.readFileSync(new URL("../../client/src/components/commerce/InventoryArchivePanel.jsx",import.meta.url),"utf8");
+const invoiceResolution=fs.readFileSync(new URL("../src/routes/purchase-order-ocr-resolution.js",import.meta.url),"utf8");
 
 test("owner product schema is additive",()=>{
   assert.doesNotMatch(bootstrap,/\b(DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i);
@@ -71,4 +74,19 @@ test("owner UI exposes a read-only LAB product quality audit",()=>{
   assert.match(client,/product\.hasSupplier/);
   assert.match(route,/SupplierProductLink[\s\S]*"hasSupplier"/);
   assert.match(client,/encodeURIComponent\(catalogQuery\.trim\(\)\).*setCatalog\(fresh\)/);
+});
+
+test("store pricing opens the complete warehouse product card",()=>{
+  assert.match(client,/onOpenFullProduct/);
+  assert.match(client,/onClick=\{\(\)=>openProduct\(row\)\}/);
+  assert.match(launcher,/initialProduct=\{inventoryInitialProduct\}/);
+  assert.match(inventoryCard,/openEdit\(initialProduct\)/);
+});
+
+test("invoice-created products retain their supplier relationship",()=>{
+  assert.match(invoiceResolution,/INSERT INTO "SupplierProductLink"/);
+  assert.match(invoiceResolution,/"source"='INVOICE'/);
+  assert.match(route,/PurchaseOrderLine/);
+  assert.match(route,/SupplierProductMapping/);
+  assert.match(route,/lp\."supplierName" IS NOT NULL/);
 });

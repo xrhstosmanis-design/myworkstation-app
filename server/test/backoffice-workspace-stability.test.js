@@ -13,7 +13,7 @@ const launcher = await readFile(
 
 test("catalog refresh keeps the BackOffice workspace mounted", () => {
   assert.doesNotMatch(stockWrapper, /<KioskStyleProductCenter key=\{reloadKey\}/);
-  assert.match(stockWrapper, /<KioskStyleProductCenter api=\{api\} stores=\{stores\}\/>/);
+  assert.match(stockWrapper, /<KioskStyleProductCenter api=\{api\} stores=\{stores\} onOpenFullProduct=\{onOpenFullProduct\}\/>/);
 });
 
 test("duplicate open events cannot reset an already open BackOffice", () => {
