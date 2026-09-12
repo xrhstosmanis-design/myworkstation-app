@@ -62,6 +62,8 @@ test("inventory edit pencil opens the complete product card",()=>{
     assert.ok(panel.includes(text),text);
   assert.match(panel,/\/api\/owner-products\/\$\{row\.productId\}\/details/);
   assert.match(panel,/details\.supplierCodes\?\.\[0\]\?\.supplierName\|\|product\.supplierName/);
+  assert.match(panel,/inferredSupplier=\(details\.suppliers\|\|\[\]\)\.find/);
+  assert.match(panel,/inferredSupplier\?\[\{supplierId:inferredSupplier\.id,supplierCode:""\}\]:\[\]/);
 });
 
 test("complete product card uses dependent taxonomy and live retail calculations",()=>{
