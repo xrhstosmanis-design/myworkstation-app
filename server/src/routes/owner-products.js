@@ -201,7 +201,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     const product=await ownedProduct(company,req.params.productId);
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
     const body=z.object({
-      name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),
+      name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),supplierName:z.string().trim().max(250).optional().or(z.literal("")),
       categoryId:z.string().min(1).nullable().optional(),subcategoryId:z.string().min(1).nullable().optional(),categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
       vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
       staffPrice:z.coerce.number().min(0).nullable().optional(),deliveryPrice:z.coerce.number().min(0).nullable().optional(),minOrderQuantity:z.coerce.number().min(0).nullable().optional(),capacity:z.coerce.number().min(0).nullable().optional(),
@@ -217,6 +217,10 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     let selectedCategoryId=body.categoryId||null,selectedSubcategoryId=body.subcategoryId||null;
     if(selectedCategoryId){const category=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${selectedCategoryId} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!category[0])return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."})}
     if(selectedSubcategoryId){const subcategory=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${selectedSubcategoryId} AND "categoryId"=${selectedCategoryId||''} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!subcategory[0])return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία."})}
+    if(!body.supplierCodes.length&&body.supplierName){
+      const inferred=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND LOWER(REGEXP_REPLACE(TRIM("name"),'[[:space:]]+',' ','g'))=LOWER(REGEXP_REPLACE(TRIM(${body.supplierName}),'[[:space:]]+',' ','g')) LIMIT 2`;
+      if(inferred.length===1)body.supplierCodes=[{supplierId:inferred[0].id,supplierCode:""}];
+    }
     const supplierIds=[...new Set(body.supplierCodes.map(row=>row.supplierId))];
     if(supplierIds.length!==body.supplierCodes.length)return res.status(400).json({error:"Ο ίδιος προμηθευτής έχει επιλεγεί περισσότερες από μία φορές."});
     if(supplierIds.length){const validSuppliers=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND "id"=ANY(${supplierIds}::text[])`;if(validSuppliers.length!==supplierIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρος προμηθευτής."})}

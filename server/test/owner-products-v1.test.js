@@ -44,6 +44,9 @@ test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/SupplierProductLink/);
   assert.match(route,/supplierCode:z\.string\(\)\.trim\(\)\.max\(120\)\.default\(""\)/);
   assert.match(route,/\$\{row\.supplierCode\|\|null\}/);
+  assert.match(route,/!body\.supplierCodes\.length&&body\.supplierName/);
+  assert.match(route,/REGEXP_REPLACE\(TRIM\("name"\)/);
+  assert.match(route,/body\.supplierCodes=\[\{supplierId:inferred\[0\]\.id,supplierCode:""\}\]/);
   assert.match(route,/PRODUCT_CARD_UPDATED/);
   assert.match(route,/changes:storeChanges,actorName/);
   assert.match(route,/Λιανική καταστήματος/);
