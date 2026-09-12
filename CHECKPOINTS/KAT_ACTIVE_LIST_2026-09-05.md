@@ -891,3 +891,12 @@
 - [x] Η αρχική έκδοση πέρασε client/server tests, PR #745 / CI #1905 και deploy.
 - [x] Συμπληρωματική διόρθωση: 8/8 στοχευμένες, 1116/1116 πλήρεις server δοκιμές, syntax checks και client production build: PASS.
 - [ ] Εκκρεμούν πράσινο CI/deploy και LAB επιβεβαίωση ότι εμφανίζεται NATURE TECH.
+
+## 12/09/2026 — Εκκρεμότητες από Chat
+
+- [x] Κάθε μήνυμα μπορεί να συνδεθεί με μία store-scoped εκκρεμότητα και η δημιουργία καταγράφεται στο audit.
+- [x] Οι κατηγορίες εμφανίζονται με έντονα γράμματα στο pop-down και στις κάρτες.
+- [x] PR #746 / CI #1904 / merge `39da98f7`, Render deploy και LAB έλεγχος: PASS.
+- [x] Προσθήκη κλεισίματος/επαναφοράς εκκρεμότητας από Ιδιοκτήτη ή Super Admin, με όνομα, ώρα και audit.
+- [x] 1/1 στοχευμένη δοκιμή, 1116/1116 πλήρης server suite, syntax check και client production build: PASS.
+- [ ] Εκκρεμούν πράσινο CI, Render deploy και LAB επιβεβαίωση.
