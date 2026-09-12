@@ -83,5 +83,19 @@ test("confirmed edits of matched invoice lines update supplier learning",()=>{
   assert.match(source,/"lastDiscount2"=EXCLUDED\."lastDiscount2"/);
   assert.match(source,/"lastDiscount3"=EXCLUDED\."lastDiscount3"/);
   assert.match(source,/learnConfirmedLineCorrection\(tx,\{companyId,supplierId:found\.supplierId,line:corrected,userId:req\.user\.id\}\)/);
-  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,mappingLearned\}\)/);
+  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,invoiceUnit,stockUnitsPerInvoiceUnit,stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit,mappingLearned\}\)/);
+});
+
+test("matched invoice line editor persists and learns package to pieces conversion",()=>{
+  const server=read("server/src/routes/purchase-orders.js");
+  const client=read("client/src/components/commerce/installPurchaseOrdersSuite.js");
+  assert.match(server,/invoiceUnit:z\.enum\(\["PIECE","PACKAGE"\]\)/);
+  assert.match(server,/stockUnitsPerInvoiceUnit:z\.coerce\.number\(\)\.min\(1\)/);
+  assert.match(server,/"invoiceUnit"=\$\{invoiceUnit\},"stockUnitsPerInvoiceUnit"=\$\{stockUnitsPerInvoiceUnit\}/);
+  assert.match(server,/"unitsPerPackage"=COALESCE\(EXCLUDED\."unitsPerPackage"/);
+  assert.match(server,/stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit/);
+  assert.match(client,/name="invoiceUnit"/);
+  assert.match(client,/ΚΒ \/ Συσκευασία/);
+  assert.match(client,/name="stockUnitsPerInvoiceUnit"/);
+  assert.match(client,/invoiceUnit:selectedUnit,stockUnitsPerInvoiceUnit:selectedPack/);
 });
