@@ -59,3 +59,9 @@ test("all supported grids receive Greek headers and column controls",()=>{
   assert.match(source,/\.mws-daily-row\.head/);
   assert.match(source,/\.recipe-head/);
 });
+
+test("remaining BackOffice product and report grids use the shared table controls",()=>{
+  for(const selector of [".mws-bulk-list-head",".tab-row.head",".report-row.head:not(.summary)",".ia-card-table > .head"]){
+    assert.ok(source.includes(`head:"${selector}"`),`missing shared grid support for ${selector}`);
+  }
+});
