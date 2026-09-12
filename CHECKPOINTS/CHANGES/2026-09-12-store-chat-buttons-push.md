@@ -17,3 +17,8 @@
 - Εκκρεμούν CI, deploy και LAB retest με δεύτερο λογαριασμό.
 
 - Η οθόνη χειρίζεται πλέον readers ως array ή JSON string, ώστε να μην κρύβεται η ένδειξη ανάγνωσης.
+
+- LAB retest μετά το PR #715: η ένδειξη δεν εμφανίστηκε για χειριστή POS.
+- Αιτία: το reader id του Store Mode ανήκει στο `StoreOperatorCredential`, ενώ το API έκανε εσωτερικό join μόνο στο `User` και απέκλειε την εγγραφή.
+- Διόρθωση: tenant/store-scoped LEFT JOIN σε `User` και `StoreOperatorCredential`, με ασφαλές fallback ονόματος και σωστό client-side έλεγχο της κανονικοποιημένης λίστας readers.
+- Στοχευμένο test και client production build: PASS. Εκκρεμούν CI, deploy και επανάληψη με δύο λογαριασμούς.
