@@ -5,6 +5,8 @@ import fs from "node:fs";
 test("store chat foundation has store isolation, categories and server-side storage",()=>{
   const route=fs.readFileSync(new URL("../src/routes/store-chat.js",import.meta.url),"utf8");
   const panel=fs.readFileSync(new URL("../../client/src/components/store/StoreChatPanel.jsx",import.meta.url),"utf8");
+  const owner=fs.readFileSync(new URL("../../client/src/main.jsx",import.meta.url),"utf8");
+  const platform=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
   assert.match(route,/StoreChatMessage/);
   assert.match(route,/LEFT JOIN "StoreOperatorCredential"/);
   assert.match(route,/o\."displayName"/);
@@ -24,4 +26,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/permissions\.canPin/);
   assert.match(panel,/ΚΑΡΦΙΤΣΩΜΕΝΗ/);
   assert.doesNotMatch(panel,/Promise\.allSettled\(nextRows\.map/);
+  assert.match(owner,/activeModules\.includes\("STORE_CHAT"\)/);
+  assert.match(owner,/Chat ανά κατάστημα/);
+  assert.match(owner,/<StoreChatPanel api=\{api\}/);
+  assert.match(platform,/<StoreChatPanel api=\{request\}/);
+  assert.match(platform,/Chat · \{store\.name\}/);
 });
