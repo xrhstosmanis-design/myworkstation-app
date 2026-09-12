@@ -107,6 +107,30 @@ function calc(input,current={}){
   if(!Number.isFinite(markupPercent))markupPercent=0;if(!Number.isFinite(proposedSalePrice))proposedSalePrice=0;
   return {quantity,unitCost,discount1:d1,discount2:d2,discount3:d3,exciseTotal,vatRate,finalUnitNet,netAmount,vatAmount,grossAmount,grossUnit,markupPercent,proposedSalePrice};
 }
+async function learnConfirmedLineCorrection(tx,{companyId,supplierId,line,userId}){
+  const supplierCode=String(line.supplierCode||"").trim(),productId=String(line.productId||"").trim();
+  if(!supplierId||!supplierCode||!productId)return false;
+  const quantity=Math.max(0.0001,n(line.quantity));
+  await tx.$executeRaw`
+    INSERT INTO "SupplierProductMapping" (
+      "id","companyId","supplierId","supplierItemCode","productId","lastDescription","lastUnitCost","lastDiscount1","lastDiscount2","lastDiscount3","lastExcisePerInvoiceUnit","lastMarkupPercent","usageCount","confirmedByUserId","confirmedAt","lastSeenAt","createdAt","updatedAt"
+    ) VALUES (
+      ${id()},${companyId},${supplierId},${supplierCode},${productId},${line.description||null},${n(line.unitCost)},${n(line.discount1)},${n(line.discount2)},${n(line.discount3)},${n(line.exciseTotal)/quantity},${n(line.markupPercent)},1,${userId||null},NOW(),NOW(),NOW(),NOW()
+    )
+    ON CONFLICT ("companyId","supplierId","supplierItemCode") DO UPDATE SET
+      "productId"=EXCLUDED."productId",
+      "lastDescription"=COALESCE(EXCLUDED."lastDescription","SupplierProductMapping"."lastDescription"),
+      "lastUnitCost"=EXCLUDED."lastUnitCost",
+      "lastDiscount1"=EXCLUDED."lastDiscount1",
+      "lastDiscount2"=EXCLUDED."lastDiscount2",
+      "lastDiscount3"=EXCLUDED."lastDiscount3",
+      "lastExcisePerInvoiceUnit"=EXCLUDED."lastExcisePerInvoiceUnit",
+      "lastMarkupPercent"=EXCLUDED."lastMarkupPercent",
+      "usageCount"="SupplierProductMapping"."usageCount"+1,
+      "confirmedByUserId"=EXCLUDED."confirmedByUserId",
+      "confirmedAt"=NOW(),"lastSeenAt"=NOW(),"updatedAt"=NOW()`;
+  return true;
+}
 const lineSchema=z.object({productId:z.string().optional().nullable(),supplierCode:z.string().trim().max(100).optional().nullable(),description:z.string().trim().min(1).max(250),quantity:z.coerce.number().positive().max(1000000).optional(),unitCost:z.coerce.number().min(0).max(1000000).optional(),discount1:z.coerce.number().min(-100).max(100).optional(),discount2:z.coerce.number().min(-100).max(100).optional(),discount3:z.coerce.number().min(-100).max(100).optional(),exciseTotal:z.coerce.number().min(0).max(1000000).optional(),vatRate:z.coerce.number().min(0).max(100).optional(),gift:z.boolean().optional(),markupPercent:z.coerce.number().min(-100).max(10000).optional(),proposedSalePrice:z.coerce.number().min(0).max(1000000).optional(),calculateFrom:z.enum(["MARKUP","RETAIL","NONE"]).optional()});
 
 router.get("/report",async(req,res,next)=>{try{
@@ -162,7 +186,8 @@ router.post("/:orderId/lines",async(req,res,next)=>{try{
 
 router.patch("/:orderId/lines/:lineId",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId),current=await line(companyId,req.params.lineId);if(!found||!current||current.orderId!==found.id)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή παραγγελίας."});editable(found);const body=lineSchema.partial().parse(req.body||{});if(body.productId&&!await product(companyId,body.productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});const c=calc(body,current);
-  await prisma.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=COALESCE(${body.productId??null},"productId"),"supplierCode"=COALESCE(${body.supplierCode??null},"supplierCode"),"description"=COALESCE(${body.description??null},"description"),"quantity"=${c.quantity},"unitCost"=${c.unitCost},"discount1"=${c.discount1},"discount2"=${c.discount2},"discount3"=${c.discount3},"exciseTotal"=${c.exciseTotal},"vatRate"=${c.vatRate},"gift"=COALESCE(${body.gift??null},"gift"),"markupPercent"=${c.markupPercent},"proposedSalePrice"=${c.proposedSalePrice},"netAmount"=${c.netAmount},"vatAmount"=${c.vatAmount},"grossAmount"=${c.grossAmount},"updatedAt"=NOW() WHERE "id"=${current.id}`;res.json({ok:true,...c});
+  const corrected={...current,...body,...c,productId:body.productId??current.productId,supplierCode:body.supplierCode??current.supplierCode,description:body.description??current.description};
+  const mappingLearned=await prisma.$transaction(async tx=>{await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=COALESCE(${body.productId??null},"productId"),"supplierCode"=COALESCE(${body.supplierCode??null},"supplierCode"),"description"=COALESCE(${body.description??null},"description"),"quantity"=${c.quantity},"unitCost"=${c.unitCost},"discount1"=${c.discount1},"discount2"=${c.discount2},"discount3"=${c.discount3},"exciseTotal"=${c.exciseTotal},"vatRate"=${c.vatRate},"gift"=COALESCE(${body.gift??null},"gift"),"markupPercent"=${c.markupPercent},"proposedSalePrice"=${c.proposedSalePrice},"netAmount"=${c.netAmount},"vatAmount"=${c.vatAmount},"grossAmount"=${c.grossAmount},"updatedAt"=NOW() WHERE "id"=${current.id}`;return learnConfirmedLineCorrection(tx,{companyId,supplierId:found.supplierId,line:corrected,userId:req.user.id})});res.json({ok:true,...c,mappingLearned});
 }catch(error){next(error)}});
 
 router.delete("/:orderId/lines/:lineId",async(req,res,next)=>{try{const companyId=req.user.companyId,found=await order(companyId,req.params.orderId),current=await line(companyId,req.params.lineId);if(!found||!current||current.orderId!==found.id)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});editable(found);await prisma.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "id"=${current.id}`;res.json({ok:true})}catch(error){next(error)}});
