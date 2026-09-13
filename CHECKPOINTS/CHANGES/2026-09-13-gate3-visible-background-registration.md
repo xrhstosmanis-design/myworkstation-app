@@ -1,7 +1,7 @@
 # Checkpoint — Gate 3 ορατή ολοκλήρωση καταχώρισης από POS
 
 **Ημερομηνία:** 13/09/2026  
-**Κατάσταση:** Υλοποίηση ολοκληρωμένη · αναμονή CI/Render/LAB
+**Κατάσταση:** CI/merge/Render ολοκληρωμένα · αναμονή μόνο LAB
 
 ## LAB εύρημα
 
@@ -29,5 +29,8 @@
 - Πλήρες server suite: 1.167/1.167 PASS.
 - Client production build: PASS.
 - Server build και Prisma generation: PASS.
-- GitHub CI, merge και Render deploy: εκκρεμούν.
+- PR #794 CI #2045: PASS.
+- Merge στο `main`: `354df49ad50ac8c8c06df337c43f7ac4efa466ea`.
+- Τελικό main CI #2046: PASS.
+- Render deploy #1081: PASS στην έκδοση `354df49ad50ac8c8c06df337c43f7ac4efa466ea`.
 - LIVE PASS από τον χρήστη: εκκρεμεί.
