@@ -173,10 +173,10 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
         ORDER BY links."supplierId",links.priority,s."name"`,
       prisma.$queryRaw`SELECT * FROM (
-        SELECT d."id",d."documentNumber",d."documentDate",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
+        SELECT d."id",d."documentNumber",d."documentDate",d."supplierId",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
         FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
         UNION ALL
-        SELECT o."id",o."invoiceNumber",o."createdAt",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
+        SELECT o."id",o."invoiceNumber",o."createdAt",o."supplierId",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
         FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
         WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT EXISTS (
           SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
@@ -197,7 +197,9 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
       prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`
     ]);
     const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
-    res.json({supplierCodes,purchases,suppliers,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
+    const latestPurchaseWithSupplier=purchases.find(row=>row.supplierId);
+    const latestSupplier=latestPurchaseWithSupplier?{supplierId:latestPurchaseWithSupplier.supplierId,supplierName:latestPurchaseWithSupplier.supplierName||""}:null;
+    res.json({supplierCodes,purchases,latestSupplier,suppliers,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
   }catch(error){next(error)}
 });
 
@@ -228,12 +230,12 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
         SELECT history."supplierId" FROM (
           SELECT d."supplierId",d."documentDate" AS at,d."createdAt" FROM "PurchaseDocumentLine" l
           JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND d."status"='APPROVED'
-          JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=${company} AND s."active"=true
+          JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=${company}
           WHERE l."productId"=${product.id}
           UNION ALL
           SELECT o."supplierId",o."createdAt" AS at,o."createdAt" FROM "PurchaseOrderLine" l
           JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND o."status" IN ('FINAL','INVOICED')
-          JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=${company} AND s."active"=true
+          JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=${company}
           WHERE l."productId"=${product.id}
         ) history ORDER BY history.at DESC,history."createdAt" DESC LIMIT 1`;
       if(purchaseSupplier[0])body.supplierCodes=[{supplierId:purchaseSupplier[0].supplierId,supplierCode:""}];
@@ -247,7 +249,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     }
     const supplierIds=[...new Set(body.supplierCodes.map(row=>row.supplierId))];
     if(supplierIds.length!==body.supplierCodes.length)return res.status(400).json({error:"Ο ίδιος προμηθευτής έχει επιλεγεί περισσότερες από μία φορές."});
-    if(supplierIds.length){const validSuppliers=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND "id"=ANY(${supplierIds}::text[])`;if(validSuppliers.length!==supplierIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρος προμηθευτής."})}
+    if(supplierIds.length){const validSuppliers=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "id"=ANY(${supplierIds}::text[])`;if(validSuppliers.length!==supplierIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρος προμηθευτής."})}
     if(body.sku){const duplicate=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "sku"=${body.sku} AND "id"<>${product.id} LIMIT 1`;if(duplicate[0])return res.status(409).json({error:"Ο κωδικός/SKU χρησιμοποιείται ήδη σε άλλο προϊόν."})}
     const barcodeValues=[...new Set(body.barcodes.map(row=>row.barcode))];
     if(barcodeValues.length!==body.barcodes.length)return res.status(400).json({error:"Το ίδιο barcode έχει καταχωριστεί περισσότερες από μία φορές."});
