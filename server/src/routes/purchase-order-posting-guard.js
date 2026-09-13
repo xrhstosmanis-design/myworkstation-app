@@ -116,7 +116,7 @@ router.delete("/:orderId",async(req,res,next)=>{
         throw error;
       }
       const totals=(await tx.$queryRaw`SELECT COUNT("id")::int AS "lineCount",COALESCE(SUM("netAmount"),0) AS "totalNet",COALESCE(SUM("grossAmount"),0) AS "totalGross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`)[0]||{};
-      let linkedDocument=null;
+      let linkedDocument=null,preservedPaymentTransactionId=null;
       if(found.sourceDocumentId){
         const documents=await tx.$queryRaw`SELECT "id","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} FOR UPDATE`;
         linkedDocument=documents[0]||null;
@@ -124,13 +124,18 @@ router.delete("/:orderId",async(req,res,next)=>{
           const error=new Error("Το συνδεδεμένο παραστατικό δεν είναι πλέον πρόχειρο και δεν μπορεί να διαγραφεί.");error.status=409;throw error;
         }
         if(linkedDocument?.paymentTransactionId){
-          const payments=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${linkedDocument.paymentTransactionId} AND "companyId"=${companyId} AND "reversedAt" IS NULL LIMIT 1`;
-          if(payments[0]){const error=new Error("Το τιμολόγιο έχει ενεργή πληρωμή. Ακύρωσε πρώτα την πληρωμή και μετά διέγραψε το πρόχειρο.");error.status=409;throw error}
+          const payments=await tx.$queryRaw`SELECT "id","invoiceDocumentNumber" FROM "StoreTransaction" WHERE "id"=${linkedDocument.paymentTransactionId} AND "companyId"=${companyId} AND "type"='SUPPLIER_PAYMENT' AND "storeId"=${found.storeId} AND "supplierId"=${found.supplierId} AND "reversedAt" IS NULL LIMIT 1 FOR UPDATE`;
+          if(payments[0]){
+            preservedPaymentTransactionId=payments[0].id;
+            // Keep the financial movement and its original shift/actor. Retain the
+            // invoice identity after the source draft/photos have been removed.
+            await tx.$executeRaw`UPDATE "StoreTransaction" SET "invoiceDocumentNumber"=COALESCE(NULLIF("invoiceDocumentNumber",''),${found.invoiceNumber}),"attachmentData"=NULL,"attachmentMimeType"=NULL,"attachmentFilename"=NULL WHERE "id"=${preservedPaymentTransactionId} AND "companyId"=${companyId} AND "attachmentMimeType"='application/vnd.myworkstation.purchase-document' AND "attachmentFilename"=${linkedDocument.id}`;
+          }
         }
       }
       const actorId=req.user.id||req.user.operatorId;
       const actorName=req.user.fullName||req.user.name||req.user.email||"Χρήστης";
-      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${actorId},'PURCHASE_ORDER_DELETED',${JSON.stringify({orderId:found.id,invoiceNumber:found.invoiceNumber,supplierId:found.supplierId,supplierName:found.supplierName,storeName:found.storeName,status:found.status,lineCount:Number(totals.lineCount||0),totalNet:n(totals.totalNet),totalGross:n(totals.totalGross),sourceType:found.sourceType,sourceDocumentId:found.sourceDocumentId,actorName,sourceFileDeleted:Boolean(linkedDocument)})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${id()},${companyId},${found.storeId},${req.user.operatorId||null},${actorId},'PURCHASE_ORDER_DELETED',${JSON.stringify({orderId:found.id,invoiceNumber:found.invoiceNumber,supplierId:found.supplierId,supplierName:found.supplierName,storeName:found.storeName,status:found.status,lineCount:Number(totals.lineCount||0),totalNet:n(totals.totalNet),totalGross:n(totals.totalGross),sourceType:found.sourceType,sourceDocumentId:found.sourceDocumentId,actorName,sourceFileDeleted:Boolean(linkedDocument),paymentPreserved:Boolean(preservedPaymentTransactionId),preservedPaymentTransactionId})}::jsonb)`;
       await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
       await tx.$executeRaw`DELETE FROM "PurchaseOrder" WHERE "id"=${found.id} AND "companyId"=${companyId}`;
       if(linkedDocument){
@@ -143,7 +148,7 @@ router.delete("/:orderId",async(req,res,next)=>{
           await tx.$executeRaw`DELETE FROM "DocumentAttachment" WHERE "id"=${source.attachmentId} AND "companyId"=${companyId}`;
         }
       }
-      return {ok:true,deleted:true,id:found.id,invoiceNumber:found.invoiceNumber};
+      return {ok:true,deleted:true,id:found.id,invoiceNumber:found.invoiceNumber,paymentPreserved:Boolean(preservedPaymentTransactionId),message:preservedPaymentTransactionId?"Το πρόχειρο και οι φωτογραφίες διαγράφηκαν. Η ενεργή πληρωμή διατηρήθηκε για νέα εισαγωγή χωρίς χρέωση.":"Το πρόχειρο διαγράφηκε."};
     });
     res.json(result);
   }catch(error){next(error)}

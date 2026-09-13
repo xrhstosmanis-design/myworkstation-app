@@ -113,10 +113,11 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
-      const duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,dataUrl:fileDataUrl})});
+      const duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),dataUrl:fileDataUrl})});
       const key=paymentKey(),totalGross=num(amount);
       let paymentTransactionId=duplicateCheck?.paymentTransactionId||null;
-      if(mode==="PAID"){
+      const effectiveMode=paymentTransactionId?"PAID":mode;
+      if(effectiveMode==="PAID"){
         if(!paymentTransactionId){
           stage="ΠΛΗΡΩΜΗ ΒΑΡΔΙΑΣ";
           setStatus("Καταχώριση πληρωμής στη βάρδια…");
@@ -127,9 +128,9 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl}))})});
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl}))})});
       setStatus(handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
-      const success=mode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Το τιμολόγιο διαβάζεται στον server και το POS είναι έτοιμο.`:`✅ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε. Η ανάγνωση συνεχίζεται στον server και το POS είναι έτοιμο.`;
+      const success=duplicateCheck?.paymentReused?`✅ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} διαβάζεται ξανά χωρίς νέα χρέωση.`:effectiveMode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Το τιμολόγιο διαβάζεται στον server και το POS είναι έτοιμο.`:`✅ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε. Η ανάγνωση συνεχίζεται στον server και το POS είναι έτοιμο.`;
       setMessage?.(success);onChanged?.();
       monitorBackgroundV244({api,jobId:handoff.jobId,documentNumber:documentNumber.trim(),setMessage,onChanged});
     }catch(error){

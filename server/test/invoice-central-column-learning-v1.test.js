@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -119,4 +119,23 @@ test('actual multipage recovery consumes repeated occurrences once and retains t
   const actual=context.merge([{code:a.code,description:a.description,quantity:4.8},{code:a.code,description:a.description,quantity:4.8}],[a,b]);
   assert.equal(actual.length,2);assert.deepEqual(Array.from(actual,l=>l.quantity),[20,10]);
   assert.equal(actual[0].retailPrice,4.8);
+});
+
+
+test('current printed headers recover all 38 rows when Azure omits tables and confuses retail with quantity',()=>{
+  const header="ΚΩΔΙΚΟΣ ΠΕΡΙΓΡΑΦΗ ΛΙΑΝΙΚΗ ΤΙΜΗ Μ.Μ. ΠΟΣΟΤΗΤΑ ΤΙΜΗ ΜΟΝΑΔΑΣ ΑΞΙΑ ΠΡΟ ΕΚΠΤΩΣΗΣ ΕΚΠΤΩΣΗ ΑΞΙΑ ΜΕΤΑ ΤΗΝ ΕΚΠΤΩΣΗ ΦΠΑ";
+  const lines=fixture.flat().map(([code,quantity,retail,cost,net])=>{
+    const rawText=`${code} MARLBORO RED 3.5 KS BOX 20 STD ${decimal(retail)} TEM ${quantity} ${decimal(cost)} ${decimal(net)} 0 0 ${decimal(net)} 0`;
+    return recoverPrintedRetailColumns({code,description:"MARLBORO RED 3.5 KS BOX 20 STD",rawText,quantity:retail,unitCost:net/retail,retailPrice:0,netAmount:net+6.71,vatRate:0},header);
+  });
+  assert.deepEqual(lines.map(l=>[l.code,l.quantity,l.retailPrice,l.unitCost,l.netAmount]),fixture.flat());
+  assert.equal(lines.reduce((sum,l)=>sum+l.quantity,0),608);
+  assert.equal(Math.round(lines.reduce((sum,l)=>sum+l.grossAmount,0)*100),236999);
+  assert.ok(lines.every(l=>l.sourceColumnsVerified));
+  const changed={rawText:"01669 MARLBORO 20 STD 5,20 TEM 30 4,9 147,00 0 0 147,00 0",quantity:5.2,unitCost:1,netAmount:20};
+  assert.equal(recoverPrintedRetailColumns(changed,header).quantity,30,"Next invoice must use its new quantities");
+  assert.equal(recoverPrintedRetailColumns(changed,header).retailPrice,5.2);
+  assert.equal(recoverPrintedRetailColumns(changed,"UNRELATED SUPPLIER HEADERS"),changed);
+  const mismatch={...changed,rawText:changed.rawText.replace("147,00 0 0 147,00","148,00 0 0 148,00")};
+  assert.equal(recoverPrintedRetailColumns(mismatch,header),mismatch,"Unbalanced source row must remain for review");
 });

@@ -48,6 +48,29 @@ export function applyConfirmedColumns(line,columns){
     sourceColumnsVerified:true,supplierProfileRecovered:true,supplierProfileRule:"CONFIRMED_UNIT_RELATIVE_COLUMNS"};
 }
 
+// Some Azure responses contain Items but omit the geometrical product table.
+// Recover this printed layout only when its headers are present in THIS source
+// and the quantity, unit price, pre/post-discount amounts and VAT agree on the
+// SAME physical row. Never derive a purchase price from a misread quantity.
+export function recoverPrintedRetailColumns(line,documentText){
+  if(line.sourceColumnsVerified)return line;
+  const header=columnKey(documentText);
+  if(!/ΛΙΑΝΙΚΗΤΙΜΗΜΜΠΟΣΟΤΗΤΑΤΙΜΗΜΟΝΑΔΑΣ/.test(header))return line;
+  const raw=String(line.azureRawRow||line.rawText||"");
+  const source=unitRelativeValues(raw);if(!source)return line;
+  const after=Object.entries(source.values).filter(([offset])=>Number(offset)>0).map(([,value])=>value);
+  if(after.length<5)return line;
+  const [quantity,unitCost,initial]=after,net=after.at(-2),vatRate=after.at(-1),retailPrice=source.values[-1];
+  // This recovery deliberately handles only zero-discount printed rows. Other
+  // layouts continue through header mapping / confirmed supplier corrections.
+  if(!(quantity>0&&unitCost>0&&retailPrice>0&&net>0)||![0,6,13,24].includes(vatRate)||
+    after.slice(3,-2).some(value=>value!==0)||Math.abs(quantity*unitCost-initial)>0.03||Math.abs(initial-net)>0.01)return line;
+  return {...line,quantity,invoiceQuantity:quantity,unitCost,unitPrice:unitCost,retailPrice,
+    initialAmount:initial,netAmount:net,netValue:net,vatRate,grossAmount:round2(net*(1+vatRate/100)),
+    discount1:0,discount2:0,discount3:0,discount1Amount:0,discount2Amount:0,discount3Amount:0,
+    azureRawRow:raw,sourceColumnsVerified:true,supplierProfileRule:"PRINTED_RETAIL_UNIT_QUANTITY_COLUMNS"};
+}
+
 function headerRole(label){
   const key=columnKey(label);
   if(/ΛΙΑΝΙΚ|RETAIL|RRP/.test(key))return "retailPrice";
