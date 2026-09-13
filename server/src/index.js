@@ -139,6 +139,7 @@ app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
 app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoutes);
+app.use("/api/platform/internet-product-search",commerceAdvancedOnlineSearchRoutes);
 app.use("/api/platform",platformInvoiceLearningProductSearchRoutes);
 app.use("/api/platform/master-catalog",masterCatalogPreviewRoutes);
 app.use("/api/platform/master-catalog",masterCatalogMaintenanceRoutes);

@@ -1,0 +1,8 @@
+.internet-search-form{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.internet-price-proposal,.internet-order-suggestion{display:grid;grid-template-columns:minmax(240px,1fr) 150px minmax(220px,1fr) auto;gap:9px;align-items:center;margin:12px 0;padding:12px;border:1px solid #c9dce5;border-radius:10px;background:#f4f9fc}
+.internet-order-suggestion{grid-template-columns:minmax(220px,1fr) minmax(260px,1.4fr) 120px auto;background:#eefaf4;border-color:#9ed6bb}
+.internet-price-proposal input,.internet-order-suggestion input{height:40px;border:1px solid #b9cad7;border-radius:8px;padding:0 9px}
+.internet-price-proposal button,.internet-order-suggestion button{min-height:40px;border:0;border-radius:8px;background:#087f5b;color:#fff;font-weight:900;padding:0 12px}
+.internet-order-suggestion small{grid-column:1/-1;color:#526c61}.internet-order-suggestion label{display:grid;font-size:12px}
+.internet-proposal{display:grid;gap:4px;padding:9px;border:1px solid #dbe5eb;border-radius:8px;background:#f8fafc}.internet-proposal>span{display:flex;gap:5px}.internet-proposal button{display:flex;align-items:center;gap:3px;padding:5px 7px}.internet-proposal button svg,.internet-proposal a svg{width:14px;height:14px}.internet-proposal em{font-size:12px}.internet-proposal em.saving{color:#087f5b;font-weight:900}
+@media(max-width:900px){.internet-search-form,.internet-price-proposal,.internet-order-suggestion{grid-template-columns:1fr}}
