@@ -51,7 +51,7 @@ async function checkPackageAccess(companyId,storeId){
   const activeKeys=rows.filter(row=>packageIsActive(row)).map(row=>row.moduleKey);
   const level=Math.max(-1,...activeKeys.map(key=>CHECK_PACKAGE_LEVELS[key]??-1));
   if(level<0)throw Object.assign(new Error("Δεν είναι ενεργό πακέτο ελέγχου για το επιλεγμένο κατάστημα."),{status:403});
-  return {level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS.COMPLETE_CHECK};
+  return {level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS.COMPLETE_CHECK,premium:level>=CHECK_PACKAGE_LEVELS.PREMIUM_CHECK};
 }
 
 function snapshotFromSession(session){
@@ -174,6 +174,22 @@ async function completePaymentControls(body){
   return {enabled:true,readOnly:true,findings,withoutEvidenceCount:withoutEvidence.length,potentialDuplicateCount:duplicateGroups.length,status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
 }
 
+async function premiumVarianceControls(body){
+  const rows=await prisma.$queryRaw`
+    SELECT COALESCE(NULLIF(s."closedByName",''),NULLIF(s."openedByName",''),'Χωρίς διαθέσιμο χειριστή') AS "operatorName",
+      COUNT(*)::int AS "shiftCount",COALESCE(SUM(ABS(COALESCE(s."variance",0))),0)::float AS "cashVarianceTotal",
+      COALESCE(SUM(ABS(COALESCE(s."cardVariance",0))),0)::float AS "cardVarianceTotal",MAX(COALESCE(s."closedAt",s."openedAt")) AS "occurredAt"
+    FROM "CashShiftSession" s
+    WHERE s."companyId"=${body.companyId} AND s."storeId"=${body.storeId} AND s."status"='CLOSED'
+      AND (ABS(COALESCE(s."variance",0))>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0))>${cardTolerance})
+      AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
+      AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+    GROUP BY COALESCE(NULLIF(s."closedByName",''),NULLIF(s."openedByName",''),'Χωρίς διαθέσιμο χειριστή')
+    HAVING COUNT(*)>=2 ORDER BY COUNT(*) DESC,MAX(COALESCE(s."closedAt",s."openedAt")) DESC LIMIT ${findingLimit}`;
+  const findings=rows.map(row=>({id:`repeated-variance:${row.operatorName}`,operatorName:row.operatorName,shiftCount:Number(row.shiftCount),cashVarianceTotal:number(row.cashVarianceTotal),cardVarianceTotal:number(row.cardVarianceTotal),occurredAt:row.occurredAt}));
+  return {enabled:true,readOnly:true,findings,repeatedVarianceCount:findings.length,status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
+}
+
 router.post("/super-admin-analytics/execute",async(req,res,next)=>{
   try{
     const body=filterSchema.parse(req.body||{});
@@ -234,6 +250,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
     const normalizedRows=rows.map(row=>({...row,cashVariance:number(row.cashVariance),cardVariance:number(row.cardVariance)}));
     const findings=findingSessions.map(findingFromSession);
     const complete=packageAccess.complete?await completePaymentControls(body):{enabled:false,reason:"Ενεργοποίησε COMPLETE ή PREMIUM Έλεγχο για έλεγχο πληρωμών και παραστατικών."};
+    const premium=packageAccess.premium?await premiumVarianceControls(body):{enabled:false,reason:"Ενεργοποίησε PREMIUM Έλεγχο για επαναλαμβανόμενες αποκλίσεις."};
     const pendingFindingCount=findings.filter(finding=>finding.reviewValid!==true).length;
     const reviewedFindingCount=findings.length-pendingFindingCount;
     await prisma.authAudit.create({data:{
@@ -250,6 +267,7 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
       rows:normalizedRows,
       findings,
       complete,
+      premium,
       pendingFindingCount,
       reviewedFindingCount,
       status:findings.length===0?"ΟΚ":pendingFindingCount?"Χρειάζεται έλεγχο":"Καταχωρισμένοι έλεγχοι",

@@ -10,7 +10,7 @@ test("an active higher check package grants BASIC execution access",()=>{
   assert.match(analyticsRoute,/const CHECK_PACKAGE_KEYS=\["BASIC_CHECK","COMPLETE_CHECK","PREMIUM_CHECK"\]/);
   assert.match(analyticsRoute,/"moduleKey"=ANY\(\$\{CHECK_PACKAGE_KEYS\}::text\[\]\)/);
   assert.match(analyticsRoute,/const activeKeys=rows\.filter\(row=>packageIsActive\(row\)\)\.map\(row=>row\.moduleKey\)/);
-  assert.match(analyticsRoute,/return \{level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS\.COMPLETE_CHECK\}/);
+  assert.match(analyticsRoute,/return \{level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS\.COMPLETE_CHECK,premium:level>=CHECK_PACKAGE_LEVELS\.PREMIUM_CHECK\}/);
 });
 
 test("check-package cards expose inherited access without allowing a derived package toggle",()=>{
