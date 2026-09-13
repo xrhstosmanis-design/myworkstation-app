@@ -51,6 +51,7 @@ jobs:
             if printf '%s\n' "$conflicts" | grep -qx 'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'; then
               git checkout --theirs CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
             fi
+            git add CHECKPOINTS/ACTIVE.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
 
             if [ "$merge_rc" -ne 0 ] && [ -n "$(git diff --name-only --diff-filter=U || true)" ]; then
               echo "Expected conflicts were not fully resolved."
