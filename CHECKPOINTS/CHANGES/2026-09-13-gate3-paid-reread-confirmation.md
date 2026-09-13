@@ -15,6 +15,11 @@ Validation:
 - Local server/client builds and 1180 server tests PASS (local Node 24; required Node 20 and real Postgres HTTP E2E are enforced in CI).
 - Added executed submit-handler tests: cancel without writes; confirm PAID and CREDIT both reuse payment and release POS.
 - Extended isolated HTTP E2E: reverse-link-only draft deletion, legacy description, supplier VAT alias, historical duplicate, canonical payment-key selection, completed job after source deletion, durable handoff, second-user review/intake and unchanged payment facts/stock.
-- Pending: green head CI, merge, main CI, exact Render revision and user LAB retest. Gate 3 remains open; this is not a live accuracy PASS.
+- PR #802 head `bb7450a0eab538478ed866e6b4bf6197e43a0542`: CI #2083 / run 34768546317 PASS, 1181 tests and real Postgres HTTP E2E PASS. Merged as `d3346a79a794e73655297675b8b5062a3ba78510`; main CI #2086 / run 34768664177 PASS.
+- A subsequent independent Super Admin commit includes #802: `c5fb20c3834847a0dda9fc5844ce768e53c19f60` (ancestry verified), CI #2087 PASS. Superseded deployment #1108 was cancelled; deployment #1110 / run 34768835097 / job 103755027669 PASS. At 16:34:54 UTC the application health returned exactly this revision with `ok:true`.
+- Ready for user LAB retest after Ctrl+F5. The confirmation must explain that the invoice is already paid and that only the invoice will be reread. Cancel makes no writes; confirm accepts the source and releases POS for sales. Test both PAID and CREDIT choices without another financial movement.
+- Gate 3 remains open pending live source-reading accuracy. A successful code/deployment check does not certify 38 correctly read rows from the user's photographs.
 
 No production financial corrections/reversals are included. Historical double payment requires a separate audited correction. Source-reading acceptance remains 38 lines / 608 units / EUR 2,369.99 with correct retail, purchase cost and quantity.
+
+Checkpoint merge recovery: a concurrent main update 3ad9817e replaced large sections of the central active list with literal truncated-output markers. Restored the complete c5fb20c3 history, retained the new COMPLETE/Audit notes, and applied this verified delivery record. No concurrent application code was changed.
