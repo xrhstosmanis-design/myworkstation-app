@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
-import {Boxes,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
+import {Boxes,Globe2,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
 import InventoryArchivePanel from "./InventoryArchivePanel.jsx";
@@ -7,6 +7,7 @@ import ManagementParametersPanel from "./ManagementParametersPanel.jsx";
 import SmartProductEntryBridge from "./SmartProductEntryBridge.jsx";
 import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
 import TableServiceBackofficePanel from "./TableServiceBackofficePanel.jsx";
+import InternetProductSearchPanel from "./InternetProductSearchPanel.jsx";
 import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
@@ -51,6 +52,7 @@ export default function CommerceLauncher(){
   const [minimized,setMinimized]=useState(false);
   const [maximized,setMaximized]=useState(true);
   const [parametersOpen,setParametersOpen]=useState(false);
+  const [internetSearchOpen,setInternetSearchOpen]=useState(false);
   const canManageParameters=parameterRoles.has(readStored("user")?.role);
   useEffect(()=>{
     const timer=setInterval(()=>setAuthenticated(Boolean(localStorage.getItem("token")&&localStorage.getItem("user"))),700);
@@ -104,6 +106,7 @@ export default function CommerceLauncher(){
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>{setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
+        {activeModules.includes("ADVANCED_ONLINE_PRODUCT_SEARCH")&&<button onClick={()=>setInternetSearchOpen(true)}><Globe2/>Αναζήτηση προϊόντων στο Internet</button>}
       </div>
       {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
         <div className="commerce-mode-switch">
@@ -116,6 +119,7 @@ export default function CommerceLauncher(){
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
       {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
+      {internetSearchOpen&&<InternetProductSearchPanel api={request} stores={stores} onClose={()=>setInternetSearchOpen(false)}/>}
       </>}
     </section></div>}
   </>;
