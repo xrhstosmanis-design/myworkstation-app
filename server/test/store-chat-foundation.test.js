@@ -4,6 +4,7 @@ import fs from "node:fs";
 
 test("store chat foundation has store isolation, categories and server-side storage",()=>{
   const route=fs.readFileSync(new URL("../src/routes/store-chat.js",import.meta.url),"utf8");
+  const push=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8");
   const panel=fs.readFileSync(new URL("../../client/src/components/store/StoreChatPanel.jsx",import.meta.url),"utf8");
   const owner=fs.readFileSync(new URL("../../client/src/main.jsx",import.meta.url),"utf8");
   const platform=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
@@ -32,6 +33,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/StoreChatTask/);
   assert.match(route,/StoreChatSettings/);
   assert.match(route,/StoreChatAcknowledgement/);
+  assert.match(route,/ensureStoreChatPushSchema/);
+  assert.match(route,/push-subscription/);
+  assert.match(route,/sendStoreChatPush/);
   assert.match(route,/invoiceAiReaderEnabled/);
   assert.match(route,/announcementAcknowledgementRequired/);
   assert.match(route,/"photosEnabled" BOOLEAN NOT NULL DEFAULT true/);
@@ -113,6 +117,12 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/store-chat-category/);
   assert.match(panel,/cache:"no-store"/);
   assert.match(panel,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
+  assert.match(panel,/pushManager\.subscribe/);
+  assert.match(panel,/Ενεργοποίηση Push/);
+  assert.match(push,/StoreChatPushSubscription/);
+  assert.match(push,/generateVAPIDKeys/);
+  assert.match(push,/"storeId"=\$\{store\.id\}/);
+  assert.match(push,/"userId"<>\$\{senderId\}/);
   assert.doesNotMatch(panel,/<iframe/);
   assert.doesNotMatch(panel,/localStorage\.setItem\([^)]*attachment/);
   assert.match(panel,/ΚΑΡΦΙΤΣΩΜΕΝΗ/);
