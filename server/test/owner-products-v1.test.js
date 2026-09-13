@@ -55,7 +55,7 @@ test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/SupplierProductLink/);
   assert.match(route,/supplierCode:z\.string\(\)\.trim\(\)\.max\(120\)\.default\(""\)/);
   assert.match(route,/\$\{row\.supplierCode\|\|null\}/);
-  assert.match(route,/!body\.supplierCodes\.length&&body\.supplierName/);
+  assert.match(route,/else if\(body\.supplierName\)/);
   assert.match(route,/REGEXP_REPLACE\(TRIM\("name"\)/);
   assert.match(route,/body\.supplierCodes=\[\{supplierId:inferred\[0\]\.id,supplierCode:""\}\]/);
   assert.match(route,/PRODUCT_CARD_UPDATED/);
@@ -112,4 +112,10 @@ test("invoice-created products retain their supplier relationship",()=>{
   assert.match(supplierLearningBootstrap,/INSERT INTO "SupplierProductLink"[\s\S]*FROM "SupplierProductMapping"/);
   assert.match(supplierLearningBootstrap,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
   assert.doesNotMatch(supplierLearningBootstrap,/\b(?:DELETE\s+FROM|TRUNCATE)\s+"SupplierProductLink"/i);
+});
+
+test("product card persists supplier by finalized purchase id before matching display text",()=>{
+  assert.match(route,/if\(!body\.supplierCodes\.length\)[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
+  assert.match(route,/purchaseSupplier\[0\][\s\S]*supplierId:purchaseSupplier\[0\]\.supplierId/);
+  assert.match(route,/body\.supplierName&&!body\.supplierCodes\.length[\s\S]*status\(409\)/);
 });
