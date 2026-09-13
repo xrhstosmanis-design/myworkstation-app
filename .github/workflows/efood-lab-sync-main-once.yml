@@ -81,7 +81,6 @@ jobs:
           MAIN_SHA="$main_sha" python -c 'from pathlib import Path; import os,re; p=Path("CHECKPOINTS/ACTIVE.md"); t=p.read_text(encoding="utf-8"); t=re.sub(r"- Βάση (?:έναρξης|συγχρονισμού): `main` `[^`]+`", f"- Βάση συγχρονισμού: `main` `{os.environ[chr(77)+chr(65)+chr(73)+chr(78)+chr(95)+chr(83)+chr(72)+chr(65)]}`", t, count=1); p.write_text(t,encoding="utf-8")'
           MAIN_SHA="$main_sha" python -c 'from pathlib import Path; import os,re; p=Path("CHECKPOINTS/CHANGES/2026-09-13-efood-pelican-phase-a-foundation.md"); t=p.read_text(encoding="utf-8"); t=re.sub(r"- \*\*Βάση (?:έναρξης|συγχρονισμού):\*\* `main` commit `[^`]+`", f"- **Βάση συγχρονισμού:** `main` commit `{os.environ[chr(77)+chr(65)+chr(73)+chr(78)+chr(95)+chr(83)+chr(72)+chr(65)]}`", t, count=1); p.write_text(t,encoding="utf-8")'
 
-          git rm .github/workflows/efood-lab-sync-main-once.yml
           git add -A
           git commit -m "Sync latest main into efood LAB validation"
           git push origin HEAD:feat/efood-pelican-lab-validation
