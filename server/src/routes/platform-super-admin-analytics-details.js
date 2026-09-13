@@ -211,7 +211,7 @@ async function premiumVarianceControls(body){
       WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
         AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
         AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
-      ORDER BY s."id",t."createdAt" DESC LIMIT ${findingLimit}`,
+      ORDER BY sh."id",COALESCE(s."occurredAt",s."createdAt"),s."id" LIMIT ${findingLimit}`,
     hasActionAudit?prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."actionType",a."reason",a."actorName",a."createdAt",a."details"
       FROM "PosSaleActionAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND COALESCE(a."details"->>'sessionId','')=sh."id"
@@ -226,14 +226,20 @@ async function premiumVarianceControls(body){
       ORDER BY a."createdAt" DESC LIMIT ${findingLimit}`:Promise.resolve([]),
     Promise.resolve([{exists:hasOperationalEvents}])
   ]);
-  const bySession=new Map();
-  for(const sale of sales){const key=`${sale.sessionId}:${sale.actorId||sale.actorName||'unknown'}:${sale.basketSignature}:${number(sale.total).toFixed(2)}`;const list=bySession.get(key)||[];list.push(sale);bySession.set(key,list)}
+  const salesBySession=new Map();
+  for(const sale of sales){const list=salesBySession.get(sale.sessionId)||[];list.push(sale);salesBySession.set(sale.sessionId,list)}
   const findings=[];
-  for(const group of bySession.values())for(let index=1;index<group.length;index++){
-    const previous=group[index-1],current=group[index],minutes=Math.abs(new Date(current.occurredAt||current.createdAt)-new Date(previous.occurredAt||previous.createdAt))/60000;
-    if(minutes>10)continue;
-    const paymentChanged=previous.paymentMethods!==current.paymentMethods;
-    findings.push({id:`sale-match:${previous.saleId}:${current.saleId}`,code:paymentChanged?"POTENTIAL_PAYMENT_SWITCH_DUPLICATE":"POTENTIAL_DUPLICATE_SALE",title:paymentChanged?"Πιθανή αλλαγή μετρητά/κάρτα χωρίς αντίστροφη εγγραφή":"Πιθανή διπλή POS συναλλαγή",sessionId:current.sessionId,shiftLabel:current.shiftLabel,terminalPos:current.terminalPos,occurredAt:current.occurredAt||current.createdAt,operatorName:current.actorName||"Χωρίς διαθέσιμο χειριστή",amount:number(current.total),saleIds:[previous.saleId,current.saleId],paymentMethods:[previous.paymentMethods,current.paymentMethods],minutesApart:Number(minutes.toFixed(1)),basketMatched:true,transactions:[previous,current].map(sale=>({saleId:sale.saleId,receiptNumber:sale.receiptNumber||null,occurredAt:sale.occurredAt||sale.createdAt,total:number(sale.total),paymentMethods:sale.paymentMethods||"—",items:sale.basketLines||"—"})),possibleExplanation:paymentChanged?"Ίδιο καλάθι και ποσό καταχωρήθηκαν κοντά χρονικά με διαφορετικό τρόπο πληρωμής. Επιβεβαίωσε αν η αρχική πληρωμή ακυρώθηκε/επιστράφηκε.":"Ίδιο καλάθι, ποσό και τρόπος πληρωμής καταχωρήθηκαν δύο φορές στην ίδια βάρδια. Επιβεβαίωσε πριν αποδώσεις αιτία στην απόκλιση."});
+  for(const group of salesBySession.values()){
+    group.sort((a,b)=>new Date(a.occurredAt||a.createdAt)-new Date(b.occurredAt||b.createdAt)||String(a.saleId).localeCompare(String(b.saleId)));
+    for(let index=1;index<group.length;index++)for(let distance=1;distance<=premiumDuplicateMaxTransactionDistance&&distance<=index;distance++){
+      const previous=group[index-distance],current=group[index];
+      const seconds=Math.abs(new Date(current.occurredAt||current.createdAt)-new Date(previous.occurredAt||previous.createdAt))/1000;
+      const sameOperator=(previous.actorId||previous.actorName||"unknown")===(current.actorId||current.actorName||"unknown");
+      const sameBasket=previous.basketSignature===current.basketSignature&&number(previous.total).toFixed(2)===number(current.total).toFixed(2);
+      if(seconds>premiumDuplicateWindowSeconds||!sameOperator||!sameBasket)continue;
+      const paymentChanged=previous.paymentMethods!==current.paymentMethods;
+      findings.push({id:`sale-match:${previous.saleId}:${current.saleId}`,code:paymentChanged?"POTENTIAL_PAYMENT_SWITCH_DUPLICATE":"POTENTIAL_DUPLICATE_SALE",title:paymentChanged?"Πιθανή αλλαγή μετρητά/κάρτα χωρίς αντίστροφη εγγραφή":"Πιθανή διπλή POS συναλλαγή",sessionId:current.sessionId,shiftLabel:current.shiftLabel,terminalPos:current.terminalPos,occurredAt:current.occurredAt||current.createdAt,operatorName:current.actorName||"Χωρίς διαθέσιμο χειριστή",amount:number(current.total),saleIds:[previous.saleId,current.saleId],paymentMethods:[previous.paymentMethods,current.paymentMethods],secondsApart:Number(seconds.toFixed(0)),transactionDistance:distance,basketMatched:true,transactions:[previous,current].map(sale=>({saleId:sale.saleId,receiptNumber:sale.receiptNumber||null,occurredAt:sale.occurredAt||sale.createdAt,total:number(sale.total),paymentMethods:sale.paymentMethods||"—",items:sale.basketLines||"—"})),possibleExplanation:paymentChanged?`Ίδιο καλάθι και ποσό καταχωρήθηκαν με διαφορετικό τρόπο πληρωμής σε ${Number(seconds.toFixed(0))}″ (${distance===1?"αμέσως επόμενη":"μεθεπόμενη"} συναλλαγή). Επιβεβαίωσε αν η αρχική πληρωμή ακυρώθηκε/επιστράφηκε.`:`Ίδιο καλάθι, ποσό και τρόπος πληρωμής καταχωρήθηκαν δύο φορές σε ${Number(seconds.toFixed(0))}″ (${distance===1?"αμέσως επόμενη":"μεθεπόμενη"} συναλλαγή). Επιβεβαίωσε πριν αποδώσεις αιτία στην απόκλιση.`});
+    }
   }
   const reversalGroups=new Map();
   for(const row of reversalAudits){const saleId=row.relatedSaleId||row.saleId;if(!saleId)continue;const key=`${row.sessionId}:${saleId}`,list=reversalGroups.get(key)||[];list.push(row);reversalGroups.set(key,list)}

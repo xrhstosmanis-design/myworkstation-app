@@ -9,7 +9,7 @@ test("PREMIUM controls are gated, read-only and reconcile only inside one closed
   assert.match(route,/scope:"PER_CLOSED_SHIFT_ONLY"/);
   assert.match(route,/t\."sessionId"=sh\."id"/);
   assert.match(route,/basketSignature/);
-  assert.match(route,/POTENTIAL_PAYMENT_SWITCH_DUPLICATE/);
+  assert.match(route,/POTENTIAL_PAYMENT_SWITCH_DUPLICATE/);\n  assert.match(route,/premiumDuplicateWindowSeconds=40/);\n  assert.match(route,/premiumDuplicateMaxTransactionDistance=2/);\n  assert.match(route,/seconds>premiumDuplicateWindowSeconds/);\n  assert.match(route,/distance<=premiumDuplicateMaxTransactionDistance/);
   assert.match(route,/POTENTIAL_REPEATED_REVERSAL/);
   assert.match(route,/PosOperationalEvent/);
   assert.match(route,/readOnly:true/);
