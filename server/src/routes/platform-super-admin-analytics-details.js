@@ -160,7 +160,12 @@ async function completePaymentControls(body){
       ORDER BY t."occurredAt" DESC,t."id" DESC LIMIT ${findingLimit}`,
     prisma.$queryRaw`
       SELECT MIN(t."occurredAt") AS "occurredAt",t."supplierId",COALESCE(NULLIF(MIN(t."supplierName"),''),MIN(sp."name"),'Χωρίς όνομα προμηθευτή') AS "supplierName",
-        t."amount",COUNT(*)::int AS "transactionCount",ARRAY_AGG(t."id" ORDER BY t."occurredAt") AS "transactionIds",st."name" AS "storeName"
+        t."amount",COUNT(*)::int AS "transactionCount",ARRAY_AGG(t."id" ORDER BY t."occurredAt",t."id") AS "transactionIds",st."name" AS "storeName",
+        JSON_AGG(JSON_BUILD_OBJECT(
+          'transactionId',t."id",'occurredAt',t."occurredAt",'amount',t."amount",'type',t."type",
+          'description',t."description",'actorName',t."actorName",'attachmentFilename',t."attachmentFilename",
+          'hasAttachment',(t."attachmentData" IS NOT NULL OR COALESCE(t."attachmentMimeType",'')='application/vnd.myworkstation.purchase-document')
+        ) ORDER BY t."occurredAt",t."id") AS "transactions"
       FROM "StoreTransaction" t
       JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
       LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND sp."companyId"=t."companyId"
@@ -174,8 +179,8 @@ async function completePaymentControls(body){
       ORDER BY MIN(t."occurredAt") DESC LIMIT ${findingLimit}`
   ]);
   const findings=[
-    ...withoutEvidence.map(row=>({id:`payment-evidence:${row.id}`,code:"PAYMENT_WITHOUT_EVIDENCE",title:"Πληρωμή χωρίς συνημμένο παραστατικό",occurredAt:row.occurredAt,amount:number(row.amount),type:row.type,supplierName:row.supplierName||null,description:row.description||null,actorName:row.actorName||null,storeName:row.storeName||null,referenceId:row.id})),
-    ...duplicateGroups.map(row=>({id:`payment-duplicate:${row.transactionIds?.join(':')||row.supplierId}`,code:"POTENTIAL_DUPLICATE_SUPPLIER_PAYMENT",title:"Πιθανή διπλή πληρωμή προμηθευτή",occurredAt:row.occurredAt,amount:number(row.amount),transactionCount:Number(row.transactionCount||0),supplierName:row.supplierName||null,storeName:row.storeName||null,referenceId:(row.transactionIds||[]).join(', ')}))
+    ...withoutEvidence.map(row=>({id:`payment-evidence:${row.id}`,code:"PAYMENT_WITHOUT_EVIDENCE",title:"Πληρωμή χωρίς συνημμένο παραστατικό",occurredAt:row.occurredAt,amount:number(row.amount),type:row.type,supplierName:row.supplierName||null,description:row.description||null,actorName:row.actorName||null,storeName:row.storeName||null,referenceId:row.id,evidence:{transactions:[{transactionId:row.id,occurredAt:row.occurredAt,amount:number(row.amount),type:row.type,description:row.description||null,actorName:row.actorName||null,attachmentFilename:null,hasAttachment:false}]}})),
+    ...duplicateGroups.map(row=>({id:`payment-duplicate:${row.transactionIds?.join(':')||row.supplierId}`,code:"POTENTIAL_DUPLICATE_SUPPLIER_PAYMENT",title:"Πιθανή διπλή πληρωμή προμηθευτή",occurredAt:row.occurredAt,amount:number(row.amount),transactionCount:Number(row.transactionCount||0),supplierName:row.supplierName||null,storeName:row.storeName||null,referenceId:(row.transactionIds||[]).join(', '),evidence:{transactions:(row.transactions||[]).map(transaction=>({...transaction,amount:number(transaction.amount)}))}}))
   ];
   return {enabled:true,readOnly:true,findings,withoutEvidenceCount:withoutEvidence.length,potentialDuplicateCount:duplicateGroups.length,status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
 }
