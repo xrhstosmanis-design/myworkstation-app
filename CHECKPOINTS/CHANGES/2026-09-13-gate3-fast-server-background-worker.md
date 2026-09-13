@@ -1,7 +1,7 @@
 # Checkpoint — Gate 3 γρήγορη επιστροφή στο POS με ανάγνωση στον server
 
 **Ημερομηνία:** 13/09/2026
-**Κατάσταση:** Τοπικό PASS · αναμονή CI/merge/Render και LIVE δοκιμής Χρήστου
+**Κατάσταση:** CI / merge / ακριβές Render revision PASS · αναμονή LIVE δοκιμής Χρήστου
 
 ## Δεσμευτικός κανόνας ροής
 
@@ -31,4 +31,7 @@
 - Πλήρες server suite: 1.168/1.168 PASS.
 - Client production build: PASS.
 - Server build / Prisma generation: PASS.
+- PR #796 / CI #2051: PASS και merge στο `main` ως `69191d253a08a8cdb2291e753e7dd3f9986699b1`.
+- CI `main` #2053: PASS.
+- Render deploy #1086: PASS. Το βήμα «Wait for exact production revision» επιβεβαίωσε υγιές `/api/health` στο ακριβές revision `69191d253a08a8cdb2291e753e7dd3f9986699b1`.
 - LIVE PASS: εκκρεμεί και θα καταγραφεί μόνο από τη δοκιμή του Χρήστου μετά το ακριβές deploy.
