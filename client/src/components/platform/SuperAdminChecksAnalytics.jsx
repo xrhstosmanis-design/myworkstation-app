@@ -209,7 +209,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     <section className="sa-scope-note"><ShieldCheck/><div><b>Τι καλύπτει ο έλεγχος</b><p>Οι ημερομηνίες εφαρμόζονται στις βάρδιες και στις διαφορές ταμείου/POS–EFTPOS. Το Ταμείο Τράπεζας είναι τρέχον λογιστικό υπόλοιπο και φιλτράρεται μόνο ανά ιδιοκτήτη και κατάστημα.</p></div></section>
     {busy&&<section className="platform-panel" style={{marginBottom:14}}><b>Εκτελείται ο έλεγχος…</b><p>Συλλέγονται δεδομένα ανάγνωσης. Δεν αλλάζει βάρδια, ταμείο, τράπεζα, απόθεμα, παραστατικό ή υπόλοιπο.</p></section>}
     {result&&<>
-      <section className="platform-panel" style={{marginBottom:14}}><b>{scopeLabel}</b><p>{periodLabel}</p><small>Εκτέλεση: {athensDateTime(result.executedAt)} · Κατάσταση: {analytics.status||"—"}</small></section>
+      <section className="platform-panel" style={{marginBottom:14}}><b>{scopeLabel}</b><p>{periodLabel}</p><small>Εκτέλεση: {athensDateTime(result.executedAt)} · Κατάσταση: {premium.enabled?"Τελικό αποτέλεσμα ανά βάρδια για έγκριση":analytics.status||"—"}</small></section>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:14}}>
         <article className="platform-panel"><small>Βάρδιες</small><h3>{totalShifts}</h3></article>
         <article className="platform-panel"><small>Καθαρή διαφορά μετρητών</small><h3>{eur(totalCashVariance)}</h3></article>

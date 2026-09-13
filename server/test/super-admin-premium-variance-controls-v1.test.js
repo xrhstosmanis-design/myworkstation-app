@@ -27,5 +27,6 @@ test("PREMIUM controls are gated, read-only and reconcile only inside one closed
   assert.match(ui,/Εσύ εγκρίνεις το τελικό αποτέλεσμα/);
   assert.match(ui,/\{!premium\.enabled&&<section className="platform-panel"/);
   assert.match(ui,/Βάρδιες με τελικό αποτέλεσμα/);
+  assert.match(ui,/premium\.enabled\?"Τελικό αποτέλεσμα ανά βάρδια για έγκριση"/);
   assert.match(ui,/Λειτουργικό συμβάν/);
 });
