@@ -13,11 +13,11 @@ test("BackOffice refresh reclaims only durable, stale POS handoffs without a pay
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
 });
 
-test("orders refresh invokes durable handoff recovery before loading the report",()=>{
+test("orders refresh starts durable handoff recovery without blocking the report",()=>{
   const start=orders.indexOf("async function loadReport");
   const body=orders.slice(start,orders.indexOf("async function loadStock",start));
   assert.match(body,/\/api\/commerce\/ai-reader\/fast-recover/);
-  assert.ok(body.indexOf("fast-recover")<body.indexOf("/api/purchase-orders/report"));
+  assert.ok(body.indexOf("fast-recover")>body.indexOf("/api/purchase-orders/report"));
 });
 
 test("AI recheck applies verified printed column recovery before reconciliation",()=>{
