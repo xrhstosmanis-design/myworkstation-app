@@ -4,9 +4,10 @@
 
 - **Branch:** `feat/efood-pelican-foundation`
 - **Βάση:** σημερινό `main` commit `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf`
-- **Feature head πριν από το τελικό CI:** `25bb75cba6ee8beaf88e7b1d38181c4deb050833`
+- **Feature head που ελέγχθηκε:** `cd7edbb873952ad1047e51db64d7aa776dd90fa1`
+- **Draft PR:** `#758`
 - **Συγχρονισμός:** το νεότερο `main` συγχωνεύτηκε μόνο προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
-- **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ`
+- **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ — CI PASS / LAB MOCK PENDING`
 - **Production ενεργοποίηση:** ΟΧΙ
 - **Test vendor:** ΑΝΑΜΟΝΗ ΑΠΟ EFOOD
 
@@ -31,21 +32,22 @@
 - Δεν καλείται RBS, CapDriver ή EFTPOS.
 - Δεν εκδίδεται φορολογικό παραστατικό.
 - Δεν χρησιμοποιούνται production credentials ή production endpoint.
+- Δεν έγινε merge στο `main`.
 
 ## Έλεγχοι
 
 - `node --check` στα νέα/τροποποιημένα server αρχεία: PASS.
 - JSX parse της οθόνης ασφαλών διασυνδέσεων: PASS.
 - `server/test/efood-pelican-foundation-v1.test.js`: **9/9 PASS**.
-- CI #1948: **PASS σε όλα τα gates**, μαζί με checkpoint policy, Prisma preparation, security/licensing, client build, Work/Render contracts, KAT safety invariants, isolated PostgreSQL και πραγματικά HTTP E2E flows.
-- Μετά το CI #1948, το `main` προχώρησε στο `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf` μέσω PR #766 και συγχρονίστηκε ξανά μόνο προς το feature branch.
-- Τελική σύγκριση με το νέο `main`: **14 αναμενόμενα αρχεία και 0 commits πίσω**.
-- Η παρούσα ανθρώπινη ενημέρωση εκκινεί το τελικό πλήρες CI πάνω στη νέα βάση.
+- CI #1948: PASS σε όλα τα gates στην προηγούμενη συγχρονισμένη βάση.
+- Μετά το PR #766, το branch συγχρονίστηκε ξανά με `main` `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf`.
+- Τελική σύγκριση: **14 αναμενόμενα αρχεία και 0 commits πίσω**.
+- CI #1952 στο commit `cd7edbb873952ad1047e51db64d7aa776dd90fa1`: **PASS σε όλα τα gates**.
+- Πέρασαν checkpoint policy, Prisma preparation, security/licensing, client build, Work/Render contracts, KAT safety/pre-install invariants, isolated PostgreSQL και πραγματικά HTTP E2E flows.
 
 ## Επόμενα υποχρεωτικά βήματα
 
-1. Πράσινο τελικό GitHub CI στο draft PR #758.
-2. Μετά από PASS, μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
-3. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
-4. Νέα ρητή έγκριση πριν από οποιαδήποτε ενεργοποίηση live sandbox webhook ή πραγματικό API call.
-5. End-to-end Pelican tests (`READY_FOR_PICKUP`, `CANCELLED`, replay, recovery) πριν από σύνδεση με OnlineOrder/POS/stock/payment/fiscal.
+1. Μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
+2. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
+3. Νέα ρητή έγκριση πριν από οποιαδήποτε ενεργοποίηση live sandbox webhook, πραγματικό API call ή merge στο `main`.
+4. End-to-end Pelican tests (`READY_FOR_PICKUP`, `CANCELLED`, replay, recovery) πριν από σύνδεση με OnlineOrder/POS/stock/payment/fiscal.
