@@ -17,3 +17,9 @@
   line-height:1.05;
   font-size:calc(9px * var(--pos-button-font) * var(--pos-text-scale))!important;
 }
+
+
+/* Brief POS feedback stays compact without moving the sale grid. */
+.store-pos-alert.store-pos-toast{position:fixed;top:100px;left:12px;z-index:4500;display:flex;align-items:flex-start;gap:8px;width:max-content;max-width:min(560px,calc(100vw - 24px));box-sizing:border-box;margin:0;padding:8px 10px;font-size:14px;line-height:1.4;border:1px solid #b5dcc9;box-shadow:0 4px 16px #173e3626}
+.store-pos-toast>span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.store-pos-toast>button{flex:none;width:32px;height:32px;padding:0;border:0;border-radius:6px;background:#ffffffa6;color:inherit;font-size:20px;cursor:pointer}
