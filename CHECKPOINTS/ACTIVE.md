@@ -3,7 +3,7 @@
 - Ημερομηνία: 2026-09-13
 - Εργασία: efood / Pelican Indirect POS — LAB-only Phase A
 - Branch: `feat/efood-pelican-lab-validation`
-- Βάση έναρξης: `main` `93550e30ee4136e6f2a9ae5ffeef1e4ba3582135`
+- Βάση συγχρονισμού: `main` `7f93bb9fea7a3b57ace7a273981354098cb31b76`
 - Κατάσταση: ΣΕ ΔΟΚΙΜΗ — αναμονή CI, merge/deploy και live LAB mock validation
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-efood-pelican-phase-a-foundation.md`
 

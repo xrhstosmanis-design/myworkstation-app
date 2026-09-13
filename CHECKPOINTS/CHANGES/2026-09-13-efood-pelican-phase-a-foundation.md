@@ -3,7 +3,7 @@
 ## Κατάσταση
 
 - **Branch:** `feat/efood-pelican-lab-validation`
-- **Βάση έναρξης:** `main` commit `93550e30ee4136e6f2a9ae5ffeef1e4ba3582135`
+- **Βάση συγχρονισμού:** `main` commit `7f93bb9fea7a3b57ace7a273981354098cb31b76`
 - **Κατάσταση:** `ΣΕ ΔΟΚΙΜΗ`
 - **Περιβάλλον δοκιμών:** αποκλειστικά `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`
 - **Test vendor:** αναμονή από efood
