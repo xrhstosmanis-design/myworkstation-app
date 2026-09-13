@@ -28,6 +28,17 @@ test("owner product flow preserves master catalog and store pricing rules",()=>{
   assert.match(route,/vatVerified/);
 });
 
+test("product quality catalogue never reuses stale supplier data",()=>{
+  assert.match(route,/router\.get\("\/catalog"[\s\S]*Cache-Control","no-store, no-cache, must-revalidate, private/);
+  assert.match(client,/owner-products\/catalog\?q=\$\{encodeURIComponent\(catalogQuery\.trim\(\)\)\}&_=\$\{Date\.now\(\)\}/);
+});
+
+test("saving the full inventory card refreshes the outer product quality list",()=>{
+  assert.match(inventoryCard,/dispatchEvent\(new CustomEvent\("mws:owner-products-refresh"/);
+  assert.match(client,/addEventListener\("mws:owner-products-refresh",refresh\)/);
+  assert.match(client,/removeEventListener\("mws:owner-products-refresh",refresh\)/);
+});
+
 test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/router\.patch\("\/:productId\/card"/);
   assert.match(route,/ownedProduct\(company,req\.params\.productId\)/);
@@ -44,6 +55,9 @@ test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/SupplierProductLink/);
   assert.match(route,/supplierCode:z\.string\(\)\.trim\(\)\.max\(120\)\.default\(""\)/);
   assert.match(route,/\$\{row\.supplierCode\|\|null\}/);
+  assert.match(route,/!body\.supplierCodes\.length&&body\.supplierName/);
+  assert.match(route,/REGEXP_REPLACE\(TRIM\("name"\)/);
+  assert.match(route,/body\.supplierCodes=\[\{supplierId:inferred\[0\]\.id,supplierCode:""\}\]/);
   assert.match(route,/PRODUCT_CARD_UPDATED/);
   assert.match(route,/changes:storeChanges,actorName/);
   assert.match(route,/Λιανική καταστήματος/);

@@ -69,6 +69,11 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
   const qualityProducts=useMemo(()=>catalogWithQuality.filter(product=>product.qualityIssues.length),[catalogWithQuality]);
   const visibleCatalog=qualityOnly?qualityProducts:catalogWithQuality;
   useEffect(()=>{sessionStorage.setItem("mws:owner-products-tab",tab)},[tab]);
+  useEffect(()=>{
+    const refresh=()=>loadCatalog();
+    window.addEventListener("mws:owner-products-refresh",refresh);
+    return()=>window.removeEventListener("mws:owner-products-refresh",refresh);
+  });
   const clearStatus=()=>{setError("");setMessage("")};
 
   const searchMaster=async event=>{
@@ -99,7 +104,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
 
   const loadCatalog=async()=>{
     clearStatus();setBusy(true);
-    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(catalogQuery.trim())}`))}catch(e){setError(e.message)}finally{setBusy(false)}
+    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(catalogQuery.trim())}&_=${Date.now()}`))}catch(e){setError(e.message)}finally{setBusy(false)}
   };
 
   const chooseProduct=row=>{

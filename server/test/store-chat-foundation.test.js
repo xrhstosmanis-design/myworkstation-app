@@ -31,7 +31,15 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/canComplete:canPin/);
   assert.match(route,/StoreChatTask/);
   assert.match(route,/StoreChatSettings/);
+  assert.match(route,/StoreChatAcknowledgement/);
   assert.match(route,/invoiceAiReaderEnabled/);
+  assert.match(route,/announcementAcknowledgementRequired/);
+  assert.match(route,/STORE_CHAT_ANNOUNCEMENT_ACK_REQUIRED/);
+  assert.match(route,/STORE_CHAT_ANNOUNCEMENT_ACK_DISABLED/);
+  assert.match(route,/STORE_CHAT_ANNOUNCEMENT_ACKNOWLEDGED/);
+  assert.match(route,/CHAT_ANNOUNCEMENT_ACK_DISABLED/);
+  assert.match(route,/found\[0\]\.category!=="ANNOUNCEMENT"/);
+  assert.match(route,/ON CONFLICT \("messageId","userId"\) DO NOTHING/);
   assert.match(route,/STORE_CHAT_INVOICE_AI_READER_ENABLED/);
   assert.match(route,/STORE_CHAT_INVOICE_AI_READER_DISABLED/);
   assert.match(route,/STORE_CHAT_INVOICE_SENT_TO_AI_READER/);
@@ -71,6 +79,9 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/AI Reader: \{settings\.invoiceAiReaderEnabled\?"Ενεργό":"Ανενεργό"\}/);
   assert.match(panel,/Αποστολή στο AI Reader/);
   assert.match(panel,/Στάλθηκε στο AI Reader από:/);
+  assert.match(panel,/Επιβεβαίωση: \{settings\.announcementAcknowledgementRequired\?"Ενεργή":"Ανενεργή"\}/);
+  assert.match(panel,/Επιβεβαίωση ανάγνωσης/);
+  assert.match(panel,/Επιβεβαίωσαν:/);
   assert.match(panel,/Εκκρεμότητες \(\{taskCount\}\)/);
   assert.match(panel,/store-chat-category/);
   assert.match(panel,/cache:"no-store"/);
