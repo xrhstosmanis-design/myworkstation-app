@@ -33,6 +33,12 @@ test("product quality catalogue never reuses stale supplier data",()=>{
   assert.match(client,/owner-products\/catalog\?q=\$\{encodeURIComponent\(catalogQuery\.trim\(\)\)\}&_=\$\{Date\.now\(\)\}/);
 });
 
+test("saving the full inventory card refreshes the outer product quality list",()=>{
+  assert.match(inventoryCard,/dispatchEvent\(new CustomEvent\("mws:owner-products-refresh"/);
+  assert.match(client,/addEventListener\("mws:owner-products-refresh",refresh\)/);
+  assert.match(client,/removeEventListener\("mws:owner-products-refresh",refresh\)/);
+});
+
 test("full product card is tenant scoped and keeps commercial history",()=>{
   assert.match(route,/router\.patch\("\/:productId\/card"/);
   assert.match(route,/ownedProduct\(company,req\.params\.productId\)/);

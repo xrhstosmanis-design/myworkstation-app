@@ -69,6 +69,11 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
   const qualityProducts=useMemo(()=>catalogWithQuality.filter(product=>product.qualityIssues.length),[catalogWithQuality]);
   const visibleCatalog=qualityOnly?qualityProducts:catalogWithQuality;
   useEffect(()=>{sessionStorage.setItem("mws:owner-products-tab",tab)},[tab]);
+  useEffect(()=>{
+    const refresh=()=>loadCatalog();
+    window.addEventListener("mws:owner-products-refresh",refresh);
+    return()=>window.removeEventListener("mws:owner-products-refresh",refresh);
+  });
   const clearStatus=()=>{setError("");setMessage("")};
 
   const searchMaster=async event=>{
