@@ -3,8 +3,8 @@
 ## Κατάσταση
 
 - **Branch:** `feat/efood-pelican-foundation`
-- **Βάση:** σημερινό `main` commit `df63b6bcb39e833b4acee63d3ae9763223432bfc` (μετά το PR #759)
-- **Συγχρονισμός:** PR #763 συγχώνευσε μόνο το νεότερο `main` προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
+- **Βάση:** σημερινό `main` commit `04dc6319d60d2804ffb23cda39bf1acec60e3a07` (μετά το PR #761)
+- **Συγχρονισμός:** τα PR #763 και #764 συγχώνευσαν μόνο το νεότερο `main` προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
 - **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ`
 - **Production ενεργοποίηση:** ΟΧΙ
 - **Test vendor:** ΑΝΑΜΟΝΗ ΑΠΟ EFOOD
@@ -42,7 +42,7 @@
 ## Επόμενα υποχρεωτικά βήματα
 
 1. Πράσινο GitHub CI στο draft PR #758.
-2. Μετά το deploy, μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
+2. Μετά από PASS, μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
 3. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
 4. Νέα ρητή έγκριση πριν από οποιαδήποτε ενεργοποίηση live sandbox webhook ή πραγματικό API call.
 5. End-to-end Pelican tests (`READY_FOR_PICKUP`, `CANCELLED`, replay, recovery) πριν από σύνδεση με OnlineOrder/POS/stock/payment/fiscal.
