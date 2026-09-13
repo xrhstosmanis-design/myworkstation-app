@@ -3,7 +3,8 @@
 ## Κατάσταση
 
 - **Branch:** `feat/efood-pelican-foundation`
-- **Βάση:** `main` commit `143b4e197c6eebafab79a4410160ca820b6c32c1` (μετά το PR #754)
+- **Βάση:** σημερινό `main` commit `df63b6bcb39e833b4acee63d3ae9763223432bfc` (μετά το PR #759)
+- **Συγχρονισμός:** PR #763 συγχώνευσε μόνο το νεότερο `main` προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
 - **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ`
 - **Production ενεργοποίηση:** ΟΧΙ
 - **Test vendor:** ΑΝΑΜΟΝΗ ΑΠΟ EFOOD
@@ -35,11 +36,12 @@
 - `node --check` στα νέα/τροποποιημένα server αρχεία: PASS.
 - JSX parse της οθόνης ασφαλών διασυνδέσεων: PASS.
 - `server/test/efood-pelican-foundation-v1.test.js`: **9/9 PASS**.
-- Πλήρες repository CI / build / isolated PostgreSQL E2E: εκκρεμεί στο PR.
+- Το branch είναι συγχρονισμένο με το σημερινό `main`: **0 commits πίσω**.
+- Πλήρες repository CI / build / isolated PostgreSQL E2E: εκκρεμεί στο draft PR #758.
 
 ## Επόμενα υποχρεωτικά βήματα
 
-1. Πράσινο GitHub CI στο PR.
+1. Πράσινο GitHub CI στο draft PR #758.
 2. Μετά το deploy, μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
 3. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
 4. Νέα ρητή έγκριση πριν από οποιαδήποτε ενεργοποίηση live sandbox webhook ή πραγματικό API call.
