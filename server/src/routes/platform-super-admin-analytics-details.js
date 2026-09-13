@@ -7,6 +7,10 @@ const router=Router();
 const cashTolerance=.009;
 const cardTolerance=.02;
 const findingLimit=500;
+// A duplicate / payment-switch candidate must be an immediate cashier action, not two
+// ordinary sales that merely happen to have the same basket later in the shift.
+const premiumDuplicateWindowSeconds=40;
+const premiumDuplicateMaxTransactionDistance=2;
 const number=value=>Number(value||0);
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 
