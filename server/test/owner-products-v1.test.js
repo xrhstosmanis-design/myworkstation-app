@@ -119,3 +119,10 @@ test("product card persists supplier by finalized purchase id before matching di
   assert.match(route,/purchaseSupplier\[0\][\s\S]*supplierId:purchaseSupplier\[0\]\.supplierId/);
   assert.match(route,/body\.supplierName&&!body\.supplierCodes\.length[\s\S]*status\(409\)/);
 });
+
+test("product details expose the exact supplier id from the visible purchase row",()=>{
+  assert.match(route,/d\."supplierId",s\."name" AS "supplierName"/);
+  assert.match(route,/o\."supplierId",s\."name"/);
+  assert.match(route,/const latestPurchaseWithSupplier=purchases\.find\(row=>row\.supplierId\)/);
+  assert.match(route,/res\.json\(\{supplierCodes,purchases,latestSupplier,suppliers/);
+});
