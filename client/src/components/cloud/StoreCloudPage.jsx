@@ -4,6 +4,7 @@ import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLaunch
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
 import OwnerPendingApprovals from "./OwnerPendingApprovals.jsx";
+import BarcodeRadioManagement from "./BarcodeRadioManagement.jsx";
 import StoreTransactionsPanel from "../store/StoreTransactionsPanel.jsx";
 
 const STORE_SYNC_KEY="myworkstation:store-sync";
@@ -103,6 +104,7 @@ export default function StoreCloudPage({api,store,onBack}){
       <CashControlPanel key={`cash-${version}`} api={api} store={store}/>
     </div>
     <div className="store-operations-actions">
+      <BarcodeRadioManagement api={api} store={store}/>
       <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
       <OwnerPendingApprovals api={api} store={store} onChanged={refresh}/>
     </div>

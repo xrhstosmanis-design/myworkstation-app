@@ -62,3 +62,12 @@ test("barcode sales report returns product totals and barcode breakdown",async()
   assert.match(source,/s\."companyId"=\$\{req\.user\.companyId\}/);
   assert.match(source,/s\."storeId"=\$\{store\.id\}/);
 });
+
+test("BackOffice exposes barcode approvals, report and paid radio configuration",async()=>{
+  const [page,panel,route]=await Promise.all([read("../../client/src/components/cloud/StoreCloudPage.jsx"),read("../../client/src/components/cloud/BarcodeRadioManagement.jsx"),read("../src/routes/store-pos-catalog.js")]);
+  assert.match(page,/BarcodeRadioManagement/);
+  assert.match(panel,/barcode-price-requests/);
+  assert.match(panel,/barcode-sales-report/);
+  assert.match(panel,/online-radio\/config/);
+  assert.match(route,/availableStations=req\.user\?\.tokenType!=="STORE_OPERATOR"&&moduleActive/);
+});

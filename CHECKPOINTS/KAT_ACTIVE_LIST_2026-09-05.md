@@ -968,4 +968,5 @@ Total output lines: 954
 - [x] Προστέθηκαν Super Admin CRUD σταθμών, ενεργοποίηση/allow-list ανά κατάστημα και Owner allow-list μόνο με ενεργό πληρωμένο module.
 - [x] Προστέθηκαν έγκριση/απόρριψη αλλαγής τιμής με audit και αναφορά συνολικών προϊόντος με ανάλυση ανά barcode.
 - [x] Client production build, server build, 6 στοχευμένα contract tests και πλήρης server suite 1123/1123: PASS.
-- [ ] Εκκρεμούν οι οθόνες BackOffice/Super Admin για τα management APIs, πράσινο CI, deploy και LAB δοκιμή.
+- [x] Προστέθηκε ενιαία οθόνη BackOffice ανά κατάστημα για εγκρίσεις τιμών Barcode, αναφορά ανά Barcode και επιλογή επιτρεπόμενων σταθμών.
+- [ ] Εκκρεμούν η κεντρική οθόνη Super Admin CRUD σταθμών, πράσινο CI, deploy και LAB δοκιμή.

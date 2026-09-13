@@ -192,7 +192,8 @@ router.get("/stores/:storeId/online-radio",async(req,res,next)=>{
     const store=req.storeOperatorStore,moduleRows=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`,config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0],terminal=String(req.user.terminalPos||"MAIN").trim().toUpperCase(),state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminal} LIMIT 1`)[0];
     const moduleActive=Boolean(moduleRows[0]?.enabled),enabled=moduleActive&&Boolean(config?.enabled),allowed=Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[];
     const stations=enabled&&allowed.length?await prisma.$queryRaw`SELECT "id","name","streamUrl" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${allowed}::text[]) ORDER BY "sortOrder","name"`:[];
-    res.json({moduleActive,enabled,stations,state:{stationId:state?.stationId||null,volume:state?.volume==null?.7:money(state.volume)},terminalPos:terminal});
+    const availableStations=req.user?.tokenType!=="STORE_OPERATOR"&&moduleActive?await prisma.$queryRaw`SELECT "id","name","streamUrl" FROM "OnlineRadioStation" WHERE "active"=TRUE ORDER BY "sortOrder","name"`:undefined;
+    res.json({moduleActive,enabled,stations,availableStations,allowedStationIds:availableStations?allowed:undefined,state:{stationId:state?.stationId||null,volume:state?.volume==null?.7:money(state.volume)},terminalPos:terminal});
   }catch(error){next(error)}
 });
 
