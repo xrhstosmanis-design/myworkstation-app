@@ -15,3 +15,9 @@ The user supplied BackOffice screenshot `021dfdb7-cc7b-4406-8a28-6f9979f2848d.pn
 ## Next step
 
 The user opens the pencil beside invoice 2612188 and supplies the detailed product rows. Compare codes, descriptions, quantities, units, prices, discounts and net values against both source pages before approval. Do not create the invoice/payment again, add an arbitrary balancing line or adjust the source total to conceal the difference.
+
+## Further user evidence and general learning requirement
+
+The follow-up screenshot `a394d473-44f1-493a-ab5d-4c922ecd81bf.png` confirms widespread line errors: retail displays zero, several quantities contain printed retail prices (4.8, 5, 4.3, 1.2), purchase prices and row order are wrong. All 38 rows require review.
+
+The user explicitly requires correction learning for every supplier and every store across the program. Reusable reading columns, units and item identities must be learned from confirmed corrections, while quantities and current prices still come from the new invoice. Implementation is in progress; this is not a learning PASS.
