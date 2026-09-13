@@ -10,17 +10,27 @@ test("POS persists every invoice page before starting full recognition",()=>{
   assert.match(route,/INSERT INTO "DocumentAttachment"/);
   assert.match(route,/POS_QUEUED/);
   assert.match(route,/posHandoff:handoff/);
-  const handoff=client.indexOf('/api/commerce/ai-reader/fast-handoff');
-  const background=client.indexOf('backgroundV244({api,store,pages',handoff);
-  assert.ok(handoff>=0&&background>handoff,"durable handoff must finish before full background OCR starts");
+  const response=route.indexOf('res.status(202).json');
+  const background=route.indexOf('setImmediate(()=>scheduleFastBackground',response);
+  assert.ok(response>=0&&background>response,"durable handoff response must be sent before full background OCR starts");
 });
 
-test("POS keeps the invoice modal alive until background registration finishes",()=>{
-  assert.match(client,/const success=mode==="PAID"\?`ℹ️ Η πληρωμή/);
-  assert.doesNotMatch(client,/const success=mode==="PAID"\?`✅ Πληρωμή/);
-  assert.match(client,/\.then\(created=>\{[^\n]*setBusy\(false\)/);
-  assert.match(client,/\.catch\(error=>\{setBusy\(false\)/);
-  assert.match(client,/created\?\.archived!==false/);
+test("POS closes the invoice modal immediately and only monitors server status",()=>{
+  assert.match(client,/const success=mode==="PAID"\?`✅ Πληρωμή/);
+  assert.match(client,/monitorBackgroundV244\(\{api,jobId:handoff\.jobId/);
+  assert.match(client,/\/ai-reader\/fast-status\//);
+  assert.doesNotMatch(client,/\/ai-reader\/jobs\/\$\{encodeURIComponent\(jobId\)\}\/ai-recheck/);
+  assert.match(route,/function scheduleFastBackground/);
+  assert.match(route,/\/ai-recheck/);
+  assert.match(route,/\/product-lines/);
+  assert.match(route,/\/pos-intake/);
+});
+
+test("status polling restarts a persisted queued worker after a server restart",()=>{
+  assert.match(route,/posHandoff:primaryHandoff/);
+  assert.match(route,/\["POS_QUEUED","POS_PROCESSING"\]\.includes\(job\.status\)/);
+  assert.match(route,/handoff\.pageJobIds/);
+  assert.match(route,/fastBackgroundWorkers\.has\(jobId\)/);
 });
 
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{

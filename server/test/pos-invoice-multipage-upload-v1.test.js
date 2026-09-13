@@ -39,12 +39,12 @@ test("camera preview attaches and plays the acquired stream before capture",()=>
 });
 
 test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
-  const background=client.slice(client.indexOf("async function backgroundV244"),client.indexOf("export default function"));
-  assert.match(background,/for\(const \[pageIndex,page\] of pages\.entries\(\)\)/);
-  assert.match(background,/ai-recheck.*additionalPageJobIds:pageJobs\.slice\(1\)/s);
-  assert.match(background,/const combinedLines=finalizeV244ProductLines/);
-  assert.match(background,/productLines:combinedLines/);
-  assert.match(background,/additionalPageJobIds:pageJobs\.slice\(1\)/);
+  const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(wrapper,/const pageJobIds=jobs\.map\(job=>job\.id\)/);
+  assert.match(background,/ai-recheck.*additionalPageJobIds/s);
+  assert.match(background,/const productLines=finalizeV244ProductLines/);
+  assert.match(background,/productLines/);
+  assert.match(background,/additionalPageJobIds/);
   assert.match(aiRecheck,/const fileParts=pageJobs\.map/);
   assert.match(aiRecheck,/content:\[\{type:"input_text",text:prompt\},\.\.\.fileParts\]/);
   assert.match(aiRecheck,/πρώτα από τη σελίδα 1, μετά από τη σελίδα 2/);
@@ -54,8 +54,8 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 });
 
 test("a multipage invoice is blocked rather than saved empty when no product lines are found",()=>{
-  const background=client.slice(client.indexOf("async function backgroundV244"),client.indexOf("export default function"));
-  assert.match(background,/if\(!combinedLines\.length\)throw new Error/);
+  const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(background,/if\(!productLines\.length\)throw new Error/);
   assert.doesNotMatch(background,/allowEmptyLines/);
   assert.match(wrapper,/if\(!lines\.length\)return res\.status\(409\)/);
   assert.match(intake,/rawLines\.length===0\)return res\.status\(409\)/);
@@ -69,8 +69,8 @@ test("a total mismatch is created as a BackOffice draft without stock posting",(
   assert.match(intake,/reconciliationDifference:z\.coerce\.number\(\)\.min\(0\)\.optional\(\)\.default\(0\)/);
   assert.match(intake,/reconciliationRequired:body\.reconciliationRequired/);
   assert.match(intake,/stockUpdated:false/);
-  assert.match(client,/created\?\.reconciliationRequired/);
-  assert.match(client,/Η πληρωμή έχει ήδη επαναχρησιμοποιηθεί/);
+  assert.match(client,/result\.reconciliationRequired/);
+  assert.match(client,/καταχωρίστηκε ως ΠΡΟΧΕΙΡΟ και χρειάζεται έλεγχο BackOffice/);
 });
 
 test("all page attachments are archived only after the single purchase is created",()=>{

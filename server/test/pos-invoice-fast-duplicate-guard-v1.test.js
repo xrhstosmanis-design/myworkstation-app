@@ -19,8 +19,8 @@ test("POS invoice checks the exact uploaded file before any payment",()=>{
 test("an incomplete AI job is resumed without a second upload or payment",()=>{
   assert.match(route,/resumable:true,resumeJobId:attachments\[0\]\.jobId/);
   assert.match(route,/paymentTransactionId:paymentByFile\[0\]\?\.id\|\|null/);
-  assert.match(client,/resumeJobId:duplicateCheck\?\.resumeJobId\|\|null/);
-  assert.match(client,/signal:new AbortController\(\)\.signal/);
+  assert.match(route,/existingJobs\[0\]\?\.id\|\|id\(\)/);
+  assert.match(route,/force:true,additionalPageJobIds/);
   assert.match(route,/paymentTransactionId:source\.paymentTransactionId\|\|null/);
 });
 
