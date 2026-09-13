@@ -1,4 +1,5 @@
 import {prisma} from "../prisma.js";
+import {applyConfirmedColumns,unitRelativeValues} from "./invoice-column-reading.js";
 
 const cleanTaxId=v=>String(v||"").replace(/\D/g,"");
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
@@ -11,7 +12,7 @@ export async function resolveCentralSupplierProfile(supplier={}){
   try{
     let rows=[];
     if(taxId)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 AND "isActive"=TRUE LIMIT 1`,taxId);
-    if(!rows.length&&name)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE ("normalizedName"=$1 OR $1 LIKE '%'||"normalizedName"||'%' OR "normalizedName" LIKE '%'||$1||'%') AND "isActive"=TRUE ORDER BY "updatedAt" DESC LIMIT 1`,name);
+    if(!rows.length&&!taxId&&name)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE ("normalizedName"=$1 OR $1 LIKE '%'||"normalizedName"||'%' OR "normalizedName" LIKE '%'||$1||'%') AND "isActive"=TRUE ORDER BY "updatedAt" DESC LIMIT 1`,name);
     const r=rows?.[0];
     return r?{supplierKey:r.supplierKey,supplierTaxId:r.supplierTaxId,supplierName:r.supplierName,ruleKey:r.ruleKey,profileVersion:r.profileVersion,...(r.profile||{}),updatedAt:r.updatedAt}:null;
   }catch(error){
@@ -111,10 +112,13 @@ function recoverDeclaredColumns(line,profile){
 
 function applyMappings(lines,profile){
   const mappings=profile?.mappings&&typeof profile.mappings==="object"?profile.mappings:{};
+  const unitKind=value=>/^(PIECE|PCS|PC|TEM|ΤΕΜ|TMX|ΤΜΧ)$/.test(norm(value))?"PIECE":/^(PACKAGE|CASE|BOX|KIB|ΚΙΒ|ΚΒ)$/.test(norm(value))?"PACKAGE":null;
   return (lines||[]).map(line=>{
     const code=norm(line?.supplierItemCode||line?.code);const m=code?mappings[code]:null;
     if(!m)return line;
-    return {...line,barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
+    const printedKind=unitKind(line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
+    const compatible=!printedKind||!learnedKind||printedKind===learnedKind;
+    return {...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
   });
 }
 
@@ -122,9 +126,10 @@ export async function applyCentralSupplierProfile(parsed){
   const profile=await resolveCentralSupplierProfile(parsed?.supplier||{});
   if(!profile)return {...parsed,supplierReadingProfile:null};
   let productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(x=>({...x})):[];
-  if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(recoverIfantisLine);
-  if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>recoverDeclaredColumns(line,profile));
-  if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(recoverQuantityFromLineTotal);
+  if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverIfantisLine(line));
+  if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverDeclaredColumns(line,profile));
+  if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverQuantityFromLineTotal(line));
+  productLines=productLines.map(line=>{const source=unitRelativeValues(sourceRow(line)),signature=source?Object.keys(source.values).join(","):"",columns=profile.readingRule?.confirmedColumnLayouts?.[signature];return columns&&!line.sourceColumnMap?applyConfirmedColumns(line,columns):line});
   productLines=applyMappings(productLines,profile);
   return {
     ...parsed,

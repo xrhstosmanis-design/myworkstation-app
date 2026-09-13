@@ -95,8 +95,8 @@ function applyLearningContract(line){
   const qty=Number(line.quantity||0);
   line.supplierItemCode=code;
   line.code=line.code||code;
-  line.unitPrice=price>0?money4(price):0;
-  line.unitCost=Number(line.unitCost||0)>0?money4(line.unitCost):line.unitPrice;
+  line.unitPrice=price>0?(line.sourceColumnsVerified?price:money4(price)):0;
+  line.unitCost=Number(line.unitCost||0)>0?(line.sourceColumnsVerified?Number(line.unitCost):money4(line.unitCost)):line.unitPrice;
   line.netValue=net>0?money2(net):0;
   line.netAmount=Number(line.netAmount||0)>0?money2(line.netAmount):line.netValue;
   line.netUnitCost=qty>0&&line.netValue>0?money4(line.netValue/qty):0;
@@ -108,7 +108,7 @@ function reconcileLine(input,index){
   const line={...input,autoCorrections:[...(input?.autoCorrections||[])],reviewReasons:[...(input?.reviewReasons||[])]};
   let quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||line.unitPrice||0),net=Number(line.netAmount||line.netValue||0),tax=Number(line.azureTax||0),vat=Number(line.vatRate||0),gross=Number(line.grossAmount||0);
 
-  sanitizeAzureDiscounts(line,quantity,unitCost,net);
+  if(!line.sourceColumnsVerified)sanitizeAzureDiscounts(line,quantity,unitCost,net);
   let factor=discountFactor(line);
 
   if(quantity>0&&unitCost<=0&&net>0&&factor>0){
@@ -123,7 +123,7 @@ function reconcileLine(input,index){
   // A verified discount is authoritative for the line economics. Azure may expose
   // the pre-discount Amount as NetAmount/GrossAmount while the raw row contains a
   // mathematically verified discount pair. Recompute net before VAT in that case.
-  if(quantity>0&&unitCost>0&&hasVerifiedDiscount(line)){
+  if(!line.sourceColumnsVerified&&quantity>0&&unitCost>0&&hasVerifiedDiscount(line)){
     const discountedNet=money2(quantity*unitCost*discountFactor(line));
     if(discountedNet>0&&Math.abs(discountedNet-net)>0.02){
       pushCorrection(line,'netAmount',net,discountedNet,'VERIFIED_DISCOUNT_RECALCULATED_NET');
@@ -159,10 +159,10 @@ function reconcileLine(input,index){
   if(quantity>0&&unitCost>0&&net>0){
     const expectedNet=money2(quantity*unitCost*factor);
     const diff=Math.abs(expectedNet-net);
-    if(diff<=tolerance(net,0.05,0.015)){
+    if(diff<=(line.sourceColumnsVerified?0.03:tolerance(net,0.05,0.015))){
       line.mathVerified=true;
       line.expectedNetAmount=expectedNet;
-      if(diff>0.02){
+      if(diff>0.02&&!line.sourceColumnsVerified){
         pushCorrection(line,'netAmount',net,expectedNet,'QTY_PRICE_DISCOUNT_MATH');line.netAmount=net=expectedNet;
         if(vat>0){const expectedTax=money2(net*vat/100);if(Math.abs(tax-expectedTax)>0.02){pushCorrection(line,'azureTax',tax,expectedTax,'RECALCULATED_AFTER_NET_CORRECTION');line.azureTax=tax=expectedTax}}
         const expectedGross=money2(net+(tax>0?tax:(vat>0?net*vat/100:0)));if(expectedGross>0)line.grossAmount=gross=expectedGross;
@@ -223,3 +223,4 @@ export function reconcileAzureInvoice(parsed){
   };
   return result;
 }
+

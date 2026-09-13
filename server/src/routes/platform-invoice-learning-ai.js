@@ -2,6 +2,7 @@ import crypto from "crypto";
 import {Router} from "express";
 import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {extractAzureColumns,combineAzureRows} from "../lib/invoice-column-reading.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
 
 const router=Router();
@@ -187,7 +188,7 @@ function findAntzoulatosRow(rows,description){
 function normalizeRetailPackaging(line){
   const raw=String(line?.azureRawRow||line?.rawText||"");
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||"").trim();
-  const caseInvoice=isCaseUnit(`${invoiceUnit} ${raw}`);
+  const caseInvoice=line.confirmedPackMapping?Number(line.unitsPerPackage)>1:isCaseUnit(`${invoiceUnit} ${raw}`);
   const pack=Math.max(0,Number(line?.unitsPerPackage||0))||packageFromText(`${line?.description||""} ${raw}`);
   const invoiceQuantity=Math.max(0,Number(line?.invoiceQuantity??line?.quantity??0));
   const packageUnitPrice=Math.max(0,Number(line?.packageUnitPrice??line?.unitPrice??0));
@@ -302,7 +303,7 @@ function normalizeAzure(payload){
   // Therefore this is intentionally detected from table geometry, not gated
   // by the supplier label returned by Azure.
   const ohonosRows=ohonosTableRows(result);
-  const productLines=items.map((item,index)=>{
+  let productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
     const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
     const description=textField(p.Description)||textField(p.ProductName)||textField(p.ItemDescription);
@@ -344,6 +345,7 @@ function normalizeAzure(payload){
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
     return normalizeRetailPackaging({supplierItemCode:ohonosTableRow?.supplierItemCode||supplierItemCode,description:ohonosTableRow?.description||description,quantity,invoiceQuantity:quantity,unit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",stockUnit:ohonosRow?"PCS":"",invoiceUnit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:ohonosRow?0:unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
+  productLines=combineAzureRows(productLines,extractAzureColumns(result)).map(line=>line.sourceColumnMap?{...line,supplierItemCode:line.code,unitPrice:line.unitCost,invoiceQuantity:line.quantity,invoiceUnit:line.unit,netUnitCost:line.quantity>0?line.netAmount/line.quantity:0,confidence:pct(doc.confidence),mathValidated:line.sourceColumnsVerified,needsReview:!line.sourceColumnsVerified}:line);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
   const lineConfs=productLines.map(x=>x.confidence).filter(Boolean);
@@ -364,7 +366,7 @@ async function applyLearnedKnowledge(result){
     result.productLines=(result.productLines||[]).map(line=>{
       let best=null,score=0;for(const k of supplierKnowledge){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
       if(!best||score<120)return normalizeRetailPackaging(line);
-      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
+      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:line.confirmedPackMapping?line.invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:line.confirmedPackMapping?Number(line.unitsPerPackage):Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:line.sourceColumnMap?Number(line.vatRate||0):Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
     });
   }catch(error){console.warn("Invoice Learning knowledge apply skipped:",error?.message||error)}
   return result;
@@ -413,8 +415,9 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
   const text=outputText(raw);if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα."});
   let result;try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο JSON."})}
-  result=await applyLearnedKnowledge({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result});
+  result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
   res.json(result);
 }catch(error){next(error)}});
 
 export default router;
+

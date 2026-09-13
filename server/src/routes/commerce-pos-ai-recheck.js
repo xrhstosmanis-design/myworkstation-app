@@ -5,6 +5,8 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
+import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -62,15 +64,18 @@ const normalizeProductLine=line=>{
 const lineGrossTotal=lines=>money2((lines||[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
 const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
 function mergeRecoveredLines(current,recovered){
-  const out=(current||[]).map(line=>({...line}));
+  const out=(current||[]).map(line=>({...line})),used=new Set();
   for(const candidate of recovered||[]){
     if(!String(candidate?.description||candidate?.rawText||"").trim())continue;
+    const available=(line,index)=>!used.has(index)&&(line.sourceFileIndex===undefined||candidate.sourceFileIndex===undefined||line.sourceFileIndex===candidate.sourceFileIndex)&&(line.sourcePage===undefined||candidate.sourcePage===undefined||line.sourcePage===candidate.sourcePage);
     let index=-1;
-    if(candidate.code)index=out.findIndex(line=>line.code&&norm(line.code)===norm(candidate.code));
-    if(index<0)index=out.findIndex(line=>descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
-    if(index<0){out.push(normalizeProductLine(candidate));continue}
+    if(candidate.code)index=out.findIndex((line,i)=>available(line,i)&&line.code&&norm(line.code)===norm(candidate.code));
+    if(index<0)index=out.findIndex((line,i)=>available(line,i)&&!(line.code&&candidate.code&&norm(line.code)!==norm(candidate.code))&&descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
+    if(index<0){used.add(out.length);out.push(normalizeProductLine(candidate));continue}
+    used.add(index);
     const line=out[index];
-    out[index]=normalizeProductLine({...line,
+    if(line.sourceColumnsVerified&&!candidate.sourceColumnsVerified)continue;
+    out[index]=normalizeProductLine({...line,...(candidate.sourceColumnsVerified?candidate:{}),
       rawText:candidate.rawText||line.rawText,code:candidate.code||line.code,barcode:candidate.barcode||line.barcode,description:candidate.description||line.description,
       quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,unit:candidate.unit||line.unit,unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
       unitCost:Number(candidate.unitCost||0)>0?candidate.unitCost:line.unitCost,retailPrice:Number(candidate.retailPrice||0)>0?candidate.retailPrice:line.retailPrice,netAmount:Number(candidate.netAmount||0)>0?candidate.netAmount:line.netAmount,
@@ -79,8 +84,9 @@ function mergeRecoveredLines(current,recovered){
       discount3:Number(candidate.discount3||0)>0?candidate.discount3:line.discount3,discount3Amount:Number(candidate.discount3Amount||0)>0?candidate.discount3Amount:line.discount3Amount,
       vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
       confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))});
+    if(candidate.sourceColumnsVerified)out[index]=normalizeProductLine({...out[index],...candidate});
   }
-  return out;
+  return out.some(line=>line.sourceColumnsVerified)?out.sort(sourceOrder):out;
 }
 
 function mergeAzureInvoicePages(pages){
@@ -97,7 +103,7 @@ function mergeAzureInvoicePages(pages){
     // "Σε/Από μεταφορά" across pages.
     if(pageTotal>0){totalGross=pageTotal;finalTotalPage=pageIndex+1}
     const pageLines=Array.isArray(result.productLines)?result.productLines:[];
-    productLines.push(...pageLines.filter(line=>String(line?.description||line?.rawText||"").trim()).map(normalizeProductLine));
+    productLines.push(...pageLines.filter(line=>String(line?.description||line?.rawText||"").trim()).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
     const visible=Array.isArray(result.lines)?result.lines:[];
     auditLines.push(...visible.filter(line=>String(line?.text||"").trim()).map(line=>({text:String(line.text),confidence:Math.max(0,Math.min(100,Number(line.confidence||result.aiConfidence||0)))})));
     const raw=String(result.rawText||"").trim();if(raw)rawTexts.push(`ΣΕΛΙΔΑ ${pageIndex+1}:\n${raw}`);
@@ -179,6 +185,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
+  parsed=await applyCentralSupplierProfile(parsed);
   const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
   const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
   const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
@@ -210,10 +217,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0),needsAzureFields=!hasSafeLine||parsed.productLines.some(line=>Number(line?.vatRate||0)<=0);
   if(!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     const azureRecovered=[];
-    for(const page of pageJobs){
+    for(const [pageIndex,page] of pageJobs.entries()){
       try{
         const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType}));
-        azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(normalizeProductLine));
+        azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
       }catch{}
     }
     parsed.productLines=mergeRecoveredLines(parsed.productLines,azureRecovered);
@@ -221,6 +228,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.azurePageRecoveryRecovered=azureRecovered.length;
   }
 
+  parsed=await applyCentralSupplierProfile(parsed);
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
@@ -229,7 +237,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const unresolved=parsed.productLines.filter(line=>{
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
       const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
-      return q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
+      return !line.sourceColumnsVerified&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)break;
     try{
@@ -275,3 +283,4 @@ router.post("/ai-reader/jobs/:jobId/supplier",requireCompanyModule("AI_READER"),
 }catch(error){next(error)}});
 
 export default router;
+
