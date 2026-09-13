@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,X} from "lucide-react";
+import {AlertTriangle,BarChart3,Building2,CalendarDays,CheckCircle2,ChevronRight,LockKeyhole,RefreshCw,ShieldCheck,Store,Unlock, X} from "lucide-react";
 
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const number=value=>Number(value||0);
@@ -158,23 +158,27 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const selectedStore=result?.filters.storeId?storeIndex.get(String(result.filters.storeId)):null;
   const scopeLabel=selectedStore?`Εταιρεία: ${selectedStore.companyName} · Κατάστημα: ${selectedStore.name}`:selectedCompany?`Εταιρεία: ${selectedCompany.name} · Όλα τα καταστήματα`:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
   const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
+  const storeIsSelected=Boolean(filters.companyId&&filters.storeId);
+  const activePackageCount=checkPackages.filter(packageItem=>packageItem.active).length;
 
   return <div className={embedded?"platform-checks-page":"platform-modal"}><section className={`sa-modal${embedded?" sa-page":""}`}>
-    <header><div><span>ΜΟΝΟ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Κεντρική ανάλυση διαφορών ταμείου, POS–EFTPOS και Ταμείου Τράπεζας, με καταγραφή ελέγχου χωρίς μεταβολή οικονομικών δεδομένων.</p></div><button type="button" className="sa-close" onClick={onClose} disabled={busy||reviewBusy}><X/></button></header>
+    <header className="sa-checks-header"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Έλεγξε ταμείο, POS–EFTPOS και Ταμείο Τράπεζας με ασφάλεια και πλήρη καταγραφή στο Audit.</p></div><div className="sa-header-actions"><div className="sa-readonly-badge"><ShieldCheck/> Μόνο ανάγνωση</div><button type="button" className="sa-close" aria-label="Κλείσιμο ελέγχων και αναλύσεων" onClick={onClose} disabled={busy||reviewBusy}><X/></button></div></header>
     {error&&<div className="platform-alert error">{error}</div>}
-    <div className="supplier-review-filters">
-      <label>Ιδιοκτήτης / εταιρεία<select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
-      <label>Κατάστημα<select value={filters.storeId} onChange={event=>updateFilters({storeId:event.target.value})}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
-      <label>Από<input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
-      <label>Έως<input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
-      <button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Έλεγχος…":"Εμφάνιση"}</button>
-      <button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>Καθαρισμός</button>
-    </div>
-    <section className="platform-panel sa-package-panel">
-      <div><b>Πακέτα ελέγχων ανά κατάστημα</b><p>Η ενεργοποίηση γίνεται μόνο από Υπερδιαχειριστή και καταγράφεται στο Audit. Επιλέγεις πρώτα έναν ιδιοκτήτη και ένα συγκεκριμένο κατάστημα.</p></div>
-      {!filters.companyId||!filters.storeId?<div className="platform-empty">Επίλεξε ιδιοκτήτη / εταιρεία και συγκεκριμένο κατάστημα για να διαχειριστείς τα πακέτα ελέγχων.</div>:packagesBusy&&!checkPackages.length?<div className="platform-empty">Φόρτωση πακέτων…</div>:<div className="sa-package-grid">{checkPackages.map(packageItem=><article key={packageItem.key} className={`sa-package-card ${packageItem.active?"active":""}`}><div><small>{packageItem.active?"ΕΝΕΡΓΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</small><h3>{packageItem.title}</h3><p>{packageItem.description}</p></div><button type="button" onClick={()=>toggleCheckPackage(packageItem)} disabled={packagesBusy||busy||reviewBusy}>{packageItem.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></article>)}</div>}
+    <section className="sa-checks-workspace">
+      <div className="sa-workspace-heading"><div><span>1. ΕΠΙΛΟΓΗ ΠΕΔΙΟΥ</span><h3>Διάλεξε κατάστημα και περίοδο</h3></div><p>Η ανάλυση δεν αλλάζει οικονομικά δεδομένα.</p></div>
+      <div className="supplier-review-filters sa-checks-filters">
+        <label><span><Building2/> Ιδιοκτήτης / εταιρεία</span><select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
+        <label><span><Store/> Κατάστημα</span><select value={filters.storeId} onChange={event=>updateFilters({storeId:event.target.value})}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
+        <label><span><CalendarDays/> Από</span><input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
+        <label><span><CalendarDays/> Έως</span><input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
+        <div className="sa-filter-actions"><button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Εκτέλεση ελέγχου…":"Εκτέλεση ελέγχου"}<ChevronRight/></button><button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>Καθαρισμός</button></div>
+      </div>
     </section>
-    <section className="platform-panel" style={{marginBottom:14}}><b>Πεδίο ελέγχου</b><p>Οι ημερομηνίες εφαρμόζονται στις βάρδιες και στις διαφορές ταμείου/POS–EFTPOS. Το Ταμείο Τράπεζας είναι τρέχον λογιστικό υπόλοιπο και φιλτράρεται μόνο ανά ιδιοκτήτη και κατάστημα.</p></section>
+    <section className="platform-panel sa-package-panel">
+      <div className="sa-package-heading"><div><span>2. ΔΙΚΑΙΩΜΑΤΑ ΕΛΕΓΧΟΥ</span><h3>Πακέτα ελέγχων ανά κατάστημα</h3><p>Η ενεργοποίηση καταγράφεται στο Audit και γίνεται μόνο από Υπερδιαχειριστή.</p></div>{storeIsSelected&&<strong className={activePackageCount?"sa-package-count active":"sa-package-count"}>{activePackageCount} / {checkPackages.length||3} ενεργά</strong>}</div>
+      {!storeIsSelected?<div className="sa-package-empty"><LockKeyhole/><div><b>Επίλεξε πρώτα ένα συγκεκριμένο κατάστημα</b><span>Τότε θα εμφανιστούν η κατάσταση και οι διαθέσιμες ενέργειες για κάθε πακέτο.</span></div></div>:packagesBusy&&!checkPackages.length?<div className="sa-package-empty">Φόρτωση πακέτων…</div>:<div className="sa-package-grid">{checkPackages.map(packageItem=><article key={packageItem.key} className={`sa-package-card ${packageItem.active?"active":""}`}><div className="sa-package-card-top"><span className="sa-package-icon">{packageItem.active?<Unlock/>:<LockKeyhole/>}</span><small>{packageItem.active?"ΕΝΕΡΓΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</small></div><div><h3>{packageItem.title}</h3><p>{packageItem.description}</p></div><button type="button" onClick={()=>toggleCheckPackage(packageItem)} disabled={packagesBusy||busy||reviewBusy}>{packageItem.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></article>)}</div>}
+    </section>
+    <section className="sa-scope-note"><ShieldCheck/><div><b>Τι καλύπτει ο έλεγχος</b><p>Οι ημερομηνίες εφαρμόζονται στις βάρδιες και στις διαφορές ταμείου/POS–EFTPOS. Το Ταμείο Τράπεζας είναι τρέχον λογιστικό υπόλοιπο και φιλτράρεται μόνο ανά ιδιοκτήτη και κατάστημα.</p></div></section>
     {busy&&<section className="platform-panel" style={{marginBottom:14}}><b>Εκτελείται ο έλεγχος…</b><p>Συλλέγονται δεδομένα ανάγνωσης. Δεν αλλάζει βάρδια, ταμείο, τράπεζα, απόθεμα, παραστατικό ή υπόλοιπο.</p></section>}
     {result&&<>
       <section className="platform-panel" style={{marginBottom:14}}><b>{scopeLabel}</b><p>{periodLabel}</p><small>Εκτέλεση: {athensDateTime(result.executedAt)} · Κατάσταση: {analytics.status||"—"}</small></section>
