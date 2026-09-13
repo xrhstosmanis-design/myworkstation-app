@@ -53,6 +53,8 @@ const tableStatements=[
     "amount" NUMERIC(14,2) NOT NULL,
     "description" TEXT,
     "supplierName" TEXT,
+    "invoiceDocumentNumber" TEXT,
+    "invoicePaymentKey" TEXT,
     "attachmentData" TEXT,
     "attachmentMimeType" TEXT,
     "attachmentFilename" TEXT,
@@ -79,6 +81,9 @@ const tableStatements=[
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "subtractFromShift" BOOLEAN NOT NULL DEFAULT false`
   ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "supplierId" TEXT`
+  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" TEXT`
+  ,`ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoicePaymentKey" TEXT`
+  ,`CREATE UNIQUE INDEX IF NOT EXISTS "StoreTransaction_active_invoice_payment_unique" ON "StoreTransaction" ("companyId","invoicePaymentKey") WHERE "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL AND "invoicePaymentKey" IS NOT NULL`
   ,`CREATE INDEX IF NOT EXISTS "StoreTransaction_supplier_idx" ON "StoreTransaction" ("companyId","supplierId","occurredAt" DESC)`
   ,`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`
   ,`CREATE TABLE IF NOT EXISTS "SupplierPaymentSettlement" (
@@ -268,6 +273,7 @@ const transactionSchema=z.object({
   description:z.string().trim().max(500).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
+  invoiceDocumentNumber:z.string().trim().min(1).max(80).optional().nullable(),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
   purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
   paymentSource:z.enum(["CASH_SHIFT","EXTERNAL"]).optional().nullable(),
@@ -299,6 +305,16 @@ function parseAttachment(attachment){
 
 function paymentId(companyId,storeId,key){
   return `pay_${crypto.createHash("sha256").update(`${companyId}:${storeId}:${key}`).digest("hex")}`;
+}
+
+function normalizeInvoicePaymentReference(value){
+  return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
+}
+
+function invoicePaymentReference(body){
+  if(body.invoiceDocumentNumber)return normalizeInvoicePaymentReference(body.invoiceDocumentNumber);
+  const match=String(body.description||"").match(/(?:τιμολόγιο|invoice)\s+(.+?)(?:\s+[—–]\s+|$)/iu);
+  return normalizeInvoicePaymentReference(match?.[1]);
 }
 
 async function alertRecipients(companyId,store){
@@ -824,11 +840,13 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   const legacyPayment=isPayment&&!body.evidenceMode;
   let supplierName=body.supplierName||null;
+  let supplier=null;
   let purchaseDocument=null;
   if(body.type==="SUPPLIER_PAYMENT"){
-    const rows=body.supplierId?await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`:[];
+    const rows=body.supplierId?await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`:[];
     if(body.supplierId&&!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
-    supplierName=rows[0]?.name||supplierName;
+    supplier=rows[0]||null;
+    supplierName=supplier?.name||supplierName;
     if(!supplierName)return res.status(400).json({error:"Επίλεξε τον προμηθευτή της πληρωμής."});
   }
   if(legacyPayment&&needsPhoto&&!body.attachment)return res.status(400).json({error:"Η φωτογραφία παραστατικού είναι υποχρεωτική για αυτή την καταχώριση."});
@@ -854,6 +872,11 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const legacyAttachment=parseAttachment(body.attachment);
   const actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   const paymentKey=isPayment?(body.idempotencyKey||legacyAttachment?.checksum):null;
+  const invoiceReference=body.type==="SUPPLIER_PAYMENT"?invoicePaymentReference(body):"";
+  const supplierTaxId=String(supplier?.taxId||"").replace(/\D/g,"");
+  const invoiceSupplierKey=supplierTaxId?`VAT:${supplierTaxId}`:`ID:${body.supplierId||""}`;
+  const invoicePaymentKey=invoiceReference?`${req.user.companyId}:${invoiceSupplierKey}:${invoiceReference}`:null;
+  const invoicePaymentChecksum=invoicePaymentKey?crypto.createHash("sha256").update(`supplier-invoice:${invoicePaymentKey}`).digest("hex"):null;
   const selectedPaymentSource=body.paymentSource||(body.subtractFromShift?"CASH_SHIFT":"EXTERNAL");
   const selectedPaymentMethod=body.paymentMethod||(selectedPaymentSource==="CASH_SHIFT"?"CASH_SHIFT":"CORPORATE_CARD");
   const subtractFromShift=isPayment
@@ -863,36 +886,33 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   const legacyExternalPayment=legacyPayment&&selectedPaymentSource==="EXTERNAL";
   const id=isPayment?paymentId(req.user.companyId,store.id,paymentKey):crypto.randomUUID();
   const documentMime=purchaseDocument?"application/vnd.myworkstation.purchase-document":null;
-  const evidenceChecksum=isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null;
-  let rows;
-  if(externalPayment){
-    rows=await prisma.$queryRaw`
+  const evidenceChecksum=invoicePaymentChecksum||(isPayment?crypto.createHash("sha256").update(paymentKey).digest("hex"):legacyAttachment?.checksum||null);
+  const insertTransaction=async db=>{
+    if(externalPayment)return db.$queryRaw`
       INSERT INTO "StoreTransaction" (
-        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","invoiceDocumentNumber","invoicePaymentKey","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
       ) VALUES (
         ${id},${req.user.companyId},${store.id},${null},${body.type},${body.amount},
-        ${body.description||null},${body.supplierId||null},${supplierName},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+        ${body.description||null},${body.supplierId||null},${supplierName},${body.invoiceDocumentNumber||null},${invoicePaymentKey},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
       )
       RETURNING *
     `;
-  }else if(legacyExternalPayment){
-    rows=await prisma.$queryRaw`
+    if(legacyExternalPayment)return db.$queryRaw`
       INSERT INTO "StoreTransaction" (
-        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","invoiceDocumentNumber","invoicePaymentKey","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
       ) VALUES (
         ${id},${req.user.companyId},${store.id},${null},${body.type},${body.amount},
-        ${body.description||null},${body.supplierId||null},${supplierName},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+        ${body.description||null},${body.supplierId||null},${supplierName},${body.invoiceDocumentNumber||null},${invoicePaymentKey},false,${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
       )
       RETURNING *
     `;
-  }else{
-    rows=await prisma.$queryRaw`
+    return db.$queryRaw`
       INSERT INTO "StoreTransaction" (
-        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
+        "id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","invoiceDocumentNumber","invoicePaymentKey","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum"
       )
       SELECT
         ${id},${req.user.companyId},${store.id},shift."id",${body.type},${body.amount},
-        ${body.description||null},${body.supplierId||null},${supplierName},${subtractFromShift},${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
+        ${body.description||null},${body.supplierId||null},${supplierName},${body.invoiceDocumentNumber||null},${invoicePaymentKey},${subtractFromShift},${selectedPaymentMethod},${req.user.id},${actorName},${legacyAttachment?.dataUrl||null},${documentMime||legacyAttachment?.mimeType||null},${purchaseDocument?.id||legacyAttachment?.filename||null},${evidenceChecksum}
       FROM "CashShiftSession" shift
       WHERE shift."storeId"=${store.id}
         AND shift."companyId"=${req.user.companyId}
@@ -903,8 +923,26 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       FOR KEY SHARE OF shift
       RETURNING *
     `;
-    if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
-  }
+  };
+  let rows;
+  if(invoicePaymentKey){
+    const outcome=await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
+      const duplicate=await tx.$queryRaw`
+        SELECT t."id",t."storeId",t."occurredAt",t."amount",t."actorName"
+        FROM "StoreTransaction" t
+        LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+        WHERE t."companyId"=${req.user.companyId} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+          AND (t."supplierId"=${body.supplierId} OR (${supplierTaxId}<>'' AND REGEXP_REPLACE(COALESCE(s."taxId",''),'\\D','','g')=${supplierTaxId}))
+          AND (t."invoicePaymentKey"=${invoicePaymentKey} OR POSITION(${invoiceReference} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g')))>0)
+        ORDER BY t."occurredAt" ASC LIMIT 1`;
+      if(duplicate[0])return {duplicate:duplicate[0],rows:null};
+      return {duplicate:null,rows:await insertTransaction(tx)};
+    });
+    if(outcome.duplicate)return res.status(409).json({error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate});
+    rows=outcome.rows;
+  }else rows=await insertTransaction(prisma);
+  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
   const transaction=normalize(rows[0]);
   if(body.type==="OTHER_EXPENSE")await prisma.$executeRaw`
     INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId")

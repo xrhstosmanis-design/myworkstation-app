@@ -32,7 +32,10 @@ async function ensureV244IntakeSchema(){
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrSequence" INTEGER`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "invoiceUnit" TEXT`,
-        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`,
+        `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" TEXT`,
+        `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoicePaymentKey" TEXT`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS "StoreTransaction_active_invoice_payment_unique" ON "StoreTransaction" ("companyId","invoicePaymentKey") WHERE "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL AND "invoicePaymentKey" IS NOT NULL`
       ];
       for(const statement of statements)await prisma.$executeRawUnsafe(statement);
     })().catch(error=>{intakeSchemaPromise=undefined;throw error});
@@ -139,13 +142,18 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
     const lines=z.array(lineSchema).min(1).max(500).parse(rawLines);
     stage="validate-supplier";
-    const supplier=await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    const supplier=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    const invoiceReference=norm(body.documentNumber),supplierTaxId=String(supplier[0].taxId||"").replace(/\D/g,"");
+    const invoiceSupplierKey=supplierTaxId?`VAT:${supplierTaxId}`:`ID:${body.supplierId}`;
+    const invoicePaymentKey=`${req.user.companyId}:${invoiceSupplierKey}:${invoiceReference}`;
+    const invoicePaymentChecksum=crypto.createHash("sha256").update(`supplier-invoice:${invoicePaymentKey}`).digest("hex");
 
     const result=await prisma.$transaction(async tx=>{
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      if(body.settlementMode==="PAID")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
       const additionalPageJobs=[];
       for(const pageJobId of pageJobIds){
@@ -159,13 +167,24 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(body.settlementMode==="PAID"&&body.paymentTransactionId){
         stage="validate-existing-payment";
         const payments=await tx.$queryRaw`
-          SELECT "id","storeId","supplierId","type","amount","subtractFromShift","reversedAt"
+          SELECT "id","storeId","supplierId","type","amount","subtractFromShift","reversedAt","description","invoiceDocumentNumber","invoicePaymentKey"
           FROM "StoreTransaction"
           WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
         existingPayment=payments[0]||null;
-        const valid=existingPayment&&existingPayment.type==='SUPPLIER_PAYMENT'&&!existingPayment.reversedAt&&Boolean(existingPayment.subtractFromShift)&&existingPayment.storeId===job.storeId&&existingPayment.supplierId===body.supplierId&&Math.abs(Number(existingPayment.amount||0)-Number(body.totalGross||0))<=0.05;
-        if(!valid){const error=new Error("Η υπάρχουσα FAST πληρωμή δεν συμφωνεί με κατάστημα, προμηθευτή ή ποσό του τιμολογίου.");error.status=409;throw error;}
+        const existingInvoiceReference=norm(existingPayment?.invoiceDocumentNumber);
+        const sameInvoice=existingPayment?.invoicePaymentKey===invoicePaymentKey||existingInvoiceReference===invoiceReference||(!existingInvoiceReference&&norm(existingPayment?.description).includes(invoiceReference));
+        const valid=existingPayment&&existingPayment.type==='SUPPLIER_PAYMENT'&&!existingPayment.reversedAt&&Boolean(existingPayment.subtractFromShift)&&existingPayment.storeId===job.storeId&&existingPayment.supplierId===body.supplierId&&sameInvoice&&Math.abs(Number(existingPayment.amount||0)-Number(body.totalGross||0))<=0.05;
+        if(!valid){const error=new Error("Η υπάρχουσα FAST πληρωμή δεν συμφωνεί με κατάστημα, προμηθευτή, αριθμό ή ποσό του τιμολογίου.");error.status=409;throw error;}
       }else if(body.settlementMode==="PAID"){
+        const duplicatePayments=await tx.$queryRaw`
+          SELECT t."id",t."storeId",t."amount",t."occurredAt"
+          FROM "StoreTransaction" t
+          LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+          WHERE t."companyId"=${req.user.companyId} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+            AND (t."supplierId"=${body.supplierId} OR (${supplierTaxId}<>'' AND REGEXP_REPLACE(COALESCE(s."taxId",''),'\\D','','g')=${supplierTaxId}))
+            AND (t."invoicePaymentKey"=${invoicePaymentKey} OR POSITION(${invoiceReference} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g')))>0)
+          ORDER BY t."occurredAt" ASC LIMIT 1`;
+        if(duplicatePayments[0]){const error=new Error(`Η πληρωμή του τιμολογίου ${body.documentNumber} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`);error.status=409;throw error;}
         stage="lock-cash-shift";
         const shifts=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${job.storeId} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR UPDATE`;
         shift=shifts[0]||null;if(!shift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Πληρωμένο τιμολόγιο δεν μπορεί να καταχωρηθεί χωρίς ενεργή βάρδια.");error.status=409;throw error;}
@@ -189,11 +208,11 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         if(existingPayment){
           stage="link-existing-payment";
           paymentTransactionId=existingPayment.id;
-          await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId} WHERE "id"=${paymentTransactionId} AND "companyId"=${req.user.companyId}`;
+          await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber},"invoicePaymentKey"=${invoicePaymentKey},"attachmentChecksum"=${invoicePaymentChecksum} WHERE "id"=${paymentTransactionId} AND "companyId"=${req.user.companyId}`;
         }else{
           stage="create-payment";
           paymentTransactionId=`pay_${crypto.createHash("sha256").update(`${req.user.companyId}:${job.storeId}:invoice:${documentId}`).digest("hex")}`;
-          await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum") VALUES (${paymentTransactionId},${req.user.companyId},${job.storeId},${shift.id},'SUPPLIER_PAYMENT',${body.totalGross},${body.note||`Πληρωμένο τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},true,${req.user.id},${actor},NULL,'application/vnd.myworkstation.purchase-document',${documentId},${crypto.createHash("sha256").update(`invoice:${documentId}`).digest("hex")})`;
+          await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","invoiceDocumentNumber","invoicePaymentKey","subtractFromShift","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum") VALUES (${paymentTransactionId},${req.user.companyId},${job.storeId},${shift.id},'SUPPLIER_PAYMENT',${body.totalGross},${body.note||`Πληρωμένο τιμολόγιο ${body.documentNumber} — αναμονή ελέγχου BackOffice`},${body.supplierId},${supplier[0].name},${body.documentNumber},${invoicePaymentKey},true,${req.user.id},${actor},NULL,'application/vnd.myworkstation.purchase-document',${documentId},${invoicePaymentChecksum})`;
         }
         stage="link-payment-document";
         await tx.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=${paymentTransactionId} WHERE "id"=${documentId}`;
