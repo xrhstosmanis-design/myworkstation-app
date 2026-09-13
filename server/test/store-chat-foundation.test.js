@@ -6,6 +6,8 @@ test("store chat foundation has store isolation, categories and server-side stor
   const route=fs.readFileSync(new URL("../src/routes/store-chat.js",import.meta.url),"utf8");
   const push=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8");
   const panel=fs.readFileSync(new URL("../../client/src/components/store/StoreChatPanel.jsx",import.meta.url),"utf8");
+  const pos=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
+  const worker=fs.readFileSync(new URL("../../client/public/sw.js",import.meta.url),"utf8");
   const owner=fs.readFileSync(new URL("../../client/src/main.jsx",import.meta.url),"utf8");
   const platform=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
   assert.match(route,/StoreChatMessage/);
@@ -119,6 +121,15 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
   assert.match(panel,/pushManager\.subscribe/);
   assert.match(panel,/Ενεργοποίηση Push/);
+  assert.match(panel,/navigator\.serviceWorker\.ready/);
+  assert.match(panel,/registration\.update\(\)/);
+  assert.match(panel,/subscription\?"granted":"unknown"/);
+  assert.match(panel,/Το κινητό δεν συνδέθηκε με την υπηρεσία Push του Android/);
+  assert.match(worker,/visibilityState==="visible"/);
+  assert.match(worker,/STORE_CHAT_PUSH/);
+  assert.match(pos,/store-chat-in-app-alert/);
+  assert.match(pos,/playChatAlert/);
+  assert.match(pos,/setChatOpen\(true\)/);
   assert.match(push,/StoreChatPushSubscription/);
   assert.match(push,/generateVAPIDKeys/);
   assert.match(push,/"storeId"=\$\{store\.id\}/);
