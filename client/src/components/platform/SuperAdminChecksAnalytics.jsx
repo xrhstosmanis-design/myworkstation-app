@@ -144,9 +144,9 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     const note=String(reviewDraft.note||"").trim();
     setReviewBusy(true);setError("");
     try{
-      const saved=await request(`/api/platform/super-admin-analytics/sessions/${encodeURIComponent(finding.sessionId)}/confirmation`,{
+      const saved=await request(`/api/platform/super-admin-analytics/sessions/${encodeURIComponent(finding.sessionId)}/reviews`,{
         method:"POST",
-        body:JSON.stringify({companyId:finding.companyId,storeId:finding.storeId,note})
+        body:JSON.stringify({companyId:finding.companyId,storeId:finding.storeId,decision:"REVIEWED_NO_CHANGE",note})
       });
       setResult(current=>{
         if(!current)return current;

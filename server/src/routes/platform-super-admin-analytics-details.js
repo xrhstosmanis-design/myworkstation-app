@@ -28,7 +28,7 @@ const reviewSchema=z.object({
   storeId:z.string().trim().min(1),
   decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),
   amount:z.coerce.number().finite().min(0).max(999999999).default(0),
-  note:z.string().trim().min(5).max(1000)
+  note:z.string().trim().max(1000).default("")
 }).superRefine((value,ctx)=>{
   if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."});
 });
