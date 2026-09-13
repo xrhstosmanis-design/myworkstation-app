@@ -115,7 +115,7 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/import \{callAzure,normalizeAzure\} from ".\/commerce-azure-invoice-reader\.js"/);
   assert.match(aiRecheck,/const hasSafeLine=parsed\.productLines\.some/);
   assert.match(aiRecheck,/needsAzureFields=!hasSafeLine\|\|parsed\.productLines\.some\(line=>Number\(line\?\.vatRate\|\|0\)<=0\)/);
-  assert.match(aiRecheck,/if\(needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
+  assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
   assert.match(aiRecheck,/for\(const page of pageJobs\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
