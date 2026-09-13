@@ -52,6 +52,31 @@ const statements=[
    "active"=true,
    "source"=CASE WHEN "SupplierProductLink"."source"='PRODUCT_CARD' THEN "SupplierProductLink"."source" ELSE 'INVOICE_LEARNING' END,
    "updatedAt"=GREATEST("SupplierProductLink"."updatedAt",EXCLUDED."updatedAt")`,
+`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","createdAt","updatedAt")
+ SELECT md5(random()::text||clock_timestamp()::text),history."companyId",history."supplierId",history."productId",history."supplierCode",true,'PURCHASE_HISTORY',history.at,history.at
+ FROM (
+   SELECT DISTINCT ON (purchases."companyId",purchases."supplierId",purchases."productId")
+     purchases."companyId",purchases."supplierId",purchases."productId",purchases."supplierCode",purchases.at
+   FROM (
+     SELECT d."companyId",d."supplierId",l."productId",NULLIF(TRIM(l."supplierItemCode"),'') AS "supplierCode",COALESCE(d."documentDate",d."createdAt") AS at
+     FROM "PurchaseDocumentLine" l
+     JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."status"='APPROVED'
+     WHERE d."supplierId" IS NOT NULL AND l."productId" IS NOT NULL
+     UNION ALL
+     SELECT o."companyId",o."supplierId",l."productId",NULLIF(TRIM(l."supplierCode"),'') AS "supplierCode",o."createdAt" AS at
+     FROM "PurchaseOrderLine" l
+     JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."status" IN ('FINAL','INVOICED')
+     WHERE o."supplierId" IS NOT NULL AND l."productId" IS NOT NULL
+   ) purchases
+   ORDER BY purchases."companyId",purchases."supplierId",purchases."productId",purchases.at DESC
+ ) history
+ JOIN "Product" p ON p."id"=history."productId" AND p."companyId"=history."companyId"
+ JOIN "Supplier" s ON s."id"=history."supplierId" AND s."companyId"=history."companyId"
+ ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET
+   "supplierCode"=COALESCE(NULLIF(EXCLUDED."supplierCode",''),"SupplierProductLink"."supplierCode"),
+   "active"=true,
+   "source"=CASE WHEN "SupplierProductLink"."source"='PRODUCT_CARD' THEN "SupplierProductLink"."source" ELSE 'PURCHASE_HISTORY' END,
+   "updatedAt"=GREATEST("SupplierProductLink"."updatedAt",EXCLUDED."updatedAt")`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount1" DECIMAL(8,4)`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount2" DECIMAL(8,4)`,
 `ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount3" DECIMAL(8,4)`,
