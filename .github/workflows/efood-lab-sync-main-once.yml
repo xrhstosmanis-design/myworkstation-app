@@ -1,0 +1,95 @@
+name: efood LAB sync latest main once
+
+on:
+  push:
+    branches:
+      - feat/efood-pelican-lab-validation
+    paths:
+      - .github/workflows/efood-lab-sync-main-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/efood-pelican-lab-validation
+          fetch-depth: 0
+
+      - name: Merge latest main and preserve efood LAB checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          main_sha="$(git rev-parse origin/main)"
+
+          set +e
+          git merge --no-ff --no-commit origin/main
+          merge_rc=$?
+          set -e
+
+          conflicts="$(git diff --name-only --diff-filter=U || true)"
+          unexpected="$(printf '%s\n' "$conflicts" | grep -v -E '^(CHECKPOINTS/ACTIVE\.md|CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05\.md)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected merge conflicts:"
+            printf '%s\n' "$unexpected"
+            git merge --abort
+            exit 1
+          fi
+
+          if printf '%s\n' "$conflicts" | grep -qx 'CHECKPOINTS/ACTIVE.md'; then
+            git checkout --ours CHECKPOINTS/ACTIVE.md
+          fi
+          if printf '%s\n' "$conflicts" | grep -qx 'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'; then
+            git checkout --theirs CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+          fi
+
+          if [ "$merge_rc" -ne 0 ] && [ -n "$(git diff --name-only --diff-filter=U || true)" ]; then
+            echo "Expected conflicts were not fully resolved."
+            git merge --abort
+            exit 1
+          fi
+
+          MAIN_SHA="$main_sha" python - <<'PY'
+          from pathlib import Path
+          import os, re
+
+          heading = "## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB"
+          section = """## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB
+
+- [x] Η Phase A μεταφέρθηκε σε καθαρό branch από το τελευταίο `main`.
+- [x] Κλειδώθηκε server-side το μοναδικό test scope: `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
+- [x] Ρύθμιση efood, mock webhooks, product mappings και Catalog/Promo/Orders previews απορρίπτονται σε ΚΑΤ ή άλλο πραγματικό κατάστημα.
+- [x] Προστέθηκε πλήρης ασφαλής LAB mock ροή από Super Admin: `READY_FOR_PICKUP`, idempotent replay, `CANCELLED`, Catalog, Promo, Orders recovery και readiness.
+- [x] Η ροή παραμένει fail-closed: `externalCall=false`, χωρίς OnlineOrder/Sale, stock, τιμή, προσφορά, πληρωμή, RBS/CapDriver/EFTPOS ή fiscal.
+- [ ] Εκκρεμούν πράσινο CI, merge/deploy και live πάτημα «Πλήρης ασφαλής LAB δοκιμή».
+- [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization.
+
+"""
+          active_list = Path("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md")
+          text = active_list.read_text(encoding="utf-8")
+          if heading not in text:
+              active_list.write_text(section + text, encoding="utf-8")
+
+          main_sha = os.environ["MAIN_SHA"]
+          active = Path("CHECKPOINTS/ACTIVE.md")
+          active_text = active.read_text(encoding="utf-8")
+          active_text = re.sub(r'- Βάση (?:έναρξης|συγχρονισμού): `main` `[^`]+`', f'- Βάση συγχρονισμού: `main` `{main_sha}`', active_text, count=1)
+          active.write_text(active_text, encoding="utf-8")
+
+          checkpoint = Path("CHECKPOINTS/CHANGES/2026-09-13-efood-pelican-phase-a-foundation.md")
+          checkpoint_text = checkpoint.read_text(encoding="utf-8")
+          checkpoint_text = re.sub(r'- \*\*Βάση (?:έναρξης|συγχρονισμού):\*\* `main` commit `[^`]+`', f'- **Βάση συγχρονισμού:** `main` commit `{main_sha}`', checkpoint_text, count=1)
+          checkpoint.write_text(checkpoint_text, encoding="utf-8")
+          PY
+
+          git rm .github/workflows/efood-lab-sync-main-once.yml
+          git add -A
+          git commit -m "Sync latest main into efood LAB validation"
+          git push origin HEAD:feat/efood-pelican-lab-validation
