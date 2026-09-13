@@ -3,7 +3,7 @@
 - Ημερομηνία: 2026-09-13
 - Εργασία: efood / Pelican Indirect POS — Phase A fail-closed foundation
 - Branch: `feat/efood-pelican-foundation`
-- Βάση branch: σημερινό `main` `04dc6319d60d2804ffb23cda39bf1acec60e3a07`
+- Βάση branch: σημερινό `main` `40f33c9881ee6c9753e3b6b23d26c68fd381a050`
 - Draft PR: `#758`
 - Κατάσταση: ΣΕ ΔΟΚΙΜΗ — αναμονή πλήρους GitHub CI, LAB mock validation και test vendor από efood
 - Checkpoint αλλαγών: `CHECKPOINTS/CHANGES/2026-09-13-efood-pelican-phase-a-foundation.md`

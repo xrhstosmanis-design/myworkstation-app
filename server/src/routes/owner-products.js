@@ -223,9 +223,27 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     let selectedCategoryId=body.categoryId||null,selectedSubcategoryId=body.subcategoryId||null;
     if(selectedCategoryId){const category=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${selectedCategoryId} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!category[0])return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."})}
     if(selectedSubcategoryId){const subcategory=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${selectedSubcategoryId} AND "categoryId"=${selectedCategoryId||''} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!subcategory[0])return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία."})}
-    if(!body.supplierCodes.length&&body.supplierName){
-      const inferred=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND LOWER(REGEXP_REPLACE(TRIM("name"),'[[:space:]]+',' ','g'))=LOWER(REGEXP_REPLACE(TRIM(${body.supplierName}),'[[:space:]]+',' ','g')) LIMIT 2`;
-      if(inferred.length===1)body.supplierCodes=[{supplierId:inferred[0].id,supplierCode:""}];
+    if(!body.supplierCodes.length){
+      const purchaseSupplier=await prisma.$queryRaw`
+        SELECT history."supplierId" FROM (
+          SELECT d."supplierId",d."documentDate" AS at,d."createdAt" FROM "PurchaseDocumentLine" l
+          JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND d."status"='APPROVED'
+          JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=${company} AND s."active"=true
+          WHERE l."productId"=${product.id}
+          UNION ALL
+          SELECT o."supplierId",o."createdAt" AS at,o."createdAt" FROM "PurchaseOrderLine" l
+          JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND o."status" IN ('FINAL','INVOICED')
+          JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=${company} AND s."active"=true
+          WHERE l."productId"=${product.id}
+        ) history ORDER BY history.at DESC,history."createdAt" DESC LIMIT 1`;
+      if(purchaseSupplier[0])body.supplierCodes=[{supplierId:purchaseSupplier[0].supplierId,supplierCode:""}];
+      else if(body.supplierName){
+        const inferred=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true AND LOWER(REGEXP_REPLACE(TRIM("name"),'[[:space:]]+',' ','g'))=LOWER(REGEXP_REPLACE(TRIM(${body.supplierName}),'[[:space:]]+',' ','g')) LIMIT 2`;
+        if(inferred.length===1)body.supplierCodes=[{supplierId:inferred[0].id,supplierCode:""}];
+      }
+    }
+    if(body.supplierName&&!body.supplierCodes.length){
+      return res.status(409).json({error:"Ο προμηθευτής εμφανίζεται στην αγορά αλλά δεν μπόρεσε να συνδεθεί με το προϊόν. Έλεγξε ότι είναι ενεργός στην καρτέλα Προμηθευτών."});
     }
     const supplierIds=[...new Set(body.supplierCodes.map(row=>row.supplierId))];
     if(supplierIds.length!==body.supplierCodes.length)return res.status(400).json({error:"Ο ίδιος προμηθευτής έχει επιλεγεί περισσότερες από μία φορές."});
