@@ -1,252 +1,172 @@
-import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,Building2,CalendarDays,CheckCircle2,ChevronRight,LockKeyhole,RefreshCw,ShieldCheck,Store,Unlock, X} from "lucide-react";
+q(óˆ54¿pD¿ÛMºÓÝw²ê^­§fŠw(š™^µêZÊg§µÊ'¶º%²gZ[\Ü™XXÝÝ\ÙQY™™XÝ\ÙSY[[Ë\ÙTÝ]_Hœ›ÛHœ™XXÝŽÂš[\ÜÐ[\šX[™ÛK˜\Ú\ËZ[[™Ì‹Ø[[™\‘^\ËÚXÚÐÚ\˜ÛL‹Ú]œ›Û”šYÚØÚÒÙ^ZÛK™Yœ™\ÚÝËÚY[ÚXÚËÝÜ™K[›ØÚËHœ›ÛH›XÚYK\™XXÝŽÂ‚˜ÛÛœÝ]\]˜[YOO“[X™\Š˜[Y_
+KÓØØ[TÝš[™Ê™[QÔˆ‹ÜÝ[Nˆ˜Ý\œ™[˜ÞH‹Ý\œ™[˜ÞNˆ‘UTˆŸJNÂ˜ÛÛœÝ[X™\]˜[YOO“[X™\Š˜[Y_
+NÂ˜ÛÛœÝ[\Qš[\œÏ^ØÛÛ\[žRYˆˆ‹ÝÜ™RYˆˆ‹œ›ÛNˆˆ‹ÎˆˆŸNÂ˜ÛÛœÝ[\T™]šY]Ñ˜Y^Û›ÝNˆˆŸNÂ˜ÛÛœÝ™]šY]ÑXÚ\Ú[Û“X™[Ï^ÂˆVSUSÓŽˆ³¦³¬sá3¬sáóâsàs®sàó¯3«s¯s­È3­s¯³«³¬ó­óàó­È‹ˆÓÓ‘’T“QQÔÒÔ•QÑNˆ³¥sà3®s¬³­s¬³¬s®sâs¯3«s¯s¯È3«s®ó®ó­s®s¯3¯3¬H‹ˆ‘U’QUÑQÓ“×ÐÒS‘ÑNˆ³¥s®ó­s¬ó¯3«s¯s¯È3áóâsàs«óàˆ3¬s®ó®ó¬s¬ó«ˆ‚ŸNÂ˜ÛÛœÝ][œÑ]U[YO]˜[YOOžÂˆYŠ]˜[YJ\™]\›ˆ¸ %ŽÂˆÛÛœÝ]O[™]È]J˜[YJNÂˆYŠ[X™\‹š\Ó˜SŠ]K™Ù][YJ
+JJ\™]\›ˆ¸ %ŽÂˆ™]\›ˆ™]È[‘]U[YQ›Ü›X]
+™[QÔˆ‹Ý[YV›Û™Nˆ‘]\›ÜKÐ][œÈ‹^NˆŒ‹YYÚ]‹[ÛˆŒ‹YYÚ]‹YX\Žˆ›[Y\šXÈ‹Ý\ŽˆŒ‹YYÚ]‹Z[]NˆŒ‹YYÚ]‹ÙXÛÛ™ˆŒ‹YYÚ]‹Ý\ŒLŽ™˜[Ù_JK™›Ü›X]
+]JNÂŸNÂ˜ÛÛœÝš[™[™Õ]OYš[™[™ÏOžÂˆYŠš[™[™Ë™]™[X™[
+\™]\›ˆš[™[™Ë™]™[X™[ÂˆÛÛœÝØ\ÚSX]˜XœÊ[X™\Šš[™[™Ë˜Ø\Ú˜\šX[˜ÙJJKØ\™SX]˜XœÊ[X™\Šš[™[™Ë˜Ø\™˜\šX[˜ÙJJNÂˆYŠØ\Ú‹ŒI‰˜Ø\™‹ŒŠ\™]\›ˆ³¥3®s¬sá³¯óàs«3¯3­sá3às­óá3ã³¯H3®³¬s®HÔø $ÑQ•ÔÈŽÂˆYŠØ\Ú‹ŒJ\™]\›ˆ[X™\Šš[™[™Ë˜Ø\Ú˜\šX[˜ÙJOÈ³¢3®ó®ó­s®s¯3¯3¬H3¯3­sá3às­óá3ã³¯HŽˆ³¨3®ó­sã3¯s¬sàó¯3¬H3¯3­sá3às­óá3ã³¯HŽÂˆYŠØ\™‹ŒŠ\™]\›ˆ³¥3®s¬sá³¯óàs«Ôø $ÑQ•ÔÈŽÂˆ™]\›ˆ³¨óás¯3¬³«3¯H3à3¯óáH3áóàs­s®s«3­³­sá3¬s®H3«s®ó­s¬óáó¯ÈŽÂŸNÂ˜ÛÛœÝš[™[™ÒÙ^OYš[™[™ÏO”Ýš[™Êš[™[™ËšY	Ùš[™[™ËœÙ\ÜÚ[Û’YœÙ\ÜÚ[ÛˆŸN‰Ùš[™[™Ë™]™[ÛÙ_˜\šX[˜ÙHŸX
+NÂ‚™^ÜY˜][[˜Ý[ÛˆÝ\\YZ[ÚXÚÜÐ[˜[]XÜÊØÛÛ\[šY\ÏV×K™\]Y\ÝÛÛÜÙKÙ]Y\ÜØYÙK[X™YYY˜[Ù_J^ÂˆÛÛœÝÙš[\œËÙ]š[\œ×O]\ÙTÝ]J[\Qš[\œÊNÂˆÛÛœÝÜ™\Ý[Ù]™\Ý[O]\ÙTÝ]J[
+NÂˆÛÛœÝØ\ÞKÙ]\ÞWO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝÙ\œ›Ü‹Ù]\œ›Ü—O]\ÙTÝ]JˆŠNÂˆÛÛœÝÜ™]šY]Ú[™ÒYÙ]™]šY]Ú[™ÒYO]\ÙTÝ]JˆŠNÂˆÛÛœÝÜ™]šY]Ñ˜YÙ]™]šY]Ñ˜YO]\ÙTÝ]J[\T™]šY]Ñ˜Y
+NÂˆÛÛœÝÜ™]šY]Ð\ÞKÙ]™]šY]Ð\ÞWO]\ÙTÝ]J˜[ÙJNÂˆÛÛœÝØÚXÚÔXÚØYÙ\ËÙ]ÚXÚÔXÚØYÙ\×O]\ÙTÝ]J×JNÂˆÛÛœÝÜXÚØYÙ\Ð\ÞKÙ]XÚØYÙ\Ð\ÞWO]\ÙTÝ]J˜[ÙJNÂ‚ˆÛÛœÝÝÜ™\Ï]\ÙSY[[Ê
 
-const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const number=value=>Number(value||0);
-const emptyFilters={companyId:"",storeId:"",from:"",to:""};
-const emptyReviewDraft={note:""};
-const reviewDecisionLabels={
-  EXPLANATION:"ÎšÎ±Ï„Î±Ï‡Ï‰ÏÎ¹ÏƒÎ¼Î­Î½Î· ÎµÎ¾Î®Î³Î·ÏƒÎ·",
-  CONFIRMED_SHORTAGE:"Î•Ï€Î¹Î²ÎµÎ²Î±Î¹Ï‰Î¼Î­Î½Î¿ Î­Î»Î»ÎµÎ¹Î¼Î¼Î±",
-  REVIEWED_NO_CHANGE:"Î•Î»ÎµÎ³Î¼Î­Î½Î¿ Ï‡Ï‰ÏÎ¯Ï‚ Î±Î»Î»Î±Î³Î®"
-};
-const athensDateTime=value=>{
-  if(!value)return "â€”";
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime()))return "â€”";
-  return new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date);
-};
-const findingTitle=finding=>{
-  if(finding.eventLabel)return finding.eventLabel;
-  const cash=Math.abs(number(finding.cashVariance)),card=Math.abs(number(finding.cardVariance));
-  if(cash>.009&&card>.02)return "Î”Î¹Î±Ï†Î¿ÏÎ¬ Î¼ÎµÏ„ÏÎ·Ï„ÏŽÎ½ ÎºÎ±Î¹ POSâ€“EFTPOS";
-  if(cash>.009)return number(finding.cashVariance)<0?"ÎˆÎ»Î»ÎµÎ¹Î¼Î¼Î± Î¼ÎµÏ„ÏÎ·Ï„ÏŽÎ½":"Î Î»ÎµÏŒÎ½Î±ÏƒÎ¼Î± Î¼ÎµÏ„ÏÎ·Ï„ÏŽÎ½";
-  if(card>.02)return "Î”Î¹Î±Ï†Î¿ÏÎ¬ POSâ€“EFTPOS";
-  return "Î£Ï…Î¼Î²Î¬Î½ Ï€Î¿Ï… Ï‡ÏÎµÎ¹Î¬Î¶ÎµÏ„Î±Î¹ Î­Î»ÎµÎ³Ï‡Î¿";
-};
-const findingKey=finding=>String(finding.id||`${finding.sessionId||"session"}:${finding.eventCode||"variance"}`);
+OO˜ÛÛ\[šY\Ë™›]X\
+ÛÛ\[žOOŠÛÛ\[žKœÝÜ™\ß×JK›X\
+ÝÜ™OOŠË‹‹œÝÜ™KÛÛ\[žRY˜ÛÛ\[žKšYÛÛ\[žS˜[YN˜ÛÛ\[žK›˜[Y_JJJKØÛÛ\[šY\×JNÂˆÛÛœÝš\ÚX›TÝÜ™\Ï]\ÙSY[[Ê
 
-export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage,embedded=false}){
-  const [filters,setFilters]=useState(emptyFilters);
-  const [result,setResult]=useState(null);
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState("");
-  const [reviewingId,setReviewingId]=useState("");
-  const [reviewDraft,setReviewDraft]=useState(emptyReviewDraft);
-  const [reviewBusy,setReviewBusy]=useState(false);
-  const [checkPackages,setCheckPackages]=useState([]);
-  const [packagesBusy,setPackagesBusy]=useState(false);
+OOœÝÜ™\Ë™š[\ŠÝÜ™OOˆYš[\œË˜ÛÛ\[žRYÝš[™ÊÝÜ™K˜ÛÛ\[žRY
+OOOTÝš[™Êš[\œË˜ÛÛ\[žRY
+JKÜÝÜ™\Ëš[\œË˜ÛÛ\[žRYJNÂˆÛÛœÝÝÜ™R[™^]\ÙSY[[Ê
 
-  const stores=useMemo(()=>companies.flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name}))),[companies]);
-  const visibleStores=useMemo(()=>stores.filter(store=>!filters.companyId||String(store.companyId)===String(filters.companyId)),[stores,filters.companyId]);
-  const storeIndex=useMemo(()=>new Map(stores.map(store=>[String(store.id),store])),[stores]);
-  const companyIndex=useMemo(()=>new Map(companies.map(company=>[String(company.id),company])),[companies]);
+OO›™]ÈX\
+ÝÜ™\Ë›X\
+ÝÜ™OO–ÔÝš[™ÊÝÜ™KšY
+KÝÜ™WJJKÜÝÜ™\×JNÂˆÛÛœÝÛÛ\[žR[™^]\ÙSY[[Ê
 
-  useEffect(()=>{
-    const closeOnEscape=event=>{if(event.key==="Escape"&&!busy&&!reviewBusy)onClose?.()};
-    window.addEventListener("keydown",closeOnEscape);
-    return()=>window.removeEventListener("keydown",closeOnEscape);
-  },[busy,reviewBusy,onClose]);
-
-  useEffect(()=>{
-    let active=true;
-    if(!filters.companyId||!filters.storeId){
-      setCheckPackages([]);
-      return()=>{active=false};
-    }
-    setPackagesBusy(true);
-    request(`/api/platform/store-modules/companies/${encodeURIComponent(filters.companyId)}/stores/${encodeURIComponent(filters.storeId)}/check-packages`)
-      .then(data=>{if(active)setCheckPackages(data.packages||[])})
-      .catch(err=>{if(active)setError(err.message)})
-      .finally(()=>{if(active)setPackagesBusy(false)});
-    return()=>{active=false};
-  },[filters.companyId,filters.storeId,request]);
-
-  const updateFilters=patch=>{
-    setFilters(current=>({...current,...patch}));
-    setResult(null);
-    setError("");
-    setReviewingId("");
-    setReviewDraft(emptyReviewDraft);
-  };
-
-  const selectStore=value=>{
-    const selectedStore=stores.find(store=>String(store.id)===String(value));
-    updateFilters({storeId:value,companyId:value&&selectedStore?String(selectedStore.companyId):filters.companyId});
-  };
-
-  const run=async()=>{
-    if(filters.from&&filters.to&&filters.from>filters.to){
-      setError("Î— Î·Î¼ÎµÏÎ¿Î¼Î·Î½Î¯Î± Â«Î‘Ï€ÏŒÂ» Î´ÎµÎ½ Î¼Ï€Î¿ÏÎµÎ¯ Î½Î± ÎµÎ¯Î½Î±Î¹ Î¼ÎµÏ„Î±Î³ÎµÎ½Î­ÏƒÏ„ÎµÏÎ· Î±Ï€ÏŒ Ï„Î·Î½ Î·Î¼ÎµÏÎ¿Î¼Î·Î½Î¯Î± Â«ÎˆÏ‰Ï‚Â».");
-      return;
-    }
-    setBusy(true);setError("");setResult(null);setReviewingId("");setReviewDraft(emptyReviewDraft);
-    try{
-      const payload=Object.fromEntries(Object.entries(filters).filter(([,value])=>value));
-      const bankQuery=new URLSearchParams(Object.entries({companyId:filters.companyId,storeId:filters.storeId}).filter(([,value])=>value));
-      const bankSuffix=bankQuery.size?`?${bankQuery}`:"";
-      const [analytics,bank]=await Promise.all([
-        request("/api/platform/super-admin-analytics/execute",{method:"POST",body:JSON.stringify(payload)}),
-        request(`/api/transactions/bank-ledger/summary${bankSuffix}`)
-      ]);
-      setResult({analytics,bank,filters:{...filters},executedAt:new Date().toISOString()});
-      const pending=Number.isFinite(Number(analytics.pendingFindingCount))
-        ?Number(analytics.pendingFindingCount)
-        :(analytics.findings||[]).filter(finding=>finding.reviewValid!==true).length;
-      setMessage?.(analytics.status==="ÎŸÎš"?"Î— Ï†Î¹Î»Ï„ÏÎ±ÏÎ¹ÏƒÎ¼Î­Î½Î· Î±Î½Î¬Î»Ï…ÏƒÎ· Î¿Î»Î¿ÎºÎ»Î·ÏÏŽÎ¸Î·ÎºÎµ Ï‡Ï‰ÏÎ¯Ï‚ Î´Î¹Î±Ï†Î¿ÏÎ­Ï‚.":pending?`Î— Ï†Î¹Î»Ï„ÏÎ±ÏÎ¹ÏƒÎ¼Î­Î½Î· Î±Î½Î¬Î»Ï…ÏƒÎ· Î¿Î»Î¿ÎºÎ»Î·ÏÏŽÎ¸Î·ÎºÎµ: ${pending} ÏƒÏ…Î¼Î²Î¬Î½(Ï„Î±) Ï€Î±ÏÎ±Î¼Î­Î½Î¿Ï…Î½ Ï‡Ï‰ÏÎ¯Ï‚ Î­Î»ÎµÎ³Ï‡Î¿.`:"Î— Ï†Î¹Î»Ï„ÏÎ±ÏÎ¹ÏƒÎ¼Î­Î½Î· Î±Î½Î¬Î»Ï…ÏƒÎ· Î¿Î»Î¿ÎºÎ»Î·ÏÏŽÎ¸Î·ÎºÎµ ÎºÎ±Î¹ ÏŒÎ»Î± Ï„Î± ÏƒÏ…Î¼Î²Î¬Î½Ï„Î± Î­Ï‡Î¿Ï…Î½ ÎºÎ±Ï„Î±Ï‡ÏŽÏÎ¹ÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï….");
-    }catch(err){setError(err.message)}finally{setBusy(false)}
-  };
-
-  const clear=()=>{
-    setFilters(emptyFilters);
-    setResult(null);
-    setError("");
-    setReviewingId("");
-    setReviewDraft(emptyReviewDraft);
-  };
-
-  const toggleCheckPackage=async packageItem=>{
-    if(!filters.companyId||!filters.storeId)return;
-    const nextActive=!packageItem.active;
-    const action=nextActive?"ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¯Î·ÏƒÎ·":"Î±Ï€ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¯Î·ÏƒÎ·";
-    if(!window.confirm(`Î˜Î­Î»ÎµÎ¹Ï‚ ${action} Ï„Î¿Ï… Ï€Î±ÎºÎ­Ï„Î¿Ï… Â«${packageItem.title}Â» Î³Î¹Î± Ï„Î¿ ÎµÏ€Î¹Î»ÎµÎ³Î¼Î­Î½Î¿ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±; Î— ÎµÎ½Î­ÏÎ³ÎµÎ¹Î± Î¸Î± ÎºÎ±Ï„Î±Î³ÏÎ±Ï†ÎµÎ¯ ÏƒÏ„Î¿ Audit.`))return;
-    setPackagesBusy(true);setError("");
-    try{
-      const data=await request(`/api/platform/store-modules/companies/${encodeURIComponent(filters.companyId)}/stores/${encodeURIComponent(filters.storeId)}/check-packages/${encodeURIComponent(packageItem.key)}`,{method:"PUT",body:JSON.stringify({active:nextActive,monthlyPrice:packageItem.monthlyPrice||0,startsAt:packageItem.startsAt||null,endsAt:packageItem.endsAt||null,notes:packageItem.notes||""})});
-      setCheckPackages(data.packages||[]);
-      setMessage?.(`Î¤Î¿ Ï€Î±ÎºÎ­Ï„Î¿ Â«${packageItem.title}Â» ${nextActive?"ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¹Î®Î¸Î·ÎºÎµ":"Î±Ï€ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¹Î®Î¸Î·ÎºÎµ"} ÎºÎ±Î¹ ÎºÎ±Ï„Î±Î³ÏÎ¬Ï†Î·ÎºÎµ ÏƒÏ„Î¿ Audit.`);
-    }catch(err){setError(err.message)}finally{setPackagesBusy(false)}
-  };
-
-  const openReview=finding=>{
-    setReviewingId(findingKey(finding));
-    setReviewDraft(emptyReviewDraft);
-    setError("");
-  };
-
-  const cancelReview=()=>{
-    if(reviewBusy)return;
-    setReviewingId("");
-    setReviewDraft(emptyReviewDraft);
-  };
+OO›™]ÈX\
+ÛÛ\[šY\Ë›X\
+ÛÛ\[žOO–ÔÝš[™ÊÛÛ\[žKšY
+KÛÛ\[žWJJKØÛÛ\[šY\×JNÂ‚ˆ\ÙQY™™XÝ
 
 
-  const saveReview=async finding=>{
-    const note=String(reviewDraft.note||"").trim();
-    setReviewBusy(true);setError("");
-    try{
-      const saved=await request(`/api/platform/super-admin-analytics/sessions/${encodeURIComponent(finding.sessionId)}/confirmation`,{
-        method:"POST",
-        body:JSON.stringify({companyId:finding.companyId,storeId:finding.storeId,note})
-      });
-      setResult(current=>{
-        if(!current)return current;
-        const nextFindings=(current.analytics?.findings||[]).map(item=>String(item.sessionId)===String(finding.sessionId)?{...item,...saved}:item);
-        const pendingFindingCount=nextFindings.filter(item=>item.reviewValid!==true).length;
-        return {...current,analytics:{...current.analytics,findings:nextFindings,pendingFindingCount,reviewedFindingCount:nextFindings.length-pendingFindingCount,status:nextFindings.length===0?"ÎŸÎš":pendingFindingCount?"Î§ÏÎµÎ¹Î¬Î¶ÎµÏ„Î±Î¹ ÎµÏ€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ·":"Î•Ï€Î¹Î²ÎµÎ²Î±Î¹Ï‰Î¼Î­Î½Î¿Î¹ Î­Î»ÎµÎ³Ï‡Î¿Î¹"}};
-      });
-      setReviewingId("");setReviewDraft(emptyReviewDraft);
-      setMessage?.("Î•Ï€Î¹Î²ÎµÎ²Î±Î¹ÏŽÎ¸Î·ÎºÎµ Î¿ Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î¿Ï‚ Î­Î»ÎµÎ³Ï‡Î¿Ï‚ ÎºÎ±Î¹ ÎºÎ±Ï„Î±Î³ÏÎ¬Ï†Î·ÎºÎµ ÏƒÏ„Î¿ Audit.");
-    }catch(err){setError(err.message)}finally{setReviewBusy(false)}
-  };
+OOžÂˆÛÛœÝÛÜÙSÛ‘\ØØ\OY]™[OžÚYŠ]™[šÙ^OOOH‘\ØØ\H‰‰ˆX\ÞI‰ˆ\™]šY]Ð\ÞJ[ÛÛÜÙOËŠ
+_NÂˆÚ[™ÝË˜Y]™[\Ý[™\ŠšÙ^YÝÛˆ‹ÛÜÙSÛ‘\ØØ\JNÂˆ™]\›Š
+OOÚ[™ÝËœ™[[Ý™Q]™[\Ý[™\ŠšÙ^YÝÛˆ‹ÛÜÙSÛ‘\ØØ\JNÂˆKØ\ÞK™]šY]Ð\ÞKÛÛÜÙWJNÂ‚ˆ\ÙQY™™XÝ
 
-  const analytics=result?.analytics||{};
-  const rows=analytics.rows||[];
-  const findings=analytics.findings||[];
-  const bank=result?.bank||{items:[],totals:{availableBalance:0,pendingAmount:0,projectedBalance:0}};
-  const totalShifts=rows.reduce((sum,row)=>sum+number(row.shifts),0);
-  const totalCashVariance=rows.reduce((sum,row)=>sum+number(row.cashVariance),0);
-  const totalCardVariance=rows.reduce((sum,row)=>sum+number(row.cardVariance),0);
-  const pendingFindingCount=Number.isFinite(Number(analytics.pendingFindingCount))?Number(analytics.pendingFindingCount):findings.filter(finding=>finding.reviewValid!==true).length;
-  const reviewedFindingCount=Number.isFinite(Number(analytics.reviewedFindingCount))?Number(analytics.reviewedFindingCount):findings.length-pendingFindingCount;
-  const selectedCompany=result?.filters.companyId?companyIndex.get(String(result.filters.companyId)):null;
-  const selectedStore=result?.filters.storeId?storeIndex.get(String(result.filters.storeId)):null;
-  const scopeLabel=selectedStore?`Î•Ï„Î±Î¹ÏÎµÎ¯Î±: ${selectedStore.companyName} Â· ÎšÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±: ${selectedStore.name}`:selectedCompany?`Î•Ï„Î±Î¹ÏÎµÎ¯Î±: ${selectedCompany.name} Â· ÎŒÎ»Î± Ï„Î± ÎºÎ±Ï„Î±ÏƒÏ„Î®Î¼Î±Ï„Î±`:"ÎŒÎ»Î¿Î¹ Î¿Î¹ Î¹Î´Î¹Î¿ÎºÏ„Î®Ï„ÎµÏ‚ / ÎµÏ„Î±Î¹ÏÎµÎ¯ÎµÏ‚ ÎºÎ±Î¹ ÏŒÎ»Î± Ï„Î± ÎºÎ±Ï„Î±ÏƒÏ„Î®Î¼Î±Ï„Î±";
-  const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Î‘ÏÏ‡Î® Î´Î¹Î±Î¸Î­ÏƒÎ¹Î¼Ï‰Î½ Î´ÎµÎ´Î¿Î¼Î­Î½Ï‰Î½"} Î­Ï‰Ï‚ ${result.filters.to||"Î£Î®Î¼ÎµÏÎ±"}`:"ÎŒÎ»Î¿ Ï„Î¿ Î´Î¹Î±Î¸Î­ÏƒÎ¹Î¼Î¿ Î´Î¹Î¬ÏƒÏ„Î·Î¼Î±";
-  const storeIsSelected=Boolean(filters.companyId&&filters.storeId);
-  const activePackageCount=checkPackages.filter(packageItem=>packageItem.active).length;
 
-  return <div className={embedded?"platform-checks-page":"platform-modal"}><section className={`sa-modal${embedded?" sa-page":""}`}>
-    <header className="sa-checks-header"><div><span>ÎšÎ•ÎÎ¤Î¡ÎŸ Î•Î›Î•Î“Î§ÎŸÎ¥ Î¥Î Î•Î¡Î”Î™Î‘Î§Î•Î™Î¡Î™Î£Î¤Î—</span><h2><BarChart3/> ÎˆÎ»ÎµÎ³Ï‡Î¿Î¹ &amp; Î‘Î½Î±Î»ÏÏƒÎµÎ¹Ï‚</h2><p>ÎˆÎ»ÎµÎ³Î¾Îµ Ï„Î±Î¼ÎµÎ¯Î¿, POSâ€“EFTPOS ÎºÎ±Î¹ Î¤Î±Î¼ÎµÎ¯Î¿ Î¤ÏÎ¬Ï€ÎµÎ¶Î±Ï‚ Î¼Îµ Î±ÏƒÏ†Î¬Î»ÎµÎ¹Î± ÎºÎ±Î¹ Ï€Î»Î®ÏÎ· ÎºÎ±Ï„Î±Î³ÏÎ±Ï†Î® ÏƒÏ„Î¿ Audit.</p></div><div className="sa-header-actions"><div className="sa-readonly-badge"><ShieldCheck/> ÎœÏŒÎ½Î¿ Î±Î½Î¬Î³Î½Ï‰ÏƒÎ·</div><button type="button" className="sa-close" aria-label="ÎšÎ»ÎµÎ¯ÏƒÎ¹Î¼Î¿ ÎµÎ»Î­Î³Ï‡Ï‰Î½ ÎºÎ±Î¹ Î±Î½Î±Î»ÏÏƒÎµÏ‰Î½" onClick={onClose} disabled={busy||reviewBusy}><X/></button></div></header>
-    {error&&<div className="platform-alert error">{error}</div>}
-    <section className="sa-checks-workspace">
-      <div className="sa-workspace-heading"><div><span>1. Î•Î Î™Î›ÎŸÎ“Î— Î Î•Î”Î™ÎŸÎ¥</span><h3>Î”Î¹Î¬Î»ÎµÎ¾Îµ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î± ÎºÎ±Î¹ Ï€ÎµÏÎ¯Î¿Î´Î¿</h3></div><p>Î— Î±Î½Î¬Î»Ï…ÏƒÎ· Î´ÎµÎ½ Î±Î»Î»Î¬Î¶ÎµÎ¹ Î¿Î¹ÎºÎ¿Î½Î¿Î¼Î¹ÎºÎ¬ Î´ÎµÎ´Î¿Î¼Î­Î½Î±.</p></div>
-      <div className="supplier-review-filters sa-checks-filters">
-        <label><span><Building2/> Î™Î´Î¹Î¿ÎºÏ„Î®Ï„Î·Ï‚ / ÎµÏ„Î±Î¹ÏÎµÎ¯Î±</span><select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">ÎŒÎ»Î¿Î¹ Î¿Î¹ Î¹Î´Î¹Î¿ÎºÏ„Î®Ï„ÎµÏ‚ / ÎµÏ„Î±Î¹ÏÎµÎ¯ÎµÏ‚</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Î§Ï‰ÏÎ¯Ï‚ Î¹Î´Î¹Î¿ÎºÏ„Î®Ï„Î·";return <option key={company.id} value={company.id}>{owner} Â· {company.name}</option>})}</select></label>
-        <label><span><Store/> ÎšÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±</span><select value={filters.storeId} onChange={event=>selectStore(event.target.value)}><option value="">ÎŒÎ»Î± Ï„Î± ÎºÎ±Ï„Î±ÏƒÏ„Î®Î¼Î±Ï„Î±</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} Â· ${store.name}`}</option>)}</select></label>
-        <label><span><CalendarDays/> Î‘Ï€ÏŒ</span><input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
-        <label><span><CalendarDays/> ÎˆÏ‰Ï‚</span><input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
-        <div className="sa-filter-actions"><button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Î•ÎºÏ„Î­Î»ÎµÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï…â€¦":"Î•ÎºÏ„Î­Î»ÎµÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï…"}<ChevronRight/></button><button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>ÎšÎ±Î¸Î±ÏÎ¹ÏƒÎ¼ÏŒÏ‚</button></div>
-      </div>
-    </section>
-    <section className="platform-panel sa-package-panel">
-      <div className="sa-package-heading"><div><span>2. Î”Î™ÎšÎ‘Î™Î©ÎœÎ‘Î¤Î‘ Î•Î›Î•Î“Î§ÎŸÎ¥</span><h3>Î Î±ÎºÎ­Ï„Î± ÎµÎ»Î­Î³Ï‡Ï‰Î½ Î±Î½Î¬ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±</h3><p>Î— ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¯Î·ÏƒÎ· ÎºÎ±Ï„Î±Î³ÏÎ¬Ï†ÎµÏ„Î±Î¹ ÏƒÏ„Î¿ Audit ÎºÎ±Î¹ Î³Î¯Î½ÎµÏ„Î±Î¹ Î¼ÏŒÎ½Î¿ Î±Ï€ÏŒ Î¥Ï€ÎµÏÎ´Î¹Î±Ï‡ÎµÎ¹ÏÎ¹ÏƒÏ„Î®.</p></div>{storeIsSelected&&<strong className={activePackageCount?"sa-package-count active":"sa-package-count"}>{activePackageCount} / {checkPackages.length||3} ÎµÎ½ÎµÏÎ³Î¬</strong>}</div>
-      {!storeIsSelected?<div className="sa-package-empty"><LockKeyhole/><div><b>Î•Ï€Î¯Î»ÎµÎ¾Îµ Ï€ÏÏŽÏ„Î± Î­Î½Î± ÏƒÏ…Î³ÎºÎµÎºÏÎ¹Î¼Î­Î½Î¿ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±</b><span>Î¤ÏŒÏ„Îµ Î¸Î± ÎµÎ¼Ï†Î±Î½Î¹ÏƒÏ„Î¿ÏÎ½ Î· ÎºÎ±Ï„Î¬ÏƒÏ„Î±ÏƒÎ· ÎºÎ±Î¹ Î¿Î¹ Î´Î¹Î±Î¸Î­ÏƒÎ¹Î¼ÎµÏ‚ ÎµÎ½Î­ÏÎ³ÎµÎ¹ÎµÏ‚ Î³Î¹Î± ÎºÎ¬Î¸Îµ Ï€Î±ÎºÎ­Ï„Î¿.</span></div></div>:packagesBusy&&!checkPackages.length?<div className="sa-package-empty">Î¦ÏŒÏÏ„Ï‰ÏƒÎ· Ï€Î±ÎºÎ­Ï„Ï‰Î½â€¦</div>:<div className="sa-package-grid">{checkPackages.map(packageItem=><article key={packageItem.key} className={`sa-package-card ${packageItem.active?"active":""}`}><div className="sa-package-card-top"><span className="sa-package-icon">{packageItem.active?<Unlock/>:<LockKeyhole/>}</span><small>{packageItem.active?"Î•ÎÎ•Î¡Î“ÎŸ":"ÎšÎ›Î•Î™Î”Î©ÎœÎ•ÎÎŸ"}</small></div><div><h3>{packageItem.title}</h3><p>{packageItem.description}</p></div><button type="button" onClick={()=>toggleCheckPackage(packageItem)} disabled={!packageItem.canToggle||packagesBusy||busy||reviewBusy}>{packageItem.includedBy?`Î ÎµÏÎ¹Î»Î±Î¼Î²Î¬Î½ÎµÏ„Î±Î¹ ÏƒÏ„Î¿ ${packageItem.includedByTitle}`:packageItem.active?"Î‘Ï€ÎµÎ½ÎµÏÎ³Î¿Ï€Î¿Î¯Î·ÏƒÎ·":"Î•Î½ÎµÏÎ³Î¿Ï€Î¿Î¯Î·ÏƒÎ·"}</button></article>)}</div>}
-    </section>
-    <section className="sa-scope-note"><ShieldCheck/><div><b>Î¤Î¹ ÎºÎ±Î»ÏÏ€Ï„ÎµÎ¹ Î¿ Î­Î»ÎµÎ³Ï‡Î¿Ï‚</b><p>ÎŸÎ¹ Î·Î¼ÎµÏÎ¿Î¼Î·Î½Î¯ÎµÏ‚ ÎµÏ†Î±ÏÎ¼ÏŒÎ¶Î¿Î½Ï„Î±Î¹ ÏƒÏ„Î¹Ï‚ Î²Î¬ÏÎ´Î¹ÎµÏ‚ ÎºÎ±Î¹ ÏƒÏ„Î¹Ï‚ Î´Î¹Î±Ï†Î¿ÏÎ­Ï‚ Ï„Î±Î¼ÎµÎ¯Î¿Ï…/POSâ€“EFTPOS. Î¤Î¿ Î¤Î±Î¼ÎµÎ¯Î¿ Î¤ÏÎ¬Ï€ÎµÎ¶Î±Ï‚ ÎµÎ¯Î½Î±Î¹ Ï„ÏÎ­Ï‡Î¿Î½ Î»Î¿Î³Î¹ÏƒÏ„Î¹ÎºÏŒ Ï…Ï€ÏŒÎ»Î¿Î¹Ï€Î¿ ÎºÎ±Î¹ Ï†Î¹Î»Ï„ÏÎ¬ÏÎµÏ„Î±Î¹ Î¼ÏŒÎ½Î¿ Î±Î½Î¬ Î¹Î´Î¹Î¿ÎºÏ„Î®Ï„Î· ÎºÎ±Î¹ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±.</p></div></section>
-    {busy&&<section className="platform-panel" style={{marginBottom:14}}><b>Î•ÎºÏ„ÎµÎ»ÎµÎ¯Ï„Î±Î¹ Î¿ Î­Î»ÎµÎ³Ï‡Î¿Ï‚â€¦</b><p>Î£Ï…Î»Î»Î­Î³Î¿Î½Ï„Î±Î¹ Î´ÎµÎ´Î¿Î¼Î­Î½Î± Î±Î½Î¬Î³Î½Ï‰ÏƒÎ·Ï‚. Î”ÎµÎ½ Î±Î»Î»Î¬Î¶ÎµÎ¹ Î²Î¬ÏÎ´Î¹Î±, Ï„Î±Î¼ÎµÎ¯Î¿, Ï„ÏÎ¬Ï€ÎµÎ¶Î±, Î±Ï€ÏŒÎ¸ÎµÎ¼Î±, Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ Î® Ï…Ï€ÏŒÎ»Î¿Î¹Ï€Î¿.</p></section>}
-    {result&&<>
-      <section className="platform-panel" style={{marginBottom:14}}><b>{scopeLabel}</b><p>{periodLabel}</p><small>Î•ÎºÏ„Î­Î»ÎµÏƒÎ·: {athensDateTime(result.executedAt)} Â· ÎšÎ±Ï„Î¬ÏƒÏ„Î±ÏƒÎ·: {analytics.status||"â€”"}</small></section>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:14}}>
-        <article className="platform-panel"><small>Î’Î¬ÏÎ´Î¹ÎµÏ‚</small><h3>{totalShifts}</h3></article>
-        <article className="platform-panel"><small>ÎšÎ±Î¸Î±ÏÎ® Î´Î¹Î±Ï†Î¿ÏÎ¬ Î¼ÎµÏ„ÏÎ·Ï„ÏŽÎ½</small><h3>{eur(totalCashVariance)}</h3></article>
-        <article className="platform-panel"><small>Î”Î¹Î±Ï†Î¿ÏÎ¬ POSâ€“EFTPOS</small><h3>{eur(totalCardVariance)}</h3></article>
-        <article className="platform-panel"><small>Î•ÎºÎºÏÎµÎ¼Î® ÏƒÏ…Î¼Î²Î¬Î½Ï„Î±</small><h3>{pendingFindingCount}</h3><small>{reviewedFindingCount} Î¼Îµ ÎºÎ±Ï„Î±Ï‡ÏŽÏÎ¹ÏƒÎ· Â· {findings.length} ÏƒÏ…Î½Î¿Î»Î¹ÎºÎ¬</small></article>
-      </div>
-      <section className="platform-panel" style={{marginBottom:14}}>
-        <b>Î£Ï…Î¼Î²Î¬Î½Ï„Î± Ï€Î¿Ï… Ï‡ÏÎµÎ¹Î¬Î¶Î¿Î½Ï„Î±Î¹ Î­Î»ÎµÎ³Ï‡Î¿</b>
-        <p>ÎšÎ¬Î¸Îµ ÎµÎ³Î³ÏÎ±Ï†Î® ÎµÎ¯Î½Î±Î¹ Î±Ï€Î¿Ï„Î­Î»ÎµÏƒÎ¼Î± Ï„Ï‰Î½ Î±Ï…Ï„ÏŒÎ¼Î±Ï„Ï‰Î½ ÎºÎ±Î½ÏŒÎ½Ï‰Î½. Î”ÎµÎ½ Î±Ï€Î¿Ï„ÎµÎ»ÎµÎ¯ Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î· Î±Ï€ÏŒÎ´Î¿ÏƒÎ· Î±Î¹Ï„Î¯Î±Ï‚ Î® ÎµÏ…Î¸ÏÎ½Î·Ï‚. Î•Ï€Î¹Î²ÎµÎ²Î±Î¹ÏŽÎ½ÎµÎ¹Ï‚ Î¼ÏŒÎ½Î¿ Ï„Î¿ Î±Ï€Î¿Ï„Î­Î»ÎµÏƒÎ¼Î± ÎºÎ±Î¹, Î±Î½ Î¸Î­Î»ÎµÎ¹Ï‚, Ï€ÏÎ¿ÏƒÎ¸Î­Ï„ÎµÎ¹Ï‚ Ï€Î±ÏÎ±Ï„Î®ÏÎ·ÏƒÎ·.</p>
-        {analytics.findingsTruncated&&<div className="platform-alert error">Î•Î¼Ï†Î±Î½Î¯Î¶Î¿Î½Ï„Î±Î¹ Ï„Î± Î½ÎµÏŒÏ„ÎµÏÎ± {analytics.findingLimit||500} ÏƒÏ…Î¼Î²Î¬Î½Ï„Î±. Î ÎµÏÎ¹ÏŒÏÎ¹ÏƒÎµ Ï„Î¹Ï‚ Î·Î¼ÎµÏÎ¿Î¼Î·Î½Î¯ÎµÏ‚ Î³Î¹Î± Ï€Î»Î®ÏÎ· Î»Î¯ÏƒÏ„Î±.</div>}
-        {findings.length?<div style={{display:"grid",gap:12,marginTop:12}}>{findings.map((finding,index)=>{
-          const store=storeIndex.get(String(finding.storeId));
-          const company=companyIndex.get(String(finding.companyId));
-          const companyName=finding.companyName||company?.name||store?.companyName||"â€”";
-          const storeName=finding.storeName||store?.name||finding.storeId||"â€”";
-          const operator=finding.operatorName||finding.closedByName||finding.openedByName||"Î§Ï‰ÏÎ¯Ï‚ Î´Î¹Î±Î¸Î­ÏƒÎ¹Î¼Î¿ Ï‡ÎµÎ¹ÏÎ¹ÏƒÏ„Î®";
-          const reference=finding.referenceId||finding.sessionId||"â€”";
-          const key=findingKey(finding);
-          const reviewed=finding.reviewValid===true;
-          const needsRecheck=finding.recheckRequired===true;
-          const statusLabel=reviewed?(finding.reviewLabel||reviewDecisionLabels[finding.reviewDecision]||"ÎšÎ±Ï„Î±Ï‡Ï‰ÏÎ¹ÏƒÎ¼Î­Î½Î¿Ï‚ Î­Î»ÎµÎ³Ï‡Î¿Ï‚"):needsRecheck?"Î‘Ï€Î±Î¹Ï„ÎµÎ¯Ï„Î±Î¹ ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿Ï‚":"Î§ÏÎµÎ¹Î¬Î¶ÎµÏ„Î±Î¹ Î­Î»ÎµÎ³Ï‡Î¿";
-          const formOpen=reviewingId===key;
-          return <article key={key||`${finding.storeId||"finding"}:${reference}:${index}`} style={{border:"1px solid #d7e1ec",borderRadius:14,padding:14,background:"#fff"}}>
-            <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}><div><small>{finding.eventSource||"Î£Ï…Î¼Î²Î¬Î½ Î²Î¬ÏÎ´Î¹Î±Ï‚"}</small><h3 style={{margin:"4px 0 0"}}>{findingTitle(finding)}</h3></div><span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:999,fontWeight:800,background:reviewed?"#e3f7ed":"#fff1df",color:reviewed?"#08734e":"#9a4b0b"}}>{reviewed?<CheckCircle2/>:<AlertTriangle/>} {statusLabel}</span></div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginTop:13}}>
-              <span><b>Î—Î¼ÎµÏÎ¿Î¼Î·Î½Î¯Î± / ÏŽÏÎ±</b><small style={{display:"block"}}>{athensDateTime(finding.occurredAt||finding.closedAt||finding.openedAt)}</small></span>
-              <span><b>Î•Ï„Î±Î¹ÏÎµÎ¯Î±</b><small style={{display:"block"}}>{companyName}</small></span>
-              <span><b>ÎšÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±</b><small style={{display:"block"}}>{storeName}</small></span>
-              <span><b>POS / Î¤ÎµÏÎ¼Î±Ï„Î¹ÎºÏŒ</b><small style={{display:"block"}}>{finding.terminalPos||"Î§Ï‰ÏÎ¯Ï‚ POS"}</small></span>
-              <span><b>Î’Î¬ÏÎ´Î¹Î±</b><small style={{display:"block"}}>{finding.shiftLabel||"Î§Ï‰ÏÎ¯Ï‚ Î¿Î½Î¿Î¼Î±ÏƒÎ¯Î± Î²Î¬ÏÎ´Î¹Î±Ï‚"}</small></span>
-              <span><b>Î§ÎµÎ¹ÏÎ¹ÏƒÏ„Î®Ï‚ ÎºÎ»ÎµÎ¹ÏƒÎ¯Î¼Î±Ï„Î¿Ï‚</b><small style={{display:"block"}}>{operator}</small></span>
-              <span><b>Î”Î¹Î±Ï†Î¿ÏÎ¬ Î¼ÎµÏ„ÏÎ·Ï„ÏŽÎ½</b><small style={{display:"block"}}>{eur(finding.cashVariance)}</small></span>
-              <span><b>Î”Î¹Î±Ï†Î¿ÏÎ¬ POSâ€“EFTPOS</b><small style={{display:"block"}}>{eur(finding.cardVariance)}</small></span>
-              <span><b>Î†Î½Î¿Î¹Î³Î¼Î± Î²Î¬ÏÎ´Î¹Î±Ï‚</b><small style={{display:"block"}}>{athensDateTime(finding.openedAt)}</small></span>
-              <span><b>ÎšÎ»ÎµÎ¯ÏƒÎ¹Î¼Î¿ Î²Î¬ÏÎ´Î¹Î±Ï‚</b><small style={{display:"block"}}>{athensDateTime(finding.closedAt)}</small></span>
-            </div>
-            <small style={{display:"block",marginTop:12}}>Î‘Î½Î±Ï†Î¿ÏÎ¬ Î²Î¬ÏÎ´Î¹Î±Ï‚: {reference} Â· ÎšÏ‰Î´Î¹ÎºÏŒÏ‚ ÏƒÏ…Î¼Î²Î¬Î½Ï„Î¿Ï‚: {finding.eventCode||finding.code||"VARIANCE_REVIEW"}</small>
-            {finding.reviewId&&<div style={{marginTop:12,padding:11,borderRadius:10,background:reviewed?"#ecfdf5":"#fff7ed",border:`1px solid ${reviewed?"#b9ead3":"#fed7aa"}`}}>
-              <b>Î¤ÎµÎ»ÎµÏ…Ï„Î±Î¯Î¿Ï‚ Î­Î»ÎµÎ³Ï‡Î¿Ï‚: {reviewed?(finding.reviewLabel||reviewDecisionLabels[finding.reviewDecision]||"ÎšÎ±Ï„Î±Ï‡Ï‰ÏÎ¹ÏƒÎ¼Î­Î½Î¿Ï‚ Î­Î»ÎµÎ³Ï‡Î¿Ï‚"):"Î‘Ï€Î±Î¹Ï„ÎµÎ¯Ï„Î±Î¹ ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿Ï‚"}</b>
-              <small style={{display:"block",marginTop:4}}>{finding.reviewedBy||"Î§Ï‰ÏÎ¯Ï‚ Î´Î¹Î±Î¸Î­ÏƒÎ¹Î¼Î¿ ÎµÎ»ÎµÎ³ÎºÏ„Î®"} Â· {athensDateTime(finding.reviewedAt)}{number(finding.reviewAmount)>0?` Â· Î Î¿ÏƒÏŒ ${eur(finding.reviewAmount)}`:""}</small>
-              {finding.reviewNote&&<p style={{margin:"7px 0 0"}}>{finding.reviewNote}</p>}
-              {needsRecheck&&<small style={{display:"block",marginTop:6,color:"#9a4b0b"}}>ÎœÎµÏ„Î¬ Ï„Î¿Î½ Ï€ÏÎ¿Î·Î³Î¿ÏÎ¼ÎµÎ½Î¿ Î­Î»ÎµÎ³Ï‡Î¿ ÎºÎ±Ï„Î±Î³ÏÎ¬Ï†Î·ÎºÎµ Î½ÎµÏŒÏ„ÎµÏÎ· ÎºÎ¯Î½Î·ÏƒÎ· ÏƒÏ„Î· Î²Î¬ÏÎ´Î¹Î±. Î§ÏÎµÎ¹Î¬Î¶ÎµÏ„Î±Î¹ Î½Î­Î± ÎºÎ±Ï„Î±Ï‡ÏŽÏÎ¹ÏƒÎ·.</small>}
-            </div>}
-            <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
-              <button type="button" onClick={()=>openReview(finding)} disabled={reviewBusy} style={{border:0,borderRadius:9,padding:"9px 12px",background:"#147fc1",color:"#fff",fontWeight:800,cursor:"pointer"}}>{reviewed?"ÎÎ­Î± ÎµÏ€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ·":"Î•Ï€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï…"}</button>
-            </div>
-            {formOpen&&<div style={{display:"grid",gap:10,marginTop:12,padding:12,borderRadius:12,background:"#f7fafc",border:"1px solid #d7e1ec"}}>
-              <b>Î•Ï€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ· Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î¿Ï… ÎµÎ»Î­Î³Ï‡Î¿Ï…</b>
-              <label style={{display:"grid",gap:5,fontWeight:800,fontSize:12}}>Î Î±ÏÎ±Ï„Î®ÏÎ·ÏƒÎ· (Ï€ÏÎ¿Î±Î¹ÏÎµÏ„Î¹ÎºÎ®)<textarea value={reviewDraft.note} onChange={event=>setReviewDraft(current=>({...current,note:event.target.value}))} disabled={reviewBusy} rows={3} maxLength={1000} placeholder="Î ÏÎ¿Î±Î¹ÏÎµÏ„Î¹ÎºÎ® Ï€Î±ÏÎ±Ï„Î®ÏÎ·ÏƒÎ· Î³Î¹Î± Ï„Î¿Î½ Î­Î»ÎµÎ³Ï‡Î¿." style={{padding:10,border:"1px solid #cbd5e1",borderRadius:8,resize:"vertical",font:"inherit"}}/></label>
-              <small>Î— ÎµÏ€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ· Î±Ï€Î¿Î¸Î·ÎºÎµÏÎµÎ¹ ÏƒÏ„Î¿ Audit Î¼ÏŒÎ½Î¿ Ï„Î¿Î½ ÎµÎ»ÎµÎ³ÎºÏ„Î®, Ï„Î·Î½ ÏŽÏÎ± ÎºÎ±Î¹ Ï„Î·Î½ Ï€ÏÎ¿Î±Î¹ÏÎµÏ„Î¹ÎºÎ® Ï€Î±ÏÎ±Ï„Î®ÏÎ·ÏƒÎ·. Î”ÎµÎ½ Î±Î»Î»Î¬Î¶ÎµÎ¹ Ï€Î¿ÏƒÎ¬, Ï„Î±Î¼ÎµÎ¯Î¿, POSâ€“EFTPOS, Ï„ÏÎ¬Ï€ÎµÎ¶Î± Î® Î±Ï€ÏŒÎ¸ÎµÎ¼Î±.</small>
-              <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-                <button type="button" className="secondary" onClick={cancelReview} disabled={reviewBusy}>Î‘ÎºÏÏÏ‰ÏƒÎ·</button>
-                <button type="button" onClick={()=>saveReview(finding)} disabled={reviewBusy}>{reviewBusy?"Î•Ï€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ·â€¦":"Î•Ï€Î¹Î²ÎµÎ²Î±Î¯Ï‰ÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï…"}</button>
-              </div>
-            </div>}
-          </article>})}</div>:<div className="platform-empty">Î”ÎµÎ½ Ï…Ï€Î¬ÏÏ‡Î¿Ï…Î½ ÏƒÏ…Î³ÎºÎµÎºÏÎ¹Î¼Î­Î½Î± ÏƒÏ…Î¼Î²Î¬Î½Ï„Î± Î³Î¹Î± Î­Î»ÎµÎ³Ï‡Î¿ ÏƒÏ„Î± ÎµÏ€Î¹Î»ÎµÎ³Î¼Î­Î½Î± Ï†Î¯Î»Ï„ÏÎ±.</div>}
-      </section>
-      <section className="platform-panel" style={{marginBottom:14}}><b>Î‘Î½Î¬Î»Ï…ÏƒÎ· Î±Î½Î¬ ÎºÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±</b>{rows.length?rows.map(row=>{const store=storeIndex.get(String(row.storeId));const company=companyIndex.get(String(row.companyId));const needsReview=Math.abs(number(row.cashVariance))>.009||Math.abs(number(row.cardVariance))>.02;return <article key={`${row.companyId}:${row.storeId}`} style={{display:"grid",gridTemplateColumns:"minmax(220px,1fr) repeat(3,minmax(120px,.5fr))",gap:12,alignItems:"center",padding:"13px 0",borderBottom:"1px solid #e2e8f0"}}><div><b>Î•Ï„Î±Î¹ÏÎµÎ¯Î±: {company?.name||store?.companyName||row.companyId}</b><small style={{display:"block"}}>ÎšÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±: {store?.name||row.storeId}</small></div><span>Î’Î¬ÏÎ´Î¹ÎµÏ‚ <b>{number(row.shifts)}</b></span><span>ÎœÎµÏ„ÏÎ·Ï„Î¬ <b>{eur(row.cashVariance)}</b></span><span>{needsReview?<AlertTriangle/>:<CheckCircle2/>} {needsReview?"Î¥Ï€Î¬ÏÏ‡ÎµÎ¹ Î±Ï€ÏŒÎºÎ»Î¹ÏƒÎ·":"Î£Ï…Î¼Ï†Ï‰Î½Î¯Î±"} Â· POSâ€“EFTPOS {eur(row.cardVariance)}</span></article>}):<div className="platform-empty">Î”ÎµÎ½ Ï…Ï€Î¬ÏÏ‡Î¿Ï…Î½ ÎºÎ»ÎµÎ¹ÏƒÎ¼Î­Î½ÎµÏ‚ Î²Î¬ÏÎ´Î¹ÎµÏ‚ Î³Î¹Î± Ï„Î± ÎµÏ€Î¹Î»ÎµÎ³Î¼Î­Î½Î± Ï†Î¯Î»Ï„ÏÎ±.</div>}</section>
-      <section className="platform-panel" style={{marginBottom:14}}><b>Î£ÏÎ½Î¿ÏˆÎ· Î•Î¹ÎºÎ¿Î½Î¹ÎºÎ¿Ï Î¤Î±Î¼ÎµÎ¯Î¿Ï… Î¤ÏÎ¬Ï€ÎµÎ¶Î±Ï‚</b><p>Î›Î¿Î³Î¹ÏƒÏ„Î¹ÎºÏŒ: {eur(bank.totals?.projectedBalance)} Â· Î•Ï€Î¹Î²ÎµÎ²Î±Î¹Ï‰Î¼Î­Î½Î¿: {eur(bank.totals?.availableBalance)} Â· Î£Îµ Î±Î½Î±Î¼Î¿Î½Î®: {eur(bank.totals?.pendingAmount)}</p>{(bank.items||[]).map(item=><small key={item.bankAccountId} style={{display:"block",marginTop:5}}>Î•Ï„Î±Î¹ÏÎµÎ¯Î±: {item.companyName} Â· ÎšÎ±Ï„Î¬ÏƒÏ„Î·Î¼Î±: {item.storeName} Â· {item.bankName} / {item.accountName}: Î›Î¿Î³Î¹ÏƒÏ„Î¹ÎºÏŒ {eur(item.projectedBalance)} Â· Î•Ï€Î¹Î²ÎµÎ²Î±Î¹Ï‰Î¼Î­Î½Î¿ {eur(item.availableBalance)} Â· Î£Îµ Î±Î½Î±Î¼Î¿Î½Î® {eur(item.pendingAmount)}</small>)}</section>
-      <section className="platform-panel"><ShieldCheck/><b> ÎœÏŒÎ½Î¿ Î³Î¹Î± Î±Î½Î¬Î³Î½Ï‰ÏƒÎ· Ï„Î± Î¿Î¹ÎºÎ¿Î½Î¿Î¼Î¹ÎºÎ¬ Î´ÎµÎ´Î¿Î¼Î­Î½Î±</b><p>Î— Î±Î½Î¬Î»Ï…ÏƒÎ· Î´ÎµÎ½ Ï€ÏÎ±Î³Î¼Î±Ï„Î¿Ï€Î¿Î¹ÎµÎ¯ Î´Î¹Î¿ÏÎ¸ÏŽÏƒÎµÎ¹Ï‚ ÎºÎ±Î¹ Î´ÎµÎ½ Î±Ï€Î¿Î´Î¯Î´ÎµÎ¹ Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î± ÎµÏ…Î¸ÏÎ½Î· ÏƒÎµ ÎµÏÎ³Î±Î¶ÏŒÎ¼ÎµÎ½Î¿. Î— ÎºÎ±Ï„Î±Ï‡ÏŽÏÎ¹ÏƒÎ· ÎµÎ»Î­Î³Ï‡Î¿Ï… Î³ÏÎ¬Ï†ÎµÎ¹ Î¼ÏŒÎ½Î¿ Î±Ï€ÏŒÏ†Î±ÏƒÎ·, ÏƒÎ·Î¼ÎµÎ¯Ï‰ÏƒÎ·, ÎµÎ»ÎµÎ³ÎºÏ„Î® ÎºÎ±Î¹ Ï‡ÏÏŒÎ½Î¿ ÏƒÏ„Î¿ Audit.</p></section>
-    </>}
-  </section></div>;
-}
+OOžÂˆ]XÝ]™O]YNÂˆYŠYš[\œË˜ÛÛ\[žRYYš[\œËœÝÜ™RY
+^ÂˆÙ]ÚXÚÔXÚØYÙ\Ê×JNÂˆ™]\›Š
+OOžØXÝ]™OY˜[Ù_NÂˆBˆÙ]XÚØYÙ\Ð\ÞJYJNÂˆ™\]Y\Ý
+Ø\KÜ]›Ü›KÜÝÜ™K[[Ù[\ËØÛÛ\[šY\ËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+š[\œË˜ÛÛ\[žRY
+_KÜÝÜ™\ËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+š[\œËœÝÜ™RY
+_KØÚXÚË\XÚØYÙ\Ø
+Bˆ[Š]OOžÚYŠXÝ]™J\Ù]ÚXÚÔXÚØYÙ\Ê]KœXÚØYÙ\ß×J_JBˆ˜Ø]Ú
+\œOžÚYŠXÝ]™J\Ù]\œ›ÜŠ\œ‹›Y\ÜØYÙJ_JBˆ™š[˜[J
+
+OOžÚYŠXÝ]™J\Ù]XÚØYÙ\Ð\ÞJ˜[ÙJ_JNÂˆ™]\›Š
+OOžØXÝ]™OY˜[Ù_NÂˆKÙš[\œË˜ÛÛ\[žRYš[\œËœÝÜ™RY™\]Y\ÝJNÂ‚ˆÛÛœÝ\]Qš[\œÏ\]ÚOžÂˆÙ]š[\œÊÝ\œ™[OŠË‹‹˜Ý\œ™[‹‹œ]ÚJJNÂˆÙ]™\Ý[
+[
+NÂˆÙ]\œ›ÜŠˆŠNÂˆÙ]™]šY]Ú[™ÒY
+ˆŠNÂˆÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆNÂ‚ˆÛÛœÝÙ[XÝÝÜ™O]˜[YOOžÂˆÛÛœÝÙ[XÝYÝÜ™O\ÝÜ™\Ë™š[™
+ÝÜ™OO”Ýš[™ÊÝÜ™KšY
+OOOTÝš[™Ê˜[YJJNÂˆ\]Qš[\œÊÜÝÜ™RY˜[YKÛÛ\[žRY˜[YI‰œÙ[XÝYÝÜ™OÔÝš[™ÊÙ[XÝYÝÜ™K˜ÛÛ\[žRY
+N™š[\œË˜ÛÛ\[žRYJNÂˆNÂ‚ˆÛÛœÝ[X\Þ[˜Ê
+OOžÂˆYŠš[\œË™œ›ÛI‰™š[\œËÉ‰™š[\œË™œ›ÛO™š[\œËÊ^ÂˆÙ]\œ›ÜŠ³¥È3­ó¯3­sàs¯ó¯3­ó¯s«ó¬H0ªó¤sà3ã0®È3­3­s¯H3¯3à3¯óàs­s«È3¯s¬H3­s«ó¯s¬s®H3¯3­sá3¬s¬ó­s¯s«sàóá3­sàs­È3¬sà3ã3á3­ó¯H3­ó¯3­sàs¯ó¯3­ó¯s«ó¬H0ªó¢3âsà°®ËˆŠNÂˆ™]\›ŽÂˆBˆÙ]\ÞJYJNÜÙ]\œ›ÜŠˆŠNÜÙ]™\Ý[
+[
+NÜÙ]™]šY]Ú[™ÒY
+ˆŠNÜÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆž^ÂˆÛÛœÝ^[ØYSØš™XÝ™œ›ÛQ[šY\ÊØš™XÝ™[šY\Êš[\œÊK™š[\Š
+Ë˜[YWJOO˜[YJJNÂˆÛÛœÝ˜[šÔ]Y\žO[™]ÈT“ÙX\˜Ú\˜[\ÊØš™XÝ™[šY\ÊØÛÛ\[žRY™š[\œË˜ÛÛ\[žRYÝÜ™RY™š[\œËœÝÜ™RYJK™š[\Š
+Ë˜[YWJOO˜[YJJNÂˆÛÛœÝ˜[šÔÝY™š^X˜[šÔ]Y\žKœÚ^™OØÉØ˜[šÔ]Y\ž_XˆˆŽÂˆÛÛœÝØ[˜[]XÜË˜[š×OX]ØZ]›ÛZ\ÙK˜[
+Âˆ™\]Y\Ý
+‹Ø\KÜ]›Ü›KÜÝ\\‹XYZ[‹X[˜[]XÜËÙ^XÝ]H‹ÛY]Ùˆ”ÔÕ‹›ÙN’”ÓÓ‹œÝš[™ÚYžJ^[ØY
+_JKˆ™\]Y\Ý
+Ø\KÝ˜[œØXÝ[ÛœËØ˜[šË[YÙ\‹ÜÝ[[X\žIØ˜[šÔÝY™š^X
+BˆJNÂˆÙ]™\Ý[
+Ø[˜[]XÜË˜[šËš[\œÎžË‹‹™š[\œßK^XÝ]Y]›™]È]J
+KÒTÓÔÝš[™Ê
+_JNÂˆÛÛœÝ[™[™ÏS[X™\‹š\Ñš[š]J[X™\Š[˜[]XÜËœ[™[™Ñš[™[™ÐÛÝ[
+JBˆÓ[X™\Š[˜[]XÜËœ[™[™Ñš[™[™ÐÛÝ[
+BˆŠ[˜[]XÜË™š[™[™Üß×JK™š[\Šš[™[™ÏO™š[™[™Ëœ™]šY]Õ˜[YOO]YJK›[™ÝÂˆÙ]Y\ÜØYÙOËŠ[˜[]XÜËœÝ]\ÏOOH³§ó¦ˆÈ³¥È3á³®s®óá3às¬sàs®sàó¯3«s¯s­È3¬s¯s«3®óásàó­È3¯ó®ó¯ó®³®ó­óàsã³®3­ó®³­H3áóâsàs«óàˆ3­3®s¬sá³¯óàs«sà‹ˆŽœ[™[™ÏØ3¥È3á³®s®óá3às¬sàs®sàó¯3«s¯s­È3¬s¯s«3®óásàó­È3¯ó®ó¯ó®³®ó­óàsã³®3­ó®³­Nˆ	Ü[™[™ßH3àóás¯3¬³«3¯J3á3¬JH3à3¬sàs¬s¯3«s¯s¯óás¯H3áóâsàs«óàˆ3«s®ó­s¬óáó¯Ë˜ˆ³¥È3á³®s®óá3às¬sàs®sàó¯3«s¯s­È3¬s¯s«3®óásàó­È3¯ó®ó¯ó®³®ó­óàsã³®3­ó®³­H3®³¬s®H3ã3®ó¬H3á3¬H3àóás¯3¬³«3¯sá3¬H3«sáó¯óás¯H3®³¬sá3¬sáóã³às®sàó­È3­s®ó«s¬óáó¯óáKˆŠNÂˆXØ]Ú
+\œŠ^ÜÙ]\œ›ÜŠ\œ‹›Y\ÜØYÙJ_Yš[˜[^ÜÙ]\ÞJ˜[ÙJ_BˆNÂ‚ˆÛÛœÝÛX\J
+OOžÂˆÙ]š[\œÊ[\Qš[\œÊNÂˆÙ]™\Ý[
+[
+NÂˆÙ]\œ›ÜŠˆŠNÂˆÙ]™]šY]Ú[™ÒY
+ˆŠNÂˆÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆNÂ‚ˆÛÛœÝÙÙÛPÚXÚÔXÚØYÙOX\Þ[˜ÈXÚØYÙR][OOžÂˆYŠYš[\œË˜ÛÛ\[žRYYš[\œËœÝÜ™RY
+\™]\›ŽÂˆÛÛœÝ™^XÝ]™OH\XÚØYÙR][K˜XÝ]™NÂˆÛÛœÝXÝ[Û[™^XÝ]™OÈ³­s¯s­sàs¬ó¯óà3¯ó«ó­óàó­ÈŽˆ³¬sà3­s¯s­sàs¬ó¯óà3¯ó«ó­óàó­ÈŽÂˆYŠ]Ú[™ÝË˜ÛÛ™š\›J3¦3«s®ó­s®sàˆ	ØXÝ[ÛŸH3á3¯óáH3à3¬s®³«sá3¯óáH0ªÉÜXÚØYÙR][K]_p®È3¬ó®s¬H3á3¯È3­sà3®s®ó­s¬ó¯3«s¯s¯È3®³¬sá3«3àóá3­ó¯3¬NÈ3¥È3­s¯s«sàs¬ó­s®s¬H3®3¬H3®³¬sá3¬s¬óàs¬sá³­s«È3àóá3¯È]Y]˜
+J\™]\›ŽÂˆÙ]XÚØYÙ\Ð\ÞJYJNÜÙ]\œ›ÜŠˆŠNÂˆž^ÂˆÛÛœÝ]OX]ØZ]™\]Y\Ý
+Ø\KÜ]›Ü›KÜÝÜ™K[[Ù[\ËØÛÛ\[šY\ËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+š[\œË˜ÛÛ\[žRY
+_KÜÝÜ™\ËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+š[\œËœÝÜ™RY
+_KØÚXÚË\XÚØYÙ\ËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+XÚØYÙR][KšÙ^J_XÛY]Ùˆ”U‹›ÙN’”ÓÓ‹œÝš[™ÚYžJØXÝ]™N›™^XÝ]™K[ÛTšXÙNœXÚØYÙR][K›[ÛTšXÙ_Ý\Ð]œXÚØYÙR][KœÝ\Ð][[™Ð]œXÚØYÙR][K™[™Ð][›Ý\ÎœXÚØYÙR][K››Ý\ßˆŸJ_JNÂˆÙ]ÚXÚÔXÚØYÙ\Ê]KœXÚØYÙ\ß×JNÂˆÙ]Y\ÜØYÙOËŠ3©3¯È3à3¬s®³«sá3¯È0ªÉÜXÚØYÙR][K]_p®È	Û™^XÝ]™OÈ³­s¯s­sàs¬ó¯óà3¯ó®s«³®3­ó®³­HŽˆ³¬sà3­s¯s­sàs¬ó¯óà3¯ó®s«³®3­ó®³­HŸH3®³¬s®H3®³¬sá3¬s¬óàs«3á³­ó®³­H3àóá3¯È]Y]˜
+NÂˆXØ]Ú
+\œŠ^ÜÙ]\œ›ÜŠ\œ‹›Y\ÜØYÙJ_Yš[˜[^ÜÙ]XÚØYÙ\Ð\ÞJ˜[ÙJ_BˆNÂ‚ˆÛÛœÝÜ[”™]šY]ÏYš[™[™ÏOžÂˆÙ]™]šY]Ú[™ÒY
+š[™[™ÒÙ^Jš[™[™ÊJNÂˆÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆÙ]\œ›ÜŠˆŠNÂˆNÂ‚ˆÛÛœÝØ[˜Ù[™]šY]ÏJ
+OOžÂˆYŠ™]šY]Ð\ÞJ\™]\›ŽÂˆÙ]™]šY]Ú[™ÒY
+ˆŠNÂˆÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆNÂ‚‚ˆÛÛœÝØ]™T™]šY]ÏX\Þ[˜Èš[™[™ÏOžÂˆÛÛœÝ›ÝOTÝš[™Ê™]šY]Ñ˜Y››Ý_ˆŠKš[J
+NÂˆÙ]™]šY]Ð\ÞJYJNÜÙ]\œ›ÜŠˆŠNÂˆž^ÂˆÛÛœÝØ]™YX]ØZ]™\]Y\Ý
+Ø\KÜ]›Ü›KÜÝ\\‹XYZ[‹X[˜[]XÜËÜÙ\ÜÚ[ÛœËÉÙ[˜ÛÙUT’PÛÛ\Û™[
+š[™[™ËœÙ\ÜÚ[Û’Y
+_KØÛÛ™š\›X][Û˜ÂˆY]Ùˆ”ÔÕ‹ˆ›ÙN’”ÓÓ‹œÝš[™ÚYžJØÛÛ\[žRY™š[™[™Ë˜ÛÛ\[žRYÝÜ™RY™š[™[™ËœÝÜ™RY›Ý_JBˆJNÂˆÙ]™\Ý[
+Ý\œ™[OžÂˆYŠXÝ\œ™[
+\™]\›ˆÝ\œ™[ÂˆÛÛœÝ™^š[™[™ÜÏJÝ\œ™[˜[˜[]XÜÏË™š[™[™Üß×JK›X\
+][OO”Ýš[™Ê][KœÙ\ÜÚ[Û’Y
+OOOTÝš[™Êš[™[™ËœÙ\ÜÚ[Û’Y
+OÞË‹‹š][K‹‹œØ]™YNš][JNÂˆÛÛœÝ[™[™Ñš[™[™ÐÛÝ[[™^š[™[™ÜË™š[\Š][OOš][Kœ™]šY]Õ˜[YOO]YJK›[™ÝÂˆ™]\›ˆË‹‹˜Ý\œ™[[˜[]XÜÎžË‹‹˜Ý\œ™[˜[˜[]XÜËš[™[™ÜÎ›™^š[™[™ÜË[™[™Ñš[™[™ÐÛÝ[™]šY]ÙYš[™[™ÐÛÝ[›™^š[™[™ÜË›[™Ý\[™[™Ñš[™[™ÐÛÝ[Ý]\Î›™^š[™[™ÜË›[™ÝOOLÈ³§ó¦ˆŽœ[™[™Ñš[™[™ÐÛÝ[È³©óàs­s®s«3­³­sá3¬s®H3­sà3®s¬³­s¬³¬s«óâsàó­ÈŽˆ³¥sà3®s¬³­s¬³¬s®sâs¯3«s¯s¯ó®H3«s®ó­s¬óáó¯ó®HŸ_NÂˆJNÂˆÙ]™]šY]Ú[™ÒY
+ˆŠNÜÙ]™]šY]Ñ˜Y
+[\T™]šY]Ñ˜Y
+NÂˆÙ]Y\ÜØYÙOËŠ³¥sà3®s¬³­s¬³¬s®sã³®3­ó®³­H3¯È3¬sásá3ã3¯3¬sá3¯óàˆ3«s®ó­s¬óáó¯óàˆ3®³¬s®H3®³¬sá3¬s¬óàs«3á³­ó®³­H3àóá3¯È]Y]ˆŠNÂˆXØ]Ú
+\œŠ^ÜÙ]\œ›ÜŠ\œ‹›Y\ÜØYÙJ_Yš[˜[^ÜÙ]™]šY]Ð\ÞJ˜[ÙJ_BˆNÂ‚ˆÛÛœÝ[˜[]XÜÏ\™\Ý[Ë˜[˜[]XÜßßNÂˆÛÛœÝ›ÝÜÏX[˜[]XÜËœ›ÝÜß×NÂˆÛÛœÝš[™[™ÜÏX[˜[]XÜË™š[™[™Üß×NÂˆÛÛœÝÛÛ\]OX[˜[]XÜË˜ÛÛ\]_Ù[˜X›Y™˜[ÙKš[™[™ÜÎ–×_NÂˆÛÛœÝÛÛ\]Qš[™[™ÜÏXÛÛ\]K™š[™[™Üß×NÂˆÛÛœÝ˜[šÏ\™\Ý[Ë˜˜[šßÚ][\Î–×KÝ[ÎžØ]˜Z[X›P˜[[˜ÙNŒ[™[™Ð[[Ý[Œ›Ú™XÝY˜[[˜ÙNŒ_NÂˆÛÛœÝÝ[ÚYÏ\›ÝÜËœ™YXÙJ
+Ý[K›ÝÊOOœÝ[JÛ[X™\Š›ÝËœÚYÊK
+NÂˆÛÛœÝÝ[Ø\Ú˜\šX[˜ÙO\›ÝÜËœ™YXÙJ
+Ý[K›ÝÊOOœÝ[JÛ[X™\Š›ÝË˜Ø\Ú˜\šX[˜ÙJK
+NÂˆÛÛœÝÝ[Ø\™˜\šX[˜ÙO\›ÝÜËœ™YXÙJ
+Ý[K›ÝÊOOœÝ[JÛ[X™\Š›ÝË˜Ø\™˜\šX[˜ÙJK
+NÂˆÛÛœÝ[™[™Ñš[™[™ÐÛÝ[S[X™\‹š\Ñš[š]J[X™\Š[˜[]XÜËœ[™[™Ñš[™[™ÐÛÝ[
+JOÓ[X™\Š[˜[]XÜËœ[™[™Ñš[™[™ÐÛÝ[
+N™š[™[™ÜË™š[\Šš[™[™ÏO™š[™[™Ëœ™]šY]Õ˜[YOO]YJK›[™ÝÂˆÛÛœÝ™]šY]ÙYš[™[™ÐÛÝ[S[X™\‹š\Ñš[š]J[X™\Š[˜[]XÜËœ™]šY]ÙYš[™[™ÐÛÝ[
+JOÓ[X™\Š[˜[]XÜËœ™]šY]ÙYš[™[™ÐÛÝ[
+N™š[™[™ÜË›[™Ý\[™[™Ñš[™[™ÐÛÝ[ÂˆÛÛœÝÙ[XÝYÛÛ\[žO\™\Ý[Ë™š[\œË˜ÛÛ\[žRYØÛÛ\[žR[™^™Ù]
+Ýš[™Ê™\Ý[™š[\œË˜ÛÛ\[žRY
+JN›[ÂˆÛÛœÝÙ[XÝYÝÜ™O\™\Ý[Ë™š[\œËœÝÜ™RYÜÝÜ™R[™^™Ù]
+Ýš[™Ê™\Ý[™š[\œËœÝÜ™RY
+JN›[ÂˆÛÛœÝØÛÜSX™[\Ù[XÝYÝÜ™OØ3¥sá3¬s®sàs­s«ó¬Nˆ	ÜÙ[XÝYÝÜ™K˜ÛÛ\[žS˜[Y_H0­È3¦³¬sá3«3àóá3­ó¯3¬Nˆ	ÜÙ[XÝYÝÜ™K›˜[Y_XœÙ[XÝYÛÛ\[žOØ3¥sá3¬s®sàs­s«ó¬Nˆ	ÜÙ[XÝYÛÛ\[žK›˜[Y_H0­È3£3®ó¬H3á3¬H3®³¬sá3¬sàóá3«³¯3¬sá3¬Xˆ³£3®ó¯ó®H3¯ó®H3®s­3®s¯ó®³á3«³á3­sàˆÈ3­sá3¬s®sàs­s«ó­sàˆ3®³¬s®H3ã3®ó¬H3á3¬H3®³¬sá3¬sàóá3«³¯3¬sá3¬HŽÂˆÛÛœÝ\š[ÙX™[\™\Ý[Ë™š[\œË™œ›Û_™\Ý[Ë™š[\œËÏØ	Ü™\Ý[™š[\œË™œ›Û_³¤sàsáó«ˆ3­3®s¬s®3«sàó®s¯3âs¯H3­3­s­3¯ó¯3«s¯sâs¯HŸH3«sâsàˆ	Ü™\Ý[™š[\œËß³¨ó«³¯3­sàs¬HŸXˆ³£3®ó¯È3á3¯È3­3®s¬s®3«sàó®s¯3¯È3­3®s«3àóá3­ó¯3¬HŽÂˆÛÛœÝÝÜ™R\ÔÙ[XÝYP›ÛÛX[Šš[\œË˜ÛÛ\[žRY	‰™š[\œËœÝÜ™RY
+NÂˆÛÛœÝXÝ]™TXÚØYÙPÛÝ[XÚXÚÔXÚØYÙ\Ë™š[\ŠXÚØYÙR][OOœXÚØYÙR][K˜XÝ]™JK›[™ÝÂ‚ˆ™]\›ˆ]ˆÛ\ÜÓ˜[YO^Ù[X™YYÈœ]›Ü›KXÚXÚÜË\YÙHŽˆœ]›Ü›K[[Ù[ŸOÙXÝ[ÛˆÛ\ÜÓ˜[YO^ØØK[[Ù[	Ù[X™YYÈˆØK\YÙHŽˆˆŸXO‚ˆXY\ˆÛ\ÜÓ˜[YOHœØKXÚXÚÜËZXY\ˆ]Ü[³¦³¥s§s©3¨s§È3¥s¦ó¥s¤ó©ó§ó©H3©s¨3¥s¨s¥3¦s¤s©ó¥s¦s¨s¦s¨ó©3¥ÏÜÜ[˜\Ú\ËÏˆ3¢3®ó­s¬óáó¯ó®H	˜[\È3¤s¯s¬s®óãsàó­s®sàÚ³¢3®ó­s¬ó¯³­H3á3¬s¯3­s«ó¯ËÔø $ÑQ•ÔÈ3®³¬s®H3©3¬s¯3­s«ó¯È3©3às«3à3­s­³¬sàˆ3¯3­H3¬sàóá³«3®ó­s®s¬H3®³¬s®H3à3®ó«³às­È3®³¬sá3¬s¬óàs¬sá³«ˆ3àóá3¯È]Y]ÜÙ]]ˆÛ\ÜÓ˜[YOHœØKZXY\‹XXÝ[ÛœÈ]ˆÛ\ÜÓ˜[YOHœØK\™XYÛ›KX˜YÙHÚY[ÚXÚËÏˆ3§3ã3¯s¯È3¬s¯s«3¬ó¯sâsàó­ÏÙ]]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœØKXÛÜÙHˆ\šXK[X™[H³¦³®ó­s«óàó®s¯3¯È3­s®ó«s¬óáóâs¯H3®³¬s®H3¬s¯s¬s®óãsàó­sâs¯HˆÛÛXÚÏ^ÛÛÛÜÙ_H\ØX›Y^Ø\Þ_™]šY]Ð\Þ_OÏØ]ÛÙ]ÚXY\‚ˆÙ\œ›Ü‰‰]ˆÛ\ÜÓ˜[YOHœ]›Ü›KX[\\œ›ÜˆžÙ\œ›ÜŸOÙ]ŸBˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœØKXÚXÚÜË]ÛÜšÜÜXÙH‚ˆ]ˆÛ\ÜÓ˜[YOHœØK]ÛÜšÜÜXÙKZXY[™È]Ü[ŒKˆ3¥s¨3¦s¦ó§ó¤ó¥È3¨3¥s¥3¦s§ó©OÜÜ[Ï³¥3®s«3®ó­s¯³­H3®³¬sá3«3àóá3­ó¯3¬H3®³¬s®H3à3­sàs«ó¯ó­3¯ÏÚÏÙ]³¥È3¬s¯s«3®óásàó­È3­3­s¯H3¬s®ó®ó«3­³­s®H3¯ó®s®³¯ó¯s¯ó¯3®s®³«3­3­s­3¯ó¯3«s¯s¬KÜÙ]‚ˆ]ˆÛ\ÜÓ˜[YOHœÝ\Y\‹\™]šY]ËYš[\œÈØKXÚXÚÜËYš[\œÈ‚ˆX™[Ü[Z[[™Ì‹Ïˆ3¦s­3®s¯ó®³á3«³á3­óàˆÈ3­sá3¬s®sàs­s«ó¬OÜÜ[Ù[XÝ˜[YO^Ùš[\œË˜ÛÛ\[žRYHÛÚ[™ÙO^Ù]™[O\]Qš[\œÊØÛÛ\[žRY™]™[\™Ù]˜[YKÝÜ™RYˆˆŸJ_OÜ[Ûˆ˜[YOHˆ³£3®ó¯ó®H3¯ó®H3®s­3®s¯ó®³á3«³á3­sàˆÈ3­sá3¬s®sàs­s«ó­sàÛÜ[ÛžØÛÛ\[šY\Ë›X\
+ÛÛ\[žOOžØÛÛœÝÝÛ™\XÛÛ\[žK›ÝÛ™\Ë™[˜[Y_ÛÛ\[žK›ÝÛ™\“˜[Y_³©óâsàs«óàˆ3®s­3®s¯ó®³á3«³á3­ÈŽÜ™]\›ˆÜ[ÛˆÙ^O^ØÛÛ\[žKšYH˜[YO^ØÛÛ\[žKšYOžÛÝÛ™\ŸH0­ÈØÛÛ\[žK›˜[Y_OÛÜ[ÛŸJ_OÜÙ[XÝÛX™[‚ˆX™[Ü[ÝÜ™KÏˆ3¦³¬sá3«3àóá3­ó¯3¬OÜÜ[Ù[XÝ˜[YO^Ùš[\œËœÝÜ™RYHÛÚ[™ÙO^Ù]™[OœÙ[XÝÝÜ™J]™[\™Ù]˜[YJ_OÜ[Ûˆ˜[YOHˆ³£3®ó¬H3á3¬H3®³¬sá3¬sàóá3«³¯3¬sá3¬OÛÜ[ÛžÝš\ÚX›TÝÜ™\Ë›X\
+ÝÜ™OOÜ[ÛˆÙ^O^ÜÝÜ™KšYH˜[YO^ÜÝÜ™KšYOžÙš[\œË˜ÛÛ\[žRYÜÝÜ™K›˜[YN˜	ÜÝÜ™K˜ÛÛ\[žS˜[Y_H0­È	ÜÝÜ™K›˜[Y_XOÛÜ[ÛŠ_OÜÙ[XÝÛX™[‚ˆX™[Ü[Ø[[™\‘^\ËÏˆ3¤sà3ãÜÜ[[œ]\OH™]Hˆ˜[YO^Ùš[\œË™œ›Û_HX^^Ùš[\œËß[™Yš[™YHÛÚ[™ÙO^Ù]™[O\]Qš[\œÊÙœ›ÛN™]™[\™Ù]˜[Y_J_KÏÛX™[‚ˆX™[Ü[Ø[[™\‘^\ËÏˆ3¢3âsàÜÜ[[œ]\OH™]Hˆ˜[YO^Ùš[\œËßHZ[^Ùš[\œË™œ›Û_[™Yš[™YHÛÚ[™ÙO^Ù]™[O\]Qš[\œÊÝÎ™]™[\™Ù]˜[Y_J_KÏÛX™[‚ˆ]ˆÛ\ÜÓ˜[YOHœØKYš[\‹XXÝ[ÛœÈ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ü[ŸH\ØX›Y^Ø\Þ_™]šY]Ð\Þ_O™Yœ™\ÚÝËÏžØ\ÞOÈ³¥s®³á3«s®ó­sàó­È3­s®ó«s¬óáó¯óáx )ˆŽˆ³¥s®³á3«s®ó­sàó­È3­s®ó«s¬óáó¯óáHŸOÚ]œ›Û”šYÚÏØ]Û]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœÙXÛÛ™\žHˆÛÛXÚÏ^ØÛX\ŸH\ØX›Y^Ø\Þ_™]šY]Ð\Þ_O³¦³¬s®3¬sàs®sàó¯3ã3àØ]ÛÙ]‚ˆÙ]‚ˆÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ØK\XÚØYÙK\[™[‚ˆ]ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKZXY[™È]Ü[Œ‹ˆ3¥3¦s¦³¤s¦sªs§3¤s©3¤H3¥s¦ó¥s¤ó©ó§ó©OÜÜ[Ï³¨3¬s®³«sá3¬H3­s®ó«s¬óáóâs¯H3¬s¯s«3®³¬sá3«3àóá3­ó¯3¬OÚÏ³¥È3­s¯s­sàs¬ó¯óà3¯ó«ó­óàó­È3®³¬sá3¬s¬óàs«3á³­sá3¬s®H3àóá3¯È]Y]3®³¬s®H3¬ó«ó¯s­sá3¬s®H3¯3ã3¯s¯È3¬sà3ã3©sà3­sàs­3®s¬sáó­s®sàs®sàóá3«‹ÜÙ]žÜÝÜ™R\ÔÙ[XÝY	‰Ý›Û™ÈÛ\ÜÓ˜[YO^ØXÝ]™TXÚØYÙPÛÝ[ÈœØK\XÚØYÙKXÛÝ[XÝ]™HŽˆœØK\XÚØYÙKXÛÝ[ŸOžØXÝ]™TXÚØYÙPÛÝ[HÈØÚXÚÔXÚØYÙ\Ë›[™ÝßH3­s¯s­sàs¬ó«ÜÝ›Û™ÏŸOÙ]‚ˆÈ\ÝÜ™R\ÔÙ[XÝYÏ]ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKY[\HØÚÒÙ^ZÛKÏ]³¥sà3«ó®ó­s¯³­H3à3àsã³á3¬H3«s¯s¬H3àóás¬ó®³­s®³às®s¯3«s¯s¯È3®³¬sá3«3àóá3­ó¯3¬OØÜ[³©3ã3á3­H3®3¬H3­s¯3á³¬s¯s®sàóá3¯óãs¯H3­È3®³¬sá3«3àóá3¬sàó­È3®³¬s®H3¯ó®H3­3®s¬s®3«sàó®s¯3­sàˆ3­s¯s«sàs¬ó­s®s­sàˆ3¬ó®s¬H3®³«3®3­H3à3¬s®³«sá3¯ËÜÜ[Ù]Ù]ŽœXÚØYÙ\Ð\ÞI‰ˆXÚXÚÔXÚØYÙ\Ë›[™ÝÏ]ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKY[\H³©³ã3àsá3âsàó­È3à3¬s®³«sá3âs¯x )Ù]Ž]ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKYÜšYžØÚXÚÔXÚØYÙ\Ë›X\
+XÚØYÙR][OO\XÛHÙ^O^ÜXÚØYÙR][KšÙ^_HÛ\ÜÓ˜[YO^ØØK\XÚØYÙKXØ\™	ÜXÚØYÙR][K˜XÝ]™OÈ˜XÝ]™HŽˆˆŸXO]ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKXØ\™]ÜÜ[ˆÛ\ÜÓ˜[YOHœØK\XÚØYÙKZXÛÛˆžÜXÚØYÙR][K˜XÝ]™OÏ[›ØÚËÏŽØÚÒÙ^ZÛKÏŸOÜÜ[ÛX[žÜXÚØYÙR][K˜XÝ]™OÈ³¥s§s¥s¨s¤ó§ÈŽˆ³¦³¦ó¥s¦s¥3ªs§3¥s§s§ÈŸOÜÛX[Ù]]ÏžÜXÚØYÙR][K]_OÚÏžÜXÚØYÙR][K™\ØÜš\[ÛŸOÜÙ]]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOÙÙÛPÚXÚÔXÚØYÙJXÚØYÙR][J_H\ØX›Y^È\XÚØYÙR][K˜Ø[•ÙÙÛ_XÚØYÙ\Ð\Þ_\Þ_™]šY]Ð\Þ_OžÜXÚØYÙR][Kš[˜ÛYYžOØ3¨3­sàs®s®ó¬s¯3¬³«3¯s­sá3¬s®H3àóá3¯È	ÜXÚØYÙR][Kš[˜ÛYYžU]_XœXÚØYÙR][K˜XÝ]™OÈ³¤sà3­s¯s­sàs¬ó¯óà3¯ó«ó­óàó­ÈŽˆ³¥s¯s­sàs¬ó¯óà3¯ó«ó­óàó­ÈŸOØ]ÛØ\XÛOŠ_OÙ]ŸBˆÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœØK\ØÛÜK[›ÝHÚY[ÚXÚËÏ]³©3®H3®³¬s®óãsà3á3­s®H3¯È3«s®ó­s¬óáó¯óàØ³§ó®H3­ó¯3­sàs¯ó¯3­ó¯s«ó­sàˆ3­sá³¬sàs¯3ã3­³¯ó¯sá3¬s®H3àóá3®sàˆ3¬³«3às­3®s­sàˆ3®³¬s®H3àóá3®sàˆ3­3®s¬sá³¯óàs«sàˆ3á3¬s¯3­s«ó¯óáKÔÔø $ÑQ•ÔËˆ3©3¯È3©3¬s¯3­s«ó¯È3©3às«3à3­s­³¬sàˆ3­s«ó¯s¬s®H3á3às«sáó¯ó¯H3®ó¯ó¬ó®sàóá3®s®³ã3ásà3ã3®ó¯ó®sà3¯È3®³¬s®H3á³®s®óá3às«3às­sá3¬s®H3¯3ã3¯s¯È3¬s¯s«3®s­3®s¯ó®³á3«³á3­È3®³¬s®H3®³¬sá3«3àóá3­ó¯3¬KÜÙ]ÜÙXÝ[Û‚ˆØ\ÞI‰ÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_O³¥s®³á3­s®ó­s«óá3¬s®H3¯È3«s®ó­s¬óáó¯óà¸ )Ø³¨óás®ó®ó«s¬ó¯ó¯sá3¬s®H3­3­s­3¯ó¯3«s¯s¬H3¬s¯s«3¬ó¯sâsàó­óà‹ˆ3¥3­s¯H3¬s®ó®ó«3­³­s®H3¬³«3às­3®s¬K3á3¬s¯3­s«ó¯Ë3á3às«3à3­s­³¬K3¬sà3ã3®3­s¯3¬K3à3¬sàs¬sàóá3¬sá3®s®³ã3«ˆ3ásà3ã3®ó¯ó®sà3¯ËÜÜÙXÝ[ÛŸBˆÜ™\Ý[	‰‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_OžÜØÛÜSX™[OØžÜ\š[ÙX™[OÜÛX[³¥s®³á3«s®ó­sàó­ÎˆØ][œÑ]U[YJ™\Ý[™^XÝ]Y]
+_H0­È3¦³¬sá3«3àóá3¬sàó­ÎˆØ[˜[]XÜËœÝ]\ß¸ %ŸOÜÛX[ÜÙXÝ[Û‚ˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹ÜšY[\]PÛÛ[[œÎˆœ™\X]
+]]ËYš]Z[›X^
+NYœŠJH‹Ø\ŒL‹X\™Ú[›ÝÛNŒM_O‚ˆ\XÛHÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ÛX[³¤³«3às­3®s­sàÜÛX[ÏžÝÝ[ÚYßOÚÏØ\XÛO‚ˆ\XÛHÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ÛX[³¦³¬s®3¬sàs«ˆ3­3®s¬sá³¯óàs«3¯3­sá3às­óá3ã³¯OÜÛX[ÏžÙ]\ŠÝ[Ø\Ú˜\šX[˜ÙJ_OÚÏØ\XÛO‚ˆ\XÛHÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ÛX[³¥3®s¬sá³¯óàs«Ôø $ÑQ•ÔÏÜÛX[ÏžÙ]\ŠÝ[Ø\™˜\šX[˜ÙJ_OÚÏØ\XÛO‚ˆ\XÛHÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ÛX[³¥s®³®³às­s¯3«ˆ3àóás¯3¬³«3¯sá3¬OÜÛX[ÏžÜ[™[™Ñš[™[™ÐÛÝ[OÚÏÛX[žÜ™]šY]ÙYš[™[™ÐÛÝ[H3¯3­H3®³¬sá3¬sáóã³às®sàó­È0­ÈÙš[™[™ÜË›[™ÝH3àóás¯s¯ó®ó®s®³«ÜÛX[Ø\XÛO‚ˆÙ]‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_O‚ˆ³¨óás¯3¬³«3¯sá3¬H3à3¯óáH3áóàs­s®s«3­³¯ó¯sá3¬s®H3«s®ó­s¬óáó¯ÏØ‚ˆ³¦³«3®3­H3­s¬ó¬óàs¬sá³«ˆ3­s«ó¯s¬s®H3¬sà3¯óá3«s®ó­sàó¯3¬H3á3âs¯H3¬sásá3ã3¯3¬sá3âs¯H3®³¬s¯sã3¯sâs¯Kˆ3¥3­s¯H3¬sà3¯óá3­s®ó­s«È3¬sásá3ã3¯3¬sá3­È3¬sà3ã3­3¯óàó­È3¬s®sá3«ó¬sàˆ3«ˆ3­sás®3ãs¯s­óà‹ˆ3¥sà3®s¬³­s¬³¬s®sã³¯s­s®sàˆ3¯3ã3¯s¯È3á3¯È3¬sà3¯óá3«s®ó­sàó¯3¬H3®³¬s®K3¬s¯H3®3«s®ó­s®sà‹3à3às¯óàó®3«sá3­s®sàˆ3à3¬sàs¬sá3«³às­óàó­ËÜ‚ˆØ[˜[]XÜË™š[™[™ÜÕ[˜Ø]Y	‰]ˆÛ\ÜÓ˜[YOHœ]›Ü›KX[\\œ›Üˆ³¥s¯3á³¬s¯s«ó­³¯ó¯sá3¬s®H3á3¬H3¯s­sã3á3­sàs¬HØ[˜[]XÜË™š[™[™Ó[Z]LH3àóás¯3¬³«3¯sá3¬Kˆ3¨3­sàs®sã3às®sàó­H3á3®sàˆ3­ó¯3­sàs¯ó¯3­ó¯s«ó­sàˆ3¬ó®s¬H3à3®ó«³às­È3®ó«óàóá3¬KÙ]ŸBˆÙš[™[™ÜË›[™ÝÏ]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹Ø\ŒL‹X\™Ú[•ÜŒLŸ_OžÙš[™[™ÜË›X\
+
+š[™[™Ë[™^
+OOžÂˆÛÛœÝÝÜ™O\ÝÜ™R[™^™Ù]
+Ýš[™Êš[™[™ËœÝÜ™RY
+JNÂˆÛÛœÝÛÛ\[žOXÛÛ\[žR[™^™Ù]
+Ýš[™Êš[™[™Ë˜ÛÛ\[žRY
+JNÂˆÛÛœÝÛÛ\[žS˜[YOYš[™[™Ë˜ÛÛ\[žS˜[Y_ÛÛ\[žOË›˜[Y_ÝÜ™OË˜ÛÛ\[žS˜[Y_¸ %ŽÂˆÛÛœÝÝÜ™S˜[YOYš[™[™ËœÝÜ™S˜[Y_ÝÜ™OË›˜[Y_š[™[™ËœÝÜ™RY¸ %ŽÂˆÛÛœÝÜ\˜]ÜYš[™[™Ë›Ü\˜]Ü“˜[Y_š[™[™Ë˜ÛÜÙYžS˜[Y_š[™[™Ë›Ü[™YžS˜[Y_³©óâsàs«óàˆ3­3®s¬s®3«sàó®s¯3¯È3áó­s®sàs®sàóá3«ˆŽÂˆÛÛœÝ™Y™\™[˜ÙOYš[™[™Ëœ™Y™\™[˜ÙRYš[™[™ËœÙ\ÜÚ[Û’Y¸ %ŽÂˆÛÛœÝÙ^OYš[™[™ÒÙ^Jš[™[™ÊNÂˆÛÛœÝ™]šY]ÙYYš[™[™Ëœ™]šY]Õ˜[YOO]YNÂˆÛÛœÝ™YYÔ™XÚXÚÏYš[™[™Ëœ™XÚXÚÔ™\]Z\™YOO]YNÂˆÛÛœÝÝ]\ÓX™[\™]šY]ÙYÊš[™[™Ëœ™]šY]ÓX™[™]šY]ÑXÚ\Ú[Û“X™[ÖÙš[™[™Ëœ™]šY]ÑXÚ\Ú[Û—_³¦³¬sá3¬sáóâsàs®sàó¯3«s¯s¯óàˆ3«s®ó­s¬óáó¯óàˆŠN›™YYÔ™XÚXÚÏÈ³¤sà3¬s®sá3­s«óá3¬s®H3­sà3¬s¯s«s®ó­s¬óáó¯óàˆŽˆ³©óàs­s®s«3­³­sá3¬s®H3«s®ó­s¬óáó¯ÈŽÂˆÛÛœÝ›Ü›SÜ[\™]šY]Ú[™ÒYOOZÙ^NÂˆ™]\›ˆ\XÛHÙ^O^ÚÙ^_	Ùš[™[™ËœÝÜ™RY™š[™[™ÈŸN‰Ü™Y™\™[˜Ù_N‰Ú[™^XHÝ[O^ÞØ›Ü™\ŽˆŒ\ÛÛYÙÙLYXÈ‹›Ü™\”˜Y]\ÎŒMY[™ÎŒM˜XÚÙÜ›Ý[™ˆˆÙ™™ˆŸ_O‚ˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™›^‹\ÝYžPÛÛ[ˆœÜXÙKX™]ÙY[ˆ‹Ø\ŒL‹[YÛ’][\Îˆ™›^\Ý\‹›^Ü˜\ˆÜ˜\Ÿ_O]ÛX[žÙš[™[™Ë™]™[ÛÝ\˜Ù_³¨óás¯3¬³«3¯H3¬³«3às­3®s¬sàˆŸOÜÛX[ÈÝ[O^ÞÛX\™Ú[ŽˆŸ_OžÙš[™[™Õ]Jš[™[™Ê_OÚÏÙ]Ü[ˆÝ[O^ÞÙ\Ü^Nˆš[›[™KY›^‹[YÛ’][\Îˆ˜Ù[\ˆ‹Ø\‹Y[™ÎˆÜL‹›Ü™\”˜Y]\ÎŽNNK›ÛÙZYÚŽ˜XÚÙÜ›Ý[™œ™]šY]ÙYÈˆÙLÙÙYŽˆˆÙ™™ŒYˆ‹ÛÛÜŽœ™]šY]ÙYÈˆÌÌÍHŽˆˆÎXMŒˆŸ_OžÜ™]šY]ÙYÏÚXÚÐÚ\˜ÛL‹ÏŽ[\šX[™ÛKÏŸHÜÝ]\ÓX™[OÜÜ[Ù]‚ˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹ÜšY[\]PÛÛ[[œÎˆœ™\X]
+]]ËYš]Z[›X^
+NLYœŠJH‹Ø\ŒLX\™Ú[•ÜŒLß_O‚ˆÜ[³¥ó¯3­sàs¯ó¯3­ó¯s«ó¬HÈ3ã³às¬OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžØ][œÑ]U[YJš[™[™Ë›ØØÝ\œ™Y]š[™[™Ë˜ÛÜÙY]š[™[™Ë›Ü[™Y]
+_OÜÛX[ÜÜ[‚ˆÜ[³¥sá3¬s®sàs­s«ó¬OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžØÛÛ\[žS˜[Y_OÜÛX[ÜÜ[‚ˆÜ[³¦³¬sá3«3àóá3­ó¯3¬OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÜÝÜ™S˜[Y_OÜÛX[ÜÜ[‚ˆÜ[”ÔÈÈ3©3­sàs¯3¬sá3®s®³ãØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙš[™[™Ë\›Z[˜[Üß³©óâsàs«óàˆÔÈŸOÜÛX[ÜÜ[‚ˆÜ[³¤³«3às­3®s¬OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙš[™[™ËœÚYX™[³©óâsàs«óàˆ3¯ó¯s¯ó¯3¬sàó«ó¬H3¬³«3às­3®s¬sàˆŸOÜÛX[ÜÜ[‚ˆÜ[³©ó­s®sàs®sàóá3«³àˆ3®³®ó­s®sàó«ó¯3¬sá3¯óàØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÛÜ\˜]ÜŸOÜÛX[ÜÜ[‚ˆÜ[³¥3®s¬sá³¯óàs«3¯3­sá3às­óá3ã³¯OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙ]\Šš[™[™Ë˜Ø\Ú˜\šX[˜ÙJ_OÜÛX[ÜÜ[‚ˆÜ[³¥3®s¬sá³¯óàs«Ôø $ÑQ•ÔÏØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙ]\Šš[™[™Ë˜Ø\™˜\šX[˜ÙJ_OÜÛX[ÜÜ[‚ˆÜ[³¡³¯s¯ó®s¬ó¯3¬H3¬³«3às­3®s¬sàØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžØ][œÑ]U[YJš[™[™Ë›Ü[™Y]
+_OÜÛX[ÜÜ[‚ˆÜ[³¦³®ó­s«óàó®s¯3¯È3¬³«3às­3®s¬sàØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžØ][œÑ]U[YJš[™[™Ë˜ÛÜÙY]
+_OÜÛX[ÜÜ[‚ˆÙ]‚ˆÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•ÜŒLŸ_O³¤s¯s¬sá³¯óàs«3¬³«3às­3®s¬sàŽˆÜ™Y™\™[˜Ù_H0­È3¦³âs­3®s®³ã3àˆ3àóás¯3¬³«3¯sá3¯óàŽˆÙš[™[™Ë™]™[ÛÙ_š[™[™Ë˜ÛÙ_•T’PSÑWÔ‘U’QUÈŸOÜÛX[‚ˆÙš[™[™Ëœ™]šY]ÒY	‰]ˆÝ[O^ÞÛX\™Ú[•ÜŒL‹Y[™ÎŒLK›Ü™\”˜Y]\ÎŒL˜XÚÙÜ›Ý[™œ™]šY]ÙYÈˆÙXÙ™HŽˆˆÙ™™ÙY‹›Ü™\Ž˜\ÛÛY	Ü™]šY]ÙYÈˆØŽYXYÈŽˆˆÙ™YØXHŸX_O‚ˆ³©3­s®ó­sásá3¬s«ó¯óàˆ3«s®ó­s¬óáó¯óàŽˆÜ™]šY]ÙYÊš[™[™Ëœ™]šY]ÓX™[™]šY]ÑXÚ\Ú[Û“X™[ÖÙš[™[™Ëœ™]šY]ÑXÚ\Ú[Û—_³¦³¬sá3¬sáóâsàs®sàó¯3«s¯s¯óàˆ3«s®ó­s¬óáó¯óàˆŠNˆ³¤sà3¬s®sá3­s«óá3¬s®H3­sà3¬s¯s«s®ó­s¬óáó¯óàˆŸOØ‚ˆÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•Ü_OžÙš[™[™Ëœ™]šY]ÙYž_³©óâsàs«óàˆ3­3®s¬s®3«sàó®s¯3¯È3­s®ó­s¬ó®³á3«ˆŸH0­ÈØ][œÑ]U[YJš[™[™Ëœ™]šY]ÙY]
+_^Û[X™\Šš[™[™Ëœ™]šY]Ð[[Ý[
+OŒØ0­È3¨3¯óàóã	Ù]\Šš[™[™Ëœ™]šY]Ð[[Ý[
+_XˆˆŸOÜÛX[‚ˆÙš[™[™Ëœ™]šY]Ó›ÝI‰Ý[O^ÞÛX\™Ú[ŽˆÜŸ_OžÙš[™[™Ëœ™]šY]Ó›Ý_OÜŸBˆÛ™YYÔ™XÚXÚÉ‰ÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•Ü‹ÛÛÜŽˆˆÎXMŒˆŸ_O³§3­sá3«3á3¯ó¯H3à3às¯ó­ó¬ó¯óãs¯3­s¯s¯È3«s®ó­s¬óáó¯È3®³¬sá3¬s¬óàs«3á³­ó®³­H3¯s­sã3á3­sàs­È3®³«ó¯s­óàó­È3àóá3­È3¬³«3às­3®s¬Kˆ3©óàs­s®s«3­³­sá3¬s®H3¯s«s¬H3®³¬sá3¬sáóã³às®sàó­ËÜÛX[ŸBˆÙ]ŸBˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™›^‹\ÝYžPÛÛ[ˆ™›^Y[™‹X\™Ú[•ÜŒLŸ_O‚ˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OO›Ü[”™]šY]Êš[™[™Ê_H\ØX›Y^Ü™]šY]Ð\Þ_HÝ[O^ÞØ›Ü™\ŽŒ›Ü™\”˜Y]\ÎŽKY[™ÎˆŽ\Lœ‹˜XÚÙÜ›Ý[™ˆˆÌMÙ˜ÌH‹ÛÛÜŽˆˆÙ™™ˆ‹›ÛÙZYÚŽÝ\œÛÜŽˆœÚ[\ˆŸ_OžÜ™]šY]ÙYÈ³§s«s¬H3­sà3®s¬³­s¬³¬s«óâsàó­ÈŽˆ³¥sà3®s¬³­s¬³¬s«óâsàó­È3­s®ó«s¬óáó¯óáHŸOØ]Û‚ˆÙ]‚ˆÙ›Ü›SÜ[‰‰]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹Ø\ŒLX\™Ú[•ÜŒL‹Y[™ÎŒL‹›Ü™\”˜Y]\ÎŒL‹˜XÚÙÜ›Ý[™ˆˆÙÙ˜Y˜È‹›Ü™\ŽˆŒ\ÛÛYÙÙLYXÈŸ_O‚ˆ³¥sà3®s¬³­s¬³¬s«óâsàó­È3¬sásá3ã3¯3¬sá3¯óáH3­s®ó«s¬óáó¯óáOØ‚ˆX™[Ý[O^ÞÙ\Ü^Nˆ™ÜšY‹Ø\K›ÛÙZYÚŽ›ÛÚ^™NŒLŸ_O³¨3¬sàs¬sá3«³às­óàó­È
+3à3às¯ó¬s®sàs­sá3®s®³«ŠO^\™XH˜[YO^Ü™]šY]Ñ˜Y››Ý_HÛÚ[™ÙO^Ù]™[OœÙ]™]šY]Ñ˜Y
+Ý\œ™[OŠË‹‹˜Ý\œ™[›ÝN™]™[\™Ù]˜[Y_JJ_H\ØX›Y^Ü™]šY]Ð\Þ_H›ÝÜÏ^ÌßHX^[™Ý^ÌLHXÙZÛ\H³¨3às¯ó¬s®sàs­sá3®s®³«ˆ3à3¬sàs¬sá3«³às­óàó­È3¬ó®s¬H3á3¯ó¯H3«s®ó­s¬óáó¯ËˆˆÝ[O^ÞÜY[™ÎŒL›Ü™\ŽˆŒ\ÛÛYØØ™YLH‹›Ü™\”˜Y]\ÎŽ™\Ú^™Nˆ™\XØ[‹›Ûˆš[š\š]Ÿ_KÏÛX™[‚ˆÛX[³¥È3­sà3®s¬³­s¬³¬s«óâsàó­È3¬sà3¯ó®3­ó®³­sãs­s®H3àóá3¯È]Y]3¯3ã3¯s¯È3á3¯ó¯H3­s®ó­s¬ó®³á3«‹3á3­ó¯H3ã³às¬H3®³¬s®H3á3­ó¯H3à3às¯ó¬s®sàs­sá3®s®³«ˆ3à3¬sàs¬sá3«³às­óàó­Ëˆ3¥3­s¯H3¬s®ó®ó«3­³­s®H3à3¯óàó«3á3¬s¯3­s«ó¯ËÔø $ÑQ•ÔË3á3às«3à3­s­³¬H3«ˆ3¬sà3ã3®3­s¯3¬KÜÛX[‚ˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™›^‹\ÝYžPÛÛ[ˆ™›^Y[™‹Ø\Ž_O‚ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOHœÙXÛÛ™\žHˆÛÛXÚÏ^ØØ[˜Ù[™]šY]ßH\ØX›Y^Ü™]šY]Ð\Þ_O³¤s®³ãsàsâsàó­ÏØ]Û‚ˆ]Ûˆ\OH˜]ÛˆˆÛÛXÚÏ^Ê
+OOœØ]™T™]šY]Êš[™[™Ê_H\ØX›Y^Ü™]šY]Ð\Þ_OžÜ™]šY]Ð\ÞOÈ³¥sà3®s¬³­s¬³¬s«óâsàó­ø )ˆŽˆ³¥sà3®s¬³­s¬³¬s«óâsàó­È3­s®ó«s¬óáó¯óáHŸOØ]Û‚ˆÙ]‚ˆÙ]ŸBˆØ\XÛOŸJ_OÙ]Ž]ˆÛ\ÜÓ˜[YOHœ]›Ü›KY[\H³¥3­s¯H3ásà3«3àsáó¯óás¯H3àóás¬ó®³­s®³às®s¯3«s¯s¬H3àóás¯3¬³«3¯sá3¬H3¬ó®s¬H3«s®ó­s¬óáó¯È3àóá3¬H3­sà3®s®ó­s¬ó¯3«s¯s¬H3á³«ó®óá3às¬KÙ]ŸBˆÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_O‚ˆ]ˆÝ[O^ÞÙ\Ü^Nˆ™›^‹\ÝYžPÛÛ[ˆœÜXÙKX™]ÙY[ˆ‹[YÛ’][\Îˆ˜Ù[\ˆ‹Ø\ŒL‹›^Ü˜\ˆÜ˜\Ÿ_O]ÓÓTUH0­È3¨3®ó­óàsâs¯3«sàˆ3®³¬s®H3à3¬sàs¬sàóá3¬sá3®s®³«ØÝ[O^ÞÛX\™Ú[›ÝÛNŒ_O³¢3®ó­s¬óáó¯óàˆ3¯3ã3¯s¯È3¬ó®s¬H3¬s¯s«3¬ó¯sâsàó­È3àó­H3­s¯s­sàs¬ó«sàˆ3®³®s¯s«³àó­s®sàˆ3á3¯óáH3­sà3®s®ó­s¬ó¯3«s¯s¯óáH3®³¬sá3¬sàóá3«³¯3¬sá3¯óà‹ÜÙ]Ü[ˆÝ[O^ÞÙ›ÛÙZYÚŽÛÛÜŽ˜ÛÛ\]K™[˜X›YÊÛÛ\]Qš[™[™ÜË›[™ÝÈˆÎXMŒˆŽˆˆÌÌÍHŠNˆˆÍÍˆŸ_OžØÛÛ\]K™[˜X›YÊÛÛ\]Qš[™[™ÜË›[™ÝÈ³©óàs­s®s«3­³­sá3¬s®H3«s®ó­s¬óáó¯ÈŽˆ³§ó¦ˆŠNˆ³¥3­s¯H3­s«ó¯s¬s®H3­s¯s­sàs¬óãŸOÜÜ[Ù]‚ˆÈXÛÛ\]K™[˜X›YÏ]ˆÛ\ÜÓ˜[YOHœ]›Ü›KY[\HžØÛÛ\]Kœ™X\ÛÛŸ³¥s¯s­sàs¬ó¯óà3¯ó«ó­óàó­HÓÓTUH3«ˆ‘SRUSH3¢3®ó­s¬óáó¯È3¬ó®s¬H3¬sásá3«3á3¬H3àóá3¯ó®sáó­s«ó¬KˆŸOÙ]Ž]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹ÜšY[\]PÛÛ[[œÎˆœ™\X]
+]]ËYš]Z[›X^
+NYœŠJH‹Ø\ŒL‹X\™Ú[ŽˆŒLœŸ_O\XÛHÝ[O^ÞÜY[™ÎŒL‹›Ü™\ŽˆŒ\ÛÛYÙÙLYXÈ‹›Ü™\”˜Y]\ÎŒL_OÛX[³©óâsàs«óàˆ3à3¬sàs¬sàóá3¬sá3®s®³ãÜÛX[ÏžÛ[X™\ŠÛÛ\]KÚ]Ý]]šY[˜ÙPÛÝ[
+_OÚÏØ\XÛO\XÛHÝ[O^ÞÜY[™ÎŒL‹›Ü™\ŽˆŒ\ÛÛYÙÙLYXÈ‹›Ü™\”˜Y]\ÎŒL_OÛX[³¨3®s®3¬s¯s«sàˆ3­3®sà3®ó«sàˆ3à3®ó­óàsâs¯3«sàÜÛX[ÏžÛ[X™\ŠÛÛ\]KœÝ[X[\XØ]PÛÝ[
+_OÚÏØ\XÛOÙ]žØÛÛ\]Qš[™[™ÜË›[™ÝÏ]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹Ø\ŒL_OžØÛÛ\]Qš[™[™ÜË›X\
+š[™[™ÏO\XÛHÙ^O^Ùš[™[™ËšYHÝ[O^ÞØ›Ü™\ŽˆŒ\ÛÛYÙ™YØXH‹›Ü™\”˜Y]\ÎŒL‹Y[™ÎŒL‹˜XÚÙÜ›Ý[™ˆˆÙ™™™ŽHŸ_O]ˆÝ[O^ÞÙ\Ü^Nˆ™›^‹\ÝYžPÛÛ[ˆœÜXÙKX™]ÙY[ˆ‹Ø\ŒL›^Ü˜\ˆÜ˜\Ÿ_O]ÛX[žÙš[™[™Ë˜ÛÙOOOH”VSQS•ÕÒUÕUÑU’QSÑHÈ³¨3®ó­óàsâs¯3«ˆÈ3«s¯³¯ó­3¯ÈŽˆ³¢3®ó­s¬óáó¯óàˆ3à3às¯ó¯3­ó®3­sásá3«ˆŸOÜÛX[ÈÝ[O^ÞÛX\™Ú[ŽˆŸ_OžÙš[™[™Ë]_OÚÏÙ]Ü[ˆÝ[O^ÞÙ›ÛÙZYÚŽÛÛÜŽˆˆÎXMŒˆŸ_O[\šX[™ÛKÏˆ3©óàs­s®s«3­³­sá3¬s®H3«s®ó­s¬óáó¯ÏÜÜ[Ù]]ˆÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹ÜšY[\]PÛÛ[[œÎˆœ™\X]
+]]ËYš]Z[›X^
+MM\YœŠJH‹Ø\ŽKX\™Ú[•ÜŒL_OÜ[³¥ó¯3­sàs¯ó¯3­ó¯s«ó¬OØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžØ][œÑ]U[YJš[™[™Ë›ØØÝ\œ™Y]
+_OÜÛX[ÜÜ[Ü[³¨3às¯ó¯3­ó®3­sásá3«³àØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙš[™[™ËœÝ\Y\“˜[Y_¸ %ŸOÜÛX[ÜÜ[Ü[³¨3¯óàóãØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙ]\Šš[™[™Ë˜[[Ý[
+_OÜÛX[ÜÜ[žÙš[™[™Ë˜[œØXÝ[ÛÛÝ[	‰Ü[³¦³®s¯s«³àó­s®sàØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙš[™[™Ë˜[œØXÝ[ÛÛÝ[OÜÛX[ÜÜ[ŸOÜ[³©ó­s®sàs®sàóá3«³àØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_OžÙš[™[™Ë˜XÝÜ“˜[Y_¸ %ŸOÜÛX[ÜÜ[Ù]žÙš[™[™Ë™\ØÜš\[Û‰‰ÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•ÜŽ__O³¨3­sàs®s¬óàs¬sá³«ŽˆÙš[™[™Ë™\ØÜš\[ÛŸOÜÛX[ŸOÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•ÜŽ__O³¤s¯s¬sá³¯óàs«ˆÙš[™[™Ëœ™Y™\™[˜ÙRY¸ %ŸOÜÛX[Ø\XÛOŠ_OÙ]Ž]ˆÛ\ÜÓ˜[YOHœ]›Ü›KY[\H³¥3­s¯H3¬³às«s®3­ó®³¬s¯H3à3®ó­óàsâs¯3«sàˆ3áóâsàs«óàˆ3à3¬sàs¬sàóá3¬sá3®s®³ã3«ˆ3à3®s®3¬s¯s«3­3®sà3®ó«sàˆ3à3®ó­óàsâs¯3«sàˆ3àóá3¬H3­sà3®s®ó­s¬ó¯3«s¯s¬H3á³«ó®óá3às¬KÙ]ŸOÏŸBˆÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_O³¤s¯s«3®óásàó­È3¬s¯s«3®³¬sá3«3àóá3­ó¯3¬OØžÜ›ÝÜË›[™ÝÜ›ÝÜË›X\
+›ÝÏOžØÛÛœÝÝÜ™O\ÝÜ™R[™^™Ù]
+Ýš[™Ê›ÝËœÝÜ™RY
+JNØÛÛœÝÛÛ\[žOXÛÛ\[žR[™^™Ù]
+Ýš[™Ê›ÝË˜ÛÛ\[žRY
+JNØÛÛœÝ™YYÔ™]šY]ÏSX]˜XœÊ[X™\Š›ÝË˜Ø\Ú˜\šX[˜ÙJJO‹Œ_X]˜XœÊ[X™\Š›ÝË˜Ø\™˜\šX[˜ÙJJO‹ŒŽÜ™]\›ˆ\XÛHÙ^O^Ø	Ü›ÝË˜ÛÛ\[žRYN‰Ü›ÝËœÝÜ™RYXHÝ[O^ÞÙ\Ü^Nˆ™ÜšY‹ÜšY[\]PÛÛ[[œÎˆ›Z[›X^
+ŒŒYœŠH™\X]
+ËZ[›X^
+LŒYœŠJH‹Ø\ŒL‹[YÛ’][\Îˆ˜Ù[\ˆ‹Y[™ÎˆŒLÜ‹›Ü™\›ÝÛNˆŒ\ÛÛYÙL™NŒŸ_O]³¥sá3¬s®sàs­s«ó¬NˆØÛÛ\[žOË›˜[Y_ÝÜ™OË˜ÛÛ\[žS˜[Y_›ÝË˜ÛÛ\[žRYOØÛX[Ý[O^ÞÙ\Ü^Nˆ˜›ØÚÈŸ_O³¦³¬sá3«3àóá3­ó¯3¬NˆÜÝÜ™OË›˜[Y_›ÝËœÝÜ™RYOÜÛX[Ù]Ü[³¤³«3às­3®s­sàˆžÛ[X™\Š›ÝËœÚYÊ_OØÜÜ[Ü[³§3­sá3às­óá3«žÙ]\Š›ÝË˜Ø\Ú˜\šX[˜ÙJ_OØÜÜ[Ü[žÛ™YYÔ™]šY]ÏÏ[\šX[™ÛKÏŽÚXÚÐÚ\˜ÛL‹ÏŸHÛ™YYÔ™]šY]ÏÈ³©sà3«3àsáó­s®H3¬sà3ã3®³®ó®sàó­ÈŽˆ³¨óás¯3á³âs¯s«ó¬HŸH0­ÈÔø $ÑQ•ÔÈÙ]\Š›ÝË˜Ø\™˜\šX[˜ÙJ_OÜÜ[Ø\XÛOŸJN]ˆÛ\ÜÓ˜[YOHœ]›Ü›KY[\H³¥3­s¯H3ásà3«3àsáó¯óás¯H3®³®ó­s®sàó¯3«s¯s­sàˆ3¬³«3às­3®s­sàˆ3¬ó®s¬H3á3¬H3­sà3®s®ó­s¬ó¯3«s¯s¬H3á³«ó®óá3às¬KÙ]ŸOÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ˆÝ[O^ÞÛX\™Ú[›ÝÛNŒM_O³¨óãs¯s¯óâ3­È3¥s®s®³¯ó¯s®s®³¯óãH3©3¬s¯3­s«ó¯óáH3©3às«3à3­s­³¬sàØ³¦ó¯ó¬ó®sàóá3®s®³ãˆÙ]\Š˜[šËÝ[ÏËœ›Ú™XÝY˜[[˜ÙJ_H0­È3¥sà3®s¬³­s¬³¬s®sâs¯3«s¯s¯ÎˆÙ]\Š˜[šËÝ[ÏË˜]˜Z[X›P˜[[˜ÙJ_H0­È3¨ó­H3¬s¯s¬s¯3¯ó¯s«ŽˆÙ]\Š˜[šËÝ[ÏËœ[™[™Ð[[Ý[
+_OÜžÊ˜[šËš][\ß×JK›X\
+][OOÛX[Ù^O^Ú][K˜˜[šÐXØÛÝ[YHÝ[O^ÞÙ\Ü^Nˆ˜›ØÚÈ‹X\™Ú[•Ü__O³¥sá3¬s®sàs­s«ó¬NˆÚ][K˜ÛÛ\[žS˜[Y_H0­È3¦³¬sá3«3àóá3­ó¯3¬NˆÚ][KœÝÜ™S˜[Y_H0­ÈÚ][K˜˜[šÓ˜[Y_HÈÚ][K˜XØÛÝ[˜[Y_Nˆ3¦ó¯ó¬ó®sàóá3®s®³ãÙ]\Š][Kœ›Ú™XÝY˜[[˜ÙJ_H0­È3¥sà3®s¬³­s¬³¬s®sâs¯3«s¯s¯ÈÙ]\Š][K˜]˜Z[X›P˜[[˜ÙJ_H0­È3¨ó­H3¬s¯s¬s¯3¯ó¯s«ˆÙ]\Š][Kœ[™[™Ð[[Ý[
+_OÜÛX[Š_OÜÙXÝ[Û‚ˆÙXÝ[ÛˆÛ\ÜÓ˜[YOHœ]›Ü›K\[™[ÚY[ÚXÚËÏˆ3§3ã3¯s¯È3¬ó®s¬H3¬s¯s«3¬ó¯sâsàó­È3á3¬H3¯ó®s®³¯ó¯s¯ó¯3®s®³«3­3­s­3¯ó¯3«s¯s¬OØ³¥È3¬s¯s«3®óásàó­È3­3­s¯H3à3às¬s¬ó¯3¬sá3¯óà3¯ó®s­s«È3­3®s¯óàs®3ã³àó­s®sàˆ3®³¬s®H3­3­s¯H3¬sà3¯ó­3«ó­3­s®H3¬sásá3ã3¯3¬sá3¬H3­sás®3ãs¯s­È3àó­H3­sàs¬ó¬s­³ã3¯3­s¯s¯Ëˆ3¥È3®³¬sá3¬sáóã³às®sàó­È3­s®ó«s¬óáó¯óáH3¬óàs«3á³­s®H3¯3ã3¯s¯È3¬sà3ã3á³¬sàó­Ë3àó­ó¯3­s«óâsàó­Ë3­s®ó­s¬ó®³á3«ˆ3®³¬s®H3áóàsã3¯s¯È3àóá3¯È]Y]ÜÜÙXÝ[Û‚ˆÏŸBˆÜÙXÝ[ÛÙ]ŽÂŸB
