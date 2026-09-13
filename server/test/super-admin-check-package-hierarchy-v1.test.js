@@ -1,1 +1,22 @@
-±êïz¿ì­Ïë¢ë^³úej×è®k.¥êÚvh§jv¥ÊØœ±×­j)lŽÆ–×÷'B76W'Bg&öÒ&æöFS¦76W'B÷7G&–7B#°¦–×÷'B·&VDf–ÆWÒg&öÒ&æöFS¦g2÷&öÖ—6W2#°¦–×÷'BFW7Bg&öÒ&æöFS§FW7B#° ¦6öç7BæÇ—F–75&÷WFSÖv—B&VDf–ÆR†æWrU$Â‚"ââ÷7&2÷&÷WFW2÷ÆFf÷&Ò×7WW"ÖFÖ–âÖæÇ—F–72ÖFWF–Ç2æ§2"Æ–×÷'BæÖWFçW&Â’Â'WFc‚"“°¦6öç7BÖöGVÆU&÷WFSÖv—B&VDf–ÆR†æWrU$Â‚"ââ÷7&2÷&÷WFW2÷ÆFf÷&Ò×7F÷&RÖÖöGVÆW2æ§2"Æ–×÷'BæÖWFçW&Â’Â'WFc‚"“°¦6öç7BV“Öv—B&VDf–ÆR†æWrU$Â‚"ââòââö6Æ–VçB÷7&2ö6ö×öæVçG2÷ÆFf÷&Òõ7WW$FÖ–ä6†V6·4æÇ—F–72æ§7‚"Æ–×÷'BæÖWFçW&Â’Â'WFc‚"“° §FW7B‚&â7F—fR†–v†W"6†V6²6¶vRw&çG2$4”2W†V7WF–öâ66W72"Â‚“Óç°¢76W'BæÖF6‚†æÇ—F–75&÷WFRÂö6öç7B4„T4µõ4´tUô´U•3ÕÅ²$$4”5ô4„T4²"Â$4ôÕÄUDUô4„T4²"Â%$TÔ•TÕô4„T4²%ÅÒò“°¢76W'BæÖF6‚†æÇ—F–75&÷WFRÂò&ÖöGVÆT¶W’#Ôå•Â…ÂEÇ´4„T4µõ4´tUô´U•5ÇÓ£§FW‡EÅµÅÕÂ’ò“°¢76W'BæÖF6‚†æÇ—F–75&÷WFRÂö6öç7B7F—fT¶W—3×&÷w5Âæf–ÇFW%Â‡&÷sÓç6¶vT—47F—fUÂ‡&÷uÂ•Â•ÂæÖÂ‡&÷sÓç&÷uÂæÖöGVÆT¶W•Â’ò“°¢76W'BæÖF6‚†æÇ—F–75&÷WFRÂ÷&WGW&âÇ¶ÆWfVÂÆ7F—fT¶W—2Æ&6–3§G'VRÆ6ö×ÆWFS¦ÆWfVÃãÔ4„T4µõ4´tUôÄUdTÅ5Âä4ôÕÄUDUô4„T4µÇÒò“°§Ò“° §FW7B‚&6†V6²×6¶vR6&G2W‡÷6R–æ†W&—FVB66W72v—F†÷WBÆÆ÷v–ærFW&—fVB6¶vRFövvÆR"Â‚“Óç°¢76W'BæÖF6‚†ÖöGVÆU&÷WFRÂö6öç7B4„T4µõ4´tUôÄUdTÅ3ÕÇ´$4”5ô4„T4³£Ä4ôÕÄUDUô4„T4³£Å$TÔ•TÕô4„T4³£%ÇÒò“°¢76W'BæÖF6‚†ÖöGVÆU&÷WFRÂö–æ6ÇVFVD'“Ô4„T4µõ4´tUô´U•5Âç6Æ–6UÂ†ÆWfVÅÂ³Â•Âæf–æBò“°¢76W'BæÖF6‚†ÖöGVÆU&÷WFRÂö6åFövvÆS¦F—&V7D7F—fUÇÅÇÂ7F—fRò“°¢76W'BæÖF6‚‡V’Âüêë\øëœë¼ëëÌë,êÌëÜë\øLëë’ø<øLëòÂEÇ·6¶vT—FVÕÂæ–æ6ÇVFVD'•F—FÆUÇÒò“°¢76W'BæÖF6‚‡V’ÂöF—6&ÆVCÕÇ²6¶vT—FVÕÂæ6åFövvÆUÇÅÇÇ6¶vW4'W7•ÇÅÇÆ'W7•ÇÅÇÇ&Wf–Wt'W7•ÇÒò“°§Ò“°
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import test from "node:test";
+
+const analyticsRoute=await readFile(new URL("../src/routes/platform-super-admin-analytics-details.js",import.meta.url),"utf8");
+const moduleRoute=await readFile(new URL("../src/routes/platform-store-modules.js",import.meta.url),"utf8");
+const ui=await readFile(new URL("../../client/src/components/platform/SuperAdminChecksAnalytics.jsx",import.meta.url),"utf8");
+
+test("an active higher check package grants BASIC execution access",()=>{
+  assert.match(analyticsRoute,/const CHECK_PACKAGE_KEYS=\["BASIC_CHECK","COMPLETE_CHECK","PREMIUM_CHECK"\]/);
+  assert.match(analyticsRoute,/"moduleKey"=ANY\(\$\{CHECK_PACKAGE_KEYS\}::text\[\]\)/);
+  assert.match(analyticsRoute,/const activeKeys=rows\.filter\(row=>packageIsActive\(row\)\)\.map\(row=>row\.moduleKey\)/);
+  assert.match(analyticsRoute,/return \{level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS\.COMPLETE_CHECK\}/);
+});
+
+test("check-package cards expose inherited access without allowing a derived package toggle",()=>{
+  assert.match(moduleRoute,/const CHECK_PACKAGE_LEVELS=\{BASIC_CHECK:0,COMPLETE_CHECK:1,PREMIUM_CHECK:2\}/);
+  assert.match(moduleRoute,/includedBy=CHECK_PACKAGE_KEYS\.slice\(level\+1\)\.find/);
+  assert.match(moduleRoute,/canToggle:directActive\|\|!active/);
+  assert.match(ui,/Î ÎµÏÎ¹Î»Î±Î¼Î²Î¬Î½ÎµÏ„Î±Î¹ ÏƒÏ„Î¿ \$\{packageItem\.includedByTitle\}/);
+  assert.match(ui,/disabled=\{!packageItem\.canToggle\|\|packagesBusy\|\|busy\|\|reviewBusy\}/);
+});

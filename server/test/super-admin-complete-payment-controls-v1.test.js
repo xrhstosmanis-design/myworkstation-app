@@ -1,31 +1,28 @@
-±êïz¿ízË²ê^­§fŠw!yÉ)iÉèbz¶«r¯Ö×¬¶;[\Ü\ÜÙ\œ›ÛH››ÙN˜\ÜÙ\ÜÝšXÝŽÂš[\ÜÜ™XYš[_Hœ›ÛH››ÙN™œËÜ›ÛZ\Ù\ÈŽÂš[\Ü\Ýœ›ÛH››ÙN\ÝŽÂ‚˜ÛÛœÝ›Ý]OX]ØZ]™XYš[J™]ÈT“
-‹‹‹ÜÜ˜ËÜ›Ý]\ËÜ]›Ü›K\Ý\\‹XYZ[‹X[˜[]XÜËY]Z[ËšœÈ‹[\Ü›Y]K\›
-K]ŽŠNÂ˜ÛÛœÝZOX]ØZ]™XYš[J™]ÈT“
-‹‹‹Ë‹‹ØÛY[ÜÜ˜ËØÛÛ\Û™[ËÜ]›Ü›KÔÝ\\YZ[ÚXÚÜÐ[˜[]XÜËšœÞ‹[\Ü›Y]K\›
-K]ŽŠNÂ‚\Ý
-ÓÓTUH^[Y[ÛÛ›ÛÈ\™H[Z]YÈ[ˆXÝ]™HÓÓTUHÜˆ‘SRUSHXÚØYÙH‹
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import test from "node:test";
 
-OOžÂˆ\ÜÙ\›X]Ú
-›Ý]KØÛÛœÝÒPÒ×ÔPÒÐQÑWÓU‘SÏWÐTÒP×ÐÒPÒÎŒÓÓTUWÐÒPÒÎŒK‘SRUSWÐÒPÒÎŒ—KÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KØÛÛ\]N›]™[PÒPÒ×ÔPÒÐQÑWÓU‘S×ÓÓTUWÐÒPÒËÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÜXÚØYÙPXØÙ\Ü×˜ÛÛ\]WØ]ØZ]ÛÛ\]T^[Y[ÛÛ›ÛËÊNÂŸJNÂ‚\Ý
-ÓÓTUHÛÛ›ÛÈ[œÜXÝXÝ]™H^[Y[ÈÚ]Ý]]]][™È[H‹
+const route=await readFile(new URL("../src/routes/platform-super-admin-analytics-details.js",import.meta.url),"utf8");
+const ui=await readFile(new URL("../../client/src/components/platform/SuperAdminChecksAnalytics.jsx",import.meta.url),"utf8");
 
-OOžÂˆ\ÜÙ\›X]Ú
-›Ý]KÝˆœ™]™\œÙY]ˆTÈ•SS‘ˆ\HˆSˆ
-	ÔÕTQT—ÔVSQS•	Ë	ÓÕT—ÑVS”ÑI×
-KÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÝˆ˜]XÚY[]HˆTÈ•SÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÔVSQS•ÕÒUÕUÑU’QSÑKÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÔÕS•PSÑTPÐUWÔÕTQT—ÔVSQS•ÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÑÔ“ÕT–HˆœÝ\Y\’Y‹ˆ˜[[Ý[‹UW
-ˆ›ØØÝ\œ™Y]—
-KÝˆ›˜[YH‹ÊNÂˆ\ÜÙ\›X]Ú
-›Ý]KÜ™XYÛ›NYKÊNÂŸJNÂ‚\Ý
-”Ý\\ˆYZ[ˆØÜ™Y[ˆ^Z[œÈ[™™[™\œÈHÓÓTUHš[™[™ÜÈ‹
+test("COMPLETE payment controls are limited to an active COMPLETE or PREMIUM package",()=>{
+  assert.match(route,/const CHECK_PACKAGE_LEVELS=\{BASIC_CHECK:0,COMPLETE_CHECK:1,PREMIUM_CHECK:2\}/);
+  assert.match(route,/complete:level>=CHECK_PACKAGE_LEVELS\.COMPLETE_CHECK/);
+  assert.match(route,/packageAccess\.complete\?await completePaymentControls/);
+});
 
-OOžÂˆ\ÜÙ\›X]Ú
-ZKÐÓÓTUH0­È3¨3®ó­óàsâs¯3«sàˆ3®³¬s®H3à3¬sàs¬sàóá3¬sá3®s®³«ÊNÂˆ\ÜÙ\›X]Ú
-ZKó©óâsàs«óàˆ3à3¬sàs¬sàóá3¬sá3®s®³ãÊNÂˆ\ÜÙ\›X]Ú
-ZKó¨3®s®3¬s¯s«sàˆ3­3®sà3®ó«sàˆ3à3®ó­óàsâs¯3«sà‹ÊNÂˆ\ÜÙ\›X]Ú
-ZKó¥3­s¯H3¬³às«s®3­ó®³¬s¯H3à3®ó­óàsâs¯3«sàˆ3áóâsàs«óàˆ3à3¬sàs¬sàóá3¬sá3®s®³ãÊNÂŸJNÂ
+test("COMPLETE controls inspect active payments without mutating them",()=>{
+  assert.match(route,/t\."reversedAt" IS NULL AND t\."type" IN \('SUPPLIER_PAYMENT','OTHER_EXPENSE'\)/);
+  assert.match(route,/t\."attachmentData" IS NULL/);
+  assert.match(route,/PAYMENT_WITHOUT_EVIDENCE/);
+  assert.match(route,/POTENTIAL_DUPLICATE_SUPPLIER_PAYMENT/);
+  assert.match(route,/GROUP BY t\."supplierId",t\."amount",DATE\(t\."occurredAt"\),st\."name"/);
+  assert.match(route,/readOnly:true/);
+});
+
+test("Super Admin screen explains and renders the COMPLETE findings",()=>{
+  assert.match(ui,/COMPLETE Â· Î Î»Î·ÏÏ‰Î¼Î­Ï‚ ÎºÎ±Î¹ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÎ¬/);
+  assert.match(ui,/Î§Ï‰ÏÎ¯Ï‚ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ/);
+  assert.match(ui,/Î Î¹Î¸Î±Î½Î­Ï‚ Î´Î¹Ï€Î»Î­Ï‚ Ï€Î»Î·ÏÏ‰Î¼Î­Ï‚/);
+  assert.match(ui,/Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎ±Î½ Ï€Î»Î·ÏÏ‰Î¼Î­Ï‚ Ï‡Ï‰ÏÎ¯Ï‚ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ/);
+});
