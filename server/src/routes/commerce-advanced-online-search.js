@@ -5,13 +5,64 @@ import {advancedOnlineProductSearch,advancedOnlineSearchEntitlement} from "../ad
 
 const router=Router(),uid=()=>crypto.randomUUID();
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
+const isOwner=req=>req.user?.role==="OWNER";
 const nextSku=async(companyId,tx=prisma)=>String((await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "sku" ~ '^[0-9]+$' THEN "sku"::bigint END),10000)+1 AS next FROM "Product" WHERE "companyId"=${companyId}`)[0]?.next||10001);
-async function requireAdvanced(req,res){if(isPlatformSuper(req))return true;const ok=await advancedOnlineSearchEntitlement(req.user.companyId);if(!ok){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return false}return true}
+async function requireAdvanced(req,res){if(isPlatformSuper(req))return true;if(!isOwner(req)){res.status(403).json({error:"Η αναζήτηση Internet επιτρέπεται μόνο σε ιδιοκτήτη ή Super Admin.",code:"OWNER_ONLY"});return false}const ok=await advancedOnlineSearchEntitlement(req.user.companyId);if(!ok){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return false}return true}
 
 async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
 }
+
+async function ensureMarketSchema(){
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InternetProductSearch" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT,"actorId" TEXT,
+    "query" TEXT NOT NULL,"queryType" TEXT NOT NULL,"productId" TEXT,"resultCount" INTEGER NOT NULL DEFAULT 0,
+    "results" JSONB NOT NULL DEFAULT '[]'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  ); CREATE INDEX IF NOT EXISTS "InternetProductSearch_company_created_idx" ON "InternetProductSearch" ("companyId","createdAt" DESC)`);
+}
+
+const euroValues=value=>[...String(value||"").matchAll(/(?:€\s*|EUR\s*)(\d{1,4}(?:[.,]\d{1,2})?)|(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)/gi)]
+  .map(match=>Number(String(match[1]||match[2]).replace(",","."))).filter(value=>Number.isFinite(value)&&value>0&&value<100000);
+const offerText=value=>String(value||"").match(/(?:1\s*\+\s*1|2\s*\+\s*1|-?\s*\d{1,2}\s*%|έκπτωση[^.·|]{0,50}|προσφορά[^.·|]{0,50})/iu)?.[0]?.trim()||null;
+const sourceType=domain=>/skroutz|bestprice|shopflix/i.test(domain)?"ONLINE_STORE":/market|supermarket|sklavenitis|ab\.gr|mymarket|masoutis|kritikos/i.test(domain)?"SUPERMARKET":/cash|carry|wholesale|χονδρ/i.test(domain)?"WHOLESALER":"PUBLIC_INTERNET";
+const domainOf=url=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch{return ""}};
+
+async function internetMarketSearch(query){
+  const key=String(process.env.SERPER_API_KEY||"").trim();
+  if(!key)return {configured:false,rows:[]};
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+  try{
+    const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":key,"Content-Type":"application/json"},body:JSON.stringify({q:`${query} τιμή προσφορά αγορά Ελλάδα`,gl:"gr",hl:"el",num:10}),signal:controller.signal});
+    if(!response.ok)throw new Error(`SERPER_${response.status}`);
+    const data=await response.json();
+    return {configured:true,rows:(data.organic||[]).slice(0,10).map((item,index)=>{const domain=domainOf(item.link),prices=euroValues(`${item.title||""} ${item.snippet||""}`);return {id:`internet:${index}`,productName:String(item.title||query).trim().slice(0,240),barcode:/^\d{6,18}$/.test(query)?query:null,sourceDomain:domain,sourceUrl:item.link||null,sourceType:sourceType(domain),price:prices[0]??null,offer:offerText(`${item.title||""} ${item.snippet||""}`),offerDate:null,snippet:String(item.snippet||"").trim().slice(0,500)}})};
+  }finally{clearTimeout(timer)}
+}
+
+router.get("/market-search",async(req,res,next)=>{try{
+  if(!await requireAdvanced(req,res))return;await ensureMarketSchema();
+  const query=String(req.query.q||"").trim().replace(/\s+/g," "),storeId=String(req.query.storeId||"").trim()||null,productId=String(req.query.productId||"").trim()||null;
+  if(query.length<2||query.length>180)return res.status(400).json({error:"Γράψε όνομα, barcode, προμηθευτή ή κατηγορία."});
+  if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."})}
+  let own=null;
+  if(productId||/^\d{6,18}$/.test(query))own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
+  const internet=await internetMarketSearch(query),priced=internet.rows.filter(row=>row.price!=null),cheapest=priced.sort((a,b)=>a.price-b.price)[0]||null;
+  const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=sale>0?((sale-cost)/sale)*100:null,marketPrice=cheapest?.price??null;
+  const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":marketPrice&&sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη δημόσια τιμή.":marketPrice&&sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις τιμές που εντοπίστηκαν.";
+  const results=internet.rows.map(row=>({...row,differenceFromOurSale:row.price!=null&&sale?Number((row.price-sale).toFixed(2)):null}));
+  const id=uid();await prisma.$executeRaw`INSERT INTO "InternetProductSearch" ("id","companyId","storeId","actorId","query","queryType","productId","resultCount","results") VALUES (${id},${req.user.companyId},${storeId},${req.user.id||null},${query},${/^\d{6,18}$/.test(query)?"BARCODE":"TEXT"},${own?.id||productId},${results.length},${JSON.stringify(results)}::jsonb)`;
+  res.json({id,query,configured:internet.configured,own:own?{...own,costPrice:cost,salePrice:sale,marginPercent:margin==null?null:Number(margin.toFixed(2))}:null,rows:results,cheapest,recommendation,warning:"Οι τιμές Internet είναι ενδείξεις από δημόσια αποτελέσματα και δεν εφαρμόζονται αυτόματα."});
+}catch(error){next(error)}});
+
+router.get("/products",async(req,res,next)=>{try{
+  if(!await requireAdvanced(req,res))return;
+  const q=String(req.query.q||"").trim(),storeId=String(req.query.storeId||"").trim()||null;if(q.length<2)return res.json({rows:[]});
+  const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND (p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like})) ORDER BY p."name" LIMIT 20`;
+  res.json({rows:rows.map(row=>({...row,costPrice:Number(row.costPrice||0),salePrice:Number(row.salePrice||0)}))});
+}catch(error){next(error)}});
+
+router.get("/history",async(req,res,next)=>{try{if(!await requireAdvanced(req,res))return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${req.user.companyId} ORDER BY "createdAt" DESC LIMIT 50`;res.json({rows})}catch(error){next(error)}});
 
 router.get("/options",async(req,res,next)=>{try{
   if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId;
