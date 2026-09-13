@@ -26,6 +26,8 @@ test("POS exposes the barcode tool and an internal radio player",async()=>{
   const [pos,barcode,radio,chatCss]=await Promise.all([read("../../client/src/components/store/StorePosPanel.jsx"),read("../../client/src/components/store/PosBarcodeRegistrationModal.jsx"),read("../../client/src/components/store/PosOnlineRadioPlayer.jsx"),read("../../client/src/components/store/store-chat.css")]);
   assert.match(pos,/Έλεγχος και καταχώρηση νέου Barcode/);
   assert.match(barcode,/ΧΩΡΙΣ BARCODE/);
+  assert.match(barcode,/setTimeout\(\(\)=>load\(query\),query\.trim\(\)\?220:0\)/);
+  assert.match(barcode,/searchRequest\.current/);
   assert.match(radio,/Online Ράδιο/);
   assert.match(radio,/<audio/);
   assert.match(pos,/persistentLauncher/);
