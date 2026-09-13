@@ -100,7 +100,7 @@ function mergeAzureInvoicePages(pages){
     productLines.push(...pageLines.filter(line=>String(line?.description||line?.rawText||"").trim()).map(normalizeProductLine));
     const visible=Array.isArray(result.lines)?result.lines:[];
     auditLines.push(...visible.filter(line=>String(line?.text||"").trim()).map(line=>({text:String(line.text),confidence:Math.max(0,Math.min(100,Number(line.confidence||result.aiConfidence||0)))})));
-    const raw=String(result.rawText||"").trim();if(raw)rawTexts.push(\`ΣΕΛΙΔΑ \${pageIndex+1}:\n\${raw}\`);
+    const raw=String(result.rawText||"").trim();if(raw)rawTexts.push(`ΣΕΛΙΔΑ ${pageIndex+1}:\n${raw}`);
     const confidence=Number(result.aiConfidence||0);if(confidence>0)confidenceValues.push(confidence);
   }
   const rawText=rawTexts.join("\n\n");
@@ -154,9 +154,9 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
   let parsed=null,unifiedAiFailure=null;
   try{
-    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:\`Bearer \${process.env.OPENAI_API_KEY}\`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
-    if(!apiResponse.ok){const error=new Error(payload?.error?.message||\`Ο AI επανέλεγχος απέτυχε (\${apiResponse.status}).\`);error.status=502;throw error}
+    if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
     try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
   }catch(error){unifiedAiFailure=error}
 
