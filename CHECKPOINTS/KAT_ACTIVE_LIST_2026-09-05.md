@@ -1,18 +1,13 @@
 ## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB
 
-- [x] Η Phase A μεταφέρθηκε σε καθαρό branch από το τελευταίο `main`.
+- [x] Υλοποιήθηκε και συγχωνεύτηκε στο κεντρικό `main` μέσω PR #775 / merge `eb97190e`.
+- [x] CI #1972 πριν από το merge και CI #1973 πάνω στο `main`: PASS σε όλα τα gates.
 - [x] Κλειδώθηκε server-side το μοναδικό test scope: `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
-- [x] Ρύθμιση efood, mock webhooks, product mappings και Catalog/Promo/Orders previews απορρίπτονται σε ΚΑΤ ή άλλο πραγματικό κατάστημα.
-- [x] Προστέθηκε πλήρης ασφαλής LAB mock ροή από Super Admin: `READY_FOR_PICKUP`, idempotent replay, `CANCELLED`, Catalog, Promo, Orders recovery και readiness.
+- [x] Ρύθμιση efood, mock webhooks, product mappings, Catalog/Promo/Orders previews και δημόσιο webhook απορρίπτονται σε ΚΑΤ ή άλλο πραγματικό κατάστημα.
+- [x] Προστέθηκε πλήρης ασφαλής LAB mock ροή: `READY_FOR_PICKUP`, idempotent replay, `CANCELLED`, Catalog, Promo, Orders recovery και readiness.
 - [x] Η ροή παραμένει fail-closed: `externalCall=false`, χωρίς OnlineOrder/Sale, stock, τιμή, προσφορά, πληρωμή, RBS/CapDriver/EFTPOS ή fiscal.
-- [ ] Εκκρεμούν πράσινο CI, merge/deploy και live πάτημα «Πλήρης ασφαλής LAB δοκιμή».
-- [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization.
-
-Warning: truncated output (original token count: 31006)
-Total output lines: 981
-
-Warning: truncated output (original token count: 30025)
-Total output lines: 954
+- [ ] Εκκρεμούν επιβεβαίωση Render revision και live πάτημα `Πλήρης ασφαλής LAB δοκιμή`.
+- [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization πριν από πραγματικό sandbox event.
 
 ## 2026-09-10 — Ανθεκτική παραλαβή τιμολογίου POS / LAB
 
