@@ -24,3 +24,7 @@ The user reported oversized persistent POS notices and a non-working BackOffice 
 ## Next LAB checkpoint
 
 After deployment, refresh the existing LAB purchase-order list and inspect invoice 2612188. Do not upload it or record its payment again. Verify one order, 38 complete lines in source-page order, and final total 2369.99 EUR before approval. The screenshots are not a full Gate 3 PASS.
+
+## LAB follow-up
+
+Refresh and the visible draft were confirmed in the user's next screenshot: 3 entries and invoice 2612188 with 38 items. The lines total 2363.28 EUR against the source total of 2369.99 EUR, so 6.71 EUR remains unreconciled. See [the next LAB checkpoint](2026-09-13-gate3-refresh-lab-pass-reconciliation-open.md). Product accuracy and POS notice timing are still unverified.
