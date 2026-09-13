@@ -1,0 +1,55 @@
+name: efood LAB checkpoint once
+
+on:
+  push:
+    branches:
+      - feat/efood-pelican-lab-validation
+    paths:
+      - .github/workflows/efood-lab-checkpoint-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  checkpoint:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/efood-pelican-lab-validation
+          fetch-depth: 0
+
+      - name: Update unified list and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md")
+          text = path.read_text(encoding="utf-8")
+          heading = "## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB"
+          section = """## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB
+
+          - [x] Η Phase A μεταφέρθηκε σε καθαρό branch από το τελευταίο `main`.
+          - [x] Κλειδώθηκε server-side το μοναδικό test scope: `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
+          - [x] Ρύθμιση efood, mock webhooks, product mappings και Catalog/Promo/Orders previews απορρίπτονται σε ΚΑΤ ή άλλο πραγματικό κατάστημα.
+          - [x] Προστέθηκε πλήρης ασφαλής LAB mock ροή από Super Admin: `READY_FOR_PICKUP`, idempotent replay, `CANCELLED`, Catalog, Promo, Orders recovery και readiness.
+          - [x] Η ροή παραμένει fail-closed: `externalCall=false`, χωρίς OnlineOrder/Sale, stock, τιμή, προσφορά, πληρωμή, RBS/CapDriver/EFTPOS ή fiscal.
+          - [ ] Εκκρεμούν πράσινο CI, merge/deploy και live πάτημα «Πλήρης ασφαλής LAB δοκιμή».
+          - [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization.
+
+          """
+          section = "\n".join(line[10:] if line.startswith("          ") else line for line in section.splitlines()) + "\n"
+          if heading not in text:
+              path.write_text(section + text, encoding="utf-8")
+          PY
+
+          git rm .github/workflows/efood-lab-checkpoint-once.yml
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+          git commit -m "Record efood LAB-only checkpoint in unified list"
+          git push origin HEAD:feat/efood-pelican-lab-validation

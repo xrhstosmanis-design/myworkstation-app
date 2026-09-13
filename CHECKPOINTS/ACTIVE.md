@@ -1,7 +1,28 @@
-Active checkpoint: `CHECKPOINTS/CHANGES/2026-09-12-full-product-card-invoice-supplier.md` (with unified list `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`)
+# ACTIVE CHECKPOINT
 
-Current branch: `fix/backfill-supplier-links-from-purchases`
+- Ημερομηνία: 2026-09-13
+- Εργασία: efood / Pelican Indirect POS — LAB-only Phase A
+- Branch: `feat/efood-pelican-lab-validation`
+- Βάση έναρξης: `main` `93550e30ee4136e6f2a9ae5ffeef1e4ba3582135`
+- Κατάσταση: ΣΕ ΔΟΚΙΜΗ — αναμονή CI, merge/deploy και live LAB mock validation
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-efood-pelican-phase-a-foundation.md`
 
-Current goal: repair missing product-supplier links automatically from finalized purchase history at server startup.
+## Υποχρεωτικό LAB scope
 
-Rule: every code/configuration PR must update the active unified list and add a checkpoint under `CHECKPOINTS/CHANGES/`. CI enforces the rule. Completed, evidenced items are marked `ΟΚ`; untested work remains `ΣΕ ΔΟΚΙΜΗ`.
+- Όλη η efood/Pelican προετοιμασία και κάθε δοκιμή εκτελούνται μόνο στο `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
+- Ο server απορρίπτει ρύθμιση, mock event, mapping ή preview σε οποιοδήποτε άλλο κατάστημα.
+- ΚΑΤ και πραγματικά καταστήματα δεν αγγίζονται.
+
+## Fail-closed όρια
+
+- Μόνο local mock και SANDBOX previews.
+- Καμία πραγματική κλήση efood.
+- Καμία παραγγελία, πώληση, αλλαγή stock/τιμής/προσφοράς, πληρωμή ή φορολογική έκδοση.
+- Καμία κλήση RBS / CapDriver / EFTPOS.
+
+## Επόμενο βήμα
+
+1. Πλήρες πράσινο GitHub CI.
+2. Deploy της fail-closed Phase A.
+3. Super Admin → `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` → «Πλήρης ασφαλής LAB δοκιμή».
+4. Αναμονή test vendor από efood πριν από πραγματικό sandbox event.
