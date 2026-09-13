@@ -15,6 +15,14 @@ test("POS persists every invoice page before starting full recognition",()=>{
   assert.ok(handoff>=0&&background>handoff,"durable handoff must finish before full background OCR starts");
 });
 
+test("POS keeps the invoice modal alive until background registration finishes",()=>{
+  assert.match(client,/const success=mode==="PAID"\?`ℹ️ Η πληρωμή/);
+  assert.doesNotMatch(client,/const success=mode==="PAID"\?`✅ Πληρωμή/);
+  assert.match(client,/\.then\(created=>\{[^\n]*setBusy\(false\)/);
+  assert.match(client,/\.catch\(error=>\{setBusy\(false\)/);
+  assert.match(client,/created\?\.archived!==false/);
+});
+
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
   assert.match(route,/FROM "MyDataInboundDocument" m/);
   assert.match(route,/ABS\(COALESCE\(m\."totalGross",0\)-\$\{totalGross\}\)<=0\.05/);
@@ -28,4 +36,3 @@ test("LAB handoff records paid or credit intent without posting stock",()=>{
   assert.match(route,/paymentTransactionId/);
   assert.doesNotMatch(route,/fast-handoff[\s\S]*INSERT INTO "StockMovement"/);
 });
-
