@@ -112,10 +112,13 @@ function recoverDeclaredColumns(line,profile){
 
 function applyMappings(lines,profile){
   const mappings=profile?.mappings&&typeof profile.mappings==="object"?profile.mappings:{};
+  const unitKind=value=>/^(PIECE|PCS|PC|TEM|ΤΕΜ|TMX|ΤΜΧ)$/.test(norm(value))?"PIECE":/^(PACKAGE|CASE|BOX|KIB|ΚΙΒ|ΚΒ)$/.test(norm(value))?"PACKAGE":null;
   return (lines||[]).map(line=>{
     const code=norm(line?.supplierItemCode||line?.code);const m=code?mappings[code]:null;
     if(!m)return line;
-    return {...line,...(m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
+    const printedKind=unitKind(line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
+    const compatible=!printedKind||!learnedKind||printedKind===learnedKind;
+    return {...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
   });
 }
 
@@ -136,4 +139,3 @@ export async function applyCentralSupplierProfile(parsed){
     supplierProfileApplied:true
   };
 }
-

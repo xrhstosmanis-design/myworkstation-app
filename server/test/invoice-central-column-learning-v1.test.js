@@ -104,6 +104,11 @@ test('every reading entry point can consume the same supplier profile, including
   const missing=await context.apply({supplier:{taxId:'999999999',name:'SHARED SUPPLIER'},productLines:[]});
   assert.equal(missing.supplierReadingProfile,null);
   assert.deepEqual(queries,['998878583','998878583','999999999']);
+  tx.profileRow.profile.mappings['01669'].invoiceUnit='PACKAGE';
+  tx.profileRow.profile.mappings['01669'].unitsPerPackage=20;
+  const pieces=await context.apply({supplier:{taxId:'998878583'},productLines:[{code:'01669',unit:'TEM',quantity:30,unitCost:4.75,netAmount:142.5}]});
+  assert.equal(pieces.productLines[0].unit,'TEM');
+  assert.equal(pieces.productLines[0].unitsPerPackage,undefined);
 });
 
 test('actual multipage recovery consumes repeated occurrences once and retains their printed order',async()=>{
