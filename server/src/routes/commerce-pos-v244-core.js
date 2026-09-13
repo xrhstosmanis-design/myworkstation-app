@@ -204,7 +204,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       let inboxId=null;
       const inboxIds=[];
       const archiveJobs=[job,...pageJobIds.map(pageJobId=>additionalPageJobs.find(pageJob=>pageJob.id===pageJobId)).filter(Boolean)];
-      for(const [pageIndex,pageJob] of archiveJobs.entries())if(pageJob.attachmentId){
+      try{ for(const [pageIndex,pageJob] of archiveJobs.entries())if(pageJob.attachmentId){
         stage="archive-after-registration";
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${pageJob.attachmentId} LIMIT 1 FOR UPDATE`;
         const pageInboxId=existingInbox[0]?.id||id();
@@ -214,6 +214,11 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const archiveNote=`Καταχωρίστηκε στις Παραγγελίες & Αγορές • Τιμολόγιο ${body.documentNumber}${pageLabel} • Αγορά ${orderId}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:" • Με πίστωση"}`;
         if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageInboxId} AND "companyId"=${req.user.companyId}`;
         else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${pageInboxId},${req.user.companyId},${job.storeId},${body.supplierId},${pageJob.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${actor},${createdByUserId})`;
+      } }catch(archiveError){
+        // Registration and payment must not be rolled back because an older
+        // DocumentInbox schema cannot archive the attachment metadata.
+        console.error("V2.4.4 archive warning",{jobId:job.id,message:archiveError?.message||String(archiveError)});
+        inboxId=null; inboxIds.length=0;
       }
       return {documentId,orderId,paymentTransactionId,inboxId,inboxIds,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length,pageCount:archiveJobs.length};
     });
