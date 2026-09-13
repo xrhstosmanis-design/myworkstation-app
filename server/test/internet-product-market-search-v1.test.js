@@ -38,3 +38,10 @@ test("Super Admin gets a central company-scoped view and purchase suggestions",(
   assert.match(platform,/basePath="\/api\/platform\/internet-product-search"/);
   for(const text of ["Πρόταση παραγγελίας","βασικό κόστος αγοράς","Προσθήκη στην πρόταση παραγγελίας"])assert.match(ui,new RegExp(text,"i"));
 });
+
+test("market bootstrap and provider failures cannot surface as a generic internal error",()=>{
+  assert.match(route,/CREATE TABLE IF NOT EXISTS "InternetProductSearch"/);
+  assert.match(route,/catch\(error\)\{return \{configured:true,rows:\[\],reason:/);
+  assert.match(route,/GOOGLE_CSE_API_KEY/);
+  assert.match(ui,/Ο πάροχος Internet δεν απάντησε σωστά/);
+});
