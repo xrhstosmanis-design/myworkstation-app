@@ -37,3 +37,12 @@
 3. τελικό ποσό `2.369,99 €`,
 4. όλες οι σελίδες αρχειοθετημένες,
 5. καμία κίνηση stock πριν από τον έλεγχο/έγκριση BackOffice.
+
+
+## Υλοποίηση / CI / ανάπτυξη
+
+- PR: [#787](https://github.com/xrhstosmanis-design/myworkstation-app/pull/787)
+- CI #2013: PASS — 1.145/1.145 server tests και όλα τα υπόλοιπα gates πράσινα.
+- Merge στο `main`: `2ecc924e69796870ee1c6b274bf70a44967dcabf`.
+- Live deploy check: PASS. Η δημόσια εφαρμογή άλλαξε asset set μετά το merge, από `entry-BUq92ZTN` σε `entry-QNZA6VPw`, ενώ νεότερο commit του `main` παραμένει το παραπάνω merge.
+- Κατάσταση Gate 3: η διόρθωση είναι διαθέσιμη για επανάληψη LAB· το πολυσέλιδο test παραμένει ανοικτό μέχρι το αποτέλεσμα του Χρήστου.
