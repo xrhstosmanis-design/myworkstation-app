@@ -93,7 +93,8 @@ test("confirmed edits of matched invoice lines update supplier learning",()=>{
   assert.match(source,/"lastDiscount2"=EXCLUDED\."lastDiscount2"/);
   assert.match(source,/"lastDiscount3"=EXCLUDED\."lastDiscount3"/);
   assert.match(source,/learnConfirmedLineCorrection\(tx,\{companyId,supplierId:found\.supplierId,line:corrected,userId:req\.user\.id\}\)/);
-  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,invoiceUnit,stockUnitsPerInvoiceUnit,stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit,mappingLearned\}\)/);
+  assert.match(source,/learnCentralInvoiceCorrection\(tx,\{actor:req\.user,companyId,supplierId:found\.supplierId,line:corrected\}\)/);
+  assert.match(source,/res\.json\(\{ok:true,\.\.\.c,invoiceUnit,stockUnitsPerInvoiceUnit,stockQuantity:c\.quantity\*stockUnitsPerInvoiceUnit,mappingLearned,centralLearning\}\)/);
 });
 
 test("matched invoice line editor persists and learns package to pieces conversion",()=>{
@@ -115,7 +116,7 @@ test("matched invoice line correction is audited atomically without changing sto
   const report=read("server/src/routes/kiosk-reports-audit.js");
   assert.match(route,/'INVOICE_LINE_CORRECTED'/);
   assert.match(route,/before:auditLineState\(current\),after:auditLineState\(corrected\)/);
-  assert.match(route,/supplierMappingLearned:learned,stockChanged:false/);
+  assert.match(route,/supplierMappingLearned:learned,centralLearning,stockChanged:false/);
   assert.match(route,/INSERT INTO "StoreOperatorAudit"/);
   assert.match(report,/INVOICE_LINE_CORRECTED="Διόρθωση γραμμής τιμολογίου"/);
 });

@@ -1,3 +1,10 @@
+## 2026-09-13 — Gate 3: πλήρης τοπικός έλεγχος Node 20 PASS
+- [x] Ακριβές απομονωμένο αντίγραφο του branch και npm install με Node.js 20.19.0.
+- [x] 1.160/1.160 server tests, server build, client build και 6/6 ομάδες production invariants PASS.
+- [x] Ενημερώθηκαν δύο παλιές δοκιμές συμβολαίου για τη νέα πληροφορία centralLearning στην απόκριση και στο audit· οι έλεγχοι απομόνωσης/stock παραμένουν.
+- [ ] Δημιουργία PR μέσω GitHub: ακόμη ReadTimeout. Δεν υπάρχει απομακρυσμένο CI, HTTP E2E PASS, merge ή deploy. Το Gate 3 παραμένει ανοιχτό για LAB ακρίβεια.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-central-supplier-column-learning.md`.
+
 ## 2026-09-13 — Checkpoint συνέχειας / υποβολή PR προσωρινά μπλοκαρισμένη
 - [x] Κώδικας και checkpoint αποθηκευμένα στο `codex/gate3-central-supplier-column-learning`. 31/31 στοχευμένες δοκιμές PASS.
 - [ ] Η σύνδεση GitHub επιστρέφει `ReadTimeout` / `Internal error` κατά τη δημιουργία PR. Δεν υπάρχει νέο PR/CI/merge/deploy για αυτή τη διόρθωση. Η γενική εντολή παραμένει ήδη καταγεγραμμένη στο main μέσω #791.
