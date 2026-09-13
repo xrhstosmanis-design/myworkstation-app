@@ -9,6 +9,7 @@ import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLaunch
 import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
 import SuperAdminInstallationCenter from "./SuperAdminInstallationCenter.jsx";
 import SuperAdminStaffScheduler from "./SuperAdminStaffScheduler.jsx";
+import SuperAdminOnlineRadioCenter from "./SuperAdminOnlineRadioCenter.jsx";
 import StoreFiscalIntegrations from "./StoreFiscalIntegrations.jsx";
 import SupplierSettlementReviewCenter from "./SupplierSettlementReviewCenter.jsx";
 import OtherExpenseReviewCenter from "./OtherExpenseReviewCenter.jsx";
@@ -117,6 +118,7 @@ export default function PlatformAdminApp(){
   const [routingTerminalPos,setRoutingTerminalPos]=useState("");
   const [deviceOperationsManager,setDeviceOperationsManager]=useState(null);
   const [showInstallationCenter,setShowInstallationCenter]=useState(false);
+  const [showOnlineRadioCenter,setShowOnlineRadioCenter]=useState(false);
   const [workforceTarget,setWorkforceTarget]=useState(null);
   const [openDeviceCenter,setOpenDeviceCenter]=useState(false);
   const [terminalActivationNotice,setTerminalActivationNotice]=useState(null);
@@ -441,6 +443,7 @@ export default function PlatformAdminApp(){
     <main className="platform-main">
       <div className="platform-title"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>{const company=(data?.companies||[]).find(item=>item.active&&item.stores?.length===1);if(company)setWorkforceTarget({company,store:company.stores[0]});else setError("Επίλεξε πρώτα εταιρεία με ένα κατάστημα από τις Εγκαταστάσεις.")}}><UsersRound/>Προσωπικό & Πρόγραμμα</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowChatChooser(true)}><MessageCircle/>Chat</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({page:true})}><AlertTriangle/>Κέντρο Ελέγχων</button><button className="secondary" onClick={()=>setShowFiscalDryRun(true)}><ShieldCheck/>Fiscal DRY RUN</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
+      <button type="button" onClick={()=>setShowOnlineRadioCenter(true)} style={{marginBottom:12}}>📻 Online Ράδιο · Διαχείριση</button>
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button><button type="button" onClick={()=>openActivationOnThisPc(terminalActivationNotice.activationUrl)}><ExternalLink/> Άνοιγμα σε αυτό το PC</button></div>}
       <div className="platform-stats">
@@ -538,6 +541,7 @@ export default function PlatformAdminApp(){
     {showEventsCenter&&<SuperAdminEventsCenter request={request} companies={data?.companies||[]} onClose={()=>setShowEventsCenter(false)}/>}
     {showFiscalDryRun&&<FiscalBridgeDryRunCenter companies={data?.companies||[]} onClose={()=>setShowFiscalDryRun(false)}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
+    {showOnlineRadioCenter&&<SuperAdminOnlineRadioCenter companies={data?.companies||[]} request={request} onClose={()=>setShowOnlineRadioCenter(false)}/>}
     {workforceTarget&&<SuperAdminStaffScheduler {...workforceTarget} request={request} onClose={()=>setWorkforceTarget(null)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;

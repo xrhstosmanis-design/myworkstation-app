@@ -71,3 +71,13 @@ test("BackOffice exposes barcode approvals, report and paid radio configuration"
   assert.match(panel,/online-radio\/config/);
   assert.match(route,/availableStations=req\.user\?\.tokenType!=="STORE_OPERATOR"&&moduleActive/);
 });
+
+test("Super Admin has a central radio station and store activation screen",async()=>{
+  const [app,center]=await Promise.all([read("../../client/src/components/platform/PlatformAdminApp.jsx"),read("../../client/src/components/platform/SuperAdminOnlineRadioCenter.jsx")]);
+  assert.match(app,/Online Ράδιο · Διαχείριση/);
+  assert.match(app,/SuperAdminOnlineRadioCenter/);
+  assert.match(center,/online-radio\/stations/);
+  assert.match(center,/moduleKey:"ONLINE_RADIO"/);
+  assert.match(center,/allowedStationIds/);
+  assert.match(center,/Πληρωμένο module ενεργό/);
+});
