@@ -23,12 +23,14 @@ test("barcode price stays on one product stock and the sale line records the sca
 });
 
 test("POS exposes the barcode tool and an internal radio player",async()=>{
-  const [pos,barcode,radio]=await Promise.all([read("../../client/src/components/store/StorePosPanel.jsx"),read("../../client/src/components/store/PosBarcodeRegistrationModal.jsx"),read("../../client/src/components/store/PosOnlineRadioPlayer.jsx")]);
+  const [pos,barcode,radio,chatCss]=await Promise.all([read("../../client/src/components/store/StorePosPanel.jsx"),read("../../client/src/components/store/PosBarcodeRegistrationModal.jsx"),read("../../client/src/components/store/PosOnlineRadioPlayer.jsx"),read("../../client/src/components/store/store-chat.css")]);
   assert.match(pos,/Έλεγχος και καταχώρηση νέου Barcode/);
   assert.match(barcode,/ΧΩΡΙΣ BARCODE/);
   assert.match(pos,/Online Ράδιο/);
   assert.match(radio,/<audio/);
   assert.doesNotMatch(radio,/window\.open|youtube|iframe/i);
+  assert.match(chatCss,/\.store-chat-top-host\{display:flex;flex-flow:row nowrap/);
+  assert.match(chatCss,/\.store-chat-top-button\{flex:0 0 auto;white-space:nowrap/);
 });
 
 test("online radio is paid-module gated and persists terminal-specific state",async()=>{
