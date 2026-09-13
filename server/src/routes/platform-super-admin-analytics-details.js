@@ -182,9 +182,9 @@ async function premiumVarianceControls(body){
   // Older stores may not have the newer POS audit tables yet. Their absence must never
   // prevent the final cash-shift result from being produced.
   const [actionAuditTable,safetyAuditTable,operationalTable]=await Promise.all([
-    prisma.$queryRaw`SELECT to_regclass('"PosSaleActionAudit"') IS NOT NULL AS "exists"`,
-    prisma.$queryRaw`SELECT to_regclass('"PosSaleSafetyAudit"') IS NOT NULL AS "exists"`,
-    prisma.$queryRaw`SELECT to_regclass('"PosOperationalEvent"') IS NOT NULL AS "exists"`
+    prisma.$queryRaw`SELECT to_regclass('"PosSaleActionAudit"')::text IS NOT NULL AS "exists"`,
+    prisma.$queryRaw`SELECT to_regclass('"PosSaleSafetyAudit"')::text IS NOT NULL AS "exists"`,
+    prisma.$queryRaw`SELECT to_regclass('"PosOperationalEvent"')::text IS NOT NULL AS "exists"`
   ]);
   const hasActionAudit=Boolean(actionAuditTable[0]?.exists),hasSafetyAudit=Boolean(safetyAuditTable[0]?.exists),hasOperationalEvents=Boolean(operationalTable[0]?.exists);
   const [sessions,sales,reversalAudits,safetyAudits,operationalTables]=await Promise.all([
@@ -198,7 +198,7 @@ async function premiumVarianceControls(body){
         AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
         AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
       ORDER BY sh."openedAt" DESC LIMIT ${findingLimit}`,
-    hasActionAudit?prisma.$queryRaw`
+    prisma.$queryRaw`
       SELECT DISTINCT ON (s."id") sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedAt",sh."closedAt",
         s."id" AS "saleId",s."total"::float AS "total",s."occurredAt",s."createdAt",t."actorId",t."actorName",
         COALESCE(lines."basketSignature",'') AS "basketSignature",COALESCE(payments."paymentMethods",'') AS "paymentMethods"
@@ -212,7 +212,7 @@ async function premiumVarianceControls(body){
         AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
         AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
       ORDER BY s."id",t."createdAt" DESC LIMIT ${findingLimit}`,
-    prisma.$queryRaw`
+    hasActionAudit?prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."actionType",a."reason",a."actorName",a."createdAt",a."details"
       FROM "PosSaleActionAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND COALESCE(a."details"->>'sessionId','')=sh."id"
       WHERE a."companyId"=${body.companyId} AND a."storeId"=${body.storeId} AND a."actionType" IN ('CANCEL','RETURN','RETURN_ITEMS')

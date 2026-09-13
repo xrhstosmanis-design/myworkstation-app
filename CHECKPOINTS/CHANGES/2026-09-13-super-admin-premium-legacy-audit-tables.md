@@ -3,4 +3,4 @@
 - Ο PREMIUM έλεγχος επαληθεύει πλέον την ύπαρξη των προαιρετικών πινάκων audit POS πριν τους διαβάσει.
 - Αν σε παλαιότερο κατάστημα λείπει `PosSaleActionAudit` ή `PosSaleSafetyAudit`, ο έλεγχος ολοκληρώνεται με τα διαθέσιμα δεδομένα αντί να αποτυγχάνει.
 - Η απουσία audit δεν δημιουργεί τεχνητό εύρημα και δεν αλλάζει οικονομικά δεδομένα.
-- Επαληθεύτηκε με το στοχευμένο suite Super Admin και production client build.
+- Επαληθεύτηκε με syntax check, το στοχευμένο suite Super Admin και production client build.
