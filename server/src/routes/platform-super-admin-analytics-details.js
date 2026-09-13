@@ -40,11 +40,13 @@ const reviewDecisionLabel=decision=>({
   REVIEWED_NO_CHANGE:"Ελεγμένο χωρίς αλλαγή"
 }[decision]||"Καταχωρισμένος έλεγχος");
 
+const CHECK_PACKAGE_KEYS=["BASIC_CHECK","COMPLETE_CHECK","PREMIUM_CHECK"];
+const packageIsActive=(row,now=Date.now())=>Boolean(row?.active)&&(!row.startsAt||new Date(row.startsAt).getTime()<=now)&&(!row.endsAt||new Date(row.endsAt).getTime()>=now);
+
 async function requireBasicCheckPackage(companyId,storeId){
   if(!companyId||!storeId)throw Object.assign(new Error("Για εκτέλεση BASIC ελέγχου επίλεξε συγκεκριμένο ιδιοκτήτη και κατάστημα."),{status:400});
-  const rows=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "moduleKey"='BASIC_CHECK' LIMIT 1`;
-  const row=rows[0],now=Date.now();
-  if(!row?.active||row.startsAt&&new Date(row.startsAt).getTime()>now||row.endsAt&&new Date(row.endsAt).getTime()<now)throw Object.assign(new Error("Το πακέτο BASIC Έλεγχος δεν είναι ενεργό για το επιλεγμένο κατάστημα."),{status:403});
+  const rows=await prisma.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "moduleKey"=ANY(${CHECK_PACKAGE_KEYS}::text[])`;
+  if(!rows.some(row=>packageIsActive(row)))throw Object.assign(new Error("Δεν είναι ενεργό πακέτο ελέγχου για το επιλεγμένο κατάστημα."),{status:403});
 }
 
 function snapshotFromSession(session){

@@ -172,10 +172,16 @@ const CHECK_PACKAGES={
   PREMIUM_CHECK:{key:"PREMIUM_CHECK",title:"PREMIUM Έλεγχος",description:"COMPLETE, κόστος, margin, κερδοφορία και απώλειες."}
 };
 const CHECK_PACKAGE_KEYS=Object.keys(CHECK_PACKAGES);
-const checkPackageStates=rows=>Object.values(CHECK_PACKAGES).map(def=>{
-  const row=rows.find(item=>item.moduleKey===def.key),now=Date.now();
-  return {...def,active:Boolean(row?.active)&&(!row?.startsAt||new Date(row.startsAt).getTime()<=now)&&(!row?.endsAt||new Date(row.endsAt).getTime()>=now),monthlyPrice:Number(row?.monthlyPrice||0),startsAt:row?.startsAt||null,endsAt:row?.endsAt||null,notes:row?.notes||null};
-});
+const CHECK_PACKAGE_LEVELS={BASIC_CHECK:0,COMPLETE_CHECK:1,PREMIUM_CHECK:2};
+const packageIsActive=(row,now=Date.now())=>Boolean(row?.active)&&(!row?.startsAt||new Date(row.startsAt).getTime()<=now)&&(!row?.endsAt||new Date(row.endsAt).getTime()>=now);
+const checkPackageStates=rows=>{
+  const now=Date.now(),directlyActive=new Set(rows.filter(row=>packageIsActive(row,now)).map(row=>row.moduleKey));
+  return Object.values(CHECK_PACKAGES).map(def=>{
+    const row=rows.find(item=>item.moduleKey===def.key),level=CHECK_PACKAGE_LEVELS[def.key],includedBy=CHECK_PACKAGE_KEYS.slice(level+1).find(key=>directlyActive.has(key))||null;
+    const directActive=directlyActive.has(def.key),active=directActive||Boolean(includedBy);
+    return {...def,active,directActive,includedBy,includedByTitle:includedBy?CHECK_PACKAGES[includedBy].title:null,canToggle:directActive||!active,monthlyPrice:Number(row?.monthlyPrice||0),startsAt:row?.startsAt||null,endsAt:row?.endsAt||null,notes:row?.notes||null};
+  });
+};
 
 router.get("/companies/:companyId/stores/:storeId/check-packages",async(req,res,next)=>{
   try{

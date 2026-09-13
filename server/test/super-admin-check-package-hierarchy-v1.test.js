@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import test from "node:test";
+
+const analyticsRoute=await readFile(new URL("../src/routes/platform-super-admin-analytics-details.js",import.meta.url),"utf8");
+const moduleRoute=await readFile(new URL("../src/routes/platform-store-modules.js",import.meta.url),"utf8");
+const ui=await readFile(new URL("../../client/src/components/platform/SuperAdminChecksAnalytics.jsx",import.meta.url),"utf8");
+
+test("an active higher check package grants BASIC execution access",()=>{
+  assert.match(analyticsRoute,/const CHECK_PACKAGE_KEYS=\["BASIC_CHECK","COMPLETE_CHECK","PREMIUM_CHECK"\]/);
+  assert.match(analyticsRoute,/"moduleKey"=ANY\(\$\{CHECK_PACKAGE_KEYS\}::text\[\]\)/);
+  assert.match(analyticsRoute,/rows\.some\(row=>packageIsActive\(row\)\)/);
+});
+
+test("check-package cards expose inherited access without allowing a derived package toggle",()=>{
+  assert.match(moduleRoute,/const CHECK_PACKAGE_LEVELS=\{BASIC_CHECK:0,COMPLETE_CHECK:1,PREMIUM_CHECK:2\}/);
+  assert.match(moduleRoute,/includedBy=CHECK_PACKAGE_KEYS\.slice\(level\+1\)\.find/);
+  assert.match(moduleRoute,/canToggle:directActive\|\|!active/);
+  assert.match(ui,/Περιλαμβάνεται στο \$\{packageItem\.includedByTitle\}/);
+  assert.match(ui,/disabled=\{!packageItem\.canToggle\|\|packagesBusy\|\|busy\|\|reviewBusy\}/);
+});
