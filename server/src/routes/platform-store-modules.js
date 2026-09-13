@@ -135,6 +135,20 @@ router.patch("/online-radio/stations/:stationId",async(req,res,next)=>{
   try{const body=z.object({name:z.string().trim().min(2).max(120),streamUrl:z.string().url().refine(value=>value.startsWith("https://"),"Το stream πρέπει να χρησιμοποιεί HTTPS."),active:z.boolean(),sortOrder:z.coerce.number().int().min(0).max(10000)}).parse(req.body||{}),rows=await prisma.$queryRaw`UPDATE "OnlineRadioStation" SET "name"=${body.name},"streamUrl"=${body.streamUrl},"active"=${body.active},"sortOrder"=${body.sortOrder},"updatedAt"=NOW() WHERE "id"=${req.params.stationId} RETURNING "id"`;if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο σταθμός."});res.json({id:rows[0].id,...body})}catch(error){next(error)}
 });
 
+router.delete("/online-radio/stations/:stationId",async(req,res,next)=>{
+  try{
+    const station=(await prisma.$queryRaw`SELECT "id","name" FROM "OnlineRadioStation" WHERE "id"=${req.params.stationId} LIMIT 1`)[0];
+    if(!station)return res.status(404).json({error:"Δεν βρέθηκε ο σταθμός."});
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreOnlineRadioConfig" SET "allowedStationIds"="allowedStationIds"-${station.id},"updatedBy"=${req.user.id},"updatedAt"=NOW() WHERE "allowedStationIds" ? ${station.id}`;
+      await tx.$executeRaw`UPDATE "PosOnlineRadioState" SET "stationId"=NULL,"updatedAt"=NOW() WHERE "stationId"=${station.id}`;
+      await tx.$executeRaw`DELETE FROM "OnlineRadioStation" WHERE "id"=${station.id}`;
+    });
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"ONLINE_RADIO_STATION_DELETED",success:true,deviceName:station.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,id:station.id,name:station.name});
+  }catch(error){next(error)}
+});
+
 router.get("/companies/:companyId/stores/:storeId/online-radio",async(req,res,next)=>{
   try{const store=await ownedStore(req.params.companyId,req.params.storeId),config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds","updatedAt" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} LIMIT 1`)[0]||{enabled:false,allowedStationIds:[]},stations=await prisma.$queryRaw`SELECT "id","name","streamUrl","active","sortOrder" FROM "OnlineRadioStation" ORDER BY "sortOrder","name"`;res.json({store,config,stations})}catch(error){next(error)}
 });

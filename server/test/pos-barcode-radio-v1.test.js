@@ -26,6 +26,8 @@ test("POS exposes the barcode tool and an internal radio player",async()=>{
   const [pos,barcode,radio,chatCss]=await Promise.all([read("../../client/src/components/store/StorePosPanel.jsx"),read("../../client/src/components/store/PosBarcodeRegistrationModal.jsx"),read("../../client/src/components/store/PosOnlineRadioPlayer.jsx"),read("../../client/src/components/store/store-chat.css")]);
   assert.match(pos,/Έλεγχος και καταχώρηση νέου Barcode/);
   assert.match(barcode,/ΧΩΡΙΣ BARCODE/);
+  assert.match(barcode,/setTimeout\(\(\)=>load\(query\),query\.trim\(\)\?220:0\)/);
+  assert.match(barcode,/searchRequest\.current/);
   assert.match(radio,/Online Ράδιο/);
   assert.match(radio,/<audio/);
   assert.match(pos,/persistentLauncher/);
@@ -83,4 +85,15 @@ test("Super Admin has a central radio station and store activation screen",async
   assert.match(center,/moduleKey:"ONLINE_RADIO"/);
   assert.match(center,/allowedStationIds/);
   assert.match(center,/Πληρωμένο module ενεργό/);
+  assert.match(center,/removeStation/);
+  assert.match(center,/Trash2.*Διαγραφή/);
+  assert.match(app,/SuperAdminOnlineRadioCenter/);
+});
+
+test("Super Admin can safely delete a radio station from all stores",async()=>{
+  const route=await read("../src/routes/platform-store-modules.js");
+  assert.match(route,/router\.delete\("\/online-radio\/stations\/:stationId"/);
+  assert.match(route,/"allowedStationIds"="allowedStationIds"-\$\{station\.id\}/);
+  assert.match(route,/UPDATE "PosOnlineRadioState" SET "stationId"=NULL/);
+  assert.match(route,/ONLINE_RADIO_STATION_DELETED/);
 });
