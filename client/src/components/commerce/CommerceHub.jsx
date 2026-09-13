@@ -147,7 +147,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   return <div className="commerce-hub">
     <section className="panel">
-      <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={()=>{loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
+      <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={event=>{if(!event.currentTarget.dispatchEvent(new CustomEvent("purchase-orders:refresh",{bubbles:true,cancelable:true})))return;loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
       <div className="commerce-module-strip">
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
@@ -200,3 +200,4 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="observer"&&<ConnectorObserverPanel api={api} storeId={storeId}/>}
   </div>;
 }
+
