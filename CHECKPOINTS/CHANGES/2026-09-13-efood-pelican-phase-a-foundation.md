@@ -4,6 +4,7 @@
 
 - **Branch:** `feat/efood-pelican-foundation`
 - **Βάση:** σημερινό `main` commit `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf`
+- **Feature head πριν από το τελικό CI:** `25bb75cba6ee8beaf88e7b1d38181c4deb050833`
 - **Συγχρονισμός:** το νεότερο `main` συγχωνεύτηκε μόνο προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
 - **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ`
 - **Production ενεργοποίηση:** ΟΧΙ
@@ -31,18 +32,19 @@
 - Δεν εκδίδεται φορολογικό παραστατικό.
 - Δεν χρησιμοποιούνται production credentials ή production endpoint.
 
-## Έλεγχοι πριν από push
+## Έλεγχοι
 
 - `node --check` στα νέα/τροποποιημένα server αρχεία: PASS.
 - JSX parse της οθόνης ασφαλών διασυνδέσεων: PASS.
 - `server/test/efood-pelican-foundation-v1.test.js`: **9/9 PASS**.
-- Τελική σύγκριση με `main`: **14 αναμενόμενα αρχεία και 0 commits πίσω**.
-- Το CI #1946 δεν εκτέλεσε jobs επειδή δημιουργήθηκε από bot-authored merge commit (`action_required`). Η παρούσα τεκμηριωμένη ενημέρωση εκκινεί νέο κανονικό CI run.
-- Πλήρες repository CI / build / isolated PostgreSQL E2E: εκκρεμεί στο draft PR #758.
+- CI #1948: **PASS σε όλα τα gates**, μαζί με checkpoint policy, Prisma preparation, security/licensing, client build, Work/Render contracts, KAT safety invariants, isolated PostgreSQL και πραγματικά HTTP E2E flows.
+- Μετά το CI #1948, το `main` προχώρησε στο `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf` μέσω PR #766 και συγχρονίστηκε ξανά μόνο προς το feature branch.
+- Τελική σύγκριση με το νέο `main`: **14 αναμενόμενα αρχεία και 0 commits πίσω**.
+- Η παρούσα ανθρώπινη ενημέρωση εκκινεί το τελικό πλήρες CI πάνω στη νέα βάση.
 
 ## Επόμενα υποχρεωτικά βήματα
 
-1. Πράσινο GitHub CI στο draft PR #758.
+1. Πράσινο τελικό GitHub CI στο draft PR #758.
 2. Μετά από PASS, μόνο Super Admin local mock validation στο `MYWORKSTATION LAB`.
 3. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
 4. Νέα ρητή έγκριση πριν από οποιαδήποτε ενεργοποίηση live sandbox webhook ή πραγματικό API call.
