@@ -19,8 +19,30 @@ async function ensureMarketSchema(){
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT,"actorId" TEXT,
     "query" TEXT NOT NULL,"queryType" TEXT NOT NULL,"productId" TEXT,"resultCount" INTEGER NOT NULL DEFAULT 0,
     "results" JSONB NOT NULL DEFAULT '[]'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  ); CREATE INDEX IF NOT EXISTS "InternetProductSearch_company_created_idx" ON "InternetProductSearch" ("companyId","createdAt" DESC)`);
+  ); CREATE INDEX IF NOT EXISTS "InternetProductSearch_company_created_idx" ON "InternetProductSearch" ("companyId","createdAt" DESC);
+  CREATE TABLE IF NOT EXISTS "InternetPriceProposal" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"productId" TEXT NOT NULL,"searchId" TEXT,
+    "currentPrice" NUMERIC(14,4) NOT NULL,"proposedPrice" NUMERIC(14,4) NOT NULL,"reason" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',"createdBy" TEXT,"reviewedBy" TEXT,"reviewedAt" TIMESTAMPTZ,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  ); CREATE INDEX IF NOT EXISTS "InternetPriceProposal_company_status_idx" ON "InternetPriceProposal" ("companyId","status","createdAt" DESC);
+  CREATE TABLE IF NOT EXISTS "InternetPriceProposalAudit" (
+    "id" TEXT PRIMARY KEY,"proposalId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"productId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,"oldPrice" NUMERIC(14,4),"newPrice" NUMERIC(14,4),"actorId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  ); CREATE INDEX IF NOT EXISTS "InternetPriceProposalAudit_proposal_idx" ON "InternetPriceProposalAudit" ("proposalId","createdAt")`);
 }
+
+async function companyFor(req,res,{moduleRequired=true}={}){
+  const platform=isPlatformSuper(req),platformPath=String(req.baseUrl||"").startsWith("/api/platform");
+  if(platformPath&&!platform){res.status(403).json({error:"Απαιτείται πρόσβαση Super Admin."});return null}
+  const companyId=platform?String(req.query.companyId||req.body?.companyId||"").trim():req.user.companyId;
+  if(!companyId){res.status(400).json({error:"Επίλεξε εταιρεία."});return null}
+  if(!platform&&moduleRequired&&!await advancedOnlineSearchEntitlement(companyId)){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return null}
+  if(!platform&&!isOwner(req)){res.status(403).json({error:"Η αναζήτηση Internet επιτρέπεται μόνο σε ιδιοκτήτη ή Super Admin.",code:"OWNER_ONLY"});return null}
+  return companyId;
+}
+
+async function validStore(companyId,storeId){return storeId?prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}}):null}
 
 const euroValues=value=>[...String(value||"").matchAll(/(?:€\s*|EUR\s*)(\d{1,4}(?:[.,]\d{1,2})?)|(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)/gi)]
   .map(match=>Number(String(match[1]||match[2]).replace(",","."))).filter(value=>Number.isFinite(value)&&value>0&&value<100000);
@@ -41,28 +63,34 @@ async function internetMarketSearch(query){
 }
 
 router.get("/market-search",async(req,res,next)=>{try{
-  if(!await requireAdvanced(req,res))return;await ensureMarketSchema();
+  const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();
   const query=String(req.query.q||"").trim().replace(/\s+/g," "),storeId=String(req.query.storeId||"").trim()||null,productId=String(req.query.productId||"").trim()||null;
   if(query.length<2||query.length>180)return res.status(400).json({error:"Γράψε όνομα, barcode, προμηθευτή ή κατηγορία."});
-  if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."})}
+  if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
   let own=null;
-  if(productId||/^\d{6,18}$/.test(query))own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
+  if(productId||/^\d{6,18}$/.test(query))own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sup."name",'Βασικός προμηθευτής') AS "supplierName",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) LEFT JOIN LATERAL (SELECT spl."supplierId" FROM "SupplierProductLink" spl WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1) link ON true LEFT JOIN "Supplier" sup ON sup."id"=link."supplierId" AND sup."companyId"=${companyId} WHERE p."companyId"=${companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
   const internet=await internetMarketSearch(query),priced=internet.rows.filter(row=>row.price!=null),cheapest=priced.sort((a,b)=>a.price-b.price)[0]||null;
   const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=sale>0?((sale-cost)/sale)*100:null,marketPrice=cheapest?.price??null;
   const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":marketPrice&&sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη δημόσια τιμή.":marketPrice&&sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις τιμές που εντοπίστηκαν.";
   const results=internet.rows.map(row=>({...row,differenceFromOurSale:row.price!=null&&sale?Number((row.price-sale).toFixed(2)):null}));
-  const id=uid();await prisma.$executeRaw`INSERT INTO "InternetProductSearch" ("id","companyId","storeId","actorId","query","queryType","productId","resultCount","results") VALUES (${id},${req.user.companyId},${storeId},${req.user.id||null},${query},${/^\d{6,18}$/.test(query)?"BARCODE":"TEXT"},${own?.id||productId},${results.length},${JSON.stringify(results)}::jsonb)`;
+  const id=uid();await prisma.$executeRaw`INSERT INTO "InternetProductSearch" ("id","companyId","storeId","actorId","query","queryType","productId","resultCount","results") VALUES (${id},${companyId},${storeId},${req.user.id||null},${query},${/^\d{6,18}$/.test(query)?"BARCODE":"TEXT"},${own?.id||productId},${results.length},${JSON.stringify(results)}::jsonb)`;
   res.json({id,query,configured:internet.configured,own:own?{...own,costPrice:cost,salePrice:sale,marginPercent:margin==null?null:Number(margin.toFixed(2))}:null,rows:results,cheapest,recommendation,warning:"Οι τιμές Internet είναι ενδείξεις από δημόσια αποτελέσματα και δεν εφαρμόζονται αυτόματα."});
 }catch(error){next(error)}});
 
 router.get("/products",async(req,res,next)=>{try{
-  if(!await requireAdvanced(req,res))return;
+  const companyId=await companyFor(req,res);if(!companyId)return;
   const q=String(req.query.q||"").trim(),storeId=String(req.query.storeId||"").trim()||null;if(q.length<2)return res.json({rows:[]});
-  const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND (p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like})) ORDER BY p."name" LIMIT 20`;
+  if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like})) ORDER BY p."name" LIMIT 20`;
   res.json({rows:rows.map(row=>({...row,costPrice:Number(row.costPrice||0),salePrice:Number(row.salePrice||0)}))});
 }catch(error){next(error)}});
 
-router.get("/history",async(req,res,next)=>{try{if(!await requireAdvanced(req,res))return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${req.user.companyId} ORDER BY "createdAt" DESC LIMIT 50`;res.json({rows})}catch(error){next(error)}});
+router.get("/history",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC LIMIT 50`;res.json({rows})}catch(error){next(error)}});
+
+router.get("/price-proposals",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT pp.*,p."name" AS "productName",p."sku",s."name" AS "storeName" FROM "InternetPriceProposal" pp JOIN "Product" p ON p."id"=pp."productId" AND p."companyId"=pp."companyId" JOIN "Store" s ON s."id"=pp."storeId" AND s."companyId"=pp."companyId" WHERE pp."companyId"=${companyId} ORDER BY (pp."status"='PENDING') DESC,pp."createdAt" DESC LIMIT 100`;res.json({rows:rows.map(row=>({...row,currentPrice:Number(row.currentPrice),proposedPrice:Number(row.proposedPrice)}))})}catch(error){next(error)}});
+
+router.post("/price-proposals",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const {storeId,productId,searchId}=req.body||{},proposedPrice=Number(req.body?.proposedPrice),reason=String(req.body?.reason||"").trim().slice(0,500)||null;if(!storeId||!productId||!Number.isFinite(proposedPrice)||proposedPrice<0)return res.status(400).json({error:"Επίλεξε προϊόν, κατάστημα και έγκυρη προτεινόμενη τιμή."});if(!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});const product=(await prisma.$queryRaw`SELECT p."id",COALESCE(sp."salePrice",p."salePrice") AS "salePrice" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} WHERE p."id"=${productId} AND p."companyId"=${companyId} AND p."active"=true AND sp."active"=true LIMIT 1`)[0];if(!product)return res.status(404).json({error:"Το προϊόν δεν είναι ενεργό στο κατάστημα."});const id=uid(),currentPrice=Number(product.salePrice||0);await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "InternetPriceProposal" ("id","companyId","storeId","productId","searchId","currentPrice","proposedPrice","reason","createdBy") VALUES (${id},${companyId},${storeId},${productId},${searchId||null},${currentPrice},${proposedPrice},${reason},${req.user.id||null})`;await tx.$executeRaw`INSERT INTO "InternetPriceProposalAudit" ("id","proposalId","companyId","storeId","productId","action","oldPrice","newPrice","actorId") VALUES (${uid()},${id},${companyId},${storeId},${productId},'PROPOSED',${currentPrice},${proposedPrice},${req.user.id||null})`});res.status(201).json({ok:true,id,status:"PENDING"})}catch(error){next(error)}});
+
+router.post("/price-proposals/:id/decision",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const decision=String(req.body?.decision||"").toUpperCase();if(!["APPROVE","REJECT"].includes(decision))return res.status(400).json({error:"Επίλεξε έγκριση ή απόρριψη."});const result=await prisma.$transaction(async tx=>{const proposal=(await tx.$queryRaw`SELECT * FROM "InternetPriceProposal" WHERE "id"=${req.params.id} AND "companyId"=${companyId} FOR UPDATE`)[0];if(!proposal){const error=new Error("Η πρόταση δεν βρέθηκε.");error.status=404;throw error}if(proposal.status!=="PENDING"){const error=new Error("Η πρόταση έχει ήδη εξεταστεί.");error.status=409;throw error}if(decision==="APPROVE"){const updated=await tx.$executeRaw`UPDATE "StoreProduct" sp SET "salePrice"=${proposal.proposedPrice} FROM "Product" p WHERE sp."storeId"=${proposal.storeId} AND sp."productId"=${proposal.productId} AND p."id"=sp."productId" AND p."companyId"=${companyId} AND sp."active"=true`;if(updated!==1){const error=new Error("Δεν ήταν δυνατή η ασφαλής ενημέρωση της τιμής.");error.status=409;throw error}}const status=decision==="APPROVE"?"APPROVED":"REJECTED";await tx.$executeRaw`UPDATE "InternetPriceProposal" SET "status"=${status},"reviewedBy"=${req.user.id||null},"reviewedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${proposal.id}`;await tx.$executeRaw`INSERT INTO "InternetPriceProposalAudit" ("id","proposalId","companyId","storeId","productId","action","oldPrice","newPrice","actorId") VALUES (${uid()},${proposal.id},${companyId},${proposal.storeId},${proposal.productId},${status},${proposal.currentPrice},${proposal.proposedPrice},${req.user.id||null})`;return {status}});res.json({ok:true,...result})}catch(error){next(error)}});
 
 router.get("/options",async(req,res,next)=>{try{
   if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId;
