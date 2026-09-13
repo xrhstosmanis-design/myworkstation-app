@@ -30,6 +30,9 @@ test("owner product flow preserves master catalog and store pricing rules",()=>{
 
 test("product quality catalogue never reuses stale supplier data",()=>{
   assert.match(route,/router\.get\("\/catalog"[\s\S]*Cache-Control","no-store, no-cache, must-revalidate, private/);
+  assert.match(smartEntry,/router\.get\("\/catalog"[\s\S]*lp\."supplierName"[\s\S]*"hasSupplier"/);
+  assert.match(smartEntry,/SupplierProductLink[\s\S]*SupplierProductMapping[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
+  assert.match(smartEntry,/Cache-Control","no-store, no-cache, must-revalidate, private/);
   assert.match(client,/owner-products\/catalog\?q=\$\{encodeURIComponent\(catalogQuery\.trim\(\)\)\}&_=\$\{Date\.now\(\)\}/);
 });
 
