@@ -27,6 +27,9 @@ test("POS exposes the barcode tool and an internal radio player",async()=>{
   assert.match(pos,/Έλεγχος και καταχώρηση νέου Barcode/);
   assert.match(barcode,/ΧΩΡΙΣ BARCODE/);
   assert.match(pos,/Online Ράδιο/);
+  assert.ok(pos.indexOf("PosOnlineRadioPlayer)")<pos.indexOf("PosBarcodeRegistrationModal)"),"Το Online Ράδιο πρέπει να βρίσκεται αμέσως μετά το Chat και πριν από το Barcode.");
+  assert.match(pos,/host\.style\.cssText="display:grid;grid-template-columns:max-content max-content/);
+  assert.match(pos,/gridColumn:"1 \/ -1",gridRow:2,justifySelf:"start"/);
   assert.match(radio,/<audio/);
   assert.doesNotMatch(radio,/window\.open|youtube|iframe/i);
   assert.match(chatCss,/\.store-chat-top-host\{display:flex;flex-flow:row nowrap/);
