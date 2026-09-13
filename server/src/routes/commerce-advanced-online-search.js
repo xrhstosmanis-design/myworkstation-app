@@ -52,6 +52,25 @@ const euroValues=value=>[...String(value||"").matchAll(/(?:€\s*|EUR\s*)(\d{1,4
 const offerText=value=>String(value||"").match(/(?:1\s*\+\s*1|2\s*\+\s*1|-?\s*\d{1,2}\s*%|έκπτωση[^.·|]{0,50}|προσφορά[^.·|]{0,50})/iu)?.[0]?.trim()||null;
 const sourceType=domain=>/skroutz|bestprice|shopflix/i.test(domain)?"ONLINE_STORE":/market|supermarket|sklavenitis|ab\.gr|mymarket|masoutis|kritikos/i.test(domain)?"SUPERMARKET":/cash|carry|wholesale|χονδρ/i.test(domain)?"WHOLESALER":"PUBLIC_INTERNET";
 const domainOf=url=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch{return ""}};
+const normalizeMarketText=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9α-ω.,×]+/g," ").trim();
+const productFacts=value=>{
+  const raw=normalizeMarketText(value),measureMatches=[...raw.matchAll(/(\d+(?:[.,]\d+)?)\s*(ml|cl|lt|l|λιτρο|λιτρα|gr|g|kg)\b/giu)];
+  const measures=measureMatches.map(match=>{const amount=Number(match[1].replace(",",".")),unit=match[2].toLowerCase();if(unit==="l"||unit==="lt"||unit.startsWith("λιτρ"))return {kind:"VOLUME",value:amount*1000};if(unit==="cl")return {kind:"VOLUME",value:amount*10};if(unit==="kg")return {kind:"WEIGHT",value:amount*1000};return {kind:unit==="ml"?"VOLUME":"WEIGHT",value:amount}});
+  const pack=raw.match(/(?:\b(\d{1,2})\s*[x×]\s*\d+(?:[.,]\d+)?\s*(?:ml|cl|lt|l|gr|g|kg)\b|\b(?:pack|συσκευασια)\s*(\d{1,2})\b|\b(\d{1,2})\s*(?:τεμ|τεμαχια)\b)/iu),unitCount=Math.max(1,Number(pack?.[1]||pack?.[2]||pack?.[3]||1));
+  const variant=/\b(zero|χωρις ζαχαρη|sugar free)\b/iu.test(raw)?"ZERO":/\b(light|lite)\b/iu.test(raw)?"LIGHT":"REGULAR",barcodes=[...new Set([...raw.matchAll(/\b\d{8,14}\b/g)].map(match=>match[0]))];
+  const stop=new Set(["και","με","σε","για","τιμη","προσφορα","αγορα","ελλαδα","αναψυκτικα","προιοντα","ml","cl","lt","l","gr","g","kg"]),tokens=new Set(raw.split(/\s+/).filter(token=>token.length>1&&!stop.has(token)&&!/^\d/.test(token)));
+  return {measures,unitCount,variant,barcodes,tokens};
+};
+const sameMeasure=(a,b)=>a.some(left=>b.some(right=>left.kind===right.kind&&Math.abs(left.value-right.value)<.01));
+const marketMatch=(own,row)=>{
+  if(!own)return {matchLevel:"UNLINKED",matchReason:"Σύνδεσε προϊόν της αποθήκης για ασφαλή ταυτοποίηση.",eligibleForOrder:false,comparablePrice:null};
+  const expected=productFacts(`${own.name||""} ${(own.barcodes||[]).join(" ")}`),candidate=productFacts(`${row.productName||""} ${row.snippet||""}`),knownBarcodes=new Set(own.barcodes||[]);
+  if(candidate.barcodes.some(barcode=>knownBarcodes.has(barcode)))return {matchLevel:"EXACT",matchReason:"Ίδιο barcode.",eligibleForOrder:true,unitCount:candidate.unitCount,comparablePrice:row.price==null?null:Number((row.price/candidate.unitCount).toFixed(4))};
+  const conflictingBarcode=knownBarcodes.size>0&&candidate.barcodes.length>0,measureOk=expected.measures.length>0&&candidate.measures.length>0&&sameMeasure(expected.measures,candidate.measures),variantOk=expected.variant===candidate.variant,common=[...expected.tokens].filter(token=>candidate.tokens.has(token)).length,similarity=expected.tokens.size?common/expected.tokens.size:0;
+  if(!conflictingBarcode&&measureOk&&variantOk&&similarity>=.5)return {matchLevel:"PROBABLE",matchReason:"Ίδια ονομασία, παραλλαγή και ποσότητα — απαιτείται χειροκίνητη επιβεβαίωση.",eligibleForOrder:false,unitCount:candidate.unitCount,comparablePrice:row.price==null?null:Number((row.price/candidate.unitCount).toFixed(4))};
+  const reason=conflictingBarcode?"Διαφορετικό barcode.":!measureOk?"Δεν επιβεβαιώθηκε ίδια ποσότητα/συσκευασία.":!variantOk?"Διαφορετική παραλλαγή προϊόντος.":"Η ονομασία δεν ταυτοποιεί με ασφάλεια το ίδιο προϊόν.";
+  return {matchLevel:"NON_COMPARABLE",matchReason:reason,eligibleForOrder:false,unitCount:candidate.unitCount,comparablePrice:null};
+};
 
 async function internetMarketSearch(query){
   const serperKey=String(process.env.SERPER_API_KEY||"").trim(),googleKey=String(process.env.GOOGLE_CSE_API_KEY||"").trim(),googleCx=String(process.env.GOOGLE_CSE_CX||"").trim();
@@ -74,22 +93,23 @@ router.get("/market-search",async(req,res,next)=>{try{
   if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
   let own=null;
   if(productId||/^\d{6,18}$/.test(query)){
-    own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
+    own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
     if(own){const supplier=(await prisma.$queryRaw`SELECT sup."name" FROM "SupplierProductLink" spl JOIN "Supplier" sup ON sup."id"=spl."supplierId" AND sup."companyId"=spl."companyId" WHERE spl."companyId"=${companyId} AND spl."productId"=${own.id} AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1`.catch(()=>[]))[0];own.supplierName=supplier?.name||"Βασικός προμηθευτής"}
   }
-  const internet=await internetMarketSearch(query),priced=internet.rows.filter(row=>row.price!=null),cheapest=priced.sort((a,b)=>a.price-b.price)[0]||null;
-  const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=sale>0?((sale-cost)/sale)*100:null,marketPrice=cheapest?.price??null;
-  const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":marketPrice&&sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη δημόσια τιμή.":marketPrice&&sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις τιμές που εντοπίστηκαν.";
-  const results=internet.rows.map(row=>({...row,differenceFromOurSale:row.price!=null&&sale?Number((row.price-sale).toFixed(2)):null}));
+  const providerQuery=own?[query,own.name].filter(Boolean).join(" "):query;
+  const internet=await internetMarketSearch(providerQuery),results=internet.rows.map(row=>({...row,...marketMatch(own,row)})),safePriced=results.filter(row=>row.eligibleForOrder&&row.comparablePrice!=null),cheapest=safePriced.sort((a,b)=>a.comparablePrice-b.comparablePrice)[0]||null;
+  const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=sale>0?((sale-cost)/sale)*100:null,marketPrice=cheapest?.comparablePrice??null;
+  const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":marketPrice==null?"Δεν βρέθηκε ακόμη επιβεβαιωμένη τιμή για ασφαλή σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη επιβεβαιωμένη τιμή.":sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις επιβεβαιωμένες τιμές που εντοπίστηκαν.";
+  for(const row of results)row.differenceFromOurSale=row.comparablePrice!=null&&sale?Number((row.comparablePrice-sale).toFixed(2)):null;
   const id=uid();await prisma.$executeRaw`INSERT INTO "InternetProductSearch" ("id","companyId","storeId","actorId","query","queryType","productId","resultCount","results") VALUES (${id},${companyId},${storeId},${req.user.id||null},${query},${/^\d{6,18}$/.test(query)?"BARCODE":"TEXT"},${own?.id||productId},${results.length},${JSON.stringify(results)}::jsonb)`;
   res.json({id,query,configured:internet.configured,providerReason:internet.reason,own:own?{...own,costPrice:cost,salePrice:sale,marginPercent:margin==null?null:Number(margin.toFixed(2))}:null,rows:results,cheapest,recommendation,warning:"Οι τιμές Internet είναι ενδείξεις από δημόσια αποτελέσματα και δεν εφαρμόζονται αυτόματα."});
 }catch(error){next(error)}});
 
 router.get("/products",async(req,res,next)=>{try{
   const companyId=await companyFor(req,res);if(!companyId)return;
-  const q=String(req.query.q||"").trim(),storeId=String(req.query.storeId||"").trim()||null;if(q.length<2)return res.json({rows:[]});
-  if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT pb."barcode" FROM "ProductBarcode" pb WHERE pb."productId"=p."id" ORDER BY pb."barcode" LIMIT 1),'') AS "barcode" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like})) ORDER BY p."name" LIMIT 20`;
-  res.json({rows:rows.map(row=>({...row,costPrice:Number(row.costPrice||0),salePrice:Number(row.salePrice||0)}))});
+  const q=String(req.query.q||"").trim(),storeId=String(req.query.storeId||"").trim()||null,inventory=String(req.query.inventory||"")==="1";if(!inventory&&q.length<2)return res.json({rows:[]});
+  if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});const like=`%${q}%`;const rows=await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (${q}='' OR p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like})) ORDER BY (COALESCE(sp."currentStock",0)>0) DESC,p."name" LIMIT 100`;
+  res.json({rows:rows.map(row=>({...row,barcode:row.barcodes?.[0]||"",costPrice:Number(row.costPrice||0),salePrice:Number(row.salePrice||0),currentStock:Number(row.currentStock||0)}))});
 }catch(error){next(error)}});
 
 router.get("/history",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC LIMIT 50`;res.json({rows})}catch(error){next(error)}});
