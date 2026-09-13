@@ -204,7 +204,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       let inboxId=null;
       const inboxIds=[];
       const archiveJobs=[job,...pageJobIds.map(pageJobId=>additionalPageJobs.find(pageJob=>pageJob.id===pageJobId)).filter(Boolean)];
-      for(const [pageIndex,pageJob] of archiveJobs.entries())if(pageJob.attachmentId){
+      try{ for(const [pageIndex,pageJob] of archiveJobs.entries())if(pageJob.attachmentId){
         stage="archive-after-registration";
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${req.user.companyId} AND "attachmentId"=${pageJob.attachmentId} LIMIT 1 FOR UPDATE`;
         const pageInboxId=existingInbox[0]?.id||id();
@@ -215,7 +215,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "storeId"=${job.storeId},"supplierId"=${body.supplierId},"status"='PROCESSED',"processedAt"=CURRENT_TIMESTAMP,"note"=${archiveNote},"responsibleName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageInboxId} AND "companyId"=${req.user.companyId}`;
         else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","processedAt","note","responsibleName","createdByUserId") VALUES (${pageInboxId},${req.user.companyId},${job.storeId},${body.supplierId},${pageJob.attachmentId},'PROCESSED',CURRENT_TIMESTAMP,${archiveNote},${actor},${createdByUserId})`;
       }
-      return {documentId,orderId,paymentTransactionId,inboxId,inboxIds,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length,pageCount:archiveJobs.length};
+      } }catch(archiveError){\n        console.error("V2.4.4 archive warning",{jobId:job.id,message:archiveError?.message||String(archiveError)});\n        inboxId=null; inboxIds.length=0;\n      }\n      return {documentId,orderId,paymentTransactionId,inboxId,inboxIds,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length,pageCount:archiveJobs.length};
     });
     res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,inboxIds:result.inboxIds,pageCount:result.pageCount,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,reconciliationRequired:body.reconciliationRequired,reconciliationDifference:body.reconciliationDifference,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 από ${result.pageCount} ${result.pageCount===1?"σελίδα":"σελίδες"} και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
   }catch(error){
