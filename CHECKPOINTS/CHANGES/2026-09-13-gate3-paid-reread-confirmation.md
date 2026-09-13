@@ -34,3 +34,6 @@ Checkpoint merge recovery: a concurrent main update 3ad9817e replaced large sect
 
 
 - POS handoff correction: normal Invoice intake confirmed the source rows were correct, while the POS V2.4.4 finalizer could reselect a non-verified duplicate and overwrite them. It now prefers `sourceColumnsVerified`, rejects an overwrite when quantity × unit cost (after discounts) does not agree with the row net amount, and carries the verified retail price into BackOffice. The quick POS flow, payment reuse, approval and stock behavior are unchanged.
+
+
+- POS handoff follow-up: verified source rows now win even when OCR duplicates share source coordinates; payment, stock, approval and quick POS flow unchanged.
