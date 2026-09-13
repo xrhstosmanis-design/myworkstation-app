@@ -125,6 +125,33 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/online-radio/stations",async(req,res,next)=>{try{const rows=await prisma.$queryRaw`SELECT "id","name","streamUrl","active","sortOrder","createdAt","updatedAt" FROM "OnlineRadioStation" ORDER BY "sortOrder","name"`;res.json({rows})}catch(error){next(error)}});
+
+router.post("/online-radio/stations",async(req,res,next)=>{
+  try{const body=z.object({name:z.string().trim().min(2).max(120),streamUrl:z.string().url().refine(value=>value.startsWith("https://"),"Το stream πρέπει να χρησιμοποιεί HTTPS."),active:z.boolean().default(true),sortOrder:z.coerce.number().int().min(0).max(10000).default(0)}).parse(req.body||{}),id=crypto.randomUUID();await prisma.$executeRaw`INSERT INTO "OnlineRadioStation" ("id","name","streamUrl","active","sortOrder","createdBy") VALUES (${id},${body.name},${body.streamUrl},${body.active},${body.sortOrder},${req.user.id})`;res.status(201).json({id,...body})}catch(error){next(error)}
+});
+
+router.patch("/online-radio/stations/:stationId",async(req,res,next)=>{
+  try{const body=z.object({name:z.string().trim().min(2).max(120),streamUrl:z.string().url().refine(value=>value.startsWith("https://"),"Το stream πρέπει να χρησιμοποιεί HTTPS."),active:z.boolean(),sortOrder:z.coerce.number().int().min(0).max(10000)}).parse(req.body||{}),rows=await prisma.$queryRaw`UPDATE "OnlineRadioStation" SET "name"=${body.name},"streamUrl"=${body.streamUrl},"active"=${body.active},"sortOrder"=${body.sortOrder},"updatedAt"=NOW() WHERE "id"=${req.params.stationId} RETURNING "id"`;if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε ο σταθμός."});res.json({id:rows[0].id,...body})}catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/online-radio",async(req,res,next)=>{
+  try{const store=await ownedStore(req.params.companyId,req.params.storeId),config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds","updatedAt" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} LIMIT 1`)[0]||{enabled:false,allowedStationIds:[]},stations=await prisma.$queryRaw`SELECT "id","name","streamUrl","active","sortOrder" FROM "OnlineRadioStation" ORDER BY "sortOrder","name"`;res.json({store,config,stations})}catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/online-radio",async(req,res,next)=>{
+  try{
+    const store=await ownedStore(req.params.companyId,req.params.storeId),body=z.object({enabled:z.boolean(),allowedStationIds:z.array(z.string().min(1)).max(100)}).parse(req.body||{}),ids=[...new Set(body.allowedStationIds)];
+    const moduleActive=Boolean((await prisma.$queryRaw`SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW()) LIMIT 1`)[0]);
+    if(body.enabled&&!moduleActive)return res.status(409).json({error:"Ενεργοποίησε πρώτα το πληρωμένο module Online Ράδιο για το κατάστημα."});
+    const valid=ids.length?await prisma.$queryRaw`SELECT "id" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${ids}::text[])`:[];
+    if(valid.length!==ids.length)return res.status(400).json({error:"Ένας ή περισσότεροι σταθμοί δεν είναι ενεργοί."});
+    await prisma.$executeRaw`INSERT INTO "StoreOnlineRadioConfig" ("storeId","companyId","enabled","allowedStationIds","updatedBy") VALUES (${store.id},${store.companyId},${body.enabled},${JSON.stringify(ids)}::jsonb,${req.user.id}) ON CONFLICT ("storeId") DO UPDATE SET "companyId"=EXCLUDED."companyId","enabled"=EXCLUDED."enabled","allowedStationIds"=EXCLUDED."allowedStationIds","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+    await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:`STORE_ONLINE_RADIO_${body.enabled?"ENABLED":"DISABLED"}`,success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    res.json({ok:true,enabled:body.enabled,allowedStationIds:ids});
+  }catch(error){next(error)}
+});
+
 const CHECK_PACKAGES={
   BASIC_CHECK:{key:"BASIC_CHECK",title:"BASIC Έλεγχος",description:"Ταμεία, βάρδιες, μετρητά, κάρτες, POS–EFTPOS και συμβάντα."},
   COMPLETE_CHECK:{key:"COMPLETE_CHECK",title:"COMPLETE Έλεγχος",description:"BASIC, παραστατικά, αποθήκη, τιμολόγια και προμηθευτές."},
