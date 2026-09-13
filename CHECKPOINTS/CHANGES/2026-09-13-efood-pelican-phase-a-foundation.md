@@ -1,16 +1,18 @@
 # 2026-09-13 — efood / Pelican Indirect POS — LAB-only Phase A
 
-## Τελική κατάσταση κώδικα
+## Τελική κατάσταση
 
-- **Κεντρικό `main`:** `eb97190ed24b4e50178c6e90e374863e5737f18b`
-- **PR #775:** συγχωνεύτηκε επιτυχώς με squash merge.
-- **CI #1972:** PASS πριν από το merge.
-- **CI #1973:** PASS πάνω στο πραγματικό merge commit του `main`.
+- **Λειτουργικό merge:** `eb97190ed24b4e50178c6e90e374863e5737f18b` μέσω PR `#775`.
+- **Checkpoint merge:** `317dcf9b9a8187f8274b93ebe3624412c1ad2d3e` μέσω PR `#780`.
+- **Τρέχον deployed `main`:** `b6262b8ffc95a51b93c5129ad1ec822b20422aac`.
+- **CI #1972, #1973, #1985 και #1987:** PASS.
+- **Render workflow #1054:** PASS.
+- **Render exact revision gate:** `Wait for exact production revision` — PASS.
 - **Παλαιό draft PR #758:** έκλεισε χωρίς merge ως αντικατασταθέν.
-- **Κατάσταση:** `ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟ MAIN · AUTOMATED PASS · ΑΝΑΜΟΝΗ LIVE LAB MOCK`.
+- **Κατάσταση:** `ΥΛΟΠΟΙΗΘΗΚΕ · MAIN PASS · RENDER PASS · ΑΝΑΜΟΝΗ LIVE LAB MOCK`.
 - **Περιβάλλον δοκιμών:** αποκλειστικά `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
 - **Test vendor:** αναμονή από efood.
-- **Production ενεργοποίηση:** ΟΧΙ.
+- **Production efood ενεργοποίηση:** ΟΧΙ.
 
 ## Υλοποιήθηκε
 
@@ -58,11 +60,14 @@
 - Όλα τα KAT safety/pre-install invariants: PASS.
 - Isolated PostgreSQL preparation: PASS.
 - Πραγματικά HTTP E2E flows: PASS.
+- Render deploy hook, rollback checkpoint και exact production revision: PASS.
 
-## Εκκρεμότητες
+## Επόμενο υποχρεωτικό βήμα
 
-1. Επιβεβαίωση ότι το Render εξυπηρετεί το `main` `eb97190e`.
-2. Live πάτημα `Πλήρης ασφαλής LAB δοκιμή` μόνο από Platform Super Admin στο μόνιμο LAB.
-3. Καταγραφή `LAB MOCK PASS` στο checkpoint μετά την πραγματική οθόνη.
-4. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
-5. Νέα ρητή έγκριση πριν από live sandbox webhook ή πραγματικό API call.
+1. Platform Super Admin → `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` → `Ασφαλείς διασυνδέσεις καταστήματος`.
+2. Αν δεν υπάρχει ακόμη εγγραφή efood, πάτημα `Προετοιμασία efood στο LAB` χωρίς πραγματικά credentials.
+3. Πάτημα `Πλήρης ασφαλής LAB δοκιμή`.
+4. Αναμενόμενο αποτέλεσμα: `LAB MOCK PASS`, replay idempotent `true` και External call / Order / Sale / Stock / Payment / Fiscal = `ΟΧΙ`.
+5. Καταγραφή του live PASS στο checkpoint.
+6. Παραλαβή test Vendor ID, portal access, sandbox credentials και webhook Authorization από efood.
+7. Νέα ρητή έγκριση πριν από live sandbox webhook ή πραγματικό API call.
