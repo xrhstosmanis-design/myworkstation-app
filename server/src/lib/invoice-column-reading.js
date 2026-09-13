@@ -55,12 +55,20 @@ export function applyConfirmedColumns(line,columns){
 export function recoverPrintedRetailColumns(line,documentText){
   if(line.sourceColumnsVerified)return line;
   const header=columnKey(documentText);
-  if(!/ΛΙΑΝΙΚΗΤΙΜΗΜΜΠΟΣΟΤΗΤΑΤΙΜΗΜΟΝΑΔΑΣ/.test(header))return line;
   const raw=String(line.azureRawRow||line.rawText||"");
   const source=unitRelativeValues(raw);if(!source)return line;
   const after=Object.entries(source.values).filter(([offset])=>Number(offset)>0).map(([,value])=>value);
   if(after.length<5)return line;
   const [quantity,unitCost,initial]=after,net=after.at(-2),vatRate=after.at(-1),retailPrice=source.values[-1];
+  const hasPrintedHeaders=/ΛΙΑΝΙΚΗΤΙΜΗΜΜΠΟΣΟΤΗΤΑΤΙΜΗΜΟΝΑΔΑΣ/.test(header);
+  // Some OCR responses retain each physical row but drop the page header. In
+  // that case recover only the unmistakable failure signature: retail is zero
+  // and the parsed quantity is exactly the printed retail value. The complete
+  // current row must still balance independently below.
+  const shiftedRetail=Number(line.retailPrice||0)<=0&&retailPrice>0&&
+    Math.abs(Number(line.quantity||0)-retailPrice)<0.000001&&
+    Math.abs(Number(line.unitCost||0)-unitCost)<0.000001;
+  if(!hasPrintedHeaders&&!shiftedRetail)return line;
   // This recovery deliberately handles only zero-discount printed rows. Other
   // layouts continue through header mapping / confirmed supplier corrections.
   if(!(quantity>0&&unitCost>0&&retailPrice>0&&net>0)||![0,6,13,24].includes(vatRate)||

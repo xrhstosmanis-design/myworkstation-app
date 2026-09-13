@@ -136,6 +136,8 @@ test('current printed headers recover all 38 rows when Azure omits tables and co
   assert.equal(recoverPrintedRetailColumns(changed,header).quantity,30,"Next invoice must use its new quantities");
   assert.equal(recoverPrintedRetailColumns(changed,header).retailPrice,5.2);
   assert.equal(recoverPrintedRetailColumns(changed,"UNRELATED SUPPLIER HEADERS"),changed);
+  const omittedHeader={...changed,retailPrice:0,quantity:5.2,unitCost:4.9};
+  assert.equal(recoverPrintedRetailColumns(omittedHeader,"UNRELATED SUPPLIER HEADERS").quantity,30,"A missing OCR header still recovers only the verified shifted-retail signature");
   const mismatch={...changed,rawText:changed.rawText.replace("147,00 0 0 147,00","148,00 0 0 148,00")};
   assert.equal(recoverPrintedRetailColumns(mismatch,header),mismatch,"Unbalanced source row must remain for review");
 });
