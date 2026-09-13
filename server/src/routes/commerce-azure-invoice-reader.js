@@ -4,7 +4,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {reconcileAzureInvoice} from "../lib/invoice-azure-reconciler.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {extractAzureColumns,combineAzureRows} from "../lib/invoice-column-reading.js";
+import {extractAzureColumns,combineAzureRows,recoverPrintedRetailColumns} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const API_VERSION="2024-11-30";
@@ -137,7 +137,7 @@ export function normalizeAzure(payload){
   const f=doc.fields||{};
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[];
   const tableRows=extractAzureColumns(result).map(row=>({...row,confidence:pct(doc.confidence)}));
-  const productLines=combineAzureRows(items,tableRows);
+  const productLines=combineAzureRows(items,tableRows).map(line=>recoverPrintedRetailColumns(line,result.content));
   const supplier={name:fieldText(f.VendorName)||fieldText(f.VendorAddressRecipient),taxId:fieldText(f.VendorTaxId),email:fieldText(f.VendorEmail),phone:fieldText(f.VendorPhoneNumber),address:addressText(f.VendorAddress),city:f.VendorAddress?.valueAddress?.city||""};
   const documentNumber=fieldText(f.InvoiceId);
   const documentDate=fieldText(f.InvoiceDate);

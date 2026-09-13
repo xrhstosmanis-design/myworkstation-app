@@ -22,7 +22,7 @@ function decorate(){
     button.addEventListener("click",async event=>{
       event.preventDefault();event.stopPropagation();
       const invoice=row.children?.[2]?.textContent?.trim()||"την παραγγελία";
-      if(!confirm(`Διαγραφή της πρόχειρης παραγγελίας ${invoice};\n\nΗ διαγραφή επιτρέπεται μόνο αν δεν έχει οριστικοποιηθεί.`))return;
+      if(!confirm(`Διαγραφή της πρόχειρης παραγγελίας ${invoice};\n\nΘα διαγραφούν το πρόχειρο και οι φωτογραφίες ανάγνωσης. Η υπάρχουσα πληρωμή διατηρείται και θα συνδεθεί στη νέα εισαγωγή χωρίς χρέωση.\nΗ διαγραφή επιτρέπεται μόνο αν δεν έχει οριστικοποιηθεί.`))return;
       button.disabled=true;
       try{
         await removeOrder(button.dataset.poDeleteOrder);

@@ -7,6 +7,8 @@ const router=Router();
 const cashTolerance=.009;
 const cardTolerance=.02;
 const findingLimit=500;
+const premiumDuplicateWindowSeconds=40;
+const premiumDuplicateMaxTransactionDistance=2;
 const number=value=>Number(value||0);
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 

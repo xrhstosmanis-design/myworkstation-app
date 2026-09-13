@@ -16,7 +16,7 @@ test("POS persists every invoice page before starting full recognition",()=>{
 });
 
 test("POS closes the invoice modal immediately and only monitors server status",()=>{
-  assert.match(client,/const success=mode==="PAID"\?`✅ Πληρωμή/);
+  assert.match(client,/effectiveMode==="PAID"\?`✅ Πληρωμή/);
   assert.match(client,/monitorBackgroundV244\(\{api,jobId:handoff\.jobId/);
   assert.match(client,/\/ai-reader\/fast-status\//);
   assert.doesNotMatch(client,/\/ai-reader\/jobs\/\$\{encodeURIComponent\(jobId\)\}\/ai-recheck/);

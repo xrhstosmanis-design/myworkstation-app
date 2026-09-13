@@ -94,7 +94,7 @@ test("additional page jobs are locked individually and internal intake errors id
 
 test("empty initial invoice extraction triggers the table recovery pass",()=>{
   assert.match(aiRecheck,/const needsTablePass=!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
-  assert.match(aiRecheck,/if\(needsTablePass\)/);
+  assert.match(aiRecheck,/if\(needsTablePass\|\|inconsistentRows\)/);
   assert.match(aiRecheck,/const recovered=Array\.isArray\(tableParsed\.productLines\)/);
 });
 
@@ -114,7 +114,7 @@ test("failed unified AI recovers every page through Azure without adding carry-f
 test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/import \{callAzure,normalizeAzure\} from ".\/commerce-azure-invoice-reader\.js"/);
   assert.match(aiRecheck,/const hasSafeLine=parsed\.productLines\.some/);
-  assert.match(aiRecheck,/needsAzureFields=!hasSafeLine\|\|parsed\.productLines\.some\(line=>Number\(line\?\.vatRate\|\|0\)<=0\)/);
+  assert.match(aiRecheck,/needsAzureFields=!hasSafeLine\|\|totalMismatch\|\|inconsistentRows\|\|parsed\.productLines\.some\(line=>Number\(line\?\.vatRate\|\|0\)<=0\)/);
   assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
   assert.match(aiRecheck,/for\(const page of pageJobs\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
@@ -134,7 +134,7 @@ test("Azure-derived net unit cost does not hide invoice discounts",async()=>{
 test("main AI extraction carries original prices, discount pairs, and verifies line arithmetic",async()=>{
   const verifier=await readFile(new URL("../src/lib/invoice-discount-verifier.js",import.meta.url),"utf8");
   assert.match(aiRecheck,/discount1Amount:\{type:"number"/);
-  assert.match(aiRecheck,/Τιμή ΤΜΧ ΠΡΙΝ ΑΠΟ ΕΚΠΤΩΣΕΙΣ=unitCost/);
+  assert.match(aiRecheck,/ΤΙΜΗ ΜΟΝΑΔΑΣ ΠΡΙΝ ΑΠΟ ΕΚΠΤΩΣΕΙΣ=unitCost/);
   assert.match(aiRecheck,/import \{verifyInvoiceDiscounts\}/);
   assert.match(aiRecheck,/Math\.abs\(q\*u-net\)>Math\.max\(0\.05,net\*0\.02\)/);
   assert.match(verifier,/qty × original price - discounts reproduces net/);

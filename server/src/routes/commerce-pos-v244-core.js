@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -15,7 +16,7 @@ const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v||0)));
 // bootstrap.  Without these columns an uploaded invoice reaches the document
 // inbox but fails while the draft purchase order is being created.
 let intakeSchemaPromise;
-async function ensureV244IntakeSchema(){
+export async function ensureV244IntakeSchema(){
   if(!intakeSchemaPromise){
     intakeSchemaPromise=(async()=>{
       const statements=[
@@ -153,7 +154,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
-      if(body.settlementMode==="PAID")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
+      if(body.documentType==="INVOICE")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
       const additionalPageJobs=[];
       for(const pageJobId of pageJobIds){
@@ -164,17 +165,26 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
       let shift=null,existingPayment=null;
+      // Shared POS/BackOffice intake: a reread of an already paid invoice must
+      // not turn it into new credit or require the original operator's shift.
+      if(body.documentType==="INVOICE"){
+        const priorPayment=await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId,documentNumber:body.documentNumber});
+        if(priorPayment){
+          assertReusableInvoicePayment(priorPayment,{storeId:job.storeId,supplierId:body.supplierId,documentNumber:body.documentNumber,totalGross:body.totalGross});
+          if(body.paymentTransactionId&&body.paymentTransactionId!==priorPayment.id)throw Object.assign(new Error("Η πληρωμή δεν είναι η αρχική πληρωμή του τιμολογίου."),{status:409});
+          body.paymentTransactionId=priorPayment.id;body.settlementMode="PAID";
+        }
+      }
       if(body.settlementMode==="PAID"&&body.paymentTransactionId){
         stage="validate-existing-payment";
         const payments=await tx.$queryRaw`
           SELECT "id","storeId","supplierId","type","amount","subtractFromShift","reversedAt","description","invoiceDocumentNumber","invoicePaymentKey"
           FROM "StoreTransaction"
-          WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+          WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE`;
         existingPayment=payments[0]||null;
-        const existingInvoiceReference=norm(existingPayment?.invoiceDocumentNumber);
-        const sameInvoice=existingPayment?.invoicePaymentKey===invoicePaymentKey||existingInvoiceReference===invoiceReference||(!existingInvoiceReference&&norm(existingPayment?.description).includes(invoiceReference));
-        const valid=existingPayment&&existingPayment.type==='SUPPLIER_PAYMENT'&&!existingPayment.reversedAt&&Boolean(existingPayment.subtractFromShift)&&existingPayment.storeId===job.storeId&&existingPayment.supplierId===body.supplierId&&sameInvoice&&Math.abs(Number(existingPayment.amount||0)-Number(body.totalGross||0))<=0.05;
-        if(!valid){const error=new Error("Η υπάρχουσα FAST πληρωμή δεν συμφωνεί με κατάστημα, προμηθευτή, αριθμό ή ποσό του τιμολογίου.");error.status=409;throw error;}
+        assertReusableInvoicePayment(existingPayment,{storeId:job.storeId,supplierId:body.supplierId,documentNumber:body.documentNumber,totalGross:body.totalGross});
+        const linked=await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "paymentTransactionId"=${existingPayment.id} AND "status" IN ('DRAFT','APPROVED') LIMIT 1`;
+        if(linked[0])throw Object.assign(new Error("Η πληρωμή είναι ήδη συνδεδεμένη με καταχωρισμένο τιμολόγιο."),{status:409});
       }else if(body.settlementMode==="PAID"){
         const duplicatePayments=await tx.$queryRaw`
           SELECT t."id",t."storeId",t."amount",t."occurredAt"
