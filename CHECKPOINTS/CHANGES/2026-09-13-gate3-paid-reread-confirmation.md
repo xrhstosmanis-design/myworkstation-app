@@ -31,3 +31,6 @@ Checkpoint merge recovery: a concurrent main update 3ad9817e replaced large sect
 - Before reconciliation, the reader applies the existing source-verified printed-column recovery to the current document rows. It derives quantity, purchase and retail only when the printed row balances; it never imports prior invoice economics.
 - Targeted tests pass locally. CI/Render/LAB reread remain pending. The current wrong draft must not be approved.
 - Headerless OCR hotfix: the second LAB reread retained physical rows but omitted the header. Recovery now runs only for `retail=0`, parsed quantity equal to printed retail, an inconsistent parsed row equation, and a balanced current source row. Regression coverage added; no payment, stock, or approval behavior changed.
+
+
+- POS handoff correction: normal Invoice intake confirmed the source rows were correct, while the POS V2.4.4 finalizer could reselect a non-verified duplicate and overwrite them. It now prefers `sourceColumnsVerified`, rejects an overwrite when quantity × unit cost (after discounts) does not agree with the row net amount, and carries the verified retail price into BackOffice. The quick POS flow, payment reuse, approval and stock behavior are unchanged.
