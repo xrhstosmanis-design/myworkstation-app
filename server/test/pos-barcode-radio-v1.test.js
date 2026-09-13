@@ -85,4 +85,15 @@ test("Super Admin has a central radio station and store activation screen",async
   assert.match(center,/moduleKey:"ONLINE_RADIO"/);
   assert.match(center,/allowedStationIds/);
   assert.match(center,/Πληρωμένο module ενεργό/);
+  assert.match(center,/removeStation/);
+  assert.match(center,/Trash2.*Διαγραφή/);
+  assert.match(app,/SuperAdminOnlineRadioCenter/);
+});
+
+test("Super Admin can safely delete a radio station from all stores",async()=>{
+  const route=await read("../src/routes/platform-store-modules.js");
+  assert.match(route,/router\.delete\("\/online-radio\/stations\/:stationId"/);
+  assert.match(route,/"allowedStationIds"="allowedStationIds"-\$\{station\.id\}/);
+  assert.match(route,/UPDATE "PosOnlineRadioState" SET "stationId"=NULL/);
+  assert.match(route,/ONLINE_RADIO_STATION_DELETED/);
 });
