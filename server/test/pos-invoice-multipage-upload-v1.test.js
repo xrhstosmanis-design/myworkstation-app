@@ -93,11 +93,23 @@ test("additional page jobs are locked individually and internal intake errors id
 
 
 test("empty initial invoice extraction triggers the table recovery pass",()=>{
-  assert.match(aiRecheck,/const needsTablePass=parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch/);
+  assert.match(aiRecheck,/const needsTablePass=!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
   assert.match(aiRecheck,/if\(needsTablePass\)/);
   assert.match(aiRecheck,/const recovered=Array\.isArray\(tableParsed\.productLines\)/);
 });
 
+
+test("failed unified AI recovers every page through Azure without adding carry-forward totals",()=>{
+  assert.match(aiRecheck,/function mergeAzureInvoicePages\(pages\)/);
+  assert.match(aiRecheck,/if\(pageTotal>0\)\{totalGross=pageTotal;finalTotalPage=pageIndex\+1\}/);
+  assert.doesNotMatch(aiRecheck,/totalGross\+=pageTotal/);
+  assert.match(aiRecheck,/for\(const page of pageJobs\)\{\s*try\{azurePages\.push\(normalizeAzure\(await callAzure/s);
+  assert.match(aiRecheck,/δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες/);
+  assert.match(aiRecheck,/parsed\.openAiUnifiedFailed=true/);
+  assert.match(aiRecheck,/parsed\.openAiUnifiedRecovery="AZURE_ALL_PAGES"/);
+  assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields/);
+  assert.match(aiRecheck,/catch\{discountDiagnostics\.providerFailures=/);
+});
 
 test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/import \{callAzure,normalizeAzure\} from ".\/commerce-azure-invoice-reader\.js"/);
