@@ -37,3 +37,12 @@ test("does not restore shifted retail as quantity over a verified reader line",(
   const [line]=finalizeV244ProductLines(rows);
   assert.equal(line.quantity,20);assert.equal(line.retailPrice,4.8);
 });
+
+test("prefers the verified duplicate even when source coordinates collide",()=>{
+  const rows=[
+    {sourceRow:3,sourceTable:0,sourcePage:1,sourceFileIndex:0,code:"01801",description:"MARLBORO GOLD",quantity:32,unit:"TEM",unitCost:4.7795,retailPrice:0,netAmount:152.94,grossAmount:152.94},
+    {sourceRow:3,sourceTable:0,sourcePage:1,sourceFileIndex:0,code:"01801",description:"MARLBORO GOLD",quantity:32,unit:"TEM",unitCost:4.7795,retailPrice:5.2,netAmount:152.94,grossAmount:152.94,sourceColumnsVerified:true}
+  ];
+  const [line]=finalizeV244ProductLines(rows);
+  assert.equal(line.retailPrice,5.2);
+});
