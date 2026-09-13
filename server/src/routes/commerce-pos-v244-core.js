@@ -170,7 +170,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(body.documentType==="INVOICE"){
         const priorPayment=await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId,documentNumber:body.documentNumber});
         if(priorPayment){
-          assertReusableInvoicePayment(priorPayment,{storeId:job.storeId,supplierId:body.supplierId,documentNumber:body.documentNumber,totalGross:body.totalGross});
+          assertReusableInvoicePayment(priorPayment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId,documentNumber:body.documentNumber,totalGross:body.totalGross});
           if(body.paymentTransactionId&&body.paymentTransactionId!==priorPayment.id)throw Object.assign(new Error("Η πληρωμή δεν είναι η αρχική πληρωμή του τιμολογίου."),{status:409});
           body.paymentTransactionId=priorPayment.id;body.settlementMode="PAID";
         }
@@ -178,11 +178,12 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(body.settlementMode==="PAID"&&body.paymentTransactionId){
         stage="validate-existing-payment";
         const payments=await tx.$queryRaw`
-          SELECT "id","storeId","supplierId","type","amount","subtractFromShift","reversedAt","description","invoiceDocumentNumber","invoicePaymentKey"
-          FROM "StoreTransaction"
-          WHERE "id"=${body.paymentTransactionId} AND "companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE`;
+          SELECT t."id",t."companyId",t."storeId",t."supplierId",t."type",t."amount",t."subtractFromShift",t."reversedAt",t."description",t."invoiceDocumentNumber",t."invoicePaymentKey",s."taxId" AS "supplierTaxId"
+          FROM "StoreTransaction" t
+          LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+          WHERE t."id"=${body.paymentTransactionId} AND t."companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE OF t`;
         existingPayment=payments[0]||null;
-        assertReusableInvoicePayment(existingPayment,{storeId:job.storeId,supplierId:body.supplierId,documentNumber:body.documentNumber,totalGross:body.totalGross});
+        assertReusableInvoicePayment(existingPayment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId,documentNumber:body.documentNumber,totalGross:body.totalGross});
         const linked=await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "paymentTransactionId"=${existingPayment.id} AND "status" IN ('DRAFT','APPROVED') LIMIT 1`;
         if(linked[0])throw Object.assign(new Error("Η πληρωμή είναι ήδη συνδεδεμένη με καταχωρισμένο τιμολόγιο."),{status:409});
       }else if(body.settlementMode==="PAID"){

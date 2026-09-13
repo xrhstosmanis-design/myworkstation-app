@@ -25,9 +25,20 @@ test("payment lookup is company scoped, finds the oldest payment and retains reg
   const tx={$queryRaw:async(strings,...values)=>{
     const sql=strings.join("?");
     assert.match(sql,/t\."companyId"=\?/);assert.ok(values.includes("company"));
-    assert.match(sql,/ORDER BY t\."occurredAt" ASC/);
+    assert.match(sql,/t\."occurredAt" ASC/);
+    assert.ok(sql.includes('CASE WHEN t."invoicePaymentKey"='));
     assert.ok(sql.includes("\\s+"));assert.ok(sql.includes("\\D"));
     return [payment];
   }};
   assert.equal(await findInvoicePayment(tx,{...invoice,companyId:"company",supplierTaxId:"998878583"}),payment);
+});
+
+test("same-company supplier aliases use verified VAT while tenant/store/amount stay strict",()=>{
+  const alias={...payment,companyId:"company",supplierId:"legacy-supplier",supplierTaxId:"998878583"};
+  const target={...invoice,companyId:"company",supplierTaxId:"998 878 583"};
+  assert.equal(assertReusableInvoicePayment(alias,target),alias);
+  for(const change of [{companyId:"other"},{storeId:"other"},{supplierTaxId:"111111111"},{amount:NaN},{amount:Infinity},{amount:-2369.99}]){
+    assert.throws(()=>assertReusableInvoicePayment({...alias,...change},target),{status:409});
+  }
+  assert.throws(()=>assertReusableInvoicePayment(payment,{...invoice,totalGross:0}),/ποσό.*δεν εστάλη/);
 });

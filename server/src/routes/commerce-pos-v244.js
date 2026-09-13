@@ -184,19 +184,20 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const supplierTaxId=cleanTaxId(supplierRows[0].taxId);
     await ensureV244IntakeSchema();
     const payment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber});
-    if(payment)assertReusableInvoicePayment(payment,{storeId,supplierId,documentNumber:req.body.documentNumber,totalGross:intakeNumber(req.body.totalGross)});
+    if(payment)assertReusableInvoicePayment(payment,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,totalGross:intakeNumber(req.body.totalGross)});
     let resume=null;
     const fileMatch=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
     const checksum=fileMatch?crypto.createHash("sha256").update(Buffer.from(fileMatch[2],"base64")).digest("hex"):null;
     if(checksum){
       const attachments=await prisma.$queryRaw`
-        SELECT a."id",a."filename",i."id" AS "inboxId",j."id" AS "jobId",j."purchaseDocumentId",COALESCE(i."status",j."status",'UPLOADED') AS "status",
+        SELECT a."id",a."filename",i."id" AS "inboxId",j."id" AS "jobId",d."id" AS "purchaseDocumentId",COALESCE(i."status",j."status",'UPLOADED') AS "status",
           COALESCE(i."receivedAt",j."createdAt",a."createdAt") AS "receivedAt"
         FROM "DocumentAttachment" a
         LEFT JOIN "DocumentInbox" i ON i."attachmentId"=a."id" AND i."companyId"=a."companyId"
         LEFT JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId"
+        LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId"
         WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${checksum}
-        ORDER BY COALESCE(i."receivedAt",j."createdAt",a."createdAt") DESC LIMIT 1`;
+        ORDER BY (d."id" IS NOT NULL) DESC, COALESCE(i."receivedAt",j."createdAt",a."createdAt") DESC LIMIT 1`;
       const paymentByFile=await prisma.$queryRaw`
         SELECT t."id",t."occurredAt",t."amount",t."description"
         FROM "StoreTransaction" t
@@ -204,7 +205,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
           AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."attachmentChecksum"=${checksum}
         ORDER BY t."occurredAt" DESC LIMIT 1`;
       if(attachments[0]?.purchaseDocumentId)return res.status(409).json({error:"Η ίδια φωτογραφία/PDF τιμολογίου έχει ήδη καταχωριστεί. Δεν έγινε νέα πληρωμή ή πίστωση.",code:"DUPLICATE_INVOICE_FILE",existing:attachments[0]});
-      if(attachments[0]?.jobId)resume={resumable:true,resumeJobId:attachments[0].jobId,resumeStatus:attachments[0].status};
+      if(attachments[0]?.jobId&&!["AWAITING_APPROVAL","CONFIRMED"].includes(attachments[0].status))resume={resumable:true,resumeJobId:attachments[0].jobId,resumeStatus:attachments[0].status};
       // Legacy file-only evidence without an exact invoice identity must be reviewed.
       if(paymentByFile[0]&&!payment)return res.status(409).json({error:"Υπάρχει πληρωμή για το αρχείο χωρίς επιβεβαιωμένο αριθμό τιμολογίου. Χρειάζεται έλεγχος στο BackOffice.",code:"DUPLICATE_INVOICE_PAYMENT"});
     }
@@ -251,7 +252,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     await ensureV244IntakeSchema();
     const existingPayment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber});
     if(existingPayment){
-      assertReusableInvoicePayment(existingPayment,{storeId,supplierId,documentNumber,totalGross});
+      assertReusableInvoicePayment(existingPayment,{companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,totalGross});
       if(paymentTransactionId&&paymentTransactionId!==existingPayment.id)return res.status(409).json({error:"Η πληρωμή δεν είναι η αρχική πληρωμή αυτού του τιμολογίου."});
       paymentTransactionId=existingPayment.id;settlementMode="PAID";
     }else if(paymentTransactionId||settlementMode==="PAID")return res.status(409).json({error:"Δεν βρέθηκε ενεργή πληρωμή που συμφωνεί με το τιμολόγιο. Δεν έγινε νέα χρέωση."});
@@ -280,7 +281,15 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         const existingAttachments=await tx.$queryRaw`SELECT "id" FROM "DocumentAttachment" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "checksum"=${page.checksum} LIMIT 1`;
         const attachmentId=existingAttachments[0]?.id||id();
         if(!existingAttachments[0])await tx.$executeRaw`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES (${attachmentId},${companyId},${storeId},'AI_READER_SOURCE',${page.filename},${page.mimeType},${`DATABASE:${page.checksum}`},${page.checksum},${page.dataUrl})`;
-        const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} ORDER BY "createdAt" DESC LIMIT 1`;
+        const activeSources=await tx.$queryRaw`
+          SELECT j."id" FROM "AiReaderJob" j
+          WHERE j."companyId"=${companyId} AND j."storeId"=${storeId} AND j."attachmentId"=${attachmentId}
+            AND (EXISTS (SELECT 1 FROM "PurchaseDocument" d WHERE d."companyId"=j."companyId" AND d."id"=j."purchaseDocumentId")
+              OR EXISTS (SELECT 1 FROM "PurchaseOrder" o WHERE o."companyId"=j."companyId" AND o."sourceDocumentId"=j."purchaseDocumentId")) LIMIT 1`;
+        if(activeSources[0])throw Object.assign(new Error("Η ίδια φωτογραφία/PDF ανήκει σε καταχωρισμένο τιμολόγιο. Δεν έγινε νέα πληρωμή ή πίστωση."),{status:409,code:"DUPLICATE_INVOICE_FILE"});
+        // A dangling historical job must never bring its deleted extraction back.
+        // Resume only jobs which were never attached to a purchase document.
+        const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} AND "purchaseDocumentId" IS NULL AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "createdAt" DESC LIMIT 1`;
         const jobId=existingJobs[0]?.id||id();
         const handoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
         if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;

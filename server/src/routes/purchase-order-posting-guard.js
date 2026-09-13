@@ -117,14 +117,20 @@ router.delete("/:orderId",async(req,res,next)=>{
       }
       const totals=(await tx.$queryRaw`SELECT COUNT("id")::int AS "lineCount",COALESCE(SUM("netAmount"),0) AS "totalNet",COALESCE(SUM("grossAmount"),0) AS "totalGross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`)[0]||{};
       let linkedDocument=null,preservedPaymentTransactionId=null;
-      if(found.sourceDocumentId){
-        const documents=await tx.$queryRaw`SELECT "id","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} FOR UPDATE`;
+      {
+        const documents=await tx.$queryRaw`SELECT "id","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "storeId"=${found.storeId} AND ("id"=${found.sourceDocumentId||null} OR "purchaseOrderId"=${found.id}) FOR UPDATE`;
+        if(documents.length>1)throw Object.assign(new Error("Βρέθηκαν πολλαπλά συνδεδεμένα παραστατικά. Χρειάζεται έλεγχος πριν από τη διαγραφή."),{status:409});
         linkedDocument=documents[0]||null;
         if(linkedDocument?.status&&linkedDocument.status!=="DRAFT"){
           const error=new Error("Το συνδεδεμένο παραστατικό δεν είναι πλέον πρόχειρο και δεν μπορεί να διαγραφεί.");error.status=409;throw error;
         }
         if(linkedDocument?.paymentTransactionId){
-          const payments=await tx.$queryRaw`SELECT "id","invoiceDocumentNumber" FROM "StoreTransaction" WHERE "id"=${linkedDocument.paymentTransactionId} AND "companyId"=${companyId} AND "type"='SUPPLIER_PAYMENT' AND "storeId"=${found.storeId} AND "supplierId"=${found.supplierId} AND "reversedAt" IS NULL LIMIT 1 FOR UPDATE`;
+          const payments=await tx.$queryRaw`SELECT t."id",t."invoiceDocumentNumber" FROM "StoreTransaction" t
+            LEFT JOIN "Supplier" paid ON paid."id"=t."supplierId" AND paid."companyId"=t."companyId"
+            JOIN "Supplier" selected ON selected."id"=${found.supplierId} AND selected."companyId"=t."companyId"
+            WHERE t."id"=${linkedDocument.paymentTransactionId} AND t."companyId"=${companyId} AND t."type"='SUPPLIER_PAYMENT' AND t."storeId"=${found.storeId} AND t."reversedAt" IS NULL
+              AND (t."supplierId"=${found.supplierId} OR (REGEXP_REPLACE(COALESCE(selected."taxId",''),'\\D','','g')<>'' AND REGEXP_REPLACE(COALESCE(paid."taxId",''),'\\D','','g')=REGEXP_REPLACE(selected."taxId",'\\D','','g')))
+            LIMIT 1 FOR UPDATE OF t`;
           if(payments[0]){
             preservedPaymentTransactionId=payments[0].id;
             // Keep the financial movement and its original shift/actor. Retain the

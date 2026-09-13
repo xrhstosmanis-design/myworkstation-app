@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import {PrismaClient} from "@prisma/client";
 
 const prisma=new PrismaClient();
@@ -139,6 +140,7 @@ async function main(){
   const duplicateBody={storeId,supplierId,documentNumber:invoiceNumber,totalGross:12.4,dataUrl:sourceData};
   const blocked=await request("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",token,body:duplicateBody});
   assert.equal(blocked.response.status,409,"An existing invoice must still block duplicate input");
+  await prisma.$executeRawUnsafe(`UPDATE "PurchaseOrder" SET "sourceDocumentId"=NULL WHERE "id"=$1`,paidDocs[0].purchaseOrderId);
   const deleted=await request(`/api/purchase-orders/${paidDocs[0].purchaseOrderId}`,{method:"DELETE",token});
   assert.equal(deleted.response.status,200,JSON.stringify(deleted.payload));
   assert.equal(deleted.payload.paymentPreserved,true);
@@ -158,12 +160,50 @@ async function main(){
   assert.equal(reusable.payload.paymentTransactionId,originalPaymentId);assert.equal(reusable.payload.paymentReused,true);
   const wrongAmount=await request("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",token,body:{...duplicateBody,totalGross:13.4}});
   assert.equal(wrongAmount.response.status,409,"A different amount cannot reuse the payment");
-  const secondJob=await upload(secondToken);assert.notEqual(secondJob,firstJob);
+  // Historical duplicate payments, legacy invoice descriptions and supplier alias:
+  // prefer the row holding the canonical key; never rewrite financial facts.
+  const aliasId=crypto.randomUUID();
+  await prisma.$executeRawUnsafe(`INSERT INTO "Supplier" ("id","companyId","name","taxId","active") VALUES ($1,$2,'E2E legacy supplier alias','E2E AI 001',true)`,aliasId,companyId);
+  const oldDuplicateId=crypto.randomUUID();
+  await prisma.$executeRawUnsafe(`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","supplierId","amount","description","actorId","actorName","occurredAt") VALUES ($1,$2,$3,'SUPPLIER_PAYMENT',$4,12.4,$5,$6,'Legacy operator',NOW()-INTERVAL '1 day')`,oldDuplicateId,companyId,storeId,aliasId,`Τιμολόγιο ${invoiceNumber} — Γρήγορη καταχώριση POS`,owner.id);
+  await prisma.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "supplierId"=$2,"invoiceDocumentNumber"=NULL WHERE "id"=$1`,originalPaymentId,aliasId);
+  const aliasCheck=await request("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",token:secondToken,body:duplicateBody});
+  assert.equal(aliasCheck.response.status,200,JSON.stringify(aliasCheck.payload));
+  assert.equal(aliasCheck.payload.paymentTransactionId,originalPaymentId,"Must keep the existing canonical payment despite an older historical duplicate");
+  // Dangling jobs from older deletions must not block the same photo.
+  const staleAttachment=crypto.randomUUID(),staleJob=crypto.randomUUID(),deletedDocument=crypto.randomUUID();
+  const sourceChecksum=crypto.createHash("sha256").update(Buffer.from(sourceData.split(",")[1],"base64")).digest("hex");
+  await prisma.$executeRawUnsafe(`INSERT INTO "DocumentAttachment" ("id","companyId","storeId","documentType","filename","mimeType","storageKey","checksum","contentData") VALUES ($1,$2,$3,'AI_READER_SOURCE','reread.png','image/png',$4,$5,$6)`,staleAttachment,companyId,storeId,`DATABASE:${sourceChecksum}`,sourceChecksum,sourceData);
+  await prisma.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentNumber") VALUES ($1,$2,$3,$4,$5)`,deletedDocument,companyId,storeId,supplierId,invoiceNumber);
+  await prisma.$executeRawUnsafe(`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","purchaseDocumentId","resultJson") VALUES ($1,$2,$3,$4,'LOCAL','AWAITING_APPROVAL',$5,'{}'::jsonb)`,staleJob,companyId,storeId,staleAttachment,deletedDocument);
+  await prisma.$executeRawUnsafe(`DELETE FROM "PurchaseDocument" WHERE "id"=$1`,deletedDocument);
+  const staleCheck=await request("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",token:secondToken,body:duplicateBody});
+  assert.equal(staleCheck.response.status,200,JSON.stringify(staleCheck.payload));
+  assert.equal(staleCheck.payload.paymentTransactionId,originalPaymentId);
+  const handedOff=await request("/api/commerce/ai-reader/fast-handoff",{method:"POST",token:secondToken,body:{...intakeBody,storeId,paymentTransactionId:originalPaymentId,pages:[{filename:"reread.png",mimeType:"image/png",dataUrl:sourceData}]}});
+  assert.equal(handedOff.response.status,202,JSON.stringify(handedOff.payload));
+  const secondJob=handedOff.payload.jobId;
+  assert.notEqual(secondJob,firstJob);assert.notEqual(secondJob,staleJob,"Handoff reused a deleted invoice's extraction");
+  // CI has no external AI credentials: wait for the durable worker's explicit
+  // failure, then supply verified source lines through the normal review API.
+  let workerStatus;
+  for(let attempt=0;attempt<100;attempt++){
+    workerStatus=await request(`/api/commerce/ai-reader/fast-status/${secondJob}`,{token:secondToken});
+    if(workerStatus.payload.failed)break;
+    await new Promise(resolve=>setTimeout(resolve,50));
+  }
+  assert.equal(workerStatus.payload.failed,true,JSON.stringify(workerStatus.payload));
+  const verified=await request(`/api/commerce/ai-reader/jobs/${secondJob}/product-lines`,{method:"PUT",token:secondToken,body:{source:"V2.4.4",productLines:[{description:"E2E AI Product",quantity:10,unitCost:1,retailPrice:2,netAmount:10,vatRate:24,grossAmount:12.4,confidence:95}]}});
+  assert.equal(verified.response.status,200,JSON.stringify(verified.payload));
   const secondIntake=await request(`/api/commerce/ai-reader/jobs/${secondJob}/pos-intake`,{method:"POST",token:secondToken,body:{...intakeBody,settlementMode:"PAID",paymentTransactionId:reusable.payload.paymentTransactionId}});
   assert.equal(secondIntake.response.status,201,JSON.stringify(secondIntake.payload));
   assert.deepEqual(await paymentSnapshot(),before,"Rereading must not reassign payment to a new shift or change amounts");
   const paymentCount=await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreTransaction" WHERE "companyId"=$1 AND "invoiceDocumentNumber"=$2`,companyId,invoiceNumber);
   assert.equal(paymentCount[0].count,1,"Reread charged the invoice again");
+  const historicalCount=await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreTransaction" WHERE "id" IN ($1,$2)`,originalPaymentId,oldDuplicateId);
+  assert.equal(historicalCount[0].count,2,"Historical financial records must remain untouched");
+  const canonical=await prisma.$queryRawUnsafe(`SELECT "supplierId" FROM "StoreTransaction" WHERE "id"=$1`,originalPaymentId);
+  assert.equal(canonical[0].supplierId,aliasId,"Reread must not reassign the original payment supplier");
   assert.equal(await stock(productId),10,"Draft reread changed stock");
   const raceNumber="E2E-REREAD-RACE";
   const race=await Promise.all([token,secondToken].map((raceToken,index)=>request(`/api/transactions/stores/${storeId}`,{method:"POST",token:raceToken,body:{type:"SUPPLIER_PAYMENT",amount:3,supplierId,invoiceDocumentNumber:raceNumber,description:`Τιμολόγιο ${raceNumber} — concurrency test`,evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:`e2e-reread-race-${index}`}})));
