@@ -2,6 +2,7 @@ import {Router} from "express";
 import crypto from "crypto";
 import {prisma} from "../prisma.js";
 import {advancedOnlineProductSearch} from "../advanced-online-product-search.js";
+import {z} from "zod";
 
 const router=Router();
 const money=value=>Number(value||0);
@@ -99,6 +100,123 @@ router.get("/stores/:storeId/access",async(req,res)=>{
       notifySurplus:shifts.notifySurplus===true
     }
   });
+});
+
+router.get("/stores/:storeId/barcode-registration",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore,access=req.storeOperatorAccess||adminAccess;
+    if(!access.addBarcode)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Προσθήκη barcode είδους» από το BackOffice."});
+    const q=String(req.query.q||"").trim(),like=`%${q}%`;
+    const rows=await prisma.$queryRaw`
+      SELECT p."id",p."sku",p."name",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
+        COALESCE((SELECT json_agg(json_build_object('id',pb."id",'barcode',pb."barcode",'salePrice',pb."salePrice") ORDER BY pb."createdAt") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes"
+      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId}
+      WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."active"=TRUE
+        AND (${q}='' OR p."name" ILIKE ${like} OR COALESCE(p."sku",'') ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like}))
+      ORDER BY CASE WHEN NOT EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id") THEN 0 ELSE 1 END,p."name" LIMIT 250`;
+    res.json({rows:rows.map(row=>({...row,salePrice:money(row.salePrice),currentStock:money(row.currentStock),barcodes:(row.barcodes||[]).map(code=>({...code,salePrice:code.salePrice==null?null:money(code.salePrice)}))})),access:{changeRetail:Boolean(access.changeRetail)}});
+  }catch(error){next(error)}
+});
+
+router.post("/stores/:storeId/barcode-registration",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore,access=req.storeOperatorAccess||adminAccess;
+    if(!access.addBarcode)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Προσθήκη barcode είδους» από το BackOffice."});
+    const body=z.object({productId:z.string().min(1),barcode:z.string().trim().min(3).max(80).refine(value=>!(/\s/.test(value)),"Το barcode δεν επιτρέπεται να έχει κενά."),salePrice:z.coerce.number().min(0).max(1000000).optional().nullable()}).parse(req.body||{});
+    const product=await activeStoreProduct(req,store,body.productId);
+    if(!product)return res.status(404).json({error:"Το προϊόν δεν είναι ενεργό στο συγκεκριμένο κατάστημα."});
+    const result=await prisma.$transaction(async tx=>{
+      const conflicts=await tx.$queryRaw`SELECT pb."productId",p."name",p."sku" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${req.user.companyId} AND pb."barcode"=${body.barcode} LIMIT 1`;
+      if(conflicts[0]&&conflicts[0].productId!==product.id){const error=new Error(`Το barcode ${body.barcode} υπάρχει ήδη στο προϊόν «${conflicts[0].name}»${conflicts[0].sku?` (${conflicts[0].sku})`:""}.`);error.status=409;throw error}
+      let barcodeId;
+      if(conflicts[0])barcodeId=(await tx.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${product.id} AND "barcode"=${body.barcode} LIMIT 1`)[0].id;
+      else{barcodeId=crypto.randomUUID();await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier","salePrice") VALUES (${barcodeId},${product.id},${body.barcode},1,${access.changeRetail?(body.salePrice??null):null})`}
+      let priceStatus="UNCHANGED",requestId=null;
+      if(body.salePrice!==undefined&&body.salePrice!==null){
+        if(access.changeRetail){await tx.$executeRaw`UPDATE "ProductBarcode" SET "salePrice"=${body.salePrice},"updatedAt"=NOW() WHERE "id"=${barcodeId}`;priceStatus="APPLIED"}
+        else{const current=(await tx.$queryRaw`SELECT COALESCE(pb."salePrice",sp."salePrice",p."salePrice") AS price FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} WHERE pb."id"=${barcodeId} AND p."companyId"=${req.user.companyId} LIMIT 1`)[0];requestId=crypto.randomUUID();await tx.$executeRaw`INSERT INTO "ProductBarcodePriceRequest" ("id","companyId","storeId","productId","barcodeId","barcode","oldPrice","requestedPrice","requestedBy","requestedByName") VALUES (${requestId},${req.user.companyId},${store.id},${product.id},${barcodeId},${body.barcode},${current?.price??null},${body.salePrice},${req.user.id},${req.user.fullName||"Πωλητής"})`;priceStatus="PENDING_APPROVAL"}
+      }
+      return {barcodeId,priceStatus,requestId};
+    });
+    await audit(req,store,"POS_BARCODE_REGISTERED",{productId:product.id,productName:product.name,barcode:body.barcode,requestedPrice:body.salePrice??null,priceStatus:result.priceStatus,priceRequestId:result.requestId});
+    res.status(201).json({ok:true,product:{id:product.id,name:product.name},barcode:{id:result.barcodeId,barcode:body.barcode,salePrice:result.priceStatus==="APPLIED"?body.salePrice:null},priceStatus:result.priceStatus,message:result.priceStatus==="PENDING_APPROVAL"?"Το barcode αποθηκεύτηκε. Η νέα τιμή στάλθηκε για έγκριση.":"Το νέο barcode αποθηκεύτηκε."});
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:error.issues?.[0]?.message||"Τα στοιχεία barcode δεν είναι έγκυρα."});next(error)}
+});
+
+const managementRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
+function requireStoreManagement(req,res){
+  if(req.user?.tokenType==="STORE_OPERATOR"||!managementRoles.has(req.user?.role)){res.status(403).json({error:"Η λειτουργία είναι διαθέσιμη μόνο σε Υπεύθυνο, Ιδιοκτήτη ή Super Admin."});return false}
+  return true;
+}
+
+router.get("/stores/:storeId/barcode-price-requests",async(req,res,next)=>{
+  try{
+    if(!requireStoreManagement(req,res))return;
+    const store=req.storeOperatorStore;
+    const status=z.enum(["PENDING","APPROVED","REJECTED","ALL"]).default("PENDING").parse(String(req.query.status||"PENDING").toUpperCase());
+    const rows=await prisma.$queryRaw`SELECT r.*,p."name" AS "productName",p."sku" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."companyId"=${req.user.companyId} AND r."storeId"=${store.id} AND (${status}='ALL' OR r."status"=${status}) ORDER BY r."createdAt" DESC LIMIT 500`;
+    res.json({rows:rows.map(row=>({...row,oldPrice:row.oldPrice==null?null:money(row.oldPrice),requestedPrice:money(row.requestedPrice)}))});
+  }catch(error){next(error)}
+});
+
+router.post("/stores/:storeId/barcode-price-requests/:requestId/review",async(req,res,next)=>{
+  try{
+    if(!requireStoreManagement(req,res))return;
+    const store=req.storeOperatorStore,body=z.object({decision:z.enum(["APPROVE","REJECT"])}).parse(req.body||{});
+    const reviewed=await prisma.$transaction(async tx=>{
+      const rows=await tx.$queryRaw`SELECT r.*,p."name" AS "productName" FROM "ProductBarcodePriceRequest" r JOIN "Product" p ON p."id"=r."productId" AND p."companyId"=r."companyId" WHERE r."id"=${req.params.requestId} AND r."companyId"=${req.user.companyId} AND r."storeId"=${store.id} FOR UPDATE`;
+      const row=rows[0];if(!row){const error=new Error("Δεν βρέθηκε το αίτημα αλλαγής τιμής.");error.status=404;throw error}if(row.status!=="PENDING"){const error=new Error("Το αίτημα έχει ήδη εξεταστεί.");error.status=409;throw error}
+      if(body.decision==="APPROVE")await tx.$executeRaw`UPDATE "ProductBarcode" SET "salePrice"=${row.requestedPrice},"updatedAt"=NOW() WHERE "id"=${row.barcodeId} AND "productId"=${row.productId}`;
+      const status=body.decision==="APPROVE"?"APPROVED":"REJECTED";
+      await tx.$executeRaw`UPDATE "ProductBarcodePriceRequest" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${row.id}`;
+      return {...row,status};
+    });
+    await audit(req,store,`POS_BARCODE_PRICE_${reviewed.status}`,{requestId:reviewed.id,productId:reviewed.productId,productName:reviewed.productName,barcode:reviewed.barcode,oldPrice:money(reviewed.oldPrice),requestedPrice:money(reviewed.requestedPrice),reviewedBy:req.user.fullName||req.user.email||req.user.id});
+    res.json({ok:true,status:reviewed.status});
+  }catch(error){next(error)}
+});
+
+router.get("/stores/:storeId/barcode-sales-report",async(req,res,next)=>{
+  try{
+    if(!requireStoreManagement(req,res))return;
+    const store=req.storeOperatorStore,query=z.object({from:z.string().datetime().optional(),to:z.string().datetime().optional()}).parse(req.query),from=query.from?new Date(query.from):new Date(Date.now()-30*86400000),to=query.to?new Date(query.to):new Date();
+    if(from>to)return res.status(400).json({error:"Η ημερομηνία έναρξης δεν μπορεί να είναι μετά τη λήξη."});
+    const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') AS barcode,SUM(sl."quantity") AS quantity,SUM(sl."lineTotal") AS revenue FROM "SaleLine" sl JOIN "Sale" s ON s."id"=sl."saleId" JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=s."companyId" WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND s."status"='COMPLETED' AND s."occurredAt">=${from} AND s."occurredAt"<=${to} AND s."source" NOT IN ('WASTE','PRODUCT_DESTRUCTION') GROUP BY p."id",p."name",p."sku",COALESCE(sl."scannedBarcode",'ΧΩΡΙΣ BARCODE') ORDER BY p."name",barcode`;
+    const products=[];for(const row of rows){let product=products.find(item=>item.productId===row.productId);if(!product){product={productId:row.productId,productName:row.productName,sku:row.sku,quantity:0,revenue:0,barcodes:[]};products.push(product)}const detail={barcode:row.barcode,quantity:money(row.quantity),revenue:money(row.revenue)};product.quantity+=detail.quantity;product.revenue+=detail.revenue;product.barcodes.push(detail)}
+    res.json({store,from,to,products,totals:{quantity:products.reduce((sum,row)=>sum+row.quantity,0),revenue:products.reduce((sum,row)=>sum+row.revenue,0)}});
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});next(error)}
+});
+
+router.get("/stores/:storeId/online-radio",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore,moduleRows=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW())) AS enabled`,config=(await prisma.$queryRaw`SELECT "enabled","allowedStationIds" FROM "StoreOnlineRadioConfig" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0],terminal=String(req.user.terminalPos||"MAIN").trim().toUpperCase(),state=(await prisma.$queryRaw`SELECT "stationId","volume" FROM "PosOnlineRadioState" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminal} LIMIT 1`)[0];
+    const moduleActive=Boolean(moduleRows[0]?.enabled),enabled=moduleActive&&Boolean(config?.enabled),allowed=Array.isArray(config?.allowedStationIds)?config.allowedStationIds:[];
+    const stations=enabled&&allowed.length?await prisma.$queryRaw`SELECT "id","name","streamUrl" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${allowed}::text[]) ORDER BY "sortOrder","name"`:[];
+    res.json({moduleActive,enabled,stations,state:{stationId:state?.stationId||null,volume:state?.volume==null?.7:money(state.volume)},terminalPos:terminal});
+  }catch(error){next(error)}
+});
+
+router.put("/stores/:storeId/online-radio/config",async(req,res,next)=>{
+  try{
+    if(!requireStoreManagement(req,res))return;
+    const store=req.storeOperatorStore,body=z.object({enabled:z.boolean(),allowedStationIds:z.array(z.string().min(1)).max(100)}).parse(req.body||{});
+    const moduleActive=Boolean((await prisma.$queryRaw`SELECT 1 FROM "StorePaidModule" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "moduleKey"='ONLINE_RADIO' AND "active"=TRUE AND ("startsAt" IS NULL OR "startsAt"<=NOW()) AND ("endsAt" IS NULL OR "endsAt">=NOW()) LIMIT 1`)[0]);
+    if(!moduleActive)return res.status(403).json({error:"Το πληρωμένο module Online Ράδιο δεν είναι ενεργό για το κατάστημα."});
+    const ids=[...new Set(body.allowedStationIds)],valid=ids.length?await prisma.$queryRaw`SELECT "id" FROM "OnlineRadioStation" WHERE "active"=TRUE AND "id"=ANY(${ids}::text[])`:[];
+    if(valid.length!==ids.length)return res.status(400).json({error:"Ένας ή περισσότεροι σταθμοί δεν είναι ενεργοί."});
+    await prisma.$executeRaw`INSERT INTO "StoreOnlineRadioConfig" ("storeId","companyId","enabled","allowedStationIds","updatedBy") VALUES (${store.id},${req.user.companyId},${body.enabled},${JSON.stringify(ids)}::jsonb,${req.user.id}) ON CONFLICT ("storeId") DO UPDATE SET "companyId"=EXCLUDED."companyId","enabled"=EXCLUDED."enabled","allowedStationIds"=EXCLUDED."allowedStationIds","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+    await audit(req,store,"ONLINE_RADIO_CONFIG_UPDATED",{enabled:body.enabled,allowedStationIds:ids});res.json({ok:true,enabled:body.enabled,allowedStationIds:ids});
+  }catch(error){next(error)}
+});
+
+router.put("/stores/:storeId/online-radio/state",async(req,res,next)=>{
+  try{
+    const store=req.storeOperatorStore,body=z.object({stationId:z.string().min(1).optional().nullable(),volume:z.coerce.number().min(0).max(1)}).parse(req.body||{}),terminal=String(req.user.terminalPos||"MAIN").trim().toUpperCase();
+    const allowed=await prisma.$queryRaw`SELECT 1 FROM "StoreOnlineRadioConfig" cfg JOIN "StorePaidModule" m ON m."storeId"=cfg."storeId" AND m."companyId"=cfg."companyId" AND m."moduleKey"='ONLINE_RADIO' AND m."active"=TRUE WHERE cfg."companyId"=${req.user.companyId} AND cfg."storeId"=${store.id} AND cfg."enabled"=TRUE AND (${body.stationId}::text IS NULL OR cfg."allowedStationIds" ? ${body.stationId}) LIMIT 1`;
+    if(!allowed[0])return res.status(403).json({error:"Το Online Ράδιο ή ο επιλεγμένος σταθμός δεν είναι ενεργός για αυτό το κατάστημα."});
+    await prisma.$executeRaw`INSERT INTO "PosOnlineRadioState" ("companyId","storeId","terminalPos","stationId","volume") VALUES (${req.user.companyId},${store.id},${terminal},${body.stationId||null},${body.volume}) ON CONFLICT ("companyId","storeId","terminalPos") DO UPDATE SET "stationId"=EXCLUDED."stationId","volume"=EXCLUDED."volume","updatedAt"=NOW()`;
+    res.json({ok:true});
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Η ρύθμιση ραδιοφώνου δεν είναι έγκυρη."});next(error)}
 });
 
 router.put("/stores/:storeId/layout",async(req,res,next)=>{
