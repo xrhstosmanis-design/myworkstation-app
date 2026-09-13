@@ -5,6 +5,7 @@ import {verifyInvoiceDiscounts} from "../src/lib/invoice-discount-verifier.js";
 import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-core.js";
 
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
+const backofficeIntake=await readFile(new URL("../../client/src/purchase-order-invoice-intake-bootstrap.js",import.meta.url),"utf8");
 const intake=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
 const wrapper=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
 const jobs=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
@@ -18,6 +19,15 @@ test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/Σελίδα \{index\+1\}/);
   assert.match(client,/movePage\(index,-1\)/);
   assert.match(client,/movePage\(index,1\)/);
+});
+
+test("BackOffice purchase intake keeps every selected invoice page",()=>{
+  assert.match(backofficeIntake,/data-image-file type="file"[^>]*multiple/);
+  assert.match(backofficeIntake,/data-pdf-file type="file"[^>]*multiple/);
+  assert.match(backofficeIntake,/for\(const \[pageIndex,file\] of files\.entries\(\)\)/);
+  assert.match(backofficeIntake,/additionalPageJobIds:pageJobs\.slice\(1\)\.map\(page=>page\.id\)/);
+  assert.match(backofficeIntake,/Η πολυσέλιδη ανάγνωση σταμάτησε με ασφάλεια/);
+  assert.match(backofficeIntake,/headerIndexes=files\.length>1\?\[0,files\.length-1\]:\[0\]/);
 });
 
 test("camera preview attaches and plays the acquired stream before capture",()=>{
@@ -38,6 +48,8 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
   assert.match(aiRecheck,/const fileParts=pageJobs\.map/);
   assert.match(aiRecheck,/content:\[\{type:"input_text",text:prompt\},\.\.\.fileParts\]/);
   assert.match(aiRecheck,/πρώτα από τη σελίδα 1, μετά από τη σελίδα 2/);
+  assert.match(aiRecheck,/«Σε μεταφορά» ή «Από μεταφορά».*ΔΕΝ προστίθεται δεύτερη φορά/s);
+  assert.match(aiRecheck,/totalGross.*τελικό πληρωτέο ποσό της τελευταίας σελίδας/s);
   assert.match(azure,/additionalPageJobIds.*return next\(\)/s);
 });
 
