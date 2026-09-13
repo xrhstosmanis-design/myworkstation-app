@@ -17,6 +17,6 @@ User instruction: delete only the incorrect unposted draft and its source photos
 - Local server build and client build PASS; server tests 1175/1175 PASS (local Node 24; required CI uses Node 20).
 - Functional parsing fixture checks all 38 printed rows, retail vs purchase price, quantities totaling 608 and invoice sum 2369.99; changed future quantities/prices come only from the new row.
 - New isolated real HTTP E2E covers paid draft deletion, source/job removal, unchanged original payment, second-user reentry, mismatch rejection, one payment and no draft stock posting. This runs in CI, never production.
-- CI / merge / Render: pending.
+- CI / merge / Render: pending. CI #2071 started after incorporating current main. The new main c0e7c33c contained literal backslash-n separators in its Premium test; normalized these to actual newlines without changing any assertions or feature behavior.
 - LIVE parsing and complete Gate 3: pending user test. Latest original screenshot still shows 2363.28 and 6.71 difference; do not call this resolved based on fixture tests alone.
 - Existing historic duplicate payments stay untouched, pending controlled audited financial correction.
