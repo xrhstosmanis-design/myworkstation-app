@@ -22,7 +22,7 @@ export async function findInvoicePayment(tx,{companyId,supplierId,supplierTaxId,
     FROM "StoreTransaction" t
     LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
     WHERE t."companyId"=${companyId} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
-      AND (t."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND REGEXP_REPLACE(COALESCE(s."taxId",''),'\\\D','','g')=${supplierTaxId}))
+      AND (t."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND REGEXP_REPLACE(COALESCE(s."taxId",''),'\\D','','g')=${supplierTaxId}))
       AND REGEXP_REPLACE(UPPER(COALESCE(NULLIF(t."invoiceDocumentNumber",''),SUBSTRING(t."description" FROM '(?i)Τιμολόγιο\\s+(.+?)(?:\\s+[—–]|\\s+-\\s+|$)'))),'[^A-ZΑ-Ω0-9]','','g')=${token}
     ORDER BY t."occurredAt" ASC LIMIT 1`;
   return rows[0]||null;

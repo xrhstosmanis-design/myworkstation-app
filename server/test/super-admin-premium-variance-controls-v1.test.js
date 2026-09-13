@@ -15,11 +15,11 @@ test("PREMIUM controls are gated, read-only and reconcile only inside one closed
   assert.match(route,/seconds>premiumDuplicateWindowSeconds/);
   assert.match(route,/distance<=premiumDuplicateMaxTransactionDistance/);
   assert.match(route,/POTENTIAL_REPEATED_REVERSAL/);
-  assert.match(route,/PosOperationalEvent/);
+  assert.match(route,/PosOperationalEvent/);\n  assert.match(route,/auditSales/);\n  assert.match(route,/saleEvidenceById/);\n  assert.match(route,/itemsJson/);
   assert.match(route,/readOnly:true/);
   assert.match(route,/FINAL_RECONCILED/);
   assert.match(route,/SHIFT_HANDOVER_DIFFERENCE/);
   assert.match(ui,/PREMIUM · Τελικό αποτέλεσμα ανά βάρδια/);
   assert.match(ui,/Έγκριση τελικού αποτελέσματος/);
-  assert.match(ui,/Εσύ εγκρίνεις το τελικό αποτέλεσμα/);
+  assert.match(ui,/Εσύ εγκρίνεις το τελικό αποτέλεσμα/);\n  assert.match(ui,/Λειτουργικό συμβάν/);
 });

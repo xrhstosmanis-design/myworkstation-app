@@ -9,7 +9,7 @@ User instruction: delete only the incorrect unposted draft and its source photos
 - Shared POS/BackOffice intake serializes invoice identity, validates/locks the existing payment and links it to the new draft. Already paid invoices cannot become new credit. No change to original payment amount, actor, session, method or timestamp; no cash drawer request on reuse.
 - Printed retail/unit/quantity/purchase columns can recover Items-only Azure responses using current-source header evidence and a balanced same-row equation. No old invoice prices/quantities are learned. The existing central supplier correction profile remains shared across entry points.
 - Arithmetic mismatch triggers recovery even when every numeric field is nonzero. Discount verification uses only rows assigned to the corresponding page, so page 2 rows cannot be rewritten from page 1.
-- Repair the pre-existing main CI failure: define the two missing Premium correlation constants (40 seconds / 2 transactions), as already asserted by the current main tests. No other Premium behavior changes.
+- The pre-existing main CI failure was caused by two missing Premium correlation constants. Main independently fixed these in a4189180; incorporated latest main through c0e7c33c unchanged, including all newer Premium work.
 - Restore the active list's previously truncated middle from exact matching git history (df63b6bc), retaining current prefix/suffix and all new checkpoints.
 
 ## Validation
