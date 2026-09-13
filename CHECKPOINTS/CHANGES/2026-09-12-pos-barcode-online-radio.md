@@ -29,5 +29,5 @@ Branch: `feat/pos-barcode-registration`
 
 ## Ακριβές επόμενο βήμα
 
-1. Προσθήκη οθονών BackOffice/Super Admin πάνω στα ολοκληρωμένα management APIs.
-2. Τοπικό commit και αναμονή ρητής έγκρισης για push/PR.
+1. Ολοκληρώθηκε οθόνη BackOffice ανά κατάστημα για Owner/Manager: εγκρίσεις τιμών, αναφορά ανά barcode και επιλογή επιτρεπόμενων σταθμών.
+2. Εκκρεμεί η κεντρική οθόνη Super Admin CRUD σταθμών.

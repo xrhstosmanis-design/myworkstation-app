@@ -1,0 +1,27 @@
+import React,{useEffect,useState} from "react";
+import {Barcode,Check,Radio,RefreshCw,X} from "lucide-react";
+
+const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
+const iso=(date,end=false)=>new Date(`${date}T${end?"23:59:59":"00:00:00"}`).toISOString();
+
+export default function BarcodeRadioManagement({api,store}){
+  const today=new Date().toISOString().slice(0,10),monthAgo=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const [radio,setRadio]=useState(null),[allowed,setAllowed]=useState([]),[enabled,setEnabled]=useState(false);
+  const [requests,setRequests]=useState([]),[report,setReport]=useState(null),[from,setFrom]=useState(monthAgo),[to,setTo]=useState(today);
+  const [busy,setBusy]=useState(""),[error,setError]=useState(""),[message,setMessage]=useState("");
+  const load=async()=>{setBusy("load");setError("");try{const [r,p]=await Promise.all([api(`/api/store-pos/stores/${store.id}/online-radio`),api(`/api/store-pos/stores/${store.id}/barcode-price-requests`)]);setRadio(r);setEnabled(Boolean(r.enabled));setAllowed(r.allowedStationIds||[]);setRequests(p.rows||[])}catch(e){setError(e.message)}finally{setBusy("")}};
+  useEffect(()=>{load()},[store.id]);
+  const saveRadio=async()=>{setBusy("radio");setError("");try{await api(`/api/store-pos/stores/${store.id}/online-radio/config`,{method:"PUT",body:JSON.stringify({enabled,allowedStationIds:allowed})});setMessage("Οι ρυθμίσεις Online Ραδιοφώνου αποθηκεύτηκαν.");await load()}catch(e){setError(e.message)}finally{setBusy("")}};
+  const review=async(id,decision)=>{setBusy(id);setError("");try{await api(`/api/store-pos/stores/${store.id}/barcode-price-requests/${id}/review`,{method:"POST",body:JSON.stringify({decision})});setRequests(rows=>rows.filter(row=>row.id!==id));setMessage(decision==="APPROVE"?"Η νέα τιμή εγκρίθηκε.":"Η αλλαγή τιμής απορρίφθηκε.")}catch(e){setError(e.message)}finally{setBusy("")}};
+  const loadReport=async()=>{setBusy("report");setError("");try{setReport(await api(`/api/store-pos/stores/${store.id}/barcode-sales-report?from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to,true))}`))}catch(e){setError(e.message)}finally{setBusy("")}};
+  const toggle=id=>setAllowed(ids=>ids.includes(id)?ids.filter(value=>value!==id):[...ids,id]);
+  return <section style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,marginBottom:18}}>
+    <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center"}}><div><h3 style={{margin:0}}><Barcode size={19}/> Barcode & Online Ράδιο</h3><small>{store.name} · διαχείριση ιδιοκτήτη</small></div><button type="button" onClick={load} disabled={busy==="load"}><RefreshCw size={16}/> Ανανέωση</button></div>
+    {error&&<div className="cloud-alert cloud-error">{error}</div>}{message&&<div className="cloud-alert">{message}</div>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:16,marginTop:14}}>
+      <article style={{border:"1px solid #dce5ef",borderRadius:12,padding:14}}><h4><Radio size={17}/> Online Ράδιο</h4>{!radio?.moduleActive?<p>Το πληρωμένο module δεν είναι ενεργό.</p>:<><label><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/> Ενεργό στο κατάστημα</label><div style={{display:"grid",gap:7,margin:"12px 0"}}>{(radio.availableStations||[]).map(row=><label key={row.id}><input type="checkbox" checked={allowed.includes(row.id)} onChange={()=>toggle(row.id)}/> {row.name}</label>)}</div><button type="button" onClick={saveRadio} disabled={busy==="radio"}>{busy==="radio"?"Αποθήκευση…":"Αποθήκευση σταθμών"}</button></>}</article>
+      <article style={{border:"1px solid #dce5ef",borderRadius:12,padding:14}}><h4>Εγκρίσεις νέας τιμής Barcode</h4>{requests.length?requests.map(row=><div key={row.id} style={{padding:"9px 0",borderBottom:"1px solid #edf1f5"}}><b>{row.productName}</b><small style={{display:"block"}}>{row.barcode} · {euro(row.oldPrice)} → <strong>{euro(row.requestedPrice)}</strong> · {row.requestedByName}</small><div style={{display:"flex",gap:7,marginTop:7}}><button onClick={()=>review(row.id,"APPROVE")} disabled={Boolean(busy)}><Check size={15}/> Έγκριση</button><button onClick={()=>review(row.id,"REJECT")} disabled={Boolean(busy)}><X size={15}/> Απόρριψη</button></div></div>):<p>Δεν υπάρχουν εκκρεμείς αλλαγές τιμής.</p>}</article>
+    </div>
+    <article style={{border:"1px solid #dce5ef",borderRadius:12,padding:14,marginTop:16}}><h4>Πωλήσεις ανά Barcode</h4><div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"end"}}><label>Από<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Έως<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label><button onClick={loadReport} disabled={busy==="report"}>Εμφάνιση αναφοράς</button></div>{report&&<div style={{overflowX:"auto",marginTop:12}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th>Προϊόν</th><th>Barcode</th><th>Ποσότητα</th><th>Τζίρος</th></tr></thead><tbody>{report.products.flatMap(product=>product.barcodes.map((row,index)=><tr key={`${product.productId}-${row.barcode}`}><td>{index===0?<><b>{product.productName}</b><small style={{display:"block"}}>Σύνολο {product.quantity} · {euro(product.revenue)}</small></>:""}</td><td>{row.barcode}</td><td>{row.quantity}</td><td>{euro(row.revenue)}</td></tr>))}</tbody></table></div>}</article>
+  </section>;
+}
