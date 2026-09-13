@@ -147,11 +147,12 @@ async function completePaymentControls(body){
       SELECT t."id",t."type",t."amount",t."occurredAt",t."supplierName",t."description",t."actorName",st."name" AS "storeName"
       FROM "StoreTransaction" t
       JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
+      JOIN "CashShiftSession" s ON s."id"=t."sessionId" AND s."companyId"=t."companyId" AND s."storeId"=t."storeId" AND s."status"='CLOSED'
       WHERE t."companyId"=${body.companyId} AND t."storeId"=${body.storeId}
         AND t."reversedAt" IS NULL AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
         AND t."attachmentData" IS NULL AND COALESCE(t."attachmentMimeType",'')<>'application/vnd.myworkstation.purchase-document'
-        AND (${body.from||null}::date IS NULL OR t."occurredAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR t."occurredAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
+        AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
       ORDER BY t."occurredAt" DESC,t."id" DESC LIMIT ${findingLimit}`,
     prisma.$queryRaw`
       SELECT MIN(t."occurredAt") AS "occurredAt",t."supplierId",COALESCE(NULLIF(MIN(t."supplierName"),''),MIN(sp."name"),'Χωρίς όνομα προμηθευτή') AS "supplierName",
@@ -159,11 +160,12 @@ async function completePaymentControls(body){
       FROM "StoreTransaction" t
       JOIN "Store" st ON st."id"=t."storeId" AND st."companyId"=t."companyId"
       LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId" AND sp."companyId"=t."companyId"
+      JOIN "CashShiftSession" s ON s."id"=t."sessionId" AND s."companyId"=t."companyId" AND s."storeId"=t."storeId" AND s."status"='CLOSED'
       WHERE t."companyId"=${body.companyId} AND t."storeId"=${body.storeId}
         AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT' AND t."supplierId" IS NOT NULL
-        AND (${body.from||null}::date IS NULL OR t."occurredAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR t."occurredAt"<(${body.to||null}::date + INTERVAL '1 day'))
-      GROUP BY t."supplierId",t."amount",DATE(t."occurredAt"),st."name"
+        AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
+        AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      GROUP BY t."sessionId",t."supplierId",t."amount",DATE(t."occurredAt"),st."name"
       HAVING COUNT(*)>1
       ORDER BY MIN(t."occurredAt") DESC LIMIT ${findingLimit}`
   ]);
@@ -175,19 +177,61 @@ async function completePaymentControls(body){
 }
 
 async function premiumVarianceControls(body){
-  const rows=await prisma.$queryRaw`
-    SELECT COALESCE(NULLIF(s."closedByName",''),NULLIF(s."openedByName",''),'Χωρίς διαθέσιμο χειριστή') AS "operatorName",
-      COUNT(*)::int AS "shiftCount",COALESCE(SUM(ABS(COALESCE(s."variance",0))),0)::float AS "cashVarianceTotal",
-      COALESCE(SUM(ABS(COALESCE(s."cardVariance",0))),0)::float AS "cardVarianceTotal",MAX(COALESCE(s."closedAt",s."openedAt")) AS "occurredAt"
-    FROM "CashShiftSession" s
-    WHERE s."companyId"=${body.companyId} AND s."storeId"=${body.storeId} AND s."status"='CLOSED'
-      AND (ABS(COALESCE(s."variance",0))>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0))>${cardTolerance})
-      AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
-      AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
-    GROUP BY COALESCE(NULLIF(s."closedByName",''),NULLIF(s."openedByName",''),'Χωρίς διαθέσιμο χειριστή')
-    HAVING COUNT(*)>=2 ORDER BY COUNT(*) DESC,MAX(COALESCE(s."closedAt",s."openedAt")) DESC LIMIT ${findingLimit}`;
-  const findings=rows.map(row=>({id:`repeated-variance:${row.operatorName}`,operatorName:row.operatorName,shiftCount:Number(row.shiftCount),cashVarianceTotal:number(row.cashVarianceTotal),cardVarianceTotal:number(row.cardVarianceTotal),occurredAt:row.occurredAt}));
-  return {enabled:true,readOnly:true,findings,repeatedVarianceCount:findings.length,status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
+  // Every correlation is constrained by the immutable cash-shift session.  We deliberately
+  // never compare transactions from two different shifts, even when their baskets match.
+  const [sales,reversalAudits,safetyAudits,operationalTables]=await Promise.all([
+    prisma.$queryRaw`
+      SELECT DISTINCT ON (s."id") sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedAt",sh."closedAt",
+        s."id" AS "saleId",s."total"::float AS "total",s."occurredAt",s."createdAt",t."actorId",t."actorName",
+        COALESCE(lines."basketSignature",'') AS "basketSignature",COALESCE(payments."paymentMethods",'') AS "paymentMethods"
+      FROM "CashShiftSession" sh
+      JOIN "StoreTransaction" t ON t."companyId"=sh."companyId" AND t."storeId"=sh."storeId" AND t."sessionId"=sh."id" AND t."reversedAt" IS NULL AND t."type" IN ('SALE_CASH','SALE_CARD','SALE_IRIS')
+      JOIN "Sale" s ON s."companyId"=sh."companyId" AND s."storeId"=sh."storeId" AND s."status"='COMPLETED' AND s."source" IN ('POS','ONLINE_POS')
+        AND t."description" LIKE ('%POS πώληση ' || s."id" || ' ·%')
+      LEFT JOIN LATERAL (SELECT string_agg(COALESCE(l."productId",l."description",'—') || ':' || l."quantity"::text || ':' || l."lineTotal"::text,'|' ORDER BY COALESCE(l."productId",l."description",'—'),l."quantity",l."lineTotal") AS "basketSignature" FROM "SaleLine" l WHERE l."saleId"=s."id") lines ON TRUE
+      LEFT JOIN LATERAL (SELECT string_agg(p."method" || ':' || p."amount"::text,'|' ORDER BY p."method",p."amount") AS "paymentMethods" FROM "Payment" p WHERE p."saleId"=s."id") payments ON TRUE
+      WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
+        AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      ORDER BY s."id",t."createdAt" DESC LIMIT ${findingLimit}`,
+    prisma.$queryRaw`
+      SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."actionType",a."reason",a."actorName",a."createdAt",a."details"
+      FROM "PosSaleActionAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND COALESCE(a."details"->>'sessionId','')=sh."id"
+      WHERE a."companyId"=${body.companyId} AND a."storeId"=${body.storeId} AND a."actionType" IN ('CANCEL','RETURN','RETURN_ITEMS')
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      ORDER BY a."createdAt" DESC LIMIT ${findingLimit}`,
+    prisma.$queryRaw`
+      SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."eventType",a."actorName",a."createdAt",a."details"
+      FROM "PosSaleSafetyAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND EXISTS (SELECT 1 FROM "StoreTransaction" t WHERE t."companyId"=sh."companyId" AND t."storeId"=sh."storeId" AND t."sessionId"=sh."id" AND (COALESCE(t."description",'') LIKE ('%' || COALESCE(a."saleId",'') || '%') OR COALESCE(t."description",'') LIKE ('%' || COALESCE(a."relatedSaleId",'') || '%')))
+      WHERE a."companyId"=${body.companyId} AND a."storeId"=${body.storeId} AND a."eventType" IN ('DUPLICATE_CONFIRMED','DUPLICATE_BLOCKED','IDEMPOTENT_REPLAY')
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      ORDER BY a."createdAt" DESC LIMIT ${findingLimit}`,
+    prisma.$queryRaw`SELECT to_regclass('"PosOperationalEvent"') IS NOT NULL AS "exists"`
+  ]);
+  const bySession=new Map();
+  for(const sale of sales){const key=`${sale.sessionId}:${sale.actorId||sale.actorName||'unknown'}:${sale.basketSignature}:${number(sale.total).toFixed(2)}`;const list=bySession.get(key)||[];list.push(sale);bySession.set(key,list)}
+  const findings=[];
+  for(const group of bySession.values())for(let index=1;index<group.length;index++){
+    const previous=group[index-1],current=group[index],minutes=Math.abs(new Date(current.occurredAt||current.createdAt)-new Date(previous.occurredAt||previous.createdAt))/60000;
+    if(minutes>10)continue;
+    const paymentChanged=previous.paymentMethods!==current.paymentMethods;
+    findings.push({id:`sale-match:${previous.saleId}:${current.saleId}`,code:paymentChanged?"POTENTIAL_PAYMENT_SWITCH_DUPLICATE":"POTENTIAL_DUPLICATE_SALE",title:paymentChanged?"Πιθανή αλλαγή μετρητά/κάρτα χωρίς αντίστροφη εγγραφή":"Πιθανή διπλή POS συναλλαγή",sessionId:current.sessionId,shiftLabel:current.shiftLabel,terminalPos:current.terminalPos,occurredAt:current.occurredAt||current.createdAt,operatorName:current.actorName||"Χωρίς διαθέσιμο χειριστή",amount:number(current.total),saleIds:[previous.saleId,current.saleId],paymentMethods:[previous.paymentMethods,current.paymentMethods],minutesApart:Number(minutes.toFixed(1)),basketMatched:true,possibleExplanation:paymentChanged?"Ίδιο καλάθι και ποσό καταχωρήθηκαν κοντά χρονικά με διαφορετικό τρόπο πληρωμής. Επιβεβαίωσε αν η αρχική πληρωμή ακυρώθηκε/επιστράφηκε.":"Ίδιο καλάθι, ποσό και τρόπος πληρωμής καταχωρήθηκαν δύο φορές στην ίδια βάρδια. Επιβεβαίωσε πριν αποδώσεις αιτία στην απόκλιση."});
+  }
+  const reversalGroups=new Map();
+  for(const row of reversalAudits){const saleId=row.relatedSaleId||row.saleId;if(!saleId)continue;const key=`${row.sessionId}:${saleId}`,list=reversalGroups.get(key)||[];list.push(row);reversalGroups.set(key,list)}
+  for(const [key,group] of reversalGroups)if(group.length>1){const saleId=key.split(":").slice(1).join(":");findings.push({id:`reversal-repeat:${key}`,code:"POTENTIAL_REPEATED_REVERSAL",title:"Πιθανές επαναλαμβανόμενες ακυρώσεις / επιστροφές",sessionId:group[0].sessionId,shiftLabel:group[0].shiftLabel,terminalPos:group[0].terminalPos,saleIds:[saleId],occurredAt:group[0].createdAt,operatorName:group[0].actorName||"—",transactionCount:group.length,possibleExplanation:"Περισσότερα από ένα audit ακύρωσης/επιστροφής για την ίδια αρχική πώληση μέσα στην ίδια βάρδια. Χρειάζεται αντιπαραβολή με τις αντίστροφες εγγραφές."})}
+  for(const row of safetyAudits)findings.push({id:`safety:${row.id}`,code:row.eventType,title:row.eventType==="DUPLICATE_CONFIRMED"?"Επιβεβαιωμένη διπλή καταχώριση POS":"Συμβάν ασφάλειας διπλής/επανάληψης POS",sessionId:row.sessionId,shiftLabel:row.shiftLabel,terminalPos:row.terminalPos,saleIds:[row.saleId,row.relatedSaleId].filter(Boolean),occurredAt:row.createdAt,operatorName:row.actorName||"—",possibleExplanation:"Το POS κατέγραψε συμβάν προστασίας διπλής συναλλαγής. Είναι ένδειξη για έλεγχο, όχι αυτόματη απόδοση ευθύνης."});
+  if(operationalTables[0]?.exists){
+    const operationalEvents=await prisma.$queryRaw`
+      SELECT e."id",e."sessionId",e."operatorName",e."type",e."total"::float AS "total",e."createdAt",sh."shiftLabel",sh."terminalPos"
+      FROM "PosOperationalEvent" e JOIN "CashShiftSession" sh ON sh."id"=e."sessionId" AND sh."companyId"=e."companyId" AND sh."storeId"=e."storeId" AND sh."status"='CLOSED'
+      WHERE e."companyId"=${body.companyId} AND e."storeId"=${body.storeId} AND e."type" ~* '(DELETE|REMOVE|VOID|CANCEL)'
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      ORDER BY e."createdAt" DESC LIMIT ${findingLimit}`;
+    for(const row of operationalEvents)findings.push({id:`operational:${row.id}`,code:"UNMATCHED_POS_OPERATION",title:"Διαγραφή / ακύρωση POS που χρειάζεται αντιπαραβολή",sessionId:row.sessionId,shiftLabel:row.shiftLabel,terminalPos:row.terminalPos,occurredAt:row.createdAt,operatorName:row.operatorName||"—",amount:number(row.total),possibleExplanation:"Υπάρχει λειτουργικό συμβάν διαγραφής ή ακύρωσης στην ίδια βάρδια. Επιβεβαίωσε αν προηγήθηκε φυσική πληρωμή χωρίς σωστή αντίστροφη εγγραφή πριν το χρησιμοποιήσεις ως εξήγηση πλεονάσματος."});
+  }
+  // Older installations may not have operational events; this is exposed explicitly instead of guessing.
+  return {enabled:true,readOnly:true,scope:"PER_CLOSED_SHIFT_ONLY",findings:findings.slice(0,findingLimit),potentialDuplicateSaleCount:findings.filter(item=>item.code.includes("DUPLICATE")||item.code.includes("PAYMENT_SWITCH")).length,potentialRepeatedReversalCount:findings.filter(item=>item.code==="POTENTIAL_REPEATED_REVERSAL").length,operationalEventsAvailable:Boolean(operationalTables[0]?.exists),status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
 }
 
 router.post("/super-admin-analytics/execute",async(req,res,next)=>{

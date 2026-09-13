@@ -16,7 +16,8 @@ test("COMPLETE controls inspect active payments without mutating them",()=>{
   assert.match(route,/t\."attachmentData" IS NULL/);
   assert.match(route,/PAYMENT_WITHOUT_EVIDENCE/);
   assert.match(route,/POTENTIAL_DUPLICATE_SUPPLIER_PAYMENT/);
-  assert.match(route,/GROUP BY t\."supplierId",t\."amount",DATE\(t\."occurredAt"\),st\."name"/);
+  assert.match(route,/JOIN "CashShiftSession" s ON s\."id"=t\."sessionId"/);
+  assert.match(route,/GROUP BY t\."sessionId",t\."supplierId",t\."amount",DATE\(t\."occurredAt"\),st\."name"/);
   assert.match(route,/readOnly:true/);
 });
 
