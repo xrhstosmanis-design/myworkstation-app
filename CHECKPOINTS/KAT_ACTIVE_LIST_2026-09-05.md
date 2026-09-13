@@ -10,7 +10,7 @@ Total output lines: 1097
 - [x] Ο browser κάνει μόνο σύντομο έλεγχο κατάστασης και εμφανίζει τελικό μήνυμα. Η πληρωμή επαναχρησιμοποιείται και δεν δημιουργείται δεύτερη οικονομική κίνηση.
 - [x] Δεν έγινε αλλαγή σε οριστικοποίηση, stock posting, supplier balance, fiscal/RBS/CapDriver/EFTPOS ή tenant/store isolation.
 - [x] Τοπικοί έλεγχοι: 1.168/1.168 server tests, client production build και server build PASS.
-- [ ] PR / πράσινο CI / merge στο `main` / ακριβές Render revision: σε εξέλιξη.
+- [x] PR #796 / CI #2051 / merge `69191d25` / CI `main` #2053 / Render #1086: PASS. Το `/api/health` επιβεβαίωσε το ακριβές revision `69191d253a08a8cdb2291e753e7dd3f9986699b1`.
 - [ ] LIVE δοκιμή αποκλειστικά από τον Χρήστο: μετά το deploy, με ασφαλή επανάληψη του υπάρχοντος τιμολογίου χωρίς δεύτερη πληρωμή και χωρίς οριστικοποίηση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-gate3-fast-server-background-worker.md`.
 
