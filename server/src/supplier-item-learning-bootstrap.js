@@ -58,15 +58,25 @@ const statements=[
    SELECT DISTINCT ON (purchases."companyId",purchases."supplierId",purchases."productId")
      purchases."companyId",purchases."supplierId",purchases."productId",purchases."supplierCode",purchases.at
    FROM (
-     SELECT d."companyId",d."supplierId",l."productId",NULLIF(TRIM(l."supplierItemCode"),'') AS "supplierCode",COALESCE(d."documentDate",d."createdAt") AS at
+     SELECT d."companyId",d."supplierId",COALESCE(l."productId",(
+       SELECT CASE WHEN COUNT(*)=1 THEN MIN(candidate."id") END
+       FROM "Product" candidate
+       WHERE candidate."companyId"=d."companyId" AND NULLIF(TRIM(l."supplierItemCode"),'') IS NOT NULL
+         AND UPPER(REGEXP_REPLACE(TRIM(candidate."sku"),'[[:space:]]+','','g'))=UPPER(REGEXP_REPLACE(TRIM(l."supplierItemCode"),'[[:space:]]+','','g'))
+     )) AS "productId",NULLIF(TRIM(l."supplierItemCode"),'') AS "supplierCode",COALESCE(d."documentDate",d."createdAt") AS at
      FROM "PurchaseDocumentLine" l
      JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."status"='APPROVED'
-     WHERE d."supplierId" IS NOT NULL AND l."productId" IS NOT NULL
+     WHERE d."supplierId" IS NOT NULL
      UNION ALL
-     SELECT o."companyId",o."supplierId",l."productId",NULLIF(TRIM(l."supplierCode"),'') AS "supplierCode",o."createdAt" AS at
+     SELECT o."companyId",o."supplierId",COALESCE(l."productId",(
+       SELECT CASE WHEN COUNT(*)=1 THEN MIN(candidate."id") END
+       FROM "Product" candidate
+       WHERE candidate."companyId"=o."companyId" AND NULLIF(TRIM(l."supplierCode"),'') IS NOT NULL
+         AND UPPER(REGEXP_REPLACE(TRIM(candidate."sku"),'[[:space:]]+','','g'))=UPPER(REGEXP_REPLACE(TRIM(l."supplierCode"),'[[:space:]]+','','g'))
+     )) AS "productId",NULLIF(TRIM(l."supplierCode"),'') AS "supplierCode",o."createdAt" AS at
      FROM "PurchaseOrderLine" l
      JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."status" IN ('FINAL','INVOICED')
-     WHERE o."supplierId" IS NOT NULL AND l."productId" IS NOT NULL
+     WHERE o."supplierId" IS NOT NULL
    ) purchases
    ORDER BY purchases."companyId",purchases."supplierId",purchases."productId",purchases.at DESC
  ) history
