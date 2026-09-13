@@ -36,7 +36,8 @@
 - `node --check` στα νέα/τροποποιημένα server αρχεία: PASS.
 - JSX parse της οθόνης ασφαλών διασυνδέσεων: PASS.
 - `server/test/efood-pelican-foundation-v1.test.js`: **9/9 PASS**.
-- Το branch είναι συγχρονισμένο με το σημερινό `main`: **0 commits πίσω**.
+- Τελική σύγκριση με `main`: **14 αναμενόμενα αρχεία και 0 commits πίσω**.
+- Το CI #1946 δεν εκτέλεσε jobs επειδή δημιουργήθηκε από bot-authored merge commit (`action_required`). Η παρούσα τεκμηριωμένη ενημέρωση εκκινεί νέο κανονικό CI run.
 - Πλήρες repository CI / build / isolated PostgreSQL E2E: εκκρεμεί στο draft PR #758.
 
 ## Επόμενα υποχρεωτικά βήματα
