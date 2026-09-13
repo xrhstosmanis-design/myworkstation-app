@@ -28,7 +28,7 @@ test("internet market search records history and applies a price only after expl
 test("owner UI exposes catalog linking market prices offers margin and history",()=>{
   assert.match(launcher,/ADVANCED_ONLINE_PRODUCT_SEARCH/);
   assert.match(launcher,/Αναζήτηση προϊόντων στο Internet/);
-  for(const text of ["Σύνδεση με δικό μας προϊόν","Δική μας αγορά","Δική μας πώληση","Margin","Φθηνότερη δημόσια τιμή","Πρόσφατες αναζητήσεις"])assert.match(ui,new RegExp(text));
+  for(const text of ["Σύνδεση με δικό μας προϊόν","Δική μας αγορά","Δική μας πώληση","Margin","Φθηνότερη επιβεβαιωμένη τιμή","Πρόσφατες αναζητήσεις"])assert.match(ui,new RegExp(text));
   assert.match(index,/commerce\/internet-product-search/);
 });
 
@@ -44,4 +44,13 @@ test("market bootstrap and provider failures cannot surface as a generic interna
   assert.match(route,/catch\(error\)\{return \{configured:true,rows:\[\],reason:/);
   assert.match(route,/GOOGLE_CSE_API_KEY/);
   assert.match(ui,/Ο πάροχος Internet δεν απάντησε σωστά/);
+});
+
+test("warehouse selection and safe matching protect purchase suggestions",()=>{
+  for(const value of ['matchLevel:"EXACT"','matchLevel:"PROBABLE"','matchLevel:"NON_COMPARABLE"'])assert.match(route,new RegExp(value));
+  assert.match(route,/sameMeasure\(expected\.measures,candidate\.measures\)/);
+  assert.match(route,/safePriced=results\.filter\(row=>row\.eligibleForOrder/);
+  assert.match(route,/inventory=String\(req\.query\.inventory/);
+  assert.match(route,/json_agg\(pb\."barcode" ORDER BY pb\."barcode"\)/);
+  for(const text of ["Αποθήκη προϊόντων","Φθηνότερη επιβεβαιωμένη τιμή","Δεν υπάρχει ακόμη ασφαλής τιμή","Επιβεβαίωση"])assert.match(ui,new RegExp(text));
 });
