@@ -140,7 +140,8 @@ function findingFromSession(session){
     recheckRequired,
     reviewStatus:reviewValid?"REVIEWED":recheckRequired?"RECHECK_REQUIRED":"PENDING",
     reviewLabel,
-    status:reviewLabel
+    status:reviewLabel,
+    movementEvidence:(session.movementEvidence||[]).map(movement=>({...movement,amount:number(movement.amount)}))
   };
 }
 
@@ -327,6 +328,19 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
           FROM "StoreTransaction" t
           WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id"
         ) movement ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT JSON_AGG(JSON_BUILD_OBJECT(
+            'transactionId',entry."id",'occurredAt',entry."occurredAt",'type',entry."type",'amount',entry."amount",
+            'actorName',entry."actorName",'description',entry."description",'reversedAt',entry."reversedAt"
+          ) ORDER BY entry."occurredAt" DESC,entry."id" DESC) AS "movementEvidence"
+          FROM (
+            SELECT t."id",t."occurredAt",t."type",t."amount",t."actorName",t."description",t."reversedAt"
+            FROM "StoreTransaction" t
+            WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id"
+            ORDER BY t."occurredAt" DESC,t."id" DESC
+            LIMIT 50
+          ) entry
+        ) movementEvidence ON TRUE
         WHERE s."status"='CLOSED'
           AND (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null})
           AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})

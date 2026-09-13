@@ -13,6 +13,16 @@ test("an active higher check package grants BASIC execution access",()=>{
   assert.match(analyticsRoute,/return \{level,activeKeys,basic:true,complete:level>=CHECK_PACKAGE_LEVELS\.COMPLETE_CHECK,premium:level>=CHECK_PACKAGE_LEVELS\.PREMIUM_CHECK\}/);
 });
 
+test("BASIC variance findings include read-only chronological evidence from the same closed shift",()=>{
+  assert.match(analyticsRoute,/JSON_AGG\(JSON_BUILD_OBJECT\(/);
+  assert.match(analyticsRoute,/'transactionId',entry\."id",'occurredAt',entry\."occurredAt"/);
+  assert.match(analyticsRoute,/WHERE t\."companyId"=s\."companyId" AND t\."storeId"=s\."storeId" AND t\."sessionId"=s\."id"/);
+  assert.match(analyticsRoute,/LIMIT 50/);
+  assert.match(analyticsRoute,/movementEvidence:\(session\.movementEvidence\|\|\[\]\)/);
+  assert.match(ui,/Κινήσεις βάρδιας που λήφθηκαν υπόψη/);
+  assert.match(ui,/Εμφανίζονται έως οι 50 νεότερες κινήσεις/);
+});
+
 test("check-package cards expose inherited access without allowing a derived package toggle",()=>{
   assert.match(moduleRoute,/const CHECK_PACKAGE_LEVELS=\{BASIC_CHECK:0,COMPLETE_CHECK:1,PREMIUM_CHECK:2\}/);
   assert.match(moduleRoute,/includedBy=CHECK_PACKAGE_KEYS\.slice\(level\+1\)\.find/);
