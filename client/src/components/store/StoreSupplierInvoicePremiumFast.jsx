@@ -114,6 +114,9 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
       const duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),dataUrl:fileDataUrl})});
+      if(duplicateCheck?.paymentReused&&!window.confirm(`Το τιμολόγιο ${documentNumber.trim()} έχει ήδη πληρωθεί (${num(amount).toFixed(2)} €). Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση.\n\nΝα συνεχίσουμε μόνο με νέα ανάγνωση και καταχώριση του τιμολογίου στο BackOffice;`)){
+        setStatus("Η επανεισαγωγή ακυρώθηκε. Η υπάρχουσα πληρωμή διατηρείται.");setBusy(false);return;
+      }
       const key=paymentKey(),totalGross=num(amount);
       let paymentTransactionId=duplicateCheck?.paymentTransactionId||null;
       const effectiveMode=paymentTransactionId?"PAID":mode;
