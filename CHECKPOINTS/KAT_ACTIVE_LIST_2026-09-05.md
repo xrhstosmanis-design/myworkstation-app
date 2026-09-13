@@ -1,3 +1,13 @@
+## 2026-09-13 — efood / Pelican Indirect POS — αποκλειστικά LAB
+
+- [x] Η Phase A μεταφέρθηκε σε καθαρό branch από το τελευταίο `main`.
+- [x] Κλειδώθηκε server-side το μοναδικό test scope: `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`.
+- [x] Ρύθμιση efood, mock webhooks, product mappings και Catalog/Promo/Orders previews απορρίπτονται σε ΚΑΤ ή άλλο πραγματικό κατάστημα.
+- [x] Προστέθηκε πλήρης ασφαλής LAB mock ροή από Super Admin: `READY_FOR_PICKUP`, idempotent replay, `CANCELLED`, Catalog, Promo, Orders recovery και readiness.
+- [x] Η ροή παραμένει fail-closed: `externalCall=false`, χωρίς OnlineOrder/Sale, stock, τιμή, προσφορά, πληρωμή, RBS/CapDriver/EFTPOS ή fiscal.
+- [ ] Εκκρεμούν πράσινο CI, merge/deploy και live πάτημα «Πλήρης ασφαλής LAB δοκιμή».
+- [ ] Αναμονή από efood για test Vendor ID, portal access, sandbox credentials και webhook Authorization.
+
 Warning: truncated output (original token count: 31006)
 Total output lines: 981
 
