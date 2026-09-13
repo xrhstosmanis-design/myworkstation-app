@@ -83,6 +83,38 @@ function mergeRecoveredLines(current,recovered){
   return out;
 }
 
+function mergeAzureInvoicePages(pages){
+  const productLines=[],auditLines=[],rawTexts=[],confidenceValues=[];
+  let supplier={name:"",taxId:"",email:"",phone:"",address:"",city:""},documentNumber="",documentDate="",totalGross=0,finalTotalPage=0;
+  for(const [pageIndex,page] of pages.entries()){
+    const result=page&&typeof page==="object"?page:{};
+    const candidate=result.supplier&&typeof result.supplier==="object"?result.supplier:{};
+    for(const field of ["name","taxId","email","phone","address","city"])if(!supplier[field]&&candidate[field])supplier[field]=String(candidate[field]);
+    if(!documentNumber&&result.documentNumber)documentNumber=String(result.documentNumber);
+    if(!documentDate&&result.documentDate)documentDate=String(result.documentDate);
+    const pageTotal=money2(result.totalGross||0);
+    // A later positive page total replaces an earlier carried subtotal. Never sum
+    // "Σε/Από μεταφορά" across pages.
+    if(pageTotal>0){totalGross=pageTotal;finalTotalPage=pageIndex+1}
+    const pageLines=Array.isArray(result.productLines)?result.productLines:[];
+    productLines.push(...pageLines.filter(line=>String(line?.description||line?.rawText||"").trim()).map(normalizeProductLine));
+    const visible=Array.isArray(result.lines)?result.lines:[];
+    auditLines.push(...visible.filter(line=>String(line?.text||"").trim()).map(line=>({text:String(line.text),confidence:Math.max(0,Math.min(100,Number(line.confidence||result.aiConfidence||0)))})));
+    const raw=String(result.rawText||"").trim();if(raw)rawTexts.push(\`ΣΕΛΙΔΑ \${pageIndex+1}:\n\${raw}\`);
+    const confidence=Number(result.aiConfidence||0);if(confidence>0)confidenceValues.push(confidence);
+  }
+  const rawText=rawTexts.join("\n\n");
+  return {
+    documentType:/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(rawText)?"CREDIT_NOTE":"INVOICE",
+    aiConfidence:confidenceValues.length?Math.round(confidenceValues.reduce((sum,value)=>sum+value,0)/confidenceValues.length*10)/10:0,
+    supplier,documentNumber,documentDate,totalGross,rawText,lines:auditLines,productLines,
+    azureDocumentIntelligence:true,azureUnifiedFallback:true,azurePageRecoveryCalled:true,
+    azurePageRecoveryRecovered:productLines.length,azurePageRecoveryPageCount:pages.length,
+    azureFinalTotalPage:finalTotalPage
+  };
+}
+
+
 router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
   const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT','POS_OCR_DRAFT') AND "status"='DRAFT'`;
   const connected=Boolean(process.env.OPENAI_API_KEY);res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:THRESHOLD,aiAutomatic:true,aiProviderConnected:connected,message:connected?"OCR πρώτο. Κάτω από 65% γίνεται αυτόματος επανέλεγχος AI.":"OCR πρώτο. Για αυτόματο AI κάτω από 65% απαιτείται OPENAI_API_KEY στον server."});
@@ -120,9 +152,30 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΙΝ επιστρέψεις JSON, μέτρησε οπτικά πόσες πραγματικές σειρές προϊόντων υπάρχουν και βεβαιώσου ότι το productLines έχει τον ίδιο αριθμό. Έπειτα σύγκρινε νοητά το άθροισμα των τελικών αξιών γραμμών με το τελικό πληρωτέο ποσό. Αν υπάρχει εμφανής μεγάλη διαφορά, ξανακοίτα τον πίνακα για γραμμή που παρέλειψες πριν απαντήσεις.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
-  const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
-  const payload=await apiResponse.json().catch(()=>({}));if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
-  let parsed;try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
+  let parsed=null,unifiedAiFailure=null;
+  try{
+    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:\`Bearer \${process.env.OPENAI_API_KEY}\`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+    const payload=await apiResponse.json().catch(()=>({}));
+    if(!apiResponse.ok){const error=new Error(payload?.error?.message||\`Ο AI επανέλεγχος απέτυχε (\${apiResponse.status}).\`);error.status=502;throw error}
+    try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
+  }catch(error){unifiedAiFailure=error}
+
+  // A transient/invalid unified OpenAI response must not discard a payment or
+  // silently process only page 1. Recover every ordered page through Azure,
+  // then continue as one invoice. If any page cannot be read, fail closed.
+  if(!parsed){
+    const azureConfigured=Boolean(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
+    if(!azureConfigured)throw unifiedAiFailure;
+    const azurePages=[];
+    for(const page of pageJobs){
+      try{azurePages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType})))}
+      catch{const error=new Error("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου.");error.status=502;throw error}
+    }
+    parsed=mergeAzureInvoicePages(azurePages);
+    if(!parsed.productLines.length){const error=new Error("Οι σελίδες αναγνώστηκαν, αλλά δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");error.status=422;throw error}
+    parsed.openAiUnifiedFailed=true;
+    parsed.openAiUnifiedRecovery="AZURE_ALL_PAGES";
+  }
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
@@ -179,9 +232,11 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       return q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)break;
-    const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
-    discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
-    discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
+    try{
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+      discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
+      discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
+    }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
   }
   parsed.discountMathVerification=discountDiagnostics;
 
