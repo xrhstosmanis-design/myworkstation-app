@@ -10,13 +10,14 @@ if(!src.includes(importLine)){
   if(src.includes(anchor)){src=src.replace(anchor,`${anchor}\n${importLine}`);changed=true}
 }
 
-// Apply the centrally learned profile after deterministic Azure reconciliation.
+// Apply the centrally learned profile before deterministic Azure reconciliation.
 // Replace every occurrence so both azure-direct and job ai-recheck use the same profile.
 const anchor='    parsed=reconcileAzureInvoice(parsed);';
-const replacement='    parsed=reconcileAzureInvoice(parsed);\n    parsed=await applyCentralSupplierProfile(parsed);';
+const replacement='    parsed=await applyCentralSupplierProfile(parsed);\n    parsed=reconcileAzureInvoice(parsed);';
 if(!src.includes(replacement)&&src.includes(anchor)){
   src=src.split(anchor).join(replacement);changed=true;
 }
 
 if(changed){fs.writeFileSync(path,src);console.log("Commerce Azure invoice reader connected to central supplier reading profiles.")}
 else console.log("Commerce Azure supplier-profile runtime already connected or source unchanged.");
+

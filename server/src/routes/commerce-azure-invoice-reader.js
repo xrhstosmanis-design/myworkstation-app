@@ -3,6 +3,8 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {reconcileAzureInvoice} from "../lib/invoice-azure-reconciler.js";
+import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {extractAzureColumns,combineAzureRows} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const API_VERSION="2024-11-30";
@@ -88,6 +90,9 @@ function normalizeItem(item,index){
   const description=fieldText(p.Description)||fieldText(p.ProductName)||fieldText(p.ItemDescription);
   const code=fieldText(p.ProductCode)||fieldText(p.ItemCode)||fieldText(p.Code);
   const quantity=Math.max(0,numericField(p.Quantity));
+  const retailPrice=Math.max(0,numericField(p.RetailPrice)||numericField(p.SalePrice));
+  const region=item?.boundingRegions?.[0]||{},polygon=region.polygon||[];
+  const sourcePage=Number(region.pageNumber||1),sourceY=polygon.length?Math.min(...polygon.filter((_,i)=>i%2===1)):index;
   const unit=fieldText(p.Unit)||fieldText(p.UnitOfMeasure)||"ΤΜΧ";
   let unitCost=Math.max(0,numericField(p.UnitPrice)||numericField(p.Price)||numericField(p.UnitCost)),azureUnitCostDerivedFromNet=false;
   const [discount1,discount2,discount3]=itemDiscounts(p);
@@ -104,7 +109,7 @@ function normalizeItem(item,index){
   const rawText=String(item?.content||description||"").replace(/\s+/g," ").trim();
   const confidences=[item?.confidence,p.Description?.confidence,p.ProductCode?.confidence,p.Quantity?.confidence,p.Unit?.confidence,p.UnitPrice?.confidence,p.Price?.confidence,p.UnitCost?.confidence,p.Amount?.confidence,p.NetAmount?.confidence,p.SubTotal?.confidence,p.NetPrice?.confidence].filter(v=>v!==undefined&&v!==null).map(pct);
   const confidence=confidences.length?Math.max(...confidences):0;
-  return {rawText,code,barcode:"",description,quantity,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
+  return {rawText,code,barcode:"",description,quantity,retailPrice,sourcePage,sourceY,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
 export async function callAzure({contentData,mimeType}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
@@ -130,7 +135,9 @@ export function normalizeAzure(payload){
   const result=payload?.analyzeResult||{};
   const doc=result.documents?.[0]||{};
   const f=doc.fields||{};
-  const productLines=Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[];
+  const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray.map(normalizeItem).filter(line=>line.description||line.rawText).slice(0,500):[];
+  const tableRows=extractAzureColumns(result).map(row=>({...row,confidence:pct(doc.confidence)}));
+  const productLines=combineAzureRows(items,tableRows);
   const supplier={name:fieldText(f.VendorName)||fieldText(f.VendorAddressRecipient),taxId:fieldText(f.VendorTaxId),email:fieldText(f.VendorEmail),phone:fieldText(f.VendorPhoneNumber),address:addressText(f.VendorAddress),city:f.VendorAddress?.valueAddress?.city||""};
   const documentNumber=fieldText(f.InvoiceId);
   const documentDate=fieldText(f.InvoiceDate);
@@ -157,7 +164,8 @@ router.post("/ai-reader/azure-direct",requireCompanyModule("AI_READER"),async(re
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
     let parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType}));
     if(!parsed.productLines.length)return res.status(422).json({error:"Το Azure διάβασε το παραστατικό αλλά δεν επέστρεψε γραμμές προϊόντων."});
-    await verifyInvoiceDiscounts({contentData:dataUrl,mimeType,filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    await verifyInvoiceDiscounts({contentData:dataUrl,mimeType,filename,productLines:parsed.productLines.filter(line=>!line.sourceColumnsVerified),apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    parsed=await applyCentralSupplierProfile(parsed);
     parsed=reconcileAzureInvoice(parsed);
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     return res.json({ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",confidence:parsed.aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,discountVerifier:process.env.OPENAI_API_KEY?"AI_VERIFIED":"NONE"});
@@ -184,6 +192,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       console.warn("Azure Document Intelligence returned invoice header without product lines; falling back to AI table reader.",{jobId:job.id,confidence:parsed.aiConfidence});
       return next();
     }
+    parsed=await applyCentralSupplierProfile(parsed);
     parsed=reconcileAzureInvoice(parsed);
     if(parsed.reconciliation?.headerReview?.includes("INVOICE_TOTAL_DIFFERS_FROM_LINE_SUM")){
       parsed.azurePartial=true;
@@ -192,7 +201,8 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       console.warn("Azure returned an incomplete invoice table; falling back to the full AI table reader.",{jobId:job.id,lineGrossSum:parsed.reconciliation.lineGrossSum,invoiceTotal:parsed.reconciliation.invoiceTotal});
       return next();
     }
-    await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:parsed.productLines.filter(line=>!line.sourceColumnsVerified),apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+    parsed=await applyCentralSupplierProfile(parsed);
     parsed=reconcileAzureInvoice(parsed);
     const match=await supplierMatch(req.user.companyId,parsed.supplier);
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${parsed.aiConfidence},"resultJson"=${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
@@ -201,3 +211,4 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 });
 
 export default router;
+
