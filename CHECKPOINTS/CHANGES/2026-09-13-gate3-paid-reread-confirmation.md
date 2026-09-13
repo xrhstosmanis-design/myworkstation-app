@@ -21,3 +21,5 @@ Validation:
 - Gate 3 remains open pending live source-reading accuracy. A successful code/deployment check does not certify 38 correctly read rows from the user's photographs.
 
 No production financial corrections/reversals are included. Historical double payment requires a separate audited correction. Source-reading acceptance remains 38 lines / 608 units / EUR 2,369.99 with correct retail, purchase cost and quantity.
+
+Checkpoint merge recovery: a concurrent main update 3ad9817e replaced large sections of the central active list with literal truncated-output markers. Restored the complete c5fb20c3 history, retained the new COMPLETE/Audit notes, and applied this verified delivery record. No concurrent application code was changed.
