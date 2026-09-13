@@ -28,3 +28,12 @@ test("keeps invoice retail separate from purchase cost and sends it as the Backo
   assert.match(source,/Number\(line\.retailPrice\|\|line\.product\?\.salePrice\|\|0\)/);
   assert.match(ai,/ΛΙΑΝΙΚΗ ΤΙΜΗ=retailPrice/);
 });
+
+test("does not restore shifted retail as quantity over a verified reader line",()=>{
+  const rows=[
+    {rawText:"01669 MARLBORO 4,80 TEM 20 4,56991 91,40 0 0 91,40 0",code:"01669",description:"MARLBORO",quantity:4.8,unit:"TEM",unitCost:4.56991,retailPrice:0,netAmount:91.4,vatRate:0,grossAmount:91.4},
+    {rawText:"01669 MARLBORO 4,80 TEM 20 4,56991 91,40 0 0 91,40 0",code:"01669",description:"MARLBORO",quantity:20,unit:"TEM",unitCost:4.56991,retailPrice:4.8,netAmount:91.4,vatRate:0,grossAmount:91.4,sourceColumnsVerified:true}
+  ];
+  const [line]=finalizeV244ProductLines(rows);
+  assert.equal(line.quantity,20);assert.equal(line.retailPrice,4.8);
+});
