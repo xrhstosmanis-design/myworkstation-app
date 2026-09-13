@@ -70,6 +70,11 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
     setReviewDraft(emptyReviewDraft);
   };
 
+  const selectStore=value=>{
+    const selectedStore=stores.find(store=>String(store.id)===String(value));
+    updateFilters({storeId:value,companyId:value&&selectedStore?String(selectedStore.companyId):filters.companyId});
+  };
+
   const run=async()=>{
     if(filters.from&&filters.to&&filters.from>filters.to){
       setError("Η ημερομηνία «Από» δεν μπορεί να είναι μεταγενέστερη από την ημερομηνία «Έως».");
@@ -168,7 +173,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
       <div className="sa-workspace-heading"><div><span>1. ΕΠΙΛΟΓΗ ΠΕΔΙΟΥ</span><h3>Διάλεξε κατάστημα και περίοδο</h3></div><p>Η ανάλυση δεν αλλάζει οικονομικά δεδομένα.</p></div>
       <div className="supplier-review-filters sa-checks-filters">
         <label><span><Building2/> Ιδιοκτήτης / εταιρεία</span><select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
-        <label><span><Store/> Κατάστημα</span><select value={filters.storeId} onChange={event=>updateFilters({storeId:event.target.value})}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
+        <label><span><Store/> Κατάστημα</span><select value={filters.storeId} onChange={event=>selectStore(event.target.value)}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
         <label><span><CalendarDays/> Από</span><input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
         <label><span><CalendarDays/> Έως</span><input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
         <div className="sa-filter-actions"><button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Εκτέλεση ελέγχου…":"Εκτέλεση ελέγχου"}<ChevronRight/></button><button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>Καθαρισμός</button></div>
