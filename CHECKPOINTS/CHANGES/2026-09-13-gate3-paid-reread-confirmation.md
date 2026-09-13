@@ -1,5 +1,6 @@
 # Gate 3 — paid reread confirmation and legacy identity recovery
 
+- CI #2081 caught a legacy-description lookup failure in the real HTTP test. The SQL extractor now strips the dash-delimited note before extracting the full invoice number; assertions remain unchanged.
 User retest after PR #800: FAIL. Invoice 2612188 and its photos are no longer visible in Purchases/Inbox, but both PAID and CREDIT input are rejected. Latest screenshot reports INVOICE_PAYMENT_MISMATCH; prior screenshot reported DUPLICATE_INVOICE_FILE. Supplier ledger still shows two historical payments of EUR 2,369.99. Screenshots do not identify which validation field differs; no direct production database inspection has been performed.
 
 Changes:

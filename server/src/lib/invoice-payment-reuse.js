@@ -29,13 +29,15 @@ export async function findInvoicePayment(tx,{companyId,supplierId,supplierTaxId,
   const token=invoiceToken(documentNumber);
   if(!token)return null;
   const paymentKey=`${companyId}:${supplierTaxId?`VAT:${supplierTaxId}`:`ID:${supplierId}`}:${token}`;
+  // Strip the note before extracting the number: PostgreSQL overall regex
+  // greediness can otherwise swallow the note despite a non-greedy capture.
   const rows=await tx.$queryRaw`
     SELECT t."id",t."companyId",s."taxId" AS "supplierTaxId",t."storeId",t."supplierId",t."type",t."amount",t."reversedAt",t."invoiceDocumentNumber",t."description",t."occurredAt"
     FROM "StoreTransaction" t
     LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
     WHERE t."companyId"=${companyId} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
       AND (t."supplierId"=${supplierId} OR (${supplierTaxId}<>'' AND REGEXP_REPLACE(COALESCE(s."taxId",''),'\\D','','g')=${supplierTaxId}))
-      AND REGEXP_REPLACE(UPPER(COALESCE(NULLIF(t."invoiceDocumentNumber",''),SUBSTRING(t."description" FROM '(?i)Τιμολόγιο\\s+(.+?)(?:\\s+[—–]|\\s+-\\s+|$)'))),'[^A-ZΑ-Ω0-9]','','g')=${token}
+      AND REGEXP_REPLACE(UPPER(COALESCE(NULLIF(t."invoiceDocumentNumber",''),SUBSTRING(REGEXP_REPLACE(t."description",'\\s+[—–].*$|\\s+-\\s+.*$','') FROM '(?i)Τιμολόγιο\\s+(.+)$'))),'[^A-ZΑ-Ω0-9]','','g')=${token}
     ORDER BY CASE WHEN t."invoicePaymentKey"=${paymentKey} THEN 0 ELSE 1 END, t."occurredAt" ASC, t."id" ASC LIMIT 1`;
   return rows[0]||null;
 }
