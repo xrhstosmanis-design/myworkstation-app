@@ -18,7 +18,8 @@ The user reported oversized persistent POS notices and a non-working BackOffice 
 - PASS: 7/7 behavioral tests cover both refresh controls, filters, new rows, mutation idempotency, out-of-order responses, failure/retry, cleared/invalid inputs, and unmount.
 - PASS: syntax checks for the purchase suite and report route.
 - Local runtime: Node 24. Full Node 20 build/server/invariant/isolated E2E gates run in GitHub CI before merge.
-- CI / merge / exact Render revision: pending verification in this change.
+- PASS: [PR #789](https://github.com/xrhstosmanis-design/myworkstation-app/pull/789), [CI #2017](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/34746941921), merged as `bc91ec6a5a1b8b1e0c57c011de184a9869486475`. All 1152/1152 server tests on Node 20, production client build, security/licensing/production invariants and isolated HTTP E2E flows passed.
+- PASS: main CI #2018 and [Render deploy #1063](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/34747125725). The deployment job completed its `Wait for exact production revision` gate: `/api/health` was healthy on the exact merged code revision `bc91ec6a5a1b8b1e0c57c011de184a9869486475`. This is deployment evidence, not a LAB product-reading PASS.
 
 ## Next LAB checkpoint
 
