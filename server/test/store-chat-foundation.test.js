@@ -36,10 +36,19 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/announcementAcknowledgementRequired/);
   assert.match(route,/"photosEnabled" BOOLEAN NOT NULL DEFAULT true/);
   assert.match(route,/"pdfEnabled" BOOLEAN NOT NULL DEFAULT true/);
+  assert.match(route,/"downloadsEnabled" BOOLEAN NOT NULL DEFAULT true/);
+  assert.match(route,/"employeeDownloadsEnabled" BOOLEAN NOT NULL DEFAULT false/);
   assert.match(route,/STORE_CHAT_PHOTOS_ENABLED/);
   assert.match(route,/STORE_CHAT_PHOTOS_DISABLED/);
   assert.match(route,/STORE_CHAT_PDF_ENABLED/);
   assert.match(route,/STORE_CHAT_PDF_DISABLED/);
+  assert.match(route,/STORE_CHAT_DOWNLOADS_ENABLED/);
+  assert.match(route,/STORE_CHAT_DOWNLOADS_DISABLED/);
+  assert.match(route,/STORE_CHAT_EMPLOYEE_DOWNLOADS_ENABLED/);
+  assert.match(route,/STORE_CHAT_EMPLOYEE_DOWNLOADS_DISABLED/);
+  assert.match(route,/if\(isPlatformSuperAdmin\(user\)\)return true/);
+  assert.match(route,/if\(!settings\.downloadsEnabled\)return false/);
+  assert.match(route,/if\(user\?\.tokenType==="STORE_OPERATOR"\)return settings\.employeeDownloadsEnabled/);
   assert.match(route,/attachment\?\.mimeType\.startsWith\("image\/"\)&&!settings\.photosEnabled/);
   assert.match(route,/attachment\?\.mimeType==="application\/pdf"&&!settings\.pdfEnabled/);
   assert.match(route,/STORE_CHAT_ANNOUNCEMENT_ACK_REQUIRED/);
@@ -93,6 +102,8 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/Φωτογραφίες: \{settings\.photosEnabled\?"Ενεργές":"Ανενεργές"\}/);
   assert.match(panel,/PDF: \{settings\.pdfEnabled\?"Ενεργά":"Ανενεργά"\}/);
   assert.match(panel,/Αρχεία ανενεργά/);
+  assert.match(panel,/Λήψεις: \{settings\.downloadsEnabled\?"Ενεργές":"Ανενεργές"\}/);
+  assert.match(panel,/Υπάλληλοι: \{settings\.employeeDownloadsEnabled&&settings\.downloadsEnabled\?"Λήψη επιτρέπεται":"Λήψη απαγορεύεται"\}/);
   assert.match(panel,/Εκκρεμότητες \(\{taskCount\}\)/);
   assert.match(panel,/store-chat-category/);
   assert.match(panel,/cache:"no-store"/);
