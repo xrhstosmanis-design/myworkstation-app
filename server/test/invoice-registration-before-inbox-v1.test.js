@@ -4,13 +4,14 @@ import {readFile} from "node:fs/promises";
 
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
 const intake=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
+const wrapper=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
 const review=await readFile(new URL("../src/routes/commerce-invoice-draft-approval.js",import.meta.url),"utf8");
 
 test("POS recognizes and registers the invoice before archiving it",()=>{
-  const background=client.slice(client.indexOf("async function backgroundV244"),client.indexOf("export default function"));
+  const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
   assert.doesNotMatch(background,/documents\/inbox/);
-  assert.ok(background.indexOf("/ai-reader/jobs")<background.indexOf("/pos-intake"));
-  assert.match(background,/Καταχώριση τιμολογίου στο BackOffice και κατόπιν αρχειοθέτηση/);
+  assert.ok(background.indexOf("/ai-recheck")<background.indexOf("/product-lines"));
+  assert.ok(background.indexOf("/product-lines")<background.indexOf("/pos-intake"));
 
   const documentWrite=intake.indexOf('INSERT INTO "PurchaseDocument"');
   const orderWrite=intake.indexOf('INSERT INTO "PurchaseOrder"');
