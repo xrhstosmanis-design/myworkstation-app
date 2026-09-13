@@ -123,6 +123,12 @@ test("startup repairs missing supplier links from finalized purchase history",()
   assert.match(supplierLearningBootstrap,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
 });
 
+test("legacy invoice lines without product id repair by one exact tenant SKU",()=>{
+  assert.match(supplierLearningBootstrap,/COALESCE\(l\."productId",\([\s\S]*CASE WHEN COUNT\(\*\)=1 THEN MIN\(candidate\."id"\) END/);
+  assert.match(supplierLearningBootstrap,/candidate\."companyId"=d\."companyId"[\s\S]*TRIM\(l\."supplierItemCode"\)/);
+  assert.match(supplierLearningBootstrap,/candidate\."companyId"=o\."companyId"[\s\S]*TRIM\(l\."supplierCode"\)/);
+});
+
 test("product card persists supplier by finalized purchase id before matching display text",()=>{
   assert.match(route,/if\(!body\.supplierCodes\.length\)[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
   assert.match(route,/purchaseSupplier\[0\][\s\S]*supplierId:purchaseSupplier\[0\]\.supplierId/);
