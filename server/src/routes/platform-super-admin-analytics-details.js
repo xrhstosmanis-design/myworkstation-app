@@ -179,7 +179,17 @@ async function completePaymentControls(body){
 async function premiumVarianceControls(body){
   // Every correlation is constrained by the immutable cash-shift session.  We deliberately
   // never compare transactions from two different shifts, even when their baskets match.
-  const [sales,reversalAudits,safetyAudits,operationalTables]=await Promise.all([
+  const [sessions,sales,reversalAudits,safetyAudits,operationalTables]=await Promise.all([
+    prisma.$queryRaw`
+      SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedByName",sh."closedByName",sh."openedAt",sh."closedAt",
+        COALESCE(sh."variance",0)::float AS "cashVariance",COALESCE(sh."cardVariance",0)::float AS "cardVariance",
+        COALESCE(sh."actualOperational",0)::float AS "closingOperational",next."openedAt" AS "nextOpenedAt",COALESCE(next."openingOperational",0)::float AS "nextOpeningOperational"
+      FROM "CashShiftSession" sh
+      LEFT JOIN LATERAL (SELECT n."openedAt",n."openingOperational" FROM "CashShiftSession" n WHERE n."companyId"=sh."companyId" AND n."storeId"=sh."storeId" AND n."terminalPos"=sh."terminalPos" AND n."openedAt">COALESCE(sh."closedAt",sh."openedAt") ORDER BY n."openedAt" LIMIT 1) next ON TRUE
+      WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
+        AND (${body.from||null}::date IS NULL OR "openedAt">=${body.from||null}::date)
+        AND (${body.to||null}::date IS NULL OR "openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+      ORDER BY sh."openedAt" DESC LIMIT ${findingLimit}`,
     prisma.$queryRaw`
       SELECT DISTINCT ON (s."id") sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedAt",sh."closedAt",
         s."id" AS "saleId",s."total"::float AS "total",s."occurredAt",s."createdAt",t."actorId",t."actorName",
@@ -231,7 +241,9 @@ async function premiumVarianceControls(body){
     for(const row of operationalEvents)findings.push({id:`operational:${row.id}`,code:"UNMATCHED_POS_OPERATION",title:"Διαγραφή / ακύρωση POS που χρειάζεται αντιπαραβολή",sessionId:row.sessionId,shiftLabel:row.shiftLabel,terminalPos:row.terminalPos,occurredAt:row.createdAt,operatorName:row.operatorName||"—",amount:number(row.total),possibleExplanation:"Υπάρχει λειτουργικό συμβάν διαγραφής ή ακύρωσης στην ίδια βάρδια. Επιβεβαίωσε αν προηγήθηκε φυσική πληρωμή χωρίς σωστή αντίστροφη εγγραφή πριν το χρησιμοποιήσεις ως εξήγηση πλεονάσματος."});
   }
   // Older installations may not have operational events; this is exposed explicitly instead of guessing.
-  return {enabled:true,readOnly:true,scope:"PER_CLOSED_SHIFT_ONLY",findings:findings.slice(0,findingLimit),potentialDuplicateSaleCount:findings.filter(item=>item.code.includes("DUPLICATE")||item.code.includes("PAYMENT_SWITCH")).length,potentialRepeatedReversalCount:findings.filter(item=>item.code==="POTENTIAL_REPEATED_REVERSAL").length,operationalEventsAvailable:Boolean(operationalTables[0]?.exists),status:findings.length?"Χρειάζεται έλεγχο":"ΟΚ"};
+  const byShift=new Map();for(const finding of findings){if(!finding.sessionId)continue;const list=byShift.get(finding.sessionId)||[];list.push(finding);byShift.set(finding.sessionId,list)}
+  const shiftResults=sessions.map(session=>{const evidence=byShift.get(session.sessionId)||[],cashVariance=number(session.cashVariance),cardVariance=number(session.cardVariance),handoverDelta=session.nextOpenedAt?number(session.nextOpeningOperational)-number(session.closingOperational):null;const handoverMatched=handoverDelta===null||Math.abs(handoverDelta)<=cashTolerance;if(!handoverMatched)evidence.push({id:`handover:${session.sessionId}`,code:"SHIFT_HANDOVER_DIFFERENCE",title:"Απόκλιση παράδοσης προς επόμενη βάρδια",possibleExplanation:`Το κλείσιμο ${number(session.closingOperational).toFixed(2)} € δεν συμφωνεί με το επόμενο άνοιγμα ${number(session.nextOpeningOperational).toFixed(2)} €. Δεν γίνεται αυτόματος συμψηφισμός.`});return{...session,cashVariance,cardVariance,handoverDelta,handoverMatched,evidence,finalStatus:evidence.length?"FINAL_WITH_TRACED_EVIDENCE":Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance?"FINAL_UNEXPLAINED_VARIANCE":"FINAL_RECONCILED",finalLabel:evidence.length?"Τελικό αποτέλεσμα με τεκμηριωμένες κινήσεις":Math.abs(cashVariance)>cashTolerance||Math.abs(cardVariance)>cardTolerance?"Τελικό ανεξήγητο υπόλοιπο":"Τελική συμφωνία",approvalRequired:true}});
+  return {enabled:true,readOnly:true,scope:"PER_CLOSED_SHIFT_ONLY",shiftResults,findings:findings.slice(0,findingLimit),potentialDuplicateSaleCount:findings.filter(item=>item.code.includes("DUPLICATE")||item.code.includes("PAYMENT_SWITCH")).length,potentialRepeatedReversalCount:findings.filter(item=>item.code==="POTENTIAL_REPEATED_REVERSAL").length,operationalEventsAvailable:Boolean(operationalTables[0]?.exists),status:"Τελική ανάλυση ανά βάρδια"};
 }
 
 router.post("/super-admin-analytics/execute",async(req,res,next)=>{
