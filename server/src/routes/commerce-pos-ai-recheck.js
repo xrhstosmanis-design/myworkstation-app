@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {sourceOrder} from "../lib/invoice-column-reading.js";
+import {recoverPrintedRetailColumns,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -186,6 +186,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
   parsed=await applyCentralSupplierProfile(parsed);
+  // Recover the printed retail / unit / quantity columns from the current
+  // source itself when a reader has shifted the numeric columns. This rule is
+  // layout-based, applies to every supplier, and never reuses prior invoice
+  // quantities or prices.
+  const printedDocumentText=[parsed.rawText,localRawText].filter(Boolean).join("\n");
+  parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
   const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
   const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
   const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);

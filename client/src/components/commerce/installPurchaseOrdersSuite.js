@@ -38,6 +38,10 @@ async function loadReport(root){
   state.loading=true;updateRefreshControls(root);
   try{
     const query=qReport();query.set("_refresh",`${Date.now()}-${requestId}`);
+    // Refresh is also the durable recovery trigger for a POS invoice handoff.
+    // It is intentionally best-effort: the orders list must still load if no
+    // queued invoice exists or a recovery worker is already running.
+    await api("/api/commerce/ai-reader/fast-recover",{method:"POST",body:JSON.stringify({storeId:state.storeId||""})}).catch(()=>null);
     const report=await api(`/api/purchase-orders/report?${query}`,{cache:"no-store"});
     if(requestId!==reportRequestId||!root.isConnected)return;
     state.report=report;state.lastRefresh=new Date();render(root);

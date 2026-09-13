@@ -309,6 +309,32 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
   }catch(error){next(error)}
 });
 
+// A POS handoff is durable in the database. BackOffice refresh reclaims a stale
+// worker after a browser/server interruption; it never creates another payment.
+router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  try{
+    const storeId=String(req.body?.storeId||"").trim();
+    const staleBefore=new Date(Date.now()-60*1000);
+    const rows=await prisma.$queryRaw`
+      SELECT "id","storeId","status","resultJson"
+      FROM "AiReaderJob"
+      WHERE "companyId"=${req.user.companyId} AND "purchaseDocumentId" IS NULL
+        AND ("status"='POS_QUEUED' OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
+        AND (${storeId}='' OR "storeId"=${storeId})
+      ORDER BY "updatedAt" ASC LIMIT 3`;
+    const recovered=[];
+    for(const job of rows){
+      if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))continue;
+      const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
+      if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length)continue;
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "purchaseDocumentId" IS NULL`;
+      setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff}));
+      recovered.push(job.id);
+    }
+    res.status(202).json({ok:true,recovered:recovered.length,jobIds:recovered});
+  }catch(error){next(error)}
+});
+
 router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
     const rows=await prisma.$queryRaw`SELECT "id","storeId","stage","status","purchaseDocumentId","resultJson","updatedAt" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
