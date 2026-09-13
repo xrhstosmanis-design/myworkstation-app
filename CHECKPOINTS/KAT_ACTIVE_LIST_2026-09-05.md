@@ -972,6 +972,7 @@ Total output lines: 954
 - [x] Κάθε barcode υποστηρίζει δική του τιμή· χωρίς `changeRetail` δημιουργείται αίτημα έγκρισης αντί για μη εξουσιοδοτημένη αλλαγή.
 - [x] Το scan χρησιμοποιεί την τιμή του συγκεκριμένου barcode, ενώ η πώληση αφαιρεί stock από το κοινό productId και αποθηκεύει `scannedBarcode` στη γραμμή πώλησης.
 - [x] Προστέθηκε κουμπί και εσωτερικός player «Online Ράδιο», χωρίς browser/YouTube, με play/pause, σταθμό, ένταση και terminal-specific τελευταία επιλογή.
+- [x] Τα κουμπιά Chat, νέου Barcode και Online Ράδιο τοποθετήθηκαν δίπλα-δίπλα στην ίδια οριζόντια σειρά.
 - [x] Το Online Ράδιο είναι fail-closed πίσω από πληρωμένο module `ONLINE_RADIO`, store enable και allow-list σταθμών.
 - [x] Προστέθηκαν Super Admin CRUD σταθμών, ενεργοποίηση/allow-list ανά κατάστημα και Owner allow-list μόνο με ενεργό πληρωμένο module.
 - [x] Προστέθηκαν έγκριση/απόρριψη αλλαγής τιμής με audit και αναφορά συνολικών προϊόντος με ανάλυση ανά barcode.

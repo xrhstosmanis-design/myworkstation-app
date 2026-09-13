@@ -3,7 +3,7 @@
 ## Κατάσταση
 
 - **Branch:** `feat/efood-pelican-foundation`
-- **Βάση:** σημερινό `main` commit `40f33c9881ee6c9753e3b6b23d26c68fd381a050`
+- **Βάση:** σημερινό `main` commit `ce9c3863a90e5878dcbcebcf57ddfc15fa5c2edf`
 - **Συγχρονισμός:** το νεότερο `main` συγχωνεύτηκε μόνο προς το feature branch. Δεν έγινε merge της efood εργασίας στο `main`.
 - **Κατάσταση εργασίας:** `ΣΕ ΔΟΚΙΜΗ`
 - **Production ενεργοποίηση:** ΟΧΙ
