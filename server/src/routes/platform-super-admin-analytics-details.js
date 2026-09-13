@@ -215,7 +215,7 @@ async function premiumVarianceControls(body){
       WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
         AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
         AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
-      ORDER BY sh."id",COALESCE(s."occurredAt",s."createdAt"),s."id" LIMIT ${findingLimit}`,
+      ORDER BY s."id",t."createdAt" DESC LIMIT ${findingLimit}`,
     hasActionAudit?prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."actionType",a."reason",a."actorName",a."createdAt",a."details"
       FROM "PosSaleActionAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND COALESCE(a."details"->>'sessionId','')=sh."id"
