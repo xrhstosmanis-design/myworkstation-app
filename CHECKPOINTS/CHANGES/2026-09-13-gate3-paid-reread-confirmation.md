@@ -23,3 +23,10 @@ Validation:
 No production financial corrections/reversals are included. Historical double payment requires a separate audited correction. Source-reading acceptance remains 38 lines / 608 units / EUR 2,369.99 with correct retail, purchase cost and quantity.
 
 Checkpoint merge recovery: a concurrent main update 3ad9817e replaced large sections of the central active list with literal truncated-output markers. Restored the complete c5fb20c3 history, retained the new COMPLETE/Audit notes, and applied this verified delivery record. No concurrent application code was changed.
+
+## POS durable recovery and printed-column correction
+
+- LAB showed that a durable POS job could remain unavailable until sign-out/sign-in, and that invoice 2612188 could retain 38 rows while shifting retail into quantity (`2,363.28 €` vs `2,369.99 €`).
+- Orders & Purchases refresh now reclaims only queued or stale processing POS jobs for the current tenant/store. Recovery schedules the existing job and never creates, reverses, or changes a payment.
+- Before reconciliation, the reader applies the existing source-verified printed-column recovery to the current document rows. It derives quantity, purchase and retail only when the printed row balances; it never imports prior invoice economics.
+- Targeted tests pass locally. CI/Render/LAB reread remain pending. The current wrong draft must not be approved.

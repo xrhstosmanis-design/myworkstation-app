@@ -67,7 +67,8 @@ test("outer commerce refresh targets the active suite and cancels unrelated cata
   f.requests[0].resolve(response());await pending;
   f.root.hidden=true;cancelled=false;
   f.listeners["purchase-orders:refresh"]({target:{closest:()=>f.hub},preventDefault(){cancelled=true}});
-  assert.equal(cancelled,false);assert.equal(f.requests.length,1);
+  assert.equal(cancelled,false);assert.equal(f.requests.length,2);
+  assert.match(f.requests[1].url,/\/api\/commerce\/ai-reader\/fast-recover$/);
 });
 
 test("observer mutations do not remount an existing suite or trigger request loops",()=>{

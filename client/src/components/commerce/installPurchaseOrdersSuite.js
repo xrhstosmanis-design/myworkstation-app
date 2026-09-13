@@ -39,6 +39,9 @@ async function loadReport(root){
   try{
     const query=qReport();query.set("_refresh",`${Date.now()}-${requestId}`);
     const report=await api(`/api/purchase-orders/report?${query}`,{cache:"no-store"});
+    // Refresh also starts durable recovery for a POS handoff, without delaying
+    // the list response or coupling the existing refresh contract to the worker.
+    void api("/api/commerce/ai-reader/fast-recover",{method:"POST",body:JSON.stringify({storeId:state.storeId||""})}).catch(()=>null);
     if(requestId!==reportRequestId||!root.isConnected)return;
     state.report=report;state.lastRefresh=new Date();render(root);
     if(state.tab!=="orders"&&state.storeId)await loadStock(root);
