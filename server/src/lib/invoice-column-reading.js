@@ -67,7 +67,7 @@ export function recoverPrintedRetailColumns(line,documentText){
   // current row must still balance independently below.
   const shiftedRetail=Number(line.retailPrice||0)<=0&&retailPrice>0&&
     Math.abs(Number(line.quantity||0)-retailPrice)<0.000001&&
-    Math.abs(Number(line.unitCost||0)-unitCost)<0.000001;
+    Math.abs(Number(line.quantity||0)*Number(line.unitCost||0)-Number(line.netAmount||0))>0.05;
   if(!hasPrintedHeaders&&!shiftedRetail)return line;
   // This recovery deliberately handles only zero-discount printed rows. Other
   // layouts continue through header mapping / confirmed supplier corrections.
