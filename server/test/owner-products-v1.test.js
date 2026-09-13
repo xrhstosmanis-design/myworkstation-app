@@ -114,6 +114,15 @@ test("invoice-created products retain their supplier relationship",()=>{
   assert.doesNotMatch(supplierLearningBootstrap,/\b(?:DELETE\s+FROM|TRUNCATE)\s+"SupplierProductLink"/i);
 });
 
+test("startup repairs missing supplier links from finalized purchase history",()=>{
+  assert.match(supplierLearningBootstrap,/INSERT INTO "SupplierProductLink"[\s\S]*'PURCHASE_HISTORY'/);
+  assert.match(supplierLearningBootstrap,/PurchaseDocumentLine[\s\S]*d\."status"='APPROVED'/);
+  assert.match(supplierLearningBootstrap,/PurchaseOrderLine[\s\S]*o\."status" IN \('FINAL','INVOICED'\)/);
+  assert.match(supplierLearningBootstrap,/JOIN "Product" p[\s\S]*p\."companyId"=history\."companyId"/);
+  assert.match(supplierLearningBootstrap,/JOIN "Supplier" s[\s\S]*s\."companyId"=history\."companyId"/);
+  assert.match(supplierLearningBootstrap,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
+});
+
 test("product card persists supplier by finalized purchase id before matching display text",()=>{
   assert.match(route,/if\(!body\.supplierCodes\.length\)[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
   assert.match(route,/purchaseSupplier\[0\][\s\S]*supplierId:purchaseSupplier\[0\]\.supplierId/);
