@@ -38,6 +38,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/"pdfEnabled" BOOLEAN NOT NULL DEFAULT true/);
   assert.match(route,/"downloadsEnabled" BOOLEAN NOT NULL DEFAULT true/);
   assert.match(route,/"employeeDownloadsEnabled" BOOLEAN NOT NULL DEFAULT false/);
+  assert.match(route,/"employeeTaskCreationEnabled" BOOLEAN NOT NULL DEFAULT true/);
   assert.match(route,/STORE_CHAT_PHOTOS_ENABLED/);
   assert.match(route,/STORE_CHAT_PHOTOS_DISABLED/);
   assert.match(route,/STORE_CHAT_PDF_ENABLED/);
@@ -46,6 +47,8 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/STORE_CHAT_DOWNLOADS_DISABLED/);
   assert.match(route,/STORE_CHAT_EMPLOYEE_DOWNLOADS_ENABLED/);
   assert.match(route,/STORE_CHAT_EMPLOYEE_DOWNLOADS_DISABLED/);
+  assert.match(route,/STORE_CHAT_EMPLOYEE_TASK_CREATION_ENABLED/);
+  assert.match(route,/STORE_CHAT_EMPLOYEE_TASK_CREATION_DISABLED/);
   assert.match(route,/if\(isPlatformSuperAdmin\(user\)\)return true/);
   assert.match(route,/if\(!settings\.downloadsEnabled\)return false/);
   assert.match(route,/if\(user\?\.tokenType==="STORE_OPERATOR"\)return settings\.employeeDownloadsEnabled/);
@@ -66,7 +69,8 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(route,/stockChanged:false/);
   assert.match(route,/STORE_CHAT_TASK_CREATED/);
   assert.match(route,/ON CONFLICT \("messageId"\) DO NOTHING/);
-  assert.match(route,/canCreateTask:true/);
+  assert.match(route,/canCreateTask:canCreateTask\(req\.user,settings\)/);
+  assert.match(route,/if\(!canCreateTask\(req\.user,settings\)\)return res\.status\(403\)/);
   assert.match(route,/canManageTask:canPin\(req\.user\)/);
   assert.match(route,/STORE_CHAT_TASK_COMPLETED/);
   assert.match(route,/STORE_CHAT_TASK_REOPENED/);
@@ -104,6 +108,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/Αρχεία ανενεργά/);
   assert.match(panel,/Λήψεις: \{settings\.downloadsEnabled\?"Ενεργές":"Ανενεργές"\}/);
   assert.match(panel,/Υπάλληλοι: \{settings\.employeeDownloadsEnabled&&settings\.downloadsEnabled\?"Λήψη επιτρέπεται":"Λήψη απαγορεύεται"\}/);
+  assert.match(panel,/Εκκρεμότητες υπαλλήλων: \{settings\.employeeTaskCreationEnabled\?"Επιτρέπονται":"Απαγορεύονται"\}/);
   assert.match(panel,/Εκκρεμότητες \(\{taskCount\}\)/);
   assert.match(panel,/store-chat-category/);
   assert.match(panel,/cache:"no-store"/);
