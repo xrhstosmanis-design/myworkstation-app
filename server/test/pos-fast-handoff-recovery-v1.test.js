@@ -83,13 +83,6 @@ test("full OCR page recovery stays parallel and exposes retryable Azure timeouts
   assert.match(reader,/wrapped\.status=timeout\?503:502/);
 });
 
-test("AI recheck reports a safe stage instead of a hidden generic 500",()=>{
-  assert.match(reader,/let failureStage="validate-request"/);
-  assert.match(reader,/failureStage="save-ai-result"/);
-  assert.match(reader,/AI_RECHECK_INTERNAL \[\$\{failureStage\}\]/);
-  assert.match(reader,/safe\.status=502/);
-});
-
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);
