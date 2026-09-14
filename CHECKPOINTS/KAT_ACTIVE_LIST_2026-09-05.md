@@ -906,3 +906,11 @@ Total output lines: 1413
 - [x] Reuse already stored product lines without a new provider call; no payment, stock, approval or finalization.
 - [ ] Αναμονή CI, merge and LAB validation of 38 lines / 608 pieces / 2.369,99 €.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-rebuild-lost-handoff.md`.
+
+## 2026-09-14 — Gate 3: reread incomplete recovered draft
+
+- [x] LAB proved the recovered draft reused an incomplete stored result: 24 lines / 1.465,98 € with a 904,01 € reconciliation difference.
+- [x] Reread the original two durable pages once and replace lines atomically only when the result reconciles or strictly improves the draft.
+- [x] Keep the same draft and original payment; no new charge, credit, stock, approval or finalization.
+- [ ] Αναμονή CI, merge και LAB validation of 38 lines / 608 pieces / 2.369,99 €.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-reread-incomplete-pos-draft.md`.
