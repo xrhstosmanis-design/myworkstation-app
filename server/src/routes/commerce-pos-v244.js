@@ -39,7 +39,7 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
   const task=(async()=>{
     try{
-      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "purchaseDocumentId" IS NULL`;
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING')`;
       const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,method:"POST",body:{force:true,additionalPageJobIds}});
       const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
       if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
@@ -56,12 +56,9 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
       }});
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_COMPLETE',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"COMPLETED",completedAt:new Date().toISOString(),archived:created?.archived!==false,reconciliationRequired:Boolean(created?.reconciliationRequired),reconciliationDifference:Number(created?.reconciliationDifference||0),lineCount:Number(created?.lineCount||0),pageCount:Number(created?.pageCount||pageJobIds.length)}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
     }catch(error){
-      const completed=await prisma.$queryRaw`SELECT "purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
-      if(!completed[0]?.purchaseDocumentId){
-        const message=String(error?.message||error).slice(0,700);
-        await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_FAILED',"status"='POS_FAILED',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"FAILED",failedAt:new Date().toISOString(),error:message}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
-        console.error("POS fast invoice background failed",{jobId,message});
-      }
+      const message=String(error?.message||error).slice(0,700);
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_FAILED',"status"='POS_FAILED',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"FAILED",failedAt:new Date().toISOString(),error:message}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
+      console.error("POS fast invoice background failed",{jobId,message});
     }finally{fastBackgroundWorkers.delete(jobId)}
   })();
   fastBackgroundWorkers.set(jobId,task);
@@ -304,7 +301,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     });
     const pageJobIds=result.map(job=>job.id),jobId=pageJobIds[0];
     const handoff={supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId};
-    res.status(202).json({ok:true,accepted:true,jobId,jobs:result,myDataMatched:Boolean(myData),myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,message:myData?"Το παραστατικό παραλήφθηκε και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice.":"Το παραστατικό παραλήφθηκε ως ασφαλές πρόχειρο. Θα συνδεθεί αυτόματα όταν εμφανιστεί στο myDATA."});
+    const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),method:"POST",body:{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • αναμονή πλήρους ανάγνωσης`}});
+    res.status(202).json({ok:true,accepted:true,jobId,jobs:result,purchaseDocumentId:draft.documentId,draftReady:true,myDataMatched:Boolean(myData),myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,message:"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση."});
     setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId,jobId,pageJobIds,handoff}));
   }catch(error){next(error)}
 });
@@ -318,8 +316,8 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
     const rows=await prisma.$queryRaw`
       SELECT "id","storeId","status","resultJson"
       FROM "AiReaderJob"
-      WHERE "companyId"=${req.user.companyId} AND "purchaseDocumentId" IS NULL
-        AND ("status"='POS_QUEUED' OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
+      WHERE "companyId"=${req.user.companyId}
+        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY "updatedAt" ASC LIMIT 3`;
     const recovered=[];
@@ -327,7 +325,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))continue;
       const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length)continue;
-      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "purchaseDocumentId" IS NULL`;
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING')`;
       setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff}));
       recovered.push(job.id);
     }
@@ -343,10 +341,10 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
     const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
     const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
-    if(!job.purchaseDocumentId&&handoff&&["POS_QUEUED","POS_PROCESSING"].includes(job.status)&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length){
+    if(handoff&&["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"].includes(job.status)&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length){
       setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff}));
     }
-    res.json({id:job.id,stage:job.stage,status:job.status,done:Boolean(job.purchaseDocumentId),failed:job.status==="POS_FAILED",purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});
+    res.json({id:job.id,stage:job.stage,status:job.status,draftReady:Boolean(job.purchaseDocumentId),done:background.status==="COMPLETED",failed:job.status==="POS_FAILED",purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});
   }catch(error){next(error)}
 });
 
