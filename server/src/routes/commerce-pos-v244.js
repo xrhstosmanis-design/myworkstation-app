@@ -365,20 +365,20 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
         AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY "updatedAt" ASC LIMIT 50`;
-    const recovered=[];
+    const recovered=[];let skippedOperatorScope=0,skippedNoHandoff=0,skippedNonRetryable=0;
     for(const job of rows){
       if(recovered.length>=3)break;
-      if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))continue;
+      if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId)){skippedOperatorScope++;continue}
       const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
-      if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length)continue;
+      if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length){skippedNoHandoff++;continue}
       const storedBackgroundError=String(job.resultJson?.posBackground?.error||"");
-      if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError))continue;
+      if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')`;
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
       setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
       recovered.push(job.id);
     }
-    res.status(202).json({ok:true,recovered:recovered.length,jobIds:recovered});
+    res.status(202).json({ok:true,scanned:rows.length,recovered:recovered.length,jobIds:recovered,skipped:{operatorScope:skippedOperatorScope,noHandoff:skippedNoHandoff,nonRetryable:skippedNonRetryable}});
   }catch(error){next(error)}
 });
 

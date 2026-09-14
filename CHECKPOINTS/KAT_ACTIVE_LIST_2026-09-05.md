@@ -889,3 +889,11 @@ Total output lines: 1413
 - [x] No payment, OCR algorithm, draft, pricing/discount, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge and LAB recovery of invoice 2612188.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-recover-filter-in-code.md`.
+
+## 2026-09-14 — Gate 3: show recovery outcome
+
+- [x] LAB on live 7e6f22f8 remained on the unchanged 17:12 failure; no reclaim was observable.
+- [x] Surface safe recovery counters or the endpoint error beside the refresh timestamp.
+- [x] No OCR/provider, payment, draft, pricing/discount, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge and one immediate LAB refresh outcome.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-show-recovery-outcome.md`.
