@@ -33,6 +33,16 @@ test("STEFANIDIS FAST header is independent of reversed page selection",()=>{
   }
 });
 
+test("POS background uses the central STEFANIDIS Azure pages in parallel before unified AI",()=>{
+  const fastPath=aiRecheck.indexOf("if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
+  const unified=aiRecheck.indexOf('fetch("https://api.openai.com/v1/responses"');
+  assert.ok(fastPath>0&&fastPath<unified);
+  assert.match(aiRecheck,/Promise\.all\(pageJobs\.map\(page=>callAzure/);
+  assert.match(aiRecheck,/preferCentralStefanidis=cleanTaxId\(supplierRows\[0\]\?\.taxId\)===STEFANIDIS_TAX_ID/);
+  assert.match(aiRecheck,/parsed\.totalGross=money2\(posHandoff\.totalGross\|\|parsed\.totalGross\)/);
+  assert.match(aiRecheck,/parsed\.stefanidisCentralFastPath=true/);
+});
+
 test("fast header falls back from Azure without blocking payment",()=>{
   assert.match(wrapper,/FAST Azure header failed; trying configured fallback/);
   assert.match(wrapper,/if\(!process\.env\.OPENAI_API_KEY\)\{const wrapped=new Error/);
