@@ -165,8 +165,10 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const result=await prisma.$transaction(async tx=>{
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
-      if(!locked[0]||((locked[0].purchaseDocumentId)&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(locked[0].status))||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
-      const skeletonDocumentId=locked[0].purchaseDocumentId||null;
+      if(!locked[0]){const error=new Error("Δεν βρέθηκε η ανάγνωση του τιμολογίου.");error.status=404;throw error;}
+      if(locked[0].purchaseDocumentId)return {reused:true,documentId:locked[0].purchaseDocumentId,orderId:null,paymentTransactionId:null,inboxId:null,inboxIds:[],lineCount:0,unresolved:0,pageCount:0};
+      if(["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      const skeletonDocumentId=null;
       if(body.documentType==="INVOICE")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
       const additionalPageJobs=[];
@@ -265,7 +267,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       }
       return {documentId,orderId,paymentTransactionId,inboxId,inboxIds,lineCount:matched.length,unresolved:matched.filter(l=>!l.product).length,pageCount:archiveJobs.length};
     });
-    res.status(201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,inboxIds:result.inboxIds,pageCount:result.pageCount,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,reconciliationRequired:body.reconciliationRequired,reconciliationDifference:body.reconciliationDifference,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 από ${result.pageCount} ${result.pageCount===1?"σελίδα":"σελίδες"} και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
+    res.status(result.reused?200:201).json({ok:true,id:result.documentId,purchaseOrderId:result.orderId,inboxId:result.inboxId,inboxIds:result.inboxIds,pageCount:result.pageCount,archived:Boolean(result.inboxId),status:"DRAFT",settlementMode:body.settlementMode,paymentRecorded:Boolean(result.paymentTransactionId),paymentTransactionId:result.paymentTransactionId,reconciliationRequired:body.reconciliationRequired,reconciliationDifference:body.reconciliationDifference,subtractFromShift:body.settlementMode==="PAID",stockUpdated:false,awaitingApproval:true,lineCount:result.lineCount,unresolvedLines:result.unresolved,v244:true,message:`Το τιμολόγιο πέρασε με ${result.lineCount} πραγματικές γραμμές V2.4.4 από ${result.pageCount} ${result.pageCount===1?"σελίδα":"σελίδες"} και μετά αρχειοθετήθηκε στη Θυρίδα. ${result.unresolved} χρειάζονται αντιστοίχιση. Η αποθήκη δεν ενημερώθηκε.`});
   }catch(error){
     console.error("V2.4.4 invoice intake failed",{jobId:req.params.jobId,stage,message:error?.message||String(error),code:error?.code||null,metaCode:error?.meta?.code||null});
     if(error?.status)return next(error);
