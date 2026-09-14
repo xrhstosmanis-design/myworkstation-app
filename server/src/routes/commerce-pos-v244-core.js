@@ -147,7 +147,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
-    if((job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(job.status))||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
+    if(job.purchaseDocumentId)return res.status(200).json({ok:true,id:job.purchaseDocumentId,status:"DRAFT",stockUpdated:false,awaitingApproval:true,message:"Το τιμολόγιο υπάρχει ήδη ως πρόχειρο. Δεν δημιουργήθηκε δεύτερη εγγραφή ή πληρωμή."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
