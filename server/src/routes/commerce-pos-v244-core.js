@@ -129,7 +129,7 @@ router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READE
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    if(job.purchaseDocumentId)return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
+    if(job.purchaseDocumentId&&job.status!=="POS_PROCESSING"&&job.status!=="POS_DRAFT_READY")return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
     const productLines=body.productLines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),retailPrice:Number(line.retailPrice||0),initialAmount:Number(line.initialAmount||0),discount1:clamp(line.discount1,0,100),discount1Amount:Number(line.discount1Amount||0),discount2:clamp(line.discount2,0,100),discount2Amount:Number(line.discount2Amount||0),discount3:clamp(line.discount3,0,100),discount3Amount:Number(line.discount3Amount||0),netAmount:Number(line.netAmount),vatRate:clamp(line.vatRate,0,100),grossAmount:Number(line.grossAmount),confidence:clamp(line.confidence,0,100),v244:true}));
     const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
     const resultJson={...previous,productLines,v244Finalized:true,v244FinalizedAt:new Date().toISOString(),v244Source:"KAT_INVOICE_LAB_V2_4_4"};
@@ -152,6 +152,8 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
     const lines=z.array(lineSchema).min(1).max(500).parse(rawLines);
+    // The durable draft already owns the payment and is visible to BackOffice. Do not create a second document while the worker finishes; the saved lines remain attached to the job for BackOffice review.
+    if(job.purchaseDocumentId)return res.status(200).json({ok:true,id:job.purchaseDocumentId,status:"DRAFT",stockUpdated:false,awaitingApproval:true,lineCount:lines.length,message:"Το πρόχειρο BackOffice είναι ήδη έτοιμο. Οι γραμμές της ανάγνωσης αποθηκεύτηκαν για έλεγχο."});
     stage="validate-supplier";
     const supplier=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
