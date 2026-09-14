@@ -847,3 +847,11 @@ Total output lines: 1413
 - [x] FAST header, payment, draft, stock, price and discount calculation are unchanged.
 - [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-bounded-background-ocr.md`.
+## 2026-09-14 — Gate 3: final unbounded discount-verifier transport
+
+- [x] LAB: PR #830 reclaimed 2612188 at 08:04, but the draft remained at 0 lines / 0,00 € after the full window.
+- [x] Only the POS background discount-verifier transport now receives the existing 75-second provider deadline.
+- [x] Price/discount arithmetic and every other verifier caller remain unchanged.
+- [x] Same job, draft, photos and payment; no stock, approval or finalization.
+- [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-bounded-discount-verifier.md`.

@@ -80,10 +80,12 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 });
 
 test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
+  const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/;
   assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=75000/);
   assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
   assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
+  assert.match(aiRecheck,verifierCall);
 });
 
 test("a multipage invoice is blocked rather than saved empty when no product lines are found",()=>{
@@ -156,6 +158,8 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
 
 test("Azure-derived net unit cost does not hide invoice discounts",async()=>{
   const verifier=await readFile(new URL("../src/lib/invoice-discount-verifier.js",import.meta.url),"utf8");
+  assert.match(verifier,/timeoutMs=0/);
+  assert.match(verifier,/signal:AbortSignal\.timeout\(Number\(timeoutMs\)\)/);
   assert.match(azure,/azureUnitCostDerivedFromNet=true/);
   assert.match(azure,/azureUnitCostDerivedFromNet,azureSequence/);
   assert.match(verifier,/Number\(line\.unitCost\|\|0\)>0&&!line\.azureUnitCostDerivedFromNet/);
