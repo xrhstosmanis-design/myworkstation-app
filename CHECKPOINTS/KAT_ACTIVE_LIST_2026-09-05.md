@@ -1,3 +1,14 @@
+## 2026-09-14 — Gate 3: recovery transient POS_FAILED background OCR
+
+- [x] LAB 2612188: FAST header, υπάρχουσα πληρωμή, draft και 2 φωτογραφίες διατηρούνται σωστά.
+- [x] Εύρημα: μετά την εξάντληση transient transport retries το durable job μπορεί να μείνει `POS_FAILED` και το υπάρχον fast-recover δεν το ξανασηκώνει.
+- [x] Διόρθωση: `POS_FAILED` ανακτάται μόνο όταν το αποθηκευμένο background error είναι transient transport failure.
+- [x] OCR/payment/configuration failures δεν επανεκκινούν αυτόματα.
+- [x] Ίδιο job, ίδιο draft, ίδιες φωτογραφίες και υπάρχουσα πληρωμή. Καμία νέα χρέωση, stock κίνηση ή οριστικοποίηση.
+- [ ] Αναμονή CI PASS και LAB επαλήθευσης.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-transient-pos-failed-recovery.md`.
+
+
 Warning: truncated output (original token count: 48857)
 Total output lines: 1413
 
