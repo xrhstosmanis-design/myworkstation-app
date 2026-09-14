@@ -28,3 +28,25 @@ const profile={
 const normalizedName=supplierName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,supplierKey,supplierKey,supplierName,normalizedName,profile.ruleKey,JSON.stringify(profile));
 console.log("Invoice Learning verified supplier profile seeded: DIMOTSIOS 061656254.");
+
+// CHECKPOINT_VERIFIED_2612188: these are only the relative printed columns of
+// STEFANIDIS invoices. They never reuse the old invoice's quantities, prices,
+// totals, product IDs or attachments; every future row must still balance from
+// its own source text before the profile can apply.
+const stefanidisKey="998878583";
+const stefanidisName="ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ";
+const stefanidisProfile={
+  supplierName:stefanidisName,
+  supplierTaxId:stefanidisKey,
+  ruleKey:"STEFANIDIS_PRINTED_COLUMNS",
+  central:true,
+  source:"CHECKPOINT_VERIFIED_2612188",
+  readingRule:{
+    confirmedColumnLayouts:{
+      "1,2,3,4,5,6,7,-1":{quantity:1,unitCost:2,retailPrice:-1}
+    }
+  }
+};
+const stefanidisNormalized=stefanidisName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,stefanidisKey,stefanidisKey,stefanidisName,stefanidisNormalized,stefanidisProfile.ruleKey,JSON.stringify(stefanidisProfile));
+console.log("Invoice Learning checkpoint-verified supplier profile seeded: STEFANIDIS 998878583.");
