@@ -23,6 +23,12 @@ test("fast handoff creates the BackOffice shell and file inbox before OCR",()=>{
   assert.match(body,/POS_DRAFT_READY','POS_PROCESSING','POS_FAILED/);
 });
 
+test("background OCR falls back to the public Render origin when loopback fails",()=>{
+  assert.match(route,/const origins=\[localOrigin,.+publicOrigin/);
+  assert.match(route,/publicOrigin,method:"POST",body:\{force:true/);
+  assert.match(route,/x-forwarded-proto/);
+});
+
 test("orders refresh starts durable handoff recovery without blocking the report",()=>{
   const start=orders.indexOf("async function loadReport");
   const body=orders.slice(start,orders.indexOf("async function loadStock",start));
