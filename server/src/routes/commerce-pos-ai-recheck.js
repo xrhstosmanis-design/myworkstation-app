@@ -131,8 +131,9 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
   const connected=Boolean(process.env.OPENAI_API_KEY);res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:THRESHOLD,aiAutomatic:true,aiProviderConnected:connected,message:connected?"OCR πρώτο. Κάτω από 65% γίνεται αυτόματος επανέλεγχος AI.":"OCR πρώτο. Για αυτόματο AI κάτω από 65% απαιτείται OPENAI_API_KEY στον server."});
 }catch(error){next(error)}});
 
-router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{let failureStage="validate-request";try{
   const body=z.object({force:z.boolean().optional(),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([])}).parse(req.body||{});
+  failureStage="load-primary-job";
   const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
@@ -170,6 +171,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
   let parsed=null,unifiedAiFailure=null;
+  failureStage="read-provider-pages";
   if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     try{
       const azurePages=await Promise.all(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
@@ -212,6 +214,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
+  failureStage="apply-supplier-profile-initial";
   parsed=await applyCentralSupplierProfile(parsed);
   // Recover the printed retail / unit / quantity columns from the current
   // source itself when a reader has shifted the numeric columns. This rule is
@@ -226,6 +229,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const needsTablePass=!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
   const inconsistentRows=parsed.productLines.some(line=>!line.sourceColumnsVerified&&Math.abs(Number(line.quantity||0)*Number(line.unitCost||0)*[line.discount1,line.discount2,line.discount3].reduce((f,d)=>f*(1-Number(d||0)/100),1)-Number(line.netAmount||0))>0.05);
   if(needsTablePass||inconsistentRows){
+    failureStage="table-recheck";
     const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
     const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα ΜΟΝΟ τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών, τράπεζες/IBAN, σύνολα και footer.
 
@@ -250,6 +254,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // primary, and no empty invoice may pass through.
   const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0),needsAzureFields=!hasSafeLine||totalMismatch||inconsistentRows||parsed.productLines.some(line=>Number(line?.vatRate||0)<=0);
   if(!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+    failureStage="azure-field-recovery";
     const azureRecovered=[];
     for(const [pageIndex,page] of pageJobs.entries()){
       try{
@@ -262,6 +267,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.azurePageRecoveryRecovered=azureRecovered.length;
   }
 
+  failureStage="apply-supplier-profile-final";
   parsed=await applyCentralSupplierProfile(parsed);
   // Table/Azure recovery can add rows after the first printed-column pass.
   // Re-apply the centrally learned STEFANIDIS layout to those late rows before
@@ -274,6 +280,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
+  failureStage="discount-verification";
   const discountDiagnostics={accepted:0,rejectedMath:0};
   for(const [pageIndex,page] of pageJobs.entries()){
     const unresolved=parsed.productLines.filter(line=>{
@@ -298,10 +305,16 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
   parsed.lines=parsed.productLines.length?parsed.productLines.map(line=>{const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim(),quantity=Math.max(0,Number(line.quantity||0)),unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ",unitCost=Math.max(0,Number(line.unitCost||0));return {text:[description,quantity>0?`${quantity} ${unit}`:"",unitCost>0?decimalText(unitCost):""].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))}}):[];
   parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
+  failureStage="match-supplier";
   const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
+  failureStage="save-ai-result";
   await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
   res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
-}catch(error){next(error)}});
+}catch(error){
+  console.error("POS AI recheck failed",{jobId:req.params.jobId,stage:failureStage,message:providerErrorText(error),code:error?.code||null});
+  if(!error?.status){const safe=new Error(`AI_RECHECK_INTERNAL [${failureStage}]`);safe.status=502;safe.code="AI_RECHECK_INTERNAL";return next(safe)}
+  next(error)
+}});
 
 router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
   const reviewLine=z.object({rawText:z.string().max(2000).optional().default(""),code:z.string().trim().max(80).optional().default(""),barcode:z.string().trim().max(80).optional().default(""),description:z.string().trim().min(1).max(500),quantity:z.coerce.number().min(0).max(1000000),unit:z.string().trim().max(40).optional().default("ΤΜΧ"),unitsPerPackage:z.coerce.number().min(0).max(100000).optional().default(0),unitCost:z.coerce.number().min(0).max(10000000),vatRate:z.coerce.number().min(0).max(100),confidence:z.coerce.number().min(0).max(100).optional().default(0)});
