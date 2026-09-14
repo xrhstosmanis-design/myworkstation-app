@@ -16,6 +16,7 @@ function table(labels,rows,page=1){
   ]};
 }
 const fixture=JSON.parse(await readFile(new URL('./fixtures/invoice-printed-column-economics.json',import.meta.url),'utf8'));
+const stefanidisSeed=await readFile(new URL('../src/seed-invoice-profile-dimotsios.js',import.meta.url),'utf8');
 const fixtureRows=rows=>rows.map(([code,q,retail,cost,net])=>[code,`ΠΡΟΪΟΝ ${code}`,decimal(retail),'TEM',q,decimal(cost),decimal(net),0,0,decimal(net),0]);
 
 test('38 printed rows keep retail, purchase precision, quantities and page order through reconciliation and POS handoff',()=>{
@@ -30,6 +31,13 @@ test('38 printed rows keep retail, purchase precision, quantities and page order
   assert.equal(lines.reduce((sum,l)=>sum+l.quantity,0),608);
   assert.equal(Math.round(lines.reduce((sum,l)=>sum+l.grossAmount,0)*100)/100,2369.99);
   assert.equal(parsed.reconciliation.totalDifference,0);
+});
+
+test('checkpoint-verified STEFANIDIS layout is seeded centrally without old invoice economics',()=>{
+  assert.match(stefanidisSeed,/STEFANIDIS_PRINTED_COLUMNS/);
+  assert.match(stefanidisSeed,/CHECKPOINT_VERIFIED_2612188/);
+  assert.match(stefanidisSeed,/"1,2,3,4,5,6,7,-1":\{quantity:1,unitCost:2,retailPrice:-1\}/);
+  assert.doesNotMatch(stefanidisSeed,/2369\.99|608/);
 });
 
 test('unrelated supplier layout uses printed English headers, three discounts and amount-only discounts',()=>{
