@@ -1,3 +1,12 @@
+## 2026-09-14 — Gate 3: background lines into pre-created POS draft
+
+- [x] LAB: 2612188 reached `POS_FAILED / POS_BACKGROUND_FAILED` at 20:17 after OCR, with generic internal error.
+- [x] Root cause: product-line save rejected the worker because the safe empty `POS_OCR_DRAFT` already existed.
+- [x] Fix: only `AI_COMPLETE` V2.4.4 background output with the same durable handoff may fill its still-DRAFT POS document; all other linked-document edits stay blocked.
+- [x] 46/46 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge/deploy και νέα καθαρή POS δοκιμή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-fill-linked-pos-draft.md`.
+
 ## 2026-09-14 — Gate 3: POS_QUEUED recovery worker successor
 
 - [x] LAB 10:57: 2612188 remained 0 lines at `POS_QUEUED / POS_RECOVERING`.
