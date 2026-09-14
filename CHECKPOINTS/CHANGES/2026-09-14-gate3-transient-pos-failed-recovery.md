@@ -10,17 +10,20 @@
 
 - The server already retries transient background transport failures at `0s`, `3s`, `12s`, `30s`.
 - After those retries are exhausted the durable job is marked `POS_FAILED`.
-- `fast-recover` and `fast-status` currently reclaim only `POS_QUEUED`, `POS_DRAFT_READY`, or stale `POS_PROCESSING` jobs, so a transport-only `POS_FAILED` job can remain permanently stranded even though the draft, photos and payment are intact.
+- `fast-recover` currently reclaims only `POS_QUEUED`, `POS_DRAFT_READY`, or stale `POS_PROCESSING` jobs, so a transport-only `POS_FAILED` job can remain stranded even though the draft, photos and payment are intact.
 
-## Planned fix
+## Implemented fix
 
-- Reclaim `POS_FAILED` only when the stored `posBackground.error` matches the existing retryable transport classifier.
-- Do not auto-retry configuration, payment, unsafe OCR, or other non-transient failures.
-- Resume the same job/page IDs and same existing payment; no duplicate invoice shell.
+- Added a deployment-time Gate 3 patch that makes `fast-recover` consider `POS_FAILED` jobs.
+- A failed job is actually reclaimed only when stored `posBackground.error` matches the existing transient transport classifier: `fetch failed`, `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, or `EAI_AGAIN`.
+- Configuration, payment, unsafe OCR and other non-transient failures remain failed and are not automatically replayed.
+- Recovery changes the same durable job back to `POS_QUEUED` and schedules the existing background worker with the same page IDs and payment identity.
+- Added targeted tests for transient eligibility, non-transient exclusion and patch idempotency.
 
 ## Safety
 
+- Same durable job, same draft, same source photos and same existing payment.
 - No new payment or credit.
 - No stock movement.
 - No approval/finalization.
-- CI PASS and LAB reread required before merge.
+- PR #827 remains Draft until CI PASS and LAB verification.
