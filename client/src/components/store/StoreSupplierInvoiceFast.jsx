@@ -8,7 +8,7 @@ const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(",","."))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
-async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,inboxId,mode,paymentTransactionId}){
+async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierId,documentNumber,documentDate,totalGross,inboxId,mode,paymentTransactionId,onStatus}){
   const patch=async(status,note)=>{try{await api(`/api/commerce/documents/inbox/${encodeURIComponent(inboxId)}`,{method:"PATCH",body:JSON.stringify({status,note})})}catch{}};
   try{
     const job=await api("/api/commerce/ai-reader/jobs",{method:"POST",body:JSON.stringify({storeId:store.id,filename,mimeType,dataUrl:fileDataUrl,localConfidence:0,result:{rawText:"",lines:[],pageCount:null,pdfNote:"POS FAST PAYMENT — background V2.4.4"}})});
@@ -22,9 +22,9 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
     const finalDate=String(result.documentDate||documentDate||today()).slice(0,10);
     const finalTotal=Number(result.totalGross||totalGross||0);
     const created=await api(`/api/commerce/ai-reader/jobs/${encodeURIComponent(job.id)}/pos-intake`,{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:finalNumber||`POS-${Date.now()}`,documentDate:finalDate,totalGross:finalTotal,settlementMode:mode,paymentTransactionId:mode==="PAID"?paymentTransactionId:null,note:`POS FAST • Inbox ${inboxId} • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`})});
-    await patch("IN_REVIEW",`✅ V2.4.4 ολοκληρώθηκε στο παρασκήνιο • ${productLines.length} γραμμές • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • ${created?.purchaseOrderId||created?.id||"προς έλεγχο"}`);
+    const message=`✅ Ανέβηκε στο BackOffice για έλεγχο • ${productLines.length} γραμμές • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`;await patch("IN_REVIEW",message);onStatus?.(message);
   }catch(error){
-    await patch("IN_REVIEW",`⚠️ Χρειάζεται έλεγχο BackOffice • ${String(error?.message||error).slice(0,700)}`);
+    const message=`❌ Δεν ανέβηκε στο BackOffice — χρειάζεται επανάληψη/έλεγχος • ${String(error?.message||error).slice(0,500)}`;await patch("IN_REVIEW",message);onStatus?.(message);
   }
 }
 
@@ -59,7 +59,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
       const successText=mode==="PAID"?`Η πληρωμή καταχωρίστηκε με ${paymentMethodLabel}`:"Το τιμολόγιο καταχωρίστηκε με πίστωση";
       setMessage?.(`✅ ${successText}. Επιστροφή στο POS — ο έλεγχος συνεχίζεται στο BackOffice.`);
       onChanged?.();
-      backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id,mode,paymentTransactionId});
+      backgroundV244({api,store,fileDataUrl:dataUrl,filename:file.name||"timologio.jpg",mimeType:file.type||"image/jpeg",supplierId,documentNumber,documentDate,totalGross:num(amount),inboxId:inbox.id,mode,paymentTransactionId,onStatus:setMessage});
     }catch(error){
       setMessage?.(`❌ ${error?.message||"Η καταχώριση απέτυχε."}`);
       setBusy(false);
