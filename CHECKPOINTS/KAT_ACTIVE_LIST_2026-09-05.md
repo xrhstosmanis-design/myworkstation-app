@@ -839,3 +839,11 @@ Total output lines: 1413
 - [x] No payment, credit, draft, stock, approval or finalization behavior changed.
 - [ ] Αναμονή CI, merge και LAB επανάληψης μόνο της αρχικής γρήγορης ανάγνωσης.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-restore-fast-header-lab-window.md`.
+## 2026-09-14 — Gate 3: hung POS_PROCESSING background OCR
+
+- [x] LAB 2612188 remained at 0 lines / 0,00 € for more than six minutes with both photos and payment preserved.
+- [x] Full multipage OCR provider requests are bounded to 75 seconds so the durable job cannot remain processing forever.
+- [x] Provider timeouts are transient and use the guarded recovery added by PR #827.
+- [x] FAST header, payment, draft, stock, price and discount calculation are unchanged.
+- [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-bounded-background-ocr.md`.

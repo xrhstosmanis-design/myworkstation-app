@@ -27,7 +27,7 @@ const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
+const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|aborted due to timeout|TimeoutError/i.test(String(error?.message||error));
 
 async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
@@ -362,7 +362,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       SELECT "id","storeId","status","resultJson"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
-        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR ("status"='POS_FAILED' AND COALESCE("resultJson"->'posBackground'->>'error','')~*'fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN'))
+        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR ("status"='POS_FAILED' AND COALESCE("resultJson"->'posBackground'->>'error','')~*'fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|aborted due to timeout|TimeoutError'))
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY "updatedAt" ASC LIMIT 3`;
     const recovered=[];
