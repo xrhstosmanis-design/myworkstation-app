@@ -9,6 +9,7 @@ import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runti
 import {recoverPrintedRetailColumns,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
+const FULL_OCR_PROVIDER_TIMEOUT_MS=75000;
 const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
 const TOTAL_TOLERANCE=0.05;
@@ -160,7 +161,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
   let parsed=null,unifiedAiFailure=null;
   try{
-    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
     try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
@@ -174,7 +175,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     if(!azureConfigured)throw unifiedAiFailure;
     const azurePages=[];
     for(const page of pageJobs){
-      try{azurePages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType})))}
+      try{azurePages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS})))}
       catch{const error=new Error("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου.");error.status=502;throw error}
     }
     parsed=mergeAzureInvoicePages(azurePages);
@@ -207,7 +208,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
 
 Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | ΛΙΑΝΙΚΗ ΤΙΜΗ | Μ.Μ. | ΤΜΧ | αρχική Τιμή ΤΜΧ | Αξία | Εκπτ.1/2/3 ποσοστό και ποσό | Καθ Αξία | ΦΠΑ. retailPrice=ΛΙΑΝΙΚΗ ΤΙΜΗ, quantity=ΠΟΣΟΤΗΤΑ (όχι η ένδειξη μονάδας ΤΕΜ/ΤΜΧ), unit=Μ.Μ., unitCost=αρχική Τιμή ΤΜΧ πριν από εκπτώσεις, discount1/2/3=ποσοστά, discount1Amount/2Amount/3Amount=ποσά, netAmount=Καθ Αξία, vatRate=%ΦΠΑ. Μην συγχέεις retailPrice και unitCost και μην αντικαθιστάς την αρχική τιμή με net/qty όταν υπάρχει έκπτωση. Αριθμοί συσκευασίας μέσα στην περιγραφή δεν είναι quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount.`;
-    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
     const tablePayload=await tableResponse.json().catch(()=>({}));
     if(tableResponse.ok){try{
       const tableParsed=JSON.parse(outputText(tablePayload));
@@ -226,7 +227,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const azureRecovered=[];
     for(const [pageIndex,page] of pageJobs.entries()){
       try{
-        const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType}));
+        const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}));
         azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
       }catch{}
     }
@@ -290,4 +291,3 @@ router.post("/ai-reader/jobs/:jobId/supplier",requireCompanyModule("AI_READER"),
 }catch(error){next(error)}});
 
 export default router;
-

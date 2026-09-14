@@ -79,6 +79,13 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
   assert.match(azure,/additionalPageJobIds.*return next\(\)/s);
 });
 
+test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=75000/);
+  assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
+  assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/);
+  assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
+});
+
 test("a multipage invoice is blocked rather than saved empty when no product lines are found",()=>{
   const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
   assert.match(background,/if\(!productLines\.length\)throw new Error/);

@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const source=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
-const retryable=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
+const retryable=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|aborted due to timeout|TimeoutError/i.test(String(error?.message||error));
 
 test("transient POS_FAILED jobs become eligible for durable recovery",()=>{
-  assert.match(source,/\("status"='POS_FAILED' AND COALESCE\("resultJson"->'posBackground'->>'error',''\)~\*'fetch failed\|ECONNRESET\|ECONNREFUSED\|ETIMEDOUT\|EAI_AGAIN'\)/);
+  assert.match(source,/\("status"='POS_FAILED' AND COALESCE\("resultJson"->'posBackground'->>'error',''\)~\*'fetch failed\|ECONNRESET\|ECONNREFUSED\|ETIMEDOUT\|EAI_AGAIN\|aborted due to timeout\|TimeoutError'\)/);
   assert.match(source,/job\.status==="POS_FAILED"&&!isRetryableBackgroundError\(storedBackgroundError\)/);
   assert.match(source,/"status" IN \('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
 });
@@ -21,6 +21,8 @@ test("fast-status reclaims only retryable POS_FAILED jobs",()=>{
 test("non-transient failed jobs remain excluded",()=>{
   assert.equal(retryable("fetch failed"),true);
   assert.equal(retryable("ECONNRESET while reading invoice"),true);
+  assert.equal(retryable("The operation was aborted due to timeout"),true);
+  assert.equal(retryable("TimeoutError"),true);
   assert.equal(retryable("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο."),false);
   assert.equal(retryable("Δεν βρέθηκε ενεργή πληρωμή που συμφωνεί με το τιμολόγιο."),false);
 });
