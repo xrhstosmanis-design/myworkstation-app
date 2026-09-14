@@ -142,6 +142,8 @@ test("failed unified AI recovers every page through Azure without adding carry-f
   assert.match(aiRecheck,/δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedFailed=true/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedRecovery="AZURE_ALL_PAGES"/);
+  assert.match(aiRecheck,/if\(isProviderTimeout\(error\)\)throw error/);
+  assert.match(aiRecheck,/AZURE_TIMEOUT\|TimeoutError\|aborted due to timeout/);
   assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields/);
   assert.match(aiRecheck,/catch\{discountDiagnostics\.providerFailures=/);
 });
