@@ -149,3 +149,21 @@ test('current printed headers recover all 38 rows when Azure omits tables and co
   const mismatch={...changed,rawText:changed.rawText.replace("147,00 0 0 147,00","148,00 0 0 148,00")};
   assert.equal(recoverPrintedRetailColumns(mismatch,header),mismatch,"Unbalanced source row must remain for review");
 });
+
+test('late recovered STEFANIDIS rows receive the central column rule before final totals',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const mergeAt=source.indexOf('parsed.productLines=mergeRecoveredLines(parsed.productLines,azureRecovered)');
+  const finalRecoveryAt=source.indexOf('if(isStefanidisInvoice(parsed))',mergeAt);
+  const totalsAt=source.indexOf('parsed.productLinesGrossAfterRecovery=',finalRecoveryAt);
+  assert.ok(mergeAt>=0&&finalRecoveryAt>mergeAt&&totalsAt>finalRecoveryAt);
+  assert.match(source.slice(finalRecoveryAt,totalsAt),/recoverPrintedRetailColumns\(line,printedDocumentText\)/);
+  assert.match(source,/STEFANIDIS_TAX_ID="998878583"/);
+
+  const header="ΚΩΔΙΚΟΣ ΠΕΡΙΓΡΑΦΗ ΛΙΑΝΙΚΗ ΤΙΜΗ Μ.Μ. ΠΟΣΟΤΗΤΑ ΤΙΜΗ ΜΟΝΑΔΑΣ ΑΞΙΑ ΠΡΟ ΕΚΠΤΩΣΗΣ ΕΚΠΤΩΣΗ ΑΞΙΑ ΜΕΤΑ ΤΗΝ ΕΚΠΤΩΣΗ ΦΠΑ";
+  const lateRows=fixture.flat().map(([code,quantity,retail,cost,net])=>recoverPrintedRetailColumns({
+    code,description:`ΠΡΟΪΟΝ ${code}`,rawText:`${code} ΠΡΟΪΟΝ ${code} ${decimal(retail)} TEM ${quantity} ${decimal(cost)} ${decimal(net)} 0 0 ${decimal(net)} 0`,
+    quantity:retail,unitCost:net/retail,retailPrice:0,netAmount:net+6.71,vatRate:0
+  },header));
+  assert.equal(lateRows.reduce((sum,line)=>sum+line.quantity,0),608);
+  assert.equal(Math.round(lateRows.reduce((sum,line)=>sum+line.grossAmount,0)*100)/100,2369.99);
+});
