@@ -193,15 +193,17 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   if(!parsed){
     const azureConfigured=Boolean(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
     if(!azureConfigured)throw unifiedAiFailure;
-    const azurePages=[];
-    for(const [pageIndex,page] of pageJobs.entries()){
-      try{azurePages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS})))}
-      catch(error){
-        if(isProviderTimeout(error))throw error;
-        const wrapped=new Error(`FULL_OCR_PROVIDER_FAILURE: OPENAI=${providerErrorText(unifiedAiFailure)}; AZURE_PAGE_${pageIndex+1}=${providerErrorText(error)}`);
-        wrapped.status=502;throw wrapped;
-      }
+    // Recover all invoice pages concurrently. The old sequential fallback
+    // consumed one complete provider timeout per page and then leaked a plain
+    // 500, so the durable POS worker could neither retry nor explain the wait.
+    const azureAttempts=await Promise.allSettled(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
+    const failedPageIndex=azureAttempts.findIndex(result=>result.status==="rejected");
+    if(failedPageIndex>=0){
+      const failure=azureAttempts[failedPageIndex].reason,timeout=isProviderTimeout(failure);
+      const wrapped=new Error(`${timeout?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: OPENAI=${providerErrorText(unifiedAiFailure)}; AZURE_PAGE_${failedPageIndex+1}=${providerErrorText(failure)}`);
+      wrapped.status=timeout?503:502;throw wrapped;
     }
+    const azurePages=azureAttempts.map(result=>result.value);
     parsed=mergeAzureInvoicePages(azurePages);
     if(!parsed.productLines.length){const error=new Error("Οι σελίδες αναγνώστηκαν, αλλά δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");error.status=422;throw error}
     parsed.openAiUnifiedFailed=true;
