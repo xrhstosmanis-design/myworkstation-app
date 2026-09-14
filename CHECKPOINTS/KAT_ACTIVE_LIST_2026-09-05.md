@@ -831,3 +831,11 @@ Total output lines: 1413
 - [x] No payment, credit, draft, stock, approval or finalization behavior changed.
 - [ ] Αναμονή CI, merge και LAB επανάληψης μόνο της αρχικής γρήγορης ανάγνωσης.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-fast-header-provider-timeout.md`.
+## 2026-09-14 — Restore proven FAST header LAB behavior
+
+- [x] PR #828 did not restore the previously working header read; LAB returned an internal error.
+- [x] FAST header gets a dedicated 60-second client budget while all other POS requests remain at 30 seconds.
+- [x] Azure keeps a 40-second allowance and fallback 15 seconds; price/discount/background logic is unchanged.
+- [x] No payment, credit, draft, stock, approval or finalization behavior changed.
+- [ ] Αναμονή CI, merge και LAB επανάληψης μόνο της αρχικής γρήγορης ανάγνωσης.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-restore-fast-header-lab-window.md`.

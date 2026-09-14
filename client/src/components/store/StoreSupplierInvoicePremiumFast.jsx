@@ -62,7 +62,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       const headerPages=initial&&nextPages.length>1?[nextPages[0],nextPages[nextPages.length-1]]:[nextPages[nextPages.length-1]];
       let supplierMeta=null,documentMeta=null,totalMeta=null,confidence=0;
       for(const page of headerPages){
-        const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})});
+        const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:60000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})});
         if(!supplierMeta&&(meta?.supplierId||meta?.supplierName))supplierMeta=meta;
         if(!documentMeta&&(meta?.documentNumber||meta?.documentDate))documentMeta=meta;
         if(Number(meta?.totalGross||0)>0)totalMeta=meta;

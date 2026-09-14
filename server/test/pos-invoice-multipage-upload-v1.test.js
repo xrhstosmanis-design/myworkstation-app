@@ -35,13 +35,16 @@ test("fast header also falls back when Azure succeeds with an empty header",()=>
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
 });
 
-test("fast header times out providers before the POS 30 second request deadline",()=>{
-  assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=9000/);
-  assert.match(wrapper,/FAST_OPENAI_HEADER_TIMEOUT_MS=17000/);
+test("fast header keeps the proven Azure window inside its dedicated POS request budget",async()=>{
+  const operator=await readFile(new URL("../../client/src/components/store/StoreOperatorApp.jsx",import.meta.url),"utf8");
+  assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=40000/);
+  assert.match(wrapper,/FAST_OPENAI_HEADER_TIMEOUT_MS=15000/);
   assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/signal:AbortSignal\.timeout\(FAST_OPENAI_HEADER_TIMEOUT_MS\)/);
   assert.match(azure,/deadline=Number\(timeoutMs\)>0/);
   assert.match(azure,/signal:requestSignal\(\)/);
+  assert.match(client,/fast-header.*timeoutMs:60000/);
+  assert.match(operator,/timeoutMs=Math\.max\(1000,Number\(options\.timeoutMs\|\|30000\)\)/);
 });
 
 test("BackOffice purchase intake keeps every selected invoice page",()=>{
