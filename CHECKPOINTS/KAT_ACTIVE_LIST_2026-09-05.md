@@ -822,3 +822,12 @@ Total output lines: 1413
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-central-supplier-column-learning.md`.
 
 - 2026-09-14: Pending POS invoice source photos can be deleted from Invoice Inbox; processed evidence and payments are protected.
+
+## 2026-09-14 — FAST header provider timeout before POS 30″ deadline
+
+- [x] LAB: three consecutive two-page attempts exceeded the POS 30-second request timeout before any transaction.
+- [x] Azure FAST header is bounded to 9 seconds so the configured fallback can run before the client aborts.
+- [x] OpenAI FAST fallback is bounded to 17 seconds; background V2.4.4 timing is unchanged.
+- [x] No payment, credit, draft, stock, approval or finalization behavior changed.
+- [ ] Αναμονή CI, merge και LAB επανάληψης μόνο της αρχικής γρήγορης ανάγνωσης.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-fast-header-provider-timeout.md`.

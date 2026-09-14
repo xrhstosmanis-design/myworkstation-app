@@ -111,19 +111,23 @@ function normalizeItem(item,index){
   const confidence=confidences.length?Math.max(...confidences):0;
   return {rawText,code,barcode:"",description,quantity,retailPrice,sourcePage,sourceY,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
-export async function callAzure({contentData,mimeType}){
+export async function callAzure({contentData,mimeType,timeoutMs=0}){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
+  const deadline=Number(timeoutMs)>0?Date.now()+Number(timeoutMs):0;
+  const requestSignal=()=>deadline?AbortSignal.timeout(Math.max(1,deadline-Date.now())):undefined;
   const {bytes,mimeType:detected}=parseDataUrl(contentData,mimeType);
   if(bytes.length<20)throw new Error("AZURE_EMPTY_DOCUMENT");
   const url=`${endpoint}/documentintelligence/documentModels/${MODEL_ID}:analyze?api-version=${API_VERSION}`;
-  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes});
+  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes,signal:requestSignal()});
   if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,300)}`);
   const operation=start.headers.get("operation-location");
   if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
   for(let i=0;i<30;i++){
-    await new Promise(resolve=>setTimeout(resolve,i<2?700:1200));
-    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key}});
+    const delay=i<2?700:1200;
+    if(deadline&&Date.now()+delay>=deadline)throw new Error("AZURE_TIMEOUT");
+    await new Promise(resolve=>setTimeout(resolve,delay));
+    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key},signal:requestSignal()});
     if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
     const payload=await poll.json();
     if(payload.status==="succeeded")return payload;
@@ -211,4 +215,3 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 });
 
 export default router;
-

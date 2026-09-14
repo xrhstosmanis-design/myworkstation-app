@@ -35,6 +35,15 @@ test("fast header also falls back when Azure succeeds with an empty header",()=>
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
 });
 
+test("fast header times out providers before the POS 30 second request deadline",()=>{
+  assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=9000/);
+  assert.match(wrapper,/FAST_OPENAI_HEADER_TIMEOUT_MS=17000/);
+  assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS\}\)/);
+  assert.match(wrapper,/signal:AbortSignal\.timeout\(FAST_OPENAI_HEADER_TIMEOUT_MS\)/);
+  assert.match(azure,/deadline=Number\(timeoutMs\)>0/);
+  assert.match(azure,/signal:requestSignal\(\)/);
+});
+
 test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/data-image-file type="file"[^>]*multiple/);
   assert.match(backofficeIntake,/data-pdf-file type="file"[^>]*multiple/);
