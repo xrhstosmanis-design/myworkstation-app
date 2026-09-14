@@ -66,7 +66,12 @@ async function rebuildLostFastHandoff(companyId,job){
 }
 
 function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handoff,publicOrigin}){
-  if(!authorization||!jobId||fastBackgroundWorkers.has(jobId))return;
+  if(!authorization||!jobId)return;
+  const activeWorker=fastBackgroundWorkers.get(jobId);
+  if(activeWorker){
+    if(handoff.replaceExistingDraft)activeWorker.finally(()=>{if(!fastBackgroundWorkers.has(jobId))scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handoff,publicOrigin})});
+    return;
+  }
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
   const task=(async()=>{
     try{
@@ -437,16 +442,26 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
     const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
     const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(background.error);
+    const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
+    const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&!reprocess.attemptedAt;
+    let scheduledHandoff=handoff,rereadClaimed=false;
     let shouldSchedule=hasRecoverableHandoff&&["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"].includes(job.status);
+    if(hasRecoverableHandoff&&needsAutomaticReread){
+      const marker={mode:"RECONCILIATION_REREAD",attemptedAt:new Date().toISOString(),previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
+      const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='AWAITING_APPROVAL'`;
+      rereadClaimed=Boolean(claimed);
+      if(rereadClaimed){scheduledHandoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};shouldSchedule=true}
+    }
     if(hasRecoverableHandoff&&retryableFailed){
       const reclaimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='POS_FAILED'`;
       shouldSchedule=Boolean(reclaimed);
     }
     if(shouldSchedule){
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-      setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
+      setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:scheduledHandoff.pageJobIds,handoff:scheduledHandoff,publicOrigin}));
     }
-    res.json({id:job.id,stage:job.stage,status:job.status,draftReady:Boolean(job.purchaseDocumentId),done:background.status==="COMPLETED",failed:job.status==="POS_FAILED",purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});
+    const done=background.status==="COMPLETED"&&job.status==="AWAITING_APPROVAL"&&!rereadClaimed;
+    res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":job.stage,status:rereadClaimed?"POS_REPROCESSING":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:job.status==="POS_FAILED",purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});
   }catch(error){next(error)}
 });
 

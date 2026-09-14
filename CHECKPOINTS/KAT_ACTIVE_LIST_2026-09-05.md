@@ -914,3 +914,11 @@ Total output lines: 1413
 - [x] Keep the same draft and original payment; no new charge, credit, stock, approval or finalization.
 - [ ] Αναμονή CI, merge και LAB validation of 38 lines / 608 pieces / 2.369,99 €.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-reread-incomplete-pos-draft.md`.
+
+## 2026-09-14 — Gate 3: POS automatic incomplete reread
+
+- [x] Corrected the trigger: normal POS polling continues automatically when the first complete result has a reconciliation mismatch.
+- [x] BackOffice refresh is not required for the normal invoice flow.
+- [x] Same durable draft, pages and payment; no new charge, credit, stock, approval or finalization.
+- [ ] Αναμονή CI, merge και νέα LAB δοκιμή αποκλειστικά από το POS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-pos-automatic-incomplete-reread.md`.
