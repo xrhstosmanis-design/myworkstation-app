@@ -191,7 +191,7 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
   }
 }
 
-export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model}){
+export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
 
@@ -222,7 +222,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
   const schema={type:'object',additionalProperties:false,properties:{discounts:{type:'array',items:{type:'object',additionalProperties:false,properties:{index:{type:'integer',minimum:1},originalUnitPrice:{type:'number',minimum:0},discountPercent1:{type:'number',minimum:0,maximum:99.99},discountAmount1:{type:'number',minimum:0},discountPercent2:{type:'number',minimum:0,maximum:99.99},discountAmount2:{type:'number',minimum:0},discountPercent3:{type:'number',minimum:0,maximum:99.99},discountAmount3:{type:'number',minimum:0},confidence:{type:'number',minimum:0,maximum:100},evidence:{type:'string'}},required:['index','originalUnitPrice','discountPercent1','discountAmount1','discountPercent2','discountAmount2','discountPercent3','discountAmount3','confidence','evidence']}}},required:['discounts']};
   const prompt=`Διάβασε για κάθε γραμμή ως ΕΝΙΑΙΟ αριθμητικό σύνολο: αρχική τιμή μονάδας ΠΡΙΝ από εκπτώσεις, ποσότητα, έως τρία ζεύγη ποσοστού/ποσού έκπτωσης και καθαρή αξία. Το Azure content περιέχει ολόκληρη τη γραμμή. Παράδειγμα: qty 5, originalUnitPrice 1,420, αρχική αξία 7,10, ποσοστό 15,00, ποσό έκπτωσης 1,07, καθαρή αξία 6,03. Επέστρεψε originalUnitPrice και discountPercent1/2/3 με discountAmount1/2/3. Η τιμή στο guide μπορεί να είναι προσωρινή καθαρή τιμή που υπολογίστηκε από net/qty — μην την αντιγράψεις ως originalUnitPrice αν στο έντυπο φαίνεται διαφορετική αρχική τιμή. Μην αλλάξεις ποσότητα, καθαρή αξία ή ΦΠΑ. Βάλε 0 όταν δεν είσαι βέβαιος.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
   try{
-    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model:model||'gpt-5',input:[{role:'user',content:[{type:'input_text',text:prompt},filePart]}],text:{format:{type:'json_schema',name:'invoice_discount_pairs',strict:true,schema}}})});
+    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},...(Number(timeoutMs)>0?{signal:AbortSignal.timeout(Number(timeoutMs))}:{}),body:JSON.stringify({model:model||'gpt-5',input:[{role:'user',content:[{type:'input_text',text:prompt},filePart]}],text:{format:{type:'json_schema',name:'invoice_discount_pairs',strict:true,schema}}})});
     if(!response.ok){diagnostics.status='FAILED';diagnostics.reason=`HTTP_${response.status}`;console.warn('Discount verifier failed:',response.status,await response.text().catch(()=>''));return stamp(productLines,diagnostics)}
     const text=outputText(await response.json());if(!text){diagnostics.status='FAILED';diagnostics.reason='EMPTY_OUTPUT';return stamp(productLines,diagnostics)}
     const parsed=JSON.parse(text),candidates=Array.isArray(parsed?.discounts)?parsed.discounts:[];diagnostics.candidates=candidates.length;

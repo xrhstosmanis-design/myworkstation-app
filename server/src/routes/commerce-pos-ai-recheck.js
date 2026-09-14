@@ -249,7 +249,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     });
     if(!unresolved.length)continue;
     try{
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
     }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
