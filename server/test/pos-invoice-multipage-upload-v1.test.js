@@ -21,6 +21,12 @@ test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/movePage\(index,1\)/);
 });
 
+test("fast header falls back from Azure without blocking payment",()=>{
+  assert.match(wrapper,/FAST Azure header failed; trying configured fallback/);
+  assert.match(wrapper,/if\(!process\.env\.OPENAI_API_KEY\)\{const wrapped=new Error/);
+  assert.match(wrapper,/Η πληρωμή δεν έγινε/);
+});
+
 test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/data-image-file type="file"[^>]*multiple/);
   assert.match(backofficeIntake,/data-pdf-file type="file"[^>]*multiple/);
