@@ -112,7 +112,9 @@ test("full OCR provider calls are bounded so durable recovery cannot remain POS_
 
 test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{
   assert.match(aiRecheck,/const providerErrorText=error=>/);
-  assert.match(aiRecheck,/FULL_OCR_PROVIDER_FAILURE: OPENAI=\$\{providerErrorText\(unifiedAiFailure\)\}; AZURE_PAGE_\$\{pageIndex\+1\}=\$\{providerErrorText\(error\)\}/);
+  assert.match(aiRecheck,/timeout\?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"/);
+  assert.match(aiRecheck,/AZURE_PAGE_\$\{failedPageIndex\+1\}=\$\{providerErrorText\(failure\)\}/);
+  assert.match(aiRecheck,/wrapped\.status=timeout\?503:502/);
   assert.doesNotMatch(aiRecheck,/const wrapped=new Error\("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου\."\)/);
 });
 
@@ -166,11 +168,11 @@ test("failed unified AI recovers every page through Azure without adding carry-f
   assert.match(aiRecheck,/function mergeAzureInvoicePages\(pages\)/);
   assert.match(aiRecheck,/if\(pageTotal>0\)\{totalGross=pageTotal;finalTotalPage=pageIndex\+1\}/);
   assert.doesNotMatch(aiRecheck,/totalGross\+=pageTotal/);
-  assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)\{\s*try\{azurePages\.push\(normalizeAzure\(await callAzure/s);
+  assert.match(aiRecheck,/Promise\.allSettled\(pageJobs\.map\(page=>callAzure/);
   assert.match(aiRecheck,/FULL_OCR_PROVIDER_FAILURE/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedFailed=true/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedRecovery="AZURE_ALL_PAGES"/);
-  assert.match(aiRecheck,/if\(isProviderTimeout\(error\)\)throw error/);
+  assert.match(aiRecheck,/timeout=isProviderTimeout\(failure\)/);
   assert.match(aiRecheck,/AZURE_TIMEOUT\|TimeoutError\|aborted due to timeout/);
   assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields/);
   assert.match(aiRecheck,/catch\{discountDiagnostics\.providerFailures=/);
