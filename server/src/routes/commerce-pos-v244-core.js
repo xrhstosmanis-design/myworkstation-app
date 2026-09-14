@@ -151,7 +151,7 @@ router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READE
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    if(job.purchaseDocumentId&&job.status!=="POS_DRAFT_READY"&&job.status!=="POS_PROCESSING")return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
+    if(job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
     const productLines=body.productLines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),retailPrice:Number(line.retailPrice||0),initialAmount:Number(line.initialAmount||0),discount1:clamp(line.discount1,0,100),discount1Amount:Number(line.discount1Amount||0),discount2:clamp(line.discount2,0,100),discount2Amount:Number(line.discount2Amount||0),discount3:clamp(line.discount3,0,100),discount3Amount:Number(line.discount3Amount||0),netAmount:Number(line.netAmount),vatRate:clamp(line.vatRate,0,100),grossAmount:Number(line.grossAmount),confidence:clamp(line.confidence,0,100),v244:true}));
     const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
     const resultJson={...previous,productLines,v244Finalized:true,v244FinalizedAt:new Date().toISOString(),v244Source:"KAT_INVOICE_LAB_V2_4_4"};
@@ -169,7 +169,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
-    if((job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(job.status))||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
+    if((job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED"].includes(job.status))||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
@@ -185,7 +185,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const result=await prisma.$transaction(async tx=>{
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
-      if(!locked[0]||((locked[0].purchaseDocumentId)&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(locked[0].status))||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      if(!locked[0]||((locked[0].purchaseDocumentId)&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED"].includes(locked[0].status))||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
       const skeletonDocumentId=locked[0].purchaseDocumentId||null;
       if(body.documentType==="INVOICE")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
