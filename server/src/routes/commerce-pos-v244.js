@@ -20,6 +20,7 @@ const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)r
 const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
 const id=()=>crypto.randomUUID();
 const fastBackgroundWorkers=new Map();
+const fastBackgroundSuccessors=new Map();
 // A POS handoff is intentionally fire-and-forget for the operator. Render can
 // briefly refuse a loopback/public request while a worker is waking up, so the
 // server retries the same durable job before it is ever reported as failed.
@@ -69,7 +70,12 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
   if(!authorization||!jobId)return;
   const activeWorker=fastBackgroundWorkers.get(jobId);
   if(activeWorker){
-    if(handoff.replaceExistingDraft)activeWorker.finally(()=>{if(!fastBackgroundWorkers.has(jobId))scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handoff,publicOrigin})});
+    // Recovery may have moved the durable row back to POS_QUEUED while an
+    // older in-memory attempt is still finishing. Always attach a successor;
+    // otherwise the queued row can be left without any worker.
+    const waiting=fastBackgroundSuccessors.has(jobId);
+    fastBackgroundSuccessors.set(jobId,{authorization,companyId,jobId,pageJobIds,handoff,publicOrigin});
+    if(!waiting)activeWorker.finally(()=>{const successor=fastBackgroundSuccessors.get(jobId);fastBackgroundSuccessors.delete(jobId);if(successor&&!fastBackgroundWorkers.has(jobId))scheduleFastBackground(successor)});
     return;
   }
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
