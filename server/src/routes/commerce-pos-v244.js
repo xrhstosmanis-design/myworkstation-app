@@ -28,7 +28,7 @@ const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες/i.test(String(error?.message||error));
+const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου/i.test(String(error?.message||error));
 
 async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
