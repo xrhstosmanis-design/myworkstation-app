@@ -880,3 +880,12 @@ Total output lines: 1413
 - [x] No OCR algorithm, payment, draft, pricing/discount, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge and one LAB refresh for the exact provider/page result.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-preserve-full-ocr-provider-error.md`.
+
+## 2026-09-14 — Gate 3: recover filter in code
+
+- [x] LAB after live 4d33312a stayed on the old 17:12 generic failure, proving the job was not reclaimed.
+- [x] Removed the redundant database error regex; the existing tested application guard remains authoritative before UPDATE.
+- [x] Non-transient failed jobs remain excluded and cannot starve eligible candidates; maximum recovery remains 3.
+- [x] No payment, OCR algorithm, draft, pricing/discount, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge and LAB recovery of invoice 2612188.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-recover-filter-in-code.md`.
