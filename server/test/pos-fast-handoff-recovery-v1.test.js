@@ -8,9 +8,19 @@ const reader=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",i
 
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
-  assert.match(route,/"status"='POS_QUEUED' OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
+  assert.match(route,/"status" IN \('POS_QUEUED','POS_DRAFT_READY'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
   assert.match(route,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\)/);
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
+});
+
+test("fast handoff creates the BackOffice shell and file inbox before OCR",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  assert.match(body,/\/pos-draft/);
+  assert.ok(body.indexOf('/pos-draft')<body.indexOf('res.status(202).json'));
+  assert.match(body,/DocumentInbox/);
+  assert.match(body,/\"status\" IN \('AWAITING_APPROVAL','CONFIRMED'\)/);
+  assert.match(body,/POS_DRAFT_READY','POS_PROCESSING','POS_FAILED/);
 });
 
 test("orders refresh starts durable handoff recovery without blocking the report",()=>{
