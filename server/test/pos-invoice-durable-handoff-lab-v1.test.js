@@ -37,7 +37,7 @@ test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
   assert.match(route,/FROM "MyDataInboundDocument" m/);
   assert.match(route,/ABS\(COALESCE\(m\."totalGross",0\)-\$\{totalGross\}\)<=0\.05/);
   assert.match(route,/myDataMatched:Boolean\(myData\)/);
-  assert.match(route,/συνδέθηκε με το υπάρχον myDATA/);
+  assert.match(route,/myData\?\.inboxId/);
   assert.match(route,/εμφανίστηκε αμέσως στα Πρόχειρα BackOffice/);
 });
 
