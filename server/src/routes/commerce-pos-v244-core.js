@@ -112,6 +112,38 @@ async function productsForLines(tx,companyId,supplierId,lines){
 
 router.use(async(req,res,next)=>{try{await ensureV244IntakeSchema();next()}catch(error){next(error)}});
 
+// The POS has already recorded (or safely reused) the supplier payment before
+// full OCR starts.  Create the BackOffice shell in the same durable handoff so
+// an OCR failure can never hide that paid invoice from the Drafts list.
+router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
+    const result=await prisma.$transaction(async tx=>{
+      const jobs=await tx.$queryRaw`SELECT "id","storeId","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE`;
+      const job=jobs[0];
+      if(!job)throw Object.assign(new Error("Δεν βρέθηκε η ανάγνωση του τιμολογίου."),{status:404});
+      if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)throw Object.assign(new Error("Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."),{status:403});
+      if(job.purchaseDocumentId)return {documentId:job.purchaseDocumentId,reused:true};
+      const suppliers=await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+      const supplier=suppliers[0];if(!supplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
+      const payment=body.settlementMode==="PAID"?await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber}):null;
+      if(body.settlementMode==="PAID"){
+        assertReusableInvoicePayment(payment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber,totalGross:body.totalGross});
+        if(body.paymentTransactionId&&body.paymentTransactionId!==payment.id)throw Object.assign(new Error("Η πληρωμή δεν είναι η αρχική πληρωμή του τιμολογίου."),{status:409});
+      }
+      const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
+      if(duplicate)throw Object.assign(new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`),{status:409});
+      const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
+      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId","paymentTransactionId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber},${body.documentDate},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId},${payment?.id||null})`;
+      await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`POS πρόχειρο ${body.documentNumber} — αναμονή πλήρους ανάγνωσης`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
+      if(payment)await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber} WHERE "id"=${payment.id} AND "companyId"=${req.user.companyId}`;
+      await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_DRAFT_READY',"status"='POS_DRAFT_READY',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+      return {documentId,orderId,reused:false};
+    });
+    res.status(result.reused?200:201).json({ok:true,status:"DRAFT",stockUpdated:false,awaitingApproval:true,...result});
+  }catch(error){next(error)}
+});
+
 router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
     const body=z.object({productLines:z.array(lineSchema).min(1).max(500),source:z.literal("V2.4.4").optional()}).parse(req.body||{});
@@ -119,7 +151,7 @@ router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READE
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    if(job.purchaseDocumentId)return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
+    if(job.purchaseDocumentId&&job.status!=="POS_DRAFT_READY"&&job.status!=="POS_PROCESSING")return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
     const productLines=body.productLines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),retailPrice:Number(line.retailPrice||0),initialAmount:Number(line.initialAmount||0),discount1:clamp(line.discount1,0,100),discount1Amount:Number(line.discount1Amount||0),discount2:clamp(line.discount2,0,100),discount2Amount:Number(line.discount2Amount||0),discount3:clamp(line.discount3,0,100),discount3Amount:Number(line.discount3Amount||0),netAmount:Number(line.netAmount),vatRate:clamp(line.vatRate,0,100),grossAmount:Number(line.grossAmount),confidence:clamp(line.confidence,0,100),v244:true}));
     const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
     const resultJson={...previous,productLines,v244Finalized:true,v244FinalizedAt:new Date().toISOString(),v244Source:"KAT_INVOICE_LAB_V2_4_4"};
@@ -137,7 +169,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
-    if(job.purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
+    if((job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(job.status))||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
@@ -153,7 +185,8 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const result=await prisma.$transaction(async tx=>{
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
-      if(!locked[0]||locked[0].purchaseDocumentId||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      if(!locked[0]||((locked[0].purchaseDocumentId)&&!["POS_DRAFT_READY","POS_PROCESSING"].includes(locked[0].status))||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
+      const skeletonDocumentId=locked[0].purchaseDocumentId||null;
       if(body.documentType==="INVOICE")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
       const additionalPageJobs=[];
@@ -163,7 +196,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       }
       if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||pageJob.purchaseDocumentId||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
-      if(duplicate){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
+      if(duplicate&&duplicate.id!==skeletonDocumentId){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
       let shift=null,existingPayment=null;
       // Shared POS/BackOffice intake: a reread of an already paid invoice must
       // not turn it into new credit or require the original operator's shift.
@@ -185,7 +218,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         existingPayment=payments[0]||null;
         assertReusableInvoicePayment(existingPayment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId,documentNumber:body.documentNumber,totalGross:body.totalGross});
         const linked=await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "paymentTransactionId"=${existingPayment.id} AND "status" IN ('DRAFT','APPROVED') LIMIT 1`;
-        if(linked[0])throw Object.assign(new Error("Η πληρωμή είναι ήδη συνδεδεμένη με καταχωρισμένο τιμολόγιο."),{status:409});
+        if(linked[0]&&linked[0].id!==skeletonDocumentId)throw Object.assign(new Error("Η πληρωμή είναι ήδη συνδεδεμένη με καταχωρισμένο τιμολόγιο."),{status:409});
       }else if(body.settlementMode==="PAID"){
         const duplicatePayments=await tx.$queryRaw`
           SELECT t."id",t."storeId",t."amount",t."occurredAt"
@@ -202,12 +235,16 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       }
       stage="match-products";
       const matched=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
-      const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
+      const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
+      if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
+      const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
       const totalNet=matched.reduce((s,l)=>s+Number(l.netAmount||0),0),totalVat=matched.reduce((s,l)=>s+Math.max(0,Number(l.grossAmount||0)-Number(l.netAmount||0)),0);
       stage="create-purchase-document";
-      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate||new Date()},${totalNet},${totalVat},${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
+      if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${body.settlementMode} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;
+      else await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate||new Date()},${totalNet},${totalVat},${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
       stage="create-purchase-order";
-      await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR V2.4.4 ${body.documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
+      if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=${body.note||`OCR V2.4.4 τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},"updatedByName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${orderId} AND "companyId"=${req.user.companyId}`;
+      else await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR V2.4.4 ${body.documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
       for(const [index,line] of matched.entries()){
         const net=Math.max(0,Number(line.netAmount||0)),gross=Math.max(net,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net);
         const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit),stockUnitsPerInvoiceUnit=invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1;
