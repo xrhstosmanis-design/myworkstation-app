@@ -20,6 +20,12 @@ const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)r
 const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
 const id=()=>crypto.randomUUID();
 const fastBackgroundWorkers=new Map();
+// A POS handoff is intentionally fire-and-forget for the operator. Render can
+// briefly refuse a loopback/public request while a worker is waking up, so the
+// server retries the same durable job before it is ever reported as failed.
+const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
 
 async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
@@ -42,20 +48,35 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
   const task=(async()=>{
     try{
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING')`;
-      const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});
-      const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
-      if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
-      await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{authorization,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
-      const created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{authorization,publicOrigin,method:"POST",body:{
-        supplierId:handoff.supplierId,
-        documentNumber:handoff.documentNumber,
-        documentDate:handoff.documentDate,
-        totalGross:handoff.totalGross,
-        settlementMode:handoff.settlementMode,
-        paymentTransactionId:handoff.settlementMode==="PAID"?handoff.paymentTransactionId:null,
-        additionalPageJobIds,
-        note:`Γρήγορη καταχώριση με AI • ${pageJobIds.length} ${pageJobIds.length===1?"σελίδα":"σελίδες"} • ${handoff.settlementMode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`
-      }});
+      let created,lastError;
+      for(const [attempt,delay] of FAST_BACKGROUND_RETRY_DELAYS_MS.entries()){
+        if(delay)await wait(delay);
+        try{
+          const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});
+          const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
+          if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
+          await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{authorization,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
+          created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{authorization,publicOrigin,method:"POST",body:{
+            supplierId:handoff.supplierId,
+            documentNumber:handoff.documentNumber,
+            documentDate:handoff.documentDate,
+            totalGross:handoff.totalGross,
+            settlementMode:handoff.settlementMode,
+            paymentTransactionId:handoff.settlementMode==="PAID"?handoff.paymentTransactionId:null,
+            additionalPageJobIds,
+            note:`Γρήγορη καταχώριση με AI • ${pageJobIds.length} ${pageJobIds.length===1?"σελίδα":"σελίδες"} • ${handoff.settlementMode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`
+          }});
+          lastError=null;
+          break;
+        }catch(error){
+          lastError=error;
+          console.warn("POS fast invoice background retry",{jobId,attempt:attempt+1,message:String(error?.message||error)});
+          // A missing AI key, unsafe OCR result or payment mismatch will not be
+          // repaired by waiting. Only transient transport failures retry.
+          if(!isRetryableBackgroundError(error))break;
+        }
+      }
+      if(lastError)throw lastError;
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_COMPLETE',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"COMPLETED",completedAt:new Date().toISOString(),archived:created?.archived!==false,reconciliationRequired:Boolean(created?.reconciliationRequired),reconciliationDifference:Number(created?.reconciliationDifference||0),lineCount:Number(created?.lineCount||0),pageCount:Number(created?.pageCount||pageJobIds.length)}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
     }catch(error){
       const message=String(error?.message||error).slice(0,700);
