@@ -134,12 +134,6 @@ router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>
 
 router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
-    if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
-      const parsed=normalizeAzure(await callAzure({contentData:req.body?.dataUrl,mimeType:req.body?.mimeType||"image/jpeg"}));
-      const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-      return res.json({confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE"});
-    }
-    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const storeId=String(req.body?.storeId||"");
     const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
     const mimeType=String(req.body?.mimeType||"image/jpeg");
@@ -151,6 +145,17 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const isPdf=mimeType==="application/pdf";
     if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
+    if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+      try{
+        const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType}));
+        const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
+        return res.json({confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE"});
+      }catch(error){
+        console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
+        if(!process.env.OPENAI_API_KEY){const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν είναι προσωρινά διαθέσιμη. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+      }
+    }
+    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const filePart=isPdf
       ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
       :{type:"input_image",image_url:dataUrl,detail:"low"};
