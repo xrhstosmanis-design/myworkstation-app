@@ -15,7 +15,9 @@ const providerErrorText=error=>String(error?.message||error||"UNKNOWN").replace(
 const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
 const TOTAL_TOLERANCE=0.05;
+const STEFANIDIS_TAX_ID="998878583";
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
+const isStefanidisInvoice=parsed=>cleanTaxId(parsed?.supplier?.taxId)===STEFANIDIS_TAX_ID||parsed?.supplierReadingProfile?.ruleKey==="STEFANIDIS_PRINTED_COLUMNS";
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const greekLatinFold=value=>norm(value).replace(/[ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]/g,c=>({Α:"A",Β:"B",Ε:"E",Ζ:"Z",Η:"H",Ι:"I",Κ:"K",Μ:"M",Ν:"N",Ο:"O",Ρ:"P",Τ:"T",Υ:"Y",Χ:"X"}[c]||c));
 const validGreekTaxId=value=>{const v=cleanTaxId(value);if(v.length!==9||/^0+$/.test(v))return false;let sum=0;for(let i=0;i<8;i++)sum+=Number(v[i])*2**(8-i);return (sum%11)%10===Number(v[8]);};
@@ -243,6 +245,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   }
 
   parsed=await applyCentralSupplierProfile(parsed);
+  // Table/Azure recovery can add rows after the first printed-column pass.
+  // Re-apply the centrally learned STEFANIDIS layout to those late rows before
+  // totals and discounts are calculated. The equations inside the recovery
+  // helper must balance, so values from another invoice are never copied.
+  if(isStefanidisInvoice(parsed)){
+    parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
+    parsed.stefanidisFinalColumnRecovery=true;
+  }
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
