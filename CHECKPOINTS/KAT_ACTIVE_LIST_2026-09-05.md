@@ -1,3 +1,12 @@
+## 2026-09-14 — Gate 3: parallel full-OCR timeout recovery
+
+- [x] LAB 11:31–11:35: 2612188 failed with `POS_FAILED / POS_BACKGROUND_FAILED` and hidden internal error.
+- [x] Root cause: sequential Azure page fallback accumulated full per-page timeouts and exposed a generic 500.
+- [x] Fix: parallel page recovery; retryable `AZURE_TIMEOUT`/503 retains the failed page and activates the durable worker retry.
+- [x] 47/47 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge/deploy και νέα καθαρή POS δοκιμή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-parallel-timeout-recovery.md`.
+
 ## 2026-09-14 — Gate 3: background lines into pre-created POS draft
 
 - [x] LAB: 2612188 reached `POS_FAILED / POS_BACKGROUND_FAILED` at 20:17 after OCR, with generic internal error.
