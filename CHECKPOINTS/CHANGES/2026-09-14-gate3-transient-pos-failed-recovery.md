@@ -12,7 +12,7 @@
 - After those retries are exhausted the durable job is marked `POS_FAILED`.
 - `fast-recover` currently reclaims only `POS_QUEUED`, `POS_DRAFT_READY`, or stale `POS_PROCESSING` jobs, so a transport-only `POS_FAILED` job can remain stranded even though the draft, photos and payment are intact.
 
-## Implemented fix
+## Αλλαγές
 
 - Added a deployment-time Gate 3 patch that makes `fast-recover` consider `POS_FAILED` jobs.
 - A failed job is actually reclaimed only when stored `posBackground.error` matches the existing transient transport classifier: `fetch failed`, `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, or `EAI_AGAIN`.
