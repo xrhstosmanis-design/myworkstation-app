@@ -27,6 +27,14 @@ test("fast header falls back from Azure without blocking payment",()=>{
   assert.match(wrapper,/Η πληρωμή δεν έγινε/);
 });
 
+test("fast header also falls back when Azure succeeds with an empty header",()=>{
+  assert.match(wrapper,/const azureHeader=/);
+  assert.match(wrapper,/const azureHasUsefulHeader=Boolean/);
+  assert.match(wrapper,/if\(azureHasUsefulHeader\)return res\.json\(azureHeader\)/);
+  assert.match(wrapper,/FAST Azure header incomplete; trying configured fallback/);
+  assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
+});
+
 test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/data-image-file type="file"[^>]*multiple/);
   assert.match(backofficeIntake,/data-pdf-file type="file"[^>]*multiple/);
