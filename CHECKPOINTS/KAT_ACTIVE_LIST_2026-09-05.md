@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 48479)
-Total output lines: 1405
+Warning: truncated output (original token count: 48857)
+Total output lines: 1413
 
 ## 2026-09-13 — Gate 3: ανάκτηση POS εργασίας και έντυπες στήλες
 
@@ -322,20 +322,7 @@ Total output lines: 1405
 | MOD-01 | Δικαιώματα / πληρωμένα modules ανά ιδιοκτήτη, εταιρεία, κατάστημα, πακέτο και ημερομηνία λήξης. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION ΟΚ |
 | MOD-02 | Επέκταση της υπάρχουσας ενότητας Προσφορών με αναλύσεις, επιστροφές, προμηθευτές και Excel/PDF. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟ MAIN · automated PASS · ΑΝΑΜΟΝΗ LAB ACCEPTANCE |
 | MOD-03 | Ποσά προμηθευτών και εξαγωγές Excel/PDF στις Προσφορές. | ΕΚΚΡΕΜΕΙ |
-| MOD-04 | Κανάλι/ομάδα…18479 tokens truncated…[x] Καρφίτσωμα επιτρέπεται μόνο σε κατηγορία «Ανακοίνωση» και ελέγχεται server-side.
-- [x] Κάθε καρφίτσωμα/ξεκαρφίτσωμα καταγράφεται στο audit με χρήστη, κατάστημα και μήνυμα.
-- [x] Οι καρφιτσωμένες ανακοινώσεις έχουν καθαρή οπτική ένδειξη και προηγούνται μέσα στην αντίστοιχη ομάδα αναγνωσμένων/αδιάβαστων.
-- [x] Στοχευμένο test, 1109/1109 server tests και client production build: PASS.
-- [ ] Εκκρεμούν CI, deploy και LAB retest.
-
-## 12/09/2026 — Κουμπί Chat σε Super Admin και Ιδιοκτήτη
-
-- [x] Ο Super Admin έχει κεντρικά κουμπιά Chat για όλα τα καταστήματα του επιλεγμένου πελάτη, ανεξάρτητα από συνδρομή.
-- [x] Ο Ιδιοκτήτης βλέπει το κεντρικό κουμπί Chat μόνο με ενεργό πληρωμένο module `STORE_CHAT`.
-- [x] Ο Ιδιοκτήτης επιλέγει μόνο ανάμεσα στα δικά του tenant-scoped καταστήματα.
-- [x] Η τελική πρόσβαση ελέγχεται ξανά server-side σε κάθε άνοιγμα και ενέργεια.
-- [x] Στοχευμένο test, 1109/1109 server tests και client production build: PASS.
-- [ ] Εκκρεμούν CI, deploy και LAB retest από Super Admin και Ιδιοκτήτη.
+| MOD-04 | Κανάλι/ομάδα…18857 tokens truncated…, deploy και LAB retest από Super Admin και Ιδιοκτήτη.
 
 ## 12/09/2026 — Ενιαίο Chat με pop-down στον Super Admin
 
@@ -813,3 +800,11 @@ Total output lines: 1405
 - [x] Τοπικά: 1.198/1.198 server tests και production client build PASS.
 - [ ] Αναμονή CI/Render και LAB δοκιμή μόνο γρήγορης ανάγνωσης των ίδιων δύο φωτογραφιών.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-11-fast-header-supplier-handoff.md`.
+## 2026-09-14 — Gate 3: κεντρική εκμάθηση ΣΤΕΦΑΝΙΔΗ από επιβεβαιωμένο checkpoint
+
+- [x] Πηγή αλήθειας: `2026-09-13-central-supplier-column-learning.md` και fixture δύο σελίδων του `2612188`: 38 γραμμές, 608 τεμάχια, `2.369,99 €`, με τυπωμένη σειρά λιανική → μονάδα → ποσότητα → τιμή αγοράς → αξία.
+- [x] Κεντρική εκμάθηση: ΑΦΜ `998878583` / ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ λαμβάνει versioned profile `STEFANIDIS_PRINTED_COLUMNS` με επαληθευμένες σχετικές θέσεις στηλών. Εφαρμόζεται σε όλες τις εταιρείες και ροές ανάγνωσης.
+- [x] Ασφάλεια: ο κανόνας δεν αποθηκεύει παλιές ποσότητες, τιμές, σύνολα, company product IDs ή φωτογραφίες. Κάθε νέα γραμμή εφαρμόζεται μόνο αν το νέο τυπωμένο ποσότητα × αγορά συμφωνεί με τη δική της αξία.
+- [x] Τοπικά: 1.199/1.199 server tests και Prisma/server build PASS.
+- [ ] Αναμονή CI/Render και τελική LAB προεπισκόπηση των δύο φωτογραφιών, χωρίς νέα πληρωμή, stock ή οριστικοποίηση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-central-supplier-column-learning.md`.
