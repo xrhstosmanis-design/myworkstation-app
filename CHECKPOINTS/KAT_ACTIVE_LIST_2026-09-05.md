@@ -2,10 +2,11 @@
 
 - [x] LAB 2612188: FAST header, υπάρχουσα πληρωμή, draft και 2 φωτογραφίες διατηρούνται σωστά.
 - [x] Εύρημα: μετά την εξάντληση transient transport retries το durable job μπορεί να μείνει `POS_FAILED` και το υπάρχον fast-recover δεν το ξανασηκώνει.
-- [x] Διόρθωση: `POS_FAILED` ανακτάται μόνο όταν το αποθηκευμένο background error είναι transient transport failure.
+- [x] Διόρθωση απευθείας στο source (χωρίς runtime text patch): `POS_FAILED` ανακτάται μόνο όταν το αποθηκευμένο background error είναι transient transport failure.
+- [x] Το `fast-status` χρησιμοποιεί τον ίδιο transient-only guard και κάνει guarded reclaim του ίδιου durable job.
 - [x] OCR/payment/configuration failures δεν επανεκκινούν αυτόματα.
 - [x] Ίδιο job, ίδιο draft, ίδιες φωτογραφίες και υπάρχουσα πληρωμή. Καμία νέα χρέωση, stock κίνηση ή οριστικοποίηση.
-- [ ] Αναμονή CI PASS και LAB επαλήθευσης.
+- [ ] Αναμονή CI PASS, merge και LAB επαλήθευσης.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-transient-pos-failed-recovery.md`.
 
 

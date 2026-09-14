@@ -14,11 +14,12 @@
 
 ## Αλλαγές
 
-- Added a deployment-time Gate 3 patch that makes `fast-recover` consider `POS_FAILED` jobs.
+- Changed the Gate 3 source directly so `fast-recover` considers `POS_FAILED` jobs; no deployment-time text patch is used.
 - A failed job is actually reclaimed only when stored `posBackground.error` matches the existing transient transport classifier: `fetch failed`, `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, or `EAI_AGAIN`.
 - Configuration, payment, unsafe OCR and other non-transient failures remain failed and are not automatically replayed.
 - Recovery changes the same durable job back to `POS_QUEUED` and schedules the existing background worker with the same page IDs and payment identity.
-- Added targeted tests for transient eligibility, non-transient exclusion and patch idempotency.
+- `fast-status` also reclaims a failed job only when the same stored transient classifier passes, allowing the existing status polling to resume the same durable job automatically.
+- Added source-level regression tests for transient eligibility, guarded status recovery and non-transient exclusion.
 
 ## Safety
 
@@ -26,4 +27,4 @@
 - No new payment or credit.
 - No stock movement.
 - No approval/finalization.
-- PR #827 remains Draft until CI PASS and LAB verification.
+- PR #827 remains Draft until CI PASS; LAB verification follows merge.
