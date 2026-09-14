@@ -355,7 +355,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       SELECT "id","storeId","status","resultJson"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
-        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
+        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR ("status"='POS_FAILED' AND COALESCE("resultJson"->'posBackground'->>'error','')~*'fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN'))
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY "updatedAt" ASC LIMIT 3`;
     const recovered=[];

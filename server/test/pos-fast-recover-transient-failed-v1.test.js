@@ -6,7 +6,7 @@ const source=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.
 const retryable=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
 
 test("transient POS_FAILED jobs become eligible for durable recovery",()=>{
-  assert.match(source,/"status" IN \('POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\)/);
+  assert.match(source,/\("status"='POS_FAILED' AND COALESCE\("resultJson"->'posBackground'->>'error',''\)~\*'fetch failed\|ECONNRESET\|ECONNREFUSED\|ETIMEDOUT\|EAI_AGAIN'\)/);
   assert.match(source,/job\.status==="POS_FAILED"&&!isRetryableBackgroundError\(storedBackgroundError\)/);
   assert.match(source,/"status" IN \('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
 });

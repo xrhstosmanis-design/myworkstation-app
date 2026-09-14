@@ -8,7 +8,7 @@ const reader=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",i
 
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
-  assert.match(route,/"status" IN \('POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
+  assert.match(route,/"status" IN \('POS_QUEUED','POS_DRAFT_READY'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\) OR \("status"='POS_FAILED' AND COALESCE\("resultJson"->'posBackground'->>'error',''\)~\*'fetch failed\|ECONNRESET\|ECONNREFUSED\|ETIMEDOUT\|EAI_AGAIN'\)/);
   assert.match(route,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\)/);
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
 });
