@@ -1,3 +1,12 @@
+## 2026-09-14 — Gate 3: POS_QUEUED recovery worker successor
+
+- [x] LAB 10:57: 2612188 remained 0 lines at `POS_QUEUED / POS_RECOVERING`.
+- [x] Root cause: recovery claimed the database row while an older in-memory worker held the job lock; no successor was attached.
+- [x] Fix: one coalesced successor always starts after the old worker settles; repeated polls cannot create duplicate/infinite workers.
+- [x] 45/45 targeted tests PASS; same draft/payment, no stock or finalization.
+- [ ] Αναμονή CI, merge/deploy και automatic recovery of the existing draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-queued-worker-successor.md`.
+
 ## 2026-09-14 — Gate 3: παράλληλη πλήρης ανάγνωση ΣΤΕΦΑΝΙΔΗ
 
 - [x] LAB 10:40–10:44:59: το νέο πρόχειρο 2612188 έμεινε 0 γραμμές και ξύπνησε μόνο ως `POS_RECOVERING` μετά από ανανέωση BackOffice.
