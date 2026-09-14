@@ -24,8 +24,8 @@ const fastBackgroundWorkers=new Map();
 // briefly refuse a loopback/public request while a worker is waking up, so the
 // server retries the same durable job before it is ever reported as failed.
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
-const FAST_AZURE_HEADER_TIMEOUT_MS=9000;
-const FAST_OPENAI_HEADER_TIMEOUT_MS=17000;
+const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
+const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
 
