@@ -897,3 +897,12 @@ Total output lines: 1413
 - [x] No OCR/provider, payment, draft, pricing/discount, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge and one immediate LAB refresh outcome.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-show-recovery-outcome.md`.
+
+## 2026-09-14 — Gate 3: rebuild lost durable handoff
+
+- [x] LAB recovery counters proved both scanned failures were skipped only because `posHandoff` was missing.
+- [x] Preserve future handoffs by merging AI results instead of replacing `resultJson`.
+- [x] Rebuild an existing handoff only from the same tenant/store draft, linked payment and exact transaction page group.
+- [x] Reuse already stored product lines without a new provider call; no payment, stock, approval or finalization.
+- [ ] Αναμονή CI, merge and LAB validation of 38 lines / 608 pieces / 2.369,99 €.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-rebuild-lost-handoff.md`.
