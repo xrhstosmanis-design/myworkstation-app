@@ -44,6 +44,27 @@ async function internalCommerceRequest(path,{authorization,method="GET",body,pub
   throw lastError||new Error("Η εσωτερική ανάγνωση τιμολογίου δεν ξεκίνησε.");
 }
 
+async function rebuildLostFastHandoff(companyId,job){
+  const storedLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
+  if(!job.purchaseDocumentId||!job.createdAt||!storedLines.length)return null;
+  const documents=await prisma.$queryRaw`
+    SELECT d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."settlementMode",d."paymentTransactionId",o."description"
+    FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId"
+    WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${companyId} AND d."storeId"=${job.storeId}
+      AND d."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' LIMIT 1`;
+  const document=documents[0];if(!document)return null;
+  if(document.settlementMode==="PAID"&&!document.paymentTransactionId)return null;
+  const expectedPageCount=Math.max(1,Math.min(5,Number(String(document.description||"").match(/(\d+)\s+σελίδ/)?.[1]||1)));
+  const siblings=await prisma.$queryRaw`
+    SELECT "id" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${job.storeId}
+      AND "createdAt"=${job.createdAt} AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "id"`;
+  if(siblings.length!==expectedPageCount||!siblings.some(row=>row.id===job.id))return null;
+  const pageJobIds=[job.id,...siblings.map(row=>row.id).filter(id=>id!==job.id)];
+  const handoff={version:"POS_FAST_HANDOFF_REBUILT_V1",supplierId:document.supplierId,documentNumber:document.documentNumber,documentDate:document.documentDate,totalGross:Number(document.totalGross||0),settlementMode:document.settlementMode,paymentTransactionId:document.paymentTransactionId||null,pageCount:pageJobIds.length,pageJobIds,primaryJobId:job.id,resumeStoredProductLines:true,rebuiltAt:new Date().toISOString()};
+  await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${companyId} AND "status"='POS_FAILED'`;
+  return handoff;
+}
+
 function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handoff,publicOrigin}){
   if(!authorization||!jobId||fastBackgroundWorkers.has(jobId))return;
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
@@ -54,8 +75,10 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
       for(const [attempt,delay] of FAST_BACKGROUND_RETRY_DELAYS_MS.entries()){
         if(delay)await wait(delay);
         try{
-          const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});
-          const productLines=finalizeV244ProductLines(Array.isArray(ai?.result?.productLines)?ai.result.productLines:[]);
+          let sourceLines;
+          if(handoff.resumeStoredProductLines){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;sourceLines=rows[0]?.resultJson?.productLines}
+          else{const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
+          const productLines=finalizeV244ProductLines(Array.isArray(sourceLines)?sourceLines:[]);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{authorization,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
           created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{authorization,publicOrigin,method:"POST",body:{
@@ -359,7 +382,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
     const storeId=String(req.body?.storeId||"").trim();
     const staleBefore=new Date(Date.now()-60*1000);
     const rows=await prisma.$queryRaw`
-      SELECT "id","storeId","status","resultJson"
+      SELECT "id","storeId","status","resultJson","purchaseDocumentId","createdAt"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
         AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
@@ -369,7 +392,8 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
     for(const job of rows){
       if(recovered.length>=3)break;
       if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId)){skippedOperatorScope++;continue}
-      const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
+      let handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
+      if(!handoff&&job.status==="POS_FAILED")handoff=await rebuildLostFastHandoff(req.user.companyId,job);
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length){skippedNoHandoff++;continue}
       const storedBackgroundError=String(job.resultJson?.posBackground?.error||"");
       if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
