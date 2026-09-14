@@ -864,3 +864,11 @@ Total output lines: 1413
 - [x] Same job, draft, photos and payment; no FAST header, calculation, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-preserve-provider-timeout.md`.
+
+## 2026-09-14 — Gate 3: POS job observability
+
+- [x] Confirmed live revision 277222c1; LAB refresh at 08:32 left invoice 2612188 at 0 lines / 0,00 € and updatedAt 08:04.
+- [x] Added tenant-scoped, read-only visibility of the linked OCR job status, stage, timestamp and bounded stored background error.
+- [x] No OCR, payment, draft, calculation, stock, approval or finalization behavior change.
+- [ ] Αναμονή CI, merge and LAB read of the exact `OCR job:` diagnostic.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-pos-job-observability.md`.
