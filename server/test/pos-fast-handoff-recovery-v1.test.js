@@ -44,6 +44,15 @@ test("orders refresh starts durable handoff recovery without blocking the report
   const body=orders.slice(start,orders.indexOf("async function loadStock",start));
   assert.match(body,/\/api\/commerce\/ai-reader\/fast-recover/);
   assert.ok(body.indexOf("fast-recover")>body.indexOf("/api/purchase-orders/report"));
+  assert.match(body,/state\.recovery=recovery;updateRefreshControls\(root\)/);
+  assert.match(body,/state\.recovery=\{error:error\.message\};updateRefreshControls\(root\)/);
+});
+
+test("fast recovery reports why stored jobs were not reclaimed",()=>{
+  assert.match(route,/skippedOperatorScope=0,skippedNoHandoff=0,skippedNonRetryable=0/);
+  assert.match(route,/scanned:rows\.length,recovered:recovered\.length/);
+  assert.match(route,/skipped:\{operatorScope:skippedOperatorScope,noHandoff:skippedNoHandoff,nonRetryable:skippedNonRetryable\}/);
+  assert.match(orders,/Recovery: scanned .*started .*no-handoff .*non-retryable/);
 });
 
 test("AI recheck applies verified printed column recovery before reconciliation",()=>{
