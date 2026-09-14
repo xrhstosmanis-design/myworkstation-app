@@ -25,6 +25,7 @@ const fastBackgroundWorkers=new Map();
 // server retries the same durable job before it is ever reported as failed.
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/i.test(String(error?.message||error));
 
 async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
@@ -70,6 +71,9 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
         }catch(error){
           lastError=error;
           console.warn("POS fast invoice background retry",{jobId,attempt:attempt+1,message:String(error?.message||error)});
+          // A missing AI key, unsafe OCR result or payment mismatch will not be
+          // repaired by waiting. Only transient transport failures retry.
+          if(!isRetryableBackgroundError(error))break;
         }
       }
       if(lastError)throw lastError;
