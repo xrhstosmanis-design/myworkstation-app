@@ -872,3 +872,11 @@ Total output lines: 1413
 - [x] No OCR, payment, draft, calculation, stock, approval or finalization behavior change.
 - [ ] Αναμονή CI, merge and LAB read of the exact `OCR job:` diagnostic.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-pos-job-observability.md`.
+
+## 2026-09-14 — Gate 3: preserve full OCR provider error
+
+- [x] LAB proved recovery ran and failed again at 17:12 with the generic all-pages error.
+- [x] Preserve bounded OpenAI and exact Azure page/provider failure details in the same durable job.
+- [x] No OCR algorithm, payment, draft, pricing/discount, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge and one LAB refresh for the exact provider/page result.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-preserve-full-ocr-provider-error.md`.

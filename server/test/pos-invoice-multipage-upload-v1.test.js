@@ -88,6 +88,12 @@ test("full OCR provider calls are bounded so durable recovery cannot remain POS_
   assert.match(aiRecheck,verifierCall);
 });
 
+test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{
+  assert.match(aiRecheck,/const providerErrorText=error=>/);
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_FAILURE: OPENAI=\$\{providerErrorText\(unifiedAiFailure\)\}; AZURE_PAGE_\$\{pageIndex\+1\}=\$\{providerErrorText\(error\)\}/);
+  assert.doesNotMatch(aiRecheck,/const wrapped=new Error\("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου\."\)/);
+});
+
 test("a multipage invoice is blocked rather than saved empty when no product lines are found",()=>{
   const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
   assert.match(background,/if\(!productLines\.length\)throw new Error/);
@@ -138,8 +144,8 @@ test("failed unified AI recovers every page through Azure without adding carry-f
   assert.match(aiRecheck,/function mergeAzureInvoicePages\(pages\)/);
   assert.match(aiRecheck,/if\(pageTotal>0\)\{totalGross=pageTotal;finalTotalPage=pageIndex\+1\}/);
   assert.doesNotMatch(aiRecheck,/totalGross\+=pageTotal/);
-  assert.match(aiRecheck,/for\(const page of pageJobs\)\{\s*try\{azurePages\.push\(normalizeAzure\(await callAzure/s);
-  assert.match(aiRecheck,/δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες/);
+  assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)\{\s*try\{azurePages\.push\(normalizeAzure\(await callAzure/s);
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_FAILURE/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedFailed=true/);
   assert.match(aiRecheck,/parsed\.openAiUnifiedRecovery="AZURE_ALL_PAGES"/);
   assert.match(aiRecheck,/if\(isProviderTimeout\(error\)\)throw error/);
@@ -153,7 +159,7 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/const hasSafeLine=parsed\.productLines\.some/);
   assert.match(aiRecheck,/needsAzureFields=!hasSafeLine\|\|totalMismatch\|\|inconsistentRows\|\|parsed\.productLines\.some\(line=>Number\(line\?\.vatRate\|\|0\)<=0\)/);
   assert.match(aiRecheck,/if\(!parsed\.azureUnifiedFallback&&needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
-  assert.match(aiRecheck,/for\(const page of pageJobs\)/);
+  assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
 });
