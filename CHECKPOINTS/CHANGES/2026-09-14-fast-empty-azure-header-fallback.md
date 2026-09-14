@@ -15,10 +15,11 @@
 ## Safety
 
 - Δεν αλλάζει payment, draft, stock, handoff, approval ή finalization.
-- Δεν γίνεται production action από αυτή την αλλαγή.
-- Merge μόνο μετά από CI PASS και έπειτα LAB επανάληψη της γρήγορης ανάγνωσης.
+- Δεν έγινε production action από αυτή την αλλαγή.
+- Merge/deploy μόνο μετά από ρητή έγκριση του Χρήστου.
 
 ## Validation
 
 - Προστέθηκε regression test: `fast header also falls back when Azure succeeds with an empty header`.
-- PR #826 παραμένει draft μέχρι CI PASS.
+- PR #826: CI #2173 PASS, μαζί με server tests, client build, production/security/licensing invariants και πραγματικά HTTP E2E flows.
+- Το PR είναι έτοιμο για review και παραμένει unmerged. Επόμενο βήμα μετά από έγκριση: merge και κατόπιν LAB επανάληψη μόνο της γρήγορης ανάγνωσης των ίδιων δύο φωτογραφιών.
