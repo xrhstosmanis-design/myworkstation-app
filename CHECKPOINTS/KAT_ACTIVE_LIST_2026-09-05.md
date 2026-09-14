@@ -808,3 +808,5 @@ Total output lines: 1413
 - [x] Τοπικά: 1.199/1.199 server tests και Prisma/server build PASS.
 - [ ] Αναμονή CI/Render και τελική LAB προεπισκόπηση των δύο φωτογραφιών, χωρίς νέα πληρωμή, stock ή οριστικοποίηση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-13-central-supplier-column-learning.md`.
+
+- 2026-09-14: Pending POS invoice source photos can be deleted from Invoice Inbox; processed evidence and payments are protected.
