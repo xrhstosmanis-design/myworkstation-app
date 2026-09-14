@@ -855,3 +855,12 @@ Total output lines: 1413
 - [x] Same job, draft, photos and payment; no stock, approval or finalization.
 - [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-bounded-discount-verifier.md`.
+## 2026-09-14 — Gate 3: preserve timeout identity for recovery
+
+- [x] LAB health confirmed revision cb1850b from PR #831.
+- [x] Refresh at 08:20 did not update the 2612188 draft; it remained at 0 lines / 0,00 € and updatedAt 08:04.
+- [x] Actual provider timeouts now survive the Azure fallback instead of becoming a generic non-retryable error.
+- [x] The exact generic error already stored by this LAB path is eligible for guarded recovery; unrelated failures remain excluded.
+- [x] Same job, draft, photos and payment; no FAST header, calculation, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge and LAB recovery of the existing draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-preserve-provider-timeout.md`.

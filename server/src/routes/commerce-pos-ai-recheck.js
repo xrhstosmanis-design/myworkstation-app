@@ -10,6 +10,7 @@ import {recoverPrintedRetailColumns,sourceOrder} from "../lib/invoice-column-rea
 
 const router=Router();
 const FULL_OCR_PROVIDER_TIMEOUT_MS=75000;
+const isProviderTimeout=error=>/AZURE_TIMEOUT|TimeoutError|aborted due to timeout/i.test(String(error?.message||error));
 const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
 const TOTAL_TOLERANCE=0.05;
@@ -176,7 +177,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const azurePages=[];
     for(const page of pageJobs){
       try{azurePages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS})))}
-      catch{const error=new Error("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου.");error.status=502;throw error}
+      catch(error){if(isProviderTimeout(error))throw error;const wrapped=new Error("Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες του τιμολογίου.");wrapped.status=502;throw wrapped}
     }
     parsed=mergeAzureInvoicePages(azurePages);
     if(!parsed.productLines.length){const error=new Error("Οι σελίδες αναγνώστηκαν, αλλά δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");error.status=422;throw error}
