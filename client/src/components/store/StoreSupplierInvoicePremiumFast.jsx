@@ -28,7 +28,7 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
         setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: καταχωρίστηκε ως ΠΡΟΧΕΙΡΟ και χρειάζεται έλεγχο BackOffice (διαφορά ${difference.toFixed(2)} €).`:`✅ Τιμολόγιο ${documentNumber}: καταχωρίστηκε στο BackOffice (${result.lineCount||0} γραμμές).`);
         onChanged?.();return;
       }
-      if(result?.failed){setMessage?.(`⚠️ Τιμολόγιο ${documentNumber}: η πληρωμή διατηρήθηκε, αλλά η ανάγνωση χρειάζεται ασφαλή επανάληψη από το BackOffice.`);return}
+      if(result?.failed){setMessage?.(`⚠️ Τιμολόγιο ${documentNumber}: η πληρωμή διατηρήθηκε, αλλά η αυτόματη ανάγνωση δεν ολοκληρώθηκε με ασφάλεια.`);return}
     }catch{}
     if(Date.now()-startedAt<10*60*1000)setTimeout(poll,5000);
   };
