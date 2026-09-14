@@ -55,6 +55,14 @@ test("fast recovery reports why stored jobs were not reclaimed",()=>{
   assert.match(orders,/Recovery: scanned .*started .*no-handoff .*non-retryable/);
 });
 
+test("queued recovery is not abandoned behind an older in-memory worker",()=>{
+  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(worker,/fastBackgroundSuccessors\.set\(jobId/);
+  assert.match(worker,/if\(!waiting\)activeWorker\.finally/);
+  assert.match(worker,/scheduleFastBackground\(successor\)/);
+  assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
+});
+
 test("AI recheck applies verified printed column recovery before reconciliation",()=>{
   assert.match(reader,/recoverPrintedRetailColumns/);
   assert.match(reader,/parsed\.productLines=parsed\.productLines\.map\(line=>recoverPrintedRetailColumns\(line,printedDocumentText\)\)/);
