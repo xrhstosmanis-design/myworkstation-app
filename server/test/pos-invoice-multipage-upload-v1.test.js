@@ -242,3 +242,7 @@ test("V2.4.4 does not accept net value as the initial value when quantity times 
   assert.equal(line.discount1,25);
   assert.equal(line.discount1Amount,3.5);
 });
+
+test("locked reread admits only an unclaimed or same-draft secondary page",()=>{
+  assert.match(intake,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
+});

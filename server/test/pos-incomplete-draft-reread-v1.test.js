@@ -16,7 +16,7 @@ test("a completed mismatched POS draft gets one full reread from its durable pag
 test("reread replaces the same draft lines atomically without creating another payment",()=>{
   assert.match(core,/replaceExistingDraft:z\.boolean\(\)\.optional\(\)\.default\(false\)/);
   assert.match(core,/lockedReplacement=.*posReprocess\?\.mode==="RECONCILIATION_REREAD"/);
-  assert.match(core,/lockedReplacement&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
+  assert.match(core,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
   const replacement=core.slice(core.indexOf('if(lockedReplacement){stage="replace-purchase-lines"'),core.indexOf('let paymentTransactionId=null'));
   assert.match(replacement,/DELETE FROM "PurchaseOrderLine" WHERE "orderId"=\$\{orderId\}/);
   assert.ok(replacement.indexOf('DELETE FROM "PurchaseOrderLine"')<replacement.indexOf('INSERT INTO "PurchaseOrderLine"'));

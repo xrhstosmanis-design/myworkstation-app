@@ -1,3 +1,12 @@
+## 2026-09-15 — Gate 3: secondary-page link during reread
+
+- [x] LAB 12:03–12:11: exact failure `POS_BACKGROUND_PURCHASE_INTAKE`; secondary page was rejected before unified replacement.
+- [x] Fix: locked reread accepts only an unclaimed secondary page or one already linked to the same draft; foreign document links remain blocked.
+- [x] The exact old failure is reclaimable without a new upload or payment.
+- [x] 50/50 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου με Ανανέωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-gate3-secondary-page-reread-link.md`.
+
 ## 2026-09-14 — Gate 3: safe background-operation diagnostics
 
 - [x] LAB 11:48–11:52: 2612188 still failed with a generic internal error; provider-timeout recovery was not the failing branch.

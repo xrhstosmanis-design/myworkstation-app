@@ -90,3 +90,7 @@ test("background failure identifies the internal operation",()=>{
   assert.match(worker,/operationStage="purchase-intake"/);
   assert.match(worker,/POS_BACKGROUND_\$\{operationStage\.toUpperCase\(\)/);
 });
+
+test("the repaired secondary-page conflict is eligible for durable recovery",()=>{
+  assert.match(route,/Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου/);
+});
