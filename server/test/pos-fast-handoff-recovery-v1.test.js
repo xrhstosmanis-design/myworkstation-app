@@ -82,3 +82,11 @@ test("full OCR page recovery stays parallel and exposes retryable Azure timeouts
   assert.match(reader,/timeout\?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"/);
   assert.match(reader,/wrapped\.status=timeout\?503:502/);
 });
+
+test("background failure identifies the internal operation",()=>{
+  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(worker,/operationStage="ai-recheck"/);
+  assert.match(worker,/operationStage="save-product-lines"/);
+  assert.match(worker,/operationStage="purchase-intake"/);
+  assert.match(worker,/POS_BACKGROUND_\$\{operationStage\.toUpperCase\(\)/);
+});

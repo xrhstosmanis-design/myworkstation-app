@@ -82,14 +82,14 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
   const task=(async()=>{
     try{
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING')`;
-      let created,lastError;
+      let created,lastError,operationStage="prepare-lines";
       for(const [attempt,delay] of FAST_BACKGROUND_RETRY_DELAYS_MS.entries()){
         if(delay)await wait(delay);
         try{
           let sourceLines,previousLines=[];
           if(handoff.resumeStoredProductLines){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;sourceLines=rows[0]?.resultJson?.productLines;previousLines=Array.isArray(sourceLines)?sourceLines:[]}
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];sourceLines=null}
-          if(!sourceLines){const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
+          if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
           const productLines=finalizeV244ProductLines(Array.isArray(sourceLines)?sourceLines:[]);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){
@@ -99,7 +99,9 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
             const afterDiff=round2(Math.abs(after.grossTotal-Number(handoff.totalGross||0)));
             if(afterDiff>POS_HANDOFF_TOLERANCE&&!(productLines.length>previousLines.length&&afterDiff<beforeDiff))throw new Error(`Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο (${productLines.length} γραμμές, διαφορά ${afterDiff.toFixed(2)} €). Οι υπάρχουσες γραμμές διατηρήθηκαν.`);
           }
+          operationStage="save-product-lines";
           await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{authorization,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
+          operationStage="purchase-intake";
           created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{authorization,publicOrigin,method:"POST",body:{
             supplierId:handoff.supplierId,
             documentNumber:handoff.documentNumber,
@@ -114,7 +116,7 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
           lastError=null;
           break;
         }catch(error){
-          lastError=error;
+          const stagedError=new Error(`POS_BACKGROUND_${operationStage.toUpperCase().replace(/-/g,"_")}: ${String(error?.message||error)}`);stagedError.status=error?.status;lastError=stagedError;
           console.warn("POS fast invoice background retry",{jobId,attempt:attempt+1,message:String(error?.message||error)});
           // A missing AI key, unsafe OCR result or payment mismatch will not be
           // repaired by waiting. Only transient transport failures retry.

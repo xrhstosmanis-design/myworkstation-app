@@ -1,3 +1,11 @@
+## 2026-09-14 — Gate 3: safe background-operation diagnostics
+
+- [x] LAB 11:48–11:52: 2612188 still failed with a generic internal error; provider-timeout recovery was not the failing branch.
+- [x] Automatic handoff now identifies AI recheck, product-line save, or purchase intake without exposing internal data.
+- [x] 49/49 targeted tests PASS locally; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και μία διαγνωστική επανάληψη για την ακριβή τελική διόρθωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-background-stage-diagnostics.md`.
+
 ## 2026-09-14 — Gate 3: parallel full-OCR timeout recovery
 
 - [x] LAB 11:31–11:35: 2612188 failed with `POS_FAILED / POS_BACKGROUND_FAILED` and hidden internal error.
