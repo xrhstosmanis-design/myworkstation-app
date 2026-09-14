@@ -7,6 +7,7 @@ const suite=fs.readFileSync(new URL("../../client/src/components/commerce/instal
 
 test("purchase order report exposes only scoped OCR job diagnostics",()=>{
   assert.match(route,/j\."companyId"=o\."companyId" AND j\."purchaseDocumentId"=o\."sourceDocumentId"/);
+  assert.match(route,/GROUP BY o\."id",o\."companyId",o\."sourceDocumentId",s\."name",st\."name"/);
   assert.match(route,/jsonb_build_object\('status',j\."status",'stage',j\."stage",'updatedAt',j\."updatedAt",'error',LEFT\(COALESCE\(j\."resultJson"->'posBackground'->>'error',''\),700\)\)/);
   assert.doesNotMatch(route,/AS "ocrJob"[\s\S]{0,80}resultJson/);
 });
