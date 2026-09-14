@@ -76,3 +76,9 @@ test("completed background OCR can fill only its own linked empty POS draft",()=
   assert.match(reader,/if\(job\.purchaseDocumentId&&!backgroundMayFillLinkedDraft\)return res\.status\(409\)/);
   assert.match(reader,/POS_BACKGROUND_V2\.4\.4/);
 });
+
+test("full OCR page recovery stays parallel and exposes retryable Azure timeouts",()=>{
+  assert.match(reader,/Promise\.allSettled\(pageJobs\.map/);
+  assert.match(reader,/timeout\?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"/);
+  assert.match(reader,/wrapped\.status=timeout\?503:502/);
+});
