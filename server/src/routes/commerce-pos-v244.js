@@ -362,11 +362,12 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       SELECT "id","storeId","status","resultJson"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
-        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR ("status"='POS_FAILED' AND COALESCE("resultJson"->'posBackground'->>'error','')~*'fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες'))
+        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
         AND (${storeId}='' OR "storeId"=${storeId})
-      ORDER BY "updatedAt" ASC LIMIT 3`;
+      ORDER BY "updatedAt" ASC LIMIT 50`;
     const recovered=[];
     for(const job of rows){
+      if(recovered.length>=3)break;
       if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))continue;
       const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length)continue;
