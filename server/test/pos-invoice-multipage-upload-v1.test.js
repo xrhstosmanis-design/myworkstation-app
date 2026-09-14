@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {verifyInvoiceDiscounts} from "../src/lib/invoice-discount-verifier.js";
 import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-core.js";
+import {mergeFastInvoiceHeaders} from "../../client/src/lib/invoice-fast-header-merge.js";
 
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
 const backofficeIntake=await readFile(new URL("../../client/src/purchase-order-invoice-intake-bootstrap.js",import.meta.url),"utf8");
@@ -19,6 +20,17 @@ test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/Σελίδα \{index\+1\}/);
   assert.match(client,/movePage\(index,-1\)/);
   assert.match(client,/movePage\(index,1\)/);
+});
+
+test("STEFANIDIS FAST header is independent of reversed page selection",()=>{
+  const pageTwo={supplierId:"supplier",supplierName:"ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ",supplierTaxId:"998878583",documentNumber:"2 2612188",documentDate:"2026-09-02",totalGross:2369.99,confidence:91};
+  const pageOne={supplierName:"ΣΤΕΦΑΝΙΔΗΣ Ι ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ",supplierTaxId:"998878583",documentNumber:"2612188",documentDate:"2026-09-02",totalGross:1492.20,confidence:93};
+  for(const headers of [[pageTwo,pageOne],[pageOne,pageTwo]]){
+    const merged=mergeFastInvoiceHeaders(headers);
+    assert.equal(merged.documentHeader.documentNumber,"2612188");
+    assert.equal(merged.totalHeader.totalGross,2369.99);
+    assert.equal(merged.supplierHeader.supplierTaxId,"998878583");
+  }
 });
 
 test("fast header falls back from Azure without blocking payment",()=>{

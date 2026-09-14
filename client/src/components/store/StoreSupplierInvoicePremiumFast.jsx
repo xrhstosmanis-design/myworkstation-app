@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
 import QRCode from "qrcode";
+import {mergeFastInvoiceHeaders} from "../../lib/invoice-fast-header-merge.js";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
@@ -60,14 +61,12 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       const nextPages=[...pages,...prepared];setPages(nextPages);
       if(initial){setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""})}
       const headerPages=initial&&nextPages.length>1?[nextPages[0],nextPages[nextPages.length-1]]:[nextPages[nextPages.length-1]];
-      let supplierMeta=null,documentMeta=null,totalMeta=null,confidence=0;
+      const headerResults=[];
       for(const page of headerPages){
         const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:60000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})});
-        if(!supplierMeta&&(meta?.supplierId||meta?.supplierName))supplierMeta=meta;
-        if(!documentMeta&&(meta?.documentNumber||meta?.documentDate))documentMeta=meta;
-        if(Number(meta?.totalGross||0)>0)totalMeta=meta;
-        confidence=Math.max(confidence,Number(meta?.confidence||0));
+        if(meta)headerResults.push(meta);
       }
+      const {supplierHeader:supplierMeta,documentHeader:documentMeta,totalHeader:totalMeta,confidence}=mergeFastInvoiceHeaders(headerResults);
       if(supplierMeta?.supplierId&&(initial||!supplierId))setSupplierId(supplierMeta.supplierId);
       if(supplierMeta&&(initial||!supplierCandidate.name))setSupplierCandidate({name:String(supplierMeta.supplierName||""),taxId:String(supplierMeta.supplierTaxId||"")});
       if(documentMeta?.documentNumber&&(initial||!documentNumber))setDocumentNumber(documentMeta.documentNumber);
