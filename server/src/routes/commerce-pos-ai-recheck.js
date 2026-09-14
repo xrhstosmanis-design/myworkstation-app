@@ -148,6 +148,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     pageJobs.push(pageJob);
   }
   const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+  const posHandoff=previous.posHandoff&&typeof previous.posHandoff==="object"?previous.posHandoff:null;
+  let preferCentralStefanidis=false;
+  if(posHandoff?.supplierId){
+    const supplierRows=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${posHandoff.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    preferCentralStefanidis=cleanTaxId(supplierRows[0]?.taxId)===STEFANIDIS_TAX_ID;
+  }
   const localRawText=pageJobs.map((page,index)=>`ΣΕΛΙΔΑ ${index+1}:\n${String(page.resultJson?.rawText||"").slice(0,12000)}`).join("\n\n").slice(0,60000);
   const fileParts=pageJobs.map((page,index)=>page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||`invoice-page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()}:{type:"input_image",image_url:page.contentData,detail:"high"});
   const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα στο πρωτότυπο. Αναγνώρισε πρώτα documentType: CREDIT_NOTE μόνο όταν το παραστατικό γράφει καθαρά ΠΙΣΤΩΤΙΚΟ / CREDIT NOTE, διαφορετικά INVOICE. Βρες τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ, ΑΦΜ, αριθμό παραστατικού, ημερομηνία και τελικό ποσό ως θετική απόλυτη αξία. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
@@ -164,7 +170,17 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
   let parsed=null,unifiedAiFailure=null;
-  try{
+  if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+    try{
+      const azurePages=await Promise.all(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
+      parsed=mergeAzureInvoicePages(azurePages);
+      parsed.totalGross=money2(posHandoff.totalGross||parsed.totalGross);
+      parsed.documentNumber=String(posHandoff.documentNumber||parsed.documentNumber||"");
+      parsed.documentDate=String(posHandoff.documentDate||parsed.documentDate||"");
+      parsed.stefanidisCentralFastPath=true;
+    }catch(error){unifiedAiFailure=error}
+  }
+  if(!parsed)try{
     const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
