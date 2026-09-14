@@ -360,7 +360,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       SELECT "id","storeId","status","resultJson"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
-        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}))
+        AND ("status" IN ('POS_QUEUED','POS_DRAFT_READY') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR ("status"='POS_FAILED' AND COALESCE("resultJson"->'posBackground'->>'error','')~*'fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN'))
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY "updatedAt" ASC LIMIT 3`;
     const recovered=[];
@@ -368,7 +368,9 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))continue;
       const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length)continue;
-      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING')`;
+      const storedBackgroundError=String(job.resultJson?.posBackground?.error||"");
+      if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError))continue;
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')`;
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
       setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
       recovered.push(job.id);
@@ -385,7 +387,14 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
     const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
     const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
-    if(handoff&&["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"].includes(job.status)&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length){
+    const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
+    const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(background.error);
+    let shouldSchedule=hasRecoverableHandoff&&["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"].includes(job.status);
+    if(hasRecoverableHandoff&&retryableFailed){
+      const reclaimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='POS_FAILED'`;
+      shouldSchedule=Boolean(reclaimed);
+    }
+    if(shouldSchedule){
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
       setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
     }
