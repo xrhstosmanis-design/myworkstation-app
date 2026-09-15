@@ -1211,3 +1211,12 @@ Total output lines: 1413
 - [x] Empty drafts remain blocked; payment, stock, accounting, approval and finalization remain unchanged.
 - [ ] Await CI/deploy, then re-read Coffee Union `ΔΑ0011467` from the original POS/front flow.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-ai-response-retry.md`.
+
+## 2026-09-15 — POS multi-page header continuation
+
+- [x] LAB reproduced internal error when page 1-2 was selected before page 1-1.
+- [x] Each header candidate is now read independently; one weak continuation page cannot cancel the valid front page.
+- [x] Selection fails only when every candidate page fails.
+- [x] Regression test covers continuation after one page error.
+- [ ] Await CI/deploy and repeat clean two-page selection without payment until all four fields appear.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-multipage-header-continue.md`.
