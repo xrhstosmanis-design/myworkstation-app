@@ -1248,3 +1248,14 @@ Total output lines: 1413
 - [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
 - [ ] Await green CI/deploy, then safely reread invoice 2612188 without creating another payment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-page-line-reuse.md`.
+
+
+## 2026-09-15 — Bounded POS multi-page provider chain
+
+- [x] LAB proved invoice 2612188 returned from POS_BACKGROUND to POS_QUEUED / POS_RECOVERING with zero lines.
+- [x] Root cause: the 90-second internal request could wrap a provider chain lasting up to 225 seconds, followed by four full retries.
+- [x] Stefanidis pages now use one ordered Azure pass, followed by one bounded OpenAI fallback; the same Azure pass is not repeated.
+- [x] Transient background retries are bounded to one retry.
+- [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
+- [ ] Await green CI/deploy, then resume the existing 2612188 draft without another payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-bounded-multipage-reader.md`.
