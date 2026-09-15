@@ -9,7 +9,16 @@ import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runti
 import {recoverPrintedRetailColumns,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
-const FULL_OCR_PROVIDER_TIMEOUT_MS=75000;
+// Keep the complete provider chain below the 90-second internal POS request
+// deadline. Normal invoice reads finish much sooner; these limits only prevent
+// one stalled provider from stranding the durable draft in recovery.
+const FULL_OCR_PROVIDER_TIMEOUT_MS=30000;
+const CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000;
+const readAzurePagesSequentially=async pageJobs=>{
+  const pages=[];
+  for(const page of pageJobs)pages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS})));
+  return pages;
+};
 const isProviderTimeout=error=>/AZURE_TIMEOUT|TimeoutError|aborted due to timeout/i.test(String(error?.message||error));
 const providerErrorText=error=>String(error?.message||error||"UNKNOWN").replace(/\s+/g," ").trim().slice(0,500);
 const id=()=>crypto.randomUUID();
@@ -220,17 +229,17 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΙΝ επιστρέψεις JSON, μέτρησε οπτικά πόσες πραγματικές σειρές προϊόντων υπάρχουν και βεβαιώσου ότι το productLines έχει τον ίδιο αριθμό. Έπειτα σύγκρινε νοητά το άθροισμα των τελικών αξιών γραμμών με το τελικό πληρωτέο ποσό. Αν υπάρχει εμφανής μεγάλη διαφορά, ξανακοίτα τον πίνακα για γραμμή που παρέλειψες πριν απαντήσεις.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
-  let parsed=null,unifiedAiFailure=null;
+  let parsed=null,unifiedAiFailure=null,centralAzureFailure=null;
   failureStage="read-provider-pages";
   if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     try{
-      const azurePages=await Promise.all(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
+      const azurePages=await readAzurePagesSequentially(pageJobs);
       parsed=mergeAzureInvoicePages(azurePages);
       parsed.totalGross=money2(posHandoff.totalGross||parsed.totalGross);
       parsed.documentNumber=String(posHandoff.documentNumber||parsed.documentNumber||"");
       parsed.documentDate=String(posHandoff.documentDate||parsed.documentDate||"");
       parsed.stefanidisCentralFastPath=true;
-    }catch(error){unifiedAiFailure=error}
+    }catch(error){centralAzureFailure=error;unifiedAiFailure=error}
   }
   if(!parsed)try{
     const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
@@ -243,6 +252,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // silently process only page 1. Recover every ordered page through Azure,
   // then continue as one invoice. If any page cannot be read, fail closed.
   if(!parsed){
+    // The centrally profiled supplier already received a complete ordered Azure
+    // pass above. Do not repeat the same two provider calls after the OpenAI
+    // fallback: that exceeded the caller deadline and caused endless recovery.
+    if(preferCentralStefanidis&&centralAzureFailure){
+      const timeout=isProviderTimeout(centralAzureFailure)||isProviderTimeout(unifiedAiFailure);
+      const wrapped=new Error(`${timeout?"FULL_OCR_PROVIDER_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: AZURE=${providerErrorText(centralAzureFailure)}; OPENAI=${providerErrorText(unifiedAiFailure)}`);
+      wrapped.status=timeout?503:502;throw wrapped;
+    }
     const azureConfigured=Boolean(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
     if(!azureConfigured)throw unifiedAiFailure;
     // Recover all invoice pages concurrently. The old sequential fallback

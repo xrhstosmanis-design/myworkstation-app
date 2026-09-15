@@ -31,8 +31,8 @@ test("background OCR falls back to the public Render origin when loopback fails"
   assert.match(route,/x-forwarded-proto/);
 });
 
-test("background OCR retries automatically before it can mark the POS draft failed",()=>{
-  assert.match(route,/FAST_BACKGROUND_RETRY_DELAYS_MS=\[0,3000,12000,30000\]/);
+test("background OCR permits one bounded retry before it marks the POS draft failed",()=>{
+  assert.match(route,/FAST_BACKGROUND_RETRY_DELAYS_MS=\[0,3000\]/);
   assert.match(route,/for\(const \[attempt,delay\] of FAST_BACKGROUND_RETRY_DELAYS_MS\.entries\(\)\)/);
   assert.match(route,/if\(lastError\)throw lastError/);
   assert.match(route,/isRetryableBackgroundError\(error\)/);
