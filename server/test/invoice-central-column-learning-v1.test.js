@@ -157,7 +157,7 @@ test('manual supplier map accepts an inline printed unit with a safe piece fallb
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const profile={supplierKey:'fresh-milk',supplierTaxId:'803151400',supplierName:'FRESH MILK LOGISTICS',profileVersion:1,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',defaultUnit:'ΤΜΧ',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'QUANTITY',4:'UNIT_PRICE',5:'DISCOUNT_1',6:'VAT_RATE',7:'AMOUNT_AFTER_DISCOUNT'}}};
   const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
-  vm.runInContext(runtime.replace(/^import .*;\\n/gm,'').replaceAll('export async function','async function')+'\\nthis.apply=applyCentralSupplierProfile;',context);
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'803151400'},productLines:[{rawText:'051 ΓΑΛΑ 3,7% ΕΠΙΛΕΓΜΕΝΟ ΟΛΥΜΠΟΥ 1LT ΤΕΜ 1 1,620 5 13 1,54',quantity:9,unitCost:9,netAmount:1.54}]});
   assert.equal(result.productLines[0].quantity,1);
   assert.equal(result.productLines[0].unitPrice,1.62);
@@ -168,8 +168,8 @@ test('manual supplier map accepts an inline printed unit with a safe piece fallb
 test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{
   for(const file of ['../../client/src/invoice-learning-lab-bootstrap.js','../../client/src/invoice-learning-catalog-publication.js']){
     const source=await readFile(new URL(file,import.meta.url),'utf8');
-    assert.match(source,/\\['SUPPLIER_CODE','DESCRIPTION','QUANTITY','UNIT_PRICE'\\]/);
-    assert.match(source,/defaultUnit:Object\\.values\\(columns\\)\\.includes\\('UNIT'\\)\\?null:'ΤΜΧ'/);
+    assert.ok(source.includes("['SUPPLIER_CODE','DESCRIPTION','QUANTITY','UNIT_PRICE']"));
+    assert.ok(source.includes("defaultUnit:Object.values(columns).includes('UNIT')?null:'ΤΜΧ'"));
     assert.doesNotMatch(source,/κωδικό, περιγραφή, μονάδα, ποσότητα/);
   }
 });
