@@ -1238,3 +1238,13 @@ Total output lines: 1413
 - [x] The line-correction button remains manual-only and cannot start a provider request.
 - [ ] Await CI/deploy, then re-read Coffee Union once without clicking a second reader button.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-single-reader-flow.md`.
+
+
+## 2026-09-15 — POS reuse complete FAST page lines
+
+- [x] LAB proved both invoice pages completed FAST recognition but the draft stayed in POS_QUEUED / POS_RECOVERING with zero lines.
+- [x] Successful Azure FAST results now carry their already-read product rows into the durable handoff.
+- [x] The background worker reuses cached rows only when every selected page returned safe product lines; otherwise the existing full OCR path remains authoritative.
+- [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
+- [ ] Await green CI/deploy, then safely reread invoice 2612188 without creating another payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-page-line-reuse.md`.
