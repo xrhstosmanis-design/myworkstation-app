@@ -1,3 +1,9 @@
+## 2026-09-15 — Invoice Learning draft-line correction
+
+- Adds a user-operated draft-line correction dialog for invoice quantity, supplier unit price, package/stock conversion, and decimal discounts.
+- The user may save only the supplier rule centrally; an invoice quantity correction remains scoped to its draft.
+- Saving or previewing a correction never creates stock, accounting, payment, invoice, or approval movement.
+
 ## 2026-09-15 — Supplier packaging and stock-rule editor
 
 - Invoice Learning adds a centrally saved supplier-rule editor for invoice unit, stock multiplier, stock unit, and exact decimal first discount.
