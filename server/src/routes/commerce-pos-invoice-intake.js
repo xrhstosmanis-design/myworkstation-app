@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -94,10 +95,14 @@ function candidateOcrRows(resultJson){
       const code=String(entry?.code||"").trim();
       const description=String(entry?.description||entry?.rawText||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g," ").trim();
       const barcode=String(entry?.barcode||"").trim()||null;
-      const rawPackageSize=Number(entry?.stockUnitsPerInvoiceUnit??entry?.unitsPerPackage??0);
+      const suppliedMultiplier=Number(entry?.stockUnitsPerInvoiceUnit??entry?.unitsPerPackage??0);
+      // Stock is stored in the product's base unit: explicit TEM/TMX becomes
+      // pieces, while printed KG/KGR becomes grams. Values such as 250ml and
+      // 24x355ml deliberately do not match either rule.
+      const conversion=stockConversionFromDescription(description,suppliedMultiplier),rawPackageSize=conversion.multiplier;
       const invoiceUnit=String(entry?.invoiceUnit||entry?.unit||"").toUpperCase()==="PACKAGE"||rawPackageSize>1?"PACKAGE":"PIECE";
       const stockUnitsPerInvoiceUnit=invoiceUnit==="PACKAGE"?(rawPackageSize>0?rawPackageSize:0):1;
-      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
+      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
     }).filter(row=>row.description.length>=2);
   }
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
