@@ -8,8 +8,12 @@ export function columnNumber(value){
   else raw=raw.replace(",",".");
   const n=Number(raw);return Number.isFinite(n)?n:null;
 }
-export function stockConversionFromDescription(description,explicitMultiplier=0){
+export function stockConversionFromDescription(description,explicitMultiplier=0,invoiceUnit=""){
   const text=String(description||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const unit=String(invoiceUnit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω]/g,"");
+  // A kilogram quantity is already the total weight. The weight printed in the
+  // description is package information and must not multiply it a second time.
+  if(/^(KG|KGR|KILO|KIL|ΚΙΛ|ΚΙΛΟ|ΚΙΛΑ)$/.test(unit))return {multiplier:1000,stockMeasure:"GRAM",inferred:true};
   const pieces=text.match(/(?:^|\D)(\d{1,4})\s*(?:TEM|TMX)(?=\D|$)/);
   const kilograms=text.match(/(?:^|\D)(\d+(?:[,.]\d+)?)\s*(?:KGR|KG|KILO|ΚΙΛ)(?=\D|$)/);
   const inferred=pieces?Number(pieces[1]):kilograms?Number(kilograms[1].replace(",","."))*1000:0;
