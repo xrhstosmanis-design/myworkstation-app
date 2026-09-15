@@ -25,13 +25,9 @@ const fastBackgroundSuccessors=new Map();
 // A POS handoff is intentionally fire-and-forget for the operator. Render can
 // briefly refuse a loopback/public request while a worker is waking up, so the
 // server retries the same durable job before it is ever reported as failed.
-// One bounded retry is enough for transient transport/provider failures. Four
-// full OCR attempts could keep a draft in recovery for many minutes.
-const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
+const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
-const FAST_OPENAI_HEADER_ATTEMPTS=2;
-const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[table-recheck\])/i.test(String(error?.message||error));
 
@@ -40,7 +36,7 @@ async function internalCommerceRequest(path,{authorization,method="GET",body,pub
   const origins=[localOrigin,...(publicOrigin&&publicOrigin!==localOrigin?[publicOrigin]:[])];
   let lastError;
   for(const origin of origins)try{
-    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:authorization,"Content-Type":"application/json"},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
+    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:authorization,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
     const text=await response.text();
     let payload={};
     if(text)try{payload=JSON.parse(text)}catch{payload={error:`Μη αναμενόμενη απάντηση server (${response.status}).`}};
@@ -156,30 +152,6 @@ function outputText(response){
   return "";
 }
 
-async function callFastOpenAiHeader({prompt,filePart}){
-  let lastError;
-  for(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt++){
-    try{
-      const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FAST_OPENAI_HEADER_TIMEOUT_MS),body:JSON.stringify({
-        model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
-        input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
-        text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
-      })});
-      if(!response.ok){const detail=await response.text();throw new Error(`HTTP ${response.status}: ${detail.slice(0,160)}`)}
-      const raw=outputText(await response.json());
-      if(!raw.trim())throw new Error("empty structured response");
-      const parsed=JSON.parse(raw);
-      if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("invalid structured response");
-      return parsed;
-    }catch(error){
-      lastError=error;
-      console.warn("FAST OpenAI header attempt failed",{attempt,message:String(error?.message||error)});
-    }
-  }
-  const wrapped=new Error("Η γρήγορη ανάγνωση δεν επέστρεψε έγκυρα βασικά στοιχεία μετά από ασφαλή επανάληψη. Η πληρωμή δεν έγινε.");
-  wrapped.status=502;wrapped.cause=lastError;throw wrapped;
-}
-
 async function matchSupplier(companyId,candidate={}){
   const taxId=cleanTaxId(candidate.taxId);
   if(taxId){
@@ -225,7 +197,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:Array.isArray(parsed.productLines)?parsed.productLines:[]};
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE"};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
         if(azureHasUsefulHeader)return res.json(azureHeader);
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
@@ -250,7 +222,13 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
 
 Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
-    const parsed=await callFastOpenAiHeader({prompt,filePart});
+    const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FAST_OPENAI_HEADER_TIMEOUT_MS),body:JSON.stringify({
+      model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
+      input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
+      text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
+    })});
+    if(!aiResponse.ok){const text=await aiResponse.text();const error=new Error(`PREMIUM FAST AI απέτυχε (${aiResponse.status}). ${text.slice(0,300)}`);error.status=502;throw error;}
+    const parsed=JSON.parse(outputText(await aiResponse.json())||"{}");
     const supplier=await matchSupplier(req.user.companyId,{name:parsed.supplierName,taxId:parsed.supplierTaxId});
     const documentNumber=String(parsed.documentNumber||"").trim();
     const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"";
@@ -361,11 +339,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       const escaped=mimeType.replace("/","\\/");const match=new RegExp(`^data:${escaped};base64,([A-Za-z0-9+/=]+)$`).exec(dataUrl);
       if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(mimeType)||!match)throw Object.assign(new Error(`Μη έγκυρη σελίδα ${index+1}.`),{status:400});
       const bytes=Buffer.from(match[1],"base64");if(bytes.length<100||bytes.length>6500000)throw Object.assign(new Error(`Η σελίδα ${index+1} πρέπει να είναι έως 6,5 MB.`),{status:400});
-      const cachedProductLines=finalizeV244ProductLines(Array.isArray(page?.productLines)?page.productLines:[]).slice(0,500);
-      return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),cachedProductLines};
+      return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
     });
-    const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
-    const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>page.cachedProductLines.map(line=>({...line,sourceFileIndex:pageIndex}))):[];
     await ensureFastHandoffSchema();
     const taxId=cleanTaxId(supplier.taxId),normalizedNumber=normalizeDocumentNumber(documentNumber);
     const myDataRows=taxId?await prisma.$queryRaw`
@@ -406,8 +381,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:hasCompleteCachedProductLines,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
-      await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
+      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;
     });

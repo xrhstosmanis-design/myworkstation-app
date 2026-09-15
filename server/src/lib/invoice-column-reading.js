@@ -162,11 +162,7 @@ export function extractAzureColumns(result){
   const rows=[];
   for(const [tableIndex,table] of (result.tables||[]).entries()){
     const cells=table.cells||[],headers=cells.filter(c=>c.kind==="columnHeader");
-    // Azure can split a printed header across two physical rows (for example
-    // "ΤΙΜΗ" / "ΜΟΝΑΔΑΣ" and "ΑΞΙΑ" / "ΠΡΟ ΕΚΠΤΩΣΗΣ"). Keep the complete
-    // header band rather than treating the first row as the whole label.
-    const headerLastRow=headers.length?Math.max(...headers.map(c=>Number(c.rowIndex)+Number(c.rowSpan||1)-1)):1;
-    const headerCells=headers.length?cells.filter(c=>c.kind==="columnHeader"||Number(c.rowIndex)<=headerLastRow):cells.filter(c=>Number(c.rowIndex)<=headerLastRow);
+    const headerCells=headers.length?headers:cells.filter(c=>Number(c.rowIndex)===0);
     const labels={};
     for(const cell of headerCells)for(let col=cell.columnIndex;col<cell.columnIndex+Number(cell.columnSpan||1);col++)labels[col]=`${labels[col]||""} ${cell.content||""}`.trim();
     const columns={};for(const [col,label] of Object.entries(labels)){const role=headerRole(label);if(role&&columns[role]===undefined)columns[role]=Number(col)}
