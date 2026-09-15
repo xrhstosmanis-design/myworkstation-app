@@ -210,7 +210,7 @@ test('a genuinely repeated printed row is restored when its second charge exactl
   const other={code:'ES01000',description:'COFFEE',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
   const restored=context.restore([cup,other],1236.38,'FR1500 cups row one\nFR1500 cups row two\nES01000 coffee');
   assert.equal(restored.restored,true);assert.equal(restored.lines.filter(line=>line.code==='FR1500').length,2);
-  assert.equal(context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee').restored,false);
+  const exactGap=context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee');\n  assert.equal(exactGap.restored,true);\n  assert.equal(exactGap.totalGapRecovered,true);
 });
 
 
