@@ -1238,3 +1238,11 @@ Total output lines: 1413
 - [x] The line-correction button remains manual-only and cannot start a provider request.
 - [ ] Await CI/deploy, then re-read Coffee Union once without clicking a second reader button.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-single-reader-flow.md`.
+
+
+## 2026-09-15 — Azure split invoice headers
+
+- [x] Azure table extraction keeps a two-row printed header band for split labels such as `ΤΙΜΗ / ΜΟΝΑΔΑΣ`.
+- [x] No stock, payment, accounting or document mutation occurs during extraction.
+- [ ] Await CI/deploy, then re-read Coffee Union once.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-azure-split-invoice-headers.md`.
