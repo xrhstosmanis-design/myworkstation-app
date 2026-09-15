@@ -71,6 +71,7 @@ test('explicit product descriptions convert coffee and chocolate to grams and cu
   assert.deepEqual(stockConversionFromDescription('DELIZ PREMIUM Ρόφημα Σοκολάτας 1Kgr'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
   assert.deepEqual(stockConversionFromDescription('MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100 TEM.)'),{multiplier:100,stockMeasure:'PIECE',inferred:true});
   assert.equal(stockConversionFromDescription('RED BULL 24x355ml').multiplier,0);
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ESPRESSO 3KGR. CLASSIC TIN',3000,'ΚΙΛΑ'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
 });
 
 test('unrelated supplier layout uses printed English headers, three discounts and amount-only discounts',()=>{
