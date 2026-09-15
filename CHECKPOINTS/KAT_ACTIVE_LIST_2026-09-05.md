@@ -1271,3 +1271,9 @@ Total output lines: 1413
 - [x] Protects payment idempotency, deliberate draft deletion, stock, fiscal, accounting and finalization boundaries.
 - [ ] Enforce this gate on every subsequent change.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-mandatory-repository-checkpoint-gate.md`.
+
+## 2026-09-15 — Invoice reader incomplete-line recovery
+
+- Reject product rows without printed quantity, unit price and net amount; no zero-value draft is displayed.
+- Make at most one explicit AI retry for incomplete rows; retain payment, stock, accounting, approval and finalization behavior.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-reader-incomplete-line-recovery.md`.
