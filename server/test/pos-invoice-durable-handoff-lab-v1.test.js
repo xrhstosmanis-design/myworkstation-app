@@ -56,11 +56,12 @@ test("a stalled internal background request times out and becomes retryable",()=
 test("multi-page header reading continues when one page has no usable header",()=>{
   const select=client.slice(client.indexOf("const selectFiles=async selected=>"),client.indexOf("const removePage="));
   assert.match(select,/const headerResults=\[\],headerErrors=\[\]/);
-  assert.match(select,/Promise\.allSettled\(headerPages\.map\(/);
-  assert.match(select,/result\.status==="fulfilled"/);
-  assert.match(select,/result\.status==="rejected"/);
+  assert.match(select,/for\(const sourcePage of headerPages\)/);
+  assert.match(select,/const result=await api\("\/api\/commerce\/ai-reader\/fast-header"/);
+  assert.match(select,/catch\(error\)\{headerErrors\.push\(error\)\}/);
+  assert.doesNotMatch(select,/Promise\.all|Promise\.allSettled/);
   assert.match(select,/if\(!headerResults\.length\)throw/);
-  assert.ok(select.indexOf('result.status==="rejected"')<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
+  assert.ok(select.indexOf("headerErrors.push(error)")<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
 });
 
 test("FAST header retries empty or malformed structured AI responses safely",()=>{
