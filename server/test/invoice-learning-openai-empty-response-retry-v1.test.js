@@ -8,4 +8,7 @@ test("Invoice Learning retries empty or invalid OpenAI structured responses once
   assert.match(route,/const callOpenAiFallback=retry=>fetch/);
   assert.match(route,/code:"AI_EMPTY_STRUCTURED_RESPONSE"/);
   assert.match(route,/code:"AI_INVALID_STRUCTURED_RESPONSE"/);
+  assert.match(route,/const hasUsableProductLines=lines=>/);
+  assert.match(route,/if\(!hasUsableProductLines\(result\.productLines\)&&!usedOpenAiRetry\)/);
+  assert.match(route,/μηδενικές οικονομικές γραμμές/);
 });
