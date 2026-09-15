@@ -149,9 +149,13 @@ function applySupplierStockConversion(line,mapping={}){
   if(!(invoiceQuantity>0&&packageUnitPrice>0))return line;
   const initialAmount=money2(invoiceQuantity*packageUnitPrice);
   const calculatedDiscount=mapping?.discount1!==undefined&&mapping?.discount1!==null?money4(mapping.discount1):(netAmount>0&&netAmount<=initialAmount?money4((1-netAmount/initialAmount)*100):Number(line?.discount1||0));
-  const quantity=money4(invoiceQuantity*factor);
+  const stockQuantity=money4(invoiceQuantity*factor);
   const stockUnit=String(mapping.stockUnit||mapping.stockConversion?.to||line?.stockUnit||line?.unit||"").trim();
-  return {...line,invoiceQuantity,invoiceUnit:mapping.invoiceUnit||line?.invoiceUnit||line?.unit||"",packageUnitPrice,quantity,unit:stockUnit,stockUnit,unitsPerPackage:factor,conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,unitPrice:money4(packageUnitPrice/factor),unitCost:money4(packageUnitPrice/factor),netUnitCost:netAmount>0?money4(netAmount/quantity):Number(line?.netUnitCost||0),initialAmount,discount1:calculatedDiscount,packageConversionApplied:true,supplierProfileRecovered:true,supplierProfileRule:"SUPPLIER_STOCK_CONVERSION",supplierProfileEvidence:{invoiceQuantity,stockQuantity:quantity,conversionFactor:factor,discount1:calculatedDiscount}};
+  const invoiceUnit=String(mapping.invoiceUnit||line?.invoiceUnit||line?.unit||"").trim();
+  // PurchaseOrderLine.quantity and unitCost always retain the printed invoice
+  // economics. stockUnitsPerInvoiceUnit is the only conversion multiplier; the
+  // review UI and stock posting derive stock quantity exactly once from it.
+  return {...line,invoiceQuantity,invoiceUnit,packageUnitPrice,quantity:invoiceQuantity,unit:invoiceUnit,stockUnit,unitsPerPackage:factor,conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,unitPrice:packageUnitPrice,unitCost:packageUnitPrice,netUnitCost:netAmount>0?money4(netAmount/invoiceQuantity):Number(line?.netUnitCost||0),initialAmount,discount1:calculatedDiscount,packageConversionApplied:true,supplierProfileRecovered:true,supplierProfileRule:"SUPPLIER_STOCK_CONVERSION",supplierProfileEvidence:{invoiceQuantity,stockQuantity,conversionFactor:factor,discount1:calculatedDiscount}};
 }
 
 function applyMappings(lines,profile){
