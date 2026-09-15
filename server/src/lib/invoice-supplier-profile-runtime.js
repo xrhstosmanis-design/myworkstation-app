@@ -1,5 +1,5 @@
 import {prisma} from "../prisma.js";
-import {applyConfirmedColumns,unitRelativeValues} from "./invoice-column-reading.js";
+import {applyConfirmedColumns,recoverStefanidisFoodLine,unitRelativeValues} from "./invoice-column-reading.js";
 
 const cleanTaxId=v=>String(v||"").replace(/\D/g,"");
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
@@ -127,6 +127,7 @@ export async function applyCentralSupplierProfile(parsed){
   if(!profile)return {...parsed,supplierReadingProfile:null};
   let productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(x=>({...x})):[];
   if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverIfantisLine(line));
+  if(profile.ruleKey==="STEFANIDIS_FOOD_PRINTED_COLUMNS")productLines=productLines.map(recoverStefanidisFoodLine);
   if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverDeclaredColumns(line,profile));
   if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverQuantityFromLineTotal(line));
   productLines=productLines.map(line=>{const source=unitRelativeValues(sourceRow(line)),signature=source?Object.keys(source.values).join(","):"",columns=profile.readingRule?.confirmedColumnLayouts?.[signature];return columns&&!line.sourceColumnMap?applyConfirmedColumns(line,columns):line});
