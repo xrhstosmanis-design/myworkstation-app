@@ -1260,3 +1260,14 @@ Total output lines: 1413
 - [ ] Await green CI/deploy, then resume the existing 2612188 draft without another payment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-bounded-multipage-reader.md`.
 - Azure invoice recovery: retain multi-row printed headers when mapping table columns; source reading remains non-mutating. (`2026-09-15-azure-split-invoice-headers-ci.md`)
+
+
+## 2026-09-15 — Mandatory repository-wide checkpoint gate
+
+- [x] Applies to every module, page, conversation and agent.
+- [x] Requires the complete active list, relevant checkpoints and current main history before any change.
+- [x] Requires explicit LAB PASS / LAB FAIL / NOT TESTED status and reconciliation of contradictory checkpoints.
+- [x] CI PASS cannot be reported as LAB PASS; deployed revision must be verified before a new LAB request.
+- [x] Protects payment idempotency, deliberate draft deletion, stock, fiscal, accounting and finalization boundaries.
+- [ ] Enforce this gate on every subsequent change.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-mandatory-repository-checkpoint-gate.md`.
