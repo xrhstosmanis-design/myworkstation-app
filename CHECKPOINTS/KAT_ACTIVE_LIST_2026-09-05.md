@@ -1,3 +1,13 @@
+## 2026-09-15 — PR #857 merged reconciliation checkpoint
+
+- [x] Merge `06dd1396` contains the approved POS invoice reconciliation and stock-unit behavior.
+- [x] Legitimate repeated charges remain; only total-verified complete OCR replay is collapsed.
+- [x] Coffee/chocolate explicit weights convert to grams, cup package counts convert to pieces, and missing counts stay red/unresolved.
+- [x] Central supplier learning remains system-wide and guarded by printed-row equations.
+- [x] Frontend build and 1,235/1,235 server tests PASS before merge.
+- [ ] Αναμονή πράσινου post-merge CI και μετά μία νέα LAB δοκιμή αποκλειστικά από το POS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-reconciliation-merged-checkpoint.md`.
+
 ## 2026-09-15 — Mixed genuine repeat inside OCR table replay
 
 - Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
