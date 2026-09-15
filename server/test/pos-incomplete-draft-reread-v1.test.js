@@ -8,8 +8,8 @@ const core=await readFile(new URL("../src/routes/commerce-pos-v244-core.js",impo
 test("a completed mismatched POS draft gets one full reread from its durable pages",()=>{
   const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   assert.match(recover,/OR "status"='AWAITING_APPROVAL'/);
-  assert.match(recover,/background\.reconciliationRequired===true&&!reprocess\.attemptedAt/);
-  assert.match(recover,/mode:"RECONCILIATION_REREAD",attemptedAt:/);
+  assert.match(recover,/background\.reconciliationRequired===true&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
+  assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:/);
   assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
 });
 
