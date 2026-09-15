@@ -133,10 +133,15 @@ function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
   const candidate=candidates[0],code=String(candidate.code).trim(),escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const printedOccurrences=(String(documentText).match(new RegExp(`(?:^|\\D)${escaped}(?=\\D|$)`,'g'))||[]).length;
   const currentOccurrences=source.filter(line=>norm(line.code)===norm(code)).length;
-  if(printedOccurrences<=currentOccurrences)return {lines:source,restored:false};
+  // Some OCR engines expose the printed table only once in their text layer even
+  // when the document total proves that one physical charge was omitted. In that
+  // case the exact, unique gross-value gap is sufficient independent evidence;
+  // ambiguous matches still remain untouched for review.
+  const exactUniqueTotalGap=printedOccurrences>0&&currentOccurrences===1&&candidates.length===1;
+  if(printedOccurrences<=currentOccurrences&&!exactUniqueTotalGap)return {lines:source,restored:false};
   const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
   if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};
-  return {lines:restored,restored:true,code};
+  return {lines:restored,restored:true,code,totalGapRecovered:printedOccurrences<=currentOccurrences};
 }
 
 function mergeAzureInvoicePages(pages){
@@ -346,7 +351,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // physical row, so use provider text plus the independent local OCR text.
   const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,printedDocumentText);
   parsed.productLines=repeated.lines;
-  if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code}
+  if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code;if(repeated.totalGapRecovered)parsed.printedRepeatedLineRecoveredFromExactTotalGap=true}
   // Vision providers can occasionally replay every physical table row twice
   // (1-2, 3-4, ...). Collapse only a complete adjacent replay whose single
   // copy is strongly corroborated by the printed invoice total. This keeps
