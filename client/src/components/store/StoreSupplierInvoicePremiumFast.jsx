@@ -66,7 +66,15 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       // supplier/header fields. Read every candidate independently so one weak
       // page can never prevent the real first page from being processed.
       const settled=await Promise.allSettled(headerPages.map(page=>api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:75000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})})));
-      for(const result of settled){if(result.status==="fulfilled"&&result.value)headerResults.push(result.value);else if(result.status==="rejected")headerErrors.push(result.reason)}
+      const processedPages=[...nextPages];
+      for(const [resultIndex,result] of settled.entries()){
+        if(result.status==="fulfilled"&&result.value){
+          headerResults.push(result.value);
+          const sourcePage=headerPages[resultIndex],pageIndex=processedPages.indexOf(sourcePage);
+          if(pageIndex>=0)processedPages[pageIndex]={...sourcePage,fastProductLines:Array.isArray(result.value.productLines)?result.value.productLines:[]};
+        }else if(result.status==="rejected")headerErrors.push(result.reason);
+      }
+      setPages(processedPages);
       if(!headerResults.length)throw headerErrors.at(-1)||new Error("Δεν διαβάστηκαν βασικά στοιχεία από τις επιλεγμένες σελίδες.");
       const {supplierHeader:supplierMeta,documentHeader:documentMeta,totalHeader:totalMeta,confidence}=mergeFastInvoiceHeaders(headerResults);
       if(supplierMeta?.supplierId&&(initial||!supplierId))setSupplierId(supplierMeta.supplierId);
@@ -132,7 +140,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl}))})});
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
       setStatus(handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
       const success=duplicateCheck?.paymentReused?`✅ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} διαβάζεται ξανά χωρίς νέα χρέωση.`:effectiveMode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Το τιμολόγιο διαβάζεται στον server και το POS είναι έτοιμο.`:`✅ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε. Η ανάγνωση συνεχίζεται στον server και το POS είναι έτοιμο.`;
