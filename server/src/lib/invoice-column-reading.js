@@ -9,6 +9,7 @@ export function columnNumber(value){
   const n=Number(raw);return Number.isFinite(n)?n:null;
 }
 const round2=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
+const round4=value=>Math.round((Number(value)+Number.EPSILON)*10000)/10000;
 const unitPattern=/(?:^|[\s|])(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|PC|Κ\.Β\.|ΚΒ|ΚΙΒ|KIB|KG|KGR|LT|L)(?=[\s|\d]|$)/i;
 export function unitRelativeValues(raw){
   const text=String(raw||"").replace(/\s+/g," ").trim(),match=text.match(unitPattern);
@@ -18,6 +19,51 @@ export function unitRelativeValues(raw){
   for(let i=before.length-1,offset=-1;i>=0;i--,offset--){const n=columnNumber(before[i]);if(n===null)break;values[offset]=n}
   for(let i=0;i<after.length;i++){const n=columnNumber(after[i]);if(n===null)break;values[i+1]=n}
   return {values,unit:match[1]};
+}
+
+// STEFANIDIS food invoices print, after the unit, quantity, original unit
+// price, value before discount, discount percentage, discount amount, value
+// after discount and VAT. Recover a shifted row only when all printed values
+// form one ordered tuple and its independent equations balance.
+export function recoverStefanidisFoodLine(line){
+  const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/(?:^|[\s|])(TEM|ΤΕΜ|TMX|ΤΜΧ|KIB|ΚΙΒ|ΚΟΥ|ΤΕΜΑΧΙΑ)(?=[\s|\d]|$)/i);
+  if(!match)return line;
+  const after=raw.slice((match.index||0)+match[0].length);
+  const values=(after.match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(Number.isFinite);
+  if(values.length<5)return line;
+  const close=(a,b,tolerance)=>Math.abs(a-b)<=tolerance;let best=null;
+  for(let qi=0;qi<Math.min(3,values.length);qi++)for(let ui=qi+1;ui<Math.min(qi+4,values.length);ui++)for(let pi=ui+1;pi<Math.min(ui+3,values.length);pi++){
+    const quantity=values[qi],unitPrice=values[ui],initial=values[pi];
+    if(!(quantity>0&&quantity<=100000&&unitPrice>0&&initial>0)||!close(quantity*unitPrice,initial,Math.max(.02,initial*.003)))continue;
+    for(let vi=values.length-1;vi>pi;vi--){
+      const vatRate=values[vi];if(![0,6,13,24].includes(vatRate))continue;
+      for(let ni=vi-1;ni>pi;ni--){
+        const net=values[ni];if(!(net>0&&net<=initial+.02))continue;
+        const discountAmount=round2(initial-net),pct=initial?discountAmount/initial*100:0,between=values.slice(pi+1,ni);
+        const printedPct=between.find(v=>v>=0&&v<=100&&Math.abs(v-pct)<=.65),printedAmount=between.find(v=>v>=0&&Math.abs(v-discountAmount)<=.03);
+        if(discountAmount>.02&&(printedPct===undefined||printedAmount===undefined))continue;
+        if(discountAmount<=.02&&between.some(v=>v>.02))continue;
+        const score=100-qi*8-(ui-qi-1)*3-(vi-ni-1)*2-Math.abs((printedPct??0)-pct);
+        if(!best||score>best.score)best={score,quantity,unitPrice,initial,discountAmount,discountPct:printedPct??0,net,vatRate};
+      }
+    }
+  }
+  if(!best)return line;
+  const printedUnit=String(match[1]||"");
+  const packageUnit=/^(KIB|ΚΙΒ|ΚΟΥ)$/i.test(printedUnit);
+  // A pack multiplier is accepted only beside an explicit piece marker in the
+  // product text and only when the invoice unit itself is a carton/package.
+  // This deliberately ignores sizes such as 250ml and forms such as 24x355ml.
+  const productText=raw.slice(0,match.index||0);
+  const explicitPieces=productText.match(/(?:^|\D)(\d{1,4})\s*(?:TMX|ΤΜΧ|TEM|ΤΕΜ)(?=\D|$)/i);
+  const countSuffix=productText.match(/[xχ×]\s*(\d{1,4})\s*(?:T|Τ)(?=\D|$)/i);
+  const unitsPerPackage=packageUnit?Number(explicitPieces?.[1]||countSuffix?.[1]||0):1;
+  return {...line,quantity:best.quantity,invoiceQuantity:best.quantity,unitPrice:round4(best.unitPrice),unitCost:round4(best.unitPrice),initialAmount:round2(best.initial),
+    discount1:round4(best.discountPct),discount1Amount:round2(best.discountAmount),discount2:0,discount2Amount:0,discount3:0,discount3Amount:0,
+    netAmount:round2(best.net),netValue:round2(best.net),netUnitCost:round4(best.net/best.quantity),vatRate:best.vatRate,grossAmount:round2(best.net*(1+best.vatRate/100)),
+    unit:packageUnit?"PACKAGE":(line?.unit||printedUnit),invoiceUnit:packageUnit?"PACKAGE":"PIECE",unitsPerPackage,stockUnitsPerInvoiceUnit:unitsPerPackage,packSizeNeedsReview:packageUnit&&unitsPerPackage<1,
+    supplierProfileRecovered:true,supplierProfileRule:"STEFANIDIS_FOOD_PRINTED_COLUMNS",sourceColumnsVerified:true,
+    supplierProfileEvidence:{quantity:best.quantity,unitPrice:round4(best.unitPrice),initialAmount:round2(best.initial),discountPercent:round4(best.discountPct),discountAmount:round2(best.discountAmount),netAmount:round2(best.net),vatRate:best.vatRate}};
 }
 export function inferConfirmedColumns(raw,line){
   const source=unitRelativeValues(raw);if(!source)return null;
