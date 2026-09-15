@@ -1,3 +1,11 @@
+## 2026-09-15 — Invoice Learning credit-note classification
+
+- [x] Supplier headings such as `Πιστ. Τιμ. Δελ. Παραλαβής Επιστροφή` are classified as `CREDIT_NOTE`; positive printed amounts do not override the heading.
+- [x] The Learning Lab shows the document as a credit/return and retains its type for the final, explicit posting flow.
+- [x] Reading and learning remain non-mutating; stock reversal is reserved for final credit-note posting.
+- [ ] Await CI/deploy, then re-read Fresh Milk `ΓΑ/322` and verify the visible type is **Πιστωτικό / επιστροφή**.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-credit-note-classification.md`.
+
 ## 2026-09-15 — Mixed genuine repeat inside OCR table replay
 
 - Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
