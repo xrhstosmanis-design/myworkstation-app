@@ -1,3 +1,9 @@
+## 2026-09-15 — Mixed genuine repeat inside OCR table replay
+
+- Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
+- Reference AA0011467: expected seven rows, with FR1500 retained twice and every other product once.
+- No payment or stock mutation; draft remains blocked until totals reconcile.
+
 ## 2026-09-15 — Description-driven stock base units
 
 - Coffee/chocolate package weights expressed as KG/KGR convert to grams in stock.

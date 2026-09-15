@@ -82,6 +82,18 @@ function collapseAdjacentTableReplay(lines,invoiceTotal){
     collapsed.push(source[index]);
   }
   const fullDifference=Math.abs(lineGrossTotal(source)-total),collapsedDifference=Math.abs(lineGrossTotal(collapsed)-total);
+  // A complete OCR replay may contain one genuinely repeated charge. Keep the
+  // second physical occurrence only when exactly one collapsed row closes the
+  // remaining invoice-total difference.
+  const missingFromSingleCopy=money2(total-lineGrossTotal(collapsed));
+  if(missingFromSingleCopy>TOTAL_TOLERANCE){
+    const genuine=collapsed.filter(line=>Math.abs(Number(line.grossAmount||0)-missingFromSingleCopy)<=TOTAL_TOLERANCE);
+    if(genuine.length===1){
+      const keepFingerprint=physicalRowFingerprint(genuine[0]),mixed=[];
+      for(let index=0;index<source.length;index+=2){mixed.push(source[index]);if(physicalRowFingerprint(source[index])===keepFingerprint)mixed.push(source[index+1])}
+      if(Math.abs(lineGrossTotal(mixed)-total)<=TOTAL_TOLERANCE)return {lines:mixed,collapsed:true,removed:source.length-mixed.length,genuineRepeatedRowPreserved:true};
+    }
+  }
   const permittedDifference=Math.max(TOTAL_TOLERANCE,total*0.02);
   if(collapsedDifference>permittedDifference||collapsedDifference>=fullDifference*0.25)return {lines:source,collapsed:false};
   return {lines:collapsed,collapsed:true,removed:source.length-collapsed.length};
@@ -339,7 +351,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // legitimate repeated products when the full table total is correct.
   const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
   parsed.productLines=replay.lines;
-  if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed}
+  if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed;if(replay.genuineRepeatedRowPreserved)parsed.genuineRepeatedRowPreserved=true}
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
