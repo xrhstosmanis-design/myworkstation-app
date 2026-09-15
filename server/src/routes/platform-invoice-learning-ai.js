@@ -444,7 +444,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
-  if(!hasUsableProductLines(result.productLines))return res.status(422).json({error:"Οι γραμμές του τιμολογίου δεν περιείχαν ασφαλή ποσότητα, τιμή και αξία. Δεν δημιουργήθηκε πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
+  if(!hasUsableProductLines(result.productLines))return res.status(422).json({error:"Οι γραμμές του τιμολογίου δεν περιείχαν ασφαλή ποσότητα, τιμή και αξία. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   res.json(result);
 }catch(error){next(error)}});
 
