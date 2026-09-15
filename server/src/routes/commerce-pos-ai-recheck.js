@@ -67,6 +67,37 @@ const normalizeProductLine=line=>{
   return {...line,rawText:String(line?.rawText||""),code:String(line?.code||"").trim(),barcode:String(line?.barcode||"").trim(),description:String(line?.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unit:String(line?.unit||"").trim(),unitsPerPackage:Math.max(0,Number(line?.unitsPerPackage||0)),unitCost,retailPrice:Math.max(0,Number(line?.retailPrice||0)),discount1:Math.max(0,Number(line?.discount1||0)),discount1Amount:Math.max(0,Number(line?.discount1Amount||0)),discount2:Math.max(0,Number(line?.discount2||0)),discount2Amount:Math.max(0,Number(line?.discount2Amount||0)),discount3:Math.max(0,Number(line?.discount3||0)),discount3Amount:Math.max(0,Number(line?.discount3Amount||0)),netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line?.confidence||0)))};
 };
 const lineGrossTotal=lines=>money2((lines||[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+const physicalRowFingerprint=line=>[
+  norm(line?.code),norm(line?.description||line?.rawText),Number(line?.quantity||0).toFixed(4),
+  Number(line?.unitCost||0).toFixed(4),Number(line?.netAmount||0).toFixed(2),
+  Number(line?.vatRate||0).toFixed(2),Number(line?.grossAmount||0).toFixed(2),
+  Number(line?.discount1||0).toFixed(2),Number(line?.discount2||0).toFixed(2),Number(line?.discount3||0).toFixed(2)
+].join("|");
+function collapseAdjacentTableReplay(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  if(total<=0||source.length<4||source.length%2!==0)return {lines:source,collapsed:false};
+  const collapsed=[];
+  for(let index=0;index<source.length;index+=2){
+    if(physicalRowFingerprint(source[index])!==physicalRowFingerprint(source[index+1]))return {lines:source,collapsed:false};
+    collapsed.push(source[index]);
+  }
+  const fullDifference=Math.abs(lineGrossTotal(source)-total),collapsedDifference=Math.abs(lineGrossTotal(collapsed)-total);
+  // A complete OCR replay may contain one genuinely repeated charge. Keep the
+  // second physical occurrence only when exactly one collapsed row closes the
+  // remaining invoice-total difference.
+  const missingFromSingleCopy=money2(total-lineGrossTotal(collapsed));
+  if(missingFromSingleCopy>TOTAL_TOLERANCE){
+    const genuine=collapsed.filter(line=>Math.abs(Number(line.grossAmount||0)-missingFromSingleCopy)<=TOTAL_TOLERANCE);
+    if(genuine.length===1){
+      const keepFingerprint=physicalRowFingerprint(genuine[0]),mixed=[];
+      for(let index=0;index<source.length;index+=2){mixed.push(source[index]);if(physicalRowFingerprint(source[index])===keepFingerprint)mixed.push(source[index+1])}
+      if(Math.abs(lineGrossTotal(mixed)-total)<=TOTAL_TOLERANCE)return {lines:mixed,collapsed:true,removed:source.length-mixed.length,genuineRepeatedRowPreserved:true};
+    }
+  }
+  const permittedDifference=Math.max(TOTAL_TOLERANCE,total*0.02);
+  if(collapsedDifference>permittedDifference||collapsedDifference>=fullDifference*0.25)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:source.length-collapsed.length};
+}
 const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
 function mergeRecoveredLines(current,recovered){
   const out=(current||[]).map(line=>({...line})),used=new Set();
@@ -92,6 +123,20 @@ function mergeRecoveredLines(current,recovered){
     if(candidate.sourceColumnsVerified)out[index]=normalizeProductLine({...out[index],...candidate});
   }
   return out.some(line=>line.sourceColumnsVerified)?out.sort(sourceOrder):out;
+}
+
+function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
+  const source=Array.isArray(lines)?lines:[],difference=money2(Number(invoiceTotal||0)-lineGrossTotal(source));
+  if(!(difference>TOTAL_TOLERANCE)||!String(documentText||"").trim())return {lines:source,restored:false};
+  const candidates=source.filter(line=>line.code&&Math.abs(Number(line.grossAmount||0)-difference)<=TOTAL_TOLERANCE);
+  if(candidates.length!==1)return {lines:source,restored:false};
+  const candidate=candidates[0],code=String(candidate.code).trim(),escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const printedOccurrences=(String(documentText).match(new RegExp(`(?:^|\\D)${escaped}(?=\\D|$)`,'g'))||[]).length;
+  const currentOccurrences=source.filter(line=>norm(line.code)===norm(code)).length;
+  if(printedOccurrences<=currentOccurrences)return {lines:source,restored:false};
+  const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
+  if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};
+  return {lines:restored,restored:true,code};
 }
 
 function mergeAzureInvoicePages(pages){
@@ -211,6 +256,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.openAiUnifiedFailed=true;
     parsed.openAiUnifiedRecovery="AZURE_ALL_PAGES";
   }
+  // The fast POS handoff total is the amount the operator explicitly confirmed
+  // (and, for PAID, the immutable payment amount). Use it as the reconciliation
+  // anchor for every supplier, not only the centrally profiled fast path.
+  const confirmedHandoffTotal=money2(posHandoff?.totalGross||0);
+  if(confirmedHandoffTotal>0){
+    parsed.totalGross=confirmedHandoffTotal;
+    parsed.posConfirmedTotalApplied=true;
+  }
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
@@ -238,15 +291,22 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
 
 Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | ΛΙΑΝΙΚΗ ΤΙΜΗ | Μ.Μ. | ΤΜΧ | αρχική Τιμή ΤΜΧ | Αξία | Εκπτ.1/2/3 ποσοστό και ποσό | Καθ Αξία | ΦΠΑ. retailPrice=ΛΙΑΝΙΚΗ ΤΙΜΗ, quantity=ΠΟΣΟΤΗΤΑ (όχι η ένδειξη μονάδας ΤΕΜ/ΤΜΧ), unit=Μ.Μ., unitCost=αρχική Τιμή ΤΜΧ πριν από εκπτώσεις, discount1/2/3=ποσοστά, discount1Amount/2Amount/3Amount=ποσά, netAmount=Καθ Αξία, vatRate=%ΦΠΑ. Μην συγχέεις retailPrice και unitCost και μην αντικαθιστάς την αρχική τιμή με net/qty όταν υπάρχει έκπτωση. Αριθμοί συσκευασίας μέσα στην περιγραφή δεν είναι quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount.`;
-    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
-    const tablePayload=await tableResponse.json().catch(()=>({}));
-    if(tableResponse.ok){try{
-      const tableParsed=JSON.parse(outputText(tablePayload));
-      const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
-      parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
-      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
-    }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
-    else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}
+    try{
+      const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+      const tablePayload=await tableResponse.json().catch(()=>({}));
+      if(tableResponse.ok){try{
+        const tableParsed=JSON.parse(outputText(tablePayload));
+        const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+        parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
+        parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
+      }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
+      else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;parsed.tableRecheckError=`HTTP_${tableResponse.status}`}
+    }catch(error){
+      // The table pass is supplemental. Keep the initial extraction and allow
+      // the Azure field-recovery path below to finish the same durable job.
+      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;
+      parsed.tableRecheckError=isProviderTimeout(error)?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE";
+    }
   }
 
   // Some supplier layouts are read more reliably by Azure per page. This is
@@ -277,6 +337,21 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
     parsed.stefanidisFinalColumnRecovery=true;
   }
+  // A supplier may legitimately charge the exact same item on two physical
+  // rows. Restore one missing occurrence only when the current document text
+  // contains the code more times than the extraction and the invoice-total
+  // difference equals that row's gross amount. No historical invoice value is
+  // used and an ambiguous match remains for review.
+  const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,parsed.rawText);
+  parsed.productLines=repeated.lines;
+  if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code}
+  // Vision providers can occasionally replay every physical table row twice
+  // (1-2, 3-4, ...). Collapse only a complete adjacent replay whose single
+  // copy is strongly corroborated by the printed invoice total. This keeps
+  // legitimate repeated products when the full table total is correct.
+  const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
+  parsed.productLines=replay.lines;
+  if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed;if(replay.genuineRepeatedRowPreserved)parsed.genuineRepeatedRowPreserved=true}
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.

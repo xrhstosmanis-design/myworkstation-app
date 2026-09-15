@@ -50,3 +50,14 @@ const stefanidisProfile={
 const stefanidisNormalized=stefanidisName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,stefanidisKey,stefanidisKey,stefanidisName,stefanidisNormalized,stefanidisProfile.ruleKey,JSON.stringify(stefanidisProfile));
 console.log("Invoice Learning checkpoint-verified supplier profile seeded: STEFANIDIS 998878583.");
+
+// The food/confectionery company uses a different printed table from the
+// cigarette company above. Store only the layout rule; every future row must
+// prove quantity × unit price = pre-discount value and pre-discount value −
+// discount = net value before it can be corrected.
+const stefanidisFoodKey="997763585";
+const stefanidisFoodName="ΑΦΟΙ Ι ΣΤΕΦΑΝΙΔΗ Α.Ε.";
+const stefanidisFoodProfile={supplierName:stefanidisFoodName,supplierTaxId:stefanidisFoodKey,ruleKey:"STEFANIDIS_FOOD_PRINTED_COLUMNS",central:true,source:"VERIFIED_PRINTED_LAYOUT_620889"};
+const stefanidisFoodNormalized=stefanidisFoodName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,stefanidisFoodKey,stefanidisFoodKey,stefanidisFoodName,stefanidisFoodNormalized,stefanidisFoodProfile.ruleKey,JSON.stringify(stefanidisFoodProfile));
+console.log("Invoice Learning verified printed layout seeded: STEFANIDIS FOOD 997763585.");

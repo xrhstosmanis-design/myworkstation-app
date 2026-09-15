@@ -154,6 +154,7 @@ test("additional page jobs are locked individually and internal intake errors id
   assert.doesNotMatch(intake,/ANY\(\$\{pageJobIds\}::text\[\]\)/);
   assert.match(intake,/Η καταχώριση τιμολογίου απέτυχε στο στάδιο \$\{stage\}/);
   assert.match(intake,/safeError\.code="V244_INTAKE_INTERNAL"/);
+  assert.match(intake,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
 });
 
 
@@ -186,6 +187,8 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
+  assert.match(aiRecheck,/const confirmedHandoffTotal=money2\(posHandoff\?\.totalGross\|\|0\)/);
+  assert.match(aiRecheck,/parsed\.totalGross=confirmedHandoffTotal/);
 });
 
 test("Azure-derived net unit cost does not hide invoice discounts",async()=>{

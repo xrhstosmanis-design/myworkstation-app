@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,stockConversionFromDescription} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -38,6 +38,39 @@ test('checkpoint-verified STEFANIDIS layout is seeded centrally without old invo
   assert.match(stefanidisSeed,/CHECKPOINT_VERIFIED_2612188/);
   assert.match(stefanidisSeed,/"1,2,3,4,5,6,7,-1":\{quantity:1,unitCost:2,retailPrice:-1\}/);
   assert.doesNotMatch(stefanidisSeed,/2369\.99|608/);
+});
+
+test('STEFANIDIS food layout restores shifted columns only when the printed row equations balance',()=>{
+  const rows=[
+    ['0011291 MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX | ΚΟΥ | 1 | 9,910 | 9,91 | 30,00 | 2,97 | | 6,94 | 13',1,9.91,6.94],
+    ['0010457 MENTOS SOUR TONES ΜΑΣΟΥΡΙ | ΤΕΜ | 72 | 1,190 | 85,68 | 37,00 | 31,70 | | 53,98 | 13',72,1.19,53.98],
+    ['0022544 RED BULL M.A RED EDITION 24x250ml | ΤΕΜ | 24 | 1,190 | 28,56 | 30,00 | 8,57 | | 19,99 | 13',24,1.19,19.99],
+    ['0022501 OFFER RED BULL 5 ΚΙΒΩΤΙΑ 250ml +7% | ΚΙΒ | 1 | 0,010 | 0,01 | 0 | 0,01 | 13',1,.01,.01]
+  ];
+  for(const [rawText,quantity,unitCost,netAmount] of rows){
+    const recovered=recoverStefanidisFoodLine({rawText,quantity:unitCost,unitCost:netAmount/quantity,netAmount:99,vatRate:0});
+    assert.equal(recovered.quantity,quantity);assert.equal(recovered.unitCost,unitCost);assert.equal(recovered.netAmount,netAmount);assert.equal(recovered.vatRate,13);
+    assert.equal(recovered.sourceColumnsVerified,true);
+  }
+  const carton=recoverStefanidisFoodLine({rawText:rows[0][0],description:'MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX'});
+  assert.equal(carton.invoiceUnit,'PACKAGE');assert.equal(carton.unitsPerPackage,12);assert.equal(carton.quantity*carton.unitsPerPackage,12);
+  const gumCarton=recoverStefanidisFoodLine({rawText:'00414 DENTYNE FIRE ΚΑΝΕΛΑ 16,8g x14t | ΚΟΥ | 1 | 11,630 | 11,63 | 30 | 3,49 | 8,14 | 13'});
+  assert.equal(gumCarton.invoiceUnit,'PACKAGE');assert.equal(gumCarton.unitsPerPackage,14);assert.equal(gumCarton.quantity*gumCarton.unitsPerPackage,14);
+  const unknownCarton=recoverStefanidisFoodLine({rawText:'00924 MENTOS FRUIT ΜΑΣΟΥΡΙ | ΚΟΥ | 1 | 13,830 | 13,83 | 30 | 4,15 | 9,68 | 13'});
+  assert.equal(unknownCarton.invoiceUnit,'PACKAGE');assert.equal(unknownCarton.unitsPerPackage,0);assert.equal(unknownCarton.packSizeNeedsReview,true);
+  const pieces=recoverStefanidisFoodLine({rawText:'0022535 RED BULL 24x355ml | TEM | 24 | 1,580 | 37,92 | 33 | 12,51 | 25,41 | 13'});
+  assert.equal(pieces.invoiceUnit,'PIECE');assert.equal(pieces.unitsPerPackage,1,'24x355ml is a size, not a carton multiplier');
+  const unsafe={rawText:'0022544 PRODUCT | TEM | 24 | 1,190 | 30,00 | 30 | 8,57 | 19,99 | 13',quantity:7,unitCost:3,netAmount:21};
+  assert.equal(recoverStefanidisFoodLine(unsafe),unsafe);
+  assert.match(stefanidisSeed,/997763585/);assert.match(stefanidisSeed,/STEFANIDIS_FOOD_PRINTED_COLUMNS/);
+});
+
+test('explicit product descriptions convert coffee and chocolate to grams and cups to pieces',()=>{
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ESPRESSO 3KGR. CLASSIC TIN'),{multiplier:3000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('IL MODO ESPRESSO DECAF. ΑΚΟΠΟΣ 1kg'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('DELIZ PREMIUM Ρόφημα Σοκολάτας 1Kgr'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100 TEM.)'),{multiplier:100,stockMeasure:'PIECE',inferred:true});
+  assert.equal(stockConversionFromDescription('RED BULL 24x355ml').multiplier,0);
 });
 
 test('unrelated supplier layout uses printed English headers, three discounts and amount-only discounts',()=>{
@@ -127,6 +160,34 @@ test('actual multipage recovery consumes repeated occurrences once and retains t
   const actual=context.merge([{code:a.code,description:a.description,quantity:4.8},{code:a.code,description:a.description,quantity:4.8}],[a,b]);
   assert.equal(actual.length,2);assert.deepEqual(Array.from(actual,l=>l.quantity),[20,10]);
   assert.equal(actual[0].retailPrice,4.8);
+});
+
+test('single-page adjacent OCR replay is collapsed only when the printed total corroborates one copy',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('const descriptionsClose='))+'\nthis.collapse=collapseAdjacentTableReplay;',context);
+  const a={code:'340058891',description:'RUFFLES SALT',quantity:3,unitCost:1.42,netAmount:3.62,vatRate:13,grossAmount:4.09,discount1:15};
+  const b={code:'34005661',description:"LAY'S BAKED SALT",quantity:3,unitCost:1.42,netAmount:3.62,vatRate:13,grossAmount:4.09,discount1:15};
+  const replay=context.collapse([a,{...a},b,{...b}],8.18);
+  assert.equal(replay.collapsed,true);assert.equal(replay.lines.length,2);assert.equal(replay.removed,2);
+  const legitimate=context.collapse([a,{...a},b,{...b}],16.36);
+  assert.equal(legitimate.collapsed,false);assert.equal(legitimate.lines.length,4);
+  const coffee={code:'ES01000',description:'COFFEE 3KGR',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
+  const cups={code:'FR1500',description:'CUPS 12OZ 100TEM',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
+  const mixed=context.collapse([coffee,{...coffee},cups,{...cups}],1236.38);
+  assert.equal(mixed.collapsed,true);assert.equal(mixed.genuineRepeatedRowPreserved,true);
+  assert.deepEqual(Array.from(mixed.lines,line=>line.code),['ES01000','FR1500','FR1500']);
+});
+
+test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('function mergeAzureInvoicePages'))+'\nthis.restore=restorePrintedRepeatedLine;',context);
+  const cup={code:'FR1500',description:'MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100TEM)',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
+  const other={code:'ES01000',description:'COFFEE',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
+  const restored=context.restore([cup,other],1236.38,'FR1500 cups row one\nFR1500 cups row two\nES01000 coffee');
+  assert.equal(restored.restored,true);assert.equal(restored.lines.filter(line=>line.code==='FR1500').length,2);
+  assert.equal(context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee').restored,false);
 });
 
 

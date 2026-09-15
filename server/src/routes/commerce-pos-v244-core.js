@@ -196,7 +196,12 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const pageJobs=await tx.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId" FROM "AiReaderJob" WHERE "companyId"=${req.user.companyId} AND "id"=${pageJobId} LIMIT 1 FOR UPDATE`;
         if(pageJobs[0])additionalPageJobs.push(pageJobs[0]);
       }
-      // During a reconciliation reread, a secondary page can legitimately be\n      // unlinked: the safe shell is created on the primary job before OCR. It\n      // may join this locked invoice only when it is still unclaimed or is\n      // already linked to the same shell; a link to any other document remains\n      // a hard conflict.\n      if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||(!lockedReplacement&&pageJob.purchaseDocumentId)||(lockedReplacement&&pageJob.purchaseDocumentId&&pageJob.purchaseDocumentId!==skeletonDocumentId)||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
+      // During a reconciliation reread, a secondary page can legitimately be
+      // unlinked: the safe shell is created on the primary job before OCR. It
+      // may join this locked invoice only when it is still unclaimed or is
+      // already linked to the same shell; a link to any other document remains
+      // a hard conflict.
+      if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||(!lockedReplacement&&pageJob.purchaseDocumentId)||(lockedReplacement&&pageJob.purchaseDocumentId&&pageJob.purchaseDocumentId!==skeletonDocumentId)||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate&&duplicate.id!==skeletonDocumentId){const error=new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;throw error;}
       let shift=null,existingPayment=null;

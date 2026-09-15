@@ -8,7 +8,7 @@ const reader=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",i
 
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
-  assert.match(route,/"status" IN \('POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
+  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
   assert.match(route,/ORDER BY "updatedAt" ASC LIMIT 50/);
   assert.match(route,/if\(recovered\.length>=3\)break/);
   assert.match(route,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\)/);
@@ -63,6 +63,13 @@ test("queued recovery is not abandoned behind an older in-memory worker",()=>{
   assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
 });
 
+test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{
+  assert.match(route,/status" IN \('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
+  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\)/);
+  assert.match(route,/Number\(handoff\.pageCount\|\|0\)===1/);
+  assert.match(route,/pageJobIds:\[job\.id\],primaryJobId:job\.id/);
+});
+
 test("AI recheck applies verified printed column recovery before reconciliation",()=>{
   assert.match(reader,/recoverPrintedRetailColumns/);
   assert.match(reader,/parsed\.productLines=parsed\.productLines\.map\(line=>recoverPrintedRetailColumns\(line,printedDocumentText\)\)/);
@@ -83,6 +90,19 @@ test("full OCR page recovery stays parallel and exposes retryable Azure timeouts
   assert.match(reader,/wrapped\.status=timeout\?503:502/);
 });
 
+test("AI recheck reports a safe stage instead of a hidden generic 500",()=>{
+  assert.match(reader,/let failureStage="validate-request"/);
+  assert.match(reader,/failureStage="save-ai-result"/);
+  assert.match(reader,/AI_RECHECK_INTERNAL \[\$\{failureStage\}\]/);
+  assert.match(reader,/safe\.status=502/);
+});
+
+test("table recheck provider failure falls through to Azure recovery",()=>{
+  assert.match(reader,/The table pass is supplemental/);
+  assert.match(reader,/tableRecheckError=isProviderTimeout\(error\)\?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE"/);
+  assert.match(route,/AI_RECHECK_INTERNAL \\\[table-recheck\\\]/);
+});
+
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);
@@ -95,13 +115,6 @@ test("the repaired secondary-page conflict is eligible for durable recovery",()=
   assert.match(route,/Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου/);
 });
 
-test("AI recheck reports a safe stage instead of a hidden generic 500",()=>{
-  assert.match(reader,/let failureStage="validate-request"/);
-  assert.match(reader,/failureStage="save-ai-result"/);
-  assert.match(reader,/AI_RECHECK_INTERNAL \[\$\{failureStage\}\]/);
-  assert.match(reader,/safe\.status=502/);
-});
-
 test("a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy",()=>{
-  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*Παρουσιάστηκε εσωτερικό σφάλμα/);
+  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*\(\?:Παρουσιάστηκε εσωτερικό σφάλμα\|AI_RECHECK_INTERNAL/);
 });
