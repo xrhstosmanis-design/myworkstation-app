@@ -99,7 +99,7 @@ function candidateOcrRows(resultJson){
       // Stock is stored in the product's base unit: explicit TEM/TMX becomes
       // pieces, while printed KG/KGR becomes grams. Values such as 250ml and
       // 24x355ml deliberately do not match either rule.
-      const conversion=stockConversionFromDescription(description,suppliedMultiplier),rawPackageSize=conversion.multiplier;
+      const conversion=stockConversionFromDescription(description,suppliedMultiplier,entry?.invoiceUnit||entry?.unit),rawPackageSize=conversion.multiplier;
       const invoiceUnit=String(entry?.invoiceUnit||entry?.unit||"").toUpperCase()==="PACKAGE"||rawPackageSize>1?"PACKAGE":"PIECE";
       const stockUnitsPerInvoiceUnit=invoiceUnit==="PACKAGE"?(rawPackageSize>0?rawPackageSize:0):1;
       return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
