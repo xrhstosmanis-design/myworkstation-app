@@ -151,6 +151,7 @@ router.patch("/:orderId",async(req,res,next)=>{
         AND o."id"=${req.params.orderId}
         AND o."companyId"=${req.user.companyId}
         AND l."productId" IS NOT NULL
+        AND (COALESCE(l."invoiceUnit",'PIECE')<>'PACKAGE' OR COALESCE(l."stockUnitsPerInvoiceUnit",0)>0)
         AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;
 
     // Μπλοκάρουμε μόνο πραγματικές οικονομικές γραμμές προϊόντων που δεν έχουν
@@ -162,7 +163,7 @@ router.patch("/:orderId",async(req,res,next)=>{
       WHERE o."id"=${req.params.orderId}
         AND o."companyId"=${req.user.companyId}
         AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'
-        AND l."productId" IS NULL
+        AND (l."productId" IS NULL OR (COALESCE(l."invoiceUnit",'PIECE')='PACKAGE' AND COALESCE(l."stockUnitsPerInvoiceUnit",0)<=0))
         AND NULLIF(BTRIM(COALESCE(l."description",'')),'') IS NOT NULL
         AND COALESCE(l."quantity",0)>0
         AND (COALESCE(l."unitCost",0)>0 OR COALESCE(l."grossAmount",0)>0)`;

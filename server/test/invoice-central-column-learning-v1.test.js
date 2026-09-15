@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -38,6 +38,31 @@ test('checkpoint-verified STEFANIDIS layout is seeded centrally without old invo
   assert.match(stefanidisSeed,/CHECKPOINT_VERIFIED_2612188/);
   assert.match(stefanidisSeed,/"1,2,3,4,5,6,7,-1":\{quantity:1,unitCost:2,retailPrice:-1\}/);
   assert.doesNotMatch(stefanidisSeed,/2369\.99|608/);
+});
+
+test('STEFANIDIS food layout restores shifted columns only when the printed row equations balance',()=>{
+  const rows=[
+    ['0011291 MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX | ΚΟΥ | 1 | 9,910 | 9,91 | 30,00 | 2,97 | | 6,94 | 13',1,9.91,6.94],
+    ['0010457 MENTOS SOUR TONES ΜΑΣΟΥΡΙ | ΤΕΜ | 72 | 1,190 | 85,68 | 37,00 | 31,70 | | 53,98 | 13',72,1.19,53.98],
+    ['0022544 RED BULL M.A RED EDITION 24x250ml | ΤΕΜ | 24 | 1,190 | 28,56 | 30,00 | 8,57 | | 19,99 | 13',24,1.19,19.99],
+    ['0022501 OFFER RED BULL 5 ΚΙΒΩΤΙΑ 250ml +7% | ΚΙΒ | 1 | 0,010 | 0,01 | 0 | 0,01 | 13',1,.01,.01]
+  ];
+  for(const [rawText,quantity,unitCost,netAmount] of rows){
+    const recovered=recoverStefanidisFoodLine({rawText,quantity:unitCost,unitCost:netAmount/quantity,netAmount:99,vatRate:0});
+    assert.equal(recovered.quantity,quantity);assert.equal(recovered.unitCost,unitCost);assert.equal(recovered.netAmount,netAmount);assert.equal(recovered.vatRate,13);
+    assert.equal(recovered.sourceColumnsVerified,true);
+  }
+  const carton=recoverStefanidisFoodLine({rawText:rows[0][0],description:'MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX'});
+  assert.equal(carton.invoiceUnit,'PACKAGE');assert.equal(carton.unitsPerPackage,12);assert.equal(carton.quantity*carton.unitsPerPackage,12);
+  const gumCarton=recoverStefanidisFoodLine({rawText:'00414 DENTYNE FIRE ΚΑΝΕΛΑ 16,8g x14t | ΚΟΥ | 1 | 11,630 | 11,63 | 30 | 3,49 | 8,14 | 13'});
+  assert.equal(gumCarton.invoiceUnit,'PACKAGE');assert.equal(gumCarton.unitsPerPackage,14);assert.equal(gumCarton.quantity*gumCarton.unitsPerPackage,14);
+  const unknownCarton=recoverStefanidisFoodLine({rawText:'00924 MENTOS FRUIT ΜΑΣΟΥΡΙ | ΚΟΥ | 1 | 13,830 | 13,83 | 30 | 4,15 | 9,68 | 13'});
+  assert.equal(unknownCarton.invoiceUnit,'PACKAGE');assert.equal(unknownCarton.unitsPerPackage,0);assert.equal(unknownCarton.packSizeNeedsReview,true);
+  const pieces=recoverStefanidisFoodLine({rawText:'0022535 RED BULL 24x355ml | TEM | 24 | 1,580 | 37,92 | 33 | 12,51 | 25,41 | 13'});
+  assert.equal(pieces.invoiceUnit,'PIECE');assert.equal(pieces.unitsPerPackage,1,'24x355ml is a size, not a carton multiplier');
+  const unsafe={rawText:'0022544 PRODUCT | TEM | 24 | 1,190 | 30,00 | 30 | 8,57 | 19,99 | 13',quantity:7,unitCost:3,netAmount:21};
+  assert.equal(recoverStefanidisFoodLine(unsafe),unsafe);
+  assert.match(stefanidisSeed,/997763585/);assert.match(stefanidisSeed,/STEFANIDIS_FOOD_PRINTED_COLUMNS/);
 });
 
 test('unrelated supplier layout uses printed English headers, three discounts and amount-only discounts',()=>{
