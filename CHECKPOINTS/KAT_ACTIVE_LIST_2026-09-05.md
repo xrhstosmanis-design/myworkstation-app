@@ -1,3 +1,10 @@
+## 2026-09-15 — STEFANIDIS food columns and carton stock conversion
+
+- PR #854: central supplier rule for VAT 997763585 recovers quantity, original price, discount, net and VAT only when printed-row equations balance.
+- Keeps invoice economics separate from stock: explicit 12TMX and x14t convert one carton to 12/14 pieces; size text such as 24x355ml is ignored.
+- A carton without an explicit piece count remains UNRESOLVED, is shown in red and blocks FINAL.
+- No payment mutation and no stock posting before the existing explicit approval flow.
+
 ## 2026-09-15 — POS OCR: table-recheck fallback
 
 - [x] LAB 620889 exposed exact failure AI_RECHECK_INTERNAL [table-recheck].
