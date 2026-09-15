@@ -137,7 +137,7 @@ function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
   // when the document total proves that one physical charge was omitted. In that
   // case the exact, unique gross-value gap is sufficient independent evidence;
   // ambiguous matches still remain untouched for review.
-  const exactUniqueTotalGap=printedOccurrences>0&&currentOccurrences===1&&candidates.length===1;
+  const exactUniqueTotalGap=currentOccurrences===1&&candidates.length===1;
   if(printedOccurrences<=currentOccurrences&&!exactUniqueTotalGap)return {lines:source,restored:false};
   const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
   if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};

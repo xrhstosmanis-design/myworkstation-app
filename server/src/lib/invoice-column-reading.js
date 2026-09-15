@@ -14,7 +14,7 @@ export function stockConversionFromDescription(description,explicitMultiplier=0,
   // A kilogram quantity is already the total weight. The weight printed in the
   // description is package information and must not multiply it a second time.
   if(/^(KG|KGR|KILO|KIL|ΚΙΛ|ΚΙΛΟ|ΚΙΛΑ)$/.test(unit))return {multiplier:1000,stockMeasure:"GRAM",inferred:true};
-  const pieces=text.match(/(?:^|\D)(\d{1,4})\s*(?:TEM|TMX)(?=\D|$)/);
+  const pieces=text.match(/(?:^|\D)(\d{1,4})\s*(?:TEM|TMX|ΤΕΜ|ΤΜΧ)(?=\D|$)/);
   const kilograms=text.match(/(?:^|\D)(\d+(?:[,.]\d+)?)\s*(?:KGR|KG|KILO|ΚΙΛ)(?=\D|$)/);
   const inferred=pieces?Number(pieces[1]):kilograms?Number(kilograms[1].replace(",","."))*1000:0;
   const supplied=Number(explicitMultiplier||0),multiplier=supplied>1?supplied:inferred>1?inferred:supplied;

@@ -70,6 +70,7 @@ test('explicit product descriptions convert coffee and chocolate to grams and cu
   assert.deepEqual(stockConversionFromDescription('IL MODO ESPRESSO DECAF. ΑΚΟΠΟΣ 1kg'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
   assert.deepEqual(stockConversionFromDescription('DELIZ PREMIUM Ρόφημα Σοκολάτας 1Kgr'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
   assert.deepEqual(stockConversionFromDescription('MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100 TEM.)'),{multiplier:100,stockMeasure:'PIECE',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100 ΤΕΜ.)'),{multiplier:100,stockMeasure:'PIECE',inferred:true});
   assert.equal(stockConversionFromDescription('RED BULL 24x355ml').multiplier,0);
   assert.deepEqual(stockConversionFromDescription('MRS ROSE ESPRESSO 3KGR. CLASSIC TIN',3000,'ΚΙΛΑ'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
 });
@@ -228,6 +229,9 @@ test('a genuinely repeated printed row is restored when its second charge exactl
   const exactGap=context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee');
   assert.equal(exactGap.restored,true);
   assert.equal(exactGap.totalGapRecovered,true);
+  const noCodeText=context.restore([cup,other],1236.38,'cups row without extracted supplier code');
+  assert.equal(noCodeText.restored,true);
+  assert.equal(noCodeText.totalGapRecovered,true);
 });
 
 
