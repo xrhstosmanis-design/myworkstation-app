@@ -1096,3 +1096,11 @@ Total output lines: 1413
 - [x] Preserve the immutable paid amount; no new payment, reversal, stock, approval or finalization behavior.
 - [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου χωρίς νέα αποστολή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-confirmed-total-replay-anchor.md`.
+## 2026-09-15 — POS draft idempotent replacement
+
+- [x] LAB `ΔΑ0011467`: outer summary showed 1,246.38 €, while the linked order had every OCR row twice and showed 2,492.76 €.
+- [x] Any successful fill/reread of the same linked DRAFT now replaces its OCR order rows atomically instead of appending.
+- [x] Active V2.4.4 intake applies explicit stock conversions such as `3KGR -> 3000g` and `100TEM -> 100 pieces` without altering invoice economics.
+- [x] 70/70 targeted tests PASS; payment/credit, stock, approval and finalization remain untouched.
+- [ ] Await CI/deploy, then refresh the existing draft and verify one canonical set of lines and one common total inside/outside.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-draft-idempotent-replacement.md`.
