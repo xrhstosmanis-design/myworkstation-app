@@ -113,6 +113,20 @@ function mergeRecoveredLines(current,recovered){
   return out.some(line=>line.sourceColumnsVerified)?out.sort(sourceOrder):out;
 }
 
+function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
+  const source=Array.isArray(lines)?lines:[],difference=money2(Number(invoiceTotal||0)-lineGrossTotal(source));
+  if(!(difference>TOTAL_TOLERANCE)||!String(documentText||"").trim())return {lines:source,restored:false};
+  const candidates=source.filter(line=>line.code&&Math.abs(Number(line.grossAmount||0)-difference)<=TOTAL_TOLERANCE);
+  if(candidates.length!==1)return {lines:source,restored:false};
+  const candidate=candidates[0],code=String(candidate.code).trim(),escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const printedOccurrences=(String(documentText).match(new RegExp(`(?:^|\\D)${escaped}(?=\\D|$)`,'g'))||[]).length;
+  const currentOccurrences=source.filter(line=>norm(line.code)===norm(code)).length;
+  if(printedOccurrences<=currentOccurrences)return {lines:source,restored:false};
+  const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
+  if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};
+  return {lines:restored,restored:true,code};
+}
+
 function mergeAzureInvoicePages(pages){
   const productLines=[],auditLines=[],rawTexts=[],confidenceValues=[];
   let supplier={name:"",taxId:"",email:"",phone:"",address:"",city:""},documentNumber="",documentDate="",totalGross=0,finalTotalPage=0;
@@ -311,6 +325,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
     parsed.stefanidisFinalColumnRecovery=true;
   }
+  // A supplier may legitimately charge the exact same item on two physical
+  // rows. Restore one missing occurrence only when the current document text
+  // contains the code more times than the extraction and the invoice-total
+  // difference equals that row's gross amount. No historical invoice value is
+  // used and an ambiguous match remains for review.
+  const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,parsed.rawText);
+  parsed.productLines=repeated.lines;
+  if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code}
   // Vision providers can occasionally replay every physical table row twice
   // (1-2, 3-4, ...). Collapse only a complete adjacent replay whose single
   // copy is strongly corroborated by the printed invoice total. This keeps

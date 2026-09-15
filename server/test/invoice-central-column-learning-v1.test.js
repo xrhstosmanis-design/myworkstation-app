@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,stockConversionFromDescription} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -63,6 +63,14 @@ test('STEFANIDIS food layout restores shifted columns only when the printed row 
   const unsafe={rawText:'0022544 PRODUCT | TEM | 24 | 1,190 | 30,00 | 30 | 8,57 | 19,99 | 13',quantity:7,unitCost:3,netAmount:21};
   assert.equal(recoverStefanidisFoodLine(unsafe),unsafe);
   assert.match(stefanidisSeed,/997763585/);assert.match(stefanidisSeed,/STEFANIDIS_FOOD_PRINTED_COLUMNS/);
+});
+
+test('explicit product descriptions convert coffee and chocolate to grams and cups to pieces',()=>{
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ESPRESSO 3KGR. CLASSIC TIN'),{multiplier:3000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('IL MODO ESPRESSO DECAF. ΑΚΟΠΟΣ 1kg'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('DELIZ PREMIUM Ρόφημα Σοκολάτας 1Kgr'),{multiplier:1000,stockMeasure:'GRAM',inferred:true});
+  assert.deepEqual(stockConversionFromDescription('MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100 TEM.)'),{multiplier:100,stockMeasure:'PIECE',inferred:true});
+  assert.equal(stockConversionFromDescription('RED BULL 24x355ml').multiplier,0);
 });
 
 test('unrelated supplier layout uses printed English headers, three discounts and amount-only discounts',()=>{
@@ -164,6 +172,17 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
   assert.equal(replay.collapsed,true);assert.equal(replay.lines.length,2);assert.equal(replay.removed,2);
   const legitimate=context.collapse([a,{...a},b,{...b}],16.36);
   assert.equal(legitimate.collapsed,false);assert.equal(legitimate.lines.length,4);
+});
+
+test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('function mergeAzureInvoicePages'))+'\nthis.restore=restorePrintedRepeatedLine;',context);
+  const cup={code:'FR1500',description:'MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100TEM)',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
+  const other={code:'ES01000',description:'COFFEE',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
+  const restored=context.restore([cup,other],1236.38,'FR1500 cups row one\nFR1500 cups row two\nES01000 coffee');
+  assert.equal(restored.restored,true);assert.equal(restored.lines.filter(line=>line.code==='FR1500').length,2);
+  assert.equal(context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee').restored,false);
 });
 
 
