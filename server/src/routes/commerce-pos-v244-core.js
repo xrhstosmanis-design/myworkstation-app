@@ -4,6 +4,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -252,10 +253,15 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       stage="create-purchase-order";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=${body.note||`OCR V2.4.4 τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},"updatedByName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${orderId} AND "companyId"=${req.user.companyId}`;
       else await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR V2.4.4 ${body.documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
-      if(lockedReplacement){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
+      // A linked POS OCR document is one mutable draft, not an append-only
+      // import. Every successful fill/reread replaces its OCR lines atomically
+      // while the document is still DRAFT, so retries cannot double the order.
+      if(skeletonRows[0]){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
       for(const [index,line] of matched.entries()){
         const net=Math.max(0,Number(line.netAmount||0)),gross=Math.max(net,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net);
-        const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit),stockUnitsPerInvoiceUnit=invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1;
+        const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
+        const conversion=stockConversionFromDescription(line.description,Number(line.stockUnitsPerInvoiceUnit||line.unitsPerPackage||0));
+        const stockUnitsPerInvoiceUnit=conversion.multiplier>1?conversion.multiplier:(invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1);
         stage=`create-purchase-line-${index+1}`;
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},0,${line.vatRate},false,${line.unitCost},0,${Number(line.retailPrice||line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${line.product?'MATCHED':'UNRESOLVED'},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;
       }
