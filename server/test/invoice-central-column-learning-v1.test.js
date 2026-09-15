@@ -172,6 +172,11 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
   assert.equal(replay.collapsed,true);assert.equal(replay.lines.length,2);assert.equal(replay.removed,2);
   const legitimate=context.collapse([a,{...a},b,{...b}],16.36);
   assert.equal(legitimate.collapsed,false);assert.equal(legitimate.lines.length,4);
+  const coffee={code:'ES01000',description:'COFFEE 3KGR',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
+  const cups={code:'FR1500',description:'CUPS 12OZ 100TEM',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
+  const mixed=context.collapse([coffee,{...coffee},cups,{...cups}],1236.38);
+  assert.equal(mixed.collapsed,true);assert.equal(mixed.genuineRepeatedRowPreserved,true);
+  assert.deepEqual(Array.from(mixed.lines,line=>line.code),['ES01000','FR1500','FR1500']);
 });
 
 test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
