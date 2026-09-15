@@ -154,6 +154,7 @@ test("additional page jobs are locked individually and internal intake errors id
   assert.doesNotMatch(intake,/ANY\(\$\{pageJobIds\}::text\[\]\)/);
   assert.match(intake,/Η καταχώριση τιμολογίου απέτυχε στο στάδιο \$\{stage\}/);
   assert.match(intake,/safeError\.code="V244_INTAKE_INTERNAL"/);
+  assert.match(intake,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
 });
 
 

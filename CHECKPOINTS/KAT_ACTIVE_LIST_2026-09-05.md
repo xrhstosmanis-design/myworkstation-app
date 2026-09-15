@@ -1057,3 +1057,42 @@ Total output lines: 1413
 - [x] Same durable draft, pages and payment; no new charge, credit, stock, approval or finalization.
 - [ ] Αναμονή CI, merge και νέα LAB δοκιμή αποκλειστικά από το POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-pos-automatic-incomplete-reread.md`.
+## 2026-09-14 — Gate 3: parallel full-OCR timeout recovery
+
+- [x] LAB 11:31–11:35: 2612188 failed with `POS_FAILED / POS_BACKGROUND_FAILED` and hidden internal error.
+- [x] Root cause: sequential Azure page fallback accumulated full per-page timeouts and exposed a generic 500.
+- [x] Fix: parallel page recovery; retryable `AZURE_TIMEOUT`/503 retains the failed page and activates the durable worker retry.
+- [x] 47/47 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI, merge/deploy και νέα καθαρή POS δοκιμή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-parallel-timeout-recovery.md`.
+## 2026-09-14 — Gate 3: safe background-stage diagnostics
+
+- [x] LAB 11:48–11:52: 2612188 still failed with a generic internal error; provider-timeout recovery was not the failing branch.
+- [x] Automatic handoff now identifies AI recheck, product-line save, or purchase intake; AI recheck also returns a bounded safe sub-stage.
+- [x] 49/49 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και μία διαγνωστική επανάληψη για την ακριβή τελική διόρθωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-background-stage-diagnostics.md`.
+## 2026-09-15 — Gate 3: secondary-page link during reread
+
+- [x] LAB 12:03–12:11: exact failure `POS_BACKGROUND_PURCHASE_INTAKE`; secondary page was rejected before unified replacement.
+- [x] Fix: locked reread accepts only an unclaimed secondary page or one already linked to the same draft; foreign document links remain blocked.
+- [x] The exact old failure is reclaimable without a new upload or payment.
+- [x] 50/50 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου με Ανανέωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-gate3-secondary-page-reread-link.md`.
+
+## 2026-09-15 — POS OCR: adjacent row replay guard
+
+- [x] LAB invoice 43243 proved that every physical row was inserted twice (32 lines from a 16-row one-page invoice).
+- [x] Collapse only a complete adjacent replay whose single copy is strongly corroborated by the printed invoice total.
+- [x] Preserve legitimate repeated rows when the full table total is correct.
+- [x] Credit mode remains unchanged; no payment, stock, approval, invoicing or finalization change.
+- [ ] Αναμονή CI/deploy και ασφαλής επανάγνωση του ίδιου προχείρου χωρίς νέα αποστολή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-adjacent-ocr-replay.md`.
+## 2026-09-15 — POS OCR: confirmed total replay anchor
+
+- [x] LAB rerun 43243 remained at 32 rows because generic AI ignored the POS-confirmed 76.58 € during replay detection.
+- [x] Apply the confirmed handoff total to every supplier path before completeness and replay checks.
+- [x] Preserve the immutable paid amount; no new payment, reversal, stock, approval or finalization behavior.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου χωρίς νέα αποστολή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-confirmed-total-replay-anchor.md`.
