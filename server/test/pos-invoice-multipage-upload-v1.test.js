@@ -65,7 +65,7 @@ test("fast header keeps the proven Azure window inside its dedicated POS request
   assert.match(wrapper,/signal:AbortSignal\.timeout\(FAST_OPENAI_HEADER_TIMEOUT_MS\)/);
   assert.match(azure,/deadline=Number\(timeoutMs\)>0/);
   assert.match(azure,/signal:requestSignal\(\)/);
-  assert.match(client,/fast-header.*timeoutMs:60000/);
+  assert.match(client,/fast-header.*timeoutMs:75000/);
   assert.match(operator,/timeoutMs=Math\.max\(1000,Number\(options\.timeoutMs\|\|30000\)\)/);
 });
 

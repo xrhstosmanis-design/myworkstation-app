@@ -28,6 +28,7 @@ const fastBackgroundSuccessors=new Map();
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
+const FAST_OPENAI_HEADER_ATTEMPTS=2;
 const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[table-recheck\])/i.test(String(error?.message||error));
@@ -153,6 +154,30 @@ function outputText(response){
   return "";
 }
 
+async function callFastOpenAiHeader({prompt,filePart}){
+  let lastError;
+  for(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt++){
+    try{
+      const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FAST_OPENAI_HEADER_TIMEOUT_MS),body:JSON.stringify({
+        model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
+        input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
+        text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
+      })});
+      if(!response.ok){const detail=await response.text();throw new Error(`HTTP ${response.status}: ${detail.slice(0,160)}`)}
+      const raw=outputText(await response.json());
+      if(!raw.trim())throw new Error("empty structured response");
+      const parsed=JSON.parse(raw);
+      if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("invalid structured response");
+      return parsed;
+    }catch(error){
+      lastError=error;
+      console.warn("FAST OpenAI header attempt failed",{attempt,message:String(error?.message||error)});
+    }
+  }
+  const wrapped=new Error("Η γρήγορη ανάγνωση δεν επέστρεψε έγκυρα βασικά στοιχεία μετά από ασφαλή επανάληψη. Η πληρωμή δεν έγινε.");
+  wrapped.status=502;wrapped.cause=lastError;throw wrapped;
+}
+
 async function matchSupplier(companyId,candidate={}){
   const taxId=cleanTaxId(candidate.taxId);
   if(taxId){
@@ -223,13 +248,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
 
 Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
-    const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FAST_OPENAI_HEADER_TIMEOUT_MS),body:JSON.stringify({
-      model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
-      input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
-      text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
-    })});
-    if(!aiResponse.ok){const text=await aiResponse.text();const error=new Error(`PREMIUM FAST AI απέτυχε (${aiResponse.status}). ${text.slice(0,300)}`);error.status=502;throw error;}
-    const parsed=JSON.parse(outputText(await aiResponse.json())||"{}");
+    const parsed=await callFastOpenAiHeader({prompt,filePart});
     const supplier=await matchSupplier(req.user.companyId,{name:parsed.supplierName,taxId:parsed.supplierTaxId});
     const documentNumber=String(parsed.documentNumber||"").trim();
     const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"";

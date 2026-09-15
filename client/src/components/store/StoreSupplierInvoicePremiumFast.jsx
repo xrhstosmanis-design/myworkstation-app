@@ -65,12 +65,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       // Pages may be selected back-first and a continuation page may not carry
       // supplier/header fields. Read every candidate independently so one weak
       // page can never prevent the real first page from being processed.
-      for(const page of headerPages){
-        try{
-          const meta=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:60000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})});
-          if(meta)headerResults.push(meta);
-        }catch(error){headerErrors.push(error)}
-      }
+      const settled=await Promise.allSettled(headerPages.map(page=>api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:75000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})})));
+      for(const result of settled){if(result.status==="fulfilled"&&result.value)headerResults.push(result.value);else if(result.status==="rejected")headerErrors.push(result.reason)}
       if(!headerResults.length)throw headerErrors.at(-1)||new Error("Δεν διαβάστηκαν βασικά στοιχεία από τις επιλεγμένες σελίδες.");
       const {supplierHeader:supplierMeta,documentHeader:documentMeta,totalHeader:totalMeta,confidence}=mergeFastInvoiceHeaders(headerResults);
       if(supplierMeta?.supplierId&&(initial||!supplierId))setSupplierId(supplierMeta.supplierId);
