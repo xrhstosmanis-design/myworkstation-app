@@ -138,6 +138,22 @@ function recoverDeclaredColumns(line,profile){
 }
 
 
+function applySupplierStockConversion(line,mapping={}){
+  // Legacy mappings may carry unitsPerPackage only as catalogue metadata.
+  // Apply a stock conversion only when the supplier rule explicitly declares it.
+  const factor=Number(mapping?.stockConversion?.factor||0);
+  if(!(mapping?.verified&&factor>1))return line;
+  const invoiceQuantity=Math.max(0,Number(line?.invoiceQuantity??line?.quantity??0));
+  const packageUnitPrice=Math.max(0,Number(line?.packageUnitPrice??line?.unitPrice??line?.unitCost??0));
+  const netAmount=Math.max(0,Number(line?.netAmount??line?.netValue??0));
+  if(!(invoiceQuantity>0&&packageUnitPrice>0))return line;
+  const initialAmount=money2(invoiceQuantity*packageUnitPrice);
+  const calculatedDiscount=mapping?.discount1!==undefined&&mapping?.discount1!==null?money4(mapping.discount1):(netAmount>0&&netAmount<=initialAmount?money4((1-netAmount/initialAmount)*100):Number(line?.discount1||0));
+  const quantity=money4(invoiceQuantity*factor);
+  const stockUnit=String(mapping.stockUnit||mapping.stockConversion?.to||line?.stockUnit||line?.unit||"").trim();
+  return {...line,invoiceQuantity,invoiceUnit:mapping.invoiceUnit||line?.invoiceUnit||line?.unit||"",packageUnitPrice,quantity,unit:stockUnit,stockUnit,unitsPerPackage:factor,conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,unitPrice:money4(packageUnitPrice/factor),unitCost:money4(packageUnitPrice/factor),netUnitCost:netAmount>0?money4(netAmount/quantity):Number(line?.netUnitCost||0),initialAmount,discount1:calculatedDiscount,packageConversionApplied:true,supplierProfileRecovered:true,supplierProfileRule:"SUPPLIER_STOCK_CONVERSION",supplierProfileEvidence:{invoiceQuantity,stockQuantity:quantity,conversionFactor:factor,discount1:calculatedDiscount}};
+}
+
 function applyMappings(lines,profile){
   const mappings=profile?.mappings&&typeof profile.mappings==="object"?profile.mappings:{};
   const unitKind=value=>/^(PIECE|PCS|PC|TEM|ΤΕΜ|TMX|ΤΜΧ)$/.test(norm(value))?"PIECE":/^(PACKAGE|CASE|BOX|KIB|ΚΙΒ|ΚΒ)$/.test(norm(value))?"PACKAGE":null;
@@ -146,7 +162,8 @@ function applyMappings(lines,profile){
     if(!m)return line;
     const printedKind=unitKind(line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
     const compatible=!printedKind||!learnedKind||printedKind===learnedKind;
-    return {...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
+    const mapped={...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
+    return applySupplierStockConversion(mapped,m);
   });
 }
 
