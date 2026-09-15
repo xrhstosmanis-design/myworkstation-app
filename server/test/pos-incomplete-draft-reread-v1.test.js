@@ -24,6 +24,16 @@ test("reread replaces the same draft lines atomically without creating another p
   assert.match(core,/if\(existingPayment\)\{\s*stage="link-existing-payment"/);
 });
 
+
+test("final POS intake restores one uniquely matching collapsed invoice line",()=>{
+  assert.match(core,/function restoreUniqueExactGrossGap\(lines,invoiceTotal\)/);
+  assert.match(core,/candidates\.length!==1/);
+  assert.match(core,/Math\.abs\(productLinesGross\(restored\)-expected\)>0\.05/);
+  const intake=core.slice(core.indexOf('router.post("/ai-reader/jobs/:jobId/pos-intake"'),core.indexOf('stage="validate-supplier"'));
+  assert.match(intake,/restoreUniqueExactGrossGap\(parsedLines,body\.totalGross\)/);
+  assert.match(intake,/const lines=finalGapRecovery\.lines/);
+});
+
 test("an inferior reread leaves the existing draft lines untouched",()=>{
   const worker=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/beforeDiff=.*before\.grossTotal/);
