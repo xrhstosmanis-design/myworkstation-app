@@ -52,3 +52,12 @@ test("a stalled internal background request times out and becomes retryable",()=
   assert.match(route,/signal:AbortSignal\.timeout\(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS\)/);
   assert.match(route,/aborted due to timeout\|TimeoutError/);
 });
+
+test("multi-page header reading continues when one page has no usable header",()=>{
+  const select=client.slice(client.indexOf("const selectFiles=async selected=>"),client.indexOf("const removePage="));
+  assert.match(select,/const headerResults=\[\],headerErrors=\[\]/);
+  assert.match(select,/for\(const page of headerPages\)\{\s*try\{/);
+  assert.match(select,/catch\(error\)\{headerErrors\.push\(error\)\}/);
+  assert.match(select,/if\(!headerResults\.length\)throw/);
+  assert.ok(select.indexOf("catch(error){headerErrors.push(error)}")<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
+});
