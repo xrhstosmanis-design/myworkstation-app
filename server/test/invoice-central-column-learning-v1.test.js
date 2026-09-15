@@ -272,3 +272,12 @@ test('late recovered STEFANIDIS rows receive the central column rule before fina
   assert.equal(lateRows.reduce((sum,line)=>sum+line.quantity,0),608);
   assert.equal(Math.round(lateRows.reduce((sum,line)=>sum+line.grossAmount,0)*100)/100,2369.99);
 });
+
+
+test('POS recheck anchors reconciliation to the linked draft total before restoring an omitted row',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  assert.match(source,/j\."purchaseDocumentId"/);
+  assert.match(source,/SELECT "totalGross" FROM "PurchaseDocument"/);
+  assert.match(source,/linkedDraft\[0\]\?\.totalGross\|\|posHandoff\?\.totalGross/);
+  assert.match(source,/posConfirmedTotalSource=linkedDraft\[0\]\?"LINKED_DRAFT":"POS_HANDOFF"/);
+});
