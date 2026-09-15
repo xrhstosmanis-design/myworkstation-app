@@ -17,7 +17,8 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
       if(typeof window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__!=='function')throw new Error('Δεν φορτώθηκε η φόρμα αποτελεσμάτων του Learning Lab.');
       window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__(data);
       const learned=(data.productLines||[]).filter(x=>x.learnedMatch).length;
-      if(status())status().textContent=`Ανάγνωση ολοκληρώθηκε μόνο με ${provider(data)}: ${(data.productLines||[]).length} προϊόντα${learned?` • ${learned} από Central Learning`:''}.`;
+      const documentLabel=data?.documentType==='CREDIT_NOTE'?'Πιστωτικό / επιστροφή':'Τιμολόγιο';
+      if(status())status().textContent=`${documentLabel} · ανάγνωση ολοκληρώθηκε μόνο με ${provider(data)}: ${(data.productLines||[]).length} προϊόντα${learned?` • ${learned} από Central Learning`:''}.`;
     }catch(error){if(status())status().textContent=`Azure/AI: ${error.message}`;console.error('Invoice Learning Azure-only read failed',error)}
     finally{running=false;if(button){button.disabled=false;button.textContent=old}}
   }
