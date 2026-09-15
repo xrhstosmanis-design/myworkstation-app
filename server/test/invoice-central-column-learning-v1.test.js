@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,stockConversionFromDescription} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -150,6 +150,27 @@ test('every reading entry point can consume the same supplier profile, including
   const pieces=await context.apply({supplier:{taxId:'998878583'},productLines:[{code:'01669',unit:'TEM',quantity:30,unitCost:4.75,netAmount:142.5}]});
   assert.equal(pieces.productLines[0].unit,'TEM');
   assert.equal(pieces.productLines[0].unitsPerPackage,undefined);
+});
+
+test('manual supplier map accepts an inline printed unit with a safe piece fallback',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const profile={supplierKey:'fresh-milk',supplierTaxId:'803151400',supplierName:'FRESH MILK LOGISTICS',profileVersion:1,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',defaultUnit:'ΤΜΧ',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'QUANTITY',4:'UNIT_PRICE',5:'DISCOUNT_1',6:'VAT_RATE',7:'AMOUNT_AFTER_DISCOUNT'}}};
+  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const result=await context.apply({supplier:{taxId:'803151400'},productLines:[{rawText:'051 ΓΑΛΑ 3,7% ΕΠΙΛΕΓΜΕΝΟ ΟΛΥΜΠΟΥ 1LT ΤΕΜ 1 1,620 5 13 1,54',quantity:9,unitCost:9,netAmount:1.54}]});
+  assert.equal(result.productLines[0].quantity,1);
+  assert.equal(result.productLines[0].unitPrice,1.62);
+  assert.equal(result.productLines[0].invoiceUnit,'ΤΕΜ');
+  assert.equal(result.productLines[0].supplierProfileRule,'DECLARED_COLUMNS_LINE_TOTAL_RECOVERY');
+});
+
+test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{
+  for(const file of ['../../client/src/invoice-learning-lab-bootstrap.js','../../client/src/invoice-learning-catalog-publication.js']){
+    const source=await readFile(new URL(file,import.meta.url),'utf8');
+    assert.match(source,/\['SUPPLIER_CODE','DESCRIPTION','QUANTITY','UNIT_PRICE'\]/);
+    assert.match(source,/defaultUnit:Object\.values\(columns\)\.includes\('UNIT'\)\?null:'ΤΜΧ'/);
+    assert.doesNotMatch(source,/κωδικό, περιγραφή, μονάδα, ποσότητα/);
+  }
 });
 
 test('actual multipage recovery consumes repeated occurrences once and retains their printed order',async()=>{
