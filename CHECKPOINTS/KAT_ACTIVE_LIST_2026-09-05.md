@@ -1259,3 +1259,4 @@ Total output lines: 1413
 - [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
 - [ ] Await green CI/deploy, then resume the existing 2612188 draft without another payment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-bounded-multipage-reader.md`.
+- Azure invoice recovery: retain multi-row printed headers when mapping table columns; source reading remains non-mutating. (`2026-09-15-azure-split-invoice-headers-ci.md`)
