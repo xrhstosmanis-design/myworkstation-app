@@ -1,3 +1,12 @@
+## 2026-09-15 — POS OCR: table-recheck fallback
+
+- [x] LAB 620889 exposed exact failure AI_RECHECK_INTERNAL [table-recheck].
+- [x] Supplemental table-provider failure now falls through to Azure recovery instead of aborting.
+- [x] Historical failure is retryable with the same draft and payment state.
+- [x] 16/16 focused tests PASS; no payment, reversal, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος 620889.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-table-recheck-fallback.md`.
+
 ## 2026-09-15 — POS: reused LOCAL_COMPLETE handoff
 
 - [x] LAB 620889 was accepted but stayed at LOCAL_COMPLETE / AZURE without full background start.
