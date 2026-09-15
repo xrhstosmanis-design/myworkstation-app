@@ -1158,3 +1158,12 @@ Total output lines: 1413
 - [x] 24/24 targeted tests PASS; no payment, stock posting, approval or finalization change.
 - [ ] Await CI/deploy and verify the exact missing FR1500 row is restored.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-linked-draft-total-authority.md`.
+
+## 2026-09-15 — POS final-intake exact-gap recovery
+
+- [x] LAB proved all stock-unit conversions are correct but the legitimate second FR1500 charge is still absent from the six-line draft.
+- [x] Final POS intake now restores a line only when one unique existing row closes the complete authoritative invoice gap within 0.05 €.
+- [x] Ambiguous or non-reconciling gaps remain unchanged for manual review.
+- [x] Targeted reread/intake tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify seven rows and approximately 1,380.44 €.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-final-intake-exact-gap.md`.
