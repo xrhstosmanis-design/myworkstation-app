@@ -25,7 +25,9 @@ const fastBackgroundSuccessors=new Map();
 // A POS handoff is intentionally fire-and-forget for the operator. Render can
 // briefly refuse a loopback/public request while a worker is waking up, so the
 // server retries the same durable job before it is ever reported as failed.
-const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
+// One bounded retry is enough for transient transport/provider failures. Four
+// full OCR attempts could keep a draft in recovery for many minutes.
+const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
 const FAST_OPENAI_HEADER_ATTEMPTS=2;
