@@ -154,7 +154,6 @@ test("additional page jobs are locked individually and internal intake errors id
   assert.doesNotMatch(intake,/ANY\(\$\{pageJobIds\}::text\[\]\)/);
   assert.match(intake,/Η καταχώριση τιμολογίου απέτυχε στο στάδιο \$\{stage\}/);
   assert.match(intake,/safeError\.code="V244_INTAKE_INTERNAL"/);
-  assert.match(intake,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
 });
 
 
@@ -244,4 +243,8 @@ test("V2.4.4 does not accept net value as the initial value when quantity times 
   assert.equal(line.initialAmount,14);
   assert.equal(line.discount1,25);
   assert.equal(line.discount1Amount,3.5);
+});
+
+test("locked reread admits only an unclaimed or same-draft secondary page",()=>{
+  assert.match(intake,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
 });
