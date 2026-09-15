@@ -12,7 +12,7 @@ const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
-const POS_REPROCESS_STRATEGY="GREEK_PIECES_AND_EXACT_GAP_V5";
+const POS_REPROCESS_STRATEGY="LINKED_DRAFT_TOTAL_V6";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
