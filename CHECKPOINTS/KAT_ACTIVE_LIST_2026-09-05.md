@@ -1203,3 +1203,11 @@ Total output lines: 1413
 - [x] Regression test covers timeout and retry classification.
 - [ ] Await CI/deploy and verify the existing two-page draft completes without another upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-background-request-timeout.md`.
+
+
+## 2026-09-15 — Invoice Learning invalid AI response retry
+
+- [x] A blank or invalid structured fallback response receives one bounded retry against the original invoice.
+- [x] Empty drafts remain blocked; payment, stock, accounting, approval and finalization remain unchanged.
+- [ ] Await CI/deploy, then re-read Coffee Union `ΔΑ0011467` from the original POS/front flow.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-ai-response-retry.md`.
