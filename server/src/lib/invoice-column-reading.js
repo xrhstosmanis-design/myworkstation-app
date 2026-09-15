@@ -8,6 +8,14 @@ export function columnNumber(value){
   else raw=raw.replace(",",".");
   const n=Number(raw);return Number.isFinite(n)?n:null;
 }
+export function stockConversionFromDescription(description,explicitMultiplier=0){
+  const text=String(description||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const pieces=text.match(/(?:^|\D)(\d{1,4})\s*(?:TEM|TMX)(?=\D|$)/);
+  const kilograms=text.match(/(?:^|\D)(\d+(?:[,.]\d+)?)\s*(?:KGR|KG|KILO|ΚΙΛ)(?=\D|$)/);
+  const inferred=pieces?Number(pieces[1]):kilograms?Number(kilograms[1].replace(",","."))*1000:0;
+  const supplied=Number(explicitMultiplier||0),multiplier=supplied>1?supplied:inferred>1?inferred:supplied;
+  return {multiplier:multiplier>0?multiplier:0,stockMeasure:kilograms?"GRAM":"PIECE",inferred:inferred>1};
+}
 const round2=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
 const round4=value=>Math.round((Number(value)+Number.EPSILON)*10000)/10000;
 const unitPattern=/(?:^|[\s|])(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|PC|Κ\.Β\.|ΚΒ|ΚΙΒ|KIB|KG|KGR|LT|L)(?=[\s|\d]|$)/i;
