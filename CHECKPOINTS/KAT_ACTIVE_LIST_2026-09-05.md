@@ -1,3 +1,10 @@
+## 2026-09-15 — Description-driven stock base units
+
+- Coffee/chocolate package weights expressed as KG/KGR convert to grams in stock.
+- Explicit TEM/TMX package counts convert cups and similar consumables to pieces.
+- Financial invoice quantity/cost remains unchanged; only the stock multiplier is carried to approval.
+- Package sizes such as 24x355ml do not trigger a false conversion.
+
 ## 2026-09-15 — STEFANIDIS food columns and carton stock conversion
 
 - PR #854: central supplier rule for VAT 997763585 recovers quantity, original price, discount, net and VAT only when printed-row equations balance.
