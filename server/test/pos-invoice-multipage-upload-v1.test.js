@@ -187,7 +187,7 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);
-  assert.match(aiRecheck,/const confirmedHandoffTotal=money2\(posHandoff\?\.totalGross\|\|0\)/);
+  assert.match(aiRecheck,/const confirmedHandoffTotal=money2\(linkedDraft\[0\]\?\.totalGross\|\|posHandoff\?\.totalGross\|\|0\)/);
   assert.match(aiRecheck,/parsed\.totalGross=confirmedHandoffTotal/);
 });
 
