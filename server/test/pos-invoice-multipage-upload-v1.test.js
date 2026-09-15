@@ -33,11 +33,12 @@ test("STEFANIDIS FAST header is independent of reversed page selection",()=>{
   }
 });
 
-test("POS background uses the central STEFANIDIS Azure pages in parallel before unified AI",()=>{
+test("POS background reads central STEFANIDIS Azure pages in order before unified AI",()=>{
   const fastPath=aiRecheck.indexOf("if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
   const unified=aiRecheck.indexOf('fetch("https://api.openai.com/v1/responses"');
   assert.ok(fastPath>0&&fastPath<unified);
-  assert.match(aiRecheck,/Promise\.all\(pageJobs\.map\(page=>callAzure/);
+  assert.match(aiRecheck,/readAzurePagesSequentially\(pageJobs\)/);
+  assert.match(aiRecheck,/for\(const page of pageJobs\)pages\.push/);
   assert.match(aiRecheck,/preferCentralStefanidis=cleanTaxId\(supplierRows\[0\]\?\.taxId\)===STEFANIDIS_TAX_ID/);
   assert.match(aiRecheck,/parsed\.totalGross=money2\(posHandoff\.totalGross\|\|parsed\.totalGross\)/);
   assert.match(aiRecheck,/parsed\.stefanidisCentralFastPath=true/);
@@ -103,9 +104,10 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 
 test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
   const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/;
-  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=75000/);
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=30000/);
   assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
-  assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/);
+  assert.match(aiRecheck,/CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000/);
+  assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
   assert.match(aiRecheck,verifierCall);
 });
