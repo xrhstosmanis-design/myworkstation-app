@@ -342,7 +342,9 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // contains the code more times than the extraction and the invoice-total
   // difference equals that row's gross amount. No historical invoice value is
   // used and an ambiguous match remains for review.
-  const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,parsed.rawText);
+  // The structured provider result may already have omitted the second
+  // physical row, so use provider text plus the independent local OCR text.
+  const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,printedDocumentText);
   parsed.productLines=repeated.lines;
   if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code}
   // Vision providers can occasionally replay every physical table row twice
