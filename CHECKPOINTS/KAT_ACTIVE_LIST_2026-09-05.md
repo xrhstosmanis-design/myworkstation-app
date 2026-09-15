@@ -1194,3 +1194,12 @@ Total output lines: 1413
 - [x] Regression test prevents converted quantity or divided unit cost from being persisted as invoice economics.
 - [ ] Await CI/deploy and verify 36,000 g, 2,000 g, 1,000 g, 2,400 / 500 / 500 pieces.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-supplier-conversion-once.md`.
+
+## 2026-09-15 — POS background request timeout
+
+- [x] Two-page LAB invoice 2612188 remained in POS_PROCESSING with zero lines for more than ten minutes.
+- [x] Internal POS background requests now have a 90-second deadline and reuse the existing bounded retry/recovery path.
+- [x] Persisted pages and the same DRAFT remain authoritative across timeout and restart.
+- [x] Regression test covers timeout and retry classification.
+- [ ] Await CI/deploy and verify the existing two-page draft completes without another upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-background-request-timeout.md`.

@@ -28,6 +28,7 @@ const fastBackgroundSuccessors=new Map();
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000,12000,30000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
 const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
+const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[table-recheck\])/i.test(String(error?.message||error));
 
@@ -36,7 +37,7 @@ async function internalCommerceRequest(path,{authorization,method="GET",body,pub
   const origins=[localOrigin,...(publicOrigin&&publicOrigin!==localOrigin?[publicOrigin]:[])];
   let lastError;
   for(const origin of origins)try{
-    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:authorization,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
+    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:authorization,"Content-Type":"application/json"},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
     const text=await response.text();
     let payload={};
     if(text)try{payload=JSON.parse(text)}catch{payload={error:`Μη αναμενόμενη απάντηση server (${response.status}).`}};
