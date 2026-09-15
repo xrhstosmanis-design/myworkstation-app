@@ -1,3 +1,9 @@
+## 2026-09-15 — Supplier packaging and stock-rule editor
+
+- Invoice Learning adds a centrally saved supplier-rule editor for invoice unit, stock multiplier, stock unit, and exact decimal first discount.
+- Saving rules changes no stock, accounting, payment, invoice, or approval state.
+- Re-checking applies the saved conversion only to the reading preview; existing explicit final approval remains the sole stock-posting action.
+
 ## 2026-09-15 — Mixed genuine repeat inside OCR table replay
 
 - Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
