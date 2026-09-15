@@ -13,12 +13,12 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     if(status())status().textContent='Azure Document Intelligence διαβάζει το πρωτότυπο παραστατικό. Δεν χρησιμοποιείται local OCR.';
     try{
       const r=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:selectedFile.name,mimeType:selectedFile.type||'image/jpeg',fileData:selectedDataUrl})});
-      const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`AI σφάλμα ${r.status}`);
+      const data=await r.json().catch(()=>({}));if(!r.ok){const providerState=data.azureState?` Azure: ${data.azureState}.`:'';throw new Error(`${data.error||`AI σφάλμα ${r.status}`}${providerState}`)};
       if(typeof window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__!=='function')throw new Error('Δεν φορτώθηκε η φόρμα αποτελεσμάτων του Learning Lab.');
       window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__(data);
       const learned=(data.productLines||[]).filter(x=>x.learnedMatch).length;
       const documentLabel=data?.documentType==='CREDIT_NOTE'?'Πιστωτικό / επιστροφή':'Τιμολόγιο';
-      if(status())status().textContent=`${documentLabel} · ανάγνωση ολοκληρώθηκε μόνο με ${provider(data)}: ${(data.productLines||[]).length} προϊόντα${learned?` • ${learned} από Central Learning`:''}.`;
+      if(status())status().textContent=`${documentLabel} · ανάγνωση ολοκληρώθηκε με ${provider(data)}: ${(data.productLines||[]).length} προϊόντα${learned?` • ${learned} από Central Learning`:''}.`;
     }catch(error){if(status())status().textContent=`Azure/AI: ${error.message}`;console.error('Invoice Learning Azure-only read failed',error)}
     finally{running=false;if(button){button.disabled=false;button.textContent=old}}
   }
