@@ -97,6 +97,12 @@ test("AI recheck reports a safe stage instead of a hidden generic 500",()=>{
   assert.match(reader,/safe\.status=502/);
 });
 
+test("table recheck provider failure falls through to Azure recovery",()=>{
+  assert.match(reader,/The table pass is supplemental/);
+  assert.match(reader,/tableRecheckError=isProviderTimeout\(error\)\?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE"/);
+  assert.match(route,/AI_RECHECK_INTERNAL \\\[table-recheck\\\]/);
+});
+
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);
@@ -110,5 +116,5 @@ test("the repaired secondary-page conflict is eligible for durable recovery",()=
 });
 
 test("a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy",()=>{
-  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*Παρουσιάστηκε εσωτερικό σφάλμα/);
+  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*\(\?:Παρουσιάστηκε εσωτερικό σφάλμα\|AI_RECHECK_INTERNAL/);
 });

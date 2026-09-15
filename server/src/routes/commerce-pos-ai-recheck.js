@@ -265,15 +265,22 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
 
 Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | ΛΙΑΝΙΚΗ ΤΙΜΗ | Μ.Μ. | ΤΜΧ | αρχική Τιμή ΤΜΧ | Αξία | Εκπτ.1/2/3 ποσοστό και ποσό | Καθ Αξία | ΦΠΑ. retailPrice=ΛΙΑΝΙΚΗ ΤΙΜΗ, quantity=ΠΟΣΟΤΗΤΑ (όχι η ένδειξη μονάδας ΤΕΜ/ΤΜΧ), unit=Μ.Μ., unitCost=αρχική Τιμή ΤΜΧ πριν από εκπτώσεις, discount1/2/3=ποσοστά, discount1Amount/2Amount/3Amount=ποσά, netAmount=Καθ Αξία, vatRate=%ΦΠΑ. Μην συγχέεις retailPrice και unitCost και μην αντικαθιστάς την αρχική τιμή με net/qty όταν υπάρχει έκπτωση. Αριθμοί συσκευασίας μέσα στην περιγραφή δεν είναι quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή. Αν netAmount και vatRate υπάρχουν, μπορείς να υπολογίσεις grossAmount.`;
-    const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
-    const tablePayload=await tableResponse.json().catch(()=>({}));
-    if(tableResponse.ok){try{
-      const tableParsed=JSON.parse(outputText(tablePayload));
-      const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
-      parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
-      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
-    }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
-    else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}
+    try{
+      const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+      const tablePayload=await tableResponse.json().catch(()=>({}));
+      if(tableResponse.ok){try{
+        const tableParsed=JSON.parse(outputText(tablePayload));
+        const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+        parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
+        parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
+      }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
+      else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;parsed.tableRecheckError=`HTTP_${tableResponse.status}`}
+    }catch(error){
+      // The table pass is supplemental. Keep the initial extraction and allow
+      // the Azure field-recovery path below to finish the same durable job.
+      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;
+      parsed.tableRecheckError=isProviderTimeout(error)?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE";
+    }
   }
 
   // Some supplier layouts are read more reliably by Azure per page. This is
