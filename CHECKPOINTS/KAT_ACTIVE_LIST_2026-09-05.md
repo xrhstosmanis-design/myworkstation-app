@@ -1122,3 +1122,12 @@ Total output lines: 1413
 - [x] Both column-map editors and the runtime path have regression coverage.
 - [ ] Await CI/deploy, then save the map and recheck this credit note without finalizing it.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-inline-unit.md`.
+
+## 2026-09-15 — POS exact-gap row and stock-unit reread
+
+- [x] LAB `ΔΑ0011467` still showed six rows / 1,246.38 € and raw cup quantities after refresh.
+- [x] Restore one uniquely matching omitted charge when its gross amount closes the exact invoice-total gap, even if OCR text exposes its code once.
+- [x] Start one new versioned POS reread so the existing draft receives current description-based gram/piece conversions.
+- [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy, refresh POS once, then verify seven rows, 1,380.44 €, and 2,400/500/500 cup pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-exact-gap-stock-reread.md`.
