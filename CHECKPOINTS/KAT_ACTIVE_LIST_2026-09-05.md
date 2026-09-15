@@ -1140,3 +1140,12 @@ Total output lines: 1413
 - [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
 - [ ] Await CI/deploy and verify the first line displays 36,000 g.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-printed-kilogram-priority.md`.
+
+## 2026-09-15 — POS Greek piece marker and unique total gap
+
+- [x] LAB still showed six rows and raw cup quantities after kilogram correction.
+- [x] Recognize both Latin `TEM/TMX` and Greek `ΤΕΜ/ΤΜΧ` package-count markers.
+- [x] Restore the single unique line whose gross value closes the exact invoice gap even when OCR omits its code from the text layer.
+- [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify seven rows, 1,380.44 €, and converted cup pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-greek-pieces-exact-gap.md`.
