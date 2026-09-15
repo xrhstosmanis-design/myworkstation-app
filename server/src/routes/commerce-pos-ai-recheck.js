@@ -230,6 +230,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.openAiUnifiedFailed=true;
     parsed.openAiUnifiedRecovery="AZURE_ALL_PAGES";
   }
+  // The fast POS handoff total is the amount the operator explicitly confirmed
+  // (and, for PAID, the immutable payment amount). Use it as the reconciliation
+  // anchor for every supplier, not only the centrally profiled fast path.
+  const confirmedHandoffTotal=money2(posHandoff?.totalGross||0);
+  if(confirmedHandoffTotal>0){
+    parsed.totalGross=confirmedHandoffTotal;
+    parsed.posConfirmedTotalApplied=true;
+  }
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
 
