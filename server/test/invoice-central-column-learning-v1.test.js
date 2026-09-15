@@ -174,6 +174,17 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
   assert.equal(legitimate.collapsed,false);assert.equal(legitimate.lines.length,4);
 });
 
+test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('function mergeAzureInvoicePages'))+'\nthis.restore=restorePrintedRepeatedLine;',context);
+  const cup={code:'FR1500',description:'MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100TEM)',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
+  const other={code:'ES01000',description:'COFFEE',quantity:36,unitCost:36.2,netAmount:856.85,vatRate:13,grossAmount:968.24};
+  const restored=context.restore([cup,other],1236.38,'FR1500 cups row one\nFR1500 cups row two\nES01000 coffee');
+  assert.equal(restored.restored,true);assert.equal(restored.lines.filter(line=>line.code==='FR1500').length,2);
+  assert.equal(context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee').restored,false);
+});
+
 
 test('current printed headers recover all 38 rows when Azure omits tables and confuses retail with quantity',()=>{
   const header="ΚΩΔΙΚΟΣ ΠΕΡΙΓΡΑΦΗ ΛΙΑΝΙΚΗ ΤΙΜΗ Μ.Μ. ΠΟΣΟΤΗΤΑ ΤΙΜΗ ΜΟΝΑΔΑΣ ΑΞΙΑ ΠΡΟ ΕΚΠΤΩΣΗΣ ΕΚΠΤΩΣΗ ΑΞΙΑ ΜΕΤΑ ΤΗΝ ΕΚΠΤΩΣΗ ΦΠΑ";
