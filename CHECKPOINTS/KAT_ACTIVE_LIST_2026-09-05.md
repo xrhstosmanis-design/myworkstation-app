@@ -1,22 +1,3 @@
-## 2026-09-15 — Invoice Learning professional financial view
-
-- [x] Open the current Learning draft in a professional invoice presentation before saving to history.
-- [x] Show original price, three discounts, net price/value, VAT, gross value and per-line review state.
-- [x] Compare printed invoice total with calculated lines using €0.05 tolerance.
-- [x] Preserve central supplier learning for every store with no stock or accounting posting.
-- [ ] Αναμονή CI/merge και μετά LAB έλεγχος στη σελίδα Invoice Learning Lab.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-professional-financial-view.md`.
-
-## 2026-09-15 — PR #857 merged reconciliation checkpoint
-
-- [x] Merge `06dd1396` contains the approved POS invoice reconciliation and stock-unit behavior.
-- [x] Legitimate repeated charges remain; only total-verified complete OCR replay is collapsed.
-- [x] Coffee/chocolate explicit weights convert to grams, cup package counts convert to pieces, and missing counts stay red/unresolved.
-- [x] Central supplier learning remains system-wide and guarded by printed-row equations.
-- [x] Frontend build and 1,235/1,235 server tests PASS before merge.
-- [ ] Αναμονή πράσινου post-merge CI και μετά μία νέα LAB δοκιμή αποκλειστικά από το POS.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-reconciliation-merged-checkpoint.md`.
-
 ## 2026-09-15 — Mixed genuine repeat inside OCR table replay
 
 - Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
@@ -1115,7 +1096,6 @@ Total output lines: 1413
 - [x] Preserve the immutable paid amount; no new payment, reversal, stock, approval or finalization behavior.
 - [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου χωρίς νέα αποστολή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-confirmed-total-replay-anchor.md`.
-
 ## 2026-09-15 — POS draft idempotent replacement
 
 - [x] LAB `ΔΑ0011467`: outer summary showed 1,246.38 €, while the linked order had every OCR row twice and showed 2,492.76 €.
@@ -1124,7 +1104,6 @@ Total output lines: 1413
 - [x] 70/70 targeted tests PASS; payment/credit, stock, approval and finalization remain untouched.
 - [ ] Await CI/deploy, then refresh the existing draft and verify one canonical set of lines and one common total inside/outside.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-draft-idempotent-replacement.md`.
-
 ## 2026-09-15 — POS printed repeat and warehouse-quantity display
 
 - [x] LAB `ΔΑ0011467` after #860: duplicate append fixed; six canonical rows and the same 1,246.38 € inside/outside.
@@ -1134,3 +1113,12 @@ Total output lines: 1413
 - [x] 47/47 targeted tests PASS; no payment/credit, stock posting, approval or finalization.
 - [ ] Await CI/deploy, refresh once, then verify seven lines, 1,380.44 € and converted grams/pieces.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-printed-repeat-and-stock-display.md`.
+
+## 2026-09-15 — Invoice Learning inline unit fallback
+
+- [x] FRESH MILK LAB receipt has `ΤΕΜ` inline but no dedicated unit column; the saved supplier map was incorrectly blocked.
+- [x] Unit column is optional only when the profile stores the safe `ΤΜΧ` fallback.
+- [x] Runtime anchors on the printed inline unit and still requires line-level economic reconciliation.
+- [x] Both column-map editors and the runtime path have regression coverage.
+- [ ] Await CI/deploy, then save the map and recheck this credit note without finalizing it.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-inline-unit.md`.

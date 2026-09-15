@@ -90,7 +90,12 @@ function recoverDeclaredColumns(line,profile){
   const columns=profile?.readingRule?.columns||profile?.columnMap?.columns;
   if(!columns||typeof columns!=="object")return line;
   const indexOf=role=>Number(Object.entries(columns).find(([,value])=>value===role)?.[0]||0);
-  const unitColumn=indexOf("UNIT"),quantityColumn=indexOf("QUANTITY"),priceColumn=indexOf("UNIT_PRICE");
+  const declaredUnitColumn=indexOf("UNIT"),quantityColumn=indexOf("QUANTITY"),priceColumn=indexOf("UNIT_PRICE");
+  const fallbackUnit=String(profile?.readingRule?.defaultUnit||"").trim();
+  // Some compact receipts print TEM inline between the description and quantity,
+  // without giving it a dedicated table column. Treat that token as the anchor;
+  // never recover economics unless the line equation below still balances.
+  const unitColumn=declaredUnitColumn||((fallbackUnit&&quantityColumn>1)?quantityColumn-1:0);
   if(!(unitColumn>0&&quantityColumn>0&&priceColumn>0))return line;
   const words=wordsOf(line);if(!words.length)return line;
   let unitIndex=words.findIndex(word=>unitWords.has(norm(word)));
@@ -105,7 +110,7 @@ function recoverDeclaredColumns(line,profile){
   // is an aid, never permission to invent values.
   if(amount!==null&&!close(quantity*unitPrice,amount,Math.max(.03,amount*.012))){const recovered=amount/unitPrice;if(!(recovered>0&&recovered<=100000&&close(recovered,Math.round(recovered),.05)))return line;return {...line,quantity:Math.round(recovered),invoiceQuantity:Math.round(recovered),unitPrice:money4(unitPrice),unitCost:money4(unitPrice),netAmount:money2(amount),netValue:money2(amount),invoiceUnit:words[unitIndex],unit:words[unitIndex],supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_LINE_TOTAL_RECOVERY"};}
   const discount1=mapped("DISCOUNT_1"),discount2=mapped("DISCOUNT_2"),discount3=mapped("DISCOUNT_3"),vatRate=mapped("VAT_RATE");
-  const unit=words[unitIndex];const net=amount===null?Number(line?.netAmount??line?.netValue??0):amount;
+  const unit=words[unitIndex]||fallbackUnit;const net=amount===null?Number(line?.netAmount??line?.netValue??0):amount;
   return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),invoiceUnit:unit||line?.invoiceUnit,unit:unit||line?.unit,netAmount:net>0?money2(net):line?.netAmount,netValue:net>0?money2(net):line?.netValue,discount1:discount1!==null?money4(discount1):line?.discount1,discount2:discount2!==null?money4(discount2):line?.discount2,discount3:discount3!==null?money4(discount3):line?.discount3,vatRate:vatRate!==null?money4(vatRate):line?.vatRate,supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS",supplierProfileEvidence:{unitColumn,quantityColumn,priceColumn,amountColumn:after>0?indexOf("AMOUNT_AFTER_DISCOUNT"):indexOf("AMOUNT_BEFORE_DISCOUNT"),quantity,unitPrice:money4(unitPrice),amount:net>0?money2(net):null}};
 }
 
