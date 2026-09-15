@@ -17,9 +17,10 @@ test("reread replaces the same draft lines atomically without creating another p
   assert.match(core,/replaceExistingDraft:z\.boolean\(\)\.optional\(\)\.default\(false\)/);
   assert.match(core,/lockedReplacement=.*posReprocess\?\.mode==="RECONCILIATION_REREAD"/);
   assert.match(core,/lockedReplacement&&pageJob\.purchaseDocumentId&&pageJob\.purchaseDocumentId!==skeletonDocumentId/);
-  const replacement=core.slice(core.indexOf('if(lockedReplacement){stage="replace-purchase-lines"'),core.indexOf('let paymentTransactionId=null'));
+  const replacement=core.slice(core.indexOf('if(skeletonRows[0]){stage="replace-purchase-lines"'),core.indexOf('let paymentTransactionId=null'));
   assert.match(replacement,/DELETE FROM "PurchaseOrderLine" WHERE "orderId"=\$\{orderId\}/);
   assert.ok(replacement.indexOf('DELETE FROM "PurchaseOrderLine"')<replacement.indexOf('INSERT INTO "PurchaseOrderLine"'));
+  assert.match(core,/stockConversionFromDescription\(line\.description/);
   assert.match(core,/if\(existingPayment\)\{\s*stage="link-existing-payment"/);
 });
 
