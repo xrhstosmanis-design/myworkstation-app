@@ -1,3 +1,11 @@
+## 2026-09-15 — POS OCR: confirmed total replay anchor
+
+- [x] LAB rerun 43243 remained at 32 rows because generic AI ignored the POS-confirmed 76.58 € during replay detection.
+- [x] Apply the confirmed handoff total to every supplier path before completeness and replay checks.
+- [x] Preserve the immutable paid amount; no new payment, reversal, stock, approval or finalization behavior.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος προχείρου χωρίς νέα αποστολή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-confirmed-total-replay-anchor.md`.
+
 ## 2026-09-15 — POS OCR: adjacent row replay guard
 
 - [x] LAB invoice 43243 proved that every physical row was inserted twice (32 lines from a 16-row one-page invoice).
