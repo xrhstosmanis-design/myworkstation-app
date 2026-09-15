@@ -12,6 +12,8 @@ const AZURE_MODEL_ID="prebuilt-invoice";
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
 const money4=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+// A credit note is identified from the supplier heading, never from amount signs.
+export const detectInvoiceDocumentType=value=>/ΠΙΣΤ|ΕΠΙΣΤΡΟΦ|CREDITNOTE/.test(norm(value))?"CREDIT_NOTE":"INVOICE";
 const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.valueInteger??f?.content;const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 const textField=f=>String(f?.valueString??f?.valueDate??f?.content??"").trim();
 const azureConfigured=()=>Boolean(String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim()&&String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim());
@@ -294,6 +296,7 @@ async function callAzure(fileData,mimeType){
 
 function normalizeAzure(payload){
   const result=payload?.analyzeResult||{},doc=result.documents?.[0]||{},f=doc.fields||{};
+  const documentText=[textField(f.InvoiceType),textField(f.DocumentType),...(result.pages||[]).flatMap(page=>(page.words||[]).map(word=>word?.content||""))].join(" ");
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
   const supplierName=textField(f.VendorName)||textField(f.VendorAddressRecipient);
   const antzoulatosRows=isAntzoulatos(supplierName)?antzoulatosTableRows(result):[];
@@ -350,7 +353,7 @@ function normalizeAzure(payload){
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
   const lineConfs=productLines.map(x=>x.confidence).filter(Boolean);
   const aiConfidence=Math.round((lineConfs.reduce((a,b)=>a+b,0)+(headerConfidence||0))/(lineConfs.length+1));
-  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
+  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",documentType:detectInvoiceDocumentType(documentText),aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 function learnedScore(line,k){
@@ -373,7 +376,7 @@ async function applyLearnedKnowledge(result){
 }
 
 const lineProperties={supplierItemCode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount2:{type:"number",minimum:0,maximum:100},discount3:{type:"number",minimum:0,maximum:100},netUnitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},barcode:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}};
-const schema={type:"object",additionalProperties:false,properties:{aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
+const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["documentType","aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
 
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 const platformUploadOwner=req=>String(req.user?.id||req.user?.userId||req.user?.sub||"");
@@ -410,11 +413,12 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
-  const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
+  const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος/κείμενο γράφει Πιστωτικό, Πιστ. Τιμ., Επιστροφή ή Credit Note· αλλιώς INVOICE. Μην συμπεραίνεις πιστωτικό από το πρόσημο ποσών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
   const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
   const text=outputText(raw);if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα."});
   let result;try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο JSON."})}
+  result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
   res.json(result);
 }catch(error){next(error)}});
