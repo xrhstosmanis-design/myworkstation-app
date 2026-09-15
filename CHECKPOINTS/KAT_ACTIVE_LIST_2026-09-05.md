@@ -1,3 +1,12 @@
+## 2026-09-15 — Gate 3: AI-recheck safe stage recovery
+
+- [x] LAB after 6311ea0c: exact outer failure `POS_BACKGROUND_AI_RECHECK`; multi-page intake link was no longer the blocker.
+- [x] AI recheck now reports a bounded safe sub-stage while full details stay in server logs.
+- [x] The historical hidden AI-recheck failure is reclaimable without upload or payment duplication.
+- [x] 51/51 targeted tests PASS; no payment, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy. Μετά δοκιμή διαφορετικού μονοσέλιδου τιμολογίου αποκλειστικά από POS για καθαρή αξιολόγηση ανάγνωσης.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-gate3-ai-recheck-stage-recovery.md`.
+
 ## 2026-09-15 — Gate 3: secondary-page link during reread
 
 - [x] LAB 12:03–12:11: exact failure `POS_BACKGROUND_PURCHASE_INTAKE`; secondary page was rejected before unified replacement.
