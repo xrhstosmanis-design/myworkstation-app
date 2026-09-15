@@ -56,8 +56,17 @@ test("a stalled internal background request times out and becomes retryable",()=
 test("multi-page header reading continues when one page has no usable header",()=>{
   const select=client.slice(client.indexOf("const selectFiles=async selected=>"),client.indexOf("const removePage="));
   assert.match(select,/const headerResults=\[\],headerErrors=\[\]/);
-  assert.match(select,/for\(const page of headerPages\)\{\s*try\{/);
-  assert.match(select,/catch\(error\)\{headerErrors\.push\(error\)\}/);
+  assert.match(select,/Promise\.allSettled\(headerPages\.map\(/);
+  assert.match(select,/result\.status==="fulfilled"/);
+  assert.match(select,/result\.status==="rejected"/);
   assert.match(select,/if\(!headerResults\.length\)throw/);
-  assert.ok(select.indexOf("catch(error){headerErrors.push(error)}")<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
+  assert.ok(select.indexOf('result.status==="rejected"')<select.indexOf("mergeFastInvoiceHeaders(headerResults)"));
+});
+
+test("FAST header retries empty or malformed structured AI responses safely",()=>{
+  assert.match(route,/FAST_OPENAI_HEADER_ATTEMPTS=2/);
+  assert.match(route,/for\(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt\+\+\)/);
+  assert.match(route,/if\(!raw\.trim\(\)\)throw new Error\("empty structured response"\)/);
+  assert.match(route,/const parsed=JSON\.parse\(raw\)/);
+  assert.match(route,/Η γρήγορη ανάγνωση δεν επέστρεψε έγκυρα βασικά στοιχεία μετά από ασφαλή επανάληψη/);
 });
