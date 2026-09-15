@@ -1,3 +1,12 @@
+## 2026-09-15 — POS OCR: adjacent row replay guard
+
+- [x] LAB invoice 43243 proved that every physical row was inserted twice (32 lines from a 16-row one-page invoice).
+- [x] Collapse only a complete adjacent replay whose single copy is strongly corroborated by the printed invoice total.
+- [x] Preserve legitimate repeated rows when the full table total is correct.
+- [x] Credit mode remains unchanged; no payment, stock, approval, invoicing or finalization change.
+- [ ] Αναμονή CI/deploy και ασφαλής επανάγνωση του ίδιου προχείρου χωρίς νέα αποστολή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-adjacent-ocr-replay.md`.
+
 ## 2026-09-15 — Gate 3: AI-recheck safe stage recovery
 
 - [x] LAB after 6311ea0c: exact outer failure `POS_BACKGROUND_AI_RECHECK`; multi-page intake link was no longer the blocker.

@@ -67,6 +67,25 @@ const normalizeProductLine=line=>{
   return {...line,rawText:String(line?.rawText||""),code:String(line?.code||"").trim(),barcode:String(line?.barcode||"").trim(),description:String(line?.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unit:String(line?.unit||"").trim(),unitsPerPackage:Math.max(0,Number(line?.unitsPerPackage||0)),unitCost,retailPrice:Math.max(0,Number(line?.retailPrice||0)),discount1:Math.max(0,Number(line?.discount1||0)),discount1Amount:Math.max(0,Number(line?.discount1Amount||0)),discount2:Math.max(0,Number(line?.discount2||0)),discount2Amount:Math.max(0,Number(line?.discount2Amount||0)),discount3:Math.max(0,Number(line?.discount3||0)),discount3Amount:Math.max(0,Number(line?.discount3Amount||0)),netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line?.confidence||0)))};
 };
 const lineGrossTotal=lines=>money2((lines||[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+const physicalRowFingerprint=line=>[
+  norm(line?.code),norm(line?.description||line?.rawText),Number(line?.quantity||0).toFixed(4),
+  Number(line?.unitCost||0).toFixed(4),Number(line?.netAmount||0).toFixed(2),
+  Number(line?.vatRate||0).toFixed(2),Number(line?.grossAmount||0).toFixed(2),
+  Number(line?.discount1||0).toFixed(2),Number(line?.discount2||0).toFixed(2),Number(line?.discount3||0).toFixed(2)
+].join("|");
+function collapseAdjacentTableReplay(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  if(total<=0||source.length<4||source.length%2!==0)return {lines:source,collapsed:false};
+  const collapsed=[];
+  for(let index=0;index<source.length;index+=2){
+    if(physicalRowFingerprint(source[index])!==physicalRowFingerprint(source[index+1]))return {lines:source,collapsed:false};
+    collapsed.push(source[index]);
+  }
+  const fullDifference=Math.abs(lineGrossTotal(source)-total),collapsedDifference=Math.abs(lineGrossTotal(collapsed)-total);
+  const permittedDifference=Math.max(TOTAL_TOLERANCE,total*0.02);
+  if(collapsedDifference>permittedDifference||collapsedDifference>=fullDifference*0.25)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:source.length-collapsed.length};
+}
 const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
 function mergeRecoveredLines(current,recovered){
   const out=(current||[]).map(line=>({...line})),used=new Set();
@@ -277,6 +296,13 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
     parsed.stefanidisFinalColumnRecovery=true;
   }
+  // Vision providers can occasionally replay every physical table row twice
+  // (1-2, 3-4, ...). Collapse only a complete adjacent replay whose single
+  // copy is strongly corroborated by the printed invoice total. This keeps
+  // legitimate repeated products when the full table total is correct.
+  const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
+  parsed.productLines=replay.lines;
+  if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed}
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
