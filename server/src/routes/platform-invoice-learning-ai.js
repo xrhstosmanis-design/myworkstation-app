@@ -12,7 +12,9 @@ const AZURE_MODEL_ID="prebuilt-invoice";
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
 const money4=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
-// A credit note is identified from the supplier heading, never from amount signs.
+// A credit note must be identified from the document heading/wording, never
+// from an amount sign. Supplier returns are commonly printed with positive
+// line amounts even though their final posting reverses stock.
 export const detectInvoiceDocumentType=value=>/ΠΙΣΤ|ΕΠΙΣΤΡΟΦ|CREDITNOTE/.test(norm(value))?"CREDIT_NOTE":"INVOICE";
 const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.valueInteger??f?.content;const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 const textField=f=>String(f?.valueString??f?.valueDate??f?.content??"").trim();
@@ -397,19 +399,19 @@ router.get("/invoice-learning/mobile-upload-sessions/:id",(req,res)=>{
   res.json(upload.dataUrl?{status:"READY",dataUrl:upload.dataUrl,filename:upload.filename,mimeType:upload.mimeType}:{status:"WAITING"});
 });
 
-router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
+router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5"),azureState:azureConfigured()?"READY":"NOT_CONFIGURED"}));
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  let azureFailure="";
+  let azureFailure="",azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
       azure=await applyLearnedKnowledge(azure);
       if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)
-    }catch(error){azureFailure=String(error?.message||error);console.error("Azure Invoice Learning fallback:",azureFailure)}
+    }catch(error){azureFailure=String(error?.message||error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning fallback:",azureFailure)}
   }
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
@@ -421,9 +423,8 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   let result;try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο JSON."})}
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
-  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
+  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   res.json(result);
 }catch(error){next(error)}});
 
 export default router;
-
