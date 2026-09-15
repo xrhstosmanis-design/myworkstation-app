@@ -1,5 +1,14 @@
 ## 2026-09-15 — Invoice Learning empty-result guard
 
+## 2026-09-15 — POS FAST header sequential LAB regression
+
+- [x] LAB PASS protected: `2612188` previously returned supplier/ΑΦΜ, `2612188`, `02/09/2026` and `2.369,99 €` when FAST pages were read one after the other.
+- [x] LAB FAIL: the concurrent FAST candidate change made both selected pages fail together and left all four fields blank.
+- [x] Bounded correction: read FAST header candidates sequentially while retaining independent per-page errors, order-independent merging and the existing 75-second request bound.
+- [x] No payment, credit, stock, draft deletion/recovery, approval, finalization or fiscal behavior changes.
+- [ ] AWAITING CI, exact deploy verification and one POS-front LAB read of both pages without pressing Paid/Credit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-header-sequential-lab-regression.md`.
+
 - An Azure/AI response with zero product lines is rejected instead of being presented as a completed empty invoice draft.
 - The fallback prompt explicitly preserves each visible product row, including genuinely repeated supplier-code rows.
 - No stock, accounting, payment, invoice approval, or finalization action is involved.

@@ -33,6 +33,16 @@ test("STEFANIDIS FAST header is independent of reversed page selection",()=>{
   }
 });
 
+test("POS reads multipage FAST headers sequentially without losing a successful page",()=>{
+  const start=client.indexOf("const processedPages=[...nextPages]");
+  const end=client.indexOf("setPages(processedPages)",start);
+  const headerRead=client.slice(start,end);
+  assert.match(headerRead,/for\(const sourcePage of headerPages\)/);
+  assert.match(headerRead,/await api\("\/api\/commerce\/ai-reader\/fast-header"/);
+  assert.match(headerRead,/catch\(error\)\{headerErrors\.push\(error\)\}/);
+  assert.doesNotMatch(headerRead,/Promise\.all|Promise\.allSettled/);
+});
+
 test("POS background reads central STEFANIDIS Azure pages in order before unified AI",()=>{
   const fastPath=aiRecheck.indexOf("if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
   const unified=aiRecheck.indexOf('fetch("https://api.openai.com/v1/responses"');

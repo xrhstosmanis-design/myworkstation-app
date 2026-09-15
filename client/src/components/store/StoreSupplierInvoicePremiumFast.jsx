@@ -65,14 +65,17 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       // Pages may be selected back-first and a continuation page may not carry
       // supplier/header fields. Read every candidate independently so one weak
       // page can never prevent the real first page from being processed.
-      const settled=await Promise.allSettled(headerPages.map(page=>api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:75000,body:JSON.stringify({storeId:store.id,filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl})})));
       const processedPages=[...nextPages];
-      for(const [resultIndex,result] of settled.entries()){
-        if(result.status==="fulfilled"&&result.value){
-          headerResults.push(result.value);
-          const sourcePage=headerPages[resultIndex],pageIndex=processedPages.indexOf(sourcePage);
-          if(pageIndex>=0)processedPages[pageIndex]={...sourcePage,fastProductLines:Array.isArray(result.value.productLines)?result.value.productLines:[]};
-        }else if(result.status==="rejected")headerErrors.push(result.reason);
+      // The LAB-proven path reads one page after the other. Concurrent FAST
+      // requests exhausted the shared provider and made both pages fail.
+      for(const sourcePage of headerPages){
+        try{
+          const result=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:75000,body:JSON.stringify({storeId:store.id,filename:sourcePage.file.name||"timologio.jpg",mimeType:sourcePage.file.type||"image/jpeg",dataUrl:sourcePage.dataUrl})});
+          if(!result)continue;
+          headerResults.push(result);
+          const pageIndex=processedPages.indexOf(sourcePage);
+          if(pageIndex>=0)processedPages[pageIndex]={...sourcePage,fastProductLines:Array.isArray(result.productLines)?result.productLines:[]};
+        }catch(error){headerErrors.push(error)}
       }
       setPages(processedPages);
       if(!headerResults.length)throw headerErrors.at(-1)||new Error("Δεν διαβάστηκαν βασικά στοιχεία από τις επιλεγμένες σελίδες.");
