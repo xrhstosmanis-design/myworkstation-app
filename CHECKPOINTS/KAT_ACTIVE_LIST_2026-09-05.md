@@ -1124,3 +1124,13 @@ Total output lines: 1413
 - [x] 70/70 targeted tests PASS; payment/credit, stock, approval and finalization remain untouched.
 - [ ] Await CI/deploy, then refresh the existing draft and verify one canonical set of lines and one common total inside/outside.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-draft-idempotent-replacement.md`.
+
+## 2026-09-15 — POS printed repeat and warehouse-quantity display
+
+- [x] LAB `ΔΑ0011467` after #860: duplicate append fixed; six canonical rows and the same 1,246.38 € inside/outside.
+- [x] Remaining exact difference 134.06 € identifies the omitted second physical `FR1500` 12OZ cup row.
+- [x] Genuine-repeat recovery now reads complete local OCR text and the existing mismatched draft is eligible for one versioned safe reread.
+- [x] Purchase review shows converted warehouse quantity and unit while retaining invoice quantity for all financial calculations.
+- [x] 47/47 targeted tests PASS; no payment/credit, stock posting, approval or finalization.
+- [ ] Await CI/deploy, refresh once, then verify seven lines, 1,380.44 € and converted grams/pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-printed-repeat-and-stock-display.md`.
