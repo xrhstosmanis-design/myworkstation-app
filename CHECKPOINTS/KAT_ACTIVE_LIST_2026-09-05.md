@@ -1,11 +1,3 @@
-## 2026-09-15 — Invoice Learning decimal-comma recovery
-
-- [x] Fresh Milk LAB exposed Azure values such as `1,620` returned as `1620`, inflating the 8,44 € draft to 8.440 €.
-- [x] A no-unit supplier map now repairs this only when quantity, declared discounts and printed line value prove the decimal scale.
-- [x] Unproven rows remain unchanged for manual review; no stock, accounting, payment or finalization action occurs.
-- [ ] Await CI/deploy, then re-read `ΔΑ0011467` and verify 8,44 € net / 9,06 € gross.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-decimal-comma-recovery.md`.
-
 ## 2026-09-15 — Mixed genuine repeat inside OCR table replay
 
 - Collapse full-table OCR duplication while retaining exactly one genuinely repeated row when that row alone closes the invoice total.
@@ -1139,3 +1131,12 @@ Total output lines: 1413
 - [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
 - [ ] Await CI/deploy, refresh POS once, then verify seven rows, 1,380.44 €, and 2,400/500/500 cup pieces.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-exact-gap-stock-reread.md`.
+
+## 2026-09-15 — POS printed kilogram priority
+
+- [x] LAB proved `36 ΚΙΛΑ` was incorrectly multiplied again by the `3KGR` package description, producing 108,000 g.
+- [x] Printed KG/KGR/ΚΙΛΑ now has priority and converts once to grams; description weight remains package metadata.
+- [x] Piece/package descriptions retain their existing conversion behavior.
+- [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify the first line displays 36,000 g.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-printed-kilogram-priority.md`.
