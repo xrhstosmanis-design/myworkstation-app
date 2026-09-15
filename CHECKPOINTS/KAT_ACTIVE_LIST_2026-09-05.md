@@ -1,3 +1,12 @@
+## 2026-09-15 — POS: reused LOCAL_COMPLETE handoff
+
+- [x] LAB 620889 was accepted but stayed at LOCAL_COMPLETE / AZURE without full background start.
+- [x] Promote reused LOCAL_COMPLETE jobs to POS_QUEUED during the original POS handoff.
+- [x] Recover a partial one-page handoff without upload or payment duplication.
+- [x] 38/38 targeted tests PASS; no payment, reversal, stock, approval or finalization change.
+- [ ] Αναμονή CI/deploy και ανάκτηση του υπάρχοντος 620889.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-local-complete-handoff.md`.
+
 ## 2026-09-15 — POS OCR: confirmed total replay anchor
 
 - [x] LAB rerun 43243 remained at 32 rows because generic AI ignored the POS-confirmed 76.58 € during replay detection.
