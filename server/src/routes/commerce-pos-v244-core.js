@@ -11,6 +11,23 @@ const id=()=>crypto.randomUUID();
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v||0)));
+const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
+const productLinesGross=lines=>money2((Array.isArray(lines)?lines:[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+
+// Last-resort POS safeguard for a printed line that OCR collapsed because it
+// is identical to another line. Restore it only when exactly one existing line
+// matches the whole invoice gap and the restored total reconciles within five
+// cents. Ambiguous gaps remain untouched and visible for manual review.
+function restoreUniqueExactGrossGap(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[];
+  const expected=money2(invoiceTotal),gap=money2(expected-productLinesGross(source));
+  if(!(gap>0.05))return {lines:source,restored:false};
+  const candidates=source.filter(line=>Math.abs(Number(line?.grossAmount||0)-gap)<=0.05);
+  if(candidates.length!==1)return {lines:source,restored:false};
+  const restored=[...source,{...candidates[0],finalIntakeExactGapRestored:true}];
+  if(Math.abs(productLinesGross(restored)-expected)>0.05+Number.EPSILON)return {lines:source,restored:false};
+  return {lines:restored,restored:true,gap,code:String(candidates[0]?.code||"")};
+}
 
 // The POS V2.4.4 routes are mounted before the legacy intake routes.  They
 // therefore cannot rely on the legacy route's per-request compatibility
@@ -175,7 +192,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
-    const lines=z.array(lineSchema).min(1).max(500).parse(rawLines);
+    const parsedLines=z.array(lineSchema).min(1).max(500).parse(rawLines);
+    const finalGapRecovery=restoreUniqueExactGrossGap(parsedLines,body.totalGross);
+    const lines=finalGapRecovery.lines;
     stage="validate-supplier";
     const supplier=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
