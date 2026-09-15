@@ -1230,3 +1230,11 @@ Total output lines: 1413
 - [x] Client/server builds and 32 targeted POS invoice tests PASS locally.
 - [ ] Await green CI/deploy, then repeat one clean two-page read from the POS front without submitting payment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-header-invalid-response.md`.
+
+
+## 2026-09-15 — Invoice Learning single reader flow
+
+- [x] The Lab now has one automatic Azure/AI read path per upload; the duplicate automatic reader is not loaded.
+- [x] The line-correction button remains manual-only and cannot start a provider request.
+- [ ] Await CI/deploy, then re-read Coffee Union once without clicking a second reader button.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-single-reader-flow.md`.

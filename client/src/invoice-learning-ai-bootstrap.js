@@ -3,7 +3,7 @@ if(labPath){
   let selectedFile=null,selectedDataUrl='';
   const token=()=>localStorage.getItem('token')||'';
   const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=reject;r.readAsDataURL(file)});
-  const capture=async e=>{const f=e.target.files?.[0];if(!f)return;selectedFile=f;selectedDataUrl=await readFile(f).catch(()=>"")};
+  const capture=async e=>{const f=e.target.files?.[0];if(!f)return;selectedFile=f;selectedDataUrl=await readFile(f).catch(()=>"");if(selectedDataUrl)setTimeout(()=>runAi(document.querySelector('[data-ai-recheck]')),0)};
   const currentOcrConfidence=()=>{const t=document.querySelector('#ocrBadge')?.textContent||'';const m=t.match(/OCR\s*(\d+)/i);return m?Number(m[1]):0};
   const value=(row,key)=>row.querySelector(`[data-k="${key}"]`)?.value||'';
   const change=(el,val)=>{if(!el)return;el.value=val??'';el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}))};
