@@ -1271,3 +1271,10 @@ Total output lines: 1413
 - [x] Protects payment idempotency, deliberate draft deletion, stock, fiscal, accounting and finalization boundaries.
 - [ ] Enforce this gate on every subsequent change.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-mandatory-repository-checkpoint-gate.md`.
+
+## 2026-09-15 — Selective Invoice/POS reader rollback
+
+- Restore only Invoice Learning and POS reader code from proven checkpoint `29f46bcd`, after supplier packaging rules and before reader regressions.
+- Keep all other pages, supplier rules, payment, stock, accounting, approval and finalization unchanged.
+- Require CI and a fresh LAB read before any new reader modification.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-pos-reader-selective-rollback.md`.
