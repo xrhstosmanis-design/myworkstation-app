@@ -377,6 +377,12 @@ async function applyLearnedKnowledge(result){
 
 const lineProperties={supplierItemCode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount2:{type:"number",minimum:0,maximum:100},discount3:{type:"number",minimum:0,maximum:100},netUnitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},barcode:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}};
 const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["documentType","aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
+// A displayed line is safe only when the original result contains its actual
+// invoice economics. Descriptions/codes alone must never become a zero-value draft.
+const hasUsableProductLines=lines=>Array.isArray(lines)&&lines.length>0&&lines.every(line=>{
+  const identified=String(line?.supplierItemCode||line?.description||"").trim();
+  return Boolean(identified)&&Number(line?.quantity)>0&&Number(line?.unitPrice)>0&&Number(line?.netAmount)>0;
+});
 
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 const platformUploadOwner=req=>String(req.user?.id||req.user?.userId||req.user?.sub||"");
@@ -417,17 +423,28 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος/κείμενο γράφει Πιστωτικό, Πιστ. Τιμ., Επιστροφή ή Credit Note· αλλιώς INVOICE. Μην συμπεραίνεις πιστωτικό από το πρόσημο ποσών. Διάβασε τον πίνακα ειδών γραμμή-γραμμή: κάθε ορατή γραμμή προϊόντος πρέπει να γίνει ένα ξεχωριστό productLines στοιχείο, ακόμη και αν έχει ίδιο κωδικό/περιγραφή με άλλη γραμμή. Μην επιστρέψεις κενό productLines όταν βλέπεις πίνακα ειδών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
   const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
   let response=await callOpenAiFallback(false),raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
-  let text=outputText(raw);
-  if(!text){response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR"});text=outputText(raw)}
-  if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE"});
-  let result;try{result=JSON.parse(text)}catch{
+  let text=outputText(raw),usedOpenAiRetry=false;
+  const retryOpenAi=async()=>{
     response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));
-    if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR"});
-    text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE"})};
+    if(!response.ok)return null;
+    text=outputText(raw);try{return JSON.parse(text)}catch{return null};
+  };
+  let result;try{result=JSON.parse(text)}catch{result=null}
+  if(!result){
+    result=await retryOpenAi();usedOpenAiRetry=true;
+    if(!result)return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο ή κενό δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE"});
+  }
+  if(!result.productLines?.length){
+    result=await retryOpenAi();usedOpenAiRetry=true;
+    if(!result)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE"});
+  }
+  if(!hasUsableProductLines(result.productLines)&&!usedOpenAiRetry){
+    result=await retryOpenAi();usedOpenAiRetry=true;
+    if(!result)return res.status(502).json({error:"Το AI δεν επέστρεψε ασφαλές αποτέλεσμα στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE"});
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
-  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
+  if(!hasUsableProductLines(result.productLines))return res.status(422).json({error:"Οι γραμμές του τιμολογίου δεν περιείχαν ασφαλή ποσότητα, τιμή και αξία. Δεν δημιουργήθηκε πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   res.json(result);
 }catch(error){next(error)}});
 
