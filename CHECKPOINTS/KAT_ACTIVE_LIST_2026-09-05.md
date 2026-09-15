@@ -1179,3 +1179,12 @@ Total output lines: 1413
 - [x] Targeted reread/intake tests PASS; no payment, stock posting, approval or finalization change.
 - [ ] Await CI/deploy and verify seven rows and approximately 1,380.44 €.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-final-intake-exact-gap.md`.
+
+## 2026-09-15 — POS supplier stock conversion exactly once
+
+- [x] LAB now has seven rows and a reconciled 1,380.45 € total.
+- [x] LAB exposed double stock conversion: 36,000,000 g / 240,000 pieces instead of 36,000 g / 2,400 pieces.
+- [x] Supplier rules now preserve invoice quantity and package price and store only one stock conversion multiplier.
+- [x] Regression test prevents converted quantity or divided unit cost from being persisted as invoice economics.
+- [ ] Await CI/deploy and verify 36,000 g, 2,000 g, 1,000 g, 2,400 / 500 / 500 pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-supplier-conversion-once.md`.
