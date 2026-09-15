@@ -223,7 +223,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE"};
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:Array.isArray(parsed.productLines)?parsed.productLines:[]};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
         if(azureHasUsefulHeader)return res.json(azureHeader);
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
@@ -359,8 +359,11 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       const escaped=mimeType.replace("/","\\/");const match=new RegExp(`^data:${escaped};base64,([A-Za-z0-9+/=]+)$`).exec(dataUrl);
       if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(mimeType)||!match)throw Object.assign(new Error(`Μη έγκυρη σελίδα ${index+1}.`),{status:400});
       const bytes=Buffer.from(match[1],"base64");if(bytes.length<100||bytes.length>6500000)throw Object.assign(new Error(`Η σελίδα ${index+1} πρέπει να είναι έως 6,5 MB.`),{status:400});
-      return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex")};
+      const cachedProductLines=finalizeV244ProductLines(Array.isArray(page?.productLines)?page.productLines:[]).slice(0,500);
+      return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),cachedProductLines};
     });
+    const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
+    const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>page.cachedProductLines.map(line=>({...line,sourceFileIndex:pageIndex}))):[];
     await ensureFastHandoffSchema();
     const taxId=cleanTaxId(supplier.taxId),normalizedNumber=normalizeDocumentNumber(documentNumber);
     const myDataRows=taxId?await prisma.$queryRaw`
@@ -401,8 +404,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
-      await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
+      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:hasCompleteCachedProductLines,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;
     });
