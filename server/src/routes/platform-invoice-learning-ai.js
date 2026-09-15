@@ -427,6 +427,10 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
+  if(!result.productLines?.length){
+    response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));
+    if(response.ok){text=outputText(raw);try{const retryResult=JSON.parse(text);retryResult.documentType=retryResult.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...retryResult}))}catch{ /* the existing guarded empty-result response below remains authoritative */ }}
+  }
   if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   res.json(result);
 }catch(error){next(error)}});

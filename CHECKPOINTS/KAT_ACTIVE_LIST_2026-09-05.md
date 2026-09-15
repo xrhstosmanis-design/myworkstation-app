@@ -1220,3 +1220,10 @@ Total output lines: 1413
 - [x] Regression test covers continuation after one page error.
 - [ ] Await CI/deploy and repeat clean two-page selection without payment until all four fields appear.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-multipage-header-continue.md`.
+
+
+## 2026-09-15 — Invoice Learning empty line retry
+
+- [x] A valid AI response with zero product lines receives one bounded reread of the original invoice.
+- [x] Empty drafts, stock, payments, accounting, approval and finalization remain unchanged.
+- [ ] Await CI/deploy, then re-read Coffee Union from the POS/front flow.
