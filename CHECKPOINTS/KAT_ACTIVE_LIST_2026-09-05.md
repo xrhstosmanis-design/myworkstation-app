@@ -1248,3 +1248,10 @@ Total output lines: 1413
 - [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
 - [ ] Await green CI/deploy, then safely reread invoice 2612188 without creating another payment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-page-line-reuse.md`.
+
+
+## 2026-09-15 — Azure split invoice headers
+
+- [x] Azure table extraction accepts a two-row printed header band.
+- [ ] Await CI/deploy, then re-read Coffee Union once.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-azure-split-invoice-headers-v2.md`.
