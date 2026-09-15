@@ -1220,3 +1220,13 @@ Total output lines: 1413
 - [x] Regression test covers continuation after one page error.
 - [ ] Await CI/deploy and repeat clean two-page selection without payment until all four fields appear.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-multipage-header-continue.md`.
+
+## 2026-09-15 — POS FAST header invalid-response recovery
+
+- [x] LAB retained both selected pages but both FAST calls ended with a generic internal error before filling the four header fields.
+- [x] Header candidates now run concurrently and preserve any successful page result.
+- [x] Empty, malformed, timed-out, or rejected FAST structured responses receive one bounded retry.
+- [x] Exhausted retries explicitly confirm that no payment occurred; no purchase, stock, approval or finalization behavior changed.
+- [x] Client/server builds and 32 targeted POS invoice tests PASS locally.
+- [ ] Await green CI/deploy, then repeat one clean two-page read from the POS front without submitting payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-header-invalid-response.md`.
