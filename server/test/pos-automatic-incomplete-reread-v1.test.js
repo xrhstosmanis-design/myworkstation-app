@@ -7,7 +7,8 @@ const pos=await readFile(new URL("../../client/src/components/store/StoreSupplie
 
 test("POS polling automatically claims one incomplete completed draft for full reread",()=>{
   const status=route.slice(route.indexOf('router.get("/ai-reader/fast-status'),route.indexOf('// The invoice UI labels'));
-  assert.match(status,/needsAutomaticReread=.*background\.reconciliationRequired===true&&!reprocess\.attemptedAt/);
+  assert.match(status,/needsAutomaticReread=.*background\.reconciliationRequired===true&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
+  assert.match(status,/strategy:POS_REPROCESS_STRATEGY/);
   assert.match(status,/trigger:"POS_STATUS"/);
   assert.match(status,/resumeStoredProductLines:false,replaceExistingDraft:true/);
   assert.match(status,/handoff:scheduledHandoff/);
