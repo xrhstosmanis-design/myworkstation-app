@@ -414,7 +414,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
       azure=await applyLearnedKnowledge(azure);
-      if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)
+      if(hasUsableProductLines(azure.productLines))return res.json(azure)
     }catch(error){azureFailure=String(error?.message||error);console.error("Azure Invoice Learning fallback:",azureFailure)}
   }
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
