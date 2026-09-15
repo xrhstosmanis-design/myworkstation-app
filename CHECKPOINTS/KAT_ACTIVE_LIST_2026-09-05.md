@@ -1,3 +1,12 @@
+## 2026-09-15 — Invoice Learning professional financial view
+
+- [x] Open the current Learning draft in a professional invoice presentation before saving to history.
+- [x] Show original price, three discounts, net price/value, VAT, gross value and per-line review state.
+- [x] Compare printed invoice total with calculated lines using €0.05 tolerance.
+- [x] Preserve central supplier learning for every store with no stock or accounting posting.
+- [ ] Αναμονή CI/merge και μετά LAB έλεγχος στη σελίδα Invoice Learning Lab.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-professional-financial-view.md`.
+
 ## 2026-09-15 — PR #857 merged reconciliation checkpoint
 
 - [x] Merge `06dd1396` contains the approved POS invoice reconciliation and stock-unit behavior.
