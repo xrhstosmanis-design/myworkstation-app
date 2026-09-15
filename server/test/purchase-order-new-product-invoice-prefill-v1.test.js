@@ -85,6 +85,14 @@ test("package conversion is learned and reused for later supplier invoices",()=>
   assert.match(posting,/stockPackSize\(row\.description,row\.stockUnitsPerInvoiceUnit\)/);
 });
 
+test("purchase review displays converted warehouse quantity without changing invoice economics",()=>{
+  const source=read("client/src/components/commerce/installPurchaseOrdersSuite.js");
+  assert.match(source,/const stockQuantity=line=>Number\(line\?\.quantity\|\|0\)\*Math\.max\(1,Number\(line\?\.stockUnitsPerInvoiceUnit\|\|1\)\)/);
+  assert.match(source,/Ποσ\. αποθήκης/);
+  assert.match(source,/Ποσότητα τιμολογίου:/);
+  assert.match(source,/stockQuantityLabel\(l\)/);
+});
+
 test("confirmed edits of matched invoice lines update supplier learning",()=>{
   const source=read("server/src/routes/purchase-orders.js");
   assert.match(source,/async function learnConfirmedLineCorrection/);
