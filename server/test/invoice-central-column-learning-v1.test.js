@@ -181,6 +181,7 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
 
 test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
   const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  assert.match(source,/restorePrintedRepeatedLine\(parsed\.productLines,invoiceTotal,printedDocumentText\)/);
   const context=vm.createContext({});
   vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('function mergeAzureInvoicePages'))+'\nthis.restore=restorePrintedRepeatedLine;',context);
   const cup={code:'FR1500',description:'MRS ROSE ΠΟΤΗΡΙ ΠΛΑΣΤΙΚΟ 12OZ (100TEM)',quantity:24,unitCost:5.3,netAmount:108.12,vatRate:24,grossAmount:134.07};
