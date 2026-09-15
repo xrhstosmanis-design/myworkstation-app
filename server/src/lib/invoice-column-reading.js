@@ -162,7 +162,9 @@ export function extractAzureColumns(result){
   const rows=[];
   for(const [tableIndex,table] of (result.tables||[]).entries()){
     const cells=table.cells||[],headers=cells.filter(c=>c.kind==="columnHeader");
-    // Keep a complete multi-row printed header band before mapping columns.\n    const headerLastRow=headers.length?Math.max(...headers.map(c=>Number(c.rowIndex)+Number(c.rowSpan||1)-1)):1;\n    const headerCells=headers.length?cells.filter(c=>c.kind==="columnHeader"||Number(c.rowIndex)<=headerLastRow):cells.filter(c=>Number(c.rowIndex)<=headerLastRow);
+    // Keep a complete multi-row printed header band before mapping columns.
+    const headerLastRow=headers.length?Math.max(...headers.map(c=>Number(c.rowIndex)+Number(c.rowSpan||1)-1)):1;
+    const headerCells=headers.length?cells.filter(c=>c.kind==="columnHeader"||Number(c.rowIndex)<=headerLastRow):cells.filter(c=>Number(c.rowIndex)<=headerLastRow);
     const labels={};
     for(const cell of headerCells)for(let col=cell.columnIndex;col<cell.columnIndex+Number(cell.columnSpan||1);col++)labels[col]=`${labels[col]||""} ${cell.content||""}`.trim();
     const columns={};for(const [col,label] of Object.entries(labels)){const role=headerRole(label);if(role&&columns[role]===undefined)columns[role]=Number(col)}
