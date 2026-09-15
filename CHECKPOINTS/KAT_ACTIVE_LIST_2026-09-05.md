@@ -1,3 +1,9 @@
+## 2026-09-15 — Invoice Learning empty-result guard
+
+- An Azure/AI response with zero product lines is rejected instead of being presented as a completed empty invoice draft.
+- The fallback prompt explicitly preserves each visible product row, including genuinely repeated supplier-code rows.
+- No stock, accounting, payment, invoice approval, or finalization action is involved.
+
 ## 2026-09-15 — Invoice Learning draft-line correction
 
 - Adds a user-operated draft-line correction dialog for invoice quantity, supplier unit price, package/stock conversion, and decimal discounts.
