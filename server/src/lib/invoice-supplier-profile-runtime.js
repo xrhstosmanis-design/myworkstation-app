@@ -100,6 +100,29 @@ function recoverDeclaredColumns(line,profile){
   const words=wordsOf(line);if(!words.length)return line;
   let unitIndex=words.findIndex(word=>unitWords.has(norm(word)));
   if(unitIndex<0){unitIndex=words.findIndex(word=>/^(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|KIB|ΚΙΒ|KG|ΚG|LT|ΦΑΚ)$/i.test(word))}
+  // Some Azure rows omit the inline TEM token altogether and, on this compact
+  // layout, can also return 1,620 as 1620. A no-unit map still has a stable
+  // numeric tail: quantity, price, discounts, VAT and final line value.
+  // Accept a decimal-scale repair only if the printed final value and every
+  // selected discount independently prove it.
+  if(!declaredUnitColumn&&fallbackUnit&&unitIndex<0){
+    const lastColumn=Math.max(...['QUANTITY','UNIT_PRICE','AMOUNT_BEFORE_DISCOUNT','AMOUNT_AFTER_DISCOUNT','DISCOUNT_1','DISCOUNT_2','DISCOUNT_3','VAT_RATE'].map(indexOf));
+    const tail=words.slice(-(lastColumn-quantityColumn+1)).map(parseNumber);
+    const at=role=>{const column=indexOf(role);return column>=quantityColumn?tail[column-quantityColumn]:null};
+    let quantity=at('QUANTITY'),unitPrice=at('UNIT_PRICE'),before=at('AMOUNT_BEFORE_DISCOUNT'),after=at('AMOUNT_AFTER_DISCOUNT');
+    const discount1=at('DISCOUNT_1'),discount2=at('DISCOUNT_2'),discount3=at('DISCOUNT_3'),vatRate=at('VAT_RATE');
+    if(tail.every(value=>value!==null)&&quantity>0&&unitPrice>0){
+      const amount=after>0?after:before>0?before:null;
+      const factor=[discount1,discount2,discount3].reduce((value,discount)=>value*(1-Math.max(0,Number(discount||0))/100),1);
+      if(amount!==null&&!close(quantity*unitPrice*factor,amount,Math.max(.03,amount*.012))){
+        const repaired=amount/(quantity*factor),printedScale=unitPrice/1000;
+        if(!(unitPrice>=100&&repaired>0&&close(printedScale,repaired,Math.max(.003,repaired*.012))))return line;
+        unitPrice=printedScale;
+      }
+      const net=amount===null?Number(line?.netAmount??line?.netValue??0):amount;
+      return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),initialAmount:money2(quantity*unitPrice),invoiceUnit:fallbackUnit,unit:fallbackUnit,netAmount:net>0?money2(net):line?.netAmount,netValue:net>0?money2(net):line?.netValue,netUnitCost:quantity>0&&net>0?money4(net/quantity):line?.netUnitCost,discount1:discount1!==null?money4(discount1):line?.discount1,discount2:discount2!==null?money4(discount2):line?.discount2,discount3:discount3!==null?money4(discount3):line?.discount3,vatRate:vatRate!==null?money4(vatRate):line?.vatRate,grossAmount:net>0&&vatRate!==null?money2(net*(1+vatRate/100)):line?.grossAmount,supplierProfileRecovered:true,supplierProfileRule:'DECLARED_COLUMNS_TAIL_RECONCILED',supplierProfileEvidence:{unitColumn:null,quantityColumn,priceColumn,quantity,unitPrice:money4(unitPrice),amount:net>0?money2(net):null,decimalScaleRepaired:unitPrice!==at('UNIT_PRICE')}};
+    }
+  }
   if(unitIndex<0)return line;
   const atColumn=column=>numericNear(words,unitIndex+(column-unitColumn),column>=unitColumn?1:-1);
   const mapped=role=>{const column=indexOf(role);return column>0?atColumn(column):null};
