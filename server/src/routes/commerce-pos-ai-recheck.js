@@ -184,7 +184,7 @@ router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,n
 router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{let failureStage="validate-request";try{
   const body=z.object({force:z.boolean().optional(),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([])}).parse(req.body||{});
   failureStage="load-primary-job";
-  const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+  const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."purchaseDocumentId",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
   if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
@@ -264,10 +264,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // The fast POS handoff total is the amount the operator explicitly confirmed
   // (and, for PAID, the immutable payment amount). Use it as the reconciliation
   // anchor for every supplier, not only the centrally profiled fast path.
-  const confirmedHandoffTotal=money2(posHandoff?.totalGross||0);
+  const linkedDraft=job.purchaseDocumentId?await prisma.$queryRaw`SELECT "totalGross" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1`:[];
+  const confirmedHandoffTotal=money2(linkedDraft[0]?.totalGross||posHandoff?.totalGross||0);
   if(confirmedHandoffTotal>0){
     parsed.totalGross=confirmedHandoffTotal;
     parsed.posConfirmedTotalApplied=true;
+    parsed.posConfirmedTotalSource=linkedDraft[0]?"LINKED_DRAFT":"POS_HANDOFF";
   }
   const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
