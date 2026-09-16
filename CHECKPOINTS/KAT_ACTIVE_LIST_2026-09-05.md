@@ -1412,3 +1412,14 @@ Total output lines: 1413
 - [x] Payment, credit, one-draft, stock, approval, finalization, fiscal and accounting boundaries remain unchanged.
 - [ ] AWAITING green CI, exact Render revision and one new clean POS-front LAB after deletion of only the corrupt unapproved draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS full-invoice current-image proof
+
+- [x] LAB FAIL after exact revision `ef2e3d96`: 18 rows saved as `324.61 / 393.26 EUR` instead of printed `365.75 / 429.27 EUR`; code `00009` duplicated and RED BULL code `11` received an invented discount.
+- [x] Remove all old numeric hints from the MANTZILAS focused reread and validate the complete quantity, original price, discounts, net, EFK, taxable, VAT and gross chain from the current image.
+- [x] Accept a genuine zero-discount row; reject incomplete or invented discount pairs.
+- [x] Require all 18 current-image rows and their summed gross to reconcile to the POS-confirmed invoice total within `0.05 EUR`; roll back the whole tentative batch on any missing row or mismatch.
+- [x] Focused tests `56/56`, full server suite `1281/1281`, production build PASS locally.
+- [x] Payment, credit, draft identity, stock, approval, finalization, fiscal, accounting and Invoice Learning behavior remain unchanged.
+- [ ] AWAITING green CI, exact Render revision and one new POS-front LAB after deletion of only the corrupt unapproved draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.

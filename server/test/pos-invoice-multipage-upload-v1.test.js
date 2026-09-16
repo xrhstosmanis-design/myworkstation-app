@@ -116,13 +116,13 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 });
 
 test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
-  const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,[^}]*reverifyAll:mantzilasInvoice\}\)/;
   assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=70000/);
   assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
   assert.match(aiRecheck,/CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000/);
   assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
-  assert.match(aiRecheck,verifierCall);
+  assert.match(aiRecheck,/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS/s);
+  assert.match(aiRecheck,/reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs\.length===1\?invoiceTotal:0/);
 });
 
 test("OpenAI full-table fallback outlives an exhausted Azure F0 request",()=>{
@@ -311,13 +311,42 @@ test("printed original price restores a missing discount hidden inside net unit 
 
 test("MANTZILAS focused reread replaces a self-consistent wrong quantity and returns printed VAT groups",async()=>{
   const originalFetch=global.fetch;
-  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:1,printedUnit:"KIB",originalUnitPrice:19.55,discountPercent1:31,discountAmount1:6.06,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,confidence:99,evidence:"1 × 19,55 - 6,06 = 13,49"}],vatSummary:[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]})})});
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:1,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:19.55,discountPercent1:31,discountAmount1:6.06,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"1 × 19,55 - 6,06 = 13,49"}],vatSummary:[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]})})});
   try{
     const productLines=[{code:"00009",description:"COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ",rawText:"00009 COCA COLA ZERO",quantity:2,invoiceQuantity:2,unit:"PACKAGE",invoiceUnit:"PACKAGE",unitCost:19.55,netAmount:13.49,discount1:65.5,discount1Amount:25.61,discount2:0,discount2Amount:0,discount3:0,discount3Amount:0}];
     const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true});
     assert.equal(productLines[0].quantity,1);assert.equal(productLines[0].invoiceQuantity,1);assert.equal(productLines[0].unitCost,19.55);
     assert.equal(productLines[0].discount1,31);assert.equal(productLines[0].discount1Amount,6.06);assert.equal(productLines[0].netAmount,13.49);
+    assert.equal(productLines[0].vatRate,13);assert.equal(productLines[0].grossAmount,15.24);assert.equal(productLines[0].sourceColumnsVerified,true);
     assert.deepEqual(result.vatSummary,[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]);
+  }finally{global.fetch=originalFetch}
+});
+
+test("MANTZILAS focused reread preserves a printed zero-discount row and rejects an incomplete invented discount",async()=>{
+  const originalFetch=global.fetch;
+  let call=0;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[call++===0
+    ?{index:1,printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:45.6,exciseTotal:0,taxableAmount:45.6,vatRate:13,vatAmount:5.93,grossAmount:51.53,confidence:99,evidence:"48 × 0,95 = 45,60"}
+    :{index:1,printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:45.6,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:11.03,exciseTotal:0,taxableAmount:11.03,vatRate:24,vatAmount:2.65,grossAmount:13.68,confidence:99,evidence:"invented"}],vatSummary:[]})})});
+  try{
+    const valid=[{code:"11",description:"RED BULL 0,25LT ΚΟΥΤΙ",quantity:48,unitCost:1,netAmount:11.03,discount1:45.6,discount1Amount:36.97}];
+    await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines:valid,apiKey:"test",model:"test",reverifyAll:true});
+    assert.equal(valid[0].quantity,48);assert.equal(valid[0].unitCost,.95);assert.equal(valid[0].discount1,0);assert.equal(valid[0].netAmount,45.6);assert.equal(valid[0].vatRate,13);
+    const invalid=[{code:"11",description:"RED BULL 0,25LT ΚΟΥΤΙ",quantity:48,unitCost:.95,netAmount:45.6,discount1:0,discount1Amount:0}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines:invalid,apiKey:"test",model:"test",reverifyAll:true});
+    assert.equal(invalid[0].netAmount,45.6);assert.equal(invalid[0].discount1,0);assert.equal(result.rejectedMath,1);
+  }finally{global.fetch=originalFetch}
+});
+
+test("MANTZILAS focused reread rolls back a fully consistent batch that misses the printed invoice total",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:2,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:39.1,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"self-consistent but wrong"}],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"00009",description:"COCA COLA ZERO",quantity:1,unitCost:19.55,netAmount:13.49,grossAmount:15.24,discount1:31,discount1Amount:6.06}];
+    const before=JSON.parse(JSON.stringify(productLines));
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:429.27});
+    for(const key of ["quantity","unitCost","netAmount","grossAmount","discount1","discount1Amount"]){assert.equal(productLines[0][key],before[0][key])}
+    assert.equal(result.status,"FAILED");assert.equal(result.reason,"PRINTED_ROWS_TOTAL_MISMATCH");
   }finally{global.fetch=originalFetch}
 });
 
