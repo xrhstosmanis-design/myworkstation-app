@@ -243,6 +243,29 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const isPdf=mimeType==="application/pdf";
     if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
+    // A repeated POS attempt may already have a complete durable reading for
+    // this exact file even when the external FAST providers are unavailable.
+    // Reuse is read-only and requires both exact attachment identity and
+    // invoice-total arithmetic; otherwise continue through the normal reader.
+    const fileBytes=Buffer.from(String(dataUrl).split(",").pop()||"","base64");
+    const attachmentChecksum=crypto.createHash("sha256").update(fileBytes).digest("hex");
+    const durableRows=await prisma.$queryRaw`
+      SELECT j."resultJson",s."id" AS "supplierId",s."name" AS "supplierName",s."taxId" AS "supplierTaxId"
+      FROM "DocumentAttachment" a
+      JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId" AND j."storeId"=a."storeId"
+      JOIN "Supplier" s ON s."id"=(j."resultJson"->'posHandoff'->>'supplierId') AND s."companyId"=j."companyId" AND s."active"=true
+      WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${storeId} AND a."checksum"=${attachmentChecksum}
+        AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')
+      ORDER BY j."updatedAt" DESC LIMIT 5`;
+    for(const row of durableRows){
+      const handoff=row.resultJson?.posHandoff&&typeof row.resultJson.posHandoff==="object"?row.resultJson.posHandoff:{};
+      const productLines=finalizeV244ProductLines(Array.isArray(row.resultJson?.productLines)?row.resultJson.productLines:[]);
+      const documentNumber=String(handoff.documentNumber||"").trim(),documentDate=normalizeIntakeDate(handoff.documentDate),totalGross=round2(handoff.totalGross||0);
+      const reconciliation=reconcileInvoiceLines(productLines,totalGross);
+      const difference=round2(Math.abs(reconciliation.grossTotal-totalGross));
+      if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
+      return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,provider:"DURABLE_POS_JOB",productLines});
+    }
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
