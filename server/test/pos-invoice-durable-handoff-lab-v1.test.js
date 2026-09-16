@@ -71,3 +71,14 @@ test("FAST header retries empty or malformed structured AI responses safely",()=
   assert.match(route,/const parsed=JSON\.parse\(raw\)/);
   assert.match(route,/Η γρήγορη ανάγνωση δεν επέστρεψε έγκυρα βασικά στοιχεία μετά από ασφαλή επανάληψη/);
 });
+
+test("FAST header safely reuses the exact durable POS file before provider calls",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-header"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-duplicate-check"',start));
+  assert.match(body,/crypto\.createHash\("sha256"\)\.update\(fileBytes\)/);
+  assert.match(body,/a\."companyId"=\$\{req\.user\.companyId\} AND a\."storeId"=\$\{storeId\} AND a\."checksum"=\$\{attachmentChecksum\}/);
+  assert.match(body,/difference>POS_STORED_LINES_TOLERANCE/);
+  assert.match(body,/provider:"DURABLE_POS_JOB",productLines/);
+  assert.ok(body.indexOf('provider:"DURABLE_POS_JOB"')<body.indexOf("callAzure"));
+  assert.doesNotMatch(body.slice(0,body.indexOf("callAzure")),/StoreTransaction|PurchaseDocument" SET|StockMovement/);
+});
