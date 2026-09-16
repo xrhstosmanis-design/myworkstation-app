@@ -434,6 +434,29 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         page.cachedProductLines=candidateLines;
         break;
       }
+      if(page.cachedProductLines.length)continue;
+      // Client-side image optimization may produce different bytes for the
+      // same photographed invoice. Fall back to its confirmed business
+      // identity, still inside the same tenant/store and with the same strict
+      // line-total proof used by exact-checksum recovery.
+      const identityCandidates=await prisma.$queryRaw`
+        SELECT j."resultJson" FROM "AiReaderJob" j
+        WHERE j."companyId"=${companyId} AND j."storeId"=${storeId}
+          AND j."resultJson"->'posHandoff'->>'supplierId'=${supplierId}
+          AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')
+        ORDER BY j."updatedAt" DESC LIMIT 50`;
+      for(const candidate of identityCandidates){
+        const candidateHandoff=candidate.resultJson?.posHandoff&&typeof candidate.resultJson.posHandoff==="object"?candidate.resultJson.posHandoff:{};
+        const candidateLines=finalizeV244ProductLines(Array.isArray(candidate.resultJson?.productLines)?candidate.resultJson.productLines:[]).slice(0,500);
+        const sameInvoice=normalizeDocumentNumber(candidateHandoff.documentNumber)===normalizeDocumentNumber(documentNumber)
+          &&normalizeIntakeDate(candidateHandoff.documentDate)===documentDate
+          &&Math.abs(round2(candidateHandoff.totalGross||0)-totalGross)<=POS_STORED_LINES_TOLERANCE;
+        if(!sameInvoice||!candidateLines.length)continue;
+        const candidateDifference=round2(Math.abs(reconcileInvoiceLines(candidateLines,totalGross).grossTotal-totalGross));
+        if(candidateDifference>POS_STORED_LINES_TOLERANCE)continue;
+        page.cachedProductLines=candidateLines;
+        break;
+      }
     }
     const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
     if(hasCompleteCachedProductLines){

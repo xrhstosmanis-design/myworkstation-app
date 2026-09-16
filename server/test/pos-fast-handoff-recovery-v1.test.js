@@ -45,6 +45,19 @@ test("fast handoff hydrates an empty newest job from the matching exact-file dur
   assert.ok(body.indexOf("page.cachedProductLines=candidateLines")<body.indexOf("const hasCompleteCachedProductLines"));
 });
 
+test("fast handoff survives optimized image checksum changes using strict invoice identity",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  assert.match(body,/j\."companyId"=\$\{companyId\} AND j\."storeId"=\$\{storeId\}/);
+  assert.match(body,/j\."resultJson"->'posHandoff'->>'supplierId'=\$\{supplierId\}/);
+  assert.match(body,/normalizeDocumentNumber\(candidateHandoff\.documentNumber\)===normalizeDocumentNumber\(documentNumber\)/);
+  assert.match(body,/normalizeIntakeDate\(candidateHandoff\.documentDate\)===documentDate/);
+  assert.match(body,/Math\.abs\(round2\(candidateHandoff\.totalGross\|\|0\)-totalGross\)<=POS_STORED_LINES_TOLERANCE/);
+  const identity=body.indexOf("const identityCandidates=");
+  assert.ok(identity>body.indexOf("a.\"checksum\"=${page.checksum}"));
+  assert.ok(body.indexOf("reconcileInvoiceLines(candidateLines,totalGross)",identity)>identity);
+});
+
 test("immediate POS worker receives the complete cached-line handoff",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));

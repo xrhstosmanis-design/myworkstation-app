@@ -1,5 +1,7 @@
 ## 2026-09-16 — POS FAST header durable reuse
 
+- [x] LAB follow-up after `1cf5bb44`: exact-file hydration still missed the stored table because optimized image bytes/checksum can change across selection attempts.
+- [x] Final bounded fallback: same tenant/store plus exact supplier, normalized invoice number, date and total, with stored-line gross reconciliation within `0.05 EUR`; checksum remains preferred.
 - [x] LAB follow-up after `52dcfb00`: FAST header reuse passed, but handoff chose a newer empty job instead of the older exact-file job holding sixteen lines; background provider OCR failed again.
 - [x] Follow-up correction: server-side handoff hydrates an empty page only from the same exact checksum and matching supplier/invoice/date/total whose stored lines reconcile within `0.05 EUR`.
 - [x] LAB FAIL after `49d149c4`: the same POS image stopped before handoff because FAST returned no valid basic fields after retry; the UI confirmed that no payment occurred.

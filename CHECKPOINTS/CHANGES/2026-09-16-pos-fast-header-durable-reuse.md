@@ -26,3 +26,11 @@
 - The draft remained at zero items and recovery called OpenAI/Azure again, ending with the same provider timeout/quota evidence.
 - Bounded follow-up: `fast-handoff` itself hydrates an empty incoming page only from an older job with the same company, store and exact attachment checksum, same supplier/invoice/date/total, and stored lines reconciling within `0.05 EUR`.
 - This remains draft-only and does not create, change or reverse payment, stock, approval, finalization or fiscal state.
+
+## LAB follow-up after revision `1cf5bb44`
+
+- A new POS-front run again created one empty draft and recovery reached external provider failure.
+- Exact attachment checksum is not a stable business identifier because client image optimization may produce a different binary file for the same photographed invoice.
+- Final bounded lookup uses the already-confirmed invoice identity inside the same company/store: supplier, normalized invoice number, document date and total, plus stored-line gross reconciliation within `0.05 EUR`.
+- Checksum remains the first preference; business-identity recovery is used only when the incoming page has no lines and no safe exact-file candidate exists.
+- Payment reuse remains authoritative and unchanged. No stock, approval, finalization or fiscal action is added.
