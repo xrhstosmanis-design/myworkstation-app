@@ -222,6 +222,69 @@ export function recoverVatFromPrintedSummary(lines,documentText,invoiceTotal){
   return {lines:recovered,recovered:true,rate:summary.rate,net:summary.net,tax:summary.tax};
 }
 
+// Mixed-rate invoices may contain individually shifted VAT cells even though
+// the printed footer gives exact taxable/VAT/gross totals per rate. Recover
+// rates only when the footer equations balance, the line taxable total matches
+// the footer, and one unique minimum-change allocation matches the rate base.
+export function recoverMixedVatFromPrintedSummary(lines,documentText,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=round2(invoiceTotal);
+  if(source.length<2||source.length>30||!(total>0))return {lines:source,recovered:false};
+  const candidates=[];
+  const pattern=/(?:^|[^\d])(6|13|24)\s*%?\s+(\d{1,7}(?:[.,]\d{2}))\s+(\d{1,7}(?:[.,]\d{2}))\s+(\d{1,7}(?:[.,]\d{2}))/gmi;
+  for(const match of String(documentText||"").matchAll(pattern)){
+    const rate=Number(match[1]),taxable=columnNumber(match[2]),vat=columnNumber(match[3]),gross=columnNumber(match[4]);
+    if(taxable>0&&vat>=0&&closeMoney(taxable+vat,gross)&&closeMoney(taxable*rate/100,vat))candidates.push({rate,taxable:round2(taxable),vat:round2(vat),gross:round2(gross)});
+  }
+  const unique=[...new Map(candidates.map(x=>[`${x.rate}:${x.taxable}:${x.vat}:${x.gross}`,x])).values()];
+  let summary=null;
+  for(let i=0;i<unique.length;i++)for(let j=i+1;j<unique.length;j++){
+    const pair=[unique[i],unique[j]];
+    if(pair[0].rate!==pair[1].rate&&closeMoney(pair[0].gross+pair[1].gross,total)){
+      if(summary)return {lines:source,recovered:false};
+      summary=pair;
+    }
+  }
+  if(!summary)return {lines:source,recovered:false};
+  const taxable=source.map(line=>round2(Number(line?.netAmount||0)+Number(line?.exciseTotal||0)));
+  if(taxable.some(value=>!(value>0))||!closeMoney(taxable.reduce((a,b)=>a+b,0),summary[0].taxable+summary[1].taxable))return {lines:source,recovered:false};
+  const target=Math.round(summary[0].taxable*100),values=taxable.map(value=>Math.round(value*100));
+  let states=new Map([[0,{changes:0,masks:[0n]}]]);
+  for(let index=0;index<values.length;index++){
+    const next=new Map();
+    for(const [sum,state] of states){
+      for(const pickFirst of [false,true]){
+        const updated=sum+(pickFirst?values[index]:0);if(updated>target)continue;
+        const rate=pickFirst?summary[0].rate:summary[1].rate,changes=state.changes+(Number(source[index]?.vatRate||0)===rate?0:1),maskBit=1n<<BigInt(index);
+        const existing=next.get(updated),masks=state.masks.map(mask=>pickFirst?mask|maskBit:mask);
+        if(!existing||changes<existing.changes)next.set(updated,{changes,masks:masks.slice(0,2)});
+        else if(changes===existing.changes)existing.masks=[...new Set([...existing.masks,...masks])].slice(0,2);
+      }
+    }
+    states=next;
+  }
+  const result=states.get(target);if(!result||result.masks.length!==1)return {lines:source,recovered:false};
+  const mask=result.masks[0];let recovered=source.map((line,index)=>{
+    const rate=(mask&(1n<<BigInt(index)))?summary[0].rate:summary[1].rate,base=taxable[index],vat=round2(base*rate/100);
+    return {...line,taxableAmount:base,vatRate:rate,vatAmount:vat,grossAmount:round2(base+vat),vatRecoveredFromMixedPrintedSummary:true};
+  });
+  // Printed footer VAT is authoritative at rate-group level. Distribute only
+  // a cent-level rounding residual so the stored line sum equals that footer.
+  for(const item of summary){
+    const indexes=recovered.map((line,index)=>Number(line.vatRate)===item.rate?index:-1).filter(index=>index>=0);
+    const current=round2(indexes.reduce((sum,index)=>sum+Number(recovered[index].vatAmount),0)),delta=round2(item.vat-current);
+    if(Math.abs(delta)>.05||!indexes.length)return {lines:source,recovered:false};
+    if(Math.abs(delta)>.001){const index=indexes.reduce((best,currentIndex)=>Number(recovered[currentIndex].taxableAmount)>Number(recovered[best].taxableAmount)?currentIndex:best,indexes[0]),line=recovered[index],vatAmount=round2(Number(line.vatAmount)+delta);recovered[index]={...line,vatAmount,grossAmount:round2(Number(line.taxableAmount)+vatAmount),vatRoundingAdjustment:delta}}
+  }
+  for(const item of summary){
+    const group=recovered.filter(line=>Number(line.vatRate)===item.rate),base=round2(group.reduce((sum,line)=>sum+Number(line.taxableAmount),0)),vat=round2(group.reduce((sum,line)=>sum+Number(line.vatAmount),0));
+    if(!closeMoney(base,item.taxable)||!closeMoney(vat,item.vat))return {lines:source,recovered:false};
+  }
+  if(!closeMoney(recovered.reduce((sum,line)=>sum+Number(line.grossAmount),0),total))return {lines:source,recovered:false};
+  return {lines:recovered,recovered:true,summary};
+}
+
+const closeMoney=(a,b)=>Math.abs(round2(a)-round2(b))<=.05;
+
 function headerRole(label){
   const key=columnKey(label);
   if(/ΛΙΑΝΙΚ|RETAIL|RRP/.test(key))return "retailPrice";

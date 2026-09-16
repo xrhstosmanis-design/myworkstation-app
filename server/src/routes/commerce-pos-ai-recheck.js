@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
+import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 // Full-table vision regularly needs longer than the small FAST-header read.
@@ -419,6 +419,9 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   }
   parsed.discountMathVerification=discountDiagnostics;
 
+  const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
+  parsed.productLines=mixedPrintedVat.lines;
+  if(mixedPrintedVat.recovered){parsed.mixedPrintedVatSummaryRecovered=true;parsed.mixedPrintedVatSummary=mixedPrintedVat.summary}
   const printedVat=recoverVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=printedVat.lines;
   if(printedVat.recovered){
