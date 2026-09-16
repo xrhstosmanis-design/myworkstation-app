@@ -47,6 +47,35 @@ export function applyMantzilasPackaging(line){
     packageConversionApplied:true,confirmedPackMapping:true,packRule:rule,supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_PACKAGING",
     supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity,stockQuantity:round4(invoiceQuantity*factor),conversionFactor:factor,packageUnitPrice:round4(packageUnitPrice),pieceUnitPrice:round4(packageUnitPrice/factor)}};
 }
+
+// MANTZILAS prints a complete auditable chain on every product row:
+// quantity × unit price = value before discount; value - discount = net;
+// net + excise = taxable value; taxable value × VAT = VAT amount.
+// Accept the row only when all four independent equations reconcile.
+export function recoverMantzilasEconomics(line){
+  const raw=String(line?.azureRawRow||line?.rawText||"");
+  const match=raw.match(/(?:^|[\s|])(4PK|4PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i);
+  if(!match)return line;
+  const values=(raw.slice((match.index||0)+match[0].length).match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(Number.isFinite);
+  const close=(a,b,tolerance=.03)=>Math.abs(a-b)<=tolerance;
+  let best=null;
+  for(const quantityColumns of [2,1])for(let start=0;start+quantityColumns+8<values.length;start++){
+    const quantity=values[start+quantityColumns-1],unitPrice=values[start+quantityColumns],initial=values[start+quantityColumns+1];
+    const discountPct=values[start+quantityColumns+2],discountAmount=values[start+quantityColumns+3],net=values[start+quantityColumns+4];
+    const excise=values[start+quantityColumns+5],taxable=values[start+quantityColumns+6],vatRate=values[start+quantityColumns+7],vatAmount=values[start+quantityColumns+8];
+    if(![0,6,13,24].includes(vatRate)||!(quantity>0&&unitPrice>0&&initial>0&&net>0&&taxable>0)||discountPct<0||discountPct>100)continue;
+    if(!close(quantity*unitPrice,initial,Math.max(.03,initial*.002))||!close(initial-discountAmount,net)||!close(net+excise,taxable)||!close(taxable*vatRate/100,vatAmount,.04))continue;
+    if(discountAmount>.02&&!close(initial*discountPct/100,discountAmount,.04))continue;
+    const score=quantityColumns*10-start;
+    if(!best||score>best.score)best={score,quantity,unitPrice,initial,discountPct,discountAmount,net,excise,taxable,vatRate,vatAmount};
+  }
+  if(!best)return line;
+  return {...line,quantity:best.quantity,invoiceQuantity:best.quantity,unitCost:round4(best.unitPrice),unitPrice:round4(best.unitPrice),initialAmount:round2(best.initial),
+    discount1:round4(best.discountPct),discount1Amount:round2(best.discountAmount),discount2:0,discount2Amount:0,discount3:0,discount3Amount:0,
+    netAmount:round2(best.net),netValue:round2(best.net),exciseTotal:round2(best.excise),taxableAmount:round2(best.taxable),vatRate:best.vatRate,
+    vatAmount:round2(best.vatAmount),grossAmount:round2(best.taxable+best.vatAmount),sourceColumnsVerified:true,supplierProfileRecovered:true,
+    supplierProfileRule:"MANTZILAS_PRINTED_ECONOMICS",supplierProfileEvidence:{quantity:best.quantity,unitPrice:round4(best.unitPrice),initialAmount:round2(best.initial),discountPercent:round4(best.discountPct),discountAmount:round2(best.discountAmount),netAmount:round2(best.net),exciseTotal:round2(best.excise),taxableAmount:round2(best.taxable),vatRate:best.vatRate,vatAmount:round2(best.vatAmount)}};
+}
 const round2=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
 const round4=value=>Math.round((Number(value)+Number.EPSILON)*10000)/10000;
 const unitPattern=/(?:^|[\s|])(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|PC|Κ\.Β\.|ΚΒ|ΚΙΒ|KIB|KG|KGR|LT|L)(?=[\s|\d]|$)/i;
@@ -206,6 +235,8 @@ function headerRole(label){
     return `discount${ordinal}${/ΠΟΣΟ|AMOUNT/.test(key)?"Amount":""}`;
   }
   if(/ΦΠΑ|VAT|TAXRATE/.test(key))return /ΑΞΙΑ|ΠΟΣΟ|AMOUNT/.test(key)?"taxAmount":"vatRate";
+  if(/ΕΦΚ|EXCISE/.test(key))return "exciseTotal";
+  if(/ΦΟΡΟΛΟΓΗΤ|TAXABLE/.test(key))return "taxableAmount";
   if(/ΤΙΜΗΜΟΝ|ΤΙΜΗΤΜΧ|UNITPRICE|UNITCOST|ΤΙΜΗΑΓΟΡΑΣ/.test(key))return "unitCost";
   if(/ΜΕΤΑΤΗΝΕΚΠΤ|ΜΕΤΑΕΚΠΤ|ΚΑΘΑΡ|ΚΑΘΑΞΙΑ|NETAMOUNT|NETVALUE/.test(key))return "netAmount";
   if(/ΠΡΟΕΚΠΤ|ΠΡΙΝ|BEFOREDISCOUNT/.test(key))return "initialAmount";
@@ -247,11 +278,12 @@ export function extractAzureColumns(result){
         math*=1-percent/100;
       }
       const netAmount=printedNet??round2(math);
+      const exciseTotal=columnNumber(get("exciseTotal"))||0,taxableAmount=columnNumber(get("taxableAmount"))??round2(netAmount+exciseTotal);
       const vatRate=columnNumber(get("vatRate"))||0,tax=columnNumber(get("taxAmount"));
       const rawText=[...rowCells].sort((a,b)=>a.columnIndex-b.columnIndex).map(c=>c.content||"").join(" | ");
       rows.push({code,description,barcode:get("barcode"),unit:get("unit")||"ΤΜΧ",quantity:quantity||0,unitCost:unitCost||0,
-        retailPrice:columnNumber(get("retailPrice"))||0,initialAmount,netAmount,vatRate,
-        grossAmount:round2(netAmount+(tax??netAmount*vatRate/100)),...discounts,
+        retailPrice:columnNumber(get("retailPrice"))||0,initialAmount,netAmount,exciseTotal,taxableAmount,vatRate,
+        grossAmount:round2(taxableAmount+(tax??taxableAmount*vatRate/100)),...discounts,
         rawText,azureRawRow:rawText,sourceColumnMap:columns,sourceColumnsVerified:printedNet!==null&&quantity>0&&unitCost>0&&Math.abs(math-netAmount)<=0.03,
         sourceTable:tableIndex,sourceRow:rowIndex,...position(rowCells[0]?.boundingRegions||table.boundingRegions),confidence:0,azureSequence:rows.length+1});
     }
