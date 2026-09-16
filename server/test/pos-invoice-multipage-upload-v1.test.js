@@ -135,7 +135,7 @@ test("OpenAI full-table fallback outlives an exhausted Azure F0 request",()=>{
 
 test("full-table OCR uses the bounded vision model instead of the general reasoning model",()=>{
   assert.match(aiRecheck,/const FULL_OCR_MODEL=process\.env\.OPENAI_INVOICE_FULL_MODEL\|\|process\.env\.OPENAI_INVOICE_FAST_MODEL\|\|"gpt-5-mini"/);
-  assert.match(aiRecheck,/model:FULL_OCR_MODEL,input:/);
+  assert.match(aiRecheck,/model:FULL_OCR_MODEL,reasoning:\{effort:"minimal"\},input:/);
   assert.match(aiRecheck,/verifyInvoiceDiscounts\(\{[^}]*model:FULL_OCR_MODEL/s);
   assert.doesNotMatch(aiRecheck,/model:process\.env\.OPENAI_INVOICE_MODEL\|\|"gpt-5"/);
 });
@@ -147,6 +147,14 @@ test("full-table OCR returns one compact structured table and rebuilds audit tex
   assert.match(aiRecheck,/Μην επαναλάβεις όλο το παραστατικό ως ξεχωριστό rawText ή lines/);
   assert.match(aiRecheck,/if\(!String\(parsed\.rawText\|\|""\)\.trim\(\)\)parsed\.rawText=parsed\.productLines\.map/);
   assert.match(aiRecheck,/parsed\.lines=auditLines/);
+});
+
+test("full-table OCR spends its bounded provider window on extraction instead of reasoning",()=>{
+  const requests=[...aiRecheck.matchAll(/model:FULL_OCR_MODEL,reasoning:\{effort:"minimal"\},input:/g)];
+  assert.equal(requests.length,2);
+  assert.match(aiRecheck,/name:"invoice_extract",strict:true,schema:invoiceSchema/);
+  assert.match(aiRecheck,/name:"invoice_product_table_extract",strict:true,schema:productTableSchema/);
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=70000/);
 });
 
 test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{

@@ -51,3 +51,10 @@
 - The unified full-OCR response schema duplicated the invoice output as global `rawText`, audit `lines` and structured `productLines`, increasing response generation until the bounded provider timeout.
 - The bounded correction requests only the header plus structured `productLines`; equivalent audit text and audit lines are rebuilt locally from those same rows before the existing supplier-profile and reconciliation stages.
 - Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Provider deadlines, payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.
+
+## LAB follow-up after revision `c7385ffb`
+
+- The POS-front rerun of `27293` again ended at `POS_BACKGROUND_AI_RECHECK / FULL_OCR_PROVIDER_FAILURE` with OpenAI timeout and Azure F0 quota `403`; the draft remained at zero items and `0.00 EUR`.
+- Compacting the structured response did not remove the timeout, so duplicate output was not the remaining cause.
+- Both full-table vision requests now use minimal reasoning effort, reserving the existing bounded 70-second provider window for visual extraction and structured output.
+- Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Provider deadlines, payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.
