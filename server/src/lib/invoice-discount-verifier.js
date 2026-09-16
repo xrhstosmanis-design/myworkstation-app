@@ -193,7 +193,7 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
   }
 }
 
-export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0}){
+export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0,reverifyAll=false}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
 
@@ -213,7 +213,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     diagnostics.rejectedMath+=1;
   }
   applySiblingDiscountConsensus(productLines,diagnostics);
-  const unresolved=productLines.map((line,index)=>({line,index})).filter(({line})=>!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0));
+  const unresolved=productLines.map((line,index)=>({line,index})).filter(({line})=>reverifyAll||!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0));
   if(!unresolved.length){diagnostics.status='OK';diagnostics.reason='AZURE_CONTENT_DISCOUNTS_VERIFIED';return stamp(productLines,diagnostics)}
   if(!apiKey){diagnostics.reason=diagnostics.rawAccepted>0?'PARTIAL_AZURE_CONTENT_NO_OPENAI_KEY':'NO_OPENAI_KEY';return stamp(productLines,diagnostics)}
   if(!contentData){diagnostics.reason='NO_DOCUMENT';return stamp(productLines,diagnostics)}
@@ -221,21 +221,25 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
   diagnostics.called=true;
   const filePart=mimeType==='application/pdf'?{type:'input_file',filename:filename||'invoice.pdf',file_data:String(contentData).split(',').pop()}:{type:'input_image',image_url:contentData,detail:'high'};
   const guide=unresolved.map(({line,index})=>`${index+1}. ${line.code||''} | ${line.description||''} | qty=${line.quantity||0} | price=${line.unitCost||0} | net=${line.netAmount||0} | azureContent=${line.rawText||''}`).join('\n');
-  const schema={type:'object',additionalProperties:false,properties:{discounts:{type:'array',items:{type:'object',additionalProperties:false,properties:{index:{type:'integer',minimum:1},originalUnitPrice:{type:'number',minimum:0},discountPercent1:{type:'number',minimum:0,maximum:99.99},discountAmount1:{type:'number',minimum:0},discountPercent2:{type:'number',minimum:0,maximum:99.99},discountAmount2:{type:'number',minimum:0},discountPercent3:{type:'number',minimum:0,maximum:99.99},discountAmount3:{type:'number',minimum:0},confidence:{type:'number',minimum:0,maximum:100},evidence:{type:'string'}},required:['index','originalUnitPrice','discountPercent1','discountAmount1','discountPercent2','discountAmount2','discountPercent3','discountAmount3','confidence','evidence']}}},required:['discounts']};
-  const prompt=`Διάβασε για κάθε γραμμή ως ΕΝΙΑΙΟ αριθμητικό σύνολο: αρχική τιμή μονάδας ΠΡΙΝ από εκπτώσεις, ποσότητα, έως τρία ζεύγη ποσοστού/ποσού έκπτωσης και καθαρή αξία. Το Azure content περιέχει ολόκληρη τη γραμμή. Παράδειγμα: qty 5, originalUnitPrice 1,420, αρχική αξία 7,10, ποσοστό 15,00, ποσό έκπτωσης 1,07, καθαρή αξία 6,03. Επέστρεψε originalUnitPrice και discountPercent1/2/3 με discountAmount1/2/3. Η τιμή στο guide μπορεί να είναι προσωρινή καθαρή τιμή που υπολογίστηκε από net/qty — μην την αντιγράψεις ως originalUnitPrice αν στο έντυπο φαίνεται διαφορετική αρχική τιμή. Μην αλλάξεις ποσότητα, καθαρή αξία ή ΦΠΑ. Βάλε 0 όταν δεν είσαι βέβαιος.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
+  const vatSummaryItem={type:'object',additionalProperties:false,properties:{rate:{type:'number',enum:[0,6,13,24]},taxable:{type:'number',minimum:0},vat:{type:'number',minimum:0},gross:{type:'number',minimum:0}},required:['rate','taxable','vat','gross']};
+  const schema={type:'object',additionalProperties:false,properties:{discounts:{type:'array',items:{type:'object',additionalProperties:false,properties:{index:{type:'integer',minimum:1},printedQuantity:{type:'number',minimum:0},printedUnit:{type:'string'},originalUnitPrice:{type:'number',minimum:0},discountPercent1:{type:'number',minimum:0,maximum:99.99},discountAmount1:{type:'number',minimum:0},discountPercent2:{type:'number',minimum:0,maximum:99.99},discountAmount2:{type:'number',minimum:0},discountPercent3:{type:'number',minimum:0,maximum:99.99},discountAmount3:{type:'number',minimum:0},confidence:{type:'number',minimum:0,maximum:100},evidence:{type:'string'}},required:['index','printedQuantity','printedUnit','originalUnitPrice','discountPercent1','discountAmount1','discountPercent2','discountAmount2','discountPercent3','discountAmount3','confidence','evidence']}},vatSummary:{type:'array',maxItems:4,items:vatSummaryItem}},required:['discounts','vatSummary']};
+  const prompt=`Διάβασε για κάθε γραμμή ως ΕΝΙΑΙΟ αριθμητικό σύνολο: τυπωμένη ποσότητα, τυπωμένη Μ.Μ., αρχική τιμή μονάδας ΠΡΙΝ από εκπτώσεις, έως τρία ζεύγη ποσοστού/ποσού έκπτωσης και καθαρή αξία. Το Azure content μπορεί να είναι προσωρινό· προτεραιότητα έχει η ορατή φυσική γραμμή στην εικόνα. Παράδειγμα: qty 5, originalUnitPrice 1,420, αρχική αξία 7,10, ποσοστό 15,00, ποσό έκπτωσης 1,07, καθαρή αξία 6,03. Επέστρεψε printedQuantity, printedUnit, originalUnitPrice και discountPercent1/2/3 με discountAmount1/2/3. Μην αντιγράψεις προσωρινή qty/τιμή από το guide όταν το έντυπο δείχνει άλλη τιμή. Στο vatSummary αντέγραψε κάθε ορατή γραμμή της ΑΝΑΛΥΣΗΣ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ως rate, φορολογητέα αξία, ΦΠΑ και συνολική αξία. Βάλε 0 μόνο όταν πραγματικά δεν φαίνεται.\n\nΓΡΑΜΜΕΣ:\n${guide}`;
   try{
     const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},...(Number(timeoutMs)>0?{signal:AbortSignal.timeout(Number(timeoutMs))}:{}),body:JSON.stringify({model:model||'gpt-5',input:[{role:'user',content:[{type:'input_text',text:prompt},filePart]}],text:{format:{type:'json_schema',name:'invoice_discount_pairs',strict:true,schema}}})});
     if(!response.ok){diagnostics.status='FAILED';diagnostics.reason=`HTTP_${response.status}`;console.warn('Discount verifier failed:',response.status,await response.text().catch(()=>''));return stamp(productLines,diagnostics)}
     const text=outputText(await response.json());if(!text){diagnostics.status='FAILED';diagnostics.reason='EMPTY_OUTPUT';return stamp(productLines,diagnostics)}
     const parsed=JSON.parse(text),candidates=Array.isArray(parsed?.discounts)?parsed.discounts:[];diagnostics.candidates=candidates.length;
+    diagnostics.vatSummary=Array.isArray(parsed?.vatSummary)?parsed.vatSummary:[];
     for(const candidate of candidates){
       const line=productLines[Number(candidate?.index||0)-1];if(!line)continue;
-      if(Number(line.discount1||0)>0||Number(line.discount2||0)>0||Number(line.discount3||0)>0)continue;
+      if(!reverifyAll&&(Number(line.discount1||0)>0||Number(line.discount2||0)>0||Number(line.discount3||0)>0))continue;
       const confidence=Number(candidate?.confidence||0);if(confidence<85){diagnostics.rejectedLowConfidence+=1;continue}
       const pairs=[{percent:candidate.discountPercent1,amount:candidate.discountAmount1},{percent:candidate.discountPercent2,amount:candidate.discountAmount2},{percent:candidate.discountPercent3,amount:candidate.discountAmount3}];
       if(!pairs.some(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0))continue;
-      const originalUnitPrice=safeAmount(candidate.originalUnitPrice),validationLine=originalUnitPrice>0?{...line,unitCost:originalUnitPrice}:line;
+      const originalUnitPrice=safeAmount(candidate.originalUnitPrice),printedQuantity=safeAmount(candidate.printedQuantity),validationLine={...line,...(printedQuantity>0?{quantity:printedQuantity}:{}),...(originalUnitPrice>0?{unitCost:originalUnitPrice}:{})};
       const validated=validateDiscountPairs(validationLine,pairs);if(!validated){diagnostics.rejectedMath+=1;continue}
+      if(printedQuantity>0){line.quantity=printedQuantity;line.invoiceQuantity=printedQuantity;line.quantitySource='AI_PRINTED_ROW_MATH_VERIFIED'}
+      if(String(candidate.printedUnit||'').trim()){line.unit=String(candidate.printedUnit).trim();line.invoiceUnit=String(candidate.printedUnit).trim()}
       if(originalUnitPrice>0){line.unitCost=originalUnitPrice;line.unitPrice=originalUnitPrice;line.azureUnitCostDerivedFromNet=false;line.originalUnitPriceSource='AI_DISCOUNT_MATH_VERIFIED'}
       applyValidatedPairs(line,validated);
       line.discountSource='AI_PERCENT_AMOUNT_VERIFIED';line.discountConfidence=confidence;line.discountEvidence=String(candidate?.evidence||'').slice(0,180);
