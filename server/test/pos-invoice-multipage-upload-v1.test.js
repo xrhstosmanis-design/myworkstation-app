@@ -68,12 +68,14 @@ test("fast header also falls back when Azure succeeds with an empty header",()=>
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
 });
 
-test("fast header keeps the proven Azure window inside its dedicated POS request budget",async()=>{
+test("fast header preserves a readable fallback inside its dedicated POS request budget",async()=>{
   const operator=await readFile(new URL("../../client/src/components/store/StoreOperatorApp.jsx",import.meta.url),"utf8");
-  assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=40000/);
-  assert.match(wrapper,/FAST_OPENAI_HEADER_TIMEOUT_MS=15000/);
+  assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=20000/);
+  assert.match(wrapper,/FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=50000/);
   assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS\}\)/);
-  assert.match(wrapper,/signal:AbortSignal\.timeout\(FAST_OPENAI_HEADER_TIMEOUT_MS\)/);
+  assert.match(wrapper,/const remainingMs=deadline-Date\.now\(\)/);
+  assert.match(wrapper,/signal:AbortSignal\.timeout\(remainingMs\)/);
+  assert.match(wrapper,/detail:"high"/);
   assert.match(azure,/deadline=Number\(timeoutMs\)>0/);
   assert.match(azure,/signal:requestSignal\(\)/);
   assert.match(client,/fast-header.*timeoutMs:75000/);

@@ -1291,3 +1291,10 @@ Total output lines: 1413
 - [x] Protects payment idempotency, deliberate draft deletion, stock, fiscal, accounting and finalization boundaries.
 - [ ] Enforce this gate on every subsequent change.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-mandatory-repository-checkpoint-gate.md`.
+## 2026-09-16 — POS FAST readable header recovery
+
+- [x] LAB FAIL: a clear single-page STEFANIDIS invoice returned none of the four basic fields; the safe failure correctly made no payment.
+- [x] The fallback now receives invoice images at high detail and shares one bounded 50-second deadline after a bounded 20-second Azure attempt.
+- [x] No payment, credit, draft, stock, approval, finalization or fiscal behavior changes.
+- [ ] AWAITING CI, exact deploy verification and one LAB retry of the same image without submitting payment or credit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-readable-header-recovery.md`.

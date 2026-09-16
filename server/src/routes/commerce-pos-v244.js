@@ -28,8 +28,8 @@ const fastBackgroundSuccessors=new Map();
 // One bounded retry is enough for transient transport/provider failures. Four
 // full OCR attempts could keep a draft in recovery for many minutes.
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
-const FAST_AZURE_HEADER_TIMEOUT_MS=40000;
-const FAST_OPENAI_HEADER_TIMEOUT_MS=15000;
+const FAST_AZURE_HEADER_TIMEOUT_MS=20000;
+const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=50000;
 const FAST_OPENAI_HEADER_ATTEMPTS=2;
 const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -157,10 +157,11 @@ function outputText(response){
 }
 
 async function callFastOpenAiHeader({prompt,filePart}){
-  let lastError;
+  let lastError;const deadline=Date.now()+FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS;
   for(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt++){
     try{
-      const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FAST_OPENAI_HEADER_TIMEOUT_MS),body:JSON.stringify({
+      const remainingMs=deadline-Date.now();if(remainingMs<1000)break;
+      const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(remainingMs),body:JSON.stringify({
         model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
         input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
         text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
@@ -239,7 +240,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const filePart=isPdf
       ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
-      :{type:"input_image",image_url:dataUrl,detail:"low"};
+      :{type:"input_image",image_url:dataUrl,detail:"high"};
     const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού και την κάτω περιοχή για τα τελικά σύνολα. ΜΗΝ αναλύσεις προϊόντα και ΜΗΝ επιστρέψεις γραμμές ειδών.
 
 Χρειάζομαι ΜΟΝΟ αυτά τα 5 στοιχεία:
