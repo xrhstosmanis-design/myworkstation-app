@@ -307,6 +307,12 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
   }
   const alreadyPieces={description:'RED BULL 0,25LT',unit:'TEM',quantity:48,unitCost:.95,netAmount:45.6};
   assert.equal(applyMantzilasPackaging(alreadyPieces),alreadyPieces,'printed pieces must never be converted twice');
+  const poisonedPiece={description:'RED BULL 0,25LT ΚΟΥΤΙ',rawText:'11 | RED BULL 0,25LT ΚΟΥΤΙ | TEM | 48 | 0,95 | 45,60',quantity:48,invoiceQuantity:48,unitCost:.95,netAmount:45.6,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:48,unitsPerPackage:48,packageConversionApplied:true};
+  const repairedPiece=applyMantzilasPackaging(poisonedPiece);
+  assert.equal(repairedPiece.quantity,48);assert.equal(repairedPiece.invoiceUnit,'PIECE');assert.equal(repairedPiece.stockUnitsPerInvoiceUnit,1);assert.equal(repairedPiece.packageConversionApplied,false);
+  const carton={description:'ΝΕΡΟ ΒΙΚΟΣ 0,5LT',rawText:'046 | ΝΕΡΟ ΒΙΚΟΣ 0,5LT | KIB | 15 | 2,16 | 32,40',quantity:15,unitCost:2.16,netAmount:32.4};
+  const once=applyMantzilasPackaging(carton),twice=applyMantzilasPackaging(once);
+  assert.equal(twice.quantity,15);assert.equal(twice.invoiceQuantity,15);assert.equal(twice.stockUnitsPerInvoiceUnit,24);assert.equal(twice.supplierProfileEvidence.stockQuantity,360);
 });
 
 test('MANTZILAS printed economics recover discounts, excise, taxable value and VAT only from balanced rows',()=>{

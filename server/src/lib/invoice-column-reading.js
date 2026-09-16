@@ -25,8 +25,21 @@ export function stockConversionFromDescription(description,explicitMultiplier=0,
 // unit conversion; quantities, package prices and invoice totals always come
 // from the current document and are never copied from an older invoice.
 export function applyMantzilasPackaging(line){
-  const text=String(line?.description||line?.rawText||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
-  const unit=String(line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
+  const raw=String(line?.azureRawRow||line?.rawText||"");
+  const text=String(line?.description||raw).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  // The unit printed on the current physical row is authoritative. A learned
+  // supplier mapping may describe an older carton, and must never multiply a
+  // row that explicitly says TEM/TMX. Reading raw first also makes this helper
+  // idempotent after invoiceUnit has already been normalized to PACKAGE.
+  const printedUnit=(raw.match(/(?:^|[\s|])(4PK|4PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i)||[])[1]||"";
+  const unit=String(printedUnit||line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
+  if(/^(TEM|ΤΕΜ|TMX|ΤΜΧ|FIA|ΦΙΑ)$/.test(unit)){
+    const alreadyPiece=Number(line?.stockUnitsPerInvoiceUnit||1)<=1&&!line?.packageConversionApplied&&!line?.unitsPerPackage;
+    if(alreadyPiece)return line;
+    return {...line,unit:"PIECE",invoiceUnit:"PIECE",stockUnit:"ΤΜΧ",unitsPerPackage:1,
+    conversionFactor:1,stockUnitsPerInvoiceUnit:1,packageConversionApplied:false,confirmedPackMapping:true,packRule:"MANTZILAS_PRINTED_PIECE",
+    supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_PRINTED_UNIT",supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity:Number(line?.quantity||0),stockQuantity:Number(line?.quantity||0),conversionFactor:1}};
+  }
   let factor=0,rule="";
   if(/^(4PK|4PACK)$/.test(unit)||/(?:^|\D)4\s*PACK(?:\D|$)/.test(text)){factor=4;rule="MANTZILAS_4PACK"}
   else if(/^(KIB|ΚΙΒ|ΚΒ|Κ\.Β\.)$/.test(unit)){
