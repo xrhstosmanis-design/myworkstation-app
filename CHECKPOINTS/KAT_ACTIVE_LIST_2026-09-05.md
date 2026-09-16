@@ -1368,3 +1368,11 @@ Total output lines: 1413
 - [x] Preserve payment reuse, one-draft guard, reconciliation, stock, approval and finalization boundaries.
 - [ ] CI/deploy and one new end-to-end POS rerun; BackOffice recovery is not acceptance.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-cached-discount-recovery.md`.
+
+# 2026-09-16 — POS full OCR minimal reasoning
+
+- [x] LAB after `c7385ffb`: compact full-table output still exhausted the 70-second OpenAI boundary while Azure F0 remained quota-blocked.
+- [x] Use minimal reasoning only for the two full-table vision extraction requests so the existing provider window is spent on OCR output.
+- [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
+- [ ] AWAITING tests, CI, exact deploy and one new POS-front LAB; BackOffice recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
