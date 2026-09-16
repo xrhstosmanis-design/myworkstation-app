@@ -1321,3 +1321,11 @@ Total output lines: 1413
 - [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
 - [ ] CI/deploy, then reclaim the same failed 43243 draft with one BackOffice refresh and no new upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-full-ocr-fast-vision-model.md`.
+# 2026-09-16 — POS FAST cached discount recovery
+
+- [x] LAB front-POS evidence: 16 cached lines arrived, but 340061124 remained `1.205 / 0%` and the redundant full provider call ended `POS_FAILED`.
+- [x] Run complete cached FAST rows through deterministic printed-row discount arithmetic before finalization.
+- [x] Pass `resumeStoredProductLines` and the durable page identity to the immediate background worker.
+- [x] Preserve payment reuse, one-draft guard, reconciliation, stock, approval and finalization boundaries.
+- [ ] CI/deploy and one new end-to-end POS rerun; BackOffice recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-cached-discount-recovery.md`.

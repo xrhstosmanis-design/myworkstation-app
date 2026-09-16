@@ -25,6 +25,22 @@ test("fast handoff creates the BackOffice shell and file inbox before OCR",()=>{
   assert.match(body,/POS_DRAFT_READY','POS_PROCESSING','POS_FAILED/);
 });
 
+test("complete FAST product lines recover printed discounts before bypassing full OCR",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  assert.match(route,/import \{verifyInvoiceDiscounts\} from "\.\.\/lib\/invoice-discount-verifier\.js"/);
+  assert.match(body,/await verifyInvoiceDiscounts\(\{productLines:page\.cachedProductLines,apiKey:null\}\)/);
+  assert.match(body,/finalizeV244ProductLines\(page\.cachedProductLines\)/);
+  assert.ok(body.indexOf("verifyInvoiceDiscounts")<body.indexOf("const cachedProductLines=hasCompleteCachedProductLines"));
+});
+
+test("immediate POS worker receives the complete cached-line handoff",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  assert.match(body,/const handoff=\{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds\.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines\}/);
+  assert.match(body,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\),companyId,jobId,pageJobIds,handoff,publicOrigin\}\)/);
+});
+
 test("background OCR falls back to the public Render origin when loopback fails",()=>{
   assert.match(route,/const origins=\[localOrigin,.+publicOrigin/);
   assert.match(route,/publicOrigin,method:"POST",body:\{force:true/);
