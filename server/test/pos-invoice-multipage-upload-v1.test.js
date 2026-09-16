@@ -253,6 +253,27 @@ test("rounded net values snap an AI-derived 24.9524 percent back to the verified
   assert.deepEqual(productLines.map(line=>line.discount1Amount),[3.5,2.625,2.625,4.5]);
 });
 
+test("printed original price restores a missing discount hidden inside net unit cost",async()=>{
+  const productLines=[{
+    code:"340061124",
+    description:"LAYS PRAWN 120G (C20U)",
+    rawText:"340061124 LAYS PRAWN 120G C20U ΤΕΜ 2 1,420 2,84 15,00 0,43 2,41 13",
+    quantity:2,
+    unitCost:1.205,
+    netAmount:2.41,
+    vatRate:13,
+    grossAmount:2.72,
+    discount1:0,
+    discount1Amount:0,
+  }];
+  const result=await verifyInvoiceDiscounts({productLines});
+  assert.equal(productLines[0].unitCost,1.42);
+  assert.equal(productLines[0].discount1,15);
+  assert.equal(productLines[0].discount1Amount,0.43);
+  assert.equal(productLines[0].netAmount,2.41);
+  assert.equal(result.rawEconomicsAccepted,1);
+});
+
 test("V2.4.4 does not accept net value as the initial value when quantity times price disagrees",()=>{
   const [line]=finalizeV244ProductLines([{description:'COOKIE',rawText:'COOKIE ΤΜΧ 10 1,40 10,50',quantity:10,unitCost:1.4,netAmount:10.5,vatRate:13}]);
   assert.equal(line.initialAmount,14);

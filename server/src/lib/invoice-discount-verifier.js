@@ -110,7 +110,8 @@ function deriveEconomicsFromAzureContent(line){
 }
 function applyRawContentEconomics(productLines,diagnostics){
   for(const line of productLines){
-    if(Number(line.unitCost||0)>0&&!line.azureUnitCostDerivedFromNet)continue;
+    const hasDiscount=[line?.discount1,line?.discount2,line?.discount3,line?.discount1Amount,line?.discount2Amount,line?.discount3Amount].some(value=>Number(value||0)>0);
+    if(Number(line.unitCost||0)>0&&!line.azureUnitCostDerivedFromNet&&hasDiscount)continue;
     const derived=deriveEconomicsFromAzureContent(line);if(!derived)continue;
     line.unitCost=money4(derived.price);
     line.unitPrice=money4(derived.price);
@@ -178,6 +179,7 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
     if(active.length>1)continue;
     const currentPercent=active.length?safePercent(active[0].percent):0;
     if(currentPercent&&Math.abs(currentPercent-percent)>0.1)continue;
+    if(currentPercent&&Math.abs(currentPercent-percent)<=0.0001&&validateDiscountPairs(line,linePairs(line)))continue;
     const quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),net=Number(line?.netAmount||0),base=quantity*unitCost;
     if(!(quantity>0&&unitCost>0&&net>0&&net<base))continue;
     const amount=money4(base*percent/100);
