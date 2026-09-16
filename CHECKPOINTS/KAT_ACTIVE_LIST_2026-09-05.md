@@ -1,5 +1,8 @@
 ## 2026-09-16 — POS FAST complete-table handoff
 
+- [x] LAB follow-up after `56735d39`: `27293` remained at zero items and entered `POS_QUEUED / POS_RECOVERING`; the complete FAST table did not reach the handoff.
+- [x] Bounded deadline correction: the complete structured-table request receives 70 seconds and the browser waits 100 seconds, preventing the former four-field timeout from discarding the table first.
+- [x] Existing payment/draft identity and all stock, approval, finalization and fiscal boundaries remain unchanged.
 - [x] LAB follow-up after `83255307`: `27293` again remained `POS_PROCESSING` with zero rows because a useful Azure header returned before the OpenAI FAST table reader was called.
 - [x] Follow-up correction: Azure may finish FAST by itself only with a complete table reconciled within `0.05 EUR`; otherwise its header is preserved while OpenAI FAST reads the table.
 - [x] If OpenAI fails, the safe Azure header still survives; no payment, stock, approval, finalization or fiscal behavior changes.

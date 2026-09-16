@@ -37,3 +37,10 @@
 - Follow-up correction: Azure returns immediately only when its own product table reconciles to the invoice total within `0.05 EUR`. A useful header with empty/partial rows is retained as a safe header fallback while the existing FAST OpenAI call reads the table.
 - If OpenAI fails, the already-read Azure header is still returned, preserving the four-field behavior and fail-closed background path.
 - Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Payment, draft identity, stock, approval, finalization and fiscal boundaries remain unchanged.
+
+## LAB follow-up after revision `56735d39`
+
+- A new POS-front run of `27293` again stayed at zero items and moved from `POS_PROCESSING / POS_BACKGROUND` to `POS_QUEUED / POS_RECOVERING`.
+- This proves that the complete FAST table did not reach the durable handoff; the old slow provider path was activated again.
+- The complete structured-table request was still limited to the former four-field 50-second deadline. Its server deadline is now bounded at 70 seconds and the browser request at 100 seconds, so the server result cannot be cut off by the client first.
+- Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. No payment, draft identity, stock, approval, finalization or fiscal behavior changes.

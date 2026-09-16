@@ -70,7 +70,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       // requests exhausted the shared provider and made both pages fail.
       for(const sourcePage of headerPages){
         try{
-          const result=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:75000,body:JSON.stringify({storeId:store.id,filename:sourcePage.file.name||"timologio.jpg",mimeType:sourcePage.file.type||"image/jpeg",dataUrl:sourcePage.dataUrl})});
+          const result=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:100000,body:JSON.stringify({storeId:store.id,filename:sourcePage.file.name||"timologio.jpg",mimeType:sourcePage.file.type||"image/jpeg",dataUrl:sourcePage.dataUrl})});
           if(!result)continue;
           headerResults.push(result);
           const pageIndex=processedPages.indexOf(sourcePage);
