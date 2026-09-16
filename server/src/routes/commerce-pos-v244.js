@@ -409,6 +409,32 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       const cachedProductLines=finalizeV244ProductLines(Array.isArray(page?.productLines)?page.productLines:[]).slice(0,500);
       return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),cachedProductLines};
     });
+    // The browser can correctly recover the four FAST fields from an older
+    // exact-file job while the newest job for that attachment is an empty
+    // failed shell. Hydrate the handoff server-side so React timing or job
+    // ordering can never force another provider call.
+    for(const page of normalizedPages){
+      if(page.cachedProductLines.length)continue;
+      const durableCandidates=await prisma.$queryRaw`
+        SELECT j."resultJson" FROM "DocumentAttachment" a
+        JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId" AND j."storeId"=a."storeId"
+        WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${page.checksum}
+          AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')
+        ORDER BY j."updatedAt" DESC LIMIT 10`;
+      for(const candidate of durableCandidates){
+        const candidateHandoff=candidate.resultJson?.posHandoff&&typeof candidate.resultJson.posHandoff==="object"?candidate.resultJson.posHandoff:{};
+        const candidateLines=finalizeV244ProductLines(Array.isArray(candidate.resultJson?.productLines)?candidate.resultJson.productLines:[]).slice(0,500);
+        const sameInvoice=String(candidateHandoff.supplierId||"")===supplierId
+          &&normalizeDocumentNumber(candidateHandoff.documentNumber)===normalizeDocumentNumber(documentNumber)
+          &&normalizeIntakeDate(candidateHandoff.documentDate)===documentDate
+          &&Math.abs(round2(candidateHandoff.totalGross||0)-totalGross)<=POS_STORED_LINES_TOLERANCE;
+        if(!sameInvoice||!candidateLines.length)continue;
+        const candidateDifference=round2(Math.abs(reconcileInvoiceLines(candidateLines,totalGross).grossTotal-totalGross));
+        if(candidateDifference>POS_STORED_LINES_TOLERANCE)continue;
+        page.cachedProductLines=candidateLines;
+        break;
+      }
+    }
     const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
     if(hasCompleteCachedProductLines){
       // FAST Azure can return a complete table while exposing the discounted
