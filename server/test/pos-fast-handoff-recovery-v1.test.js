@@ -34,6 +34,15 @@ test("complete FAST product lines recover printed discounts before bypassing ful
   assert.ok(body.indexOf("verifyInvoiceDiscounts")<body.indexOf("const cachedProductLines=hasCompleteCachedProductLines"));
 });
 
+test("OpenAI FAST captures a complete table once and only forwards rows that reconcile",()=>{
+  assert.match(route,/productLines:\{type:"array",maxItems:500/);
+  assert.match(route,/Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=\[\]/);
+  assert.match(route,/const candidateProductLines=finalizeV244ProductLines/);
+  assert.match(route,/reconcileInvoiceLines\(candidateProductLines,totalGross\)/);
+  assert.match(route,/const productLines=candidateDifference<=POS_STORED_LINES_TOLERANCE\?candidateProductLines:\[\]/);
+  assert.ok(route.indexOf("candidateDifference<=POS_STORED_LINES_TOLERANCE")<route.indexOf("res.json({",route.indexOf("candidateDifference<=POS_STORED_LINES_TOLERANCE")));
+});
+
 test("fast handoff hydrates an empty newest job from the matching exact-file durable table",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));

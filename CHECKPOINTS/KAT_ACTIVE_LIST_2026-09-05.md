@@ -1,3 +1,12 @@
+## 2026-09-16 — POS FAST complete-table handoff
+
+- [x] LAB FAIL: new POS-front invoice `27293` kept the correct four header fields but remained `POS_PROCESSING` with zero items after more than two minutes and refresh.
+- [x] Root cause: the successful OpenAI FAST request was instructed to discard products, forcing a second full-table request after Azure F0 quota rejection.
+- [x] Bounded change: the same FAST response may carry the complete table, but rows bypass background OCR only when their gross sum reconciles to the invoice total within `0.05 EUR`.
+- [x] Payment, duplicate, draft, stock, approval, finalization and fiscal boundaries remain unchanged.
+- [ ] AWAITING full tests, CI, merge, exact deploy and POS-front LAB verification of invoice `27293`: 16 rows, quantity 47, net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
 ## 2026-09-16 — POS FAST header durable reuse
 
 - [x] LAB follow-up after `1cf5bb44`: exact-file hydration still missed the stored table because optimized image bytes/checksum can change across selection attempts.

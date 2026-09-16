@@ -217,14 +217,19 @@ async function matchSupplier(companyId,candidate={}){
   return null;
 }
 
+const fastProductLineProperties={
+  rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},retailPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount1Amount:{type:"number",minimum:0},discount2:{type:"number",minimum:0,maximum:100},discount2Amount:{type:"number",minimum:0},discount3:{type:"number",minimum:0,maximum:100},discount3Amount:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
+};
+const fastProductLineRequired=Object.keys(fastProductLineProperties);
 const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
   confidence:{type:"number",minimum:0,maximum:100},
   supplierName:{type:"string"},
   supplierTaxId:{type:"string"},
   documentNumber:{type:"string"},
   documentDate:{type:"string"},
-  totalGross:{type:"number",minimum:0}
-},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
+  totalGross:{type:"number",minimum:0},
+  productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:fastProductLineProperties,required:fastProductLineRequired}}
+},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross","productLines"]};
 
 router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>{
   res.json({enabled:true,moduleKey:"AI_READER"});
@@ -285,21 +290,32 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const filePart=isPdf
       ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
       :{type:"input_image",image_url:dataUrl,detail:"high"};
-    const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού και την κάτω περιοχή για τα τελικά σύνολα. ΜΗΝ αναλύσεις προϊόντα και ΜΗΝ επιστρέψεις γραμμές ειδών.
+    const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού, τον πίνακα ειδών και την κάτω περιοχή για τα τελικά σύνολα.
 
-Χρειάζομαι ΜΟΝΟ αυτά τα 5 στοιχεία:
+Χρειάζομαι αυτά τα 5 βασικά στοιχεία:
 1. supplierName = ο ΕΚΔΟΤΗΣ/ΠΡΟΜΗΘΕΥΤΗΣ του παραστατικού, όχι ο πελάτης/παραλήπτης.
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
 3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
 
-Αν ένα από αυτά δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα μόνο για αυτά τα βασικά πεδία.`;
+Επιπλέον, στο productLines επέστρεψε ΟΛΕΣ τις πραγματικές γραμμές ειδών που φαίνονται στον πίνακα, μία φορά και στην έντυπη σειρά. Μην επιστρέψεις κεφαλίδες, στοιχεία εταιρειών, σύνολα ή footer. Για κάθε γραμμή διάβασε οριζόντια: κωδικό, περιγραφή, ποσότητα, μονάδα, αρχική τιμή μονάδας, λιανική, εκπτώσεις 1/2/3 με τα ποσά τους, καθαρή αξία, ΦΠΑ και τελική αξία με ΦΠΑ. Μην αντικαθιστάς την αρχική unitCost με netAmount/quantity όταν φαίνεται έκπτωση. Αν grossAmount δεν τυπώνεται αλλά φαίνονται netAmount και vatRate, υπολόγισέ το. Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=[]· μην επιστρέψεις μερικό πίνακα.
+
+Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     const parsed=await callFastOpenAiHeader({prompt,filePart});
     const supplier=await matchSupplier(req.user.companyId,{name:parsed.supplierName,taxId:parsed.supplierTaxId});
     const documentNumber=String(parsed.documentNumber||"").trim();
     const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"";
     const totalGross=round2(parsed.totalGross||0);
+    const candidateProductLines=finalizeV244ProductLines(Array.isArray(parsed.productLines)?parsed.productLines:[]).slice(0,500);
+    const candidateDifference=candidateProductLines.length&&totalGross>0
+      ?round2(Math.abs(reconcileInvoiceLines(candidateProductLines,totalGross).grossTotal-totalGross))
+      :Number.POSITIVE_INFINITY;
+    // FAST rows may bypass the unavailable full-table provider only when the
+    // complete table proves itself against the printed/confirmed invoice total.
+    // A partial table is discarded and the existing fail-closed background
+    // path remains authoritative.
+    const productLines=candidateDifference<=POS_STORED_LINES_TOLERANCE?candidateProductLines:[];
     res.json({
       confidence:Number(parsed.confidence||0),
       supplierId:supplier?.id||"",
@@ -307,7 +323,8 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       supplierTaxId:supplier?.taxId||String(parsed.supplierTaxId||""),
       documentNumber:/\d/.test(documentNumber)?documentNumber:"",
       documentDate,
-      totalGross:totalGross>0?totalGross:0
+      totalGross:totalGross>0?totalGross:0,
+      productLines
     });
   }catch(error){next(error)}
 });
