@@ -1,3 +1,14 @@
+## 2026-09-16 — Invoice Learning unified Azure recovery
+
+- [x] LAB FAIL reconciled: Coffee Union returned one line / `82.72 EUR` gross instead of seven lines / approximately `1,380.44 EUR`.
+- [x] Root cause: any non-empty Azure result was accepted, while QR/mobile still depended on the removed duplicate-reader module.
+- [x] One active reader now owns file, camera and QR intake and blocks a second request while one read is running.
+- [x] A result with a printed total must reconcile its product-line gross total; proven partial Azure results fall through once and proven partial fallback results are rejected.
+- [x] Safe Azure state is visible without exposing provider credentials.
+- [x] No payment, credit, stock, approval, finalization or fiscal behavior changes.
+- [ ] AWAITING CI, exact deploy verification and one direct plus one QR/mobile LAB read without save, learning or finalization.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-invoice-learning-unified-azure-recovery.md`.
+
 ## 2026-09-15 — Invoice Learning empty-result guard
 
 ## 2026-09-15 — POS FAST header sequential LAB regression
