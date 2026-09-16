@@ -70,7 +70,10 @@ const productLineProperties={
   rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},retailPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount1Amount:{type:"number",minimum:0},discount2:{type:"number",minimum:0,maximum:100},discount2Amount:{type:"number",minimum:0},discount3:{type:"number",minimum:0,maximum:100},discount3Amount:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
 };
 const productLineRequired=["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","retailPrice","discount1","discount1Amount","discount2","discount2Amount","discount3","discount3Amount","netAmount","vatRate","grossAmount","confidence"];
-const invoiceSchema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},email:{type:"string"},phone:{type:"string"},address:{type:"string"},city:{type:"string"}},required:["name","taxId","email","phone","address","city"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},rawText:{type:"string"},lines:{type:"array",maxItems:1000,items:{type:"object",additionalProperties:false,properties:{text:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["text","confidence"]}},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["documentType","aiConfidence","supplier","documentNumber","documentDate","totalGross","rawText","lines","productLines"]};
+// The POS provider response must not repeat the full invoice three times as
+// rawText, audit lines and structured productLines. The structured rows remain
+// authoritative; compact audit text is rebuilt locally from their rawText.
+const invoiceSchema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"}},required:["name","taxId"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["documentType","aiConfidence","supplier","documentNumber","documentDate","totalGross","productLines"]};
 const productTableSchema={type:"object",additionalProperties:false,properties:{productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["productLines"]};
 
 const normalizeProductLine=line=>{
@@ -228,7 +231,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 Σε πολυσέλιδο παραστατικό, το ποσό «Σε μεταφορά» ή «Από μεταφορά» είναι μεταφερόμενο ενδιάμεσο σύνολο και ΔΕΝ προστίθεται δεύτερη φορά. Ως totalGross χρησιμοποίησε αποκλειστικά την «ΤΕΛΙΚΗ ΑΞΙΑ» ή το τελικό πληρωτέο ποσό της τελευταίας σελίδας.
 
-Στο lines επέστρεψε ΟΛΕΣ τις ορατές γραμμές για audit. Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται.
+Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Μην επαναλάβεις όλο το παραστατικό ως ξεχωριστό rawText ή lines. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται.
 
 Για ΚΑΘΕ προϊόν ακολούθησε την ΙΔΙΑ ΟΡΙΖΟΝΤΙΑ ΣΕΙΡΑ από αριστερά προς τα δεξιά. Χαρτογράφηση: ΛΙΑΝΙΚΗ ΤΙΜΗ=retailPrice, ΠΟΣΟΤΗΤΑ=quantity, Μ.Μ.=unit, ΤΙΜΗ ΜΟΝΑΔΑΣ ΠΡΙΝ ΑΠΟ ΕΚΠΤΩΣΕΙΣ=unitCost, Εκπτ.1/2/3=discount1/2/3, αντίστοιχο ποσό έκπτωσης=discount1Amount/2Amount/3Amount, Καθ Αξία=netAmount, %ΦΠΑ=vatRate. Η retailPrice είναι η τιμή πώλησης και ΔΕΝ είναι η unitCost. Μην αντικαθιστάς την αρχική unitCost με netAmount/quantity όταν φαίνονται εκπτώσεις. Αν δεν υπάρχει ορατή λιανική βάλε retailPrice=0. Αν υπάρχει τελική αξία με ΦΠΑ είναι grossAmount. Αριθμοί συσκευασίας (500ML, 6x330ml κ.λπ.) δεν είναι ποσότητα/τιμή. Αν unitCost δεν φαίνεται και δεν υπάρχουν εκπτώσεις αλλά quantity>0 και netAmount>0, unitCost=netAmount/quantity. Αν grossAmount δεν φαίνεται αλλά netAmount και vatRate υπάρχουν, υπολόγισέ το.
 
@@ -294,8 +297,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.posConfirmedTotalApplied=true;
     parsed.posConfirmedTotalSource=linkedDraft[0]?"LINKED_DRAFT":"POS_HANDOFF";
   }
-  const auditLines=Array.isArray(parsed.lines)?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000):[];
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+  if(!String(parsed.rawText||"").trim())parsed.rawText=parsed.productLines.map(line=>String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim()).filter(Boolean).join("\n");
+  const auditLines=Array.isArray(parsed.lines)&&parsed.lines.length
+    ?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000)
+    :parsed.productLines.map(line=>({text:String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim(),confidence:Number(line.confidence||parsed.aiConfidence||0)})).filter(line=>line.text).slice(0,1000);
+  parsed.lines=auditLines;
 
   failureStage="apply-supplier-profile-initial";
   parsed=await applyCentralSupplierProfile(parsed);

@@ -44,3 +44,10 @@
 - This proves that the complete FAST table did not reach the durable handoff; the old slow provider path was activated again.
 - The complete structured-table request was still limited to the former four-field 50-second deadline. Its server deadline is now bounded at 70 seconds and the browser request at 100 seconds, so the server result cannot be cut off by the client first.
 - Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. No payment, draft identity, stock, approval, finalization or fiscal behavior changes.
+
+## LAB follow-up after revision `a3f9a916`
+
+- The POS-front rerun of `27293` ended at `POS_BACKGROUND_AI_RECHECK / FULL_OCR_PROVIDER_FAILURE` with OpenAI timeout and Azure F0 quota `403`.
+- The unified full-OCR response schema duplicated the invoice output as global `rawText`, audit `lines` and structured `productLines`, increasing response generation until the bounded provider timeout.
+- The bounded correction requests only the header plus structured `productLines`; equivalent audit text and audit lines are rebuilt locally from those same rows before the existing supplier-profile and reconciliation stages.
+- Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Provider deadlines, payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.

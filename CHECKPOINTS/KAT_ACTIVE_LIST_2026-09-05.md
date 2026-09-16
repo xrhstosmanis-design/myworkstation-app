@@ -1,5 +1,8 @@
 ## 2026-09-16 — POS FAST complete-table handoff
 
+- [x] LAB follow-up after `a3f9a916`: `27293` failed at `POS_BACKGROUND_AI_RECHECK`; OpenAI timed out and Azure F0 returned quota `403`.
+- [x] Compact full-OCR response: request the header plus structured `productLines` once, then rebuild audit text/lines locally instead of making the model repeat the invoice three times.
+- [x] Provider deadlines and all payment, draft, stock, approval, finalization and fiscal boundaries remain unchanged.
 - [x] LAB follow-up after `56735d39`: `27293` remained at zero items and entered `POS_QUEUED / POS_RECOVERING`; the complete FAST table did not reach the handoff.
 - [x] Bounded deadline correction: the complete structured-table request receives 70 seconds and the browser waits 100 seconds, preventing the former four-field timeout from discarding the table first.
 - [x] Existing payment/draft identity and all stock, approval, finalization and fiscal boundaries remain unchanged.
