@@ -123,6 +123,7 @@ test("full OCR provider calls are bounded so durable recovery cannot remain POS_
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
   assert.match(aiRecheck,/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS/s);
   assert.match(aiRecheck,/reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs\.length===1\?invoiceTotal:0/);
+  assert.match(aiRecheck,/line\.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"\?line:recoverMantzilasEconomics\(line\)/);
 });
 
 test("OpenAI full-table fallback outlives an exhausted Azure F0 request",()=>{

@@ -31,8 +31,11 @@ export function applyMantzilasPackaging(line){
   // supplier mapping may describe an older carton, and must never multiply a
   // row that explicitly says TEM/TMX. Reading raw first also makes this helper
   // idempotent after invoiceUnit has already been normalized to PACKAGE.
-  const printedUnit=(raw.match(/(?:^|[\s|])(4PK|4PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i)||[])[1]||"";
-  const unit=String(printedUnit||line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
+  const printedUnit=(raw.match(/(?:^|[\s|])(4PK|4PACK|6PK|6PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i)||[])[1]||"";
+  // Once the current image has proved the complete row, its printed unit is
+  // stronger than stale OCR text retained from the earlier extraction pass.
+  const verifiedUnit=line?.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"?line?.invoiceUnit:"";
+  const unit=String(verifiedUnit||printedUnit||line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
   if(/^(TEM|ΤΕΜ|TMX|ΤΜΧ|FIA|ΦΙΑ)$/.test(unit)){
     const alreadyPiece=Number(line?.stockUnitsPerInvoiceUnit||1)<=1&&!line?.packageConversionApplied&&!line?.unitsPerPackage;
     if(alreadyPiece)return line;
@@ -42,6 +45,7 @@ export function applyMantzilasPackaging(line){
   }
   let factor=0,rule="";
   if(/^(4PK|4PACK)$/.test(unit)||/(?:^|\D)4\s*PACK(?:\D|$)/.test(text)){factor=4;rule="MANTZILAS_4PACK"}
+  else if(/^(6PK|6PACK)$/.test(unit)||/(?:^|\D)6\s*PACK(?:\D|$)/.test(text)){factor=6;rule="MANTZILAS_6PACK"}
   else if(/^(KIB|ΚΙΒ|ΚΒ|Κ\.Β\.)$/.test(unit)){
     const water=/ΝΕΡΟ|WATER/.test(text),bottle=/ΦΙΑΛ|BOTTLE/.test(text);
     if(water&&/(?:750\s*ML|0[,.]?75\s*L(?:T)?)/.test(text)){factor=12;rule="MANTZILAS_WATER_750ML"}
@@ -67,7 +71,7 @@ export function applyMantzilasPackaging(line){
 // Accept the row only when all four independent equations reconcile.
 export function recoverMantzilasEconomics(line){
   const raw=String(line?.azureRawRow||line?.rawText||"");
-  const match=raw.match(/(?:^|[\s|])(4PK|4PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i);
+  const match=raw.match(/(?:^|[\s|])(4PK|4PACK|6PK|6PACK|KIB|ΚΙΒ|Κ\.Β\.|ΚΒ|FIA|ΦΙΑ|TEM|ΤΕΜ|TMX|ΤΜΧ)(?=[\s|\d]|$)/i);
   if(!match)return line;
   const values=(raw.slice((match.index||0)+match[0].length).match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(Number.isFinite);
   const close=(a,b,tolerance=.03)=>Math.abs(a-b)<=tolerance;
