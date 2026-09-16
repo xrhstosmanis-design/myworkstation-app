@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
+import {applyMantzilasPackaging,extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -286,6 +286,27 @@ test('printed VAT footer repairs gross-as-net rows only when every total reconci
   assert.equal(recoverVatFromPrintedSummary(lines,'13% 65,72 8,53',75).recovered,false,'invoice total must agree');
   assert.equal(recoverVatFromPrintedSummary(lines,'13% 64,72 9,53',74.25).recovered,false,'footer VAT equation must agree');
   assert.equal(recoverVatFromPrintedSummary([{...lines[0],vatRate:24},...lines.slice(1)],'13% 65,72 8,53',74.25).recovered,false,'mixed existing VAT must remain untouched');
+});
+
+test('MANTZILAS learned packs convert stock quantity and piece price without changing invoice economics',()=>{
+  const cases=[
+    [{description:'PILS 0,5LT 4PACK',unit:'4PK',quantity:3,unitCost:3.2,netAmount:9.6},4,12,.8,'MANTZILAS_4PACK'],
+    [{description:'ΝΕΡΟ ΒΙΚΟΣ 0,5LT',unit:'ΚΙΒ',quantity:15,unitCost:2.16,netAmount:32.4},24,360,.09,'MANTZILAS_WATER_500ML'],
+    [{description:'ΝΕΡΟ 750ML',unit:'ΚΙΒ',quantity:2,unitCost:5,netAmount:10},12,24,5/12,'MANTZILAS_WATER_750ML'],
+    [{description:'ΝΕΡΟ 1LT',unit:'ΚΙΒ',quantity:2,unitCost:6,netAmount:12},6,12,1,'MANTZILAS_WATER_1000ML'],
+    [{description:'ΝΕΡΟ ΒΙΚΟΣ 6X1,5LT',unit:'ΚΙΒ',quantity:10,unitCost:1.1,netAmount:11},6,60,1.1/6,'MANTZILAS_WATER_1500ML'],
+    [{description:'ΜΠΥΡΑ ΦΙΑΛΗ 500ML',unit:'ΚΙΒ',quantity:1,unitCost:20,netAmount:20},20,20,1,'MANTZILAS_BOTTLE_500ML'],
+    [{description:'ΑΝΑΨΥΚΤΙΚΟ ΚΟΥΤΙ 500ML',unit:'ΚΙΒ',quantity:2,unitCost:24,netAmount:48},24,48,1,'MANTZILAS_CASE_500ML'],
+    [{description:'ΑΝΑΨΥΚΤΙΚΟ 330ML',unit:'ΚΙΒ',quantity:2,unitCost:24,netAmount:48},24,48,1,'MANTZILAS_CASE_330ML']
+  ];
+  for(const [input,factor,stockQuantity,piecePrice,rule] of cases){
+    const line=applyMantzilasPackaging(input);
+    assert.equal(line.stockUnitsPerInvoiceUnit,factor);assert.equal(line.quantity,input.quantity);assert.equal(line.unitCost,input.unitCost);
+    assert.equal(line.supplierProfileEvidence.stockQuantity,stockQuantity);assert.ok(Math.abs(line.supplierProfileEvidence.pieceUnitPrice-piecePrice)<.0001);assert.equal(line.packRule,rule);
+    assert.equal(line.netAmount,input.netAmount,'pack conversion must not change invoice totals');
+  }
+  const alreadyPieces={description:'RED BULL 0,25LT',unit:'TEM',quantity:48,unitCost:.95,netAmount:45.6};
+  assert.equal(applyMantzilasPackaging(alreadyPieces),alreadyPieces,'printed pieces must never be converted twice');
 });
 
 

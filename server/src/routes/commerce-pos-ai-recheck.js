@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
+import {applyMantzilasPackaging,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
 // Full-table vision regularly needs longer than the small FAST-header read.
@@ -31,8 +31,10 @@ const id=()=>crypto.randomUUID();
 const THRESHOLD=65;
 const TOTAL_TOLERANCE=0.05;
 const STEFANIDIS_TAX_ID="998878583";
+const MANTZILAS_TAX_ID="081565488";
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const isStefanidisInvoice=parsed=>cleanTaxId(parsed?.supplier?.taxId)===STEFANIDIS_TAX_ID||parsed?.supplierReadingProfile?.ruleKey==="STEFANIDIS_PRINTED_COLUMNS";
+const isMantzilasInvoice=parsed=>cleanTaxId(parsed?.supplier?.taxId)===MANTZILAS_TAX_ID||/ΜΑΝΤΖΙΛΑΣ|MANTZILAS/.test(norm(parsed?.supplier?.name));
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const greekLatinFold=value=>norm(value).replace(/[ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]/g,c=>({Α:"A",Β:"B",Ε:"E",Ζ:"Z",Η:"H",Ι:"I",Κ:"K",Μ:"M",Ν:"N",Ο:"O",Ρ:"P",Τ:"T",Υ:"Y",Χ:"X"}[c]||c));
 const validGreekTaxId=value=>{const v=cleanTaxId(value);if(v.length!==9||/^0+$/.test(v))return false;let sum=0;for(let i=0;i<8;i++)sum+=Number(v[i])*2**(8-i);return (sum%11)%10===Number(v[8]);};
@@ -306,6 +308,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
   failureStage="apply-supplier-profile-initial";
   parsed=await applyCentralSupplierProfile(parsed);
+  if(isMantzilasInvoice(parsed))parsed.productLines=parsed.productLines.map(applyMantzilasPackaging);
   // Recover the printed retail / unit / quantity columns from the current
   // source itself when a reader has shifted the numeric columns. This rule is
   // layout-based, applies to every supplier, and never reuses prior invoice
@@ -366,6 +369,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
   failureStage="apply-supplier-profile-final";
   parsed=await applyCentralSupplierProfile(parsed);
+  if(isMantzilasInvoice(parsed)){
+    parsed.productLines=parsed.productLines.map(applyMantzilasPackaging);
+    parsed.mantzilasPackagingLearningApplied=true;
+  }
   // Table/Azure recovery can add rows after the first printed-column pass.
   // Re-apply the centrally learned STEFANIDIS layout to those late rows before
   // totals and discounts are calculated. The equations inside the recovery

@@ -13,3 +13,10 @@ test("supplier stock conversion preserves invoice quantity and price",()=>{
   assert.doesNotMatch(block,/quantity:money4\(invoiceQuantity\*factor\)/);
   assert.doesNotMatch(block,/unitCost:money4\(packageUnitPrice\/factor\)/);
 });
+
+test("purchase review displays learned package economics per stock piece",async()=>{
+  const client=await readFile(new URL("../../client/src/components/commerce/installPurchaseOrdersSuite.js",import.meta.url),"utf8");
+  assert.match(client,/const stockUnitCost=line=>Number\(line\?\.unitCost\|\|0\)\/Math\.max\(1,Number\(line\?\.stockUnitsPerInvoiceUnit\|\|1\)\)/);
+  assert.match(client,/title="Τιμή συσκευασίας:/);
+  assert.match(client,/ανά τεμάχιο/);
+});
