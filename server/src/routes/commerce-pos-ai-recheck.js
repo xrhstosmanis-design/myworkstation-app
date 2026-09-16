@@ -72,11 +72,13 @@ const productLineProperties={
   rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},retailPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount1Amount:{type:"number",minimum:0},discount2:{type:"number",minimum:0,maximum:100},discount2Amount:{type:"number",minimum:0},discount3:{type:"number",minimum:0,maximum:100},discount3Amount:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},exciseTotal:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
 };
 const productLineRequired=["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","retailPrice","discount1","discount1Amount","discount2","discount2Amount","discount3","discount3Amount","netAmount","exciseTotal","vatRate","grossAmount","confidence"];
+const vatSummaryItem={type:"object",additionalProperties:false,properties:{rate:{type:"number",enum:[0,6,13,24]},taxable:{type:"number",minimum:0},vat:{type:"number",minimum:0},gross:{type:"number",minimum:0}},required:["rate","taxable","vat","gross"]};
 // The POS provider response must not repeat the full invoice three times as
 // rawText, audit lines and structured productLines. The structured rows remain
 // authoritative; compact audit text is rebuilt locally from their rawText.
-const invoiceSchema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"}},required:["name","taxId"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["documentType","aiConfidence","supplier","documentNumber","documentDate","totalGross","productLines"]};
-const productTableSchema={type:"object",additionalProperties:false,properties:{productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["productLines"]};
+const invoiceSchema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"}},required:["name","taxId"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},vatSummary:{type:"array",maxItems:4,items:vatSummaryItem},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["documentType","aiConfidence","supplier","documentNumber","documentDate","totalGross","vatSummary","productLines"]};
+const productTableSchema={type:"object",additionalProperties:false,properties:{vatSummary:{type:"array",maxItems:4,items:vatSummaryItem},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["vatSummary","productLines"]};
+const vatSummaryText=summary=>(Array.isArray(summary)?summary:[]).map(row=>`${Number(row?.rate||0)}% ${money2(row?.taxable||0).toFixed(2)} ${money2(row?.vat||0).toFixed(2)} ${money2(row?.gross||0).toFixed(2)}`).join("\n");
 
 const normalizeProductLine=line=>{
   const quantity=Math.max(0,Number(line?.quantity||0));
@@ -234,7 +236,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 Σε πολυσέλιδο παραστατικό, το ποσό «Σε μεταφορά» ή «Από μεταφορά» είναι μεταφερόμενο ενδιάμεσο σύνολο και ΔΕΝ προστίθεται δεύτερη φορά. Ως totalGross χρησιμοποίησε αποκλειστικά την «ΤΕΛΙΚΗ ΑΞΙΑ» ή το τελικό πληρωτέο ποσό της τελευταίας σελίδας.
 
-Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Μην επαναλάβεις όλο το παραστατικό ως ξεχωριστό rawText ή lines. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται.
+Στο productLines επέστρεψε ΜΟΝΟ ΟΛΕΣ τις πραγματικές γραμμές ειδών του πίνακα, καμία κεφαλίδα/IBAN/σύνολο/footer. Στο rawText κάθε προϊόντος αντέγραψε ολόκληρη τη συγκεκριμένη φυσική σειρά από τον κωδικό μέχρι το ποσό ΦΠΑ, ώστε quantity × unitCost, έκπτωση, καθαρή αξία, ΕΦΚ και ΦΠΑ να μπορούν να επαληθευτούν. Μην επαναλάβεις όλο το παραστατικό ως ξεχωριστό rawText ή lines. Μην παραλείψεις προϊόν επειδή μία αριθμητική στήλη είναι δύσκολη: κράτησε τη γραμμή και βάλε 0 μόνο στο πεδίο που πραγματικά δεν φαίνεται. Στο vatSummary αντέγραψε τις ορατές γραμμές της ΑΝΑΛΥΣΗΣ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ως rate, taxable, vat και gross.
 
 Για ΚΑΘΕ προϊόν ακολούθησε την ΙΔΙΑ ΟΡΙΖΟΝΤΙΑ ΣΕΙΡΑ από αριστερά προς τα δεξιά. Χαρτογράφηση: ΛΙΑΝΙΚΗ ΤΙΜΗ=retailPrice, ΠΟΣΟΤΗΤΑ=quantity, Μ.Μ.=unit, ΤΙΜΗ ΜΟΝΑΔΑΣ ΠΡΙΝ ΑΠΟ ΕΚΠΤΩΣΕΙΣ=unitCost, Εκπτ.1/2/3=discount1/2/3, αντίστοιχο ποσό έκπτωσης=discount1Amount/2Amount/3Amount, Καθ Αξία μετά την έκπτωση=netAmount, ΕΦΚ=exciseTotal, %ΦΠΑ=vatRate. Η φορολογητέα αξία είναι netAmount+exciseTotal. Η retailPrice είναι η τιμή πώλησης και ΔΕΝ είναι η unitCost. Μην αντικαθιστάς την αρχική unitCost με netAmount/quantity όταν φαίνονται εκπτώσεις. Αν δεν υπάρχει ορατή λιανική βάλε retailPrice=0. Αν υπάρχει τελική αξία με ΦΠΑ είναι grossAmount. Αριθμοί συσκευασίας (500ML, 6x330ml κ.λπ.) δεν είναι ποσότητα/τιμή. Αν unitCost δεν φαίνεται και δεν υπάρχουν εκπτώσεις αλλά quantity>0 και netAmount>0, unitCost=netAmount/quantity. Αν grossAmount δεν φαίνεται, υπολόγισέ το πάνω στη φορολογητέα αξία.
 
@@ -314,7 +316,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // source itself when a reader has shifted the numeric columns. This rule is
   // layout-based, applies to every supplier, and never reuses prior invoice
   // quantities or prices.
-  const printedDocumentText=[parsed.rawText,localRawText].filter(Boolean).join("\n");
+  let printedDocumentText=[parsed.rawText,localRawText,vatSummaryText(parsed.vatSummary)].filter(Boolean).join("\n");
   parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
   const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
   const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
@@ -325,7 +327,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   if(needsTablePass||inconsistentRows){
     failureStage="table-recheck";
     const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
-    const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα ΜΟΝΟ τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών, τράπεζες/IBAN, σύνολα και footer.
+    const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών και τράπεζες/IBAN. Στο rawText αντέγραψε ολόκληρη τη φυσική σειρά κάθε προϊόντος. Στο vatSummary αντέγραψε χωριστά μόνο τις γραμμές της ΑΝΑΛΥΣΗΣ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ως rate, taxable, vat και gross.
 
 Ο πρώτος έλεγχος βρήκε προσωρινά:\n${anchors||"(καμία ασφαλής γραμμή)"}
 
@@ -339,6 +341,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
         const tableParsed=JSON.parse(outputText(tablePayload));
         const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
         parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
+        if(Array.isArray(tableParsed.vatSummary)&&tableParsed.vatSummary.length){parsed.vatSummary=tableParsed.vatSummary;printedDocumentText=[printedDocumentText,vatSummaryText(tableParsed.vatSummary)].filter(Boolean).join("\n")}
         parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
       }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
       else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;parsed.tableRecheckError=`HTTP_${tableResponse.status}`}
@@ -404,20 +407,23 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // amount of a discount was mistaken for the original unit price.
   failureStage="discount-verification";
   const discountDiagnostics={accepted:0,rejectedMath:0};
+  const mantzilasInvoice=isMantzilasInvoice(parsed);
   for(const [pageIndex,page] of pageJobs.entries()){
     const unresolved=parsed.productLines.filter(line=>{
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
       const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
-      return !line.sourceColumnsVerified&&(pageJobs.length===1||line.sourceFileIndex===pageIndex)&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
+      return !line.sourceColumnsVerified&&(pageJobs.length===1||line.sourceFileIndex===pageIndex)&&q>0&&net>0&&(mantzilasInvoice||!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)continue;
     try{
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:mantzilasInvoice});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
+      if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
     }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
   }
   parsed.discountMathVerification=discountDiagnostics;
+  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(recoverMantzilasEconomics).map(applyMantzilasPackaging);
 
   const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=mixedPrintedVat.lines;

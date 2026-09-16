@@ -99,3 +99,13 @@
 - The correction makes the current printed unit authoritative (`TEM/TMX/FIA=1`, `4PK=4`, `KIB` only through the explicit MANTZILAS rules), derives any mapped-package discount only from the current row equation, rejects incompatible learned piece/package mappings, and preserves the full verified economic tuple during the trusted background save.
 - Targeted regression tests `48/48` and production build PASS. The first full suite run was `1277/1278` with one unrelated precision expectation exposed by the safer current-row discount derivation; rounding was aligned to the existing two-decimal discount contract and the focused regression then passed.
 - Status: **AWAITING CI and exact-revision POS-front LAB**. Delete the corrupted draft before retest. Do not refresh/reprocess or finalize that draft, and do not update stock.
+
+## MANTZILAS LAB failure after revision `38859181`
+
+- A clean POS-front read of invoice `12665` again returned all 18 rows and the correct taxable total `365.75 EUR`, but gross was `440.75 EUR` instead of the printed `429.27 EUR` (difference `11.48 EUR`).
+- The review exposed a current-image reading failure that ordinary arithmetic could not reject: code `00009` was read as quantity `2` with a fabricated `65.5%` discount, although the printed row is quantity `1` with `31%`; several VAT rates were also shifted to `24%` instead of the printed mixed `13%/24%` groups.
+- The focused current-document reread now requests the complete physical row (printed quantity, unit, original unit price and discount percent/amount pairs) and the printed VAT-summary rows. It replaces a self-consistent candidate only at confidence `>=85` and only when the complete current-row equation reproduces the already-read net amount.
+- Structured VAT-summary evidence from both full-table and focused rereads is fed into the existing exact mixed-VAT recovery. Rate allocation still requires the printed footer equations, exact taxable bases, invoice gross within `0.05 EUR`, and one unique minimum-change solution.
+- No historic quantity, price, discount or VAT value is supplied as authoritative evidence. No payment, credit, stock, approval, finalization, fiscal or accounting action is added.
+- Local verification: focused regressions `54/54`, complete server suite `1278/1278`, production build PASS.
+- Status: **LAB FAIL / AWAITING CI and exact Render deploy**. Delete only the corrupt unapproved draft before the next clean POS-front test; do not refresh/reprocess or finalize it, and do not post stock.

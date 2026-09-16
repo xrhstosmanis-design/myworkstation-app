@@ -116,7 +116,7 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 });
 
 test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
-  const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/;
+  const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,[^}]*reverifyAll:mantzilasInvoice\}\)/;
   assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=70000/);
   assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
   assert.match(aiRecheck,/CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000/);
@@ -246,7 +246,9 @@ test("Azure-derived net unit cost does not hide invoice discounts",async()=>{
   assert.match(azure,/azureUnitCostDerivedFromNet,azureSequence/);
   assert.match(verifier,/Number\(line\.unitCost\|\|0\)>0&&!line\.azureUnitCostDerivedFromNet/);
   assert.match(verifier,/originalUnitPrice/);
-  assert.match(verifier,/validationLine=originalUnitPrice>0/);
+  assert.match(verifier,/printedQuantity=safeAmount\(candidate\.printedQuantity\)/);
+  assert.match(verifier,/validationLine=\{\.\.\.line/);
+  assert.match(verifier,/originalUnitPrice>0/);
   assert.match(verifier,/line\.unitCost=originalUnitPrice/);
 });
 
@@ -305,6 +307,18 @@ test("printed original price restores a missing discount hidden inside net unit 
   assert.equal(productLines[0].discount1Amount,0.43);
   assert.equal(productLines[0].netAmount,2.41);
   assert.equal(result.rawEconomicsAccepted,1);
+});
+
+test("MANTZILAS focused reread replaces a self-consistent wrong quantity and returns printed VAT groups",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:1,printedUnit:"KIB",originalUnitPrice:19.55,discountPercent1:31,discountAmount1:6.06,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,confidence:99,evidence:"1 × 19,55 - 6,06 = 13,49"}],vatSummary:[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]})})});
+  try{
+    const productLines=[{code:"00009",description:"COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ",rawText:"00009 COCA COLA ZERO",quantity:2,invoiceQuantity:2,unit:"PACKAGE",invoiceUnit:"PACKAGE",unitCost:19.55,netAmount:13.49,discount1:65.5,discount1Amount:25.61,discount2:0,discount2Amount:0,discount3:0,discount3Amount:0}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true});
+    assert.equal(productLines[0].quantity,1);assert.equal(productLines[0].invoiceQuantity,1);assert.equal(productLines[0].unitCost,19.55);
+    assert.equal(productLines[0].discount1,31);assert.equal(productLines[0].discount1Amount,6.06);assert.equal(productLines[0].netAmount,13.49);
+    assert.deepEqual(result.vatSummary,[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]);
+  }finally{global.fetch=originalFetch}
 });
 
 test("V2.4.4 does not accept net value as the initial value when quantity times price disagrees",()=>{
