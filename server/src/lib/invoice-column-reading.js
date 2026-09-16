@@ -137,6 +137,35 @@ export function recoverPrintedRetailColumns(line,documentText){
     azureRawRow:raw,sourceColumnsVerified:true,supplierProfileRule:"PRINTED_RETAIL_UNIT_QUANTITY_COLUMNS"};
 }
 
+// A vision pass can preserve each printed line's final (gross) amount while
+// shifting the narrow VAT column to zero. Recover that VAT only when the
+// current document footer independently prints one canonical VAT summary and
+// both the footer equation and every reconstructed line total reconcile.
+export function recoverVatFromPrintedSummary(lines,documentText,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=round2(invoiceTotal);
+  if(!source.length||!(total>0)||source.some(line=>Number(line?.vatRate||0)>0))return {lines:source,recovered:false};
+  const currentGross=round2(source.reduce((sum,line)=>sum+Number(line?.grossAmount||line?.netAmount||0),0));
+  if(Math.abs(currentGross-total)>.05)return {lines:source,recovered:false};
+  const candidates=[];
+  const pattern=/(?:^|[^\d])(6|13|24)\s*%\s+(\d{1,7}(?:[.,]\d{2}))\s+(\d{1,7}(?:[.,]\d{2}))/gmi;
+  for(const match of String(documentText||"").matchAll(pattern)){
+    const rate=Number(match[1]),net=columnNumber(match[2]),tax=columnNumber(match[3]);
+    if(net>0&&tax>0&&Math.abs(net+tax-total)<=.05&&Math.abs(net*rate/100-tax)<=.05)candidates.push({rate,net:round2(net),tax:round2(tax)});
+  }
+  const unique=[...new Map(candidates.map(candidate=>[`${candidate.rate}:${candidate.net}:${candidate.tax}`,candidate])).values()];
+  if(unique.length!==1)return {lines:source,recovered:false};
+  const summary=unique[0];
+  const recovered=source.map(line=>{
+    const gross=round2(Number(line?.grossAmount||line?.netAmount||0)),net=round2(gross/(1+summary.rate/100));
+    return {...line,netAmount:net,netValue:net,netUnitCost:Number(line?.quantity||0)>0?round4(net/Number(line.quantity)):line?.netUnitCost,
+      vatRate:summary.rate,azureTax:round2(gross-net),grossAmount:gross,vatRecoveredFromPrintedSummary:true};
+  });
+  const recoveredNet=round2(recovered.reduce((sum,line)=>sum+Number(line.netAmount||0),0));
+  const recoveredTax=round2(recovered.reduce((sum,line)=>sum+Number(line.grossAmount||0)-Number(line.netAmount||0),0));
+  if(Math.abs(recoveredNet-summary.net)>.05||Math.abs(recoveredTax-summary.tax)>.05)return {lines:source,recovered:false};
+  return {lines:recovered,recovered:true,rate:summary.rate,net:summary.net,tax:summary.tax};
+}
+
 function headerRole(label){
   const key=columnKey(label);
   if(/ΛΙΑΝΙΚ|RETAIL|RRP/.test(key))return "retailPrice";

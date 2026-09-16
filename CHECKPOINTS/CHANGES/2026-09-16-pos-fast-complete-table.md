@@ -65,4 +65,12 @@
 - A BackOffice refresh while the first worker was finishing queued a successor. After the first worker completed the draft, the successor attempted `SAVE_PRODUCT_LINES` again and reported the false failure “Το τιμολόγιο έχει ήδη σταλεί για έλεγχο”.
 - A waiting successor now re-reads the durable job status after the active worker ends and stops when the invoice is already `AWAITING_APPROVAL` or `CONFIRMED`.
 - Status remains **LAB FAIL / OCR PASS, intake refresh FAIL**. The visible net total is still `74.25 EUR` instead of the printed `65.72 EUR`, so line economics remain unverified.
+
+## Printed VAT summary recovery
+
+- LAB showed that the 16 recovered rows preserved their final gross amounts but the narrow VAT column shifted to `0`, making net and gross both `74.25 EUR`.
+- The recovery now accepts a printed VAT footer only when its canonical rate, net and tax form an exact equation with the POS-confirmed invoice total.
+- It then converts the preserved line gross amounts back to net amounts and accepts the result only when the reconstructed line totals independently equal the same printed net `65.72 EUR` and VAT `8.53 EUR`.
+- Ambiguous summaries, mixed pre-existing VAT rates, or any total mismatch remain unchanged for review; no supplier-wide `13%` assumption is made.
+- Status: **AWAITING CI, exact deploy and POS-front LAB**.
 - Payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.
