@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {applyMantzilasPackaging,recoverMantzilasEconomics,extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
+import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -319,6 +319,20 @@ test('MANTZILAS printed economics recover discounts, excise, taxable value and V
   const invalid={description:'BAD',rawText:'14 | BAD | KIB | 1 | 1 | 21,75 | 21,75 | 17 | 8,49 | 18,05 | 6,86 | 24,91 | 24 | 5,98'};
   assert.equal(recoverMantzilasEconomics(invalid),invalid,'a shifted discount that breaks the printed equation must be rejected');
 });
+
+test('MANTZILAS mixed VAT footer uniquely repairs the three shifted rates and exact invoice total',()=>{
+  const bases=[24.91,19.38,9.60,16.29,26.98,13.49,34.51,45.60,26.40,6.82,5.80,17.55,32.40,11.00,23.09,28.80,11.13,12.00];
+  const correct=[24,24,24,24,13,13,13,13,13,13,13,13,13,13,24,24,24,24];
+  const shifted=[...correct];shifted[7]=24;shifted[8]=24;shifted[11]=0;
+  const lines=bases.map((base,index)=>({description:`ROW ${index+1}`,netAmount:base,exciseTotal:0,vatRate:shifted[index],grossAmount:roundForTest(base*(1+shifted[index]/100))}));
+  const footer='24 145,20 34,85 180,05\n13 220,55 28,67 249,22';
+  const result=recoverMixedVatFromPrintedSummary(lines,footer,429.27);
+  assert.equal(result.recovered,true);assert.deepEqual(result.lines.map(line=>line.vatRate),correct);
+  assert.equal(roundForTest(result.lines.reduce((sum,line)=>sum+line.grossAmount,0)),429.27);
+  assert.equal(recoverMixedVatFromPrintedSummary(lines,'24 145,20 34,00 179,20',429.27).recovered,false,'invalid footer math must not alter rows');
+});
+
+const roundForTest=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
 
 
 test('POS recheck anchors reconciliation to the linked draft total before restoring an omitted row',async()=>{
