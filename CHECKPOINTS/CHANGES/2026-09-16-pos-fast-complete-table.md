@@ -119,3 +119,12 @@
 - The result is fail-closed for the whole invoice: every current-image row must pass and the sum of all line gross amounts must equal the POS-confirmed `429.27 EUR` within `0.05 EUR`; otherwise all tentative replacements and VAT evidence are rolled back.
 - Local verification: focused regressions `56/56`, complete server suite `1281/1281`, production build PASS.
 - Status: **LAB FAIL / AWAITING CI and exact Render deploy**. Do not finalize, refresh/reprocess or post stock from the corrupt draft. After exact deploy, delete only that unapproved draft and perform one new POS-front read.
+
+## MANTZILAS row 6 follow-up after exact revision `5a145a4d`
+
+- Fresh POS-front LAB reached `AWAITING_APPROVAL / POS_BACKGROUND_COMPLETE` with all 18 rows, taxable `365.75 EUR` and gross `429.26 EUR` against printed `429.27 EUR`; the `0.01 EUR` difference passed the existing `0.05 EUR` reconciliation tolerance.
+- Operator review confirmed that only row 6, supplier code `00009`, remained wrong: it showed 48 stock pieces and `65.5%` instead of the current printed `1 KIB × 24 = 24` pieces, `31%`, discount `6.06 EUR` and net `13.49 EUR`.
+- Cause: after the successful current-image full-row proof, the final legacy raw-row recovery ran again and overwrote the newly verified quantity and discount with its earlier self-consistent wrong interpretation.
+- The bounded correction skips only that second economic recovery for rows already marked `AI_PRINTED_ROW_FULL_MATH_VERIFIED`; the existing packaging pass still applies the current `KIB × 24` conversion. All other rows and invoice economics retain their existing behavior.
+- Local verification: focused regressions `56/56`, complete server suite `1281/1281`, production build PASS.
+- Status: **LAB FAIL / AWAITING CI and exact Render deploy**. Do not finalize the current draft or post stock.

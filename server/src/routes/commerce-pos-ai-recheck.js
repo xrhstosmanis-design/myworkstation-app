@@ -425,7 +425,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
   }
   parsed.discountMathVerification=discountDiagnostics;
-  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(recoverMantzilasEconomics).map(applyMantzilasPackaging);
+  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>line.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
 
   const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=mixedPrintedVat.lines;

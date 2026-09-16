@@ -313,6 +313,9 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
   const carton={description:'ΝΕΡΟ ΒΙΚΟΣ 0,5LT',rawText:'046 | ΝΕΡΟ ΒΙΚΟΣ 0,5LT | KIB | 15 | 2,16 | 32,40',quantity:15,unitCost:2.16,netAmount:32.4};
   const once=applyMantzilasPackaging(carton),twice=applyMantzilasPackaging(once);
   assert.equal(twice.quantity,15);assert.equal(twice.invoiceQuantity,15);assert.equal(twice.stockUnitsPerInvoiceUnit,24);assert.equal(twice.supplierProfileEvidence.stockQuantity,360);
+  const currentImageRow={description:'COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ',rawText:'00009 | COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ | KIB | 2 | 2 | 19,55 | 39,10 | 65,5 | 25,61 | 13,49',quantity:1,invoiceQuantity:1,unitCost:19.55,initialAmount:19.55,discount1:31,discount1Amount:6.06,netAmount:13.49,invoiceUnit:'KIB',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED'};
+  const preserved=applyMantzilasPackaging(currentImageRow);
+  assert.equal(preserved.quantity,1);assert.equal(preserved.stockUnitsPerInvoiceUnit,24);assert.equal(preserved.supplierProfileEvidence.stockQuantity,24);assert.equal(preserved.discount1,31);assert.equal(preserved.netAmount,13.49);
 });
 
 test('MANTZILAS printed economics recover discounts, excise, taxable value and VAT only from balanced rows',()=>{

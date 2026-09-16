@@ -1423,3 +1423,13 @@ Total output lines: 1413
 - [x] Payment, credit, draft identity, stock, approval, finalization, fiscal, accounting and Invoice Learning behavior remain unchanged.
 - [ ] AWAITING green CI, exact Render revision and one new POS-front LAB after deletion of only the corrupt unapproved draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS row 6 verified-result preservation
+
+- [x] LAB after exact revision `5a145a4d`: 18 rows and totals `365.75 / 429.26 EUR` passed reconciliation, but only row 6 (`00009`) remained wrong at 48 pieces / `65.5%`.
+- [x] Preserve the successful current-image result for that row (`1 KIB`, `31%`, `6.06 EUR`, net `13.49 EUR`) instead of running the stale raw-row economic recovery a second time.
+- [x] Keep the existing packaging pass so `1 KIB × 24 = 24` stock pieces; do not change the other 17 operator-confirmed rows.
+- [x] Focused tests `56/56`, full server suite `1281/1281`, production build PASS locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal, accounting or Invoice Learning change.
+- [ ] AWAITING green CI, exact Render revision and one new POS-front LAB; current draft must not be finalized or posted.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
