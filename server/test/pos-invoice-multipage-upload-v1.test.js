@@ -132,6 +132,13 @@ test("OpenAI full-table fallback outlives an exhausted Azure F0 request",()=>{
   assert.ok(wrapper.indexOf("INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000")<wrapper.indexOf("function internalCommerceRequest"));
 });
 
+test("full-table OCR uses the bounded vision model instead of the general reasoning model",()=>{
+  assert.match(aiRecheck,/const FULL_OCR_MODEL=process\.env\.OPENAI_INVOICE_FULL_MODEL\|\|process\.env\.OPENAI_INVOICE_FAST_MODEL\|\|"gpt-5-mini"/);
+  assert.match(aiRecheck,/model:FULL_OCR_MODEL,input:/);
+  assert.match(aiRecheck,/verifyInvoiceDiscounts\(\{[^}]*model:FULL_OCR_MODEL/s);
+  assert.doesNotMatch(aiRecheck,/model:process\.env\.OPENAI_INVOICE_MODEL\|\|"gpt-5"/);
+});
+
 test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{
   assert.match(aiRecheck,/const providerErrorText=error=>/);
   assert.match(aiRecheck,/timeout\?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"/);
