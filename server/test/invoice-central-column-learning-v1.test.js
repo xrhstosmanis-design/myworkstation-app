@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {applyMantzilasPackaging,extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
+import {applyMantzilasPackaging,recoverMantzilasEconomics,extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -307,6 +307,17 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
   }
   const alreadyPieces={description:'RED BULL 0,25LT',unit:'TEM',quantity:48,unitCost:.95,netAmount:45.6};
   assert.equal(applyMantzilasPackaging(alreadyPieces),alreadyPieces,'printed pieces must never be converted twice');
+});
+
+test('MANTZILAS printed economics recover discounts, excise, taxable value and VAT only from balanced rows',()=>{
+  const pils=recoverMantzilasEconomics({description:'PILS 0,5LT 4PACK',rawText:'0168 | PILS 0,5LT 4PACK | 4PK | 3 | 3,20 | 9,60 | 0 | 0,00 | 9,60 | 0,00 | 9,60 | 24 | 2,30'});
+  assert.deepEqual({quantity:pils.quantity,unitCost:pils.unitCost,discount:pils.discount1,net:pils.netAmount,excise:pils.exciseTotal,taxable:pils.taxableAmount,vat:pils.vatRate,vatAmount:pils.vatAmount,gross:pils.grossAmount},
+    {quantity:3,unitCost:3.2,discount:0,net:9.6,excise:0,taxable:9.6,vat:24,vatAmount:2.3,gross:11.9});
+  const mythos=recoverMantzilasEconomics({description:'MYTHOS ICE BEER ΦΙΑΛΗ 24/330 ML',rawText:'1142 | MYTHOS ICE BEER ΦΙΑΛΗ 24/330 ML | KIB | 1 | 1 | 22,85 | 22,85 | 17 | 3,88 | 18,97 | 4,12 | 23,09 | 24 | 5,55'});
+  assert.deepEqual({quantity:mythos.quantity,unitCost:mythos.unitCost,discount:mythos.discount1,discountAmount:mythos.discount1Amount,net:mythos.netAmount,excise:mythos.exciseTotal,taxable:mythos.taxableAmount,vatAmount:mythos.vatAmount,gross:mythos.grossAmount},
+    {quantity:1,unitCost:22.85,discount:17,discountAmount:3.88,net:18.97,excise:4.12,taxable:23.09,vatAmount:5.55,gross:28.64});
+  const invalid={description:'BAD',rawText:'14 | BAD | KIB | 1 | 1 | 21,75 | 21,75 | 17 | 8,49 | 18,05 | 6,86 | 24,91 | 24 | 5,98'};
+  assert.equal(recoverMantzilasEconomics(invalid),invalid,'a shifted discount that breaks the printed equation must be rejected');
 });
 
 

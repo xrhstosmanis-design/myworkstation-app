@@ -82,4 +82,6 @@
 - The first bounded learning change covers packaging only: `4PK=4`, water `500ml=24`, `750ml=12`, `1L=6`, `1.5L=6`, bottle case `500ml=20`, other case `500ml=24`, and case `330ml=24`.
 - Invoice quantity and package price remain the immutable invoice economics; stock quantity and the visible per-piece price are derived exactly once from the learned multiplier. Existing pieces are never converted again.
 - Discount, excise, taxable-value and mixed-VAT column recovery remains a separate next change. No stock, payment, credit, approval, finalization, fiscal or accounting action is added.
-- Status: **AWAITING full tests, CI, exact deploy and a new POS-front LAB invoice**.
+- Packaging status: PR #910 / CI #2370 merged and exact Render revision `d5b230108098dd4ff049c483ec10f2ccf8c26ec7` verified; **LAB NOT TESTED** for this revision.
+- Active bounded economics change: parse only the current physical row and accept quantity, original unit price, discount percent/amount, net after discount, EFK, taxable value, VAT rate/amount and gross only when `quantity × price = initial`, `initial − discount = net`, `net + EFK = taxable` and `taxable × VAT = VAT amount` all reconcile. The saved order keeps EFK separate while its displayed value without VAT is the taxable value.
+- No stock, payment, credit, approval, finalization, fiscal or accounting action is added. Active change is **LAB NOT TESTED** until tests, CI, merge and exact deploy complete.
