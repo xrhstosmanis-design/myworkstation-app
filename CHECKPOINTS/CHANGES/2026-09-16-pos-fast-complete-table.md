@@ -84,4 +84,6 @@
 - Discount, excise, taxable-value and mixed-VAT column recovery remains a separate next change. No stock, payment, credit, approval, finalization, fiscal or accounting action is added.
 - Packaging status: PR #910 / CI #2370 merged and exact Render revision `d5b230108098dd4ff049c483ec10f2ccf8c26ec7` verified; **LAB NOT TESTED** for this revision.
 - Active bounded economics change: parse only the current physical row and accept quantity, original unit price, discount percent/amount, net after discount, EFK, taxable value, VAT rate/amount and gross only when `quantity × price = initial`, `initial − discount = net`, `net + EFK = taxable` and `taxable × VAT = VAT amount` all reconcile. The saved order keeps EFK separate while its displayed value without VAT is the taxable value.
-- No stock, payment, credit, approval, finalization, fiscal or accounting action is added. Active change is **LAB NOT TESTED** until tests, CI, merge and exact deploy complete.
+- No stock, payment, credit, approval, finalization, fiscal or accounting action is added.
+- Economics status: PR #911, CI #2372 and exact Render revision `db195844948c1de5aa9db1b7a70faff51db82c18` verified; server tests `1277/1277` and production build PASS. **LAB NOT TESTED**.
+- Exact next step: perform one fresh POS-front MANTZILAS read (not a refresh of the old stored lines) and verify 18 rows, taxable `365.75 EUR`, VAT `63.52 EUR`, gross `429.27 EUR`, discounts, EFK, stock quantities and per-piece prices. Do not finalize or update stock.

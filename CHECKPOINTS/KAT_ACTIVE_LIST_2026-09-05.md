@@ -18,7 +18,8 @@
 - [ ] Printed VAT footer recovery: repair gross-as-net rows only when the footer equation and independently reconstructed line totals both match net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`; awaiting tests, CI, exact deploy and POS-front LAB.
 - [x] POS-front LAB invoice `12665`: green operator success and 18 rows are LAB PASS; economics are LAB FAIL (`352.39 / 425.39 EUR` instead of `365.75 / 429.27 EUR`), with EFK and some discounts shifted. Do not finalize.
 - [x] MANTZILAS packaging learning: PR #910, CI #2370 and exact Render revision `d5b230108098dd4ff049c483ec10f2ccf8c26ec7`; `4PK=4`, water `500ml=24`, `750ml=12`, `1L=6`, `1.5L=6`, bottle case `500ml=20`, other case `500ml=24`, case `330ml=24`. LAB remains NOT TESTED for this revision.
-- [ ] MANTZILAS economics: recover discount, EFK, taxable value, VAT and gross only when every printed row equation balances; preserve invoice/stock/finalization boundaries. Implementation under test; LAB NOT TESTED.
+- [x] MANTZILAS economics implementation: PR #911, CI #2372 and exact Render revision `db195844948c1de5aa9db1b7a70faff51db82c18`; recover discount, EFK, taxable value, VAT and gross only when every printed row equation balances. LAB remains NOT TESTED.
+- [ ] POS-front LAB with a fresh MANTZILAS read: verify 18 rows, printed discounts/EFK, taxable `365.75 EUR`, VAT `63.52 EUR`, gross `429.27 EUR`, package stock quantities and piece prices. Do not finalize or post stock.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
 
 ## 2026-09-16 — POS FAST header durable reuse
