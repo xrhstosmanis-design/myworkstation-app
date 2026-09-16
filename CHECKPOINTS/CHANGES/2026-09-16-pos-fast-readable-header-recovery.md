@@ -22,5 +22,7 @@
 ## Required validation
 
 - Targeted FAST header and durable handoff tests, full server tests and client/server builds must pass.
-- CI PASS is not LAB PASS.
-- After exact deployed-revision verification, LAB must retry this one STEFANIDIS image once and verify only supplier, invoice number, invoice date and `76.58 EUR`; do not submit payment or credit.
+- PR `#893`, main commit `492af013`, CI `#2335` and Render deploy `#1193`: PASS.
+- **LAB PASS:** after exact deployment, the same one-page STEFANIDIS image returned supplier `ΑΦΟΙ Ι ΣΤΕΦΑΝΙΔΗ ΑΕ` / ΑΦΜ `997763585`, invoice number `43243`, date `20/08/2026` and total `76.58 EUR`.
+- The operator did not press paid, credit or submit; this PASS certifies only the four pre-payment fields.
+- Product-line reading, draft creation, payment, stock and finalization remain untested by this checkpoint.

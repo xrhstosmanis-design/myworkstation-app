@@ -1296,5 +1296,7 @@ Total output lines: 1413
 - [x] LAB FAIL: a clear single-page STEFANIDIS invoice returned none of the four basic fields; the safe failure correctly made no payment.
 - [x] The fallback now receives invoice images at high detail and shares one bounded 50-second deadline after a bounded 20-second Azure attempt.
 - [x] No payment, credit, draft, stock, approval, finalization or fiscal behavior changes.
-- [ ] AWAITING CI, exact deploy verification and one LAB retry of the same image without submitting payment or credit.
+- [x] PR `#893`, main `492af013`, CI `#2335` and Render deploy `#1193`: PASS.
+- [x] LAB PASS / four fields only: STEFANIDIS `997763585`, invoice `43243`, `20/08/2026`, `76.58 EUR`; no paid/credit/submit action was pressed.
+- [ ] Product lines, draft creation, payment, stock and finalization are not certified by this checkpoint.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-readable-header-recovery.md`.
