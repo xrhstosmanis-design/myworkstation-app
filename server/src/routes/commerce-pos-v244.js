@@ -13,6 +13,7 @@ const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
+const POS_STORED_LINES_TOLERANCE=0.05;
 const POS_REPROCESS_STRATEGY="SINGLE_STOCK_CONVERSION_V8";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
@@ -95,10 +96,26 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
       for(const [attempt,delay] of FAST_BACKGROUND_RETRY_DELAYS_MS.entries()){
         if(delay)await wait(delay);
         try{
-          let sourceLines,previousLines=[];
-          if(handoff.resumeStoredProductLines){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;sourceLines=rows[0]?.resultJson?.productLines;previousLines=Array.isArray(sourceLines)?sourceLines:[]}
+          let sourceLines,previousLines=[],usingStoredProductLines=false;
+          if(!handoff.replaceExistingDraft){
+            const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
+            const storedLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];
+            const storedReconciliation=reconcileInvoiceLines(finalizeV244ProductLines(storedLines),handoff.totalGross);
+            const storedDifference=round2(Math.abs(storedReconciliation.grossTotal-Number(handoff.totalGross||0)));
+            // Old POS handoffs did not always persist the resume flag. Reuse
+            // their table only when its own arithmetic proves that it belongs
+            // to the operator-confirmed invoice total.
+            if(handoff.resumeStoredProductLines||(storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)){sourceLines=storedLines;usingStoredProductLines=true}
+            previousLines=storedLines;
+          }
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];sourceLines=null}
           if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
+          // A repeated POS intake can legitimately reuse the same failed job
+          // after its draft was deleted. In that case the browser may send
+          // only the four FAST header fields, while the durable job still has
+          // the complete table. Verify that stored table again before reuse so
+          // it neither calls unavailable providers nor loses printed discounts.
+          if(usingStoredProductLines&&Array.isArray(sourceLines)&&sourceLines.length)await verifyInvoiceDiscounts({productLines:sourceLines,apiKey:null});
           const productLines=finalizeV244ProductLines(Array.isArray(sourceLines)?sourceLines:[]);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){

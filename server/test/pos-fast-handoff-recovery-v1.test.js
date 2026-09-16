@@ -41,6 +41,16 @@ test("immediate POS worker receives the complete cached-line handoff",()=>{
   assert.match(body,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\),companyId,jobId,pageJobIds,handoff,publicOrigin\}\)/);
 });
 
+test("a repeated POS intake reuses and re-verifies durable cached lines without provider OCR",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(worker,/storedDifference<=POS_STORED_LINES_TOLERANCE/);
+  assert.match(worker,/usingStoredProductLines=true/);
+  assert.match(worker,/if\(usingStoredProductLines&&Array\.isArray\(sourceLines\)&&sourceLines\.length\)await verifyInvoiceDiscounts\(\{productLines:sourceLines,apiKey:null\}\)/);
+  assert.ok(worker.indexOf("verifyInvoiceDiscounts({productLines:sourceLines")<worker.indexOf("const productLines=finalizeV244ProductLines"));
+});
+
 test("background OCR falls back to the public Render origin when loopback fails",()=>{
   assert.match(route,/const origins=\[localOrigin,.+publicOrigin/);
   assert.match(route,/publicOrigin,method:"POST",body:\{force:true/);
