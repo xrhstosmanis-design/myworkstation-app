@@ -29,3 +29,11 @@
 3. For invoice `27293`, the same draft must automatically reach 16 product rows, quantity 47, net `65.72 EUR`, VAT `8.53 EUR` and gross `74.25 EUR`.
 4. Compare the printed line quantities, original unit prices and discounts before any approval.
 5. Do not approve, finalize or update stock during this diagnostic test.
+
+## LAB follow-up after revision `83255307`
+
+- A clean POS-front rerun of `27293` again reached `POS_PROCESSING / POS_BACKGROUND` with zero items and `0.00 EUR` values.
+- Root cause in the deployed path: Azure returned a useful header and the route returned it immediately even when Azure supplied no complete reconciled product table. Therefore the new OpenAI FAST table schema was never called.
+- Follow-up correction: Azure returns immediately only when its own product table reconciles to the invoice total within `0.05 EUR`. A useful header with empty/partial rows is retained as a safe header fallback while the existing FAST OpenAI call reads the table.
+- If OpenAI fails, the already-read Azure header is still returned, preserving the four-field behavior and fail-closed background path.
+- Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Payment, draft identity, stock, approval, finalization and fiscal boundaries remain unchanged.

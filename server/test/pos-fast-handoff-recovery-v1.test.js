@@ -37,10 +37,21 @@ test("complete FAST product lines recover printed discounts before bypassing ful
 test("OpenAI FAST captures a complete table once and only forwards rows that reconcile",()=>{
   assert.match(route,/productLines:\{type:"array",maxItems:500/);
   assert.match(route,/Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=\[\]/);
-  assert.match(route,/const candidateProductLines=finalizeV244ProductLines/);
-  assert.match(route,/reconcileInvoiceLines\(candidateProductLines,totalGross\)/);
-  assert.match(route,/const productLines=candidateDifference<=POS_STORED_LINES_TOLERANCE\?candidateProductLines:\[\]/);
-  assert.ok(route.indexOf("candidateDifference<=POS_STORED_LINES_TOLERANCE")<route.indexOf("res.json({",route.indexOf("candidateDifference<=POS_STORED_LINES_TOLERANCE")));
+  assert.match(route,/const reconciledFastProductLines=/);
+  assert.match(route,/reconcileInvoiceLines\(productLines,totalGross\)/);
+  assert.match(route,/return difference<=POS_STORED_LINES_TOLERANCE\?productLines:\[\]/);
+  assert.match(route,/const productLines=reconciledFastProductLines\(parsed\.productLines,totalGross\)/);
+});
+
+test("a useful Azure header with an incomplete table continues through FAST OpenAI",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-header"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-duplicate-check"',start));
+  assert.match(body,/let azureHeaderFallback=null/);
+  assert.match(body,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
+  assert.match(body,/if\(azureHasUsefulHeader&&azureProductLines\.length\)return res\.json\(azureHeader\)/);
+  assert.match(body,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
+  assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart})"));
+  assert.match(body,/catch\(error\)\{if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);
 });
 
 test("fast handoff hydrates an empty newest job from the matching exact-file durable table",()=>{
