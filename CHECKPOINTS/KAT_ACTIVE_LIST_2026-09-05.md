@@ -1300,3 +1300,10 @@ Total output lines: 1413
 - [x] LAB PASS / four fields only: STEFANIDIS `997763585`, invoice `43243`, `20/08/2026`, `76.58 EUR`; no paid/credit/submit action was pressed.
 - [ ] Product lines, draft creation, payment, stock and finalization are not certified by this checkpoint.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-readable-header-recovery.md`.
+## 2026-09-16 — STEFANIDIS hidden discount recovery
+
+- [x] LAB FAIL: invoice `43243` line `340061124` stored `1.205 EUR` with `0%` instead of printed original price `1.420 EUR`, `15%` / `0.43 EUR`, net `2.41 EUR`.
+- [x] Raw-row recovery now runs on missing-discount lines even when a net-derived unit cost is present, but changes values only when the full printed arithmetic proves them.
+- [x] No existing draft, payment, stock, approval, finalization, fiscal or learning mutation.
+- [ ] AWAITING tests, CI, exact deploy and one clean POS rerun after safe deletion of only the unapproved test draft/source.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-stefanidis-hidden-discount-recovery.md`.
