@@ -109,3 +109,13 @@
 - No historic quantity, price, discount or VAT value is supplied as authoritative evidence. No payment, credit, stock, approval, finalization, fiscal or accounting action is added.
 - Local verification: focused regressions `54/54`, complete server suite `1278/1278`, production build PASS.
 - Status: **LAB FAIL / AWAITING CI and exact Render deploy**. Delete only the corrupt unapproved draft before the next clean POS-front test; do not refresh/reprocess or finalize it, and do not post stock.
+
+## MANTZILAS LAB failure after exact revision `ef2e3d96`
+
+- A fresh POS-front read of invoice `12665` returned 18 rows but saved net `324.61 EUR` and gross `393.26 EUR`, versus printed taxable `365.75 EUR`, VAT `63.52 EUR` and gross `429.27 EUR`.
+- Code `00009` was duplicated to 48 pieces and `26.98 EUR` net instead of the current printed 24 pieces and `13.49 EUR`; RED BULL code `11` received an invented `45.6%` discount although the printed row has no discount and net `45.60 EUR`.
+- The earlier focused verifier still treated the already-wrong net as its target, required at least one discount pair, and supplied existing numeric guesses beside the current image. A self-consistent hallucinated row could therefore pass without proving the complete invoice.
+- The current-image verifier now rereads the full physical numeric chain for every one of the 18 rows without old quantity, price, discount, net or VAT hints. It accepts zero-discount rows, requires quantity × original price = initial, initial − discounts = net, net + EFK = taxable, taxable × VAT = VAT amount and taxable + VAT = gross.
+- The result is fail-closed for the whole invoice: every current-image row must pass and the sum of all line gross amounts must equal the POS-confirmed `429.27 EUR` within `0.05 EUR`; otherwise all tentative replacements and VAT evidence are rolled back.
+- Local verification: focused regressions `56/56`, complete server suite `1281/1281`, production build PASS.
+- Status: **LAB FAIL / AWAITING CI and exact Render deploy**. Do not finalize, refresh/reprocess or post stock from the corrupt draft. After exact deploy, delete only that unapproved draft and perform one new POS-front read.
