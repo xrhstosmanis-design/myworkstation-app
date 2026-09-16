@@ -356,6 +356,23 @@ function normalizeAzure(payload){
   return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",documentType:detectInvoiceDocumentType(documentText),aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
+function invoiceLineGross(line){
+  const explicit=Math.max(0,Number(line?.grossAmount||0));
+  if(explicit>0)return explicit;
+  const net=Math.max(0,Number(line?.netAmount||0)),vat=Math.max(0,Number(line?.vatRate||0));
+  return net>0?net*(1+vat/100):0;
+}
+
+export function invoiceReadingCompleteness(result){
+  const lines=Array.isArray(result?.productLines)?result.productLines:[];
+  if(!lines.length)return {complete:false,reason:"NO_PRODUCT_LINES",lineGross:0,totalGross:Math.max(0,Number(result?.totalGross||0)),difference:null};
+  const totalGross=Math.max(0,Number(result?.totalGross||0));
+  const lineGross=money4(lines.reduce((sum,line)=>sum+invoiceLineGross(line),0));
+  if(!(totalGross>0)||!(lineGross>0))return {complete:true,reason:"TOTAL_NOT_AVAILABLE",lineGross,totalGross,difference:null};
+  const difference=money4(Math.abs(totalGross-lineGross)),tolerance=.05;
+  return {complete:difference<=tolerance,reason:difference<=tolerance?"RECONCILED":"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference};
+}
+
 function learnedScore(line,k){
   const c=norm(line.supplierItemCode),kc=norm(k.supplierItemCode);if(c&&kc&&c===kc)return 1000;
   const d=norm(line.description),kd=norm(k.description);if(!d||!kd)return 0;if(d===kd)return 900;if(d.includes(kd)||kd.includes(d))return 700;
@@ -397,39 +414,43 @@ router.get("/invoice-learning/mobile-upload-sessions/:id",(req,res)=>{
   res.json(upload.dataUrl?{status:"READY",dataUrl:upload.dataUrl,filename:upload.filename,mimeType:upload.mimeType}:{status:"WAITING"});
 });
 
-router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
+router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),azureState:azureConfigured()?"READY":"NOT_CONFIGURED",openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  let azureFailure="";
+  let azureFailure="",azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
       azure=await applyLearnedKnowledge(azure);
-      if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)
-    }catch(error){azureFailure=String(error?.message||error);console.error("Azure Invoice Learning fallback:",azureFailure)}
+      const completeness=invoiceReadingCompleteness(azure);
+      if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
+      azureFailure=completeness.reason;azureState="NO_SAFE_RESULT";
+      console.warn("Azure Invoice Learning incomplete result; falling back to OpenAI.",{reason:completeness.reason,lineGross:completeness.lineGross,totalGross:completeness.totalGross,difference:completeness.difference});
+    }catch(error){azureFailure=String(error?.message||error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning fallback:",azureFailure)}
   }
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED",azureState});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
   const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος/κείμενο γράφει Πιστωτικό, Πιστ. Τιμ., Επιστροφή ή Credit Note· αλλιώς INVOICE. Μην συμπεραίνεις πιστωτικό από το πρόσημο ποσών. Διάβασε τον πίνακα ειδών γραμμή-γραμμή: κάθε ορατή γραμμή προϊόντος πρέπει να γίνει ένα ξεχωριστό productLines στοιχείο, ακόμη και αν έχει ίδιο κωδικό/περιγραφή με άλλη γραμμή. Μην επιστρέψεις κενό productLines όταν βλέπεις πίνακα ειδών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
   const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
-  let response=await callOpenAiFallback(false),raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
+  let response=await callOpenAiFallback(false),raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR",azureState});
   let text=outputText(raw);
-  if(!text){response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR"});text=outputText(raw)}
-  if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE"});
+  if(!text){response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});text=outputText(raw)}
+  if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE",azureState});
   let result;try{result=JSON.parse(text)}catch{
     response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));
-    if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR"});
-    text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE"})};
+    if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});
+    text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
-  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
-  res.json(result);
+  const completeness=invoiceReadingCompleteness(result);
+  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
+  if(!completeness.complete)return res.status(422).json({error:`Η ανάγνωση βρήκε μόνο μέρος του τιμολογίου (${completeness.lineGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} € από ${completeness.totalGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} €). Δεν δημιουργήθηκε μερικό πρόχειρο.`,code:"PARTIAL_PRODUCT_LINES",azureState,completeness});
+  res.json({...result,azureState,completeness});
 }catch(error){next(error)}});
 
 export default router;
-
