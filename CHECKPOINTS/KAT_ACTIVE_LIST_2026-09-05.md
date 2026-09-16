@@ -1,3 +1,12 @@
+## 2026-09-16 — POS durable cached-line recovery
+
+- [x] LAB FAIL: POS invoice `43243` reused its payment but stayed at zero lines and failed at `POS_BACKGROUND_AI_RECHECK` after OpenAI timeout and Azure F0 quota `403`.
+- [x] Root cause: the reused durable job retained sixteen product lines, but the new four-field browser handoff set `resumeStoredProductLines=false` and forced provider OCR.
+- [x] Bounded fix: reuse the exact job's stored table only when its gross total matches the confirmed invoice total within `0.05 EUR`, then rerun deterministic discount verification without a provider.
+- [x] Existing payment, draft-only flow, stock, approval, finalization and fiscal behavior remain unchanged.
+- [ ] AWAITING CI, exact deploy verification and POS-front LAB recovery: sixteen lines, no new payment/provider failure, row `340061124 = 2 × 1.420`, discount `15% / 0.43`, net `2.41`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-durable-lines-recovery.md`.
+
 ## 2026-09-16 — Invoice Learning unified Azure recovery
 
 - [x] LAB FAIL reconciled: Coffee Union returned one line / `82.72 EUR` gross instead of seven lines / approximately `1,380.44 EUR`.
