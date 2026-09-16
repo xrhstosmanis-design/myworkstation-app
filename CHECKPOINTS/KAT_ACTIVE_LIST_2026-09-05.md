@@ -1,5 +1,8 @@
 ## 2026-09-16 — POS FAST complete-table handoff
 
+- [x] LAB follow-up after `83255307`: `27293` again remained `POS_PROCESSING` with zero rows because a useful Azure header returned before the OpenAI FAST table reader was called.
+- [x] Follow-up correction: Azure may finish FAST by itself only with a complete table reconciled within `0.05 EUR`; otherwise its header is preserved while OpenAI FAST reads the table.
+- [x] If OpenAI fails, the safe Azure header still survives; no payment, stock, approval, finalization or fiscal behavior changes.
 - [x] LAB FAIL: new POS-front invoice `27293` kept the correct four header fields but remained `POS_PROCESSING` with zero items after more than two minutes and refresh.
 - [x] Root cause: the successful OpenAI FAST request was instructed to discard products, forcing a second full-table request after Azure F0 quota rejection.
 - [x] Bounded change: the same FAST response may carry the complete table, but rows bypass background OCR only when their gross sum reconciles to the invoice total within `0.05 EUR`.

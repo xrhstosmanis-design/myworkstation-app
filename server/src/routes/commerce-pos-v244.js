@@ -230,6 +230,12 @@ const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
   totalGross:{type:"number",minimum:0},
   productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:fastProductLineProperties,required:fastProductLineRequired}}
 },required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross","productLines"]};
+const reconciledFastProductLines=(lines,totalGross)=>{
+  const productLines=finalizeV244ProductLines(Array.isArray(lines)?lines:[]).slice(0,500);
+  if(!productLines.length||!(Number(totalGross)>0))return [];
+  const difference=round2(Math.abs(reconcileInvoiceLines(productLines,totalGross).grossTotal-Number(totalGross)));
+  return difference<=POS_STORED_LINES_TOLERANCE?productLines:[];
+};
 
 router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>{
   res.json({enabled:true,moduleKey:"AI_READER"});
@@ -271,15 +277,19 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,provider:"DURABLE_POS_JOB",productLines});
     }
+    let azureHeaderFallback=null;
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:Number(parsed.totalGross||0),provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:Array.isArray(parsed.productLines)?parsed.productLines:[]};
+        const azureTotalGross=round2(parsed.totalGross||0);
+        const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
-        if(azureHasUsefulHeader)return res.json(azureHeader);
+        if(azureHasUsefulHeader&&azureProductLines.length)return res.json(azureHeader);
+        if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
-        if(!process.env.OPENAI_API_KEY){const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
       }catch(error){
         if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
         console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
@@ -302,25 +312,28 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 Επιπλέον, στο productLines επέστρεψε ΟΛΕΣ τις πραγματικές γραμμές ειδών που φαίνονται στον πίνακα, μία φορά και στην έντυπη σειρά. Μην επιστρέψεις κεφαλίδες, στοιχεία εταιρειών, σύνολα ή footer. Για κάθε γραμμή διάβασε οριζόντια: κωδικό, περιγραφή, ποσότητα, μονάδα, αρχική τιμή μονάδας, λιανική, εκπτώσεις 1/2/3 με τα ποσά τους, καθαρή αξία, ΦΠΑ και τελική αξία με ΦΠΑ. Μην αντικαθιστάς την αρχική unitCost με netAmount/quantity όταν φαίνεται έκπτωση. Αν grossAmount δεν τυπώνεται αλλά φαίνονται netAmount και vatRate, υπολόγισέ το. Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=[]· μην επιστρέψεις μερικό πίνακα.
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
-    const parsed=await callFastOpenAiHeader({prompt,filePart});
-    const supplier=await matchSupplier(req.user.companyId,{name:parsed.supplierName,taxId:parsed.supplierTaxId});
-    const documentNumber=String(parsed.documentNumber||"").trim();
-    const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"";
-    const totalGross=round2(parsed.totalGross||0);
-    const candidateProductLines=finalizeV244ProductLines(Array.isArray(parsed.productLines)?parsed.productLines:[]).slice(0,500);
-    const candidateDifference=candidateProductLines.length&&totalGross>0
-      ?round2(Math.abs(reconcileInvoiceLines(candidateProductLines,totalGross).grossTotal-totalGross))
-      :Number.POSITIVE_INFINITY;
+    let parsed;
+    try{parsed=await callFastOpenAiHeader({prompt,filePart})}
+    catch(error){if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
+    const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
+    const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
+    const supplier=await matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId});
+    const parsedDocumentNumber=String(parsed.documentNumber||"").trim();
+    const documentNumber=/\d/.test(parsedDocumentNumber)?parsedDocumentNumber:String(azureHeaderFallback?.documentNumber||"");
+    const parsedDocumentDate=String(parsed.documentDate||"");
+    const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(parsedDocumentDate)?parsedDocumentDate:String(azureHeaderFallback?.documentDate||"");
+    const parsedTotalGross=round2(parsed.totalGross||0);
+    const totalGross=parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background
     // path remains authoritative.
-    const productLines=candidateDifference<=POS_STORED_LINES_TOLERANCE?candidateProductLines:[];
+    const productLines=reconciledFastProductLines(parsed.productLines,totalGross);
     res.json({
       confidence:Number(parsed.confidence||0),
       supplierId:supplier?.id||"",
-      supplierName:supplier?.name||String(parsed.supplierName||""),
-      supplierTaxId:supplier?.taxId||String(parsed.supplierTaxId||""),
+      supplierName:supplier?.name||supplierName,
+      supplierTaxId:supplier?.taxId||supplierTaxId,
       documentNumber:/\d/.test(documentNumber)?documentNumber:"",
       documentDate,
       totalGross:totalGross>0?totalGross:0,
