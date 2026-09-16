@@ -291,6 +291,7 @@ test('printed VAT footer repairs gross-as-net rows only when every total reconci
 test('MANTZILAS learned packs convert stock quantity and piece price without changing invoice economics',()=>{
   const cases=[
     [{description:'PILS 0,5LT 4PACK',unit:'4PK',quantity:3,unitCost:3.2,netAmount:9.6},4,12,.8,'MANTZILAS_4PACK'],
+    [{description:'FANTA 0,33LT 6PACK',unit:'6PK',quantity:2,unitCost:4.2,netAmount:5.8},6,12,.7,'MANTZILAS_6PACK'],
     [{description:'ΝΕΡΟ ΒΙΚΟΣ 0,5LT',unit:'ΚΙΒ',quantity:15,unitCost:2.16,netAmount:32.4},24,360,.09,'MANTZILAS_WATER_500ML'],
     [{description:'ΝΕΡΟ 750ML',unit:'ΚΙΒ',quantity:2,unitCost:5,netAmount:10},12,24,5/12,'MANTZILAS_WATER_750ML'],
     [{description:'ΝΕΡΟ 1LT',unit:'ΚΙΒ',quantity:2,unitCost:6,netAmount:12},6,12,1,'MANTZILAS_WATER_1000ML'],
@@ -307,6 +308,12 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
   }
   const alreadyPieces={description:'RED BULL 0,25LT',unit:'TEM',quantity:48,unitCost:.95,netAmount:45.6};
   assert.equal(applyMantzilasPackaging(alreadyPieces),alreadyPieces,'printed pieces must never be converted twice');
+  const verifiedBottle={description:'CORONA ΦΙΑΛΗ 0,33ML',rawText:'02410 | CORONA ΦΙΑΛΗ 0,33ML | KIB | 24 | 0,98',quantity:24,invoiceQuantity:24,unitCost:.98,netAmount:23.52,invoiceUnit:'ΦΙΑ',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED',stockUnitsPerInvoiceUnit:24,packageConversionApplied:true};
+  const repairedBottle=applyMantzilasPackaging(verifiedBottle);
+  assert.equal(repairedBottle.quantity,24);assert.equal(repairedBottle.invoiceUnit,'PIECE');assert.equal(repairedBottle.stockUnitsPerInvoiceUnit,1);assert.equal(repairedBottle.packageConversionApplied,false);
+  const verifiedSixPack={description:'COCA COLA ZERO 0,33LT 6P',rawText:'13192 | COCA COLA ZERO | KIB | 2 | 4,94',quantity:2,invoiceQuantity:2,unitCost:4.94,netAmount:6.82,invoiceUnit:'6PK',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED'};
+  const repairedSixPack=applyMantzilasPackaging(verifiedSixPack);
+  assert.equal(repairedSixPack.quantity,2);assert.equal(repairedSixPack.stockUnitsPerInvoiceUnit,6);assert.equal(repairedSixPack.supplierProfileEvidence.stockQuantity,12);
   const poisonedPiece={description:'RED BULL 0,25LT ΚΟΥΤΙ',rawText:'11 | RED BULL 0,25LT ΚΟΥΤΙ | TEM | 48 | 0,95 | 45,60',quantity:48,invoiceQuantity:48,unitCost:.95,netAmount:45.6,invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:48,unitsPerPackage:48,packageConversionApplied:true};
   const repairedPiece=applyMantzilasPackaging(poisonedPiece);
   assert.equal(repairedPiece.quantity,48);assert.equal(repairedPiece.invoiceUnit,'PIECE');assert.equal(repairedPiece.stockUnitsPerInvoiceUnit,1);assert.equal(repairedPiece.packageConversionApplied,false);
