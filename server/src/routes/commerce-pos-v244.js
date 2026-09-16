@@ -85,11 +85,19 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
   const activeWorker=fastBackgroundWorkers.get(jobId);
   if(activeWorker){
     // Recovery may have moved the durable row back to POS_QUEUED while an
-    // older in-memory attempt is still finishing. Always attach a successor;
-    // otherwise the queued row can be left without any worker.
+    // older in-memory attempt is still finishing. Keep one successor, but
+    // start it only when the first worker did not already finish the draft.
+    // A BackOffice refresh must never replay a successful POS intake.
     const waiting=fastBackgroundSuccessors.has(jobId);
     fastBackgroundSuccessors.set(jobId,{authorization,companyId,jobId,pageJobIds,handoff,publicOrigin});
-    if(!waiting)activeWorker.finally(()=>{const successor=fastBackgroundSuccessors.get(jobId);fastBackgroundSuccessors.delete(jobId);if(successor&&!fastBackgroundWorkers.has(jobId))scheduleFastBackground(successor)});
+    if(!waiting)void activeWorker.finally(async()=>{
+      const successor=fastBackgroundSuccessors.get(jobId);
+      fastBackgroundSuccessors.delete(jobId);
+      if(!successor||fastBackgroundWorkers.has(jobId))return;
+      const rows=await prisma.$queryRaw`SELECT "status" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
+      if(["AWAITING_APPROVAL","CONFIRMED"].includes(rows[0]?.status))return;
+      scheduleFastBackground(successor);
+    }).catch(error=>console.error("POS fast invoice successor check failed",{jobId,message:String(error?.message||error)}));
     return;
   }
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);

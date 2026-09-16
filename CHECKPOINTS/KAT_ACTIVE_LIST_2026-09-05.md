@@ -1376,3 +1376,11 @@ Total output lines: 1413
 - [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
 - [ ] AWAITING tests, CI, exact deploy and one new POS-front LAB; BackOffice recovery is not acceptance.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — POS refresh successor idempotency
+
+- [x] LAB after `493adc33`: POS OCR returned all 16 rows, then refresh queued a successor that falsely failed while re-saving the completed draft.
+- [x] Re-check durable job state after the active worker ends; do not run the queued successor after `AWAITING_APPROVAL` or `CONFIRMED`.
+- [x] Preserve recovery after a real failure and every payment, draft, stock, approval, finalization and fiscal boundary.
+- [ ] AWAITING tests, CI, exact deploy and POS-front LAB; printed net `65.72 EUR` remains unverified.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.

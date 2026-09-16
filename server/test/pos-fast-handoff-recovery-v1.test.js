@@ -125,10 +125,12 @@ test("fast recovery reports why stored jobs were not reclaimed",()=>{
   assert.match(orders,/Recovery: scanned .*started .*no-handoff .*non-retryable/);
 });
 
-test("queued recovery is not abandoned behind an older in-memory worker",()=>{
+test("queued recovery waits for the older worker and skips a completed draft",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/fastBackgroundSuccessors\.set\(jobId/);
-  assert.match(worker,/if\(!waiting\)activeWorker\.finally/);
+  assert.match(worker,/if\(!waiting\)void activeWorker\.finally/);
+  assert.match(worker,/SELECT "status" FROM "AiReaderJob"/);
+  assert.match(worker,/\["AWAITING_APPROVAL","CONFIRMED"\]\.includes\(rows\[0\]\?\.status\)/);
   assert.match(worker,/scheduleFastBackground\(successor\)/);
   assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
 });
