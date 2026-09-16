@@ -148,7 +148,10 @@ function applySupplierStockConversion(line,mapping={}){
   const netAmount=Math.max(0,Number(line?.netAmount??line?.netValue??0));
   if(!(invoiceQuantity>0&&packageUnitPrice>0))return line;
   const initialAmount=money2(invoiceQuantity*packageUnitPrice);
-  const calculatedDiscount=mapping?.discount1!==undefined&&mapping?.discount1!==null?money4(mapping.discount1):(netAmount>0&&netAmount<=initialAmount?money4((1-netAmount/initialAmount)*100):Number(line?.discount1||0));
+  // A learned mapping may describe packaging, never the commercial terms of
+  // a later invoice. Derive the discount only from this row's printed/current
+  // quantity, price and net amount; otherwise retain the current extraction.
+  const calculatedDiscount=netAmount>0&&netAmount<=initialAmount+.02?money2(Math.max(0,(1-netAmount/initialAmount)*100)):Number(line?.discount1||0);
   const stockQuantity=money4(invoiceQuantity*factor);
   const stockUnit=String(mapping.stockUnit||mapping.stockConversion?.to||line?.stockUnit||line?.unit||"").trim();
   const invoiceUnit=String(mapping.invoiceUnit||line?.invoiceUnit||line?.unit||"").trim();
@@ -164,10 +167,10 @@ function applyMappings(lines,profile){
   return (lines||[]).map(line=>{
     const code=norm(line?.supplierItemCode||line?.code);const m=code?mappings[code]:null;
     if(!m)return line;
-    const printedKind=unitKind(line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
+    const printedKind=unitKind(unitRelativeValues(sourceRow(line))?.unit||line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
     const compatible=!printedKind||!learnedKind||printedKind===learnedKind;
     const mapped={...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
-    return applySupplierStockConversion(mapped,m);
+    return compatible?applySupplierStockConversion(mapped,m):mapped;
   });
 }
 
