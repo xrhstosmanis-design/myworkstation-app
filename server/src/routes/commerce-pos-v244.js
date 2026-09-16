@@ -31,7 +31,11 @@ const fastBackgroundSuccessors=new Map();
 // full OCR attempts could keep a draft in recovery for many minutes.
 const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=20000;
-const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=50000;
+// A complete 16+ row structured table needs a little more time than the
+// original four-field header. Keep one shared bounded deadline so the FAST
+// reader can finish the table instead of silently handing an empty draft to
+// the slower recovery worker.
+const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=70000;
 const FAST_OPENAI_HEADER_ATTEMPTS=2;
 // The full-table fallback may legitimately use 70 seconds when Azure F0 has
 // exhausted its call quota. Keep the durable background request bounded while
