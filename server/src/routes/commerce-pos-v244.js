@@ -7,6 +7,7 @@ import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
 import {reconcileInvoiceLines} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
+import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 
 const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
@@ -369,7 +370,13 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),cachedProductLines};
     });
     const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
-    const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>page.cachedProductLines.map(line=>({...line,sourceFileIndex:pageIndex}))):[];
+    if(hasCompleteCachedProductLines){
+      // FAST Azure can return a complete table while exposing the discounted
+      // net unit price as UnitPrice. Recover printed price/discount pairs from
+      // each raw row before the cached lines can bypass the full provider.
+      for(const page of normalizedPages)await verifyInvoiceDiscounts({productLines:page.cachedProductLines,apiKey:null});
+    }
+    const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>finalizeV244ProductLines(page.cachedProductLines).map(line=>({...line,sourceFileIndex:pageIndex}))):[];
     await ensureFastHandoffSchema();
     const taxId=cleanTaxId(supplier.taxId),normalizedNumber=normalizeDocumentNumber(documentNumber);
     const myDataRows=taxId?await prisma.$queryRaw`
@@ -416,7 +423,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       return jobs;
     });
     const pageJobIds=result.map(job=>job.id),jobId=pageJobIds[0];
-    const handoff={supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId};
+    const handoff={supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines};
     const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
     const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • αναμονή πλήρους ανάγνωσης`}});
     const handoffMessage=myData
