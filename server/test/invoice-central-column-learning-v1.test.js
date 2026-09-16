@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
+import {extractAzureColumns,combineAzureRows,inferConfirmedColumns,applyConfirmedColumns,sourceOrder,recoverPrintedRetailColumns,recoverStefanidisFoodLine,recoverVatFromPrintedSummary,stockConversionFromDescription,unitRelativeValues} from '../src/lib/invoice-column-reading.js';
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
@@ -271,6 +271,21 @@ test('late recovered STEFANIDIS rows receive the central column rule before fina
   },header));
   assert.equal(lateRows.reduce((sum,line)=>sum+line.quantity,0),608);
   assert.equal(Math.round(lateRows.reduce((sum,line)=>sum+line.grossAmount,0)*100)/100,2369.99);
+});
+
+test('printed VAT footer repairs gross-as-net rows only when every total reconciles',()=>{
+  const gross=[5.31,1.93,5.47,3.41,2.28,5.64,1.88,5.60,5.46,5.15,5.30,4.81,4.02,7.59,4.75,5.65];
+  const lines=gross.map((amount,index)=>({description:`LINE ${index+1}`,quantity:1,unitCost:amount,netAmount:amount,vatRate:0,grossAmount:amount}));
+  const recovered=recoverVatFromPrintedSummary(lines,'ΑΝΑΛΥΣΗ ΦΠΑ\n13% 65,72 8,53',74.25);
+  assert.equal(recovered.recovered,true);
+  assert.equal(recovered.rate,13);
+  assert.equal(Math.round(recovered.lines.reduce((sum,line)=>sum+line.netAmount,0)*100)/100,65.72);
+  assert.equal(Math.round(recovered.lines.reduce((sum,line)=>sum+line.azureTax,0)*100)/100,8.53);
+  assert.ok(recovered.lines.every(line=>line.vatRate===13&&line.vatRecoveredFromPrintedSummary));
+
+  assert.equal(recoverVatFromPrintedSummary(lines,'13% 65,72 8,53',75).recovered,false,'invoice total must agree');
+  assert.equal(recoverVatFromPrintedSummary(lines,'13% 64,72 9,53',74.25).recovered,false,'footer VAT equation must agree');
+  assert.equal(recoverVatFromPrintedSummary([{...lines[0],vatRate:24},...lines.slice(1)],'13% 65,72 8,53',74.25).recovered,false,'mixed existing VAT must remain untouched');
 });
 
 

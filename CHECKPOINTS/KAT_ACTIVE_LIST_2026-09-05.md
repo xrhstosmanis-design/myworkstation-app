@@ -14,6 +14,8 @@
 - [x] Bounded change: the same FAST response may carry the complete table, but rows bypass background OCR only when their gross sum reconciles to the invoice total within `0.05 EUR`.
 - [x] Payment, duplicate, draft, stock, approval, finalization and fiscal boundaries remain unchanged.
 - [ ] AWAITING full tests, CI, merge, exact deploy and POS-front LAB verification of invoice `27293`: 16 rows, quantity 47, net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`.
+- [x] PR #908 / CI #2366: stop a refresh-triggered successor after the durable POS job already reached `AWAITING_APPROVAL` or `CONFIRMED`; exact Render revision `e3e9a0c739da643ea3054506d91fd22dcb3dac25` verified.
+- [ ] Printed VAT footer recovery: repair gross-as-net rows only when the footer equation and independently reconstructed line totals both match net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`; awaiting tests, CI, exact deploy and POS-front LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
 
 ## 2026-09-16 — POS FAST header durable reuse
