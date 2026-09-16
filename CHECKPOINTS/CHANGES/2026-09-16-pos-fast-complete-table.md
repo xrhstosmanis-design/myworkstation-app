@@ -58,3 +58,11 @@
 - Compacting the structured response did not remove the timeout, so duplicate output was not the remaining cause.
 - Both full-table vision requests now use minimal reasoning effort, reserving the existing bounded 70-second provider window for visual extraction and structured output.
 - Status remains **LAB FAIL / AWAITING CI and new POS-front LAB**. Provider deadlines, payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.
+
+## LAB follow-up after revision `493adc33`
+
+- Full OCR succeeded from the POS front: the same draft displayed all 16 product rows and gross `74.25 EUR`.
+- A BackOffice refresh while the first worker was finishing queued a successor. After the first worker completed the draft, the successor attempted `SAVE_PRODUCT_LINES` again and reported the false failure “Το τιμολόγιο έχει ήδη σταλεί για έλεγχο”.
+- A waiting successor now re-reads the durable job status after the active worker ends and stops when the invoice is already `AWAITING_APPROVAL` or `CONFIRMED`.
+- Status remains **LAB FAIL / OCR PASS, intake refresh FAIL**. The visible net total is still `74.25 EUR` instead of the printed `65.72 EUR`, so line economics remain unverified.
+- Payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.

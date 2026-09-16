@@ -22,12 +22,14 @@ test("POS keeps polling while the mismatch reread is being claimed",()=>{
   assert.doesNotMatch(pos,/επανάληψη από το BackOffice/);
 });
 
-test("every queued recovery waits for the first worker and then receives a successor",()=>{
+test("queued recovery waits for the first worker and skips a completed draft successor",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/const activeWorker=fastBackgroundWorkers\.get\(jobId\)/);
   assert.match(worker,/fastBackgroundSuccessors\.set\(jobId/);
-  assert.match(worker,/if\(!waiting\)activeWorker\.finally/);
+  assert.match(worker,/if\(!waiting\)void activeWorker\.finally/);
+  assert.match(worker,/SELECT "status" FROM "AiReaderJob"/);
+  assert.match(worker,/\["AWAITING_APPROVAL","CONFIRMED"\]\.includes\(rows\[0\]\?\.status\)/);
   assert.match(worker,/scheduleFastBackground\(successor\)/);
   assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
-  assert.match(worker,/!fastBackgroundWorkers\.has\(jobId\)/);
+  assert.match(worker,/fastBackgroundWorkers\.has\(jobId\)/);
 });
