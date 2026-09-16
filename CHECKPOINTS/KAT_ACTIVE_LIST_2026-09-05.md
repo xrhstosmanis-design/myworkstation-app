@@ -1314,3 +1314,10 @@ Total output lines: 1413
 - [x] Preserve the existing payment, single draft, fail-closed empty-line guard, stock, approval and finalization boundaries.
 - [ ] CI/deploy, then reclaim the same failed draft through one BackOffice refresh without a new upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-azure-f0-quota-openai-fallback.md`.
+# 2026-09-16 — POS full OCR bounded vision model
+
+- [x] LAB after 1757a419: Azure F0 quota rejection remained immediate, while the general OpenAI model exceeded the full-table 70-second boundary.
+- [x] Route full extraction, table recovery and discount diagnostics through the bounded invoice vision model used by the successful FAST path.
+- [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
+- [ ] CI/deploy, then reclaim the same failed 43243 draft with one BackOffice refresh and no new upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-full-ocr-fast-vision-model.md`.
