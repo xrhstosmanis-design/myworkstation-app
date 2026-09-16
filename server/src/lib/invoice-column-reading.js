@@ -20,6 +20,33 @@ export function stockConversionFromDescription(description,explicitMultiplier=0,
   const supplied=Number(explicitMultiplier||0),multiplier=supplied>1?supplied:inferred>1?inferred:supplied;
   return {multiplier:multiplier>0?multiplier:0,stockMeasure:kilograms?"GRAM":"PIECE",inferred:inferred>1};
 }
+
+// Centrally verified MANTZILAS packaging grammar. This learns only the printed
+// unit conversion; quantities, package prices and invoice totals always come
+// from the current document and are never copied from an older invoice.
+export function applyMantzilasPackaging(line){
+  const text=String(line?.description||line?.rawText||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const unit=String(line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
+  let factor=0,rule="";
+  if(/^(4PK|4PACK)$/.test(unit)||/(?:^|\D)4\s*PACK(?:\D|$)/.test(text)){factor=4;rule="MANTZILAS_4PACK"}
+  else if(/^(KIB|ΚΙΒ|ΚΒ|Κ\.Β\.)$/.test(unit)){
+    const water=/ΝΕΡΟ|WATER/.test(text),bottle=/ΦΙΑΛ|BOTTLE/.test(text);
+    if(water&&/(?:750\s*ML|0[,.]?75\s*L(?:T)?)/.test(text)){factor=12;rule="MANTZILAS_WATER_750ML"}
+    else if(water&&/(?:1[,.]?5\s*L(?:T)?|1500\s*ML)/.test(text)){factor=6;rule="MANTZILAS_WATER_1500ML"}
+    else if(water&&/(?:1\s*L(?:T)?|1000\s*ML)/.test(text)){factor=6;rule="MANTZILAS_WATER_1000ML"}
+    else if(water&&/(?:0[,.]?5\s*L(?:T)?|500\s*ML)/.test(text)){factor=24;rule="MANTZILAS_WATER_500ML"}
+    else if(bottle&&/(?:0[,.]?5\s*L(?:T)?|500\s*ML)/.test(text)){factor=20;rule="MANTZILAS_BOTTLE_500ML"}
+    else if(/(?:0[,.]?5\s*L(?:T)?|500\s*ML)/.test(text)){factor=24;rule="MANTZILAS_CASE_500ML"}
+    else if(/(?:0[,.]?33\s*L(?:T)?|330\s*ML)/.test(text)){factor=24;rule="MANTZILAS_CASE_330ML"}
+  }
+  if(!(factor>1))return line;
+  const invoiceQuantity=Number(line?.invoiceQuantity??line?.quantity??0),packageUnitPrice=Number(line?.packageUnitPrice??line?.unitCost??line?.unitPrice??0);
+  if(!(invoiceQuantity>0&&packageUnitPrice>0))return line;
+  return {...line,quantity:invoiceQuantity,invoiceQuantity,unit:"PACKAGE",invoiceUnit:"PACKAGE",stockUnit:"ΤΜΧ",unitsPerPackage:factor,
+    conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,packageUnitPrice,unitCost:packageUnitPrice,unitPrice:packageUnitPrice,
+    packageConversionApplied:true,confirmedPackMapping:true,packRule:rule,supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_PACKAGING",
+    supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity,stockQuantity:round4(invoiceQuantity*factor),conversionFactor:factor,packageUnitPrice:round4(packageUnitPrice),pieceUnitPrice:round4(packageUnitPrice/factor)}};
+}
 const round2=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
 const round4=value=>Math.round((Number(value)+Number.EPSILON)*10000)/10000;
 const unitPattern=/(?:^|[\s|])(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|PC|Κ\.Β\.|ΚΒ|ΚΙΒ|KIB|KG|KGR|LT|L)(?=[\s|\d]|$)/i;

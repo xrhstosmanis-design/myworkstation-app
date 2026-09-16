@@ -74,3 +74,12 @@
 - Ambiguous summaries, mixed pre-existing VAT rates, or any total mismatch remain unchanged for review; no supplier-wide `13%` assumption is made.
 - Status: **AWAITING CI, exact deploy and POS-front LAB**.
 - Payment identity, draft identity, stock, approval, finalization and fiscal behavior remain unchanged.
+
+## MANTZILAS supplier packaging learning
+
+- POS-front LAB invoice `12665` reached `AWAITING_APPROVAL / POS_BACKGROUND_COMPLETE` with all 18 printed product rows and a clear green operator success message.
+- LAB remains **FAIL** for economics: the draft showed net `352.39 EUR` and gross `425.39 EUR` instead of printed taxable value `365.75 EUR`, VAT `63.52 EUR` and gross `429.27 EUR`; it must not be finalized.
+- The first bounded learning change covers packaging only: `4PK=4`, water `500ml=24`, `750ml=12`, `1L=6`, `1.5L=6`, bottle case `500ml=20`, other case `500ml=24`, and case `330ml=24`.
+- Invoice quantity and package price remain the immutable invoice economics; stock quantity and the visible per-piece price are derived exactly once from the learned multiplier. Existing pieces are never converted again.
+- Discount, excise, taxable-value and mixed-VAT column recovery remains a separate next change. No stock, payment, credit, approval, finalization, fiscal or accounting action is added.
+- Status: **AWAITING full tests, CI, exact deploy and a new POS-front LAB invoice**.

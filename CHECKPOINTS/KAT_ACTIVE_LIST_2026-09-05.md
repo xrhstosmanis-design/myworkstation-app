@@ -16,6 +16,8 @@
 - [ ] AWAITING full tests, CI, merge, exact deploy and POS-front LAB verification of invoice `27293`: 16 rows, quantity 47, net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`.
 - [x] PR #908 / CI #2366: stop a refresh-triggered successor after the durable POS job already reached `AWAITING_APPROVAL` or `CONFIRMED`; exact Render revision `e3e9a0c739da643ea3054506d91fd22dcb3dac25` verified.
 - [ ] Printed VAT footer recovery: repair gross-as-net rows only when the footer equation and independently reconstructed line totals both match net `65.72 EUR`, VAT `8.53 EUR`, gross `74.25 EUR`; awaiting tests, CI, exact deploy and POS-front LAB.
+- [x] POS-front LAB invoice `12665`: green operator success and 18 rows are LAB PASS; economics are LAB FAIL (`352.39 / 425.39 EUR` instead of `365.75 / 429.27 EUR`), with EFK and some discounts shifted. Do not finalize.
+- [ ] MANTZILAS packaging learning: `4PK=4`; water `500ml=24`, `750ml=12`, `1L=6`, `1.5L=6`; bottle case `500ml=20`; other case `500ml=24`; case `330ml=24`. Derive stock quantity and visible piece price once without changing invoice totals. Awaiting tests, CI, exact deploy and LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
 
 ## 2026-09-16 — POS FAST header durable reuse
