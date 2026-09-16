@@ -34,6 +34,17 @@ test("complete FAST product lines recover printed discounts before bypassing ful
   assert.ok(body.indexOf("verifyInvoiceDiscounts")<body.indexOf("const cachedProductLines=hasCompleteCachedProductLines"));
 });
 
+test("fast handoff hydrates an empty newest job from the matching exact-file durable table",()=>{
+  const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
+  assert.match(body,/a\."checksum"=\$\{page\.checksum\}/);
+  assert.match(body,/normalizeDocumentNumber\(candidateHandoff\.documentNumber\)===normalizeDocumentNumber\(documentNumber\)/);
+  assert.match(body,/normalizeIntakeDate\(candidateHandoff\.documentDate\)===documentDate/);
+  assert.match(body,/candidateDifference>POS_STORED_LINES_TOLERANCE/);
+  assert.match(body,/page\.cachedProductLines=candidateLines/);
+  assert.ok(body.indexOf("page.cachedProductLines=candidateLines")<body.indexOf("const hasCompleteCachedProductLines"));
+});
+
 test("immediate POS worker receives the complete cached-line handoff",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));

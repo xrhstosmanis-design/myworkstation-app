@@ -1,5 +1,7 @@
 ## 2026-09-16 — POS FAST header durable reuse
 
+- [x] LAB follow-up after `52dcfb00`: FAST header reuse passed, but handoff chose a newer empty job instead of the older exact-file job holding sixteen lines; background provider OCR failed again.
+- [x] Follow-up correction: server-side handoff hydrates an empty page only from the same exact checksum and matching supplier/invoice/date/total whose stored lines reconcile within `0.05 EUR`.
 - [x] LAB FAIL after `49d149c4`: the same POS image stopped before handoff because FAST returned no valid basic fields after retry; the UI confirmed that no payment occurred.
 - [x] Bounded correction: exact company/store/attachment checksum may reuse an unfinished durable handoff only when all basic fields exist and its stored lines reconcile within `0.05 EUR`.
 - [x] No payment, credit, draft, stock, approval, finalization or fiscal write occurs during the lookup.
