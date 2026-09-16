@@ -140,6 +140,15 @@ test("full-table OCR uses the bounded vision model instead of the general reason
   assert.doesNotMatch(aiRecheck,/model:process\.env\.OPENAI_INVOICE_MODEL\|\|"gpt-5"/);
 });
 
+test("full-table OCR returns one compact structured table and rebuilds audit text locally",()=>{
+  assert.match(aiRecheck,/const invoiceSchema=.*totalGross.*productLines/s);
+  assert.doesNotMatch(aiRecheck,/const invoiceSchema=.*rawText:\{type:"string"\}.*productLines/s);
+  assert.doesNotMatch(aiRecheck,/const invoiceSchema=.*lines:\{type:"array".*productLines/s);
+  assert.match(aiRecheck,/Μην επαναλάβεις όλο το παραστατικό ως ξεχωριστό rawText ή lines/);
+  assert.match(aiRecheck,/if\(!String\(parsed\.rawText\|\|""\)\.trim\(\)\)parsed\.rawText=parsed\.productLines\.map/);
+  assert.match(aiRecheck,/parsed\.lines=auditLines/);
+});
+
 test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{
   assert.match(aiRecheck,/const providerErrorText=error=>/);
   assert.match(aiRecheck,/timeout\?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"/);
