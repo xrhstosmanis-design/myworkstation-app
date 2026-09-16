@@ -48,7 +48,7 @@ test("LAB handoff records paid or credit intent without posting stock",()=>{
 });
 
 test("a stalled internal background request times out and becomes retryable",()=>{
-  assert.match(route,/INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000/);
+  assert.match(route,/INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000/);
   assert.match(route,/signal:AbortSignal\.timeout\(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS\)/);
   assert.match(route,/aborted due to timeout\|TimeoutError/);
 });

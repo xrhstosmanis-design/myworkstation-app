@@ -116,12 +116,20 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
 
 test("full OCR provider calls are bounded so durable recovery cannot remain POS_PROCESSING forever",()=>{
   const verifierCall=/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS\}\)/;
-  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=30000/);
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=70000/);
   assert.match(aiRecheck,/signal:AbortSignal\.timeout\(FULL_OCR_PROVIDER_TIMEOUT_MS\)/);
   assert.match(aiRecheck,/CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000/);
   assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
   assert.match(aiRecheck,verifierCall);
+});
+
+test("OpenAI full-table fallback outlives an exhausted Azure F0 request",()=>{
+  assert.match(aiRecheck,/FULL_OCR_PROVIDER_TIMEOUT_MS=70000/);
+  assert.match(wrapper,/INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000/);
+  assert.match(aiRecheck,/if\(!parsed\)try\{/);
+  assert.match(aiRecheck,/OPENAI=.*providerErrorText\(unifiedAiFailure\)/);
+  assert.ok(wrapper.indexOf("INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000")<wrapper.indexOf("function internalCommerceRequest"));
 });
 
 test("full OCR preserves the failing provider and page instead of hiding the root error",()=>{

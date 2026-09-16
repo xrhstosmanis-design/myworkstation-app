@@ -31,7 +31,10 @@ const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
 const FAST_AZURE_HEADER_TIMEOUT_MS=20000;
 const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=50000;
 const FAST_OPENAI_HEADER_ATTEMPTS=2;
-const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=90000;
+// The full-table fallback may legitimately use 70 seconds when Azure F0 has
+// exhausted its call quota. Keep the durable background request bounded while
+// allowing the extraction and safe draft write to complete.
+const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[table-recheck\])/i.test(String(error?.message||error));
 
