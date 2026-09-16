@@ -9,10 +9,12 @@ import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runti
 import {recoverPrintedRetailColumns,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
-// Keep the complete provider chain below the 90-second internal POS request
-// deadline. Normal invoice reads finish much sooner; these limits only prevent
-// one stalled provider from stranding the durable draft in recovery.
-const FULL_OCR_PROVIDER_TIMEOUT_MS=30000;
+// Full-table vision regularly needs longer than the small FAST-header read.
+// Azure F0 can also reject immediately when its monthly quota is exhausted, so
+// leave the independent OpenAI fallback enough time to finish the original
+// image instead of converting a healthy fallback into POS_FAILED at 30 seconds.
+// The caller remains bounded and the operator-facing handoff is fire-and-forget.
+const FULL_OCR_PROVIDER_TIMEOUT_MS=70000;
 const CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000;
 const readAzurePagesSequentially=async pageJobs=>{
   const pages=[];

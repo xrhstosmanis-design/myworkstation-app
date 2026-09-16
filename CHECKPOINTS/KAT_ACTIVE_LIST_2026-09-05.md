@@ -1307,3 +1307,10 @@ Total output lines: 1413
 - [x] No existing draft, payment, stock, approval, finalization, fiscal or learning mutation.
 - [ ] AWAITING tests, CI, exact deploy and one clean POS rerun after safe deletion of only the unapproved test draft/source.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-stefanidis-hidden-discount-recovery.md`.
+# 2026-09-16 — POS full OCR fallback after Azure F0 quota exhaustion
+
+- [x] LAB evidence: invoice 43243 FAST header and payment reuse passed; full OCR failed because Azure F0 returned quota 403 and the OpenAI table fallback hit the old 30-second limit.
+- [x] Extend only the background full-table provider boundary to 70 seconds and its bounded internal request to 180 seconds.
+- [x] Preserve the existing payment, single draft, fail-closed empty-line guard, stock, approval and finalization boundaries.
+- [ ] CI/deploy, then reclaim the same failed draft through one BackOffice refresh without a new upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-azure-f0-quota-openai-fallback.md`.
