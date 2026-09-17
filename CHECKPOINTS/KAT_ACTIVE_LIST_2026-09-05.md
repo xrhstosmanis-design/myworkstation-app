@@ -1508,3 +1508,11 @@ Total output lines: 1413
 - [x] Focused tests `79/79`, full server suite `1290/1290`, client build and server build PASS locally.
 - [ ] AWAITING green CI, exact deploy and one BackOffice refresh of the same draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-legacy-cached-line-reread.md`.
+## 2026-09-17 — MANTZILAS POS-front code 00009 correction
+
+- [x] LAB FAIL: a new POS-front read produced all 18 rows and correct totals, but `00009` remained `48 pieces / 65.5%` instead of `24 pieces / 31%`.
+- [x] Scope is only the original POS-front read; BackOffice refresh recovery is not acceptance.
+- [x] Added a MANTZILAS-only current-row arithmetic fallback for code `00009` without changing the other 17 rows or invoice totals.
+- [x] Focused tests `41/41`, full server suite `1292/1292`, client production build and server/Prisma build PASS.
+- [ ] AWAITING commit, green CI, exact deploy and a fresh POS-front LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-pos-front-code-00009.md`.

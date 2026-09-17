@@ -416,6 +416,40 @@ test("MANTZILAS resolves doubled-quantity equivalent-discount ambiguity from sam
   }finally{global.fetch=originalFetch}
 });
 
+test("MANTZILAS code 00009 resolves its x24 equivalent scale without a matching sibling",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[
+    {index:1,supplierCode:"00009",printedQuantity:2,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:39.10,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"ambiguous printed row"}
+  ],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"00009",description:"COCA COLA ZERO 0,33LT x24pack",grossAmount:15.24}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:15.24,supplierRule:"MANTZILAS"});
+    assert.equal(result.status,"OK");
+    assert.equal(result.mantzilasCode00009AmbiguitiesRepaired,1);
+    assert.equal(productLines[0].quantity,1);
+    assert.equal(productLines[0].invoiceQuantity,1);
+    assert.equal(productLines[0].discount1,31);
+    assert.equal(productLines[0].netAmount,13.49);
+    assert.equal(productLines[0].grossAmount,15.24);
+    assert.equal(productLines[0].quantitySource,"MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED");
+  }finally{global.fetch=originalFetch}
+});
+
+test("code 00009 pack arithmetic is not changed outside the MANTZILAS supplier rule",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[
+    {index:1,supplierCode:"00009",printedQuantity:2,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:39.10,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"another supplier"}
+  ],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"00009",description:"COCA COLA ZERO 0,33LT x24pack",grossAmount:15.24}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:15.24});
+    assert.equal(result.status,"OK");
+    assert.equal(result.mantzilasCode00009AmbiguitiesRepaired,undefined);
+    assert.equal(productLines[0].quantity,2);
+    assert.equal(productLines[0].discount1,65.5);
+  }finally{global.fetch=originalFetch}
+});
+
 test("MANTZILAS full reread cannot publish a table outside cent-level invoice tolerance",()=>{
   assert.match(aiRecheck,/mantzilasInvoice&&pageJobs\.length===1&&invoiceTotal>0&&Math\.abs\(parsed\.productLinesTotalDifference\)>0\.05/);
   assert.match(aiRecheck,/Οι λανθασμένες γραμμές δεν αποθηκεύτηκαν/);
