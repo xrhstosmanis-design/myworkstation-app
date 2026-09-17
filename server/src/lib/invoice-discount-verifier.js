@@ -217,6 +217,35 @@ function applySiblingDiscountConsensus(productLines,diagnostics){
   }
 }
 
+function repairScaledQuantityDiscountAmbiguity(productLines,diagnostics){
+  // A doubled quantity and a correspondingly inflated discount can reproduce
+  // the exact same net amount (24 @ 31% == 48 @ 65.5%).  Total reconciliation
+  // therefore cannot distinguish the two.  Resolve only when another row in
+  // the same printed table independently establishes the same unit price and
+  // normal discount, and the alternative arithmetic is exact.
+  for(const line of productLines){
+    const pairs=linePairs(line),active=pairs.filter(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0);
+    if(active.length!==1)continue;
+    const currentPercent=safePercent(active[0].percent),quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),net=Number(line?.netAmount||0);
+    if(!(currentPercent>50&&quantity>0&&Number.isInteger(quantity)&&quantity%2===0&&unitCost>0&&net>0))continue;
+    const halfQuantity=quantity/2;
+    const siblingPercents=productLines.filter(other=>other!==line&&Math.abs(Number(other?.unitCost||0)-unitCost)<=0.0001)
+      .flatMap(other=>linePairs(other).map(pair=>safePercent(pair.percent)).filter(percent=>percent>0&&percent<50));
+    const unique=[...new Set(siblingPercents.map(percent=>money4(percent)))];
+    if(unique.length!==1)continue;
+    const percent=unique[0],base=halfQuantity*unitCost,amount=money4(base*percent/100);
+    if(Math.abs((base-amount)-net)>Math.max(.03,net*.002))continue;
+    const validated=validateDiscountPairs({...line,quantity:halfQuantity},[{percent,amount},{percent:0,amount:0},{percent:0,amount:0}]);
+    if(!validated)continue;
+    line.quantity=halfQuantity;line.invoiceQuantity=halfQuantity;line.quantitySource='SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED';
+    applyValidatedPairs(line,validated);
+    line.initialAmount=money4(base);
+    line.discountSource='SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED';line.discountConfidence=99;
+    line.discountEvidence=`Διόρθωση ισοδύναμης κλίμακας: ${halfQuantity} τεμ. με ${percent}% από ίδια τιμή/έκπτωση γειτονικής γραμμής`;
+    diagnostics.scaledQuantityAmbiguitiesRepaired=Number(diagnostics.scaledQuantityAmbiguitiesRepaired||0)+1;
+  }
+}
+
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0,reverifyAll=false,expectedGrossTotal=0}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
@@ -292,6 +321,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       diagnostics.accepted+=1;diagnostics.aiAccepted+=1;
     }
     applySiblingDiscountConsensus(productLines,diagnostics);
+    if(reverifyAll)repairScaledQuantityDiscountAmbiguity(productLines,diagnostics);
     const expectedGross=Number(expectedGrossTotal||0),candidateGross=money4(productLines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
     const incompletePrintedRows=reverifyAll&&expectedGross>0&&acceptedPrintedIndexes.size!==productLines.length;
     if(reverifyAll&&expectedGross>0&&(incompletePrintedRows||Math.abs(candidateGross-expectedGross)>.05)){

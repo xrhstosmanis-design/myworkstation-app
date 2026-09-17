@@ -397,6 +397,24 @@ test("MANTZILAS row identity accepts omitted display-leading zeroes without weak
   }finally{global.fetch=originalFetch}
 });
 
+test("MANTZILAS resolves doubled-quantity equivalent-discount ambiguity from same-price sibling",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[
+    {index:1,supplierCode:"00160",printedQuantity:48,printedUnit:"ΤΜΧ",originalUnitPrice:.814583,initialAmount:39.10,discountPercent1:31,discountAmount1:12.12,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:26.98,exciseTotal:0,taxableAmount:26.98,vatRate:13,vatAmount:3.51,grossAmount:30.49,confidence:99,evidence:"printed row"},
+    {index:2,supplierCode:"00009",printedQuantity:48,printedUnit:"ΤΜΧ",originalUnitPrice:.814583,initialAmount:39.10,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"ambiguous printed row"}
+  ],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"00160",description:"COCA COLA",grossAmount:30.49},{code:"00009",description:"COCA COLA ZERO",grossAmount:15.24}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:45.73});
+    assert.equal(result.status,"OK");
+    assert.equal(result.scaledQuantityAmbiguitiesRepaired,1);
+    assert.equal(productLines[1].quantity,24);
+    assert.equal(productLines[1].discount1,31);
+    assert.equal(productLines[1].netAmount,13.49);
+    assert.equal(productLines[1].grossAmount,15.24);
+  }finally{global.fetch=originalFetch}
+});
+
 test("MANTZILAS full reread cannot publish a table outside cent-level invoice tolerance",()=>{
   assert.match(aiRecheck,/mantzilasInvoice&&pageJobs\.length===1&&invoiceTotal>0&&Math\.abs\(parsed\.productLinesTotalDifference\)>0\.05/);
   assert.match(aiRecheck,/Οι λανθασμένες γραμμές δεν αποθηκεύτηκαν/);
