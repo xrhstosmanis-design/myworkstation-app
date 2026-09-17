@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 import {verifyInvoiceDiscounts} from "../src/lib/invoice-discount-verifier.js";
 import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-core.js";
 import {mergeFastInvoiceHeaders} from "../../client/src/lib/invoice-fast-header-merge.js";
+import {recoverVatSummaryInvoiceTotal} from "../src/lib/invoice-total-reading.js";
 
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
 const backofficeIntake=await readFile(new URL("../../client/src/purchase-order-invoice-intake-bootstrap.js",import.meta.url),"utf8");
@@ -67,6 +68,20 @@ test("fast header also falls back when Azure succeeds with an empty header",()=>
   assert.match(wrapper,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.match(wrapper,/FAST Azure header incomplete; trying configured fallback/);
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
+});
+
+test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account balance",()=>{
+  const printed=`ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.
+  24 204,31 49,03 253,34
+  13 41,87 5,44 47,31
+  0 18,09 0,00 18,09
+  ΣΥΝΟΛΑ 264,27 54,47 318,74
+  ΣΥΝΟΛΟ 300,65 ΕΓΓΥΟΔΟΣΙΑ 18,09 ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ 4.212,27 ΝΕΟ ΥΠΟΛΟΙΠΟ 4.531,01`;
+  assert.equal(recoverVatSummaryInvoiceTotal(printed),318.74);
+  assert.equal(recoverVatSummaryInvoiceTotal("ΝΕΟ ΥΠΟΛΟΙΠΟ 4.531,01"),0,"an account balance alone is never an invoice total proof");
+  assert.equal(recoverVatSummaryInvoiceTotal("ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 264,27 54,47 319,74"),0,"an unbalanced summary is rejected");
+  assert.match(wrapper,/verifiedVatSummaryTotal=mantzilasInvoice\?recoverVatSummaryInvoiceTotal\(azureRawText\):0/);
+  assert.match(wrapper,/ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ/);
 });
 
 test("fast header preserves a readable fallback inside its dedicated POS request budget",async()=>{

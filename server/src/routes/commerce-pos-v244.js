@@ -8,6 +8,7 @@ import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./co
 import {reconcileInvoiceLines} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
+import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
 
 const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
@@ -321,10 +322,11 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,provider:"DURABLE_POS_JOB",productLines});
     }
-    let azureHeaderFallback=null;
+    let azureHeaderFallback=null,azureRawText="";
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
+        azureRawText=String(parsed.rawText||"");
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
         const azureTotalGross=round2(parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
@@ -351,7 +353,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
 3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
-5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
+5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal. ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ, ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ, BALANCE ή αξία/υπόλοιπο εγγυοδοσίας. Αν υπάρχει «ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.», προτίμησε το μικτό ποσό της γραμμής «ΣΥΝΟΛΑ» που αποδεικνύεται από καθαρή αξία + ΦΠΑ.
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
@@ -365,7 +367,9 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const parsedDocumentDate=String(parsed.documentDate||"");
     const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(parsedDocumentDate)?parsedDocumentDate:String(azureHeaderFallback?.documentDate||"");
     const parsedTotalGross=round2(parsed.totalGross||0);
-    const totalGross=parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
+    const mantzilasInvoice=cleanTaxId(supplier?.taxId||supplierTaxId)==="081565488"||/ΜΑΝΤΖΙΛΑΣ|MANTZILAS/.test(norm(supplier?.name||supplierName));
+    const verifiedVatSummaryTotal=mantzilasInvoice?recoverVatSummaryInvoiceTotal(azureRawText):0;
+    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background

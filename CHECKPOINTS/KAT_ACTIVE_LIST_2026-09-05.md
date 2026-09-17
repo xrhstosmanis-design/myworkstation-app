@@ -1,3 +1,12 @@
+## 2026-09-17 — MANTZILAS FAST total must ignore account balance
+
+- [x] LAB FAIL: invoice `12424` selected the printed new account balance `4,531.01 EUR` instead of invoice gross `318.74 EUR`.
+- [x] Printed proof: VAT summary net `264.27 EUR` + VAT `54.47 EUR` = gross `318.74 EUR`; supplier, number and date already pass.
+- [x] Implemented the bounded MANTZILAS VAT-summary total recovery and explicit balance exclusion without changing payment, draft, stock, approval, finalization, fiscal or accounting behavior.
+- [x] Focused tests `65/65`, full server suite `1295/1295`, client build and server/Prisma build PASS.
+- [ ] Require green CI, merge, exact deployed revision and a fresh POS-front LAB read before marking fixed.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-fast-total-not-balance.md`.
+
 ## 2026-09-16 — POS FAST complete-table handoff
 
 - [x] LAB follow-up after `a3f9a916`: `27293` failed at `POS_BACKGROUND_AI_RECHECK`; OpenAI timed out and Azure F0 returned quota `403`.
