@@ -1471,3 +1471,13 @@ Total output lines: 1413
 - [x] Preserve all payment, credit, stock, approval, finalization, fiscal and accounting guards.
 - [ ] AWAITING tests, CI, exact deploy and one POS-front retry.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-leading-zero-code-identity.md`.
+
+# 2026-09-17 — MANTZILAS scaled quantity/discount ambiguity
+
+- [x] LAB confirmed code `00009` is 24 pieces at 31%, not 48 pieces at 65.5%.
+- [x] Detect equivalent-net doubled-quantity ambiguity using same-document price/discount evidence.
+- [x] Keep supplier-code/index identity and whole-invoice total verification.
+- [x] Focused tests `39/39` and full server suite `1287/1287` pass locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
+- [ ] AWAITING green CI, exact deploy and one new POS-front LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-scaled-quantity-discount-ambiguity.md`.
