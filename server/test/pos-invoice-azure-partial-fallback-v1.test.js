@@ -15,6 +15,14 @@ test("partial Azure invoice tables fall through to the full AI table reader",()=
   assert.match(route,/return next\(\)/);
 });
 
+test("durable POS handoffs bypass generic Azure without losing their routing state",()=>{
+  const route=azure.slice(azure.indexOf('router.post("/ai-reader/jobs/:jobId/ai-recheck"'));
+  const bypass=route.indexOf('if(job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object")return next()');
+  const providerCall=route.indexOf('payload=await callAzure');
+  const partialWrite=route.indexOf('"status"=\'LOCAL_COMPLETE\'');
+  assert.ok(bypass>=0&&providerCall>bypass&&partialWrite>providerCall,"POS handoff must leave the generic route before provider work or a partial result write");
+});
+
 test("resuming a known incomplete Azure result forces a complete reread",()=>{
   assert.match(handoff,/force:true,additionalPageJobIds/);
   assert.match(handoff,/scheduleFastBackground/);

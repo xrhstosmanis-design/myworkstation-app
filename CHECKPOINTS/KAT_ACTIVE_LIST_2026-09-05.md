@@ -1,3 +1,12 @@
+## 2026-09-17 — POS handoff must bypass generic Azure recheck
+
+- [x] LAB FAIL on exact production `62906a202d3f1a861e4bcaeed89527dc1dceaa2d`: fresh MANTZILAS `12424` remained at zero rows and entered `POS_QUEUED / POS_RECOVERING` after four minutes.
+- [x] Root cause: the generic Azure recheck runs before the POS-specific reader and may replace `resultJson`, erasing `posHandoff` before the MANTZILAS path can use the confirmed supplier and total.
+- [x] Bypass the generic Azure recheck whenever the durable job contains a POS handoff, preserving it for the POS-specific route.
+- [x] Focused regression tests `74/74`, isolated transient check `3/3`, full server suite `1297/1297`, client build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge, exact deploy and recovery of the same draft without another upload or credit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-handoff-generic-azure-bypass.md`.
+
 ## 2026-09-17 — MANTZILAS 12424 existing-draft line recovery
 
 - [x] FAST-header LAB PASS on exact production `59cc0f4655dfcca4c9dd4ce9f1d450ae8f6e1558`: invoice `12424` now shows `318.74 EUR`, not account balance `4,531.01 EUR`.
