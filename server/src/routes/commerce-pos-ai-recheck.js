@@ -121,6 +121,30 @@ function collapseAdjacentTableReplay(lines,invoiceTotal){
   if(collapsedDifference>permittedDifference||collapsedDifference>=fullDifference*0.25)return {lines:source,collapsed:false};
   return {lines:collapsed,collapsed:true,removed:source.length-collapsed.length};
 }
+function collapseExactDuplicateOverage(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  const overage=money2(lineGrossTotal(source)-total);
+  if(total<=0||source.length<2||overage<=TOTAL_TOLERANCE)return {lines:source,collapsed:false};
+  const groups=new Map();
+  source.forEach((line,index)=>{
+    const fingerprint=physicalRowFingerprint(line),indexes=groups.get(fingerprint)||[];
+    indexes.push(index);groups.set(fingerprint,indexes);
+  });
+  const candidates=[];
+  for(const indexes of groups.values()){
+    if(indexes.length!==2)continue;
+    const gross=money2(source[indexes[0]]?.grossAmount||0);
+    if(gross>0&&Math.abs(gross-overage)<=TOTAL_TOLERANCE)candidates.push(indexes[1]);
+  }
+  // The printed invoice total is an independent anchor, but it is safe to
+  // remove a row only when one unique pair is identical across code,
+  // description and the complete economic tuple. Ambiguous pairs remain for
+  // the fail-closed reconciliation path.
+  if(candidates.length!==1)return {lines:source,collapsed:false};
+  const removeIndex=candidates[0],collapsed=source.filter((_,index)=>index!==removeIndex);
+  if(Math.abs(lineGrossTotal(collapsed)-total)>TOTAL_TOLERANCE)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:1,overage};
+}
 const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
 function mergeRecoveredLines(current,recovered){
   const out=(current||[]).map(line=>({...line})),used=new Set();
@@ -405,6 +429,15 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
   parsed.productLines=replay.lines;
   if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed;if(replay.genuineRepeatedRowPreserved)parsed.genuineRepeatedRowPreserved=true}
+  // A supplemental provider can append one already-present physical row even
+  // when the rest of the table is not replayed. For the single-page MANTZILAS
+  // layout, remove that isolated replay only when the duplicate tuple is
+  // unique and its exact gross amount is the entire invoice-total overage.
+  const isolatedDuplicate=isMantzilasInvoice(parsed)&&pageJobs.length===1
+    ?collapseExactDuplicateOverage(parsed.productLines,invoiceTotal)
+    :{lines:parsed.productLines,collapsed:false};
+  parsed.productLines=isolatedDuplicate.lines;
+  if(isolatedDuplicate.collapsed){parsed.isolatedDuplicateRowCollapsed=true;parsed.isolatedDuplicateRowRemoved=isolatedDuplicate.removed;parsed.isolatedDuplicateRowOverage=isolatedDuplicate.overage}
   // Re-read prices and discount pairs against the document and accept them
   // only when the line equation balances. This also repairs cases where the
   // amount of a discount was mistaken for the original unit price.
