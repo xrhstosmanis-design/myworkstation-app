@@ -1453,3 +1453,12 @@ Total output lines: 1413
 - [x] Preserve fail-closed payment and all duplicate/payment/stock/finalization guards.
 - [ ] AWAITING green CI, exact deploy and one repeat with the same POS-front image.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-fast-header-only.md`.
+
+# 2026-09-17 — MANTZILAS corrective reread authority
+
+- [x] LAB found 18 rows at `358.19 / 434.07 EUR`, with neighboring economics shifted across rows 6–8.
+- [x] Retain unique KΩΔ+index identity, but allow the fully balanced focused reread to replace a wrong first-pass gross.
+- [x] Reject the entire MANTZILAS result unless the final 18-row total matches the printed invoice within `0.05 EUR`.
+- [x] Do not change payment, credit, stock, approval, finalization, fiscal or accounting behavior.
+- [ ] AWAITING tests, CI, exact deploy and one clean POS-front LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corrective-reread.md`.

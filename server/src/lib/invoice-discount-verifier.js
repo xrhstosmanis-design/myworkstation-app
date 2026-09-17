@@ -264,8 +264,6 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
       const confidence=Number(candidate?.confidence||0);if(confidence<85){diagnostics.rejectedLowConfidence+=1;continue}
       if(reverifyAll){
         const printed=validatePrintedEconomics(candidate);if(!printed){diagnostics.rejectedMath+=1;continue}
-        const baseline=originalLines[targetIndex];
-        if(baseline?.sourceColumnsVerified&&Number(baseline?.grossAmount||0)>0&&!closeMoney(printed.gross,baseline.grossAmount,.05,.002)){diagnostics.rejectedMath+=1;continue}
         line.quantity=printed.quantity;line.invoiceQuantity=printed.quantity;line.quantitySource='AI_PRINTED_ROW_FULL_MATH_VERIFIED';
         if(String(candidate.printedUnit||'').trim()){line.unit=String(candidate.printedUnit).trim();line.invoiceUnit=String(candidate.printedUnit).trim()}
         line.unitCost=printed.unitCost;line.unitPrice=printed.unitCost;line.packageUnitPrice=printed.unitCost;line.initialAmount=money4(printed.initial);

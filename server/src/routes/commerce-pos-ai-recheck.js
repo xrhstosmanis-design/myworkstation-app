@@ -442,6 +442,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.invoiceTotalForCompleteness=invoiceTotal;
   parsed.productLinesTotalDifference=money2(parsed.productLinesGrossAfterRecovery-invoiceTotal);
   parsed.productLinesComplete=invoiceTotal<=0||Math.abs(parsed.productLinesTotalDifference)<=TOTAL_TOLERANCE+0.000001;
+  // MANTZILAS is a single-page learned layout with a printed authoritative
+  // total. Never publish a merely "close enough" table: that allowed shifted
+  // neighboring economics with a 4.80 EUR error to reach operator review.
+  // Keep the durable draft/retry path fail-closed until the corrective reread
+  // reconciles the full table to cent-level invoice tolerance.
+  if(mantzilasInvoice&&pageJobs.length===1&&invoiceTotal>0&&Math.abs(parsed.productLinesTotalDifference)>0.05)throw new Error(`Η πλήρης ανάγνωση ΜΑΝΤΖΙΛΑΣ δεν συμφωνεί με το τιμολόγιο (διαφορά ${Math.abs(parsed.productLinesTotalDifference).toFixed(2)} €). Οι λανθασμένες γραμμές δεν αποθηκεύτηκαν.`);
   parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
   parsed.lines=parsed.productLines.length?parsed.productLines.map(line=>{const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim(),quantity=Math.max(0,Number(line.quantity||0)),unit=String(line.unit||"ΤΜΧ").trim()||"ΤΜΧ",unitCost=Math.max(0,Number(line.unitCost||0));return {text:[description,quantity>0?`${quantity} ${unit}`:"",unitCost>0?decimalText(unitCost):""].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))}}):[];
   parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
