@@ -180,15 +180,16 @@ function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
   const candidate=candidates[0],code=String(candidate.code).trim(),escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const printedOccurrences=(String(documentText).match(new RegExp(`(?:^|\\D)${escaped}(?=\\D|$)`,'g'))||[]).length;
   const currentOccurrences=source.filter(line=>norm(line.code)===norm(code)).length;
-  // Some OCR engines expose the printed table only once in their text layer even
-  // when the document total proves that one physical charge was omitted. In that
-  // case the exact, unique gross-value gap is sufficient independent evidence;
-  // ambiguous matches still remain untouched for review.
-  const exactUniqueTotalGap=currentOccurrences===1&&candidates.length===1;
-  if(printedOccurrences<=currentOccurrences&&!exactUniqueTotalGap)return {lines:source,restored:false};
+  // A matching total gap is not proof that the same physical row was printed
+  // twice: another omitted row plus shifted neighbouring economics can produce
+  // the same gap. Restore only when the current document text independently
+  // contains more occurrences of this exact supplier code than the structured
+  // table. Otherwise keep the mismatch so the complete printed-table verifier
+  // rereads codes, discounts, VAT and amounts from the image.
+  if(printedOccurrences<=currentOccurrences)return {lines:source,restored:false};
   const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
   if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};
-  return {lines:restored,restored:true,code,totalGapRecovered:printedOccurrences<=currentOccurrences};
+  return {lines:restored,restored:true,code};
 }
 
 function mergeAzureInvoicePages(pages){
