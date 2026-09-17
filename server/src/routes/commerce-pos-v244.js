@@ -322,11 +322,12 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,provider:"DURABLE_POS_JOB",productLines});
     }
-    let azureHeaderFallback=null,azureRawText="";
+    let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
         azureRawText=String(parsed.rawText||"");
+        azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
         const azureTotalGross=round2(parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
@@ -374,7 +375,13 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background
     // path remains authoritative.
-    const productLines=reconciledFastProductLines(parsed.productLines,totalGross);
+    // Azure may have read a complete table while choosing a footer account
+    // balance as its header total. Keep those current-image rows until the
+    // independently verified final total is known, then reconcile once more.
+    // This never accepts a partial table and avoids a second provider pass for
+    // a table that already proves itself against the invoice.
+    const providerLines=Array.isArray(parsed.productLines)&&parsed.productLines.length?parsed.productLines:azureCandidateProductLines;
+    const productLines=reconciledFastProductLines(providerLines,totalGross);
     res.json({
       confidence:Number(parsed.confidence||0),
       supplierId:supplier?.id||"",

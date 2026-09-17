@@ -1,3 +1,13 @@
+## 2026-09-17 — MANTZILAS 12424 existing-draft line recovery
+
+- [x] FAST-header LAB PASS on exact production `59cc0f4655dfcca4c9dd4ce9f1d450ae8f6e1558`: invoice `12424` now shows `318.74 EUR`, not account balance `4,531.01 EUR`.
+- [x] Full-flow LAB FAIL: the one credit draft remained at zero rows in `POS_QUEUED / POS_RECOVERING` for about 14 minutes.
+- [x] Root cause: Azure candidate rows were reconciled against the provider's wrong header total and discarded before the verified VAT-summary total replaced it; they were not rechecked against `318.74 EUR`.
+- [x] Preserve and reconcile those current-image candidates against the final confirmed total, and recover the exact existing draft through the bounded central MANTZILAS Azure path.
+- [x] Focused regression tests `94/94`, full server suite `1296/1296`, client build and server/Prisma build PASS.
+- [ ] Require green CI, merge, exact deploy and recovery of the existing draft without another upload, credit, stock action or finalization.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-12424-existing-draft-recovery.md`.
+
 ## 2026-09-17 — MANTZILAS FAST total must ignore account balance
 
 - [x] LAB FAIL: invoice `12424` selected the printed new account balance `4,531.01 EUR` instead of invoice gross `318.74 EUR`.

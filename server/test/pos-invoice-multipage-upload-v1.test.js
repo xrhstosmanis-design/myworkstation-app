@@ -45,12 +45,12 @@ test("POS reads multipage FAST headers sequentially without losing a successful 
 });
 
 test("POS background reads central STEFANIDIS Azure pages in order before unified AI",()=>{
-  const fastPath=aiRecheck.indexOf("if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
+  const fastPath=aiRecheck.indexOf("if((preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
   const unified=aiRecheck.indexOf('fetch("https://api.openai.com/v1/responses"');
   assert.ok(fastPath>0&&fastPath<unified);
   assert.match(aiRecheck,/readAzurePagesSequentially\(pageJobs\)/);
   assert.match(aiRecheck,/for\(const page of pageJobs\)pages\.push/);
-  assert.match(aiRecheck,/preferCentralStefanidis=cleanTaxId\(supplierRows\[0\]\?\.taxId\)===STEFANIDIS_TAX_ID/);
+  assert.match(aiRecheck,/preferCentralStefanidis=supplierTaxId===STEFANIDIS_TAX_ID/);
   assert.match(aiRecheck,/parsed\.totalGross=money2\(posHandoff\.totalGross\|\|parsed\.totalGross\)/);
   assert.match(aiRecheck,/parsed\.stefanidisCentralFastPath=true/);
 });
@@ -82,6 +82,16 @@ test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account
   assert.equal(recoverVatSummaryInvoiceTotal("ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 264,27 54,47 319,74"),0,"an unbalanced summary is rejected");
   assert.match(wrapper,/verifiedVatSummaryTotal=mantzilasInvoice\?recoverVatSummaryInvoiceTotal\(azureRawText\):0/);
   assert.match(wrapper,/ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ/);
+});
+
+test("MANTZILAS rechecks Azure candidate rows against the corrected total and recovers its existing draft first",()=>{
+  assert.match(wrapper,/azureCandidateProductLines=Array\.isArray\(parsed\.productLines\)\?parsed\.productLines:\[\]/);
+  assert.match(wrapper,/providerLines=Array\.isArray\(parsed\.productLines\)&&parsed\.productLines\.length\?parsed\.productLines:azureCandidateProductLines/);
+  assert.match(wrapper,/productLines=reconciledFastProductLines\(providerLines,totalGross\)/);
+  assert.match(aiRecheck,/preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID/);
+  assert.match(aiRecheck,/\(preferCentralStefanidis\|\|preferCentralMantzilas\)&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT/);
+  assert.match(aiRecheck,/if\(preferCentralMantzilas\)parsed\.mantzilasCentralFastPath=true/);
+  assert.match(aiRecheck,/if\(mantzilasInvoice\)return currentPage&&!line\.sourceColumnsVerified/);
 });
 
 test("fast header preserves a readable fallback inside its dedicated POS request budget",async()=>{

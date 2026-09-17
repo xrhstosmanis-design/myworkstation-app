@@ -223,10 +223,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   }
   const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
   const posHandoff=previous.posHandoff&&typeof previous.posHandoff==="object"?previous.posHandoff:null;
-  let preferCentralStefanidis=false;
+  let preferCentralStefanidis=false,preferCentralMantzilas=false;
   if(posHandoff?.supplierId){
     const supplierRows=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${posHandoff.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
-    preferCentralStefanidis=cleanTaxId(supplierRows[0]?.taxId)===STEFANIDIS_TAX_ID;
+    const supplierTaxId=cleanTaxId(supplierRows[0]?.taxId);
+    preferCentralStefanidis=supplierTaxId===STEFANIDIS_TAX_ID;
+    preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID;
   }
   const localRawText=pageJobs.map((page,index)=>`ΣΕΛΙΔΑ ${index+1}:\n${String(page.resultJson?.rawText||"").slice(0,12000)}`).join("\n\n").slice(0,60000);
   const fileParts=pageJobs.map((page,index)=>page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||`invoice-page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()}:{type:"input_image",image_url:page.contentData,detail:"high"});
@@ -245,14 +247,15 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
   let parsed=null,unifiedAiFailure=null,centralAzureFailure=null;
   failureStage="read-provider-pages";
-  if(preferCentralStefanidis&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+  if((preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     try{
       const azurePages=await readAzurePagesSequentially(pageJobs);
       parsed=mergeAzureInvoicePages(azurePages);
       parsed.totalGross=money2(posHandoff.totalGross||parsed.totalGross);
       parsed.documentNumber=String(posHandoff.documentNumber||parsed.documentNumber||"");
       parsed.documentDate=String(posHandoff.documentDate||parsed.documentDate||"");
-      parsed.stefanidisCentralFastPath=true;
+      if(preferCentralStefanidis)parsed.stefanidisCentralFastPath=true;
+      if(preferCentralMantzilas)parsed.mantzilasCentralFastPath=true;
     }catch(error){centralAzureFailure=error;unifiedAiFailure=error}
   }
   if(!parsed)try{
@@ -269,7 +272,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     // The centrally profiled supplier already received a complete ordered Azure
     // pass above. Do not repeat the same two provider calls after the OpenAI
     // fallback: that exceeded the caller deadline and caused endless recovery.
-    if(preferCentralStefanidis&&centralAzureFailure){
+    if((preferCentralStefanidis||preferCentralMantzilas)&&centralAzureFailure){
       const timeout=isProviderTimeout(centralAzureFailure)||isProviderTimeout(unifiedAiFailure);
       const wrapped=new Error(`${timeout?"FULL_OCR_PROVIDER_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: AZURE=${providerErrorText(centralAzureFailure)}; OPENAI=${providerErrorText(unifiedAiFailure)}`);
       wrapped.status=timeout?503:502;throw wrapped;
@@ -413,7 +416,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
       const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
       const currentPage=pageJobs.length===1||line.sourceFileIndex===pageIndex;
-      if(mantzilasInvoice)return currentPage;
+      if(mantzilasInvoice)return currentPage&&!line.sourceColumnsVerified;
       return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)continue;
