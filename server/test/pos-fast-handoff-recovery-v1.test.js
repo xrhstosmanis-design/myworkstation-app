@@ -5,13 +5,14 @@ import {readFile} from "node:fs/promises";
 const route=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
 const orders=await readFile(new URL("../../client/src/components/commerce/installPurchaseOrdersSuite.js",import.meta.url),"utf8");
 const reader=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+const auth=await readFile(new URL("../src/middleware/auth.js",import.meta.url),"utf8");
 
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
   assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
   assert.match(route,/"updatedAt" ASC LIMIT 50/);
   assert.match(route,/if\(recovered\.length>=3\)break/);
-  assert.match(route,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\)/);
+  assert.match(route,/scheduleFastBackground\(\{companyId:req\.user\.companyId,storeId:job\.storeId/);
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
 });
 
@@ -82,7 +83,31 @@ test("immediate POS worker receives the complete cached-line handoff",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
   assert.match(body,/const handoff=\{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds\.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines\}/);
-  assert.match(body,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\),companyId,jobId,pageJobIds,handoff,publicOrigin\}\)/);
+  assert.match(body,/scheduleFastBackground\(\{companyId,storeId,jobId,pageJobIds,handoff,publicOrigin\}\)/);
+});
+
+test("durable POS background uses a job-scoped server capability instead of the browser session",()=>{
+  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
+  assert.match(route,/tokenType:"POS_BACKGROUND",companyId,storeId,jobId,path,method,bodyHash/);
+  assert.match(route,/expiresIn:"5m",issuer:POS_BACKGROUND_TOKEN_ISSUER,audience:POS_BACKGROUND_TOKEN_AUDIENCE/);
+  assert.match(worker,/const backgroundScope=\{companyId,storeId,jobId\}/);
+  assert.match(worker,/\/ai-recheck`,\{backgroundScope,publicOrigin/);
+  assert.match(worker,/\/product-lines`,\{backgroundScope,publicOrigin/);
+  assert.match(worker,/\/pos-intake`,\{backgroundScope,publicOrigin/);
+  assert.doesNotMatch(worker,/authorization:req\.get|\{authorization,publicOrigin/);
+});
+
+test("POS background capability is bound to exact route, method, body, tenant, store and durable job",()=>{
+  assert.match(auth,/^const POS_BACKGROUND_ACTIONS=\{/m);
+  assert.match(auth,/payload\.path!==path\.replace\("\/api\/commerce",""\)/);
+  assert.match(auth,/payload\.method!==req\.method/);
+  assert.match(auth,/payload\.jobId!==requestJobId/);
+  assert.match(auth,/payload\.bodyHash!==bodyHash/);
+  assert.match(auth,/j\."companyId"=\$\{String\(payload\.companyId\|\|""\)\} AND j\."storeId"=\$\{String\(payload\.storeId\|\|""\)\}/);
+  assert.match(auth,/Array\.isArray\(handoff\.pageJobIds\).*includes\(String\(job\?\.id\)\)/);
+  assert.match(auth,/\["POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"\]\.includes\(job\.status\)/);
+  assert.match(auth,/code:"POS_BACKGROUND_SCOPE_REJECTED"/);
+  assert.match(auth,/code:"POS_BACKGROUND_JOB_REJECTED"/);
 });
 
 test("a repeated POS intake reuses and re-verifies durable cached lines without provider OCR",()=>{

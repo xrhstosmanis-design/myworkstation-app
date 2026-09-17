@@ -306,6 +306,12 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
     assert.equal(line.supplierProfileEvidence.stockQuantity,stockQuantity);assert.ok(Math.abs(line.supplierProfileEvidence.pieceUnitPrice-piecePrice)<.0001);assert.equal(line.packRule,rule);
     assert.equal(line.netAmount,input.netAmount,'pack conversion must not change invoice totals');
   }
+  const lipton12={code:'01880',description:'LIPTON ΤΣΑΪ ΡΟΔΑΚΙΝΟ Χ.ΖΑΧ 500ml',rawText:'01880 | LIPTON ΤΣΑΪ ΡΟΔΑΚΙΝΟ Χ.ΖΑΧ 500ml | 12TMX | 1 | 9,370000 | 9,37 | 13 | 10,59',quantity:1,invoiceQuantity:1,unitCost:9.37,netAmount:9.37,vatRate:13,grossAmount:10.59,invoiceUnit:'12TMX',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED'};
+  const convertedLipton=applyMantzilasPackaging(lipton12);
+  assert.deepEqual({quantity:convertedLipton.quantity,invoiceQuantity:convertedLipton.invoiceQuantity,invoiceUnit:convertedLipton.invoiceUnit,pack:convertedLipton.stockUnitsPerInvoiceUnit,stock:convertedLipton.supplierProfileEvidence.stockQuantity,piecePrice:convertedLipton.supplierProfileEvidence.pieceUnitPrice,net:convertedLipton.netAmount,gross:convertedLipton.grossAmount},{quantity:1,invoiceQuantity:1,invoiceUnit:'PACKAGE',pack:12,stock:12,piecePrice:.7808,net:9.37,gross:10.59});
+  assert.equal(convertedLipton.packRule,'MANTZILAS_PRINTED_12TMX');
+  const sizeOnlyLipton=applyMantzilasPackaging({...lipton12,rawText:'01880 | LIPTON ΤΣΑΪ ΡΟΔΑΚΙΝΟ 500ml | TMX | 1 | 9,37',invoiceUnit:'TMX'});
+  assert.equal(sizeOnlyLipton.stockUnitsPerInvoiceUnit,undefined,'500 ml alone must not invent a 12-piece package');
   const alreadyPieces={description:'RED BULL 0,25LT',unit:'TEM',quantity:48,unitCost:.95,netAmount:45.6};
   assert.equal(applyMantzilasPackaging(alreadyPieces),alreadyPieces,'printed pieces must never be converted twice');
   const verifiedBottle={description:'CORONA ΦΙΑΛΗ 0,33ML',rawText:'02410 | CORONA ΦΙΑΛΗ 0,33ML | KIB | 24 | 0,98',quantity:24,invoiceQuantity:24,unitCost:.98,netAmount:23.52,invoiceUnit:'ΦΙΑ',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED',stockUnitsPerInvoiceUnit:24,packageConversionApplied:true};
