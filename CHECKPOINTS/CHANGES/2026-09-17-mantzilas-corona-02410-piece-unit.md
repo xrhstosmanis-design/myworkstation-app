@@ -20,4 +20,5 @@
 - Focused invoice/POS recovery tests: **104/104 PASS**.
 - Full server suite: **1294/1294 PASS**.
 - Client production build and server/Prisma build: **PASS**.
-- Status: **AWAITING commit, green CI, exact deploy and POS-front LAB**.
+- Superseded by the joint final normalization in PR **#931**.
+- Final fresh POS-front LAB on exact production revision `6b7b33a3f4f8be88fe7816b0cd677891ce14c915`: **PASS** with `02410 = 24 pieces × 0.98 EUR`, net `23.52 EUR`, gross `35.71 EUR`, while COCA-COLA `00009` also remained correct.

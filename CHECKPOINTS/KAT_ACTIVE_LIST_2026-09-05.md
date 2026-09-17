@@ -1517,7 +1517,7 @@ Total output lines: 1413
 - [x] Scope is only the original POS-front read; BackOffice refresh recovery is not acceptance.
 - [x] Added a MANTZILAS-only current-row arithmetic fallback for code `00009` without changing the other 17 rows or invoice totals.
 - [x] Focused tests `41/41`, full server suite `1292/1292`, client production build and server/Prisma build PASS.
-- [ ] AWAITING commit, green CI, exact deploy and a fresh POS-front LAB.
+- [x] Superseded by joint normalization PR #931; final fresh POS-front LAB PASS with `00009 = 24 pieces / 31%` while CORONA `02410` also remained correct.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-pos-front-code-00009.md`.
 ## 2026-09-17 — MANTZILAS CORONA 02410 already-piece guard
 
@@ -1526,7 +1526,7 @@ Total output lines: 1413
 - [x] Bounded correction: when the current fully verified MANTZILAS row itself proves code `02410`, CORONA bottle `0.33`, `24 × 0.98 = 23.52`, expose it as pieces and do not apply the stale `×24` carton multiplier.
 - [x] Regression preserves other carton rules and the complete CORONA economics: net `23.52`, EFK `5.28`, taxable `28.80`, VAT `6.91`, gross `35.71`. No payment, stock posting, approval, finalization, fiscal or accounting change.
 - [x] Focused invoice/POS tests `104/104`, full server suite `1294/1294`, client production build and server/Prisma build: PASS.
-- [ ] AWAITING commit, green CI, exact deploy and fresh POS-front LAB verification.
+- [x] Superseded by joint normalization PR #931; final fresh POS-front LAB PASS with `02410 = 24 pieces × 0.98 EUR` while COCA-COLA `00009` also remained correct.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corona-02410-piece-unit.md`.
 ## 2026-09-17 — MANTZILAS 00009 + CORONA joint final normalization
 
@@ -1535,5 +1535,7 @@ Total output lines: 1413
 - [x] Both exact, current-row arithmetic proofs now run in the same final MANTZILAS packaging-normalization stage, so provider variation cannot make the two fixes alternate.
 - [x] Regression covers both rows simultaneously plus unrelated-code/carton negative controls; the other packaging rules and economic values remain unchanged. No payment, stock posting, approval, finalization, fiscal or accounting change.
 - [x] Focused invoice/POS tests `104/104`, full server suite `1294/1294`, client production build and server/Prisma build: PASS.
-- [ ] AWAITING commit, green CI, exact deploy and one fresh POS-front LAB where both `00009` and `02410` are correct simultaneously.
+- [x] PR #931 / CI #2417 / exact production revision `6b7b33a3f4f8be88fe7816b0cd677891ce14c915`: PASS.
+- [x] FINAL POS-FRONT LAB PASS: fresh `12665` completed with 18 rows and both targets correct simultaneously: `00009 = 24 pieces / 31% / 13.49 EUR / 15.24 EUR`; `02410 = 24 pieces × 0.98 EUR / 23.52 EUR / 35.71 EUR`.
+- [x] Invoice `429.27 EUR`, line sum `429.26 EUR`, difference `0.01 EUR` within `0.05 EUR` tolerance. No approval, finalization or stock posting was performed.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
