@@ -57,12 +57,10 @@ async function hasPersistedMantzilasLegacyAmbiguity(companyId,job){
 }
 const id=()=>crypto.randomUUID();
 const fastBackgroundWorkers=new Map();
-// A POS handoff is intentionally fire-and-forget for the operator. Render can
-// briefly refuse a loopback/public request while a worker is waking up, so the
-// server retries the same durable job before it is ever reported as failed.
-// One bounded retry is enough for transient transport/provider failures. Four
-// full OCR attempts could keep a draft in recovery for many minutes.
-const FAST_BACKGROUND_RETRY_DELAYS_MS=[0,3000];
+// A POS handoff is intentionally fire-and-forget for the operator. The durable
+// database task below is the single retry owner; do not nest another full OCR
+// retry loop inside one lease or a failed provider call can look permanently
+// stuck in POS_PROCESSING.
 const FAST_AZURE_HEADER_TIMEOUT_MS=20000;
 // A complete 16+ row structured table needs a little more time than the
 // original four-field header. Keep one shared bounded deadline so the FAST
@@ -84,7 +82,6 @@ const POS_BACKGROUND_CONCURRENCY=2;
 const posBackgroundWorkerId=`${process.env.RENDER_INSTANCE_ID||process.pid}:${crypto.randomUUID()}`;
 let posBackgroundSweepTimer=null;
 let posBackgroundSweepActive=false;
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 
 function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
@@ -98,14 +95,23 @@ async function internalCommerceRequest(path,{authorization,backgroundScope,metho
   const origins=[localOrigin,...(publicOrigin&&publicOrigin!==localOrigin?[publicOrigin]:[])];
   const requestAuthorization=backgroundScope?posBackgroundAuthorization({...backgroundScope,path,method,body}):authorization;
   let lastError;
-  for(const origin of origins)try{
+  for(const [originIndex,origin] of origins.entries())try{
     const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:requestAuthorization,"Content-Type":"application/json"},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
     const text=await response.text();
     let payload={};
     if(text)try{payload=JSON.parse(text)}catch{payload={error:`Μη αναμενόμενη απάντηση server (${response.status}).`}};
-    if(!response.ok){const error=new Error(payload?.error||`Σφάλμα server ${response.status}.`);error.status=response.status;throw error;}
+    if(!response.ok){const error=new Error(payload?.error||`Σφάλμα server ${response.status}.`);error.status=response.status;error.internalHttpResponse=true;throw error;}
     return payload;
-  }catch(error){lastError=error}
+  }catch(error){
+    lastError=error;
+    const hasFallback=originIndex<origins.length-1;
+    const timedOut=/TimeoutError|AbortError|aborted due to timeout/i.test(`${error?.name||""} ${error?.message||error}`);
+    // A loopback connection refusal can safely try the public Render origin.
+    // HTTP failures and timeouts mean the local handler was reached (and may
+    // still be finishing); replaying them through the public origin duplicates
+    // the same expensive OCR operation and extends POS_PROCESSING for minutes.
+    if(!hasFallback||error?.internalHttpResponse||timedOut)throw error;
+  }
   throw lastError||new Error("Η εσωτερική ανάγνωση τιμολογίου δεν ξεκίνησε.");
 }
 
@@ -137,10 +143,8 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
   const task=(async()=>{
     try{
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING')`;
-      let created,lastError,operationStage="prepare-lines";
-      for(const [attempt,delay] of FAST_BACKGROUND_RETRY_DELAYS_MS.entries()){
-        if(delay)await wait(delay);
-        try{
+      let created,operationStage="prepare-lines";
+      try{
           let sourceLines,previousLines=[],usingStoredProductLines=false;
           if(!handoff.replaceExistingDraft){
             const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
@@ -184,17 +188,9 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
             additionalPageJobIds,
             note:`Γρήγορη καταχώριση με AI • ${pageJobIds.length} ${pageJobIds.length===1?"σελίδα":"σελίδες"} • ${handoff.settlementMode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"}`
           }});
-          lastError=null;
-          break;
-        }catch(error){
-          const stagedError=new Error(`POS_BACKGROUND_${operationStage.toUpperCase().replace(/-/g,"_")}: ${String(error?.message||error)}`);stagedError.status=error?.status;lastError=stagedError;
-          console.warn("POS fast invoice background retry",{jobId,attempt:attempt+1,message:String(error?.message||error)});
-          // A missing AI key, unsafe OCR result or payment mismatch will not be
-          // repaired by waiting. Only transient transport failures retry.
-          if(!isRetryableBackgroundError(error))break;
-        }
+      }catch(error){
+        const stagedError=new Error(`POS_BACKGROUND_${operationStage.toUpperCase().replace(/-/g,"_")}: ${String(error?.message||error)}`);stagedError.status=error?.status;throw stagedError;
       }
-      if(lastError)throw lastError;
       await prisma.$transaction(async tx=>{
         const completed=await tx.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "state"='COMPLETED',"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "leaseToken"=${leaseToken}`;
         if(!completed)return;
