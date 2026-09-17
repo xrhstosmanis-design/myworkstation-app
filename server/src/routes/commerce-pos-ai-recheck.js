@@ -411,12 +411,20 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   failureStage="discount-verification";
   const discountDiagnostics={accepted:0,rejectedMath:0};
   const mantzilasInvoice=isMantzilasInvoice(parsed);
+  // A per-row Azure flag cannot prove that the complete table is correct when
+  // the aggregate already disagrees with the POS-confirmed invoice total. In
+  // that exact MANTZILAS failure case, reverify every current-page row from the
+  // original image. Keep the no-provider fast path for a table that already
+  // reconciles, including the LAB-passed 12665 normalization.
+  const mantzilasRequiresCompleteReverification=mantzilasInvoice
+    &&invoiceTotal>0
+    &&Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
   for(const [pageIndex,page] of pageJobs.entries()){
     const unresolved=parsed.productLines.filter(line=>{
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
       const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
       const currentPage=pageJobs.length===1||line.sourceFileIndex===pageIndex;
-      if(mantzilasInvoice)return currentPage&&!line.sourceColumnsVerified;
+      if(mantzilasInvoice)return currentPage&&(mantzilasRequiresCompleteReverification||!line.sourceColumnsVerified);
       return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)continue;

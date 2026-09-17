@@ -1,3 +1,13 @@
+## 2026-09-17 — POS-front MANTZILAS full verification after aggregate mismatch
+
+- [x] Current LAB evidence remains FAIL: POS-front invoice `12424` created one draft but finished at `0 items / 0.00 EUR` with `POS_FAILED / POS_BACKGROUND_FAILED`.
+- [x] User acceptance rule: BackOffice refresh/recovery is not acceptance. A fresh invoice must complete correctly from one POS-front submission without a second upload or operator recovery action.
+- [x] When the current MANTZILAS candidate table does not reconcile to the confirmed invoice total, do not exempt Azure rows merely because each row carries `sourceColumnsVerified`; the aggregate mismatch disproves the table as a complete verified batch.
+- [x] Reverify the complete current-page MANTZILAS table only in that mismatch case, while preserving the fast path for an already reconciled table and every payment/draft/stock/approval/finalization guard.
+- [x] Focused invoice/POS tests `73/73`, full server suite `1299/1299`, client production build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge, exact deploy and one fresh POS-front LAB. BackOffice refresh of `12424` may provide diagnostics but cannot mark this change PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-front-mantzilas-full-mismatch-verification.md`.
+
 ## 2026-09-17 — MANTZILAS exact reconciliation diagnostics
 
 - [x] LAB FAIL on exact production `a2c68311721fcc4635c9ebdf50aeb068b13810dc`: existing `12424` reached `POS_FAILED / POS_BACKGROUND_FAILED` with `AI_RECHECK_INTERNAL [discount-verification]` and zero rows.
