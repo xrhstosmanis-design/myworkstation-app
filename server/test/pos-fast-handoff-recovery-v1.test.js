@@ -198,6 +198,21 @@ test("discount verification internal failure is eligible for durable reread",()=
   assert.match(route,/table-recheck\|discount-verification/);
 });
 
+test("a reclaimed discount failure stays in POS recovery instead of reporting the stale failure",()=>{
+  assert.match(route,/retryClaimed=false/);
+  assert.match(route,/retryClaimed=Boolean\(reclaimed\);shouldSchedule=retryClaimed/);
+  assert.match(route,/stage:rereadClaimed\?"POS_REPROCESSING":retryClaimed\?"POS_RECOVERING"/);
+  assert.match(route,/failed:job\.status==="POS_FAILED"&&!retryClaimed/);
+  assert.match(route,/error:retryClaimed\?null:background\.error\|\|null/);
+  assert.match(route,/status:"RECOVERING",recoveredAt:new Date\(\)\.toISOString\(\),previousError/);
+});
+
+test("normal POS status polling does not enqueue a successor until processing is stale",()=>{
+  assert.match(route,/staleProcessing=job\.status==="POS_PROCESSING"&&new Date\(job\.updatedAt\)\.getTime\(\)<Date\.now\(\)-60\*1000/);
+  assert.match(route,/\["POS_QUEUED","POS_DRAFT_READY"\]\.includes\(job\.status\)\|\|staleProcessing/);
+  assert.doesNotMatch(route,/\["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"\]\.includes\(job\.status\)/);
+});
+
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);

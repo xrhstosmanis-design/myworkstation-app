@@ -1486,8 +1486,11 @@ Total output lines: 1413
 
 - [x] LAB failure stayed safe at 0 items but was incorrectly classified as non-retryable.
 - [x] Allow the archived POS handoff to retry `AI_RECHECK_INTERNAL [discount-verification]`.
+- [x] LAB FAIL after PR #928: status reclaimed the `15:22` failure at `18:15` as `POS_QUEUED / POS_RECOVERING`, but returned the stale failure to POS, which stopped polling.
+- [x] Reclaimed jobs now return as recovering, clear the visible stale error and keep only bounded/stale recovery scheduling.
 - [x] Preserve bounded recovery and all payment/stock/finalization guards.
-- [ ] AWAITING tests, green CI, exact deploy and recovery by BackOffice refresh.
+- [x] Focused recovery tests `28/28`, full server suite `1294/1294`, client production build and server/Prisma build PASS.
+- [ ] AWAITING commit, green CI, exact deploy and POS-front recovery without another payment/upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-discount-verification-recovery.md`.
 
 # 2026-09-17 — MANTZILAS legacy cached-line reread
