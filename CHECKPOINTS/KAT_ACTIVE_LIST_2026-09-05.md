@@ -1444,3 +1444,12 @@ Total output lines: 1413
 - [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
 - [ ] AWAITING green CI, exact deploy and one new POS-front LAB of invoice `12665`.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-row-identity-guard.md`.
+
+# 2026-09-17 — POS FAST header-only recovery
+
+- [x] LAB reproduced a safe pre-payment failure while FAST attempted a full 18-row structured table.
+- [x] Limit the operator-facing fallback to supplier, invoice number, date and gross total.
+- [x] Keep complete product reading in the durable V2.4.4 background flow.
+- [x] Preserve fail-closed payment and all duplicate/payment/stock/finalization guards.
+- [ ] AWAITING green CI, exact deploy and one repeat with the same POS-front image.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-fast-header-only.md`.
