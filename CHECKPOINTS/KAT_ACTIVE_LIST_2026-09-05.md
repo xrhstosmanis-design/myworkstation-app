@@ -1498,3 +1498,13 @@ Total output lines: 1413
 - [x] Keep the same payment, durable job and draft; no stock, approval, finalization, fiscal or accounting mutation.
 - [ ] AWAITING tests, green CI, exact deploy and one BackOffice refresh of the existing `12665` draft.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-legacy-cached-line-reread.md`.
+
+# 2026-09-17 — MANTZILAS persisted-draft reread
+
+- [x] LAB FAIL after PR #925: `00009` remained `48 / 65.5%` after BackOffice refresh.
+- [x] Detect the exact wrong row from the linked `PurchaseOrderLine` draft when legacy job cache is incomplete.
+- [x] Prioritize recent completed drafts inside the bounded 50-job recovery scan.
+- [x] Advance the one-attempt recovery marker to V10 without changing payment, stock, approval or finalization.
+- [x] Focused tests `79/79`, full server suite `1290/1290`, client build and server build PASS locally.
+- [ ] AWAITING green CI, exact deploy and one BackOffice refresh of the same draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-legacy-cached-line-reread.md`.

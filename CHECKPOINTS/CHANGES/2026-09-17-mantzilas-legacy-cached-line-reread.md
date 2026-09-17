@@ -19,3 +19,17 @@
 - No new upload or payment; no credit, stock, approval, finalization, fiscal or accounting mutation.
 - PASS requires 18 rows, taxable `365.75 EUR`, gross within `0.05 EUR` of `429.27 EUR`, `00009 = 24 pieces / 31%`, `13192 = 12` stock pieces, `433 = 12` stock pieces and `02410 = 24` stock pieces.
 - Status: **LAB FAIL / AWAITING tests, CI, exact deploy and one BackOffice refresh of the existing draft**.
+
+## LAB result after PR #925
+
+- **LAB FAIL:** after the deployed `V9` recovery and BackOffice refresh, persisted order line `00009` was still visible as `48 pieces / 65.5%`.
+- The recovery scan considered the oldest 50 jobs first, so a recent completed draft could be omitted from the bounded scan.
+- The ambiguity predicate inspected only `AiReaderJob.resultJson.productLines`; it could miss the wrong values already persisted in `PurchaseOrderLine` when the legacy cache lacked the sibling/evidence fields.
+
+## Bounded follow-up
+
+- Prioritize recent `AWAITING_APPROVAL` jobs inside the existing 50-job bound.
+- Verify the exact MANTZILAS `00009 = 48 / 65.5%` signature against the linked draft and sibling `00160` when cached evidence is incomplete.
+- Advance the one-attempt strategy to `V10`; reuse the same archived image, payment, job and draft.
+- Focused tests `79/79`, full server suite `1290/1290`, client build and server build PASS locally.
+- Status: **LAB FAIL / AWAITING green CI, exact deploy and one BackOffice refresh of the same draft**.
