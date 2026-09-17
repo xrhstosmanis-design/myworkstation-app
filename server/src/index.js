@@ -65,7 +65,7 @@ import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-approval.js";
 import commerceMyDataInboxRoutes from "./routes/commerce-mydata-inbox.js";
 import commerceVatLookupRoutes from "./routes/commerce-vat-lookup.js";
-import commercePosV244Routes from "./routes/commerce-pos-v244.js";
+import commercePosV244Routes,{ensurePosInvoiceBackgroundWorkerSchema,startPosInvoiceBackgroundWorker} from "./routes/commerce-pos-v244.js";
 import commerceAzureInvoiceReaderRoutes from "./routes/commerce-azure-invoice-reader.js";
 import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
@@ -245,4 +245,8 @@ app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
-app.listen(process.env.PORT||8080,()=>console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`));
+await ensurePosInvoiceBackgroundWorkerSchema();
+app.listen(process.env.PORT||8080,()=>{
+  console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
+  startPosInvoiceBackgroundWorker();
+});

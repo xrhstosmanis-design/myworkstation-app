@@ -3,6 +3,7 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const route=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
+const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
 
 test("POS persists every invoice page before starting full recognition",()=>{
@@ -10,9 +11,11 @@ test("POS persists every invoice page before starting full recognition",()=>{
   assert.match(route,/INSERT INTO "DocumentAttachment"/);
   assert.match(route,/POS_QUEUED/);
   assert.match(route,/posHandoff:handoff/);
-  const response=route.indexOf('res.status(202).json');
-  const background=route.indexOf('setImmediate(()=>scheduleFastBackground',response);
-  assert.ok(response>=0&&background>response,"durable handoff response must be sent before full background OCR starts");
+  const handoffStart=route.indexOf('router.post("/ai-reader/fast-handoff"');
+  const response=route.indexOf('res.status(202).json',handoffStart);
+  const queued=route.indexOf('await enqueueFastBackground({companyId,storeId,jobId,publicOrigin})',handoffStart);
+  assert.ok(queued>handoffStart&&response>queued,"the durable task must be committed before POS receives acceptance");
+  assert.doesNotMatch(route.slice(handoffStart,response),/scheduleFastBackground\(/);
 });
 
 test("POS closes the invoice modal immediately and only monitors server status",()=>{
@@ -26,12 +29,15 @@ test("POS closes the invoice modal immediately and only monitors server status",
   assert.match(route,/\/pos-intake/);
 });
 
-test("status polling restarts a persisted queued or stale worker after a server restart",()=>{
+test("server startup reclaims persisted queued or expired-lease work without POS polling",()=>{
   assert.match(route,/posHandoff:primaryHandoff/);
-  assert.match(route,/\["POS_QUEUED","POS_DRAFT_READY"\]\.includes\(job\.status\)\|\|staleProcessing/);
-  assert.match(route,/staleProcessing=job\.status==="POS_PROCESSING"&&new Date\(job\.updatedAt\)\.getTime\(\)<Date\.now\(\)-60\*1000/);
-  assert.match(route,/handoff\.pageJobIds/);
-  assert.match(route,/fastBackgroundWorkers\.has\(jobId\)/);
+  assert.match(route,/CREATE TABLE IF NOT EXISTS "PosInvoiceBackgroundTask"/);
+  assert.match(route,/SELECT j\."id",j\."companyId",j\."storeId",'QUEUED',NOW\(\) FROM "AiReaderJob" j/);
+  assert.match(route,/t\."state"='RUNNING' AND t\."leaseUntil"<CURRENT_TIMESTAMP/);
+  assert.match(route,/FOR UPDATE OF t SKIP LOCKED LIMIT 1/);
+  assert.match(route,/setInterval\(runPosInvoiceBackgroundSweep,POS_BACKGROUND_SWEEP_MS\)/);
+  assert.match(server,/await ensurePosInvoiceBackgroundWorkerSchema\(\)/);
+  assert.match(server,/app\.listen[\s\S]*startPosInvoiceBackgroundWorker\(\)/);
 });
 
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
