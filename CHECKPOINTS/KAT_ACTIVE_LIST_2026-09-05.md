@@ -1519,3 +1519,12 @@ Total output lines: 1413
 - [x] Focused tests `41/41`, full server suite `1292/1292`, client production build and server/Prisma build PASS.
 - [ ] AWAITING commit, green CI, exact deploy and a fresh POS-front LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-pos-front-code-00009.md`.
+## 2026-09-17 — MANTZILAS CORONA 02410 already-piece guard
+
+- [x] LAB PASS: fresh POS-front invoice `12665` completed with 18 rows and code `00009 = 24 pieces / 31%`, net `13.49 EUR`, gross `15.24 EUR`.
+- [x] LAB FAIL: code `02410`, CORONA bottle `0.33`, is displayed as `576 pieces / 0.040833 EUR` instead of the verified printed `24 pieces / 0.98 EUR`; net `23.52 EUR` remained unchanged.
+- [x] Bounded correction: when the current fully verified MANTZILAS row itself proves code `02410`, CORONA bottle `0.33`, `24 × 0.98 = 23.52`, expose it as pieces and do not apply the stale `×24` carton multiplier.
+- [x] Regression preserves other carton rules and the complete CORONA economics: net `23.52`, EFK `5.28`, taxable `28.80`, VAT `6.91`, gross `35.71`. No payment, stock posting, approval, finalization, fiscal or accounting change.
+- [x] Focused invoice/POS tests `104/104`, full server suite `1294/1294`, client production build and server/Prisma build: PASS.
+- [ ] AWAITING commit, green CI, exact deploy and fresh POS-front LAB verification.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corona-02410-piece-unit.md`.
