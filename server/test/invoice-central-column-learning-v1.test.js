@@ -245,11 +245,11 @@ test('a genuinely repeated printed row is restored when its second charge exactl
   const restored=context.restore([cup,other],1236.38,'FR1500 cups row one\nFR1500 cups row two\nES01000 coffee');
   assert.equal(restored.restored,true);assert.equal(restored.lines.filter(line=>line.code==='FR1500').length,2);
   const exactGap=context.restore([cup,other],1236.38,'FR1500 once\nES01000 coffee');
-  assert.equal(exactGap.restored,true);
-  assert.equal(exactGap.totalGapRecovered,true);
+  assert.equal(exactGap.restored,false);
+  assert.equal(exactGap.lines.length,2);
   const noCodeText=context.restore([cup,other],1236.38,'cups row without extracted supplier code');
-  assert.equal(noCodeText.restored,true);
-  assert.equal(noCodeText.totalGapRecovered,true);
+  assert.equal(noCodeText.restored,false);
+  assert.equal(noCodeText.lines.length,2);
 });
 
 
