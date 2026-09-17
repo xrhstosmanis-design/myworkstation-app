@@ -1,3 +1,12 @@
+## 2026-09-18 — MANTZILAS isolated duplicate-row reconciliation
+
+- [x] **LAB FAIL** after exact production `67216bce30d4abdadec4c5eaa8c5cb155c166384`: the durable Phase 1 worker claimed invoice `12674` and reached a terminal diagnostic without another POS submission, but the corrective reread returned `13` rows / `372.63 EUR` against printed gross `366.47 EUR` (unique overage `6.16 EUR`).
+- [x] Root cause boundary: supplemental row merging can retain one isolated identical physical-row replay; the existing replay guard covers only a duplicated whole table.
+- [x] Collapse one isolated replay only for a single-page MANTZILAS invoice when exactly one duplicated full physical/economic fingerprint has gross equal to the complete overage and removing one occurrence reconciles the independent invoice total within `0.05 EUR`.
+- [x] Preserve ambiguous or genuine repeated rows, the full printed-table verifier, invoice `12665` row normalizations (`00009`, `02410`), explicit `12 TMX`, and every payment/draft/stock/approval/finalization/fiscal/accounting boundary.
+- [x] Focused route and reconciliation regressions `69/69`, full server suite `1304/1304`, production build, syntax and diff checks: PASS locally. LAB remains FAIL until green CI, merge, exact deploy and automatic recovery of the existing `12674` draft to all printed rows and `366.47 EUR`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-isolated-duplicate-row.md`.
+
 ## 2026-09-17 — Phase 1 LAB retry amplification follow-up
 
 - [x] **LAB FAIL** on exact production `dde564989fdb49d72b170c1d5548e57fb12c0a0d`: invoice `12674` remained at `0 items / 0.00 EUR` in `POS_PROCESSING / POS_BACKGROUND` after the operator left the POS and refreshed BackOffice.
