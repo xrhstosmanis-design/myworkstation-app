@@ -72,6 +72,19 @@ export function applyMantzilasPackaging(line){
     conversionFactor:1,stockUnitsPerInvoiceUnit:1,packageUnitPrice:verifiedUnitCost,unitCost:verifiedUnitCost,unitPrice:verifiedUnitCost,
     packageConversionApplied:false,confirmedPackMapping:true,packRule:"MANTZILAS_02410_CORONA_VERIFIED_PIECE",
     supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_VERIFIED_PIECE_ROW",supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity:verifiedQuantity,stockQuantity:verifiedQuantity,conversionFactor:1,packageUnitPrice:round4(verifiedUnitCost),pieceUnitPrice:round4(verifiedUnitCost)}};
+  // LAB invoice 12674 and the operator's physical-pack check confirm that
+  // these two exact LOUX 330 ml supplier codes are 12-piece cartons. Code
+  // 12798 also prints the independent (10+2) evidence on the current row.
+  // Keep every price/discount/tax value from the current invoice and learn
+  // only the stock-unit conversion for these supplier identities.
+  const verifiedLoux12=["12798","12718"].includes(normalizedCode)&&/ΛΟΥΞ|LOUX/.test(text)&&/(?:0[,.]?33\s*(?:L|LT)|330\s*ML)/.test(text);
+  if(verifiedLoux12){
+    const invoiceQuantity=Number(line?.invoiceQuantity??line?.quantity??0),packageUnitPrice=Number(line?.packageUnitPrice??line?.unitCost??line?.unitPrice??0),factor=12;
+    if(invoiceQuantity>0&&packageUnitPrice>0)return {...line,quantity:invoiceQuantity,invoiceQuantity,unit:"PACKAGE",invoiceUnit:"PACKAGE",stockUnit:"ΤΜΧ",unitsPerPackage:factor,
+      conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,packageUnitPrice,unitCost:packageUnitPrice,unitPrice:packageUnitPrice,
+      packageConversionApplied:true,confirmedPackMapping:true,packRule:`MANTZILAS_${normalizedCode}_VERIFIED_PACK12`,supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_VERIFIED_SUPPLIER_CODE_PACKAGING",
+      supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity,stockQuantity:round4(invoiceQuantity*factor),conversionFactor:factor,packageUnitPrice:round4(packageUnitPrice),pieceUnitPrice:round4(packageUnitPrice/factor)}};
+  }
   // The unit printed on the current physical row is authoritative. A learned
   // supplier mapping may describe an older carton, and must never multiply a
   // row that explicitly says TEM/TMX. Reading raw first also makes this helper
