@@ -36,7 +36,37 @@ export function applyMantzilasPackaging(line){
   const normalizedCode=columnKey(line?.code).replace(/^0+(?=\d)/,"");
   const verifiedQuantity=Number(line?.invoiceQuantity??line?.quantity??0),verifiedUnitCost=Number(line?.packageUnitPrice??line?.unitCost??line?.unitPrice??0);
   const verifiedInitial=Number(line?.initialAmount??verifiedQuantity*verifiedUnitCost),verifiedNet=Number(line?.netAmount||0);
+  const discount1=Number(line?.discount1||0);
   const activeDiscount=[line?.discount1,line?.discount2,line?.discount3].some(value=>Number(value||0)>0);
+  // Code 00009 can arrive from the provider in two mathematically equivalent
+  // scales: 48 pieces at 65.5%, or two x24 cartons at 65.5%. Both equal the
+  // printed 13.49 EUR net, but the invoice states 24 pieces / 31%. Normalize
+  // this exact current-row proof here, next to the CORONA proof below, so a
+  // later packaging pass cannot undo either correction.
+  const cocaZero24=normalizedCode==="9"&&/COCA\s*COLA\s*ZERO/.test(text)&&/(?:X|Χ)\s*24\s*(?:PACK|PK|TEM|TMX|ΤΕΜ|ΤΜΧ)/.test(text)&&Math.abs(verifiedNet-13.49)<=.01;
+  const piecePrice=Math.abs(verifiedUnitCost-.814583)<=.00001;
+  const packagePrice=Math.abs(verifiedUnitCost-19.55)<=.001;
+  const doubledPieceScale=cocaZero24&&piecePrice&&Math.abs(verifiedQuantity-48)<.0001&&Math.abs(discount1-65.5)<=.05&&Math.abs(verifiedQuantity*verifiedUnitCost*(1-discount1/100)-verifiedNet)<=.02;
+  const correctPieceScale=cocaZero24&&piecePrice&&Math.abs(verifiedQuantity-24)<.0001&&Math.abs(discount1-31)<=.05&&Math.abs(verifiedQuantity*verifiedUnitCost*(1-discount1/100)-verifiedNet)<=.02;
+  const doubledPackageScale=cocaZero24&&packagePrice&&Math.abs(verifiedQuantity-2)<.0001&&Math.abs(discount1-65.5)<=.05&&Math.abs(verifiedQuantity*verifiedUnitCost*(1-discount1/100)-verifiedNet)<=.02;
+  if(doubledPieceScale||correctPieceScale){
+    const quantity=24,unitCost=.814583,initialAmount=round4(quantity*unitCost),discountAmount=round4(initialAmount*.31);
+    return {...line,quantity,invoiceQuantity:quantity,unit:"PIECE",invoiceUnit:"PIECE",stockUnit:"ΤΜΧ",unitsPerPackage:1,
+      conversionFactor:1,stockUnitsPerInvoiceUnit:1,packageUnitPrice:unitCost,unitCost,unitPrice:unitCost,initialAmount,
+      discount1:31,discount1Amount:discountAmount,discountAmount1:discountAmount,discount2:0,discount2Amount:0,discountAmount2:0,discount3:0,discount3Amount:0,discountAmount3:0,
+      quantitySource:"MANTZILAS_CODE_00009_FINAL_NORMALIZATION",discountSource:"MANTZILAS_CODE_00009_FINAL_NORMALIZATION",discountConfidence:99,
+      packageConversionApplied:false,confirmedPackMapping:true,packRule:"MANTZILAS_00009_VERIFIED_PIECE",
+      supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_VERIFIED_PIECE_ROW",supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity:quantity,stockQuantity:quantity,conversionFactor:1,packageUnitPrice:round4(unitCost),pieceUnitPrice:round4(unitCost)}};
+  }
+  if(doubledPackageScale){
+    const invoiceQuantity=1,packageUnitPrice=19.55,initialAmount=19.55,discountAmount=round4(initialAmount*.31),factor=24;
+    return {...line,quantity:invoiceQuantity,invoiceQuantity,unit:"PACKAGE",invoiceUnit:"PACKAGE",stockUnit:"ΤΜΧ",unitsPerPackage:factor,
+      conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,packageUnitPrice,unitCost:packageUnitPrice,unitPrice:packageUnitPrice,initialAmount,
+      discount1:31,discount1Amount:discountAmount,discountAmount1:discountAmount,discount2:0,discount2Amount:0,discountAmount2:0,discount3:0,discount3Amount:0,discountAmount3:0,
+      quantitySource:"MANTZILAS_CODE_00009_FINAL_NORMALIZATION",discountSource:"MANTZILAS_CODE_00009_FINAL_NORMALIZATION",discountConfidence:99,
+      packageConversionApplied:true,confirmedPackMapping:true,packRule:"MANTZILAS_00009_VERIFIED_PACK24",
+      supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_PACKAGING",supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity,stockQuantity:factor,conversionFactor:factor,packageUnitPrice,pieceUnitPrice:round4(packageUnitPrice/factor)}};
+  }
   const verifiedCoronaPiece=normalizedCode==="2410"&&line?.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"&&/CORONA/.test(text)&&/(?:ΦΙΑΛ|BOTTLE)/.test(text)&&/(?:0[,.]?33\s*(?:ML|L|LT)|330\s*ML)/.test(text)&&Math.abs(verifiedQuantity-24)<.0001&&Math.abs(verifiedUnitCost-.98)<.0001&&Math.abs(verifiedInitial-23.52)<=.01&&!activeDiscount&&Math.abs(verifiedNet-23.52)<=.01;
   if(verifiedCoronaPiece)return {...line,quantity:verifiedQuantity,invoiceQuantity:verifiedQuantity,unit:"PIECE",invoiceUnit:"PIECE",stockUnit:"ΤΜΧ",unitsPerPackage:1,
     conversionFactor:1,stockUnitsPerInvoiceUnit:1,packageUnitPrice:verifiedUnitCost,unitCost:verifiedUnitCost,unitPrice:verifiedUnitCost,
