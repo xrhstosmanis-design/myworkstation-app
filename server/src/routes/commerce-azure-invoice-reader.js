@@ -189,6 +189,13 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
     if(!job.contentData)return next();
+    // POS jobs have an immutable, operator-confirmed handoff (supplier, total,
+    // settlement identity and ordered pages) and a dedicated full reader
+    // mounted immediately after this generic Azure fallback. Let that reader
+    // own the request from the start. A partial generic Azure result used to
+    // replace resultJson before next(), erasing posHandoff and forcing the
+    // durable draft into the wrong provider/recovery loop.
+    if(job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object")return next();
     let payload;
     try{payload=await callAzure({contentData:job.contentData,mimeType:job.mimeType})}catch(error){console.error("Azure Document Intelligence fallback:",error?.message||error);return next()}
     let parsed=normalizeAzure(payload);
