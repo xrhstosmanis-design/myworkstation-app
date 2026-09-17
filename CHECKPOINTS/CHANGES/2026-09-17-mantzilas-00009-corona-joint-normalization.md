@@ -25,4 +25,11 @@
 - Focused invoice/POS recovery tests: **104/104 PASS**, including both rows in the same normalization pass and negative controls for unrelated codes/cartons.
 - Full server suite: **1294/1294 PASS**.
 - Client production build and server/Prisma build: **PASS**.
-- Status: **AWAITING commit, green CI, exact deploy and POS-front LAB**.
+- PR **#931**, CI **#2417** and exact production revision `6b7b33a3f4f8be88fe7816b0cd677891ce14c915`: **PASS**.
+- **FINAL POS-FRONT LAB PASS:** fresh invoice `12665` completed automatically with 18 rows and `POS_BACKGROUND_COMPLETE`.
+- The same saved draft shows both protected rows correct simultaneously:
+  - `00009 = 24 pieces / 31%`, net `13.49 EUR`, gross `15.24 EUR`.
+  - `02410 = 24 pieces × 0.98 EUR`, net `23.52 EUR`, EFK `5.28 EUR`, taxable `28.80 EUR`, gross `35.71 EUR`.
+- Invoice total `429.27 EUR` versus line sum `429.26 EUR`: difference `0.01 EUR`, within the visible `0.05 EUR` tolerance.
+- No approval, finalization or stock posting was performed during acceptance.
+- Status: **LAB PASS**.

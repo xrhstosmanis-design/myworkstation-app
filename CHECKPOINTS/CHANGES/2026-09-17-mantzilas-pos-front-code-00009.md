@@ -20,4 +20,5 @@
 - Focused POS invoice tests: **41/41 PASS**.
 - Full server suite: **1292/1292 PASS**.
 - Client production build and server/Prisma build: **PASS**.
-- Status: **AWAITING commit, green CI, exact deploy and fresh POS-front LAB**.
+- Superseded by the joint final normalization in PR **#931**.
+- Final fresh POS-front LAB on exact production revision `6b7b33a3f4f8be88fe7816b0cd677891ce14c915`: **PASS** with `00009 = 24 pieces / 31%`, net `13.49 EUR`, gross `15.24 EUR`, while CORONA `02410` also remained correct.
