@@ -130,18 +130,21 @@ test("a repeated POS intake reuses and re-verifies durable cached lines without 
   assert.ok(worker.indexOf("verifyInvoiceDiscounts({productLines:sourceLines")<worker.indexOf("const productLines=finalizeV244ProductLines"));
 });
 
-test("background OCR falls back to the public Render origin when loopback fails",()=>{
+test("background OCR falls back publicly only for a loopback connection failure",()=>{
   assert.match(route,/const origins=\[localOrigin,.+publicOrigin/);
   assert.match(route,/publicOrigin,method:"POST",body:\{force:true/);
+  assert.match(route,/error\.internalHttpResponse=true/);
+  assert.match(route,/if\(!hasFallback\|\|error\?\.internalHttpResponse\|\|timedOut\)throw error/);
   assert.match(route,/x-forwarded-proto/);
 });
 
-test("background OCR permits one bounded retry before it marks the POS draft failed",()=>{
-  assert.match(route,/FAST_BACKGROUND_RETRY_DELAYS_MS=\[0,3000\]/);
-  assert.match(route,/for\(const \[attempt,delay\] of FAST_BACKGROUND_RETRY_DELAYS_MS\.entries\(\)\)/);
-  assert.match(route,/if\(lastError\)throw lastError/);
+test("the durable database task is the only background retry owner",()=>{
+  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
+  assert.doesNotMatch(route,/FAST_BACKGROUND_RETRY_DELAYS_MS/);
+  assert.doesNotMatch(worker,/for\(const \[attempt,delay\]/);
   assert.match(route,/isRetryableBackgroundError\(error\)/);
-  assert.ok(route.indexOf("FAST_BACKGROUND_RETRY_DELAYS_MS")<route.indexOf("'POS_BACKGROUND_FAILED'"));
+  assert.match(route,/POS_BACKGROUND_DURABLE_RETRY_DELAYS_MS=\[30000,120000\]/);
+  assert.match(route,/"state"='QUEUED',"availableAt"=\$\{availableAt\}/);
 });
 
 test("orders refresh starts durable handoff recovery without blocking the report",()=>{
