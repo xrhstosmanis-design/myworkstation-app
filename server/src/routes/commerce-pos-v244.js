@@ -16,7 +16,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V10";
+const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V11";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
