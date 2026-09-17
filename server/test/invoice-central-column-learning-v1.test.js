@@ -218,6 +218,23 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
   assert.deepEqual(Array.from(mixed.lines,line=>line.code),['ES01000','FR1500','FR1500']);
 });
 
+test('one isolated duplicate row is removed only when its exact gross is the unique total overage',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('const descriptionsClose='))+'\nthis.collapse=collapseExactDuplicateOverage;',context);
+  const first={code:'A',description:'FIRST',quantity:1,unitCost:200,netAmount:200,vatRate:0,grossAmount:200};
+  const second={code:'B',description:'SECOND',quantity:1,unitCost:160.31,netAmount:160.31,vatRate:0,grossAmount:160.31};
+  const duplicate={code:'C',description:'DUPLICATE',quantity:1,unitCost:6.16,netAmount:6.16,vatRate:0,grossAmount:6.16};
+  const collapsed=context.collapse([first,duplicate,second,{...duplicate}],366.47);
+  assert.equal(collapsed.collapsed,true);assert.equal(collapsed.removed,1);assert.equal(collapsed.lines.length,3);
+  assert.equal(collapsed.lines.reduce((sum,line)=>sum+line.grossAmount,0),366.47);
+  const legitimate=context.collapse([first,duplicate,second,{...duplicate}],372.63);
+  assert.equal(legitimate.collapsed,false);assert.equal(legitimate.lines.length,4);
+  const another={...duplicate,code:'D',description:'ANOTHER'};
+  const ambiguous=context.collapse([first,duplicate,{...duplicate},another,{...another}],218.48);
+  assert.equal(ambiguous.collapsed,false);assert.equal(ambiguous.lines.length,5);
+});
+
 test('a genuinely repeated printed row is restored when its second charge exactly closes the invoice total',async()=>{
   const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
   assert.match(source,/restorePrintedRepeatedLine\(parsed\.productLines,invoiceTotal,printedDocumentText\)/);
