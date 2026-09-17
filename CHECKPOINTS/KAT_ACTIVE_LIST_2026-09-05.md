@@ -1,3 +1,13 @@
+## 2026-09-17 — Phase 1 LAB retry amplification follow-up
+
+- [x] **LAB FAIL** on exact production `dde564989fdb49d72b170c1d5548e57fb12c0a0d`: invoice `12674` remained at `0 items / 0.00 EUR` in `POS_PROCESSING / POS_BACKGROUND` after the operator left the POS and refreshed BackOffice.
+- [x] The durable dispatcher did claim the job, but one database attempt still contained the old two-pass full-OCR loop and an internal HTTP failure/timeout could also be replayed through the public Render origin. Those nested retries can keep the draft in `POS_PROCESSING` for many minutes before the durable retry state is visible.
+- [x] Make the database task the only retry owner. A loopback connection failure may still fall back to the public origin, but an HTTP response or timeout is not replayed as a second expensive OCR operation.
+- [x] Preserve the same settlement, attachment, job and draft. No resubmission, payment/credit, approval, finalization, stock, fiscal or accounting mutation.
+- [x] Focused lifecycle regressions `44/44`, full server suite `1303/1303`, production build, syntax and diff checks: PASS locally.
+- [ ] Require green CI, merge, exact deploy and automatic recovery of the same invoice `12674` without another submission. LAB remains FAIL until all printed rows and `366.47 EUR` complete correctly.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-phase1-durable-retry-amplification.md`.
+
 ## 2026-09-17 — Phase 1 database-owned POS invoice worker
 
 - [x] **LAB NOT TESTED**: implementation is locally verified only; CI PASS or deploy will not be reported as LAB PASS.
