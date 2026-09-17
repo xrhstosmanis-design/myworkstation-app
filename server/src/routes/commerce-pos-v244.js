@@ -14,7 +14,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_LEGACY_AMBIGUITY_V9";
+const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V10";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -31,6 +31,27 @@ function hasMantzilasLegacyAmbiguity(productLines){
   const doubledNine=Boolean(row9&&row160&&Number(row9.quantity)===48&&Math.abs(Number(row9.discount1||0)-65.5)<=0.05&&Number(row160.quantity)===48&&Math.abs(Number(row160.discount1||0)-31)<=0.05);
   const staleSixPack=Boolean(row433&&/6\s*(?:P|PK|PACK)/i.test(String(row433.description||row433.rawText||""))&&Number(row433.supplierProfileEvidence?.stockQuantity||0)===6);
   return mantzilasSignature&&(doubledNine||staleSixPack);
+}
+async function hasPersistedMantzilasLegacyAmbiguity(companyId,job){
+  if(!job?.purchaseDocumentId)return false;
+  const rows=await prisma.$queryRaw`
+    SELECT EXISTS (
+      SELECT 1
+      FROM "PurchaseDocument" d
+      JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
+      JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId"
+      JOIN "PurchaseOrderLine" row9 ON row9."orderId"=o."id"
+      JOIN "PurchaseOrderLine" row160 ON row160."orderId"=o."id"
+      WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${companyId}
+        AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
+        AND (s."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%' OR s."name" ILIKE '%MANTZILAS%')
+        AND LTRIM(REGEXP_REPLACE(COALESCE(row9."supplierCode",''),'\\D','','g'),'0')='9'
+        AND row9."description" ILIKE '%COCA%COLA%ZERO%'
+        AND row9."quantity"=48 AND ABS(row9."discount1"-65.5)<=0.05
+        AND LTRIM(REGEXP_REPLACE(COALESCE(row160."supplierCode",''),'\\D','','g'),'0')='160'
+        AND row160."description" ILIKE '%COCA%COLA%'
+    ) AS matches`;
+  return rows[0]?.matches===true;
 }
 const id=()=>crypto.randomUUID();
 const fastBackgroundWorkers=new Map();
@@ -586,7 +607,9 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       WHERE "companyId"=${req.user.companyId}
         AND ("status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR "status"='AWAITING_APPROVAL')
         AND (${storeId}='' OR "storeId"=${storeId})
-      ORDER BY "updatedAt" ASC LIMIT 50`;
+      ORDER BY CASE WHEN "status"='AWAITING_APPROVAL' THEN 0 ELSE 1 END,
+        CASE WHEN "status"='AWAITING_APPROVAL' THEN "updatedAt" END DESC,
+        "updatedAt" ASC LIMIT 50`;
     const recovered=[];let skippedOperatorScope=0,skippedNoHandoff=0,skippedNonRetryable=0;
     for(const job of rows){
       if(recovered.length>=3)break;
@@ -600,7 +623,8 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length){skippedNoHandoff++;continue}
       const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
       const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
-      const needsLegacyAmbiguityReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+      const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+      const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread;
       if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
@@ -634,7 +658,8 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
     const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(background.error);
     const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
-    const needsLegacyAmbiguityReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+    const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+    const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread;
     let scheduledHandoff=handoff,rereadClaimed=false;

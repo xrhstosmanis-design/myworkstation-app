@@ -9,7 +9,7 @@ const reader=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",i
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
   assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
-  assert.match(route,/ORDER BY "updatedAt" ASC LIMIT 50/);
+  assert.match(route,/"updatedAt" ASC LIMIT 50/);
   assert.match(route,/if\(recovered\.length>=3\)break/);
   assert.match(route,/scheduleFastBackground\(\{authorization:req\.get\("authorization"\)/);
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
@@ -137,10 +137,20 @@ test("queued recovery waits for the older worker and skips a completed draft",()
 
 test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the archived image",()=>{
   assert.match(route,/function hasMantzilasLegacyAmbiguity\(productLines\)/);
+  assert.match(route,/async function hasPersistedMantzilasLegacyAmbiguity\(companyId,job\)/);
+  assert.match(route,/JOIN "PurchaseOrderLine" row9 ON row9\."orderId"=o\."id"/);
+  assert.match(route,/row9\."quantity"=48 AND ABS\(row9\."discount1"-65\.5\)<=0\.05/);
+  assert.match(route,/await hasPersistedMantzilasLegacyAmbiguity\(req\.user\.companyId,job\)/);
   assert.match(route,/Number\(row9\.quantity\)===48/);
   assert.match(route,/Number\(row9\.discount1\|\|0\)-65\.5/);
   assert.match(route,/reason:needsLegacyAmbiguityReread\?"MANTZILAS_LEGACY_AMBIGUITY":null/);
   assert.match(route,/handoff=\{\.\.\.handoff,resumeStoredProductLines:false,replaceExistingDraft:true\}/);
+});
+
+test("recovery prioritizes recent completed drafts before the bounded legacy scan",()=>{
+  assert.match(route,/ORDER BY CASE WHEN "status"='AWAITING_APPROVAL' THEN 0 ELSE 1 END,/);
+  assert.match(route,/CASE WHEN "status"='AWAITING_APPROVAL' THEN "updatedAt" END DESC,/);
+  assert.match(route,/MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V10/);
 });
 
 test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{
