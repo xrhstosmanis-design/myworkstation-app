@@ -1434,3 +1434,13 @@ Total output lines: 1413
 - [x] No payment, credit, stock, approval, finalization, fiscal, accounting or Invoice Learning change.
 - [ ] AWAITING green CI, exact Render revision and one new POS-front LAB; current draft must not be finalized or posted.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-17 — MANTZILAS unique row identity guard
+
+- [x] Bind every focused reread result to the same unique supplier code and printed row index.
+- [x] Reject duplicate or shifted candidates and roll the full reread batch back atomically.
+- [x] Preserve each source-verified gross row amount against neighboring-row drift.
+- [x] Focused tests `35/35` and full server suite `1283/1283` pass locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
+- [ ] AWAITING green CI, exact deploy and one new POS-front LAB of invoice `12665`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-row-identity-guard.md`.

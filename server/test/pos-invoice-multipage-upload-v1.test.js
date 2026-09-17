@@ -312,7 +312,7 @@ test("printed original price restores a missing discount hidden inside net unit 
 
 test("MANTZILAS focused reread replaces a self-consistent wrong quantity and returns printed VAT groups",async()=>{
   const originalFetch=global.fetch;
-  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:1,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:19.55,discountPercent1:31,discountAmount1:6.06,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"1 × 19,55 - 6,06 = 13,49"}],vatSummary:[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]})})});
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"00009",printedQuantity:1,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:19.55,discountPercent1:31,discountAmount1:6.06,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"1 × 19,55 - 6,06 = 13,49"}],vatSummary:[{rate:24,taxable:145.2,vat:34.85,gross:180.05},{rate:13,taxable:220.55,vat:28.67,gross:249.22}]})})});
   try{
     const productLines=[{code:"00009",description:"COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ",rawText:"00009 COCA COLA ZERO",quantity:2,invoiceQuantity:2,unit:"PACKAGE",invoiceUnit:"PACKAGE",unitCost:19.55,netAmount:13.49,discount1:65.5,discount1Amount:25.61,discount2:0,discount2Amount:0,discount3:0,discount3Amount:0}];
     const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true});
@@ -327,8 +327,8 @@ test("MANTZILAS focused reread preserves a printed zero-discount row and rejects
   const originalFetch=global.fetch;
   let call=0;
   global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[call++===0
-    ?{index:1,printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:45.6,exciseTotal:0,taxableAmount:45.6,vatRate:13,vatAmount:5.93,grossAmount:51.53,confidence:99,evidence:"48 × 0,95 = 45,60"}
-    :{index:1,printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:45.6,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:11.03,exciseTotal:0,taxableAmount:11.03,vatRate:24,vatAmount:2.65,grossAmount:13.68,confidence:99,evidence:"invented"}],vatSummary:[]})})});
+    ?{index:1,supplierCode:"11",printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:45.6,exciseTotal:0,taxableAmount:45.6,vatRate:13,vatAmount:5.93,grossAmount:51.53,confidence:99,evidence:"48 × 0,95 = 45,60"}
+    :{index:1,supplierCode:"11",printedQuantity:48,printedUnit:"TEM",originalUnitPrice:.95,initialAmount:45.6,discountPercent1:45.6,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:11.03,exciseTotal:0,taxableAmount:11.03,vatRate:24,vatAmount:2.65,grossAmount:13.68,confidence:99,evidence:"invented"}],vatSummary:[]})})});
   try{
     const valid=[{code:"11",description:"RED BULL 0,25LT ΚΟΥΤΙ",quantity:48,unitCost:1,netAmount:11.03,discount1:45.6,discount1Amount:36.97}];
     await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines:valid,apiKey:"test",model:"test",reverifyAll:true});
@@ -341,13 +341,36 @@ test("MANTZILAS focused reread preserves a printed zero-discount row and rejects
 
 test("MANTZILAS focused reread rolls back a fully consistent batch that misses the printed invoice total",async()=>{
   const originalFetch=global.fetch;
-  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,printedQuantity:2,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:39.1,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"self-consistent but wrong"}],vatSummary:[]})})});
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"00009",printedQuantity:2,printedUnit:"KIB",originalUnitPrice:19.55,initialAmount:39.1,discountPercent1:65.5,discountAmount1:25.61,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:13.49,exciseTotal:0,taxableAmount:13.49,vatRate:13,vatAmount:1.75,grossAmount:15.24,confidence:99,evidence:"self-consistent but wrong"}],vatSummary:[]})})});
   try{
     const productLines=[{code:"00009",description:"COCA COLA ZERO",quantity:1,unitCost:19.55,netAmount:13.49,grossAmount:15.24,discount1:31,discount1Amount:6.06}];
     const before=JSON.parse(JSON.stringify(productLines));
     const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:429.27});
     for(const key of ["quantity","unitCost","netAmount","grossAmount","discount1","discount1Amount"]){assert.equal(productLines[0][key],before[0][key])}
     assert.equal(result.status,"FAILED");assert.equal(result.reason,"PRINTED_ROWS_TOTAL_MISMATCH");
+  }finally{global.fetch=originalFetch}
+});
+
+test("MANTZILAS focused reread rejects a candidate assigned to the wrong supplier code",async()=>{
+  const originalFetch=global.fetch;
+  const candidate=(index,supplierCode,gross)=>({index,supplierCode,printedQuantity:1,printedUnit:"TEM",originalUnitPrice:gross/1.13,initialAmount:gross/1.13,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:gross/1.13,exciseTotal:0,taxableAmount:gross/1.13,vatRate:13,vatAmount:gross-gross/1.13,grossAmount:gross,confidence:99,evidence:"row"});
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[candidate(1,"B",11.3),candidate(2,"B",22.6)],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"A",quantity:1,unitCost:10,netAmount:10,grossAmount:11.3},{code:"B",quantity:1,unitCost:20,netAmount:20,grossAmount:22.6}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:33.9});
+    assert.equal(result.status,"FAILED");assert.equal(result.reason,"PRINTED_ROWS_INCOMPLETE");assert.equal(result.aiAccepted,0);
+    assert.equal(productLines[0].code,"A");assert.equal(productLines[1].code,"B");
+  }finally{global.fetch=originalFetch}
+});
+
+test("MANTZILAS focused reread cannot replace a verified row total with a neighboring row total",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"0168",printedQuantity:1,printedUnit:"KIB",originalUnitPrice:3.2,initialAmount:3.2,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:3.2,exciseTotal:0,taxableAmount:3.2,vatRate:24,vatAmount:.77,grossAmount:3.97,confidence:99,evidence:"neighbor drift"}],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"0168",quantity:3,unitCost:3.2,netAmount:9.6,taxableAmount:9.6,vatRate:24,vatAmount:2.3,grossAmount:11.9,sourceColumnsVerified:true}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:11.9});
+    assert.equal(result.status,"FAILED");assert.equal(result.reason,"PRINTED_ROWS_INCOMPLETE");
+    assert.equal(productLines[0].quantity,3);assert.equal(productLines[0].netAmount,9.6);assert.equal(productLines[0].grossAmount,11.9);
   }finally{global.fetch=originalFetch}
 });
 
