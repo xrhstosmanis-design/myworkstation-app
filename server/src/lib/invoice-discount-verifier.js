@@ -79,7 +79,13 @@ function rawNumberTokens(rawText){
   return matches.map((raw,index)=>({raw,value:parseLocaleNumber(raw),index})).filter(x=>Number.isFinite(x.value));
 }
 function closeMoney(a,b,min=0.03,ratio=0.015){return Math.abs(Number(a||0)-Number(b||0))<=Math.max(min,Math.abs(Number(b||0))*ratio)}
-function normalizeSupplierCode(value){return String(value??'').trim().replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,'').toUpperCase()}
+function normalizeSupplierCode(value){
+  const code=String(value??'').trim().replace(/[^0-9A-Za-zΑ-Ωα-ω]/g,'').toUpperCase();
+  // Vision commonly renders a numeric printed code without its display-only
+  // leading zeroes (0168 -> 168, 00009 -> 9). Canonicalize only all-numeric
+  // codes; alphanumeric supplier identities retain every character.
+  return /^\d+$/.test(code)?code.replace(/^0+(?=\d)/,''):code;
+}
 
 function deriveEconomicsFromAzureContent(line){
   const quantity=Number(line?.quantity||0),net=Number(line?.netAmount||0);

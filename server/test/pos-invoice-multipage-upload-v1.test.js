@@ -387,6 +387,16 @@ test("MANTZILAS focused reread replaces a wrong first-pass row when code, math a
   }finally{global.fetch=originalFetch}
 });
 
+test("MANTZILAS row identity accepts omitted display-leading zeroes without weakening index matching",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"168",printedQuantity:3,printedUnit:"4PK",originalUnitPrice:3.2,initialAmount:9.6,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:9.6,exciseTotal:0,taxableAmount:9.6,vatRate:24,vatAmount:2.3,grossAmount:11.9,confidence:99,evidence:"0168 printed row"}],vatSummary:[]})})});
+  try{
+    const productLines=[{code:"0168",quantity:1,unitCost:3.2,netAmount:3.2,grossAmount:3.97}];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:11.9});
+    assert.equal(result.status,"OK");assert.equal(result.aiAccepted,1);assert.equal(productLines[0].quantity,3);assert.equal(productLines[0].netAmount,9.6);
+  }finally{global.fetch=originalFetch}
+});
+
 test("MANTZILAS full reread cannot publish a table outside cent-level invoice tolerance",()=>{
   assert.match(aiRecheck,/mantzilasInvoice&&pageJobs\.length===1&&invoiceTotal>0&&Math\.abs\(parsed\.productLinesTotalDifference\)>0\.05/);
   assert.match(aiRecheck,/Οι λανθασμένες γραμμές δεν αποθηκεύτηκαν/);
