@@ -34,13 +34,13 @@ test("complete FAST product lines recover printed discounts before bypassing ful
   assert.ok(body.indexOf("verifyInvoiceDiscounts")<body.indexOf("const cachedProductLines=hasCompleteCachedProductLines"));
 });
 
-test("OpenAI FAST captures a complete table once and only forwards rows that reconcile",()=>{
-  assert.match(route,/productLines:\{type:"array",maxItems:500/);
-  assert.match(route,/Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=\[\]/);
+test("Azure may forward a reconciled complete table while OpenAI FAST remains header-only",()=>{
+  const schema=route.slice(route.indexOf('const fastHeaderSchema='),route.indexOf('const reconciledFastProductLines='));
+  assert.doesNotMatch(schema,/productLines/);
   assert.match(route,/const reconciledFastProductLines=/);
   assert.match(route,/reconcileInvoiceLines\(productLines,totalGross\)/);
   assert.match(route,/return difference<=POS_STORED_LINES_TOLERANCE\?productLines:\[\]/);
-  assert.match(route,/const productLines=reconciledFastProductLines\(parsed\.productLines,totalGross\)/);
+  assert.match(route,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
 });
 
 test("a useful Azure header with an incomplete table continues through FAST OpenAI",()=>{

@@ -229,19 +229,19 @@ async function matchSupplier(companyId,candidate={}){
   return null;
 }
 
-const fastProductLineProperties={
-  rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},retailPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount1Amount:{type:"number",minimum:0},discount2:{type:"number",minimum:0,maximum:100},discount2Amount:{type:"number",minimum:0},discount3:{type:"number",minimum:0,maximum:100},discount3Amount:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},exciseTotal:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
-};
-const fastProductLineRequired=Object.keys(fastProductLineProperties);
+// Keep the operator-facing request limited to the fields required before a
+// payment choice. Asking the FAST model for the full item table made a clear
+// one-page invoice exhaust the request budget before the four header fields
+// could be returned. Product extraction remains in the durable background
+// flow (or in Azure when Azure already returned a fully reconciled table).
 const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
   confidence:{type:"number",minimum:0,maximum:100},
   supplierName:{type:"string"},
   supplierTaxId:{type:"string"},
   documentNumber:{type:"string"},
   documentDate:{type:"string"},
-  totalGross:{type:"number",minimum:0},
-  productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:fastProductLineProperties,required:fastProductLineRequired}}
-},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross","productLines"]};
+  totalGross:{type:"number",minimum:0}
+},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
 const reconciledFastProductLines=(lines,totalGross)=>{
   const productLines=finalizeV244ProductLines(Array.isArray(lines)?lines:[]).slice(0,500);
   if(!productLines.length||!(Number(totalGross)>0))return [];
@@ -320,8 +320,6 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
 5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal.
-
-Επιπλέον, στο productLines επέστρεψε ΟΛΕΣ τις πραγματικές γραμμές ειδών που φαίνονται στον πίνακα, μία φορά και στην έντυπη σειρά. Μην επιστρέψεις κεφαλίδες, στοιχεία εταιρειών, σύνολα ή footer. Για κάθε γραμμή διάβασε οριζόντια: κωδικό, περιγραφή, ποσότητα, μονάδα, αρχική τιμή μονάδας, λιανική, εκπτώσεις 1/2/3 με τα ποσά τους, καθαρή αξία μετά την έκπτωση, ΕΦΚ, ΦΠΑ και τελική αξία με ΦΠΑ. Βάλε τον ΕΦΚ στο exciseTotal· η φορολογητέα αξία είναι netAmount+exciseTotal. Μην αντικαθιστάς την αρχική unitCost με netAmount/quantity όταν φαίνεται έκπτωση. Αν grossAmount δεν τυπώνεται, υπολόγισέ το πάνω στη φορολογητέα αξία. Αν δεν μπορείς να διαβάσεις με ασφάλεια ΟΛΟ τον πίνακα, επέστρεψε productLines=[]· μην επιστρέψεις μερικό πίνακα.
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;

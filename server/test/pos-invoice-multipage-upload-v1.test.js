@@ -83,6 +83,19 @@ test("fast header preserves a readable fallback inside its dedicated POS request
   assert.match(operator,/timeoutMs=Math\.max\(1000,Number\(options\.timeoutMs\|\|30000\)\)/);
 });
 
+test("operator-facing FAST fallback reads only payment header fields and leaves products to the background",()=>{
+  const start=wrapper.indexOf('const fastHeaderSchema=');
+  const end=wrapper.indexOf('const reconciledFastProductLines=',start);
+  const schema=wrapper.slice(start,end);
+  const promptStart=wrapper.indexOf('const prompt=`Είσαι FAST');
+  const promptEnd=wrapper.indexOf('`;\n    let parsed;',promptStart);
+  const prompt=wrapper.slice(promptStart,promptEnd);
+  assert.match(schema,/required:\["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"\]/);
+  assert.doesNotMatch(schema,/productLines|fastProductLineProperties/);
+  assert.doesNotMatch(prompt,/στο productLines|ΟΛΕΣ τις πραγματικές γραμμές/);
+  assert.match(wrapper,/if\(!sourceLines\)\{operationStage="ai-recheck"/);
+});
+
 test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/data-image-file type="file"[^>]*multiple/);
   assert.match(backofficeIntake,/data-pdf-file type="file"[^>]*multiple/);
