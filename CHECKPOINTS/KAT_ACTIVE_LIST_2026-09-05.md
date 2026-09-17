@@ -1489,3 +1489,12 @@ Total output lines: 1413
 - [x] Preserve bounded recovery and all payment/stock/finalization guards.
 - [ ] AWAITING tests, green CI, exact deploy and recovery by BackOffice refresh.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-discount-verification-recovery.md`.
+
+# 2026-09-17 — MANTZILAS legacy cached-line reread
+
+- [x] LAB FAIL: `12665` completed with 18 rows and totals `365.75 / 429.26 EUR`, but cached legacy rows kept `00009 = 48 / 65.5%` and `433 = 6` stock pieces.
+- [x] Reclaim that exact completed-draft signature and reread the archived source instead of reusing the old total-reconciling table.
+- [x] Preserve the verified `24 / 31%` scaled-ambiguity repair through the final economics pass.
+- [x] Keep the same payment, durable job and draft; no stock, approval, finalization, fiscal or accounting mutation.
+- [ ] AWAITING tests, green CI, exact deploy and one BackOffice refresh of the existing `12665` draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-legacy-cached-line-reread.md`.
