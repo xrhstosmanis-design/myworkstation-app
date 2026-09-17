@@ -246,7 +246,32 @@ function repairScaledQuantityDiscountAmbiguity(productLines,diagnostics){
   }
 }
 
-export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0,reverifyAll=false,expectedGrossTotal=0}){
+function repairMantzilasCode00009PackAmbiguity(productLines,diagnostics,supplierRule){
+  if(supplierRule!=="MANTZILAS")return;
+  for(const line of productLines){
+    if(normalizeSupplierCode(line?.code)!=="9")continue;
+    const source=String(`${line?.description||""} ${line?.rawText||""}`).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+    if(!/COCA\s*COLA\s*ZERO/.test(source)||!/(?:X|Χ)\s*24\s*(?:PACK|PK|TEM|TMX|ΤΕΜ|ΤΜΧ)/.test(source))continue;
+    const pairs=linePairs(line),active=pairs.filter(pair=>safePercent(pair.percent)>0||safeAmount(pair.amount)>0);
+    if(active.length!==1)continue;
+    const currentPercent=safePercent(active[0].percent),quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),net=Number(line?.netAmount||0);
+    if(Math.abs(currentPercent-65.5)>.05||![2,48].includes(quantity)||!(unitCost>0&&net>0)||!validateDiscountPairs(line,pairs))continue;
+    const correctedQuantity=quantity/2,base=correctedQuantity*unitCost;
+    const inferredPercent=(1-net/base)*100;
+    if(Math.abs(inferredPercent-31)>.1)continue;
+    const percent=31,amount=money4(base*percent/100);
+    const validated=validateDiscountPairs({...line,quantity:correctedQuantity},[{percent,amount},{percent:0,amount:0},{percent:0,amount:0}]);
+    if(!validated)continue;
+    line.quantity=correctedQuantity;line.invoiceQuantity=correctedQuantity;line.quantitySource='MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED';
+    applyValidatedPairs(line,validated);
+    line.initialAmount=money4(base);
+    line.discountSource='MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED';line.discountConfidence=99;
+    line.discountEvidence=`Κωδικός 00009 COCA COLA ZERO x24: ${correctedQuantity} × ${money4(unitCost)} με 31% αναπαράγει ακριβώς net ${money4(net)}`;
+    diagnostics.mantzilasCode00009AmbiguitiesRepaired=Number(diagnostics.mantzilasCode00009AmbiguitiesRepaired||0)+1;
+  }
+}
+
+export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0,reverifyAll=false,expectedGrossTotal=0,supplierRule=""}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
   if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
   const originalLines=reverifyAll?productLines.map(line=>JSON.parse(JSON.stringify(line))):[];
@@ -322,6 +347,7 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     }
     applySiblingDiscountConsensus(productLines,diagnostics);
     if(reverifyAll)repairScaledQuantityDiscountAmbiguity(productLines,diagnostics);
+    if(reverifyAll)repairMantzilasCode00009PackAmbiguity(productLines,diagnostics,supplierRule);
     const expectedGross=Number(expectedGrossTotal||0),candidateGross=money4(productLines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
     const incompletePrintedRows=reverifyAll&&expectedGross>0&&acceptedPrintedIndexes.size!==productLines.length;
     if(reverifyAll&&expectedGross>0&&(incompletePrintedRows||Math.abs(candidateGross-expectedGross)>.05)){

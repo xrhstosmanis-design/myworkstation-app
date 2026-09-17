@@ -418,14 +418,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     });
     if(!unresolved.length)continue;
     try{
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs.length===1?invoiceTotal:0});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":""});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
     }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
   }
   parsed.discountMathVerification=discountDiagnostics;
-  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>["AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED"].includes(line.quantitySource)?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
+  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>["AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED","MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED"].includes(line.quantitySource)?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
 
   const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=mixedPrintedVat.lines;
