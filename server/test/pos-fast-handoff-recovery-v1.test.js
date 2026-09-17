@@ -135,6 +135,14 @@ test("queued recovery waits for the older worker and skips a completed draft",()
   assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
 });
 
+test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the archived image",()=>{
+  assert.match(route,/function hasMantzilasLegacyAmbiguity\(productLines\)/);
+  assert.match(route,/Number\(row9\.quantity\)===48/);
+  assert.match(route,/Number\(row9\.discount1\|\|0\)-65\.5/);
+  assert.match(route,/reason:needsLegacyAmbiguityReread\?"MANTZILAS_LEGACY_AMBIGUITY":null/);
+  assert.match(route,/handoff=\{\.\.\.handoff,resumeStoredProductLines:false,replaceExistingDraft:true\}/);
+});
+
 test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{
   assert.match(route,/status" IN \('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
   assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\)/);

@@ -14,13 +14,24 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="SINGLE_STOCK_CONVERSION_V8";
+const POS_REPROCESS_STRATEGY="MANTZILAS_LEGACY_AMBIGUITY_V9";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const normalizeIntakeDate=value=>{const text=String(value||"").trim();if(!text)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const m=text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?`${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`:null};
 const intakeNumber=value=>{const text=String(value??"").trim().replace(/\s/g,"");const normalized=text.includes(",")?text.replace(/\./g,"").replace(",","."):text;const n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:0};
+const canonicalSupplierCode=value=>String(value??"").trim().replace(/\D/g,"").replace(/^0+(?=\d)/,"");
+function hasMantzilasLegacyAmbiguity(productLines){
+  if(!Array.isArray(productLines))return false;
+  const row9=productLines.find(line=>canonicalSupplierCode(line?.code)==="9");
+  const row160=productLines.find(line=>canonicalSupplierCode(line?.code)==="160");
+  const row433=productLines.find(line=>canonicalSupplierCode(line?.code)==="433");
+  const mantzilasSignature=Boolean(row9&&row160&&/COCA\s*COLA\s*ZERO/i.test(String(row9.description||row9.rawText||""))&&/COCA\s*COLA/i.test(String(row160.description||row160.rawText||"")));
+  const doubledNine=Boolean(row9&&row160&&Number(row9.quantity)===48&&Math.abs(Number(row9.discount1||0)-65.5)<=0.05&&Number(row160.quantity)===48&&Math.abs(Number(row160.discount1||0)-31)<=0.05);
+  const staleSixPack=Boolean(row433&&/6\s*(?:P|PK|PACK)/i.test(String(row433.description||row433.rawText||""))&&Number(row433.supplierProfileEvidence?.stockQuantity||0)===6);
+  return mantzilasSignature&&(doubledNine||staleSixPack);
+}
 const id=()=>crypto.randomUUID();
 const fastBackgroundWorkers=new Map();
 const fastBackgroundSuccessors=new Map();
@@ -589,12 +600,14 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length){skippedNoHandoff++;continue}
       const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
       const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
+      const needsLegacyAmbiguityReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
-      if(job.status==="AWAITING_APPROVAL"&&!needsReconciliationReread)continue;
+      const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread;
+      if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
       const storedBackgroundError=String(job.resultJson?.posBackground?.error||"");
       if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
-      if(needsReconciliationReread){
-        const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+      if(needsDraftReread){
+        const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
         const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='AWAITING_APPROVAL'`;
         if(!claimed)continue;
         handoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};
@@ -621,11 +634,13 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
     const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(background.error);
     const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
+    const needsLegacyAmbiguityReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+    const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread;
     let scheduledHandoff=handoff,rereadClaimed=false;
     let shouldSchedule=hasRecoverableHandoff&&["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"].includes(job.status);
-    if(hasRecoverableHandoff&&needsAutomaticReread){
-      const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
+    if(hasRecoverableHandoff&&needsDraftReread){
+      const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
       const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='AWAITING_APPROVAL'`;
       rereadClaimed=Boolean(claimed);
       if(rereadClaimed){scheduledHandoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};shouldSchedule=true}
