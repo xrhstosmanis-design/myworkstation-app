@@ -1,3 +1,13 @@
+## 2026-09-18 — MANTZILAS 12798 / 12718 verified 12-piece cartons
+
+- [x] **LAB FAIL** on invoice `12674`: the draft exposes supplier codes `12798` and `12718` as `24` stock pieces because the generic MANTZILAS 330 ml carton rule was applied.
+- [x] The operator physically confirmed both cartons contain `12` pieces; code `12798` independently prints `(10+2)` on the current invoice image.
+- [x] Scope the correction to exact MANTZILAS supplier codes `12798` and `12718`, a LOUX 330 ml description and positive current-invoice package quantity/price. Preserve all current invoice economics, including the printed `19%` discounts.
+- [x] Unrelated LOUX/330 ml codes remain on the generic rule. No quantity, price, discount or tax is copied from an older invoice.
+- [x] Focused packaging/column regressions `25/25`, full server suite `1304/1304`, production build, syntax and diff checks: PASS. CI, merge, exact deploy and reread of the existing unapproved `12674` draft remain required.
+- [x] No payment, credit, upload, duplicate draft, approval, finalization, stock posting, fiscal, accounting or myDATA mutation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-12798-12718-pack12.md`.
+
 ## 2026-09-18 — Invoice 12674 false total-only duplicate recovery
 
 - [x] **LAB FAIL** on exact production `e64de7bc58c860c78570f0ef0706a1229a7160eb`: invoice `12674` completed automatically and its draft displayed `13` rows / `366.50 EUR`, but comparison with the original image proves the apparent `0.03 EUR` agreement is false.
@@ -7,7 +17,7 @@
 - [x] Advance the one-attempt persisted-draft reread marker to V11 so the existing unapproved draft can be reread after deploy without another POS submission, payment, credit or upload.
 - [x] Preserve the current draft, settlement identity and source image. No approval, finalization, stock, fiscal, accounting or myDATA mutation.
 - [x] Focused invoice/recovery regressions `105/105`, full server suite `1304/1304`, production build, syntax and diff checks: PASS. CI, merge and exact deploy remain required. LAB remains FAIL until the original `12674` image is reread to the printed physical rows, discounts and VAT footer.
-- [ ] Separate verified packaging acceptance remains: supplier codes `12798` and `12718` must expose `12` stock pieces, not `24`, without changing invoice economics.
+- [x] Separate verified packaging correction prepared: supplier codes `12798` and `12718` expose `12` stock pieces, not `24`, without changing invoice economics; see the newer checkpoint above.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-invoice-12674-false-total-duplicate.md`.
 
 ## 2026-09-18 — MANTZILAS isolated duplicate-row reconciliation
