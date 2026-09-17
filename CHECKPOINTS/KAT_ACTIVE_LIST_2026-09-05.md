@@ -1481,3 +1481,11 @@ Total output lines: 1413
 - [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
 - [ ] AWAITING green CI, exact deploy and one new POS-front LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-scaled-quantity-discount-ambiguity.md`.
+
+# 2026-09-17 — POS discount-verification durable recovery
+
+- [x] LAB failure stayed safe at 0 items but was incorrectly classified as non-retryable.
+- [x] Allow the archived POS handoff to retry `AI_RECHECK_INTERNAL [discount-verification]`.
+- [x] Preserve bounded recovery and all payment/stock/finalization guards.
+- [ ] AWAITING tests, green CI, exact deploy and recovery by BackOffice refresh.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-discount-verification-recovery.md`.
