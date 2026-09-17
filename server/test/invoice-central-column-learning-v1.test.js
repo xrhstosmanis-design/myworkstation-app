@@ -329,6 +329,17 @@ test('MANTZILAS learned packs convert stock quantity and piece price without cha
   const currentImageRow={description:'COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ',rawText:'00009 | COCA COLA ZERO 0,33LT x24pack ΚΟΥΤΙ | KIB | 2 | 2 | 19,55 | 39,10 | 65,5 | 25,61 | 13,49',quantity:1,invoiceQuantity:1,unitCost:19.55,initialAmount:19.55,discount1:31,discount1Amount:6.06,netAmount:13.49,invoiceUnit:'KIB',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED'};
   const preserved=applyMantzilasPackaging(currentImageRow);
   assert.equal(preserved.quantity,1);assert.equal(preserved.stockUnitsPerInvoiceUnit,24);assert.equal(preserved.supplierProfileEvidence.stockQuantity,24);assert.equal(preserved.discount1,31);assert.equal(preserved.netAmount,13.49);
+  const regressedCoca={code:'00009',description:'COCA COLA ZERO 0,33LTx24pack',rawText:'00009 | COCA COLA ZERO 0,33LTx24pack | TEM | 48 | 0,814583 | 39,10 | 65,5 | 25,61 | 13,49',quantity:48,invoiceQuantity:48,unitCost:.814583,packageUnitPrice:.814583,initialAmount:39.1,discount1:65.5,discount1Amount:25.61,netAmount:13.49,vatRate:13,grossAmount:15.24,invoiceUnit:'TEM',quantitySource:'AI_PRINTED_ROW_FULL_MATH_VERIFIED'};
+  const fixedCoca=applyMantzilasPackaging(regressedCoca);
+  assert.deepEqual({quantity:fixedCoca.quantity,invoiceQuantity:fixedCoca.invoiceQuantity,unitCost:fixedCoca.unitCost,discount:fixedCoca.discount1,net:fixedCoca.netAmount,gross:fixedCoca.grossAmount,stock:fixedCoca.supplierProfileEvidence.stockQuantity},{quantity:24,invoiceQuantity:24,unitCost:.814583,discount:31,net:13.49,gross:15.24,stock:24});
+  const alreadyCorrectCoca=applyMantzilasPackaging({...regressedCoca,quantity:24,invoiceQuantity:24,initialAmount:19.55,discount1:31,discount1Amount:6.06});
+  assert.equal(alreadyCorrectCoca.quantity,24);assert.equal(alreadyCorrectCoca.stockUnitsPerInvoiceUnit,1);assert.equal(alreadyCorrectCoca.discount1,31);
+  const cartonScaleCoca=applyMantzilasPackaging({...regressedCoca,quantity:2,invoiceQuantity:2,unitCost:19.55,packageUnitPrice:19.55,initialAmount:39.1,invoiceUnit:'KIB'});
+  assert.equal(cartonScaleCoca.quantity,1);assert.equal(cartonScaleCoca.stockUnitsPerInvoiceUnit,24);assert.equal(cartonScaleCoca.supplierProfileEvidence.stockQuantity,24);assert.equal(cartonScaleCoca.discount1,31);assert.equal(cartonScaleCoca.netAmount,13.49);
+  const unrelatedEquivalent={...regressedCoca,code:'12345'};
+  assert.equal(applyMantzilasPackaging(unrelatedEquivalent).quantity,48,'the exact arithmetic must not change another supplier code');
+  const simultaneous=[regressedCoca,labCorona].map(applyMantzilasPackaging);
+  assert.equal(simultaneous[0].supplierProfileEvidence.stockQuantity,24);assert.equal(simultaneous[0].discount1,31);assert.equal(simultaneous[1].supplierProfileEvidence.stockQuantity,24);assert.equal(simultaneous[1].unitCost,.98);
 });
 
 test('MANTZILAS printed economics recover discounts, excise, taxable value and VAT only from balanced rows',()=>{

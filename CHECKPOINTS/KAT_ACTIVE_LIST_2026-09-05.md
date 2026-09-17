@@ -1528,3 +1528,12 @@ Total output lines: 1413
 - [x] Focused invoice/POS tests `104/104`, full server suite `1294/1294`, client production build and server/Prisma build: PASS.
 - [ ] AWAITING commit, green CI, exact deploy and fresh POS-front LAB verification.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corona-02410-piece-unit.md`.
+## 2026-09-17 — MANTZILAS 00009 + CORONA joint final normalization
+
+- [x] LAB PASS: fresh POS-front invoice `12665` completed with 18 rows and CORONA `02410 = 24 pieces × 0.98 EUR`, net `23.52 EUR`.
+- [x] LAB FAIL: the same read regressed COCA-COLA ZERO `00009` to `48 pieces / 65.5%` instead of `24 pieces / 31%`; net `13.49 EUR` remained unchanged.
+- [x] Both exact, current-row arithmetic proofs now run in the same final MANTZILAS packaging-normalization stage, so provider variation cannot make the two fixes alternate.
+- [x] Regression covers both rows simultaneously plus unrelated-code/carton negative controls; the other packaging rules and economic values remain unchanged. No payment, stock posting, approval, finalization, fiscal or accounting change.
+- [x] Focused invoice/POS tests `104/104`, full server suite `1294/1294`, client production build and server/Prisma build: PASS.
+- [ ] AWAITING commit, green CI, exact deploy and one fresh POS-front LAB where both `00009` and `02410` are correct simultaneously.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
