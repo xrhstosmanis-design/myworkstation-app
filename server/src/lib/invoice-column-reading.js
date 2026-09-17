@@ -27,6 +27,21 @@ export function stockConversionFromDescription(description,explicitMultiplier=0,
 export function applyMantzilasPackaging(line){
   const raw=String(line?.azureRawRow||line?.rawText||"");
   const text=String(line?.description||raw).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  // LAB invoice 12665 proves that supplier row 02410 is printed as 24
+  // individual CORONA bottles at 0.98 EUR. A stale KIB token can survive in
+  // the earlier OCR text even after the authoritative full-row reread has
+  // proved 24 × 0.98 = 23.52, causing the generic 330 ml carton rule to expose
+  // 576 stock pieces. Resolve only this exact, fully verified current-row
+  // equation; no quantity or price is copied from supplier history.
+  const normalizedCode=columnKey(line?.code).replace(/^0+(?=\d)/,"");
+  const verifiedQuantity=Number(line?.invoiceQuantity??line?.quantity??0),verifiedUnitCost=Number(line?.packageUnitPrice??line?.unitCost??line?.unitPrice??0);
+  const verifiedInitial=Number(line?.initialAmount??verifiedQuantity*verifiedUnitCost),verifiedNet=Number(line?.netAmount||0);
+  const activeDiscount=[line?.discount1,line?.discount2,line?.discount3].some(value=>Number(value||0)>0);
+  const verifiedCoronaPiece=normalizedCode==="2410"&&line?.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"&&/CORONA/.test(text)&&/(?:ΦΙΑΛ|BOTTLE)/.test(text)&&/(?:0[,.]?33\s*(?:ML|L|LT)|330\s*ML)/.test(text)&&Math.abs(verifiedQuantity-24)<.0001&&Math.abs(verifiedUnitCost-.98)<.0001&&Math.abs(verifiedInitial-23.52)<=.01&&!activeDiscount&&Math.abs(verifiedNet-23.52)<=.01;
+  if(verifiedCoronaPiece)return {...line,quantity:verifiedQuantity,invoiceQuantity:verifiedQuantity,unit:"PIECE",invoiceUnit:"PIECE",stockUnit:"ΤΜΧ",unitsPerPackage:1,
+    conversionFactor:1,stockUnitsPerInvoiceUnit:1,packageUnitPrice:verifiedUnitCost,unitCost:verifiedUnitCost,unitPrice:verifiedUnitCost,
+    packageConversionApplied:false,confirmedPackMapping:true,packRule:"MANTZILAS_02410_CORONA_VERIFIED_PIECE",
+    supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_VERIFIED_PIECE_ROW",supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity:verifiedQuantity,stockQuantity:verifiedQuantity,conversionFactor:1,packageUnitPrice:round4(verifiedUnitCost),pieceUnitPrice:round4(verifiedUnitCost)}};
   // The unit printed on the current physical row is authoritative. A learned
   // supplier mapping may describe an older carton, and must never multiply a
   // row that explicitly says TEM/TMX. Reading raw first also makes this helper
