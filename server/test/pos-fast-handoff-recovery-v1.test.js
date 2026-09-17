@@ -198,6 +198,11 @@ test("discount verification internal failure is eligible for durable reread",()=
   assert.match(route,/table-recheck\|discount-verification/);
 });
 
+test("bounded invoice-total diagnostics remain eligible for durable reread",()=>{
+  assert.match(route,/invoice-total-reconciliation/);
+  assert.ok(route.includes("AI_RECHECK_INTERNAL \\[(?:table-recheck|discount-verification|invoice-total-reconciliation)"));
+});
+
 test("a reclaimed discount failure stays in POS recovery instead of reporting the stale failure",()=>{
   assert.match(route,/retryClaimed=false/);
   assert.match(route,/retryClaimed=Boolean\(reclaimed\);shouldSchedule=retryClaimed/);

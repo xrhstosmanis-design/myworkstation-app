@@ -94,6 +94,17 @@ test("MANTZILAS rechecks Azure candidate rows against the corrected total and re
   assert.match(aiRecheck,/if\(mantzilasInvoice\)return currentPage&&!line\.sourceColumnsVerified/);
 });
 
+test("MANTZILAS exact-total rejection records bounded diagnostics without publishing candidate rows",()=>{
+  assert.match(aiRecheck,/const reconciliationDiagnostic=\{/);
+  assert.match(aiRecheck,/lineCount:parsed\.productLines\.length/);
+  assert.match(aiRecheck,/calculatedGross:parsed\.productLinesGrossAfterRecovery/);
+  assert.match(aiRecheck,/expectedGross:invoiceTotal/);
+  assert.match(aiRecheck,/discountProviderFailures:Number\(discountDiagnostics\.providerFailures\|\|0\)/);
+  assert.match(aiRecheck,/failureStage=`invoice-total-reconciliation;lines=\$\{reconciliationDiagnostic\.lineCount\}/);
+  assert.match(aiRecheck,/posAiDiagnostics:\{\.\.\.reconciliationDiagnostic,recordedAt:new Date\(\)\.toISOString\(\)\}/);
+  assert.doesNotMatch(aiRecheck,/posAiDiagnostics:\{[^}]*productLines/);
+});
+
 test("fast header preserves a readable fallback inside its dedicated POS request budget",async()=>{
   const operator=await readFile(new URL("../../client/src/components/store/StoreOperatorApp.jsx",import.meta.url),"utf8");
   assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=20000/);

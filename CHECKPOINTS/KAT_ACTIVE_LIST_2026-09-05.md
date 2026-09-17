@@ -1,3 +1,12 @@
+## 2026-09-17 — MANTZILAS exact reconciliation diagnostics
+
+- [x] LAB FAIL on exact production `a2c68311721fcc4635c9ebdf50aeb068b13810dc`: existing `12424` reached `POS_FAILED / POS_BACKGROUND_FAILED` with `AI_RECHECK_INTERNAL [discount-verification]` and zero rows.
+- [x] Split the final reconciliation stage from provider discount verification and expose only safe line-count/total/difference diagnostics while retaining the incomplete table outside the draft.
+- [x] Keep the exact stored attachment recoverable; no new upload, credit, draft, stock, approval or finalization.
+- [x] Focused regression tests `73/73`, full server suite `1299/1299`, client build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge and exact deploy before the same-draft diagnostic recovery.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-reconciliation-diagnostics.md`.
+
 ## 2026-09-17 — POS handoff must bypass generic Azure recheck
 
 - [x] LAB FAIL on exact production `62906a202d3f1a861e4bcaeed89527dc1dceaa2d`: fresh MANTZILAS `12424` remained at zero rows and entered `POS_QUEUED / POS_RECOVERING` after four minutes.
