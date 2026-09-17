@@ -75,7 +75,7 @@ const FAST_OPENAI_HEADER_ATTEMPTS=2;
 // allowing the extraction and safe draft write to complete.
 const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification)\])/i.test(String(error?.message||error));
+const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 
 async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
