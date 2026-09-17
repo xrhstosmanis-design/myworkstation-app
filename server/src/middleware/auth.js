@@ -1,5 +1,14 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { prisma } from "../prisma.js";
+
+const POS_BACKGROUND_TOKEN_ISSUER="myworkstation-pos-background";
+const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
+const POS_BACKGROUND_ACTIONS={
+  "POST:ai-recheck":"AI_RECHECK",
+  "PUT:product-lines":"PRODUCT_LINES",
+  "POST:pos-intake":"POS_INTAKE"
+};
 
 function storeRuntimePermissions(profile){
   const p=profile&&typeof profile==="object"?profile:{};
@@ -91,6 +100,35 @@ export async function auth(req,res,next){
   if(!token)return res.status(401).json({error:"Απαιτείται σύνδεση."});
   try{
     const payload=jwt.verify(token,process.env.JWT_SECRET);
+
+    if(payload.tokenType==="POS_BACKGROUND"){
+      const path=String(req.originalUrl||"").split("?")[0];
+      const match=path.match(/^\/api\/commerce\/ai-reader\/jobs\/([^/]+)\/(ai-recheck|product-lines|pos-intake)$/);
+      const action=match?POS_BACKGROUND_ACTIONS[`${req.method}:${match[2]}`]:null;
+      const requestJobId=match?decodeURIComponent(match[1]):"";
+      const bodyHash=crypto.createHash("sha256").update(JSON.stringify(req.body??null)).digest("hex");
+      const audience=Array.isArray(payload.aud)?payload.aud:[payload.aud];
+      if(payload.iss!==POS_BACKGROUND_TOKEN_ISSUER||!audience.includes(POS_BACKGROUND_TOKEN_AUDIENCE)||!action||payload.path!==path.replace("/api/commerce","")||payload.method!==req.method||payload.jobId!==requestJobId||payload.bodyHash!==bodyHash){
+        return res.status(401).json({error:"Μη έγκυρη εσωτερική εξουσιοδότηση POS.",code:"POS_BACKGROUND_SCOPE_REJECTED"});
+      }
+      const rows=await prisma.$queryRaw`
+        SELECT j."id",j."companyId",j."storeId",j."status",j."resultJson",
+               c."active" AS "companyActive",s."active" AS "storeActive"
+        FROM "AiReaderJob" j
+        JOIN "Company" c ON c."id"=j."companyId"
+        JOIN "Store" s ON s."id"=j."storeId" AND s."companyId"=j."companyId"
+        WHERE j."id"=${requestJobId} AND j."companyId"=${String(payload.companyId||"")} AND j."storeId"=${String(payload.storeId||"")}
+        LIMIT 1
+      `;
+      const job=rows[0],handoff=job?.resultJson?.posHandoff;
+      const boundHandoff=handoff&&String(handoff.primaryJobId||job?.id)===String(job?.id)&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.map(String).includes(String(job?.id));
+      if(!job||!job.companyActive||!job.storeActive||!boundHandoff||!["POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(job.status)){
+        return res.status(401).json({error:"Η εσωτερική εργασία POS δεν είναι πλέον ενεργή.",code:"POS_BACKGROUND_JOB_REJECTED"});
+      }
+      req.user={id:null,tokenType:"POS_BACKGROUND",companyId:job.companyId,storeId:job.storeId,role:"SYSTEM",fullName:"POS Background",permissions:["AI_READER","INVENTORY"]};
+      req.posBackgroundAction=action;
+      return next();
+    }
 
     if(payload.tokenType==="STORE_OPERATOR"){
       if(!payload.operatorSessionId){

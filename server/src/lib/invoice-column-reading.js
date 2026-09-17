@@ -81,6 +81,15 @@ export function applyMantzilasPackaging(line){
   // stronger than stale OCR text retained from the earlier extraction pass.
   const verifiedUnit=line?.quantitySource==="AI_PRINTED_ROW_FULL_MATH_VERIFIED"?line?.invoiceUnit:"";
   const unit=String(verifiedUnit||printedUnit||line?.invoiceUnit||line?.unit||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s/g,"");
+  const explicitPiecePack=raw.match(/(?:^|[\s|])(\d{1,4})\s*(?:TEM|TMX|ΤΕΜ|ΤΜΧ)(?=[\s|]|$)/i);
+  const explicitPieceCount=Number(explicitPiecePack?.[1]||0);
+  if(explicitPieceCount>1){
+    const invoiceQuantity=Number(line?.invoiceQuantity??line?.quantity??0),packageUnitPrice=Number(line?.packageUnitPrice??line?.unitCost??line?.unitPrice??0);
+    if(invoiceQuantity>0&&packageUnitPrice>0)return {...line,quantity:invoiceQuantity,invoiceQuantity,unit:"PACKAGE",invoiceUnit:"PACKAGE",stockUnit:"ΤΜΧ",unitsPerPackage:explicitPieceCount,
+      conversionFactor:explicitPieceCount,stockUnitsPerInvoiceUnit:explicitPieceCount,packageUnitPrice,unitCost:packageUnitPrice,unitPrice:packageUnitPrice,
+      packageConversionApplied:true,confirmedPackMapping:true,packRule:`MANTZILAS_PRINTED_${explicitPieceCount}TMX`,supplierProfileRecovered:true,supplierProfileRule:"MANTZILAS_PRINTED_COUNT_UNIT",
+      supplierProfileEvidence:{...(line?.supplierProfileEvidence||{}),invoiceQuantity,stockQuantity:round4(invoiceQuantity*explicitPieceCount),conversionFactor:explicitPieceCount,packageUnitPrice:round4(packageUnitPrice),pieceUnitPrice:round4(packageUnitPrice/explicitPieceCount)}};
+  }
   if(/^(TEM|ΤΕΜ|TMX|ΤΜΧ|FIA|ΦΙΑ)$/.test(unit)){
     const alreadyPiece=Number(line?.stockUnitsPerInvoiceUnit||1)<=1&&!line?.packageConversionApplied&&!line?.unitsPerPackage;
     if(alreadyPiece)return line;

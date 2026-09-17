@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
@@ -74,15 +75,24 @@ const FAST_OPENAI_HEADER_ATTEMPTS=2;
 // exhausted its call quota. Keep the durable background request bounded while
 // allowing the extraction and safe draft write to complete.
 const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000;
+const POS_BACKGROUND_TOKEN_ISSUER="myworkstation-pos-background";
+const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 
-async function internalCommerceRequest(path,{authorization,method="GET",body,publicOrigin}={}){
+function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
+  const bodyHash=crypto.createHash("sha256").update(JSON.stringify(body??null)).digest("hex");
+  const token=jwt.sign({tokenType:"POS_BACKGROUND",companyId,storeId,jobId,path,method,bodyHash},process.env.JWT_SECRET,{expiresIn:"5m",issuer:POS_BACKGROUND_TOKEN_ISSUER,audience:POS_BACKGROUND_TOKEN_AUDIENCE});
+  return `Bearer ${token}`;
+}
+
+async function internalCommerceRequest(path,{authorization,backgroundScope,method="GET",body,publicOrigin}={}){
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
   const origins=[localOrigin,...(publicOrigin&&publicOrigin!==localOrigin?[publicOrigin]:[])];
+  const requestAuthorization=backgroundScope?posBackgroundAuthorization({...backgroundScope,path,method,body}):authorization;
   let lastError;
   for(const origin of origins)try{
-    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:authorization,"Content-Type":"application/json"},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
+    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:requestAuthorization,"Content-Type":"application/json"},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
     const text=await response.text();
     let payload={};
     if(text)try{payload=JSON.parse(text)}catch{payload={error:`Μη αναμενόμενη απάντηση server (${response.status}).`}};
@@ -113,8 +123,8 @@ async function rebuildLostFastHandoff(companyId,job){
   return handoff;
 }
 
-function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handoff,publicOrigin}){
-  if(!authorization||!jobId)return;
+function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publicOrigin}){
+  if(!companyId||!storeId||!jobId)return;
   const activeWorker=fastBackgroundWorkers.get(jobId);
   if(activeWorker){
     // Recovery may have moved the durable row back to POS_QUEUED while an
@@ -122,7 +132,7 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
     // start it only when the first worker did not already finish the draft.
     // A BackOffice refresh must never replay a successful POS intake.
     const waiting=fastBackgroundSuccessors.has(jobId);
-    fastBackgroundSuccessors.set(jobId,{authorization,companyId,jobId,pageJobIds,handoff,publicOrigin});
+    fastBackgroundSuccessors.set(jobId,{companyId,storeId,jobId,pageJobIds,handoff,publicOrigin});
     if(!waiting)void activeWorker.finally(async()=>{
       const successor=fastBackgroundSuccessors.get(jobId);
       fastBackgroundSuccessors.delete(jobId);
@@ -133,6 +143,7 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
     }).catch(error=>console.error("POS fast invoice successor check failed",{jobId,message:String(error?.message||error)}));
     return;
   }
+  const backgroundScope={companyId,storeId,jobId};
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
   const task=(async()=>{
     try{
@@ -154,7 +165,7 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
             previousLines=storedLines;
           }
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];sourceLines=null}
-          if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{authorization,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
+          if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
           // A repeated POS intake can legitimately reuse the same failed job
           // after its draft was deleted. In that case the browser may send
           // only the four FAST header fields, while the durable job still has
@@ -171,9 +182,9 @@ function scheduleFastBackground({authorization,companyId,jobId,pageJobIds,handof
             if(afterDiff>POS_HANDOFF_TOLERANCE&&!(productLines.length>previousLines.length&&afterDiff<beforeDiff))throw new Error(`Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο (${productLines.length} γραμμές, διαφορά ${afterDiff.toFixed(2)} €). Οι υπάρχουσες γραμμές διατηρήθηκαν.`);
           }
           operationStage="save-product-lines";
-          await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{authorization,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
+          await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{backgroundScope,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
           operationStage="purchase-intake";
-          created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{authorization,publicOrigin,method:"POST",body:{
+          created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{backgroundScope,publicOrigin,method:"POST",body:{
             supplierId:handoff.supplierId,
             documentNumber:handoff.documentNumber,
             documentDate:handoff.documentDate,
@@ -602,7 +613,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       ?"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση."
       :"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice. Θα συνδεθεί αυτόματα όταν εμφανιστεί στο myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση.";
     res.status(202).json({ok:true,accepted:true,jobId,jobs:result,purchaseDocumentId:draft.documentId,draftReady:true,myDataMatched:Boolean(myData),myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,message:handoffMessage});
-    setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId,jobId,pageJobIds,handoff,publicOrigin}));
+    setImmediate(()=>scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publicOrigin}));
   }catch(error){next(error)}
 });
 
@@ -652,7 +663,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
         await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:recoveryBackground})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')`;
       }
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-      setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
+      setImmediate(()=>scheduleFastBackground({companyId:req.user.companyId,storeId:job.storeId,jobId:job.id,pageJobIds:handoff.pageJobIds,handoff,publicOrigin}));
       recovered.push(job.id);
     }
     res.status(202).json({ok:true,scanned:rows.length,recovered:recovered.length,jobIds:recovered,skipped:{operatorScope:skippedOperatorScope,noHandoff:skippedNoHandoff,nonRetryable:skippedNonRetryable}});
@@ -690,7 +701,7 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     }
     if(shouldSchedule){
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-      setImmediate(()=>scheduleFastBackground({authorization:req.get("authorization"),companyId:req.user.companyId,jobId:job.id,pageJobIds:scheduledHandoff.pageJobIds,handoff:scheduledHandoff,publicOrigin}));
+      setImmediate(()=>scheduleFastBackground({companyId:req.user.companyId,storeId:job.storeId,jobId:job.id,pageJobIds:scheduledHandoff.pageJobIds,handoff:scheduledHandoff,publicOrigin}));
     }
     const done=background.status==="COMPLETED"&&job.status==="AWAITING_APPROVAL"&&!rereadClaimed;
     res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_RECOVERING":job.stage,status:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_QUEUED":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:job.status==="POS_FAILED"&&!retryClaimed,purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:retryClaimed?null:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});

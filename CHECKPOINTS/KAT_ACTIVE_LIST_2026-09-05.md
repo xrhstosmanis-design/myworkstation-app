@@ -1,3 +1,25 @@
+## 2026-09-17 — MANTZILAS explicit `12 TMX` package conversion
+
+- [x] **LAB FAIL** on invoice `12674`: supplier code `01880`, LIPTON peach tea 500 ml, is printed as a `12 TMX` package but the draft exposes `1 piece x 9.37 EUR`.
+- [x] Treat an explicit count-bearing unit token from the current physical row (for example `12TMX`) as one invoice package of 12 stock pieces, without changing invoice quantity, net, VAT or gross economics.
+- [x] Expected stock presentation for `01880`: `12 pieces x 0.780833 EUR`; preserved invoice net `9.37 EUR`, VAT 13%, gross `10.59 EUR`.
+- [ ] Do not infer a package from bottle volume text alone, supplier history or an old invoice. Preserve all payment, draft, stock-posting, approval, finalization, fiscal and accounting guards.
+- [x] Focused regressions `124/124`, full server suite `1301/1301`, client production build, server/Prisma build and diff checks PASS locally.
+- [ ] Require green CI, merge, exact deploy and one fresh POS-front LAB together with the session-independent background correction.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-explicit-count-unit-package.md`.
+
+## 2026-09-17 — POS background must survive operator-session expiry
+
+- [x] **LAB FAIL** on exact production `a2e6fb581809cbdc16402d5a1f18e4ccb31ab797`: fresh MANTZILAS invoice `12674` was submitted exactly once from the POS front and its durable draft reached 12 rows, but the row sum was `348.72 EUR` versus the confirmed printed invoice total `366.47 EUR` (difference `17.75 EUR`).
+- [x] The aggregate-mismatch guard correctly requested the full current-page correction. The correction then failed at `POS_BACKGROUND_AI_RECHECK` with `Η συνεδρία έληξε.`, proving that the durable server background still depends on the operator browser session remaining valid.
+- [x] Detailed row evidence: supplier code `01880` is a `12 TMX` LIPTON package, not one stock piece. Expected display is `12 x 0.780833 EUR`, preserving net `9.37 EUR` and gross `10.59 EUR`.
+- [x] The operator confirms the displayed discounts are also wrong. The existing 12-row draft is not acceptable; the corrective current-image reread must replace original price and discounts 1/2/3 only from balanced physical-row evidence and reconcile the complete invoice to `366.47 EUR`.
+- [x] After the already-authenticated durable POS handoff, continue only the exact tenant/store/job/path/method/body-scoped background operations with a five-minute signed server capability, without reusing an expiring browser token. Preserve every normal authorization check for browser and external requests.
+- [ ] Preserve the single existing credit draft and attachment. No second upload, payment/credit, duplicate draft, approval, finalization, stock posting, fiscal or accounting mutation during diagnosis or recovery.
+- [x] Focused regressions `124/124`, full server suite `1301/1301`, client production build, server/Prisma build and diff checks PASS locally.
+- [ ] Require green CI, merge and exact deployed revision before a new POS-front LAB. BackOffice refresh/recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-background-session-independent.md`.
+
 ## 2026-09-17 — POS-front MANTZILAS full verification after aggregate mismatch
 
 - [x] Current LAB evidence remains FAIL: POS-front invoice `12424` created one draft but finished at `0 items / 0.00 EUR` with `POS_FAILED / POS_BACKGROUND_FAILED`.
