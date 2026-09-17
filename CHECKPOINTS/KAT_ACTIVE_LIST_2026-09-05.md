@@ -1,3 +1,15 @@
+## 2026-09-18 — Invoice 12674 false total-only duplicate recovery
+
+- [x] **LAB FAIL** on exact production `e64de7bc58c860c78570f0ef0706a1229a7160eb`: invoice `12674` completed automatically and its draft displayed `13` rows / `366.50 EUR`, but comparison with the original image proves the apparent `0.03 EUR` agreement is false.
+- [x] The original has one supplier-code `59` row and a separate final `01880` row; the draft duplicated code `59`, shifted neighbouring economics/VAT and exposed zero discounts although the printed rows contain `31%` and `19%` discounts.
+- [x] Root cause: `restorePrintedRepeatedLine` allowed a unique total gap alone to synthesize a second physical row. That artificial row closed the total and suppressed the complete MANTZILAS printed-table verifier.
+- [x] Require independent current-document text evidence that the exact supplier code occurs more times than the structured table before restoring a repeated row. A total gap alone now remains a mismatch and triggers the existing full row/code/discount/VAT verifier.
+- [x] Advance the one-attempt persisted-draft reread marker to V11 so the existing unapproved draft can be reread after deploy without another POS submission, payment, credit or upload.
+- [x] Preserve the current draft, settlement identity and source image. No approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused invoice/recovery regressions `105/105`, full server suite `1304/1304`, production build, syntax and diff checks: PASS. CI, merge and exact deploy remain required. LAB remains FAIL until the original `12674` image is reread to the printed physical rows, discounts and VAT footer.
+- [ ] Separate verified packaging acceptance remains: supplier codes `12798` and `12718` must expose `12` stock pieces, not `24`, without changing invoice economics.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-invoice-12674-false-total-duplicate.md`.
+
 ## 2026-09-18 — MANTZILAS isolated duplicate-row reconciliation
 
 - [x] **LAB FAIL** after exact production `67216bce30d4abdadec4c5eaa8c5cb155c166384`: the durable Phase 1 worker claimed invoice `12674` and reached a terminal diagnostic without another POS submission, but the corrective reread returned `13` rows / `372.63 EUR` against printed gross `366.47 EUR` (unique overage `6.16 EUR`).
