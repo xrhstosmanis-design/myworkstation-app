@@ -1462,3 +1462,12 @@ Total output lines: 1413
 - [x] Do not change payment, credit, stock, approval, finalization, fiscal or accounting behavior.
 - [ ] AWAITING tests, CI, exact deploy and one clean POS-front LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corrective-reread.md`.
+
+# 2026-09-17 — MANTZILAS leading-zero code identity
+
+- [x] LAB safely blocked the mismatched table at 0 items during discount verification.
+- [x] Canonicalize numeric-only supplier codes so `0168=168` and `00009=9`.
+- [x] Retain exact index, unique-target, row-math and whole-invoice-total gates.
+- [x] Preserve all payment, credit, stock, approval, finalization, fiscal and accounting guards.
+- [ ] AWAITING tests, CI, exact deploy and one POS-front retry.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-leading-zero-code-identity.md`.
