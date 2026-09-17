@@ -21,4 +21,6 @@
 - Focused invoice/POS tests: `55/55` PASS.
 - Full server suite: `1302/1302` PASS.
 - Client production build and server/Prisma build: PASS.
-- Awaiting commit, green CI, merge, exact deployed revision and recovery/retest from POS front. BackOffice refresh is not acceptance.
+- PR `#939`, CI and exact Render revision `d7b471da2ff5ca1d9429a563b8dfb60ea8468646`: PASS.
+- Fresh POS-front invoice `12674` then failed before the table repair could run because the server rejected its own background capability during the durable claim transition: `POS_BACKGROUND_AI_RECHECK: Η εσωτερική εργασία POS δεν είναι πλέον ενεργή.`
+- This remains **LAB FAIL** and is tracked by `CHECKPOINTS/CHANGES/2026-09-17-pos-background-durable-claim-race.md`. BackOffice refresh is not acceptance.

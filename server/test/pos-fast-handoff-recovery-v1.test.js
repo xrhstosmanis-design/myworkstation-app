@@ -105,9 +105,18 @@ test("POS background capability is bound to exact route, method, body, tenant, s
   assert.match(auth,/payload\.bodyHash!==bodyHash/);
   assert.match(auth,/j\."companyId"=\$\{String\(payload\.companyId\|\|""\)\} AND j\."storeId"=\$\{String\(payload\.storeId\|\|""\)\}/);
   assert.match(auth,/Array\.isArray\(handoff\.pageJobIds\).*includes\(String\(job\?\.id\)\)/);
-  assert.match(auth,/\["POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"\]\.includes\(job\.status\)/);
+  assert.match(auth,/\["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"\]\.includes\(job\.status\)/);
   assert.match(auth,/code:"POS_BACKGROUND_SCOPE_REJECTED"/);
   assert.match(auth,/code:"POS_BACKGROUND_JOB_REJECTED"/);
+});
+
+test("POS background capability remains active across the durable claim race only",()=>{
+  const start=auth.indexOf('if(payload.tokenType==="POS_BACKGROUND")');
+  const body=auth.slice(start,auth.indexOf('if(payload.tokenType==="STORE_OPERATOR")',start));
+  assert.match(body,/"POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"/);
+  assert.doesNotMatch(body,/"POS_FAILED"/);
+  assert.doesNotMatch(body,/"AWAITING_APPROVAL"/);
+  assert.doesNotMatch(body,/"CONFIRMED"/);
 });
 
 test("a repeated POS intake reuses and re-verifies durable cached lines without provider OCR",()=>{

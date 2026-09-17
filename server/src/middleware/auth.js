@@ -122,7 +122,13 @@ export async function auth(req,res,next){
       `;
       const job=rows[0],handoff=job?.resultJson?.posHandoff;
       const boundHandoff=handoff&&String(handoff.primaryJobId||job?.id)===String(job?.id)&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.map(String).includes(String(job?.id));
-      if(!job||!job.companyActive||!job.storeActive||!boundHandoff||!["POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(job.status)){
+      // The worker claim and the first loopback request are separate database /
+      // HTTP operations. A concurrent POS status poll can legitimately observe
+      // and reschedule the same bound handoff while it is still POS_QUEUED or
+      // POS_DRAFT_READY. The capability is already restricted to the exact
+      // tenant, store, job, route, method and body, so those two durable active
+      // phases are safe; terminal states remain rejected.
+      if(!job||!job.companyActive||!job.storeActive||!boundHandoff||!["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(job.status)){
         return res.status(401).json({error:"Η εσωτερική εργασία POS δεν είναι πλέον ενεργή.",code:"POS_BACKGROUND_JOB_REJECTED"});
       }
       req.user={id:null,tokenType:"POS_BACKGROUND",companyId:job.companyId,storeId:job.storeId,role:"SYSTEM",fullName:"POS Background",permissions:["AI_READER","INVENTORY"]};
