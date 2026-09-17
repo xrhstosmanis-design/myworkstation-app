@@ -26,9 +26,10 @@ test("POS closes the invoice modal immediately and only monitors server status",
   assert.match(route,/\/pos-intake/);
 });
 
-test("status polling restarts a persisted queued worker after a server restart",()=>{
+test("status polling restarts a persisted queued or stale worker after a server restart",()=>{
   assert.match(route,/posHandoff:primaryHandoff/);
-  assert.match(route,/\["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING"\]\.includes\(job\.status\)/);
+  assert.match(route,/\["POS_QUEUED","POS_DRAFT_READY"\]\.includes\(job\.status\)\|\|staleProcessing/);
+  assert.match(route,/staleProcessing=job\.status==="POS_PROCESSING"&&new Date\(job\.updatedAt\)\.getTime\(\)<Date\.now\(\)-60\*1000/);
   assert.match(route,/handoff\.pageJobIds/);
   assert.match(route,/fastBackgroundWorkers\.has\(jobId\)/);
 });
