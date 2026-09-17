@@ -172,7 +172,12 @@ test("AI recheck reports a safe stage instead of a hidden generic 500",()=>{
 test("table recheck provider failure falls through to Azure recovery",()=>{
   assert.match(reader,/The table pass is supplemental/);
   assert.match(reader,/tableRecheckError=isProviderTimeout\(error\)\?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE"/);
-  assert.match(route,/AI_RECHECK_INTERNAL \\\[table-recheck\\\]/);
+  assert.match(route,/table-recheck\|discount-verification/);
+});
+
+test("discount verification internal failure is eligible for durable reread",()=>{
+  assert.match(route,/AI_RECHECK_INTERNAL \\\[/);
+  assert.match(route,/table-recheck\|discount-verification/);
 });
 
 test("background failure identifies the internal operation",()=>{
