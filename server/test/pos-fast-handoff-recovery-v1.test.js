@@ -12,7 +12,7 @@ test("BackOffice refresh reclaims only durable, stale POS handoffs without a pay
   assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
   assert.match(route,/"updatedAt" ASC LIMIT 50/);
   assert.match(route,/if\(recovered\.length>=3\)break/);
-  assert.match(route,/scheduleFastBackground\(\{companyId:req\.user\.companyId,storeId:job\.storeId/);
+  assert.match(route,/enqueueFastBackground\(\{companyId:req\.user\.companyId,storeId:job\.storeId,jobId:job\.id,publicOrigin\}\)/);
   assert.doesNotMatch(route.slice(route.indexOf('router.post("/ai-reader/fast-recover"'),route.indexOf('router.get("/ai-reader/fast-status')),/StoreTransaction"/);
 });
 
@@ -79,11 +79,12 @@ test("fast handoff survives optimized image checksum changes using strict invoic
   assert.ok(body.indexOf("reconcileInvoiceLines(candidateLines,totalGross)",identity)>identity);
 });
 
-test("immediate POS worker receives the complete cached-line handoff",()=>{
+test("durable POS task receives the complete cached-line handoff",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
   assert.match(body,/const handoff=\{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds\.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines\}/);
-  assert.match(body,/scheduleFastBackground\(\{companyId,storeId,jobId,pageJobIds,handoff,publicOrigin\}\)/);
+  assert.match(body,/posHandoff:primaryHandoff/);
+  assert.match(body,/await enqueueFastBackground\(\{companyId,storeId,jobId,publicOrigin\}\)/);
 });
 
 test("durable POS background uses a job-scoped server capability instead of the browser session",()=>{
@@ -159,14 +160,13 @@ test("fast recovery reports why stored jobs were not reclaimed",()=>{
   assert.match(orders,/Recovery: scanned .*started .*no-handoff .*non-retryable/);
 });
 
-test("queued recovery waits for the older worker and skips a completed draft",()=>{
-  const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
-  assert.match(worker,/fastBackgroundSuccessors\.set\(jobId/);
-  assert.match(worker,/if\(!waiting\)void activeWorker\.finally/);
-  assert.match(worker,/SELECT "status" FROM "AiReaderJob"/);
-  assert.match(worker,/\["AWAITING_APPROVAL","CONFIRMED"\]\.includes\(rows\[0\]\?\.status\)/);
-  assert.match(worker,/scheduleFastBackground\(successor\)/);
-  assert.doesNotMatch(worker,/if\(handoff\.replaceExistingDraft\)activeWorker\.finally/);
+test("queued recovery uses the existing database lease and skips a completed draft",()=>{
+  const queue=route.slice(route.indexOf("async function enqueueFastBackground"),route.indexOf("async function claimFastBackground"));
+  const claim=route.slice(route.indexOf("async function claimFastBackground"),route.indexOf("async function runPosInvoiceBackgroundSweep"));
+  assert.match(queue,/"state"='RUNNING' AND "PosInvoiceBackgroundTask"\."leaseUntil">CURRENT_TIMESTAMP/);
+  assert.match(claim,/FOR UPDATE OF t SKIP LOCKED LIMIT 1/);
+  assert.match(claim,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING'\)/);
+  assert.doesNotMatch(claim,/AWAITING_APPROVAL|CONFIRMED/);
 });
 
 test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the archived image",()=>{
