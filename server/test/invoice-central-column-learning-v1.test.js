@@ -6,6 +6,7 @@ import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPri
 import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learning.js';
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
+import {buildCompletePrintedTableCandidate} from '../src/lib/invoice-discount-verifier.js';
 
 const headers=['ΚΩΔΙΚΟΣ','ΠΕΡΙΓΡΑΦΗ','ΛΙΑΝΙΚΗ ΤΙΜΗ','Μ.Μ.','ΠΟΣΟΤΗΤΑ','ΤΙΜΗ ΜΟΝΑΔΑΣ','ΑΞΙΑ ΠΡΟ ΕΚΠΤΩΣΗΣ','ΕΚΠΤΩΣΗ %','ΕΚΠΤΩΣΗ ΠΟΣΟ','ΑΞΙΑ ΜΕΤΑ ΤΗΝ ΕΚΠΤΩΣΗ','ΦΠΑ'];
 const decimal=n=>String(n).replace('.',',');
@@ -357,6 +358,34 @@ test('MANTZILAS printed economics recover discounts, excise, taxable value and V
     {quantity:1,unitCost:22.85,discount:17,discountAmount:3.88,net:18.97,excise:4.12,taxable:23.09,vatAmount:5.55,gross:28.64});
   const invalid={description:'BAD',rawText:'14 | BAD | KIB | 1 | 1 | 21,75 | 21,75 | 17 | 8,49 | 18,05 | 6,86 | 24,91 | 24 | 5,98'};
   assert.equal(recoverMantzilasEconomics(invalid),invalid,'a shifted discount that breaks the printed equation must be rejected');
+});
+
+test('MANTZILAS 11998 rebuilds all 14 physical rows when the first OCR guide omitted one',()=>{
+  const source=[
+    ['00009','COCA COLA ZERO 0,33LTx24pack ΚΟΥΤΙ','KIB',1,19.55,19.55,31,6.06,13.49,0,13.49,13,1.75,15.24],
+    ['046','ΝΕΡΟ ΒΙΚΟΣ 0,5LT','KIB',20,2.16,43.20,0,0,43.20,0,43.20,13,5.62,48.82],
+    ['043','ΝΕΡΟ ΒΙΚΟΣ 6X1,5LT','KIB',10,1.10,11,0,0,11,0,11,13,1.43,12.43],
+    ['10503','AMSTEL RADLER 0,33LT ΚΟΥΤΙ','KIB',1,16.80,16.80,17,2.86,13.94,4.12,18.06,24,4.34,22.40],
+    ['1056','FURSTENBRAU ΚΟΥΤΙ 4PACK 0,5ML','4PK',3,2.08,6.24,17,1.06,5.18,2.19,7.37,24,1.77,9.14],
+    ['10195','MYTHOS 0,5LTx4Pack ΚΟΥΤΙ (3+1Δ)','4PK',3,2.40,7.20,17,1.22,5.98,4.35,10.33,24,2.48,12.81],
+    ['621312','FIX ANEY 0,33LTx6Pack ΚΟΥΤΙ (5+1)','6PK',2,3.64,7.28,17,1.24,6.04,0,6.04,24,1.45,7.49],
+    ['62211','FIX ANEY ΣΑΓΚΟΥΙΝΙ 0,33 ML 4PACK','4PK',3,2.37,7.11,17,1.21,5.90,0,5.90,24,1.42,7.32],
+    ['14','ΑΛΦΑ 0,5LT ΚΟΥΤΙ','KIB',2,21.75,43.50,17,7.40,36.10,13.72,49.82,24,11.95,61.77],
+    ['614','ΑΛΦΑ 0,33LT ΚΟΥΤΙ (5+1Δ)','KIB',1,12.79,12.79,17,2.17,10.62,4.53,15.15,24,3.64,18.79],
+    ['617','ΑΛΦΑ 0,5LT ΚΟΥΤΙ STRONG','KIB',1,23.01,23.01,17,3.91,19.10,9.36,28.46,24,6.83,35.29],
+    ['1085','AMSTEL 0,5LT ΚΟΥΤΙ (3+1)','KIB',1,13.19,13.19,0,0,13.19,7.49,20.68,24,4.97,25.65],
+    ['01210','HEINEKEN 0,5LT ΚΟΥΤΙ (3+1)','KIB',1,16.50,16.50,0,0,16.50,7.49,23.99,24,5.75,29.74],
+    ['009','HEINEKEN 0,33LT ΚΟΥΤΙ (5+1ΔΩΡΟ)','KIB',1,14,14,0,0,14,4.94,18.94,24,4.55,23.49]
+  ];
+  const candidates=source.map(([supplierCode,description,printedUnit,printedQuantity,originalUnitPrice,initialAmount,discountPercent1,discountAmount1,netAmount,exciseTotal,taxableAmount,vatRate,vatAmount,grossAmount],index)=>({index:index+1,supplierCode,description,printedUnit,printedQuantity,originalUnitPrice,initialAmount,discountPercent1,discountAmount1,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount,exciseTotal,taxableAmount,vatRate,vatAmount,grossAmount,confidence:99,evidence:'printed physical row'}));
+  const vatSummary=[{rate:24,taxable:204.74,vat:49.14,gross:253.88},{rate:13,taxable:67.69,vat:8.80,gross:76.49}];
+  const rebuilt=buildCompletePrintedTableCandidate(candidates,330.37,vatSummary);
+  assert.equal(rebuilt.length,14);assert.equal(rebuilt[0].code,'00009');assert.equal(rebuilt.at(-1).code,'009');
+  assert.equal(roundForTest(rebuilt.reduce((sum,line)=>sum+line.taxableAmount,0)),272.43);
+  assert.equal(roundForTest(rebuilt.reduce((sum,line)=>sum+line.grossAmount,0)),330.38,'printed row rounding may differ one cent from the authoritative VAT footer');
+  assert.equal(buildCompletePrintedTableCandidate(candidates.slice(0,-1),330.37,vatSummary),null,'an incomplete table cannot be accepted merely because its rows balance');
+  const packaged=rebuilt.map(applyMantzilasPackaging);
+  assert.equal(packaged[0].supplierProfileEvidence.stockQuantity,24);assert.equal(packaged[1].supplierProfileEvidence.stockQuantity,480);assert.equal(packaged[2].supplierProfileEvidence.stockQuantity,60);
 });
 
 test('MANTZILAS mixed VAT footer uniquely repairs the three shifted rates and exact invoice total',()=>{

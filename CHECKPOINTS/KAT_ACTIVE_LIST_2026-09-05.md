@@ -1608,3 +1608,15 @@ Total output lines: 1413
 - [x] FINAL POS-FRONT LAB PASS: fresh `12665` completed with 18 rows and both targets correct simultaneously: `00009 = 24 pieces / 31% / 13.49 EUR / 15.24 EUR`; `02410 = 24 pieces × 0.98 EUR / 23.52 EUR / 35.71 EUR`.
 - [x] Invoice `429.27 EUR`, line sum `429.26 EUR`, difference `0.01 EUR` within `0.05 EUR` tolerance. No approval, finalization or stock posting was performed.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
+
+## 2026-09-17 — MANTZILAS 11998 complete printed-table recovery
+
+- [x] LAB FAIL: fresh POS-front invoice `11998` had the correct four-field header but ended in `POS_BACKGROUND_AI` instead of completing automatically.
+- [x] Treat `330.37 EUR` as the invoice total; never select the account balance or handwritten returnable-container note.
+- [x] Recover all 14 physical rows even when the initial OCR guide omitted a row.
+- [x] Accept the rebuilt table only when every printed row equation, each VAT-footer group and the POS-confirmed invoice total reconcile.
+- [x] Preserve current-image supplier codes/descriptions/units for packaging conversion; use no economics from a previous invoice.
+- [x] Focused invoice/POS tests `55/55` and full server suite `1302/1302`: PASS.
+- [x] Client production build and server/Prisma build: PASS.
+- [ ] AWAITING commit, green CI, merge, exact Render revision and one POS-front LAB/recovery without BackOffice refresh or duplicate submission.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-complete-printed-table-recovery.md`.
