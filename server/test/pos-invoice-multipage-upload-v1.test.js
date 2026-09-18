@@ -158,7 +158,7 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
   const background=wrapper.slice(wrapper.indexOf("function scheduleFastBackground"),wrapper.indexOf("async function ensureFastHandoffSchema"));
   assert.match(wrapper,/const pageJobIds=jobs\.map\(job=>job\.id\)/);
   assert.match(background,/ai-recheck.*additionalPageJobIds/s);
-  assert.match(background,/const productLines=finalizeV244ProductLines/);
+  assert.match(background,/const productLines=verifiedPrintedTableForPersistence\([^\n]+\)\|\|finalizeV244ProductLines/);
   assert.match(background,/productLines/);
   assert.match(background,/additionalPageJobIds/);
   assert.match(aiRecheck,/const fileParts=pageJobs\.map/);
