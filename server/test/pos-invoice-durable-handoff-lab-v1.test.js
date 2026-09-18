@@ -57,10 +57,22 @@ test("startup reconciles an eligible job whose durable task is terminal or mis-s
   assert.match(schema,/j\."resultJson"->'posHandoff' IS NOT NULL/);
   assert.match(schema,/ON CONFLICT \("jobId"\) DO UPDATE SET/);
   assert.match(schema,/"state"='QUEUED',"availableAt"=NOW\(\),"attemptCount"=0/);
-  assert.match(schema,/"PosInvoiceBackgroundTask"\."state" IN \('FAILED','COMPLETED'\)/);
+  assert.match(schema,/NOT \("PosInvoiceBackgroundTask"\."state"='RUNNING' AND "PosInvoiceBackgroundTask"\."leaseUntil">NOW\(\)/);
   assert.match(schema,/"PosInvoiceBackgroundTask"\."companyId"<>EXCLUDED\."companyId"/);
   assert.match(schema,/"PosInvoiceBackgroundTask"\."storeId"<>EXCLUDED\."storeId"/);
   assert.doesNotMatch(schema,/ON CONFLICT \("jobId"\) DO NOTHING/);
+});
+
+test("worker watchdog requeues a stale recovering job without browser polling",()=>{
+  const repair=route.slice(route.indexOf("async function repairStaleRecoveringTasks"),route.indexOf("async function runPosInvoiceBackgroundSweep"));
+  const sweep=route.slice(route.indexOf("async function runPosInvoiceBackgroundSweep"),route.indexOf("export async function ensurePosInvoiceBackgroundWorkerSchema"));
+  assert.match(repair,/j\."status"='POS_QUEUED' AND j\."stage"='POS_RECOVERING'/);
+  assert.match(repair,/j\."updatedAt"<CURRENT_TIMESTAMP-INTERVAL '3 minutes'/);
+  assert.match(repair,/j\."resultJson"->'posHandoff' IS NOT NULL/);
+  assert.match(repair,/NOT \(t\."state"='RUNNING' AND t\."leaseUntil">CURRENT_TIMESTAMP/);
+  assert.match(repair,/"state"='QUEUED',"availableAt"=CURRENT_TIMESTAMP/);
+  assert.match(sweep,/await repairStaleRecoveringTasks\(\)/);
+  assert.ok(sweep.indexOf("repairStaleRecoveringTasks")<sweep.indexOf("claimFastBackground"));
 });
 
 test("startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh",()=>{

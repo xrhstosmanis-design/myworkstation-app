@@ -260,7 +260,7 @@ async function ensureFastHandoffSchema(){
     ON CONFLICT ("jobId") DO UPDATE SET
       "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=NOW(),"attemptCount"=0,
       "leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=NULL,"updatedAt"=NOW()
-    WHERE "PosInvoiceBackgroundTask"."state" IN ('FAILED','COMPLETED')
+    WHERE NOT ("PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">NOW() AND "PosInvoiceBackgroundTask"."leaseToken" IS NOT NULL AND "PosInvoiceBackgroundTask"."leaseOwner" IS NOT NULL)
       OR "PosInvoiceBackgroundTask"."companyId"<>EXCLUDED."companyId"
       OR "PosInvoiceBackgroundTask"."storeId"<>EXCLUDED."storeId"`);
 
@@ -325,10 +325,24 @@ async function claimFastBackground(){
   return {...claimed,handoff,pageJobIds,attemptCount:Number(claimed.attemptCount||1)};
 }
 
+async function repairStaleRecoveringTasks(){
+  // A retry marker without a live lease must never remain operator-visible for
+  // hours. Reconcile the durable task from the authoritative active job; the
+  // existing attempt counter and worker guards still bound provider retries.
+  await prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" t SET "state"='QUEUED',"availableAt"=CURRENT_TIMESTAMP,"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"updatedAt"=CURRENT_TIMESTAMP
+    FROM "AiReaderJob" j
+    WHERE j."id"=t."jobId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId"
+      AND j."status"='POS_QUEUED' AND j."stage"='POS_RECOVERING'
+      AND j."updatedAt"<CURRENT_TIMESTAMP-INTERVAL '3 minutes'
+      AND j."resultJson"->'posHandoff' IS NOT NULL
+      AND NOT (t."state"='RUNNING' AND t."leaseUntil">CURRENT_TIMESTAMP AND t."leaseToken" IS NOT NULL AND t."leaseOwner" IS NOT NULL)`;
+}
+
 async function runPosInvoiceBackgroundSweep(){
   if(posBackgroundSweepActive)return;
   posBackgroundSweepActive=true;
   try{
+    await repairStaleRecoveringTasks();
     while(fastBackgroundWorkers.size<POS_BACKGROUND_CONCURRENCY){
       const claimed=await claimFastBackground();
       if(!claimed)break;
