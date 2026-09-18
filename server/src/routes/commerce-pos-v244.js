@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
-import {reconcileInvoiceLines} from "../invoice-line-reconciliation.js";
+import {reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
@@ -16,7 +16,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V11";
+const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V12";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -165,7 +165,8 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // the complete table. Verify that stored table again before reuse so
           // it neither calls unavailable providers nor loses printed discounts.
           if(usingStoredProductLines&&Array.isArray(sourceLines)&&sourceLines.length)await verifyInvoiceDiscounts({productLines:sourceLines,apiKey:null});
-          const productLines=finalizeV244ProductLines(Array.isArray(sourceLines)?sourceLines:[]);
+          const sourceProductLines=Array.isArray(sourceLines)?sourceLines:[];
+          const productLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross)||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){
             const before=reconcileInvoiceLines(finalizeV244ProductLines(previousLines),handoff.totalGross);
