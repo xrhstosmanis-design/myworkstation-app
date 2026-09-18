@@ -74,7 +74,8 @@ const FAST_OPENAI_HEADER_ATTEMPTS=2;
 const INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS=180000;
 const POS_BACKGROUND_TOKEN_ISSUER="myworkstation-pos-background";
 const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
-const POS_BACKGROUND_LEASE_MS=12*60*1000;
+const POS_BACKGROUND_LEASE_MS=90*1000;
+const POS_BACKGROUND_HEARTBEAT_MS=30*1000;
 const POS_BACKGROUND_SWEEP_MS=5000;
 const POS_BACKGROUND_MAX_ATTEMPTS=3;
 const POS_BACKGROUND_DURABLE_RETRY_DELAYS_MS=[30000,120000];
@@ -89,6 +90,11 @@ function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
   const bodyHash=crypto.createHash("sha256").update(JSON.stringify(body??null)).digest("hex");
   const token=jwt.sign({tokenType:"POS_BACKGROUND",companyId,storeId,jobId,path,method,bodyHash},process.env.JWT_SECRET,{expiresIn:"5m",issuer:POS_BACKGROUND_TOKEN_ISSUER,audience:POS_BACKGROUND_TOKEN_AUDIENCE});
   return `Bearer ${token}`;
+}
+
+async function renewFastBackgroundLease({companyId,jobId,leaseToken}){
+  const leaseUntil=new Date(Date.now()+POS_BACKGROUND_LEASE_MS);
+  return prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "leaseUntil"=${leaseUntil},"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "state"='RUNNING' AND "leaseToken"=${leaseToken}`;
 }
 
 async function internalCommerceRequest(path,{authorization,backgroundScope,method="GET",body,publicOrigin}={}){
@@ -141,6 +147,8 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
   if(!companyId||!storeId||!jobId||!leaseToken||fastBackgroundWorkers.has(jobId))return;
   const backgroundScope={companyId,storeId,jobId};
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
+  const leaseHeartbeat=setInterval(()=>{renewFastBackgroundLease({companyId,jobId,leaseToken}).catch(error=>console.warn("POS invoice lease heartbeat failed",{jobId,message:String(error?.message||error)}))},POS_BACKGROUND_HEARTBEAT_MS);
+  leaseHeartbeat.unref?.();
   const task=(async()=>{
     try{
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING')`;
@@ -222,7 +230,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
         });
         console.error("POS fast invoice background failed",{jobId,message});
       }
-    }finally{fastBackgroundWorkers.delete(jobId);setImmediate(runPosInvoiceBackgroundSweep)}
+    }finally{clearInterval(leaseHeartbeat);fastBackgroundWorkers.delete(jobId);setImmediate(runPosInvoiceBackgroundSweep)}
   })();
   fastBackgroundWorkers.set(jobId,task);
   task.catch(error=>console.error("POS fast invoice worker crashed",{jobId,message:String(error?.message||error)}));
@@ -243,6 +251,8 @@ async function ensureFastHandoffSchema(){
     "leaseToken" TEXT,"leaseOwner" TEXT,"leaseUntil" TIMESTAMPTZ,"publicOrigin" TEXT,"lastError" TEXT,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"completedAt" TIMESTAMPTZ)`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosInvoiceBackgroundTask_dispatch_idx" ON "PosInvoiceBackgroundTask" ("state","availableAt","leaseUntil")`);
+  await prisma.$executeRawUnsafe(`UPDATE "PosInvoiceBackgroundTask" SET "state"='QUEUED',"availableAt"=NOW(),"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"updatedAt"=NOW()
+    WHERE "state"='RUNNING' AND ("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL)`);
   await prisma.$executeRawUnsafe(`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt")
     SELECT j."id",j."companyId",j."storeId",'QUEUED',NOW() FROM "AiReaderJob" j
     WHERE j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING')
@@ -263,7 +273,7 @@ async function claimFastBackground(){
   const rows=await prisma.$queryRaw`WITH candidate AS (
       SELECT t."jobId" FROM "PosInvoiceBackgroundTask" t
       JOIN "AiReaderJob" j ON j."id"=t."jobId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId"
-      WHERE ((t."state"='QUEUED' AND t."availableAt"<=CURRENT_TIMESTAMP) OR (t."state"='RUNNING' AND t."leaseUntil"<CURRENT_TIMESTAMP))
+      WHERE ((t."state"='QUEUED' AND t."availableAt"<=CURRENT_TIMESTAMP) OR (t."state"='RUNNING' AND (t."leaseUntil" IS NULL OR t."leaseUntil"<CURRENT_TIMESTAMP)))
         AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING')
         AND j."resultJson"->'posHandoff' IS NOT NULL
       ORDER BY t."availableAt",t."createdAt" FOR UPDATE OF t SKIP LOCKED LIMIT 1
