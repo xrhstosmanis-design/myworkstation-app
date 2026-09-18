@@ -257,7 +257,12 @@ async function ensureFastHandoffSchema(){
     SELECT j."id",j."companyId",j."storeId",'QUEUED',NOW() FROM "AiReaderJob" j
     WHERE j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING')
       AND j."resultJson"->'posHandoff' IS NOT NULL
-    ON CONFLICT ("jobId") DO NOTHING`);
+    ON CONFLICT ("jobId") DO UPDATE SET
+      "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=NOW(),"attemptCount"=0,
+      "leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=NULL,"updatedAt"=NOW()
+    WHERE "PosInvoiceBackgroundTask"."state" IN ('FAILED','COMPLETED')
+      OR "PosInvoiceBackgroundTask"."companyId"<>EXCLUDED."companyId"
+      OR "PosInvoiceBackgroundTask"."storeId"<>EXCLUDED."storeId"`);
 }
 
 async function enqueueFastBackground({companyId,storeId,jobId,publicOrigin}){

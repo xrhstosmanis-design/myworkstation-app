@@ -1,3 +1,13 @@
+## 2026-09-19 — Reconcile an eligible POS job with a terminal durable task
+
+- [x] **LAB FAIL** after exact production `ae876397d65beea243bfb200bc2d8698f581619e`: invoice `12674` still shows `0 items / 0.00 EUR`; its purchase shell updated at `19/09/2026 10:23`, while the linked OCR job remains at `POS_PROCESSING / POS_BACKGROUND` with the older `18/09/2026 07:58` update.
+- [x] The unchanged OCR timestamp proves the dispatcher did not claim this eligible job. Startup inserted missing tasks but used `ON CONFLICT DO NOTHING`, so a pre-existing `FAILED`/`COMPLETED` task, or a task with stale tenant/store scope, could permanently block the still-active job.
+- [x] On startup, requeue only a conflicting terminal or mis-scoped task whose joined AI job is still non-terminal and has the persisted POS handoff. Preserve live `RUNNING` tasks, ordinary queued retry timing and terminal AI jobs.
+- [x] Reuse the same attachment, credit/payment identity, AI job and draft. No OCR economics, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused durable-worker regressions `57/57`, complete server suite `1308/1308`, production build, syntax and diff checks: PASS.
+- [ ] Require green CI, merge and exact deploy. Automatic continuation of `12674` remains diagnostic; Phase 1 still requires a future genuinely new one-submit POS-front invoice for LAB PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-phase1-terminal-task-reconciliation.md`.
+
 ## 2026-09-18 — Recover an orphaned durable POS worker lease
 
 - [x] **LAB FAIL** on exact production `5d49fcbfb27f1ca65930af806149a9044d63468c`: invoice `12674` was accepted again from the POS and its shell updated at `10:23`, but it stayed at `0 items / 0.00 EUR`; the linked `POS_PROCESSING / POS_BACKGROUND` job still showed the older `07:39` update.
