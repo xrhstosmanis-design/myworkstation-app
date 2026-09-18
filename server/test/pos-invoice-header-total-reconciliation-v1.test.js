@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {reconcileInvoiceLines} from "../src/invoice-line-reconciliation.js";
+import {reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../src/invoice-line-reconciliation.js";
 
 test("header total wins when it equals the sum of net OCR lines",()=>{
   const lines=[
@@ -23,6 +23,24 @@ test("canonical VAT is rebuilt and non-canonical OCR VAT cannot inflate totals",
   assert.equal(result.strategy,"NET_PLUS_CANONICAL_VAT");
   assert.equal(result.grossTotal,174);
   assert.deepEqual(result.normalizedLines.map(line=>line.grossAmount),[124,50]);
+});
+
+
+test("a complete verified printed table persists without a second heuristic reinterpretation",()=>{
+  const lines=[
+    {code:"00206",description:"RED BULL SUGAR FREE 0,355LT ΚΟΥΤΙ",quantity:24,unit:"TEM",unitCost:1.10,initialAmount:26.40,discount1:0,discount1Amount:0,netAmount:26.40,exciseTotal:0,vatRate:13,grossAmount:29.83,sourceColumnsVerified:true,quantitySource:"AI_COMPLETE_PRINTED_TABLE_VERIFIED"},
+    {code:"11",description:"RED BULL 0,25LT ΚΟΥΤΙ",quantity:24,unit:"TEM",unitCost:.95,initialAmount:22.80,discount1:0,discount1Amount:0,netAmount:22.80,exciseTotal:0,vatRate:13,grossAmount:25.76,sourceColumnsVerified:true,quantitySource:"AI_COMPLETE_PRINTED_TABLE_VERIFIED"},
+    {code:"12798",description:"ΛΟΥΞ Π/Α Λ ΜΠΛΕ 0,33LT PET (10+2)",quantity:1,unit:"PACKAGE",unitsPerPackage:12,unitCost:6.82,initialAmount:6.82,discount1:19,discount1Amount:1.30,netAmount:5.52,exciseTotal:0,vatRate:13,grossAmount:6.24,sourceColumnsVerified:true,quantitySource:"AI_COMPLETE_PRINTED_TABLE_VERIFIED"}
+  ];
+  const persisted=verifiedPrintedTableForPersistence(lines,61.83);
+  assert.ok(persisted);
+  assert.deepEqual(persisted.map(line=>[line.code,line.quantity,line.unit,line.unitsPerPackage,line.discount1,line.discount1Amount,line.netAmount]),[
+    ["00206",24,"TEM",undefined,0,0,26.4],
+    ["11",24,"TEM",undefined,0,0,22.8],
+    ["12798",1,"PACKAGE",12,19,1.3,5.52]
+  ]);
+  assert.equal(verifiedPrintedTableForPersistence(lines,62),null,"the independent invoice total remains mandatory");
+  assert.equal(verifiedPrintedTableForPersistence([{...lines[0],sourceColumnsVerified:false}],29.83),null,"partial OCR rows still use the guarded finalizer");
 });
 
 test("existing POS OCR drafts have an idempotent safe repair route",()=>{
