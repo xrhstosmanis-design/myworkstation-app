@@ -1,3 +1,13 @@
+## 2026-09-18 — Preserve verified MANTZILAS table at POS persistence
+
+- [x] **LAB FAIL** on exact production `0230624780a5103f3088b880111a4ec2ef2f3af9`: invoice `12674` remains an unapproved 13-line draft at `331.09 / 374.12 EUR` against printed gross `366.47 EUR`.
+- [x] Current draft evidence: both Red Bull lines (`00206`, `11`) were expanded from printed `24` to `576` pieces; every discount column is zero; code `12798` now correctly exposes `12` pieces, while `12718` remains one piece in the retained older table.
+- [x] The complete MANTZILAS reread itself accepts only a contiguous physical table whose row arithmetic, VAT footer and independent invoice total agree within `0.05 EUR`. The POS worker then sent that verified table through the older heuristic finalizer a second time, producing the reported `120.28 EUR` mismatch and safely retaining the inferior draft.
+- [x] Persist a table without heuristic reinterpretation only when every row carries the complete-table verification markers and a fresh independent reconciliation still matches the invoice total within `0.05 EUR`. Partial, unverified or mismatched tables retain the existing guarded finalizer.
+- [x] Advance the bounded reread marker to V12 so the same unapproved draft can be reread once after deploy. Preserve the original image, draft and settlement identity; no upload, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused reconciliation/POS regressions `110/110`, full server suite `1305/1305`, production build, syntax and diff checks: PASS. Green CI, merge, exact deploy and LAB remain required.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-verified-table-persistence.md`.
+
 ## 2026-09-18 — MANTZILAS 12798 / 12718 verified 12-piece cartons
 
 - [x] **LAB FAIL** on invoice `12674`: the draft exposes supplier codes `12798` and `12718` as `24` stock pieces because the generic MANTZILAS 330 ml carton rule was applied.
