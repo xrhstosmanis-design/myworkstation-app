@@ -1,3 +1,13 @@
+## 2026-09-19 — Self-heal a stale POS_RECOVERING durable task
+
+- [x] **LAB FAIL**: invoice `12674` has remained at `POS_QUEUED / POS_RECOVERING` since 17:00 with the preserved old `12`-row / `430.29 EUR` draft. A retry marker without a worker for hours is a stuck queue, not processing.
+- [x] Root-cause boundary: the AI job and durable task can remain divergent after a retry. Startup preserved any existing `QUEUED` row, and the periodic dispatcher had no reconciliation step for a stale recovering job.
+- [x] At startup, reset every eligible active POS task unless it owns a complete live `RUNNING` lease. During every dispatcher sweep, requeue a `POS_QUEUED / POS_RECOVERING` job older than three minutes when it has no live lease.
+- [x] Preserve the existing attempt counter during the watchdog repair, the single worker/lease guards, original attachment, handoff, payment/credit identity, AI job and draft. No duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused durable recovery regressions `53/53`, complete server suite `1311/1311`, production build, syntax and diff checks: PASS.
+- [ ] Require green CI, merge and exact deploy. Existing `12674` recovery remains diagnostic; Phase 1 still requires a future new one-submit POS invoice for LAB PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-phase1-stale-recovering-watchdog.md`.
+
 ## 2026-09-19 — Startup reread for the completed pre-deploy MANTZILAS draft
 
 - [x] **LAB FAIL**: before the single-verifier revision reached production, invoice `12674` eventually completed after more than six minutes with `12` rows / `430.29 EUR` against printed gross `366.47 EUR` (difference `63.82 EUR`).
