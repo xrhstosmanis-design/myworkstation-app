@@ -83,6 +83,7 @@ const posBackgroundWorkerId=`${process.env.RENDER_INSTANCE_ID||process.pid}:${cr
 let posBackgroundSweepTimer=null;
 let posBackgroundSweepActive=false;
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
+const isSafeInferiorRereadFailure=error=>/POS_BACKGROUND_AI_RECHECK:\s*Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο/i.test(String(error?.message||error));
 
 function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
   const bodyHash=crypto.createHash("sha256").update(JSON.stringify(body??null)).digest("hex");
@@ -719,16 +720,17 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       if(!handoff||!Array.isArray(handoff.pageJobIds)||!handoff.pageJobIds.length){skippedNoHandoff++;continue}
       const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
       const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
+      const storedBackgroundError=String(background.error||"");
       const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
-      const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread;
+      const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.mode==="RECONCILIATION_REREAD"&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
+      const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
       if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
-      const storedBackgroundError=String(job.resultJson?.posBackground?.error||"");
-      if(job.status==="POS_FAILED"&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
+      if(job.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
       if(needsDraftReread){
-        const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
-        const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='AWAITING_APPROVAL'`;
+        const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+        const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('AWAITING_APPROVAL','POS_FAILED')`;
         if(!claimed)continue;
         handoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};
       }else{
@@ -754,18 +756,20 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
     const handoff=job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object"?job.resultJson.posHandoff:null;
     const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
-    const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(background.error);
     const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
+    const storedBackgroundError=String(background.error||"");
+    const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(storedBackgroundError);
     const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
-    const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread;
+    const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.mode==="RECONCILIATION_REREAD"&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
+    const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
     const staleProcessing=job.status==="POS_PROCESSING"&&new Date(job.updatedAt).getTime()<Date.now()-60*1000;
     let scheduledHandoff=handoff,rereadClaimed=false,retryClaimed=false;
     let shouldSchedule=hasRecoverableHandoff&&(["POS_QUEUED","POS_DRAFT_READY"].includes(job.status)||staleProcessing);
     if(hasRecoverableHandoff&&needsDraftReread){
-      const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
-      const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='AWAITING_APPROVAL'`;
+      const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
+      const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('AWAITING_APPROVAL','POS_FAILED')`;
       rereadClaimed=Boolean(claimed);
       if(rereadClaimed){scheduledHandoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};shouldSchedule=true}
     }
