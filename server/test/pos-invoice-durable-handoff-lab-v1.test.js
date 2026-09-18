@@ -33,11 +33,22 @@ test("server startup reclaims persisted queued or expired-lease work without POS
   assert.match(route,/posHandoff:primaryHandoff/);
   assert.match(route,/CREATE TABLE IF NOT EXISTS "PosInvoiceBackgroundTask"/);
   assert.match(route,/SELECT j\."id",j\."companyId",j\."storeId",'QUEUED',NOW\(\) FROM "AiReaderJob" j/);
-  assert.match(route,/t\."state"='RUNNING' AND t\."leaseUntil"<CURRENT_TIMESTAMP/);
+  assert.match(route,/t\."state"='RUNNING' AND \(t\."leaseUntil" IS NULL OR t\."leaseUntil"<CURRENT_TIMESTAMP\)/);
   assert.match(route,/FOR UPDATE OF t SKIP LOCKED LIMIT 1/);
   assert.match(route,/setInterval\(runPosInvoiceBackgroundSweep,POS_BACKGROUND_SWEEP_MS\)/);
   assert.match(server,/await ensurePosInvoiceBackgroundWorkerSchema\(\)/);
   assert.match(server,/app\.listen[\s\S]*startPosInvoiceBackgroundWorker\(\)/);
+});
+
+test("a live POS worker heartbeats a short lease and an orphan is reclaimed",()=>{
+  assert.match(route,/POS_BACKGROUND_LEASE_MS=90\*1000/);
+  assert.match(route,/POS_BACKGROUND_HEARTBEAT_MS=30\*1000/);
+  assert.match(route,/async function renewFastBackgroundLease/);
+  assert.match(route,/"state"='RUNNING' AND "leaseToken"=\$\{leaseToken\}/);
+  assert.match(route,/setInterval\(\(\)=>\{renewFastBackgroundLease/);
+  assert.match(route,/clearInterval\(leaseHeartbeat\)/);
+  assert.match(route,/WHERE "state"='RUNNING' AND \("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL\)/);
+  assert.match(route,/t\."state"='RUNNING' AND \(t\."leaseUntil" IS NULL OR t\."leaseUntil"<CURRENT_TIMESTAMP\)/);
 });
 
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{

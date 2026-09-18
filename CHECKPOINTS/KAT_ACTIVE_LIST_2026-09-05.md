@@ -1,3 +1,12 @@
+## 2026-09-18 — Recover an orphaned durable POS worker lease
+
+- [x] **LAB FAIL** on exact production `5d49fcbfb27f1ca65930af806149a9044d63468c`: invoice `12674` was accepted again from the POS and its shell updated at `10:23`, but it stayed at `0 items / 0.00 EUR`; the linked `POS_PROCESSING / POS_BACKGROUND` job still showed the older `07:39` update.
+- [x] Root cause boundary: the durable task can retain a 12-minute `RUNNING` lease after its server instance stops, and a malformed legacy running row with a missing lease field is never claimable.
+- [x] Renew a 90-second lease every 30 seconds while the owning worker is alive; reclaim only an elapsed/null lease and repair structurally orphaned running task rows at startup.
+- [x] Preserve the single retry owner, lease-token completion guards and the same attachment/payment/job/draft identity. No OCR economics, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused durable-worker/invoice regressions `99/99`, full server suite `1307/1307`, production build, syntax and diff checks: PASS. Green CI, merge and exact deploy remain required. Automatic continuation of `12674` without refresh is diagnostic only; Phase 1 still requires a future genuinely new one-submit POS-front invoice for LAB PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-phase1-orphaned-worker-lease.md`.
+
 ## 2026-09-18 — Recover a safe inferior reread without legacy mode metadata
 
 - [x] **LAB FAIL** after exact production `c9621df47114909e1f64964cbd363c1a9cc7c53d`: invoice `12674` again remained unchanged at `08:18`, proving that the V12 reread claim still did not run.
