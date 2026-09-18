@@ -1,3 +1,12 @@
+## 2026-09-18 — Recover a safe inferior reread without legacy mode metadata
+
+- [x] **LAB FAIL** after exact production `c9621df47114909e1f64964cbd363c1a9cc7c53d`: invoice `12674` again remained unchanged at `08:18`, proving that the V12 reread claim still did not run.
+- [x] The exact persisted error already proves that this job was an inferior replacement reread, but this older job does not expose the newer `posReprocess.mode` metadata required by PR #947.
+- [x] Remove only the legacy mode-field requirement. Still require `POS_FAILED`, an existing linked purchase draft, a strategy different from V12 and the exact safe-inferior-reread error before one same-draft strategy advance.
+- [x] The V12 marker stamped by the claim prevents a repeat. All other non-retryable failures remain blocked; no upload, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused reconciliation/POS regressions `114/114`, full server suite `1306/1306`, production build, syntax and diff checks: PASS. Green CI, merge, exact deploy and LAB remain required.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-safe-error-reread-without-mode.md`.
+
 ## 2026-09-18 — Advance a safely failed MANTZILAS reread to V12
 
 - [x] **LAB FAIL** after exact production `324ee1cc744f4ec0c17ae88f3aa1085e3379d1f6`: BackOffice refresh left invoice `12674` unchanged at update time `08:18`, `331.09 / 374.12 EUR`, `POS_FAILED / POS_BACKGROUND_FAILED`, with the old safe-inferior-reread difference `120.28 EUR`.
