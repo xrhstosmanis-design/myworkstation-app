@@ -51,6 +51,18 @@ test("a live POS worker heartbeats a short lease and an orphan is reclaimed",()=
   assert.match(route,/t\."state"='RUNNING' AND \(t\."leaseUntil" IS NULL OR t\."leaseUntil"<CURRENT_TIMESTAMP\)/);
 });
 
+test("startup reconciles an eligible job whose durable task is terminal or mis-scoped",()=>{
+  const schema=route.slice(route.indexOf("async function ensureFastHandoffSchema"),route.indexOf("async function enqueueFastBackground"));
+  assert.match(schema,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING'\)/);
+  assert.match(schema,/j\."resultJson"->'posHandoff' IS NOT NULL/);
+  assert.match(schema,/ON CONFLICT \("jobId"\) DO UPDATE SET/);
+  assert.match(schema,/"state"='QUEUED',"availableAt"=NOW\(\),"attemptCount"=0/);
+  assert.match(schema,/"PosInvoiceBackgroundTask"\."state" IN \('FAILED','COMPLETED'\)/);
+  assert.match(schema,/"PosInvoiceBackgroundTask"\."companyId"<>EXCLUDED\."companyId"/);
+  assert.match(schema,/"PosInvoiceBackgroundTask"\."storeId"<>EXCLUDED\."storeId"/);
+  assert.doesNotMatch(schema,/ON CONFLICT \("jobId"\) DO NOTHING/);
+});
+
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
   assert.match(route,/FROM "MyDataInboundDocument" m/);
   assert.match(route,/ABS\(COALESCE\(m\."totalGross",0\)-\$\{totalGross\}\)<=0\.05/);
