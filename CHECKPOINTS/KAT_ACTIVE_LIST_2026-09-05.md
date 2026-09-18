@@ -1,3 +1,16 @@
+Warning: truncated output (original token count: 51768)
+Total output lines: 1730
+
+## 2026-09-19 — Reconcile an eligible POS job with a terminal durable task
+
+- [x] **LAB FAIL** after exact production `ae876397d65beea243bfb200bc2d8698f581619e`: invoice `12674` still shows `0 items / 0.00 EUR`; its purchase shell updated at `19/09/2026 10:23`, while the linked OCR job remains at `POS_PROCESSING / POS_BACKGROUND` with the older `18/09/2026 07:58` update.
+- [x] The unchanged OCR timestamp proves the dispatcher did not claim this eligible job. Startup inserted missing tasks but used `ON CONFLICT DO NOTHING`, so a pre-existing `FAILED`/`COMPLETED` task, or a task with stale tenant/store scope, could permanently block the still-active job.
+- [x] On startup, requeue only a conflicting terminal or mis-scoped task whose joined AI job is still non-terminal and has the persisted POS handoff. Preserve live `RUNNING` tasks, ordinary queued retry timing and terminal AI jobs.
+- [x] Reuse the same attachment, credit/payment identity, AI job and draft. No OCR economics, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused durable-worker regressions `57/57`, complete server suite `1308/1308`, production build, syntax and diff checks: PASS.
+- [ ] Require green CI, merge and exact deploy. Automatic continuation of `12674` remains diagnostic; Phase 1 still requires a future genuinely new one-submit POS-front invoice for LAB PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-phase1-terminal-task-reconciliation.md`.
+
 ## 2026-09-18 — Recover an orphaned durable POS worker lease
 
 - [x] **LAB FAIL** on exact production `5d49fcbfb27f1ca65930af806149a9044d63468c`: invoice `12674` was accepted again from the POS and its shell updated at `10:23`, but it stayed at `0 items / 0.00 EUR`; the linked `POS_PROCESSING / POS_BACKGROUND` job still showed the older `07:39` update.
@@ -684,57 +697,7 @@ Total output lines: 1413
 | DEV-03 | Σταθερή πλήρης οθόνη POS, ασφαλής offline ουρά και έλεγχος ταχύτητας πληρωμών. | ΕΚΚΡΕΜΕΙ |
 | DEV-04 | Πλήρης σύνδεση τιμών/δικαιούχων POS - Online Store - BackOffice - Audit. | ΕΚΚΡΕΜΕΙ |
 | DEV-05 | Ταμείο/βάρδιες: φωτογραφία παράδοσης και πλήρης συμφωνία μετρητών, καρτών και IRIS. | ΕΚΚΡΕΜΕΙ |
-| DEV-06 | Invoice Reader: κάμερα, ανανέωση, σωστή ένωση έως 5 σελίδων, σειρά γραμμών, εκπτώσεις, δεκαδικά και εκμάθηση προμηθευτή. Η επαγγελματική προβολή εκπαιδευμένων τιμολογίων και η απόκρυψη διπλών ορατών εγγραφών ολοκληρώθηκαν χωρίς διαγραφή δεδομένων. | ΣΕ ΕΞΕΛΙΞΗ - PR #535 / #536 |
-| DEV-07 | Καθαρισμός προϊόντων, διπλά barcodes, Master Catalog, μαζικές τιμές και σύγκριση προμηθευτών. | ΕΚΚΡΕΜΕΙ |
-| DEV-08 | Πληρωμές προμηθευτών και Ταμείο Τράπεζας με αποτροπή διπλής/υπερπληρωμής και πλήρες Audit. | ΕΚΚΡΕΜΕΙ |
-| DEV-09 | Online/Delivery: stock, fiscal, ακυρώσεις και αντιστροφές ακριβώς μία φορά. | ΕΚΚΡΕΜΕΙ |
-| DEV-10 | Προσωπικό, πραγματικές ώρες, μισθοδοσία, υπερωρίες, προκαταβολές και μηνιαία αξιολόγηση ταμείων. | ΕΚΚΡΕΜΕΙ |
-| DEV-11 | Αναφορές πωλήσεων/επιστροφών/εκπτώσεων, μηνιαίο email ελλειμμάτων και εξαγωγές. | ΕΚΚΡΕΜΕΙ |
-| DEV-12 | Πραγματικοί κανόνες πακέτων και πλήρης έλεγχος δικαιωμάτων: Super Admin πάντα, ιδιοκτήτης μόνο με ενεργή άδεια/module, εργαζόμενος χωρίς οικονομικά/αναλύσεις/αξιολόγηση εκτός ειδικού δικαιώματος, με δυνατότητα override ανά κατάστημα και λήξη. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION |
-| DEV-13 | Netlink/TORA production πιστοποίηση, voucher, επανεκτύπωση, ακύρωση και reconciliation. | ΣΕ ΑΝΑΜΟΝΗ ΠΑΡΟΧΩΝ |
-| DEV-14 | myDATA/e-invoicing: sandbox, MARK, PDF, webhooks, ακυρώσεις, πιστωτικά και Δελτία Αποστολής. | ΣΕ ΑΝΑΜΟΝΗ ΠΑΡΟΧΟΥ |
-| DEV-15 | Backup/rollback εφαρμογής και βάσης, offline ανάκτηση, έλεγχος secrets και τελικό εγχειρίδιο εγκατάστασης. | ΕΚΚΡΕΜΕΙ |
-
-## 3A. MYWORKSTATION LAB — μόνιμο εργαστήριο δοκιμών για όλα τα καταστήματα
-
-| Κωδικός | Εργασία / κριτήριο ολοκλήρωσης | Κατάσταση |
-| --- | --- | --- |
-| LAB-01 | Γενικός tenant/store σχεδιασμός χωρίς εξάρτηση από το όνομα ΚΑΤ. | ΟΚ - checkpoint `2026-09-06-myworkstation-lab-online-store` |
-| LAB-02 | Ξεχωριστό Online Store ανά κατάστημα μέσω μοναδικού `publicSlug`, με tenant/store isolation. | ΟΚ - server/client build και 1014 tests PASS |
-| LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
-| LAB-04 | LAB-POS-01 και LAB-POS-02: ακριβής διάταξη ΚΑΤ σε κάθε Windows terminal, κοινή αποθήκη και store ledger, ξεχωριστές terminal sessions/βάρδιες. Η BackOffice αρχική προβολή βαρδιών γίνεται ανά επιλεγμένο terminal, με πτυσσόμενες κινήσεις και ανάλυση κατηγορίας με πάτημα. | ΟΚ - PR #588 / #589 · CI #1577 / #1580 · LAB acceptance 08/09/2026 |
-| LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
-| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - PR #623 ανακτά fail-closed το route από την πραγματική βάρδια· αναμονή CI/merge και live test |
-| LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΟΚ - tenant/store υπάρχουν και χρησιμοποιούνται |
-| LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΟΚ - LAB-POS-01 / LAB-POS-02 υπάρχουν, συνέχεια στα Gate 1–8 |
-
-### Κανόνας κοινής χρήσης εργαστηρίου
-
-Όλες οι σελίδες υλοποίησης, QA και δοκιμών χρησιμοποιούν αποκλειστικά το `MYWORKSTATION LAB` / `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`. Δεν δημιουργείται δεύτερο test tenant και δεν μπαίνουν νέα test δεδομένα με όνομα ΚΑΤ. Το tenant/store δημιουργήθηκε και εκδόθηκαν τα `LAB-POS-01` και `LAB-POS-02` με εφάπαξ links στο Platform Admin. Τα activation tokens δεν αποθηκεύονται στη λίστα.
-
-## 4. Εγκεκριμένη σειρά νέων modules
-
-Η σειρά προέρχεται από τη νέα ενιαία λίστα του χρήστη. Τα modules παραμένουν εμπορικά κλειδωμένα μέχρι να ολοκληρωθούν, να δοκιμαστούν και να γίνουν ενεργά από Super Admin.
-
-| Κωδικός | Εργασία | Κατάσταση |
-| --- | --- | --- |
-| MOD-01 | Δικαιώματα / πληρωμένα modules ανά ιδιοκτήτη, εταιρεία, κατάστημα, πακέτο και ημερομηνία λήξης. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION ΟΚ |
-| MOD-02 | Επέκταση της υπάρχουσας ενότητας Προσφορών με αναλύσεις, επιστροφές, προμηθευτές και Excel/PDF. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟ MAIN · automated PASS · ΑΝΑΜΟΝΗ LAB ACCEPTANCE |
-| MOD-03 | Ποσά προμηθευτών και εξαγωγές Excel/PDF στις Προσφορές. | ΕΚΚΡΕΜΕΙ |
-| MOD-04 | Κανάλι/ομάδα…18857 tokens truncated…, deploy και LAB retest από Super Admin και Ιδιοκτήτη.
-
-## 12/09/2026 — Ενιαίο Chat με pop-down στον Super Admin
-
-- [x] Αφαιρέθηκαν τα ξεχωριστά αιωρούμενα κουμπιά Chat ανά κατάστημα.
-- [x] Προστέθηκε ένα κεντρικό κουμπί `Chat` στην επάνω ομάδα «Έλεγχοι» του Super Admin.
-- [x] Το κουμπί ανοίγει pop-down με `Πελάτης · Κατάστημα` για όλα τα καταστήματα της πλατφόρμας.
-- [x] Με την επιλογή καταστήματος ανοίγει απευθείας το αντίστοιχο ασφαλές Chat.
-- [x] Στοχευμένο test, 1110/1110 server tests και client production build: PASS.
-- [ ] Εκκρεμούν CI, deploy και LAB retest.
-
-## 12/09/2026 — Φωτογραφίες και PDF στο Chat καταστήματος
-
-- [x] Μήνυμα Chat μπορεί να περιέχει μία φωτογραφία JPG/PNG/WEBP ή ένα PDF έως 7 MB.
+| DEV-06 | Invoice Reader: κάμερα, ανανέωση, σωστή ένωση έως 5 σελίδων, σειρά γραμμών, εκπτώσεις, δεκαδικά και εκμάθηση προμηθευτή. Η επαγγελματική προβολή εκπαιδευμένων τιμολογίων και η α…1768 tokens truncated…PDF έως 7 MB.
 - [x] Το αρχείο αποθηκεύεται μόνο server-side και δεν επιστρέφεται μαζί με τη λίστα μηνυμάτων.
 - [x] Η προβολή γίνεται προσωρινά μέσα στο MyWorkStation με `no-store/no-cache` και άμεση εκκαθάριση του προσωρινού browser URL στο κλείσιμο.
 - [x] Κατέβασμα επιτρέπεται server-side μόνο σε Ιδιοκτήτη ή Super Admin· ο υπάλληλος έχει μόνο προσωρινή προβολή.
