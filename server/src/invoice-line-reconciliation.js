@@ -20,3 +20,15 @@ export function reconcileInvoiceLines(productLines,invoiceTotal,tolerance=0.05){
   const grossTotal=round2(normalizedLines.reduce((sum,line)=>sum+line.grossAmount,0));
   return {normalizedLines,netTotal,grossTotal,correctedLines,strategy:headerEqualsNet?"HEADER_TOTAL_EQUALS_NET":"NET_PLUS_CANONICAL_VAT",difference:round2(Math.abs(grossTotal-total))};
 }
+ 
+// A complete visual reread has already passed per-row arithmetic, contiguous
+// printed order, VAT-footer groups and the independent invoice total. Keep
+// that authoritative table intact for persistence instead of sending it
+// through the older heuristic finalizer, which can reinterpret printed piece
+// units or discounts a second time.
+export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tolerance=0.05){
+  const lines=Array.isArray(productLines)?productLines:[];
+  if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&line?.quantitySource==="AI_COMPLETE_PRINTED_TABLE_VERIFIED"))return null;
+  const reconciliation=reconcileInvoiceLines(lines,invoiceTotal,tolerance);
+  return reconciliation.difference<=tolerance+Number.EPSILON?reconciliation.normalizedLines:null;
+}
