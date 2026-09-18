@@ -108,6 +108,10 @@ test("MANTZILAS uses one complete verifier instead of stacking redundant provide
   assert.match(aiRecheck,/reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs\.length===1\?invoiceTotal:0/);
   assert.match(discountVerifier,/export function buildCompletePrintedTableCandidate/);
   assert.match(discountVerifier,/const complete=buildCompletePrintedTableCandidate\(candidates,expectedGrossTotal,diagnostics\.vatSummary\)/);
+  assert.match(discountVerifier,/ΥΠΟΧΡΕΩΤΙΚΟΣ ΕΛΕΓΧΟΣ ΠΛΗΡΟΤΗΤΑΣ/);
+  assert.match(discountVerifier,/Ο προσωρινός οδηγός αθροίζει \$\{guideGross\.toFixed\(2\)\}/);
+  assert.match(discountVerifier,/Το άθροισμα πρέπει να συμφωνεί με \$\{reconciliationAnchor\.toFixed\(2\)\} € εντός 0,05 €/);
+  assert.match(discountVerifier,/reasoning:\{effort:'minimal'\}/);
 });
 
 test("MANTZILAS exact-total rejection records bounded diagnostics without publishing candidate rows",()=>{

@@ -46,3 +46,15 @@ This gate applies to every module, page, conversation and agent working in this 
 10. If the active list, checkpoints, deployed revision or LAB evidence cannot be read, stop and obtain them before changing the repository.
 
 For payment, invoice, stock, fiscal, accounting and finalization flows, also preserve idempotency: no duplicate payment, no resurrection of a deliberately deleted draft, no stock posting and no finalization during diagnostic testing unless the checkpoint explicitly authorizes it.
+
+## POS invoice acceptance invariant
+
+A POS invoice change is accepted only when one genuinely new invoice submission
+from the POS creates the correct single BackOffice draft automatically. A POS or
+BackOffice refresh, status polling, reopening the draft, a second upload, or a
+startup reread may be used only for diagnosis and must never be reported as the
+acceptance result. The accepted draft must preserve the one settlement, one AI
+job and one purchase draft identities and must reconcile every printed row,
+discount, tax group and the invoice total before approval. No approval,
+finalization, stock, fiscal, accounting or myDATA mutation is part of the LAB
+acceptance test.
