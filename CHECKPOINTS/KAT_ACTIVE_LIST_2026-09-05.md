@@ -1,3 +1,12 @@
+## 2026-09-18 — Advance a safely failed MANTZILAS reread to V12
+
+- [x] **LAB FAIL** after exact production `324ee1cc744f4ec0c17ae88f3aa1085e3379d1f6`: BackOffice refresh left invoice `12674` unchanged at update time `08:18`, `331.09 / 374.12 EUR`, `POS_FAILED / POS_BACKGROUND_FAILED`, with the old safe-inferior-reread difference `120.28 EUR`.
+- [x] Root cause: the V12 recovery claim handled completed `AWAITING_APPROVAL` drafts, while this same preserved draft is `POS_FAILED` specifically because its V11 reread was safely rejected. The ordinary retry classifier intentionally excludes that non-transient result.
+- [x] Allow one strategy advance only when a `POS_FAILED` job has an existing purchase draft, a prior `RECONCILIATION_REREAD` marker from an older strategy and the exact safe-inferior-reread error. Claim the same job/draft as `POS_REPROCESSING` and keep `replaceExistingDraft=true`.
+- [x] All other non-retryable failures remain blocked. Preserve the existing image, handoff, draft and settlement identity; no upload, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused reconciliation/POS regressions `111/111`, full server suite `1306/1306`, production build, syntax and diff checks: PASS. Green CI, merge, exact deploy and LAB remain required.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-failed-reread-strategy-advance.md`.
+
 ## 2026-09-18 — Preserve verified MANTZILAS table at POS persistence
 
 - [x] **LAB FAIL** on exact production `0230624780a5103f3088b880111a4ec2ef2f3af9`: invoice `12674` remains an unapproved 13-line draft at `331.09 / 374.12 EUR` against printed gross `366.47 EUR`.

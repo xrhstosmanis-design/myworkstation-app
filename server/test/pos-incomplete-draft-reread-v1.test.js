@@ -13,6 +13,16 @@ test("a completed mismatched POS draft gets one full reread from its durable pag
   assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
 });
 
+
+test("a failed safe inferior reread advances once when a newer strategy is deployed",()=>{
+  const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
+  assert.match(wrapper,/const isSafeInferiorRereadFailure=error=>\/POS_BACKGROUND_AI_RECHECK:/);
+  assert.match(recover,/job\.status==="POS_FAILED"&&Boolean\(job\.purchaseDocumentId\)&&reprocess\.mode==="RECONCILIATION_REREAD"&&reprocess\.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure\(storedBackgroundError\)/);
+  assert.match(recover,/reason:needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD"/);
+  assert.match(recover,/"status" IN \('AWAITING_APPROVAL','POS_FAILED'\)/);
+  assert.match(recover,/if\(job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError/);
+});
+
 test("reread replaces the same draft lines atomically without creating another payment",()=>{
   assert.match(core,/replaceExistingDraft:z\.boolean\(\)\.optional\(\)\.default\(false\)/);
   assert.match(core,/lockedReplacement=.*posReprocess\?\.mode==="RECONCILIATION_REREAD"/);
