@@ -62,3 +62,12 @@ test("supplier reading knowledge is global by VAT while product ids stay tenant-
   assert.match(intake,/FROM "SupplierProductMapping" WHERE "companyId"=\$\{companyId\} AND "supplierId"=\$\{supplierId\}/);
   assert.match(posting,/ON CONFLICT \("companyId","supplierId","productId"\) DO UPDATE/);
 });
+
+test("POS full OCR cannot lose the confirmed supplier's fail-closed verifier",()=>{
+  const reader=fs.readFileSync(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+  assert.match(reader,/SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=\$\{posHandoff\.supplierId\}/);
+  assert.match(reader,/trustedHandoffSupplier=supplierRows\[0\]\|\|null/);
+  assert.match(reader,/parsed\.supplier=\{\.\.\.\(parsed\.supplier&&typeof parsed\.supplier==="object"\?parsed\.supplier:\{\}\),name:trustedHandoffSupplier\.name\|\|"",taxId:trustedHandoffSupplier\.taxId\|\|""\}/);
+  assert.ok(reader.indexOf("parsed.posHandoffSupplierApplied=true")<reader.indexOf('failureStage="apply-supplier-profile-initial"'));
+  assert.match(reader,/if\(mantzilasInvoice&&pageJobs\.length===1&&invoiceTotal>0&&Math\.abs\(parsed\.productLinesTotalDifference\)>0\.05\)/);
+});

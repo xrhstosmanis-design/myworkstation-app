@@ -248,9 +248,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   }
   const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
   const posHandoff=previous.posHandoff&&typeof previous.posHandoff==="object"?previous.posHandoff:null;
-  let preferCentralStefanidis=false,preferCentralMantzilas=false;
+  let preferCentralStefanidis=false,preferCentralMantzilas=false,trustedHandoffSupplier=null;
   if(posHandoff?.supplierId){
-    const supplierRows=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${posHandoff.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    const supplierRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${posHandoff.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    trustedHandoffSupplier=supplierRows[0]||null;
     const supplierTaxId=cleanTaxId(supplierRows[0]?.taxId);
     preferCentralStefanidis=supplierTaxId===STEFANIDIS_TAX_ID;
     preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID;
@@ -319,6 +320,15 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     if(!parsed.productLines.length){const error=new Error("Οι σελίδες αναγνώστηκαν, αλλά δεν βρέθηκαν ασφαλείς γραμμές προϊόντων.");error.status=422;throw error}
     parsed.openAiUnifiedFailed=true;
     parsed.openAiUnifiedRecovery="AZURE_ALL_PAGES";
+  }
+  // The POS operator already confirmed the supplier before creating the
+  // durable handoff. Some full-page providers omit or garble that header even
+  // while reading the table. Preserve the trusted tenant supplier identity so
+  // its learned layout, complete-table verifier and fail-closed rules cannot
+  // be bypassed by a missing OCR supplier field.
+  if(trustedHandoffSupplier){
+    parsed.supplier={...(parsed.supplier&&typeof parsed.supplier==="object"?parsed.supplier:{}),name:trustedHandoffSupplier.name||"",taxId:trustedHandoffSupplier.taxId||""};
+    parsed.posHandoffSupplierApplied=true;
   }
   // The fast POS handoff total is the amount the operator explicitly confirmed
   // (and, for PAID, the immutable payment amount). Use it as the reconciliation
