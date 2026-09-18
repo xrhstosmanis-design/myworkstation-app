@@ -63,6 +63,20 @@ test("startup reconciles an eligible job whose durable task is terminal or mis-s
   assert.doesNotMatch(schema,/ON CONFLICT \("jobId"\) DO NOTHING/);
 });
 
+test("startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh",()=>{
+  const schema=route.slice(route.indexOf("async function ensureFastHandoffSchema"),route.indexOf("async function enqueueFastBackground"));
+  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V13/);
+  assert.match(schema,/j\."status"='AWAITING_APPROVAL'/);
+  assert.match(schema,/j\."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'/);
+  assert.match(schema,/reconciliationRequired'\)::boolean,false\)=true/);
+  assert.match(schema,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
+  assert.match(schema,/s\."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%'/);
+  assert.match(schema,/reason:"STARTUP_SINGLE_VERIFIER",trigger:"SERVER_STARTUP"/);
+  assert.match(schema,/resumeStoredProductLines:false,replaceExistingDraft:true/);
+  assert.match(schema,/"status"='POS_REPROCESSING'/);
+  assert.match(schema,/ON CONFLICT \("jobId"\) DO UPDATE SET[\s\S]*"state"='QUEUED'/);
+});
+
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
   assert.match(route,/FROM "MyDataInboundDocument" m/);
   assert.match(route,/ABS\(COALESCE\(m\."totalGross",0\)-\$\{totalGross\}\)<=0\.05/);
