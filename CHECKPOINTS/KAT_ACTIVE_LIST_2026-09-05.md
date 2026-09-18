@@ -1,3 +1,13 @@
+## 2026-09-19 — Bound MANTZILAS POS OCR to one complete verifier
+
+- [x] **LAB FAIL** on exact production `1b535650a4bd691b73d7d1480ba7919dc2ed97d1`: the durable worker now claims invoice `12674`, but after six minutes and an operator refresh it still shows `0 items / 0.00 EUR`, with `POS_PROCESSING / POS_BACKGROUND` updated again at `08:21`.
+- [x] Root cause: after the central MANTZILAS Azure pass, the mismatch path could serially call a second table AI pass, repeat Azure field recovery, and finally call the complete printed-table/discount verifier. Their independent timeouts exceeded the background request budget and durable retries amplified the delay.
+- [x] For the exact central MANTZILAS path, keep the initial Azure table and run only the existing complete printed-table verifier. That verifier already rereads every physical row, can rebuild omitted rows, validates full row arithmetic/discounts and requires the VAT footer plus exact invoice total.
+- [x] Other suppliers retain their existing table and Azure recovery paths. Reuse the same attachment, credit/payment identity, AI job and draft; no duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused single-verifier regressions `50/50`, complete server suite `1309/1309`, production build and diff checks: PASS.
+- [ ] Require green CI, merge and exact deploy. Existing `12674` recovery is diagnostic; a future new one-submit POS invoice remains the Phase 1 acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-phase1-mantzilas-single-verifier.md`.
+
 ## 2026-09-19 — Reconcile an eligible POS job with a terminal durable task
 
 - [x] **LAB FAIL** after exact production `ae876397d65beea243bfb200bc2d8698f581619e`: invoice `12674` still shows `0 items / 0.00 EUR`; its purchase shell updated at `19/09/2026 10:23`, while the linked OCR job remains at `POS_PROCESSING / POS_BACKGROUND` with the older `18/09/2026 07:58` update.

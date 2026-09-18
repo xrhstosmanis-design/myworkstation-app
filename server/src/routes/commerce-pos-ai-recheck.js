@@ -350,9 +350,15 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
   const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
   const partialNumericMissing=parsed.productLines.some(line=>Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0||Number(line.netAmount||0)<=0);
-  const needsTablePass=!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
+  // The MANTZILAS verifier below already rereads every physical row, rebuilds
+  // an omitted row, validates each discount/economic chain and requires the
+  // printed VAT footer plus exact invoice total. Running a separate table pass
+  // and then Azure again before that verifier made one attempt exceed the
+  // background request budget and caused repeated six-minute POS_PROCESSING.
+  const mantzilasSingleVerifierPath=preferCentralMantzilas&&parsed.mantzilasCentralFastPath===true;
+  const needsTablePass=!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
   const inconsistentRows=parsed.productLines.some(line=>!line.sourceColumnsVerified&&Math.abs(Number(line.quantity||0)*Number(line.unitCost||0)*[line.discount1,line.discount2,line.discount3].reduce((f,d)=>f*(1-Number(d||0)/100),1)-Number(line.netAmount||0))>0.05);
-  if(needsTablePass||inconsistentRows){
+  if(needsTablePass||(!mantzilasSingleVerifierPath&&inconsistentRows)){
     failureStage="table-recheck";
     const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
     const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών και τράπεζες/IBAN. Στο rawText αντέγραψε ολόκληρη τη φυσική σειρά κάθε προϊόντος. Στο vatSummary αντέγραψε χωριστά μόνο τις γραμμές της ΑΝΑΛΥΣΗΣ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ως rate, taxable, vat και gross.
@@ -385,7 +391,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // a last recovery path only: the unified OpenAI pass and table pass remain
   // primary, and no empty invoice may pass through.
   const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0),needsAzureFields=!hasSafeLine||totalMismatch||inconsistentRows||parsed.productLines.some(line=>Number(line?.vatRate||0)<=0);
-  if(!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+  if(!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     failureStage="azure-field-recovery";
     const azureRecovered=[];
     for(const [pageIndex,page] of pageJobs.entries()){
