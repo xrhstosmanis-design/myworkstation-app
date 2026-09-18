@@ -1,3 +1,13 @@
+## 2026-09-19 — Startup reread for the completed pre-deploy MANTZILAS draft
+
+- [x] **LAB FAIL**: before the single-verifier revision reached production, invoice `12674` eventually completed after more than six minutes with `12` rows / `430.29 EUR` against printed gross `366.47 EUR` (difference `63.82 EUR`).
+- [x] The job is now terminal `AWAITING_APPROVAL`, so ordinary durable startup recovery and stopped POS polling cannot apply the deployed verifier without a browser refresh or another submission.
+- [x] Advance the one-attempt strategy to V13 and, at server startup, claim only a recent (`48 hours`), still-unapproved MANTZILAS POS OCR draft whose completed background result explicitly requires reconciliation. Reuse the same attachment, handoff, payment/credit identity, job and draft.
+- [x] Queue the claimed draft through the durable worker with `replaceExistingDraft=true`; no new upload, browser refresh, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused startup/reread regressions `20/20`, complete server suite `1310/1310`, production build, syntax and diff checks: PASS.
+- [ ] Require green CI, merge and exact deploy. Recovery of `12674` is diagnostic; Phase 1 remains AWAITING LAB for a future genuinely new one-submit invoice.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-phase1-startup-single-verifier-reread.md`.
+
 ## 2026-09-19 — Bound MANTZILAS POS OCR to one complete verifier
 
 - [x] **LAB FAIL** on exact production `1b535650a4bd691b73d7d1480ba7919dc2ed97d1`: the durable worker now claims invoice `12674`, but after six minutes and an operator refresh it still shows `0 items / 0.00 EUR`, with `POS_PROCESSING / POS_BACKGROUND` updated again at `08:21`.

@@ -16,7 +16,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_PERSISTED_DRAFT_AMBIGUITY_V12";
+const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V13";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -263,6 +263,35 @@ async function ensureFastHandoffSchema(){
     WHERE "PosInvoiceBackgroundTask"."state" IN ('FAILED','COMPLETED')
       OR "PosInvoiceBackgroundTask"."companyId"<>EXCLUDED."companyId"
       OR "PosInvoiceBackgroundTask"."storeId"<>EXCLUDED."storeId"`);
+
+  // A completed mismatched draft can predate the single-verifier deployment,
+  // so POS polling has already stopped. Claim only a recent, still-unapproved
+  // MANTZILAS draft once for the new strategy and reuse its durable handoff.
+  const candidates=await prisma.$queryRaw`
+    SELECT j."id",j."companyId",j."storeId",j."resultJson"
+    FROM "AiReaderJob" j
+    JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId"
+    JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
+    WHERE j."status"='AWAITING_APPROVAL'
+      AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
+      AND j."resultJson"->'posHandoff' IS NOT NULL
+      AND j."resultJson"->'posBackground'->>'status'='COMPLETED'
+      AND COALESCE((j."resultJson"->'posBackground'->>'reconciliationRequired')::boolean,false)=true
+      AND COALESCE(j."resultJson"->'posReprocess'->>'strategy','')<>${POS_REPROCESS_STRATEGY}
+      AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
+      AND (s."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%' OR s."name" ILIKE '%MANTZILAS%')
+    ORDER BY j."updatedAt" DESC LIMIT 3`;
+  for(const job of candidates){
+    const background=job.resultJson?.posBackground||{};
+    const handoff={...job.resultJson.posHandoff,resumeStoredProductLines:false,replaceExistingDraft:true};
+    const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:"STARTUP_SINGLE_VERIFIER",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+    await prisma.$transaction(async tx=>{
+      const claimed=await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker,posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${job.companyId} AND "status"='AWAITING_APPROVAL' AND COALESCE("resultJson"->'posReprocess'->>'strategy','')<>${POS_REPROCESS_STRATEGY}`;
+      if(!claimed)return;
+      await tx.$executeRaw`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt") VALUES (${job.id},${job.companyId},${job.storeId},'QUEUED',CURRENT_TIMESTAMP)
+        ON CONFLICT ("jobId") DO UPDATE SET "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=CURRENT_TIMESTAMP,"attemptCount"=0,"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=NULL,"updatedAt"=CURRENT_TIMESTAMP`;
+    });
+  }
 }
 
 async function enqueueFastBackground({companyId,storeId,jobId,publicOrigin}){
