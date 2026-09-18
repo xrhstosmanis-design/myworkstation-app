@@ -724,7 +724,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
-      const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.mode==="RECONCILIATION_REREAD"&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
+      const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
       const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
       if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
       if(job.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
@@ -762,7 +762,7 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
-    const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.mode==="RECONCILIATION_REREAD"&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
+    const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
     const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
     const staleProcessing=job.status==="POS_PROCESSING"&&new Date(job.updatedAt).getTime()<Date.now()-60*1000;
     let scheduledHandoff=handoff,rereadClaimed=false,retryClaimed=false;
