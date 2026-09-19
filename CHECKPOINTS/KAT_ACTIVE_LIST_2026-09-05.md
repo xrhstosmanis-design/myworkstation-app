@@ -1,3 +1,10 @@
+## 2026-09-19 — Video Connector PowerShell parser hotfix — AWAITING LAB
+
+- [x] LAB αποκάλυψε parser corruption στο VideoConnector.ps1, όχι πρόβλημα Dahua/network/pairing.
+- [x] Ανακατασκευάστηκε το Dahua CLIP/mediaFileFind block και αφαιρέθηκε duplicated corrupted tail.
+- [ ] CI → merge → αντικατάσταση script στο LAB → ONLINE → πραγματικό video test.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-video-connector-parser-hotfix-awaiting-lab.md`.
+
 ## 2026-09-19 — Backoffice Κάμερες / Video Audit — AWAITING LAB
 
 - [x] Προστέθηκε διαχείριση Video Audit στο Backoffice ανά κατάστημα, αντί να εξαρτάται η καθημερινή χρήση από το Platform Admin.
