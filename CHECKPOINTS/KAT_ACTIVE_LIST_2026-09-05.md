@@ -1,3 +1,12 @@
+## 2026-09-20 — Super Admin Video Connector installer — AWAITING LAB
+
+- [x] Νέο κουμπί «Λήψη εγκατάστασης Video Connector» στο Video Audit.
+- [x] Store-scoped installer endpoint με προσωρινό pairing code 60 λεπτών.
+- [x] Installer bootstrap κατεβάζει pinned LAB-PASS connector από commit `3b87f976`, όχι mutable main.
+- [x] Δημιουργήθηκαν PDF εγκαταστάτη και PDF Super Admin.
+- [ ] CI → merge/deploy → LAB download/install validation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-connector-superadmin-installer.md`.
+
 ## 2026-09-20 — Video FFmpeg timeout / heartbeat protection — AWAITING LAB
 
 - [x] LAB process inspection: πραγματικό Dahua `.dav` έχει κατέβει· κόλλημα στο `ffmpeg DAV→MP4`.
