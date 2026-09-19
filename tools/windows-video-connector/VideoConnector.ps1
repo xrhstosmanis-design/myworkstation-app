@@ -79,8 +79,10 @@ function Invoke-Command([object]$Command){
       [IO.File]::WriteAllBytes($dav,(Invoke-NvrBytes ("/cgi-bin/loadfile.cgi?action=startLoad&channel={0}&startTime={1}&endTime={2}&subtype=0" -f $channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end))))
       if(!$script:Config.ffmpegPath -or !(Test-Path -LiteralPath $script:Config.ffmpegPath)){throw "FFMPEG_REQUIRED_FOR_BROWSER_PREVIEW"}
       $mp4=Join-Path $TempPath ($Command.id+".mp4")
-      & $script:Config.ffmpegPath -y -i $dav -c:v libx264 -preset veryfast -an -movflags +faststart $mp4 2>$null
-      if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
+      $ffmpegArgs=@("-y","-nostdin","-i",$dav,"-c:v","libx264","-preset","veryfast","-an","-movflags","+faststart",$mp4)
+      $ffmpeg=Start-Process -FilePath $script:Config.ffmpegPath -ArgumentList $ffmpegArgs -PassThru -WindowStyle Hidden
+      if(!$ffmpeg.WaitForExit(60000)){try{$ffmpeg.Kill()}catch{};try{$ffmpeg.WaitForExit(5000)}catch{};throw "FFMPEG_TIMEOUT"}
+      if($ffmpeg.ExitCode -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
       Upload-Artifact $Command $mp4 "CLIP" "video/mp4"
       Remove-Item -LiteralPath $dav -Force -ErrorAction SilentlyContinue
       Remove-Item -LiteralPath $mp4 -Force -ErrorAction SilentlyContinue
