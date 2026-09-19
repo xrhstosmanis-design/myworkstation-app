@@ -1,3 +1,10 @@
+## 2026-09-20 — Video command stale CLAIMED requeue — AWAITING LAB
+
+- [x] Root cause του UI timeout με connector `commands=0`: παλιό CLAIMED command επαναχρησιμοποιούνταν για έως 5 λεπτά.
+- [x] CLAIMED >90s γίνεται FAILED/STALE_CLAIM_REQUEUED και δημιουργείται νέο command.
+- [ ] CI → merge → ίδιο συμβάν → commands=1 → πραγματικό clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-command-stale-claim-requeue.md`.
+
 ## 2026-09-20 — Dahua native channel mapping — AWAITING LAB
 
 - [x] Επιτυχημένο manual mediaFileFind είχε `condition.Channel=1`.
