@@ -37,19 +37,19 @@ function Invoke-NvrBytes([string]$Path){
 }
 function Invoke-NvrAbsoluteBytes([string]$Uri){$response=$script:NvrClient.GetAsync($Uri).GetAwaiter().GetResult();if(!$response.IsSuccessStatusCode){throw "NVR_HTTP_$([int]$response.StatusCode)"};return $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()}
 function Invoke-NvrText([string]$Path){return [Text.Encoding]::UTF8.GetString((Invoke-NvrBytes $Path))}
-function Parse-Dahua([string]$Text){$result=@{};foreach($line in ($Text -split "`r?`n")){if($line -match '^([^=]+)=(.*)$'){$result[$matches[1].Trim()]=$matches[2].Trim()}};return $result}
+function Parse-Dahua([string]$Text){$result=@{};foreach($line in ($Text -split [Environment]::NewLine)){$pos=$line.IndexOf("=");if($pos -gt 0){$result[$line.Substring(0,$pos).Trim()]=$line.Substring($pos+1).Trim()}};return $result}
 function Get-NvrState(){
-  $watch=[Diagnostics.Stopwatch]::StartNew();if($script:Config.protocol -eq "ONVIF"){$deviceXml=Invoke-Onvif "/onvif/device_service" "<tds:GetDeviceInformation/>";$timeXml=Invoke-Onvif "/onvif/device_service" "<tds:GetSystemDateAndTime/>";$utcBlock=if($timeXml -match '<(?:\w+:)?UTCDateTime>([\s\S]*?)</(?:\w+:)?UTCDateTime>'){$matches[1]}else{$timeXml};$rawTime=("{0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2}" -f [int](Onvif-Value $utcBlock "Year"),[int](Onvif-Value $utcBlock "Month"),[int](Onvif-Value $utcBlock "Day"),[int](Onvif-Value $utcBlock "Hour"),[int](Onvif-Value $utcBlock "Minute"),[int](Onvif-Value $utcBlock "Second"));$info=@{deviceType=(Onvif-Value $deviceXml "Model");serialNumber=(Onvif-Value $deviceXml "SerialNumber");softwareVersion=(Onvif-Value $deviceXml "FirmwareVersion")};$watch.Stop();$nvrTime=[DateTimeOffset]::ParseExact(($rawTime+" +00:00"),"yyyy-MM-dd HH:mm:ss zzz",[Globalization.CultureInfo]::InvariantCulture)}else{$info=Parse-Dahua (Invoke-NvrText "/cgi-bin/magicBox.cgi?action=getSystemInfo");$timeData=Parse-Dahua (Invoke-NvrText "/cgi-bin/global.cgi?action=getCurrentTime");$watch.Stop();$rawTime=$timeData.time;if(!$rawTime){$rawTime=$timeData.'result.time'};if(!$rawTime){$rawTime=$timeData.result};if(!$rawTime){throw "NVR_TIME_UNAVAILABLE"};$local=[DateTime]::ParseExact([string]$rawTime,"yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture);try{$zone=[TimeZoneInfo]::FindSystemTimeZoneById("GTB Standard Time")}catch{$zone=[TimeZoneInfo]::Local};$offset=$zone.GetUtcOffset($local);$nvrTime=New-Object DateTimeOffset($local,$offset)}
+  $watch=[Diagnostics.Stopwatch]::StartNew();if($script:Config.protocol -eq "ONVIF"){$deviceXml=Invoke-Onvif "/onvif/device_service" "<tds:GetDeviceInformation/>";$timeXml=Invoke-Onvif "/onvif/device_service" "<tds:GetSystemDateAndTime/>";$utcBlock=$timeXml;$rawTime=("{0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2}" -f [int](Onvif-Value $utcBlock "Year"),[int](Onvif-Value $utcBlock "Month"),[int](Onvif-Value $utcBlock "Day"),[int](Onvif-Value $utcBlock "Hour"),[int](Onvif-Value $utcBlock "Minute"),[int](Onvif-Value $utcBlock "Second"));$info=@{deviceType=(Onvif-Value $deviceXml "Model");serialNumber=(Onvif-Value $deviceXml "SerialNumber");softwareVersion=(Onvif-Value $deviceXml "FirmwareVersion")};$watch.Stop();$nvrTime=[DateTimeOffset]::ParseExact(($rawTime+" +00:00"),"yyyy-MM-dd HH:mm:ss zzz",[Globalization.CultureInfo]::InvariantCulture)}else{$info=Parse-Dahua (Invoke-NvrText "/cgi-bin/magicBox.cgi?action=getSystemInfo");$timeData=Parse-Dahua (Invoke-NvrText "/cgi-bin/global.cgi?action=getCurrentTime");$watch.Stop();$rawTime=$timeData.time;if(!$rawTime){$rawTime=$timeData.'result.time'};if(!$rawTime){$rawTime=$timeData.result};if(!$rawTime){throw "NVR_TIME_UNAVAILABLE"};$local=[DateTime]::ParseExact([string]$rawTime,"yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture);try{$zone=[TimeZoneInfo]::FindSystemTimeZoneById("GTB Standard Time")}catch{$zone=[TimeZoneInfo]::Local};$offset=$zone.GetUtcOffset($local);$nvrTime=New-Object DateTimeOffset($local,$offset)}
   return @{latencyMs=[int]$watch.ElapsedMilliseconds;nvrTime=$nvrTime.ToString("o");systemTime=[DateTimeOffset]::UtcNow.ToString("o");deviceInfo=@{deviceType=$info.deviceType;serialNumber=$info.serialNumber;softwareVersion=$info.softwareVersion}}
 }
 function Get-SnapshotBytes([int]$Channel){if($script:Config.protocol -ne "ONVIF"){return Invoke-NvrBytes ("/cgi-bin/snapshot.cgi?channel={0}" -f $Channel)};$profiles=Invoke-Onvif "/onvif/media_service" "<trt:GetProfiles/>";$tokens=@([Regex]::Matches($profiles,'<(?:\w+:)?Profiles\b[^>]*token="([^"]+)"')|ForEach-Object{$_.Groups[1].Value});if(!$tokens.Count){throw "ONVIF_PROFILE_MISSING"};$token=$tokens[[Math]::Min($Channel,$tokens.Count-1)];$snapshot=Invoke-Onvif "/onvif/media_service" ("<trt:GetSnapshotUri><trt:ProfileToken>{0}</trt:ProfileToken></trt:GetSnapshotUri>" -f (Xml-Escape $token));$uri=Onvif-Value $snapshot "Uri";if(!$uri){throw "ONVIF_SNAPSHOT_URI_MISSING"};return Invoke-NvrAbsoluteBytes $uri}
-function Get-Channel([object]$Command){$value=$Command.cameraKey;if($Command.payload.streamReference -match '^\d+
+function Get-Channel([object]$Command){$value=$Command.cameraKey;$number=0;$streamRef=[string]$Command.payload.streamReference;if($streamRef -and [int]::TryParse($streamRef,[ref]$number)){$value=$streamRef};$number=0;if([int]::TryParse([string]$value,[ref]$number)){return [Math]::Max(0,$number)};return 0}
 function Upload-Artifact([object]$Command,[string]$Path,[string]$Kind,[string]$MimeType){
   $bytes=[IO.File]::ReadAllBytes($Path);if($bytes.Length -gt 75MB){throw "ARTIFACT_TOO_LARGE"};$sha=[BitConverter]::ToString(([Security.Cryptography.SHA256]::Create().ComputeHash($bytes))).Replace("-","").ToLowerInvariant();$chunkSize=4MB;$count=[Math]::Ceiling($bytes.Length/$chunkSize)
   for($index=0;$index -lt $count;$index++){$length=[Math]::Min($chunkSize,$bytes.Length-($index*$chunkSize));$chunk=New-Object byte[] $length;[Array]::Copy($bytes,$index*$chunkSize,$chunk,0,$length);$final=$index -eq ($count-1);Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/chunks" -f $Command.id) @{kind=$Kind;cameraKey=$Command.cameraKey;mimeType=$MimeType;filename=[IO.Path]::GetFileName($Path);chunkIndex=$index;chunkBase64=[Convert]::ToBase64String($chunk);final=$final;sha256=$(if($final){$sha}else{$null});totalBytes=$(if($final){$bytes.Length}else{$null})}|Out-Null}
 }
 function Complete-Command([object]$Command,[hashtable]$Result){Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/complete" -f $Command.id) @{result=$Result}|Out-Null}
-function Fail-Command([object]$Command,[string]$Code){
+function Fail-Command([object]$Command,[string]$Code){try{$safeCode=[string]$Code;if([string]::IsNullOrWhiteSpace($safeCode)){$safeCode="COMMAND_FAILED"};if($safeCode.Length -gt 120){$safeCode=$safeCode.Substring(0,120)};Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=$safeCode}|Out-Null}catch{Write-SafeLog "COMMAND failure report deferred"}}
   try{
     $safeCode=[string]$Code
     if([string]::IsNullOrWhiteSpace($safeCode)){$safeCode="COMMAND_FAILED"}
@@ -69,7 +69,7 @@ function Invoke-Command([object]$Command){
       $searchObject=(Parse-Dahua (Invoke-NvrText "/cgi-bin/mediaFileFind.cgi?action=factory.create")).result
       if(!$searchObject){throw "DAHUA_MEDIA_SEARCH_CREATE_FAILED"}
       try{
-        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,($start -replace " ","%20"),($end -replace " ","%20")
+        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,$start.Replace(" ","%20"),$end.Replace(" ","%20")
         $findResponse=Invoke-NvrText $findPath
         if(([string]$findResponse).Trim() -ne "OK"){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
@@ -101,7 +101,7 @@ $script:Config=Get-Content -LiteralPath $ConfigPath -Raw|ConvertFrom-Json;$scrip
 New-Item -ItemType Directory -Path $TempPath -Force|Out-Null
 try{Invoke-Backend "/api/cloud/v1/device/video/register" @{version=$Version;protocol=$script:Config.protocol;deviceName=("KAT Video Connector - "+$env:COMPUTERNAME);cameraKeys=@();capabilities=@{health=$true;time=$true;snapshot=$true;clip=$true}}|Out-Null}catch{Write-SafeLog ("REGISTER deferred: "+$_.Exception.Message)}
 do{
-  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode=($_.Exception.Message -replace '[^A-Z0-9_\-]','_');Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
+  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode="NVR_HEALTH_FAILED";Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
   $heartbeatBody=@{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;errorCode=$errorCode}
   if($null -ne $state){$heartbeatBody.latencyMs=$state.latencyMs;$heartbeatBody.nvrTime=$state.nvrTime;$heartbeatBody.systemTime=$state.systemTime;$heartbeatBody.deviceInfo=$state.deviceInfo}
   try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" $heartbeatBody;foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
@@ -114,7 +114,7 @@ function Upload-Artifact([object]$Command,[string]$Path,[string]$Kind,[string]$M
   for($index=0;$index -lt $count;$index++){$length=[Math]::Min($chunkSize,$bytes.Length-($index*$chunkSize));$chunk=New-Object byte[] $length;[Array]::Copy($bytes,$index*$chunkSize,$chunk,0,$length);$final=$index -eq ($count-1);Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/chunks" -f $Command.id) @{kind=$Kind;cameraKey=$Command.cameraKey;mimeType=$MimeType;filename=[IO.Path]::GetFileName($Path);chunkIndex=$index;chunkBase64=[Convert]::ToBase64String($chunk);final=$final;sha256=$(if($final){$sha}else{$null});totalBytes=$(if($final){$bytes.Length}else{$null})}|Out-Null}
 }
 function Complete-Command([object]$Command,[hashtable]$Result){Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/complete" -f $Command.id) @{result=$Result}|Out-Null}
-function Fail-Command([object]$Command,[string]$Code){try{Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=($Code -replace '[^A-Z0-9_\-]','_').Substring(0,[Math]::Min(120,($Code -replace '[^A-Z0-9_\-]','_').Length))}|Out-Null}catch{Write-SafeLog "COMMAND failure report deferred"}}
+function Fail-Command([object]$Command,[string]$Code){try{$safeCode=[string]$Code;if([string]::IsNullOrWhiteSpace($safeCode)){$safeCode="COMMAND_FAILED"};if($safeCode.Length -gt 120){$safeCode=$safeCode.Substring(0,120)};Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=$safeCode}|Out-Null}catch{Write-SafeLog "COMMAND failure report deferred"}}
 function Invoke-Command([object]$Command){
   try{
     if($Command.commandType -eq "HEALTH"){$state=Get-NvrState;Complete-Command $Command @{nvrOnline=$true;latencyMs=$state.latencyMs;deviceInfo=$state.deviceInfo};return}
@@ -127,12 +127,12 @@ function Invoke-Command([object]$Command){
       $searchObject=(Parse-Dahua (Invoke-NvrText "/cgi-bin/mediaFileFind.cgi?action=factory.create")).result
       if(!$searchObject){throw "DAHUA_MEDIA_SEARCH_CREATE_FAILED"}
       try{
-        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,($start -replace " ","%20"),($end -replace " ","%20")
+        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,$start.Replace(" ","%20"),$end.Replace(" ","%20")
         $findResponse=Invoke-NvrText $findPath
-        if($findResponse -notmatch '(?im)^OK\\s*$'){throw "DAHUA_MEDIA_SEARCH_FAILED"}
+        if(([string]$findResponse).Trim() -ne "OK"){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
         $found=0
-        if($nextResponse -match '(?im)^found=(\\d+)\\s*$'){$found=[int]$matches[1]}
+        foreach($line in ([string]$nextResponse -split [Environment]::NewLine)){if($line.StartsWith("found=")){[int]::TryParse($line.Substring(6).Trim(),[ref]$found)|Out-Null;break}}
         if($found -lt 1){throw "DAHUA_RECORDING_NOT_FOUND"}
       }finally{
         if($searchObject){
@@ -159,7 +159,7 @@ $script:Config=Get-Content -LiteralPath $ConfigPath -Raw|ConvertFrom-Json;$scrip
 New-Item -ItemType Directory -Path $TempPath -Force|Out-Null
 try{Invoke-Backend "/api/cloud/v1/device/video/register" @{version=$Version;protocol=$script:Config.protocol;deviceName=("KAT Video Connector - "+$env:COMPUTERNAME);cameraKeys=@();capabilities=@{health=$true;time=$true;snapshot=$true;clip=$true}}|Out-Null}catch{Write-SafeLog ("REGISTER deferred: "+$_.Exception.Message)}
 do{
-  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode=($_.Exception.Message -replace '[^A-Z0-9_\-]','_');Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
+  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode="NVR_HEALTH_FAILED";Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
   $heartbeatBody=@{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;errorCode=$errorCode}
   if($null -ne $state){$heartbeatBody.latencyMs=$state.latencyMs;$heartbeatBody.nvrTime=$state.nvrTime;$heartbeatBody.systemTime=$state.systemTime;$heartbeatBody.deviceInfo=$state.deviceInfo}
   try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" $heartbeatBody;foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
