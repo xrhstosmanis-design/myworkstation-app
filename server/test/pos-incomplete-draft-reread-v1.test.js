@@ -9,7 +9,7 @@ test("a completed mismatched POS draft gets one full reread from its durable pag
   const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   assert.match(recover,/OR "status"='AWAITING_APPROVAL'/);
   assert.match(recover,/background\.reconciliationRequired===true&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
-  assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:/);
+  assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery\?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:POS_REPROCESS_STRATEGY,attemptedAt:/);
   assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
 });
 
@@ -19,9 +19,18 @@ test("a failed safe inferior reread advances once when a newer strategy is deplo
   assert.match(wrapper,/const isSafeInferiorRereadFailure=error=>\/POS_BACKGROUND_AI_RECHECK:/);
   assert.match(recover,/job\.status==="POS_FAILED"&&Boolean\(job\.purchaseDocumentId\)&&reprocess\.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure\(storedBackgroundError\)/);
   assert.doesNotMatch(recover,/needsFailedRereadAdvance=.*reprocess\.mode/);
-  assert.match(recover,/reason:needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD"/);
+  assert.match(recover,/needsCompleteTableReplayRecovery\?"COMPLETE_TABLE_TRAILING_REPLAY":needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD"/);
   assert.match(recover,/"status" IN \('AWAITING_APPROVAL','POS_FAILED'\)/);
-  assert.match(recover,/if\(job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError/);
+  assert.match(recover,/if\(job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!needsCompleteTableReplayRecovery&&!isRetryableBackgroundError/);
+});
+
+test("a failed Fresh complete-table replay is safely requeued once from its stored source",()=>{
+  assert.match(wrapper,/const POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY="COMPLETE_TABLE_TRAILING_REPLAY_V16"/);
+  assert.match(wrapper,/const isSafeCompleteTableReplayFailure=/);
+  assert.match(wrapper,/FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE/);
+  assert.match(wrapper,/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές/);
+  assert.match(wrapper,/reason:"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP"/);
+  assert.match(wrapper,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
 });
 
 test("reread replaces the same draft lines atomically without creating another payment",()=>{
