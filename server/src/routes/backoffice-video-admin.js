@@ -36,6 +36,25 @@ router.post("/stores/:storeId/pairing-code",async(req,res,next)=>{try{
  res.status(201).json({code,expiresAt:row.expiresAt,store:{id:req.videoStore.id,name:req.videoStore.name}});
 }catch(e){next(e)}});
 
+
+router.post("/stores/:storeId/installer",async(req,res,next)=>{try{
+ const minutes=z.coerce.number().int().min(15).max(120).default(60).parse(req.body?.minutes??60);
+ await prisma.$executeRaw`UPDATE "CloudPairingCode" SET "expiresAt"=NOW() WHERE "storeId"=${req.videoStore.id} AND "usedAt" IS NULL`;
+ const code=makeCode(),id=crypto.randomUUID();
+ await prisma.$executeRaw`INSERT INTO "CloudPairingCode" ("id","companyId","storeId","codeHash","expiresAt","createdBy") VALUES (${id},${req.user.companyId},${req.videoStore.id},${hash(code)},NOW()+(${minutes}::integer*INTERVAL '1 minute'),${req.user.id})`;
+ const apiBase=(process.env.PUBLIC_API_BASE_URL||process.env.RENDER_EXTERNAL_URL||"").replace(/\/$/,"");
+ const installerUrl=`${apiBase}/api/video-admin/installer.cmd?storeId=${encodeURIComponent(req.videoStore.id)}&pairingCode=${encodeURIComponent(code)}`;
+ res.status(201).json({downloadUrl:installerUrl,expiresInMinutes:minutes});
+}catch(e){next(e)}});
+
+router.get("/installer.cmd",async(req,res,next)=>{try{
+ const storeId=z.string().trim().min(1).max(120).parse(req.query.storeId),pairingCode=z.string().trim().min(8).max(16).parse(req.query.pairingCode);
+ const apiBase=(process.env.PUBLIC_API_BASE_URL||process.env.RENDER_EXTERNAL_URL||"").replace(/\/$/,"");
+ const raw="https://raw.githubusercontent.com/xrhstosmanis-design/myworkstation-app/3b87f976e32f4ce4048c3163a29dfec5c82fe8eb/tools/windows-video-connector";
+ const body=`@echo off\r\nsetlocal\r\nnet session >nul 2>&1 || (echo Run as Administrator & pause & exit /b 1)\r\nmkdir C:\\MyWorkStation-Video 2>nul\r\ncurl.exe -L "${raw}/Install-VideoConnector.ps1" -o "C:\\MyWorkStation-Video\\Install-VideoConnector.ps1" || exit /b 1\r\ncurl.exe -L "${raw}/VideoConnector.ps1" -o "C:\\MyWorkStation-Video\\VideoConnector.ps1" || exit /b 1\r\ncurl.exe -L "${raw}/Status-VideoConnector.ps1" -o "C:\\MyWorkStation-Video\\Status-VideoConnector.ps1" || exit /b 1\r\necho Store: ${storeId}\r\necho Pairing code: ${pairingCode}\r\npowershell.exe -ExecutionPolicy Bypass -File "C:\\MyWorkStation-Video\\Install-VideoConnector.ps1"\r\nendlocal\r\n`;
+ res.setHeader("Content-Type","application/octet-stream");res.setHeader("Content-Disposition",`attachment; filename="MyWorkStation-Video-Connector-${storeId}.cmd"`);res.send(body);
+}catch(e){next(e)}});
+
 router.put("/stores/:storeId/cameras",async(req,res,next)=>{try{
  const body=z.object({cameras:z.array(z.object({cameraKey:z.string().trim().min(1).max(80),displayName:z.string().trim().min(1).max(120),zone:z.enum(["POS_1","POS_2","WAREHOUSE","ENTRANCE","DELIVERY","OTHER"]),streamReference:z.string().trim().max(500).optional().or(z.literal("")),active:z.boolean().default(true),sortOrder:z.coerce.number().int().min(0).max(999)})).max(64)}).parse(req.body||{});
  const connection=(await prisma.$queryRaw`SELECT "id" FROM "StoreVideoConnection" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.videoStore.id} LIMIT 1`)[0];if(!connection)return res.status(409).json({error:"Αποθήκευσε πρώτα τη σύνδεση καταγραφικού."});
