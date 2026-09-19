@@ -22,7 +22,11 @@ export function videoAdapterFor(protocol){
       return {valid:true,protocol,endpoint,credentialsConfigured:Boolean(config?.username&&config?.passwordConfigured)};
     },
     capabilities(){return {...definition}},
-    async connect(){throw new Error("Η πραγματική σύνδεση απαιτεί εγκατεστημένο και προσβάσιμο NVR.")}
+    async connect(config,{client,connector}={}){
+      if(client?.connect){const result=await client.connect();return {...result,protocol,realConnectionPerformed:true}}
+      if(connector?.probe){const result=await connector.probe({protocol,endpoint:config?.endpoint});return {...result,protocol,realConnectionPerformed:true}}
+      throw new Error("Η πραγματική σύνδεση σε προσβάσιμο NVR απαιτεί ενεργό τοπικό Video Connector.");
+    }
   };
 }
 

@@ -3,7 +3,8 @@ import crypto from "node:crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {ensureKioskReportAuditSchema,insertKioskAuditEvent} from "../kiosk-report-audit.js";
-import {buildVendorClientFallback,videoAdapterFor} from "../services/video-adapters.js";
+import {buildVendorClientFallback} from "../services/video-adapters.js";
+import {enqueueVideoCommand,latestEventArtifact,readyVideoArtifact,videoCommandStatus,videoConnectorStatus} from "../services/video-connector-commands.js";
 
 const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",SALE_CASH:"Πώληση με μετρητά",SALE_CARD:"Πώληση με κάρτα",SALE_IRIS:"Πληρωμή με IRIS",PERCENTAGES:"Ποσοστά",TRANSFER_AMOUNT:"Μεταφορά ποσού",SAFE_ADJUSTMENT:"Διόρθωση χρηματοκιβωτίου",SALE_MIXED:"Μικτή πώληση",SALE_CREDIT:"Πώληση με πίστωση",BANK_DEPOSIT:"Κατάθεση τράπεζας",BANK_WITHDRAWAL:"Ανάληψη τράπεζας",POS_SALE_COMPLETED:"Ολοκλήρωση πώλησης",AUDIENCE_DISCOUNT_SELECTED:"Επιλογή δικαιούχου έκπτωσης",CART_ITEM_ADD:"Προσθήκη προϊόντος στο καλάθι",CART_QTY_CHANGE:"Αλλαγή ποσότητας στο καλάθι",ITEM_CHANGE_REQUEST:"Αίτημα αλλαγής είδους",ITEM_EXCHANGE_COMPLETED:"Ολοκλήρωση αλλαγής είδους",HOLD_RESTORE:"Επαναφορά αναμονής",HOLD_SAVE:"Αποθήκευση αναμονής",POS_RETURN:"Ολική επιστροφή",POS_RETURN_ITEMS:"Μερική επιστροφή",POS_SELF_CONSUMPTION:"Προσωπική κατανάλωση",POS_PRODUCT_DESTRUCTION:"Καταστροφή προϊόντων",POS_CANCEL:"Ακύρωση πώλησης",CART_ITEM_REMOVE:"Διαγραφή προϊόντος από καλάθι",CART_CANCEL:"Ακύρωση λίστας πώλησης",PRICE_CHANGE:"Χειροκίνητη αλλαγή τιμής",SHIFT_CLOSE_SHORTAGE_ATTEMPT:"Προσπάθεια κλεισίματος με έλλειμμα",SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE:"Κλείσιμο με επιβεβαιωμένο έλλειμμα",BANK_DEPOSIT_PROOF_UPLOADED:"Ανέβασμα αποδεικτικού κατάθεσης",BANK_DEPOSIT_AUTO_MATCHED:"Αυτόματη αντιστοίχιση κατάθεσης",BANK_DEPOSIT_PROOF_DISCREPANCY:"Απόκλιση αποδεικτικού κατάθεσης",BANK_LEDGER_CONFIRMED:"Επιβεβαίωση τραπεζικής κίνησης",BANK_LEDGER_DISCREPANCY:"Απόκλιση τραπεζικής κίνησης",BANK_LEDGER_CANCELLED:"Ακύρωση τραπεζικής κίνησης",OTHER_EXPENSE_CONFIRMED:"Επιβεβαίωση λοιπού εξόδου",OTHER_EXPENSE_DISCREPANCY:"Απόκλιση λοιπού εξόδου",SUPPLIER_SETTLEMENT_CONFIRMED:"Επιβεβαίωση πληρωμής προμηθευτή",SUPPLIER_SETTLEMENT_DISCREPANCY:"Απόκλιση πληρωμής προμηθευτή"};
 auditEventLabels.PRODUCT_CARD_UPDATED="Διόρθωση είδους";
@@ -284,28 +285,39 @@ router.get("/audit-events/:sourceType/:sourceId/video-context",requireManagement
   try{
     const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","StoreOperatorAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId);
     const events=await prisma.$queryRaw`
-      SELECT v."id",v."storeId",v."terminalPos",v."operatorId",v."operatorName",v."eventType",v."eventAt",v."nvrEventAt",v."timeOffsetSeconds",v."clipStartAt",v."clipEndAt",v."clipStatus",v."expiresAt",v."sourceType",v."sourceId",
+      SELECT v."id",v."companyId",v."storeId",v."terminalPos",v."operatorId",v."operatorName",v."eventType",v."eventAt",v."nvrEventAt",v."timeOffsetSeconds",v."clipStartAt",v."clipEndAt",v."clipStatus",v."expiresAt",v."sourceType",v."sourceId",
         s."name" AS "storeName",c."cameraKey",c."displayName" AS "cameraName",c."zone",c."streamReference",connection."protocol",connection."endpoint"
       FROM "VideoOperationalEvent" v
       JOIN "Store" s ON s."id"=v."storeId" AND s."companyId"=v."companyId"
       JOIN "StoreVideoConnection" connection ON connection."companyId"=v."companyId" AND connection."storeId"=v."storeId" AND connection."active"=true
       LEFT JOIN "StoreVideoCamera" c ON c."companyId"=v."companyId" AND c."storeId"=v."storeId" AND c."active"=true
         AND c."zone"=CASE WHEN UPPER(v."terminalPos") LIKE '%2%' THEN 'POS_2' ELSE 'POS_1' END
-      WHERE v."companyId"=${req.user.companyId} AND v."sourceType"=${sourceType} AND v."sourceId"=${sourceId} AND v."expiresAt">NOW()
+      WHERE (${isSuperAdmin(req)}=TRUE OR v."companyId"=${req.user.companyId}) AND v."sourceType"=${sourceType} AND v."sourceId"=${sourceId} AND v."expiresAt">NOW()
       ORDER BY c."sortOrder" LIMIT 1`;
     const event=events[0];
     if(!event)return res.json({available:false,reason:"Το συμβάν δεν έχει ακόμη συνδεθεί με εγγραφή Video Events.",realVideoOpened:false});
-    const clipSupported=event.protocol==="VENDOR_API"&&videoAdapterFor(event.protocol).capabilities().clipExport,{endpoint,...publicEvent}=event,vendorClientFallback=event.protocol==="VENDOR_CLIENT"&&event.cameraKey?buildVendorClientFallback({endpoint,cameraKey:event.cameraKey,streamReference:event.streamReference,nvrEventAt:event.nvrEventAt}):null;
-    res.json({available:Boolean(event.cameraKey),reason:event.cameraKey?null:"Δεν έχει αντιστοιχιστεί ενεργή κάμερα στη ζώνη αυτού του POS.",clipSupported,clipWindow:{secondsBefore:30,secondsAfter:60,startAt:event.clipStartAt,endAt:event.clipEndAt},clipReason:clipSupported?null:"Το clip θα δημιουργηθεί μόνο όταν ο πραγματικός adapter του καταγραφικού δηλώσει υποστήριξη playback/export.",vendorClientFallback,event:publicEvent,realVideoOpened:false,clipCreated:false,configurationOnly:true});
+    const {endpoint,companyId,...publicEvent}=event,vendorClientFallback=event.protocol==="VENDOR_CLIENT"&&event.cameraKey?buildVendorClientFallback({endpoint,cameraKey:event.cameraKey,streamReference:event.streamReference,nvrEventAt:event.nvrEventAt}):null,connector=await videoConnectorStatus(companyId,event.storeId),artifact=await latestEventArtifact({companyId,storeId:event.storeId,videoEventId:event.id});
+    let command=null;
+    if(event.cameraKey&&connector?.online&&!artifact){command=await enqueueVideoCommand({companyId,storeId:event.storeId,commandType:"CLIP",cameraKey:event.cameraKey,videoEventId:event.id,payload:{startAt:new Date(event.clipStartAt).toISOString(),endAt:new Date(event.clipEndAt).toISOString(),streamReference:event.streamReference||null},ttlSeconds:300});await prisma.$executeRaw`UPDATE "VideoOperationalEvent" SET "clipStatus"='REQUESTED' WHERE "id"=${event.id} AND "companyId"=${companyId}`}
+    const clipSupported=Boolean(connector?.online||artifact),mediaUrl=artifact?`/api/reports/video-media/${encodeURIComponent(artifact.id)}`:null;
+    res.json({available:Boolean(event.cameraKey),reason:event.cameraKey?null:"Δεν έχει αντιστοιχιστεί ενεργή κάμερα στη ζώνη αυτού του POS.",clipSupported,clipWindow:{secondsBefore:30,secondsAfter:60,startAt:event.clipStartAt,endAt:event.clipEndAt},clipReason:clipSupported?null:"Ο ασφαλής τοπικός Video Connector είναι offline.",vendorClientFallback,event:publicEvent,connector:{online:Boolean(connector?.online),lastSeenAt:connector?.lastSeenAt||null},commandId:command?.id||null,commandStatus:artifact?"COMPLETED":command?.status||null,mediaUrl,mimeType:artifact?.mimeType||null,realVideoOpened:Boolean(artifact),clipCreated:Boolean(artifact),configurationOnly:false});
   }catch(error){next(error)}
+});
+
+router.get("/video-commands/:commandId",requireManagement,requireVideoAccess,async(req,res,next)=>{
+  try{const commandId=z.string().uuid().parse(req.params.commandId),rows=await prisma.$queryRaw`SELECT "companyId","storeId" FROM "VideoConnectorCommand" WHERE "id"=${commandId} LIMIT 1`,scope=rows[0];if(!scope||!isSuperAdmin(req)&&scope.companyId!==req.user.companyId)return res.status(404).json({error:"Δεν βρέθηκε η εντολή video."});const command=await videoCommandStatus({companyId:scope.companyId,storeId:scope.storeId,commandId});res.json({...command,mediaUrl:command?.artifactStatus==="READY"?`/api/reports/video-media/${encodeURIComponent(command.artifactId)}`:null})}catch(error){next(error)}
+});
+
+router.get("/video-media/:artifactId",requireManagement,requireVideoAccess,async(req,res,next)=>{
+  try{const artifactId=z.string().uuid().parse(req.params.artifactId),rows=await prisma.$queryRaw`SELECT "companyId","storeId" FROM "VideoMediaArtifact" WHERE "id"=${artifactId} LIMIT 1`,scope=rows[0];if(!scope||!isSuperAdmin(req)&&scope.companyId!==req.user.companyId)return res.status(404).json({error:"Το προσωρινό video δεν βρέθηκε ή έληξε."});const artifact=await readyVideoArtifact({companyId:scope.companyId,storeId:scope.storeId,artifactId});if(!artifact)return res.status(404).json({error:"Το προσωρινό video δεν βρέθηκε ή έληξε."});res.setHeader("Content-Type",artifact.mimeType);res.setHeader("Content-Length",String(artifact.bytes.length));res.setHeader("Content-Disposition",`inline; filename="${String(artifact.filename).replace(/[\r\n\"]/g,"_")}"`);res.setHeader("Cache-Control","private, no-store");res.send(artifact.bytes)}catch(error){next(error)}
 });
 
 router.post("/audit-events/:sourceType/:sourceId/video-access",requireManagement,requireVideoAccess,async(req,res,next)=>{
   try{
-    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId),body=z.object({action:z.enum(["VIEW","EXPORT"]),outcome:z.enum(["CONTEXT_ONLY","OPENED","EXPORTED","UNAVAILABLE"])}).parse(req.body||{});
-    const events=await prisma.$queryRaw`SELECT "id","storeId","eventType" FROM "VideoOperationalEvent" WHERE "companyId"=${req.user.companyId} AND "sourceType"=${sourceType} AND "sourceId"=${sourceId} LIMIT 1`,event=events[0];
+    const sourceType=z.enum(["StoreTransaction","PosSaleActionAudit","StoreOperatorAudit","ONLINE_ORDERS"]).parse(req.params.sourceType),sourceId=z.string().trim().min(1).max(200).parse(req.params.sourceId),body=z.object({action:z.enum(["VIEW","EXPORT"]),outcome:z.enum(["CONTEXT_ONLY","OPENED","EXPORTED","UNAVAILABLE"])}).parse(req.body||{});
+    const events=await prisma.$queryRaw`SELECT "id","companyId","storeId","eventType" FROM "VideoOperationalEvent" WHERE (${isSuperAdmin(req)}=TRUE OR "companyId"=${req.user.companyId}) AND "sourceType"=${sourceType} AND "sourceId"=${sourceId} LIMIT 1`,event=events[0];
     if(!event)return res.status(404).json({error:"Δεν βρέθηκε συνδεδεμένο Video Event."});
-    await prisma.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${event.storeId},${req.user.id||null},${body.action==="VIEW"?'VIDEO_VIEW':'VIDEO_EXPORT'},${JSON.stringify({videoEventId:event.id,eventType:event.eventType,sourceType,sourceId,outcome:body.outcome,actualVideoAccess:body.outcome==="OPENED"||body.outcome==="EXPORTED"})}::jsonb)`;
+    await prisma.$executeRaw`INSERT INTO "VideoAccessAudit" ("id","companyId","storeId","actorId","action","details") VALUES (${crypto.randomUUID()},${event.companyId},${event.storeId},${req.user.id||null},${body.action==="VIEW"?'VIDEO_VIEW':'VIDEO_EXPORT'},${JSON.stringify({videoEventId:event.id,eventType:event.eventType,sourceType,sourceId,outcome:body.outcome,actualVideoAccess:body.outcome==="OPENED"||body.outcome==="EXPORTED"})}::jsonb)`;
     res.status(201).json({ok:true,audited:true,action:body.action,outcome:body.outcome});
   }catch(error){next(error)}
 });

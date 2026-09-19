@@ -124,6 +124,7 @@ import { ensureKatPreparationSeed } from "./kat-preparation-bootstrap.js";
 import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.js";
 import { ensureVideoEventsSchema } from "./video-events-bootstrap.js";
 import {ensureStorePaidModulesSchema} from "./store-paid-modules.js";
+import videoConnectorDeviceRoutes from "./routes/video-connector-device.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -205,6 +206,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),paymentDeviceAt
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeTableOrdersRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotActionsRoutes);
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
+app.use("/api/cloud/v1/device/video",videoConnectorDeviceRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
 app.use("/mobile-invoice-upload",mobileInvoiceUploadRoutes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
