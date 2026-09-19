@@ -20,6 +20,14 @@ test("V17 stores device and Dahua credentials with Windows DPAPI and uses no inb
   assert.match(installer,/ProtectedData.*LocalMachine/);assert.match(installer,/protectedNvrCredential/);assert.match(installer,/outboundOnly=\$true/);assert.doesNotMatch(connector,/HttpListener|TcpListener|Start-Job/);assert.doesNotMatch(connector,/Write-SafeLog.*NvrCredential/);
 });
 
+test("V17 verifies a Dahua recording through mediaFileFind before downloading the clip",()=>{
+  assert.match(connector,/mediaFileFind\.cgi\?action=factory\.create/);
+  assert.match(connector,/action=findFile&object=/);
+  assert.match(connector,/action=findNextFile&object=/);
+  assert.match(connector,/DAHUA_RECORDING_NOT_FOUND/);
+  assert.match(connector,/loadfile\.cgi\?action=startLoad/);
+});
+
 test("V17 discovers ONVIF devices locally without exposing an inbound service",()=>{
   assert.match(discovery,/239\.255\.255\.250/);assert.match(discovery,/NetworkVideoTransmitter/);assert.match(installer,/Discover-VideoDevices\.ps1/);assert.match(connector,/GetDeviceInformation/);assert.match(connector,/GetSnapshotUri/);assert.doesNotMatch(discovery,/HttpListener|TcpListener/);
 });
