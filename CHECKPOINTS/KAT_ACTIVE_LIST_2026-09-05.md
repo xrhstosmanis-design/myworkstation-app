@@ -1,3 +1,10 @@
+## 2026-09-20 — Dahua FIND_FILE query format — AWAITING LAB
+
+- [x] Stage diagnostics: CREATE_SEARCH περνά, αποτυχία ακριβώς στο FIND_FILE.
+- [x] Timestamp query ευθυγραμμίστηκε με το επιτυχημένο manual 4KS3 request: μόνο space → %20, χωρίς encoding των ':' χαρακτήρων.
+- [ ] CI → merge → LAB πραγματικό clip → FIND_NEXT/LOAD_FILE/MP4.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-dahua-findfile-query-format.md`.
+
 ## 2026-09-19 — Dahua clip HTTP 400 stage diagnostics — AWAITING LAB
 
 - [x] Connector ONLINE και πραγματικό clip command φτάνει στο LAB.
