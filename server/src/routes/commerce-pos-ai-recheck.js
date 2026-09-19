@@ -1,1 +1,602 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíÛ^uİ:-jZ.¶›­–)Ş³V–×÷'B7'—Fòg&öÒ&7'—Fò#°¦–×÷'Bµ&÷WFW'Òg&öÒ&W‡&W72#°¦–×÷'B·§Òg&öÒ'¦öB#°¦–×÷'B·&—6ÖÒg&öÒ"ââ÷&—6Öæ§2#°¦–×÷'B·&WV—&T6ö×ç”ÖöGVÆWÒg&öÒ"ââöÖ–FFÆWv&RöÖöGVÆRÖ66W72æ§2#°¦–×÷'B¶6ÆÄ§W&RÆæ÷&ÖÆ—¦T§W&WÒg&öÒ"âö6öÖÖW&6RÖ§W&RÖ–çfö–6R×&VFW"æ§2#°¦–×÷'B·fW&–g”–çfö–6TF—66÷VçG7Òg&öÒ"ââöÆ–"ö–çfö–6RÖF—66÷VçB×fW&–f–W"æ§2#°¦–×÷'B¶Ç”6VçG&Å7WÆ–W%&öf–ÆWÒg&öÒ"ââöÆ–"ö–çfö–6R×7WÆ–W"×&öf–ÆR×'VçF–ÖRæ§2#°¦–×÷'B¶Ç”ÖçG¦–Æ56¶v–ærÇ&V6÷fW$ÖçG¦–Æ4V6öæöÖ–72Ç&V6÷fW$Ö—†VEfDg&öÕ&–çFVE7VÖÖ'’Ç&V6÷fW%&–çFVE&WF–Ä6öÇVÖç2Ç&V6÷fW%fDg&öÕ&–çFVE7VÖÖ'’Ç6÷W&6T÷&FW'Òg&öÒ"ââöÆ–"ö–çfö–6RÖ6öÇVÖâ×&VF–æræ§2#° ¦6öç7B&÷WFW#Õ&÷WFW"‚“°¢òògVÆÂ×F&ÆRf—6–öâ&VwVÆ&Ç’æVVG2ÆöævW"F†âF†R6ÖÆÂd5BÖ†VFW"&VBà¢òò§W&Rc6âÇ6ò&V¦V7B–ÖÖVF–FVÇ’v†Vâ—G2ÖöçF†Ç’V÷F—2W††W7FVBÂ6ğ¢òòÆVfRF†R–æFWVæFVçB÷Vä’fÆÆ&6²Væ÷Vv‚F–ÖRFòf–æ—6‚F†R÷&–v–æÀ¢òò–ÖvR–ç7FVBöb6öçfW'F–ær†VÇF‡’fÆÆ&6²–çFòõ5ôd”ÄTBB36V6öæG2à¢òòF†R6ÆÆW"&VÖ–ç2&÷VæFVBæBF†R÷W&F÷"Öf6–ær†æFöfb—2f—&RÖæBÖf÷&vWBà¦6öç7BeTÄÅôô5%õ$õd”DU%õD”ÔTõUEôÕ3Ós°¦6öç7B4TåE$Åô¥U$UõtUõD”ÔTõUEôÕ3Ó#S°¢òògVÆÂ–çfö–6RF&ÆW2æVVBf—6–öâÖöFVÂGVæVBf÷"&÷VæFVB–çFW&7F—fRv÷&²à¢òòFòæ÷B–æ†W&—BF†RvVæW&Â&V6öæ–ærÖöFVÃ¢Ä"&÷fVBF†B—B6âW†6VVBF†P¢òò&÷f–FW"'VFvWBöâ6ÆV"b×&÷rvRv†–ÆRF†Rd5Bf—6–öâF‚7V66VVG2à¦6öç7BeTÄÅôô5%ôÔôDTÃ×&ö6W72æVçbäõTä•ô”ådô”4UôeTÄÅôÔôDTÇÇÇ&ö6W72æVçbäõTä•ô”ådô”4Uôd5EôÔôDTÇÇÂ&wBÓRÖÖ–æ’#°¦6öç7B&VD§W&UvW56WVVçF–ÆÇ“Ö7–æ2vT¦ö'3Óç°¢6öç7BvW3ÕµÓ°¢f÷"†6öç7BvRöbvT¦ö'2—vW2çW6‚†æ÷&ÖÆ—¦T§W&R†v—B6ÆÄ§W&R‡¶6öçFVçDFF§vRæ6öçFVçDFFÆÖ–ÖUG—S§vRæÖ–ÖUG—RÇF–ÖV÷WD×3¤4TåE$Åô¥U$UõtUõD”ÔTõUEôÕ7Ò’’“°¢&WGW&âvW3°§Ó°¦6öç7B—5&÷f–FW%F–ÖV÷WCÖW'&÷#Óâô¥U$UõD”ÔTõUGÅF–ÖV÷WDW'&÷'Æ&÷'FVBGVRFòF–ÖV÷WBö’çFW7B…7G&–ær†W'&÷#òæÖW76vWÇÆW'&÷"’“°¦6öç7B&÷f–FW$W'&÷%FW‡CÖW'&÷#Óå7G&–ær†W'&÷#òæÖW76vWÇÆW'&÷'ÇÂ%Tä´äõtâ"’ç&WÆ6R‚õÇ2²örÂ""’çG&–Ò‚’ç6Æ–6RƒÃS“°¦6öç7B–CÒ‚“Óæ7'—Fòç&æFöÕUT”B‚“°¦6öç7BD…$U4„ôÄCÓcS°¦6öç7BDõDÅõDôÄU$ä4SÓãS°¦6öç7B5DTdä”D•5õD…ô”CÒ#““ƒƒsƒSƒ2#°¦6öç7BÔåE¤”Ä5õD…ô”CÒ#ƒScSCƒ‚#°¦6öç7B6ÆVåF„–C×fÇVSÓå7G&–ær‡fÇVWÇÂ""’ç&WÆ6R‚õÄBörÂ""“°¦6öç7B—57FVfæ–F—4–çfö–6S×'6VCÓæ6ÆVåF„–B‡'6VCòç7WÆ–W#òçF„–B“ÓÓÕ5DTdä”D•5õD…ô”GÇÇ'6VCòç7WÆ–W%&VF–æu&öf–ÆSòç'VÆT¶W“ÓÓÒ%5DTdä”D•5õ$”åDTEô4ôÅTÔå2#°¦6öç7B—4ÖçG¦–Æ4–çfö–6S×'6VCÓæ6ÆVåF„–B‡'6VCòç7WÆ–W#òçF„–B“ÓÓÔÔåE¤”Ä5õD…ô”GÇÂüéÌééÜêLéléœé¼éê7ÄÔåE¤”Ä2òçFW7B†æ÷&Ò‡'6VCòç7WÆ–W#òææÖR’“°¦6öç7Bæ÷&Ó×fÇVSÓå7G&–ær‡fÇVWÇÂ""’ææ÷&ÖÆ—¦R‚$ädB"’ç&WÆ6R‚õµÇS3ÕÇS3feÒörÂ""’çFôÆö6ÆUWW$66R‚&VÂÔu""’ç&WÆ6R‚õµäÕ¬éÜê“Ó•ÒörÂ""“°¦6öç7Bw&VV´ÆF–äföÆC×fÇVSÓææ÷&Ò‡fÇVR’ç&WÆ6R‚õ¼éé,é\élé|éœé¬éÌéÜéüêêLê\êuÒörÆ3Óâ‡¼é¢$"Ìé#¢$""ÌéS¢$R"Ìéc¢%¢"Ìés¢$‚"Ìé“¢$’"Ìé£¢$²"ÌéÃ¢$Ò"ÌéÓ¢$â"Ìéó¢$ò"Ìê¢%"ÌêC¢%B"ÌêS¢%’"Ìês¢%‚'Õ¶5×ÇÆ2’“°¦6öç7BfÆ–Dw&VVµF„–C×fÇVSÓç¶6öç7BcÖ6ÆVåF„–B‡fÇVR“¶–b‡bæÆVæwF‚ÓÓ—ÇÂõã²BòçFW7B‡b’—&WGW&âfÇ6S¶ÆWB7VÓÓ¶f÷"†ÆWB“Ó¶“Ãƒ¶’²²—7VÒ³ÔçVÖ&W"‡e¶•Ò’£"¢¢ƒ‚Ö’“·&WGW&â‡7VÒS’SÓÓÔçVÖ&W"‡e³…Ò“·Ó°¦6öç7BVF—E6–Ö–Æ&—G“Ò†Æ"“Óç¶6öç7BƒÖw&VV´ÆF–äföÆB†’Ç“Öw&VV´ÆF–äföÆB†"“¶–b‚‡ÇÂ’—&WGW&â¶–b‡ƒÓÓ×’—&WGW&â¶6öç7B&WcÔ'&’æg&öÒ‡¶ÆVæwFƒ§’æÆVæwF‚³ÒÂ…òÆ’“Óæ’“¶f÷"†ÆWB“Ó¶“Ã×‚æÆVæwFƒ¶’²²—¶ÆWBÆVgCÖ“¶f÷"†ÆWB£Ó¶£Ã×’æÆVæwFƒ¶¢²²—¶6öç7BæW‡C×&We¶¥Ó·&We¶¥ÓÔÖF‚æÖ–â‡&We¶¥Ò³ÆÆVgB³Ç&We¶¢ÓÒ²‡…¶’ÓÓÓÓ×•¶¢ÓÓó£’“¶ÆVgCÖæW‡C·××&WGW&âÒ‡&We·’æÆVæwF…ÒôÖF‚æÖ‚‡‚æÆVæwF‚Ç’æÆVæwF‚’“·Ó°¦6öç7BFV6–ÖÅFW‡C×fÇVSÓäÖF‚æÖ‚ƒÄçVÖ&W"‡fÇVWÇÃ’’çFôf—†VBƒB’ç&WÆ6R‚"â"Â"Â"“°¦6öç7BÖöæW“#×fÇVSÓäÖF‚ç&÷VæB‚„çVÖ&W"‡fÇVWÇÃ’´çVÖ&W"äU4”Äôâ’£’ó° ¦gVæ7F–öâ÷WGWEFW‡B‡&W7öç6R—°¢–b‡G—Vöb&W7öç6Sòæ÷WGWE÷FW‡CÓÓÒ'7G&–ær"bg&W7öç6Ræ÷WGWE÷FW‡BçG&–Ò‚’—&WGW&â&W7öç6Ræ÷WGWE÷FW‡C°¢f÷"†6öç7B—FVÒöb&W7öç6Sòæ÷WGWGÇÅµÒ–f÷"†6öç7B'Böb—FVÓòæ6öçFVçGÇÅµÒ––b‡'CòçG—SÓÓÒ&÷WGWE÷FW‡B"bg'BçFW‡B—&WGW&â'BçFW‡C°¢&WGW&â"#°§Ğ ¦7–æ2gVæ7F–öâ7WÆ–W$ÖF6‚†6ö×ç”–BÆ6æF–FFS×·Ò—°¢6öç7B&uF„–CÖ6ÆVåF„–B†6æF–FFRçF„–B’ÇF„–C×fÆ–Dw&VVµF„–B‡&uF„–B“÷&uF„–C¢"#°¢–b‡F„–B—°¢6öç7B&÷w3Öv—B&—6ÖâGVW'•&v4TÄT5B&–B"Â&æÖR"Â'F„–B"Â&VÖ–Â"Â'†öæR"Â&FG&W72"Â&6—G’"e$ôÒ%7WÆ–W""t„U$R&6ö×ç”–B#ÒG¶6ö×ç”–GÒäB&7F—fR#×G'VRäB$TtU…õ$UÄ4R„4ôÄU44R‚'F„–B"Ârr’ÂuÅÄBrÂrrÂvrr“ÒG·F„–GÒÄ”Ô•B°¢–b‡&÷w5³Ò—&WGW&â&÷w5³Ó°¢Ğ¢6öç7B¶W“Öæ÷&Ò†6æF–FFRææÖR“°¢–b†¶W’æÆVæwFƒãÓB—°¢6öç7B&÷w3Öv—B&—6ÖâGVW'•&v4TÄT5B&–B"Â&æÖR"Â'F„–B"Â&VÖ–Â"Â'†öæR"Â&FG&W72"Â&6—G’"e$ôÒ%7WÆ–W""t„U$R&6ö×ç”–B#ÒG¶6ö×ç”–GÒäB&7F—fR#×G'VRõ$DU"%’&æÖR&°¢6öç7BW†7C×&÷w2æf–æB‡&÷sÓææ÷&Ò‡&÷rææÖR“ÓÓÖ¶W’“¶–b†W†7B—&WGW&âW†7C°¢6öç7B6Æ÷6S×&÷w2æf–æB‡&÷sÓç¶6öç7B³Öæ÷&Ò‡&÷rææÖR“·&WGW&â¶W’æÆVæwFƒãÓrbf²æÆVæwFƒãÓrbb†²æ–æ6ÇVFW2†¶W’—ÇÆ¶W’æ–æ6ÇVFW2†²’“·Ò“¶–b†6Æ÷6R—&WGW&â6Æ÷6S°¢6öç7B&æ¶VC×&÷w2æÖ‡&÷sÓâ‡·&÷rÇ66÷&S¦VF—E6–Ö–Æ&—G’†6æF–FFRææÖRÇ&÷rææÖR—Ò’’ç6÷'B‚†Æ"“Óæ"ç66÷&RÖç66÷&R“°¢6öç7B&W7C×&æ¶VE³ÒÇ6V6öæC×&æ¶VE³Ó°¢òòô5"Ö’Ö—‚w&VV²æBÆF–âvÇ—‡3²öæÇ’WFòÖÆ–æ²v†VâF†RæÖR—0¢òò7Vff–6–VçFÇ’6Æ÷6RæB6ÆV&Ç’&VG2F†RæW‡B7WÆ–W"à¢–b†&W7Bbf&W7Bç66÷&SãÓãsbbb‚6V6öæGÇÆ&W7Bç66÷&RÒ‡6V6öæBç66÷&WÇÃ“ãÓã‚’—&WGW&â&W7Bç&÷s°¢Ğ¢&WGW&âçVÆÃ°§Ğ ¦6öç7B&öGV7DÆ–æU&÷W'F–W3×°¢&uFW‡C§·G—S¢'7G&–ær'ÒÆ6öFS§·G—S¢'7G&–ær'ÒÆ&&6öFS§·G—S¢'7G&–ær'ÒÆFW67&—F–öã§·G—S¢'7G&–ær'ÒÇVçF—G“§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇVæ—C§·G—S¢'7G&–ær'ÒÇVæ—G5W%6¶vS§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇVæ—D6÷7C§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇ&WF–Å&–6S§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆF—66÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£ÒÆF—66÷VçCÖ÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆF—66÷VçC#§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£ÒÆF—66÷VçC$Ö÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆF—66÷VçC3§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£ÒÆF—66÷VçC4Ö÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆæWDÖ÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆW†6—6UF÷FÃ§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇfE&FS§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£ÒÆw&÷74Ö÷VçC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆ6öæf–FVæ6S§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£Ğ§Ó°¦6öç7B&öGV7DÆ–æU&WV—&VCÕ²'&uFW‡B"Â&6öFR"Â&&&6öFR"Â&FW67&—F–öâ"Â'VçF—G’"Â'Væ—B"Â'Væ—G5W%6¶vR"Â'Væ—D6÷7B"Â'&WF–Å&–6R"Â&F—66÷VçC"Â&F—66÷VçCÖ÷VçB"Â&F—66÷VçC""Â&F—66÷VçC$Ö÷VçB"Â&F—66÷VçC2"Â&F—66÷VçC4Ö÷VçB"Â&æWDÖ÷VçB"Â&W†6—6UF÷FÂ"Â'fE&FR"Â&w&÷74Ö÷VçB"Â&6öæf–FVæ6R%Ó°¦6öç7BfE7VÖÖ'”—FVÓ×·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§·&FS§·G—S¢&çVÖ&W""ÆVçVÓ¥³ÃbÃ2Ã#E×ÒÇF†&ÆS§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇfC§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÆw&÷73§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£×ÒÇ&WV—&VC¥²'&FR"Â'F†&ÆR"Â'fB"Â&w&÷72%×Ó°¢òòF†Rõ2&÷f–FW"&W7öç6R×W7Bæ÷B&WVBF†RgVÆÂ–çfö–6RF‡&VRF–ÖW20¢òò&uFW‡BÂVF—BÆ–æW2æB7G'V7GW&VB&öGV7DÆ–æW2âF†R7G'V7GW&VB&÷w2&VÖ–à¢òòWF†÷&—FF—fS²6ö×7BVF—BFW‡B—2&V'V–ÇBÆö6ÆÇ’g&öÒF†V—"&uFW‡Bà¦6öç7B–çfö–6U66†VÖ×·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§¶Fö7VÖVçEG—S§·G—S¢'7G&–ær"ÆVçVÓ¥²$”ådô”4R"Â$5$TD•EôäõDR%×ÒÆ”6öæf–FVæ6S§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÆÖ†–×VÓ£ÒÇ7WÆ–W#§·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§¶æÖS§·G—S¢'7G&–ær'ÒÇF„–C§·G—S¢'7G&–ær'×ÒÇ&WV—&VC¥²&æÖR"Â'F„–B%×ÒÆFö7VÖVçDçVÖ&W#§·G—S¢'7G&–ær'ÒÆFö7VÖVçDFFS§·G—S¢'7G&–ær'ÒÇF÷FÄw&÷73§·G—S¢&çVÖ&W""ÆÖ–æ–×VÓ£ÒÇfE7VÖÖ'“§·G—S¢&'&’"ÆÖ„—FV×3£BÆ—FV×3§fE7VÖÖ'”—FV×ÒÇ&öGV7DÆ–æW3§·G—S¢&'&’"ÆÖ„—FV×3£SÆ—FV×3§·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§&öGV7DÆ–æU&÷W'F–W2Ç&WV—&VC§&öGV7DÆ–æU&WV—&VG××ÒÇ&WV—&VC¥²&Fö7VÖVçEG—R"Â&”6öæf–FVæ6R"Â'7WÆ–W""Â&Fö7VÖVçDçVÖ&W""Â&Fö7VÖVçDFFR"Â'F÷FÄw&÷72"Â'fE7VÖÖ'’"Â'&öGV7DÆ–æW2%×Ó°¦6öç7B&öGV7EF&ÆU66†VÖ×·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§·fE7VÖÖ'“§·G—S¢&'&’"ÆÖ„—FV×3£BÆ—FV×3§fE7VÖÖ'”—FV×ÒÇ&öGV7DÆ–æW3§·G—S¢&'&’"ÆÖ„—FV×3£SÆ—FV×3§·G—S¢&ö&¦V7B"ÆFF—F–öæÅ&÷W'F–W3¦fÇ6RÇ&÷W'F–W3§&öGV7DÆ–æU&÷W'F–W2Ç&WV—&VC§&öGV7DÆ–æU&WV—&VG××ÒÇ&WV—&VC¥²'fE7VÖÖ'’"Â'&öGV7DÆ–æW2%×Ó°¦6öç7BfE7VÖÖ'•FW‡C×7VÖÖ'“Óâ„'&’æ—4'&’‡7VÖÖ'’“÷7VÖÖ'“¥µÒ’æÖ‡&÷sÓæG´çVÖ&W"‡&÷sòç&FWÇÃ—ÒRG¶ÖöæW“"‡&÷sòçF†&ÆWÇÃ’çFôf—†VBƒ"—ÒG¶ÖöæW“"‡&÷sòçfGÇÃ’çFôf—†VBƒ"—ÒG¶ÖöæW“"‡&÷sòæw&÷77ÇÃ’çFôf—†VBƒ"—Ö’æ¦ö–â‚%Æâ"“° ¦6öç7Bæ÷&ÖÆ—¦U&öGV7DÆ–æSÖÆ–æSÓç°¢6öç7BVçF—G“ÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòçVçF—G—ÇÃ’“°¢6öç7BæWDÖ÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòææWDÖ÷VçGÇÃ’“°¢ÆWBVæ—D6÷7CÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòçVæ—D6÷7GÇÃ’“¶–b‚Væ—D6÷7BbgVçF—G“ãbfæWDÖ÷VçCã—Væ—D6÷7CÖæWDÖ÷VçB÷VçF—G“°¢6öç7BfE&FSÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòçfE&FWÇÃ’“°¢6öç7BW†6—6UF÷FÃÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæW†6—6UF÷FÇÇÃ’“°¢ÆWBw&÷74Ö÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæw&÷74Ö÷VçGÇÃ’“¶–b‚w&÷74Ö÷VçBbfæWDÖ÷VçCã–w&÷74Ö÷VçCÒ†æWDÖ÷VçB¶W†6—6UF÷FÂ’¢ƒ·fE&FRó“°¢&WGW&â²ââæÆ–æRÇ&uFW‡C¥7G&–ær†Æ–æSòç&uFW‡GÇÂ""’Æ6öFS¥7G&–ær†Æ–æSòæ6öFWÇÂ""’çG&–Ò‚’Æ&&6öFS¥7G&–ær†Æ–æSòæ&&6öFWÇÂ""’çG&–Ò‚’ÆFW67&—F–öã¥7G&–ær†Æ–æSòæFW67&—F–öçÇÂ""’ç&WÆ6R‚õåÇ2¥ÆG³BÃÕÇ2²òÂrr’ç&WÆ6R‚õÇ2²örÂrr’çG&–Ò‚’ÇVçF—G’ÇVæ—C¥7G&–ær†Æ–æSòçVæ—GÇÂ""’çG&–Ò‚’ÇVæ—G5W%6¶vS¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòçVæ—G5W%6¶vWÇÃ’’ÇVæ—D6÷7BÇ&WF–Å&–6S¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòç&WF–Å&–6WÇÃ’’ÆF—66÷VçC¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçCÇÃ’’ÆF—66÷VçCÖ÷VçC¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçCÖ÷VçGÇÃ’’ÆF—66÷VçC#¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçC'ÇÃ’’ÆF—66÷VçC$Ö÷VçC¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçC$Ö÷VçGÇÃ’’ÆF—66÷VçC3¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçC7ÇÃ’’ÆF—66÷VçC4Ö÷VçC¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æSòæF—66÷VçC4Ö÷VçGÇÃ’’ÆæWDÖ÷VçBÆW†6—6UF÷FÂÇfE&FRÆw&÷74Ö÷VçBÆ6öæf–FVæ6S¤ÖF‚æÖ‚ƒÄÖF‚æÖ–âƒÄçVÖ&W"†Æ–æSòæ6öæf–FVæ6WÇÃ’’—Ó°§Ó°¦6öç7BÆ–æTw&÷75F÷FÃÖÆ–æW3ÓæÖöæW“"‚†Æ–æW7ÇÅµÒ’ç&VGV6R‚‡7VÒÆÆ–æR“Óç7VÒ´çVÖ&W"†Æ–æSòæw&÷74Ö÷VçGÇÃ’Ã’“°¦6öç7B‡—6–6Å&÷tf–ævW'&–çCÖÆ–æSÓå°¢æ÷&Ò†Æ–æSòæ6öFR’Ææ÷&Ò†Æ–æSòæFW67&—F–öçÇÆÆ–æSòç&uFW‡B’ÄçVÖ&W"†Æ–æSòçVçF—G—ÇÃ’çFôf—†VBƒB’À¢çVÖ&W"†Æ–æSòçVæ—D6÷7GÇÃ’çFôf—†VBƒB’ÄçVÖ&W"†Æ–æSòææWDÖ÷VçGÇÃ’çFôf—†VBƒ"’À¢çVÖ&W"†Æ–æSòçfE&FWÇÃ’çFôf—†VBƒ"’ÄçVÖ&W"†Æ–æSòæw&÷74Ö÷VçGÇÃ’çFôf—†VBƒ"’À¢çVÖ&W"†Æ–æSòæF—66÷VçCÇÃ’çFôf—†VBƒ"’ÄçVÖ&W"†Æ–æSòæF—66÷VçC'ÇÃ’çFôf—†VBƒ"’ÄçVÖ&W"†Æ–æSòæF—66÷VçC7ÇÃ’çFôf—†VBƒ"¥Òæ¦ö–â‚'Â"“°¦gVæ7F–öâ6öÆÆ6TF¦6VçEF&ÆU&WÆ’†Æ–æW2Æ–çfö–6UF÷FÂ—°¢6öç7B6÷W&6SÔ'&’æ—4'&’†Æ–æW2“öÆ–æW3¥µÒÇF÷FÃÖÖöæW“"†–çfö–6UF÷FÇÇÃ“°¢–b‡F÷FÃÃÓÇÇ6÷W&6RæÆVæwFƒÃGÇÇ6÷W&6RæÆVæwF‚S"ÓÓ—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢6öç7B6öÆÆ6VCÕµÓ°¢f÷"†ÆWB–æFWƒÓ¶–æFWƒÇ6÷W&6RæÆVæwFƒ¶–æFW‚³Ó"—°¢–b‡‡—6–6Å&÷tf–ævW'&–çB‡6÷W&6U¶–æFW…Ò’Ó×‡—6–6Å&÷tf–ævW'&–çB‡6÷W&6U¶–æFW‚³Ò’—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢6öÆÆ6VBçW6‚‡6÷W&6U¶–æFW…Ò“°¢Ğ¢6öç7BgVÆÄF–ffW&Væ6SÔÖF‚æ'2†Æ–æTw&÷75F÷FÂ‡6÷W&6R’×F÷FÂ’Æ6öÆÆ6VDF–ffW&Væ6SÔÖF‚æ'2†Æ–æTw&÷75F÷FÂ†6öÆÆ6VB’×F÷FÂ“°¢òò6ö×ÆWFRô5"&WÆ’Ö’6öçF–âöæRvVçV–æVÇ’&WVFVB6†&vRâ¶VWF†P¢òò6V6öæB‡—6–6Âö67W'&Væ6RöæÇ’v†VâW†7FÇ’öæR6öÆÆ6VB&÷r6Æ÷6W2F†P¢òò&VÖ–æ–ær–çfö–6R×F÷FÂF–ffW&Væ6Rà¢6öç7BÖ—76–ætg&öÕ6–ævÆT6÷“ÖÖöæW“"‡F÷FÂÖÆ–æTw&÷75F÷FÂ†6öÆÆ6VB’“°¢–b†Ö—76–ætg&öÕ6–ævÆT6÷“åDõDÅõDôÄU$ä4R—°¢6öç7BvVçV–æSÖ6öÆÆ6VBæf–ÇFW"†Æ–æSÓäÖF‚æ'2„çVÖ&W"†Æ–æRæw&÷74Ö÷VçGÇÃ’ÖÖ—76–ætg&öÕ6–ævÆT6÷’“ÃÕDõDÅõDôÄU$ä4R“°¢–b†vVçV–æRæÆVæwFƒÓÓÓ—°¢6öç7B¶VWf–ævW'&–çC×‡—6–6Å&÷tf–ævW'&–çB†vVçV–æU³Ò’ÆÖ—†VCÕµÓ°¢f÷"†ÆWB–æFWƒÓ¶–æFWƒÇ6÷W&6RæÆVæwFƒ¶–æFW‚³Ó"—¶Ö—†VBçW6‚‡6÷W&6U¶–æFW…Ò“¶–b‡‡—6–6Å&÷tf–ævW'&–çB‡6÷W&6U¶–æFW…Ò“ÓÓÖ¶VWf–ævW'&–çB–Ö—†VBçW6‚‡6÷W&6U¶–æFW‚³Ò—Ğ¢–b„ÖF‚æ'2†Æ–æTw&÷75F÷FÂ†Ö—†VB’×F÷FÂ“ÃÕDõDÅõDôÄU$ä4R—&WGW&â¶Æ–æW3¦Ö—†VBÆ6öÆÆ6VC§G'VRÇ&VÖ÷fVC§6÷W&6RæÆVæwF‚ÖÖ—†VBæÆVæwF‚ÆvVçV–æU&WVFVE&÷u&W6W'fVC§G'VWÓ°¢Ğ¢Ğ¢6öç7BW&Ö—GFVDF–ffW&Væ6SÔÖF‚æÖ‚…DõDÅõDôÄU$ä4RÇF÷FÂ£ã"“°¢–b†6öÆÆ6VDF–ffW&Væ6SçW&Ö—GFVDF–ffW&Væ6WÇÆ6öÆÆ6VDF–ffW&Væ6SãÖgVÆÄF–ffW&Væ6R£ã#R—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢&WGW&â¶Æ–æW3¦6öÆÆ6VBÆ6öÆÆ6VC§G'VRÇ&VÖ÷fVC§6÷W&6RæÆVæwF‚Ö6öÆÆ6VBæÆVæwF‡Ó°§Ğ¦gVæ7F–öâ6öÆÆ6TW†7DGWÆ–6FT÷fW&vR†Æ–æW2Æ–çfö–6UF÷FÂ—°¢6öç7B6÷W&6SÔ'&’æ—4'&’†Æ–æW2“öÆ–æW3¥µÒÇF÷FÃÖÖöæW“"†–çfö–6UF÷FÇÇÃ“°¢6öç7B÷fW&vSÖÖöæW“"†Æ–æTw&÷75F÷FÂ‡6÷W&6R’×F÷FÂ“°¢–b‡F÷FÃÃÓÇÇ6÷W&6RæÆVæwFƒÃ'ÇÆ÷fW&vSÃÕDõDÅõDôÄU$ä4R—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢6öç7Bw&÷W3ÖæWrÖ‚“°¢6÷W&6Ræf÷$V6‚‚†Æ–æRÆ–æFW‚“Óç°¢6öç7Bf–ævW'&–çC×‡—6–6Å&÷tf–ævW'&–çB†Æ–æR’Æ–æFW†W3Öw&÷W2ævWB†f–ævW'&–çB—ÇÅµÓ°¢–æFW†W2çW6‚†–æFW‚“¶w&÷W2ç6WB†f–ævW'&–çBÆ–æFW†W2“°¢Ò“°¢6öç7B6æF–FFW3ÕµÓ°¢f÷"†6öç7B–æFW†W2öbw&÷W2çfÇVW2‚’—°¢–b†–æFW†W2æÆVæwF‚ÓÓ"–6öçF–çVS°¢6öç7Bw&÷73ÖÖöæW“"‡6÷W&6U¶–æFW†W5³ÕÓòæw&÷74Ö÷VçGÇÃ“°¢–b†w&÷73ãbdÖF‚æ'2†w&÷72Ö÷fW&vR“ÃÕDõDÅõDôÄU$ä4R–6æF–FFW2çW6‚†–æFW†W5³Ò“°¢Ğ¢òòF†R&–çFVB–çfö–6RF÷FÂ—2â–æFWVæFVçBæ6†÷"Â'WB—B—26fRFğ¢òò&VÖ÷fR&÷röæÇ’v†VâöæRVæ—VR—"—2–FVçF–6Â7&÷726öFRÀ¢òòFW67&—F–öâæBF†R6ö×ÆWFRV6öæöÖ–2GWÆRâÖ&–wV÷W2—'2&VÖ–âf÷ ¢òòF†Rf–ÂÖ6Æ÷6VB&V6öæ6–Æ–F–öâF‚à¢–b†6æF–FFW2æÆVæwF‚ÓÓ—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢6öç7B&VÖ÷fT–æFWƒÖ6æF–FFW5³ÒÆ6öÆÆ6VC×6÷W&6Ræf–ÇFW"‚…òÆ–æFW‚“Óæ–æFW‚Ó×&VÖ÷fT–æFW‚“°¢–b„ÖF‚æ'2†Æ–æTw&÷75F÷FÂ†6öÆÆ6VB’×F÷FÂ“åDõDÅõDôÄU$ä4R—&WGW&â¶Æ–æW3§6÷W&6RÆ6öÆÆ6VC¦fÇ6WÓ°¢&WGW&â¶Æ–æW3¦6öÆÆ6VBÆ6öÆÆ6VC§G'VRÇ&VÖ÷fVC£Æ÷fW&vWÓ°§Ğ¢òò6öÖR6ö×7BF†W&ÖÂ&V6V—G2&RW‡G&7FVB6÷'&V7FÇ’öæ6RæBF†Vâ&V6V—fP¢òò6V6öæBÂÖÆf÷&ÖVBF–Âg&öÒ7WÆVÖVçFÂ&VFW"â¶VWöæÇ’&Vf—€¢òòv†Vâ—BÇ&VG’&V6öæ6–ÆW2W†7FÇ’FòF†R–æFWVæFVçFÇ’6öæf—&ÖVB–çfö–6P¢òòF÷FÂæBWfW'’F—66&FVB&÷r—2âVçfW&–f–VB&WÆ’öbâV&Æ–W"&–çFV@¢òòFW67&—F–öââF†—2æWfW"–çfVçG2Æ–æR÷"6÷–W2V6öæöÖ–72g&öÒ†—7F÷'’à¦gVæ7F–öâF—66&EVçfW&–f–VEG&–Æ–æu&WÆ’†Æ–æW2Æ–çfö–6UF÷FÂ—°¢6öç7B6÷W&6SÔ'&’æ—4'&’†Æ–æW2“öÆ–æW3¥µÒÇF÷FÃÖÖöæW“"†–çfö–6UF÷FÇÇÃ“°¢–b‚‡F÷FÃã—ÇÇ6÷W&6RæÆVæwFƒÃ"—&WGW&â¶Æ–æW3§6÷W&6RÆF—66&FVC¦fÇ6WÓ°¢f÷"†ÆWBVæCÓ¶VæCÇ6÷W&6RæÆVæwFƒ¶VæB²²—°¢6öç7B&Vf—ƒ×6÷W&6Rç6Æ–6RƒÆVæB’ÇF–Ã×6÷W&6Rç6Æ–6R†VæB“°¢–b„ÖF‚æ'2†Æ–æTw&÷75F÷FÂ‡&Vf—‚’×F÷FÂ“åDõDÅõDôÄU$ä4R–6öçF–çVS°¢6öç7B6fUF–Ã×F–ÂæWfW'’†Æ–æSÓâÆ–æSòç6÷W&6T6öÇVÖç5fW&–f–VBbg&Vf—‚ç6öÖR†V&Æ–W#ÓæFW67&—F–öç46Æ÷6R†V&Æ–W"æFW67&—F–öçÇÆV&Æ–W"ç&uFW‡BÆÆ–æRæFW67&—F–öçÇÆÆ–æRç&uFW‡B’’“°¢–b‡6fUF–Â—&WGW&â¶Æ–æW3§&Vf—‚ÆF—66&FVC§G'VRÇ&VÖ÷fVC§F–ÂæÆVæwF‡Ó°¢Ğ¢&WGW&â¶Æ–æW3§6÷W&6RÆF—66&FVC¦fÇ6WÓ°§Ğ¦6öç7BFW67&—F–öç46Æ÷6SÒ†Æ"“Óç¶6öç7BƒÖæ÷&Ò†’Ç“Öæ÷&Ò†"“·&WGW&â&ööÆVâ‡‚bg’bb‡ƒÓÓ×—ÇÂ‡‚æÆVæwFƒãÓbbg’æÆVæwFƒãÓbbb‡‚æ–æ6ÇVFW2‡’—ÇÇ’æ–æ6ÇVFW2‡‚’’’’—Ó°¦gVæ7F–öâÖW&vU&V6÷fW&VDÆ–æW2†7W'&VçBÇ&V6÷fW&VB—°¢6öç7B÷WCÒ†7W'&VçGÇÅµÒ’æÖ†Æ–æSÓâ‡²ââæÆ–æWÒ’’ÇW6VCÖæWr6WB‚“°¢f÷"†6öç7B6æF–FFRöb&V6÷fW&VGÇÅµÒ—°¢–b‚7G&–ær†6æF–FFSòæFW67&—F–öçÇÆ6æF–FFSòç&uFW‡GÇÂ""’çG&–Ò‚’–6öçF–çVS°¢6öç7Bf–Æ&ÆSÒ†Æ–æRÆ–æFW‚“ÓâW6VBæ†2†–æFW‚’bb†Æ–æRç6÷W&6Tf–ÆT–æFWƒÓÓ×VæFVf–æVGÇÆ6æF–FFRç6÷W&6Tf–ÆT–æFWƒÓÓ×VæFVf–æVGÇÆÆ–æRç6÷W&6Tf–ÆT–æFWƒÓÓÖ6æF–FFRç6÷W&6Tf–ÆT–æFW‚’bb†Æ–æRç6÷W&6UvSÓÓ×VæFVf–æVGÇÆ6æF–FFRç6÷W&6UvSÓÓ×VæFVf–æVGÇÆÆ–æRç6÷W&6UvSÓÓÖ6æF–FFRç6÷W&6UvR“°¢ÆWB–æFWƒÒÓ°¢–b†6æF–FFRæ6öFR––æFWƒÖ÷WBæf–æD–æFW‚‚†Æ–æRÆ’“Óæf–Æ&ÆR†Æ–æRÆ’’bfÆ–æRæ6öFRbfæ÷&Ò†Æ–æRæ6öFR“ÓÓÖæ÷&Ò†6æF–FFRæ6öFR’“°¢–b†–æFWƒÃ––æFWƒÖ÷WBæf–æD–æFW‚‚†Æ–æRÆ’“Óæf–Æ&ÆR†Æ–æRÆ’’bb†Æ–æRæ6öFRbf6æF–FFRæ6öFRbfæ÷&Ò†Æ–æRæ6öFR’ÓÖæ÷&İuç]í¢G§²ÚîÆ­y×FÂ“åDõDÅõDôÄU$ä4R³ã°¢f÷"†6öç7B·vT–æFW‚ÇvUÒöbvT¦ö'2æVçG&–W2‚’—°¢6öç7BVç&W6öÇfVC×'6VBç&öGV7DÆ–æW2æf–ÇFW"†Æ–æSÓç°¢6öç7BÔçVÖ&W"†Æ–æRçVçF—G—ÇÃ’ÇSÔçVÖ&W"†Æ–æRçVæ—D6÷7GÇÃ’ÆæWCÔçVÖ&W"†Æ–æRææWDÖ÷VçGÇÃ“°¢6öç7B†4F—66÷VçCÕ¶Æ–æRæF—66÷VçCÆÆ–æRæF—66÷VçC"ÆÆ–æRæF—66÷VçC2ÆÆ–æRæF—66÷VçCÖ÷VçBÆÆ–æRæF—66÷VçC$Ö÷VçBÆÆ–æRæF—66÷VçC4Ö÷VçEÒç6öÖR‡fÇVSÓäçVÖ&W"‡fÇVWÇÃ“ã“°¢6öç7B7W'&VçEvS×vT¦ö'2æÆVæwFƒÓÓÓÇÆÆ–æRç6÷W&6Tf–ÆT–æFWƒÓÓ×vT–æFWƒ°¢–b†ÖçG¦–Æ4–çfö–6R—&WGW&â7W'&VçEvRbb‡&WV—&W46ö×ÆWFU&WfW&–f–6F–öçÇÂÆ–æRç6÷W&6T6öÇVÖç5fW&–f–VB“°¢–b‡7WÆ–W%&WV—&W46ö×ÆWFU&–çFVEF&ÆR—&WGW&â7W'&VçEvRbg&WV—&W46ö×ÆWFU&WfW&–f–6F–öã°¢&WGW&âÆ–æRç6÷W&6T6öÇVÖç5fW&–f–VBbf7W'&VçEvRbgãbfæWCãbb‚†4F—66÷VçGÇÄÖF‚æ'2‡§RÖæWB“äÖF‚æÖ‚ƒãRÆæWB£ã"’“°¢Ò“°¢òòF†R–æ—F–Âô5"6âÆVv—F–ÖFVÇ’&WGW&âæò&öGV7B&÷w2âÆV&æV@¢òò6ö×ÆWFR×F&ÆR7WÆ–W"×W7B7F–ÆÂvWBöæR–ÖvRÖöæÇ’&W&VC²F†P¢òòfW&–f–W"v–ÆÂV—F†W"&V'V–ÆBWfW'’&÷rv—F‚fö÷FW"w&VVÖVçB÷"ÆVfP¢òòF†RÆ–æ¶VBG&gBVçF÷V6†VBà¢6öç7BæVVG4V×G”6ö×ÆWFUF&ÆU&VCÒ†ÖçG¦–Æ4–çfö–6WÇÇ7WÆ–W%&WV—&W46ö×ÆWFU&–çFVEF&ÆR¢bg&WV—&W46ö×ÆWFU&WfW&–f–6F–öà¢bg'6VBç&öGV7DÆ–æW2æÆVæwFƒÓÓÓ°¢–b‚Vç&W6öÇfVBæÆVæwF‚bbæVVG4V×G”6ö×ÆWFUF&ÆU&VB–6öçF–çVS°¢G'—°¢6öç7B6ö×ÆWFU&–çFVEF&ÆSÖÖçG¦–Æ4–çfö–6WÇÇ7WÆ–W%&WV—&W46ö×ÆWFU&–çFVEF&ÆS°¢6öç7BF–væ÷7F–73Öv—BfW&–g”–çfö–6TF—66÷VçG2‡¶6öçFVçDFF§vRæ6öçFVçDFFÆÖ–ÖUG—S§vRæÖ–ÖUG—RÆf–ÆVæÖS§vRæf–ÆVæÖRÇ&öGV7DÆ–æW3¦æVVG4V×G”6ö×ÆWFUF&ÆU&VC÷'6VBç&öGV7DÆ–æW3§Vç&W6öÇfVBÆ”¶W“§&ö6W72æVçbäõTä•ô•ô´U’ÆÖöFVÃ¤eTÄÅôô5%ôÔôDTÂÇF–ÖV÷WD×3¤eTÄÅôô5%õ$õd”DU%õD”ÔTõUEôÕ2Ç&WfW&–g”ÆÃ¦6ö×ÆWFU&–çFVEF&ÆRÆW‡V7FVDw&÷75F÷FÃ¦6ö×ÆWFU&–çFVEF&ÆRbgvT¦ö'2æÆVæwFƒÓÓÓö–çfö–6UF÷FÃ£Ç7WÆ–W%'VÆS¦ÖçG¦–Æ4–çfö–6Sò$ÔåE¤”Ä2#§7WÆ–W%&WV—&W46ö×ÆWFU&–çFVEF&ÆSõ7G&–ær‡'6VCòç7WÆ–W%&VF–æu&öf–ÆSòç'VÆT¶W—ÇÂ""“¢"'Ò“°¢F—66÷VçDF–væ÷7F–72æ66WFVB³ÔçVÖ&W"†F–væ÷7F–72æ66WFVGÇÃ“°¢F—66÷VçDF–væ÷7F–72ç&V¦V7FVDÖF‚³ÔçVÖ&W"†F–væ÷7F–72ç&V¦V7FVDÖF‡ÇÃ“°¢–b„'&’æ—4'&’†F–væ÷7F–72çfE7VÖÖ'’’bfF–væ÷7F–72çfE7VÖÖ'’æÆVæwF‚—&–çFVDFö7VÖVçEFW‡CÕ·&–çFVDFö7VÖVçEFW‡BÇfE7VÖÖ'•FW‡B†F–væ÷7F–72çfE7VÖÖ'’•Òæf–ÇFW"„&ööÆVâ’æ¦ö–â‚%Æâ"“°¢Ö6F6‡¶F—66÷VçDF–væ÷7F–72ç&÷f–FW$f–ÇW&W3ÔçVÖ&W"†F—66÷VçDF–væ÷7F–72ç&÷f–FW$f–ÇW&W7ÇÃ’³Ğ¢Ğ¢'6VBæF—66÷VçDÖF…fW&–f–6F–öãÖF—66÷VçDF–væ÷7F–73°¢–b†ÖçG¦–Æ4–çfö–6R—'6VBç&öGV7DÆ–æW3×'6VBç&öGV7DÆ–æW2æÖ†Æ–æSÓå²$•õ$”åDTEõ$õuôeTÄÅôÔD…õdU$”d”TB"Â%4”$Ä”äuõ$”4UôD•44õTåEõ44ÄUõdU$”d”TB"Â$ÔåE¤”Ä5ô4ôDUó•õ4³#Eõ44ÄUõdU$”d”TB%Òæ–æ6ÇVFW2†Æ–æRçVçF—G•6÷W&6R“öÆ–æS§&V6÷fW$ÖçG¦–Æ4V6öæöÖ–72†Æ–æR’’æÖ†Ç”ÖçG¦–Æ56¶v–ær“° ¢6öç7BÖ—†VE&–çFVEfC×&V6÷fW$Ö—†VEfDg&öÕ&–çFVE7VÖÖ'’‡'6VBç&öGV7DÆ–æW2Ç&–çFVDFö7VÖVçEFW‡BÆ–çfö–6UF÷FÂ“°¢'6VBç&öGV7DÆ–æW3ÖÖ—†VE&–çFVEfBæÆ–æW3°¢–b†Ö—†VE&–çFVEfBç&V6÷fW&VB—·'6VBæÖ—†VE&–çFVEfE7VÖÖ'•&V6÷fW&VC×G'VS·'6VBæÖ—†VE&–çFVEfE7VÖÖ'“ÖÖ—†VE&–çFVEfBç7VÖÖ'—Ğ¢6öç7B&–çFVEfC×&V6÷fW%fDg&öÕ&–çFVE7VÖÖ'’‡'6VBç&öGV7DÆ–æW2Ç&–çFVDFö7VÖVçEFW‡BÆ–çfö–6UF÷FÂ“°¢'6VBç&öGV7DÆ–æW3×&–çFVEfBæÆ–æW3°¢–b‡&–çFVEfBç&V6÷fW&VB—°¢'6VBç&–çFVEfE7VÖÖ'•&V6÷fW&VC×G'VS°¢'6VBç&–çFVEfE7VÖÖ'“×·&FS§&–çFVEfBç&FRÆæWC§&–çFVEfBææWBÇFƒ§&–çFVEfBçF‡Ó°¢Ğ ¢'6VBç&öGV7DÆ–æW4w&÷74&Vf÷&U&V6÷fW'“Ö–æ—F–ÄÆ–æW5F÷FÃ°¢'6VBç&öGV7DÆ–æW4w&÷74gFW%&V6÷fW'“ÖÆ–æTw&÷75F÷FÂ‡'6VBç&öGV7DÆ–æW2“°¢'6VBæ–çfö–6UF÷FÄf÷$6ö×ÆWFVæW73Ö–çfö–6UF÷FÃ°¢'6VBç&öGV7DÆ–æW5F÷FÄF–ffW&Væ6SÖÖöæW“"‡'6VBç&öGV7DÆ–æW4w&÷74gFW%&V6÷fW'’Ö–çfö–6UF÷FÂ“°¢'6VBç&öGV7DÆ–æW46ö×ÆWFSÖ–çfö–6UF÷FÃÃÓÇÄÖF‚æ'2‡'6VBç&öGV7DÆ–æW5F÷FÄF–ffW&Væ6R“ÃÕDõDÅõDôÄU$ä4R³ã°¢6öç7B&V6öæ6–Æ–F–öäF–væ÷7F–3×°¢Æ–æT6÷VçC§'6VBç&öGV7DÆ–æW2æÆVæwF‚À¢6Æ7VÆFVDw&÷73§'6VBç&öGV7DÆ–æW4w&÷74gFW%&V6÷fW'’À¢W‡V7FVDw&÷73¦–çfö–6UF÷FÂÀ¢F–ffW&Væ6S¤ÖF‚æ'2‡'6VBç&öGV7DÆ–æW5F÷FÄF–ffW&Væ6R’À¢F—66÷VçE&÷f–FW$f–ÇW&W3¤çVÖ&W"†F—66÷VçDF–væ÷7F–72ç&÷f–FW$f–ÇW&W7ÇÃ¢Ó°¢f–ÇW&U7FvSÖ–çfö–6R×F÷FÂ×&V6öæ6–Æ–F–öã¶Æ–æW3ÒG·&V6öæ6–Æ–F–öäF–væ÷7F–2æÆ–æT6÷VçGÓ¶w&÷73ÒG·&V6öæ6–Æ–F–öäF–væ÷7F–2æ6Æ7VÆFVDw&÷72çFôf—†VBƒ"—Ó¶W‡V7FVCÒG·&V6öæ6–Æ–F–öäF–væ÷7F–2æW‡V7FVDw&÷72çFôf—†VBƒ"—Ó¶F–fcÒG·&V6öæ6–Æ–F–öäF–væ÷7F–2æF–ffW&Væ6RçFôf—†VBƒ"—Ó·&÷f–FW$f–ÇW&W3ÒG·&V6öæ6–Æ–F–öäF–væ÷7F–2æF—66÷VçE&÷f–FW$f–ÇW&W7Ö°¢òòÔåE¤”Ä2—26–ævÆR×vRÆV&æVBÆ–÷WBv—F‚&–çFVBWF†÷&—FF—fP¢òòF÷FÂâæWfW"V&Æ—6‚ÖW&VÇ’&6Æ÷6RVæ÷Vv‚"F&ÆS¢F†BÆÆ÷vVB6†–gFV@¢òòæV–v†&÷&–ærV6öæöÖ–72v—F‚BãƒUU"W'&÷"Fò&V6‚÷W&F÷"&Wf–Wrà¢òò¶VWF†RGW&&ÆRG&gB÷&WG'’F‚f–ÂÖ6Æ÷6VBVçF–ÂF†R6÷'&V7F—fR&W&V@¢òò&V6öæ6–ÆW2F†RgVÆÂF&ÆRFò6VçBÖÆWfVÂ–çfö–6RFöÆW&æ6Rà¢–b†ÖçG¦–Æ4–çfö–6RbgvT¦ö'2æÆVæwFƒÓÓÓbf–çfö–6UF÷FÃãbdÖF‚æ'2‡'6VBç&öGV7DÆ–æW5F÷FÄF–ffW&Væ6R“ããR—°¢òò&WF–âöæÇ’&÷VæFVBF–væ÷7F–72öâF†RGW&&ÆR¦ö"â6æF–FFR&÷w27F¢òòÆö6ÂFòF†—2&WVW7BæB&RæWfW"V&Æ—6†VBFòF†RW&6†6RG&gBà¢v—B&—6ÖâFW†V7WFU&vUDDR$•&VFW$¦ö""4UB'&W7VÇD§6öâ#Ô4ôÄU44R‚'&W7VÇD§6öâ"Âw·Òs£¦§6öæ"—ÇÂG´¥4ôâç7G&–æv–g’‡·÷4”F–væ÷7F–73§²ââç&V6öæ6–Æ–F–öäF–væ÷7F–2Ç&V6÷&FVDC¦æWrFFR‚’çFô•4õ7G&–ær‚—×Ò—Ó£¦§6öæ"Â'WFFVDB#Ô5U%$TåEõD”ÔU5DÕt„U$R&–B#ÒG¶¦ö"æ–GÒäB&6ö×ç”–B#ÒG·&WçW6W"æ6ö×ç”–GÖ°¢F‡&÷ræWrW'&÷"†érøë¼êìøë|ø"ëëÜêÌë<ëÜøœø<ëréÌééÜêLéléœé¼éê2ëLë\ëÒø<ø\ëÌøløœëÜë\êòëÌëRøLëòøLëœëÌëüë¼øÌë<ëœëòŒëLëœëølëüøêÂG´ÖF‚æ'2‡'6VBç&öGV7DÆ–æW5F÷FÄF–ffW&Væ6R’çFôf—†VBƒ"—Ò(*Â’âéüë’ë¼ëëÜëŒëø<ëÌêÜëÜë\ø"ë<øëëÌëÌêÜø"ëLë\ëÒëøëüëŒë|ë¬ë\øÜøLë|ë¬ëëÒæ“°¢Ğ¢f–ÇW&U7FvSÒ'&W&RÖ’×&W7VÇB#°¢'6VBæVF—DÆ–æW3ÖVF—DÆ–æW2æÆVæwFƒöVF—DÆ–æW3¢„'&’æ—4'&’‡&Wf–÷W2æÆ–æW2“÷&Wf–÷W2æÆ–æW3¥µÒ“°¢'6VBæÆ–æW3×'6VBç&öGV7DÆ–æW2æÆVæwFƒ÷'6VBç&öGV7DÆ–æW2æÖ†Æ–æSÓç¶6öç7BFW67&—F–öãÕ7G&–ær†Æ–æRæFW67&—F–öçÇÆÆ–æRç&uFW‡GÇÂ""’ç&WÆ6R‚õÇ2²örÂ""’çG&–Ò‚’ÇVçF—G“ÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVçF—G—ÇÃ’’ÇVæ—CÕ7G&–ær†Æ–æRçVæ—GÇÂ,êLéÌêr"’çG&–Ò‚—ÇÂ,êLéÌêr"ÇVæ—D6÷7CÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVæ—D6÷7GÇÃ’“·&WGW&â·FW‡C¥¶FW67&—F–öâÇVçF—G“ãöG·VçF—G—ÒG·Væ—GÖ¢""ÇVæ—D6÷7CãöFV6–ÖÅFW‡B‡Væ—D6÷7B“¢"%Òæf–ÇFW"„&ööÆVâ’æ¦ö–â‚""’Æ6öæf–FVæ6S¤ÖF‚æÖ‚ƒÄÖF‚æÖ–âƒÄçVÖ&W"†Æ–æRæ6öæf–FVæ6WÇÇ'6VBæ”6öæf–FVæ6WÇÃ’’—×Ò“¥µÓ°¢'6VBç&uFW‡C×'6VBç&uFW‡GÇÇ'6VBæVF—DÆ–æW2æÖ‡ƒÓç‚çFW‡B’æ¦ö–â‚%Æâ"—ÇÆÆö6Å&uFW‡C°¢f–ÇW&U7FvSÒ&ÖF6‚×7WÆ–W"#°¢6öç7BÖF6ƒÖv—B7WÆ–W$ÖF6‚‡&WçW6W"æ6ö×ç”–BÇ'6VBç7WÆ–W"’Æ”6öæf–FVæ6SÔÖF‚æÖ‚ƒÄÖF‚æÖ–âƒÄçVÖ&W"‡'6VBæ”6öæf–FVæ6WÇÃ’’“°¢f–ÇW&U7FvSÒ'6fRÖ’×&W7VÇB#°¢v—B&—6ÖâFW†V7WFU&vUDDR$•&VFW$¦ö""4UB'7FvR#Òt’rÂ'7FGW2#Òt•ô4ôÕÄUDRrÂ&”6öæf–FVæ6R#ÒG¶”6öæf–FVæ6WÒÂ'&W7VÇD§6öâ#Ô4ôÄU44R‚'&W7VÇD§6öâ"Âw·Òs£¦§6öæ"—ÇÂG´¥4ôâç7G&–æv–g’‡'6VB—Ó£¦§6öæ"Â'WFFVDB#Ô5U%$TåEõD”ÔU5DÕt„U$R&–B#ÒG¶¦ö"æ–GÒäB&6ö×ç”–B#ÒG·&WçW6W"æ6ö×ç”–GÖ°¢&W2æ§6öâ‡¶–C¦¦ö"æ–BÇ7FGW3¢$•ô4ôÕÄUDR"Æ”6ÆÆVC§G'VRÆ6öæf–FVæ6S¦”6öæf–FVæ6RÇ&W7VÇC§'6VBÇ7WÆ–W$ÖF6ƒ¦ÖF6‡ÇÆçVÆÂÇ7WÆ–W$6æF–FFS§'6VBç7WÆ–W'ÇÆçVÆÂÆÖöFVÃ¤eTÄÅôô5%ôÔôDTÇÒ“°§Ö6F6‚†W'&÷"—°¢6öç6öÆRæW'&÷"‚%õ2’&V6†V6²f–ÆVB"Ç¶¦ö$–C§&Wç&×2æ¦ö$–BÇ7FvS¦f–ÇW&U7FvRÆÖW76vS§&÷f–FW$W'&÷%FW‡B†W'&÷"’Æ6öFS¦W'&÷#òæ6öFWÇÆçVÆÇÒ“°¢–b‚W'&÷#òç7FGW2—¶6öç7B6fSÖæWrW'&÷"†•õ$T4„T4µô”åDU$äÂ²G¶f–ÇW&U7FvWÕÖ“·6fRç7FGW3ÓS#·6fRæ6öFSÒ$•õ$T4„T4µô”åDU$äÂ#·&WGW&âæW‡B‡6fR—Ğ¢æW‡B†W'&÷"§×Ò“° §&÷WFW"çWB‚"ö’×&VFW"ö¦ö'2ó¦¦ö$–B÷&öGV7BÖÆ–æW2"Ç&WV—&T6ö×ç”ÖöGVÆR‚$•õ$TDU""’Æ7–æ2‡&WÇ&W2ÆæW‡B“Óç·G'—°¢6öç7B&Wf–WtÆ–æS×¢æö&¦V7B‡·&uFW‡C§¢ç7G&–ær‚’æÖ‚ƒ#’æ÷F–öæÂ‚’æFVfVÇB‚""’Æ6öFS§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒƒ’æ÷F–öæÂ‚’æFVfVÇB‚""’Æ&&6öFS§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒƒ’æ÷F–öæÂ‚’æFVfVÇB‚""’ÆFW67&—F–öã§¢ç7G&–ær‚’çG&–Ò‚’æÖ–âƒ’æÖ‚ƒS’ÇVçF—G“§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’ÇVæ—C§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒC’æ÷F–öæÂ‚’æFVfVÇB‚,êLéÌêr"’ÇVæ—G5W%6¶vS§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’æFVfVÇBƒ’ÇVæ—D6÷7C§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’ÇfE&FS§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’Æ6öæf–FVæ6S§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’æFVfVÇBƒ’Æ–çfö–6UVçF—G“§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’Æ–çfö–6UVæ—C§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒC’æ÷F–öæÂ‚’Ç7Fö6µVæ—C§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒC’æ÷F–öæÂ‚’Ç7Fö6µVæ—G5W$–çfö–6UVæ—C§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’Ç6¶vUVæ—E&–6S§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçCÖ÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçC#§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçC$Ö÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçC3§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆF—66÷VçC4Ö÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’Æ–æ—F–ÄÖ÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆæWDÖ÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÆW†6—6UF÷FÃ§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÇF†&ÆTÖ÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’ÇfDÖ÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’Æw&÷74Ö÷VçC§¢æ6öW&6RæçVÖ&W"‚’æÖ–âƒ’æÖ‚ƒ’æ÷F–öæÂ‚’Ç6¶vT6öçfW'6–öäÆ–VC§¢æ&ööÆVâ‚’æ÷F–öæÂ‚’Ç6÷W&6T6öÇVÖç5fW&–f–VC§¢æ&ööÆVâ‚’æ÷F–öæÂ‚’Ç6µ'VÆS§¢ç7G&–ær‚’æÖ‚ƒ#’æ÷F–öæÂ‚—Ò“°¢6öç7B&öG“×¢æö&¦V7B‡·6÷W&6S§¢æVçVÒ…²%c"ãBãB"Â%c"ãBãEõU4U%õ$Ud”Ur%Ò’æ÷F–öæÂ‚’æFVfVÇB‚%c"ãBãEõU4U%õ$Ud”Ur"’Ç&öGV7DÆ–æW3§¢æ'&’‡&Wf–WtÆ–æR’æÖ–âƒ’æÖ‚ƒS—Ò’ç'6R‡&Wæ&öG—ÇÇ·Ò“°¢6öç7B¦ö'3Öv—B&—6ÖâGVW'•&v4TÄT5B¢â&–B"Æ¢â'7F÷&T–B"Æ¢â'7FGW2"Æ¢â'W&6†6TFö7VÖVçD–B"Æ¢â'&W7VÇD§6öâ"ÆBâ'6÷W&6UG—R"2&Fö7VÖVçE6÷W&6UG—R"ÆBâ'7FGW2"2&Fö7VÖVçE7FGW2"e$ôÒ$•&VFW$¦ö""¢ÄTeB¤ô”â%W&6†6TFö7VÖVçB"BôâBâ&–B#Ö¢â'W&6†6TFö7VÖVçD–B"äBBâ&6ö×ç”–B#Ö¢â&6ö×ç”–B"t„U$R¢â&–B#ÒG·&Wç&×2æ¦ö$–GÒäB¢â&6ö×ç”–B#ÒG·&WçW6W"æ6ö×ç”–GÒÄ”Ô•B°¢6öç7B¦ö#Ö¦ö'5³Ó¶–b‚¦ö"—&WGW&â&W2ç7FGW2ƒCB’æ§6öâ‡¶W'&÷#¢,éLë\ëÒë,øêÜëŒë|ë¬ëRërëëÜêÌë<ëÜøœø<ërâ'Ò“¶–b‡&WçW6W#òçFö¶VåG—SÓÓÒ%5Dõ$UôõU$Dõ""bg&WçW6W"ç7F÷&T–BÓÖ¦ö"ç7F÷&T–B—&WGW&â&W2ç7FGW2ƒC2’æ§6öâ‡¶W'&÷#¢,éLë\ëÒêÜø|ë\ëœø"øøøÌø<ë,ëø<ërø<ëRëø\øLøÂøLëòøLëœëÌëüë¼øÌë<ëœëòâ'Ò“°¢6öç7B&6¶w&÷VæDÖ”f–ÆÄÆ–æ¶VDG&gCÔ&ööÆVâ†¦ö"çW&6†6TFö7VÖVçD–Bbf&öG’ç6÷W&6SÓÓÒ%c"ãBãB"bf¦ö"ç7FGW3ÓÓÒ$•ô4ôÕÄUDR"bf¦ö"ç&W7VÇD§6öãòç÷4†æFöfbbf¦ö"æFö7VÖVçE6÷W&6UG—SÓÓÒ%õ5ôô5%ôE$eB"bf¦ö"æFö7VÖVçE7FGW3ÓÓÒ$E$eB"“°¢–b†¦ö"çW&6†6TFö7VÖVçD–Bbb&6¶w&÷VæDÖ”f–ÆÄÆ–æ¶VDG&gB—&WGW&â&W2ç7FGW2ƒC’’æ§6öâ‡¶W'&÷#¢,êLëòøLëœëÌëüë¼øÌë<ëœëòêÜø|ë\ë’êìëLërë¬ëøLëø|øœøëœø<øLë\êòë<ëœëêÜë¼ë\ë<ø|ëòë¬ëë’ëüë’ë<øëëÌëÌêÜø"ëLë\ëÒëÌøëüøëüøÜëÒëÜëëë¼ë¼êÌëìëüø\ëÒëøøÂøLëòõ2â'Ò“°¢6öç7B&Wf–÷W3Ö¦ö"ç&W7VÇD§6öâbgG—Vöb¦ö"ç&W7VÇD§6öãÓÓÒ&ö&¦V7B#ö¦ö"ç&W7VÇD§6öã§·Ó°¢6öç7B&öGV7DÆ–æW3Ö&öG’ç&öGV7DÆ–æW2æÖ†Æ–æSÓç¶6öç7BVçF—G“ÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVçF—G—ÇÃ’’ÇVæ—D6÷7CÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVæ—D6÷7GÇÃ’’ÇfE&FSÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçfE&FWÇÃ’“°¢–b†&6¶w&÷VæDÖ”f–ÆÄÆ–æ¶VDG&gB—¶6öç7BæWDÖ÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRææWDÖ÷VçCó÷VçF—G’§Væ—D6÷7B’’ÆW†6—6UF÷FÃÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRæW†6—6UF÷FÇÇÃ’’ÇF†&ÆTÖ÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçF†&ÆTÖ÷VçCóöæWDÖ÷VçB¶W†6—6UF÷FÂ’’ÇfDÖ÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçfDÖ÷VçCó÷F†&ÆTÖ÷VçB§fE&FRó’’Æw&÷74Ö÷VçCÔÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRæw&÷74Ö÷VçCó÷F†&ÆTÖ÷VçB·fDÖ÷VçB’“·&WGW&â²ââæÆ–æRÇ&uFW‡C¥7G&–ær†Æ–æRç&uFW‡GÇÆÆ–æRæFW67&—F–öâ’Æ6öFS¥7G&–ær†Æ–æRæ6öFWÇÂ""’Æ&&6öFS¥7G&–ær†Æ–æRæ&&6öFWÇÂ""’ÆFW67&—F–öã¥7G&–ær†Æ–æRæFW67&—F–öçÇÂ""’çG&–Ò‚’ÇVçF—G’ÇVæ—C¥7G&–ær†Æ–æRçVæ—GÇÂ,êLéÌêr"’ÇVæ—G5W%6¶vS¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVæ—G5W%6¶vWÇÃ’’ÇVæ—D6÷7BÆæWDÖ÷VçBÆW†6—6UF÷FÂÇF†&ÆTÖ÷VçBÇfE&FRÇfDÖ÷VçBÆw&÷74Ö÷VçBÆ6öæf–FVæ6S¤ÖF‚æÖ‚ƒÄÖF‚æÖ–âƒÄçVÖ&W"†Æ–æRæ6öæf–FVæ6WÇÃ’’’Ç6÷W&6T6öÇVÖç5fW&–f–VC¤&ööÆVâ†Æ–æRç6÷W&6T6öÇVÖç5fW&–f–VB—×Ğ¢6öç7BæWDÖ÷VçC×VçF—G’§Væ—D6÷7BÆw&÷74Ö÷VçCÖæWDÖ÷VçB¢ƒ·fE&FRó“·&WGW&â·&uFW‡C¥7G&–ær†Æ–æRç&uFW‡GÇÆÆ–æRæFW67&—F–öâ’Æ6öFS¥7G&–ær†Æ–æRæ6öFWÇÂ""’Æ&&6öFS¥7G&–ær†Æ–æRæ&&6öFWÇÂ""’ÆFW67&—F–öã¥7G&–ær†Æ–æRæFW67&—F–öçÇÂ""’çG&–Ò‚’ÇVçF—G’ÇVæ—C¥7G&–ær†Æ–æRçVæ—GÇÂ,êLéÌêr"’ÇVæ—G5W%6¶vS¤ÖF‚æÖ‚ƒÄçVÖ&W"†Æ–æRçVæ—G5W%6¶vWÇÃ’’ÇVæ—D6÷7BÆæWDÖ÷VçBÇfE&FRÆw&÷74Ö÷VçBÆ6öæf–FVæ6S¤ÖF‚æÖ‚ƒÄÖF‚æÖ–âƒÄçVÖ&W"†Æ–æRæ6öæf–FVæ6WÇÃ’’’Ç6÷W&6T6öÇVÖç5fW&–f–VC¤&ööÆVâ†Æ–æRç6÷W&6T6öÇVÖç5fW&–f–VB—×Ò“°¢6öç7B&W7VÇD§6öã×²ââç&Wf–÷W2Ç&öGV7DÆ–æW2ÆÆ–æW3§&öGV7DÆ–æW2æÖ†Æ–æSÓâ‡·FW‡C¥¶Æ–æRæFW67&—F–öâÆÆ–æRçVçF—G“ãöG¶Æ–æRçVçF—G—ÒG¶Æ–æRçVæ—GÖ¢""ÆÆ–æRçVæ—D6÷7CãöFV6–ÖÅFW‡B†Æ–æRçVæ—D6÷7B“¢"%Òæf–ÇFW"„&ööÆVâ’æ¦ö–â‚""’Æ6öæf–FVæ6S¦Æ–æRæ6öæf–FVæ6WÒ’’Ç&Wf–WvVDC¦æWrFFR‚’çFô•4õ7G&–ær‚’Ç&Wf–WvVD'•W6W$–C§&WçW6W"æ–BÇc#CDf–æÆ—¦VC§G'VRÇc#CDf–æÆ—¦VDC¦æWrFFR‚’çFô•4õ7G&–ær‚’Çc#CE6÷W&6S¦&6¶w&÷VæDÖ”f–ÆÄÆ–æ¶VDG&gCò%õ5ô$4´u$õTäEõc"ãBãB#¢%õ5ô”ådô”4Uõ$Ud”Ur'Ó°¢v—B&—6ÖâFW†V7WFU&vUDDR$•&VFW$¦ö""4UB'&W7VÇD§6öâ#ÒG´¥4ôâç7G&–æv–g’‡&W7VÇD§6öâ—Ó£¦§6öæ"Â'WFFVDB#Ô5U%$TåEõD”ÔU5DÕt„U$R&–B#ÒG¶¦ö"æ–GÒäB&6ö×ç”–B#ÒG·&WçW6W"æ6ö×ç”–GÖ°¢&W2æ§6öâ‡¶ö³§G'VRÆ–C¦¦ö"æ–BÇ&öGV7DÆ–æW2ÆÖW76vS¢,éüë’ë<øëëÌëÌêÜø"øLëœëÌëüë¼ëüë<êüëüøRëøëüëŒë|ë¬ë\øÜøLë|ë¬ëëÒë<ëœëøLë|ëÒøLë\ë¼ëœë¬êâë¬ëøLëø|øìøëœø<ërâ'Ò“°§Ö6F6‚†W'&÷"—¶æW‡B†W'&÷"—×Ò“° §&÷WFW"ç÷7B‚"ö’×&VFW"ö¦ö'2ó¦¦ö$–B÷7WÆ–W""Ç&WV—&T6ö×ç”ÖöGVÆR‚$•õ$TDU""’Ç&WV—&T6ö×ç”ÖöGVÆR‚$”ådTåDõ%’"’Æ7–æ2‡&WÇ&W2ÆæW‡B“Óç·G'—°¢6öç7B&öG“×¢æö&¦V7B‡¶æÖS§¢ç7G&–ær‚’çG&–Ò‚’æÖ–âƒ"’æÖ‚ƒƒ’ÇF„–C§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒ3’æ÷F–öæÂ‚’æçVÆÆ&ÆR‚’ÆVÖ–Ã§¢çVæ–öâ…·¢ç7G&–ær‚’æVÖ–Â‚’Ç¢æÆ—FW&Â‚""•Ò’æ÷F–öæÂ‚’æçVÆÆ&ÆR‚’Ç†öæS§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒC’æ÷F–öæÂ‚’æçVÆÆ&ÆR‚’ÆFG&W73§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒ#S’æ÷F–öæÂ‚’æçVÆÆ&ÆR‚’Æ6—G“§¢ç7G&–ær‚’çG&–Ò‚’æÖ‚ƒ#’æ÷F–öæÂ‚’æçVÆÆ&ÆR‚—Ò’ç'6R‡&Wæ&öG—ÇÇ·Ò“°¢6öç7B¦ö'3Öv—B&—6ÖâGVW'•&v4TÄT5B&–B"Â'7F÷&T–B"e$ôÒ$•&VFW$¦ö""t„U$R&–B#ÒG·&Wç&×2æ¦ö$–GÒäB&6ö×ç”–B#ÒG·&WçW6W"æ6ö×ç”–GÒÄ”Ô•B°¢–b‚¦ö'5³Ò—&WGW&â&W2ç7FGW2ƒCB’æ§6öâ‡¶W'&÷#¢,éLë\ëÒë,øêÜëŒë|ë¬ëRërëëÜêÌë<ëÜøœø<ërâ'Ò“¶–b‡&WçW6W#òçFö¶VåG—SÓÓÒ%5Dõ$UôõU$Dõ""bg&WçW6W"ç7F÷&T–BÓÖ¦ö'5³Òç7F÷&T–B—&WGW&â&W2ç7FGW2ƒC2’æ§6öâ‡¶W'&÷#¢,éLë\ëÒêÜø|ë\ëœø"øøøÌø<ë,ëø<ërø<ëRëø\øLøÂøLëòøLëœëÌëüë¼øÌë<ëœëòâ'Ò“°¢6öç7BW†—7F–æsÖv—B7WÆ–W$ÖF6‚‡&WçW6W"æ6ö×ç”–BÆ&öG’“¶–b†W†—7F–ær—&WGW&â&W2æ§6öâ‡¶7&VFVC¦fÇ6RÇ7WÆ–W#¦W†—7F–ærÆÖW76vS¢,éòøøëüëÌë|ëŒë\ø\øLêìø"ø\øêìøø|ëRêìëLërø<øLëò&6´öff–6Rë¬ëë’ø<ø\ëÜëLêÜëŒë|ë¬ëRâ'Ò“°¢6öç7B7WÆ–W$–CÖ–B‚“¶v—B&—6ÖâFW†V7WFU&v”å4U%B”åDò%7WÆ–W""‚&–B"Â&6ö×ç”–B"Â&æÖR"Â'F„–B"Â&VÖ–Â"Â'†öæR"Â&FG&W72"Â&6—G’"Â&7F—fR"’dÅTU2‚G·7WÆ–W$–GÒÂG·&WçW6W"æ6ö×ç”–GÒÂG¶&öG’ææÖWÒÂG¶&öG’çF„–GÇÆçVÆÇÒÂG¶&öG’æVÖ–ÇÇÆçVÆÇÒÂG¶&öG’ç†öæWÇÆçVÆÇÒÂG¶&öG’æFG&W77ÇÆçVÆÇÒÂG¶&öG’æ6—G—ÇÆçVÆÇÒÇG'VR–°¢&W2ç7FGW2ƒ#’æ§6öâ‡¶7&VFVC§G'VRÇ7WÆ–W#§¶–C§7WÆ–W$–BÆæÖS¦&öG’ææÖRÇF„–C¦&öG’çF„–GÇÆçVÆÂÆVÖ–Ã¦&öG’æVÖ–ÇÇÆçVÆÂÇ†öæS¦&öG’ç†öæWÇÆçVÆÂÆFG&W73¦&öG’æFG&W77ÇÆçVÆÂÆ6—G“¦&öG’æ6—G—ÇÆçVÆÇÒÆÖW76vS¢,éòøøëüëÌë|ëŒë\ø\øLêìø"ë¬ëøLëø|øœøêüø<øLë|ë¬ëRø<øLëüø\ø"êøëüëÌë|ëŒë\ø\øLêÜø"øLëüøR&6´öff–6Râ'Ò“°§Ö6F6‚†W'&÷"—¶æW‡B†W'&÷"—×Ò“° ¦W‡÷'BFVfVÇB&÷WFW#° 
+import crypto from "crypto";
+import {Router} from "express";
+import {z} from "zod";
+import {prisma} from "../prisma.js";
+import {requireCompanyModule} from "../middleware/module-access.js";
+import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
+import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
+import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
+
+const router=Router();
+// Full-table vision regularly needs longer than the small FAST-header read.
+// Azure F0 can also reject immediately when its monthly quota is exhausted, so
+// leave the independent OpenAI fallback enough time to finish the original
+// image instead of converting a healthy fallback into POS_FAILED at 30 seconds.
+// The caller remains bounded and the operator-facing handoff is fire-and-forget.
+const FULL_OCR_PROVIDER_TIMEOUT_MS=70000;
+const CENTRAL_AZURE_PAGE_TIMEOUT_MS=25000;
+// Full invoice tables need a vision model tuned for bounded interactive work.
+// Do not inherit the general reasoning model: LAB proved that it can exceed the
+// provider budget on a clear 16-row page while the FAST vision path succeeds.
+const FULL_OCR_MODEL=process.env.OPENAI_INVOICE_FULL_MODEL||process.env.OPENAI_INVOICE_FAST_MODEL||"gpt-5-mini";
+const readAzurePagesSequentially=async pageJobs=>{
+  const pages=[];
+  for(const page of pageJobs)pages.push(normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS})));
+  return pages;
+};
+const isProviderTimeout=error=>/AZURE_TIMEOUT|TimeoutError|aborted due to timeout/i.test(String(error?.message||error));
+const providerErrorText=error=>String(error?.message||error||"UNKNOWN").replace(/\s+/g," ").trim().slice(0,500);
+const id=()=>crypto.randomUUID();
+const THRESHOLD=65;
+const TOTAL_TOLERANCE=0.05;
+const STEFANIDIS_TAX_ID="998878583";
+const MANTZILAS_TAX_ID="081565488";
+const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
+const isStefanidisInvoice=parsed=>cleanTaxId(parsed?.supplier?.taxId)===STEFANIDIS_TAX_ID||parsed?.supplierReadingProfile?.ruleKey==="STEFANIDIS_PRINTED_COLUMNS";
+const isMantzilasInvoice=parsed=>cleanTaxId(parsed?.supplier?.taxId)===MANTZILAS_TAX_ID||/ÎœÎ‘ÎÎ¤Î–Î™Î›Î‘Î£|MANTZILAS/.test(norm(parsed?.supplier?.name));
+const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZÎ‘-Î©0-9]/g,"");
+const greekLatinFold=value=>norm(value).replace(/[Î‘Î’Î•Î–Î—Î™ÎšÎœÎÎŸÎ¡Î¤Î¥Î§]/g,c=>({Î‘:"A",Î’:"B",Î•:"E",Î–:"Z",Î—:"H",Î™:"I",Îš:"K",Îœ:"M",Î:"N",ÎŸ:"O",Î¡:"P",Î¤:"T",Î¥:"Y",Î§:"X"}[c]||c));
+const validGreekTaxId=value=>{const v=cleanTaxId(value);if(v.length!==9||/^0+$/.test(v))return false;let sum=0;for(let i=0;i<8;i++)sum+=Number(v[i])*2**(8-i);return (sum%11)%10===Number(v[8]);};
+const editSimilarity=(a,b)=>{const x=greekLatinFold(a),y=greekLatinFold(b);if(!x||!y)return 0;if(x===y)return 1;const prev=Array.from({length:y.length+1},(_,i)=>i);for(let i=1;i<=x.length;i++){let left=i;for(let j=1;j<=y.length;j++){const next=prev[j];prev[j]=Math.min(prev[j]+1,left+1,prev[j-1]+(x[i-1]===y[j-1]?0:1));left=next;}}return 1-(prev[y.length]/Math.max(x.length,y.length));};
+const decimalText=value=>Math.max(0,Number(value||0)).toFixed(4).replace(".",",");
+const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
+
+function outputText(response){
+  if(typeof response?.output_text==="string"&&response.output_text.trim())return response.output_text;
+  for(const item of response?.output||[])for(const part of item?.content||[])if(part?.type==="output_text"&&part.text)return part.text;
+  return "";
+}
+
+async function supplierMatch(companyId,candidate={}){
+  const rawTaxId=cleanTaxId(candidate.taxId),taxId=validGreekTaxId(rawTaxId)?rawTaxId:"";
+  if(taxId){
+    const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
+    if(rows[0])return rows[0];
+  }
+  const key=norm(candidate.name);
+  if(key.length>=4){
+    const rows=await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","address","city" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`;
+    const exact=rows.find(row=>norm(row.name)===key);if(exact)return exact;
+    const close=rows.find(row=>{const k=norm(row.name);return key.length>=7&&k.length>=7&&(k.includes(key)||key.includes(k));});if(close)return close;
+    const ranked=rows.map(row=>({row,score:editSimilarity(candidate.name,row.name)})).sort((a,b)=>b.score-a.score);
+    const best=ranked[0],second=ranked[1];
+    // OCR may mix Greek and Latin glyphs; only auto-link when the name is
+    // sufficiently close and clearly beats the next supplier.
+    if(best&&best.score>=0.76&&(!second||best.score-(second.score||0)>=0.08))return best.row;
+  }
+  return null;
+}
+
+const productLineProperties={
+  rawText:{type:"string"},code:{type:"string"},barcode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitCost:{type:"number",minimum:0},retailPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount1Amount:{type:"number",minimum:0},discount2:{type:"number",minimum:0,maximum:100},discount2Amount:{type:"number",minimum:0},discount3:{type:"number",minimum:0,maximum:100},discount3Amount:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},exciseTotal:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},confidence:{type:"number",minimum:0,maximum:100}
+};
+const productLineRequired=["rawText","code","barcode","description","quantity","unit","unitsPerPackage","unitCost","retailPrice","discount1","discount1Amount","discount2","discount2Amount","discount3","discount3Amount","netAmount","exciseTotal","vatRate","grossAmount","confidence"];
+const vatSummaryItem={type:"object",additionalProperties:false,properties:{rate:{type:"number",enum:[0,6,13,24]},taxable:{type:"number",minimum:0},vat:{type:"number",minimum:0},gross:{type:"number",minimum:0}},required:["rate","taxable","vat","gross"]};
+// The POS provider response must not repeat the full invoice three times as
+// rawText, audit lines and structured productLines. The structured rows remain
+// authoritative; compact audit text is rebuilt locally from their rawText.
+const invoiceSchema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"}},required:["name","taxId"]},documentNumber:{type:"string"},documentDate:{type:"string"},totalGross:{type:"number",minimum:0},vatSummary:{type:"array",maxItems:4,items:vatSummaryItem},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["documentType","aiConfidence","supplier","documentNumber","documentDate","totalGross","vatSummary","productLines"]};
+const productTableSchema={type:"object",additionalProperties:false,properties:{vatSummary:{type:"array",maxItems:4,items:vatSummaryItem},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:productLineProperties,required:productLineRequired}}},required:["vatSummary","productLines"]};
+const vatSummaryText=summary=>(Array.isArray(summary)?summary:[]).map(row=>`${Number(row?.rate||0)}% ${money2(row?.taxable||0).toFixed(2)} ${money2(row?.vat||0).toFixed(2)} ${money2(row?.gross||0).toFixed(2)}`).join("\n");
+
+const normalizeProductLine=line=>{
+  const quantity=Math.max(0,Number(line?.quantity||0));
+  const netAmount=Math.max(0,Number(line?.netAmount||0));
+  let unitCost=Math.max(0,Number(line?.unitCost||0));if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
+  const vatRate=Math.max(0,Number(line?.vatRate||0));
+  const exciseTotal=Math.max(0,Number(line?.exciseTotal||0));
+  let grossAmount=Math.max(0,Number(line?.grossAmount||0));if(!grossAmount&&netAmount>0)grossAmount=(netAmount+exciseTotal)*(1+vatRate/100);
+  return {...line,rawText:String(line?.rawText||""),code:String(line?.code||"").trim(),barcode:String(line?.barcode||"").trim(),description:String(line?.description||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g,' ').trim(),quantity,unit:String(line?.unit||"").trim(),unitsPerPackage:Math.max(0,Number(line?.unitsPerPackage||0)),unitCost,retailPrice:Math.max(0,Number(line?.retailPrice||0)),discount1:Math.max(0,Number(line?.discount1||0)),discount1Amount:Math.max(0,Number(line?.discount1Amount||0)),discount2:Math.max(0,Number(line?.discount2||0)),discount2Amount:Math.max(0,Number(line?.discount2Amount||0)),discount3:Math.max(0,Number(line?.discount3||0)),discount3Amount:Math.max(0,Number(line?.discount3Amount||0)),netAmount,exciseTotal,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line?.confidence||0)))};
+};
+const lineGrossTotal=lines=>money2((lines||[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+const physicalRowFingerprint=line=>[
+  norm(line?.code),norm(line?.description||line?.rawText),Number(line?.quantity||0).toFixed(4),
+  Number(line?.unitCost||0).toFixed(4),Number(line?.netAmount||0).toFixed(2),
+  Number(line?.vatRate||0).toFixed(2),Number(line?.grossAmount||0).toFixed(2),
+  Number(line?.discount1||0).toFixed(2),Number(line?.discount2||0).toFixed(2),Number(line?.discount3||0).toFixed(2)
+].join("|");
+function collapseAdjacentTableReplay(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  if(total<=0||source.length<4||source.length%2!==0)return {lines:source,collapsed:false};
+  const collapsed=[];
+  for(let index=0;index<source.length;index+=2){
+    if(physicalRowFingerprint(source[index])!==physicalRowFingerprint(source[index+1]))return {lines:source,collapsed:false};
+    collapsed.push(source[index]);
+  }
+  const fullDifference=Math.abs(lineGrossTotal(source)-total),collapsedDifference=Math.abs(lineGrossTotal(collapsed)-total);
+  // A complete OCR replay may contain one genuinely repeated charge. Keep the
+  // second physical occurrence only when exactly one collapsed row closes the
+  // remaining invoice-total difference.
+  const missingFromSingleCopy=money2(total-lineGrossTotal(collapsed));
+  if(missingFromSingleCopy>TOTAL_TOLERANCE){
+    const genuine=collapsed.filter(line=>Math.abs(Number(line.grossAmount||0)-missingFromSingleCopy)<=TOTAL_TOLERANCE);
+    if(genuine.length===1){
+      const keepFingerprint=physicalRowFingerprint(genuine[0]),mixed=[];
+      for(let index=0;index<source.length;index+=2){mixed.push(source[index]);if(physicalRowFingerprint(source[index])===keepFingerprint)mixed.push(source[index+1])}
+      if(Math.abs(lineGrossTotal(mixed)-total)<=TOTAL_TOLERANCE)return {lines:mixed,collapsed:true,removed:source.length-mixed.length,genuineRepeatedRowPreserved:true};
+    }
+  }
+  const permittedDifference=Math.max(TOTAL_TOLERANCE,total*0.02);
+  if(collapsedDifference>permittedDifference||collapsedDifference>=fullDifference*0.25)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:source.length-collapsed.length};
+}
+function collapseExactDuplicateOverage(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  const overage=money2(lineGrossTotal(source)-total);
+  if(total<=0||source.length<2||overage<=TOTAL_TOLERANCE)return {lines:source,collapsed:false};
+  const groups=new Map();
+  source.forEach((line,index)=>{
+    const fingerprint=physicalRowFingerprint(line),indexes=groups.get(fingerprint)||[];
+    indexes.push(index);groups.set(fingerprint,indexes);
+  });
+  const candidates=[];
+  for(const indexes of groups.values()){
+    if(indexes.length!==2)continue;
+    const gross=money2(source[indexes[0]]?.grossAmount||0);
+    if(gross>0&&Math.abs(gross-overage)<=TOTAL_TOLERANCE)candidates.push(indexes[1]);
+  }
+  // The printed invoice total is an independent anchor, but it is safe to
+  // remove a row only when one unique pair is identical across code,
+  // description and the complete economic tuple. Ambiguous pairs remain for
+  // the fail-closed reconciliation path.
+  if(candidates.length!==1)return {lines:source,collapsed:false};
+  const removeIndex=candidates[0],collapsed=source.filter((_,index)=>index!==removeIndex);
+  if(Math.abs(lineGrossTotal(collapsed)-total)>TOTAL_TOLERANCE)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:1,overage};
+}
+// Some compact thermal receipts are extracted correctly once and then receive
+// a second, malformed tail from a supplemental reader.  Keep only a prefix
+// when it already reconciles exactly to the independently confirmed invoice
+// total and every discarded row is an unverified replay of an earlier printed
+// description.  This never invents a line or copies economics from history.
+function discardUnverifiedTrailingReplay(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  if(!(total>0)||source.length<2)return {lines:source,discarded:false};
+  for(let end=1;end<source.length;end++){
+    const prefix=source.slice(0,end),tail=source.slice(end);
+    if(Math.abs(lineGrossTotal(prefix)-total)>TOTAL_TOLERANCE)continue;
+    const safeTail=tail.every(line=>!line?.sourceColumnsVerified&&prefix.some(earlier=>descriptionsClose(earlier.description||earlier.rawText,line.description||line.rawText)));
+    if(safeTail)return {lines:prefix,discarded:true,removed:tail.length};
+  }
+  return {lines:source,discarded:false};
+}
+const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
+function mergeRecoveredLines(current,recovered){
+  const out=(current||[]).map(line=>({...line})),used=new Set();
+  for(const candidate of recovered||[]){
+    if(!String(candidate?.description||candidate?.rawText||"").trim())continue;
+    const available=(line,index)=>!used.has(index)&&(line.sourceFileIndex===undefined||candidate.sourceFileIndex===undefined||line.sourceFileIndex===candidate.sourceFileIndex)&&(line.sourcePage===undefined||candidate.sourcePage===undefined||line.sourcePage===candidate.sourcePage);
+    let index=-1;
+    if(candidate.code)index=out.findIndex((line,i)=>available(line,i)&&line.code&&norm(line.code)===norm(candidate.code));
+    if(index<0)index=out.findIndex((line,i)=>available(line,i)&&!(line.code&&candidate.code&&norm(line.code)!==norm(candidate.code))&&descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
+    if(index<0){used.add(out.length);out.push(normalizeProductLine(candidate));continue}
+    used.add(index);
+    const line=out[index];
+    if(line.sourceColumnsVerified&&!candidate.sourceColumnsVerified)continue;
+    out[index]=normalizeProductLine({...line,...(candidate.sourceColumnsVerified?candidate:{}),
+      rawText:candidate.rawText||line.rawText,code:candidate.code||line.code,barcode:candidate.barcode||line.barcode,description:candidate.description||line.description,
+      quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,unit:candidate.unit||line.unit,unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
+      unitCost:Number(candidate.unitCost||0)>0?candidate.unitCost:line.unitCost,retailPrice:Number(candidate.retailPrice||0)>0?candidate.retailPrice:line.retailPrice,netAmount:Number(candidate.netAmount||0)>0?candidate.netAmount:line.netAmount,
+      discount1:Number(candidate.discount1||0)>0?candidate.discount1:line.discount1,discount1Amount:Number(candidate.discount1Amount||0)>0?candidate.discount1Amount:line.discount1Amount,
+      discount2:Number(candidate.discount2||0)>0?candidate.discount2:line.discount2,discount2Amount:Number(candidate.discount2Amount||0)>0?candidate.discount2Amount:line.discount2Amount,
+      discount3:Number(candidate.discount3||0)>0?candidate.discount3:line.discount3,discount3Amount:Number(candidate.discount3Amount||0)>0?candidate.discount3Amount:line.discount3Amount,
+      vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
+      confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))});
+    if(candidate.sourceColumnsVerified)out[index]=normalizeProductLine({...out[index],...candidate});
+  }
+  return out.some(line=>line.sourceColumnsVerified)?out.sort(sourceOrder):out;
+}
+
+function restorePrintedRepeatedLine(lines,invoiceTotal,documentText){
+  const source=Array.isArray(lines)?lines:[],difference=money2(Number(invoiceTotal||0)-lineGrossTotal(source));
+  if(!(difference>TOTAL_TOLERANCE)||!String(documentText||"").trim())return {lines:source,restored:false};
+  const candidates=source.filter(line=>line.code&&Math.abs(Number(line.grossAmount||0)-difference)<=TOTAL_TOLERANCE);
+  if(candidates.length!==1)return {lines:source,restored:false};
+  const candidate=candidates[0],code=String(candidate.code).trim(),escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const printedOccurrences=(String(documentText).match(new RegExp(`(?:^|\\D)${escaped}(?=\\D|$)`,'g'))||[]).length;
+  const currentOccurrences=source.filter(line=>norm(line.code)===norm(code)).length;
+  // A matching total gap is not proof that the same physical row was printed
+  // twice: another omitted row plus shifted neighbouring economics can produce
+  // the same gap. Restore only when the current document text independently
+  // contains more occurrences of this exact supplier code than the structured
+  // table. Otherwise keep the mismatch so the complete printed-table verifier
+  // rereads codes, discounts, VAT and amounts from the image.
+  if(printedOccurrences<=currentOccurrences)return {lines:source,restored:false};
+  const restored=[...source,{...candidate,restoredPrintedOccurrence:true,azureSequence:Math.max(0,...source.map(line=>Number(line.azureSequence||0)))+1}];
+  if(Math.abs(lineGrossTotal(restored)-Number(invoiceTotal||0))>=Math.abs(difference))return {lines:source,restored:false};
+  return {lines:restored,restored:true,code};
+}
+
+function mergeAzureInvoicePages(pages){
+  const productLines=[],auditLines=[],rawTexts=[],confidenceValues=[];
+  let supplier={name:"",taxId:"",email:"",phone:"",address:"",city:""},documentNumber="",documentDate="",totalGross=0,finalTotalPage=0;
+  for(const [pageIndex,page] of pages.entries()){
+    const result=page&&typeof page==="object"?page:{};
+    const candidate=result.supplier&&typeof result.supplier==="object"?result.supplier:{};
+    for(const field of ["name","taxId","email","phone","address","city"])if(!supplier[field]&&candidate[field])supplier[field]=String(candidate[field]);
+    if(!documentNumber&&result.documentNumber)documentNumber=String(result.documentNumber);
+    if(!documentDate&&result.documentDate)documentDate=String(result.documentDate);
+    const pageTotal=money2(result.totalGross||0);
+    // A later positive page total replaces an earlier carried subtotal. Never sum
+    // "Î£Îµ/Î‘Ï€ÏŒ Î¼ÎµÏ„Î±Ï†Î¿ÏÎ¬" across pages.
+    if(pageTotal>0){totalGross=pageTotal;finalTotalPage=pageIndex+1}
+    const pageLines=Array.isArray(result.productLines)?result.productLines:[];
+    productLines.push(...pageLines.filter(line=>String(line?.description||line?.rawText||"").trim()).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
+    const visible=Array.isArray(result.lines)?result.lines:[];
+    auditLines.push(...visible.filter(line=>String(line?.text||"").trim()).map(line=>({text:String(line.text),confidence:Math.max(0,Math.min(100,Number(line.confidence||result.aiConfidence||0)))})));
+    const raw=String(result.rawText||"").trim();if(raw)rawTexts.push(`Î£Î•Î›Î™Î”Î‘ ${pageIndex+1}:\n${raw}`);
+    const confidence=Number(result.aiConfidence||0);if(confidence>0)confidenceValues.push(confidence);
+  }
+  const rawText=rawTexts.join("\n\n");
+  return {
+    documentType:/Î Î™Î£Î¤Î©Î¤Î™Îš|CREDIT\s*NOTE/i.test(rawText)?"CREDIT_NOTE":"INVOICE",
+    aiConfidence:confidenceValues.length?Math.round(confidenceValues.reduce((sum,value)=>sum+value,0)/confidenceValues.length*10)/10:0,
+    supplier,documentNumber,documentDate,totalGross,rawText,lines:auditLines,productLines,
+    azureDocumentIntelligence:true,azureUnifiedFallback:true,azurePageRecoveryCalled:true,
+    azurePageRecoveryRecovered:productLines.length,azurePageRecoveryPageCount:pages.length,
+    azureFinalTotalPage:finalTotalPage
+  };
+}
+
+
+router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS drafts FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "sourceType" IN ('OCR_DRAFT','AI_DRAFT','POS_OCR_DRAFT') AND "status"='DRAFT'`;
+  const connected=Boolean(process.env.OPENAI_API_KEY);res.json({twoStageReader:true,drafts:rows[0]?.drafts||0,localConfidenceThreshold:THRESHOLD,aiAutomatic:true,aiProviderConnected:connected,message:connected?"OCR Ï€ÏÏÏ„Î¿. ÎšÎ¬Ï„Ï‰ Î±Ï€ÏŒ 65% Î³Î¯Î½ÎµÏ„Î±Î¹ Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î¿Ï‚ ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿Ï‚ AI.":"OCR Ï€ÏÏÏ„Î¿. Î“Î¹Î± Î±Ï…Ï„ÏŒÎ¼Î±Ï„Î¿ AI ÎºÎ¬Ï„Ï‰ Î±Ï€ÏŒ 65% Î±Ï€Î±Î¹Ï„ÎµÎ¯Ï„Î±Î¹ OPENAI_API_KEY ÏƒÏ„Î¿Î½ server."});
+}catch(error){next(error)}});
+
+router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"),async(req,res,next)=>{let failureStage="validate-request";try{
+  const body=z.object({force:z.boolean().optional(),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([])}).parse(req.body||{});
+  failureStage="load-primary-job";
+  const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."purchaseDocumentId",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+  const job=jobs[0];if(!job)return res.status(404).json({error:"Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎµ Î· Î±Î½Î¬Î³Î½Ï‰ÏƒÎ·."});
+  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Î”ÎµÎ½ Î­Ï‡ÎµÎ¹Ï‚ Ï€ÏÏŒÏƒÎ²Î±ÏƒÎ· ÏƒÎµ Î±Ï…Ï„ÏŒ Ï„Î¿ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î¿."});
+  if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Î¤Î¿ OCR ÎµÎ¯Î½Î±Î¹ ÎºÎ¬Ï„Ï‰ Î±Ï€ÏŒ 65%, Î±Î»Î»Î¬ Î´ÎµÎ½ Î­Ï‡ÎµÎ¹ ÏƒÏ…Î½Î´ÎµÎ¸ÎµÎ¯ OPENAI_API_KEY ÏƒÏ„Î¿Î½ server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
+  if(!job.contentData)return res.status(409).json({error:"Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎµ Ï„Î¿ Î±ÏÏ‡Î¹ÎºÏŒ Î±ÏÏ‡ÎµÎ¯Î¿ Ï„Î¿Ï… Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï… Î³Î¹Î± ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿ AI."});
+
+  const pageJobs=[job];
+  for(const pageJobId of [...new Set(body.additionalPageJobIds)].filter(id=>id!==job.id)){
+    const rows=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${pageJobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+    const pageJob=rows[0];
+    if(!pageJob||pageJob.storeId!==job.storeId||!pageJob.contentData)return res.status(409).json({error:"Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎ±Î½ ÏŒÎ»ÎµÏ‚ Î¿Î¹ ÏƒÎµÎ»Î¯Î´ÎµÏ‚ Ï„Î¿Ï… ÎµÎ½Î¹Î±Î¯Î¿Ï… Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï…."});
+    pageJobs.push(pageJob);
+  }
+  const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+  const posHandoff=previous.posHandoff&&typeof previous.posHandoff==="object"?previous.posHandoff:null;
+  let preferCentralStefanidis=false,preferCentralMantzilas=false,trustedHandoffSupplier=null;
+  if(posHandoff?.supplierId){
+    const supplierRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${posHandoff.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
+    trustedHandoffSupplier=supplierRows[0]||null;
+    const supplierTaxId=cleanTaxId(supplierRows[0]?.taxId);
+    preferCentralStefanidis=supplierTaxId===STEFANIDIS_TAX_ID;
+    preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID;
+  }
+  const localRawText=pageJobs.map((page,index)=>`Î£Î•Î›Î™Î”Î‘ ${index+1}:\n${String(page.resultJson?.rawText||"").slice(0,12000)}`).join("\n\n").slice(0,60000);
+  const fileParts=pageJobs.map((page,index)=>page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||`invoice-page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()}:{type:"input_image",image_url:page.contentData,detail:"high"});
+  const prompt=`Î•Î¯ÏƒÎ±Î¹ Î´ÎµÏÏ„ÎµÏÎ¿Ï‚ ÎµÎ»ÎµÎ³ÎºÏ„Î®Ï‚ OCR Î³Î¹Î± ÎµÎ»Î»Î·Î½Î¹ÎºÎ¬ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î± Ï€ÏÎ¿Î¼Î·Î¸ÎµÏ…Ï„ÏÎ½. ÎˆÏ‡ÎµÎ¹Ï‚ Ï„Î¿ Î Î¡Î©Î¤ÎŸÎ¤Î¥Î ÎŸ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ Ï‰Ï‚ ÎµÎ¹ÎºÏŒÎ½Î±/PDF ÎºÎ±Î¹ Î±Ï€ÏŒ ÎºÎ¬Ï„Ï‰ Ï„Î¿ Ï€ÏÏŒÏ‡ÎµÎ¹ÏÎ¿ OCR ÎºÎµÎ¯Î¼ÎµÎ½Î¿. Î§ÏÎ·ÏƒÎ¹Î¼Î¿Ï€Î¿Î¯Î·ÏƒÎµ ÎºÎ±Î¹ Ï„Î± Î´ÏÎ¿, Î¼Îµ Ï€ÏÎ¿Ï„ÎµÏÎ±Î¹ÏŒÏ„Î·Ï„Î± ÏƒÏ„Î¿ Ï€ÏÏ‰Ï„ÏŒÏ„Ï…Ï€Î¿. Î‘Î½Î±Î³Î½ÏÏÎ¹ÏƒÎµ Ï€ÏÏÏ„Î± documentType: CREDIT_NOTE Î¼ÏŒÎ½Î¿ ÏŒÏ„Î±Î½ Ï„Î¿ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ Î³ÏÎ¬Ï†ÎµÎ¹ ÎºÎ±Î¸Î±ÏÎ¬ Î Î™Î£Î¤Î©Î¤Î™ÎšÎŸ / CREDIT NOTE, Î´Î¹Î±Ï†Î¿ÏÎµÏ„Î¹ÎºÎ¬ INVOICE. Î’ÏÎµÏ‚ Ï„Î¿Î½ Î•ÎšÎ”ÎŸÎ¤Î—/Î Î¡ÎŸÎœÎ—Î˜Î•Î¥Î¤Î—, Î‘Î¦Îœ, Î±ÏÎ¹Î¸Î¼ÏŒ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÎ¿Ï, Î·Î¼ÎµÏÎ¿Î¼Î·Î½Î¯Î± ÎºÎ±Î¹ Ï„ÎµÎ»Î¹ÎºÏŒ Ï€Î¿ÏƒÏŒ Ï‰Ï‚ Î¸ÎµÏ„Î¹ÎºÎ® Î±Ï€ÏŒÎ»Ï…Ï„Î· Î±Î¾Î¯Î±. documentDate ÏƒÎµ YYYY-MM-DD. ÎœÎ·Î½ ÎµÏ†ÎµÏ…ÏÎ¯ÏƒÎºÎµÎ¹Ï‚ ÏƒÏ„Î¿Î¹Ï‡ÎµÎ¯Î±.
+
+ÎŸÎ¹ ${pageJobs.length} Ï€Î·Î³Î­Ï‚ Ï€Î¿Ï… Î±ÎºÎ¿Î»Î¿Ï…Î¸Î¿ÏÎ½ ÎµÎ¯Î½Î±Î¹ Î´Î¹Î±Î´Î¿Ï‡Î¹ÎºÎ­Ï‚ ÏƒÎµÎ»Î¯Î´ÎµÏ‚ Ï„Î¿Ï… Î™Î”Î™ÎŸÎ¥ Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï…, Î¼Îµ Ï„Î·Î½ Î±ÎºÏÎ¹Î²Î® ÏƒÎµÎ¹ÏÎ¬ Ï€Î¿Ï… Î´ÏŒÎ¸Î·ÎºÎ±Î½. Î‘Î½ Î¼Î¯Î± Ï€Î·Î³Î® ÎµÎ¯Î½Î±Î¹ Ï€Î¿Î»Ï…ÏƒÎ­Î»Î¹Î´Î¿ PDF, ÎºÏÎ¬Ï„Î·ÏƒÎµ ÎºÎ±Î¹ Ï„Î·Î½ ÎµÏƒÏ‰Ï„ÎµÏÎ¹ÎºÎ® ÏƒÎµÎ¹ÏÎ¬ Ï„Ï‰Î½ ÏƒÎµÎ»Î¯Î´Ï‰Î½ Ï„Î¿Ï…. Î”Î¹Î¬Î²Î±ÏƒÎµ Ï„Î¿ ÏƒÏÎ½Î¿Î»Î¿ Ï‰Ï‚ Î­Î½Î± ÎµÎ½Î¹Î±Î¯Î¿ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ ÎºÎ±Î¹ ÎµÏ€Î­ÏƒÏ„ÏÎµÏˆÎµ Ï„Î¹Ï‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï€ÏÏÏ„Î± Î±Ï€ÏŒ Ï„Î· ÏƒÎµÎ»Î¯Î´Î± 1, Î¼ÎµÏ„Î¬ Î±Ï€ÏŒ Ï„Î· ÏƒÎµÎ»Î¯Î´Î± 2 Îº.Î¿.Îº.
+
+Î£Îµ Ï€Î¿Î»Ï…ÏƒÎ­Î»Î¹Î´Î¿ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ, Ï„Î¿ Ï€Î¿ÏƒÏŒ Â«Î£Îµ Î¼ÎµÏ„Î±Ï†Î¿ÏÎ¬Â» Î® Â«Î‘Ï€ÏŒ Î¼ÎµÏ„Î±Ï†Î¿ÏÎ¬Â» ÎµÎ¯Î½Î±Î¹ Î¼ÎµÏ„Î±Ï†ÎµÏÏŒÎ¼ÎµÎ½Î¿ ÎµÎ½Î´Î¹Î¬Î¼ÎµÏƒÎ¿ ÏƒÏÎ½Î¿Î»Î¿ ÎºÎ±Î¹ Î”Î•Î Ï€ÏÎ¿ÏƒÏ„Î¯Î¸ÎµÏ„Î±Î¹ Î´ÎµÏÏ„ÎµÏÎ· Ï†Î¿ÏÎ¬. Î©Ï‚ totalGross Ï‡ÏÎ·ÏƒÎ¹Î¼Î¿Ï€Î¿Î¯Î·ÏƒÎµ Î±Ï€Î¿ÎºÎ»ÎµÎ¹ÏƒÏ„Î¹ÎºÎ¬ Ï„Î·Î½ Â«Î¤Î•Î›Î™ÎšÎ— Î‘ÎÎ™Î‘Â» Î® Ï„Î¿ Ï„ÎµÎ»Î¹ÎºÏŒ Ï€Î»Î·ÏÏ‰Ï„Î­Î¿ Ï€Î¿ÏƒÏŒ Ï„Î·Ï‚ Ï„ÎµÎ»ÎµÏ…Ï„Î±Î¯Î±Ï‚ ÏƒÎµÎ»Î¯Î´Î±Ï‚.
+
+Î£Ï„Î¿ productLines ÎµÏ€Î­ÏƒÏ„ÏÎµÏˆÎµ ÎœÎŸÎÎŸ ÎŸÎ›Î•Î£ Ï„Î¹Ï‚ Ï€ÏÎ±Î³Î¼Î±Ï„Î¹ÎºÎ­Ï‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ ÎµÎ¹Î´ÏÎ½ Ï„Î¿Ï… Ï€Î¯Î½Î±ÎºÎ±, ÎºÎ±Î¼Î¯Î± ÎºÎµÏ†Î±Î»Î¯Î´Î±/IBAN/ÏƒÏÎ½Î¿Î»Î¿/footer. Î£Ï„Î¿ rawText ÎºÎ¬Î¸Îµ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Î¿Ï‚ Î±Î½Ï„Î­Î³ÏÎ±ÏˆÎµ Î¿Î»ÏŒÎºÎ»Î·ÏÎ· Ï„Î· ÏƒÏ…Î³ÎºÎµÎºÏÎ¹Î¼Î­Î½Î· Ï†Ï…ÏƒÎ¹ÎºÎ® ÏƒÎµÎ¹ÏÎ¬ Î±Ï€ÏŒ Ï„Î¿Î½ ÎºÏ‰Î´Î¹ÎºÏŒ Î¼Î­Ï‡ÏÎ¹ Ï„Î¿ Ï€Î¿ÏƒÏŒ Î¦Î Î‘, ÏÏƒÏ„Îµ quantity Ã— unitCost, Î­ÎºÏ€Ï„Ï‰ÏƒÎ·, ÎºÎ±Î¸Î±ÏÎ® Î±Î¾Î¯Î±, Î•Î¦Îš ÎºÎ±Î¹ Î¦Î Î‘ Î½Î± Î¼Ï€Î¿ÏÎ¿ÏÎ½ Î½Î± ÎµÏ€Î±Î»Î·Î¸ÎµÏ…Ï„Î¿ÏÎ½. ÎœÎ·Î½ ÎµÏ€Î±Î½Î±Î»Î¬Î²ÎµÎ¹Ï‚ ÏŒÎ»Î¿ Ï„Î¿ Ï€Î±ÏÎ±ÏƒÏ„Î±Ï„Î¹ÎºÏŒ Ï‰Ï‚ Î¾ÎµÏ‡Ï‰ÏÎ¹ÏƒÏ„ÏŒ rawText Î® lines. ÎœÎ·Î½ Ï€Î±ÏÎ±Î»ÎµÎ¯ÏˆÎµÎ¹Ï‚ Ï€ÏÎ¿ÏŠÏŒÎ½ ÎµÏ€ÎµÎ¹Î´Î® Î¼Î¯Î± Î±ÏÎ¹Î¸Î¼Î·Ï„Î¹ÎºÎ® ÏƒÏ„Î®Î»Î· ÎµÎ¯Î½Î±Î¹ Î´ÏÏƒÎºÎ¿Î»Î·: ÎºÏÎ¬Ï„Î·ÏƒÎµ Ï„Î· Î³ÏÎ±Î¼Î¼Î® ÎºÎ±Î¹ Î²Î¬Î»Îµ 0 Î¼ÏŒÎ½Î¿ ÏƒÏ„Î¿ Ï€ÎµÎ´Î¯Î¿ Ï€Î¿Ï… Ï€ÏÎ±Î³Î¼Î±Ï„Î¹ÎºÎ¬ Î´ÎµÎ½ Ï†Î±Î¯Î½ÎµÏ„Î±Î¹. Î£Ï„Î¿ vatSummary Î±Î½Ï„Î­Î³ÏÎ±ÏˆÎµ Ï„Î¹Ï‚ Î¿ÏÎ±Ï„Î­Ï‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï„Î·Ï‚ Î‘ÎÎ‘Î›Î¥Î£Î—Î£ Î¥Î ÎŸÎ›ÎŸÎ“Î™Î£ÎœÎŸÎ¥ Î¦Î Î‘ Ï‰Ï‚ rate, taxable, vat ÎºÎ±Î¹ gross.
+
+Î“Î¹Î± ÎšÎ‘Î˜Î• Ï€ÏÎ¿ÏŠÏŒÎ½ Î±ÎºÎ¿Î»Î¿ÏÎ¸Î·ÏƒÎµ Ï„Î·Î½ Î™Î”Î™Î‘ ÎŸÎ¡Î™Î–ÎŸÎÎ¤Î™Î‘ Î£Î•Î™Î¡Î‘ Î±Ï€ÏŒ Î±ÏÎ¹ÏƒÏ„ÎµÏÎ¬ Ï€ÏÎ¿Ï‚ Ï„Î± Î´ÎµÎ¾Î¹Î¬. Î§Î±ÏÏ„Î¿Î³ÏÎ¬Ï†Î·ÏƒÎ·: Î›Î™Î‘ÎÎ™ÎšÎ— Î¤Î™ÎœÎ—=retailPrice, Î ÎŸÎ£ÎŸÎ¤Î—Î¤Î‘=quantity, Îœ.Îœ.=unit, Î¤Î™ÎœÎ— ÎœÎŸÎÎ‘Î”Î‘Î£ Î Î¡Î™Î Î‘Î ÎŸ Î•ÎšÎ Î¤Î©Î£Î•Î™Î£=unitCost, Î•ÎºÏ€Ï„.1/2/3=discount1/2/3, Î±Î½Ï„Î¯ÏƒÏ„Î¿Î¹Ï‡Î¿ Ï€Î¿ÏƒÏŒ Î­ÎºÏ€Ï„Ï‰ÏƒÎ·Ï‚=discount1Amount/2Amount/3Amount, ÎšÎ±Î¸ Î‘Î¾Î¯Î± Î¼ÎµÏ„Î¬ Ï„Î·Î½ Î­ÎºÏ€Ï„Ï‰ÏƒÎ·=netAmount, Î•Î¦Îš=exciseTotal, %Î¦Î Î‘=vatRate. Î— Ï†Î¿ÏÎ¿Î»Î¿Î³Î·Ï„Î­Î± Î±Î¾Î¯Î± ÎµÎ¯Î½Î±Î¹ netAmount+exciseTotal. Î— retailPrice ÎµÎ¯Î½Î±Î¹ Î· Ï„Î¹Î¼Î® Ï€ÏÎ»Î·ÏƒÎ·Ï‚ ÎºÎ±Î¹ Î”Î•Î ÎµÎ¯Î½Î±Î¹ Î· unitCost. ÎœÎ·Î½ Î±Î½Ï„Î¹ÎºÎ±Î¸Î¹ÏƒÏ„Î¬Ï‚ Ï„Î·Î½ Î±ÏÏ‡Î¹ÎºÎ® unitCost Î¼Îµ netAmount/quantity ÏŒÏ„Î±Î½ Ï†Î±Î¯Î½Î¿Î½Ï„Î±Î¹ ÎµÎºÏ€Ï„ÏÏƒÎµÎ¹Ï‚. Î‘Î½ Î´ÎµÎ½ Ï…Ï€Î¬ÏÏ‡ÎµÎ¹ Î¿ÏÎ±Ï„Î® Î»Î¹Î±Î½Î¹ÎºÎ® Î²Î¬Î»Îµ retailPrice=0. Î‘Î½ Ï…Ï€Î¬ÏÏ‡ÎµÎ¹ Ï„ÎµÎ»Î¹ÎºÎ® Î±Î¾Î¯Î± Î¼Îµ Î¦Î Î‘ ÎµÎ¯Î½Î±Î¹ grossAmount. Î‘ÏÎ¹Î¸Î¼Î¿Î¯ ÏƒÏ…ÏƒÎºÎµÏ…Î±ÏƒÎ¯Î±Ï‚ (500ML, 6x330ml Îº.Î»Ï€.) Î´ÎµÎ½ ÎµÎ¯Î½Î±Î¹ Ï€Î¿ÏƒÏŒÏ„Î·Ï„Î±/Ï„Î¹Î¼Î®. Î‘Î½ unitCost Î´ÎµÎ½ Ï†Î±Î¯Î½ÎµÏ„Î±Î¹ ÎºÎ±Î¹ Î´ÎµÎ½ Ï…Ï€Î¬ÏÏ‡Î¿Ï…Î½ ÎµÎºÏ€Ï„ÏÏƒÎµÎ¹Ï‚ Î±Î»Î»Î¬ quantity>0 ÎºÎ±Î¹ netAmount>0, unitCost=netAmount/quantity. Î‘Î½ grossAmount Î´ÎµÎ½ Ï†Î±Î¯Î½ÎµÏ„Î±Î¹, Ï…Ï€Î¿Î»ÏŒÎ³Î¹ÏƒÎ­ Ï„Î¿ Ï€Î¬Î½Ï‰ ÏƒÏ„Î· Ï†Î¿ÏÎ¿Î»Î¿Î³Î·Ï„Î­Î± Î±Î¾Î¯Î±.
+
+Î Î¡Î™Î ÎµÏ€Î¹ÏƒÏ„ÏÎ­ÏˆÎµÎ¹Ï‚ JSON, Î¼Î­Ï„ÏÎ·ÏƒÎµ Î¿Ï€Ï„Î¹ÎºÎ¬ Ï€ÏŒÏƒÎµÏ‚ Ï€ÏÎ±Î³Î¼Î±Ï„Î¹ÎºÎ­Ï‚ ÏƒÎµÎ¹ÏÎ­Ï‚ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Ï‰Î½ Ï…Ï€Î¬ÏÏ‡Î¿Ï…Î½ ÎºÎ±Î¹ Î²ÎµÎ²Î±Î¹ÏÏƒÎ¿Ï… ÏŒÏ„Î¹ Ï„Î¿ productLines Î­Ï‡ÎµÎ¹ Ï„Î¿Î½ Î¯Î´Î¹Î¿ Î±ÏÎ¹Î¸Î¼ÏŒ. ÎˆÏ€ÎµÎ¹Ï„Î± ÏƒÏÎ³ÎºÏÎ¹Î½Îµ Î½Î¿Î·Ï„Î¬ Ï„Î¿ Î¬Î¸ÏÎ¿Î¹ÏƒÎ¼Î± Ï„Ï‰Î½ Ï„ÎµÎ»Î¹ÎºÏÎ½ Î±Î¾Î¹ÏÎ½ Î³ÏÎ±Î¼Î¼ÏÎ½ Î¼Îµ Ï„Î¿ Ï„ÎµÎ»Î¹ÎºÏŒ Ï€Î»Î·ÏÏ‰Ï„Î­Î¿ Ï€Î¿ÏƒÏŒ. Î‘Î½ Ï…Ï€Î¬ÏÏ‡ÎµÎ¹ ÎµÎ¼Ï†Î±Î½Î®Ï‚ Î¼ÎµÎ³Î¬Î»Î· Î´Î¹Î±Ï†Î¿ÏÎ¬, Î¾Î±Î½Î±ÎºÎ¿Î¯Ï„Î± Ï„Î¿Î½ Ï€Î¯Î½Î±ÎºÎ± Î³Î¹Î± Î³ÏÎ±Î¼Î¼Î® Ï€Î¿Ï… Ï€Î±ÏÎ­Î»ÎµÎ¹ÏˆÎµÏ‚ Ï€ÏÎ¹Î½ Î±Ï€Î±Î½Ï„Î®ÏƒÎµÎ¹Ï‚.
+
+Î Î¡ÎŸÎ§Î•Î™Î¡ÎŸ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(Î´ÎµÎ½ Ï…Ï€Î®ÏÎ¾Îµ Ï‡ÏÎ®ÏƒÎ¹Î¼Î¿ OCR ÎºÎµÎ¯Î¼ÎµÎ½Î¿)"}`;
+  let parsed=null,unifiedAiFailure=null,centralAzureFailure=null;
+  failureStage="read-provider-pages";
+  if((preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+    try{
+      const azurePages=await readAzurePagesSequentially(pageJobs);
+      parsed=mergeAzureInvoicePages(azurePages);
+      parsed.totalGross=money2(posHandoff.totalGross||parsed.totalGross);
+      parsed.documentNumber=String(posHandoff.documentNumber||parsed.documentNumber||"");
+      parsed.documentDate=String(posHandoff.documentDate||parsed.documentDate||"");
+      if(preferCentralStefanidis)parsed.stefanidisCentralFastPath=true;
+      if(preferCentralMantzilas)parsed.mantzilasCentralFastPath=true;
+    }catch(error){centralAzureFailure=error;unifiedAiFailure=error}
+  }
+  if(!parsed)try{
+    const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:FULL_OCR_MODEL,reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
+    const payload=await apiResponse.json().catch(()=>({}));
+    if(!apiResponse.ok){const error=new Error(payload?.error?.message||`ÎŸ AI ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿Ï‚ Î±Ï€Î­Ï„Ï…Ï‡Îµ (${apiResponse.status}).`);error.status=502;throw error}
+    try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("ÎŸ AI ÎµÏ€Î±Î½Î­Î»ÎµÎ³Ï‡Î¿Ï‚ Î´ÎµÎ½ ÎµÏ€Î­ÏƒÏ„ÏÎµÏˆÎµ Î­Î³ÎºÏ…ÏÎ± Î´Î¿Î¼Î·Î¼Î­Î½Î± ÏƒÏ„Î¿Î¹Ï‡ÎµÎ¯Î±.");error.status=502;throw error}
+  }catch(error){unifiedAiFailure=error}
+
+  // A transient/invalid unified OpenAI response must not discard a payment or
+  // silently process only page 1. Recover every ordered page through Azure,
+  // then continue as one invoice. If any page cannot be read, fail closed.
+  if(!parsed){
+    // The centrally profiled supplier already received a complete ordered Azure
+    // pass above. Do not repeat the same two provider calls after the OpenAI
+    // fallback: that exceeded the caller deadline and caused endless recovery.
+    if((preferCentralStefanidis||preferCentralMantzilas)&&centralAzureFailure){
+      const timeout=isProviderTimeout(centralAzureFailure)||isProviderTimeout(unifiedAiFailure);
+      const wrapped=new Error(`${timeout?"FULL_OCR_PROVIDER_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: AZURE=${providerErrorText(centralAzureFailure)}; OPENAI=${providerErrorText(unifiedAiFailure)}`);
+      wrapped.status=timeout?503:502;throw wrapped;
+    }
+    const azureConfigured=Boolean(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
+    if(!azureConfigured)throw unifiedAiFailure;
+    // Recover all invoice pages concurrently. The old sequential fallback
+    // consumed one complete provider timeout per page and then leaked a plain
+    // 500, so the durable POS worker could neither retry nor explain the wait.
+    const azureAttempts=await Promise.allSettled(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
+    const failedPageIndex=azureAttempts.findIndex(result=>result.status==="rejected");
+    if(failedPageIndex>=0){
+      const failure=azureAttempts[failedPageIndex].reason,timeout=isProviderTimeout(failure);
+      const wrapped=new Error(`${timeout?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: OPENAI=${providerErrorText(unifiedAiFailure)}; AZURE_PAGE_${failedPageIndex+1}=${providerErrorText(failure)}`);
+      wrapped.status=timeout?503:502;throw wrapped;
+    }
+    const azurePages=azureAttempts.map(result=>result.value);
+    parsed=mergeAzureInvoicePages(azurePages);
+    if(!parsed.productLines.length){const error=new Error("ÎŸÎ¹ ÏƒÎµÎ»Î¯Î´ÎµÏ‚ Î±Î½Î±Î³Î½ÏÏƒÏ„Î·ÎºÎ±Î½, Î±Î»Î»Î¬ Î´ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎ±Î½ Î±ÏƒÏ†Î±Î»ÎµÎ¯Ï‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Ï‰Î½.");error.status=422;throw error}
+    parsed.openAiUnifiedFailed=true;
+    parsed.openAiUnifiedRecovery="AZURE_ALL_PAGES";
+  }
+  // The POS operator already confirmed the supplier before creating the
+  // durable handoff. Some full-page providers omit or garble that header even
+  // while reading the table. Preserve the trusted tenant supplier identity so
+  // its learned layout, complete-table verifier and fail-closed rules cannot
+  // be bypassed by a missing OCR supplier field.
+  if(trustedHandoffSupplier){
+    parsed.supplier={...(parsed.supplier&&typeof parsed.supplier==="object"?parsed.supplier:{}),name:trustedHandoffSupplier.name||"",taxId:trustedHandoffSupplier.taxId||""};
+    parsed.posHandoffSupplierApplied=true;
+  }
+  // The fast POS handoff total is the amount the operator explicitly confirmed
+  // (and, for PAID, the immutable payment amount). Use it as the reconciliation
+  // anchor for every supplier, not only the centrally profiled fast path.
+  const linkedDraft=job.purchaseDocumentId?await prisma.$queryRaw`SELECT "totalGross" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1`:[];
+  const confirmedHandoffTotal=money2(linkedDraft[0]?.totalGross||posHandoff?.totalGross||0);
+  if(confirmedHandoffTotal>0){
+    parsed.totalGross=confirmedHandoffTotal;
+    parsed.posConfirmedTotalApplied=true;
+    parsed.posConfirmedTotalSource=linkedDraft[0]?"LINKED_DRAFT":"POS_HANDOFF";
+  }
+  parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+  if(!String(parsed.rawText||"").trim())parsed.rawText=parsed.productLines.map(line=>String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim()).filter(Boolean).join("\n");
+  const auditLines=Array.isArray(parsed.lines)&&parsed.lines.length
+    ?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000)
+    :parsed.productLines.map(line=>({text:String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim(),confidence:Number(line.confidence||parsed.aiConfidence||0)})).filter(line=>line.text).slice(0,1000);
+  parsed.lines=auditLines;
+
+  failureStage="apply-supplier-profile-initial";
+  parsed=await applyCentralSupplierProfile(parsed);
+  if(isMantzilasInvoice(parsed))parsed.productLines=parsed.productLines.map(recoverMantzilasEconomics).map(applyMantzilasPackaging);
+  // Recover the printed retail / unit / quantity columns from the current
+  // source itself when a reader has shifted the numeric columns. This rule is
+  // layout-based, applies to every supplier, and never reuses prior invoice
+  // quantities or prices.
+  let printedDocumentText=[parsed.rawText,localRawText,vatSummaryText(parsed.vatSummary)].filter(Boolean).join("\n");
+  parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
+  const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
+  const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
+  const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
+  const partialNumericMissing=parsed.productLines.some(line=>Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0||Number(line.netAmount||0)<=0);
+  // The MANTZILAS verifier below already rereads every physical row, rebuilds
+  // an omitted row, validates each discount/economic chain and requires the
+  // printed VAT footer plus exact invoice total. Running a separate table pass
+  // and then Azure again before that verifier made one attempt exceed the
+  // background request budget and caused repeated six-minute POS_PROCESSING.
+  const mantzilasSingleVerifierPath=preferCentralMantzilas&&parsed.mantzilasCentralFastPath===true;
+  const needsTablePass=!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
+  const inconsistentRows=parsed.productLines.some(line=>!line.sourceColumnsVerified&&Math.abs(Number(line.quantity||0)*Number(line.unitCost||0)*[line.discount1,line.discount2,line.discount3].reduce((f,d)=>f*(1-Number(d||0)/100),1)-Number(line.netAmount||0))>0.05);
+  if(needsTablePass||(!mantzilasSingleVerifierPath&&inconsistentRows)){
+    failureStage="table-recheck";
+    const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
+    const tablePrompt=`Î•Î¯ÏƒÎ±Î¹ ÎµÎ¾ÎµÎ¹Î´Î¹ÎºÎµÏ…Î¼Î­Î½Î¿Ï‚ Î¿Ï€Ï„Î¹ÎºÏŒÏ‚ ÎµÎ»ÎµÎ³ÎºÏ„Î®Ï‚ Î Î™ÎÎ‘ÎšÎ‘ Î•Î™Î”Î©Î Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï…. ÎšÎ¿Î¯Ï„Î± Ï„Î¿Î½ Ï€Î¯Î½Î±ÎºÎ± Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Ï‰Î½ ÎºÎ±Î¹ ÎµÏ€Î­ÏƒÏ„ÏÎµÏˆÎµ ÎŸÎ›Î•Î£ Ï„Î¹Ï‚ Ï€ÏÎ±Î³Î¼Î±Ï„Î¹ÎºÎ­Ï‚ ÏƒÎµÎ¹ÏÎ­Ï‚ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Ï‰Î½ Ï€Î¿Ï… Î²Î»Î­Ï€ÎµÎ¹Ï‚, ÏŒÏ‡Î¹ Î¼ÏŒÎ½Î¿ ÏŒÏƒÎµÏ‚ Ï…Ï€Î¬ÏÏ‡Î¿Ï…Î½ ÏƒÏ„Î± anchors. Î‘Î³Î½ÏŒÎ·ÏƒÎµ ÎºÎµÏ†Î±Î»Î¯Î´ÎµÏ‚, ÏƒÏ„Î¿Î¹Ï‡ÎµÎ¯Î± ÎµÏ„Î±Î¹ÏÎµÎ¹ÏÎ½ ÎºÎ±Î¹ Ï„ÏÎ¬Ï€ÎµÎ¶ÎµÏ‚/IBAN. Î£Ï„Î¿ rawText Î±Î½Ï„Î­Î³ÏÎ±ÏˆÎµ Î¿Î»ÏŒÎºÎ»Î·ÏÎ· Ï„Î· Ï†Ï…ÏƒÎ¹ÎºÎ® ÏƒÎµÎ¹ÏÎ¬ ÎºÎ¬Î¸Îµ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Î¿Ï‚. Î£Ï„Î¿ vatSummary Î±Î½Ï„Î­Î³ÏÎ±ÏˆÎµ Ï‡Ï‰ÏÎ¹ÏƒÏ„Î¬ Î¼ÏŒÎ½Î¿ Ï„Î¹Ï‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï„Î·Ï‚ Î‘ÎÎ‘Î›Î¥Î£Î—Î£ Î¥Î ÎŸÎ›ÎŸÎ“Î™Î£ÎœÎŸÎ¥ Î¦Î Î‘ Ï‰Ï‚ rate, taxable, vat ÎºÎ±Î¹ gross.
+
+ÎŸ Ï€ÏÏÏ„Î¿Ï‚ Î­Î»ÎµÎ³Ï‡Î¿Ï‚ Î²ÏÎ®ÎºÎµ Ï€ÏÎ¿ÏƒÏ‰ÏÎ¹Î½Î¬:\n${anchors||"(ÎºÎ±Î¼Î¯Î± Î±ÏƒÏ†Î±Î»Î®Ï‚ Î³ÏÎ±Î¼Î¼Î®)"}
+
+Î¤ÎµÎ»Î¹ÎºÏŒ Ï€Î»Î·ÏÏ‰Ï„Î­Î¿ Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï…: ${invoiceTotal.toFixed(2)} â‚¬. Î†Î¸ÏÎ¿Î¹ÏƒÎ¼Î± grossAmount Ï„Ï‰Î½ Ï€ÏÎ¿ÏƒÏ‰ÏÎ¹Î½ÏÎ½ Î³ÏÎ±Î¼Î¼ÏÎ½: ${initialLinesTotal.toFixed(2)} â‚¬. ${totalMismatch?`Î¥Ï€Î¬ÏÏ‡ÎµÎ¹ Î´Î¹Î±Ï†Î¿ÏÎ¬ ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} â‚¬, Î¬ÏÎ± Î±Î½Î±Î¶Î®Ï„Î·ÏƒÎµ ÎµÎ¹Î´Î¹ÎºÎ¬ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Ï‰Î½ Ï€Î¿Ï… Ï€Î±ÏÎ±Î»ÎµÎ¯Ï†Î¸Î·ÎºÎ±Î½.`:""}
+
+Î•Ï€Î­ÏƒÏ„ÏÎµÏˆÎµ ÎšÎ‘Î˜Î• Î¿ÏÎ±Ï„Î® Î³ÏÎ±Î¼Î¼Î® Ï€ÏÎ¿ÏŠÏŒÎ½Ï„Î¿Ï‚ Î¼Î¯Î± Ï†Î¿ÏÎ¬. Î“Î¹Î± ÎºÎ¬Î¸Îµ ÏƒÎµÎ¹ÏÎ¬ Î´Î¹Î¬Î²Î±ÏƒÎµ Î¿ÏÎ¹Î¶ÏŒÎ½Ï„Î¹Î±: ÎšÏ‰Î´Î¹ÎºÏŒÏ‚/Î ÎµÏÎ¹Î³ÏÎ±Ï†Î® | Îœ.Îœ. | Ï€Î¿ÏƒÏŒÏ„Î·Ï„Î± | Î±ÏÏ‡Î¹ÎºÎ® Î¤Î¹Î¼Î® ÎœÎ¿Î½Î¬Î´Î±Ï‚ | Î±Î¾Î¯Î± Ï€ÏÎ¿ Î­ÎºÏ€Ï„Ï‰ÏƒÎ·Ï‚ | Î­ÎºÏ€Ï„Ï‰ÏƒÎ· % ÎºÎ±Î¹ Ï€Î¿ÏƒÏŒ | Î±Î¾Î¯Î± Î¼ÎµÏ„Î¬ Ï„Î·Î½ Î­ÎºÏ€Ï„Ï‰ÏƒÎ· | Î•Î¦Îš | Ï†Î¿ÏÎ¿Î»Î¿Î³Î·Ï„Î­Î± Î±Î¾Î¯Î± | Î¦Î Î‘ % ÎºÎ±Î¹ Ï€Î¿ÏƒÏŒ. unitCost=Î±ÏÏ‡Î¹ÎºÎ® Ï„Î¹Î¼Î® Ï€ÏÎ¹Î½ Î±Ï€ÏŒ ÎµÎºÏ€Ï„ÏÏƒÎµÎ¹Ï‚, discount1/2/3=Ï€Î¿ÏƒÎ¿ÏƒÏ„Î¬, discount1Amount/2Amount/3Amount=Ï€Î¿ÏƒÎ¬, netAmount=Î±Î¾Î¯Î± Î¼ÎµÏ„Î¬ Ï„Î·Î½ Î­ÎºÏ€Ï„Ï‰ÏƒÎ·, exciseTotal=Î•Î¦Îš, vatRate=%Î¦Î Î‘ ÎºÎ±Î¹ grossAmount=Ï†Î¿ÏÎ¿Î»Î¿Î³Î·Ï„Î­Î± Î±Î¾Î¯Î±+Ï€Î¿ÏƒÏŒ Î¦Î Î‘. ÎœÎ·Î½ ÏƒÏ…Î³Ï‡Î­ÎµÎ¹Ï‚ Î±ÏÎ¹Î¸Î¼Î¿ÏÏ‚ ÏƒÏ…ÏƒÎºÎµÏ…Î±ÏƒÎ¯Î±Ï‚ Î¼Îµ quantity/unitCost. ÎœÎ·Î½ ÎµÏ†ÎµÏ…ÏÎ¯ÏƒÎºÎµÎ¹Ï‚. Î‘Î½ Î­Î½Î± Ï€ÎµÎ´Î¯Î¿ Î´ÎµÎ½ Ï†Î±Î¯Î½ÎµÏ„Î±Î¹ Î²Î¬Î»Îµ 0, Î±Î»Î»Î¬ ÎœÎ—Î Ï€Î±ÏÎ±Î»ÎµÎ¯ÏˆÎµÎ¹Ï‚ Ï„Î· Î³ÏÎ±Î¼Î¼Î®.`;
+    try{
+      const tableResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:FULL_OCR_MODEL,reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:tablePrompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_product_table_extract",strict:true,schema:productTableSchema}}})});
+      const tablePayload=await tableResponse.json().catch(()=>({}));
+      if(tableResponse.ok){try{
+        const tableParsed=JSON.parse(outputText(tablePayload));
+        const recovered=Array.isArray(tableParsed.productLines)?tableParsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+        parsed.productLines=mergeRecoveredLines(parsed.productLines,recovered);
+        if(Array.isArray(tableParsed.vatSummary)&&tableParsed.vatSummary.length){parsed.vatSummary=tableParsed.vatSummary;printedDocumentText=[printedDocumentText,vatSummaryText(tableParsed.vatSummary)].filter(Boolean).join("\n")}
+        parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
+      }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
+      else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;parsed.tableRecheckError=`HTTP_${tableResponse.status}`}
+    }catch(error){
+      // The table pass is supplemental. Keep the initial extraction and allow
+      // the Azure field-recovery path below to finish the same durable job.
+      parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;
+      parsed.tableRecheckError=isProviderTimeout(error)?"PROVIDER_TIMEOUT":"PROVIDER_FAILURE";
+    }
+  }
+
+  // Some supplier layouts are read more reliably by Azure per page. This is
+  // a last recovery path only: the unified OpenAI pass and table pass remain
+  // primary, and no empty invoice may pass through.
+  const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0),needsAzureFields=!hasSafeLine||totalMismatch||inconsistentRows||parsed.productLines.some(line=>Number(line?.vatRate||0)<=0);
+  if(!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+    failureStage="azure-field-recovery";
+    const azureRecovered=[];
+    for(const [pageIndex,page] of pageJobs.entries()){
+      try{
+        const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}));
+        azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
+      }catch{}
+    }
+    parsed.productLines=mergeRecoveredLines(parsed.productLines,azureRecovered);
+    parsed.azurePageRecoveryCalled=true;
+    parsed.azurePageRecoveryRecovered=azureRecovered.length;
+  }
+
+  failureStage="apply-supplier-profile-final";
+  parsed=await applyCentralSupplierProfile(parsed);
+  if(isMantzilasInvoice(parsed)){
+    parsed.productLines=parsed.productLines.map(recoverMantzilasEconomics).map(applyMantzilasPackaging);
+    parsed.mantzilasPackagingLearningApplied=true;
+  }
+  // Table/Azure recovery can add rows after the first printed-column pass.
+  // Re-apply the centrally learned STEFANIDIS layout to those late rows before
+  // totals and discounts are calculated. The equations inside the recovery
+  // helper must balance, so values from another invoice are never copied.
+  if(isStefanidisInvoice(parsed)){
+    parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
+    parsed.stefanidisFinalColumnRecovery=true;
+  }
+  // A supplier may legitimately charge the exact same item on two physical
+  // rows. Restore one missing occurrence only when the current document text
+  // contains the code more times than the extraction and the invoice-total
+  // difference equals that row's gross amount. No historical invoice value is
+  // used and an ambiguous match remains for review.
+  // The structured provider result may already have omitted the second
+  // physical row, so use provider text plus the independent local OCR text.
+  const repeated=restorePrintedRepeatedLine(parsed.productLines,invoiceTotal,printedDocumentText);
+  parsed.productLines=repeated.lines;
+  if(repeated.restored){parsed.printedRepeatedLineRestored=true;parsed.printedRepeatedLineCode=repeated.code;if(repeated.totalGapRecovered)parsed.printedRepeatedLineRecoveredFromExactTotalGap=true}
+  // Vision providers can occasionally replay every physical table row twice
+  // (1-2, 3-4, ...). Collapse only a complete adjacent replay whose single
+  // copy is strongly corroborated by the printed invoice total. This keeps
+  // legitimate repeated products when the full table total is correct.
+  const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
+  parsed.productLines=replay.lines;
+  if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed;if(replay.genuineRepeatedRowPreserved)parsed.genuineRepeatedRowPreserved=true}
+  // Fresh Snack's current-image receipt may have an otherwise-correct first
+  // table followed by a malformed supplemental replay.  The independent
+  // total makes trimming that unverified tail safe; a non-reconciling table
+  // still proceeds to the complete image verifier below.
+  const trailingReplay=(['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE'].includes(parsed?.supplierReadingProfile?.ruleKey)
+    &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true)
+    ?discardUnverifiedTrailingReplay(parsed.productLines,invoiceTotal)
+    :{lines:parsed.productLines,discarded:false};
+  parsed.productLines=trailingReplay.lines;
+  if(trailingReplay.discarded){parsed.unverifiedTrailingReplayDiscarded=true;parsed.unverifiedTrailingReplayRemoved=trailingReplay.removed}
+  // A supplemental provider can append one already-present physical row even
+  // when the rest of the table is not replayed. For the single-page MANTZILAS
+  // layout, remove that isolated replay only when the duplicate tuple is
+  // unique and its exact gross amount is the entire invoice-total overage.
+  const isolatedDuplicate=isMantzilasInvoice(parsed)&&pageJobs.length===1
+    ?collapseExactDuplicateOverage(parsed.productLines,invoiceTotal)
+    :{lines:parsed.productLines,collapsed:false};
+  parsed.productLines=isolatedDuplicate.lines;
+  if(isolatedDuplicate.collapsed){parsed.isolatedDuplicateRowCollapsed=true;parsed.isolatedDuplicateRowRemoved=isolatedDuplicate.removed;parsed.isolatedDuplicateRowOverage=isolatedDuplicate.overage}
+  // Re-read prices and discount pairs against the document and accept them
+  // only when the line equation balances. This also repairs cases where the
+  // amount of a discount was mistaken for the original unit price.
+  failureStage="discount-verification";
+  const discountDiagnostics={accepted:0,rejectedMath:0};
+  const mantzilasInvoice=isMantzilasInvoice(parsed);
+  // A per-row Azure flag cannot prove that the complete table is correct when
+  // the aggregate already disagrees with the POS-confirmed invoice total. In
+  // that exact MANTZILAS failure case, reverify every current-page row from the
+  // original image. Keep the no-provider fast path for a table that already
+  // reconciles, including the LAB-passed 12665 normalization.
+  const supplierRequiresCompletePrintedTable=['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE','LEVENTOPOULOS_MM_POS1_COLUMNS'].includes(parsed?.supplierReadingProfile?.ruleKey)
+    &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
+  const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
+    &&invoiceTotal>0
+    &&Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
+  for(const [pageIndex,page] of pageJobs.entries()){
+    const unresolved=parsed.productLines.filter(line=>{
+      const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
+      const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
+      const currentPage=pageJobs.length===1||line.sourceFileIndex===pageIndex;
+      if(mantzilasInvoice)return currentPage&&(requiresCompleteReverification||!line.sourceColumnsVerified);
+      if(supplierRequiresCompletePrintedTable)return currentPage&&requiresCompleteReverification;
+      return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
+    });
+    // The initial OCR can legitimately return no product rows. A learned
+    // complete-table supplier must still get one image-only reread; the
+    // verifier will either rebuild every row with footer agreement or leave
+    // the linked draft untouched.
+    const needsEmptyCompleteTableRead=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
+      &&requiresCompleteReverification
+      &&parsed.productLines.length===0;
+    if(!unresolved.length&&!needsEmptyCompleteTableRead)continue;
+    try{
+      const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable;
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:needsEmptyCompleteTableRead?parsed.productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
+      discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
+      discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
+      if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
+    }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
+  }
+  parsed.discountMathVerification=discountDiagnostics;
+  if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>["AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED","MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED"].includes(line.quantitySource)?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
+
+  const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
+  parsed.productLines=mixedPrintedVat.lines;
+  if(mixedPrintedVat.recovered){parsed.mixedPrintedVatSummaryRecovered=true;parsed.mixedPrintedVatSummary=mixedPrintedVat.summary}
+  const printedVat=recoverVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
+  parsed.productLines=printedVat.lines;
+  if(printedVat.recovered){
+    parsed.printedVatSummaryRecovered=true;
+    parsed.printedVatSummary={rate:printedVat.rate,net:printedVat.net,tax:printedVat.tax};
+  }
+
+  parsed.productLinesGrossBeforeRecovery=initialLinesTotal;
+  parsed.productLinesGrossAfterRecovery=lineGrossTotal(parsed.productLines);
+  parsed.invoiceTotalForCompleteness=invoiceTotal;
+  parsed.productLinesTotalDifference=money2(parsed.productLinesGrossAfterRecovery-invoiceTotal);
+  parsed.productLinesComplete=invoiceTotal<=0||Math.abs(parsed.productLinesTotalDifference)<=TOTAL_TOLERANCE+0.000001;
+  const reconciliationDiagnostic={
+    lineCount:parsed.productLines.length,
+    calculatedGross:parsed.productLinesGrossAfterRecovery,
+    expectedGross:invoiceTotal,
+    difference:Math.abs(parsed.productLinesTotalDifference),
+    discountProviderFailures:Number(discountDiagnostics.providerFailures||0)
+  };
+  failureStage=`invoice-total-reconciliation;lines=${reconciliationDiagnostic.lineCount};gross=${reconciliationDiagnostic.calculatedGross.toFixed(2)};expected=${reconciliationDiagnostic.expectedGross.toFixed(2)};diff=${reconciliationDiagnostic.difference.toFixed(2)};providerFailures=${reconciliationDiagnostic.discountProviderFailures}`;
+  // MANTZILAS is a single-page learned layout with a printed authoritative
+  // total. Never publish a merely "close enough" table: that allowed shifted
+  // neighboring economics with a 4.80 EUR error to reach operator review.
+  // Keep the durable draft/retry path fail-closed until the corrective reread
+  // reconciles the full table to cent-level invoice tolerance.
+  if(mantzilasInvoice&&pageJobs.length===1&&invoiceTotal>0&&Math.abs(parsed.productLinesTotalDifference)>0.05){
+    // Retain only bounded diagnostics on the durable job. Candidate rows stay
+    // local to this request and are never published to the purchase draft.
+    await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posAiDiagnostics:{...reconciliationDiagnostic,recordedAt:new Date().toISOString()}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+    throw new Error(`Î— Ï€Î»Î®ÏÎ·Ï‚ Î±Î½Î¬Î³Î½Ï‰ÏƒÎ· ÎœÎ‘ÎÎ¤Î–Î™Î›Î‘Î£ Î´ÎµÎ½ ÏƒÏ…Î¼Ï†Ï‰Î½ÎµÎ¯ Î¼Îµ Ï„Î¿ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î¿ (Î´Î¹Î±Ï†Î¿ÏÎ¬ ${Math.abs(parsed.productLinesTotalDifference).toFixed(2)} â‚¬). ÎŸÎ¹ Î»Î±Î½Î¸Î±ÏƒÎ¼Î­Î½ÎµÏ‚ Î³ÏÎ±Î¼Î¼Î­Ï‚ Î´ÎµÎ½ Î±Ï€Î¿Î¸Î·ÎºÎµÏÏ„Î·ÎºÎ±Î½.`);
+  }
+  failureStage="prepare-ai-result";
+  parsed.auditLines=auditLines.length?auditLines:(Array.isArray(previous.lines)?previous.lines:[]);
+  parsed.lines=parsed.productLines.length?parsed.productLines.map(line=>{const description=String(line.description||line.rawText||"").replace(/\s+/g," ").trim(),quantity=Math.max(0,Number(line.quantity||0)),unit=String(line.unit||"Î¤ÎœÎ§").trim()||"Î¤ÎœÎ§",unitCost=Math.max(0,Number(line.unitCost||0));return {text:[description,quantity>0?`${quantity} ${unit}`:"",unitCost>0?decimalText(unitCost):""].filter(Boolean).join(" "),confidence:Math.max(0,Math.min(100,Number(line.confidence||parsed.aiConfidence||0)))}}):[];
+  parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
+  failureStage="match-supplier";
+  const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
+  failureStage="save-ai-result";
+  await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+  res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:FULL_OCR_MODEL});
+}catch(error){
+  console.error("POS AI recheck failed",{jobId:req.params.jobId,stage:failureStage,message:providerErrorText(error),code:error?.code||null});
+  if(!error?.status){const safe=new Error(`AI_RECHECK_INTERNAL [${failureStage}]`);safe.status=502;safe.code="AI_RECHECK_INTERNAL";return next(safe)}
+  next(error)
+}});
+
+router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const reviewLine=z.object({rawText:z.string().max(2000).optional().default(""),code:z.string().trim().max(80).optional().default(""),barcode:z.string().trim().max(80).optional().default(""),description:z.string().trim().min(1).max(500),quantity:z.coerce.number().min(0).max(1000000),unit:z.string().trim().max(40).optional().default("Î¤ÎœÎ§"),unitsPerPackage:z.coerce.number().min(0).max(100000).optional().default(0),unitCost:z.coerce.number().min(0).max(10000000),vatRate:z.coerce.number().min(0).max(100),confidence:z.coerce.number().min(0).max(100).optional().default(0),invoiceQuantity:z.coerce.number().min(0).max(1000000).optional(),invoiceUnit:z.string().trim().max(40).optional(),stockUnit:z.string().trim().max(40).optional(),stockUnitsPerInvoiceUnit:z.coerce.number().min(0).max(100000).optional(),packageUnitPrice:z.coerce.number().min(0).max(10000000).optional(),discount1:z.coerce.number().min(0).max(100).optional(),discount1Amount:z.coerce.number().min(0).max(1000000000).optional(),discount2:z.coerce.number().min(0).max(100).optional(),discount2Amount:z.coerce.number().min(0).max(1000000000).optional(),discount3:z.coerce.number().min(0).max(100).optional(),discount3Amount:z.coerce.number().min(0).max(1000000000).optional(),initialAmount:z.coerce.number().min(0).max(1000000000).optional(),netAmount:z.coerce.number().min(0).max(1000000000).optional(),exciseTotal:z.coerce.number().min(0).max(1000000000).optional(),taxableAmount:z.coerce.number().min(0).max(1000000000).optional(),vatAmount:z.coerce.number().min(0).max(1000000000).optional(),grossAmount:z.coerce.number().min(0).max(1000000000).optional(),packageConversionApplied:z.boolean().optional(),sourceColumnsVerified:z.boolean().optional(),packRule:z.string().max(120).optional()});
+  const body=z.object({source:z.enum(["V2.4.4","V2.4.4_USER_REVIEW"]).optional().default("V2.4.4_USER_REVIEW"),productLines:z.array(reviewLine).min(1).max(500)}).parse(req.body||{});
+  const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."purchaseDocumentId",j."resultJson",d."sourceType" AS "documentSourceType",d."status" AS "documentStatus" FROM "AiReaderJob" j LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
+  const job=jobs[0];if(!job)return res.status(404).json({error:"Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎµ Î· Î±Î½Î¬Î³Î½Ï‰ÏƒÎ·."});if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Î”ÎµÎ½ Î­Ï‡ÎµÎ¹Ï‚ Ï€ÏÏŒÏƒÎ²Î±ÏƒÎ· ÏƒÎµ Î±Ï…Ï„ÏŒ Ï„Î¿ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î¿."});
+  const backgroundMayFillLinkedDraft=Boolean(job.purchaseDocumentId&&body.source==="V2.4.4"&&job.status==="AI_COMPLETE"&&job.resultJson?.posHandoff&&job.documentSourceType==="POS_OCR_DRAFT"&&job.documentStatus==="DRAFT");
+  if(job.purchaseDocumentId&&!backgroundMayFillLinkedDraft)return res.status(409).json({error:"Î¤Î¿ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î¿ Î­Ï‡ÎµÎ¹ Î®Î´Î· ÎºÎ±Ï„Î±Ï‡Ï‰ÏÎ¹ÏƒÏ„ÎµÎ¯ Î³Î¹Î± Î­Î»ÎµÎ³Ï‡Î¿ ÎºÎ±Î¹ Î¿Î¹ Î³ÏÎ±Î¼Î¼Î­Ï‚ Î´ÎµÎ½ Î¼Ï€Î¿ÏÎ¿ÏÎ½ Î½Î± Î±Î»Î»Î¬Î¾Î¿Ï…Î½ Î±Ï€ÏŒ Ï„Î¿ POS."});
+  const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
+  const productLines=body.productLines.map(line=>{const quantity=Math.max(0,Number(line.quantity||0)),unitCost=Math.max(0,Number(line.unitCost||0)),vatRate=Math.max(0,Number(line.vatRate||0));
+    if(backgroundMayFillLinkedDraft){const netAmount=Math.max(0,Number(line.netAmount??quantity*unitCost)),exciseTotal=Math.max(0,Number(line.exciseTotal||0)),taxableAmount=Math.max(0,Number(line.taxableAmount??netAmount+exciseTotal)),vatAmount=Math.max(0,Number(line.vatAmount??taxableAmount*vatRate/100)),grossAmount=Math.max(0,Number(line.grossAmount??taxableAmount+vatAmount));return {...line,rawText:String(line.rawText||line.description),code:String(line.code||""),barcode:String(line.barcode||""),description:String(line.description||"").trim(),quantity,unit:String(line.unit||"Î¤ÎœÎ§"),unitsPerPackage:Math.max(0,Number(line.unitsPerPackage||0)),unitCost,netAmount,exciseTotal,taxableAmount,vatRate,vatAmount,grossAmount,confidence:Math.max(0,Math.min(100,Number(line.confidence||0))),sourceColumnsVerified:Boolean(line.sourceColumnsVerified)}}
+    const netAmount=quantity*unitCost,grossAmount=netAmount*(1+vatRate/100);return {rawText:String(line.rawText||line.description),code:String(line.code||""),barcode:String(line.barcode||""),description:String(line.description||"").trim(),quantity,unit:String(line.unit||"Î¤ÎœÎ§"),unitsPerPackage:Math.max(0,Number(line.unitsPerPackage||0)),unitCost,netAmount,vatRate,grossAmount,confidence:Math.max(0,Math.min(100,Number(line.confidence||0))),sourceColumnsVerified:Boolean(line.sourceColumnsVerified)}});
+  const resultJson={...previous,productLines,lines:productLines.map(line=>({text:[line.description,line.quantity>0?`${line.quantity} ${line.unit}`:"",line.unitCost>0?decimalText(line.unitCost):""].filter(Boolean).join(" "),confidence:line.confidence})),reviewedAt:new Date().toISOString(),reviewedByUserId:req.user.id,v244Finalized:true,v244FinalizedAt:new Date().toISOString(),v244Source:backgroundMayFillLinkedDraft?"POS_BACKGROUND_V2.4.4":"POS_INVOICE_REVIEW"};
+  await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(resultJson)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+  res.json({ok:true,id:job.id,productLines,message:"ÎŸÎ¹ Î³ÏÎ±Î¼Î¼Î­Ï‚ Ï„Î¹Î¼Î¿Î»Î¿Î³Î¯Î¿Ï… Î±Ï€Î¿Î¸Î·ÎºÎµÏÏ„Î·ÎºÎ±Î½ Î³Î¹Î± Ï„Î·Î½ Ï„ÎµÎ»Î¹ÎºÎ® ÎºÎ±Ï„Î±Ï‡ÏÏÎ¹ÏƒÎ·."});
+}catch(error){next(error)}});
+
+router.post("/ai-reader/jobs/:jobId/supplier",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
+  const body=z.object({name:z.string().trim().min(2).max(180),taxId:z.string().trim().max(30).optional().nullable(),email:z.union([z.string().email(),z.literal("")]).optional().nullable(),phone:z.string().trim().max(40).optional().nullable(),address:z.string().trim().max(250).optional().nullable(),city:z.string().trim().max(120).optional().nullable()}).parse(req.body||{});
+  const jobs=await prisma.$queryRaw`SELECT "id","storeId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+  if(!jobs[0])return res.status(404).json({error:"Î”ÎµÎ½ Î²ÏÎ­Î¸Î·ÎºÎµ Î· Î±Î½Î¬Î³Î½Ï‰ÏƒÎ·."});if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==jobs[0].storeId)return res.status(403).json({error:"Î”ÎµÎ½ Î­Ï‡ÎµÎ¹Ï‚ Ï€ÏÏŒÏƒÎ²Î±ÏƒÎ· ÏƒÎµ Î±Ï…Ï„ÏŒ Ï„Î¿ Ï„Î¹Î¼Î¿Î»ÏŒÎ³Î¹Î¿."});
+  const existing=await supplierMatch(req.user.companyId,body);if(existing)return res.json({created:false,supplier:existing,message:"ÎŸ Ï€ÏÎ¿Î¼Î·Î¸ÎµÏ…Ï„Î®Ï‚ Ï…Ï€Î®ÏÏ‡Îµ Î®Î´Î· ÏƒÏ„Î¿ BackOffice ÎºÎ±Î¹ ÏƒÏ…Î½Î´Î­Î¸Î·ÎºÎµ."});
+  const supplierId=id();await prisma.$executeRaw`INSERT INTO "Supplier" ("id","companyId","name","taxId","email","phone","address","city","active") VALUES (${supplierId},${req.user.companyId},${body.name},${body.taxId||null},${body.email||null},${body.phone||null},${body.address||null},${body.city||null},true)`;
+  res.status(201).json({created:true,supplier:{id:supplierId,name:body.name,taxId:body.taxId||null,email:body.email||null,phone:body.phone||null,address:body.address||null,city:body.city||null},message:"ÎŸ Ï€ÏÎ¿Î¼Î·Î¸ÎµÏ…Ï„Î®Ï‚ ÎºÎ±Ï„Î±Ï‡Ï‰ÏÎ¯ÏƒÏ„Î·ÎºÎµ ÏƒÏ„Î¿Ï…Ï‚ Î ÏÎ¿Î¼Î·Î¸ÎµÏ…Ï„Î­Ï‚ Ï„Î¿Ï… BackOffice."});
+}catch(error){next(error)}});
+
+export default router;
