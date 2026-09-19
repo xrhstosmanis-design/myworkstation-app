@@ -306,7 +306,11 @@ function repairMantzilasCode00009PackAmbiguity(productLines,diagnostics,supplier
 
 export async function verifyInvoiceDiscounts({contentData,mimeType,filename,productLines,apiKey,model,timeoutMs=0,reverifyAll=false,expectedGrossTotal=0,supplierRule=""}){
   const diagnostics={called:false,status:'SKIPPED',reason:'',candidates:0,accepted:0,rawAccepted:0,rawEconomicsAccepted:0,aiAccepted:0,rejectedLowConfidence:0,rejectedMath:0};
-  if(!Array.isArray(productLines)||!productLines.length){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
+  if(!Array.isArray(productLines)){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
+  // A complete-table reread must also work when the first OCR pass found no
+  // product rows at all. The image remains the sole evidence and the result
+  // is accepted only through buildCompletePrintedTableCandidate below.
+  if(!productLines.length&&!reverifyAll){diagnostics.reason='NO_PRODUCT_LINES';return diagnostics}
   const originalLines=reverifyAll?productLines.map(line=>JSON.parse(JSON.stringify(line))):[];
 
   // Azure often leaves UnitPrice/Discount empty on Greek invoices even though the full line content contains them.
@@ -325,7 +329,9 @@ export async function verifyInvoiceDiscounts({contentData,mimeType,filename,prod
     diagnostics.rejectedMath+=1;
   }
   applySiblingDiscountConsensus(productLines,diagnostics);
-  const unresolved=productLines.map((line,index)=>({line,index})).filter(({line})=>reverifyAll||!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0));
+  const unresolved=productLines.length
+    ?productLines.map((line,index)=>({line,index})).filter(({line})=>reverifyAll||!(Number(line?.discount1||0)>0||Number(line?.discount2||0)>0||Number(line?.discount3||0)>0))
+    :reverifyAll?[{line:{},index:0}]:[];
   if(!unresolved.length){diagnostics.status='OK';diagnostics.reason='AZURE_CONTENT_DISCOUNTS_VERIFIED';return stamp(productLines,diagnostics)}
   if(!apiKey){diagnostics.reason=diagnostics.rawAccepted>0?'PARTIAL_AZURE_CONTENT_NO_OPENAI_KEY':'NO_OPENAI_KEY';return stamp(productLines,diagnostics)}
   if(!contentData){diagnostics.reason='NO_DOCUMENT';return stamp(productLines,diagnostics)}

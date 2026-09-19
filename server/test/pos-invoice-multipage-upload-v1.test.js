@@ -446,6 +446,18 @@ test("MANTZILAS focused reread replaces a wrong first-pass row when code, math a
   }finally{global.fetch=originalFetch}
 });
 
+test("complete-table reread can rebuild an empty first-pass table only with verified footer totals",async()=>{
+  const originalFetch=global.fetch;
+  global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"e48266",description:"ΣΥΛ MAGIC DBL GOLD CAR",printedQuantity:20,printedUnit:"ΤΜΧ",originalUnitPrice:2.8,initialAmount:56,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:56,exciseTotal:0,taxableAmount:56,vatRate:13,vatAmount:7.28,grossAmount:63.28,confidence:99,evidence:"20 × 2,80 = 56,00"}],vatSummary:[{rate:13,taxable:56,vat:7.28,gross:63.28}]})})});
+  try{
+    const productLines=[];
+    const result=await verifyInvoiceDiscounts({contentData:"data:image/jpeg;base64,AA==",mimeType:"image/jpeg",productLines,apiKey:"test",model:"test",reverifyAll:true,expectedGrossTotal:63.28,supplierRule:"LEVENTOPOULOS_MM_POS1_COLUMNS"});
+    assert.equal(result.status,"OK");assert.equal(result.completePrintedTableRecovered,true);
+    assert.equal(productLines.length,1);assert.equal(productLines[0].quantity,20);assert.equal(productLines[0].unitCost,2.8);
+    assert.equal(productLines[0].grossAmount,63.28);assert.equal(productLines[0].sourceColumnsVerified,true);
+  }finally{global.fetch=originalFetch}
+});
+
 test("MANTZILAS row identity accepts omitted display-leading zeroes without weakening index matching",async()=>{
   const originalFetch=global.fetch;
   global.fetch=async()=>({ok:true,json:async()=>({output_text:JSON.stringify({discounts:[{index:1,supplierCode:"168",printedQuantity:3,printedUnit:"4PK",originalUnitPrice:3.2,initialAmount:9.6,discountPercent1:0,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:9.6,exciseTotal:0,taxableAmount:9.6,vatRate:24,vatAmount:2.3,grossAmount:11.9,confidence:99,evidence:"0168 printed row"}],vatSummary:[]})})});

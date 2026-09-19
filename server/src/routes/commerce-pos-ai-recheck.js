@@ -506,10 +506,17 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       if(supplierRequiresCompletePrintedTable)return currentPage&&requiresCompleteReverification;
       return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
-    if(!unresolved.length)continue;
+    // The initial OCR can legitimately return no product rows. A learned
+    // complete-table supplier must still get one image-only reread; the
+    // verifier will either rebuild every row with footer agreement or leave
+    // the linked draft untouched.
+    const needsEmptyCompleteTableRead=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
+      &&requiresCompleteReverification
+      &&parsed.productLines.length===0;
+    if(!unresolved.length&&!needsEmptyCompleteTableRead)continue;
     try{
       const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable;
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:needsEmptyCompleteTableRead?parsed.productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
