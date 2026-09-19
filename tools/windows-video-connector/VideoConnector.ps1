@@ -14,7 +14,14 @@ function Write-SafeLog([string]$Message){
   $lines=Get-Content -LiteralPath $LogPath -ErrorAction SilentlyContinue;if($lines.Count -gt 1200){$lines[-600..-1]|Set-Content -LiteralPath $LogPath -Encoding UTF8}
 }
 function Unprotect([string]$Cipher){$bytes=[Convert]::FromBase64String($Cipher);$plain=[Security.Cryptography.ProtectedData]::Unprotect($bytes,$null,[Security.Cryptography.DataProtectionScope]::LocalMachine);return [Text.Encoding]::UTF8.GetString($plain)}
-function Invoke-Backend([string]$Path,[object]$Body){return Invoke-RestMethod -Uri ($script:Config.apiBase.TrimEnd("/")+$Path) -Method Post -Headers @{Authorization="Bearer $script:Token"} -ContentType "application/json; charset=utf-8" -Body ($Body|ConvertTo-Json -Depth 10 -Compress) -TimeoutSec 90}
+function Invoke-Backend([string]$Path,[object]$Body){
+  try{return Invoke-RestMethod -Uri ($script:Config.apiBase.TrimEnd("/")+$Path) -Method Post -Headers @{Authorization="Bearer $script:Token"} -ContentType "application/json; charset=utf-8" -Body ($Body|ConvertTo-Json -Depth 10 -Compress) -TimeoutSec 90}
+  catch{
+    $detail=$_.Exception.Message
+    try{if($_.ErrorDetails.Message){$detail=$_.ErrorDetails.Message}}catch{}
+    throw ("BACKEND_REQUEST_FAILED {0}: {1}" -f $Path,$detail)
+  }
+}
 function New-NvrClient(){
   $handler=New-Object Net.Http.HttpClientHandler;$handler.Credentials=New-Object Net.NetworkCredential($script:NvrCredential.username,$script:NvrCredential.password);$handler.PreAuthenticate=$false;$handler.AllowAutoRedirect=$false
   $client=New-Object Net.Http.HttpClient($handler);$client.Timeout=[TimeSpan]::FromSeconds(20);return $client
@@ -88,7 +95,9 @@ New-Item -ItemType Directory -Path $TempPath -Force|Out-Null
 try{Invoke-Backend "/api/cloud/v1/device/video/register" @{version=$Version;protocol=$script:Config.protocol;deviceName=("KAT Video Connector - "+$env:COMPUTERNAME);cameraKeys=@();capabilities=@{health=$true;time=$true;snapshot=$true;clip=$true}}|Out-Null}catch{Write-SafeLog ("REGISTER deferred: "+$_.Exception.Message)}
 do{
   $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode=($_.Exception.Message -replace '[^A-Z0-9_\-]','_');Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
-  try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" @{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;latencyMs=$state.latencyMs;nvrTime=$state.nvrTime;systemTime=$state.systemTime;deviceInfo=$state.deviceInfo;errorCode=$errorCode};foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
+  $heartbeatBody=@{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;errorCode=$errorCode}
+  if($null -ne $state){$heartbeatBody.latencyMs=$state.latencyMs;$heartbeatBody.nvrTime=$state.nvrTime;$heartbeatBody.systemTime=$state.systemTime;$heartbeatBody.deviceInfo=$state.deviceInfo}
+  try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" $heartbeatBody;foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
   if(!$Once){Start-Sleep -Seconds 30}
 }while(!$Once)
 $script:NvrClient.Dispose()

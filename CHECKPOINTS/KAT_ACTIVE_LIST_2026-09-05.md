@@ -1,3 +1,10 @@
+## 2026-09-19 — Video heartbeat degraded-state hotfix — AWAITING LAB
+
+- [x] Root cause HTTP 400: NVR_TIME_UNAVAILABLE left NVR state null and optional heartbeat fields were dereferenced/sent incorrectly.
+- [x] Heartbeat now remains valid with process online / NVR health unavailable and logs safe backend response detail.
+- [ ] CI → merge → LAB -Once → connector presence → Dahua time fix → ONLINE.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-video-heartbeat-degraded-hotfix.md`.
+
 ## 2026-09-19 — Video Connector PowerShell parser hotfix — AWAITING LAB
 
 - [x] LAB αποκάλυψε parser corruption στο VideoConnector.ps1, όχι πρόβλημα Dahua/network/pairing.
