@@ -7,7 +7,7 @@ const retryable=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN
 
 test("transient POS_FAILED jobs become eligible for durable recovery",()=>{
   assert.match(source,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\)/);
-  assert.match(source,/job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError\(storedBackgroundError\)/);
+  assert.match(source,/job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!needsCompleteTableReplayRecovery&&!isRetryableBackgroundError\(storedBackgroundError\)/);
   assert.doesNotMatch(source,/"resultJson"->'posBackground'->>'error'.*~\*/);
   assert.match(source,/if\(recovered\.length>=3\)break/);
   assert.match(source,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
