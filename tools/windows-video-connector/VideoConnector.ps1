@@ -62,7 +62,7 @@ function Invoke-Command([object]$Command){
       $searchObject=(Parse-Dahua (Invoke-NvrText "/cgi-bin/mediaFileFind.cgi?action=factory.create")).result
       if(!$searchObject){throw "DAHUA_MEDIA_SEARCH_CREATE_FAILED"}
       try{
-        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end)
+        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,($start -replace " ","%20"),($end -replace " ","%20")
         $findResponse=Invoke-NvrText $findPath
         if($findResponse -notmatch '(?im)^OK\\s*$'){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
