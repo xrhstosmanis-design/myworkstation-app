@@ -7,6 +7,7 @@ Verify the already uploaded Fresh Snack invoice `36-ΤΔΑ 005401` using its dur
 ## Scope
 
 - Only recent `POS_FAILED` jobs with a `FRESH_SNACK_COMPLETE_PRINTED_TABLE` or `FRESH_DELICACIES_COMPLETE_PRINTED_TABLE` profile, the precise pre-fix unverified-printed-lines error, an existing POS OCR draft and no prior V16 replay attempt are eligible.
+- For legacy Fresh Snack jobs that did not persist their profile, the linked draft supplier name `FRESH SNACK` is accepted only alongside that same exact error and the same unapproved POS OCR draft restrictions.
 - The worker reuses the same job, attachment, handoff and draft with `replaceExistingDraft: true`.
 - Replacing lines remains fail-closed on complete printed-table verification. No approval, payment, stock, fiscal, accounting, myDATA or credit mutation is allowed.
 

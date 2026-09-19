@@ -86,10 +86,15 @@ let posBackgroundSweepTimer=null;
 let posBackgroundSweepActive=false;
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 const isSafeInferiorRereadFailure=error=>/POS_BACKGROUND_AI_RECHECK:\s*Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο/i.test(String(error?.message||error));
-const isSafeCompleteTableReplayFailure=(job,error)=>{
+const isSafeCompleteTableReplayFailure=(job,error,supplierName="")=>{
   const profile=job?.resultJson?.supplierReadingProfile||{};
-  return ["FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE"].includes(profile.ruleKey)
-    &&profile.requireCompletePrintedTableOnMismatch===true
+  const completeTableProfile=["FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE"].includes(profile.ruleKey)
+    &&profile.requireCompletePrintedTableOnMismatch===true;
+  // Older failed jobs did not persist the profile. Their supplier is still
+  // authoritative on the linked unapproved draft, so use it only with the
+  // exact old failure text below.
+  const legacyFreshSnackDraft=/FRESH\s+SNACK/i.test(String(supplierName||""));
+  return (completeTableProfile||legacyFreshSnackDraft)
     &&/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές\. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση\./i.test(String(error?.message||error));
 };
 
@@ -316,18 +321,20 @@ async function ensureFastHandoffSchema(){
   // POS_FAILED jobs do not keep a browser poll alive. A complete-table profile
   // may retry its durable image once after a safe trailing-replay fix lands.
   const replayCandidates=await prisma.$queryRaw`
-    SELECT j."id",j."companyId",j."storeId",j."resultJson"
+    SELECT j."id",j."companyId",j."storeId",j."resultJson",s."name" AS "supplierName"
     FROM "AiReaderJob" j JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId"
+      JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
     WHERE j."status"='POS_FAILED' AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
       AND j."resultJson"->'posHandoff' IS NOT NULL
-      AND j."resultJson"->'supplierReadingProfile'->>'ruleKey' IN ('FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE')
-      AND COALESCE(j."resultJson"->'supplierReadingProfile'->>'requireCompletePrintedTableOnMismatch','false')='true'
+      AND ((j."resultJson"->'supplierReadingProfile'->>'ruleKey' IN ('FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE')
+        AND COALESCE(j."resultJson"->'supplierReadingProfile'->>'requireCompletePrintedTableOnMismatch','false')='true')
+        OR s."name" ILIKE '%FRESH%SNACK%')
       AND COALESCE(j."resultJson"->'posReprocess'->>'strategy','')<>${POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY}
       AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
     ORDER BY j."updatedAt" DESC LIMIT 3`;
   for(const job of replayCandidates){
     const background=job.resultJson?.posBackground||{};
-    if(!isSafeCompleteTableReplayFailure(job,background.error))continue;
+    if(!isSafeCompleteTableReplayFailure(job,background.error,job.supplierName))continue;
     const handoff={...job.resultJson.posHandoff,resumeStoredProductLines:false,replaceExistingDraft:true};
     const marker={mode:"RECONCILIATION_REREAD",strategy:POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY,attemptedAt:new Date().toISOString(),reason:"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
     await prisma.$transaction(async tx=>{
