@@ -127,7 +127,7 @@ test("a repeated POS intake reuses and re-verifies durable cached lines without 
   assert.match(worker,/storedDifference<=POS_STORED_LINES_TOLERANCE/);
   assert.match(worker,/usingStoredProductLines=true/);
   assert.match(worker,/if\(usingStoredProductLines&&Array\.isArray\(sourceLines\)&&sourceLines\.length\)await verifyInvoiceDiscounts\(\{productLines:sourceLines,apiKey:null\}\)/);
-  assert.ok(worker.indexOf("verifyInvoiceDiscounts({productLines:sourceLines")<worker.indexOf("const productLines=verifiedPrintedTableForPersistence"));
+  assert.ok(worker.indexOf("verifyInvoiceDiscounts({productLines:sourceLines")<worker.indexOf("const verifiedProductLines=verifiedPrintedTableForPersistence"));
 });
 
 test("background OCR falls back publicly only for a loopback connection failure",()=>{
@@ -187,7 +187,7 @@ test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the ar
 test("recovery prioritizes recent completed drafts before the bounded legacy scan",()=>{
   assert.match(route,/ORDER BY CASE WHEN "status"='AWAITING_APPROVAL' THEN 0 ELSE 1 END,/);
   assert.match(route,/CASE WHEN "status"='AWAITING_APPROVAL' THEN "updatedAt" END DESC,/);
-  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14/);
+  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V15/);
 });
 
 test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{

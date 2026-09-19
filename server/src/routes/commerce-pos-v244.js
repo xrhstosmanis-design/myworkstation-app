@@ -16,7 +16,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14";
+const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V15";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -175,7 +175,12 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // it neither calls unavailable providers nor loses printed discounts.
           if(usingStoredProductLines&&Array.isArray(sourceLines)&&sourceLines.length)await verifyInvoiceDiscounts({productLines:sourceLines,apiKey:null});
           const sourceProductLines=Array.isArray(sourceLines)?sourceLines:[];
-          const productLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross)||finalizeV244ProductLines(sourceProductLines);
+          const verifiedProductLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross);
+          // A same-draft MANTZILAS recovery must never fall back to the legacy
+          // finalizer: that transformation is precisely what can erase the
+          // verified printed package, discount and excise fields.
+          if(handoff.replaceExistingDraft&&!verifiedProductLines)throw new Error("Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση.");
+          const productLines=verifiedProductLines||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){
             const before=reconcileInvoiceLines(finalizeV244ProductLines(previousLines),handoff.totalGross);

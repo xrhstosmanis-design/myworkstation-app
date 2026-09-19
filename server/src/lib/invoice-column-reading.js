@@ -157,7 +157,7 @@ export function recoverMantzilasEconomics(line){
   return {...line,quantity:best.quantity,invoiceQuantity:best.quantity,unitCost:round4(best.unitPrice),unitPrice:round4(best.unitPrice),initialAmount:round2(best.initial),
     discount1:round4(best.discountPct),discount1Amount:round2(best.discountAmount),discount2:0,discount2Amount:0,discount3:0,discount3Amount:0,
     netAmount:round2(best.net),netValue:round2(best.net),exciseTotal:round2(best.excise),taxableAmount:round2(best.taxable),vatRate:best.vatRate,
-    vatAmount:round2(best.vatAmount),grossAmount:round2(best.taxable+best.vatAmount),sourceColumnsVerified:true,supplierProfileRecovered:true,
+    vatAmount:round2(best.vatAmount),grossAmount:round2(best.taxable+best.vatAmount),sourceColumnsVerified:true,quantitySource:"MANTZILAS_PRINTED_ECONOMICS_VERIFIED",discountSource:"MANTZILAS_PRINTED_ECONOMICS_VERIFIED",supplierProfileRecovered:true,
     supplierProfileRule:"MANTZILAS_PRINTED_ECONOMICS",supplierProfileEvidence:{quantity:best.quantity,unitPrice:round4(best.unitPrice),initialAmount:round2(best.initial),discountPercent:round4(best.discountPct),discountAmount:round2(best.discountAmount),netAmount:round2(best.net),exciseTotal:round2(best.excise),taxableAmount:round2(best.taxable),vatRate:best.vatRate,vatAmount:round2(best.vatAmount)}};
 }
 const round2=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;

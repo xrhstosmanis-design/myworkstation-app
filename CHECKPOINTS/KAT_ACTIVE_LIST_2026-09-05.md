@@ -1789,3 +1789,13 @@ Total output lines: 1413
 - [x] Exact regressions and focused invoice/POS tests `49/49`, complete server suite `1316/1316`, production client/server/Prisma build and diff checks: PASS.
 - [ ] Require green CI, merge, exact deploy and automatic same-draft reread verification. No second upload, BackOffice manual save, approval, finalization, payment, stock, fiscal, accounting or myDATA mutation.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-invoice-12729-verified-row-persistence.md`.
+
+## 2026-09-19 — Invoice 12729 V15 printed-economics persistence
+
+- [x] **LAB FAIL** evidence: the V14 same-draft reread still reached the legacy finalizer after a printed-column reconstruction did not expose a persistence-safe source marker. The screen retained `1 / 2 / 3` package quantities and lost discounts/excise.
+- [x] Mark only four-equation reconstructed printed rows as `MANTZILAS_PRINTED_ECONOMICS_VERIFIED` and admit them only with source-column verification plus the independent invoice-total gate.
+- [x] A same-draft replacement is now fail-closed: it cannot use the legacy finalizer. Unsafe rereads preserve the existing draft instead of writing incorrect values.
+- [x] Advance automatic same-attachment recovery to V15; no second upload, approval, finalization, payment, inventory, fiscal, accounting or myDATA mutation.
+- [x] Focused invoice/POS regressions `50/50`, complete server suite `1317/1317`, production client/server/Prisma build and diff checks: PASS.
+- [ ] Require green CI, merge, exact deploy and automatic same-draft reread verification.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-invoice-12729-v15-printed-economics-persistence.md`.

@@ -86,7 +86,7 @@ test("worker watchdog requeues a stale recovering job without browser polling",(
 
 test("startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh",()=>{
   const schema=route.slice(route.indexOf("async function ensureFastHandoffSchema"),route.indexOf("async function enqueueFastBackground"));
-  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14/);
+  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V15/);
   assert.match(schema,/j\."status"='AWAITING_APPROVAL'/);
   assert.match(schema,/j\."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'/);
   assert.match(schema,/reconciliationRequired'\)::boolean,false\)=true/);

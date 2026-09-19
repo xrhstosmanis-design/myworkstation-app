@@ -33,7 +33,8 @@ export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tol
     "AI_PRINTED_ROW_FULL_MATH_VERIFIED",
     "SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED",
     "MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED",
-    "MANTZILAS_CODE_00009_FINAL_NORMALIZATION"
+    "MANTZILAS_CODE_00009_FINAL_NORMALIZATION",
+    "MANTZILAS_PRINTED_ECONOMICS_VERIFIED"
   ]);
   if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&completeRowSources.has(line?.quantitySource)))return null;
   const reconciliation=reconcileInvoiceLines(lines,invoiceTotal,tolerance);
