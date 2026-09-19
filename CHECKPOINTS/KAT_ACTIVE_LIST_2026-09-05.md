@@ -1,3 +1,10 @@
+## 2026-09-19 — Ώρα Europe/Athens + Dahua time parser — AWAITING LAB
+
+- [x] Ρητή εμφάνιση Europe/Athens σε Παραγγελίες/OCR και Platform Audit χωρίς μόνιμο +3.
+- [x] Dahua current-time parser διαβάζει το επιβεβαιωμένο `result=YYYY-MM-DD HH:mm:ss`.
+- [ ] CI → merge → LAB επιβεβαίωση ώρας → connector ONLINE.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-athens-time-and-dahua-time-fix.md`.
+
 ## 2026-09-19 — Video heartbeat degraded-state hotfix — AWAITING LAB
 
 - [x] Root cause HTTP 400: NVR_TIME_UNAVAILABLE left NVR state null and optional heartbeat fields were dereferenced/sent incorrectly.

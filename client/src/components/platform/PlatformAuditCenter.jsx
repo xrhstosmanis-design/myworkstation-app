@@ -30,7 +30,7 @@ function describe(row){
   return "Εμπορική ενέργεια Platform Admin.";
 }
 
-const when=value=>new Date(value).toLocaleString("el-GR",{dateStyle:"short",timeStyle:"short"});
+const when=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",dateStyle:"short",timeStyle:"short"});
 
 export default function PlatformAuditCenter(){
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser")));
