@@ -28,6 +28,8 @@ test("a failed Fresh complete-table replay is safely requeued once from its stor
   assert.match(wrapper,/const POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY="COMPLETE_TABLE_TRAILING_REPLAY_V16"/);
   assert.match(wrapper,/const isSafeCompleteTableReplayFailure=/);
   assert.match(wrapper,/FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE/);
+  assert.match(wrapper,/legacyFreshSnackDraft=\/FRESH\\s\+SNACK\/i/);
+  assert.match(wrapper,/s\."name" ILIKE '%FRESH%SNACK%'/);
   assert.match(wrapper,/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές/);
   assert.match(wrapper,/reason:"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP"/);
   assert.match(wrapper,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
