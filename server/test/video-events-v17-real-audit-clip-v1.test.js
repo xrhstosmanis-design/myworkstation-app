@@ -13,7 +13,7 @@ test("V17 requests the exact existing 30-before 60-after Audit window",()=>{
 });
 
 test("V17 shows authenticated browser-compatible media instead of direct RTSP",()=>{
-  assert.match(ui,/waitVideoCommand/);assert.match(ui,/protectedBlob/);assert.match(ui,/document\.createElement\("video"\)/);assert.doesNotMatch(ui,/src=["'`]rtsp:/i);assert.match(connector,/video\/mp4/);assert.match(connector,/movflags \+faststart/);
+  assert.match(ui,/waitVideoCommand/);assert.match(ui,/protectedBlob/);assert.match(ui,/document\.createElement\("video"\)/);assert.doesNotMatch(ui,/src=["'`]rtsp:/i);assert.match(connector,/video\/mp4/);assert.match(connector,/"-movflags","\+faststart"/);assert.match(connector,/WaitForExit\(60000\)/);assert.match(connector,/FFMPEG_TIMEOUT/);
 });
 
 test("V17 stores device and Dahua credentials with Windows DPAPI and uses no inbound listener",()=>{
