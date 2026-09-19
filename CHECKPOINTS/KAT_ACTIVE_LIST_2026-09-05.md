@@ -1,3 +1,13 @@
+## 2026-09-19 — KAT-10 πραγματικός Dahua connector — AWAITING LAB
+
+- [x] **LAB NOT TESTED / AWAITING LAB**: ολοκληρώθηκε η ασφαλής βάση πραγματικής σύνδεσης Dahua/ONVIF, αλλά δεν έχει ακόμη δοκιμαστεί με το φυσικό `DHI-NVR2104-4KS3` και την `DH-IPC-T1E20-A` στο ίδιο LAN με το POS.
+- [x] Προστέθηκε outbound-only Windows connector με τοπικό ONVIF/WS-Discovery, Dahua CGI health/time/snapshot/clip, αυτόματη επανασύνδεση και προστασία token/διαπιστευτηρίων με Windows DPAPI LocalMachine. Δεν απαιτείται και δεν επιτρέπεται port forwarding.
+- [x] Το συνεχόμενο video παραμένει στο NVR. Snapshot, live preview και Audit clip ζητούνται μόνο κατ' απαίτηση και περνούν από authenticated browser-safe proxy χωρίς άμεσο RTSP στον browser.
+- [x] Η υπάρχουσα αντιστοίχιση store/terminal/camera, τα Video Audit events, τα παράθυρα `30″ πριν / 60″ μετά`, τα permissions και το retention διατηρούνται· δεν αλλάχθηκαν POS, πληρωμές, invoice OCR, stock ή drafts.
+- [x] Τοπική επαλήθευση: video tests `54/54` (τα υπάρχοντα `43/43` συν `11` νέα), πλήρες server suite `1331/1331`, client build, server build και `git diff --check`: PASS.
+- [ ] Απαιτούνται πράσινο GitHub CI, merge και εγκατάσταση του connector στο πραγματικό POS/LAN. Το KAT-10 δεν γίνεται `ΟΚ` πριν επιβεβαιωθούν online status, αυτόματη ώρα `Europe/Athens`, snapshot/preview και πραγματικό clip του Audit από το LAB hardware.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-kat10-dahua-real-connector-awaiting-lab.md`.
+
 ## 2026-09-19 — Self-heal a stale POS_RECOVERING durable task
 
 - [x] **LAB FAIL**: invoice `12674` has remained at `POS_QUEUED / POS_RECOVERING` since 17:00 with the preserved old `12`-row / `430.29 EUR` draft. A retry marker without a worker for hours is a stuck queue, not processing.
@@ -711,7 +721,7 @@ Total output lines: 1413
 | KAT-07 | Κάρτα: έγκριση, απόρριψη, timeout, ακύρωση/reversal και settlement στη σωστή συσκευή. | ΕΚΚΡΕΜΕΙ |
 | KAT-08 | Σάρωση αντιπροσωπευτικών προϊόντων και σύγκριση barcode, τιμής και ΦΠΑ με Kiosk Manager. | ΕΚΚΡΕΜΕΙ |
 | KAT-09 | Ταυτόχρονη λειτουργία δύο ταμείων, κοινό stock χωρίς διπλή αφαίρεση και σωστό κλείσιμο βάρδιας. | ΕΚΚΡΕΜΕΙ |
-| KAT-10 | Σύνδεση Dahua DVR/NVR, αντιστοίχιση καμερών και πραγματικό Video Audit με έλεγχο ώρας. | ΕΚΚΡΕΜΕΙ |
+| KAT-10 | Σύνδεση Dahua DVR/NVR, αντιστοίχιση καμερών και πραγματικό Video Audit με έλεγχο ώρας. | AWAITING LAB — connector/automated PASS, εκκρεμεί πραγματικό Dahua LAN test |
 | KAT-11 | GO/NO-GO: μηδενικά pending fiscalizations, mismatches, duplicates και ανεξήγητες οικονομικές διαφορές. | ΜΠΛΟΚΑΡΙΣΜΑ |
 | KAT-12 | Περιορισμένο πιλοτικό άνοιγμα και καθημερινή συμφωνία για 48 ώρες. | ΜΕΤΑ ΤΟ GO |
 
