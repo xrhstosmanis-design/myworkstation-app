@@ -71,10 +71,10 @@ function Invoke-Command([object]$Command){
       try{
         $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,($start -replace " ","%20"),($end -replace " ","%20")
         $findResponse=Invoke-NvrText $findPath
-        if($findResponse -notmatch '(?im)^OK\\s*$'){throw "DAHUA_MEDIA_SEARCH_FAILED"}
+        if(([string]$findResponse).Trim() -ne "OK"){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
         $found=0
-        if($nextResponse -match '(?im)^found=(\\d+)\\s*$'){$found=[int]$matches[1]}
+        foreach($line in ([string]$nextResponse -split [Environment]::NewLine)){if($line.StartsWith("found=")){[int]::TryParse($line.Substring(6).Trim(),[ref]$found)|Out-Null;break}}
         if($found -lt 1){throw "DAHUA_RECORDING_NOT_FOUND"}
       }finally{
         if($searchObject){
