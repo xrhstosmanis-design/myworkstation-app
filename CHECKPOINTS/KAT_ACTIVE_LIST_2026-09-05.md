@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Connector structural duplicate cleanup — AWAITING LAB
+
+- [x] LAB parser error line 59/111 απομονώθηκε σε orphan/duplicated blocks, όχι σε νέο regex θέμα.
+- [x] Αφαιρέθηκε duplicate Fail-Command body και corrupted tail μετά το `NvrClient.Dispose()`.
+- [ ] CI → merge → pinned download → `-Once` PASS → ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-structural-duplicate-cleanup.md`.
+
 ## 2026-09-20 — Video Connector zero-regex verified source — AWAITING LAB
 
 - [x] Έγινε full-file έλεγχος και βρέθηκαν duplicated/stale regex occurrences που είχαν μείνει.
