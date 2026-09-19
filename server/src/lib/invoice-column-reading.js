@@ -246,6 +246,31 @@ export function applyConfirmedColumns(line,columns){
     sourceColumnsVerified:true,supplierProfileRecovered:true,supplierProfileRule:"CONFIRMED_UNIT_RELATIVE_COLUMNS"};
 }
 
+// Λεβεντόπουλος prints a numeric ΜΜ value before ΠΟΣ1.  It is a packaging
+// measurement, not the stock quantity.  Recover only the exact printed tail
+// MM | ΠΟΣ1 | ΠΟΣ2 | ΤΙΜΗ | ΕΚΠ% | Κ. ΑΞΙΑ | ΦΠΑ when that same row balances.
+// This function is deliberately supplier-scoped by its caller; it must not
+// reinterpret another supplier's numeric layout.
+export function recoverLeventopoulosMmPos1Columns(line){
+  if(line?.sourceColumnsVerified)return line;
+  const raw=String(line?.azureRawRow||line?.rawText||"");
+  const values=(raw.match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(value=>value!==null);
+  if(values.length<7)return line;
+  const [mm,quantity,pos2,unitCost,discount,netAmount,vatRate]=values.slice(-7);
+  if(!(mm>0&&quantity>0&&pos2>0&&unitCost>0&&netAmount>0)||![0,6,13,24].includes(vatRate))return line;
+  const factor=1-(Number(discount||0)/100),expected=round2(quantity*unitCost*factor);
+  if(Math.abs(expected-netAmount)>.03)return line;
+  return {...line,
+    quantity,invoiceQuantity:quantity,unitCost,unitPrice:unitCost,
+    initialAmount:round2(quantity*unitCost),netAmount,netValue:netAmount,
+    discount1:Number(discount||0),discount2:0,discount3:0,
+    vatRate,grossAmount:round2(netAmount*(1+vatRate/100)),
+    sourceColumnsVerified:true,supplierProfileRecovered:true,
+    supplierProfileRule:"LEVENTOPOULOS_MM_POS1_COLUMNS",
+    supplierProfileEvidence:{mm,quantityColumn:"ΠΟΣ1",pos2,unitPrice:unitCost,netAmount,vatRate}
+  };
+}
+
 // Some Azure responses contain Items but omit the geometrical product table.
 // Recover this printed layout only when its headers are present in THIS source
 // and the quantity, unit price, pre/post-discount amounts and VAT agree on the
