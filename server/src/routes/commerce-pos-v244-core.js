@@ -97,6 +97,7 @@ const lineSchema=z.object({
   vatRate:z.coerce.number().min(0).max(100),
   grossAmount:z.coerce.number().min(0).max(1000000000),
   confidence:z.coerce.number().min(0).max(100).optional().default(0),
+  sourceColumnsVerified:z.boolean().optional().default(false),
   packRule:z.string().max(120).optional().default("")
 });
 
@@ -184,7 +185,7 @@ router.put("/ai-reader/jobs/:jobId/product-lines",requireCompanyModule("AI_READE
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
     if(job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED","AI_COMPLETE"].includes(job.status))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί για έλεγχο."});
-    const productLines=body.productLines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),retailPrice:Number(line.retailPrice||0),initialAmount:Number(line.initialAmount||0),discount1:clamp(line.discount1,0,100),discount1Amount:Number(line.discount1Amount||0),discount2:clamp(line.discount2,0,100),discount2Amount:Number(line.discount2Amount||0),discount3:clamp(line.discount3,0,100),discount3Amount:Number(line.discount3Amount||0),netAmount:Number(line.netAmount),exciseTotal:Number(line.exciseTotal||0),vatRate:clamp(line.vatRate,0,100),grossAmount:Number(line.grossAmount),confidence:clamp(line.confidence,0,100),v244:true}));
+    const productLines=body.productLines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),retailPrice:Number(line.retailPrice||0),initialAmount:Number(line.initialAmount||0),discount1:clamp(line.discount1,0,100),discount1Amount:Number(line.discount1Amount||0),discount2:clamp(line.discount2,0,100),discount2Amount:Number(line.discount2Amount||0),discount3:clamp(line.discount3,0,100),discount3Amount:Number(line.discount3Amount||0),netAmount:Number(line.netAmount),exciseTotal:Number(line.exciseTotal||0),vatRate:clamp(line.vatRate,0,100),grossAmount:Number(line.grossAmount),confidence:clamp(line.confidence,0,100),sourceColumnsVerified:Boolean(line.sourceColumnsVerified),v244:true}));
     const previous=job.resultJson&&typeof job.resultJson==="object"?job.resultJson:{};
     const resultJson={...previous,productLines,v244Finalized:true,v244FinalizedAt:new Date().toISOString(),v244Source:"KAT_INVOICE_LAB_V2_4_4"};
     await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(resultJson)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
