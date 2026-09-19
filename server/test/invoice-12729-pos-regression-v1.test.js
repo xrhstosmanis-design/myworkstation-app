@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {applyMantzilasPackaging} from "../src/lib/invoice-column-reading.js";
+import {applyMantzilasPackaging,recoverMantzilasEconomics} from "../src/lib/invoice-column-reading.js";
 import {verifiedPrintedTableForPersistence} from "../src/invoice-line-reconciliation.js";
 import {reconcileCentRoundingResidual} from "../src/routes/commerce-pos-v244-core.js";
 
@@ -41,6 +41,16 @@ test("invoice 12729 keeps verified discounts, excise and MANTZILAS stock packagi
 test("invoice 12729 preservation still rejects an unverified or materially mismatched table",()=>{
   assert.equal(verifiedPrintedTableForPersistence(printed12729.map((line,index)=>index?line:{...line,sourceColumnsVerified:false}),200.08),null);
   assert.equal(verifiedPrintedTableForPersistence(printed12729,210),null);
+});
+
+test("invoice 12729 preserves printed-column recovery instead of falling back to the lossy finalizer",()=>{
+  const recovered=recoverMantzilasEconomics({...printed12729[0],sourceColumnsVerified:false,quantitySource:"",rawText:"12 | ΑΛΦΑ 0,5LT ΦΙΑΛΗ | KIB | 1 | 19,04 | 19,04 | 22 | 4,19 | 14,85 | 5,72 | 20,57 | 24 | 4,94"});
+  assert.equal(recovered.quantitySource,"MANTZILAS_PRINTED_ECONOMICS_VERIFIED");
+  const persisted=verifiedPrintedTableForPersistence([recovered,...printed12729.slice(1)].map(applyMantzilasPackaging),200.08);
+  assert.ok(persisted,"a complete current-image printed-column recovery must retain its package, discount and excise fields");
+  assert.equal(persisted[0].discount1,22);
+  assert.equal(persisted[0].exciseTotal,5.72);
+  assert.equal(persisted[0].stockUnitsPerInvoiceUnit,20);
 });
 
 test("invoice 12729 assigns the one-cent VAT rounding residual without changing net or discounts",()=>{
