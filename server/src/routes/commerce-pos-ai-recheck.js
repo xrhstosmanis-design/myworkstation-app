@@ -145,6 +145,22 @@ function collapseExactDuplicateOverage(lines,invoiceTotal){
   if(Math.abs(lineGrossTotal(collapsed)-total)>TOTAL_TOLERANCE)return {lines:source,collapsed:false};
   return {lines:collapsed,collapsed:true,removed:1,overage};
 }
+// Some compact thermal receipts are extracted correctly once and then receive
+// a second, malformed tail from a supplemental reader.  Keep only a prefix
+// when it already reconciles exactly to the independently confirmed invoice
+// total and every discarded row is an unverified replay of an earlier printed
+// description.  This never invents a line or copies economics from history.
+function discardUnverifiedTrailingReplay(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money2(invoiceTotal||0);
+  if(!(total>0)||source.length<2)return {lines:source,discarded:false};
+  for(let end=1;end<source.length;end++){
+    const prefix=source.slice(0,end),tail=source.slice(end);
+    if(Math.abs(lineGrossTotal(prefix)-total)>TOTAL_TOLERANCE)continue;
+    const safeTail=tail.every(line=>!line?.sourceColumnsVerified&&prefix.some(earlier=>descriptionsClose(earlier.description||earlier.rawText,line.description||line.rawText)));
+    if(safeTail)return {lines:prefix,discarded:true,removed:tail.length};
+  }
+  return {lines:source,discarded:false};
+}
 const descriptionsClose=(a,b)=>{const x=norm(a),y=norm(b);return Boolean(x&&y&&(x===y||(x.length>=6&&y.length>=6&&(x.includes(y)||y.includes(x)))))};
 function mergeRecoveredLines(current,recovered){
   const out=(current||[]).map(line=>({...line})),used=new Set();
@@ -446,6 +462,16 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const replay=collapseAdjacentTableReplay(parsed.productLines,invoiceTotal);
   parsed.productLines=replay.lines;
   if(replay.collapsed){parsed.duplicateTableReplayCollapsed=true;parsed.duplicateTableReplayRemoved=replay.removed;if(replay.genuineRepeatedRowPreserved)parsed.genuineRepeatedRowPreserved=true}
+  // Fresh Snack's current-image receipt may have an otherwise-correct first
+  // table followed by a malformed supplemental replay.  The independent
+  // total makes trimming that unverified tail safe; a non-reconciling table
+  // still proceeds to the complete image verifier below.
+  const trailingReplay=(['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE'].includes(parsed?.supplierReadingProfile?.ruleKey)
+    &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true)
+    ?discardUnverifiedTrailingReplay(parsed.productLines,invoiceTotal)
+    :{lines:parsed.productLines,discarded:false};
+  parsed.productLines=trailingReplay.lines;
+  if(trailingReplay.discarded){parsed.unverifiedTrailingReplayDiscarded=true;parsed.unverifiedTrailingReplayRemoved=trailingReplay.removed}
   // A supplemental provider can append one already-present physical row even
   // when the rest of the table is not replayed. For the single-page MANTZILAS
   // layout, remove that isolated replay only when the duplicate tuple is
