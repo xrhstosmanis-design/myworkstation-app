@@ -51,7 +51,8 @@ function Upload-Artifact([object]$Command,[string]$Path,[string]$Kind,[string]$M
 function Complete-Command([object]$Command,[hashtable]$Result){Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/complete" -f $Command.id) @{result=$Result}|Out-Null}
 function Fail-Command([object]$Command,[string]$Code){
   try{
-    $safeCode=([string]$Code -replace '[^A-Z0-9_\-]','_')
+    $safeCode=[string]$Code
+    $safeCode=[regex]::Replace($safeCode,'[^A-Z0-9_-]','_')
     if($safeCode.Length -gt 120){$safeCode=$safeCode.Substring(0,120)}
     Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=$safeCode}|Out-Null
   }catch{Write-SafeLog "COMMAND failure report deferred"}

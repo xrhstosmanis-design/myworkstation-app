@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Fail-Command Regex.Replace PS5 — AWAITING LAB
+
+- [x] PR #984 LAB parser test απέδειξε ότι το PowerShell 5 συνεχίζει να απορρίπτει το `-replace` expression.
+- [x] Αφαιρέθηκε πλήρως ο operator και αντικαταστάθηκε με `[regex]::Replace`.
+- [ ] CI → merge → LAB `-Once` χωρίς parser error → background ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-fail-command-regex-ps5.md`.
+
 ## 2026-09-20 — Video Fail-Command parser hotfix — AWAITING LAB
 
 - [x] Scheduled task Last Result 1 απομονώθηκε σε PowerShell parser error στη Fail-Command line 52.
