@@ -21,7 +21,9 @@ test("V11 stamps expiry and purges only expired event metadata",()=>{
   assert.match(audit,/v\."expiresAt">NOW\(\)/);
 });
 
-test("V11 does not add CCTV payload storage",()=>{
+test("V11 does not add continuous CCTV payload storage and expires requested artifacts",()=>{
   assert.match(ui,/δεν αντιγράφουν video ή ολόκληρο CCTV/);
-  assert.doesNotMatch(bootstrap,/BYTEA|videoData|clipData|videoBlob|recordingBlob/i);
+  assert.match(bootstrap,/VideoMediaArtifact/);
+  assert.match(bootstrap,/DELETE FROM "VideoMediaArtifact" WHERE "expiresAt"<NOW\(\)/);
+  assert.doesNotMatch(bootstrap,/recordingBlob|continuousRecording|audioBlob/i);
 });

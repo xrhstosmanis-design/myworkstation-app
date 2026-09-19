@@ -13,9 +13,9 @@ test("V06 stores the exact 30 second before and 60 second after clip window",()=
   assert.match(ui,/30″ πριν · 60″ μετά/);
 });
 
-test("V06 only advertises clip support for a capable adapter",()=>{
-  assert.match(route,/clipSupported=event\.protocol==="VENDOR_API"/);
-  assert.match(route,/clipCreated:false/);
-  assert.match(route,/πραγματικός adapter του καταγραφικού/);
-  assert.match(ui,/δεν δημιουργήθηκε clip σε αυτό το στάδιο/);
+test("V06 only advertises clip support for an online connector or ready artifact",()=>{
+  assert.match(route,/clipSupported=Boolean\(connector\?\.online\|\|artifact\)/);
+  assert.match(route,/clipCreated:Boolean\(artifact\)/);
+  assert.match(route,/Video Connector είναι offline/);
+  assert.match(ui,/Ανάκτηση πραγματικού αποσπάσματος/);
 });

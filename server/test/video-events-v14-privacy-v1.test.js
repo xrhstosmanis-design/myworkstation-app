@@ -23,7 +23,8 @@ test("V14 combines restricted access retention and privacy acknowledgement",()=>
   assert.match(ui,/καταγραφή ήχου παραμένει απενεργοποιημένη/);
 });
 
-test("V14 audit contains policy metadata but no media or credentials",()=>{
+test("V14 audit contains policy metadata, temporary event media and no credentials or audio",()=>{
   assert.match(platform,/privacyMode:"EVENT_ONLY",audioEnabled:false/);
-  assert.doesNotMatch(bootstrap,/audioData|audioBlob|videoData|videoBlob|BYTEA/i);
+  assert.match(bootstrap,/VideoMediaArtifact/);
+  assert.doesNotMatch(bootstrap,/audioData|audioBlob|passwordEnc.*VideoMediaArtifact/i);
 });
