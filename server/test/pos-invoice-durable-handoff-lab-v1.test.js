@@ -19,7 +19,8 @@ test("POS persists every invoice page before starting full recognition",()=>{
 });
 
 test("POS closes the invoice modal immediately and only monitors server status",()=>{
-  assert.match(client,/effectiveMode==="PAID"\?`✅ Πληρωμή/);
+  assert.match(client,/effectiveMode==="PAID"\?`⏳ Η πληρωμή/);
+  assert.match(client,/δεν έχει δηλωθεί ακόμη επιτυχία/);
   assert.match(client,/monitorBackgroundV244\(\{api,jobId:handoff\.jobId/);
   assert.match(client,/\/ai-reader\/fast-status\//);
   assert.doesNotMatch(client,/\/ai-reader\/jobs\/\$\{encodeURIComponent\(jobId\)\}\/ai-recheck/);
@@ -27,6 +28,14 @@ test("POS closes the invoice modal immediately and only monitors server status",
   assert.match(route,/\/ai-recheck/);
   assert.match(route,/\/product-lines/);
   assert.match(route,/\/pos-intake/);
+});
+
+test("POS reports success only after non-empty reconciled background completion",()=>{
+  assert.match(route,/const lineCount=Number\(background\.lineCount\|\|job\.resultJson\?\.productLines\?\.length\|\|0\)/);
+  assert.match(route,/const done=background\.status==="COMPLETED"&&job\.status==="AWAITING_APPROVAL"&&!rereadClaimed&&lineCount>0/);
+  assert.match(client,/if\(lineCount<=0\).*Δεν θεωρείται επιτυχής/s);
+  assert.match(client,/review\?`⚠️[\s\S]*Δεν θεωρείται ολοκληρωμένο\.`:`✅[\s\S]*οικονομικός έλεγχος ΟΚ/);
+  assert.match(client,/safe retry του ίδιου job|ασφαλές retry του ίδιου job/);
 });
 
 test("server startup reclaims persisted queued or expired-lease work without POS polling",()=>{
@@ -77,13 +86,16 @@ test("worker watchdog requeues a stale recovering job without browser polling",(
 
 test("startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh",()=>{
   const schema=route.slice(route.indexOf("async function ensureFastHandoffSchema"),route.indexOf("async function enqueueFastBackground"));
-  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V13/);
+  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14/);
   assert.match(schema,/j\."status"='AWAITING_APPROVAL'/);
   assert.match(schema,/j\."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'/);
   assert.match(schema,/reconciliationRequired'\)::boolean,false\)=true/);
+  assert.match(schema,/COALESCE\(l\."stockUnitsPerInvoiceUnit",1\)<=1/);
+  assert.match(schema,/o\."sourceDocumentId"=d\."id"/);
+  assert.match(schema,/STARTUP_TOTAL_OR_PACKAGING_RESTORE/);
   assert.match(schema,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
   assert.match(schema,/s\."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%'/);
-  assert.match(schema,/reason:"STARTUP_SINGLE_VERIFIER",trigger:"SERVER_STARTUP"/);
+  assert.match(schema,/reason:"STARTUP_TOTAL_OR_PACKAGING_RESTORE",trigger:"SERVER_STARTUP"/);
   assert.match(schema,/resumeStoredProductLines:false,replaceExistingDraft:true/);
   assert.match(schema,/"status"='POS_REPROCESSING'/);
   assert.match(schema,/ON CONFLICT \("jobId"\) DO UPDATE SET[\s\S]*"state"='QUEUED'/);

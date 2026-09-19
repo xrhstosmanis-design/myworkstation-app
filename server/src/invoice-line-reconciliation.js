@@ -28,7 +28,14 @@ export function reconcileInvoiceLines(productLines,invoiceTotal,tolerance=0.05){
 // units or discounts a second time.
 export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tolerance=0.05){
   const lines=Array.isArray(productLines)?productLines:[];
-  if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&line?.quantitySource==="AI_COMPLETE_PRINTED_TABLE_VERIFIED"))return null;
+  const completeRowSources=new Set([
+    "AI_COMPLETE_PRINTED_TABLE_VERIFIED",
+    "AI_PRINTED_ROW_FULL_MATH_VERIFIED",
+    "SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED",
+    "MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED",
+    "MANTZILAS_CODE_00009_FINAL_NORMALIZATION"
+  ]);
+  if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&completeRowSources.has(line?.quantitySource)))return null;
   const reconciliation=reconcileInvoiceLines(lines,invoiceTotal,tolerance);
   return reconciliation.difference<=tolerance+Number.EPSILON?reconciliation.normalizedLines:null;
 }

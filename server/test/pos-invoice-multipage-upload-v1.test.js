@@ -253,7 +253,8 @@ test("a total mismatch is created as a BackOffice draft without stock posting",(
   assert.match(intake,/reconciliationRequired:body\.reconciliationRequired/);
   assert.match(intake,/stockUpdated:false/);
   assert.match(client,/result\.reconciliationRequired/);
-  assert.match(client,/καταχωρίστηκε ως ΠΡΟΧΕΙΡΟ και χρειάζεται έλεγχο BackOffice/);
+  assert.match(client,/δημιουργήθηκε πρόχειρο με \$\{lineCount\} γραμμές, αλλά ο οικονομικός έλεγχος έχει διαφορά/);
+  assert.match(client,/Δεν θεωρείται ολοκληρωμένο/);
 });
 
 test("all page attachments are archived only after the single purchase is created",()=>{

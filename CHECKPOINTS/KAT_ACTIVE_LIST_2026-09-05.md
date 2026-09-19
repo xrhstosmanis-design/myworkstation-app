@@ -1777,3 +1777,15 @@ Total output lines: 1413
 - [x] Focused regression, complete server suite `1312/1312` and production build: PASS locally.
 - [ ] Require green CI, squash merge and exact Render revision. LAB PASS still requires one future new POS-front submission without refresh or second upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-pos-confirmed-supplier-full-ocr.md`.
+## 2026-09-19 — Invoice 12729 verified-row persistence and packaging restore
+
+- [x] **LAB FAIL** from one POS-front credit submission of invoice `12729`: one automatic 10-line draft reached `AWAITING_APPROVAL / POS_BACKGROUND_COMPLETE`, but displayed `200.09 EUR` instead of `200.08 EUR`, lost printed discounts/excise and exposed package quantities as `1 / 2 / 3` stock pieces.
+- [x] Root cause: the complete MANTZILAS verifier emitted safe `AI_PRINTED_ROW_FULL_MATH_VERIFIED` rows, while `verifiedPrintedTableForPersistence` accepted only `AI_COMPLETE_PRINTED_TABLE_VERIFIED`. The worker therefore sent the verified rows through the older lossy finalizer a second time.
+- [x] Preserve every complete, source-column-verified row for the bounded safe marker set; retain current-image price, discount, excise, VAT and package metadata. Unverified or materially mismatched tables remain fail-closed.
+- [x] Reconcile only a cent-level gross rounding residual (maximum `0.05 EUR`) on one final line so invoice `12729` persists exact `164.66 + 35.42 = 200.08 EUR` without changing net values or discounts.
+- [x] Advance the one-attempt strategy to V14 and automatically reread only a recent unapproved MANTZILAS POS draft with a completed mismatch or demonstrably lost `4PACK / 6PACK / KIB` multiplier. Reuse the same attachment, handoff, credit identity, job and draft.
+- [x] Exact `12729` fixture expects stock quantities `20, 1, 24, 24, 24, 24, 12, 48, 8, 12`, discounts `22, 0, 17, 17, 17, 17, 0, 0, 31, 0`, ten physical rows and exact totals.
+- [x] Focused invoice/POS regressions `49/49`: PASS.
+- [x] Exact regressions and focused invoice/POS tests `49/49`, complete server suite `1316/1316`, production client/server/Prisma build and diff checks: PASS.
+- [ ] Require green CI, merge, exact deploy and automatic same-draft reread verification. No second upload, BackOffice manual save, approval, finalization, payment, stock, fiscal, accounting or myDATA mutation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-invoice-12729-verified-row-persistence.md`.

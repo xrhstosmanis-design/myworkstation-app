@@ -187,7 +187,7 @@ test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the ar
 test("recovery prioritizes recent completed drafts before the bounded legacy scan",()=>{
   assert.match(route,/ORDER BY CASE WHEN "status"='AWAITING_APPROVAL' THEN 0 ELSE 1 END,/);
   assert.match(route,/CASE WHEN "status"='AWAITING_APPROVAL' THEN "updatedAt" END DESC,/);
-  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V13/);
+  assert.match(route,/MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14/);
 });
 
 test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{

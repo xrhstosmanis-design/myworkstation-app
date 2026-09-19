@@ -19,7 +19,7 @@ test("POS keeps polling while the mismatch reread is being claimed",()=>{
   const status=route.slice(route.indexOf('router.get("/ai-reader/fast-status'),route.indexOf('// The invoice UI labels'));
   assert.match(status,/const done=background\.status==="COMPLETED"&&job\.status==="AWAITING_APPROVAL"&&!rereadClaimed/);
   assert.match(pos,/if\(result\?\.done\)/);
-  assert.match(pos,/setTimeout\(poll,5000\)/);
+  assert.match(pos,/setTimeout\(poll,2000\)/);
   assert.doesNotMatch(pos,/επανάληψη από το BackOffice/);
 });
 

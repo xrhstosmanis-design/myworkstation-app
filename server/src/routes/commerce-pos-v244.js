@@ -16,7 +16,7 @@ const router=Router();
 // remain visible for management review in BackOffice and do not block the operator.
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
-const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V13";
+const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V14";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -264,7 +264,8 @@ async function ensureFastHandoffSchema(){
       OR "PosInvoiceBackgroundTask"."companyId"<>EXCLUDED."companyId"
       OR "PosInvoiceBackgroundTask"."storeId"<>EXCLUDED."storeId"`);
 
-  // A completed mismatched draft can predate the single-verifier deployment,
+  // A completed mismatched or lossy-packaging draft can predate the current
+  // persistence deployment,
   // so POS polling has already stopped. Claim only a recent, still-unapproved
   // MANTZILAS draft once for the new strategy and reuse its durable handoff.
   const candidates=await prisma.$queryRaw`
@@ -276,7 +277,14 @@ async function ensureFastHandoffSchema(){
       AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
       AND j."resultJson"->'posHandoff' IS NOT NULL
       AND j."resultJson"->'posBackground'->>'status'='COMPLETED'
-      AND COALESCE((j."resultJson"->'posBackground'->>'reconciliationRequired')::boolean,false)=true
+      AND (COALESCE((j."resultJson"->'posBackground'->>'reconciliationRequired')::boolean,false)=true OR EXISTS (
+        SELECT 1 FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id"
+        WHERE o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId"
+          AND COALESCE(l."stockUnitsPerInvoiceUnit",1)<=1
+          AND (l."description" ILIKE '%4pack%' OR l."description" ILIKE '%6pack%'
+            OR l."description" ILIKE '%0,5LT%ΚΟΥΤΙ%' OR l."description" ILIKE '%0,33LT%ΚΟΥΤΙ%'
+            OR l."description" ILIKE '%0,5LT%ΦΙΑΛΗ%')
+      ))
       AND COALESCE(j."resultJson"->'posReprocess'->>'strategy','')<>${POS_REPROCESS_STRATEGY}
       AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
       AND (s."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%' OR s."name" ILIKE '%MANTZILAS%')
@@ -284,7 +292,7 @@ async function ensureFastHandoffSchema(){
   for(const job of candidates){
     const background=job.resultJson?.posBackground||{};
     const handoff={...job.resultJson.posHandoff,resumeStoredProductLines:false,replaceExistingDraft:true};
-    const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:"STARTUP_SINGLE_VERIFIER",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+    const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:"STARTUP_TOTAL_OR_PACKAGING_RESTORE",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
     await prisma.$transaction(async tx=>{
       const claimed=await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker,posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${job.companyId} AND "status"='AWAITING_APPROVAL' AND COALESCE("resultJson"->'posReprocess'->>'strategy','')<>${POS_REPROCESS_STRATEGY}`;
       if(!claimed)return;
@@ -841,8 +849,9 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:scheduledHandoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED')`;
       await enqueueFastBackground({companyId:req.user.companyId,storeId:job.storeId,jobId:job.id,publicOrigin});
     }
-    const done=background.status==="COMPLETED"&&job.status==="AWAITING_APPROVAL"&&!rereadClaimed;
-    res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_RECOVERING":job.stage,status:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_QUEUED":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:job.status==="POS_FAILED"&&!retryClaimed,purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:retryClaimed?null:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),pageCount:Number(background.pageCount||handoff?.pageCount||0)});
+    const lineCount=Number(background.lineCount||job.resultJson?.productLines?.length||0);
+    const done=background.status==="COMPLETED"&&job.status==="AWAITING_APPROVAL"&&!rereadClaimed&&lineCount>0;
+    res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_RECOVERING":job.stage,status:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_QUEUED":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:job.status==="POS_FAILED"&&!retryClaimed,purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:retryClaimed?null:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount,pageCount:Number(background.pageCount||handoff?.pageCount||0)});
   }catch(error){next(error)}
 });
 
