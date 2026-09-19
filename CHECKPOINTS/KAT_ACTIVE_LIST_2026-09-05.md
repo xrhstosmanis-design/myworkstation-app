@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Connector zero-regex verified source — AWAITING LAB
+
+- [x] Έγινε full-file έλεγχος και βρέθηκαν duplicated/stale regex occurrences που είχαν μείνει.
+- [x] Το branch source επαληθεύτηκε με **0 γραμμές** `-match/-notmatch/-replace` πριν το commit.
+- [ ] CI → merge → pinned download → LAB findstr 0 → `-Once` PASS → ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-ps5-zero-regex-verified.md`.
+
 ## 2026-09-20 — Video Connector πλήρως χωρίς regex operators — AWAITING LAB
 
 - [x] Static check βρήκε υπόλοιπα regex σε logging, ONVIF και HTTP stage detection.
