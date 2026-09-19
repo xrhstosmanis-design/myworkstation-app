@@ -1,3 +1,13 @@
+## 2026-09-20 — Video Audit πραγματικό clip — LAB PASS ✅
+
+- [x] Connector parser PASS, Scheduled Task Running, BackOffice ONLINE.
+- [x] D1 IPC → POS 1 → native Dahua channel/stream 1.
+- [x] Πραγματικό ιστορικό clip 90s (30s πριν / 60s μετά) ανακτήθηκε από Dahua NVR.
+- [x] DAV → MP4 μέσω FFmpeg και εμφανίστηκε στον authenticated browser player.
+- [x] FFmpeg timeout protection 60s για να μην μπλοκάρουν τα heartbeats.
+- [x] End-to-end LAB PASS: event → command → NVR → DAV → MP4 → upload → playback.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-audit-real-clip-lab-pass.md`.
+
 ## 2026-09-20 — Video FFmpeg timeout / heartbeat protection — AWAITING LAB
 
 - [x] LAB process inspection: πραγματικό Dahua `.dav` έχει κατέβει· κόλλημα στο `ffmpeg DAV→MP4`.
