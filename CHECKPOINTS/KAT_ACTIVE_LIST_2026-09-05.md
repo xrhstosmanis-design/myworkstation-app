@@ -1,3 +1,10 @@
+## 2026-09-19 — Fresh Snack unverified trailing replay — AWAITING DEPLOY
+
+- [x] Fresh POS-front diagnostic `36-ΤΔΑ 005401` proves the receipt itself was read once correctly: its first five provisional rows reconcile exactly to printed `53.87 EUR`. Four later unverified replay rows inflated the draft to `92.28 EUR`, and the existing safety gate correctly blocked it before approval, stock, fiscal, accounting or payment mutation.
+- [x] For a profiled supplier, drop only a trailing unverified replay when the preceding current-image rows already reconcile exactly and each discarded description repeats an earlier row. Any non-identical or non-reconciling tail remains blocked.
+- [x] Focused regression suite `78/78` PASS locally. Green CI, merge, exact deploy and operator check of the existing safe draft remain required; no new Fresh invoice is needed for this diagnostic fix.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-fresh-snack-unverified-tail-replay.md`.
+
 ## 2026-09-19 — Fresh Delicacies complete printed-table safety rule — AWAITING LAB
 
 - [x] **LAB FAIL retained for diagnostic invoice `BB 6439`**: the actual receipt has `12` rows / `51.20 EUR` net / `6.66 EUR` VAT / `57.86 EUR` gross. The provisional 14-row OCR result contained a malformed `4,201.00 EUR` line and two duplicates (`4,810.44 EUR` gross), so the POS correctly kept it `POS_FAILED` / visibly reviewable. No approval, stock, fiscal, accounting or payment mutation occurred.
