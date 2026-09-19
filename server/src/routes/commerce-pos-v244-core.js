@@ -5,6 +5,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
+import {reviewStatusForInvoiceLine} from "../lib/invoice-line-review.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -63,6 +64,7 @@ export async function ensureV244IntakeSchema(){
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "invoiceUnit" TEXT`,
         `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`,
+        `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrReviewReasons" TEXT`,
         `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoiceDocumentNumber" TEXT`,
         `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoicePaymentKey" TEXT`,
         `CREATE UNIQUE INDEX IF NOT EXISTS "StoreTransaction_active_invoice_payment_unique" ON "StoreTransaction" ("companyId","invoicePaymentKey") WHERE "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL AND "invoicePaymentKey" IS NOT NULL`
@@ -295,8 +297,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
         const conversion=stockConversionFromDescription(line.description,Number(line.stockUnitsPerInvoiceUnit||line.unitsPerPackage||0),invoiceUnit);
         const stockUnitsPerInvoiceUnit=conversion.multiplier>1?conversion.multiplier:(invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1);
+        const review=reviewStatusForInvoiceLine({...line,invoiceUnit,stockUnitsPerInvoiceUnit},{matched:Boolean(line.product)});
         stage=`create-purchase-line-${index+1}`;
-        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},${exciseTotal},${line.vatRate},false,${line.unitCost},0,${Number(line.retailPrice||line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${line.product?'MATCHED':'UNRESOLVED'},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","ocrReviewReasons","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},${exciseTotal},${line.vatRate},false,${line.unitCost},0,${Number(line.retailPrice||line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${review.resolutionStatus},${review.reasons.join(" · ")||null},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;
       }
       let paymentTransactionId=null;
       if(body.settlementMode==="PAID"){
