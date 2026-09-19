@@ -1,3 +1,11 @@
+## 2026-09-19 — Backoffice Κάμερες / Video Audit — AWAITING LAB
+
+- [x] Προστέθηκε διαχείριση Video Audit στο Backoffice ανά κατάστημα, αντί να εξαρτάται η καθημερινή χρήση από το Platform Admin.
+- [x] Owner/Admin + VIDEO_EVENTS gate, connector status, camera mapping και one-time pairing code 15 λεπτών.
+- [x] Τα NVR credentials δεν εμφανίζονται στο Backoffice.
+- [ ] CI / merge / deploy / LAB connector pairing και πραγματικό video test.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-backoffice-video-audit-manager-awaiting-lab.md`.
+
 ## 2026-09-19 — Video Audit ιστορικού on-demand — AWAITING LAB
 
 - [x] Παλιές Audit εγγραφές μπορούν να δημιουργούν Video Event on-demand όταν πατηθεί «Προβολή βίντεο», χωρίς να απαιτείται προϋπάρχουσα video εγγραφή από την ημέρα του συμβάντος.
