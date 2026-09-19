@@ -91,6 +91,7 @@ test("startup rereads one recent unapproved mismatched MANTZILAS draft without b
   assert.match(schema,/j\."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'/);
   assert.match(schema,/reconciliationRequired'\)::boolean,false\)=true/);
   assert.match(schema,/COALESCE\(l\."stockUnitsPerInvoiceUnit",1\)<=1/);
+  assert.match(schema,/o\."sourceDocumentId"=d\."id"/);
   assert.match(schema,/STARTUP_TOTAL_OR_PACKAGING_RESTORE/);
   assert.match(schema,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
   assert.match(schema,/s\."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%'/);

@@ -279,7 +279,7 @@ async function ensureFastHandoffSchema(){
       AND j."resultJson"->'posBackground'->>'status'='COMPLETED'
       AND (COALESCE((j."resultJson"->'posBackground'->>'reconciliationRequired')::boolean,false)=true OR EXISTS (
         SELECT 1 FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id"
-        WHERE o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId"
+        WHERE o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId"
           AND COALESCE(l."stockUnitsPerInvoiceUnit",1)<=1
           AND (l."description" ILIKE '%4pack%' OR l."description" ILIKE '%6pack%'
             OR l."description" ILIKE '%0,5LT%ΚΟΥΤΙ%' OR l."description" ILIKE '%0,33LT%ΚΟΥΤΙ%'
