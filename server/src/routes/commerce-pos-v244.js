@@ -17,6 +17,7 @@ const router=Router();
 const POS_HANDOFF_TOLERANCE=5;
 const POS_STORED_LINES_TOLERANCE=0.05;
 const POS_REPROCESS_STRATEGY="MANTZILAS_SINGLE_COMPLETE_VERIFIER_V15";
+const POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY="COMPLETE_TABLE_TRAILING_REPLAY_V16";
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const normalizeDocumentNumber=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
@@ -85,6 +86,12 @@ let posBackgroundSweepTimer=null;
 let posBackgroundSweepActive=false;
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 const isSafeInferiorRereadFailure=error=>/POS_BACKGROUND_AI_RECHECK:\s*Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο/i.test(String(error?.message||error));
+const isSafeCompleteTableReplayFailure=(job,error)=>{
+  const profile=job?.resultJson?.supplierReadingProfile||{};
+  return ["FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE"].includes(profile.ruleKey)
+    &&profile.requireCompletePrintedTableOnMismatch===true
+    &&/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές\. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση\./i.test(String(error?.message||error));
+};
 
 function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
   const bodyHash=crypto.createHash("sha256").update(JSON.stringify(body??null)).digest("hex");
@@ -300,6 +307,31 @@ async function ensureFastHandoffSchema(){
     const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:"STARTUP_TOTAL_OR_PACKAGING_RESTORE",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
     await prisma.$transaction(async tx=>{
       const claimed=await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker,posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${job.companyId} AND "status"='AWAITING_APPROVAL' AND COALESCE("resultJson"->'posReprocess'->>'strategy','')<>${POS_REPROCESS_STRATEGY}`;
+      if(!claimed)return;
+      await tx.$executeRaw`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt") VALUES (${job.id},${job.companyId},${job.storeId},'QUEUED',CURRENT_TIMESTAMP)
+        ON CONFLICT ("jobId") DO UPDATE SET "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=CURRENT_TIMESTAMP,"attemptCount"=0,"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=NULL,"updatedAt"=CURRENT_TIMESTAMP`;
+    });
+  }
+
+  // POS_FAILED jobs do not keep a browser poll alive. A complete-table profile
+  // may retry its durable image once after a safe trailing-replay fix lands.
+  const replayCandidates=await prisma.$queryRaw`
+    SELECT j."id",j."companyId",j."storeId",j."resultJson"
+    FROM "AiReaderJob" j JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId"
+    WHERE j."status"='POS_FAILED' AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
+      AND j."resultJson"->'posHandoff' IS NOT NULL
+      AND j."resultJson"->'supplierReadingProfile'->>'ruleKey' IN ('FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE')
+      AND COALESCE(j."resultJson"->'supplierReadingProfile'->>'requireCompletePrintedTableOnMismatch','false')='true'
+      AND COALESCE(j."resultJson"->'posReprocess'->>'strategy','')<>${POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY}
+      AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
+    ORDER BY j."updatedAt" DESC LIMIT 3`;
+  for(const job of replayCandidates){
+    const background=job.resultJson?.posBackground||{};
+    if(!isSafeCompleteTableReplayFailure(job,background.error))continue;
+    const handoff={...job.resultJson.posHandoff,resumeStoredProductLines:false,replaceExistingDraft:true};
+    const marker={mode:"RECONCILIATION_REREAD",strategy:POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY,attemptedAt:new Date().toISOString(),reason:"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+    await prisma.$transaction(async tx=>{
+      const claimed=await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker,posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${job.companyId} AND "status"='POS_FAILED' AND COALESCE("resultJson"->'posReprocess'->>'strategy','')<>${POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY}`;
       if(!claimed)return;
       await tx.$executeRaw`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt") VALUES (${job.id},${job.companyId},${job.storeId},'QUEUED',CURRENT_TIMESTAMP)
         ON CONFLICT ("jobId") DO UPDATE SET "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=CURRENT_TIMESTAMP,"attemptCount"=0,"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=NULL,"updatedAt"=CURRENT_TIMESTAMP`;
@@ -796,11 +828,12 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
-      const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
+      const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError);
+      const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
       if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
-      if(job.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
+      if(job.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!needsCompleteTableReplayRecovery&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
       if(needsDraftReread){
-        const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
+        const marker={mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsCompleteTableReplayRecovery?"COMPLETE_TABLE_TRAILING_REPLAY":needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
         const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('AWAITING_APPROVAL','POS_FAILED')`;
         if(!claimed)continue;
         handoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};
@@ -834,12 +867,13 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
-    const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance;
+    const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError);
+    const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
     const staleProcessing=job.status==="POS_PROCESSING"&&new Date(job.updatedAt).getTime()<Date.now()-60*1000;
     let scheduledHandoff=handoff,rereadClaimed=false,retryClaimed=false;
     let shouldSchedule=hasRecoverableHandoff&&(["POS_QUEUED","POS_DRAFT_READY"].includes(job.status)||staleProcessing);
     if(hasRecoverableHandoff&&needsDraftReread){
-      const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
+      const marker={mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsCompleteTableReplayRecovery?"COMPLETE_TABLE_TRAILING_REPLAY":needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
       const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('AWAITING_APPROVAL','POS_FAILED')`;
       rereadClaimed=Boolean(claimed);
       if(rereadClaimed){scheduledHandoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};shouldSchedule=true}
