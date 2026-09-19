@@ -1909,10 +1909,10 @@ Total output lines: 1413
 - [x] The recovery reuses the same job, attachment, credit/draft identity and replaces lines only if the new read is fully verified. It never approves, creates payment, moves stock or finalizes the document.
 - [ ] Await CI, deployment and actual result: five physical rows, `47.67 EUR` net, `6.20 EUR` VAT, `53.87 EUR` gross.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-fresh-snack-safe-replay-verification.md`.
-## 2026-09-19 — Λεβεντόπουλος ΠΟΣ1 ποσότητα — AWAITING LAB
+## 2026-09-19 — Λεβεντόπουλος ακριβή κελιά ποσότητας — AWAITING LAB
 
-- [x] Για τον προμηθευτή ΑΦΜ `800503361` (Λεβεντόπουλος), η ποσότητα αποθέματος διαβάζεται από τη στήλη `ΠΟΣ1`; τα αριθμητικά `ΜΜ` και `ΠΟΣ2` αγνοούνται.
-- [x] Ο κανόνας εφαρμόζεται μόνο όταν η αριθμητική της τρέχουσας εκτυπωμένης γραμμής ισορροπεί· αλλιώς η γραμμή παραμένει για έλεγχο.
+- [x] Για τον προμηθευτή ΑΦΜ `800503361` (Λεβεντόπουλος), η ποσότητα και η τιμή διαβάζονται από τα ακριβή κελιά `ΠΟΣ1` και `ΤΙΜΗ` του Azure πίνακα· δεν σαρώνεται πλέον ελεύθερο OCR κείμενο που μπορεί να περιέχει αριθμούς κωδικού/περιγραφής.
+- [x] Ο κανόνας εφαρμόζεται μόνο όταν τα ακριβή κελιά της τρέχουσας εκτυπωμένης γραμμής ισορροπούν· αλλιώς η γραμμή παραμένει για έλεγχο.
 - [x] Δεν αλλάζει υπάρχον draft, πληρωμή, πίστωση, απόθεμα, οριστικοποίηση, fiscal, accounting ή myDATA.
 - [ ] Απαιτούνται πράσινο CI, merge/deploy και ένα νέο LAB τιμολόγιο Λεβεντόπουλου για επιβεβαίωση των ποσοτήτων `ΠΟΣ1`.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-leventopoulos-mm-pos1-safe-quantity.md`.

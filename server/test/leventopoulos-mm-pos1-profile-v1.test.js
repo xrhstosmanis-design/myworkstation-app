@@ -1,24 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {recoverLeventopoulosMmPos1Columns} from "../src/lib/invoice-column-reading.js";
+import {extractAzureColumns,recoverLeventopoulosMmPos1Columns} from "../src/lib/invoice-column-reading.js";
 
-test("Λεβεντόπουλος uses ΠΟΣ1, never the numeric ΜΜ, when the printed row balances",()=>{
-  const line=recoverLeventopoulosMmPos1Columns({
+test("Λεβεντόπουλος never infers ΠΟΣ1 from unstructured OCR text",()=>{
+  const input={
     code:"e48266",rawText:"e48266 ΣΥΛ MAGIC DBL GOLD CAR 10 20.00 1.00 2.800 0.0 56.00 13",
     quantity:10,unitCost:20,netAmount:56,vatRate:13
-  });
-  assert.equal(line.quantity,20);
-  assert.equal(line.unitCost,2.8);
-  assert.equal(line.netAmount,56);
-  assert.equal(line.vatRate,13);
-  assert.equal(line.sourceColumnsVerified,true);
-  assert.equal(line.supplierProfileEvidence.mm,10);
+  };
+  assert.equal(recoverLeventopoulosMmPos1Columns(input),input);
 });
 
 test("Λεβεντόπουλος leaves an unbalanced physical row for review",()=>{
   const input={rawText:"e48266 ΣΥΛ MAGIC DBL GOLD CAR 10 20.00 1.00 2.800 0.0 55.90 13",quantity:10,unitCost:20,netAmount:55.9};
   assert.equal(recoverLeventopoulosMmPos1Columns(input),input);
+});
+
+test("Λεβεντόπουλος reads ΠΟΣ1 and ΤΙΜΗ from their exact Azure table cells",()=>{
+  const cells=[
+    ["ΚΩΔΙΚΟΣ","code"],["ΕΙΔΟΣ","description"],["ΜΜ","unit"],["ΠΟΣ1","pos1"],["ΠΟΣ2","pos2"],["ΤΙΜΗ","price"],["ΕΚΠ%","discount"],["Κ. ΑΞΙΑ","net"],["ΦΠΑ","vat"]
+  ].map(([content],columnIndex)=>({kind:"columnHeader",rowIndex:0,columnIndex,content}));
+  const row=["e80549","ΚΥΠ B&J STRAWDOUGH 4","10","10.00","0.13","0.802","0.0","8.02","13"];
+  cells.push(...row.map((content,columnIndex)=>({rowIndex:1,columnIndex,content,boundingRegions:[{pageNumber:1,polygon:[0,0,1,0,1,1,0,1]}]})));
+  const [line]=extractAzureColumns({tables:[{cells,boundingRegions:[{pageNumber:1,polygon:[0,0,1,0,1,1,0,1]}]}]});
+  assert.equal(line.quantity,10);
+  assert.equal(line.unitCost,.802);
+  assert.equal(line.netAmount,8.02);
+  assert.equal(line.sourceColumnsVerified,true);
+  assert.equal(recoverLeventopoulosMmPos1Columns(line),line);
 });
 
 test("the supplier rule is central, scoped by ΑΦΜ and does not preserve old invoice economics",async()=>{

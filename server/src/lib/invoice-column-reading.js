@@ -246,29 +246,12 @@ export function applyConfirmedColumns(line,columns){
     sourceColumnsVerified:true,supplierProfileRecovered:true,supplierProfileRule:"CONFIRMED_UNIT_RELATIVE_COLUMNS"};
 }
 
-// Λεβεντόπουλος prints a numeric ΜΜ value before ΠΟΣ1.  It is a packaging
-// measurement, not the stock quantity.  Recover only the exact printed tail
-// MM | ΠΟΣ1 | ΠΟΣ2 | ΤΙΜΗ | ΕΚΠ% | Κ. ΑΞΙΑ | ΦΠΑ when that same row balances.
-// This function is deliberately supplier-scoped by its caller; it must not
-// reinterpret another supplier's numeric layout.
+// Λεβεντόπουλος prints a numeric ΜΜ value before ΠΟΣ1. It is a packaging
+// measurement, not the stock quantity. The valid source is the geometrical
+// Azure table (ΜΜ | ΠΟΣ1 | ΠΟΣ2 | ΤΙΜΗ), never a scan of free OCR text: item
+// descriptions and product codes contain numbers that can look plausible.
 export function recoverLeventopoulosMmPos1Columns(line){
-  if(line?.sourceColumnsVerified)return line;
-  const raw=String(line?.azureRawRow||line?.rawText||"");
-  const values=(raw.match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(value=>value!==null);
-  if(values.length<7)return line;
-  const [mm,quantity,pos2,unitCost,discount,netAmount,vatRate]=values.slice(-7);
-  if(!(mm>0&&quantity>0&&pos2>0&&unitCost>0&&netAmount>0)||![0,6,13,24].includes(vatRate))return line;
-  const factor=1-(Number(discount||0)/100),expected=round2(quantity*unitCost*factor);
-  if(Math.abs(expected-netAmount)>.03)return line;
-  return {...line,
-    quantity,invoiceQuantity:quantity,unitCost,unitPrice:unitCost,
-    initialAmount:round2(quantity*unitCost),netAmount,netValue:netAmount,
-    discount1:Number(discount||0),discount2:0,discount3:0,
-    vatRate,grossAmount:round2(netAmount*(1+vatRate/100)),
-    sourceColumnsVerified:true,supplierProfileRecovered:true,
-    supplierProfileRule:"LEVENTOPOULOS_MM_POS1_COLUMNS",
-    supplierProfileEvidence:{mm,quantityColumn:"ΠΟΣ1",pos2,unitPrice:unitCost,netAmount,vatRate}
-  };
+  return line;
 }
 
 // Some Azure responses contain Items but omit the geometrical product table.
@@ -429,6 +412,20 @@ export function extractAzureColumns(result){
     const labels={};
     for(const cell of headerCells)for(let col=cell.columnIndex;col<cell.columnIndex+Number(cell.columnSpan||1);col++)labels[col]=`${labels[col]||""} ${cell.content||""}`.trim();
     const columns={};for(const [col,label] of Object.entries(labels)){const role=headerRole(label);if(role&&columns[role]===undefined)columns[role]=Number(col)}
+    // Λεβεντόπουλος uses the compact printed chain ΜΜ | ΠΟΣ1 | ΠΟΣ2 | ΤΙΜΗ.
+    // ΠΟΣ1 is the invoice quantity and ΤΙΜΗ is the purchase unit price.  The
+    // generic header classifier intentionally does not guess bare ΠΟΣ1/ΤΙΜΗ
+    // labels, so recognize this complete, unambiguous header fingerprint only.
+    const compact=Object.entries(labels).reduce((map,[col,label])=>{map[columnKey(label)]=Number(col);return map},{});
+    if(compact.ΜΜ!==undefined&&compact.ΠΟΣ1!==undefined&&compact.ΠΟΣ2!==undefined&&compact.ΤΙΜΗ!==undefined){
+      if(compact.ΚΩΔΙΚΟΣ!==undefined)columns.code=compact.ΚΩΔΙΚΟΣ;
+      if(compact.ΕΙΔΟΣ!==undefined)columns.description=compact.ΕΙΔΟΣ;
+      if(compact.ΚΑΞΙΑ!==undefined)columns.netAmount=compact.ΚΑΞΙΑ;
+      if(compact.ΕΚΠ!==undefined)columns.discount1=compact.ΕΚΠ;
+      columns.unit=compact.ΜΜ;
+      columns.quantity=compact.ΠΟΣ1;
+      columns.unitCost=compact.ΤΙΜΗ;
+    }
     if(columns.description===undefined||columns.quantity===undefined||columns.unitCost===undefined)continue;
     const headerEnd=Math.max(...headerCells.map(c=>Number(c.rowIndex)+Number(c.rowSpan||1)-1));
     const grouped=new Map();for(const c of cells){if(c.rowIndex<=headerEnd)continue;if(!grouped.has(c.rowIndex))grouped.set(c.rowIndex,[]);grouped.get(c.rowIndex).push(c)}
