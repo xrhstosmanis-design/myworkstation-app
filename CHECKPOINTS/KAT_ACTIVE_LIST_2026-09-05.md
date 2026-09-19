@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Connector PS5 χωρίς regex operators — AWAITING LAB
+
+- [x] Commit-pinned LAB test πέρασε το προηγούμενο σημείο και αποκάλυψε parser errors σε `-notmatch/-match/-replace`.
+- [x] Αφαιρέθηκαν από findFile/found parsing, stream ref και NVR health error path.
+- [ ] CI → merge → pinned download → static check → `-Once` PASS → ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-ps5-remove-remaining-regex.md`.
+
 ## 2026-09-20 — Video Fail-Command χωρίς regex — AWAITING LAB
 
 - [x] LAB απέδειξε parser failure και με `-replace` και με `[regex]::Replace`.
