@@ -188,7 +188,7 @@ export async function applyCentralSupplierProfile(parsed){
     ...parsed,
     productLines,
     lines:productLines.map(line=>({text:line.rawText||line.description||"",confidence:line.confidence||0})),
-    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,updatedAt:profile.updatedAt},
+    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,requireCompletePrintedTableOnMismatch:profile?.readingRule?.requireCompletePrintedTableOnMismatch===true,updatedAt:profile.updatedAt},
     supplierProfileApplied:true
   };
 }
