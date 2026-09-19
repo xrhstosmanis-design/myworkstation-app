@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Connector πλήρως χωρίς regex operators — AWAITING LAB
+
+- [x] Static check βρήκε υπόλοιπα regex σε logging, ONVIF και HTTP stage detection.
+- [x] Αφαιρέθηκαν όλα τα `-match/-notmatch/-replace` από το script.
+- [ ] CI → merge → pinned download → findstr κενό → `-Once` PASS → ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-ps5-remove-all-regex.md`.
+
 ## 2026-09-20 — Video Connector PS5 χωρίς regex operators — AWAITING LAB
 
 - [x] Commit-pinned LAB test πέρασε το προηγούμενο σημείο και αποκάλυψε parser errors σε `-notmatch/-match/-replace`.
