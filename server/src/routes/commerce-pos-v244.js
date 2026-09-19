@@ -171,7 +171,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING')`;
       let created,operationStage="prepare-lines";
       try{
-          let sourceLines,previousLines=[],usingStoredProductLines=false;
+          let sourceLines,previousLines=[],usingStoredProductLines=false,requiresCompletePrintedTable=false;
           if(!handoff.replaceExistingDraft){
             const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
             const storedLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];
@@ -182,9 +182,10 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
             // to the operator-confirmed invoice total.
             if(handoff.resumeStoredProductLines||(storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)){sourceLines=storedLines;usingStoredProductLines=true}
             previousLines=storedLines;
+            requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
           }
-          if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];sourceLines=null}
-          if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines}
+          if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;sourceLines=null}
+          if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines;requiresCompletePrintedTable=ai?.result?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true}
           // A repeated POS intake can legitimately reuse the same failed job
           // after its draft was deleted. In that case the browser may send
           // only the four FAST header fields, while the durable job still has
@@ -196,7 +197,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // A same-draft MANTZILAS recovery must never fall back to the legacy
           // finalizer: that transformation is precisely what can erase the
           // verified printed package, discount and excise fields.
-          if(handoff.replaceExistingDraft&&!verifiedProductLines)throw new Error("Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση.");
+          if((handoff.replaceExistingDraft||requiresCompletePrintedTable)&&!verifiedProductLines)throw new Error("Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση.");
           const productLines=verifiedProductLines||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){

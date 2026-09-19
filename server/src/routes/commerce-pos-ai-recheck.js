@@ -492,7 +492,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // that exact MANTZILAS failure case, reverify every current-page row from the
   // original image. Keep the no-provider fast path for a table that already
   // reconciles, including the LAB-passed 12665 normalization.
-  const supplierRequiresCompletePrintedTable=['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE'].includes(parsed?.supplierReadingProfile?.ruleKey)
+  const supplierRequiresCompletePrintedTable=['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE','LEVENTOPOULOS_MM_POS1_COLUMNS'].includes(parsed?.supplierReadingProfile?.ruleKey)
     &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
   const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
     &&invoiceTotal>0

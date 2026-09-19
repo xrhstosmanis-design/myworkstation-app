@@ -25,6 +25,12 @@ test("V2.4.4 records completeness totals before and after recovery",()=>{
   assert.match(source,/productLinesComplete/);
 });
 
+test("Leventopoulos requires a complete printed table before its draft may be filled",()=>{
+  assert.match(source,/LEVENTOPOULOS_MM_POS1_COLUMNS/);
+  assert.match(source,/supplierRequiresCompletePrintedTable=.*LEVENTOPOULOS_MM_POS1_COLUMNS/s);
+  assert.match(source,/requiresCompleteReverification=.*supplierRequiresCompletePrintedTable/s);
+});
+
 test("supplier OCR matching validates VAT and tolerates Greek/Latin OCR glyphs",()=>{
   assert.match(source,/validGreekTaxId/);
   assert.match(source,/greekLatinFold/);

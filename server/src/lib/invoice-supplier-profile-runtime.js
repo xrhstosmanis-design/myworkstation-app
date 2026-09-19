@@ -185,11 +185,15 @@ export async function applyCentralSupplierProfile(parsed){
   if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverQuantityFromLineTotal(line));
   productLines=productLines.map(line=>{const source=unitRelativeValues(sourceRow(line)),signature=source?Object.keys(source.values).join(","):"",columns=profile.readingRule?.confirmedColumnLayouts?.[signature];return columns&&!line.sourceColumnMap?applyConfirmedColumns(line,columns):line});
   productLines=applyMappings(productLines,profile);
+  // Existing LAB installations may already hold the first version of this
+  // profile.  The fail-closed rule is intrinsic to this layout, so expose it
+  // even before the seed refresh has persisted the new profile JSON.
+  const requireCompletePrintedTableOnMismatch=profile?.readingRule?.requireCompletePrintedTableOnMismatch===true||profile.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS";
   return {
     ...parsed,
     productLines,
     lines:productLines.map(line=>({text:line.rawText||line.description||"",confidence:line.confidence||0})),
-    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,requireCompletePrintedTableOnMismatch:profile?.readingRule?.requireCompletePrintedTableOnMismatch===true,updatedAt:profile.updatedAt},
+    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,requireCompletePrintedTableOnMismatch,updatedAt:profile.updatedAt},
     supplierProfileApplied:true
   };
 }

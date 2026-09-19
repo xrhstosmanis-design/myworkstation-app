@@ -46,3 +46,19 @@ test("prefers the verified duplicate even when source coordinates collide",()=>{
   const [line]=finalizeV244ProductLines(rows);
   assert.equal(line.retailPrice,5.2);
 });
+
+test("Leventopoulos never persists a free-form numeric-column guess",async()=>{
+  const fs=await import("node:fs/promises");
+  const columns=await fs.readFile(new URL("../src/lib/invoice-column-reading.js",import.meta.url),"utf8");
+  const background=await fs.readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
+  const recheck=await fs.readFile(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+  const profile=await fs.readFile(new URL("../src/lib/invoice-supplier-profile-runtime.js",import.meta.url),"utf8");
+  const start=columns.indexOf("export function recoverLeventopoulosMmPos1Columns");
+  const body=columns.slice(start,columns.indexOf("export function recoverPrintedRetailColumns",start));
+  assert.match(body,/return line;/);
+  assert.doesNotMatch(body,/const candidates=/);
+  assert.match(recheck,/LEVENTOPOULOS_MM_POS1_COLUMNS/);
+  assert.match(profile,/profile\.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS"/);
+  assert.match(background,/requiresCompletePrintedTable/);
+  assert.match(background,/\(handoff\.replaceExistingDraft\|\|requiresCompletePrintedTable\)&&!verifiedProductLines/);
+});
