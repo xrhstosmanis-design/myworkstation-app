@@ -1,3 +1,10 @@
+## 2026-09-19 — Dahua ώρα / PowerShell 5 ParseExact — AWAITING LAB
+
+- [x] Το `result=...` πλέον διαβάζεται· LAB αποκάλυψε ασυμβατό 4-argument ParseExact overload στο Windows PowerShell 5.
+- [x] Αλλαγή σε συμβατό 3-argument ParseExact, με timezone/DST εφαρμογή στο επόμενο βήμα όπως πριν.
+- [ ] CI → merge → LAB `nvrOnline=True`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-dahua-time-parseexact-ps5-hotfix.md`.
+
 ## 2026-09-19 — Ώρα Europe/Athens + Dahua time parser — AWAITING LAB
 
 - [x] Ρητή εμφάνιση Europe/Athens σε Παραγγελίες/OCR και Platform Audit χωρίς μόνιμο +3.
