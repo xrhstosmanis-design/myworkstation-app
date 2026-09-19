@@ -61,3 +61,21 @@ const stefanidisFoodProfile={supplierName:stefanidisFoodName,supplierTaxId:stefa
 const stefanidisFoodNormalized=stefanidisFoodName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,stefanidisFoodKey,stefanidisFoodKey,stefanidisFoodName,stefanidisFoodNormalized,stefanidisFoodProfile.ruleKey,JSON.stringify(stefanidisFoodProfile));
 console.log("Invoice Learning verified printed layout seeded: STEFANIDIS FOOD 997763585.");
+
+// CHECKPOINT_VERIFIED_TDLPIX14_15: Λεβεντόπουλος rows print the packaging
+// measurement (ΜΜ) before ΠΟΣ1.  Only ΠΟΣ1 is the actual stock quantity.
+// The runtime still requires the same physical row to balance before applying
+// this supplier-only rule; it does not reuse this invoice's values.
+const leventopoulosKey="800503361";
+const leventopoulosName="Σ ΛΕΒΕΝΤΟΠΟΥΛΟΣ ΕΜΠΟΡΙΑ ΚΑΠΝΟΒΙΟΜΗΧΑΝΙΚΩΝ ΚΑΙ ΛΟΙΠΩΝ ΠΡΟΪΟΝΤΩΝ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ";
+const leventopoulosProfile={
+  supplierName:leventopoulosName,
+  supplierTaxId:leventopoulosKey,
+  ruleKey:"LEVENTOPOULOS_MM_POS1_COLUMNS",
+  central:true,
+  source:"CHECKPOINT_VERIFIED_TDLPIX14_15",
+  readingRule:{layoutMode:"LEVENTOPOULOS_MM_POS1_COLUMNS",quantityColumn:"ΠΟΣ1",ignoredColumns:["ΜΜ","ΠΟΣ2"]}
+};
+const leventopoulosNormalized=leventopoulosName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
+await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,leventopoulosKey,leventopoulosKey,leventopoulosName,leventopoulosNormalized,leventopoulosProfile.ruleKey,JSON.stringify(leventopoulosProfile));
+console.log("Invoice Learning verified supplier profile seeded: LEVENTOPOULOS 800503361.");
