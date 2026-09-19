@@ -14,5 +14,11 @@
 
 ### Validation
 
-- Focused POS line-contract and completeness tests pass locally.
-- Awaiting GitHub CI, merge, deploy and one LAB reread of the existing diagnostic attachment. The existing draft is not deleted or modified by this change.
+- The recovery now invokes the full image table reader even when the first OCR
+  pass produced zero product rows. It can rebuild rows only when every printed
+  row, VAT footer and the operator-confirmed invoice total validate together.
+- 63 targeted regression tests pass locally, including an empty-first-pass
+  complete-table reconstruction test.
+- Awaiting GitHub CI, merge, deploy and one LAB reread of the existing
+  diagnostic attachment. The existing draft is not deleted or modified by this
+  change unless the complete verified table is returned.

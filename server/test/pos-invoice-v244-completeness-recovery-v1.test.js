@@ -29,6 +29,8 @@ test("Leventopoulos requires a complete printed table before its draft may be fi
   assert.match(source,/LEVENTOPOULOS_MM_POS1_COLUMNS/);
   assert.match(source,/supplierRequiresCompletePrintedTable=.*LEVENTOPOULOS_MM_POS1_COLUMNS/s);
   assert.match(source,/requiresCompleteReverification=.*supplierRequiresCompletePrintedTable/s);
+  assert.match(source,/needsEmptyCompleteTableRead=.*parsed\.productLines\.length===0/s);
+  assert.match(source,/productLines:needsEmptyCompleteTableRead\?parsed\.productLines:unresolved/);
 });
 
 test("supplier OCR matching validates VAT and tolerates Greek/Latin OCR glyphs",()=>{
