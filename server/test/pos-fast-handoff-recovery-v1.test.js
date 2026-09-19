@@ -258,3 +258,15 @@ test("normal POS status polling does not enqueue a successor until processing is
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);
+  assert.match(worker,/operationStage="save-product-lines"/);
+  assert.match(worker,/operationStage="purchase-intake"/);
+  assert.match(worker,/POS_BACKGROUND_\$\{operationStage\.toUpperCase\(\)/);
+});
+
+test("the repaired secondary-page conflict is eligible for durable recovery",()=>{
+  assert.match(route,/Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου/);
+});
+
+test("a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy",()=>{
+  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*\(\?:Παρουσιάστηκε εσωτερικό σφάλμα\|AI_RECHECK_INTERNAL/);
+});
