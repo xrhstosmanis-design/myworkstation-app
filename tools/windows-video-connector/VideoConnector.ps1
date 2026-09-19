@@ -49,61 +49,35 @@ function Invoke-Command([object]$Command){
     $channel=Get-Channel $Command
     if($Command.commandType -eq "SNAPSHOT"){$path=Join-Path $TempPath ($Command.id+".jpg");[IO.File]::WriteAllBytes($path,(Get-SnapshotBytes $channel));Upload-Artifact $Command $path "SNAPSHOT" "image/jpeg";Remove-Item -LiteralPath $path -Force;return}
     if($Command.commandType -eq "CLIP"){
-      try{$athens=[TimeZoneInfo]::FindSystemTimeZoneById("GTB Standard Time")}catch{$athens=[TimeZoneInfo]::Local};$start=[TimeZoneInfo]::ConvertTime([DateTimeOffset]::Parse($Command.payload.startAt),$athens).ToString("yyyy-MM-dd HH:mm:ss");$end=[TimeZoneInfo]::ConvertTime([DateTimeOffset]::Parse($Command.payload.endAt),$athens).ToString("yyyy-MM-dd HH:mm:ss")
-      # The 4KS3 family was verified in LAB to expose recorded media through the
-      # stateful mediaFileFind CGI flow. Probe that flow first so we fail closed
-      # when the requested channel/time has no recording, then use the existing
-      # bounded loadfile download for the exact requested window.
+      try{$athens=[TimeZoneInfo]::FindSystemTimeZoneById("GTB Standard Time")}catch{$athens=[TimeZoneInfo]::Local}
+      $start=[TimeZoneInfo]::ConvertTime([DateTimeOffset]::Parse($Command.payload.startAt),$athens).ToString("yyyy-MM-dd HH:mm:ss")
+      $end=[TimeZoneInfo]::ConvertTime([DateTimeOffset]::Parse($Command.payload.endAt),$athens).ToString("yyyy-MM-dd HH:mm:ss")
       $searchObject=(Parse-Dahua (Invoke-NvrText "/cgi-bin/mediaFileFind.cgi?action=factory.create")).result
       if(!$searchObject){throw "DAHUA_MEDIA_SEARCH_CREATE_FAILED"}
-      $searchStarted=$false
       try{
         $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}" -f $searchObject,$channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end)
         $findResponse=Invoke-NvrText $findPath
-        if($findResponse -notmatch '(?im)^OK\s*      if(!$script:Config.ffmpegPath -or !(Test-Path -LiteralPath $script:Config.ffmpegPath)){throw "FFMPEG_REQUIRED_FOR_BROWSER_PREVIEW"};$mp4=Join-Path $TempPath ($Command.id+".mp4");& $script:Config.ffmpegPath -y -i $dav -c:v libx264 -preset veryfast -an -movflags +faststart $mp4 2>$null;if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
-      Upload-Artifact $Command $mp4 "CLIP" "video/mp4";Remove-Item -LiteralPath $dav -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $mp4 -Force -ErrorAction SilentlyContinue;return
-    }
-    throw "UNKNOWN_COMMAND"
-  }catch{Write-SafeLog ("COMMAND {0} failed: {1}" -f $Command.commandType,$_.Exception.Message);Fail-Command $Command $_.Exception.Message}
-}
-if(!(Test-Path -LiteralPath $ConfigPath)){throw "Video Connector configuration is missing."}
-$script:Config=Get-Content -LiteralPath $ConfigPath -Raw|ConvertFrom-Json;$script:Token=Unprotect $script:Config.protectedToken;$script:NvrCredential=(Unprotect $script:Config.protectedNvrCredential)|ConvertFrom-Json;$script:NvrClient=New-NvrClient
-New-Item -ItemType Directory -Path $TempPath -Force|Out-Null
-try{Invoke-Backend "/api/cloud/v1/device/video/register" @{version=$Version;protocol=$script:Config.protocol;deviceName=("KAT Video Connector - "+$env:COMPUTERNAME);cameraKeys=@();capabilities=@{health=$true;time=$true;snapshot=$true;clip=$true}}|Out-Null}catch{Write-SafeLog ("REGISTER deferred: "+$_.Exception.Message)}
-do{
-  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode=($_.Exception.Message -replace '[^A-Z0-9_\-]','_');Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
-  try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" @{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;latencyMs=$state.latencyMs;nvrTime=$state.nvrTime;systemTime=$state.systemTime;deviceInfo=$state.deviceInfo;errorCode=$errorCode};foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
-  if(!$Once){Start-Sleep -Seconds 30}
-}while(!$Once)
-$script:NvrClient.Dispose()
-){throw "DAHUA_MEDIA_SEARCH_FAILED"}
+        if($findResponse -notmatch '(?im)^OK\\s*$'){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
-        $searchStarted=$true
         $found=0
-        if($nextResponse -match '(?im)^found=(\d+)\s*      if(!$script:Config.ffmpegPath -or !(Test-Path -LiteralPath $script:Config.ffmpegPath)){throw "FFMPEG_REQUIRED_FOR_BROWSER_PREVIEW"};$mp4=Join-Path $TempPath ($Command.id+".mp4");& $script:Config.ffmpegPath -y -i $dav -c:v libx264 -preset veryfast -an -movflags +faststart $mp4 2>$null;if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
-      Upload-Artifact $Command $mp4 "CLIP" "video/mp4";Remove-Item -LiteralPath $dav -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $mp4 -Force -ErrorAction SilentlyContinue;return
-    }
-    throw "UNKNOWN_COMMAND"
-  }catch{Write-SafeLog ("COMMAND {0} failed: {1}" -f $Command.commandType,$_.Exception.Message);Fail-Command $Command $_.Exception.Message}
-}
-if(!(Test-Path -LiteralPath $ConfigPath)){throw "Video Connector configuration is missing."}
-$script:Config=Get-Content -LiteralPath $ConfigPath -Raw|ConvertFrom-Json;$script:Token=Unprotect $script:Config.protectedToken;$script:NvrCredential=(Unprotect $script:Config.protectedNvrCredential)|ConvertFrom-Json;$script:NvrClient=New-NvrClient
-New-Item -ItemType Directory -Path $TempPath -Force|Out-Null
-try{Invoke-Backend "/api/cloud/v1/device/video/register" @{version=$Version;protocol=$script:Config.protocol;deviceName=("KAT Video Connector - "+$env:COMPUTERNAME);cameraKeys=@();capabilities=@{health=$true;time=$true;snapshot=$true;clip=$true}}|Out-Null}catch{Write-SafeLog ("REGISTER deferred: "+$_.Exception.Message)}
-do{
-  $state=$null;$errorCode=$null;try{$state=Get-NvrState}catch{$errorCode=($_.Exception.Message -replace '[^A-Z0-9_\-]','_');Write-SafeLog ("NVR health failed: "+$_.Exception.Message)}
-  try{$heartbeat=Invoke-Backend "/api/cloud/v1/device/video/heartbeat" @{version=$Version;processRunning=$true;nvrOnline=($null -ne $state);protocol=$script:Config.protocol;latencyMs=$state.latencyMs;nvrTime=$state.nvrTime;systemTime=$state.systemTime;deviceInfo=$state.deviceInfo;errorCode=$errorCode};foreach($command in @($heartbeat.commands)){Invoke-Command $command};Write-SafeLog ("HEARTBEAT OK nvrOnline={0} commands={1}" -f ($null -ne $state),@($heartbeat.commands).Count)}catch{Write-SafeLog ("HEARTBEAT failed: "+$_.Exception.Message)}
-  if(!$Once){Start-Sleep -Seconds 30}
-}while(!$Once)
-$script:NvrClient.Dispose()
-){$found=[int]$matches[1]}
+        if($nextResponse -match '(?im)^found=(\\d+)\\s*$'){$found=[int]$matches[1]}
         if($found -lt 1){throw "DAHUA_RECORDING_NOT_FOUND"}
       }finally{
-        if($searchObject){try{Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=close&object={0}" -f $searchObject)|Out-Null}catch{};try{Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=destroy&object={0}" -f $searchObject)|Out-Null}catch{}}
+        if($searchObject){
+          try{Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=close&object={0}" -f $searchObject)|Out-Null}catch{}
+          try{Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=destroy&object={0}" -f $searchObject)|Out-Null}catch{}
+        }
       }
-      $dav=Join-Path $TempPath ($Command.id+".dav");[IO.File]::WriteAllBytes($dav,(Invoke-NvrBytes ("/cgi-bin/loadfile.cgi?action=startLoad&channel={0}&startTime={1}&endTime={2}&subtype=0" -f $channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end))))
-      if(!$script:Config.ffmpegPath -or !(Test-Path -LiteralPath $script:Config.ffmpegPath)){throw "FFMPEG_REQUIRED_FOR_BROWSER_PREVIEW"};$mp4=Join-Path $TempPath ($Command.id+".mp4");& $script:Config.ffmpegPath -y -i $dav -c:v libx264 -preset veryfast -an -movflags +faststart $mp4 2>$null;if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
-      Upload-Artifact $Command $mp4 "CLIP" "video/mp4";Remove-Item -LiteralPath $dav -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $mp4 -Force -ErrorAction SilentlyContinue;return
+      $dav=Join-Path $TempPath ($Command.id+".dav")
+      [IO.File]::WriteAllBytes($dav,(Invoke-NvrBytes ("/cgi-bin/loadfile.cgi?action=startLoad&channel={0}&startTime={1}&endTime={2}&subtype=0" -f $channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end))))
+      if(!$script:Config.ffmpegPath -or !(Test-Path -LiteralPath $script:Config.ffmpegPath)){throw "FFMPEG_REQUIRED_FOR_BROWSER_PREVIEW"}
+      $mp4=Join-Path $TempPath ($Command.id+".mp4")
+      & $script:Config.ffmpegPath -y -i $dav -c:v libx264 -preset veryfast -an -movflags +faststart $mp4 2>$null
+      if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $mp4)){throw "FFMPEG_TRANSCODE_FAILED"}
+      Upload-Artifact $Command $mp4 "CLIP" "video/mp4"
+      Remove-Item -LiteralPath $dav -Force -ErrorAction SilentlyContinue
+      Remove-Item -LiteralPath $mp4 -Force -ErrorAction SilentlyContinue
+      return
     }
     throw "UNKNOWN_COMMAND"
   }catch{Write-SafeLog ("COMMAND {0} failed: {1}" -f $Command.commandType,$_.Exception.Message);Fail-Command $Command $_.Exception.Message}
