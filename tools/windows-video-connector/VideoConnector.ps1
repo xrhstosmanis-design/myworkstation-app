@@ -32,7 +32,7 @@ function Invoke-Onvif([string]$Path,[string]$Body){$content=New-Object Net.Http.
 function Onvif-Value([string]$Xml,[string]$Name){if($Xml -match ('<(?:\w+:)?'+[Regex]::Escape($Name)+'(?:\s[^>]*)?>([^<]*)</(?:\w+:)?'+[Regex]::Escape($Name)+'>')){return [Net.WebUtility]::HtmlDecode($matches[1].Trim())};return $null}
 function Invoke-NvrBytes([string]$Path){
   $uri=$script:Config.nvrEndpoint.TrimEnd("/")+$Path;$response=$script:NvrClient.GetAsync($uri).GetAwaiter().GetResult()
-  if(!$response.IsSuccessStatusCode){throw "NVR_HTTP_$([int]$response.StatusCode)"}
+  if(!$response.IsSuccessStatusCode){$stage=if($Path -match "action=findFile"){"FIND_FILE"}elseif($Path -match "action=findNextFile"){"FIND_NEXT"}elseif($Path -match "loadfile.cgi"){"LOAD_FILE"}elseif($Path -match "factory.create"){"CREATE_SEARCH"}else{"NVR_REQUEST"};throw ("NVR_HTTP_{0}_{1}" -f [int]$response.StatusCode,$stage)}
   return $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
 }
 function Invoke-NvrAbsoluteBytes([string]$Uri){$response=$script:NvrClient.GetAsync($Uri).GetAwaiter().GetResult();if(!$response.IsSuccessStatusCode){throw "NVR_HTTP_$([int]$response.StatusCode)"};return $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()}
@@ -62,7 +62,7 @@ function Invoke-Command([object]$Command){
       $searchObject=(Parse-Dahua (Invoke-NvrText "/cgi-bin/mediaFileFind.cgi?action=factory.create")).result
       if(!$searchObject){throw "DAHUA_MEDIA_SEARCH_CREATE_FAILED"}
       try{
-        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}" -f $searchObject,$channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end)
+        $findPath="/cgi-bin/mediaFileFind.cgi?action=findFile&object={0}&condition.Channel={1}&condition.StartTime={2}&condition.EndTime={3}&condition.Types[0]=dav" -f $searchObject,$channel,[Uri]::EscapeDataString($start),[Uri]::EscapeDataString($end)
         $findResponse=Invoke-NvrText $findPath
         if($findResponse -notmatch '(?im)^OK\\s*$'){throw "DAHUA_MEDIA_SEARCH_FAILED"}
         $nextResponse=Invoke-NvrText ("/cgi-bin/mediaFileFind.cgi?action=findNextFile&object={0}&count=10" -f $searchObject)
