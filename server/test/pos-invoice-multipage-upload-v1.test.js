@@ -94,7 +94,7 @@ test("MANTZILAS rechecks Azure candidate rows against the corrected total and re
   assert.match(aiRecheck,/if\(preferCentralMantzilas\)parsed\.mantzilasCentralFastPath=true/);
   assert.match(aiRecheck,/const requiresCompleteReverification=\(mantzilasInvoice\|\|supplierRequiresCompletePrintedTable\)/);
   assert.match(aiRecheck,/Math\.abs\(lineGrossTotal\(parsed\.productLines\)-invoiceTotal\)>TOTAL_TOLERANCE/);
-  assert.match(aiRecheck,/if\(mantzilasInvoice\)return currentPage&&\(mantzilasRequiresCompleteReverification\|\|!line\.sourceColumnsVerified\)/);
+  assert.match(aiRecheck,/if\(mantzilasInvoice\)return currentPage&&\(requiresCompleteReverification\|\|!line\.sourceColumnsVerified\)/);
   const fullVerificationIndex=aiRecheck.indexOf("requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)");
   assert.ok(fullVerificationIndex>=0);
   assert.ok(aiRecheck.indexOf("for(const [pageIndex,page] of pageJobs.entries())",fullVerificationIndex)>fullVerificationIndex);

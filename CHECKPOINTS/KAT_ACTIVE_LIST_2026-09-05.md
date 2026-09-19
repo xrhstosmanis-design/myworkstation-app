@@ -1,3 +1,12 @@
+## 2026-09-19 — Fresh Delicacies complete printed-table safety rule — AWAITING LAB
+
+- [x] **LAB FAIL retained for diagnostic invoice `BB 6439`**: the actual receipt has `12` rows / `51.20 EUR` net / `6.66 EUR` VAT / `57.86 EUR` gross. The provisional 14-row OCR result contained a malformed `4,201.00 EUR` line and two duplicates (`4,810.44 EUR` gross), so the POS correctly kept it `POS_FAILED` / visibly reviewable. No approval, stock, fiscal, accounting or payment mutation occurred.
+- [x] Added a versioned central Learning profile for the Fresh Delicacies legal supplier name. It stores no historic item quantities, prices, discounts or totals.
+- [x] On a current-image mismatch the profile now invokes the existing complete printed-table verifier, which must reproduce every physical row, row arithmetic, VAT footer and final total before it can replace the draft; a failure preserves the same draft unchanged.
+- [x] Corrected the MANTZILAS verifier's undefined reconciliation condition to use the existing defined gate.
+- [x] Focused regression suite `77/77` PASS locally. Green CI, merge, exact deployment and a future fresh one-submit Fresh Delicacies POS invoice remain required; diagnostic `BB 6439` is not an acceptance retry.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-fresh-delicacies-complete-printed-table-rule.md`.
+
 ## 2026-09-19 — Fresh Snack complete printed-table safety rule — AWAITING LAB
 
 - [x] **LAB FAIL retained for diagnostic invoice `21-ΤΛΑ 006019`**: the one POS-front submission created one unapproved draft, but the first extraction totalled `68.12 EUR` against the confirmed `99.99 EUR`. It stayed visibly `ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟ` / `POS_FAILED`; no false success, approval, stock, fiscal, accounting or payment mutation occurred.

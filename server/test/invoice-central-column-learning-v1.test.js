@@ -53,6 +53,16 @@ test('FRESH SNACK profile requires a current-image complete-table reread, not hi
   assert.match(route,/expectedGrossTotal:completePrintedTable&&pageJobs\.length===1\?invoiceTotal:0/);
 });
 
+test('FRESH DELICACIES profile requires a current-image complete-table reread, not BB 6439 economics',async()=>{
+  const seed=await readFile(new URL('../src/lib/invoice-learning-fresh-delicacies-seed.js',import.meta.url),'utf8');
+  const route=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  assert.match(seed,/FRESH_DELICACIES_COMPLETE_PRINTED_TABLE/);
+  assert.match(seed,/requireCompletePrintedTableOnMismatch:true/);
+  assert.match(seed,/CURRENT_IMAGE_ROWS_PLUS_VAT_FOOTER_PLUS_TOTAL/);
+  assert.doesNotMatch(seed,/57\.86|51\.20|4\.20|G09\.00938/);
+  assert.match(route,/FRESH_DELICACIES_COMPLETE_PRINTED_TABLE/);
+});
+
 test('STEFANIDIS food layout restores shifted columns only when the printed row equations balance',()=>{
   const rows=[
     ['0011291 MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX | ΚΟΥ | 1 | 9,910 | 9,91 | 30,00 | 2,97 | | 6,94 | 13',1,9.91,6.94],
