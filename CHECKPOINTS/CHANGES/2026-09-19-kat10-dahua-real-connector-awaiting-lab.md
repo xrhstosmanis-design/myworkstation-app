@@ -51,3 +51,13 @@
 9. Επιβεβαίωση ότι το συνεχόμενο video παραμένει μόνο στο NVR και ότι δεν επηρεάστηκε καμία λειτουργία POS/πληρωμών/invoice/stock/drafts.
 
 Μόνο μετά την επιτυχία όλων των παραπάνω ενημερώνεται το KAT-10 σε `ΟΚ / LAB PASS`.
+
+## 19/09/2026 — πραγματικό Dahua LAN/API checkpoint
+
+- Πραγματικό NVR που επιβεβαιώθηκε από το CGI system info: `DHI-NVR2108HS-4KS3` (η αρχική αναφορά 2104 στο παλιό checkpoint διορθώνεται από το ίδιο το hardware/API).
+- Πραγματική κάμερα D1: `DH-IPC-T1E20-A`, online στο τοπικό LAN.
+- LAB evidence: RTSP 554 PASS, live video μέσω NVR PASS, χειροκίνητο playback PASS, CGI Digest auth με τον read-only `myworkstation` PASS.
+- Stateful `mediaFileFind` αναζήτηση για 19/09/2026 20:00:30–20:02:30 επέστρεψε `OK`, `found=2` και Main/Extra1 recording 20:00:00–21:00:00. Αυτό επιβεβαιώνει ότι το timestamp 20:01:36 βρίσκεται σε πραγματική εγγραφή.
+- Ο Windows connector πλέον επαληθεύει πρώτα μέσω `factory.create → findFile → findNextFile` ότι υπάρχει recording στο ζητημένο channel/time window πριν εκτελέσει το υπάρχον bounded `loadfile` clip download. Αν δεν βρεθεί recording, αποτυγχάνει κλειστά με `DAHUA_RECORDING_NOT_FOUND`.
+- Δεν αλλάχθηκαν POS, πληρωμές, invoice OCR, stock, drafts, fiscal, accounting ή myDATA. Δεν ανοίχθηκε inbound port και δεν εκτέθηκαν NVR credentials.
+- Κατάσταση παραμένει **AWAITING LAB για end-to-end connector clip**: χρειάζονται CI/deploy/connector install και πραγματικό Audit clip 30″ πριν / 60″ μετά μέσα από MyWorkStation πριν γίνει KAT-10 ΟΚ.

@@ -1,3 +1,12 @@
+## 2026-09-19 — KAT-10 πραγματικό Dahua media search — AWAITING LAB
+
+- [x] Πραγματικό LAN/API test στο `DHI-NVR2108HS-4KS3` με `DH-IPC-T1E20-A`: RTSP 554, live video, playback, CGI Digest authentication και timestamp media search PASS.
+- [x] Η πραγματική `mediaFileFind` αναζήτηση για 20:00:30–20:02:30 επέστρεψε `OK`, `found=2` και Main/Extra1 recording 20:00–21:00.
+- [x] Ο Windows Video Connector επαληθεύει πλέον recording στο ζητημένο channel/time πριν από το υπάρχον bounded clip download και αποτυγχάνει κλειστά όταν δεν υπάρχει recording.
+- [x] Δεν αλλάζουν POS, πληρωμές, invoice OCR, stock, drafts, fiscal/accounting/myDATA, credentials policy ή outbound-only δικτύωση.
+- [ ] PR #969: απαιτούνται πράσινο CI, merge/deploy και πραγματικό end-to-end Audit clip 30″ πριν / 60″ μετά πριν γίνει KAT-10 ΟΚ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-kat10-dahua-real-connector-awaiting-lab.md`.
+
 ## 2026-09-19 — Fresh Snack unverified trailing replay — AWAITING DEPLOY
 
 - [x] Fresh POS-front diagnostic `36-ΤΔΑ 005401` proves the receipt itself was read once correctly: its first five provisional rows reconcile exactly to printed `53.87 EUR`. Four later unverified replay rows inflated the draft to `92.28 EUR`, and the existing safety gate correctly blocked it before approval, stock, fiscal, accounting or payment mutation.
