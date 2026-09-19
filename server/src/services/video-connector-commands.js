@@ -7,7 +7,16 @@ export async function videoConnectorStatus(companyId,storeId,db=prisma){
 }
 
 export async function enqueueVideoCommand({companyId,storeId,commandType,cameraKey=null,videoEventId=null,payload={},ttlSeconds=300},db=prisma){
-  if(videoEventId){const existing=await db.$queryRaw`SELECT "id","status","createdAt","expiresAt" FROM "VideoConnectorCommand" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "videoEventId"=${videoEventId} AND "commandType"=${commandType} AND "status" IN ('PENDING','CLAIMED') AND "expiresAt">NOW() ORDER BY "createdAt" DESC LIMIT 1`;if(existing[0])return existing[0]}
+  if(videoEventId){
+    const existing=await db.$queryRaw`SELECT "id","status","createdAt","claimedAt","expiresAt" FROM "VideoConnectorCommand" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "videoEventId"=${videoEventId} AND "commandType"=${commandType} AND "status" IN ('PENDING','CLAIMED') AND "expiresAt">NOW() ORDER BY "createdAt" DESC LIMIT 1`;
+    const row=existing[0];
+    if(row?.status==="PENDING")return row;
+    if(row?.status==="CLAIMED"){
+      const claimedAt=row.claimedAt?new Date(row.claimedAt).getTime():0;
+      if(claimedAt&&Date.now()-claimedAt<90000)return row;
+      await db.$executeRaw`UPDATE "VideoConnectorCommand" SET "status"='FAILED',"errorCode"='STALE_CLAIM_REQUEUED',"completedAt"=NOW() WHERE "id"=${row.id} AND "status"='CLAIMED'`;
+    }
+  }
   const rows=await db.$queryRaw`INSERT INTO "VideoConnectorCommand" ("id","companyId","storeId","commandType","cameraKey","videoEventId","payload","expiresAt") VALUES (${crypto.randomUUID()},${companyId},${storeId},${commandType},${cameraKey},${videoEventId},${JSON.stringify(payload)}::jsonb,NOW()+(${ttlSeconds}::integer*INTERVAL '1 second')) RETURNING "id","status","createdAt","expiresAt"`;return rows[0]
 }
 
