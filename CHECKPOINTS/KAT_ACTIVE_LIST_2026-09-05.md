@@ -1,3 +1,11 @@
+## 2026-09-20 — Video FFmpeg timeout / heartbeat protection — AWAITING LAB
+
+- [x] LAB process inspection: πραγματικό Dahua `.dav` έχει κατέβει· κόλλημα στο `ffmpeg DAV→MP4`.
+- [x] FFmpeg γίνεται bounded child process: `-nostdin`, 60s timeout, kill, explicit error.
+- [x] Connector loop επιστρέφει μετά από hang ώστε να συνεχίζει heartbeat/ONLINE.
+- [ ] CI → merge → καθάρισμα stuck process → pinned script → πραγματικό clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-ffmpeg-timeout.md`.
+
 ## 2026-09-20 — Explicit Video command retry after CLAIMED — AWAITING LAB
 
 - [x] Connector parser PASS + task Running + ONLINE, αλλά UI timeout με heartbeat `commands=0`.
