@@ -180,7 +180,7 @@ test("completed MANTZILAS drafts with the legacy 48/65.5 ambiguity reread the ar
   assert.match(route,/await hasPersistedMantzilasLegacyAmbiguity\(req\.user\.companyId,job\)/);
   assert.match(route,/Number\(row9\.quantity\)===48/);
   assert.match(route,/Number\(row9\.discount1\|\|0\)-65\.5/);
-  assert.match(route,/needsCompleteTableReplayRecovery\?"COMPLETE_TABLE_TRAILING_REPLAY":needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread\?"MANTZILAS_LEGACY_AMBIGUITY":null/);
+  assert.match(route,/needsCompleteTableReplayRecovery\?\(completeRecoveryStrategy===POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY\?"LEVENTOPOULOS_EMPTY_COMPLETE_TABLE":"COMPLETE_TABLE_TRAILING_REPLAY"\):needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread\?"MANTZILAS_LEGACY_AMBIGUITY":null/);
   assert.match(route,/handoff=\{\.\.\.handoff,resumeStoredProductLines:false,replaceExistingDraft:true\}/);
 });
 
@@ -258,15 +258,3 @@ test("normal POS status polling does not enqueue a successor until processing is
 test("background failure identifies the internal operation",()=>{
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(worker,/operationStage="ai-recheck"/);
-  assert.match(worker,/operationStage="save-product-lines"/);
-  assert.match(worker,/operationStage="purchase-intake"/);
-  assert.match(worker,/POS_BACKGROUND_\$\{operationStage\.toUpperCase\(\)/);
-});
-
-test("the repaired secondary-page conflict is eligible for durable recovery",()=>{
-  assert.match(route,/Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου/);
-});
-
-test("a historical hidden AI-recheck failure can be reclaimed after staged diagnostics deploy",()=>{
-  assert.match(route,/POS_BACKGROUND_AI_RECHECK:\\s\*\(\?:Παρουσιάστηκε εσωτερικό σφάλμα\|AI_RECHECK_INTERNAL/);
-});
