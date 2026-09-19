@@ -289,7 +289,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       stage="create-purchase-order";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=${body.note||`OCR V2.4.4 τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},"updatedByName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${orderId} AND "companyId"=${req.user.companyId}`;
       else await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`OCR V2.4.4 ${body.documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
-      // A linked POS OCR document is one mutable draft, not an append-only
+      // A safe reread completes the same mutable POS draft. Its former OCR\n      // lines must be replaced atomically; payment, document identity and\n      // stock remain untouched.\n      if(skeletonRows[0])await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;\n      // A linked POS OCR document is one mutable draft, not an append-only
       // import. Every successful fill/reread replaces its OCR lines atomically
       // while the document is still DRAFT, so retries cannot double the order.
       if(skeletonRows[0]){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
