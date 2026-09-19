@@ -1,3 +1,11 @@
+## 2026-09-20 — Dahua native channel mapping — AWAITING LAB
+
+- [x] Επιτυχημένο manual mediaFileFind είχε `condition.Channel=1`.
+- [x] Connector αφαιρούσε 1 και έστελνε λάθος Channel 0· διορθώθηκε να χρησιμοποιεί native Dahua channel.
+- [x] Η ίδια HttpClient session ήδη διατηρείται σε create/find/findNext.
+- [ ] LAB: D1 IPC stream ref 1 → CI/merge → πραγματικό clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-dahua-native-channel-mapping.md`.
+
 ## 2026-09-20 — Dahua FIND_FILE query format — AWAITING LAB
 
 - [x] Stage diagnostics: CREATE_SEARCH περνά, αποτυχία ακριβώς στο FIND_FILE.
