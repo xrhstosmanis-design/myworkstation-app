@@ -25,15 +25,18 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
     try{
       const result=await api(`/api/commerce/ai-reader/fast-status/${encodeURIComponent(jobId)}`);
       if(result?.done){
-        const review=Boolean(result.reconciliationRequired),difference=Number(result.reconciliationDifference||0);
-        setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: καταχωρίστηκε ως ΠΡΟΧΕΙΡΟ και χρειάζεται έλεγχο BackOffice (διαφορά ${difference.toFixed(2)} €).`:`✅ Τιμολόγιο ${documentNumber}: καταχωρίστηκε στο BackOffice (${result.lineCount||0} γραμμές).`);
+        const review=Boolean(result.reconciliationRequired),difference=Number(result.reconciliationDifference||0),lineCount=Number(result.lineCount||0);
+        if(lineCount<=0){setMessage?.(`❌ Τιμολόγιο ${documentNumber}: η ανάγνωση ολοκληρώθηκε χωρίς γραμμές. Δεν θεωρείται επιτυχής και χρειάζεται ασφαλές retry του ίδιου job.`);return}
+        setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: δημιουργήθηκε πρόχειρο με ${lineCount} γραμμές, αλλά ο οικονομικός έλεγχος έχει διαφορά ${difference.toFixed(2)} €. Δεν θεωρείται ολοκληρωμένο.`:`✅ Τιμολόγιο ${documentNumber}: ολοκληρώθηκε σωστά στο BackOffice (${lineCount} γραμμές, οικονομικός έλεγχος ΟΚ).`);
         onChanged?.();return;
       }
-      if(result?.failed){setMessage?.(`⚠️ Τιμολόγιο ${documentNumber}: η πληρωμή διατηρήθηκε, αλλά η αυτόματη ανάγνωση δεν ολοκληρώθηκε με ασφάλεια.`);return}
+      if(result?.failed){setMessage?.(`❌ Τιμολόγιο ${documentNumber}: η αυτόματη ανάγνωση απέτυχε${result.error?` — ${result.error}`:""}. Χρησιμοποίησε ασφαλές retry του ίδιου job· μην ανεβάσεις ξανά το αρχείο.`);return}
     }catch{}
-    if(Date.now()-startedAt<10*60*1000)setTimeout(poll,5000);
+    const elapsed=Date.now()-startedAt;
+    if(elapsed>=30*1000&&elapsed<33*1000)setMessage?.(`⏳ Τιμολόγιο ${documentNumber}: η ανάγνωση συνεχίζεται πέρα από τον στόχο των 15 δευτερολέπτων. Δεν έχει δηλωθεί επιτυχία.`);
+    if(elapsed<3*60*1000)setTimeout(poll,2000);else setMessage?.(`❌ Τιμολόγιο ${documentNumber}: δεν ολοκληρώθηκε εντός 3 λεπτών. Μην κάνεις δεύτερο upload· απαιτείται έλεγχος του ίδιου job.`);
   };
-  setTimeout(poll,5000);
+  setTimeout(poll,2000);
 }
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
@@ -146,8 +149,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
       setStatus(handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
-      const success=duplicateCheck?.paymentReused?`✅ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} διαβάζεται ξανά χωρίς νέα χρέωση.`:effectiveMode==="PAID"?`✅ Πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Το τιμολόγιο διαβάζεται στον server και το POS είναι έτοιμο.`:`✅ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε. Η ανάγνωση συνεχίζεται στον server και το POS είναι έτοιμο.`;
-      setMessage?.(success);onChanged?.();
+      const accepted=duplicateCheck?.paymentReused?`⏳ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} επανελέγχεται χωρίς νέα χρέωση· αναμονή τελικού αποτελέσματος.`:effectiveMode==="PAID"?`⏳ Η πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`:`⏳ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε μία φορά. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`;
+      setMessage?.(accepted);onChanged?.();
       monitorBackgroundV244({api,jobId:handoff.jobId,documentNumber:documentNumber.trim(),setMessage,onChanged});
     }catch(error){
       const detail=error?.message||"Η καταχώριση απέτυχε.";

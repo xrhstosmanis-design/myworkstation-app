@@ -14,6 +14,17 @@ const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v||0)));
 const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const productLinesGross=lines=>money2((Array.isArray(lines)?lines:[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
 
+export function reconcileCentRoundingResidual(lines,invoiceTotal,tolerance=0.05){
+  const source=Array.isArray(lines)?lines:[],expected=money2(invoiceTotal),actual=productLinesGross(source),residual=money2(expected-actual);
+  if(!source.length||Math.abs(residual)<0.005||Math.abs(residual)>tolerance+Number.EPSILON)return {lines:source,applied:false,residual};
+  const index=source.findLastIndex(line=>Number(line?.grossAmount||0)>0);
+  if(index<0)return {lines:source,applied:false,residual};
+  const line=source[index],net=Math.max(0,Number(line?.netAmount||0)),excise=Math.max(0,Number(line?.exciseTotal||0)),gross=money2(Number(line?.grossAmount||0)+residual);
+  if(gross+Number.EPSILON<net+excise)return {lines:source,applied:false,residual};
+  const adjusted=source.map((row,rowIndex)=>rowIndex===index?{...row,grossAmount:gross,vatAmount:money2(gross-net-excise),centRoundingResidual:residual}:row);
+  return productLinesGross(adjusted)===expected?{lines:adjusted,applied:true,residual,index}:{lines:source,applied:false,residual};
+}
+
 // Last-resort POS safeguard for a printed line that OCR collapsed because it
 // is identical to another line. Restore it only when exactly one existing line
 // matches the whole invoice gap and the restored total reconciles within five
@@ -262,11 +273,13 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         shift=shifts[0]||null;if(!shift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Πληρωμένο τιμολόγιο δεν μπορεί να καταχωρηθεί χωρίς ενεργή βάρδια.");error.status=409;throw error;}
       }
       stage="match-products";
-      const matched=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
+      const matchedRows=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
+      const centReconciliation=reconcileCentRoundingResidual(matchedRows,body.totalGross);
+      const matched=centReconciliation.lines;
       const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
       const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
-      const totalNet=matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0),totalVat=matched.reduce((s,l)=>s+Math.max(0,Number(l.grossAmount||0)-Number(l.netAmount||0)-Number(l.exciseTotal||0)),0);
+      const totalNet=money2(matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0)),totalVat=money2(Number(body.totalGross)-totalNet);
       stage="create-purchase-document";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${body.settlementMode} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;
       else await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate||new Date()},${totalNet},${totalVat},${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
