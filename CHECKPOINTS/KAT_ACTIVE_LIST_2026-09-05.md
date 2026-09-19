@@ -1,3 +1,11 @@
+## 2026-09-19 — Video Audit ιστορικού on-demand — AWAITING LAB
+
+- [x] Παλιές Audit εγγραφές μπορούν να δημιουργούν Video Event on-demand όταν πατηθεί «Προβολή βίντεο», χωρίς να απαιτείται προϋπάρχουσα video εγγραφή από την ημέρα του συμβάντος.
+- [x] Υποστηρίζονται StoreTransaction, PosSaleActionAudit και StoreOperatorAudit με store/POS/camera mapping και NVR time offset.
+- [x] Παράθυρο clip 30″ πριν / 60″ μετά και έλεγχος configured NVR retention.
+- [ ] Απαιτούνται πράσινο CI, merge/deploy και LAB δοκιμή σε πραγματικό συμβάν 3–10 ημερών πριν γίνει ΟΚ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-video-audit-on-demand-history-awaiting-lab.md`.
+
 ## 2026-09-19 — KAT-10 πραγματικό Dahua media search — AWAITING LAB
 
 - [x] Πραγματικό LAN/API test στο `DHI-NVR2108HS-4KS3` με `DH-IPC-T1E20-A`: RTSP 554, live video, playback, CGI Digest authentication και timestamp media search PASS.
