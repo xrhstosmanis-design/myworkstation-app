@@ -1,3 +1,11 @@
+## 2026-09-19 — Dahua clip HTTP 400 stage diagnostics — AWAITING LAB
+
+- [x] Connector ONLINE και πραγματικό clip command φτάνει στο LAB.
+- [x] Προστέθηκε `condition.Types[0]=dav` όπως στο επιτυχημένο manual mediaFileFind test.
+- [x] Stage-specific errors για CREATE_SEARCH / FIND_FILE / FIND_NEXT / LOAD_FILE.
+- [ ] CI → merge → LAB πραγματικό clip → MP4.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-dahua-clip-http400-diagnostics.md`.
+
 ## 2026-09-19 — Dahua ώρα / PowerShell 5 ParseExact — AWAITING LAB
 
 - [x] Το `result=...` πλέον διαβάζεται· LAB αποκάλυψε ασυμβατό 4-argument ParseExact overload στο Windows PowerShell 5.
