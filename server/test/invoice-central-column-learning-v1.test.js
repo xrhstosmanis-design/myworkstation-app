@@ -41,6 +41,18 @@ test('checkpoint-verified STEFANIDIS layout is seeded centrally without old invo
   assert.doesNotMatch(stefanidisSeed,/2369\.99|608/);
 });
 
+test('FRESH SNACK profile requires a current-image complete-table reread, not historical prices',async()=>{
+  const seed=await readFile(new URL('../src/lib/invoice-learning-fresh-snack-seed.js',import.meta.url),'utf8');
+  const route=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  assert.match(seed,/supplierTaxId:'099162880'/);
+  assert.match(seed,/requireCompletePrintedTableOnMismatch:true/);
+  assert.match(seed,/CURRENT_IMAGE_ROWS_PLUS_VAT_FOOTER_PLUS_TOTAL/);
+  assert.doesNotMatch(seed,/99\.99|68\.12|SPECIAL BOLIKO|TIME OUT/);
+  assert.match(route,/supplierRequiresCompletePrintedTable/);
+  assert.match(route,/reverifyAll:completePrintedTable/);
+  assert.match(route,/expectedGrossTotal:completePrintedTable&&pageJobs\.length===1\?invoiceTotal:0/);
+});
+
 test('STEFANIDIS food layout restores shifted columns only when the printed row equations balance',()=>{
   const rows=[
     ['0011291 MENTOS STORMING ΚΑΡΠΟΥΖΙ 12TMX | ΚΟΥ | 1 | 9,910 | 9,91 | 30,00 | 2,97 | | 6,94 | 13',1,9.91,6.94],

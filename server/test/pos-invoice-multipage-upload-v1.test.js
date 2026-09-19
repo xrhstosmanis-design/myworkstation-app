@@ -92,10 +92,10 @@ test("MANTZILAS rechecks Azure candidate rows against the corrected total and re
   assert.match(aiRecheck,/preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID/);
   assert.match(aiRecheck,/\(preferCentralStefanidis\|\|preferCentralMantzilas\)&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT/);
   assert.match(aiRecheck,/if\(preferCentralMantzilas\)parsed\.mantzilasCentralFastPath=true/);
-  assert.match(aiRecheck,/const mantzilasRequiresCompleteReverification=mantzilasInvoice/);
+  assert.match(aiRecheck,/const requiresCompleteReverification=\(mantzilasInvoice\|\|supplierRequiresCompletePrintedTable\)/);
   assert.match(aiRecheck,/Math\.abs\(lineGrossTotal\(parsed\.productLines\)-invoiceTotal\)>TOTAL_TOLERANCE/);
   assert.match(aiRecheck,/if\(mantzilasInvoice\)return currentPage&&\(mantzilasRequiresCompleteReverification\|\|!line\.sourceColumnsVerified\)/);
-  const fullVerificationIndex=aiRecheck.indexOf("mantzilasRequiresCompleteReverification=mantzilasInvoice");
+  const fullVerificationIndex=aiRecheck.indexOf("requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)");
   assert.ok(fullVerificationIndex>=0);
   assert.ok(aiRecheck.indexOf("for(const [pageIndex,page] of pageJobs.entries())",fullVerificationIndex)>fullVerificationIndex);
 });
@@ -105,7 +105,7 @@ test("MANTZILAS uses one complete verifier instead of stacking redundant provide
   assert.match(aiRecheck,/const needsTablePass=!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback/);
   assert.match(aiRecheck,/if\(needsTablePass\|\|\(!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
   assert.match(aiRecheck,/if\(!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
-  assert.match(aiRecheck,/reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs\.length===1\?invoiceTotal:0/);
+  assert.match(aiRecheck,/reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs\.length===1\?invoiceTotal:0/);
   assert.match(discountVerifier,/export function buildCompletePrintedTableCandidate/);
   assert.match(discountVerifier,/const complete=buildCompletePrintedTableCandidate\(candidates,expectedGrossTotal,diagnostics\.vatSummary\)/);
   assert.match(discountVerifier,/ΥΠΟΧΡΕΩΤΙΚΟΣ ΕΛΕΓΧΟΣ ΠΛΗΡΟΤΗΤΑΣ/);
@@ -192,7 +192,7 @@ test("full OCR provider calls are bounded so durable recovery cannot remain POS_
   assert.match(aiRecheck,/callAzure\(\{contentData:page\.contentData,mimeType:page\.mimeType,timeoutMs:CENTRAL_AZURE_PAGE_TIMEOUT_MS\}\)/);
   assert.match(wrapper,/aborted due to timeout\|TimeoutError/);
   assert.match(aiRecheck,/verifyInvoiceDiscounts\(\{contentData:page\.contentData,[^}]*timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS/s);
-  assert.match(aiRecheck,/reverifyAll:mantzilasInvoice,expectedGrossTotal:mantzilasInvoice&&pageJobs\.length===1\?invoiceTotal:0/);
+  assert.match(aiRecheck,/reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs\.length===1\?invoiceTotal:0/);
   assert.match(aiRecheck,/"AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED"/);
   assert.match(aiRecheck,/includes\(line\.quantitySource\)\?line:recoverMantzilasEconomics\(line\)/);
 });

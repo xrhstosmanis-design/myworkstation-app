@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {COFFEE_UNION_PROFILE} from "../lib/invoice-learning-coffee-union-seed.js";
 import {PREMIUM_BAKERY_PROFILE} from "../lib/invoice-learning-premium-bakery-seed.js";
+import {FRESH_SNACK_PROFILE} from "../lib/invoice-learning-fresh-snack-seed.js";
 import {syncProductKnowledgeFromProfiles} from "../lib/invoice-learning-product-knowledge.js";
 
 const router=Router();
@@ -26,7 +27,7 @@ export async function ensureInvoiceLearningWorkspaceSchema(){
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceSupplierReadingProfile" ("supplierKey" TEXT PRIMARY KEY,"supplierTaxId" TEXT,"supplierName" TEXT,"normalizedName" TEXT,"ruleKey" TEXT,"profileVersion" INTEGER NOT NULL DEFAULT 1,"profile" JSONB NOT NULL DEFAULT '{}'::jsonb,"isActive" BOOLEAN NOT NULL DEFAULT TRUE,"updatedByUserId" TEXT,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "InvoiceSupplierReadingProfile_taxId_uq" ON "InvoiceSupplierReadingProfile" ("supplierTaxId") WHERE "supplierTaxId" IS NOT NULL AND "supplierTaxId"<>''`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "InvoiceSupplierReadingProfile_name_idx" ON "InvoiceSupplierReadingProfile" ("normalizedName")`);
-  const seedProfiles=[[ALFA_SEED_KEY,ALFA_SEED_PROFILE],[ALFA_TASTY_KEY,ALFA_TASTY_PROFILE],[STEFANIDIS_KEY,STEFANIDIS_PROFILE],[COFFEE_UNION_PROFILE.supplierTaxId||COFFEE_UNION_PROFILE.ruleKey,COFFEE_UNION_PROFILE],[PREMIUM_BAKERY_PROFILE.supplierTaxId||PREMIUM_BAKERY_PROFILE.ruleKey,PREMIUM_BAKERY_PROFILE]];
+  const seedProfiles=[[ALFA_SEED_KEY,ALFA_SEED_PROFILE],[ALFA_TASTY_KEY,ALFA_TASTY_PROFILE],[STEFANIDIS_KEY,STEFANIDIS_PROFILE],[COFFEE_UNION_PROFILE.supplierTaxId||COFFEE_UNION_PROFILE.ruleKey,COFFEE_UNION_PROFILE],[PREMIUM_BAKERY_PROFILE.supplierTaxId||PREMIUM_BAKERY_PROFILE.ruleKey,PREMIUM_BAKERY_PROFILE],[FRESH_SNACK_PROFILE.supplierTaxId||FRESH_SNACK_PROFILE.ruleKey,FRESH_SNACK_PROFILE]];
   for(const [key,p] of seedProfiles){const name=normName(p.supplierName),tax=cleanTaxId(p.supplierTaxId);await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=COALESCE(EXCLUDED."supplierTaxId","InvoiceSupplierReadingProfile"."supplierTaxId"),"supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","profile"=EXCLUDED."profile" || COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb),"ruleKey"=EXCLUDED."ruleKey","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,key,tax||null,p.supplierName,name,p.ruleKey,JSON.stringify(p));}
   await syncProductKnowledgeFromProfiles();
   console.log("Invoice Learning central supplier profiles + product knowledge ready.");

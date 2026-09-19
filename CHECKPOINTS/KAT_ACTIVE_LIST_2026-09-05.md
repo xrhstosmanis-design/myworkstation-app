@@ -1,3 +1,11 @@
+## 2026-09-19 — Fresh Snack complete printed-table safety rule — AWAITING LAB
+
+- [x] **LAB FAIL retained for diagnostic invoice `21-ΤΛΑ 006019`**: the one POS-front submission created one unapproved draft, but the first extraction totalled `68.12 EUR` against the confirmed `99.99 EUR`. It stayed visibly `ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟ` / `POS_FAILED`; no false success, approval, stock, fiscal, accounting or payment mutation occurred.
+- [x] Added a versioned central supplier profile only for `FRESH SNACK AE` / ΑΦΜ `099162880`. It stores no historical item quantities, prices, discounts or invoice totals.
+- [x] When this supplier's current-image rows disagree with the POS-confirmed total, the background flow now requires one complete visual reread of every physical row, row economics, VAT footer and total before replacing the same draft. An incomplete/mismatched reread preserves the existing draft unchanged for review.
+- [x] Focused regression suite `76/76` PASS locally. CI, merge, exact deployment and one future fresh POS-front invoice remain required; do not re-upload the diagnostic invoice.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-fresh-snack-complete-printed-table-rule.md`.
+
 ## 2026-09-19 — KAT-10 πραγματικός Dahua connector — AWAITING LAB
 
 - [x] **LAB NOT TESTED / AWAITING LAB**: ολοκληρώθηκε η ασφαλής βάση πραγματικής σύνδεσης Dahua/ONVIF, αλλά δεν έχει ακόμη δοκιμαστεί με το φυσικό `DHI-NVR2104-4KS3` και την `DH-IPC-T1E20-A` στο ίδιο LAN με το POS.
