@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BarChart3,Boxes,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
+import {BarChart3,Boxes,Camera,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
@@ -10,6 +10,7 @@ import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
 import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
 import PendingCenterPanel from "./PendingCenterPanel.jsx";
+import BackofficeVideoAuditPanel from "./BackofficeVideoAuditPanel.jsx";
 import "./commerce-hub.css";
 import "./commerce-external-tabs.css";
 
@@ -159,7 +160,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("AI_READER")} className={`${tab==="ai"?"active":""} ${!active.has("AI_READER")?"locked":""}`} onClick={()=>setTab("ai")}><FileScan/> Ανάγνωση τιμολογίων</button>
         <button disabled={!active.has("ATTENDANCE")} className={`${tab==="attendance"?"active":""} ${!active.has("ATTENDANCE")?"locked":""}`} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="dispatch"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("dispatch")}><Truck/> Δελτία / Πάροχος</button>
-        <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
+        <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>\n        <button disabled={!active.has("VIDEO_EVENTS")} className={`${tab==="video"?"active":""} ${!active.has("VIDEO_EVENTS")?"locked":""}`} onClick={()=>setTab("video")}><Camera/> Κάμερες / Video Audit</button>
       </div>
       <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
@@ -167,7 +168,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
     {tab==="modules"&&<section className="commerce-status-grid">{statusModules.map(module=><article key={module.key} className={`commerce-status-card ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><b>{module.name}</b><p>{module.description}</p><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ — ΑΝΕΝΕΡΓΟ":"ΥΠΟ ΑΝΑΠΤΥΞΗ / ΤΕΧΝΙΚΟ ΚΛΕΙΔΩΜΑ"}</em>{!module.commercialReady&&<LockKeyhole/>}</article>)}</section>}
 
-    {tab==="inventory"&&<>
+    {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}\n\n    {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
       <div className="commerce-grid"><section className="commerce-box"><h3>Απόθεμα καταστήματος</h3><div className="commerce-table"><div className="commerce-row head"><span>Προϊόν</span><span>SKU</span><span>Τιμή</span><span>Απόθεμα</span><span>Κόστος</span></div>{inventory.map(row=><div className="commerce-row" key={row.id}><span><b>{row.name}</b><small>{row.categoryName||"Χωρίς κατηγορία"}</small></span><span>{row.sku||"—"}</span><span>{money(row.salePrice)}</span><span>{number(row.currentStock)}</span><span>{money(row.costPrice)}</span></div>)}</div></section><aside className="commerce-box"><h3>Νέο προϊόν</h3><form className="commerce-form" onSubmit={addProduct}><input name="name" placeholder="Όνομα προϊόντος" required/><input name="sku" placeholder="Κωδικός / SKU"/><input name="barcode" placeholder="Barcode"/><input name="salePrice" type="number" step="0.01" min="0" placeholder="Τιμή πώλησης"/><input name="costPrice" type="number" step="0.01" min="0" placeholder="Κόστος"/><input name="vatRate" type="number" step="0.01" defaultValue="24"/><input name="openingStock" type="number" step="0.001" placeholder="Αρχικό απόθεμα"/><button><PackagePlus/>Αποθήκευση προϊόντος</button></form><h3>Νέος προμηθευτής</h3><form className="commerce-form" onSubmit={addSupplier}><input name="name" placeholder="Επωνυμία" required/><input name="taxId" placeholder="ΑΦΜ"/><input name="phone" placeholder="Τηλέφωνο"/><button>Αποθήκευση προμηθευτή</button></form><h3>Κίνηση αποθήκης</h3><form className="commerce-form" onSubmit={adjustStock}><select name="productId" required><option value="">Προϊόν</option>{inventory.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><select name="movementType"><option value="ADJUSTMENT">Διόρθωση +</option><option value="PURCHASE">Παραλαβή</option><option value="WASTE">Φύρα</option><option value="TRANSFER_IN">Μεταφορά εισόδου</option><option value="TRANSFER_OUT">Μεταφορά εξόδου</option></select><input name="quantity" type="number" step="0.001" required placeholder="Ποσότητα"/><input name="note" placeholder="Σημείωση"/><button>Καταχώριση κίνησης</button></form></aside></div>
       <SupplierManagementPanel api={api} suppliers={suppliers} onChanged={loadInventory}/>
