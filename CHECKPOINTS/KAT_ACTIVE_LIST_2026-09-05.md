@@ -1863,3 +1863,11 @@ Total output lines: 1413
 - [x] The recovery reuses the same job, attachment, credit/draft identity and replaces lines only if the new read is fully verified. It never approves, creates payment, moves stock or finalizes the document.
 - [ ] Await CI, deployment and actual result: five physical rows, `47.67 EUR` net, `6.20 EUR` VAT, `53.87 EUR` gross.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-fresh-snack-safe-replay-verification.md`.
+
+## 2026-09-19 — Gate 3: ασφαλής αντικατάσταση γραμμών σε επανεκτέλεση POS
+
+- [x] Αιτία LAB: η ασφαλής επανεκτέλεση του ίδιου POS draft μπορούσε να προσθέσει δεύτερες OCR γραμμές αντί να αντικαταστήσει το προσωρινό σύνολο.
+- [x] Διόρθωση: μόνο για το ίδιο υπάρχον DRAFT/NEW POS πρόχειρο, οι παλιές OCR γραμμές αντικαθίστανται μέσα στην ίδια συναλλαγή. Παραστατικό, πληρωμή και απόθεμα δεν αλλάζουν.
+- [x] Ανάγνωση: κωδικός όπως 101 260916 διαβάζεται ως item code 101, ώστε η ίδια γραμμή να μη γίνει δεύτερο προϊόν.
+- [ ] Αναμονή CI/Render και πραγματική δοκιμή νέου τιμολογίου από POS.
+- Checkpoint: CHECKPOINTS/CHANGES/2026-09-19-pos-reread-replace-lines.md.
