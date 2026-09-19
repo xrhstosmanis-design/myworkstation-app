@@ -240,6 +240,20 @@ test('single-page adjacent OCR replay is collapsed only when the printed total c
   assert.deepEqual(Array.from(mixed.lines,line=>line.code),['ES01000','FR1500','FR1500']);
 });
 
+test('a reconciled Fresh Snack table drops only an unverified trailing replay of its own rows',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\nconst money2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;\nconst TOTAL_TOLERANCE=.05;\n"+source.slice(source.indexOf('const lineGrossTotal='),source.indexOf('function mergeRecoveredLines'))+'\nthis.discard=discardUnverifiedTrailingReplay;',context);
+  const rows=[
+    {description:'SPECIAL BOLIKO',grossAmount:6.19},{description:'TIME OUT',grossAmount:5.46},{description:'ARAB KOTOYROS',grossAmount:6.87},{description:'SANT TEXAS BURGER',grossAmount:2.16},{description:'CROISSANT CHOCO BIG',grossAmount:33.19},
+    {description:'SPECIAL BOLIKO',grossAmount:14.69},{description:'TIME OUT',grossAmount:14.69},{description:'ARAB KOTOYROS',grossAmount:6.87},{description:'SANT TEXAS BURGER',grossAmount:2.16}
+  ];
+  const repaired=context.discard(rows,53.87);
+  assert.equal(repaired.discarded,true);assert.equal(repaired.lines.length,5);assert.equal(repaired.removed,4);
+  const verified=context.discard([...rows.slice(0,5),{...rows[5],sourceColumnsVerified:true}],53.87);
+  assert.equal(verified.discarded,false,'a verified row is never silently removed');
+});
+
 test('one isolated duplicate row is removed only when its exact gross is the unique total overage',async()=>{
   const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
   const context=vm.createContext({});
