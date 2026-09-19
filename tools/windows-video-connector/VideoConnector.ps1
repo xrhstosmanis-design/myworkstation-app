@@ -52,7 +52,7 @@ function Complete-Command([object]$Command,[hashtable]$Result){Invoke-Backend ("
 function Fail-Command([object]$Command,[string]$Code){
   try{
     $safeCode=[string]$Code
-    $safeCode=[regex]::Replace($safeCode,'[^A-Z0-9_-]','_')
+    if([string]::IsNullOrWhiteSpace($safeCode)){$safeCode="COMMAND_FAILED"}
     if($safeCode.Length -gt 120){$safeCode=$safeCode.Substring(0,120)}
     Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=$safeCode}|Out-Null
   }catch{Write-SafeLog "COMMAND failure report deferred"}
