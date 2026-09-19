@@ -33,11 +33,11 @@ test("V17 discovers ONVIF devices locally without exposing an inbound service",(
 });
 
 test("V17 supports on-demand historical audit video lookup within NVR retention",()=>{
-  assert.match(auditRoute,/capturedOnDemand/);
-  assert.match(auditRoute,/StoreTransaction/);
-  assert.match(auditRoute,/PosSaleActionAudit/);
-  assert.match(auditRoute,/StoreOperatorAudit/);
-  assert.match(auditRoute,/δηλωμένου χρόνου διατήρησης/);
-  assert.match(auditRoute,/getTime\(\)-30000/);
-  assert.match(auditRoute,/getTime\(\)\+60000/);
+  assert.match(route,/capturedOnDemand/);
+  assert.match(route,/StoreTransaction/);
+  assert.match(route,/PosSaleActionAudit/);
+  assert.match(route,/StoreOperatorAudit/);
+  assert.match(route,/δηλωμένου χρόνου διατήρησης/);
+  assert.match(route,/getTime\(\)-30000/);
+  assert.match(route,/getTime\(\)\+60000/);
 });
