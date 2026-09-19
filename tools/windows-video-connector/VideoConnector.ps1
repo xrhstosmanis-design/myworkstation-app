@@ -49,7 +49,13 @@ function Upload-Artifact([object]$Command,[string]$Path,[string]$Kind,[string]$M
   for($index=0;$index -lt $count;$index++){$length=[Math]::Min($chunkSize,$bytes.Length-($index*$chunkSize));$chunk=New-Object byte[] $length;[Array]::Copy($bytes,$index*$chunkSize,$chunk,0,$length);$final=$index -eq ($count-1);Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/chunks" -f $Command.id) @{kind=$Kind;cameraKey=$Command.cameraKey;mimeType=$MimeType;filename=[IO.Path]::GetFileName($Path);chunkIndex=$index;chunkBase64=[Convert]::ToBase64String($chunk);final=$final;sha256=$(if($final){$sha}else{$null});totalBytes=$(if($final){$bytes.Length}else{$null})}|Out-Null}
 }
 function Complete-Command([object]$Command,[hashtable]$Result){Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/complete" -f $Command.id) @{result=$Result}|Out-Null}
-function Fail-Command([object]$Command,[string]$Code){try{Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=($Code -replace '[^A-Z0-9_\-]','_').Substring(0,[Math]::Min(120,($Code -replace '[^A-Z0-9_\-]','_').Length))}|Out-Null}catch{Write-SafeLog "COMMAND failure report deferred"}}
+function Fail-Command([object]$Command,[string]$Code){
+  try{
+    $safeCode=([string]$Code -replace '[^A-Z0-9_\-]','_')
+    if($safeCode.Length -gt 120){$safeCode=$safeCode.Substring(0,120)}
+    Invoke-Backend ("/api/cloud/v1/device/video/commands/{0}/fail" -f $Command.id) @{errorCode=$safeCode}|Out-Null
+  }catch{Write-SafeLog "COMMAND failure report deferred"}
+}
 function Invoke-Command([object]$Command){
   try{
     if($Command.commandType -eq "HEALTH"){$state=Get-NvrState;Complete-Command $Command @{nvrOnline=$true;latencyMs=$state.latencyMs;deviceInfo=$state.deviceInfo};return}

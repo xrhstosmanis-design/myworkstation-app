@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Fail-Command parser hotfix — AWAITING LAB
+
+- [x] Scheduled task Last Result 1 απομονώθηκε σε PowerShell parser error στη Fail-Command line 52.
+- [x] Safe errorCode normalization ξαναγράφηκε συμβατά με Windows PowerShell 5.
+- [ ] CI → merge → LAB task Running/ONLINE → retry clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-fail-command-parser-hotfix.md`.
+
 ## 2026-09-20 — Video command stale CLAIMED requeue — AWAITING LAB
 
 - [x] Root cause του UI timeout με connector `commands=0`: παλιό CLAIMED command επαναχρησιμοποιούνταν για έως 5 λεπτά.
