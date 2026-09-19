@@ -31,3 +31,13 @@ test("V17 verifies a Dahua recording through mediaFileFind before downloading th
 test("V17 discovers ONVIF devices locally without exposing an inbound service",()=>{
   assert.match(discovery,/239\.255\.255\.250/);assert.match(discovery,/NetworkVideoTransmitter/);assert.match(installer,/Discover-VideoDevices\.ps1/);assert.match(connector,/GetDeviceInformation/);assert.match(connector,/GetSnapshotUri/);assert.doesNotMatch(discovery,/HttpListener|TcpListener/);
 });
+
+test("V17 supports on-demand historical audit video lookup within NVR retention",()=>{
+  assert.match(auditRoute,/capturedOnDemand/);
+  assert.match(auditRoute,/StoreTransaction/);
+  assert.match(auditRoute,/PosSaleActionAudit/);
+  assert.match(auditRoute,/StoreOperatorAudit/);
+  assert.match(auditRoute,/δηλωμένου χρόνου διατήρησης/);
+  assert.match(auditRoute,/getTime\(\)-30000/);
+  assert.match(auditRoute,/getTime\(\)\+60000/);
+});
