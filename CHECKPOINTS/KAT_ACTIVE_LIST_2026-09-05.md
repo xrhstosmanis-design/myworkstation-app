@@ -1,3 +1,10 @@
+## 2026-09-20 — Video Fail-Command χωρίς regex — AWAITING LAB
+
+- [x] LAB απέδειξε parser failure και με `-replace` και με `[regex]::Replace`.
+- [x] Αφαιρέθηκε πλήρως το regex από Fail-Command· blank fallback + max 120 chars μόνο.
+- [ ] CI → merge → cache-busted download → `-Once` PASS → ONLINE → clip.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-fail-command-no-regex.md`.
+
 ## 2026-09-20 — Video Fail-Command Regex.Replace PS5 — AWAITING LAB
 
 - [x] PR #984 LAB parser test απέδειξε ότι το PowerShell 5 συνεχίζει να απορρίπτει το `-replace` expression.
