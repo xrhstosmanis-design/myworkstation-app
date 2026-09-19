@@ -3,16 +3,17 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {combineAzureRows,extractAzureColumns,recoverLeventopoulosMmPos1Columns} from "../src/lib/invoice-column-reading.js";
 
-test("Λεβεντόπουλος reads the unique balanced ΜΜ | ΠΟΣ1 | ΠΟΣ2 | ΤΙΜΗ chain",()=>{
+test("Λεβεντόπουλος never infers columns from a balanced raw-text number chain",()=>{
   const input={
     code:"e48266",rawText:"e48266 ΣΥΛ MAGIC DBL GOLD CAR 10 20.00 1.00 2.800 0.0 56.00 13",
     quantity:10,unitCost:20,netAmount:56,vatRate:13
   };
   const line=recoverLeventopoulosMmPos1Columns(input);
-  assert.equal(line.quantity,20);
-  assert.equal(line.unitCost,2.8);
+  assert.equal(line.quantity,10);
+  assert.equal(line.unitCost,20);
   assert.equal(line.netAmount,56);
-  assert.equal(line.sourceColumnsVerified,true);
+  assert.notEqual(line.sourceColumnsVerified,true);
+  assert.equal(line,input);
 });
 
 test("Λεβεντόπουλος leaves an unbalanced physical row for review",()=>{

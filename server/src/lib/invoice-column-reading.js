@@ -247,32 +247,12 @@ export function applyConfirmedColumns(line,columns){
 }
 
 // Λεβεντόπουλος prints a numeric ΜΜ value before ΠΟΣ1. It is a packaging
-// measurement, not the stock quantity. Prefer the geometrical Azure table. If
-// Azure returns only one physical row of OCR text, accept exactly the printed
-// seven-field chain after ΜΜ only when it is the sole fully balanced candidate.
+// measurement, not the stock quantity.  Do not infer columns by scanning a
+// free-form OCR string: numbers from adjacent cells/rows can form a perfectly
+// balanced but false chain.  Only the geometrical table reader or the complete
+// printed-table verifier may mark this layout as verified.
 export function recoverLeventopoulosMmPos1Columns(line){
-  if(line?.sourceColumnsVerified)return line;
-  const values=(String(line?.azureRawRow||line?.rawText||"").match(/\d+(?:[.,]\d+)?/g)||[]).map(columnNumber).filter(value=>value!==null);
-  const candidates=[];
-  for(let i=0;i+6<values.length;i++){
-    const [mm,quantity,pos2,unitCost,discount,netAmount,vatRate]=values.slice(i,i+7);
-    // ΠΟΣ2 is a printed coefficient (1.00 / 0.25 / 0.13 on this layout), not
-    // an amount. This prevents a product-name number from becoming ΠΟΣ1.
-    if(!(Number.isInteger(mm)&&mm>0&&mm<=100&&quantity>0&&pos2>0&&pos2<=1&&unitCost>0&&netAmount>0)||![0,6,13,24].includes(vatRate)||discount<0||discount>100)continue;
-    const expected=round2(quantity*unitCost*(1-discount/100));
-    if(Math.abs(expected-netAmount)>.03)continue;
-    candidates.push({mm,quantity,pos2,unitCost,discount,netAmount,vatRate});
-  }
-  if(candidates.length!==1)return line;
-  const candidate=candidates[0];
-  return {...line,
-    quantity:candidate.quantity,invoiceQuantity:candidate.quantity,unitCost:candidate.unitCost,unitPrice:candidate.unitCost,
-    initialAmount:round2(candidate.quantity*candidate.unitCost),netAmount:candidate.netAmount,netValue:candidate.netAmount,
-    discount1:candidate.discount,discount2:0,discount3:0,vatRate:candidate.vatRate,
-    grossAmount:round2(candidate.netAmount*(1+candidate.vatRate/100)),
-    sourceColumnsVerified:true,supplierProfileRecovered:true,supplierProfileRule:"LEVENTOPOULOS_MM_POS1_COLUMNS",
-    supplierProfileEvidence:{...candidate,quantityColumn:"ΠΟΣ1",unitPriceColumn:"ΤΙΜΗ"}
-  };
+  return line;
 }
 
 // Some Azure responses contain Items but omit the geometrical product table.

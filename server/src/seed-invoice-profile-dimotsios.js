@@ -74,7 +74,7 @@ const leventopoulosProfile={
   ruleKey:"LEVENTOPOULOS_MM_POS1_COLUMNS",
   central:true,
   source:"CHECKPOINT_VERIFIED_TDLPIX14_15",
-  readingRule:{layoutMode:"LEVENTOPOULOS_MM_POS1_COLUMNS",quantityColumn:"ΠΟΣ1",ignoredColumns:["ΜΜ","ΠΟΣ2"]}
+  readingRule:{layoutMode:"LEVENTOPOULOS_MM_POS1_COLUMNS",quantityColumn:"ΠΟΣ1",ignoredColumns:["ΜΜ","ΠΟΣ2"],requireCompletePrintedTableOnMismatch:true}
 };
 const leventopoulosNormalized=leventopoulosName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
 await prisma.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedAt") VALUES ($1,$2,$3,$4,$5,1,$6::jsonb,TRUE,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profile"=COALESCE("InvoiceSupplierReadingProfile"."profile",'{}'::jsonb) || EXCLUDED."profile","isActive"=TRUE,"updatedAt"=CURRENT_TIMESTAMP`,leventopoulosKey,leventopoulosKey,leventopoulosName,leventopoulosNormalized,leventopoulosProfile.ruleKey,JSON.stringify(leventopoulosProfile));
