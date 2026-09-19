@@ -125,6 +125,7 @@ import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.j
 import { ensureVideoEventsSchema } from "./video-events-bootstrap.js";
 import {ensureStorePaidModulesSchema} from "./store-paid-modules.js";
 import videoConnectorDeviceRoutes from "./routes/video-connector-device.js";
+import backofficeVideoAdminRoutes from "./routes/backoffice-video-admin.js";
 
 if(!process.env.JWT_SECRET) throw new Error("Λείπει το JWT_SECRET.");
 const app=express();
@@ -154,7 +155,7 @@ app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform",platformEfoodIntegrationRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
 app.use("/api/platform/mail",mailRoutes);
-app.use("/api/license",licenseRoutes);
+app.use("/api/license",licenseRoutes);\napp.use("/api/video-admin",auth,backofficeVideoAdminRoutes);
 app.use("/api/operator-management",auth,requireStoreModule("STORE_MODE"),operatorManagementV2Routes);
 app.use("/api/management/vat-departments",auth,requireCompanyModule("INVENTORY"),managementVatDepartmentsRoutes);
 app.use("/api/management/expense-categories",auth,requireCompanyModule("CASH_CONTROL"),managementExpenseCategoriesRoutes);
