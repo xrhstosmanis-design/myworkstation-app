@@ -466,7 +466,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // that exact MANTZILAS failure case, reverify every current-page row from the
   // original image. Keep the no-provider fast path for a table that already
   // reconciles, including the LAB-passed 12665 normalization.
-  const supplierRequiresCompletePrintedTable=parsed?.supplierReadingProfile?.ruleKey==='FRESH_SNACK_COMPLETE_PRINTED_TABLE'
+  const supplierRequiresCompletePrintedTable=['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE'].includes(parsed?.supplierReadingProfile?.ruleKey)
     &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
   const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
     &&invoiceTotal>0
@@ -476,14 +476,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
       const hasDiscount=[line.discount1,line.discount2,line.discount3,line.discount1Amount,line.discount2Amount,line.discount3Amount].some(value=>Number(value||0)>0);
       const currentPage=pageJobs.length===1||line.sourceFileIndex===pageIndex;
-      if(mantzilasInvoice)return currentPage&&(mantzilasRequiresCompleteReverification||!line.sourceColumnsVerified);
+      if(mantzilasInvoice)return currentPage&&(requiresCompleteReverification||!line.sourceColumnsVerified);
       if(supplierRequiresCompletePrintedTable)return currentPage&&requiresCompleteReverification;
       return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     if(!unresolved.length)continue;
     try{
       const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable;
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?"FRESH_SNACK":""});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
