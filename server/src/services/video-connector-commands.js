@@ -12,9 +12,7 @@ export async function enqueueVideoCommand({companyId,storeId,commandType,cameraK
     const row=existing[0];
     if(row?.status==="PENDING")return row;
     if(row?.status==="CLAIMED"){
-      const claimedAt=row.claimedAt?new Date(row.claimedAt).getTime():0;
-      if(claimedAt&&Date.now()-claimedAt<90000)return row;
-      await db.$executeRaw`UPDATE "VideoConnectorCommand" SET "status"='FAILED',"errorCode"='STALE_CLAIM_REQUEUED',"completedAt"=NOW() WHERE "id"=${row.id} AND "status"='CLAIMED'`;
+      await db.$executeRaw`UPDATE "VideoConnectorCommand" SET "status"='FAILED',"errorCode"='CLAIM_REPLACED_BY_USER_RETRY',"completedAt"=NOW() WHERE "id"=${row.id} AND "status"='CLAIMED'`;
     }
   }
   const rows=await db.$queryRaw`INSERT INTO "VideoConnectorCommand" ("id","companyId","storeId","commandType","cameraKey","videoEventId","payload","expiresAt") VALUES (${crypto.randomUUID()},${companyId},${storeId},${commandType},${cameraKey},${videoEventId},${JSON.stringify(payload)}::jsonb,NOW()+(${ttlSeconds}::integer*INTERVAL '1 second')) RETURNING "id","status","createdAt","expiresAt"`;return rows[0]

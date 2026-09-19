@@ -1,3 +1,10 @@
+## 2026-09-20 — Explicit Video command retry after CLAIMED — AWAITING LAB
+
+- [x] Connector parser PASS + task Running + ONLINE, αλλά UI timeout με heartbeat `commands=0`.
+- [x] Explicit retry δεν επαναχρησιμοποιεί πλέον ήδη-consumed CLAIMED command· το κλείνει και δημιουργεί νέο PENDING.
+- [ ] CI → merge/deploy → ίδιο συμβάν → `commands=1` → Dahua clip pipeline.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-video-command-explicit-retry.md`.
+
 ## 2026-09-20 — Video Connector structural duplicate cleanup — AWAITING LAB
 
 - [x] LAB parser error line 59/111 απομονώθηκε σε orphan/duplicated blocks, όχι σε νέο regex θέμα.
