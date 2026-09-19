@@ -97,6 +97,11 @@ const isSafeCompleteTableReplayFailure=(job,error,supplierName="")=>{
   return (completeTableProfile||legacyFreshSnackDraft)
     &&/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές\. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση\./i.test(String(error?.message||error));
 };
+async function linkedDraftSupplierName(companyId,job){
+  if(!job?.purchaseDocumentId)return "";
+  const rows=await prisma.$queryRaw`SELECT s."name" FROM "PurchaseDocument" d JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId" WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${companyId} AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' LIMIT 1`;
+  return String(rows[0]?.name||"");
+}
 
 function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
   const bodyHash=crypto.createHash("sha256").update(JSON.stringify(body??null)).digest("hex");
@@ -831,11 +836,12 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       const background=job.resultJson?.posBackground&&typeof job.resultJson.posBackground==="object"?job.resultJson.posBackground:{};
       const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
       const storedBackgroundError=String(background.error||"");
+      const linkedSupplierName=job.status==="POS_FAILED"?await linkedDraftSupplierName(req.user.companyId,job):"";
       const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
       const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
-      const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError);
+      const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError,linkedSupplierName);
       const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
       if(job.status==="AWAITING_APPROVAL"&&!needsDraftReread)continue;
       if(job.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!needsCompleteTableReplayRecovery&&!isRetryableBackgroundError(storedBackgroundError)){skippedNonRetryable++;continue}
@@ -869,12 +875,13 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const hasRecoverableHandoff=handoff&&Array.isArray(handoff.pageJobIds)&&handoff.pageJobIds.length;
     const reprocess=job.resultJson?.posReprocess&&typeof job.resultJson.posReprocess==="object"?job.resultJson.posReprocess:{};
     const storedBackgroundError=String(background.error||"");
+    const linkedSupplierName=job.status==="POS_FAILED"?await linkedDraftSupplierName(req.user.companyId,job):"";
     const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(storedBackgroundError);
     const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
     const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
-    const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError);
+    const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY&&isSafeCompleteTableReplayFailure(job,storedBackgroundError,linkedSupplierName);
     const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
     const staleProcessing=job.status==="POS_PROCESSING"&&new Date(job.updatedAt).getTime()<Date.now()-60*1000;
     let scheduledHandoff=handoff,rereadClaimed=false,retryClaimed=false;
