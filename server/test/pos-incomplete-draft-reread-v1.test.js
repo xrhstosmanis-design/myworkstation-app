@@ -9,7 +9,7 @@ test("a completed mismatched POS draft gets one full reread from its durable pag
   const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   assert.match(recover,/OR "status"='AWAITING_APPROVAL'/);
   assert.match(recover,/background\.reconciliationRequired===true&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
-  assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery\?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:POS_REPROCESS_STRATEGY,attemptedAt:/);
+  assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery\?completeRecoveryStrategy:POS_REPROCESS_STRATEGY,attemptedAt:/);
   assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
 });
 
@@ -19,7 +19,7 @@ test("a failed safe inferior reread advances once when a newer strategy is deplo
   assert.match(wrapper,/const isSafeInferiorRereadFailure=error=>\/POS_BACKGROUND_AI_RECHECK:/);
   assert.match(recover,/job\.status==="POS_FAILED"&&Boolean\(job\.purchaseDocumentId\)&&reprocess\.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure\(storedBackgroundError\)/);
   assert.doesNotMatch(recover,/needsFailedRereadAdvance=.*reprocess\.mode/);
-  assert.match(recover,/needsCompleteTableReplayRecovery\?"COMPLETE_TABLE_TRAILING_REPLAY":needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD"/);
+  assert.match(recover,/needsCompleteTableReplayRecovery\?\(completeRecoveryStrategy===POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY\?"LEVENTOPOULOS_EMPTY_COMPLETE_TABLE":"COMPLETE_TABLE_TRAILING_REPLAY"\):needsFailedRereadAdvance\?"PREVIOUS_SAFE_INFERIOR_REREAD"/);
   assert.match(recover,/"status" IN \('AWAITING_APPROVAL','POS_FAILED'\)/);
   assert.match(recover,/if\(job\.status==="POS_FAILED"&&!needsFailedRereadAdvance&&!needsCompleteTableReplayRecovery&&!isRetryableBackgroundError/);
 });
@@ -34,8 +34,21 @@ test("a failed Fresh complete-table replay is safely requeued once from its stor
   assert.match(wrapper,/async function linkedDraftSupplierName/);
   assert.match(recover,/linkedSupplierName=job\.status==="POS_FAILED"\?await linkedDraftSupplierName/);
   assert.match(wrapper,/Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές/);
-  assert.match(wrapper,/reason:"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP"/);
+  assert.match(wrapper,/"COMPLETE_TABLE_TRAILING_REPLAY",trigger:"SERVER_STARTUP"/);
   assert.match(wrapper,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
+});
+
+test("a failed Leventopoulos empty table is requeued once from the same linked draft image",()=>{
+  const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
+  assert.match(wrapper,/POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY="LEVENTOPOULOS_EMPTY_COMPLETE_TABLE_V17"/);
+  assert.match(wrapper,/profile\.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS"/);
+  assert.match(wrapper,/ΛΕΒΕΝΤΟΠΟΥΛΟΣ\|LEVENTOPOULOS/);
+  assert.match(wrapper,/reason:recoveryStrategy===POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY\?"LEVENTOPOULOS_EMPTY_COMPLETE_TABLE"/);
+  assert.match(recover,/completeRecoveryStrategy=completeTableRecoveryStrategy\(job,linkedSupplierName\)/);
+  assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
+  assert.match(recover,/Boolean\(job\.purchaseDocumentId\)/);
+  assert.match(wrapper,/pageJobIds:\[job\.id/);
+  assert.match(wrapper,/internalCommerceRequest\(`\/ai-reader\/jobs\/\$\{encodeURIComponent\(jobId\)\}\/ai-recheck`/);
 });
 
 test("reread replaces the same draft lines atomically without creating another payment",()=>{
