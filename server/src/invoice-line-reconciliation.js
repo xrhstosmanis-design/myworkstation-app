@@ -1,5 +1,34 @@
 const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const CANONICAL_VAT=new Set([0,6,13,24]);
+const COMPLETE_ROW_SOURCES=new Set([
+  "AI_COMPLETE_PRINTED_TABLE_VERIFIED",
+  "AI_PRINTED_ROW_FULL_MATH_VERIFIED",
+  "SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED",
+  "MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED",
+  "MANTZILAS_CODE_00009_FINAL_NORMALIZATION",
+  "MANTZILAS_PRINTED_ECONOMICS_VERIFIED"
+]);
+
+export function claimsCompletePrintedTable(productLines){
+  const lines=Array.isArray(productLines)?productLines:[];
+  return lines.length>0&&lines.some(line=>line?.sourceColumnsVerified===true&&COMPLETE_ROW_SOURCES.has(line?.quantitySource));
+}
+
+function verifiedRowMathIsIntact(line){
+  const quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0);
+  const net=Number(line?.netAmount||0),excise=Math.max(0,Number(line?.exciseTotal||0));
+  const vatRate=Number(line?.vatRate||0),gross=Number(line?.grossAmount||0);
+  if(!(quantity>0&&unitCost>0&&net>0&&gross>0)||!CANONICAL_VAT.has(Math.round(vatRate)))return false;
+  let discounted=quantity*unitCost;
+  for(const value of [line?.discount1,line?.discount2,line?.discount3]){
+    const percent=Number(value||0);
+    if(!Number.isFinite(percent)||percent<0||percent>=100)return false;
+    discounted*=1-percent/100;
+  }
+  if(Math.abs(discounted-net)>Math.max(0.05,net*0.005))return false;
+  const taxable=net+excise;
+  return Math.abs(taxable*(1+Math.round(vatRate)/100)-gross)<=Math.max(0.05,gross*0.002);
+}
 
 export function reconcileInvoiceLines(productLines,invoiceTotal,tolerance=0.05){
   const lines=Array.isArray(productLines)?productLines:[];
@@ -28,15 +57,11 @@ export function reconcileInvoiceLines(productLines,invoiceTotal,tolerance=0.05){
 // units or discounts a second time.
 export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tolerance=0.05){
   const lines=Array.isArray(productLines)?productLines:[];
-  const completeRowSources=new Set([
-    "AI_COMPLETE_PRINTED_TABLE_VERIFIED",
-    "AI_PRINTED_ROW_FULL_MATH_VERIFIED",
-    "SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED",
-    "MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED",
-    "MANTZILAS_CODE_00009_FINAL_NORMALIZATION",
-    "MANTZILAS_PRINTED_ECONOMICS_VERIFIED"
-  ]);
-  if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&completeRowSources.has(line?.quantitySource)))return null;
-  const reconciliation=reconcileInvoiceLines(lines,invoiceTotal,tolerance);
-  return reconciliation.difference<=tolerance+Number.EPSILON?reconciliation.normalizedLines:null;
+  if(!lines.length||!lines.every(line=>line?.sourceColumnsVerified===true&&COMPLETE_ROW_SOURCES.has(line?.quantitySource)&&verifiedRowMathIsIntact(line)))return null;
+  const expected=round2(invoiceTotal),actual=round2(lines.reduce((sum,line)=>sum+Number(line.grossAmount||0),0));
+  if(Math.abs(actual-expected)>tolerance+Number.EPSILON)return null;
+  // The complete-table verifier already proved the printed VAT footer and
+  // every horizontal row. Do not run the legacy header/net heuristic here:
+  // a malformed replay could otherwise turn printed VAT into zero.
+  return lines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),discount1:Number(line.discount1||0),discount2:Number(line.discount2||0),discount3:Number(line.discount3||0),netAmount:round2(line.netAmount),exciseTotal:round2(line.exciseTotal),vatRate:Math.round(Number(line.vatRate||0)),vatAmount:round2(Number(line.grossAmount||0)-Number(line.netAmount||0)-Number(line.exciseTotal||0)),grossAmount:round2(line.grossAmount)}));
 }

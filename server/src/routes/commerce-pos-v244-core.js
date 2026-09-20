@@ -26,6 +26,26 @@ export function reconcileCentRoundingResidual(lines,invoiceTotal,tolerance=0.05)
   return productLinesGross(adjusted)===expected?{lines:adjusted,applied:true,residual,index}:{lines:source,applied:false,residual};
 }
 
+export function stockMultiplierForPersistedInvoiceLine(line){
+  const invoiceUnit=String(line?.invoiceUnit||line?.unit||'ΤΜΧ');
+  const invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
+  const invoiceIsWeight=/(KG|KGR|ΚΙΛ)/i.test(invoiceUnit);
+  const explicitlyVerified=Boolean(line?.packageConversionApplied||line?.confirmedPackMapping||line?.packRule||Number(line?.stockUnitsPerInvoiceUnit||0)>1);
+  // A package capacity printed in a product name (1LT, 450ML) is not a count
+  // of stock pieces. Plain TEM/TMX invoice rows therefore remain one piece
+  // unless a learned/confirmed conversion explicitly says otherwise.
+  const supplied=explicitlyVerified||invoiceIsPackage||invoiceIsWeight?Number(line?.stockUnitsPerInvoiceUnit||line?.unitsPerPackage||0):0;
+  const conversion=stockConversionFromDescription(line?.description,supplied,invoiceUnit);
+  if(conversion.multiplier>1)return conversion.multiplier;
+  return invoiceIsPackage&&Number(line?.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1;
+}
+
+export function shouldApplyLearnedPack(line,learnedPack){
+  const unit=String(line?.invoiceUnit||line?.unit||'').trim();
+  const verifiedPrintedPieces=line?.sourceColumnsVerified===true&&/^(?:ΤΜΧ|TEM|TMX|PCS|PIECE)$/i.test(unit);
+  return Number(learnedPack||0)>1&&Number(line?.unitsPerPackage||0)<=1&&!verifiedPrintedPieces;
+}
+
 // Last-resort POS safeguard for a printed line that OCR collapsed because it
 // is identical to another line. Restore it only when exactly one existing line
 // matches the whole invoice gap and the restored total reconciles within five
@@ -138,7 +158,7 @@ async function productsForLines(tx,companyId,supplierId,lines){
     if(learned)product=byId.get(learned.productId)||null;
     if(!product&&line.barcode)product=byBarcode.get(String(line.barcode))||null;
     if(!product){const key=norm(line.description);if(key.length>=4)product=products.find(p=>norm(p.name)===key)||products.find(p=>{const pk=norm(p.name);return key.length>=6&&pk.length>=6&&(pk.includes(key)||key.includes(pk))})||null;}
-    const learnedPack=Math.max(0,Number(learned?.unitsPerPackage||0)),useLearnedPack=learnedPack>1&&Number(line.unitsPerPackage||0)<=1;
+    const learnedPack=Math.max(0,Number(learned?.unitsPerPackage||0)),useLearnedPack=shouldApplyLearnedPack(line,learnedPack);
     return {...line,product,...(useLearnedPack?{unit:"PACKAGE",unitsPerPackage:learnedPack,packRule:`LEARNED_SUPPLIER_CODE_${learnedPack}`}:{})};
   });
 }
@@ -295,9 +315,8 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(skeletonRows[0]){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
       for(const [index,line] of matched.entries()){
         const net=Math.max(0,Number(line.netAmount||0)),exciseTotal=Math.max(0,Number(line.exciseTotal||0)),gross=Math.max(net+exciseTotal,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net-exciseTotal);
-        const invoiceUnit=String(line.unit||'ΤΜΧ'),invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
-        const conversion=stockConversionFromDescription(line.description,Number(line.stockUnitsPerInvoiceUnit||line.unitsPerPackage||0),invoiceUnit);
-        const stockUnitsPerInvoiceUnit=conversion.multiplier>1?conversion.multiplier:(invoiceIsPackage&&Number(line.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1);
+        const invoiceUnit=String(line.unit||'ΤΜΧ');
+        const stockUnitsPerInvoiceUnit=stockMultiplierForPersistedInvoiceLine({...line,invoiceUnit});
         const review=reviewStatusForInvoiceLine({...line,invoiceUnit,stockUnitsPerInvoiceUnit},{matched:Boolean(line.product)});
         stage=`create-purchase-line-${index+1}`;
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","ocrReviewReasons","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},${exciseTotal},${line.vatRate},false,${line.unitCost},0,${Number(line.retailPrice||line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${review.resolutionStatus},${review.reasons.join(" · ")||null},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;

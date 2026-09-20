@@ -2319,3 +2319,14 @@ Total output lines: 1413
 - [x] `73/73` targeted και `1367/1367` full server tests PASS τοπικά.
 - [ ] Green CI → merge/deploy → μία ασφαλής επανάληψη του `28897` από POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
+## 2026-09-20 — DELTA 28897 POS economics + durable Learning draft — AWAITING CI / LAB
+
+- [x] **LAB FAIL:** the first POS draft showed printed quantities multiplied by 1000 (`2 → 2000`, `1 → 1000`), discounts as `99,9` instead of `10/15`, and VAT `0` instead of `13`, despite gross `53,91 €`.
+- [x] Plain `ΤΜΧ/TEM` rows no longer interpret `1LT/450ML` capacity metadata as stock-piece multipliers; package/weight conversion still requires an explicit verified rule.
+- [x] A claimed complete printed table is revalidated immediately before persistence. Corrupted quantity/discount/VAT arithmetic now fails closed and cannot fall back to the lossy legacy finalizer.
+- [x] Exact regression fixture preserves the 11 printed quantities, discounts `10%/15%`, VAT `13%`, and gross `53,91 €`.
+- [x] **LAB FAIL:** «Αποθήκευση Προχείρου» gave no durable/visible confirmation. It now awaits the central workspace `PUT`, disables during save, and displays explicit success or failure.
+- [x] No approval, finalization, payment, stock, fiscal, accounting or myDATA mutation.
+- [ ] Green CI → merge → exact Render deploy.
+- [ ] LAB: save a Learning draft and reload it; then delete the erroneous diagnostic POS draft and submit `28897` once from POS. Acceptance requires one draft with quantities `2,1,3,6,3,3,3,2,4,3,1`, discounts `10%` for rows 1–9 / `15%` for rows 10–11, VAT `13%`, and total `53,91 €` (cent rounding tolerance only).
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
