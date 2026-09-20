@@ -1,3 +1,12 @@
+## 2026-09-20 — ΚΑΝΟΝΑΣ PASS → MANUAL — ACTIVE
+
+- [x] Κάθε πραγματικό LAB/LIVE/USER PASS μπαίνει υποχρεωτικά στο `docs/manual/` μαζί με checkpoint/active list.
+- [x] CI PASS μόνο του δεν θεωρείται λειτουργικό PASS.
+- [x] FAIL/AWAITING LAB/RETEST/OPEN δεν μπαίνουν ως ολοκληρωμένες οδηγίες.
+- [x] Νεότερο πραγματικό checkpoint υπερισχύει παλιότερου.
+- [x] Αρχικές ενότητες manual: Products, Mobile/PWA, POS, Chat, Super Admin, Video Audit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-pass-to-manual-rule.md`.
+
 ## 2026-09-20 — Video FFmpeg timeout / heartbeat protection — AWAITING LAB
 
 - [x] LAB process inspection: πραγματικό Dahua `.dav` έχει κατέβει· κόλλημα στο `ffmpeg DAV→MP4`.
