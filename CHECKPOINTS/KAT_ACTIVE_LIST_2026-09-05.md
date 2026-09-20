@@ -1,3 +1,10 @@
+## 2026-09-20 — LAB Drakou seed rebased on current main — AWAITING CI/LAB
+
+- [x] Fresh branch from current main to restore PR CI triggering.
+- [x] Super Admin + explicit confirmation + ΕΡΓΑΣΤΗΡΙΟ-only guard.
+- [x] Five requested Drakou employees and shift eligibility.
+- [ ] CI → merge → deploy → LAB execution.
+
 ## 2026-09-20 — Invoice Learning uses the POS Azure transport — AWAITING CI / LAB
 
 - [x] Πραγματικό LAB: η Azure ανάγνωση λειτουργεί από το POS, ενώ το Invoice Learning απέτυχε με `ACCESS_403` — **LAB FAIL** για το Learning Lab.
