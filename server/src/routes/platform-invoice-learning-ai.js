@@ -370,7 +370,22 @@ export function invoiceReadingCompleteness(result){
   const lineGross=money4(lines.reduce((sum,line)=>sum+invoiceLineGross(line),0));
   if(!(totalGross>0)||!(lineGross>0))return {complete:true,reason:"TOTAL_NOT_AVAILABLE",lineGross,totalGross,difference:null};
   const difference=money4(Math.abs(totalGross-lineGross)),tolerance=.05;
-  return {complete:difference<=tolerance,reason:difference<=tolerance?"RECONCILED":"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference};
+  if(difference<=tolerance)return {complete:true,reason:"RECONCILED",lineGross,totalGross,difference};
+
+  // Azure occasionally returns every printed product row with its net value,
+  // but omits VAT at line level. In that case lineGross is actually the sum of
+  // the line net values. Accept the result only when both independent footer
+  // equations reconcile: lines == printed net and net + VAT == printed total.
+  // This keeps the partial-table guard intact while allowing a review draft;
+  // missing per-line VAT remains visible for confirmation in the Learning Lab.
+  const lineNet=money4(lines.reduce((sum,line)=>sum+Math.max(0,Number(line?.netAmount||0)),0));
+  const totalNet=Math.max(0,Number(result?.totalNet||0));
+  const totalVat=Math.max(0,Number(result?.totalVat||0));
+  const netDifference=money4(Math.abs(totalNet-lineNet));
+  const footerDifference=money4(Math.abs(totalGross-(totalNet+totalVat)));
+  const headerVatReconciled=totalNet>0&&totalVat>0&&lineNet>0&&netDifference<=tolerance&&footerDifference<=tolerance;
+  if(headerVatReconciled)return {complete:true,reason:"RECONCILED_BY_HEADER_VAT",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference,requiresLineVatReview:true};
+  return {complete:false,reason:"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference};
 }
 
 function learnedScore(line,k){
