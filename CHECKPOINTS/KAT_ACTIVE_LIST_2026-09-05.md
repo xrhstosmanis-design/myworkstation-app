@@ -1,3 +1,10 @@
+## 2026-09-20 — «Φόρτωση Σεναρίου» — AWAITING LAB
+
+- [x] Exact button label requested by user.
+- [x] Explicit confirmation before mutation.
+- [x] Calls guarded LAB-only Super Admin endpoint and reloads personnel.
+- [ ] CI/merge/deploy → one-click user LAB execution.
+
 ## 2026-09-20 — Invoice Learning follows the POS provider fallback — AWAITING CI / LAB
 
 - [x] Exact shared POS Azure transport deployed at `55bb5c90c6ea13db073ae37a6d1351f22166f866`; repeated LAB still returns `ACCESS_403`.
