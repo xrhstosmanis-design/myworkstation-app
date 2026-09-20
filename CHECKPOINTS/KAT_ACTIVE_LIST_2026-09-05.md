@@ -1,3 +1,11 @@
+## 2026-09-20 — Workforce PUBLISHED → Store Chat v4 — AWAITING LAB
+
+- [x] Μόνο PUBLISHED πρόγραμμα στέλνεται στο υπάρχον Store Chat.
+- [x] Important SHIFT message, store-scoped, idempotent.
+- [x] DRAFT/PREVIEWED/APPROVED δεν στέλνουν μήνυμα.
+- [x] Email μένει fail-closed μέχρι verified mail provider.
+- [ ] CI/merge/deploy → USER LAB TEST scheduler end-to-end.
+
 ## 2026-09-20 — Workforce AI conversation + DRAFT apply v3 — AWAITING LAB
 
 - [x] In-session correction conversation retained.
