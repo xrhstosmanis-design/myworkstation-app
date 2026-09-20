@@ -480,22 +480,59 @@ function lineInformationScore(line){
     .reduce((score,key)=>score+(line?.[key]?1:0),0)+Math.max(0,Number(line?.confidence||0))/100;
 }
 
+function descriptionsOverlap(a,b){
+  const left=String(a||"").split(/\s+/).map(norm).filter(word=>word.length>=4);
+  const right=String(b||"").split(/\s+/).map(norm).filter(word=>word.length>=4);
+  return left.some(word=>right.includes(word));
+}
+
+function crossProviderEconomicMatch(a,b,overage){
+  if(a?.providerOrigin===b?.providerOrigin||!a?.providerOrigin||!b?.providerOrigin)return false;
+  const aGross=money4(invoiceLineGross(a)),bGross=money4(invoiceLineGross(b)),tolerance=.05;
+  if(!(aGross>0&&bGross>0)||Math.abs(aGross-bGross)>tolerance||Math.abs(aGross-overage)>tolerance)return false;
+  const aCode=norm(a?.supplierItemCode),bCode=norm(b?.supplierItemCode);
+  const identity=(aCode&&bCode&&aCode===bCode)||descriptionsOverlap(a?.description,b?.description);
+  if(!identity)return false;
+  const pairs=[[a?.quantity,b?.quantity,.001],[a?.unitPrice,b?.unitPrice,.001],[a?.netAmount,b?.netAmount,.05]];
+  const economicMatches=pairs.filter(([left,right,tol])=>Number(left)>0&&Number(right)>0&&Math.abs(Number(left)-Number(right))<=tol).length;
+  return economicMatches>=2;
+}
+
+export function collapseCrossProviderDuplicateOverage(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money4(invoiceTotal||0),tolerance=.05;
+  const lineTotal=money4(source.reduce((sum,line)=>sum+invoiceLineGross(line),0)),overage=money4(lineTotal-total);
+  if(!(total>0)||source.length<2||overage<=tolerance)return {lines:source,collapsed:false};
+  const candidates=[];
+  for(let left=0;left<source.length;left++)for(let right=left+1;right<source.length;right++){
+    if(crossProviderEconomicMatch(source[left],source[right],overage))candidates.push([left,right]);
+  }
+  if(candidates.length!==1)return {lines:source,collapsed:false};
+  const [left,right]=candidates[0];
+  const primary=lineInformationScore(source[right])>=lineInformationScore(source[left])?source[right]:source[left];
+  const secondary=primary===source[right]?source[left]:source[right];
+  const keepIndex=primary===source[right]?right:left,removeIndex=keepIndex===right?left:right;
+  const collapsed=source.map((line,index)=>index===keepIndex?{...secondary,...primary,providerOrigin:"AZURE+OPENAI",crossProviderEconomicMatched:true}:line).filter((_,index)=>index!==removeIndex);
+  const collapsedTotal=money4(collapsed.reduce((sum,line)=>sum+invoiceLineGross(line),0));
+  if(Math.abs(collapsedTotal-total)>tolerance)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:1,overage};
+}
+
 /* Azure and OpenAI can each miss a different printed row. Combine them as a
  * multiset (so repeated products remain repeated), but this result is usable
  * only after invoiceReadingCompleteness independently reconciles the footer. */
 export function mergeProviderInvoiceDrafts(azure,openai){
   const azureLines=Array.isArray(azure?.productLines)?azure.productLines:[];
   const aiLines=Array.isArray(openai?.productLines)?openai.productLines:[];
-  const merged=azureLines.map(line=>({...line})),matched=new Set();
+  const merged=azureLines.map(line=>({...line,providerOrigin:"AZURE"})),matched=new Set();
   for(const aiLine of aiLines){
     const index=merged.findIndex((line,i)=>!matched.has(i)&&sameInvoiceLine(line,aiLine));
-    if(index<0){merged.push({...aiLine});matched.add(merged.length-1);continue}
+    if(index<0){merged.push({...aiLine,providerOrigin:"OPENAI"});matched.add(merged.length-1);continue}
     matched.add(index);
     const primary=lineInformationScore(aiLine)>=lineInformationScore(merged[index])?aiLine:merged[index];
     const secondary=primary===aiLine?merged[index]:aiLine;
-    merged[index]={...secondary,...primary,hybridMatched:true};
+    merged[index]={...secondary,...primary,providerOrigin:"AZURE+OPENAI",hybridMatched:true};
   }
-  return {
+  const base={
     ...azure,
     ...openai,
     provider:"AZURE_DOCUMENT_INTELLIGENCE+OPENAI",
@@ -509,6 +546,8 @@ export function mergeProviderInvoiceDrafts(azure,openai){
     productLines:merged,
     hybridRecovery:true,
   };
+  const repair=collapseCrossProviderDuplicateOverage(base.productLines,base.totalGross);
+  return repair.collapsed?{...base,productLines:repair.lines,crossProviderDuplicateCollapsed:true,crossProviderDuplicateRemoved:repair.removed,crossProviderDuplicateOverage:repair.overage}:base;
 }
 
 function learnedScore(line,k){

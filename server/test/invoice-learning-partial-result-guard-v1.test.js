@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {collapseExactDuplicateInvoiceOverage,invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
+import {collapseCrossProviderDuplicateOverage,collapseExactDuplicateInvoiceOverage,invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
 
 test("Invoice Learning rejects a one-line partial result against the printed total",()=>{
   const result=invoiceReadingCompleteness({
@@ -137,4 +137,27 @@ test("Invoice Learning retains real or ambiguous repeated rows",()=>{
   const another={...duplicate,supplierItemCode:"D",description:"ANOTHER"};
   const ambiguous=collapseExactDuplicateInvoiceOverage([duplicate,{...duplicate},another,{...another}],5.22);
   assert.equal(ambiguous.collapsed,false);
+});
+
+test("Invoice Learning collapses one cross-provider description variant proven by the footer",()=>{
+  const lines=[
+    {providerOrigin:"AZURE",supplierItemCode:"",description:"COFFEE CAPPUCCINO",quantity:1,unitPrice:2.68,netAmount:2.68,grossAmount:2.68,vatRate:0,confidence:80},
+    {providerOrigin:"OPENAI",supplierItemCode:"C-1",description:"CAPPUCCINO COFFEE 250ML",quantity:1,unitPrice:2.68,netAmount:2.68,grossAmount:2.68,vatRate:0,confidence:95},
+    {providerOrigin:"OPENAI",supplierItemCode:"B",description:"OTHER",quantity:1,unitPrice:51.23,netAmount:51.23,grossAmount:51.23,vatRate:0},
+  ];
+  const repaired=collapseCrossProviderDuplicateOverage(lines,53.91);
+  assert.equal(repaired.collapsed,true);
+  assert.equal(repaired.removed,1);
+  assert.equal(repaired.overage,2.68);
+  assert.equal(repaired.lines.length,2);
+  assert.equal(repaired.lines[0].providerOrigin,"AZURE+OPENAI");
+});
+
+test("Invoice Learning does not collapse real or ambiguous cross-provider rows",()=>{
+  const azure={providerOrigin:"AZURE",description:"COFFEE",quantity:1,unitPrice:2.68,netAmount:2.68,grossAmount:2.68,vatRate:0};
+  const openai={...azure,providerOrigin:"OPENAI",description:"COFFEE 250ML"};
+  assert.equal(collapseCrossProviderDuplicateOverage([azure,openai],5.36).collapsed,false);
+  const secondAzure={...azure,description:"HERBAL TEA",grossAmount:2.68};
+  const secondOpenAi={...openai,description:"HERBAL TEA 250ML"};
+  assert.equal(collapseCrossProviderDuplicateOverage([azure,openai,secondAzure,secondOpenAi],8.04).collapsed,false);
 });

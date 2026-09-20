@@ -1,3 +1,13 @@
+## 2026-09-20 — Invoice Learning cross-provider duplicate reconciliation — AWAITING CI / LAB
+
+- [x] Post-deploy LAB: Azure returned `NO_SAFE_RESULT`; Azure+OpenAI hybrid rows totalled `56,59 €` against printed `53,91 €` (unique overage `2,68 €`).
+- [x] Hybrid merge now tracks Azure/OpenAI row origin and may collapse one cross-provider description variant only when identity overlaps, at least two economic fields agree, one row equals the entire overage, the candidate pair is unique, and the remaining total reconciles within `0,05 €`.
+- [x] Legitimate repeated rows and ambiguous pairs remain untouched and fail closed.
+- [x] Targeted `13/13` and full server suite `1367/1367` PASS.
+- [ ] Green CI → merge → exact Render deploy → same LAB invoice.
+- [ ] LAB PASS requires all real rows and exact `47,48 € + 6,43 € = 53,91 €` reconciliation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-cross-provider-duplicate.md`.
+
 ## 2026-09-20 — Invoice Learning exact duplicate overage guard — AWAITING CI / LAB
 
 - [x] Post-deploy LAB: POS-style fallback completed, but provider rows totalled `55,65 €` against the printed `53,91 €`; fail-closed `422` correctly prevented a partial draft.
