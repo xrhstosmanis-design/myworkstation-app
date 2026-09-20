@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {invoiceReadingCompleteness} from "../src/routes/platform-invoice-learning-ai.js";
+import {invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
 
 test("Invoice Learning rejects a one-line partial result against the printed total",()=>{
   const result=invoiceReadingCompleteness({
@@ -90,4 +90,28 @@ test("Invoice Learning does not derive footer net when line-level VAT is already
   });
   assert.equal(result.complete,false);
   assert.equal(result.reason,"PARTIAL_PRODUCT_LINES");
+});
+
+test("Invoice Learning safely combines complementary Azure and OpenAI rows",()=>{
+  const hybrid=mergeProviderInvoiceDrafts(
+    {model:"azure",totalNet:47.48,totalVat:6.43,totalGross:53.91,productLines:[
+      {supplierItemCode:"A",description:"FIRST",netAmount:20.12,grossAmount:20.12,vatRate:0},
+    ]},
+    {model:"openai",totalNet:47.48,totalVat:6.43,totalGross:53.91,productLines:[
+      {supplierItemCode:"B",description:"SECOND",netAmount:27.36,grossAmount:27.36,vatRate:0},
+    ]},
+  );
+  assert.equal(hybrid.productLines.length,2);
+  assert.equal(hybrid.hybridRecovery,true);
+  assert.equal(invoiceReadingCompleteness(hybrid).complete,true);
+  assert.equal(invoiceReadingCompleteness(hybrid).reason,"RECONCILED_BY_HEADER_VAT");
+});
+
+test("Invoice Learning hybrid merge does not duplicate the same provider row",()=>{
+  const hybrid=mergeProviderInvoiceDrafts(
+    {productLines:[{supplierItemCode:"A-1",description:"PRODUCT",netAmount:10}]},
+    {productLines:[{supplierItemCode:"A-1",description:"PRODUCT",netAmount:10,confidence:90}]},
+  );
+  assert.equal(hybrid.productLines.length,1);
+  assert.equal(hybrid.productLines[0].hybridMatched,true);
 });
