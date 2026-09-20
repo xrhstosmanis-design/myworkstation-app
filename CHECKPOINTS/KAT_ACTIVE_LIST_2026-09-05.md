@@ -2175,5 +2175,17 @@ Total output lines: 1413
 - [x] Μετά από τεχνική αποτυχία Azure η ανάγνωση σταματά ρητά και δεν
   παρουσιάζεται OpenAI-only αποτέλεσμα ως κανονική ανάγνωση.
 - [x] `11/11` targeted και `1357/1357` full server tests PASS.
-- [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
+- [x] Green CI → merge/deploy `b3e1b69b67a3c9c198fc904ea20784750e1086b0` → ίδιο upload στο Invoice Learning LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
+
+## 2026-09-20 — Invoice Learning Azure safe diagnostics — AWAITING CI / LAB
+
+- [x] Το retry gate λειτουργεί: το LAB δεν παρουσίασε ξανά το ελλιπές
+  OpenAI-only αποτέλεσμα μετά από Azure request failure.
+- [x] Προστέθηκε ασφαλής διαγνωστικός κωδικός για auth/access/endpoint/model,
+  rate limit, network, timeout και Azure 5xx, χωρίς έκθεση μυστικών.
+- [x] Το Azure polling timeout επαναλαμβάνεται πλέον έως 3 φορές.
+- [x] `3/3` targeted και `1358/1358` full server tests PASS.
+- [ ] Green CI → merge/deploy → ίδιο upload και καταγραφή του ακριβούς
+  διαγνωστικού κωδικού.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
