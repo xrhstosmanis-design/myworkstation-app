@@ -1,3 +1,9 @@
+## 2026-09-20 — Employee modal scroll fix rebased — AWAITING CI/LAB
+
+- [x] Fresh current-main rebase after concurrent changes.
+- [x] Viewport-contained modal scrolling + reachable actions.
+- [ ] CI/merge/deploy → LAB retest.
+
 ## 2026-09-20 — Workforce employee action buttons — AWAITING LAB
 
 - [x] Fix overlapping/clipped top-right actions.

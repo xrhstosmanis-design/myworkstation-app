@@ -57,3 +57,6 @@ button,input,select,textarea{max-width:100%}
 }
 
 .employee-panel-head{align-items:flex-start;gap:24px}.employee-primary-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.employee-primary-actions button{width:auto;min-height:44px;white-space:nowrap;padding:10px 16px}.employee-add-button,.scenario-button{display:inline-flex;align-items:center;gap:8px}@media(max-width:800px){.employee-panel-head{flex-direction:column}.employee-primary-actions{width:100%;margin-left:0;justify-content:flex-start}.employee-primary-actions button{flex:1 1 180px}}
+
+/* Keep long employee/rules dialogs fully usable on desktop and mobile. */
+.modal{z-index:1000;overflow-y:auto;align-items:start;padding:24px 15px}.modal form{max-height:calc(100vh - 48px);overflow-y:auto;overscroll-behavior:contain;margin:auto}.modal form>h3{position:sticky;top:-24px;background:#fff;z-index:2;padding:6px 0 12px;margin-top:0}.natural-rule-editor textarea{width:100%;min-height:110px;resize:vertical;padding:12px;border:1px solid #d9dfeb;border-radius:10px}.modal .actions{position:sticky;bottom:-24px;background:#fff;padding:12px 0 2px;z-index:2}@media(max-height:700px){.modal{padding:10px}.modal form{max-height:calc(100vh - 20px);padding:18px}.modal form>h3{top:-18px}.modal .actions{bottom:-18px}}
