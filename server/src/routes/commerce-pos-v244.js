@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
-import {reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
+import {claimsCompletePrintedTable,reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
@@ -202,6 +202,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           if(usingStoredProductLines&&Array.isArray(sourceLines)&&sourceLines.length)await verifyInvoiceDiscounts({productLines:sourceLines,apiKey:null});
           const sourceProductLines=Array.isArray(sourceLines)?sourceLines:[];
           const verifiedProductLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross);
+          if(claimsCompletePrintedTable(sourceProductLines)&&!verifiedProductLines)throw new Error("Οι επαληθευμένες τυπωμένες γραμμές αλλοιώθηκαν πριν από την καταχώριση (ποσότητα, έκπτωση ή ΦΠΑ). Το πρόχειρο δεν ενημερώθηκε.");
           // A same-draft MANTZILAS recovery must never fall back to the legacy
           // finalizer: that transformation is precisely what can erase the
           // verified printed package, discount and excise fields.

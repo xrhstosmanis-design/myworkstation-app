@@ -58,7 +58,7 @@ test("reread replaces the same draft lines atomically without creating another p
   const replacement=core.slice(core.indexOf('if(skeletonRows[0]){stage="replace-purchase-lines"'),core.indexOf('let paymentTransactionId=null'));
   assert.match(replacement,/DELETE FROM "PurchaseOrderLine" WHERE "orderId"=\$\{orderId\}/);
   assert.ok(replacement.indexOf('DELETE FROM "PurchaseOrderLine"')<replacement.indexOf('INSERT INTO "PurchaseOrderLine"'));
-  assert.match(core,/stockConversionFromDescription\(line\.description/);
+  assert.match(core,/stockMultiplierForPersistedInvoiceLine\(\{\.\.\.line,invoiceUnit\}\)/);
   assert.match(core,/if\(existingPayment\)\{\s*stage="link-existing-payment"/);
 });
 
