@@ -223,7 +223,7 @@ export default function useWorkforceV2Manager({company,store,request}){
 
   return {
     tab,setTab,data,form,setForm,editingId,roleForm,setRoleForm,roleEditingId,ruleForm,setRuleForm,ruleEditingId,shiftForm,setShiftForm,shiftEditingId,
-    pending,setPending,migration,setMigration,migrationScope,setMigrationScope,includeInactiveLegacy,setIncludeInactiveLegacy,busy,error,message,
+    request,pending,setPending,migration,setMigration,migrationScope,setMigrationScope,includeInactiveLegacy,setIncludeInactiveLegacy,busy,error,message,
     activeRoles,storeMap,roleMap,employeeMap,ruleDefinitionMap,shiftCategoryMap,load,resetEmployee,resetRole,resetRule,resetShiftTemplate,
     setField,setRuleField,setShiftField,chooseBaseStore,toggleStore,toggleRole,editEmployee,previewEmployee,confirmEmployee,changeEmployeeStatus,
     editRole,previewRole,confirmRole,changeRoleStatus,chooseRuleType,editRule,previewRule,confirmRule,changeRuleStatus,
