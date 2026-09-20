@@ -1,3 +1,11 @@
+## 2026-09-20 — Employee modal full visibility — AWAITING LAB
+
+- [x] Long employee editor scrolls inside viewport.
+- [x] Header and bottom actions remain reachable.
+- [x] Natural-language textarea uses full width.
+- [x] Short-screen responsive behavior.
+- [ ] CI/merge/deploy → LAB visual retest.
+
 ## 2026-09-20 — Workforce employee action buttons — AWAITING LAB
 
 - [x] Fix overlapping/clipped top-right actions.
