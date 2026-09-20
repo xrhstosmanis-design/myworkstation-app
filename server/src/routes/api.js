@@ -242,6 +242,8 @@ router.post("/schedules/interpret",async(req,res,next)=>{try{
   const effectiveShifts=store.shifts.map(shift=>({...shift,...(body.shiftOverrides?.[shift.id]||{})})),coverageDefined=effectiveShifts.filter(shift=>["MORNING","AFTERNOON","NIGHT"].includes(shift.code)).every(shift=>Number.isInteger(Number(shift.requiredCount))&&Number(shift.requiredCount)>=0);
   if(coverageDefined){const coverageWords=["ΠΡΩ","ΑΠΟΓ","ΒΡΑΔ","ΝΥΧΤ","ΑΤΟΜ","ΒΑΡΔ"];parsed.unresolved=parsed.unresolved.filter(item=>{const normalized=plain(item);const coverageHits=coverageWords.filter(word=>normalized.includes(word)).length;return coverageHits<3})}
   const understoodNorm=new Set(parsed.understood.map(plain));parsed.unresolved=parsed.unresolved.filter(item=>!understoodNorm.has(plain(item)));
+  // Generic safety instructions are already enforced by official Workforce data (approved leave, availability and employee rules). They are constraints, not missing information.
+  parsed.unresolved=parsed.unresolved.filter(item=>{const normalized=plain(item),genericSafety=(normalized.includes("ΜΗΝ")||normalized.includes("ΔΕΝ"))&&(normalized.includes("ΑΔΕΙ")||normalized.includes("ΡΕΠΟ")||normalized.includes("ΜΟΝΙΜ")||normalized.includes("ΚΑΝΟΝ"));if(genericSafety&&!/\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b/.test(normalized))return false;return true});
   res.json({interpretation:parsed,model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5"});
 }catch(e){next(e)}});
 function hoursForShift(shift){

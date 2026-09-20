@@ -1,3 +1,10 @@
+## 2026-09-20 — AI Scheduler generic safety unresolved — FIX AWAITING USER RETEST
+
+- [x] Coverage duplicate warning fixed in LAB.
+- [x] Generic «μην παραβιάσεις άδειες/ρεπό/μόνιμους κανόνες» is an enforced constraint, not unresolved.
+- [x] Specific dated conflicts remain fail-closed/unresolved.
+- [ ] CI/merge/deploy → user repeats analysis.
+
 ## 2026-09-20 — AI Scheduler duplicate unresolved — FIX AWAITING USER RETEST
 
 - [x] LAB reproduced: coverage understood and simultaneously marked unresolved.
