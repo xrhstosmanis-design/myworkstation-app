@@ -1,3 +1,12 @@
+## 2026-09-20 — LAB Drakou workforce seed v1 — AWAITING CI/LAB
+
+- [x] Super Admin only + explicit confirmation.
+- [x] Refuses non-ΕΡΓΑΣΤΗΡΙΟ stores.
+- [x] Νωπή=MORNING, Άγγελος=NIGHT, Γιώργος/Σπύρος=AFTERNOON+NIGHT, Κωνσταντίνα=AFTERNOON.
+- [x] Default 5d/40h pending further user rules.
+- [ ] CI/merge/deploy and LAB seed execution.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-lab-drakou-seed-v1.md`.
+
 ## 2026-09-20 — Natural-language employee rules v1 — AWAITING LAB
 
 - [x] Employee card: free-language permanent rule + effective date.
