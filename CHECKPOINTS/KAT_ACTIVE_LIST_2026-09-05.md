@@ -1,3 +1,10 @@
+## 2026-09-20 — Owner unified Workforce hub rebased — AWAITING CI/LAB
+
+- [x] Rebased on current main after PR #1026 became non-mergeable from concurrent changes.
+- [x] One sidebar entry: Προσωπικό & Πρόγραμμα.
+- [x] Internal tabs reuse Employees/Schedule/Leaves; attendance placeholder retained.
+- [ ] CI/merge/deploy → LAB visual test.
+
 ## 2026-09-20 — Invoice Learning cross-provider duplicate reconciliation — AWAITING CI / LAB
 
 - [x] Post-deploy LAB: Azure returned `NO_SAFE_RESULT`; Azure+OpenAI hybrid rows totalled `56,59 €` against printed `53,91 €` (unique overage `2,68 €`).
