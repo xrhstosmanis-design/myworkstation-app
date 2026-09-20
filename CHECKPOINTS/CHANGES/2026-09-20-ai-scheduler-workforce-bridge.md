@@ -1,0 +1,3 @@
+# 2026-09-20 — AI Scheduler Workforce V2 employee bridge — AWAITING USER RETEST
+
+LAB generation returned 0/21 coverage because the active store UI lists WorkforceEmployee records while the legacy /api/schedules generator selects legacy Employee + EmployeeRule. Before generation we now bridge active schedulable Workforce V2 employees to their legacy employee identity (persisting legacyEmployeeId) and, only when the legacy employee has no rules, seed allowed MORNING/AFTERNOON/NIGHT rules from Workforce V2 availability. Existing legacy rules are never overwritten. Generator then reloads employees before planning.

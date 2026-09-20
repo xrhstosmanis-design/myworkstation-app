@@ -1,3 +1,11 @@
+## 2026-09-20 — AI Scheduler Workforce employee bridge — FIX AWAITING USER RETEST
+
+- [x] LAB reproduced 0/21 despite active Workforce V2 employees.
+- [x] Root cause: generator uses legacy Employee/EmployeeRule while Personnel screen uses WorkforceEmployee.
+- [x] Bridge by persistent legacyEmployeeId; no name matching after link is stored.
+- [x] Seed shift rules from V2 morning/afternoon/night only if legacy employee has no rules; existing rules preserved.
+- [ ] CI/merge/deploy → rerun same LAB generation.
+
 ## 2026-09-20 — AI Scheduler generic safety unresolved — FIX AWAITING USER RETEST
 
 - [x] Coverage duplicate warning fixed in LAB.
