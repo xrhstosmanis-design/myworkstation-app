@@ -1,10 +1,13 @@
 import React from "react";
-import {AlertTriangle,Eye,Pencil,Power} from "lucide-react";
+import {Activity,AlertTriangle,Eye,Pencil,Power} from "lucide-react";
+import WorkforceV2EmployeePerformance from "./WorkforceV2EmployeePerformance.jsx";
 import {formatWorkforceMoney} from "./workforce-v2-ui-utils.js";
 
 export default function WorkforceV2EmployeeTab({manager,store}){
+  const [performanceEmployee,setPerformanceEmployee]=React.useState(null);
   const {data,form,setForm,editingId,busy,activeRoles,roleMap,resetEmployee,setField,chooseBaseStore,toggleStore,toggleRole,editEmployee,previewEmployee,changeEmployeeStatus}=manager;
   const selectedStoreIds=new Set(form.storeIds);
+  if(performanceEmployee)return <WorkforceV2EmployeePerformance employee={performanceEmployee} base={`/api/platform/store-modules/companies/${manager.data.company.id}/stores/${store.id}/workforce-v2`} request={manager.request} onClose={()=>setPerformanceEmployee(null)}/>;
   return <div className="workforce-two-column">
     <section className="workforce-editor-card">
       <div className="workforce-card-title"><div><h4>{editingId?"Επεξεργασία εργαζομένου":"Νέος εργαζόμενος"}</h4><p>Η αποθήκευση γίνεται μόνο αφού εμφανιστεί και εγκριθεί η προεπισκόπηση.</p></div>{editingId&&<button className="secondary" onClick={resetEmployee}>Νέα καρτέλα</button>}</div>
@@ -35,7 +38,7 @@ export default function WorkforceV2EmployeeTab({manager,store}){
       <div className="workforce-employee-list">{data.employees.length?data.employees.map(employee=><article className={!employee.active?"inactive":""} key={employee.id}>
         <div className="workforce-employee-main"><div><b>{employee.fullName}</b><span>{employee.primaryRole?.name||"Χωρίς κύριο ρόλο"} · {employee.baseStoreName||"Χωρίς κατάστημα βάσης"}</span></div><em>{employee.active?"Ενεργός":"Ανενεργός"}</em></div>
         <div className="workforce-employee-meta"><span>{employee.paymentType==="HOURLY"?`Ωρομίσθιο ${formatWorkforceMoney(employee.currentHourlyRate?.hourlyRate)}`:`Σταθερό ${formatWorkforceMoney(employee.fixedMonthlyAmount)}`}</span><span>{employee.maxDaysPerWeek} μέρες · {employee.maxHoursPerWeek} ώρες</span><span>{employee.storeAccess.filter(access=>access.active).length} καταστήματα</span></div>
-        <div className="workforce-row-actions"><button className="secondary" onClick={()=>editEmployee(employee)}><Pencil/> Επεξεργασία</button><button className="secondary" onClick={()=>changeEmployeeStatus(employee)} disabled={Boolean(busy)}><Power/> {employee.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
+        <div className="workforce-row-actions"><button className="secondary" onClick={()=>setPerformanceEmployee(employee)}><Activity/> Απόδοση & Ταμεία</button><button className="secondary" onClick={()=>editEmployee(employee)}><Pencil/> Επεξεργασία</button><button className="secondary" onClick={()=>changeEmployeeStatus(employee)} disabled={Boolean(busy)}><Power/> {employee.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
       </article>):<div className="platform-empty">Δεν υπάρχουν ακόμη εργαζόμενοι στη νέα βάση.</div>}</div>
     </section>
   </div>;
