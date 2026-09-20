@@ -390,6 +390,46 @@ function invoiceLineGross(line){
   return net>0?net*(1+vat/100):0;
 }
 
+function invoiceLineFingerprint(line){
+  return [
+    norm(line?.supplierItemCode),norm(line?.description),Number(line?.quantity||0).toFixed(4),
+    Number(line?.unitPrice||0).toFixed(4),Number(line?.netAmount||0).toFixed(2),
+    Number(line?.vatRate||0).toFixed(2),Number(invoiceLineGross(line)).toFixed(2),
+    Number(line?.discount1||0).toFixed(2),Number(line?.discount2||0).toFixed(2),Number(line?.discount3||0).toFixed(2),
+  ].join("|");
+}
+
+// Use the same independently-totalled duplicate safeguard as the POS reader.
+// A row may be removed only when exactly one identical pair exists, one copy's
+// gross is the entire overage, and the remaining rows reconcile to the footer.
+export function collapseExactDuplicateInvoiceOverage(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],total=money4(invoiceTotal||0),tolerance=.05;
+  const lineTotal=money4(source.reduce((sum,line)=>sum+invoiceLineGross(line),0));
+  const overage=money4(lineTotal-total);
+  if(!(total>0)||source.length<2||overage<=tolerance)return {lines:source,collapsed:false};
+  const groups=new Map();
+  source.forEach((line,index)=>{
+    const fingerprint=invoiceLineFingerprint(line),indexes=groups.get(fingerprint)||[];
+    indexes.push(index);groups.set(fingerprint,indexes);
+  });
+  const candidates=[];
+  for(const indexes of groups.values()){
+    if(indexes.length!==2)continue;
+    const gross=money4(invoiceLineGross(source[indexes[0]]));
+    if(gross>0&&Math.abs(gross-overage)<=tolerance)candidates.push(indexes[1]);
+  }
+  if(candidates.length!==1)return {lines:source,collapsed:false};
+  const removeIndex=candidates[0],collapsed=source.filter((_,index)=>index!==removeIndex);
+  const collapsedTotal=money4(collapsed.reduce((sum,line)=>sum+invoiceLineGross(line),0));
+  if(Math.abs(collapsedTotal-total)>tolerance)return {lines:source,collapsed:false};
+  return {lines:collapsed,collapsed:true,removed:1,overage};
+}
+
+function repairExactDuplicateInvoiceOverage(result){
+  const repair=collapseExactDuplicateInvoiceOverage(result?.productLines,result?.totalGross);
+  return repair.collapsed?{...result,productLines:repair.lines,exactDuplicateRowCollapsed:true,exactDuplicateRowRemoved:repair.removed,exactDuplicateRowOverage:repair.overage}:result;
+}
+
 export function invoiceReadingCompleteness(result){
   const lines=Array.isArray(result?.productLines)?result.productLines:[];
   if(!lines.length)return {complete:false,reason:"NO_PRODUCT_LINES",lineGross:0,totalGross:Math.max(0,Number(result?.totalGross||0)),difference:null};
@@ -522,7 +562,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
-      azure=await applyLearnedKnowledge(azure);
+      azure=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure));
       azureDraft=azure;
       const completeness=invoiceReadingCompleteness(azure);
       if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
@@ -550,7 +590,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result}));
+  result=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result})));
   let completeness=invoiceReadingCompleteness(result);
   if(!completeness.complete&&azureDraft?.productLines?.length){
     const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
