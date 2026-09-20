@@ -9,3 +9,11 @@ test("Invoice Learning uses the same Azure transport as the POS reader",()=>{
   assert.match(route,/callPosAzure\(\{contentData:fileData,mimeType\}\)/);
   assert.doesNotMatch(route,/async function callAzureOnce\(/);
 });
+
+test("Invoice Learning follows the POS fallback when Azure transport fails",()=>{
+  const providerFailure=route.indexOf('azureState="REQUEST_FAILED"');
+  const openAiFallback=route.indexOf('const base64=String(fileData)');
+  assert.ok(providerFailure>=0&&openAiFallback>providerFailure);
+  assert.doesNotMatch(route,/if\(azureState==="REQUEST_FAILED"\)return res\.status\(503\)/);
+  assert.match(route,/if\(!process\.env\.OPENAI_API_KEY\)return res\.status\(503\)/);
+});
