@@ -2204,3 +2204,13 @@ Total output lines: 1413
 - [ ] Green CI → merge/deploy → ίδιο upload και καταγραφή του ακριβούς
   διαγνωστικού κωδικού.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
+## 2026-09-20 — Invoice Learning Azure + OpenAI complementary-row recovery — AWAITING CI / LAB
+
+- [x] Υποδομή LAB: σωστό endpoint, νέο Azure key και API-key authentication Enabled· το `ACCESS_403` εξαφανίστηκε.
+- [x] Νεότερο πραγματικό LAB αποτέλεσμα: Azure απάντησε, αλλά η συνολική ανάγνωση έμεινε ασφαλώς μπλοκαρισμένη ως `NO_SAFE_RESULT` με `35,72 € από 53,91 €`.
+- [x] Azure και OpenAI γραμμές συγχωνεύονται ως multiset, ώστε πραγματικές επαναλαμβανόμενες γραμμές να μη χάνονται.
+- [x] Το υβριδικό αποτέλεσμα επιστρέφεται μόνο αν ο υπάρχων ανεξάρτητος footer έλεγχος συμφωνήσει πλήρως· διαφορετικά παραμένει μπλοκαρισμένο.
+- [x] Καμία πληρωμή, stock, έγκριση, οριστικοποίηση, fiscal/accounting ή myDATA μεταβολή.
+- [x] `14/14` targeted και `1360/1360` full server tests PASS τοπικά.
+- [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-hybrid-row-recovery.md`.

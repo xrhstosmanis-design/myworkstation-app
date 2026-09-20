@@ -437,6 +437,49 @@ export function invoiceReadingCompleteness(result){
   return {complete:false,reason:"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference};
 }
 
+function sameInvoiceLine(a,b){
+  const aCode=norm(a?.supplierItemCode),bCode=norm(b?.supplierItemCode);
+  if(aCode&&bCode)return aCode===bCode;
+  const aDescription=norm(a?.description),bDescription=norm(b?.description);
+  return Boolean(aDescription&&bDescription&&aDescription===bDescription);
+}
+
+function lineInformationScore(line){
+  return ["supplierItemCode","description","quantity","unitPrice","netAmount","grossAmount","vatRate","barcode"]
+    .reduce((score,key)=>score+(line?.[key]?1:0),0)+Math.max(0,Number(line?.confidence||0))/100;
+}
+
+/* Azure and OpenAI can each miss a different printed row. Combine them as a
+ * multiset (so repeated products remain repeated), but this result is usable
+ * only after invoiceReadingCompleteness independently reconciles the footer. */
+export function mergeProviderInvoiceDrafts(azure,openai){
+  const azureLines=Array.isArray(azure?.productLines)?azure.productLines:[];
+  const aiLines=Array.isArray(openai?.productLines)?openai.productLines:[];
+  const merged=azureLines.map(line=>({...line})),matched=new Set();
+  for(const aiLine of aiLines){
+    const index=merged.findIndex((line,i)=>!matched.has(i)&&sameInvoiceLine(line,aiLine));
+    if(index<0){merged.push({...aiLine});matched.add(merged.length-1);continue}
+    matched.add(index);
+    const primary=lineInformationScore(aiLine)>=lineInformationScore(merged[index])?aiLine:merged[index];
+    const secondary=primary===aiLine?merged[index]:aiLine;
+    merged[index]={...secondary,...primary,hybridMatched:true};
+  }
+  return {
+    ...azure,
+    ...openai,
+    provider:"AZURE_DOCUMENT_INTELLIGENCE+OPENAI",
+    model:`${azure?.model||"azure-prebuilt-invoice"}+${openai?.model||"openai"}`,
+    supplier:openai?.supplier?.name||openai?.supplier?.taxId?openai.supplier:azure?.supplier,
+    documentNumber:openai?.documentNumber||azure?.documentNumber||"",
+    documentDate:openai?.documentDate||azure?.documentDate||"",
+    totalNet:Number(openai?.totalNet||azure?.totalNet||0),
+    totalVat:Number(openai?.totalVat||azure?.totalVat||0),
+    totalGross:Number(openai?.totalGross||azure?.totalGross||0),
+    productLines:merged,
+    hybridRecovery:true,
+  };
+}
+
 function learnedScore(line,k){
   const c=norm(line.supplierItemCode),kc=norm(k.supplierItemCode);if(c&&kc&&c===kc)return 1000;
   const d=norm(line.description),kd=norm(k.description);if(!d||!kd)return 0;if(d===kd)return 900;if(d.includes(kd)||kd.includes(d))return 700;
@@ -483,12 +526,13 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  let azureFailure="",azureFailureCode="",azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
+  let azureFailure="",azureFailureCode="",azureDraft=null,azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
       azure=await applyLearnedKnowledge(azure);
+      azureDraft=azure;
       const completeness=invoiceReadingCompleteness(azure);
       if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
       azureFailure=completeness.reason;azureState="NO_SAFE_RESULT";
@@ -512,7 +556,14 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
   result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
-  const completeness=invoiceReadingCompleteness(result);
+  let completeness=invoiceReadingCompleteness(result);
+  if(!completeness.complete&&azureDraft?.productLines?.length){
+    const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
+    const hybridCompleteness=invoiceReadingCompleteness(hybrid);
+    if(hybridCompleteness.complete){
+      return res.json({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness});
+    }
+  }
   if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   if(!completeness.complete)return res.status(422).json({error:`Η ανάγνωση βρήκε μόνο μέρος του τιμολογίου (${completeness.lineGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} € από ${completeness.totalGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} €). Δεν δημιουργήθηκε μερικό πρόχειρο.`,code:"PARTIAL_PRODUCT_LINES",azureState,completeness});
   res.json({...result,azureState,completeness});
