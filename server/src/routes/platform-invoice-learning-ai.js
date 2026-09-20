@@ -278,7 +278,25 @@ function discountsReconcile(discounts,quantity,unitPrice,netAmount){
 
 export function retryableAzureFailure(error){
   const message=String(error?.message||error||"");
-  return /AZURE_(?:ANALYZE|POLL)_(?:408|409|425|429|5\d\d)\b/.test(message)||/fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(message);
+  return /AZURE_(?:ANALYZE|POLL)_(?:408|409|425|429|5\d\d)\b/.test(message)||/AZURE_TIMEOUT\b|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(message);
+}
+
+export function publicAzureFailureCode(error){
+  const message=String(error?.message||error||"");
+  const status=message.match(/AZURE_(?:ANALYZE|POLL)_(\d{3})\b/)?.[1];
+  if(status==="401")return "AUTH_401";
+  if(status==="403")return "ACCESS_403";
+  if(status==="404")return "ENDPOINT_OR_MODEL_404";
+  if(status==="408")return "TIMEOUT_408";
+  if(status==="409"||status==="425")return `SERVICE_${status}`;
+  if(status==="429")return "RATE_LIMIT_429";
+  if(status&&status.startsWith("5"))return `SERVICE_${status}`;
+  if(/AZURE_TIMEOUT|ETIMEDOUT/i.test(message))return "TIMEOUT";
+  if(/fetch failed|ECONNRESET|EAI_AGAIN|UND_ERR/i.test(message))return "NETWORK";
+  if(/AZURE_NO_OPERATION_LOCATION/i.test(message))return "MISSING_OPERATION_LOCATION";
+  if(/AZURE_(?:FAILED|CANCELED)/i.test(message))return "ANALYSIS_FAILED";
+  if(/AZURE_EMPTY_DOCUMENT/i.test(message))return "EMPTY_DOCUMENT";
+  return "UNKNOWN";
 }
 
 async function callAzureOnce(fileData,mimeType){
@@ -465,7 +483,7 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  let azureFailure="",azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
+  let azureFailure="",azureFailureCode="",azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
@@ -475,9 +493,9 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
       azureFailure=completeness.reason;azureState="NO_SAFE_RESULT";
       console.warn("Azure Invoice Learning incomplete result; falling back to OpenAI.",{reason:completeness.reason,lineGross:completeness.lineGross,totalGross:completeness.totalGross,difference:completeness.difference});
-    }catch(error){azureFailure=String(error?.message||error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning fallback:",azureFailure)}
+    }catch(error){azureFailure=String(error?.message||error);azureFailureCode=publicAzureFailureCode(error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning request failed.",{code:azureFailureCode,reason:azureFailure.slice(0,300)})}
   }
-  if(azureState==="REQUEST_FAILED")return res.status(503).json({error:"Η σύνδεση με το Azure Document Intelligence απέτυχε μετά από ασφαλείς επαναλήψεις. Δεν εκτελέστηκε ανάγνωση μόνο με AI. Δοκίμασε ξανά σε λίγο.",code:"AZURE_REQUEST_FAILED",azureState});
+  if(azureState==="REQUEST_FAILED")return res.status(503).json({error:`Η σύνδεση με το Azure Document Intelligence απέτυχε. Διαγνωστικός κωδικός: ${azureFailureCode}. Δεν εκτελέστηκε ανάγνωση μόνο με AI.`,code:"AZURE_REQUEST_FAILED",azureState,azureFailureCode});
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED",azureState});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
