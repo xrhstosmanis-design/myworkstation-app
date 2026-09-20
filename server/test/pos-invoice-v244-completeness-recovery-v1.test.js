@@ -27,6 +27,8 @@ test("V2.4.4 records completeness totals before and after recovery",()=>{
 
 test("a confirmed supplier profile requires a complete printed table before its draft may be filled",()=>{
   assert.match(source,/supplierRequiresCompletePrintedTable=parsed\?\.supplierReadingProfile\?\.requireCompletePrintedTableOnMismatch===true/);
+  assert.match(source,/hasUnverifiedPrintedRows=parsed\.productLines\.length===0\|\|parsed\.productLines\.some\(line=>line\.sourceColumnsVerified!==true\)/);
+  assert.match(source,/supplierRequiresCompletePrintedTable&&hasUnverifiedPrintedRows/);
   assert.match(source,/requiresCompleteReverification=.*supplierRequiresCompletePrintedTable/s);
   assert.match(source,/needsEmptyCompleteTableRead=.*parsed\.productLines\.length===0/s);
   assert.match(source,/productLines:needsEmptyCompleteTableRead\?parsed\.productLines:unresolved/);
