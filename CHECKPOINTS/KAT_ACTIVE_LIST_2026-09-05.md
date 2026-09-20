@@ -1,3 +1,13 @@
+## 2026-09-20 — Workforce POS Actions v3 — AWAITING LAB
+
+- [x] PosSaleActionAudit συνδέεται μόνο με verified operatorId του εργαζομένου.
+- [x] Ακυρώσεις / επιστροφές / delayed / discount-labelled audit + source sale IDs.
+- [x] Χωρίς name matching ή αυτόματο punitive score.
+- [ ] LAB με εργαζόμενο που έχει πραγματικό POS action history.
+- [ ] Human evaluation records.
+- [ ] AI conversational scheduler/publish.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-workforce-pos-actions-v3.md`.
+
 ## 2026-09-20 — Workforce POS Performance v2 — AWAITING LAB
 
 - [x] Verified identity chain WorkforceEmployee → StoreOperatorCredential → operatorId → CashShiftSession → StoreTransaction.
