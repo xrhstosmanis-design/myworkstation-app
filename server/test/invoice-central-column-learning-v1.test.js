@@ -471,3 +471,20 @@ test('POS recheck anchors reconciliation to the linked draft total before restor
   assert.match(source,/linkedDraft\[0\]\?\.totalGross\|\|posHandoff\?\.totalGross/);
   assert.match(source,/posConfirmedTotalSource=linkedDraft\[0\]\?"LINKED_DRAFT":"POS_HANDOFF"/);
 });
+
+test('complete-table verification is driven by any confirmed central profile, not a supplier allow-list',async()=>{
+  const route=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const declaration=route.match(/const supplierRequiresCompletePrintedTable=[^;]+;/)?.[0]||'';
+  assert.match(declaration,/supplierReadingProfile\?\.requireCompletePrintedTableOnMismatch===true/);
+  assert.doesNotMatch(declaration,/FRESH_SNACK|FRESH_DELICACIES|LEVENTOPOULOS|\.includes\(/);
+  assert.match(route,/requiresCompleteReverification=\(mantzilasInvoice\|\|supplierRequiresCompletePrintedTable\)/);
+});
+
+test('Confirm and Learn publishes the generic verifier contract without learning invoice prices or discounts',async()=>{
+  const lab=await readFile(new URL('../../client/src/invoice-learning-lab-bootstrap.js',import.meta.url),'utf8');
+  const handler=lab.slice(lab.indexOf("$('#learn').onclick="),lab.indexOf("$('#profiles').onclick="));
+  assert.match(handler,/ruleStatus='VERIFIED'/);
+  assert.match(handler,/requireCompletePrintedTableOnMismatch:true/);
+  assert.match(handler,/CURRENT_IMAGE_ROWS_PLUS_VAT_FOOTER_PLUS_TOTAL/);
+  assert.doesNotMatch(handler,/lastNetUnitCost|discount1:|discount2:|discount3:|unitPrice:|netAmount:/);
+});
