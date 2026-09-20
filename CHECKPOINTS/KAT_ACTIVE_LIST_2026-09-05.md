@@ -2295,3 +2295,19 @@ Total output lines: 1413
 - [x] `14/14` targeted και `1360/1360` full server tests PASS τοπικά.
 - [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-hybrid-row-recovery.md`.
+
+## 2026-09-20 — Invoice Learning → POS verified handoff — AWAITING CI / POS
+
+- [x] Πραγματικό Invoice Learning αποτέλεσμα: DELTA `28897`, 11 γραμμές,
+  `53,92 €` έναντι τυπωμένου `53,91 €` (αποδεκτή απόκλιση `0,01 €`).
+- [x] Η αιτία του `POS_BACKGROUND_AI_RECHECK` εντοπίστηκε: οι συμφωνημένες
+  γραμμές δεν περνούσαν από τον current-image verifier όταν δεν υπήρχε διαφορά
+  συνόλου, ενώ ο τελικός ασφαλής έλεγχος απαιτούσε τη σφραγίδα του.
+- [x] Κάθε μη επαληθευμένη γραμμή προφίλ Learning οδηγείται πλέον σε πλήρη
+  οπτικό και αριθμητικό έλεγχο της τρέχουσας εικόνας πριν γεμίσει το υπάρχον
+  πρόχειρο POS.
+- [x] Δεν αλλάζει πληρωμή, stock, fiscal, λογιστική, myDATA, έγκριση ή
+  οριστικοποίηση. Αποτυχία επαλήθευσης αφήνει το πρόχειρο ανέπαφο.
+- [x] `73/73` targeted και `1367/1367` full server tests PASS τοπικά.
+- [ ] Green CI → merge/deploy → μία ασφαλής επανάληψη του `28897` από POS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
