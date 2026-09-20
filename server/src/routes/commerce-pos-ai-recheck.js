@@ -492,8 +492,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // that exact MANTZILAS failure case, reverify every current-page row from the
   // original image. Keep the no-provider fast path for a table that already
   // reconciles, including the LAB-passed 12665 normalization.
-  const supplierRequiresCompletePrintedTable=['FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE','LEVENTOPOULOS_MM_POS1_COLUMNS'].includes(parsed?.supplierReadingProfile?.ruleKey)
-    &&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
+  // Invoice Learning owns this safety decision. Any Super-Admin-confirmed
+  // supplier profile can request the same complete current-image verifier;
+  // adding a new supplier must not require another hard-coded rule-key list.
+  const supplierRequiresCompletePrintedTable=parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
   const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
     &&invoiceTotal>0
     &&Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
