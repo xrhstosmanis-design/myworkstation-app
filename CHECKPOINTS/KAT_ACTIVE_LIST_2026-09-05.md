@@ -1,12 +1,5 @@
-## 2026-09-20 — Workforce POS Performance v2 — AWAITING LAB
-
-- [x] Verified identity chain WorkforceEmployee → StoreOperatorCredential → operatorId → CashShiftSession → StoreTransaction.
-- [x] Χωρίς name matching.
-- [x] Καρτέλα: βάρδιες ταμείου, συναλλαγές, cash/card sales, variance, reversals, recent shifts.
-- [ ] LAB employee with real POS history.
-- [ ] Discounts/voids/returns drill-down + human evaluations.
-- [ ] AI conversational scheduler/publish.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-workforce-pos-performance-v2.md`.
+Warning: truncated output (original token count: 61991)
+Total output lines: 2083
 
 ## 2026-09-20 — Workforce Employee Performance v1 — AWAITING LAB
 
@@ -917,55 +910,7 @@ Total output lines: 1413
 | KAT-04 | Mapping EFTPOS: 01A Store, 01B Delivery, 02A Store και 02B Delivery. | ΕΚΚΡΕΜΕΙ |
 | KAT-05 | Ενεργός πιστοποιημένος δρόμος MyWorkStation → CapDriver → RBS → εκτύπωση → επιστροφή αριθμού και κατάστασης. | ΜΠΛΟΚΑΡΙΣΜΑ |
 | KAT-06 | Μία ελεγχόμενη πώληση μετρητών ανά RBS και συμφωνία ποσού, ΦΠΑ, απόδειξης, stock, χειριστή και βάρδιας. | ΕΚΚΡΕΜΕΙ |
-| KAT-07 | Κάρτα: έγκριση, απόρριψη, timeout, ακύρωση/reversal και settlement στη σωστή συσκευή. | ΕΚΚΡΕΜΕΙ |
-| KAT-08 | Σάρωση αντιπροσωπευτικών προϊόντων και σύγκριση barcode, τιμής και ΦΠΑ με Kiosk Manager. | ΕΚΚΡΕΜΕΙ |
-| KAT-09 | Ταυτόχρονη λειτουργία δύο ταμείων, κοινό stock χωρίς διπλή αφαίρεση και σωστό κλείσιμο βάρδιας. | ΕΚΚΡΕΜΕΙ |
-| KAT-10 | Σύνδεση Dahua DVR/NVR, αντιστοίχιση καμερών και πραγματικό Video Audit με έλεγχο ώρας. | AWAITING LAB — connector/automated PASS, εκκρεμεί πραγματικό Dahua LAN test |
-| KAT-11 | GO/NO-GO: μηδενικά pending fiscalizations, mismatches, duplicates και ανεξήγητες οικονομικές διαφορές. | ΜΠΛΟΚΑΡΙΣΜΑ |
-| KAT-12 | Περιορισμένο πιλοτικό άνοιγμα και καθημερινή συμφωνία για 48 ώρες. | ΜΕΤΑ ΤΟ GO |
-
-## 3. ΠΡΟΣ ΥΛΟΠΟΙΗΣΗ - λειτουργίες που μένουν να κατασκευαστούν
-
-| Κωδικός | Λειτουργία | Κατάσταση |
-| --- | --- | --- |
-| DEV-01 | Πλήρες fiscal bridge με απάντηση απόδειξης, state machine, retry/reconciliation και exactly-once έκδοση. | ΕΚΚΡΕΜΕΙ |
-| DEV-02 | Ενιαία συμπεριφορά φίλτρων, καθαρισμός/διατήρηση φίλτρων και αποθήκευση διάταξης στηλών ανά χρήστη. Καθολική εφαρμογή σε πίνακες back-office, ελληνική αναζήτηση χωρίς τόνους και διατήρηση φίλτρων ολοκληρώθηκαν και επιβεβαιώθηκαν από τον χρήστη. | ΟΚ - PR #534 / CI #1453 / MERGE `ffcf83fd` |
-| DEV-03 | Σταθερή πλήρης οθόνη POS, ασφαλής offline ουρά και έλεγχος ταχύτητας πληρωμών. | ΕΚΚΡΕΜΕΙ |
-| DEV-04 | Πλήρης σύνδεση τιμών/δικαιούχων POS - Online Store - BackOffice - Audit. | ΕΚΚΡΕΜΕΙ |
-| DEV-05 | Ταμείο/βάρδιες: φωτογραφία παράδοσης και πλήρης συμφωνία μετρητών, καρτών και IRIS. | ΕΚΚΡΕΜΕΙ |
-| DEV-06 | Invoice Reader: κάμερα, ανανέωση, σωστή ένωση έως 5 σελίδων, σειρά γραμμών, εκπτώσεις, δεκαδικά και εκμάθηση προμηθευτή. Η επαγγελματική προβολή εκπαιδευμένων τιμολογίων και η απόκρυψη διπλών ορατών εγγραφών ολοκληρώθηκαν χωρίς διαγραφή δεδομένων. | ΣΕ ΕΞΕΛΙΞΗ - PR #535 / #536 |
-| DEV-07 | Καθαρισμός προϊόντων, διπλά barcodes, Master Catalog, μαζικές τιμές και σύγκριση προμηθευτών. | ΕΚΚΡΕΜΕΙ |
-| DEV-08 | Πληρωμές προμηθευτών και Ταμείο Τράπεζας με αποτροπή διπλής/υπερπληρωμής και πλήρες Audit. | ΕΚΚΡΕΜΕΙ |
-| DEV-09 | Online/Delivery: stock, fiscal, ακυρώσεις και αντιστροφές ακριβώς μία φορά. | ΕΚΚΡΕΜΕΙ |
-| DEV-10 | Προσωπικό, πραγματικές ώρες, μισθοδοσία, υπερωρίες, προκαταβολές και μηνιαία αξιολόγηση ταμείων. | ΕΚΚΡΕΜΕΙ |
-| DEV-11 | Αναφορές πωλήσεων/επιστροφών/εκπτώσεων, μηνιαίο email ελλειμμάτων και εξαγωγές. | ΕΚΚΡΕΜΕΙ |
-| DEV-12 | Πραγματικοί κανόνες πακέτων και πλήρης έλεγχος δικαιωμάτων: Super Admin πάντα, ιδιοκτήτης μόνο με ενεργή άδεια/module, εργαζόμενος χωρίς οικονομικά/αναλύσεις/αξιολόγηση εκτός ειδικού δικαιώματος, με δυνατότητα override ανά κατάστημα και λήξη. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION |
-| DEV-13 | Netlink/TORA production πιστοποίηση, voucher, επανεκτύπωση, ακύρωση και reconciliation. | ΣΕ ΑΝΑΜΟΝΗ ΠΑΡΟΧΩΝ |
-| DEV-14 | myDATA/e-invoicing: sandbox, MARK, PDF, webhooks, ακυρώσεις, πιστωτικά και Δελτία Αποστολής. | ΣΕ ΑΝΑΜΟΝΗ ΠΑΡΟΧΟΥ |
-| DEV-15 | Backup/rollback εφαρμογής και βάσης, offline ανάκτηση, έλεγχος secrets και τελικό εγχειρίδιο εγκατάστασης. | ΕΚΚΡΕΜΕΙ |
-
-## 3A. MYWORKSTATION LAB — μόνιμο εργαστήριο δοκιμών για όλα τα καταστήματα
-
-| Κωδικός | Εργασία / κριτήριο ολοκλήρωσης | Κατάσταση |
-| --- | --- | --- |
-| LAB-01 | Γενικός tenant/store σχεδιασμός χωρίς εξάρτηση από το όνομα ΚΑΤ. | ΟΚ - checkpoint `2026-09-06-myworkstation-lab-online-store` |
-| LAB-02 | Ξεχωριστό Online Store ανά κατάστημα μέσω μοναδικού `publicSlug`, με tenant/store isolation. | ΟΚ - server/client build και 1014 tests PASS |
-| LAB-03 | Online POS/BackOffice για οποιοδήποτε κατάστημα με store-scoped stock, shifts και audit. | ΟΚ - κώδικας και regression PASS |
-| LAB-04 | LAB-POS-01 και LAB-POS-02: ακριβής διάταξη ΚΑΤ σε κάθε Windows terminal, κοινή αποθήκη και store ledger, ξεχωριστές terminal sessions/βάρδιες. Η BackOffice αρχική προβολή βαρδιών γίνεται ανά επιλεγμένο terminal, με πτυσσόμενες κινήσεις και ανάλυση κατηγορίας με πάτημα. | ΟΚ - PR #588 / #589 · CI #1577 / #1580 · LAB acceptance 08/09/2026 |
-| LAB-05 | Online ordering, ακύρωση, παράδοση, πώληση και αφαίρεση stock στο LAB. | ΠΡΟΣ ΔΟΚΙΜΗ στο LAB |
-| LAB-06 | Fiscal Bridge DRY RUN με generic terminal IDs, χωρίς RBS/CapDriver/EFTPOS execution. | ΣΕ ΕΞΕΛΙΞΗ - PR #623 ανακτά fail-closed το route από την πραγματική βάρδια· αναμονή CI/merge και live test |
-| LAB-07 | Δημιουργία tenant `MYWORKSTATION LAB` / store `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` στο Platform Admin. | ΟΚ - tenant/store υπάρχουν και χρησιμοποιούνται |
-| LAB-08 | Ενεργοποίηση ασφαλών modules και έκδοση δύο installation-terminal activation URLs. | ΟΚ - LAB-POS-01 / LAB-POS-02 υπάρχουν, συνέχεια στα Gate 1–8 |
-
-### Κανόνας κοινής χρήσης εργαστηρίου
-
-Όλες οι σελίδες υλοποίησης, QA και δοκιμών χρησιμοποιούν αποκλειστικά το `MYWORKSTATION LAB` / `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ`. Δεν δημιουργείται δεύτερο test tenant και δεν μπαίνουν νέα test δεδομένα με όνομα ΚΑΤ. Το tenant/store δημιουργήθηκε και εκδόθηκαν τα `LAB-POS-01` και `LAB-POS-02` με εφάπαξ links στο Platform Admin. Τα activation tokens δεν αποθηκεύονται στη λίστα.
-
-## 4. Εγκεκριμένη σειρά νέων modules
-
-Η σειρά προέρχεται από τη νέα ενιαία λίστα του χρήστη. Τα modules παραμένουν εμπορικά κλειδωμένα μέχρι να ολοκληρωθούν, να δοκιμαστούν και να γίνουν ενεργά από Super Admin.
-
-| Κωδικός | Εργασία | Κατάσταση |
+| KAT-07 | Κάρτα: έγκριση, απόρριψη, timeout, ακύρωση/reversal και settlemen…1991 tokens truncated…κός | Εργασία | Κατάσταση |
 | --- | --- | --- |
 | MOD-01 | Δικαιώματα / πληρωμένα modules ανά ιδιοκτήτη, εταιρεία, κατάστημα, πακέτο και ημερομηνία λήξης. | ΣΕ ΕΞΕΛΙΞΗ - FOUNDATION ΟΚ |
 | MOD-02 | Επέκταση της υπάρχουσας ενότητας Προσφορών με αναλύσεις, επιστροφές, προμηθευτές και Excel/PDF. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟ MAIN · automated PASS · ΑΝΑΜΟΝΗ LAB ACCEPTANCE |
@@ -2078,4 +2023,16 @@ Total output lines: 1413
 - [x] Το `Επιβεβαίωση & Εκμάθηση` δημοσιεύει VERIFIED full-table contract· ο POS verifier χρησιμοποιεί το κεντρικό profile flag για κάθε προμηθευτή αντί hard-coded allow-list.
 - [x] Learned mappings δεν αποθηκεύουν τιμή/ποσότητα/έκπτωση παλιού τιμολογίου. `41/41` targeted και `1351/1351` full server tests PASS· client/server builds PASS.
 - [ ] Offline contract των 33 ενεργών δειγμάτων → CI → LAB νέου απλού/πολυσέλιδου/μετατροπής/πιστωτικού.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
+
+## 2026-09-20 — Invoice Learning Azure footer VAT reconciliation — AWAITING CI / LAB
+
+- [x] LAB evidence: το Azure/OpenAI αποτέλεσμα είχε καθαρές γραμμές `47,48 €`
+  και τελικό `53,91 €`, αλλά απορριπτόταν επειδή έλειπε ΦΠΑ ανά γραμμή.
+- [x] Νέος fail-closed έλεγχος δέχεται πρόχειρο μόνο όταν το άθροισμα καθαρών
+  γραμμών συμφωνεί με την καθαρή αξία footer και `καθαρή + ΦΠΑ = τελικό`.
+- [x] Ελλιπής πίνακας εξακολουθεί να απορρίπτεται· δεν επινοείται ΦΠΑ προϊόντος
+  και παραμένει απαίτηση ελέγχου γραμμών.
+- [x] `9/9` targeted και `1353/1353` full server tests PASS.
+- [ ] Green CI → merge/deploy → νέο upload του ίδιου δείγματος στο LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
