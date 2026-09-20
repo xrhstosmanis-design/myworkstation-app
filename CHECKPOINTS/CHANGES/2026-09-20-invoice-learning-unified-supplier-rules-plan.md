@@ -198,4 +198,21 @@ OpenAI-only αποτέλεσμα `40,90 € από 53,91 €`. Αυτό έκρυ
 - [x] Το OpenAI παραμένει fallback μόνο όταν το Azure απάντησε κανονικά αλλά
   το αναγνωσμένο περιεχόμενο δεν πέρασε τον πλήρη αριθμητικό έλεγχο.
 - [x] `11/11` στοχευμένοι και `1357/1357` πλήρες server suite PASS.
-- [ ] Green CI → merge → exact Render revision → ίδιο LAB upload.
+- [x] Green CI → merge → exact Render revision `b3e1b69b67a3c9c198fc904ea20784750e1086b0` → ίδιο LAB upload.
+
+## Phase 1.4 — ασφαλής διάγνωση Azure provider failure
+
+Το επαναληπτικό LAB upload απέδειξε ότι και οι ασφαλείς προσπάθειες Azure
+αποτυγχάνουν πριν από την κανονικοποίηση του τιμολογίου. Το γενικό
+`REQUEST_FAILED` δεν αρκεί για να ξεχωρίσει ρύθμιση endpoint/key/model από
+δίκτυο, όριο ή προσωρινή βλάβη υπηρεσίας.
+
+- [x] Προστέθηκε ασφαλής δημόσια ταξινόμηση (`AUTH_401`, `ACCESS_403`,
+  `ENDPOINT_OR_MODEL_404`, `RATE_LIMIT_429`, `NETWORK`, `TIMEOUT`, `SERVICE_*`)
+  χωρίς έκθεση key, provider response ή περιεχομένου παραστατικού.
+- [x] Το `AZURE_TIMEOUT` συμμετέχει πλέον στις έως 3 bounded επαναλήψεις.
+- [x] Η ροή παραμένει fail-closed και δεν εκτελεί OpenAI-only ανάγνωση μετά
+  από Azure request failure.
+- [x] `3/3` στοχευμένοι και `1358/1358` πλήρες server suite PASS.
+- [ ] Green CI → merge → exact Render revision → ίδιο LAB upload ώστε
+  ο εμφανιζόμενος κωδικός να οδηγήσει στην ακριβή διόρθωση υποδομής.
