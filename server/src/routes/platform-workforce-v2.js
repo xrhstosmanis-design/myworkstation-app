@@ -79,6 +79,18 @@ router.get("/bootstrap",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/employees/:employeeId/performance",async(req,res,next)=>{
+  try{
+    const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});
+    if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+    const days=Math.min(366,Math.max(1,Number(req.query.days)||30)),from=new Date(Date.now()-days*86400000);
+    const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,employeeId:employee.id,startedAt:{gte:from}},orderBy:{startedAt:"desc"},take:500});
+    const completed=sessions.filter(x=>x.status!=="OPEN"),workedMinutes=completed.reduce((s,x)=>s+Number(x.workedMinutes||0),0),overtimeMinutes=completed.reduce((s,x)=>s+Number(x.overtimeMinutes||0),0),lateMinutes=completed.reduce((s,x)=>s+Number(x.lateMinutes||0),0),earlyLeaveMinutes=completed.reduce((s,x)=>s+Number(x.earlyLeaveMinutes||0),0);
+    const audits=await prisma.workforceAuditLog.findMany({where:{companyId:context.company.id,createdAt:{gte:from},OR:[{beforeJson:{path:["employeeId"],equals:employee.id}},{afterJson:{path:["employeeId"],equals:employee.id}}]},orderBy:{createdAt:"desc"},take:100});
+    res.json({employee:{id:employee.id,fullName:employee.fullName},period:{days,from,to:new Date()},attendance:{sessions:sessions.length,completed:completed.length,workedMinutes,overtimeMinutes,lateMinutes,earlyLeaveMinutes,needsReview:sessions.filter(x=>["NEEDS_REVIEW","NEEDS_APPROVAL"].includes(x.status)).length},cashier:{status:"NOT_LINKED_YET",message:"Η σύνδεση POS/ταμείων θα εμφανιστεί εδώ μόνο από επαληθευμένα operator/session IDs."},evaluations:{status:"EVIDENCE_FIRST",message:"Οι αξιολογήσεις θα βασίζονται σε επαληθεύσιμα δεδομένα και ξεχωριστή ανθρώπινη αξιολόγηση, χωρίς αυτόματο αυθαίρετο score."},recentAudit:audits.map(x=>({id:x.id,action:x.action,createdAt:x.createdAt,reason:x.reason}))});
+  }catch(error){next(error)}
+});
+
 router.use("/roles",roleRoutes);
 router.use("/employees",employeeRoutes);
 router.use("/rules",ruleRoutes);
