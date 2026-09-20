@@ -394,6 +394,12 @@ function buildMetrics({planned,employees,shifts,counts,warnings,explanations}){
   };
 }
 
+async function syncWorkforceEmployeesForLegacyScheduler(store){
+  const workforce=await prisma.workforceEmployee.findMany({where:{companyId:store.companyId,active:true,OR:[{baseStoreId:store.id},{storeAccess:{some:{storeId:store.id,active:true,canSchedule:true}}}]},select:{id:true,legacyEmployeeId:true,fullName:true,phone:true,email:true,maxDaysPerWeek:true,maxHoursPerWeek:true,worksMorning:true,worksAfternoon:true,worksNight:true,worksWeekend:true}});
+  if(!workforce.length)return;
+  await prisma.$transaction(async tx=>{for(const w of workforce){let legacy=w.legacyEmployeeId?await tx.employee.findFirst({where:{id:w.legacyEmployeeId,storeId:store.id}}):null;if(!legacy)legacy=await tx.employee.findFirst({where:{storeId:store.id,fullName:w.fullName}});if(!legacy)legacy=await tx.employee.create({data:{fullName:w.fullName,phone:w.phone||null,email:w.email||null,position:"Εργαζόμενος",storeId:store.id,active:true,maxDaysPerWeek:Math.min(6,Math.max(1,w.maxDaysPerWeek||5)),maxHoursPerWeek:w.maxHoursPerWeek||40,allowSixthDay:(w.maxDaysPerWeek||5)>=6}});else if(!legacy.active)legacy=await tx.employee.update({where:{id:legacy.id},data:{active:true}});if(w.legacyEmployeeId!==legacy.id)await tx.workforceEmployee.update({where:{id:w.id},data:{legacyEmployeeId:legacy.id}});const allowedCodes=new Set([...(w.worksMorning?["MORNING"]:[]),...(w.worksAfternoon?["AFTERNOON"]:[]),...(w.worksNight?["NIGHT"]:[])]);const existing=await tx.employeeRule.findMany({where:{employeeId:legacy.id}});if(existing.length===0){const rows=store.shifts.filter(s=>allowedCodes.has(s.code));if(rows.length)await tx.employeeRule.createMany({data:rows.map(s=>({employeeId:legacy.id,shiftTypeId:s.id,allowed:true,targetPerWeek:null,priority:0,note:"Synced from Workforce V2 availability",fixedWeekdays:[]}))})}}});
+}
+
 router.post("/schedules/generate",async(req,res,next)=>{
   try{
     const body=briefSchema.parse(req.body);
@@ -409,6 +415,8 @@ router.post("/schedules/generate",async(req,res,next)=>{
       }
     });
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});
+    await syncWorkforceEmployeesForLegacyScheduler(store);
+    store.employees=await prisma.employee.findMany({where:{storeId:store.id,active:true},include:{rules:true,availability:true,leaveRequests:{where:{status:"APPROVED"}}}});
 
     const dateFrom=body.dateFrom?new Date(body.dateFrom):mondayOf(new Date()),dateTo=body.dateTo?new Date(body.dateTo):new Date(dateFrom.getTime()+6*86400000);
     dateFrom.setUTCHours(0,0,0,0);dateTo.setUTCHours(0,0,0,0);
