@@ -2150,3 +2150,15 @@ Total output lines: 1413
 - [x] `11/11` targeted και `1355/1355` full server tests PASS.
 - [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
+
+## 2026-09-20 — Invoice Learning Azure retry / no AI-only result — AWAITING CI / LAB
+
+- [x] LAB evidence: `Azure: REQUEST_FAILED` ακολουθήθηκε από μερικό AI-only
+  αποτέλεσμα `40,90 € από 53,91 €`.
+- [x] Προσωρινά Azure failures επαναλαμβάνονται έως 3 φορές· μόνιμα failures
+  δεν μπαίνουν σε άσκοπο retry.
+- [x] Μετά από τεχνική αποτυχία Azure η ανάγνωση σταματά ρητά και δεν
+  παρουσιάζεται OpenAI-only αποτέλεσμα ως κανονική ανάγνωση.
+- [x] `11/11` targeted και `1357/1357` full server tests PASS.
+- [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
