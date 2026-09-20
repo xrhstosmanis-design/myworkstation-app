@@ -34,3 +34,30 @@ test("Invoice Learning can retain lines when the provider exposes no printed tot
   assert.equal(result.reason,"TOTAL_NOT_AVAILABLE");
   assert.equal(result.lineGross,124);
 });
+
+test("Invoice Learning accepts all net lines when the printed net, VAT and gross footer reconcile",()=>{
+  const result=invoiceReadingCompleteness({
+    totalNet:47.48,
+    totalVat:6.43,
+    totalGross:53.91,
+    productLines:[
+      {netAmount:20.12,vatRate:0},
+      {netAmount:27.36,vatRate:0},
+    ],
+  });
+  assert.equal(result.complete,true);
+  assert.equal(result.reason,"RECONCILED_BY_HEADER_VAT");
+  assert.equal(result.requiresLineVatReview,true);
+  assert.equal(result.lineNet,47.48);
+});
+
+test("Invoice Learning still rejects missing rows when only the footer itself reconciles",()=>{
+  const result=invoiceReadingCompleteness({
+    totalNet:47.48,
+    totalVat:6.43,
+    totalGross:53.91,
+    productLines:[{netAmount:20.12,vatRate:0}],
+  });
+  assert.equal(result.complete,false);
+  assert.equal(result.reason,"PARTIAL_PRODUCT_LINES");
+});
