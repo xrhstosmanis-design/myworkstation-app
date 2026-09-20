@@ -1,3 +1,12 @@
+## 2026-09-20 — Natural-language employee rules v1 — AWAITING LAB
+
+- [x] Employee card: free-language permanent rule + effective date.
+- [x] «Τι κατάλαβα» preview before confirmation.
+- [x] Confirmed shift/day constraints compile to scheduler structure.
+- [x] Rule history retained.
+- [ ] CI/merge/deploy → LAB employee test.
+- [ ] Cross-employee dependency rules in v2.
+
 ## 2026-09-20 — AI Scheduler Workforce employee bridge — FIX AWAITING USER RETEST
 
 - [x] LAB reproduced 0/21 despite active Workforce V2 employees.
