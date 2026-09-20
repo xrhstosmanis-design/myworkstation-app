@@ -1,3 +1,14 @@
+## 2026-09-20 — Invoice Learning exact duplicate overage guard — AWAITING CI / LAB
+
+- [x] Post-deploy LAB: POS-style fallback completed, but provider rows totalled `55,65 €` against the printed `53,91 €`; fail-closed `422` correctly prevented a partial draft.
+- [x] The `1,74 €` overage is handled with the same independently-totalled safeguard used by POS.
+- [x] One row is removed only when exactly one identical economic tuple is duplicated, one copy equals the entire overage, and the remaining rows reconcile to the printed footer within `0,05 €`.
+- [x] Legitimate repeated rows and ambiguous duplicate groups remain untouched and fail closed.
+- [x] Targeted tests `16/16` and full suite `1365/1365` PASS.
+- [ ] Green CI → merge → exact Render deploy → same LAB invoice.
+- [ ] LAB PASS requires all real rows and exact reconciliation to `47,48 € + 6,43 € = 53,91 €`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-exact-duplicate-overage.md`.
+
 ## 2026-09-20 — «Φόρτωση Σεναρίου» — AWAITING LAB
 
 - [x] Exact button label requested by user.
