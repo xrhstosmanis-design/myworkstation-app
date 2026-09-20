@@ -276,7 +276,12 @@ function discountsReconcile(discounts,quantity,unitPrice,netAmount){
   return Math.abs(expected-amount)<=Math.max(.05,amount*.02);
 }
 
-async function callAzure(fileData,mimeType){
+export function retryableAzureFailure(error){
+  const message=String(error?.message||error||"");
+  return /AZURE_(?:ANALYZE|POLL)_(?:408|409|425|429|5\d\d)\b/.test(message)||/fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(message);
+}
+
+async function callAzureOnce(fileData,mimeType){
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
@@ -292,6 +297,19 @@ async function callAzure(fileData,mimeType){
     const payload=await poll.json();if(payload.status==="succeeded")return payload;if(payload.status==="failed"||payload.status==="canceled")throw new Error(`AZURE_${String(payload.status).toUpperCase()}`);
   }
   throw new Error("AZURE_TIMEOUT");
+}
+
+async function callAzure(fileData,mimeType){
+  let lastError;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{return await callAzureOnce(fileData,mimeType)}catch(error){
+      lastError=error;
+      if(attempt===3||!retryableAzureFailure(error))throw error;
+      console.warn("Azure Invoice Learning transient failure; retrying.",{attempt,reason:String(error?.message||error).slice(0,120)});
+      await new Promise(resolve=>setTimeout(resolve,attempt*800));
+    }
+  }
+  throw lastError;
 }
 
 function normalizeAzure(payload){
@@ -459,6 +477,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       console.warn("Azure Invoice Learning incomplete result; falling back to OpenAI.",{reason:completeness.reason,lineGross:completeness.lineGross,totalGross:completeness.totalGross,difference:completeness.difference});
     }catch(error){azureFailure=String(error?.message||error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning fallback:",azureFailure)}
   }
+  if(azureState==="REQUEST_FAILED")return res.status(503).json({error:"Η σύνδεση με το Azure Document Intelligence απέτυχε μετά από ασφαλείς επαναλήψεις. Δεν εκτελέστηκε ανάγνωση μόνο με AI. Δοκίμασε ξανά σε λίγο.",code:"AZURE_REQUEST_FAILED",azureState});
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED",azureState});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
