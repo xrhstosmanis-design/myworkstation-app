@@ -1,3 +1,12 @@
+## 2026-09-20 — Workforce AI Scheduler foundation — AWAITING LAB
+
+- [x] Natural-language scheduler workspace.
+- [x] Verified context: employees/rules/availability/approved leave/shift templates.
+- [x] Fail-closed PREVIEW_ONLY — καμία αυτόματη εγγραφή/δημοσίευση.
+- [ ] Structured AI proposal + deterministic validation.
+- [ ] Conversational corrections preserving prior rules.
+- [ ] Approval → publish → Store Chat/email.
+
 ## 2026-09-20 — Workforce Human Evaluations v1 — AWAITING LAB
 
 - [x] Category/date/optional 1–5/mandatory comment + creator.
