@@ -1,3 +1,11 @@
+## 2026-09-20 — Owner «Προσωπικό & Πρόγραμμα» hub v1 — AWAITING LAB
+
+- [x] Left menu consolidates Προσωπικό + Βάρδιες + Άδειες into one entry.
+- [x] Internal tabs: Εργαζόμενοι, Πρόγραμμα βαρδιών, Άδειες & Ρεπό, Παρουσίες & Ώρες.
+- [x] Reuses existing business components; no second data path created.
+- [x] Καταστήματα and Chat stay independent.
+- [ ] CI/merge/deploy → owner/LAB visual test.
+
 ## 2026-09-20 — Invoice Learning exact duplicate overage guard — AWAITING CI / LAB
 
 - [x] Post-deploy LAB: POS-style fallback completed, but provider rows totalled `55,65 €` against the printed `53,91 €`; fail-closed `422` correctly prevented a partial draft.

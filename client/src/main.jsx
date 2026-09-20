@@ -21,7 +21,8 @@ function Login({onLogin}){
 function App(){
  const [user,setUser]=useState(()=>JSON.parse(localStorage.getItem("user")||"null"));
  const params=new URLSearchParams(window.location.search),supportPage=params.get("supportPage"),supportStore=params.get("supportStore");
- const [page,setPage]=useState(supportPage||"dashboard"),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[activeModules,setActiveModules]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null),[chatStore,setChatStore]=useState(null);
+ const normalizedInitialPage=["employees","schedule","leaves"].includes(supportPage)?"workforce":(supportPage||"dashboard");
+ const [page,setPage]=useState(normalizedInitialPage),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[activeModules,setActiveModules]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null),[chatStore,setChatStore]=useState(null);
  const supportContext=(()=>{try{return JSON.parse(localStorage.getItem("supportContext")||"null")}catch{return null}})();
  const companyName=user?.company?.name||supportContext?.companyName||"MyWorkStation";
  const returnToPlatform=async()=>{
@@ -36,19 +37,23 @@ function App(){
  const logout=()=>{localStorage.clear();setUser(null)};
  if(!user)return <Login onLogin={setUser}/>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{companyName}</small></div></div>
- <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="employees"} onClick={()=>setPage("employees")} icon={<Users/>}>Προσωπικό</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav>{activeModules.includes("STORE_CHAT")&&<Nav active={page==="chat"} onClick={()=>setPage("chat")} icon={<MessageCircle/>}>Chat</Nav>}<Nav active={page==="schedule"} onClick={()=>setPage("schedule")} icon={<CalendarDays/>}>Βάρδιες</Nav><Nav active={page==="leaves"} onClick={()=>setPage("leaves")} icon={<Palmtree/>}>Άδειες</Nav></nav>
+ <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="workforce"} onClick={()=>setPage("workforce")} icon={<Users/>}>Προσωπικό & Πρόγραμμα</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav>{activeModules.includes("STORE_CHAT")&&<Nav active={page==="chat"} onClick={()=>setPage("chat")} icon={<MessageCircle/>}>Chat</Nav>}</nav>
  {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
- <main><header><div><h1>{({dashboard:"Αρχική",employees:"Προσωπικό",stores:"Καταστήματα",chat:"Chat καταστημάτων",schedule:"Βάρδιες",leaves:"Άδειες & Απουσίες"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>
+ <main><header><div><h1>{({dashboard:"Αρχική",workforce:"Προσωπικό & Πρόγραμμα",stores:"Καταστήματα",chat:"Chat καταστημάτων"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>
  {page==="dashboard"&&<><div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
- {page==="employees"&&<Employees rows={employees} stores={stores} reload={load}/>} 
+ {page==="workforce"&&<WorkforceHub employees={employees} stores={stores} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} leaves={leaves} reload={load}/>} 
  {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
  {page==="chat"&&activeModules.includes("STORE_CHAT")&&<ChatStores rows={stores} onOpen={setChatStore}/>}
- {page==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} reload={load}/>} {page==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={load}/>} 
  {chatStore&&<StoreChatPanel api={api} store={chatStore} onClose={()=>setChatStore(null)}/>}
  </main></div>
 }
 const Nav=({active,onClick,icon,children})=><button className={active?"active":""} onClick={onClick}>{icon}{children}</button>;
 const Card=({t,v})=><article className="card"><span>{t}</span><strong>{v}</strong></article>;
+
+function WorkforceHub({employees,stores,schedule,setSchedule,warnings,setWarnings,metrics,setMetrics,leaves,reload}){
+ const [tab,setTab]=useState("employees");
+ return <><section className="panel workforce-hub-head"><div className="panel-head"><div><h2>Προσωπικό & Πρόγραμμα</h2><p>Ένα σημείο για εργαζομένους, πρόγραμμα, άδειες και ώρες εργασίας.</p></div></div><div className="workforce-tabs"><button className={tab==="employees"?"active":""} onClick={()=>setTab("employees")}><Users/> Εργαζόμενοι</button><button className={tab==="schedule"?"active":""} onClick={()=>setTab("schedule")}><CalendarDays/> Πρόγραμμα βαρδιών</button><button className={tab==="leaves"?"active":""} onClick={()=>setTab("leaves")}><Palmtree/> Άδειες & Ρεπό</button><button className={tab==="attendance"?"active":""} onClick={()=>setTab("attendance")}><UserRoundCheck/> Παρουσίες & Ώρες</button></div></section>{tab==="employees"&&<Employees rows={employees} stores={stores} reload={reload}/>} {tab==="schedule"&&<Schedule stores={stores} employees={employees} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} reload={reload}/>} {tab==="leaves"&&<Leaves employees={employees} leaves={leaves} reload={reload}/>} {tab==="attendance"&&<section className="panel"><h2>Παρουσίες & Ώρες</h2><p>Η ενοποίηση με πραγματικές ώρες, POS και δημοσιευμένο πρόγραμμα συνεχίζεται πάνω στην κοινή Workforce βάση.</p></section>}</>
+}
 
 function Employees({rows,stores,reload}){
  const [mode,setMode]=useState(null),[selected,setSelected]=useState(null),[shifts,setShifts]=useState([]),[naturalText,setNaturalText]=useState(""),[naturalFrom,setNaturalFrom]=useState(()=>new Date().toISOString().slice(0,10)),[naturalPreview,setNaturalPreview]=useState(null),[naturalHistory,setNaturalHistory]=useState([]);
