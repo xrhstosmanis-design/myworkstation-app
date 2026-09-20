@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
+import {collapseExactDuplicateInvoiceOverage,invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
 
 test("Invoice Learning rejects a one-line partial result against the printed total",()=>{
   const result=invoiceReadingCompleteness({
@@ -114,4 +114,27 @@ test("Invoice Learning hybrid merge does not duplicate the same provider row",()
   );
   assert.equal(hybrid.productLines.length,1);
   assert.equal(hybrid.productLines[0].hybridMatched,true);
+});
+
+test("Invoice Learning drops one exact duplicate only when it is the unique footer overage",()=>{
+  const duplicate={supplierItemCode:"C",description:"DUPLICATE",quantity:1,unitPrice:1.74,netAmount:1.74,grossAmount:1.74,vatRate:0};
+  const repaired=collapseExactDuplicateInvoiceOverage([
+    {supplierItemCode:"A",description:"FIRST",quantity:1,netAmount:20.12,grossAmount:20.12,vatRate:0},
+    duplicate,
+    {supplierItemCode:"B",description:"SECOND",quantity:1,netAmount:32.05,grossAmount:32.05,vatRate:0},
+    {...duplicate},
+  ],53.91);
+  assert.equal(repaired.collapsed,true);
+  assert.equal(repaired.removed,1);
+  assert.equal(repaired.overage,1.74);
+  assert.equal(invoiceReadingCompleteness({totalGross:53.91,productLines:repaired.lines}).complete,true);
+});
+
+test("Invoice Learning retains real or ambiguous repeated rows",()=>{
+  const duplicate={supplierItemCode:"C",description:"DUPLICATE",quantity:1,netAmount:1.74,grossAmount:1.74,vatRate:0};
+  const realRepeat=collapseExactDuplicateInvoiceOverage([duplicate,{...duplicate}],3.48);
+  assert.equal(realRepeat.collapsed,false);
+  const another={...duplicate,supplierItemCode:"D",description:"ANOTHER"};
+  const ambiguous=collapseExactDuplicateInvoiceOverage([duplicate,{...duplicate},another,{...another}],5.22);
+  assert.equal(ambiguous.collapsed,false);
 });
