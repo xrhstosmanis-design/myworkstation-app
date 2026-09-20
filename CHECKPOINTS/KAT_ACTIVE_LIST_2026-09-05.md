@@ -2118,3 +2118,16 @@ Total output lines: 1413
 - [x] `9/9` targeted και `1353/1353` full server tests PASS.
 - [ ] Green CI → merge/deploy → νέο upload του ίδιου δείγματος στο LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
+
+## 2026-09-20 — Invoice Learning κρατά Azure όταν λείπει μόνο SubTotal — AWAITING CI / LAB
+
+- [x] LAB evidence: το Azure αποτέλεσμα `47,48 €` απορριπτόταν επειδή η φόρμα
+  επέστρεφε `TotalTax`/`InvoiceTotal` αλλά όχι `SubTotal`, και το OpenAI-only
+  fallback έβρισκε μόνο `30,24 € από 53,91 €`.
+- [x] Νέα αυστηρή συμφωνία: `InvoiceTotal - TotalTax = άθροισμα καθαρών
+  γραμμών`, μόνο όταν λείπει line-level ΦΠΑ και με ανοχή `0,05 €`.
+- [x] Ελλιπείς γραμμές ή υπάρχων line-level ΦΠΑ δεν περνούν από αυτόν τον
+  δρόμο. Δεν αλλάζουν stock, πληρωμή, οριστικοποίηση ή λογιστική.
+- [x] `11/11` targeted και `1355/1355` full server tests PASS.
+- [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
