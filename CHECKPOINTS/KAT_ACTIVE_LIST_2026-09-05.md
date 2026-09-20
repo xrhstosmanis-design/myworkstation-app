@@ -1,3 +1,13 @@
+## 2026-09-20 — Workforce POS Performance v2 — AWAITING LAB
+
+- [x] Verified identity chain WorkforceEmployee → StoreOperatorCredential → operatorId → CashShiftSession → StoreTransaction.
+- [x] Χωρίς name matching.
+- [x] Καρτέλα: βάρδιες ταμείου, συναλλαγές, cash/card sales, variance, reversals, recent shifts.
+- [ ] LAB employee with real POS history.
+- [ ] Discounts/voids/returns drill-down + human evaluations.
+- [ ] AI conversational scheduler/publish.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-workforce-pos-performance-v2.md`.
+
 ## 2026-09-20 — Workforce Employee Performance v1 — AWAITING LAB
 
 - [x] Καρτέλα «Απόδοση & Ταμεία» ανά πραγματικό Workforce employee.
