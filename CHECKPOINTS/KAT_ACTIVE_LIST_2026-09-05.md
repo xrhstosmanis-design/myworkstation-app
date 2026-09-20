@@ -1,3 +1,13 @@
+## 2026-09-20 — Workforce AI Scheduler structured preview v2 — AWAITING LAB
+
+- [x] Natural Greek instruction → weekly structured PREVIEW.
+- [x] Real employees/availability/approved leave/permanent rules/shift minimum coverage.
+- [x] Named ρεπό/άδεια weekdays + only morning/afternoon/night + balanced workday counts.
+- [x] Uncovered-slot warnings + per-employee workday totals.
+- [x] PREVIEW ONLY; no persistence.
+- [ ] Conversational corrections preserving previous instructions.
+- [ ] Apply to DRAFT → deterministic validation → approval/publish.
+
 ## 2026-09-20 — Workforce AI Scheduler foundation — AWAITING LAB
 
 - [x] Natural-language scheduler workspace.
