@@ -385,6 +385,19 @@ export function invoiceReadingCompleteness(result){
   const footerDifference=money4(Math.abs(totalGross-(totalNet+totalVat)));
   const headerVatReconciled=totalNet>0&&totalVat>0&&lineNet>0&&netDifference<=tolerance&&footerDifference<=tolerance;
   if(headerVatReconciled)return {complete:true,reason:"RECONCILED_BY_HEADER_VAT",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference,requiresLineVatReview:true};
+  // Some Azure invoice layouts expose TotalTax and InvoiceTotal but omit
+  // SubTotal. When every line also lacks line-level VAT, the printed net is
+  // still independently derivable as InvoiceTotal - TotalTax. Accept only if
+  // that derived net equals the sum of every extracted net line.
+  const lineLevelVatMissing=lines.every(line=>{
+    const net=Math.max(0,Number(line?.netAmount||0));
+    const gross=Math.max(0,Number(line?.grossAmount||0));
+    return Math.max(0,Number(line?.vatRate||0))===0&&(!(gross>0)||Math.abs(gross-net)<=tolerance);
+  });
+  const derivedTotalNet=money4(totalGross-totalVat);
+  const derivedNetDifference=money4(Math.abs(derivedTotalNet-lineNet));
+  const derivedHeaderVatReconciled=totalVat>0&&derivedTotalNet>0&&lineNet>0&&lineLevelVatMissing&&derivedNetDifference<=tolerance;
+  if(derivedHeaderVatReconciled)return {complete:true,reason:"RECONCILED_BY_DERIVED_HEADER_VAT",lineGross,totalGross,difference,lineNet,totalNet,totalVat,derivedTotalNet,derivedNetDifference,requiresLineVatReview:true};
   return {complete:false,reason:"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference};
 }
 
