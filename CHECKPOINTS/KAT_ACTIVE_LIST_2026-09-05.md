@@ -1,3 +1,11 @@
+## 2026-09-20 — Invoice Learning bounded OpenAI fallback — AWAITING CI / LAB
+
+- [x] Azure σύνδεση LAB PASS· νέο πραγματικό LAB FAIL: απλό `AI σφάλμα 502` μετά από Azure partial.
+- [x] OpenAI fallback σε fast model + minimal reasoning + bounded timeout πριν από Render gateway timeout.
+- [x] Timeout επιστρέφει ασφαλές JSON και δεν αποθηκεύει μερικό Azure draft.
+- [ ] CI/merge/exact deploy → ίδιο invoice → όλες οι γραμμές και ακριβής συμφωνία `47,48 + 6,43 = 53,91 €`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-bounded-openai-fallback.md`.
+
 ## 2026-09-20 — Natural-language employee rules v1 — AWAITING LAB
 
 - [x] Employee card: free-language permanent rule + effective date.

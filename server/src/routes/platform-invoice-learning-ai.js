@@ -8,6 +8,8 @@ import {mobileUploads} from "./mobile-invoice-upload.js";
 const router=Router();
 const AZURE_API_VERSION="2024-11-30";
 const AZURE_MODEL_ID="prebuilt-invoice";
+const OPENAI_FALLBACK_TIMEOUT_MS=Math.max(5000,Math.min(45000,Number(process.env.OPENAI_INVOICE_FALLBACK_TIMEOUT_MS||30000)));
+const openAiFallbackModel=()=>process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini";
 
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
 const money4=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
@@ -544,18 +546,20 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
   const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος/κείμενο γράφει Πιστωτικό, Πιστ. Τιμ., Επιστροφή ή Credit Note· αλλιώς INVOICE. Μην συμπεραίνεις πιστωτικό από το πρόσημο ποσών. Διάβασε τον πίνακα ειδών γραμμή-γραμμή: κάθε ορατή γραμμή προϊόντος πρέπει να γίνει ένα ξεχωριστό productLines στοιχείο, ακόμη και αν έχει ίδιο κωδικό/περιγραφή με άλλη γραμμή. Μην επιστρέψεις κενό productLines όταν βλέπεις πίνακα ειδών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
-  const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
-  let response=await callOpenAiFallback(false),raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR",azureState});
+  const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(OPENAI_FALLBACK_TIMEOUT_MS),body:JSON.stringify({model:openAiFallbackModel(),reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
+  const safeOpenAiCall=async retry=>{try{return await callOpenAiFallback(retry)}catch(error){if(/TimeoutError|AbortError|aborted due to timeout/i.test(`${error?.name||""} ${error?.message||error}`))return null;throw error}};
+  let response=await safeOpenAiCall(false);if(!response)return res.status(504).json({error:"Ο ασφαλής επανέλεγχος OpenAI άργησε περισσότερο από το επιτρεπτό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_PROVIDER_TIMEOUT",azureState});
+  let raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR",azureState});
   let text=outputText(raw);
-  if(!text){response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});text=outputText(raw)}
+  if(!text){response=await safeOpenAiCall(true);if(!response)return res.status(504).json({error:"Η δεύτερη ασφαλής προσπάθεια OpenAI ξεπέρασε το χρονικό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_RETRY_TIMEOUT",azureState});raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});text=outputText(raw)}
   if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE",azureState});
   let result;try{result=JSON.parse(text)}catch{
-    response=await callOpenAiFallback(true);raw=await response.json().catch(()=>({}));
+    response=await safeOpenAiCall(true);if(!response)return res.status(504).json({error:"Η δεύτερη ασφαλής προσπάθεια OpenAI ξεπέρασε το χρονικό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_RETRY_TIMEOUT",azureState});raw=await response.json().catch(()=>({}));
     if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});
     text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result}));
+  result=await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result}));
   let completeness=invoiceReadingCompleteness(result);
   if(!completeness.complete&&azureDraft?.productLines?.length){
     const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
