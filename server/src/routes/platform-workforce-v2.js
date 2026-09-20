@@ -79,6 +79,19 @@ router.get("/bootstrap",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/employees/:employeeId/evaluations",async(req,res,next)=>{try{
+ const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+ await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "WorkforceEmployeeEvaluation" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"category" TEXT NOT NULL,"rating" INTEGER,"comment" TEXT NOT NULL,"evaluationDate" DATE NOT NULL,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+ const rows=await prisma.$queryRaw`SELECT e.*,u."fullName" AS "createdByName" FROM "WorkforceEmployeeEvaluation" e LEFT JOIN "User" u ON u."id"=e."createdByUserId" WHERE e."companyId"=${context.company.id} AND e."employeeId"=${employee.id} ORDER BY e."evaluationDate" DESC,e."createdAt" DESC LIMIT 200`;res.json({items:rows});
+}catch(error){next(error)}});
+router.post("/employees/:employeeId/evaluations",async(req,res,next)=>{try{
+ const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+ const body=req.body||{},category=String(body.category||"").trim(),comment=String(body.comment||"").trim(),rating=body.rating==null||body.rating===""?null:Number(body.rating),evaluationDate=new Date(String(body.evaluationDate||"")+"T00:00:00Z");if(!category||!comment||Number.isNaN(evaluationDate.getTime())||(rating!==null&&(!Number.isInteger(rating)||rating<1||rating>5)))return res.status(400).json({error:"Συμπλήρωσε κατηγορία, ημερομηνία, σχόλιο και προαιρετική αξιολόγηση 1–5."});
+ await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "WorkforceEmployeeEvaluation" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"category" TEXT NOT NULL,"rating" INTEGER,"comment" TEXT NOT NULL,"evaluationDate" DATE NOT NULL,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+ const id=(await import("node:crypto")).randomUUID();await prisma.$executeRaw`INSERT INTO "WorkforceEmployeeEvaluation" ("id","companyId","storeId","employeeId","category","rating","comment","evaluationDate","createdByUserId") VALUES (${id},${context.company.id},${context.store.id},${employee.id},${category},${rating},${comment},${evaluationDate},${req.user?.id||null})`;
+ await prisma.workforceAuditLog.create({data:{companyId:context.company.id,storeId:context.store.id,actorUserId:req.user?.id||null,action:"WORKFORCE_EMPLOYEE_EVALUATED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,afterJson:{employeeId:employee.id,evaluationId:id,category,rating,evaluationDate:String(body.evaluationDate)},reason:comment}});res.status(201).json({id});
+}catch(error){next(error)}});
+
 router.get("/employees/:employeeId/performance",async(req,res,next)=>{
   try{
     const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});
