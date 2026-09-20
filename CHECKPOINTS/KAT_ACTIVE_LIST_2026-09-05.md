@@ -1,3 +1,11 @@
+## 2026-09-20 — Workforce Human Evaluations v1 — AWAITING LAB
+
+- [x] Category/date/optional 1–5/mandatory comment + creator.
+- [x] Workforce audit on creation.
+- [x] Separate from measured evidence; no automatic score.
+- [ ] LAB test.
+- [ ] AI conversational scheduler/publish.
+
 ## 2026-09-20 — Workforce POS Actions v3 — AWAITING LAB
 
 - [x] PosSaleActionAudit συνδέεται μόνο με verified operatorId του εργαζομένου.
