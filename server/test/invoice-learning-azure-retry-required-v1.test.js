@@ -22,12 +22,15 @@ test("Invoice Learning exposes only safe actionable Azure diagnostics",()=>{
   assert.equal(publicAzureFailureCode(new Error("AZURE_TIMEOUT")),"TIMEOUT");
 });
 
-test("Invoice Learning never presents an OpenAI-only result after an Azure request failure",()=>{
-  const guard=route.indexOf('if(azureState==="REQUEST_FAILED")return res.status(503)');
-  const openAi=route.indexOf('if(!process.env.OPENAI_API_KEY)',guard);
-  assert.ok(guard>0);
-  assert.ok(openAi>guard);
-  assert.match(route,/Δεν εκτελέστηκε ανάγνωση μόνο με AI/);
+test("Invoice Learning uses the configured POS-style fallback after an Azure request failure",()=>{
+  const providerFailure=route.indexOf('azureState="REQUEST_FAILED"');
+  const openAiGuard=route.indexOf('if(!process.env.OPENAI_API_KEY)',providerFailure);
+  const openAi=route.indexOf('const base64=String(fileData)',openAiGuard);
+  assert.ok(providerFailure>0);
+  assert.ok(openAiGuard>providerFailure);
+  assert.ok(openAi>openAiGuard);
+  assert.doesNotMatch(route,/if\(azureState==="REQUEST_FAILED"\)return res\.status\(503\)/);
   assert.match(route,/azureFailureCode/);
   assert.match(route,/for\(let attempt=1;attempt<=3;attempt\+\+\)/);
+  assert.match(route,/if\(!completeness\.complete\)return res\.status\(422\)/);
 });
