@@ -4,6 +4,7 @@ import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
 import {extractAzureColumns,combineAzureRows} from "../lib/invoice-column-reading.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
+import {callAzure as callPosAzure} from "./commerce-azure-invoice-reader.js";
 
 const router=Router();
 const AZURE_API_VERSION="2024-11-30";
@@ -301,28 +302,16 @@ export function publicAzureFailureCode(error){
   return "UNKNOWN";
 }
 
-async function callAzureOnce(fileData,mimeType){
-  const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
-  const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
-  const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
-  const bytes=Buffer.from(base64,"base64");
-  if(bytes.length<20)throw new Error("AZURE_EMPTY_DOCUMENT");
-  const url=`${endpoint}/documentintelligence/documentModels/${AZURE_MODEL_ID}:analyze?api-version=${AZURE_API_VERSION}`;
-  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":mimeType||"application/octet-stream"},body:bytes});
-  if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,250)}`);
-  const operation=start.headers.get("operation-location");if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
-  for(let i=0;i<30;i++){
-    await new Promise(resolve=>setTimeout(resolve,i<2?700:1200));
-    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key}});if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
-    const payload=await poll.json();if(payload.status==="succeeded")return payload;if(payload.status==="failed"||payload.status==="canceled")throw new Error(`AZURE_${String(payload.status).toUpperCase()}`);
-  }
-  throw new Error("AZURE_TIMEOUT");
-}
-
 async function callAzure(fileData,mimeType){
   let lastError;
   for(let attempt=1;attempt<=3;attempt++){
-    try{return await callAzureOnce(fileData,mimeType)}catch(error){
+    try{
+      // Use the exact transport used by the working POS invoice reader.
+      // Invoice Learning keeps its supplier-specific normalization below, but
+      // endpoint construction, authentication, upload and polling have one
+      // authoritative implementation for both entry points.
+      return await callPosAzure({contentData:fileData,mimeType});
+    }catch(error){
       lastError=error;
       if(attempt===3||!retryableAzureFailure(error))throw error;
       console.warn("Azure Invoice Learning transient failure; retrying.",{attempt,reason:String(error?.message||error).slice(0,120)});
