@@ -1,3 +1,12 @@
+## 2026-09-20 — Workforce AI conversation + DRAFT apply v3 — AWAITING LAB
+
+- [x] In-session correction conversation retained.
+- [x] Explicit reviewed preview → DRAFT only, with reason/audit.
+- [x] Immediate deterministic scheduleValidation.
+- [x] Never auto-publishes; normal PREVIEWED → APPROVED → PUBLISHED remains mandatory.
+- [ ] CI/merge/deploy → USER LAB TEST.
+- [ ] Publish notification to Store Chat/email after scheduler PASS.
+
 ## 2026-09-20 — Workforce AI Scheduler structured preview v2 — AWAITING LAB
 
 - [x] Natural Greek instruction → weekly structured PREVIEW.

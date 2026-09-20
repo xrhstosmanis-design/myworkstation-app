@@ -106,6 +106,12 @@ function buildAiProposal({instruction,periodStart,employees,templates}){
  return {assignments,warnings,summary:[...counts.entries()].map(([employeeId,days])=>({employeeId,employeeName:employees.find(e=>e.id===employeeId)?.fullName||employeeId,workDays:days}))};
 }
 
+router.post("/ai/apply",async(req,res,next)=>{try{
+ const context=await contextFor(req),body=z.object({periodStart:dateText,instruction:z.string().trim().min(5).max(8000),assignments:z.array(z.object({date:dateText,shiftTemplateId:z.string().min(1),slot:z.number().int().min(1),employeeId:z.string().nullable()})).min(1),confirmed:z.literal(true),reason:z.string().trim().min(3).max(500)}).parse(req.body||{});
+ const created=await prisma.$transaction(async tx=>{const start=weekStart(body.periodStart),end=new Date(start.getTime()+6*86400000),schedule=await tx.workforceSchedule.create({data:{companyId:context.company.id,storeId:context.store.id,periodType:"WEEK",periodStart:start,periodEnd:end,status:"DRAFT",version:1,createdByUserId:req.user.id}});for(const a of body.assignments){if(!a.employeeId)continue;await tx.workforceScheduleAssignment.create({data:{scheduleId:schedule.id,date:dayStart(a.date),employeeId:a.employeeId,shiftTemplateId:a.shiftTemplateId,slot:a.slot,note:"AI Scheduler draft"}})}await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_AI_SCHEDULE_DRAFT_CREATED",entityType:"WORKFORCE_SCHEDULE",entityId:schedule.id,after:{periodStart:body.periodStart,instruction:body.instruction,assignments:body.assignments.filter(a=>a.employeeId).length},reason:body.reason});return schedule});
+ const schedule=await loadSchedule(context,created.id),validation=await scheduleValidation(context,schedule);res.status(201).json({item:serialize(schedule),validation,message:"Το AI preview αποθηκεύτηκε ως DRAFT. Δεν δημοσιεύτηκε."});
+}catch(error){next(error)}});
+
 router.post("/ai/interpret",async(req,res,next)=>{try{
  const context=await contextFor(req),body=z.object({instruction:z.string().trim().min(5).max(8000),periodStart:dateText,conversation:z.array(z.object({role:z.enum(["USER","ASSISTANT"]),text:z.string().max(8000)})).max(30).default([])}).parse(req.body||{});
  const employees=await prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},include:{rules:true,leaveRequests:{where:{status:"APPROVED",endDate:{gte:dayStart(body.periodStart)}}}}});
