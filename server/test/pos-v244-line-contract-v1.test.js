@@ -57,7 +57,8 @@ test("Leventopoulos never persists a free-form numeric-column guess",async()=>{
   const body=columns.slice(start,columns.indexOf("export function recoverPrintedRetailColumns",start));
   assert.match(body,/return line;/);
   assert.doesNotMatch(body,/const candidates=/);
-  assert.match(recheck,/LEVENTOPOULOS_MM_POS1_COLUMNS/);
+  assert.doesNotMatch(recheck,/LEVENTOPOULOS_MM_POS1_COLUMNS/);
+  assert.match(recheck,/supplierReadingProfile\?\.requireCompletePrintedTableOnMismatch===true/);
   assert.match(profile,/profile\.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS"/);
   assert.match(background,/requiresCompletePrintedTable/);
   assert.match(background,/\(handoff\.replaceExistingDraft\|\|requiresCompletePrintedTable\)&&!verifiedProductLines/);

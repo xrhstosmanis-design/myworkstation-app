@@ -2058,3 +2058,14 @@ Total output lines: 1413
 - [x] It may reconstruct rows only when every physical row, the VAT footer and the operator-confirmed `194,77 €` total independently agree; otherwise the existing draft remains unchanged.
 - [ ] Require green CI, merge/deploy and a reread of the same stored attachment. Expected result: exactly 9 rows / `194,77 €`, before any replacement is permitted.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-leventopoulos-complete-table-fail-closed.md`.
+
+## 2026-09-20 — Invoice Learning ενιαίοι κανόνες προμηθευτή — PHASE 1 TESTED / AWAITING LAB
+
+- [x] Αποφασίστηκε ότι δεν δημιουργείται δεύτερος invoice reader: ενισχύεται η υπάρχουσα ροή `POS → Τέλος τιμολογίου → ένα Πρόχειρο BackOffice`.
+- [x] Ορίστηκε versioned κεντρικός κανόνας ανά προμηθευτή για στήλες, σελίδες, barcodes/Master Catalog, μονάδες, συσκευασίες, πιστωτικά και ειδικές γραμμές.
+- [x] Απαγορεύτηκε η εκμάθηση ιστορικών ποσοτήτων, τιμών, εκπτώσεων και συνόλων ως μελλοντικών σταθερών.
+- [x] Ορίστηκε ανεξάρτητη επαλήθευση κάθε νέου παραστατικού και fail-closed `Χρειάζεται έλεγχο` σε κάθε ασυμφωνία.
+- [x] Το `Επιβεβαίωση & Εκμάθηση` δημοσιεύει VERIFIED full-table contract· ο POS verifier χρησιμοποιεί το κεντρικό profile flag για κάθε προμηθευτή αντί hard-coded allow-list.
+- [x] Learned mappings δεν αποθηκεύουν τιμή/ποσότητα/έκπτωση παλιού τιμολογίου. `41/41` targeted και `1351/1351` full server tests PASS· client/server builds PASS.
+- [ ] Offline contract των 33 ενεργών δειγμάτων → CI → LAB νέου απλού/πολυσέλιδου/μετατροπής/πιστωτικού.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
