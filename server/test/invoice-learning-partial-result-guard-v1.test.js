@@ -61,3 +61,33 @@ test("Invoice Learning still rejects missing rows when only the footer itself re
   assert.equal(result.complete,false);
   assert.equal(result.reason,"PARTIAL_PRODUCT_LINES");
 });
+
+test("Invoice Learning keeps Azure when SubTotal is absent but TotalTax derives the complete net",()=>{
+  const result=invoiceReadingCompleteness({
+    totalNet:0,
+    totalVat:6.43,
+    totalGross:53.91,
+    productLines:[
+      {netAmount:20.12,vatRate:0,grossAmount:20.12},
+      {netAmount:27.36,vatRate:0,grossAmount:27.36},
+    ],
+  });
+  assert.equal(result.complete,true);
+  assert.equal(result.reason,"RECONCILED_BY_DERIVED_HEADER_VAT");
+  assert.equal(result.derivedTotalNet,47.48);
+  assert.equal(result.requiresLineVatReview,true);
+});
+
+test("Invoice Learning does not derive footer net when line-level VAT is already present",()=>{
+  const result=invoiceReadingCompleteness({
+    totalNet:0,
+    totalVat:6.43,
+    totalGross:53.91,
+    productLines:[
+      {netAmount:20.12,vatRate:13,grossAmount:22.7356},
+      {netAmount:24.7444,vatRate:13,grossAmount:27.9568},
+    ],
+  });
+  assert.equal(result.complete,false);
+  assert.equal(result.reason,"PARTIAL_PRODUCT_LINES");
+});
