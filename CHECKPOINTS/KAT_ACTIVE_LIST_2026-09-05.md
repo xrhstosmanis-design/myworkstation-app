@@ -1,3 +1,10 @@
+## 2026-09-20 — AI Scheduler duplicate unresolved — FIX AWAITING USER RETEST
+
+- [x] LAB reproduced: coverage understood and simultaneously marked unresolved.
+- [x] Structured shift count fields are authoritative and no longer re-flagged as ambiguous coverage.
+- [x] Exact duplicate understood/unresolved text is removed.
+- [ ] CI/merge/deploy → user repeats «Ανάλυση οδηγιών».
+
 ## 2026-09-20 — Workforce PUBLISHED → Store Chat v4 — AWAITING LAB
 
 - [x] Μόνο PUBLISHED πρόγραμμα στέλνεται στο υπάρχον Store Chat.
