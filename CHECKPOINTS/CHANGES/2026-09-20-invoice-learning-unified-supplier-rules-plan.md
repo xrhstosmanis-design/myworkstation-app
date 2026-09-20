@@ -181,3 +181,21 @@ Azure απορριπτόταν και το OpenAI-only fallback επέστρεφ
   ενεργοποιείται και το αποτέλεσμα παραμένει fail-closed.
 - [x] `11/11` στοχευμένοι έλεγχοι και `1355/1355` πλήρες server suite PASS.
 - [ ] Green CI → merge → exact Render revision → ίδιο LAB upload.
+
+## Phase 1.3 — υποχρεωτικό Azure αποτέλεσμα και ασφαλές retry
+
+Το LAB επέστρεψε `Azure: REQUEST_FAILED` και κατόπιν εμφάνισε μερικό
+OpenAI-only αποτέλεσμα `40,90 € από 53,91 €`. Αυτό έκρυβε την πραγματική αιτία
+και μπορούσε να εκληφθεί ως κανονική ροή Azure → AI.
+
+- [x] Προσωρινά Azure transport/service failures (`408/409/425/429/5xx`,
+  fetch reset/timeout/DNS) επαναλαμβάνονται έως τρεις φορές με bounded delay.
+- [x] Μόνιμα ή μη διορθώσιμα σφάλματα (`401`, κενό αρχείο κ.λπ.) δεν
+  επαναλαμβάνονται άσκοπα.
+- [x] Αν η Azure κλήση αποτύχει τεχνικά μετά τις ασφαλείς επαναλήψεις, η ροή
+  σταματά με `AZURE_REQUEST_FAILED`. Δεν εκτελείται/παρουσιάζεται OpenAI-only
+  ανάγνωση ως αποτέλεσμα του Invoice Learning.
+- [x] Το OpenAI παραμένει fallback μόνο όταν το Azure απάντησε κανονικά αλλά
+  το αναγνωσμένο περιεχόμενο δεν πέρασε τον πλήρη αριθμητικό έλεγχο.
+- [x] `11/11` στοχευμένοι και `1357/1357` πλήρες server suite PASS.
+- [ ] Green CI → merge → exact Render revision → ίδιο LAB upload.
