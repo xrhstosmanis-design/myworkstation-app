@@ -1,3 +1,11 @@
+## 2026-09-20 — Workforce employee action buttons — AWAITING LAB
+
+- [x] Fix overlapping/clipped top-right actions.
+- [x] Rename Add to «Νέος εργαζόμενος».
+- [x] Keep «Φόρτωση Σεναρίου» as separate LAB action.
+- [x] Responsive wrapping.
+- [ ] CI/merge/deploy → visual LAB retest.
+
 ## 2026-09-20 — Owner unified Workforce hub rebased — AWAITING CI/LAB
 
 - [x] Rebased on current main after PR #1026 became non-mergeable from concurrent changes.

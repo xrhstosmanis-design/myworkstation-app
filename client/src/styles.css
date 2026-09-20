@@ -55,3 +55,5 @@ button,input,select,textarea{max-width:100%}
   .cards,.cloud-metrics{grid-template-columns:1fr}
   .app>main{padding:8px}
 }
+
+.employee-panel-head{align-items:flex-start;gap:24px}.employee-primary-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.employee-primary-actions button{width:auto;min-height:44px;white-space:nowrap;padding:10px 16px}.employee-add-button,.scenario-button{display:inline-flex;align-items:center;gap:8px}@media(max-width:800px){.employee-panel-head{flex-direction:column}.employee-primary-actions{width:100%;margin-left:0;justify-content:flex-start}.employee-primary-actions button{flex:1 1 180px}}
