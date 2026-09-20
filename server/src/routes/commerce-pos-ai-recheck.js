@@ -496,9 +496,11 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // supplier profile can request the same complete current-image verifier;
   // adding a new supplier must not require another hard-coded rule-key list.
   const supplierRequiresCompletePrintedTable=parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
+  const hasUnverifiedPrintedRows=parsed.productLines.length===0||parsed.productLines.some(line=>line.sourceColumnsVerified!==true);
   const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
     &&invoiceTotal>0
-    &&Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
+    &&(Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001
+      ||(supplierRequiresCompletePrintedTable&&hasUnverifiedPrintedRows));
   for(const [pageIndex,page] of pageJobs.entries()){
     const unresolved=parsed.productLines.filter(line=>{
       const q=Number(line.quantity||0),u=Number(line.unitCost||0),net=Number(line.netAmount||0);
