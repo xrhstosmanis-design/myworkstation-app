@@ -1,3 +1,14 @@
+## 2026-09-20 — Invoice Learning follows the POS provider fallback — AWAITING CI / LAB
+
+- [x] Exact shared POS Azure transport deployed at `55bb5c90c6ea13db073ae37a6d1351f22166f866`; repeated LAB still returns `ACCESS_403`.
+- [x] Remaining flow difference found: POS continues to its configured fallback after Azure failure, while Invoice Learning returned immediate `503`.
+- [x] Invoice Learning now continues to OpenAI using the original uploaded document when Azure fails, matching the POS provider chain.
+- [x] Existing full economic completeness check remains fail-closed: no empty or partial draft may be returned.
+- [ ] Green CI → merge → exact Render deploy → repeat the same invoice upload.
+- [ ] LAB PASS requires a complete reconciled result; otherwise the existing explicit `422` remains the safe outcome.
+- [x] No change to POS behavior, credentials, payment, draft persistence, stock, approval/finalization, fiscal, accounting or myDATA.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-provider-fallback.md`.
+
 ## 2026-09-20 — Invoice Learning uses the POS Azure transport — AWAITING CI / LAB
 
 - [x] Πραγματικό LAB: η Azure ανάγνωση λειτουργεί από το POS, ενώ το Invoice Learning απέτυχε με `ACCESS_403` — **LAB FAIL** για το Learning Lab.
