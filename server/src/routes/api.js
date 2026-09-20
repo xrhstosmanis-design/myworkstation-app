@@ -238,6 +238,10 @@ router.post("/schedules/interpret",async(req,res,next)=>{try{
   const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε η ανάγνωση των κανόνων.",code:"AI_PROVIDER_ERROR"});
   let parsed;try{parsed=interpretationSchema.parse(JSON.parse(outputText(raw)))}catch{return res.status(502).json({error:"Το AI δεν επέστρεψε έγκυρη ανάλυση κανόνων."})}
   const employeeIds=new Set(store.employees.map(row=>row.id)),shiftCodes=new Set(store.shifts.map(row=>row.code));parsed.rules=parsed.rules.filter(rule=>employeeIds.has(rule.employeeId)).map(rule=>({...rule,onlyShiftCodes:rule.onlyShiftCodes.filter(code=>shiftCodes.has(code)),fixedAssignments:rule.fixedAssignments.filter(row=>shiftCodes.has(row.shiftCode))}));
+  // shiftOverrides are structured, authoritative inputs from the same screen. Do not block confirmation when AI repeats a coverage sentence as unresolved even though the numeric fields already define it.
+  const effectiveShifts=store.shifts.map(shift=>({...shift,...(body.shiftOverrides?.[shift.id]||{})})),coverageDefined=effectiveShifts.filter(shift=>["MORNING","AFTERNOON","NIGHT"].includes(shift.code)).every(shift=>Number.isInteger(Number(shift.requiredCount))&&Number(shift.requiredCount)>=0);
+  if(coverageDefined){const coverageWords=["ΠΡΩ","ΑΠΟΓ","ΒΡΑΔ","ΝΥΧΤ","ΑΤΟΜ","ΒΑΡΔ"];parsed.unresolved=parsed.unresolved.filter(item=>{const normalized=plain(item);const coverageHits=coverageWords.filter(word=>normalized.includes(word)).length;return coverageHits<3})}
+  const understoodNorm=new Set(parsed.understood.map(plain));parsed.unresolved=parsed.unresolved.filter(item=>!understoodNorm.has(plain(item)));
   res.json({interpretation:parsed,model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5"});
 }catch(e){next(e)}});
 function hoursForShift(shift){
