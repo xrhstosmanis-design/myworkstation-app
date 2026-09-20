@@ -1,3 +1,12 @@
+## 2026-09-20 — Workforce Employee Performance v1 — AWAITING LAB
+
+- [x] Καρτέλα «Απόδοση & Ταμεία» ανά πραγματικό Workforce employee.
+- [x] 30-day attendance evidence: εργασία, υπερωρία, καθυστέρηση, προς έλεγχο + audit.
+- [x] POS metrics fail-closed ως NOT_LINKED_YET μέχρι verified employee↔operator/session relation — χωρίς name matching.
+- [ ] Authoritative POS link → sales/transactions/discounts/voids/returns/cash variances + drill-down.
+- [ ] AI conversational scheduler → preview → approval → publish/chat/email.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-workforce-employee-performance-v1.md`.
+
 ## 2026-09-20 — ΚΑΝΟΝΑΣ PASS → MANUAL — ACTIVE
 
 - [x] Κάθε πραγματικό LAB/LIVE/USER PASS μπαίνει υποχρεωτικά στο `docs/manual/` μαζί με checkpoint/active list.
