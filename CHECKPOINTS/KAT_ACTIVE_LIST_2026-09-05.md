@@ -1,3 +1,14 @@
+## 2026-09-20 — Invoice Learning uses the POS Azure transport — AWAITING CI / LAB
+
+- [x] Πραγματικό LAB: η Azure ανάγνωση λειτουργεί από το POS, ενώ το Invoice Learning απέτυχε με `ACCESS_403` — **LAB FAIL** για το Learning Lab.
+- [x] Αιτία κώδικα: το Invoice Learning διατηρούσε δεύτερη ανεξάρτητη υλοποίηση endpoint/auth/upload/polling αντί να χρησιμοποιεί την κοινή λειτουργική ροή του POS.
+- [x] Το Invoice Learning χρησιμοποιεί πλέον το exported `callAzure` του `commerce-azure-invoice-reader`; η ειδική κανονικοποίηση/εκμάθηση του Lab παραμένει αμετάβλητη.
+- [x] Τοπικά: πλήρες server suite `316/316` και νέος regression έλεγχος PASS.
+- [ ] Green CI → merge → exact Render deploy → ίδιο Invoice Learning upload. Μέχρι τότε δεν χαρακτηρίζεται fixed.
+- [ ] LAB PASS μόνο όταν η Azure κλήση ολοκληρωθεί χωρίς `ACCESS_403` και η υπάρχουσα fail-closed οικονομική συμφωνία επιτρέψει ασφαλές αποτέλεσμα ή σαφές `NO_SAFE_RESULT`.
+- [x] Καμία αλλαγή σε POS συμπεριφορά, credentials, πληρωμή, draft persistence, stock, approval/finalization, fiscal, accounting ή myDATA.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-azure-transport.md`.
+
 ## 2026-09-20 — Invoice Learning bounded OpenAI fallback — AWAITING CI / LAB
 
 - [x] Azure σύνδεση LAB PASS· νέο πραγματικό LAB FAIL: απλό `AI σφάλμα 502` μετά από Azure partial.
