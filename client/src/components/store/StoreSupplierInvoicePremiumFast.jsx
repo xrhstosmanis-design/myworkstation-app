@@ -2,23 +2,11 @@ import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
 import QRCode from "qrcode";
 import {mergeFastInvoiceHeaders} from "../../lib/invoice-fast-header-merge.js";
+import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
-const optimizeImage=async file=>{
-  if(!file?.type?.startsWith("image/")||file.size<=4500000)return file;
-  try{
-    const dataUrl=await readFile(file);
-    const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=dataUrl});
-    const width=image.naturalWidth||image.width,height=image.naturalHeight||image.height,scale=Math.min(1,2200/Math.max(width,height));
-    const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
-    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
-    const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",0.82));
-    return blob?new File([blob],file.name.replace(/\\.[^.]+$/,"")+".jpg",{type:"image/jpeg"}):file;
-  }catch{return file}
-};
-const checkPhoto=async file=>{if(!file.type.startsWith("image/"))return null;if(file.size<70000)return "Η φωτογραφία είναι πολύ μικρή· βγάλε καθαρότερη φωτογραφία του παραστατικού.";const u=URL.createObjectURL(file);try{return await new Promise(resolve=>{const i=new Image();i.onload=()=>{const ok=Math.max(i.width,i.height)>=1000&&Math.min(i.width,i.height)>=600;URL.revokeObjectURL(u);resolve(ok?null:"Η ανάλυση είναι χαμηλή. Φωτογράφισε το παραστατικό από πιο κοντά και με καλό φωτισμό.")};i.onerror=()=>resolve(null);i.src=u})}catch{return null}};
 
 function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
   const startedAt=Date.now(),poll=async()=>{
@@ -58,9 +46,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     const initial=pages.length===0;
     setReading(true);setStatus("Προετοιμασία σελίδων και γρήγορη ανάγνωση βασικών στοιχείων…");
     try{
-      for(const next of incoming){const qualityError=await checkPhoto(next);if(qualityError)throw new Error(qualityError)}
       const prepared=[];
-      for(const next of incoming){const optimized=await optimizeImage(next);prepared.push({file:optimized,dataUrl:await readFile(optimized)})}
+      for(const next of incoming){const result=await prepareDocumentFile(next,{strict:true,maxSide:3000,enhance:true}),clean=result.file;prepared.push({file:clean,dataUrl:await readFile(clean),imageQuality:result.quality})}
       const nextPages=[...pages,...prepared];setPages(nextPages);
       if(initial){setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""})}
       const headerPages=initial&&nextPages.length>1?[nextPages[0],nextPages[nextPages.length-1]]:[nextPages[nextPages.length-1]];
