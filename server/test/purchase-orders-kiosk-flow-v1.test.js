@@ -49,7 +49,7 @@ test("line editor supports the three discounts excise VAT gift markup and propos
 });
 
 test("Kiosk-style drilldowns are wired to real actions",()=>{
-  assert.match(client,/Διόρθωση εγγραφής παραγγελίας/);
+  assert.match(client,/Διόρθωση γραμμής τιμολογίου/);
   assert.match(client,/Διόρθωση κωδικού τιμολογίου/);
   assert.match(client,/Εναλλακτικοί κωδικοί Barcodes είδους/);
   assert.match(client,/data-line-edit/);
