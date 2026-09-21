@@ -271,6 +271,25 @@ function recoverDiscountsFromMath(content,quantity,unitPrice,netAmount){
   return [discount];
 }
 
+// Some providers return the discounted line value but omit the printed
+// percentage. Recover only a mathematically provable percentage; do not infer
+// a discount when the result is not close to a stable whole/decimal rate.
+function applyMathematicalDiscountRecovery(result){
+  if(!result||!Array.isArray(result.productLines))return result;
+  result.productLines=result.productLines.map(line=>{
+    const quantity=Number(line?.quantity||0),unitPrice=Number(line?.unitPrice||0),netAmount=Number(line?.netAmount||0);
+    const hasDiscount=[line?.discount1,line?.discount2,line?.discount3].some(value=>Number(value||0)>0);
+    if(hasDiscount||!(quantity>0&&unitPrice>0&&netAmount>0))return line;
+    const before=quantity*unitPrice,inferred=(1-netAmount/before)*100;
+    if(!(inferred>.05&&inferred<60))return line;
+    const rounded=Math.abs(inferred-Math.round(inferred))<=.25?Math.round(inferred):Math.round(inferred*100)/100;
+    const expected=before*(1-rounded/100);
+    if(Math.abs(expected-netAmount)>Math.max(.05,netAmount*.02))return line;
+    return {...line,discount1:rounded,discountRecovered:true,netUnitCost:money4(unitPrice*(1-rounded/100))};
+  });
+  return result;
+}
+
 function discountsReconcile(discounts,quantity,unitPrice,netAmount){
   if(!discounts.length)return false;
   const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),amount=Math.max(0,Number(netAmount||0));
@@ -629,7 +648,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result})));
+  result=applyMathematicalDiscountRecovery(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result}))));
   let completeness=invoiceReadingCompleteness(result);
   if(!completeness.complete&&azureDraft?.productLines?.length){
     const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));

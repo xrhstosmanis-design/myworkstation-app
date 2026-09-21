@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {collapseCrossProviderDuplicateOverage,collapseExactDuplicateInvoiceOverage,invoiceReadingCompleteness,mergeProviderInvoiceDrafts} from "../src/routes/platform-invoice-learning-ai.js";
+import fs from "node:fs";
 
 test("Invoice Learning rejects a one-line partial result against the printed total",()=>{
   const result=invoiceReadingCompleteness({
@@ -11,6 +12,12 @@ test("Invoice Learning rejects a one-line partial result against the printed tot
   assert.equal(result.reason,"PARTIAL_PRODUCT_LINES");
   assert.equal(result.lineGross,82.72);
   assert.equal(result.totalGross,1380.44);
+});
+
+test("Invoice Learning requires the printed discount to reconcile before storing it",()=>{
+  const route=fs.readFileSync(new URL("../src/routes/platform-invoice-learning-ai.js",import.meta.url),"utf8");
+  assert.match(route,/applyMathematicalDiscountRecovery/);
+  assert.match(route,/discountRecovered:true/);
 });
 
 test("Invoice Learning accepts reconciled lines within the invoice tolerance",()=>{
