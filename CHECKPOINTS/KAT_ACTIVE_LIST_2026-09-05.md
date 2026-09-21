@@ -1948,3 +1948,13 @@ Total output lines: 1413
 - [x] No payment, duplicate invoice, stock or cross-supplier economics are introduced by the retry.
 - [ ] Green CI → merge → deploy → refresh POS and retry MANTZAVAS 38001.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-pos-generic-retry.md`.
+
+## 2026-09-21 — POS reviewable draft on header-total difference — READY FOR CI
+
+- [x] A valid printed table may now populate the existing POS draft even when its line total differs from the invoice header.
+- [x] The server preserves verified row economics when the table reconciles to its own total; it does not copy another supplier's quantities, prices or discounts.
+- [x] The existing intake reconciliation flag records the difference and keeps the document in draft/approval review with stock and finalization blocked.
+- [x] A table with corrupted row arithmetic or no usable lines remains fail-closed.
+- [x] Targeted POS handoff/recovery/line-contract tests `45/45` PASS.
+- [ ] Green CI → merge → deploy → retest MANTZAVAS 38001 and manually correct 1–2 codes if needed.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-pos-review-draft.md`.

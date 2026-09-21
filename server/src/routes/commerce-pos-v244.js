@@ -207,12 +207,19 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           if(usingStoredProductLines&&Array.isArray(sourceLines)&&sourceLines.length)await verifyInvoiceDiscounts({productLines:sourceLines,apiKey:null});
           const sourceProductLines=Array.isArray(sourceLines)?sourceLines:[];
           const verifiedProductLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross);
-          if(claimsCompletePrintedTable(sourceProductLines)&&!verifiedProductLines)throw new Error("Οι επαληθευμένες τυπωμένες γραμμές αλλοιώθηκαν πριν από την καταχώριση (ποσότητα, έκπτωση ή ΦΠΑ). Το πρόχειρο δεν ενημερώθηκε.");
-          // A same-draft MANTZILAS recovery must never fall back to the legacy
-          // finalizer: that transformation is precisely what can erase the
-          // verified printed package, discount and excise fields.
-          if((handoff.replaceExistingDraft||requiresCompletePrintedTable)&&!verifiedProductLines)throw new Error("Η πλήρης ανάγνωση δεν έχει πλήρως επαληθευμένες τυπωμένες γραμμές. Το υπάρχον πρόχειρο διατηρήθηκε χωρίς αλλοίωση.");
-          const productLines=verifiedProductLines||finalizeV244ProductLines(sourceProductLines);
+          const sourceTableGross=round2(sourceProductLines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+          const verifiedAtOwnTotal=sourceTableGross>0?verifiedPrintedTableForPersistence(sourceProductLines,sourceTableGross):null;
+          // A complete printed table may be perfectly valid while its header
+          // total is still different. Keep those rows so BackOffice can show
+          // a reviewable draft; the intake route records the difference and
+          // blocks approval/stock until the operator corrects it. Reject only
+          // a table whose own row arithmetic is corrupted.
+          if(claimsCompletePrintedTable(sourceProductLines)&&!verifiedProductLines&&!verifiedAtOwnTotal)throw new Error("Οι επαληθευμένες τυπωμένες γραμμές αλλοιώθηκαν πριν από την καταχώριση (ποσότητα, έκπτωση ή ΦΠΑ). Το πρόχειρο δεν ενημερώθηκε.");
+          // Do not run a verified printed table through the legacy finalizer:
+          // it can reinterpret printed piece units or discounts. A table that
+          // is valid on its own arithmetic is safe to retain even when the
+          // invoice header total needs manual reconciliation.
+          const productLines=verifiedProductLines||verifiedAtOwnTotal||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
           if(handoff.replaceExistingDraft){
             const before=reconcileInvoiceLines(finalizeV244ProductLines(previousLines),handoff.totalGross);
