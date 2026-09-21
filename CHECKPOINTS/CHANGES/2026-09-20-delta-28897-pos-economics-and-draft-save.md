@@ -5,6 +5,7 @@
 - **LAB FAIL:** Purchase draft `28897` preserved gross `53,91 €` but displayed quantities multiplied by 1000, discount 1 as `99,9`, and VAT as zero.
 - Printed invoice truth: 11 rows; quantities `2,1,3,6,3,3,3,2,4,3,1`; discounts `10%` on rows 1–9 and `15%` on rows 10–11; VAT `13%`; net `47,71 €`; VAT `6,20 €`; gross `53,91 €`.
 - **LAB FAIL:** the Invoice Learning «Αποθήκευση Προχείρου» action did not provide a durable confirmed save.
+- **POST-DEPLOY LAB FAIL:** the fresh 10:49 PM order proved that raw `stockUnitsPerInvoiceUnit=1000` still survived as if it were an explicit package rule, while corrupt `99,9`/VAT-zero display fields survived beside intact net/gross totals.
 
 ## Root cause and bounded changes
 
@@ -14,6 +15,9 @@
 - Plain piece units now remain multiplier 1 unless an explicit verified package conversion exists. Complete printed rows must prove quantity × unit price × discounts = net and net + VAT = gross immediately before persistence. Any claimed-but-corrupt complete table fails closed.
 - A stale learned supplier pack can no longer override a current-image, verified printed `ΤΜΧ/TEM` unit.
 - Draft save now awaits `/api/platform/invoice-learning/workspace`, shows an in-button progress/success state, and alerts on failure.
+- Plain piece rows now ignore a raw OCR multiplier even when the field is already populated; only an explicit package unit or user-confirmed conversion can multiply stock.
+- Before insertion, corrupt discount/VAT display fields are recovered only when the intact row equation uniquely proves a canonical printed percentage.
+- Existing unfinalized POS OCR drafts receive the same bounded repair when their detail is reopened; no payment, stock, approval or finalization occurs.
 
 ## Automated evidence
 
@@ -21,7 +25,7 @@
 - Existing MANTZILAS package conversion and cent-rounding regression remains green.
 - Draft-save regression proves durable central request, awaited success, and visible failure.
 - Targeted tests and client production build: PASS.
-- Full server suite: required again on final branch before PR.
+- Full server suite: `1373/1373` PASS on the post-deploy repair branch.
 
 ## Safety boundaries
 

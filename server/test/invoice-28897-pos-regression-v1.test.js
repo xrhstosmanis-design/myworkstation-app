@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {claimsCompletePrintedTable,verifiedPrintedTableForPersistence} from "../src/invoice-line-reconciliation.js";
-import {shouldApplyLearnedPack,stockMultiplierForPersistedInvoiceLine} from "../src/routes/commerce-pos-v244-core.js";
+import {normalizePersistedInvoiceEconomics,shouldApplyLearnedPack,stockMultiplierForPersistedInvoiceLine} from "../src/routes/commerce-pos-v244-core.js";
 
 const quantities=[2,1,3,6,3,3,3,2,4,3,1];
 const prices=[1.74,1.74,2.07,1.58,1.47,2,2,2.69,1.12,1.6,1.38];
@@ -26,10 +26,17 @@ test("invoice 28897 preserves printed quantities, discounts and VAT",()=>{
 
 test("invoice 28897 does not convert litres or ml into thousands of pieces",()=>{
   assert.equal(stockMultiplierForPersistedInvoiceLine(rows[0]),1);
+  assert.equal(stockMultiplierForPersistedInvoiceLine({...rows[0],stockUnitsPerInvoiceUnit:1000}),1,"1LT OCR metadata is not a package multiplier for TEM");
   assert.equal(stockMultiplierForPersistedInvoiceLine({...rows[3],unitsPerPackage:450}),1);
   assert.equal(shouldApplyLearnedPack(rows[0],1000),false,"a stale learned pack cannot override a verified printed TEM row");
   assert.equal(shouldApplyLearnedPack({...rows[0],sourceColumnsVerified:false,unitsPerPackage:0},12),true,"legacy unverified package learning remains available");
   assert.equal(stockMultiplierForPersistedInvoiceLine({...rows[0],unit:"PACKAGE",invoiceUnit:"PACKAGE",unitsPerPackage:12,packRule:"LEARNED_PACK_12"}),12);
+});
+
+test("invoice 28897 repairs corrupted display economics from intact row totals",()=>{
+  const repaired=rows.map(line=>normalizePersistedInvoiceEconomics({...line,discount1:99.9,vatRate:0}));
+  assert.deepEqual(repaired.map(line=>line.discount1),discounts);
+  assert.deepEqual(repaired.map(line=>line.vatRate),Array(11).fill(13));
 });
 
 test("invoice 28897 fails closed if a verified discount or VAT is corrupted",()=>{

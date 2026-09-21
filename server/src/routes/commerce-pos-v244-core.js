@@ -30,7 +30,13 @@ export function stockMultiplierForPersistedInvoiceLine(line){
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||'ΤΜΧ');
   const invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
   const invoiceIsWeight=/(KG|KGR|ΚΙΛ)/i.test(invoiceUnit);
-  const explicitlyVerified=Boolean(line?.packageConversionApplied||line?.confirmedPackMapping||line?.packRule||Number(line?.stockUnitsPerInvoiceUnit||0)>1);
+  const invoiceIsPiece=/^(?:ΤΜΧ|TEM|TMX|PCS|PIECE)$/i.test(invoiceUnit.trim());
+  // A raw stockUnitsPerInvoiceUnit value is not proof of a package mapping:
+  // older OCR output filled it from 1LT/450ML in the description. A printed
+  // piece row must always stay one stock piece unless the invoice itself says
+  // PACKAGE/KIB or a user-confirmed package flag is present.
+  if(invoiceIsPiece&&!line?.packageConversionApplied&&!line?.confirmedPackMapping)return 1;
+  const explicitlyVerified=Boolean(line?.packageConversionApplied||line?.confirmedPackMapping||line?.packRule);
   // A package capacity printed in a product name (1LT, 450ML) is not a count
   // of stock pieces. Plain TEM/TMX invoice rows therefore remain one piece
   // unless a learned/confirmed conversion explicitly says otherwise.
@@ -38,6 +44,25 @@ export function stockMultiplierForPersistedInvoiceLine(line){
   const conversion=stockConversionFromDescription(line?.description,supplied,invoiceUnit);
   if(conversion.multiplier>1)return conversion.multiplier;
   return invoiceIsPackage&&Number(line?.unitsPerPackage||0)>1?Number(line.unitsPerPackage):1;
+}
+
+export function normalizePersistedInvoiceEconomics(line){
+  const quantity=Number(line?.quantity||0),unitCost=Number(line?.unitCost||0),netAmount=Number(line?.netAmount||0),grossAmount=Number(line?.grossAmount||0);
+  let discount1=Number(line?.discount1||0),discount2=Number(line?.discount2||0),discount3=Number(line?.discount3||0),vatRate=Number(line?.vatRate||0);
+  const initial=quantity*unitCost;
+  const factor=[discount1,discount2,discount3].reduce((value,discount)=>value*(1-discount/100),1);
+  const discountsMatch=initial>0&&netAmount>0&&Math.abs(initial*factor-netAmount)<=Math.max(.03,netAmount*.005);
+  if(!discountsMatch&&initial>netAmount&&netAmount>0){
+    const inferred=(1-netAmount/initial)*100,rounded=Math.round(inferred);
+    if(inferred>0&&inferred<60&&Math.abs(inferred-rounded)<=.35){discount1=rounded;discount2=0;discount3=0;}
+  }
+  const canonicalVat=[0,6,13,24];
+  const vatMatches=netAmount>0&&grossAmount>=netAmount&&Math.abs(netAmount*(1+vatRate/100)-grossAmount)<=Math.max(.03,grossAmount*.003);
+  if(!vatMatches&&netAmount>0&&grossAmount>=netAmount){
+    const inferred=(grossAmount/netAmount-1)*100,nearest=canonicalVat.reduce((best,value)=>Math.abs(value-inferred)<Math.abs(best-inferred)?value:best,canonicalVat[0]);
+    if(Math.abs(nearest-inferred)<=.6)vatRate=nearest;
+  }
+  return {...line,discount1,discount2,discount3,vatRate};
 }
 
 export function shouldApplyLearnedPack(line,learnedPack){
@@ -313,7 +338,8 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       // import. Every successful fill/reread replaces its OCR lines atomically
       // while the document is still DRAFT, so retries cannot double the order.
       if(skeletonRows[0]){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
-      for(const [index,line] of matched.entries()){
+      for(const [index,rawLine] of matched.entries()){
+        const line=normalizePersistedInvoiceEconomics(rawLine);
         const net=Math.max(0,Number(line.netAmount||0)),exciseTotal=Math.max(0,Number(line.exciseTotal||0)),gross=Math.max(net+exciseTotal,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net-exciseTotal);
         const invoiceUnit=String(line.unit||'ΤΜΧ');
         const stockUnitsPerInvoiceUnit=stockMultiplierForPersistedInvoiceLine({...line,invoiceUnit});

@@ -2336,3 +2336,13 @@ Total output lines: 1413
 - [ ] Green CI → merge → exact Render deploy.
 - [ ] LAB: save a Learning draft and reload it; then delete the erroneous diagnostic POS draft and submit `28897` once from POS. Acceptance requires one draft with quantities `2,1,3,6,3,3,3,2,4,3,1`, discounts `10%` for rows 1–9 / `15%` for rows 10–11, VAT `13%`, and total `53,91 €` (cent rounding tolerance only).
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
+
+## 2026-09-20 — DELTA 28897 fresh-run display repair — AWAITING CI / LAB
+
+- [x] Η ώρα `10:49 μ.μ.` επιβεβαίωσε ότι η προβληματική εγγραφή ήταν νέα και όχι παλιό πρόχειρο.
+- [x] Αφαιρέθηκε η εμπιστοσύνη σε raw OCR multiplier (`1LT → 1000`) για μονάδα `ΤΜΧ`.
+- [x] Προστέθηκε ασφαλής αποκατάσταση `99,9 → 10/15` και `ΦΠΑ 0 → 13` μόνο όταν αποδεικνύεται από ποσότητα, αρχική τιμή, καθαρή και μικτή αξία.
+- [x] Η υπάρχουσα νέα POS OCR παραγγελία διορθώνεται κατά το επόμενο άνοιγμα λεπτομερειών μετά το deploy.
+- [x] `1373/1373` full server tests PASS.
+- [ ] Green CI → merge → exact Render deploy → άνοιγμα της υπάρχουσας `28897` και οπτική επιβεβαίωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.

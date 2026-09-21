@@ -90,6 +90,27 @@ async function product(companyId,productId){if(!productId)return null;const rows
 async function order(companyId,orderId){const rows=await prisma.$queryRaw`SELECT o.*,s."name" AS "supplierName",st."name" AS "storeName" FROM "PurchaseOrder" o JOIN "Store" st ON st."id"=o."storeId" AND st."companyId"=o."companyId" LEFT JOIN "Supplier" s ON s."id"=o."supplierId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 async function line(companyId,lineId){const rows=await prisma.$queryRaw`SELECT l.*,o."companyId",o."status",o."storeId",o."supplierId" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."id"=${lineId} AND o."companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 function editable(found){if(found?.status==="INVOICED"){const error=new Error("Η τιμολογημένη παραγγελία είναι κλειδωμένη για αλλαγές.");error.status=409;throw error}}
+async function repairPosOcrDisplayEconomics(found){
+  if(found?.sourceType!=="POS_OCR_DRAFT"||found?.status!=="NEW")return 0;
+  const rows=await prisma.$queryRaw`SELECT "id","quantity","unitCost","discount1","discount2","discount3","vatRate","netAmount","grossAmount","invoiceUnit","stockUnitsPerInvoiceUnit" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
+  let repaired=0;
+  await prisma.$transaction(async tx=>{
+    for(const row of rows){
+      const quantity=n(row.quantity),unitCost=n(row.unitCost),net=n(row.netAmount),gross=n(row.grossAmount),initial=quantity*unitCost;
+      let d1=n(row.discount1),d2=n(row.discount2),d3=n(row.discount3),vat=n(row.vatRate),stock=Math.max(1,n(row.stockUnitsPerInvoiceUnit)||1);
+      const plainPiece=/^(?:ΤΜΧ|TEM|TMX|PCS|PIECE)$/i.test(String(row.invoiceUnit||"").trim());
+      if(plainPiece&&stock>1)stock=1;
+      const factor=(1-d1/100)*(1-d2/100)*(1-d3/100),discountsMatch=initial>0&&net>0&&Math.abs(initial*factor-net)<=Math.max(.03,net*.005);
+      if(!discountsMatch&&d1>=90&&initial>net&&net>0){const inferred=(1-net/initial)*100,rounded=Math.round(inferred);if(inferred>0&&inferred<60&&Math.abs(inferred-rounded)<=.35){d1=rounded;d2=0;d3=0;}}
+      const vatMatches=net>0&&gross>=net&&Math.abs(net*(1+vat/100)-gross)<=Math.max(.03,gross*.003);
+      if(!vatMatches&&net>0&&gross>=net){const inferred=(gross/net-1)*100,canonical=[0,6,13,24],nearest=canonical.reduce((best,value)=>Math.abs(value-inferred)<Math.abs(best-inferred)?value:best,0);if(Math.abs(nearest-inferred)<=.6)vat=nearest;}
+      if(stock!==Math.max(1,n(row.stockUnitsPerInvoiceUnit)||1)||d1!==n(row.discount1)||d2!==n(row.discount2)||d3!==n(row.discount3)||vat!==n(row.vatRate)){
+        await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "stockUnitsPerInvoiceUnit"=${stock},"discount1"=${d1},"discount2"=${d2},"discount3"=${d3},"vatRate"=${vat},"vatAmount"=${Math.max(0,gross-net)},"updatedAt"=NOW() WHERE "id"=${row.id}`;repaired++;
+      }
+    }
+  });
+  return repaired;
+}
 function calc(input,current={}){
   const quantity=Math.max(0.0001,n(input.quantity??current.quantity??1));
   const unitCost=Math.max(0,n(input.unitCost??current.unitCost??0));
@@ -176,6 +197,7 @@ router.patch("/:orderId",async(req,res,next)=>{try{
 
 router.get("/:orderId/detail",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});
+  await repairPosOcrDisplayEconomics(found);
   const rows=await prisma.$queryRaw`SELECT l.*,p."name" AS "productName",p."sku",p."salePrice" AS "currentSalePrice",p."vatRate" AS "productVatRate",c."name" AS "categoryName",sp."currentStock",(SELECT b."barcode" FROM "ProductBarcode" b WHERE b."productId"=p."id" ORDER BY b."createdAt" LIMIT 1) AS "primaryBarcode" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId} LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${found.storeId} WHERE l."orderId"=${found.id} ORDER BY COALESCE(l."ocrSequence",l."ocrLineIndex",2147483647),l."createdAt",l."id"`;
   const lines=rows.map(r=>({...r,quantity:n(r.quantity),unitCost:n(r.unitCost),stockUnitsPerInvoiceUnit:Math.max(1,n(r.stockUnitsPerInvoiceUnit)||1),discount1:n(r.discount1),discount2:n(r.discount2),discount3:n(r.discount3),exciseTotal:n(r.exciseTotal),vatRate:n(r.vatRate),initialUnitCost:n(r.initialUnitCost),markupPercent:n(r.markupPercent),proposedSalePrice:n(r.proposedSalePrice),netAmount:n(r.netAmount),vatAmount:n(r.vatAmount),grossAmount:n(r.grossAmount),currentSalePrice:n(r.currentSalePrice),currentStock:n(r.currentStock),gift:Boolean(r.gift)}));const totals=lines.reduce((a,r)=>{a.quantity+=r.quantity;a.net=money2(a.net+money2(r.netAmount+r.exciseTotal));a.vat+=r.vatAmount;a.gross+=r.grossAmount;return a},{quantity:0,net:0,vat:0,gross:0});res.json({order:found,lines,totals});
 }catch(error){next(error)}});
