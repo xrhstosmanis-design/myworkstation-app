@@ -74,3 +74,15 @@ test("POS persistence rechecks the exact central Learning invoice",()=>{
   assert.match(source,/if\(exactLearning\)lines=exactLearning\.lines/);
   assert.ok(source.indexOf("if(exactLearning)lines=exactLearning.lines")<source.indexOf("stage=\"match-products\""),"learned rows must replace OCR before product matching and persistence");
 });
+
+test("exact Learning result bypasses generic OCR profile mutation",()=>{
+  const source=fs.readFileSync(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+  const exactBoundary=source.indexOf("if(parsed.exactLearningDocumentApplied===true)");
+  const genericProfile=source.indexOf('failureStage="apply-supplier-profile-initial"');
+  assert.ok(exactBoundary>0&&genericProfile>exactBoundary);
+  const block=source.slice(exactBoundary,genericProfile);
+  assert.match(block,/parsed\.posExactLearningFinal=true/);
+  assert.match(block,/status"='AI_COMPLETE'/);
+  assert.match(block,/CENTRAL_LEARNING_EXACT_INVOICE/);
+  assert.match(block,/return res\.json/);
+});
