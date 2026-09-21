@@ -11,6 +11,28 @@ const AZURE_API_VERSION="2024-11-30";
 const AZURE_MODEL_ID="prebuilt-invoice";
 const OPENAI_FALLBACK_TIMEOUT_MS=Math.max(5000,Math.min(45000,Number(process.env.OPENAI_INVOICE_FALLBACK_TIMEOUT_MS||30000)));
 const openAiFallbackModel=()=>process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini";
+// The Learning Lab must not accept whichever stochastic provider response
+// happens to arrive first. Keep up to three candidates for the same uploaded
+// bytes, choose the strongest mathematically reconciled candidate, and reuse
+// that winner for later re-checks during this server process.
+const invoiceLearningReadCache=new Map();
+const invoiceReadFingerprint=(fileData,mimeType)=>crypto.createHash("sha256").update(`${mimeType}\n${fileData}`,"utf8").digest("hex");
+const invoiceCandidateScore=result=>{
+  const completeness=result?.completeness||{},lines=Array.isArray(result?.productLines)?result.productLines:[];
+  const valid=lines.filter(line=>line?.mathValidated||line?.discountRecovered).length;
+  const difference=Number.isFinite(Number(completeness.difference))?Number(completeness.difference):999999;
+  return (completeness.complete?10000000:0)+(completeness.requiresLineVatReview?100000:0)+valid*1000+lines.length*100-Math.min(difference,99999)*10+Number(result?.aiConfidence||0);
+};
+const cacheInvoiceLearningResult=(key,result)=>{
+  if(!key||!result||typeof result!=="object")return result;
+  const previous=invoiceLearningReadCache.get(key),candidates=Array.isArray(previous?.candidates)?previous.candidates.slice():[];
+  candidates.push(result);
+  const winner=candidates.slice(-3).sort((a,b)=>invoiceCandidateScore(b)-invoiceCandidateScore(a))[0];
+  const stable=candidates.length>=3;
+  invoiceLearningReadCache.set(key,{candidates:candidates.slice(-3),winner,stableRead:stable});
+  while(invoiceLearningReadCache.size>100)invoiceLearningReadCache.delete(invoiceLearningReadCache.keys().next().value);
+  return {...winner,readAttempts:Math.min(candidates.length,3),stableRead:stable};
+};
 
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
 const money4=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
@@ -615,6 +637,9 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
+  const readFingerprint=invoiceReadFingerprint(fileData,mimeType),cachedRead=invoiceLearningReadCache.get(readFingerprint);
+  if(cachedRead?.stableRead)return res.json({...cachedRead.winner,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true});
+  const cacheResult=result=>cacheInvoiceLearningResult(readFingerprint,result);
   let azureFailure="",azureFailureCode="",azureDraft=null,azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
@@ -623,7 +648,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       azure=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure));
       azureDraft=azure;
       const completeness=invoiceReadingCompleteness(azure);
-      if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
+      if(completeness.complete)return res.json(cacheResult({...azure,azureState:"READY",completeness}))
       azureFailure=completeness.reason;azureState="NO_SAFE_RESULT";
       console.warn("Azure Invoice Learning incomplete result; falling back to OpenAI.",{reason:completeness.reason,lineGross:completeness.lineGross,totalGross:completeness.totalGross,difference:completeness.difference});
     }catch(error){azureFailure=String(error?.message||error);azureFailureCode=publicAzureFailureCode(error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning request failed.",{code:azureFailureCode,reason:azureFailure.slice(0,300)})}
@@ -654,15 +679,15 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
     const hybridCompleteness=invoiceReadingCompleteness(hybrid);
     if(hybridCompleteness.complete){
-      return res.json({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness});
+      return res.json(cacheResult({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness}));
     }
   }
   if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
   // The Learning Lab is a supervised correction surface. Keep a partial
   // provider result editable so the owner can add/correct rows and teach the
   // verified layout. POS/order intake remains fail-closed on partial lines.
-  if(!completeness.complete)return res.json({...result,azureState,completeness,requiresManualCompletion:true,partialResult:true});
-  res.json({...result,azureState,completeness});
+  if(!completeness.complete)return res.json(cacheResult({...result,azureState,completeness,requiresManualCompletion:true,partialResult:true}));
+  res.json(cacheResult({...result,azureState,completeness}));
 }catch(error){next(error)}});
 
 export default router;

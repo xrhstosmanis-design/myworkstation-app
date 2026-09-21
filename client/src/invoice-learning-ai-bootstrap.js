@@ -51,11 +51,23 @@ if(labPath){
     products.forEach((line,i)=>{const row=oldRows[i];if(!row)return;change(row.querySelector('[data-k="supplierItemCode"]'),line.supplierItemCode||'');change(row.querySelector('[data-k="description"]'),line.description||'');change(row.querySelector('[data-k="quantity"]'),line.quantity||'');change(row.querySelector('[data-k="unitsPerPackage"]'),line.unitsPerPackage||'');change(row.querySelector('[data-k="unitPrice"]'),line.unitPrice||'');change(row.querySelector('[data-k="discount1"]'),line.discount1||0);change(row.querySelector('[data-k="discount2"]'),line.discount2||0);change(row.querySelector('[data-k="discount3"]'),line.discount3||0);change(row.querySelector('[data-k="vatRate"]'),line.vatRate||'');change(row.querySelector('[data-k="barcode"]'),line.barcode||'');change(row.querySelector('[data-k="status"]'),Number(line.confidence||0)>=85?'CONFIRMED':'REVIEW');row.style.display='';row.dataset.aiConfidence=String(line.confidence||0);row.title=`${providerLabel(data)} confidence ${Number(line.confidence||0).toFixed(0)}%`});
     oldRows.slice(products.length).forEach(row=>{row.style.display='none'});const badge=document.querySelector('#ocrBadge');if(badge)badge.textContent=`${providerLabel(data)} • ${Number(data.aiConfidence||0).toFixed(0)}% • ${products.length} προϊόντα`;
   };
+  const readStableInvoice=async()=>{
+    let best=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      const response=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:selectedFile.name,mimeType:selectedFile.type||'image/jpeg',fileData:selectedDataUrl,ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok){const providerState=data.azureState?` Azure: ${data.azureState}.`:'';throw new Error(`${data.error||`AI σφάλμα ${response.status}`}${providerState}`)}
+      best=data;
+      const status=document.querySelector('#status');
+      if(status&&attempt<3)status.textContent=`Έλεγχος σταθερότητας ίδιας φωτογραφίας ${attempt}/3…`;
+    }
+    return best;
+  };
   const runAi=async button=>{
     if(running)return;
     if(!selectedFile||!selectedDataUrl){alert('Επίλεξε ξανά το PDF ή τη φωτογραφία ώστε το AI να διαβάσει το πρωτότυπο παραστατικό.');return}
     running=true;if(button)button.disabled=true;const old=button?.textContent||'';if(button)button.textContent='✨ AI επανέλεγχος...';const status=document.querySelector('#status');if(status)status.textContent='Azure Document Intelligence πρώτα· OpenAI μόνο ως fallback. Γίνεται ανάγνωση του πρωτότυπου παραστατικού...';
-    try{const r=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:selectedFile.name,mimeType:selectedFile.type||'image/jpeg',fileData:selectedDataUrl,ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});const data=await r.json().catch(()=>({}));if(!r.ok){const providerState=data.azureState?` Azure: ${data.azureState}.`:'';throw new Error(`${data.error||`AI σφάλμα ${r.status}`}${providerState}`)}applyResult(data);const source=providerLabel(data);if(status)status.textContent=data.requiresManualCompletion?`⚠ ${source} έδωσε μερικό αποτέλεσμα. Διόρθωσε ή πρόσθεσε γραμμές και μετά πάτησε «Αποθήκευση Πρόχειρου».`:`${source} ολοκληρώθηκε: ${(data.productLines||[]).length} προϊόντα. Ξεκινά αυτόματη εύρεση barcode…`;await resolveAllBarcodes(status);if(status&&data.requiresManualCompletion)status.textContent=`⚠ Μερικό πρόχειρο ${source}: έλεγξε όλες τις γραμμές, πρόσθεσε όσες λείπουν και αποθήκευσέ το πριν την εκμάθηση.`;if(status&&!data.requiresManualCompletion)status.textContent=`Ανάγνωση: ${source}. Barcode lookup ολοκληρώθηκε.`}catch(err){if(status)status.textContent=`AI: ${err.message}`;alert(err.message)}finally{running=false;if(button){button.disabled=false;button.textContent=old}}
+    try{const data=await readStableInvoice();applyResult(data);const source=providerLabel(data);if(status)status.textContent=data.requiresManualCompletion?`⚠ ${source} έδωσε μερικό αποτέλεσμα. Διόρθωσε ή πρόσθεσε γραμμές και μετά πάτησε «Αποθήκευση Πρόχειρου».`:`${source} ολοκληρώθηκε: ${(data.productLines||[]).length} προϊόντα. Ξεκινά αυτόματη εύρεση barcode…`;await resolveAllBarcodes(status);if(status&&data.requiresManualCompletion)status.textContent=`⚠ Μερικό πρόχειρο ${source}: έλεγξε όλες τις γραμμές, πρόσθεσε όσες λείπουν και αποθήκευσέ το πριν την εκμάθηση.`;if(status&&!data.requiresManualCompletion)status.textContent=`Ανάγνωση: ${source}. Barcode lookup ολοκληρώθηκε.`}catch(err){if(status)status.textContent=`AI: ${err.message}`;alert(err.message)}finally{running=false;if(button){button.disabled=false;button.textContent=old}}
   };
   let statusChecked=false;
   const install=()=>{
