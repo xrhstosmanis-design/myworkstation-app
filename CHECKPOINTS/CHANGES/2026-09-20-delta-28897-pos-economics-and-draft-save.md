@@ -67,3 +67,17 @@
   loads their saved lines into the editable form without another OCR call.
 - Targeted tests `8/8`, full server suite `1379/1379`, client production build
   PASS. No stock, payment, approval, finalization, fiscal or accounting action.
+
+## 2026-09-21 — Final POS persistence boundary
+
+- After successful central Learning confirmation, the fresh POS order still
+  displayed `2000/1000/3000` quantities and `99,9%` discounts. It must not be
+  approved or finalized.
+- Exact Learning was checked during AI/background work, but final `pos-intake`
+  persistence could still reuse stale job `resultJson` lines.
+- `pos-intake` now resolves the exact central Learning document again after
+  validating the tenant supplier and before product matching or insertion.
+  Only the same supplier, invoice number, gross total and fully balanced
+  confirmed lines replace OCR output; every mismatch remains fail-closed.
+- Targeted DELTA/Learning regression: `9/9` PASS. No stock, payment, approval,
+  finalization, fiscal or accounting action was performed.

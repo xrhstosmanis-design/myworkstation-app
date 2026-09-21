@@ -69,7 +69,7 @@ test("final POS intake restores one uniquely matching collapsed invoice line",()
   assert.match(core,/Math\.abs\(productLinesGross\(restored\)-expected\)>0\.05/);
   const intake=core.slice(core.indexOf('router.post("/ai-reader/jobs/:jobId/pos-intake"'),core.indexOf('stage="validate-supplier"'));
   assert.match(intake,/restoreUniqueExactGrossGap\(parsedLines,body\.totalGross\)/);
-  assert.match(intake,/const lines=finalGapRecovery\.lines/);
+  assert.match(intake,/let lines=finalGapRecovery\.lines/);
 });
 
 test("an inferior reread leaves the existing draft lines untouched",()=>{

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {exactLearnedInvoiceCandidate} from "../src/lib/invoice-learning-exact-document.js";
 
 const line=(overrides={})=>({status:"CONFIRMED",supplierItemCode:"720547",description:"ΚΑΘΗΜΕΡΙΝΑ ΦΡΕΣΚΟ ΓΑΛΑ ΠΛΗΡΕΣ 1LT",quantity:2,unit:"ΤΜΧ",unitPrice:1.74,discount1:10,discount2:0,discount3:0,netValue:3.13,vatRate:13,...overrides});
@@ -47,4 +48,11 @@ test("DELTA 28897 preserves the photographed quantities and discounts",()=>{
   assert.deepEqual(result.lines.map(row=>row.discount1),[10,10,10,10,10,10,10,10,10,15,15]);
   assert.ok(Math.abs(result.learnedGross-53.91)<=.05);
   assert.deepEqual(result.vatSummary.map(row=>row.rate),[13]);
+});
+
+test("POS persistence rechecks the exact central Learning invoice",()=>{
+  const source=fs.readFileSync(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
+  assert.match(source,/exactLearnedInvoiceCandidate\(workspaceRows\?\.\[0\]\?\.state/);
+  assert.match(source,/if\(exactLearning\)lines=exactLearning\.lines/);
+  assert.ok(source.indexOf("if(exactLearning)lines=exactLearning.lines")<source.indexOf("stage=\"match-products\""),"learned rows must replace OCR before product matching and persistence");
 });
