@@ -6,6 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
+import {exactLearnedInvoiceCandidate} from "../lib/invoice-learning-exact-document.js";
 import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
@@ -252,7 +253,6 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
   if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 
   const pageJobs=[job];
@@ -272,6 +272,31 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     preferCentralStefanidis=supplierTaxId===STEFANIDIS_TAX_ID;
     preferCentralMantzilas=supplierTaxId===MANTZILAS_TAX_ID;
   }
+  // A completed Learning document belongs to this exact physical invoice,
+  // not merely to the supplier layout. Resolve it before any OCR provider so
+  // the POS receives the already-confirmed quantities, prices and discounts.
+  // The resolver fails closed unless supplier, invoice number, gross total,
+  // every line status and every arithmetic chain agree independently.
+  const linkedDraft=job.purchaseDocumentId?await prisma.$queryRaw`SELECT "totalGross" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1`:[];
+  const confirmedHandoffTotal=money2(linkedDraft[0]?.totalGross||posHandoff?.totalGross||0);
+  const workspaceRows=trustedHandoffSupplier&&posHandoff?.documentNumber&&confirmedHandoffTotal>0
+    ?await prisma.$queryRawUnsafe(`SELECT "state" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"='PLATFORM_GLOBAL' LIMIT 1`).catch(()=>[]):[];
+  const exactLearning=exactLearnedInvoiceCandidate(workspaceRows?.[0]?.state,{
+    supplier:trustedHandoffSupplier,
+    documentNumber:String(posHandoff?.documentNumber||""),
+    totalGross:confirmedHandoffTotal
+  });
+  let parsed=exactLearning?{
+    documentType:"INVOICE",aiConfidence:100,
+    supplier:{name:trustedHandoffSupplier.name||"",taxId:trustedHandoffSupplier.taxId||""},
+    documentNumber:String(posHandoff.documentNumber||""),documentDate:String(posHandoff.documentDate||""),
+    totalGross:confirmedHandoffTotal,vatSummary:exactLearning.vatSummary,productLines:exactLearning.lines,
+    rawText:exactLearning.lines.map(line=>line.rawText).filter(Boolean).join("\n"),
+    lines:exactLearning.lines.map(line=>({text:line.rawText,confidence:100})).filter(line=>line.text),
+    exactLearningDocumentApplied:true,exactLearningDocumentId:exactLearning.documentId,
+    exactLearningTotalDifference:exactLearning.difference
+  }:null;
+  if(!parsed&&!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το OCR είναι κάτω από 65%, αλλά δεν έχει συνδεθεί OPENAI_API_KEY στον server.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   const localRawText=pageJobs.map((page,index)=>`ΣΕΛΙΔΑ ${index+1}:\n${String(page.resultJson?.rawText||"").slice(0,12000)}`).join("\n\n").slice(0,60000);
   const fileParts=pageJobs.map((page,index)=>page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||`invoice-page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()}:{type:"input_image",image_url:page.contentData,detail:"high"});
   const prompt=`Είσαι δεύτερος ελεγκτής OCR για ελληνικά τιμολόγια προμηθευτών. Έχεις το ΠΡΩΤΟΤΥΠΟ παραστατικό ως εικόνα/PDF και από κάτω το πρόχειρο OCR κείμενο. Χρησιμοποίησε και τα δύο, με προτεραιότητα στο πρωτότυπο. Αναγνώρισε πρώτα documentType: CREDIT_NOTE μόνο όταν το παραστατικό γράφει καθαρά ΠΙΣΤΩΤΙΚΟ / CREDIT NOTE, διαφορετικά INVOICE. Βρες τον ΕΚΔΟΤΗ/ΠΡΟΜΗΘΕΥΤΗ, ΑΦΜ, αριθμό παραστατικού, ημερομηνία και τελικό ποσό ως θετική απόλυτη αξία. documentDate σε YYYY-MM-DD. Μην εφευρίσκεις στοιχεία.
@@ -287,9 +312,9 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 ΠΡΙΝ επιστρέψεις JSON, μέτρησε οπτικά πόσες πραγματικές σειρές προϊόντων υπάρχουν και βεβαιώσου ότι το productLines έχει τον ίδιο αριθμό. Έπειτα σύγκρινε νοητά το άθροισμα των τελικών αξιών γραμμών με το τελικό πληρωτέο ποσό. Αν υπάρχει εμφανής μεγάλη διαφορά, ξανακοίτα τον πίνακα για γραμμή που παρέλειψες πριν απαντήσεις.
 
 ΠΡΟΧΕΙΡΟ OCR (${Number(job.localConfidence||0)}%):\n${localRawText||"(δεν υπήρξε χρήσιμο OCR κείμενο)"}`;
-  let parsed=null,unifiedAiFailure=null,centralAzureFailure=null;
+  let unifiedAiFailure=null,centralAzureFailure=null;
   failureStage="read-provider-pages";
-  if((preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+  if(!parsed&&(preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     try{
       const azurePages=await readAzurePagesSequentially(pageJobs);
       parsed=mergeAzureInvoicePages(azurePages);
@@ -349,8 +374,6 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // The fast POS handoff total is the amount the operator explicitly confirmed
   // (and, for PAID, the immutable payment amount). Use it as the reconciliation
   // anchor for every supplier, not only the centrally profiled fast path.
-  const linkedDraft=job.purchaseDocumentId?await prisma.$queryRaw`SELECT "totalGross" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1`:[];
-  const confirmedHandoffTotal=money2(linkedDraft[0]?.totalGross||posHandoff?.totalGross||0);
   if(confirmedHandoffTotal>0){
     parsed.totalGross=confirmedHandoffTotal;
     parsed.posConfirmedTotalApplied=true;
