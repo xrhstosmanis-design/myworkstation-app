@@ -2016,3 +2016,12 @@ Total output lines: 1413
 - [x] Targeted draft-save and POS contract tests PASS.
 - [ ] Green CI → merge → deploy → save the 12-line draft again and verify it remains after refresh.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-draft-save.md`.
+## 2026-09-21 — Κοινός καθαρισμός φωτογραφιών παραστατικών — AWAITING CI / LAB
+
+- [x] Μία κοινή ροή για φωτογραφίες από PC/κινητό/κάμερα σε νέο τιμολόγιο, πληρωμή ανοιχτών τιμολογίων, λοιπά έξοδα και κατάθεση.
+- [x] Αυτόματο συντηρητικό κόψιμο, ίσιωμα, αφαίρεση σκιάς, ενίσχυση αντίθεσης και διατήρηση έως 3000 px πριν από Azure OCR/upload.
+- [x] Έλεγχος ανάλυσης και θολώματος πριν επιτραπεί αποστολή· σαφές μήνυμα για νέα λήψη.
+- [x] Τα PDF παραμένουν ανέπαφα. Καμία αλλαγή σε πληρωμή, πίστωση, duplicate guard, draft, stock, fiscal, accounting ή myDATA.
+- [x] Client production build PASS.
+- [ ] Πράσινο CI → merge → ακριβές deploy → LAB με καθαρή/θολή φωτογραφία και PDF.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-shared-document-image-quality.md`.
