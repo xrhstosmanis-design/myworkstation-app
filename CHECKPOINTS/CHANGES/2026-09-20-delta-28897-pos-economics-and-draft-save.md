@@ -56,3 +56,14 @@
 - Client production build PASS; full server suite `1377/1377` PASS.
 - Local implementation is ready for an explicitly authorized push; no remote
   mutation was performed at this checkpoint.
+
+## 2026-09-21 — Central restore and continuation
+
+- Live retry remained correctly fail-closed (`55,25 €` read versus `53,91 €`
+  printed), but exposed that the page rendered before central workspace sync.
+- Removed the competing static Lab bootstrap and made the route dispatcher
+  await `invoiceLearningServerSyncReady` before constructing the page.
+- Restored documents now have a visible «Συνέχιση / Επιβεβαίωση» action that
+  loads their saved lines into the editable form without another OCR call.
+- Targeted tests `8/8`, full server suite `1379/1379`, client production build
+  PASS. No stock, payment, approval, finalization, fiscal or accounting action.

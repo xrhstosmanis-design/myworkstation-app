@@ -2365,3 +2365,20 @@ Total output lines: 1413
 - [ ] LAB: reopen Learning `28897`, press «Επιβεβαίωση & Εκμάθηση» once, then
   delete the zero-line diagnostic draft and submit the invoice once from POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
+
+## 2026-09-21 — Central Learning restore before OCR — READY FOR PUSH
+
+- [x] **LIVE evidence:** a new Learning upload remained safely blocked as
+  `NO_SAFE_RESULT` (`55,25 €` versus printed `53,91 €`). No partial draft was
+  created.
+- [x] Root cause: the Lab rendered from the local cache while the central
+  workspace restore was still running, so the saved `28897` was not available
+  for continuation and the user was forced into another provider read.
+- [x] The Lab now awaits central restore before rendering and no longer has a
+  competing static bootstrap.
+- [x] Every restored invoice exposes «Συνέχιση / Επιβεβαίωση», loading its
+  saved rows into the editable review without Azure/OpenAI.
+- [x] Targeted `8/8`, full server `1379/1379`, client production build PASS.
+- [ ] Green CI → merge → exact Render deploy → refresh Learning and continue
+  saved `28897` without uploading the image again.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
