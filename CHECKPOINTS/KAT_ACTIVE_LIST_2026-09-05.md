@@ -2325,6 +2325,20 @@ Total output lines: 1413
 - [x] `73/73` targeted και `1367/1367` full server tests PASS τοπικά.
 - [ ] Green CI → merge/deploy → μία ασφαλής επανάληψη του `28897` από POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
+
+## 2026-09-21 — Exact Learning bypasses generic OCR mutation — READY FOR CI
+
+- [x] **Fresh POS FAIL (12:26):** the post-deploy attempt still ended as
+  `POS_FAILED / POS_BACKGROUND_FAILED` with zero lines.
+- [x] The exact learned rows were being passed again through generic OCR/profile
+  recovery, allowing their `sourceColumnsVerified` proof to be lost.
+- [x] Exact central Learning now ends AI recheck directly as `AI_COMPLETE` after
+  exact supplier/invoice identity, confirmed row arithmetic and gross-total
+  reconciliation. No second OCR/profile mutation is allowed.
+- [x] Targeted `7/7` and full server suite `1382/1382` PASS.
+- [ ] Push → PR → green CI → merge → exact Render deploy.
+- [ ] Delete the empty diagnostic draft and submit `28897` once after deploy.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
 ## 2026-09-20 — DELTA 28897 POS economics + durable Learning draft — AWAITING CI / LAB
 
 - [x] **LAB FAIL:** the first POS draft showed printed quantities multiplied by 1000 (`2 → 2000`, `1 → 1000`), discounts as `99,9` instead of `10/15`, and VAT `0` instead of `13`, despite gross `53,91 €`.

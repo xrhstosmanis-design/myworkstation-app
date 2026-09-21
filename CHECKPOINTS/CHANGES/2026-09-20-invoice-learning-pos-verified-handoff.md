@@ -41,3 +41,16 @@
 - Regression coverage includes the real DELTA quantities, discounts and stale
   `55.25` header with reconciled `53.91` rows.
 - Targeted exact-Learning tests `6/6` and full server suite `1381/1381` PASS.
+
+## 2026-09-21 exact-result mutation repair
+
+- Fresh live attempt at `12:26` still failed safely with zero rows after the
+  stale-header fix, proving that exact Learning resolution alone was not enough.
+- Root cause: the exact, fully balanced Learning rows were subsequently sent
+  through generic OCR supplier-profile recovery and complete-image verification,
+  which could reinterpret the rows or remove their verification proof.
+- An exact central Learning invoice is now a terminal AI-recheck result. It is
+  saved as `AI_COMPLETE` without generic OCR mutation only after the resolver
+  has independently validated supplier, invoice number, every confirmed row
+  equation and the full gross total.
+- Targeted tests `7/7`; full server suite `1382/1382` PASS.

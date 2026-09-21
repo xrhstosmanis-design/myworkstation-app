@@ -386,6 +386,28 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     :parsed.productLines.map(line=>({text:String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim(),confidence:Number(line.confidence||parsed.aiConfidence||0)})).filter(line=>line.text).slice(0,1000);
   parsed.lines=auditLines;
 
+  // An exact central Learning document has already passed the strictest
+  // boundary available here: same tenant supplier and invoice number, every
+  // active row confirmed, every quantity/price/discount equation balanced,
+  // and the complete row gross reconciled to the POS-confirmed total. Do not
+  // send those immutable economics through generic supplier-profile recovery
+  // or another image verifier; either can reinterpret the learned columns and
+  // strip their sourceColumnsVerified proof before the draft is persisted.
+  if(parsed.exactLearningDocumentApplied===true){
+    const exactInvoiceTotal=money2(parsed.totalGross||confirmedHandoffTotal||0);
+    parsed.productLinesGrossBeforeRecovery=lineGrossTotal(parsed.productLines);
+    parsed.productLinesGrossAfterRecovery=parsed.productLinesGrossBeforeRecovery;
+    parsed.invoiceTotalForCompleteness=exactInvoiceTotal;
+    parsed.productLinesTotalDifference=money2(parsed.productLinesGrossAfterRecovery-exactInvoiceTotal);
+    parsed.productLinesComplete=Math.abs(parsed.productLinesTotalDifference)<=TOTAL_TOLERANCE+0.000001;
+    parsed.posExactLearningFinal=true;
+    failureStage="match-supplier-exact-learning";
+    const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=100;
+    failureStage="save-exact-learning-result";
+    await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+    return res.json({id:job.id,status:"AI_COMPLETE",aiCalled:false,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:"CENTRAL_LEARNING_EXACT_INVOICE"});
+  }
+
   failureStage="apply-supplier-profile-initial";
   parsed=await applyCentralSupplierProfile(parsed);
   if(isMantzilasInvoice(parsed))parsed.productLines=parsed.productLines.map(recoverMantzilasEconomics).map(applyMantzilasPackaging);
