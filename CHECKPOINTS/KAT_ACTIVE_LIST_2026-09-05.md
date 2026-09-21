@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 68659)
-Total output lines: 2443
+Warning: truncated output (original token count: 68797)
+Total output lines: 2451
 
 ## 2026-09-20 — Employee modal scroll fix rebased — AWAITING CI/LAB
 
@@ -446,7 +446,412 @@ Total output lines: 2443
 - [x] Allow one strategy advance only when a `POS_FAILED` job has an existing purchase draft, a prior `RECONCILIATION_REREAD` marker from an older strategy and the exact safe-inferior-reread error. Claim the same job/draft as `POS_REPROCESSING` and keep `replaceExistingDraft=true`.
 - [x] All other non-retryable failures remain blocked. Preserve the existing image, handoff, draft and settlement identity; no upload, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
 - [x] Focused reconciliation/POS regressions `111/111`, full server suite `1306/1306`, production build, syntax and diff checks: PASS. Green CI, merge, exact deploy and LAB remain required.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-failed-reread-strateg…48659 tokens truncated…9-17-mantzilas-scaled-quantity-discount-ambiguity.md`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-failed-reread-strategy-advance.md`.
+
+## 2026-09-18 — Preserve verified MANTZILAS table at POS persistence
+
+- [x] **LAB FAIL** on exact production `0230624780a5103f3088b880111a4ec2ef2f3af9`: invoice `12674` remains an unapproved 13-line draft at `331.09 / 374.12 EUR` against printed gross `366.47 EUR`.
+- [x] Current draft evidence: both Red Bull lines (`00206`, `11`) were expanded from printed `24` to `576` pieces; every discount column is zero; code `12798` now correctly exposes `12` pieces, while `12718` remains one piece in the retained older table.
+- [x] The complete MANTZILAS reread itself accepts only a contiguous physical table whose row arithmetic, VAT footer and independent invoice total agree within `0.05 EUR`. The POS worker then sent that verified table through the older heuristic finalizer a second time, producing the reported `120.28 EUR` mismatch and safely retaining the inferior draft.
+- [x] Persist a table without heuristic reinterpretation only when every row carries the complete-table verification markers and a fresh independent reconciliation still matches the invoice total within `0.05 EUR`. Partial, unverified or mismatched tables retain the existing guarded finalizer.
+- [x] Advance the bounded reread marker to V12 so the same unapproved draft can be reread once after deploy. Preserve the original image, draft and settlement identity; no upload, duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused reconciliation/POS regressions `110/110`, full server suite `1305/1305`, production build, syntax and diff checks: PASS. Green CI, merge, exact deploy and LAB remain required.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-verified-table-persistence.md`.
+
+## 2026-09-18 — MANTZILAS 12798 / 12718 verified 12-piece cartons
+
+- [x] **LAB FAIL** on invoice `12674`: the draft exposes supplier codes `12798` and `12718` as `24` stock pieces because the generic MANTZILAS 330 ml carton rule was applied.
+- [x] The operator physically confirmed both cartons contain `12` pieces; code `12798` independently prints `(10+2)` on the current invoice image.
+- [x] Scope the correction to exact MANTZILAS supplier codes `12798` and `12718`, a LOUX 330 ml description and positive current-invoice package quantity/price. Preserve all current invoice economics, including the printed `19%` discounts.
+- [x] Unrelated LOUX/330 ml codes remain on the generic rule. No quantity, price, discount or tax is copied from an older invoice.
+- [x] Focused packaging/column regressions `25/25`, full server suite `1304/1304`, production build, syntax and diff checks: PASS. CI, merge, exact deploy and reread of the existing unapproved `12674` draft remain required.
+- [x] No payment, credit, upload, duplicate draft, approval, finalization, stock posting, fiscal, accounting or myDATA mutation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-12798-12718-pack12.md`.
+
+## 2026-09-18 — Invoice 12674 false total-only duplicate recovery
+
+- [x] **LAB FAIL** on exact production `e64de7bc58c860c78570f0ef0706a1229a7160eb`: invoice `12674` completed automatically and its draft displayed `13` rows / `366.50 EUR`, but comparison with the original image proves the apparent `0.03 EUR` agreement is false.
+- [x] The original has one supplier-code `59` row and a separate final `01880` row; the draft duplicated code `59`, shifted neighbouring economics/VAT and exposed zero discounts although the printed rows contain `31%` and `19%` discounts.
+- [x] Root cause: `restorePrintedRepeatedLine` allowed a unique total gap alone to synthesize a second physical row. That artificial row closed the total and suppressed the complete MANTZILAS printed-table verifier.
+- [x] Require independent current-document text evidence that the exact supplier code occurs more times than the structured table before restoring a repeated row. A total gap alone now remains a mismatch and triggers the existing full row/code/discount/VAT verifier.
+- [x] Advance the one-attempt persisted-draft reread marker to V11 so the existing unapproved draft can be reread after deploy without another POS submission, payment, credit or upload.
+- [x] Preserve the current draft, settlement identity and source image. No approval, finalization, stock, fiscal, accounting or myDATA mutation.
+- [x] Focused invoice/recovery regressions `105/105`, full server suite `1304/1304`, production build, syntax and diff checks: PASS. CI, merge and exact deploy remain required. LAB remains FAIL until the original `12674` image is reread to the printed physical rows, discounts and VAT footer.
+- [x] Separate verified packaging correction prepared: supplier codes `12798` and `12718` expose `12` stock pieces, not `24`, without changing invoice economics; see the newer checkpoint above.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-invoice-12674-false-total-duplicate.md`.
+
+## 2026-09-18 — MANTZILAS isolated duplicate-row reconciliation
+
+- [x] **LAB FAIL** after exact production `67216bce30d4abdadec4c5eaa8c5cb155c166384`: the durable Phase 1 worker claimed invoice `12674` and reached a terminal diagnostic without another POS submission, but the corrective reread returned `13` rows / `372.63 EUR` against printed gross `366.47 EUR` (unique overage `6.16 EUR`).
+- [x] Root cause boundary: supplemental row merging can retain one isolated identical physical-row replay; the existing replay guard covers only a duplicated whole table.
+- [x] Collapse one isolated replay only for a single-page MANTZILAS invoice when exactly one duplicated full physical/economic fingerprint has gross equal to the complete overage and removing one occurrence reconciles the independent invoice total within `0.05 EUR`.
+- [x] Preserve ambiguous or genuine repeated rows, the full printed-table verifier, invoice `12665` row normalizations (`00009`, `02410`), explicit `12 TMX`, and every payment/draft/stock/approval/finalization/fiscal/accounting boundary.
+- [x] Focused route and reconciliation regressions `69/69`, full server suite `1304/1304`, production build, syntax and diff checks: PASS locally. LAB remains FAIL until green CI, merge, exact deploy and automatic recovery of the existing `12674` draft to all printed rows and `366.47 EUR`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-mantzilas-isolated-duplicate-row.md`.
+
+## 2026-09-17 — Phase 1 LAB retry amplification follow-up
+
+- [x] **LAB FAIL** on exact production `dde564989fdb49d72b170c1d5548e57fb12c0a0d`: invoice `12674` remained at `0 items / 0.00 EUR` in `POS_PROCESSING / POS_BACKGROUND` after the operator left the POS and refreshed BackOffice.
+- [x] The durable dispatcher did claim the job, but one database attempt still contained the old two-pass full-OCR loop and an internal HTTP failure/timeout could also be replayed through the public Render origin. Those nested retries can keep the draft in `POS_PROCESSING` for many minutes before the durable retry state is visible.
+- [x] Make the database task the only retry owner. A loopback connection failure may still fall back to the public origin, but an HTTP response or timeout is not replayed as a second expensive OCR operation.
+- [x] Preserve the same settlement, attachment, job and draft. No resubmission, payment/credit, approval, finalization, stock, fiscal or accounting mutation.
+- [x] Focused lifecycle regressions `44/44`, full server suite `1303/1303`, production build, syntax and diff checks: PASS locally.
+- [ ] Require green CI, merge, exact deploy and automatic recovery of the same invoice `12674` without another submission. LAB remains FAIL until all printed rows and `366.47 EUR` complete correctly.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-phase1-durable-retry-amplification.md`.
+
+## 2026-09-17 — Phase 1 database-owned POS invoice worker
+
+- [x] **LAB NOT TESTED**: implementation is locally verified only; CI PASS or deploy will not be reported as LAB PASS.
+- [x] Replace browser/BackOffice-triggered in-memory ownership with a durable `PosInvoiceBackgroundTask` row for each accepted POS invoice handoff.
+- [x] The server dispatcher starts with the application, atomically claims work with `FOR UPDATE SKIP LOCKED`, and recovers expired leases after a process restart without requiring POS polling or BackOffice refresh.
+- [x] Persist bounded retry state and require the matching lease token before completion, retry or terminal failure may update the durable task/job.
+- [x] Claim only non-terminal jobs with the exact stored tenant, store and handoff; a deleted job cascades its task, and `AWAITING_APPROVAL` / `CONFIRMED` jobs are never reclaimed.
+- [x] Preserve the signed job-scoped internal capability and the existing single settlement, attachment, draft and intake idempotency guards. No stock posting, approval, finalization, fiscal or accounting behavior changed.
+- [x] Preserve the final invoice `12665` LAB PASS rows (`00009` and `02410`) and keep invoice `12674` as LAB FAIL until a new deployed POS-front test proves the whole flow.
+- [x] Focused invoice/background regressions `95/95`, full server suite `1303/1303`, production client/server/Prisma build, syntax and diff checks: PASS locally.
+- [ ] Require green CI, merge, exact deployed revision and one fresh single-submission POS-front LAB with no BackOffice refresh, duplicate settlement, stock posting or finalization.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-phase1-durable-pos-invoice-worker.md`.
+
+## 2026-09-17 — PR #940 durable-claim capability race
+
+- [x] Main includes PR `#940` at `637cca348a5b61019a8fa705429601d07c6558a9`, allowing the exact signed POS background capability through the queued/draft-ready claim transition only.
+- [x] Normal browser authorization and terminal states remain excluded; payment, draft, stock, approval and finalization boundaries are unchanged.
+- [ ] **LAB FAIL remains authoritative** for invoice `12674`; no fresh deployed POS-front acceptance has yet superseded it.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-background-durable-claim-race.md`.
+
+## 2026-09-17 — MANTZILAS explicit `12 TMX` package conversion
+
+- [x] **LAB FAIL** on invoice `12674`: supplier code `01880`, LIPTON peach tea 500 ml, is printed as a `12 TMX` package but the draft exposes `1 piece x 9.37 EUR`.
+- [x] Treat an explicit count-bearing unit token from the current physical row (for example `12TMX`) as one invoice package of 12 stock pieces, without changing invoice quantity, net, VAT or gross economics.
+- [x] Expected stock presentation for `01880`: `12 pieces x 0.780833 EUR`; preserved invoice net `9.37 EUR`, VAT 13%, gross `10.59 EUR`.
+- [ ] Do not infer a package from bottle volume text alone, supplier history or an old invoice. Preserve all payment, draft, stock-posting, approval, finalization, fiscal and accounting guards.
+- [x] Focused regressions `124/124`, full server suite `1301/1301`, client production build, server/Prisma build and diff checks PASS locally.
+- [ ] Require green CI, merge, exact deploy and one fresh POS-front LAB together with the session-independent background correction.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-explicit-count-unit-package.md`.
+
+## 2026-09-17 — POS background must survive operator-session expiry
+
+- [x] **LAB FAIL** on exact production `a2e6fb581809cbdc16402d5a1f18e4ccb31ab797`: fresh MANTZILAS invoice `12674` was submitted exactly once from the POS front and its durable draft reached 12 rows, but the row sum was `348.72 EUR` versus the confirmed printed invoice total `366.47 EUR` (difference `17.75 EUR`).
+- [x] The aggregate-mismatch guard correctly requested the full current-page correction. The correction then failed at `POS_BACKGROUND_AI_RECHECK` with `Η συνεδρία έληξε.`, proving that the durable server background still depends on the operator browser session remaining valid.
+- [x] Detailed row evidence: supplier code `01880` is a `12 TMX` LIPTON package, not one stock piece. Expected display is `12 x 0.780833 EUR`, preserving net `9.37 EUR` and gross `10.59 EUR`.
+- [x] The operator confirms the displayed discounts are also wrong. The existing 12-row draft is not acceptable; the corrective current-image reread must replace original price and discounts 1/2/3 only from balanced physical-row evidence and reconcile the complete invoice to `366.47 EUR`.
+- [x] After the already-authenticated durable POS handoff, continue only the exact tenant/store/job/path/method/body-scoped background operations with a five-minute signed server capability, without reusing an expiring browser token. Preserve every normal authorization check for browser and external requests.
+- [ ] Preserve the single existing credit draft and attachment. No second upload, payment/credit, duplicate draft, approval, finalization, stock posting, fiscal or accounting mutation during diagnosis or recovery.
+- [x] Focused regressions `124/124`, full server suite `1301/1301`, client production build, server/Prisma build and diff checks PASS locally.
+- [ ] Require green CI, merge and exact deployed revision before a new POS-front LAB. BackOffice refresh/recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-background-session-independent.md`.
+
+## 2026-09-17 — POS-front MANTZILAS full verification after aggregate mismatch
+
+- [x] Current LAB evidence remains FAIL: POS-front invoice `12424` created one draft but finished at `0 items / 0.00 EUR` with `POS_FAILED / POS_BACKGROUND_FAILED`.
+- [x] User acceptance rule: BackOffice refresh/recovery is not acceptance. A fresh invoice must complete correctly from one POS-front submission without a second upload or operator recovery action.
+- [x] When the current MANTZILAS candidate table does not reconcile to the confirmed invoice total, do not exempt Azure rows merely because each row carries `sourceColumnsVerified`; the aggregate mismatch disproves the table as a complete verified batch.
+- [x] Reverify the complete current-page MANTZILAS table only in that mismatch case, while preserving the fast path for an already reconciled table and every payment/draft/stock/approval/finalization guard.
+- [x] Focused invoice/POS tests `73/73`, full server suite `1299/1299`, client production build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge, exact deploy and one fresh POS-front LAB. BackOffice refresh of `12424` may provide diagnostics but cannot mark this change PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-front-mantzilas-full-mismatch-verification.md`.
+
+## 2026-09-17 — MANTZILAS exact reconciliation diagnostics
+
+- [x] LAB FAIL on exact production `a2c68311721fcc4635c9ebdf50aeb068b13810dc`: existing `12424` reached `POS_FAILED / POS_BACKGROUND_FAILED` with `AI_RECHECK_INTERNAL [discount-verification]` and zero rows.
+- [x] Split the final reconciliation stage from provider discount verification and expose only safe line-count/total/difference diagnostics while retaining the incomplete table outside the draft.
+- [x] Keep the exact stored attachment recoverable; no new upload, credit, draft, stock, approval or finalization.
+- [x] Focused regression tests `73/73`, full server suite `1299/1299`, client build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge and exact deploy before the same-draft diagnostic recovery.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-reconciliation-diagnostics.md`.
+
+## 2026-09-17 — POS handoff must bypass generic Azure recheck
+
+- [x] LAB FAIL on exact production `62906a202d3f1a861e4bcaeed89527dc1dceaa2d`: fresh MANTZILAS `12424` remained at zero rows and entered `POS_QUEUED / POS_RECOVERING` after four minutes.
+- [x] Root cause: the generic Azure recheck runs before the POS-specific reader and may replace `resultJson`, erasing `posHandoff` before the MANTZILAS path can use the confirmed supplier and total.
+- [x] Bypass the generic Azure recheck whenever the durable job contains a POS handoff, preserving it for the POS-specific route.
+- [x] Focused regression tests `74/74`, isolated transient check `3/3`, full server suite `1297/1297`, client build and server/Prisma build PASS.
+- [ ] Require focused/full tests, builds, green CI, merge, exact deploy and recovery of the same draft without another upload or credit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-handoff-generic-azure-bypass.md`.
+
+## 2026-09-17 — MANTZILAS 12424 existing-draft line recovery
+
+- [x] FAST-header LAB PASS on exact production `59cc0f4655dfcca4c9dd4ce9f1d450ae8f6e1558`: invoice `12424` now shows `318.74 EUR`, not account balance `4,531.01 EUR`.
+- [x] Full-flow LAB FAIL: the one credit draft remained at zero rows in `POS_QUEUED / POS_RECOVERING` for about 14 minutes.
+- [x] Root cause: Azure candidate rows were reconciled against the provider's wrong header total and discarded before the verified VAT-summary total replaced it; they were not rechecked against `318.74 EUR`.
+- [x] Preserve and reconcile those current-image candidates against the final confirmed total, and recover the exact existing draft through the bounded central MANTZILAS Azure path.
+- [x] Focused regression tests `94/94`, full server suite `1296/1296`, client build and server/Prisma build PASS.
+- [ ] Require green CI, merge, exact deploy and recovery of the existing draft without another upload, credit, stock action or finalization.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-12424-existing-draft-recovery.md`.
+
+## 2026-09-17 — MANTZILAS FAST total must ignore account balance
+
+- [x] LAB FAIL: invoice `12424` selected the printed new account balance `4,531.01 EUR` instead of invoice gross `318.74 EUR`.
+- [x] Printed proof: VAT summary net `264.27 EUR` + VAT `54.47 EUR` = gross `318.74 EUR`; supplier, number and date already pass.
+- [x] Implemented the bounded MANTZILAS VAT-summary total recovery and explicit balance exclusion without changing payment, draft, stock, approval, finalization, fiscal or accounting behavior.
+- [x] Focused tests `65/65`, full server suite `1295/1295`, client build and server/Prisma build PASS.
+- [ ] Require green CI, merge, exact deployed revision and a fresh POS-front LAB read before marking fixed.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-fast-total-not-balance.md`.
+
+## 2026-09-16 — POS FAST complete-table handoff
+
+- [x] LAB follow-up after `a3f9a916`: `27293` failed at `POS_BACKGROUND_AI_RECHECK`; OpenAI timed out and Azure F0 returned quota `403`.
+- [x] Compact full-OCR response: request the header plus structured `productLines` once, then rebuild audit text/lines locally instead of making the model repeat the invoice three times.
+- [x] Provider deadlines and all payment, draft, stock, approval, finalization and fiscal boundaries remain unchanged.
+- [x] LAB follow-up after `56735d39`: `27293` remained at zero items and entered `POS_QUEUED / POS_RECOVERING`; the complete FAST table did not reach the handoff.
+- [x] Bounded deadline correction: the complete structured-table request receives 70 seconds and the browser waits 100 seconds, preventing the former four-field timeout from discarding the table first.
+- [x] Existing payment/draft identity and all stock, approval, finalization and fiscal boundaries remain unchanged.
+- [x] LAB follow-up after `83255307`: `27293` again remained `POS_PROCESSING` with zero rows because a useful Azure header returned before the OpenAI FAST table reader was called.
+- [x] Follow-up correction: Azure may finish FAST by itself only with a complete table reconciled within `0.05 EUR`; otherwise its header is preserved while OpenAI FAST reads the table.
+- [x] If OpenAI fails, the safe Azure header still survives; no payment, stock, approval, finalization or fiscal behavior changes.
+- [x] LAB FAIL: new POS-front invoice `27293` kept the correct four header fields but remained `POS_PROCESSING` with zero items after more than two minutes and refresh.
+- [x] Root cause: the successful OpenAI F…38797 tokens truncated…reek `ΤΕΜ/ΤΜΧ` package-count markers.
+- [x] Restore the single unique line whose gross value closes the exact invoice gap even when OCR omits its code from the text layer.
+- [x] 23/23 targeted tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify seven rows, 1,380.44 €, and converted cup pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-greek-pieces-exact-gap.md`.
+
+## 2026-09-15 — POS linked-draft total authority
+
+- [x] LAB proved conversions succeeded but six lines were still treated as complete.
+- [x] Root cause: recheck could retain the stale OCR/job total instead of the linked POS draft total.
+- [x] Reconciliation now prefers the same DRAFT PurchaseDocument total, then safely falls back to the POS handoff.
+- [x] 24/24 targeted tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify the exact missing FR1500 row is restored.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-linked-draft-total-authority.md`.
+
+## 2026-09-15 — POS final-intake exact-gap recovery
+
+- [x] LAB proved all stock-unit conversions are correct but the legitimate second FR1500 charge is still absent from the six-line draft.
+- [x] Final POS intake now restores a line only when one unique existing row closes the complete authoritative invoice gap within 0.05 €.
+- [x] Ambiguous or non-reconciling gaps remain unchanged for manual review.
+- [x] Targeted reread/intake tests PASS; no payment, stock posting, approval or finalization change.
+- [ ] Await CI/deploy and verify seven rows and approximately 1,380.44 €.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-final-intake-exact-gap.md`.
+
+## 2026-09-15 — POS supplier stock conversion exactly once
+
+- [x] LAB now has seven rows and a reconciled 1,380.45 € total.
+- [x] LAB exposed double stock conversion: 36,000,000 g / 240,000 pieces instead of 36,000 g / 2,400 pieces.
+- [x] Supplier rules now preserve invoice quantity and package price and store only one stock conversion multiplier.
+- [x] Regression test prevents converted quantity or divided unit cost from being persisted as invoice economics.
+- [ ] Await CI/deploy and verify 36,000 g, 2,000 g, 1,000 g, 2,400 / 500 / 500 pieces.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-supplier-conversion-once.md`.
+
+## 2026-09-15 — POS background request timeout
+
+- [x] Two-page LAB invoice 2612188 remained in POS_PROCESSING with zero lines for more than ten minutes.
+- [x] Internal POS background requests now have a 90-second deadline and reuse the existing bounded retry/recovery path.
+- [x] Persisted pages and the same DRAFT remain authoritative across timeout and restart.
+- [x] Regression test covers timeout and retry classification.
+- [ ] Await CI/deploy and verify the existing two-page draft completes without another upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-background-request-timeout.md`.
+
+
+## 2026-09-15 — Invoice Learning invalid AI response retry
+
+- [x] A blank or invalid structured fallback response receives one bounded retry against the original invoice.
+- [x] Empty drafts remain blocked; payment, stock, accounting, approval and finalization remain unchanged.
+- [ ] Await CI/deploy, then re-read Coffee Union `ΔΑ0011467` from the original POS/front flow.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-ai-response-retry.md`.
+
+## 2026-09-15 — POS multi-page header continuation
+
+- [x] LAB reproduced internal error when page 1-2 was selected before page 1-1.
+- [x] Each header candidate is now read independently; one weak continuation page cannot cancel the valid front page.
+- [x] Selection fails only when every candidate page fails.
+- [x] Regression test covers continuation after one page error.
+- [ ] Await CI/deploy and repeat clean two-page selection without payment until all four fields appear.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-multipage-header-continue.md`.
+
+## 2026-09-15 — POS FAST header invalid-response recovery
+
+- [x] LAB retained both selected pages but both FAST calls ended with a generic internal error before filling the four header fields.
+- [x] Header candidates now run concurrently and preserve any successful page result.
+- [x] Empty, malformed, timed-out, or rejected FAST structured responses receive one bounded retry.
+- [x] Exhausted retries explicitly confirm that no payment occurred; no purchase, stock, approval or finalization behavior changed.
+- [x] Client/server builds and 32 targeted POS invoice tests PASS locally.
+- [ ] Await green CI/deploy, then repeat one clean two-page read from the POS front without submitting payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-header-invalid-response.md`.
+
+
+## 2026-09-15 — Invoice Learning single reader flow
+
+- [x] The Lab now has one automatic Azure/AI read path per upload; the duplicate automatic reader is not loaded.
+- [x] The line-correction button remains manual-only and cannot start a provider request.
+- [ ] Await CI/deploy, then re-read Coffee Union once without clicking a second reader button.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-invoice-learning-single-reader-flow.md`.
+
+
+## 2026-09-15 — POS reuse complete FAST page lines
+
+- [x] LAB proved both invoice pages completed FAST recognition but the draft stayed in POS_QUEUED / POS_RECOVERING with zero lines.
+- [x] Successful Azure FAST results now carry their already-read product rows into the durable handoff.
+- [x] The background worker reuses cached rows only when every selected page returned safe product lines; otherwise the existing full OCR path remains authoritative.
+- [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
+- [ ] Await green CI/deploy, then safely reread invoice 2612188 without creating another payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-fast-page-line-reuse.md`.
+
+
+## 2026-09-15 — Bounded POS multi-page provider chain
+
+- [x] LAB proved invoice 2612188 returned from POS_BACKGROUND to POS_QUEUED / POS_RECOVERING with zero lines.
+- [x] Root cause: the 90-second internal request could wrap a provider chain lasting up to 225 seconds, followed by four full retries.
+- [x] Stefanidis pages now use one ordered Azure pass, followed by one bounded OpenAI fallback; the same Azure pass is not repeated.
+- [x] Transient background retries are bounded to one retry.
+- [x] Payment reuse, stock posting, approval and finalization behavior remain unchanged.
+- [ ] Await green CI/deploy, then resume the existing 2612188 draft without another payment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-pos-bounded-multipage-reader.md`.
+- Azure invoice recovery: retain multi-row printed headers when mapping table columns; source reading remains non-mutating. (`2026-09-15-azure-split-invoice-headers-ci.md`)
+
+
+## 2026-09-15 — Mandatory repository-wide checkpoint gate
+
+- [x] Applies to every module, page, conversation and agent.
+- [x] Requires the complete active list, relevant checkpoints and current main history before any change.
+- [x] Requires explicit LAB PASS / LAB FAIL / NOT TESTED status and reconciliation of contradictory checkpoints.
+- [x] CI PASS cannot be reported as LAB PASS; deployed revision must be verified before a new LAB request.
+- [x] Protects payment idempotency, deliberate draft deletion, stock, fiscal, accounting and finalization boundaries.
+- [ ] Enforce this gate on every subsequent change.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-15-mandatory-repository-checkpoint-gate.md`.
+## 2026-09-16 — POS FAST readable header recovery
+
+- [x] LAB FAIL: a clear single-page STEFANIDIS invoice returned none of the four basic fields; the safe failure correctly made no payment.
+- [x] The fallback now receives invoice images at high detail and shares one bounded 50-second deadline after a bounded 20-second Azure attempt.
+- [x] No payment, credit, draft, stock, approval, finalization or fiscal behavior changes.
+- [x] PR `#893`, main `492af013`, CI `#2335` and Render deploy `#1193`: PASS.
+- [x] LAB PASS / four fields only: STEFANIDIS `997763585`, invoice `43243`, `20/08/2026`, `76.58 EUR`; no paid/credit/submit action was pressed.
+- [ ] Product lines, draft creation, payment, stock and finalization are not certified by this checkpoint.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-readable-header-recovery.md`.
+## 2026-09-16 — STEFANIDIS hidden discount recovery
+
+- [x] LAB FAIL: invoice `43243` line `340061124` stored `1.205 EUR` with `0%` instead of printed original price `1.420 EUR`, `15%` / `0.43 EUR`, net `2.41 EUR`.
+- [x] Raw-row recovery now runs on missing-discount lines even when a net-derived unit cost is present, but changes values only when the full printed arithmetic proves them.
+- [x] No existing draft, payment, stock, approval, finalization, fiscal or learning mutation.
+- [ ] AWAITING tests, CI, exact deploy and one clean POS rerun after safe deletion of only the unapproved test draft/source.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-stefanidis-hidden-discount-recovery.md`.
+# 2026-09-16 — POS full OCR fallback after Azure F0 quota exhaustion
+
+- [x] LAB evidence: invoice 43243 FAST header and payment reuse passed; full OCR failed because Azure F0 returned quota 403 and the OpenAI table fallback hit the old 30-second limit.
+- [x] Extend only the background full-table provider boundary to 70 seconds and its bounded internal request to 180 seconds.
+- [x] Preserve the existing payment, single draft, fail-closed empty-line guard, stock, approval and finalization boundaries.
+- [ ] CI/deploy, then reclaim the same failed draft through one BackOffice refresh without a new upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-azure-f0-quota-openai-fallback.md`.
+# 2026-09-16 — POS full OCR bounded vision model
+
+- [x] LAB after 1757a419: Azure F0 quota rejection remained immediate, while the general OpenAI model exceeded the full-table 70-second boundary.
+- [x] Route full extraction, table recovery and discount diagnostics through the bounded invoice vision model used by the successful FAST path.
+- [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
+- [ ] CI/deploy, then reclaim the same failed 43243 draft with one BackOffice refresh and no new upload.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-full-ocr-fast-vision-model.md`.
+# 2026-09-16 — POS FAST cached discount recovery
+
+- [x] LAB front-POS evidence: 16 cached lines arrived, but 340061124 remained `1.205 / 0%` and the redundant full provider call ended `POS_FAILED`.
+- [x] Run complete cached FAST rows through deterministic printed-row discount arithmetic before finalization.
+- [x] Pass `resumeStoredProductLines` and the durable page identity to the immediate background worker.
+- [x] Preserve payment reuse, one-draft guard, reconciliation, stock, approval and finalization boundaries.
+- [ ] CI/deploy and one new end-to-end POS rerun; BackOffice recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-cached-discount-recovery.md`.
+
+# 2026-09-16 — POS full OCR minimal reasoning
+
+- [x] LAB after `c7385ffb`: compact full-table output still exhausted the 70-second OpenAI boundary while Azure F0 remained quota-blocked.
+- [x] Use minimal reasoning only for the two full-table vision extraction requests so the existing provider window is spent on OCR output.
+- [x] Keep the 70/180-second limits and every payment, draft, reconciliation, stock, approval and finalization guard unchanged.
+- [ ] AWAITING tests, CI, exact deploy and one new POS-front LAB; BackOffice recovery is not acceptance.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — POS refresh successor idempotency
+
+- [x] LAB after `493adc33`: POS OCR returned all 16 rows, then refresh queued a successor that falsely failed while re-saving the completed draft.
+- [x] Re-check durable job state after the active worker ends; do not run the queued successor after `AWAITING_APPROVAL` or `CONFIRMED`.
+- [x] Preserve recovery after a real failure and every payment, draft, stock, approval, finalization and fiscal boundary.
+- [ ] AWAITING tests, CI, exact deploy and POS-front LAB; printed net `65.72 EUR` remains unverified.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS current-row economics preservation
+
+- [x] LAB FAIL after `771b742d`: 18 rows were saved with repeated stock multipliers and wrong reconstructed discounts; totals remained below `365.75 / 429.27 EUR`.
+- [x] Current printed `TEM/TMX/FIA`, `4PK` and `KIB` units now override incompatible historic package learning.
+- [x] Historic discount percentages are no longer reused; mapped-package discounts derive only from the current row equation.
+- [x] Trusted background persistence retains verified discounts, EFK, taxable value, VAT and gross instead of rebuilding an undiscounted row.
+- [x] PR #915 merged as exact Render revision `388591813e81e227ca972efa068ce4d3cdfad60c`; server tests `1278/1278` and production build PASS.
+- [x] LAB after `38859181`: 18 rows and taxable `365.75 EUR` passed, but gross was `440.75 EUR` instead of `429.27 EUR`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS current-image row and VAT proof
+
+- [x] LAB FAIL after exact revision `38859181`: code `00009` became quantity `2` / discount `65.5%` and mixed VAT rates shifted.
+- [x] Focused reread now returns printed quantity, unit, original price and discount pairs for every MANTZILAS row, plus the printed VAT-summary groups.
+- [x] A replacement is accepted only from the current document at confidence `>=85` when its full row equation reproduces the line net; mixed VAT still requires exact footer and invoice-total reconciliation.
+- [x] Focused tests `54/54`, full server suite `1278/1278`, production build PASS locally.
+- [x] Payment, credit, one-draft, stock, approval, finalization, fiscal and accounting boundaries remain unchanged.
+- [ ] AWAITING green CI, exact Render revision and one new clean POS-front LAB after deletion of only the corrupt unapproved draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS full-invoice current-image proof
+
+- [x] LAB FAIL after exact revision `ef2e3d96`: 18 rows saved as `324.61 / 393.26 EUR` instead of printed `365.75 / 429.27 EUR`; code `00009` duplicated and RED BULL code `11` received an invented discount.
+- [x] Remove all old numeric hints from the MANTZILAS focused reread and validate the complete quantity, original price, discounts, net, EFK, taxable, VAT and gross chain from the current image.
+- [x] Accept a genuine zero-discount row; reject incomplete or invented discount pairs.
+- [x] Require all 18 current-image rows and their summed gross to reconcile to the POS-confirmed invoice total within `0.05 EUR`; roll back the whole tentative batch on any missing row or mismatch.
+- [x] Focused tests `56/56`, full server suite `1281/1281`, production build PASS locally.
+- [x] Payment, credit, draft identity, stock, approval, finalization, fiscal, accounting and Invoice Learning behavior remain unchanged.
+- [ ] AWAITING green CI, exact Render revision and one new POS-front LAB after deletion of only the corrupt unapproved draft.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-16 — MANTZILAS four verified stock-row corrections
+
+- [x] LAB after exact revision `5a145a4d`: 18 rows and totals `365.75 / 429.26 EUR` passed reconciliation, but four stock rows remained wrong.
+- [x] Preserve row 6 (`00009`) as `1 KIB × 24 = 24`, `31%`, `6.06 EUR`, net `13.49 EUR`, instead of rerunning stale raw-row economics.
+- [x] Convert `13192` and `433` as `2 × 6PK = 12` pieces and keep `02410` printed as `24 FIA = 24` pieces.
+- [x] Do not change the other 14 operator-confirmed rows or any invoice economic total.
+- [x] Focused tests `56/56`, full server suite `1281/1281`, production build PASS locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal, accounting or Invoice Learning change.
+- [ ] AWAITING green CI, exact Render revision and one new POS-front LAB; current draft must not be finalized or posted.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-16-pos-fast-complete-table.md`.
+
+# 2026-09-17 — MANTZILAS unique row identity guard
+
+- [x] Bind every focused reread result to the same unique supplier code and printed row index.
+- [x] Reject duplicate or shifted candidates and roll the full reread batch back atomically.
+- [x] Preserve each source-verified gross row amount against neighboring-row drift.
+- [x] Focused tests `35/35` and full server suite `1283/1283` pass locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
+- [ ] AWAITING green CI, exact deploy and one new POS-front LAB of invoice `12665`.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-row-identity-guard.md`.
+
+# 2026-09-17 — POS FAST header-only recovery
+
+- [x] LAB reproduced a safe pre-payment failure while FAST attempted a full 18-row structured table.
+- [x] Limit the operator-facing fallback to supplier, invoice number, date and gross total.
+- [x] Keep complete product reading in the durable V2.4.4 background flow.
+- [x] Preserve fail-closed payment and all duplicate/payment/stock/finalization guards.
+- [ ] AWAITING green CI, exact deploy and one repeat with the same POS-front image.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-pos-fast-header-only.md`.
+
+# 2026-09-17 — MANTZILAS corrective reread authority
+
+- [x] LAB found 18 rows at `358.19 / 434.07 EUR`, with neighboring economics shifted across rows 6–8.
+- [x] Retain unique KΩΔ+index identity, but allow the fully balanced focused reread to replace a wrong first-pass gross.
+- [x] Reject the entire MANTZILAS result unless the final 18-row total matches the printed invoice within `0.05 EUR`.
+- [x] Do not change payment, credit, stock, approval, finalization, fiscal or accounting behavior.
+- [ ] AWAITING tests, CI, exact deploy and one clean POS-front LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-corrective-reread.md`.
+
+# 2026-09-17 — MANTZILAS leading-zero code identity
+
+- [x] LAB safely blocked the mismatched table at 0 items during discount verification.
+- [x] Canonicalize numeric-only supplier codes so `0168=168` and `00009=9`.
+- [x] Retain exact index, unique-target, row-math and whole-invoice-total gates.
+- [x] Preserve all payment, credit, stock, approval, finalization, fiscal and accounting guards.
+- [ ] AWAITING tests, CI, exact deploy and one POS-front retry.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-leading-zero-code-identity.md`.
+
+# 2026-09-17 — MANTZILAS scaled quantity/discount ambiguity
+
+- [x] LAB confirmed code `00009` is 24 pieces at 31%, not 48 pieces at 65.5%.
+- [x] Detect equivalent-net doubled-quantity ambiguity using same-document price/discount evidence.
+- [x] Keep supplier-code/index identity and whole-invoice total verification.
+- [x] Focused tests `39/39` and full server suite `1287/1287` pass locally.
+- [x] No payment, credit, stock, approval, finalization, fiscal or accounting mutation.
+- [ ] AWAITING green CI, exact deploy and one new POS-front LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-scaled-quantity-discount-ambiguity.md`.
 
 # 2026-09-17 — POS discount-verification durable recovery
 
@@ -820,3 +1225,11 @@ Total output lines: 2443
 - [x] Targeted invoice-learning tests and JavaScript syntax checks PASS.
 - [ ] Green CI → merge → deploy → retest the same DELTA invoice.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-supervised-partial-correction.md`.
+## 2026-09-21 — Invoice Learning mathematical discount recovery — AWAITING CI / LAB
+
+- [x] Recover a missing discount only when quantity × unit price × discount reconciles with the printed net value.
+- [x] Example verified: `6 × 1,74 − 10% = 9,40 €`.
+- [x] Do not invent missing product rows; keep them for supervised manual addition.
+- [x] Targeted invoice-learning tests `17/17` PASS.
+- [ ] Green CI → merge → deploy → retest the DELTA invoice.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-discount-recovery.md`.
