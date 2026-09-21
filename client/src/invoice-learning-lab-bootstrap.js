@@ -9,8 +9,8 @@ if(path==='/platform-admin/invoice-learning-lab'){
   const storeKey='mws_invoice_learning_lab_v1';
   const state=(()=>{try{return JSON.parse(localStorage.getItem(storeKey)||'null')||{documents:[],profiles:{},master:[]}}catch{return {documents:[],profiles:{},master:[]}}})();
   const save=()=>localStorage.setItem(storeKey,JSON.stringify(state));
-  async function persistWorkspaceNow(){
-    const response=await fetch('/api/platform/invoice-learning/workspace',{method:'PUT',headers:headers(),body:JSON.stringify({state})});
+  async function persistWorkspaceNow({syncProfiles=true}={}){
+    const response=await fetch('/api/platform/invoice-learning/workspace',{method:'PUT',headers:headers(),body:JSON.stringify({state,syncProfiles}),signal:AbortSignal.timeout(30000)});
     const payload=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(payload.error||`Σφάλμα αποθήκευσης ${response.status}`);
     return payload;
@@ -164,7 +164,7 @@ if(path==='/platform-admin/invoice-learning-lab'){
     const i=state.documents.findIndex(d=>d.id===current.id);if(i>=0)state.documents[i]=current;else state.documents.push(current);
     try{
       save();
-      await persistWorkspaceNow();
+      await persistWorkspaceNow({syncProfiles:false});
       history();
       $('#status').textContent='✓ Το πρόχειρο αποθηκεύτηκε κεντρικά στο Learning Lab.';
       button.textContent='✓ Αποθηκεύτηκε';
