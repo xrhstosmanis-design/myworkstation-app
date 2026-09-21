@@ -44,7 +44,7 @@ function learnedLine(line,index){
 
 export function exactLearnedInvoiceCandidate(state,{supplier,documentNumber,totalGross,tolerance=.05}={}){
   const expectedNumber=invoiceKey(documentNumber),expectedGross=Number(totalGross||0);
-  if(!expectedNumber||!(expectedGross>0))return null;
+  if(!expectedNumber)return null;
   const documents=(Array.isArray(state?.documents)?state.documents:[])
     .filter(document=>String(document?.status||"").toUpperCase()==="LEARNED")
     .filter(document=>supplierMatches(document,supplier)&&invoiceKey(document?.invoiceNo||document?.invoiceNumber)===expectedNumber)
@@ -55,7 +55,7 @@ export function exactLearnedInvoiceCandidate(state,{supplier,documentNumber,tota
     const lines=active.map(learnedLine);
     if(lines.some(line=>!line))continue;
     const learnedGross=money4(lines.reduce((sum,line)=>sum+line.grossAmount,0));
-    if(Math.abs(learnedGross-expectedGross)>tolerance)continue;
+    if(expectedGross>0&&Math.abs(learnedGross-expectedGross)>tolerance)continue;
     const vatGroups=new Map();
     for(const line of lines){
       const current=vatGroups.get(line.vatRate)||{rate:line.vatRate,taxable:0,vat:0,gross:0};
@@ -64,7 +64,7 @@ export function exactLearnedInvoiceCandidate(state,{supplier,documentNumber,tota
       current.gross=money4(current.gross+line.grossAmount);
       vatGroups.set(line.vatRate,current);
     }
-    return {documentId:String(document.id||""),lines,vatSummary:[...vatGroups.values()].sort((a,b)=>a.rate-b.rate),learnedGross,difference:money4(learnedGross-expectedGross)};
+    return {documentId:String(document.id||""),lines,vatSummary:[...vatGroups.values()].sort((a,b)=>a.rate-b.rate),learnedGross,difference:money4(learnedGross-(expectedGross>0?expectedGross:learnedGross))};
   }
   return null;
 }
