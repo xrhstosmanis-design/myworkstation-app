@@ -639,7 +639,10 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     }
   }
   if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
-  if(!completeness.complete)return res.status(422).json({error:`Η ανάγνωση βρήκε μόνο μέρος του τιμολογίου (${completeness.lineGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} € από ${completeness.totalGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} €). Δεν δημιουργήθηκε μερικό πρόχειρο.`,code:"PARTIAL_PRODUCT_LINES",azureState,completeness});
+  // The Learning Lab is a supervised correction surface. Keep a partial
+  // provider result editable so the owner can add/correct rows and teach the
+  // verified layout. POS/order intake remains fail-closed on partial lines.
+  if(!completeness.complete)return res.json({...result,azureState,completeness,requiresManualCompletion:true,partialResult:true});
   res.json({...result,azureState,completeness});
 }catch(error){next(error)}});
 
