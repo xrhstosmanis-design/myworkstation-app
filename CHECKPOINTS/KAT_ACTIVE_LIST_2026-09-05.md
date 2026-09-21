@@ -2395,3 +2395,19 @@ Total output lines: 1413
 - [ ] Green CI → merge → exact Render deploy → refresh Learning and continue
   saved `28897` without uploading the image again.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
+
+## 2026-09-21 — DELTA stale Learning header total — READY FOR CI
+
+- [x] **Fresh POS FAIL (11:53):** `28897` remained a zero-line draft and ended
+  as `POS_FAILED / POS_BACKGROUND_FAILED` after a successful Learning save.
+- [x] Root cause: Learning retained stale OCR header total `55,25 €`, while its
+  11 confirmed rows reconcile to the trusted POS/printed total `53,91 €`.
+- [x] Exact replay no longer trusts that stale header. It still requires exact
+  supplier + invoice number, all rows confirmed, balanced line arithmetic and
+  complete learned gross within `0,05 €` of the POS total.
+- [x] Targeted exact-Learning regression `6/6` and full server suite
+  `1381/1381` PASS, including real quantities and discounts with stale header
+  `55,25 €`.
+- [ ] Push → PR → green CI → merge → exact Render deploy.
+- [ ] Delete the empty diagnostic draft and submit `28897` once after deploy.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.

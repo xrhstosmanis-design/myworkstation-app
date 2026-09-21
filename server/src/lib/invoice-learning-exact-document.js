@@ -2,7 +2,6 @@ const money4=value=>Math.round((Number(value||0)+Number.EPSILON)*10000)/10000;
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const invoiceKey=value=>norm(value).replace(/^0+(?=\d)/,"");
-const documentGross=document=>Number(document?.sourceGrossAmount??document?.totalGross??document?.grossAmount??0);
 
 function supplierMatches(document,supplier){
   const expectedTaxId=cleanTaxId(supplier?.taxId),documentTaxId=cleanTaxId(document?.supplierTaxId);
@@ -49,7 +48,6 @@ export function exactLearnedInvoiceCandidate(state,{supplier,documentNumber,tota
   const documents=(Array.isArray(state?.documents)?state.documents:[])
     .filter(document=>String(document?.status||"").toUpperCase()==="LEARNED")
     .filter(document=>supplierMatches(document,supplier)&&invoiceKey(document?.invoiceNo||document?.invoiceNumber)===expectedNumber)
-    .filter(document=>Math.abs(documentGross(document)-expectedGross)<=tolerance)
     .sort((a,b)=>Date.parse(b?.updatedAt||b?.createdAt||0)-Date.parse(a?.updatedAt||a?.createdAt||0));
   for(const document of documents){
     const active=(Array.isArray(document?.lines)?document.lines:[]).filter(line=>String(line?.status||"").toUpperCase()!=="REJECTED");
