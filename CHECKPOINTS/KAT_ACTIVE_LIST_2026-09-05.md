@@ -1,4 +1,4 @@
-## 2026-09-20 — Employee modal scroll fix rebased — AWAITING CI/LAB
+## 2026-09-21 — Invoice Learning: supplier identity vs commercial format — AWAITING CI / LAB\n\n- [x] Νομικός εκδότης παραμένει δεμένος με επωνυμία και ΑΦΜ.\n- [x] Προστέθηκαν ξεχωριστά εμπορική οικογένεια τιμολογίου και διανομέας/περιοχή.\n- [x] Η οικογένεια χρησιμοποιείται μόνο για διάταξη/στήλες· δεν αντιγράφονται ποσότητες, τιμές ή εκπτώσεις.\n- [x] Νέο migration και UI εκμάθησης για επιβεβαίωση του νέου ΑΦΜ ΜΑΝΤΖΑΒΑΣ με μορφή ΔΕΛΤΑ.\n- [ ] Πράσινο CI → merge → deploy → δοκιμή νέου τιμολογίου ΜΑΝΤΖΑΒΑΣ.\n- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-supplier-commercial-family.md`.\n\n## 2026-09-20 — Employee modal scroll fix rebased — AWAITING CI/LAB
 
 - [x] Fresh current-main rebase after concurrent changes.
 - [x] Viewport-contained modal scrolling + reachable actions.

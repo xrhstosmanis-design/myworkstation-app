@@ -244,6 +244,8 @@ model InvoiceSupplierReadingProfile {
   supplierKey     String   @id
   supplierTaxId   String?
   supplierName    String?
+  commercialFamily String?
+  distributorName  String?
   normalizedName  String?
   ruleKey         String?
   profileVersion  Int      @default(1)
