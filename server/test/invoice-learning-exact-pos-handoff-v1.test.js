@@ -16,6 +16,14 @@ test("exact learned invoice is replayed only with verified arithmetic",()=>{
   assert.equal(result.lines[0].sourceColumnsVerified,true);
 });
 
+test("exact learned invoice can recover a lost POS header total safely",()=>{
+  const learned={id:"learned-38001",status:"LEARNED",supplierTaxId:"053939069",supplierName:"ΜΑΝΤΖΑΒΑΣ ΣΠΥΡΙΔΩΝ ΗΛΙΑΣ",invoiceNo:"38001",lines:[line({description:"LIFE 9 ΦΡΟΥΤΑ ΜΠΟΥΚΑΛ 400ML",quantity:1,unitPrice:1.74,discount1:0,netValue:1.74,vatRate:0})]};
+  const result=exactLearnedInvoiceCandidate(state(learned),{supplier:{taxId:"053939069",name:"ΜΑΝΤΖΑΒΑΣ ΣΠΥΡΙΔΩΝ ΗΛΙΑΣ"},documentNumber:"38001",totalGross:0});
+  assert.ok(result);
+  assert.equal(result.lines[0].quantity,1);
+  assert.equal(result.learnedGross,1.74);
+});
+
 test("different invoice identity cannot reuse learned economics",()=>{
   const learned={id:"learned-28897",status:"LEARNED",supplierTaxId:"053354239",invoiceNo:"28897",sourceGrossAmount:3.54,lines:[line()]};
   assert.equal(exactLearnedInvoiceCandidate(state(learned),{supplier:{taxId:"053354239"},documentNumber:"28898",totalGross:3.54}),null);

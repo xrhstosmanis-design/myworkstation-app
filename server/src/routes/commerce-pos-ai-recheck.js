@@ -279,7 +279,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // every line status and every arithmetic chain agree independently.
   const linkedDraft=job.purchaseDocumentId?await prisma.$queryRaw`SELECT "totalGross" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1`:[];
   const confirmedHandoffTotal=money2(linkedDraft[0]?.totalGross||posHandoff?.totalGross||0);
-  const workspaceRows=trustedHandoffSupplier&&posHandoff?.documentNumber&&confirmedHandoffTotal>0
+  const workspaceRows=trustedHandoffSupplier&&posHandoff?.documentNumber
     ?await prisma.$queryRawUnsafe(`SELECT "state" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"='PLATFORM_GLOBAL' LIMIT 1`).catch(()=>[]):[];
   const exactLearning=exactLearnedInvoiceCandidate(workspaceRows?.[0]?.state,{
     supplier:trustedHandoffSupplier,
@@ -290,7 +290,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     documentType:"INVOICE",aiConfidence:100,
     supplier:{name:trustedHandoffSupplier.name||"",taxId:trustedHandoffSupplier.taxId||""},
     documentNumber:String(posHandoff.documentNumber||""),documentDate:String(posHandoff.documentDate||""),
-    totalGross:confirmedHandoffTotal,vatSummary:exactLearning.vatSummary,productLines:exactLearning.lines,
+    totalGross:confirmedHandoffTotal>0?confirmedHandoffTotal:exactLearning.learnedGross,vatSummary:exactLearning.vatSummary,productLines:exactLearning.lines,
     rawText:exactLearning.lines.map(line=>line.rawText).filter(Boolean).join("\n"),
     lines:exactLearning.lines.map(line=>({text:line.rawText,confidence:100})).filter(line=>line.text),
     exactLearningDocumentApplied:true,exactLearningDocumentId:exactLearning.documentId,
