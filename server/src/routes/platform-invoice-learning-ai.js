@@ -1,22 +1,14 @@
-import crypto from "crypto";
 import {Router} from "express";
 import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {extractAzureColumns,combineAzureRows} from "../lib/invoice-column-reading.js";
-import {mobileUploads} from "./mobile-invoice-upload.js";
-import {callAzure as callPosAzure} from "./commerce-azure-invoice-reader.js";
 
 const router=Router();
 const AZURE_API_VERSION="2024-11-30";
 const AZURE_MODEL_ID="prebuilt-invoice";
-const OPENAI_FALLBACK_TIMEOUT_MS=Math.max(5000,Math.min(45000,Number(process.env.OPENAI_INVOICE_FALLBACK_TIMEOUT_MS||30000)));
-const openAiFallbackModel=()=>process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini";
 
 const pct=v=>Math.max(0,Math.min(100,Number(v||0)*100));
 const money4=v=>Math.round((Number(v||0)+Number.EPSILON)*10000)/10000;
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
-// A credit note is identified from the supplier heading, never from amount signs.
-export const detectInvoiceDocumentType=value=>/ΠΙΣΤ|ΕΠΙΣΤΡΟΦ|CREDITNOTE/.test(norm(value))?"CREDIT_NOTE":"INVOICE";
 const numberField=f=>{const v=f?.valueCurrency?.amount??f?.valueNumber??f?.valueInteger??f?.content;const n=Number(String(v??"").replace(",","."));return Number.isFinite(n)?n:0};
 const textField=f=>String(f?.valueString??f?.valueDate??f?.content??"").trim();
 const azureConfigured=()=>Boolean(String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim()&&String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim());
@@ -124,11 +116,10 @@ function findOhonosRow(rows,supplierItemCode,description){
   return bestScore>=700?best:null;
 }
 
-
 /* Some OHONOS scans arrive without a usable Azure table, but their product
  * row text still preserves the printed financial sequence:
  * quantity, list price, catalogue discount, final price, gross, discount %,
- * discount amount, net, VAT. Accept it only when all printed arithmetic
+ * discount amount, net, VAT.  Accept it only when all printed arithmetic
  * reconciles; this is deliberately not a generic OCR-number heuristic. */
 function ohonosRawRow(content,description,supplierItemCode){
   const raw=rowTail(content,description,supplierItemCode);
@@ -143,6 +134,7 @@ function ohonosRawRow(content,description,supplierItemCode){
   }
   return null;
 }
+
 /*
  * The Antzoulatos invoice has explicit KIB and TMX columns.  Azure's generic
  * prebuilt-invoice model frequently returns only the latter as Quantity, so
@@ -193,7 +185,7 @@ function findAntzoulatosRow(rows,description){
 function normalizeRetailPackaging(line){
   const raw=String(line?.azureRawRow||line?.rawText||"");
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||"").trim();
-  const caseInvoice=line.confirmedPackMapping?Number(line.unitsPerPackage)>1:isCaseUnit(`${invoiceUnit} ${raw}`);
+  const caseInvoice=isCaseUnit(`${invoiceUnit} ${raw}`);
   const pack=Math.max(0,Number(line?.unitsPerPackage||0))||packageFromText(`${line?.description||""} ${raw}`);
   const invoiceQuantity=Math.max(0,Number(line?.invoiceQuantity??line?.quantity??0));
   const packageUnitPrice=Math.max(0,Number(line?.packageUnitPrice??line?.unitPrice??0));
@@ -279,51 +271,26 @@ function discountsReconcile(discounts,quantity,unitPrice,netAmount){
   return Math.abs(expected-amount)<=Math.max(.05,amount*.02);
 }
 
-export function retryableAzureFailure(error){
-  const message=String(error?.message||error||"");
-  return /AZURE_(?:ANALYZE|POLL)_(?:408|409|425|429|5\d\d)\b/.test(message)||/AZURE_TIMEOUT\b|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(message);
-}
-
-export function publicAzureFailureCode(error){
-  const message=String(error?.message||error||"");
-  const status=message.match(/AZURE_(?:ANALYZE|POLL)_(\d{3})\b/)?.[1];
-  if(status==="401")return "AUTH_401";
-  if(status==="403")return "ACCESS_403";
-  if(status==="404")return "ENDPOINT_OR_MODEL_404";
-  if(status==="408")return "TIMEOUT_408";
-  if(status==="409"||status==="425")return `SERVICE_${status}`;
-  if(status==="429")return "RATE_LIMIT_429";
-  if(status&&status.startsWith("5"))return `SERVICE_${status}`;
-  if(/AZURE_TIMEOUT|ETIMEDOUT/i.test(message))return "TIMEOUT";
-  if(/fetch failed|ECONNRESET|EAI_AGAIN|UND_ERR/i.test(message))return "NETWORK";
-  if(/AZURE_NO_OPERATION_LOCATION/i.test(message))return "MISSING_OPERATION_LOCATION";
-  if(/AZURE_(?:FAILED|CANCELED)/i.test(message))return "ANALYSIS_FAILED";
-  if(/AZURE_EMPTY_DOCUMENT/i.test(message))return "EMPTY_DOCUMENT";
-  return "UNKNOWN";
-}
-
 async function callAzure(fileData,mimeType){
-  let lastError;
-  for(let attempt=1;attempt<=3;attempt++){
-    try{
-      // Use the exact transport used by the working POS invoice reader.
-      // Invoice Learning keeps its supplier-specific normalization below, but
-      // endpoint construction, authentication, upload and polling have one
-      // authoritative implementation for both entry points.
-      return await callPosAzure({contentData:fileData,mimeType});
-    }catch(error){
-      lastError=error;
-      if(attempt===3||!retryableAzureFailure(error))throw error;
-      console.warn("Azure Invoice Learning transient failure; retrying.",{attempt,reason:String(error?.message||error).slice(0,120)});
-      await new Promise(resolve=>setTimeout(resolve,attempt*800));
-    }
+  const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
+  const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
+  const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
+  const bytes=Buffer.from(base64,"base64");
+  if(bytes.length<20)throw new Error("AZURE_EMPTY_DOCUMENT");
+  const url=`${endpoint}/documentintelligence/documentModels/${AZURE_MODEL_ID}:analyze?api-version=${AZURE_API_VERSION}`;
+  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":mimeType||"application/octet-stream"},body:bytes});
+  if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,250)}`);
+  const operation=start.headers.get("operation-location");if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
+  for(let i=0;i<30;i++){
+    await new Promise(resolve=>setTimeout(resolve,i<2?700:1200));
+    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key}});if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
+    const payload=await poll.json();if(payload.status==="succeeded")return payload;if(payload.status==="failed"||payload.status==="canceled")throw new Error(`AZURE_${String(payload.status).toUpperCase()}`);
   }
-  throw lastError;
+  throw new Error("AZURE_TIMEOUT");
 }
 
 function normalizeAzure(payload){
   const result=payload?.analyzeResult||{},doc=result.documents?.[0]||{},f=doc.fields||{};
-  const documentText=[textField(f.InvoiceType),textField(f.DocumentType),...(result.pages||[]).flatMap(page=>(page.words||[]).map(word=>word?.content||""))].join(" ");
   const items=Array.isArray(f.Items?.valueArray)?f.Items.valueArray:[];
   const supplierName=textField(f.VendorName)||textField(f.VendorAddressRecipient);
   const antzoulatosRows=isAntzoulatos(supplierName)?antzoulatosTableRows(result):[];
@@ -333,7 +300,7 @@ function normalizeAzure(payload){
   // Therefore this is intentionally detected from table geometry, not gated
   // by the supplier label returned by Azure.
   const ohonosRows=ohonosTableRows(result);
-  let productLines=items.map((item,index)=>{
+  const productLines=items.map((item,index)=>{
     const p=item?.valueObject||{};
     const supplierItemCode=textField(p.ProductCode)||textField(p.ItemCode)||textField(p.Code);
     const description=textField(p.Description)||textField(p.ProductName)||textField(p.ItemDescription);
@@ -375,179 +342,11 @@ function normalizeAzure(payload){
     const finalMathValid=quantity>0&&unitPrice>0&&netAmount>0?Math.abs(quantity*netUnitCost-netAmount)<=Math.max(.05,netAmount*.02):false;
     return normalizeRetailPackaging({supplierItemCode:ohonosTableRow?.supplierItemCode||supplierItemCode,description:ohonosTableRow?.description||description,quantity,invoiceQuantity:quantity,unit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",stockUnit:ohonosRow?"PCS":"",invoiceUnit:ohonosRow?"PCS":tmxIsActualQuantity?"ΤΜΧ":supplierTableRow?"ΚΙΒ":textField(p.Unit)||textField(p.UnitOfMeasure)||"",invoicePiecesColumn:printedPiecesQuantity,unitsPerPackage:ohonosRow?0:unitsPerPackage,unitPrice,packageUnitPrice:unitPrice,discount1,discount2,discount3,netUnitCost,netAmount,vatRate,grossAmount,barcode:"",confidence,azureSequence:index+1,azureRawRow:String(item?.content||""),unitPriceRecovered:!numberField(p.UnitPrice)&&unitPrice>0,netAmountRecovered:Math.abs(originalNetAmount-netAmount)>.001,netAmountSource:netRecovery.source,discountRecovered:!explicitDiscounts(p).length&&discounts.length>0,mathValidated:finalMathValid,needsReview:Boolean(netRecovery.needsReview||!finalMathValid)});
   }).filter(x=>x.description||x.supplierItemCode);
-  productLines=combineAzureRows(productLines,extractAzureColumns(result)).map(line=>line.sourceColumnMap?{...line,supplierItemCode:line.code,unitPrice:line.unitCost,invoiceQuantity:line.quantity,invoiceUnit:line.unit,netUnitCost:line.quantity>0?line.netAmount/line.quantity:0,confidence:pct(doc.confidence),mathValidated:line.sourceColumnsVerified,needsReview:!line.sourceColumnsVerified}:line);
   const supplierConfidence=Math.max(pct(f.VendorName?.confidence),pct(f.VendorTaxId?.confidence));
   const headerConfidence=Math.max(supplierConfidence,pct(f.InvoiceId?.confidence),pct(f.InvoiceDate?.confidence));
   const lineConfs=productLines.map(x=>x.confidence).filter(Boolean);
   const aiConfidence=Math.round((lineConfs.reduce((a,b)=>a+b,0)+(headerConfidence||0))/(lineConfs.length+1));
-  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",documentType:detectInvoiceDocumentType(documentText),aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
-}
-
-function invoiceLineGross(line){
-  const explicit=Math.max(0,Number(line?.grossAmount||0));
-  if(explicit>0)return explicit;
-  const net=Math.max(0,Number(line?.netAmount||0)),vat=Math.max(0,Number(line?.vatRate||0));
-  return net>0?net*(1+vat/100):0;
-}
-
-function invoiceLineFingerprint(line){
-  return [
-    norm(line?.supplierItemCode),norm(line?.description),Number(line?.quantity||0).toFixed(4),
-    Number(line?.unitPrice||0).toFixed(4),Number(line?.netAmount||0).toFixed(2),
-    Number(line?.vatRate||0).toFixed(2),Number(invoiceLineGross(line)).toFixed(2),
-    Number(line?.discount1||0).toFixed(2),Number(line?.discount2||0).toFixed(2),Number(line?.discount3||0).toFixed(2),
-  ].join("|");
-}
-
-// Use the same independently-totalled duplicate safeguard as the POS reader.
-// A row may be removed only when exactly one identical pair exists, one copy's
-// gross is the entire overage, and the remaining rows reconcile to the footer.
-export function collapseExactDuplicateInvoiceOverage(lines,invoiceTotal){
-  const source=Array.isArray(lines)?lines:[],total=money4(invoiceTotal||0),tolerance=.05;
-  const lineTotal=money4(source.reduce((sum,line)=>sum+invoiceLineGross(line),0));
-  const overage=money4(lineTotal-total);
-  if(!(total>0)||source.length<2||overage<=tolerance)return {lines:source,collapsed:false};
-  const groups=new Map();
-  source.forEach((line,index)=>{
-    const fingerprint=invoiceLineFingerprint(line),indexes=groups.get(fingerprint)||[];
-    indexes.push(index);groups.set(fingerprint,indexes);
-  });
-  const candidates=[];
-  for(const indexes of groups.values()){
-    if(indexes.length!==2)continue;
-    const gross=money4(invoiceLineGross(source[indexes[0]]));
-    if(gross>0&&Math.abs(gross-overage)<=tolerance)candidates.push(indexes[1]);
-  }
-  if(candidates.length!==1)return {lines:source,collapsed:false};
-  const removeIndex=candidates[0],collapsed=source.filter((_,index)=>index!==removeIndex);
-  const collapsedTotal=money4(collapsed.reduce((sum,line)=>sum+invoiceLineGross(line),0));
-  if(Math.abs(collapsedTotal-total)>tolerance)return {lines:source,collapsed:false};
-  return {lines:collapsed,collapsed:true,removed:1,overage};
-}
-
-function repairExactDuplicateInvoiceOverage(result){
-  const repair=collapseExactDuplicateInvoiceOverage(result?.productLines,result?.totalGross);
-  return repair.collapsed?{...result,productLines:repair.lines,exactDuplicateRowCollapsed:true,exactDuplicateRowRemoved:repair.removed,exactDuplicateRowOverage:repair.overage}:result;
-}
-
-export function invoiceReadingCompleteness(result){
-  const lines=Array.isArray(result?.productLines)?result.productLines:[];
-  if(!lines.length)return {complete:false,reason:"NO_PRODUCT_LINES",lineGross:0,totalGross:Math.max(0,Number(result?.totalGross||0)),difference:null};
-  const totalGross=Math.max(0,Number(result?.totalGross||0));
-  const lineGross=money4(lines.reduce((sum,line)=>sum+invoiceLineGross(line),0));
-  if(!(totalGross>0)||!(lineGross>0))return {complete:true,reason:"TOTAL_NOT_AVAILABLE",lineGross,totalGross,difference:null};
-  const difference=money4(Math.abs(totalGross-lineGross)),tolerance=.05;
-  if(difference<=tolerance)return {complete:true,reason:"RECONCILED",lineGross,totalGross,difference};
-
-  // Azure occasionally returns every printed product row with its net value,
-  // but omits VAT at line level. In that case lineGross is actually the sum of
-  // the line net values. Accept the result only when both independent footer
-  // equations reconcile: lines == printed net and net + VAT == printed total.
-  // This keeps the partial-table guard intact while allowing a review draft;
-  // missing per-line VAT remains visible for confirmation in the Learning Lab.
-  const lineNet=money4(lines.reduce((sum,line)=>sum+Math.max(0,Number(line?.netAmount||0)),0));
-  const totalNet=Math.max(0,Number(result?.totalNet||0));
-  const totalVat=Math.max(0,Number(result?.totalVat||0));
-  const netDifference=money4(Math.abs(totalNet-lineNet));
-  const footerDifference=money4(Math.abs(totalGross-(totalNet+totalVat)));
-  const headerVatReconciled=totalNet>0&&totalVat>0&&lineNet>0&&netDifference<=tolerance&&footerDifference<=tolerance;
-  if(headerVatReconciled)return {complete:true,reason:"RECONCILED_BY_HEADER_VAT",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference,requiresLineVatReview:true};
-  // Some Azure invoice layouts expose TotalTax and InvoiceTotal but omit
-  // SubTotal. When every line also lacks line-level VAT, the printed net is
-  // still independently derivable as InvoiceTotal - TotalTax. Accept only if
-  // that derived net equals the sum of every extracted net line.
-  const lineLevelVatMissing=lines.every(line=>{
-    const net=Math.max(0,Number(line?.netAmount||0));
-    const gross=Math.max(0,Number(line?.grossAmount||0));
-    return Math.max(0,Number(line?.vatRate||0))===0&&(!(gross>0)||Math.abs(gross-net)<=tolerance);
-  });
-  const derivedTotalNet=money4(totalGross-totalVat);
-  const derivedNetDifference=money4(Math.abs(derivedTotalNet-lineNet));
-  const derivedHeaderVatReconciled=totalVat>0&&derivedTotalNet>0&&lineNet>0&&lineLevelVatMissing&&derivedNetDifference<=tolerance;
-  if(derivedHeaderVatReconciled)return {complete:true,reason:"RECONCILED_BY_DERIVED_HEADER_VAT",lineGross,totalGross,difference,lineNet,totalNet,totalVat,derivedTotalNet,derivedNetDifference,requiresLineVatReview:true};
-  return {complete:false,reason:"PARTIAL_PRODUCT_LINES",lineGross,totalGross,difference,lineNet,totalNet,totalVat,netDifference,footerDifference};
-}
-
-function sameInvoiceLine(a,b){
-  const aCode=norm(a?.supplierItemCode),bCode=norm(b?.supplierItemCode);
-  if(aCode&&bCode)return aCode===bCode;
-  const aDescription=norm(a?.description),bDescription=norm(b?.description);
-  return Boolean(aDescription&&bDescription&&aDescription===bDescription);
-}
-
-function lineInformationScore(line){
-  return ["supplierItemCode","description","quantity","unitPrice","netAmount","grossAmount","vatRate","barcode"]
-    .reduce((score,key)=>score+(line?.[key]?1:0),0)+Math.max(0,Number(line?.confidence||0))/100;
-}
-
-function descriptionsOverlap(a,b){
-  const left=String(a||"").split(/\s+/).map(norm).filter(word=>word.length>=4);
-  const right=String(b||"").split(/\s+/).map(norm).filter(word=>word.length>=4);
-  return left.some(word=>right.includes(word));
-}
-
-function crossProviderEconomicMatch(a,b,overage){
-  if(a?.providerOrigin===b?.providerOrigin||!a?.providerOrigin||!b?.providerOrigin)return false;
-  const aGross=money4(invoiceLineGross(a)),bGross=money4(invoiceLineGross(b)),tolerance=.05;
-  if(!(aGross>0&&bGross>0)||Math.abs(aGross-bGross)>tolerance||Math.abs(aGross-overage)>tolerance)return false;
-  const aCode=norm(a?.supplierItemCode),bCode=norm(b?.supplierItemCode);
-  const identity=(aCode&&bCode&&aCode===bCode)||descriptionsOverlap(a?.description,b?.description);
-  if(!identity)return false;
-  const pairs=[[a?.quantity,b?.quantity,.001],[a?.unitPrice,b?.unitPrice,.001],[a?.netAmount,b?.netAmount,.05]];
-  const economicMatches=pairs.filter(([left,right,tol])=>Number(left)>0&&Number(right)>0&&Math.abs(Number(left)-Number(right))<=tol).length;
-  return economicMatches>=2;
-}
-
-export function collapseCrossProviderDuplicateOverage(lines,invoiceTotal){
-  const source=Array.isArray(lines)?lines:[],total=money4(invoiceTotal||0),tolerance=.05;
-  const lineTotal=money4(source.reduce((sum,line)=>sum+invoiceLineGross(line),0)),overage=money4(lineTotal-total);
-  if(!(total>0)||source.length<2||overage<=tolerance)return {lines:source,collapsed:false};
-  const candidates=[];
-  for(let left=0;left<source.length;left++)for(let right=left+1;right<source.length;right++){
-    if(crossProviderEconomicMatch(source[left],source[right],overage))candidates.push([left,right]);
-  }
-  if(candidates.length!==1)return {lines:source,collapsed:false};
-  const [left,right]=candidates[0];
-  const primary=lineInformationScore(source[right])>=lineInformationScore(source[left])?source[right]:source[left];
-  const secondary=primary===source[right]?source[left]:source[right];
-  const keepIndex=primary===source[right]?right:left,removeIndex=keepIndex===right?left:right;
-  const collapsed=source.map((line,index)=>index===keepIndex?{...secondary,...primary,providerOrigin:"AZURE+OPENAI",crossProviderEconomicMatched:true}:line).filter((_,index)=>index!==removeIndex);
-  const collapsedTotal=money4(collapsed.reduce((sum,line)=>sum+invoiceLineGross(line),0));
-  if(Math.abs(collapsedTotal-total)>tolerance)return {lines:source,collapsed:false};
-  return {lines:collapsed,collapsed:true,removed:1,overage};
-}
-
-/* Azure and OpenAI can each miss a different printed row. Combine them as a
- * multiset (so repeated products remain repeated), but this result is usable
- * only after invoiceReadingCompleteness independently reconciles the footer. */
-export function mergeProviderInvoiceDrafts(azure,openai){
-  const azureLines=Array.isArray(azure?.productLines)?azure.productLines:[];
-  const aiLines=Array.isArray(openai?.productLines)?openai.productLines:[];
-  const merged=azureLines.map(line=>({...line,providerOrigin:"AZURE"})),matched=new Set();
-  for(const aiLine of aiLines){
-    const index=merged.findIndex((line,i)=>!matched.has(i)&&sameInvoiceLine(line,aiLine));
-    if(index<0){merged.push({...aiLine,providerOrigin:"OPENAI"});matched.add(merged.length-1);continue}
-    matched.add(index);
-    const primary=lineInformationScore(aiLine)>=lineInformationScore(merged[index])?aiLine:merged[index];
-    const secondary=primary===aiLine?merged[index]:aiLine;
-    merged[index]={...secondary,...primary,providerOrigin:"AZURE+OPENAI",hybridMatched:true};
-  }
-  const base={
-    ...azure,
-    ...openai,
-    provider:"AZURE_DOCUMENT_INTELLIGENCE+OPENAI",
-    model:`${azure?.model||"azure-prebuilt-invoice"}+${openai?.model||"openai"}`,
-    supplier:openai?.supplier?.name||openai?.supplier?.taxId?openai.supplier:azure?.supplier,
-    documentNumber:openai?.documentNumber||azure?.documentNumber||"",
-    documentDate:openai?.documentDate||azure?.documentDate||"",
-    totalNet:Number(openai?.totalNet||azure?.totalNet||0),
-    totalVat:Number(openai?.totalVat||azure?.totalVat||0),
-    totalGross:Number(openai?.totalGross||azure?.totalGross||0),
-    productLines:merged,
-    hybridRecovery:true,
-  };
-  const repair=collapseCrossProviderDuplicateOverage(base.productLines,base.totalGross);
-  return repair.collapsed?{...base,productLines:repair.lines,crossProviderDuplicateCollapsed:true,crossProviderDuplicateRemoved:repair.removed,crossProviderDuplicateOverage:repair.overage}:base;
+  return {ok:true,provider:"AZURE_DOCUMENT_INTELLIGENCE",model:"azure-prebuilt-invoice",aiConfidence,headerConfidence,supplier:{name:supplierName,taxId:textField(f.VendorTaxId),confidence:supplierConfidence},documentNumber:textField(f.InvoiceId),documentNumberConfidence:pct(f.InvoiceId?.confidence),documentDate:textField(f.InvoiceDate),documentDateConfidence:pct(f.InvoiceDate?.confidence),totalNet:Math.max(0,numberField(f.SubTotal)),totalVat:Math.max(0,numberField(f.TotalTax)),totalGross:Math.max(0,numberField(f.InvoiceTotal)||numberField(f.AmountDue)),productLines,azurePageCount:Array.isArray(result.pages)?result.pages.length:0};
 }
 
 function learnedScore(line,k){
@@ -563,84 +362,41 @@ async function applyLearnedKnowledge(result){
     result.productLines=(result.productLines||[]).map(line=>{
       let best=null,score=0;for(const k of supplierKnowledge){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
       if(!best||score<120)return normalizeRetailPackaging(line);
-      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:line.confirmedPackMapping?line.invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:line.confirmedPackMapping?Number(line.unitsPerPackage):Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:line.sourceColumnMap?Number(line.vatRate||0):Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
+      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
     });
   }catch(error){console.warn("Invoice Learning knowledge apply skipped:",error?.message||error)}
   return result;
 }
 
 const lineProperties={supplierItemCode:{type:"string"},description:{type:"string"},quantity:{type:"number",minimum:0},unit:{type:"string"},unitsPerPackage:{type:"number",minimum:0},unitPrice:{type:"number",minimum:0},discount1:{type:"number",minimum:0,maximum:100},discount2:{type:"number",minimum:0,maximum:100},discount3:{type:"number",minimum:0,maximum:100},netUnitCost:{type:"number",minimum:0},netAmount:{type:"number",minimum:0},vatRate:{type:"number",minimum:0,maximum:100},grossAmount:{type:"number",minimum:0},barcode:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}};
-const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["documentType","aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
+const schema={type:"object",additionalProperties:false,properties:{aiConfidence:{type:"number",minimum:0,maximum:100},headerConfidence:{type:"number",minimum:0,maximum:100},supplier:{type:"object",additionalProperties:false,properties:{name:{type:"string"},taxId:{type:"string"},confidence:{type:"number",minimum:0,maximum:100}},required:["name","taxId","confidence"]},documentNumber:{type:"string"},documentNumberConfidence:{type:"number",minimum:0,maximum:100},documentDate:{type:"string"},documentDateConfidence:{type:"number",minimum:0,maximum:100},totalNet:{type:"number",minimum:0},totalVat:{type:"number",minimum:0},totalGross:{type:"number",minimum:0},productLines:{type:"array",maxItems:500,items:{type:"object",additionalProperties:false,properties:lineProperties,required:Object.keys(lineProperties)}}},required:["aiConfidence","headerConfidence","supplier","documentNumber","documentNumberConfidence","documentDate","documentDateConfidence","totalNet","totalVat","totalGross","productLines"]};
 
-const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
-const platformUploadOwner=req=>String(req.user?.id||req.user?.userId||req.user?.sub||"");
-
-router.post("/invoice-learning/mobile-upload-sessions",(req,res)=>{
-  if(!isPlatformSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
-  const ownerKey=platformUploadOwner(req);
-  if(!ownerKey)return res.status(401).json({error:"Απαιτείται σύνδεση."});
-  const id=crypto.randomUUID(),token=crypto.randomBytes(24).toString("base64url");
-  mobileUploads.set(id,{ownerKey,companyId:req.user?.companyId||null,token,expires:Date.now()+600000,source:"INVOICE_LEARNING_LAB"});
-  res.status(201).json({id,url:`${req.protocol}://${req.get("host")}/mobile-invoice-upload/${id}/${token}`,expiresInSeconds:600});
-});
-
-router.get("/invoice-learning/mobile-upload-sessions/:id",(req,res)=>{
-  if(!isPlatformSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
-  const upload=mobileUploads.get(req.params.id),ownerKey=platformUploadOwner(req);
-  if(!upload||upload.ownerKey!==ownerKey||upload.source!=="INVOICE_LEARNING_LAB"||upload.expires<Date.now())return res.status(404).json({error:"Το QR έληξε."});
-  res.json(upload.dataUrl?{status:"READY",dataUrl:upload.dataUrl,filename:upload.filename,mimeType:upload.mimeType}:{status:"WAITING"});
-});
-
-router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),azureState:azureConfigured()?"READY":"NOT_CONFIGURED",openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
+router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureConfigured()||Boolean(process.env.OPENAI_API_KEY),azureConfigured:azureConfigured(),openaiConnected:Boolean(process.env.OPENAI_API_KEY),providerOrder:["AZURE_DOCUMENT_INTELLIGENCE","OPENAI"],model:azureConfigured()?AZURE_MODEL_ID:(process.env.OPENAI_INVOICE_MODEL||"gpt-5")}));
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
   if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  let azureFailure="",azureFailureCode="",azureDraft=null,azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
+      // The supplier column map is the authoritative interpretation of this
+      // supplier's printed layout.  Apply it before catalogue knowledge so the
+      // quantity and purchase price handed to the UI are already reconciled.
       let azure=normalizeAzure(await callAzure(fileData,mimeType));
       azure=await applyCentralSupplierProfile(azure);
-      azure=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure));
-      azureDraft=azure;
-      const completeness=invoiceReadingCompleteness(azure);
-      if(completeness.complete)return res.json({...azure,azureState:"READY",completeness})
-      azureFailure=completeness.reason;azureState="NO_SAFE_RESULT";
-      console.warn("Azure Invoice Learning incomplete result; falling back to OpenAI.",{reason:completeness.reason,lineGross:completeness.lineGross,totalGross:completeness.totalGross,difference:completeness.difference});
-    }catch(error){azureFailure=String(error?.message||error);azureFailureCode=publicAzureFailureCode(error);azureState="REQUEST_FAILED";console.error("Azure Invoice Learning request failed.",{code:azureFailureCode,reason:azureFailure.slice(0,300)})}
+      azure=await applyLearnedKnowledge(azure);
+      if(azure.productLines.length||azure.aiConfidence>=40)return res.json(azure)
+    }catch(error){console.error("Azure Invoice Learning fallback:",error?.message||error)}
   }
-  // Match the POS provider chain: Azure is preferred, but an Azure transport
-  // failure must not prevent the configured OpenAI fallback from reading the
-  // original document. Economic completeness checks below still fail closed.
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:azureState==="REQUEST_FAILED"?`Η σύνδεση με το Azure Document Intelligence απέτυχε (${azureFailureCode}) και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.`:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED",azureState,azureFailureCode:azureFailureCode||undefined});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED"});
   const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
   const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
-  const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος/κείμενο γράφει Πιστωτικό, Πιστ. Τιμ., Επιστροφή ή Credit Note· αλλιώς INVOICE. Μην συμπεραίνεις πιστωτικό από το πρόσημο ποσών. Διάβασε τον πίνακα ειδών γραμμή-γραμμή: κάθε ορατή γραμμή προϊόντος πρέπει να γίνει ένα ξεχωριστό productLines στοιχείο, ακόμη και αν έχει ίδιο κωδικό/περιγραφή με άλλη γραμμή. Μην επιστρέψεις κενό productLines όταν βλέπεις πίνακα ειδών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
-  const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(OPENAI_FALLBACK_TIMEOUT_MS),body:JSON.stringify({model:openAiFallbackModel(),reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
-  const safeOpenAiCall=async retry=>{try{return await callOpenAiFallback(retry)}catch(error){if(/TimeoutError|AbortError|aborted due to timeout/i.test(`${error?.name||""} ${error?.message||error}`))return null;throw error}};
-  let response=await safeOpenAiCall(false);if(!response)return res.status(504).json({error:"Ο ασφαλής επανέλεγχος OpenAI άργησε περισσότερο από το επιτρεπτό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_PROVIDER_TIMEOUT",azureState});
-  let raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR",azureState});
-  let text=outputText(raw);
-  if(!text){response=await safeOpenAiCall(true);if(!response)return res.status(504).json({error:"Η δεύτερη ασφαλής προσπάθεια OpenAI ξεπέρασε το χρονικό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_RETRY_TIMEOUT",azureState});raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});text=outputText(raw)}
-  if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα ούτε στη δεύτερη προσπάθεια.",code:"AI_EMPTY_STRUCTURED_RESPONSE",azureState});
-  let result;try{result=JSON.parse(text)}catch{
-    response=await safeOpenAiCall(true);if(!response)return res.status(504).json({error:"Η δεύτερη ασφαλής προσπάθεια OpenAI ξεπέρασε το χρονικό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_RETRY_TIMEOUT",azureState});raw=await response.json().catch(()=>({}));
-    if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε και η δεύτερη ασφαλής προσπάθεια AI.",code:"AI_RETRY_PROVIDER_ERROR",azureState});
-    text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
-  }
-  result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result})));
-  let completeness=invoiceReadingCompleteness(result);
-  if(!completeness.complete&&azureDraft?.productLines?.length){
-    const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
-    const hybridCompleteness=invoiceReadingCompleteness(hybrid);
-    if(hybridCompleteness.complete){
-      return res.json({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness});
-    }
-  }
-  if(!result.productLines?.length)return res.status(422).json({error:"Δεν αναγνωρίστηκε καμία γραμμή προϊόντος από το πρωτότυπο τιμολόγιο. Δεν δημιουργήθηκε κενό πρόχειρο. Δοκίμασε ξανά με καθαρή φωτογραφία ή έλεγξε τη σύνδεση Azure.",code:"NO_PRODUCT_LINES",azureState,azureFailure:azureFailure?azureFailure.slice(0,160):undefined});
-  if(!completeness.complete)return res.status(422).json({error:`Η ανάγνωση βρήκε μόνο μέρος του τιμολογίου (${completeness.lineGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} € από ${completeness.totalGross.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} €). Δεν δημιουργήθηκε μερικό πρόχειρο.`,code:"PARTIAL_PRODUCT_LINES",azureState,completeness});
-  res.json({...result,azureState,completeness});
+  const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
+  const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR"});
+  const text=outputText(raw);if(!text)return res.status(502).json({error:"Το AI δεν επέστρεψε δομημένο αποτέλεσμα."});
+  let result;try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο JSON."})}
+  result=await applyLearnedKnowledge({ok:true,provider:"OPENAI",model:process.env.OPENAI_INVOICE_MODEL||"gpt-5",...result});
+  res.json(result);
 }catch(error){next(error)}});
 
 export default router;

@@ -1,11 +1,9 @@
 const labPath=window.location.pathname.replace(/\/+$/,'')==='/platform-admin/invoice-learning-lab';
 if(labPath){
-  let selectedFile=null,selectedDataUrl='',running=false;
+  let selectedFile=null,selectedDataUrl='';
   const token=()=>localStorage.getItem('token')||'';
   const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=reject;r.readAsDataURL(file)});
-  const acceptFile=async file=>{if(!file||running)return;selectedFile=file;selectedDataUrl=await readFile(file).catch(()=>"");if(selectedDataUrl)setTimeout(()=>runAi(document.querySelector('[data-ai-recheck]')),0)};
-  const capture=async e=>acceptFile(e.target.files?.[0]);
-  window.__MWS_INVOICE_LEARNING_ACCEPT_FILE__=acceptFile;
+  const capture=async e=>{const f=e.target.files?.[0];if(!f)return;selectedFile=f;selectedDataUrl=await readFile(f).catch(()=>"")};
   const currentOcrConfidence=()=>{const t=document.querySelector('#ocrBadge')?.textContent||'';const m=t.match(/OCR\s*(\d+)/i);return m?Number(m[1]):0};
   const value=(row,key)=>row.querySelector(`[data-k="${key}"]`)?.value||'';
   const change=(el,val)=>{if(!el)return;el.value=val??'';el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}))};
@@ -52,10 +50,9 @@ if(labPath){
     oldRows.slice(products.length).forEach(row=>{row.style.display='none'});const badge=document.querySelector('#ocrBadge');if(badge)badge.textContent=`${providerLabel(data)} • ${Number(data.aiConfidence||0).toFixed(0)}% • ${products.length} προϊόντα`;
   };
   const runAi=async button=>{
-    if(running)return;
     if(!selectedFile||!selectedDataUrl){alert('Επίλεξε ξανά το PDF ή τη φωτογραφία ώστε το AI να διαβάσει το πρωτότυπο παραστατικό.');return}
-    running=true;if(button)button.disabled=true;const old=button?.textContent||'';if(button)button.textContent='✨ AI επανέλεγχος...';const status=document.querySelector('#status');if(status)status.textContent='Azure Document Intelligence πρώτα· OpenAI μόνο ως fallback. Γίνεται ανάγνωση του πρωτότυπου παραστατικού...';
-    try{const r=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:selectedFile.name,mimeType:selectedFile.type||'image/jpeg',fileData:selectedDataUrl,ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});const data=await r.json().catch(()=>({}));if(!r.ok){const providerState=data.azureState?` Azure: ${data.azureState}.`:'';throw new Error(`${data.error||`AI σφάλμα ${r.status}`}${providerState}`)}applyResult(data);const source=providerLabel(data);if(status)status.textContent=`${source} ολοκληρώθηκε: ${(data.productLines||[]).length} προϊόντα. Ξεκινά αυτόματη εύρεση barcode…`;await resolveAllBarcodes(status);if(status)status.textContent=`Ανάγνωση: ${source}. Barcode lookup ολοκληρώθηκε.`}catch(err){if(status)status.textContent=`AI: ${err.message}`;alert(err.message)}finally{running=false;if(button){button.disabled=false;button.textContent=old}}
+    button.disabled=true;const old=button.textContent;button.textContent='✨ AI επανέλεγχος...';const status=document.querySelector('#status');if(status)status.textContent='Azure Document Intelligence πρώτα· OpenAI μόνο ως fallback. Γίνεται ανάγνωση του πρωτότυπου παραστατικού...';
+    try{const r=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:selectedFile.name,mimeType:selectedFile.type||'image/jpeg',fileData:selectedDataUrl,ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`AI σφάλμα ${r.status}`);applyResult(data);const source=providerLabel(data);if(status)status.textContent=`${source} ολοκληρώθηκε: ${(data.productLines||[]).length} προϊόντα. Ξεκινά αυτόματη εύρεση barcode…`;await resolveAllBarcodes(status);if(status)status.textContent=`Ανάγνωση: ${source}. Barcode lookup ολοκληρώθηκε.`}catch(err){if(status)status.textContent=`AI: ${err.message}`;alert(err.message)}finally{button.disabled=false;button.textContent=old}
   };
   let statusChecked=false;
   const install=()=>{
