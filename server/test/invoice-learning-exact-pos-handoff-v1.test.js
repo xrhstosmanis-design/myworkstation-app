@@ -50,6 +50,24 @@ test("DELTA 28897 preserves the photographed quantities and discounts",()=>{
   assert.deepEqual(result.vatSummary.map(row=>row.rate),[13]);
 });
 
+test("confirmed line arithmetic overrides a stale OCR header total",()=>{
+  const rows=[
+    ["720547",2,1.74,10,3.13],["720550",1,1.74,10,1.57],["720449",3,2.07,10,5.59],
+    ["720558",6,1.58,10,8.53],["720116",3,1.47,10,3.97],["720599",3,2.00,10,5.40],
+    ["720598",3,2.00,10,5.40],["720519",2,2.69,10,4.84],["720563",4,1.12,10,4.03],
+    ["730437",3,1.60,15,4.08],["730430",1,1.38,15,1.17]
+  ];
+  const learned={
+    id:"delta-28897-stale-total",status:"LEARNED",supplierTaxId:"053354239",invoiceNo:"28897",
+    sourceGrossAmount:55.25,
+    lines:rows.map(([code,quantity,unitPrice,discount1,netValue])=>({status:"CONFIRMED",supplierItemCode:code,description:`DELTA ${code}`,quantity,unitPrice,discount1,discount2:0,discount3:0,netValue,vatRate:13}))
+  };
+  const result=exactLearnedInvoiceCandidate(state(learned),{supplier:{taxId:"053354239"},documentNumber:"28897",totalGross:53.91});
+  assert.ok(result,"the stale OCR header must not hide a fully reconciled learned table");
+  assert.equal(result.lines.length,11);
+  assert.ok(Math.abs(result.learnedGross-53.91)<=.05);
+});
+
 test("POS persistence rechecks the exact central Learning invoice",()=>{
   const source=fs.readFileSync(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
   assert.match(source,/exactLearnedInvoiceCandidate\(workspaceRows\?\.\[0\]\?\.state/);

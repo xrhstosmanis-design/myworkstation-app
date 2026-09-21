@@ -26,3 +26,18 @@
 - Full server suite: `1367/1367` PASS.
 - Pending: green CI, merge, exact Render revision, then one POS retry of invoice
   `28897` using the existing empty draft/recovery path.
+
+## 2026-09-21 stale OCR header-total repair
+
+- Live evidence after successful central Learning save: a fresh POS attempt at
+  `11:53` remained empty and failed at `POS_BACKGROUND_AI_RECHECK`.
+- Root cause: the saved Learning document retained the earlier OCR header total
+  `55.25`, so exact replay was rejected before its 11 confirmed rows could be
+  reconciled against the trusted POS total `53.91`.
+- Exact replay now keys on supplier + invoice number and then independently
+  requires every confirmed row equation and the complete learned-row gross to
+  reconcile with the POS total within `0.05`. A stale OCR header cannot hide a
+  fully verified table; a mismatched table still fails closed.
+- Regression coverage includes the real DELTA quantities, discounts and stale
+  `55.25` header with reconciled `53.91` rows.
+- Targeted exact-Learning tests `6/6` and full server suite `1381/1381` PASS.
