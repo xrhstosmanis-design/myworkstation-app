@@ -38,6 +38,11 @@ test("a failed Fresh complete-table replay is safely requeued once from its stor
   assert.match(wrapper,/d\."status"='DRAFT' AND d\."sourceType"='POS_OCR_DRAFT'/);
 });
 
+test("a centrally confirmed generic complete-table profile is also requeued",()=>{
+  assert.match(wrapper,/const genericCompleteTableProfile=profile\.requireCompletePrintedTableOnMismatch===true/);
+  assert.match(wrapper,/completeTableProfile\|\|genericCompleteTableProfile\|\|legacyFreshSnackDraft/);
+});
+
 test("a failed Leventopoulos empty table is requeued once from the same linked draft image",()=>{
   const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   assert.match(wrapper,/POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY="LEVENTOPOULOS_EMPTY_COMPLETE_TABLE_V17"/);

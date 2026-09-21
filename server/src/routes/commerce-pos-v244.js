@@ -95,11 +95,16 @@ const completeTableRecoveryStrategy=(job,supplierName="")=>{
   if(leventopoulosProfile||legacyLeventopoulosDraft)return POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY;
   const completeTableProfile=["FRESH_SNACK_COMPLETE_PRINTED_TABLE","FRESH_DELICACIES_COMPLETE_PRINTED_TABLE"].includes(profile.ruleKey)
     &&profile.requireCompletePrintedTableOnMismatch===true;
+  // Any centrally confirmed supplier layout that requires the complete printed
+  // table must be recoverable from the same failed POS draft. DELTA/MANTZAVAS
+  // use the exact Learning replay before this generic recovery, so this does
+  // not authorize reuse of another supplier's economics.
+  const genericCompleteTableProfile=profile.requireCompletePrintedTableOnMismatch===true;
   // Older failed jobs did not persist the profile. Their supplier is still
   // authoritative on the linked unapproved draft, so use it only with the
   // exact old failure text below.
   const legacyFreshSnackDraft=/FRESH\s+SNACK/i.test(String(supplierName||""));
-  return completeTableProfile||legacyFreshSnackDraft?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:"";
+  return completeTableProfile||genericCompleteTableProfile||legacyFreshSnackDraft?POS_COMPLETE_TABLE_REPLAY_RECOVERY_STRATEGY:"";
 };
 const isSafeCompleteTableReplayFailure=(job,error,supplierName="")=>{
   return Boolean(completeTableRecoveryStrategy(job,supplierName))
