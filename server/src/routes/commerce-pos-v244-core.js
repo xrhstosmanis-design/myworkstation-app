@@ -6,6 +6,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
 import {reviewStatusForInvoiceLine} from "../lib/invoice-line-review.js";
+import {exactLearnedInvoiceCandidate} from "../lib/invoice-learning-exact-document.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -254,10 +255,20 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
     const parsedLines=z.array(lineSchema).min(1).max(500).parse(rawLines);
     const finalGapRecovery=restoreUniqueExactGrossGap(parsedLines,body.totalGross);
-    const lines=finalGapRecovery.lines;
+    let lines=finalGapRecovery.lines;
     stage="validate-supplier";
     const supplier=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!supplier[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
+    // Re-resolve the exact learned physical invoice at the final persistence
+    // boundary. The AI/background stage can be retried or an older resultJson
+    // can survive on the durable job; neither may override a centrally learned
+    // invoice that independently matches supplier, document number, total and
+    // every verified line equation.
+    const workspaceRows=await prisma.$queryRawUnsafe(`SELECT "state" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"='PLATFORM_GLOBAL' LIMIT 1`).catch(()=>[]);
+    const exactLearning=exactLearnedInvoiceCandidate(workspaceRows?.[0]?.state,{
+      supplier:supplier[0],documentNumber:body.documentNumber,totalGross:body.totalGross
+    });
+    if(exactLearning)lines=exactLearning.lines;
     const invoiceReference=norm(body.documentNumber),supplierTaxId=String(supplier[0].taxId||"").replace(/\D/g,"");
     const invoiceSupplierKey=supplierTaxId?`VAT:${supplierTaxId}`:`ID:${body.supplierId}`;
     const invoicePaymentKey=`${req.user.companyId}:${invoiceSupplierKey}:${invoiceReference}`;

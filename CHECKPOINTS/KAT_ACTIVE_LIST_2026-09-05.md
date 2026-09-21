@@ -2337,6 +2337,19 @@ Total output lines: 1413
 - [ ] LAB: save a Learning draft and reload it; then delete the erroneous diagnostic POS draft and submit `28897` once from POS. Acceptance requires one draft with quantities `2,1,3,6,3,3,3,2,4,3,1`, discounts `10%` for rows 1–9 / `15%` for rows 10–11, VAT `13%`, and total `53,91 €` (cent rounding tolerance only).
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
 
+## 2026-09-21 — DELTA exact Learning at final persistence — TESTING
+
+- [x] **Fresh POS FAIL:** after Learning success, the BackOffice draft still
+  showed quantities `2000/1000/3000` and discount `99,9%`; do not finalize it.
+- [x] Final `pos-intake` now revalidates the exact central Learning invoice
+  after supplier validation and before product matching/database insertion.
+- [x] Exact reuse remains fail-closed: same supplier, `28897`, `53,91 €`, all
+  11 rows confirmed and every line equation balanced.
+- [x] Targeted DELTA/Learning regression `9/9` PASS.
+- [ ] Full suite → push → PR → green CI → merge → exact Render deploy.
+- [ ] Delete this erroneous draft and retry once only after exact deployment.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
+
 ## 2026-09-20 — DELTA 28897 fresh-run display repair — AWAITING CI / LAB
 
 - [x] Η ώρα `10:49 μ.μ.` επιβεβαίωσε ότι η προβληματική εγγραφή ήταν νέα και όχι παλιό πρόχειρο.
