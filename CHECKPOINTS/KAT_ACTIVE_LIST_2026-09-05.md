@@ -1958,3 +1958,12 @@ Total output lines: 1413
 - [x] Targeted POS handoff/recovery/line-contract tests `45/45` PASS.
 - [ ] Green CI → merge → deploy → retest MANTZAVAS 38001 and manually correct 1–2 codes if needed.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-pos-review-draft.md`.
+
+## 2026-09-21 — Invoice Learning draft save separated from profile sync — READY FOR CI
+
+- [x] «Αποθήκευση Προχείρου» writes the central workspace immediately without waiting for all supplier-profile/product-knowledge synchronization.
+- [x] «Επιβεβαίωση & Εκμάθηση» continues to synchronize supplier rules centrally.
+- [x] Added a 30-second request timeout and explicit error path so a stuck request cannot look like a silent save.
+- [x] Targeted draft-save and POS contract tests PASS.
+- [ ] Green CI → merge → deploy → save the 12-line draft again and verify it remains after refresh.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-draft-save.md`.
