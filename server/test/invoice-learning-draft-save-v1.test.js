@@ -9,6 +9,7 @@ test("Invoice Learning draft save persists the workspace without waiting for pro
   assert.match(client,/void persistWorkspaceNow\(\{syncProfiles:false\}\)\.then\(\(\)=>persistWorkspaceNow\(\{syncProfiles:true\}\)\)/);
   assert.match(client,/Η εκμάθηση ολοκληρώθηκε/);
   assert.match(client,/const button=\$\('#learn'\),original=button\.textContent;try\{button\.disabled=true/);
+  assert.match(client,/p\.mappings=p\.mappings\|\|\{\}/);
   assert.match(client,/AbortSignal\.timeout\(30000\)/);
   assert.match(route,/const syncProfiles=req\.body\?\.syncProfiles!==false/);
   assert.match(route,/if\(syncProfiles\)await upsertSupplierProfiles/);
