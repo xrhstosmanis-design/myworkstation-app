@@ -2346,3 +2346,22 @@ Total output lines: 1413
 - [x] `1373/1373` full server tests PASS.
 - [ ] Green CI → merge → exact Render deploy → άνοιγμα της υπάρχουσας `28897` και οπτική επιβεβαίωση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
+
+## 2026-09-21 — DELTA Learning exact POS handoff — READY FOR PUSH
+
+- [x] **Fresh POS FAIL (09:27):** `28897` created a zero-line draft and ended as
+  `POS_FAILED / POS_BACKGROUND_FAILED`, because the background reader ignored
+  the already-confirmed Learning document and required another provider read.
+- [x] «Επιβεβαίωση & Εκμάθηση» now confirms every non-rejected row and awaits
+  the central workspace save; it cannot display a false central-save success.
+- [x] Before Azure/OpenAI, POS may reuse only a `LEARNED` document with the
+  exact supplier, invoice number and gross total, all rows confirmed, and
+  independently balanced quantity/price/discount/VAT arithmetic.
+- [x] Exact `28897` regression preserves 11 rows, quantities
+  `2,1,3,6,3,3,3,2,4,3,1`, discounts `10%/15%`, VAT `13%`, and total within
+  the existing `0,05 €` safety tolerance.
+- [x] Client production build PASS; full server suite `1377/1377` PASS.
+- [ ] User approval → push → PR → green CI → merge → exact Render deploy.
+- [ ] LAB: reopen Learning `28897`, press «Επιβεβαίωση & Εκμάθηση» once, then
+  delete the zero-line diagnostic draft and submit the invoice once from POS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.

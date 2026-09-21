@@ -46,7 +46,7 @@ test("POS reads multipage FAST headers sequentially without losing a successful 
 });
 
 test("POS background reads central STEFANIDIS Azure pages in order before unified AI",()=>{
-  const fastPath=aiRecheck.indexOf("if((preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
+  const fastPath=aiRecheck.indexOf("if(!parsed&&(preferCentralStefanidis||preferCentralMantzilas)&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");
   const unified=aiRecheck.indexOf('fetch("https://api.openai.com/v1/responses"');
   assert.ok(fastPath>0&&fastPath<unified);
   assert.match(aiRecheck,/readAzurePagesSequentially\(pageJobs\)/);

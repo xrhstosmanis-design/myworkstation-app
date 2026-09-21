@@ -40,3 +40,19 @@
 3. Submit `28897` once, freshly, from POS.
 4. Exactly one BackOffice draft must contain the 11 printed quantities, `10%/15%` discounts, `13%` VAT and `53,91 €` total.
 5. Do not approve or finalize during this acceptance check.
+
+## 2026-09-21 — Exact learned-document handoff
+
+- A fresh 09:27 POS run still failed with zero lines because the background
+  recheck did not consume the centrally learned physical invoice.
+- The Learning confirmation action now performs and awaits the central save;
+  all non-rejected lines are explicitly confirmed before `LEARNED` status.
+- POS resolves an exact learned document before invoking Azure/OpenAI. Reuse is
+  limited to the same supplier, invoice number and gross amount, and only after
+  every row's quantity, unit price, sequential discounts, net, VAT and gross
+  independently balance. Partial or mismatched documents fail closed.
+- The photographed `28897` fixture proves all 11 quantities, `10%/15%`
+  discounts, `13%` VAT and the accepted cent-level total reconciliation.
+- Client production build PASS; full server suite `1377/1377` PASS.
+- Local implementation is ready for an explicitly authorized push; no remote
+  mutation was performed at this checkpoint.
