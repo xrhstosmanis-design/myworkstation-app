@@ -26,7 +26,7 @@ export function normalizeAadeResult(xml,taxId){
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId);
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
-  const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
+  const store=await prisma.store.findFirst({where:{...(storeId?{id:storeId}:{}),companyId:req.user.companyId},select:{id:true},orderBy:{createdAt:"asc"}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const existingRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
   const existing=existingRows[0]||null;
