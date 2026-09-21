@@ -32,5 +32,5 @@ test("Invoice Learning uses the configured POS-style fallback after an Azure req
   assert.doesNotMatch(route,/if\(azureState==="REQUEST_FAILED"\)return res\.status\(503\)/);
   assert.match(route,/azureFailureCode/);
   assert.match(route,/for\(let attempt=1;attempt<=3;attempt\+\+\)/);
-  assert.match(route,/if\(!completeness\.complete\)return res\.status\(422\)/);
+  assert.match(route,/if\(!completeness\.complete\)return res\.json\(\{\.\.\.result,azureState,completeness,requiresManualCompletion:true,partialResult:true\}\)/);
 });
