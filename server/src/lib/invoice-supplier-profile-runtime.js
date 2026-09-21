@@ -11,10 +11,10 @@ export async function resolveCentralSupplierProfile(supplier={}){
   const taxId=cleanTaxId(supplier?.taxId),name=norm(supplier?.name);
   try{
     let rows=[];
-    if(taxId)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 AND "isActive"=TRUE LIMIT 1`,taxId);
-    if(!rows.length&&!taxId&&name)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE ("normalizedName"=$1 OR $1 LIKE '%'||"normalizedName"||'%' OR "normalizedName" LIKE '%'||$1||'%') AND "isActive"=TRUE ORDER BY "updatedAt" DESC LIMIT 1`,name);
+    if(taxId)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","commercialFamily","distributorName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 AND "isActive"=TRUE LIMIT 1`,taxId);
+    if(!rows.length&&!taxId&&name)rows=await prisma.$queryRawUnsafe(`SELECT "supplierKey","supplierTaxId","supplierName","commercialFamily","distributorName","ruleKey","profileVersion","profile","updatedAt" FROM "InvoiceSupplierReadingProfile" WHERE ("normalizedName"=$1 OR $1 LIKE '%'||"normalizedName"||'%' OR "normalizedName" LIKE '%'||$1||'%') AND "isActive"=TRUE ORDER BY "updatedAt" DESC LIMIT 1`,name);
     const r=rows?.[0];
-    return r?{supplierKey:r.supplierKey,supplierTaxId:r.supplierTaxId,supplierName:r.supplierName,ruleKey:r.ruleKey,profileVersion:r.profileVersion,...(r.profile||{}),updatedAt:r.updatedAt}:null;
+    return r?{supplierKey:r.supplierKey,supplierTaxId:r.supplierTaxId,supplierName:r.supplierName,commercialFamily:r.commercialFamily||r.profile?.commercialFamily||null,distributorName:r.distributorName||r.profile?.distributorName||null,ruleKey:r.ruleKey,profileVersion:r.profileVersion,...(r.profile||{}),updatedAt:r.updatedAt}:null;
   }catch(error){
     // Safe fallback while old tenants are waiting for the central profile table bootstrap.
     console.warn("Central supplier profile lookup skipped:",error?.message||error);
@@ -193,7 +193,7 @@ export async function applyCentralSupplierProfile(parsed){
     ...parsed,
     productLines,
     lines:productLines.map(line=>({text:line.rawText||line.description||"",confidence:line.confidence||0})),
-    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,requireCompletePrintedTableOnMismatch,updatedAt:profile.updatedAt},
+    supplierReadingProfile:{supplierKey:profile.supplierKey,supplierTaxId:profile.supplierTaxId,supplierName:profile.supplierName,commercialFamily:profile.commercialFamily||null,distributorName:profile.distributorName||null,ruleKey:profile.ruleKey,profileVersion:profile.profileVersion,requireCompletePrintedTableOnMismatch,updatedAt:profile.updatedAt},
     supplierProfileApplied:true
   };
 }
