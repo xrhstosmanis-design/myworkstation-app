@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 69150)
-Total output lines: 2469
+Warning: truncated output (original token count: 69316)
+Total output lines: 2477
 
 ## 2026-09-20 — Employee modal scroll fix rebased — AWAITING CI/LAB
 
@@ -899,10 +899,7 @@ Total output lines: 1413
 ## 2026-09-13 — PREMIUM επαναλαμβανόμενες αποκλίσεις / ολοκληρώθηκε από PREMIUM v2
 
 - [x] Νέος PREMIUM, read-only έλεγχος: εντοπίζει μόνο χειριστές με 2+ κλεισμένες βάρδιες που έχουν απόκλιση στα επιλεγμένα φίλτρα.
-- [x] Εμφανίζει πλήθος βαρδιών και αθροιστικές αποκλίσεις μετρητών / POS–EFTPOS ως ένδειξη ελέγχου, χωρίς απόδοση ευθύνης, οικ…19150 tokens truncated…έλεση ελέγχου.
-- [x] ΚΑΤ LIVE PASS: με ενεργό μόνο PREMIUM, οι κάρτες BASIC και COMPLETE εμφανίστηκαν ως «Περιλαμβάνεται στο PREMIUM Έλεγχος» και η εκτέλεση ολοκληρώθηκε χωρίς δεύτερη ενεργοποίηση. Αποτέλεσμα: 37 βάρδιες, καθαρή διαφορά μετρητών 449,04 €, διαφορά POS–EFTPOS −61,61 € και 22 πραγματικά συμβάντα προς έλεγχο. Δεν έγινε δοκιμαστική επιβεβαίωση σε πραγματικό εύρημα ΚΑΤ.
-
-## 13/09/2026 — COMPLETE έλεγχοι πληρωμών Super Admin
+- [x] Εμφανίζει πλήθος βαρδιών και αθροιστικές αποκλίσεις μετρητών / POS–EFTPOS ως ένδειξη ελέγχου, χωρίς απόδοση ευθύνης, οικ…19316 tokens truncated…MPLETE έλεγχοι πληρωμών Super Admin
 
 - [x] Προστέθηκε read-only έλεγχος COMPLETE για ενεργές πληρωμές/έξοδα χωρίς συνημμένο παραστατικό.
 - [x] Προστέθηκε συντηρητικός έλεγχος πιθανής διπλής πληρωμής: ίδιος προμηθευτής, ίδιο ποσό, ίδιο κατάστημα και ίδια ημέρα.
@@ -1943,3 +1940,11 @@ Total output lines: 1413
 - [x] Targeted exact-handoff regression `8/8` PASS; syntax and diff checks PASS.
 - [ ] Green CI → merge → deploy → retry the existing safe MANTZAVAS `38001` draft once.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-pos-missing-total.md`.
+
+## 2026-09-21 — POS retry for every confirmed complete-table profile — READY FOR CI
+
+- [x] LAB evidence: the existing MANTZAVAS 38001 failed job stayed `POS_FAILED` after refresh because its complete-table profile had no generic retry strategy.
+- [x] Every centrally confirmed complete-table profile can now restart the same failed draft; exact Learning replay remains supplier + invoice scoped.
+- [x] No payment, duplicate invoice, stock or cross-supplier economics are introduced by the retry.
+- [ ] Green CI → merge → deploy → refresh POS and retry MANTZAVAS 38001.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-pos-generic-retry.md`.
