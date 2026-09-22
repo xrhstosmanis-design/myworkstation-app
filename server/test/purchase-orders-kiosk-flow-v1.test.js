@@ -55,7 +55,8 @@ test("Kiosk-style drilldowns are wired to real actions",()=>{
   assert.match(client,/data-line-edit/);
   assert.match(client,/Διόρθωση γραμμής τιμολογίου/);
   assert.match(client,/data-product-search/);
-  assert.match(client,/productId:selectedProductId\|\|undefined/);
+  assert.match(client,/productId:selectedProductId/);
+  assert.match(client,/ocr-lines\/\$\{l\.id\}\/create-product/);
   assert.match(client,/parent.style.display="none"/);
   assert.match(client,/data-product-card/);
   assert.match(client,/data-barcodes/);

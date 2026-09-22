@@ -67,7 +67,7 @@ test("create-product persists invoice supplier code and purchase economics",()=>
   assert.match(source,/"markupPercent"=\$\{body\.markupPercent\}/);
   assert.match(source,/"supplierCode"=\$\{supplierCode\|\|null\}/);
   assert.match(source,/"unitCost"=\$\{unitCost\}/);
-  assert.match(source,/learnSupplierMapping\(tx,\{companyId:req\.user\.companyId,supplierId:line\.supplierId,supplierCode,productId,barcode,description:body\.name,userId:req\.user\.id,unitCost:pieceCost,unitsPerPackage:packSize,discount1:body\.discount1,discount2:body\.discount2,discount3:body\.discount3,excisePerInvoiceUnit:excise\/quantity,markupPercent:body\.markupPercent\}\)/);
+  assert.match(source,/learnSupplierMapping\(tx,\{companyId:req\.user\.companyId,supplierId:line\.supplierId,supplierCode,productId,barcode:savedBarcode,description:body\.name,userId:req\.user\.id,unitCost:pieceCost,unitsPerPackage:packSize,discount1:body\.discount1,discount2:body\.discount2,discount3:body\.discount3,excisePerInvoiceUnit:excise\/quantity,markupPercent:body\.markupPercent\}\)/);
   assert.match(source,/"lastDiscount1"=EXCLUDED\."lastDiscount1"/);
   assert.match(source,/"lastExcisePerInvoiceUnit"=EXCLUDED\."lastExcisePerInvoiceUnit"/);
   assert.match(source,/"lastMarkupPercent"=EXCLUDED\."lastMarkupPercent"/);
