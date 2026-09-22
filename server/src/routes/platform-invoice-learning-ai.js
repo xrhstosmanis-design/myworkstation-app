@@ -620,6 +620,23 @@ const schema={type:"object",additionalProperties:false,properties:{documentType:
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 const platformUploadOwner=req=>String(req.user?.id||req.user?.userId||req.user?.sub||"");
 
+export function mergeInvoiceLearningPages(pageDrafts=[]){
+  const pages=pageDrafts.filter(Boolean),first=pages[0]||{},lastWithTotal=[...pages].reverse().find(page=>Number(page?.totalGross||0)>0)||pages.at(-1)||{};
+  return {
+    ...first,
+    supplier:pages.find(page=>page?.supplier?.taxId||page?.supplier?.name)?.supplier||first.supplier,
+    documentNumber:pages.find(page=>page?.documentNumber)?.documentNumber||first.documentNumber||"",
+    documentDate:pages.find(page=>page?.documentDate)?.documentDate||first.documentDate||"",
+    documentType:pages.some(page=>page?.documentType==="CREDIT_NOTE")?"CREDIT_NOTE":"INVOICE",
+    totalNet:Number(lastWithTotal.totalNet||0),
+    totalVat:Number(lastWithTotal.totalVat||0),
+    totalGross:Number(lastWithTotal.totalGross||0),
+    productLines:pages.flatMap(page=>Array.isArray(page?.productLines)?page.productLines:[]),
+    azurePageCount:pages.reduce((sum,page)=>sum+Math.max(1,Number(page?.azurePageCount||0)),0),
+    sourcePageCount:pages.length,
+  };
+}
+
 router.post("/invoice-learning/mobile-upload-sessions",(req,res)=>{
   if(!isPlatformSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   const ownerKey=platformUploadOwner(req);
@@ -640,14 +657,18 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
-  if(!fileData||typeof fileData!=="string")return res.status(400).json({error:"Δεν βρέθηκε το πρωτότυπο PDF/φωτογραφία για AI επανέλεγχο."});
-  const readFingerprint=invoiceReadFingerprint(fileData,mimeType),cachedRead=invoiceLearningReadCache.get(readFingerprint);
+  const requestedPages=Array.isArray(req.body?.pages)?req.body.pages:[],pages=(requestedPages.length?requestedPages:[{filename,mimeType,fileData}]).map((page,index)=>({filename:String(page?.filename||`invoice-page-${index+1}`),mimeType:String(page?.mimeType||"image/jpeg"),fileData:page?.fileData}));
+  if(!pages.length||pages.length>5||pages.some(page=>!page.fileData||typeof page.fileData!=="string"))return res.status(400).json({error:"Επίλεξε από 1 έως 5 έγκυρες σελίδες του ίδιου τιμολογίου."});
+  if(pages.length>1&&pages.some(page=>page.mimeType==="application/pdf"))return res.status(400).json({error:"Επίλεξε είτε ένα PDF είτε έως 5 φωτογραφίες του ίδιου τιμολογίου."});
+  const readFingerprint=invoiceReadFingerprint(pages.map(page=>page.fileData).join("|PAGE|"),pages.map(page=>page.mimeType).join("|")),cachedRead=invoiceLearningReadCache.get(readFingerprint);
   if(cachedRead?.stableRead)return res.json({...cachedRead.winner,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true});
   const cacheResult=result=>cacheInvoiceLearningResult(readFingerprint,result);
   let azureFailure="",azureFailureCode="",azureDraft=null,azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
     try{
-      let azure=normalizeAzure(await callAzure(fileData,mimeType));
+      const azurePages=[];
+      for(const page of pages)azurePages.push(normalizeAzure(await callAzure(page.fileData,page.mimeType)));
+      let azure=mergeInvoiceLearningPages(azurePages);
       azure=await applyCentralSupplierProfile(azure);
       azure=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure));
       azureDraft=azure;
@@ -661,10 +682,9 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   // failure must not prevent the configured OpenAI fallback from reading the
   // original document. Economic completeness checks below still fail closed.
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:azureState==="REQUEST_FAILED"?`Η σύνδεση με το Azure Document Intelligence απέτυχε (${azureFailureCode}) και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.`:"Το Azure δεν έδωσε ασφαλές αποτέλεσμα και δεν έχει συνδεθεί OPENAI_API_KEY για fallback.",code:"AI_PROVIDER_NOT_CONFIGURED",azureState,azureFailureCode:azureFailureCode||undefined});
-  const base64=String(fileData).includes(",")?String(fileData).split(",").pop():String(fileData);
-  const filePart=mimeType==="application/pdf"?{type:"input_file",filename:filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(fileData).startsWith("data:")?fileData:`data:${mimeType};base64,${base64}`,detail:"high"};
+  const fileParts=pages.map(page=>{const base64=String(page.fileData).includes(",")?String(page.fileData).split(",").pop():String(page.fileData);return page.mimeType==="application/pdf"?{type:"input_file",filename:page.filename||"invoice.pdf",file_data:base64}:{type:"input_image",image_url:String(page.fileData).startsWith("data:")?page.fileData:`data:${page.mimeType};base64,${base64}`,detail:"high"}});
   const prompt="Διάβασε αποκλειστικά το πρωτότυπο ελληνικό τιμολόγιο. Μην χρησιμοποιείς OCR ή προηγούμενα πρόχειρα δεδομένα. Επίστρεψε documentType CREDIT_NOTE μόνο αν ο τίτλος του παραστατικού γράφει ρητά Πιστωτικό Τιμολόγιο, Πιστ. Τιμ., Δελτίο Επιστροφής ή Credit Note· αλλιώς INVOICE. Το Τιμολόγιο Πώλησης ή Τιμολόγιο Πώλησης - Δελτίο Αποστολής είναι πάντοτε INVOICE. Μην συμπεραίνεις πιστωτικό από αρνητικό ποσό, προηγούμενο υπόλοιπο ή μεμονωμένη λέξη επιστροφή. Διάβασε τον πίνακα ειδών γραμμή-γραμμή: κάθε ορατή γραμμή προϊόντος πρέπει να γίνει ένα ξεχωριστό productLines στοιχείο, ακόμη και αν έχει ίδιο κωδικό/περιγραφή με άλλη γραμμή. Μην επιστρέψεις κενό productLines όταν βλέπεις πίνακα ειδών. Επίστρεψε μόνο πραγματικές γραμμές προϊόντων, supplier code, περιγραφή, ποσότητα, μονάδα, συσκευασία, τιμή, πραγματικές εκπτώσεις, καθαρή αξία, ΦΠΑ, μικτή αξία και barcode μόνο αν φαίνεται. Διασταύρωσε μαθηματικά τιμή, εκπτώσεις, ποσότητα και καθαρή αξία. documentDate σε YYYY-MM-DD.";
-  const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(OPENAI_FALLBACK_TIMEOUT_MS),body:JSON.stringify({model:openAiFallbackModel(),reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt},filePart]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
+  const callOpenAiFallback=retry=>fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(OPENAI_FALLBACK_TIMEOUT_MS),body:JSON.stringify({model:openAiFallbackModel(),reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:`${retry?`${prompt} ΑΠΑΙΤΕΙΤΑΙ έγκυρο JSON που ακολουθεί ακριβώς το schema.`:prompt} Το παραστατικό έχει ${pages.length} ${pages.length===1?"σελίδα":"σελίδες"}. Διάβασέ τες όλες με τη σειρά και επέστρεψε κάθε φυσική γραμμή ακριβώς μία φορά.`},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_learning_extract",strict:true,schema}}})});
   const safeOpenAiCall=async retry=>{try{return await callOpenAiFallback(retry)}catch(error){if(/TimeoutError|AbortError|aborted due to timeout/i.test(`${error?.name||""} ${error?.message||error}`))return null;throw error}};
   let response=await safeOpenAiCall(false);if(!response)return res.status(504).json({error:"Ο ασφαλής επανέλεγχος OpenAI άργησε περισσότερο από το επιτρεπτό όριο. Το μερικό αποτέλεσμα Azure δεν αποθηκεύτηκε. Δοκίμασε ξανά.",code:"AI_PROVIDER_TIMEOUT",azureState});
   let raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε ο AI επανέλεγχος.",code:"AI_PROVIDER_ERROR",azureState});
