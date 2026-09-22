@@ -2148,6 +2148,9 @@ Total output lines: 1413
 - [x] Το ίδιο `AI_COMPLETE` job γίνεται recoverable από τις ήδη αποθηκευμένες γραμμές, χωρίς νέο upload ή νέα πληρωμή.
 - [x] Η πρώτη πραγματική επανάληψη αποκάλυψε ότι το BackOffice `fast-recover` παρέλειπε το `AI_COMPLETE`, παρότι startup/worker το δέχονταν.
 - [x] Το refresh της λίστας επιλέγει πλέον `AI_COMPLETE`, το προωθεί σε `POS_QUEUED` και επανεκκινεί το ίδιο durable handoff.
-- [x] Στοχευμένα recovery tests `41/41` PASS.
+- [x] Δεύτερο LAB FAIL: το recovery ξεκίνησε αλλά το παλιό handoff έκανε νέο `AI_RECHECK` και έληξε σε timeout.
+- [x] Όταν υπάρχουν αποθηκευμένες AI γραμμές, το recovery τις επαναχρησιμοποιεί ρητά χωρίς δεύτερη κλήση OCR/AI.
+- [x] Η αυτοΐαση ξεκινά απευθείας από το POS polling και καλύπτει stale `POS_PROCESSING`; δεν απαιτείται BackOffice refresh.
+- [x] Στοχευμένα recovery tests `44/44` PASS και πλήρες server suite `1399/1399` PASS.
 - [ ] Πράσινο CI, merge, ακριβές Render deploy και αυτόματη συνέχιση του υπάρχοντος job.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-gate3-multipage-ai-complete-resume.md`

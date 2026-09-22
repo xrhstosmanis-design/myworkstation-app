@@ -16,7 +16,11 @@ test("a stranded AI_COMPLETE multipage handoff resumes from its stored lines",()
   assert.match(claim,/"POS_REPROCESSING","AI_COMPLETE"/);
   assert.match(recover,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED','AI_COMPLETE'\)/);
   assert.match(recover,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE'\)/);
-  assert.match(status,/job\.status==="AI_COMPLETE"&&Array\.isArray\(job\.resultJson\?\.productLines\)/);
+  assert.match(recover,/hasStoredAiLines=Array\.isArray\(job\.resultJson\?\.productLines\)&&job\.resultJson\.productLines\.length>0/);
+  assert.match(recover,/else if\(hasStoredAiLines\)handoff=\{\.\.\.handoff,resumeStoredProductLines:true\}/);
+  assert.match(status,/hasStoredAiLines=Array\.isArray\(job\.resultJson\?\.productLines\)&&job\.resultJson\.productLines\.length>0/);
+  assert.match(status,/job\.status==="AI_COMPLETE"&&hasStoredAiLines/);
+  assert.match(status,/if\(hasStoredAiLines&&\(completedAiNeedsHandoff\|\|staleProcessing\)\)scheduledHandoff=\{\.\.\.handoff,resumeStoredProductLines:true\}/);
   assert.match(status,/staleProcessing\|\|completedAiNeedsHandoff/);
   assert.match(aiRecheck,/\["AI_COMPLETE","POS_PROCESSING"\]\.includes\(job\.status\)&&req\.user\?\.tokenType==="POS_BACKGROUND"/);
 });
