@@ -9,7 +9,7 @@ const auth=await readFile(new URL("../src/middleware/auth.js",import.meta.url),"
 
 test("BackOffice refresh reclaims only durable, stale POS handoffs without a payment write",()=>{
   assert.match(route,/router\.post\("\/ai-reader\/fast-recover"/);
-  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
+  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED','AI_COMPLETE'\) OR \("status"='POS_PROCESSING' AND "updatedAt"<\$\{staleBefore\}\)/);
   assert.match(route,/"updatedAt" ASC LIMIT 50/);
   assert.match(route,/if\(recovered\.length>=3\)break/);
   assert.match(route,/enqueueFastBackground\(\{companyId:req\.user\.companyId,storeId:job\.storeId,jobId:job\.id,publicOrigin\}\)/);
@@ -192,7 +192,7 @@ test("recovery prioritizes recent completed drafts before the bounded legacy sca
 
 test("a reused one-page LOCAL_COMPLETE job is promoted and recoverable after POS payment",()=>{
   assert.match(route,/status" IN \('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'\)/);
-  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED'\)/);
+  assert.match(route,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED','AI_COMPLETE'\)/);
   assert.match(route,/Number\(handoff\.pageCount\|\|0\)===1/);
   assert.match(route,/pageJobIds:\[job\.id\],primaryJobId:job\.id/);
 });
