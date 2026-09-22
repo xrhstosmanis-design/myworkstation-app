@@ -21,6 +21,7 @@ test("merges physical rows in page order and uses the footer page totals",()=>{
 test("Learning UI selects up to five images and sends every page together",()=>{
   const client=fs.readFileSync(new URL("../../client/src/invoice-learning-ai-bootstrap.js",import.meta.url),"utf8");
   assert.match(client,/el\.id==='photoFile'\)el\.multiple=true/);
+  assert.match(client,/photoButton&&photoButton\.textContent!==photoLabel/);
   assert.match(client,/incoming\.length>5/);
   assert.match(client,/pages:selectedPages\.map/);
   assert.match(client,/Σελίδα \$\{index\+1\}\/\$\{selectedFiles\.length\}/);
