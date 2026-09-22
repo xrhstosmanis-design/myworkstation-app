@@ -2032,3 +2032,12 @@ Total output lines: 1413
 - [x] Client production build PASS.
 - [ ] Πράσινο CI → merge → ακριβές deploy → LAB με καθαρή/θολή φωτογραφία και PDF.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-shared-document-image-quality.md`.
+
+
+## 2026-09-22 — Invoice Learning review navigation
+
+- Enter μετακινεί το focus στο επόμενο ενεργό κελί.
+- Η περιοχή ελέγχου δεν έχει κάθετη εσωτερική κύλιση.
+- Επιβεβαιωμένες γραμμές πράσινες και απορριφθείσες κόκκινες.
+- Δεν τροποποιήθηκε η λογική του «Επιβεβαίωση & Εκμάθηση».
+- PR: #1061.
