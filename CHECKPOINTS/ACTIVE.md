@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: Enter → επόμενο κελί, πλήρης κάθετη προβολή και χρωματισμός επιβεβαιωμένων γραμμών.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-review-navigation.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: η παλιά λίστα «Εκκρεμή Barcodes» κρυφή στην αρχική φόρτωση και διαθέσιμη μόνο από το κουμπί.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-collapse-pending-barcodes.md`
 - PR: #1060 — περιμένει πράσινο CI και merge.
