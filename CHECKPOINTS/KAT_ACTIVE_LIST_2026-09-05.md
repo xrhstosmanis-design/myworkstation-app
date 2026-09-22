@@ -6,7 +6,8 @@
 - [x] Το apply ξαναϋπολογίζει όλη την προεπισκόπηση, απαιτεί ίδιο hash και μπλοκάρει stale preview, duplicates, ήδη συνδεδεμένους και blocked rows.
 - [x] Δημιουργεί/επαναχρησιμοποιεί ρόλο ανά παλιά θέση, συνδέει `legacyEmployeeId`, store access και γράφει αναλυτικό audit μέσα σε μία transaction.
 - [x] Targeted Workforce tests `17/17`, πλήρες server suite `1385/1385`, server syntax και client production build PASS.
-- [ ] Green CI → merge/deploy → LAB εφαρμογή των 5 επιλεγμένων.
+- [x] CI #2752 έφτασε σε E2E και αποκάλυψε παλιά υπόθεση «κανένα apply endpoint»· ενημερώθηκε ώστε Owner να λαμβάνει `403` και apply να παραμένει μόνο Platform Super Admin.
+- [ ] Green CI επανάληψη → merge/deploy → LAB εφαρμογή των 5 επιλεγμένων.
 - [ ] Μετά τη μεταφορά: Workforce V2 πρέπει να δείχνει 7/7 και η Κωνσταντίνα 4 ημέρες / 32 ώρες πριν από τη δοκιμή scheduler.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-workforce-v2-controlled-migration.md`.
 
