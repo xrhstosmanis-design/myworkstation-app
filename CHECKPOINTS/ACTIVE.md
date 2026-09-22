@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: η αλλαγή ΦΠΑ ενημερώνει άμεσα τη γραμμή, τα σύνολα και την επαγγελματική προβολή.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-vat-live-update.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: popup προτάσεων στα πεδία «Μονάδα τιμολογίου» και «Μονάδα stock», με διατήρηση ελεύθερης πληκτρολόγησης.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-unit-suggestions.md`
 

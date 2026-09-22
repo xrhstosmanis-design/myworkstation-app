@@ -22,3 +22,10 @@ test('professional learning view explicitly remains non-posting and central',()=
   assert.match(lab,/δεν δημιουργούν κίνηση stock ή λογιστικής/);
   assert.match(lab,/αποθηκεύονται κεντρικά για τον ίδιο προμηθευτή/);
 });
+
+test('replacement VAT dropdown updates the live draft and financial totals',()=>{
+  assert.match(lab,/tr\.dataset\.lineId=line\.id/);
+  assert.match(lab,/body\.onchange=event=>/);
+  assert.match(lab,/find\(item=>item\.id===tr\?\.dataset\.lineId\)/);
+  assert.match(lab,/syncRow\(tr,line\)/);
+});
