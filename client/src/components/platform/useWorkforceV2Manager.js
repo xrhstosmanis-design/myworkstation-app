@@ -9,6 +9,7 @@ export default function useWorkforceV2Manager({company,store,request}){
   const[ruleForm,setRuleForm]=useState(()=>emptyWorkforceRule()),[ruleEditingId,setRuleEditingId]=useState(null);
   const[shiftForm,setShiftForm]=useState(()=>emptyWorkforceShiftTemplate()),[shiftEditingId,setShiftEditingId]=useState(null);
   const[pending,setPending]=useState(null),[migration,setMigration]=useState(null),[migrationScope,setMigrationScope]=useState("STORE"),[includeInactiveLegacy,setIncludeInactiveLegacy]=useState(false);
+  const[selectedMigrationIds,setSelectedMigrationIds]=useState([]);
   const[busy,setBusy]=useState(""),[error,setError]=useState(""),[message,setMessage]=useState("");
   const base=`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/workforce-v2`;
   const activeRoles=useMemo(()=>data?.roles?.filter(role=>role.active)||[],[data]);
@@ -29,7 +30,7 @@ export default function useWorkforceV2Manager({company,store,request}){
   useEffect(()=>{
     setForm(emptyWorkforceEmployee(store?.id));setEditingId(null);setRoleForm({name:"",code:"",description:""});setRoleEditingId(null);
     setRuleForm(emptyWorkforceRule());setRuleEditingId(null);setShiftForm(emptyWorkforceShiftTemplate());setShiftEditingId(null);
-    setMigration(null);setPending(null);load();
+    setMigration(null);setSelectedMigrationIds([]);setPending(null);load();
   },[company?.id,store?.id]);
 
   const resetEmployee=()=>{setEditingId(null);setForm(emptyWorkforceEmployee(store.id));setPending(null)};
@@ -217,16 +218,35 @@ export default function useWorkforceV2Manager({company,store,request}){
 
   const createMigrationPreview=async()=>{
     setBusy("migration");setError("");setMessage("");
-    try{setMigration(await request(`${base}/migration/preview`,{method:"POST",body:JSON.stringify({scope:migrationScope,includeInactive:includeInactiveLegacy})}))}
+    try{
+      const result=await request(`${base}/migration/preview`,{method:"POST",body:JSON.stringify({scope:migrationScope,includeInactive:includeInactiveLegacy})});
+      setMigration(result);
+      setSelectedMigrationIds(result.rows.filter(row=>(row.status==="READY"||row.status==="NEEDS_REVIEW")&&!row.duplicateCandidates.length).map(row=>row.legacy.id));
+    }
     catch(e){setError(e.message)}finally{setBusy("")}
+  };
+  const toggleMigrationEmployee=id=>setSelectedMigrationIds(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
+  const applyMigration=async()=>{
+    if(!migration||!selectedMigrationIds.length)return setError("Επίλεξε τουλάχιστον έναν εργαζόμενο για μεταφορά.");
+    if(!window.confirm(`Θα μεταφερθούν ${selectedMigrationIds.length} εργαζόμενοι στο Workforce V2. Η ενέργεια καταγράφεται και δεν δημιουργεί διπλότυπα. Συνέχεια;`))return;
+    const reason=window.prompt("Γράψε τον λόγο μεταφοράς:","Ελεγχόμενη μεταφορά από το παλιό Workforce στο Workforce V2");
+    if(!reason||reason.trim().length<3)return;
+    setBusy("migration-apply");setError("");setMessage("");
+    try{
+      const result=await request(`${base}/migration/apply`,{method:"POST",body:JSON.stringify({scope:migrationScope,includeInactive:includeInactiveLegacy,
+        legacyEmployeeIds:selectedMigrationIds,previewHash:migration.previewHash,confirmed:true,acceptWarnings:true,reason:reason.trim()})});
+      setMessage(`Μεταφέρθηκαν ${result.count} εργαζόμενοι στο Workforce V2.`);setMigration(null);setSelectedMigrationIds([]);await load();
+    }catch(e){setError(e.message)}finally{setBusy("")}
   };
 
   return {
     tab,setTab,data,form,setForm,editingId,roleForm,setRoleForm,roleEditingId,ruleForm,setRuleForm,ruleEditingId,shiftForm,setShiftForm,shiftEditingId,
-    request,pending,setPending,migration,setMigration,migrationScope,setMigrationScope,includeInactiveLegacy,setIncludeInactiveLegacy,busy,error,message,
+    request,pending,setPending,migration,setMigration,migrationScope,setMigrationScope,includeInactiveLegacy,setIncludeInactiveLegacy,
+    selectedMigrationIds,setSelectedMigrationIds,busy,error,message,
     activeRoles,storeMap,roleMap,employeeMap,ruleDefinitionMap,shiftCategoryMap,load,resetEmployee,resetRole,resetRule,resetShiftTemplate,
     setField,setRuleField,setShiftField,chooseBaseStore,toggleStore,toggleRole,editEmployee,previewEmployee,confirmEmployee,changeEmployeeStatus,
     editRole,previewRole,confirmRole,changeRoleStatus,chooseRuleType,editRule,previewRule,confirmRule,changeRuleStatus,
-    chooseShiftCategory,editShiftTemplate,previewShiftTemplate,confirmShiftTemplate,changeShiftTemplateStatus,createMigrationPreview
+    chooseShiftCategory,editShiftTemplate,previewShiftTemplate,confirmShiftTemplate,changeShiftTemplateStatus,createMigrationPreview,
+    toggleMigrationEmployee,applyMigration
   };
 }
