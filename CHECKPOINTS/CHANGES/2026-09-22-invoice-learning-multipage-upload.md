@@ -2,7 +2,7 @@
 
 ## Κατάσταση
 
-**LAB FAIL / LOCAL PASS / AWAITING CI + DEPLOY + LAB.**
+**POST-DEPLOY LAB FAIL / HOTFIX LOCAL PASS / AWAITING CI + DEPLOY + LAB.**
 
 Στο πραγματικό Gate 3 δείγμα ΤΑΛΩΣ (`01T00125909`, δύο φωτογραφημένες
 σελίδες, σύνολο `252,06 €`) το Invoice Learning εμφανίζει επιλογή μόνο ενός
@@ -48,3 +48,13 @@
 - Client production build: PASS.
 - Server build / Prisma generation: PASS.
 - Δεν εκτελέστηκε database migration, πληρωμή, stock posting ή οριστικοποίηση.
+
+## Post-deploy λευκή σελίδα και hotfix
+
+Μετά το πρώτο deploy του πολυσέλιδου upload, το πραγματικό LAB άνοιξε λευκή
+σελίδα. Αιτία: ο installer έγραφε το ίδιο `textContent` του κουμπιού σε κάθε
+εκτέλεση του global `MutationObserver`. Η εγγραφή δημιουργούσε νέα mutation και
+αμέσως νέα εκτέλεση, με αποτέλεσμα ατέρμονα κύκλο στο main thread.
+
+Το hotfix κάνει την αλλαγή idempotent: γράφει την ετικέτα μόνο όταν είναι
+διαφορετική. Δεν αλλάζει upload, AI, οικονομικά δεδομένα ή άλλο route.
