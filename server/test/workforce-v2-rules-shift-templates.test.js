@@ -64,8 +64,9 @@ test("rules are PRO-gated while shift templates remain inside BASIC Workforce ac
   assert.match(validation,/workforceShiftTemplateSchema/);
 });
 
-test("Workforce bootstrap and UI mount rules and shift templates without enabling migration apply",()=>{
+test("Workforce bootstrap and UI mount rules, shifts and Super Admin migration apply",()=>{
   const route=read("../src/routes/platform-workforce-v2.js");
+  const migrationRoute=read("../src/routes/platform-workforce-v2-migration.js");
   const panel=read("../../client/src/components/platform/WorkforceV2EmployeesPanel.jsx");
   const preview=read("../../client/src/components/platform/WorkforceV2ActionPreview.jsx");
   const manager=read("../../client/src/components/platform/useWorkforceV2Manager.js");
@@ -74,15 +75,15 @@ test("Workforce bootstrap and UI mount rules and shift templates without enablin
   assert.match(route,/router\.use\("\/shift-templates",shiftTemplateRoutes\)/);
   assert.match(route,/rulesManagement/);
   assert.match(route,/shiftTemplateManagement:true/);
-  assert.match(route,/migrationApply:false/);
-  assert.match(route,/applyAvailable:false/);
+  assert.match(route,/migrationApply:isSuperAdmin\(req\.user\)/);
+  assert.match(route,/applyAvailable:isSuperAdmin\(req\.user\)/);
   assert.match(panel,/Κανόνες/);
   assert.match(panel,/Πρότυπα βαρδιών/);
   assert.match(preview,/pending\?\.type==="rule"/);
   assert.match(preview,/pending\?\.type==="shiftTemplate"/);
   assert.match(manager,/confirmed:true/);
-  assert.doesNotMatch(route,/router\.(?:post|put|patch)\("\/migration\/apply/);
-  assert.doesNotMatch(`${panel}\n${preview}\n${manager}`,/request\([^\n]*migration\/apply/);
+  assert.match(migrationRoute,/router\.post\("\/apply"/);
+  assert.match(`${panel}\n${preview}\n${manager}`,/request\([^\n]*migration\/apply/);
 });
 
 test("new Workforce server modules pass Node syntax check",()=>{
@@ -90,6 +91,7 @@ test("new Workforce server modules pass Node syntax check",()=>{
     "../src/workforce-v2-rules.js",
     "../src/routes/platform-workforce-v2-rules.js",
     "../src/routes/platform-workforce-v2-shift-templates.js",
+    "../src/routes/platform-workforce-v2-migration.js",
     "../src/routes/platform-workforce-v2.js",
     "../src/routes/workforce-v2-access.js",
     "../src/routes/workforce-v2-validation.js"
