@@ -1,13 +1,3 @@
-## 2026-09-22 — Workforce 5η/6η ημέρα μόνο με εβδομαδιαία έγκριση — AWAITING CI / LAB
-
-- [x] LAB requirement confirmed: Κωνσταντίνα 4 συμβατικές ημέρες / 32 ώρες, με δυνατότητα ορισμένων εβδομάδων για 5η ή 6η ημέρα.
-- [x] Η δυνατότητα εξαίρεσης δεν ανεβάζει πλέον μόνιμα το όριο του scheduler στις 6 ημέρες.
-- [x] Ρητή επιβεβαιωμένη οδηγία περιόδου ενεργοποιεί έως 5/40 ή 6/48 μόνο για το επιλεγμένο διάστημα.
-- [x] Ορατή προειδοποίηση καταγράφει την εξαίρεση· μη επιτρεπόμενη εξαίρεση μπλοκάρεται.
-- [x] Local targeted tests `8/8`, server syntax, client production build και diff check PASS.
-- [ ] Green CI → merge/deploy → required LAB 4/32, 5/40, 6/48 και επόμενη εβδομάδα ξανά 4/32.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-workforce-weekly-extra-days-approval.md`.
-
 ## 2026-09-22 — FRESH SNACK πραγματικό ΑΦΜ προφίλ — AWAITING CI / DEPLOY / LAB
 
 - [x] **LAB FAIL μετά το πρώτο deploy**: το νέο ανέβασμα του `006019` παρέμεινε σε `18 προϊόντα`, επειδή η οθόνη/παραστατικό έχει ΑΦΜ `999162880` ενώ το seed του κανόνα είχε λανθασμένα `099162880`.
@@ -2130,3 +2120,9 @@ Total output lines: 1413
 - [x] Δεν γίνεται stock posting, πληρωμή, οριστικοποίηση, λογιστική ή myDATA από τη διόρθωση.
 - [ ] Πράσινο CI, merge, ακριβές Render deploy και νέα LAB δοκιμή σε νέο πρόχειρο τιμολόγιο.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-invoice-new-product-barcode-decimals.md`
+## 2026-09-22 — Generate εσωτερικού barcode και LAB 404 — AWAITING CI / DEPLOY / LAB
+
+- [x] LAB evidence: η επιλογή «Δημιουργία εσωτερικού MyWorkStation» δεν είχε κουμπί παραγωγής και η καταχώρηση νέου προϊόντος επέστρεφε `Σφάλμα 404`.
+- [x] Προσθήκη `Generate Barcode` με άμεση εμφάνιση έγκυρου εσωτερικού EAN-13 και αποθήκευση του ίδιου κωδικού.
+- [x] Διόρθωση client API prefix σε `/api/commerce/purchase-orders/.../ocr-lines/.../create-product`.
+- [ ] Πράσινο CI, merge, ακριβές Render deploy και νέα δοκιμή σε νέο πρόχειρο τιμολόγιο.
