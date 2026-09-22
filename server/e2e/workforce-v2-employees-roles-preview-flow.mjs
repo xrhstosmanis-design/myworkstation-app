@@ -72,7 +72,7 @@ async function main(){
   const base=`/api/platform/store-modules/companies/${companyId}/stores/${storeId}/workforce-v2`;
   const bootstrap=await request(`${base}/bootstrap`,{token});
   assert.equal(bootstrap.response.status,200,JSON.stringify(bootstrap.payload));
-  assert.equal(bootstrap.payload?.migration?.mode,"PREVIEW_ONLY");
+  assert.equal(bootstrap.payload?.migration?.mode,"REVIEW_REQUIRED");
   assert.equal(bootstrap.payload?.migration?.applyAvailable,false);
   assert.ok(bootstrap.payload?.stores?.some(row=>row.id===secondaryStoreId));
 
@@ -162,7 +162,7 @@ async function main(){
     method:"POST",token,body:{scope:"STORE",includeInactive:false,legacyEmployeeIds:[legacyEmployeeId]}
   });
   assert.equal(preview.response.status,200,JSON.stringify(preview.payload));
-  assert.equal(preview.payload?.mode,"PREVIEW_ONLY");
+  assert.equal(preview.payload?.mode,"REVIEW_REQUIRED");
   assert.equal(preview.payload?.readOnly,true);
   assert.equal(preview.payload?.applyAvailable,false);
   assert.equal(preview.payload?.applyEndpoint,null);
@@ -176,8 +176,8 @@ async function main(){
   const linked=await prisma.workforceEmployee.count({where:{legacyEmployeeId}});
   assert.equal(linked,0,"preview linked a legacy employee");
 
-  const missingApply=await request(`${base}/migration/apply`,{method:"POST",token,body:{previewHash:preview.payload.previewHash}});
-  assert.equal(missingApply.response.status,404,"an apply endpoint exists before explicit approval");
+  const ownerApply=await request(`${base}/migration/apply`,{method:"POST",token,body:{previewHash:preview.payload.previewHash}});
+  assert.equal(ownerApply.response.status,403,"a non-Platform-Super-Admin applied a migration");
 
   const wrongTenant=await request(`/api/platform/store-modules/companies/not-${companyId}/stores/${storeId}/workforce-v2/bootstrap`,{token});
   assert.equal(wrongTenant.response.status,404,JSON.stringify(wrongTenant.payload));
