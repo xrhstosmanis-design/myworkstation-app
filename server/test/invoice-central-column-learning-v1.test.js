@@ -199,7 +199,7 @@ test('TALOS manual map overrides a shifted provider map without changing learned
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'800802293'},productLines:[{code:'3759850',azureRawRow:'3759850 MI OREO COOKIES 66GX20CA TEM 6 0.78 4.68 11.50 18.00 1.28 3.40 13',quantity:.78,unitPrice:4.68,unitCost:4.68,netAmount:11.5,sourceColumnMap:true}]});
   const line=result.productLines[0];
-  assert.equal(line.quantity,6);assert.equal(line.unitPrice,.78);assert.equal(line.netAmount,3.4);assert.equal(line.discount1,18);assert.equal(line.vatRate,13);assert.equal(line.invoiceUnit,'TEM');assert.equal(line.supplierProfileRule,'DECLARED_COLUMNS');
+  assert.equal(line.quantity,6);assert.equal(line.unitPrice,.78);assert.equal(line.netAmount,3.4);assert.equal(line.discount1,18);assert.equal(line.vatRate,13);assert.equal(line.invoiceUnit,'TEM');assert.equal(line.supplierProfileRule,'DECLARED_COLUMNS_VERIFIED_SUFFIX');
   assert.equal(line.barcode,'5200000000000');assert.deepEqual(mappings,{3759850:{barcode:'5200000000000',verified:true}});
 });
 
@@ -215,6 +215,30 @@ test('manual no-unit map repairs only a source-proven lost decimal separator',as
   assert.equal(result.productLines[0].netAmount,1.54);
   assert.equal(result.productLines[0].vatRate,13);
   assert.equal(result.productLines[0].supplierProfileRule,'DECLARED_COLUMNS_TAIL_RECONCILED');
+});
+
+test('TALOS declared suffix preserves printed net and reconstructs one omitted quantity',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'};
+  const profile={supplierTaxId:'800802293',readingRule:{layoutMode:'DECLARED_COLUMNS',columns}};
+  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const result=await context.apply({supplier:{taxId:'800802293'},productLines:[
+    {azureRawRow:'4322626 ΣΟΚ. LACTA ΟΛΟΚΛ ΦΟΥΝΤ BAR 45G X30 TEM 6 1.06 6.36 15.00 18.00 1.93 4.43 13',quantity:6,unitPrice:1.06,netAmount:5.22,vatRate:13},
+    {azureRawRow:'4286951 FIN MIN.STIC ΦΟΥ 100GX10 TEM 1.68 16.80 17.80 18.00 5.48 11.32 13',quantity:0,unitPrice:10,netAmount:0,vatRate:0}
+  ]});
+  const [complete,omitted]=result.productLines;
+  assert.deepEqual([complete.quantity,complete.unitPrice,complete.netAmount,complete.netUnitCost,complete.vatRate],[6,1.06,4.43,.7383,13]);
+  assert.equal(complete.supplierProfileRule,'DECLARED_COLUMNS_VERIFIED_SUFFIX');
+  assert.deepEqual([omitted.quantity,omitted.unitPrice,omitted.netAmount,omitted.netUnitCost,omitted.vatRate],[10,1.68,11.32,1.132,13]);
+  assert.equal(omitted.supplierProfileEvidence.quantityInferred,true);
+});
+
+test('Invoice Learning totals retain a source-proven printed line net',async()=>{
+  const lab=await readFile(new URL('../../client/src/invoice-learning-lab-bootstrap.js',import.meta.url),'utf8');
+  assert.match(lab,/printedNet=money\(line\.netValue\?\?line\.netAmount\)/);
+  assert.match(lab,/printedNet\/quantity/);
+  assert.match(lab,/\['quantity','unitPrice','discount1','discount2','discount3'\]\.includes\(changedKey\)/);
 });
 
 test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{
