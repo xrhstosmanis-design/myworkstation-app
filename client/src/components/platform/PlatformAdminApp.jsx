@@ -545,7 +545,7 @@ export default function PlatformAdminApp(){
     {showFiscalDryRun&&<FiscalBridgeDryRunCenter companies={data?.companies||[]} onClose={()=>setShowFiscalDryRun(false)}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
     {showOnlineRadioCenter&&<SuperAdminOnlineRadioCenter companies={data?.companies||[]} request={request} onClose={()=>setShowOnlineRadioCenter(false)}/>}
-    {workforceTarget&&<SuperAdminStaffScheduler {...workforceTarget} request={request} onClose={()=>setWorkforceTarget(null)}/>}
+    {workforceTarget&&<SuperAdminStaffScheduler {...workforceTarget} companies={data?.companies||[]} request={request} onClose={()=>setWorkforceTarget(null)}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }
