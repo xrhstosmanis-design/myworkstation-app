@@ -31,7 +31,11 @@
 - Full server test suite: PASS (1396/1396).
 - Client build: PASS.
 - Prisma/server build: PASS.
-- Κατάσταση: **AWAITING CI / DEPLOY / LAB**.
+- GitHub CI, merge και ακριβές Render deploy: **PASS** (`dc79662a`, PR #1074).
+- Πραγματική LAB επανάληψη από τον χρήστη: **PASS**. Η δημιουργία/καταχώρηση
+  νέων ειδών ολοκληρώθηκε χωρίς `404` και η παραγγελία `7460`
+  οριστικοποιήθηκε με τους νέους εσωτερικούς κωδικούς ορατούς στις γραμμές.
+- Κατάσταση: **LAB PASS — CLOSED**.
 
 ## LAB αποδοχή μετά το ακριβές deploy
 
