@@ -1,20 +1,17 @@
+import {prepareDocumentFile} from "./lib/document-image-quality.js";
+
 const labPath=window.location.pathname.replace(/\/+$/,'')==='/platform-admin/invoice-learning-lab';
 if(labPath){
-  let selectedFile=null,selectedDataUrl='',running=false;
+  let selectedFile=null,selectedDataUrl='',selectedImageQuality=null,running=false;
   const token=()=>localStorage.getItem('token')||'';
   const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=reject;r.readAsDataURL(file)});
-  const acceptFile=async file=>{if(!file||running)return;selectedFile=file;selectedDataUrl=await readFile(file).catch(()=>"");if(selectedDataUrl)setTimeout(()=>runAi(document.querySelector('[data-ai-recheck]')),0)};
+  const acceptFile=async file=>{if(!file||running)return;const status=document.querySelector('#status');if(status)status.textContent='Καθαρισμός φωτογραφίας και έλεγχος ευκρίνειας…';try{const prepared=await prepareDocumentFile(file,{strict:true,maxSide:3000,enhance:true});selectedFile=prepared.file;selectedImageQuality=prepared.quality;selectedDataUrl=await readFile(selectedFile);if(status&&selectedImageQuality)status.textContent=`✓ Η φωτογραφία καθαρίστηκε και πέρασε τον έλεγχο ευκρίνειας (${selectedImageQuality.sharpness}). Ξεκινά η ανάγνωση…`;if(selectedDataUrl)setTimeout(()=>runAi(document.querySelector('[data-ai-recheck]')),0)}catch(error){selectedFile=null;selectedDataUrl='';selectedImageQuality=null;if(status)status.textContent=`⚠ ${error?.message||'Η εικόνα δεν πέρασε τον έλεγχο ποιότητας.'}`;alert(error?.message||'Η εικόνα δεν πέρασε τον έλεγχο ποιότητας.')}};
   const capture=async e=>acceptFile(e.target.files?.[0]);
   window.__MWS_INVOICE_LEARNING_ACCEPT_FILE__=acceptFile;
   const currentOcrConfidence=()=>{const t=document.querySelector('#ocrBadge')?.textContent||'';const m=t.match(/OCR\s*(\d+)/i);return m?Number(m[1]):0};
   const value=(row,key)=>row.querySelector(`[data-k="${key}"]`)?.value||'';
   const change=(el,val)=>{if(!el)return;el.value=val??'';el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}))};
   const collectRows=()=>[...document.querySelectorAll('#lines tr')].map(row=>({text:[value(row,'supplierItemCode'),value(row,'description'),value(row,'quantity'),value(row,'unitsPerPackage'),value(row,'unitPrice'),value(row,'discount1'),value(row,'discount2'),value(row,'discount3'),value(row,'vatRate')].filter(Boolean).join(' | '),description:value(row,'description')}));
-  const makeTableCrops=async file=>{if(!String(file?.type||'').startsWith('image/'))return[];const bitmap=await createImageBitmap(file),specs=[{name:'πίνακας-μεσαίο',y0:.22,y1:.62},{name:'πίνακας-χαμηλό',y0:.36,y1:.80},{name:'πίνακας-κάτω',y0:.48,y1:.92}],out=[];for(const s of specs){const sy=Math.max(0,Math.floor(bitmap.height*s.y0)),sh=Math.max(1,Math.floor(bitmap.height*(s.y1-s.y0))),targetW=Math.min(3400,Math.max(2200,bitmap.width*2.4)),scale=targetW/bitmap.width,canvas=document.createElement('canvas');canvas.width=targetW;canvas.height=Math.max(700,Math.round(sh*scale));const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,sy,bitmap.width,sh,0,0,canvas.width,canvas.height);out.push({name:s.name,dataUrl:canvas.toDataURL('image/jpeg',.98)})}bitmap.close?.();return out};
-  const lineKey=line=>{const code=String(line?.supplierItemCode||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,'');if(code)return `C:${code}`;const description=String(line?.description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,'');return description?`D:${description}`:''};
-  const mergeCropLines=(base,extra)=>{const merged=[...(Array.isArray(base)?base:[])],used=new Set();(Array.isArray(extra)?extra:[]).forEach(candidate=>{const key=lineKey(candidate),index=merged.findIndex((line,i)=>!used.has(i)&&key&&lineKey(line)===key);if(index>=0){used.add(index);merged[index]={...candidate,...merged[index],supplierItemCode:merged[index].supplierItemCode||candidate.supplierItemCode,description:merged[index].description||candidate.description}}else if(candidate?.description||candidate?.supplierItemCode)merged.push(candidate)});return merged};
-  const clientGross=lines=>Math.round(lines.reduce((sum,line)=>{const net=Number(line?.netAmount||0),gross=Number(line?.grossAmount||0),vat=Number(line?.vatRate||0);return sum+(gross>0?gross:net>0?net*(1+vat/100):0)},0)*100)/100;
-  const cropMergeBalances=(lines,declared)=>Number(declared)>0&&Math.abs(clientGross(lines)-Number(declared))<=.08;
   const providerLabel=data=>data?.provider==='AZURE_DOCUMENT_INTELLIGENCE'?'Azure Document Intelligence':data?.provider==='OPENAI'?'OpenAI fallback':'AI';
   const sourceLabel=(row,text,color='#31566b')=>{const cell=row.querySelector('.master');if(!cell)return;let el=cell.querySelector('[data-barcode-source]');if(!el){el=document.createElement('div');el.dataset.barcodeSource='1';el.style.cssText='font-size:10px;font-weight:900;margin-top:3px';cell.appendChild(el)}el.style.color=color;el.textContent=text};
   const showCandidates=(row,candidates=[])=>{const cell=row.querySelector('.master');if(!cell||!candidates.length)return;let box=cell.querySelector('[data-barcode-candidates]');if(box)box.remove();box=document.createElement('div');box.dataset.barcodeCandidates='1';box.style.cssText='display:flex;gap:4px;flex-wrap:wrap;margin-top:4px';candidates.slice(0,3).forEach(c=>{const b=document.createElement('button');b.type='button';b.textContent=c.barcode;b.title=`${c.source||''} • confidence ${c.confidence||0}%`;b.style.cssText='font-size:10px;padding:3px 5px;border:1px solid #b8c8d2;border-radius:5px;background:#fff;cursor:pointer';b.onclick=()=>{change(row.querySelector('[data-k="barcode"]'),c.barcode);sourceLabel(row,`✓ Επιβεβαιώθηκε: ${c.source==='MASTER_CATALOG'?'MASTER':'GOOGLE'}`,'#087565');box.remove()};box.appendChild(b)});cell.appendChild(box)};
@@ -44,7 +41,6 @@ if(labPath){
     // fields left old Master/barcode selections visible after a recheck.
     if(typeof window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__==='function'){
       window.__MWS_INVOICE_LEARNING_APPLY_AI_RESULT__(data);
-      window.__MWS_INVOICE_LEARNING_INCOMPLETE__=Boolean(data?.requiresManualCompletion||data?.partialResult);
       return;
     }
     if(data?.supplier?.name)change(document.querySelector('#supplierName'),data.supplier.name);
@@ -66,17 +62,6 @@ if(labPath){
       best=data;
       const status=document.querySelector('#status');
       if(status&&attempt<3)status.textContent=`Έλεγχος σταθερότητας ίδιας φωτογραφίας ${attempt}/3…`;
-    }
-    if(best&&selectedFile&&String(selectedFile.type||'').startsWith('image/')&&(best.productLines||[]).length>=10){
-      const crops=await makeTableCrops(selectedFile);let recovered=[];
-      for(let i=0;i<crops.length;i++){
-        const status=document.querySelector('#status');if(status)status.textContent=`Μεγέθυνση πίνακα και έλεγχος γραμμών ${i+1}/${crops.length}…`;
-        try{const response=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:`${selectedFile.name}-${crops[i].name}.jpg`,mimeType:'image/jpeg',fileData:crops[i].dataUrl,tableCrop:true,ocrRows:collectRows()})});const crop=await response.json().catch(()=>({}));if(response.ok)recovered=mergeCropLines(recovered,crop.productLines||[])}catch{}}
-      const merged=mergeCropLines(best.productLines,recovered),declared=Number(best.totalGross||0);
-      if(merged.length>best.productLines.length){
-        if(cropMergeBalances(merged,declared))best={...best,productLines:merged,cropRecovery:true,cropRecoveredLines:merged.length-best.productLines.length,requiresManualCompletion:false,partialResult:false};
-        else best={...best,cropRecovery:false,cropRecoveryRejected:true,cropRejectedLines:merged.length-best.productLines.length,requiresManualCompletion:true,partialResult:true};
-      }
     }
     return best;
   };
