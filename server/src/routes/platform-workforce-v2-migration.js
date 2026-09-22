@@ -33,8 +33,9 @@ router.post("/preview",async(req,res,next)=>{
   try{
     const context=await contextFor(req);
     const body=previewInput.parse(req.body||{}),{preview}=await loadMigrationPreview(req,context,body);
+    const applyAvailable=isSuperAdmin(req.user);
     res.json({
-      mode:"REVIEW_REQUIRED",readOnly:true,applyAvailable:true,applyEndpoint:"./apply",generatedAt:new Date().toISOString(),
+      mode:"REVIEW_REQUIRED",readOnly:true,applyAvailable,applyEndpoint:applyAvailable?"./apply":null,generatedAt:new Date().toISOString(),
       company:context.company,contextStore:context.store,scope:body.scope,source:"LEGACY_EMPLOYEE",target:"WORKFORCE_EMPLOYEE",...preview
     });
   }catch(error){next(error)}
