@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: ο πίνακας προσαρμόζεται στο πλάτος οθόνης χωρίς δεξιά–αριστερά.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-no-horizontal-scroll.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: Enter → επόμενο κελί, πλήρης κάθετη προβολή και χρωματισμός επιβεβαιωμένων γραμμών.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-review-navigation.md`
 
