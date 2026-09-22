@@ -125,6 +125,26 @@ function recoverDeclaredColumns(line,profile){
     }
   }
   if(unitIndex<0)return line;
+  // TALOS-style rows end in one stable economic suffix even when Azure drops
+  // the printed quantity cell: [qty?] price, gross, retail, discount %,
+  // discount value, net, VAT. Recover that suffix only when both independent
+  // row equations prove it; this avoids shifting the remaining columns left.
+  const beforeColumn=indexOf("AMOUNT_BEFORE_DISCOUNT"),retailColumn=indexOf("RETAIL_PRICE"),afterColumn=indexOf("AMOUNT_AFTER_DISCOUNT"),vatColumn=indexOf("VAT_RATE"),discount1Column=indexOf("DISCOUNT_1");
+  const talosStyle=quantityColumn<priceColumn&&priceColumn<beforeColumn&&beforeColumn<retailColumn&&retailColumn<discount1Column&&discount1Column<afterColumn&&afterColumn<vatColumn;
+  if(talosStyle){
+    const tail=words.slice(unitIndex+1).map(parseNumber).filter(value=>value!==null);
+    const suffix=tail.slice(-8),hasQuantity=suffix.length===8;
+    const values=hasQuantity?suffix:[null,...tail.slice(-7)];
+    let [quantity,unitPrice,before,retail,discount1,discountAmount,after,vatRate]=values;
+    const inferredQuantity=unitPrice>0&&before>0?before/unitPrice:0;
+    if(!hasQuantity&&inferredQuantity>0&&close(inferredQuantity,Math.round(inferredQuantity),.02))quantity=Math.round(inferredQuantity);
+    const grossValid=quantity>0&&unitPrice>0&&before>0&&close(quantity*unitPrice,before,Math.max(.03,before*.008));
+    const netValid=after>0&&discountAmount>=0&&after<=before+.02&&close(before-discountAmount,after,Math.max(.03,after*.008));
+    const vatValid=[0,6,13,17,24].includes(Number(vatRate));
+    if(grossValid&&netValid&&vatValid){
+      return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),retailPrice:retail>0?money4(retail):line?.retailPrice,initialAmount:money2(before),invoiceUnit:words[unitIndex],unit:words[unitIndex],netAmount:money2(after),netValue:money2(after),netUnitCost:money4(after/quantity),discount1:money4(discount1),discount2:0,discount3:0,vatRate:money4(vatRate),grossAmount:money2(after*(1+vatRate/100)),supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_VERIFIED_SUFFIX",supplierProfileEvidence:{quantityInferred:!hasQuantity,quantity,unitPrice:money4(unitPrice),before:money2(before),discountAmount:money2(discountAmount),after:money2(after),vatRate}};
+    }
+  }
   const atColumn=column=>numericNear(words,unitIndex+(column-unitColumn),column>=unitColumn?1:-1);
   const mapped=role=>{const column=indexOf(role);return column>0?atColumn(column):null};
   const quantity=mapped("QUANTITY"),unitPrice=mapped("UNIT_PRICE"),before=mapped("AMOUNT_BEFORE_DISCOUNT"),after=mapped("AMOUNT_AFTER_DISCOUNT");
@@ -142,7 +162,7 @@ function recoverDeclaredColumns(line,profile){
   const afterValid=!(after>0)||(beforeValid&&before>0&&after<=before+.02)||close(quantity*unitPrice*discountFactor,after,Math.max(.03,after*.012));
   if(!beforeValid||!afterValid){const recovered=amount/unitPrice;if(discountFactor!==1||!(recovered>0&&recovered<=100000&&close(recovered,Math.round(recovered),.05)))return line;return {...line,quantity:Math.round(recovered),invoiceQuantity:Math.round(recovered),unitPrice:money4(unitPrice),unitCost:money4(unitPrice),netAmount:money2(amount),netValue:money2(amount),invoiceUnit:words[unitIndex],unit:words[unitIndex],supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_LINE_TOTAL_RECOVERY"};}
   const unit=words[unitIndex]||fallbackUnit;const net=amount===null?Number(line?.netAmount??line?.netValue??0):amount;
-  return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),invoiceUnit:unit||line?.invoiceUnit,unit:unit||line?.unit,netAmount:net>0?money2(net):line?.netAmount,netValue:net>0?money2(net):line?.netValue,discount1:discount1!==null?money4(discount1):line?.discount1,discount2:discount2!==null?money4(discount2):line?.discount2,discount3:discount3!==null?money4(discount3):line?.discount3,vatRate:vatRate!==null?money4(vatRate):line?.vatRate,supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS",supplierProfileEvidence:{unitColumn,quantityColumn,priceColumn,amountColumn:after>0?indexOf("AMOUNT_AFTER_DISCOUNT"):indexOf("AMOUNT_BEFORE_DISCOUNT"),quantity,unitPrice:money4(unitPrice),amount:net>0?money2(net):null}};
+  return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),initialAmount:money2(quantity*unitPrice),invoiceUnit:unit||line?.invoiceUnit,unit:unit||line?.unit,netAmount:net>0?money2(net):line?.netAmount,netValue:net>0?money2(net):line?.netValue,netUnitCost:net>0?money4(net/quantity):line?.netUnitCost,discount1:discount1!==null?money4(discount1):line?.discount1,discount2:discount2!==null?money4(discount2):line?.discount2,discount3:discount3!==null?money4(discount3):line?.discount3,vatRate:vatRate!==null?money4(vatRate):line?.vatRate,grossAmount:net>0&&vatRate!==null?money2(net*(1+vatRate/100)):line?.grossAmount,supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS",supplierProfileEvidence:{unitColumn,quantityColumn,priceColumn,amountColumn:after>0?indexOf("AMOUNT_AFTER_DISCOUNT"):indexOf("AMOUNT_BEFORE_DISCOUNT"),quantity,unitPrice:money4(unitPrice),amount:net>0?money2(net):null}};
 }
 
 
