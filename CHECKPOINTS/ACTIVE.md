@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: popup προτάσεων στα πεδία «Μονάδα τιμολογίου» και «Μονάδα stock», με διατήρηση ελεύθερης πληκτρολόγησης.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-unit-suggestions.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: ασφαλής αναγνώριση κανονικού τιμολογίου πώλησης, χωρίς ψευδή μετατροπή σε πιστωτικό από αρνητικό προηγούμενο υπόλοιπο ή άσχετη αναφορά επιστροφής.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-explicit-document-type.md`
 
