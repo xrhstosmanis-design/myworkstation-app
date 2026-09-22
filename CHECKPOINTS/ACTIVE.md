@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — FRESH SNACK: ένωση κάθε τυπωμένης γραμμής προϊόντος με την αμέσως επόμενη αριθμητική συνέχεια, με υποχρεωτική συμφωνία γραμμών και footer πριν γίνει αποδεκτή.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-fresh-snack-wrapped-line-pairs.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — POS: η τυπωμένη μονάδα `pc` θεωρείται τεμάχιο και δεν πολλαπλασιάζεται ξανά από `8TMX/9TMX/10TMX` της περιγραφής.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-pos-pc-quantity-no-double-conversion.md`
 
