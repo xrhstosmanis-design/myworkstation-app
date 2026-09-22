@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: ασφαλής αναγνώριση κανονικού τιμολογίου πώλησης, χωρίς ψευδή μετατροπή σε πιστωτικό από αρνητικό προηγούμενο υπόλοιπο ή άσχετη αναφορά επιστροφής.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-explicit-document-type.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: επαναφορά πριν από τα λανθασμένα crops και σύνδεση της ίδιας δοκιμασμένης προεπεξεργασίας φωτογραφίας που χρησιμοποιεί το POS.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-rollback-crop-reader.md`
 
