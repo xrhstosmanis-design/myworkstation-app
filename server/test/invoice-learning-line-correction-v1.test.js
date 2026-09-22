@@ -17,3 +17,11 @@ test("converted lines keep their stock quantity instead of being recovered again
   assert.match(lab,/if\(!source\?\.packageConversionApplied\)return/);
   assert.match(lab,/draft\.quantity=source\.quantity/);
 });
+
+test("invoice and stock units offer popup suggestions while allowing custom text",()=>{
+  assert.match(lab,/invoice-learning-unit-options/);
+  assert.match(lab,/\['ΤΜΧ','ΚΟΥ','ΚΟΥΤΑ','ΚΙΒ','ΚΒ','ΣΥΣΚ'/);
+  assert.match(lab,/element\.setAttribute\('list',unitList\.id\)/);
+  assert.match(lab,/fields\.invoiceUnit=unitInput\('Μονάδα τιμολογίου'/);
+  assert.match(lab,/fields\.stockUnit=unitInput\('Μονάδα stock'/);
+});
