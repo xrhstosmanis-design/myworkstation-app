@@ -28,7 +28,7 @@ test("queued recovery keeps one database lease and cannot reopen a completed dra
   const worker=route.slice(route.indexOf("function scheduleFastBackground"),route.indexOf("async function ensureFastHandoffSchema"));
   assert.match(claim,/FOR UPDATE OF t SKIP LOCKED LIMIT 1/);
   assert.match(claim,/"leaseToken"=\$\{leaseToken\}/);
-  assert.match(claim,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING'\)/);
+  assert.match(claim,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE'\)/);
   assert.doesNotMatch(claim,/AWAITING_APPROVAL|CONFIRMED/);
   assert.match(worker,/\["AWAITING_APPROVAL","CONFIRMED"\]\.includes\(terminalRows\[0\]\?\.status\)/);
   assert.match(worker,/fastBackgroundWorkers\.has\(jobId\)/);

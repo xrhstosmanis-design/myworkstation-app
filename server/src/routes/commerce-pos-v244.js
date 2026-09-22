@@ -181,7 +181,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
   leaseHeartbeat.unref?.();
   const task=(async()=>{
     try{
-      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING')`;
+      await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND',"status"='POS_PROCESSING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId} AND "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_QUEUED','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE')`;
       let created,operationStage="prepare-lines";
       try{
           let sourceLines,previousLines=[],usingStoredProductLines=false,requiresCompletePrintedTable=false;
@@ -299,7 +299,7 @@ async function ensureFastHandoffSchema(){
     WHERE "state"='RUNNING' AND ("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL)`);
   await prisma.$executeRawUnsafe(`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt")
     SELECT j."id",j."companyId",j."storeId",'QUEUED',NOW() FROM "AiReaderJob" j
-    WHERE j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING')
+    WHERE j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE')
       AND j."resultJson"->'posHandoff' IS NOT NULL
     ON CONFLICT ("jobId") DO UPDATE SET
       "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=NOW(),"attemptCount"=0,
@@ -388,7 +388,7 @@ async function claimFastBackground(){
       SELECT t."jobId" FROM "PosInvoiceBackgroundTask" t
       JOIN "AiReaderJob" j ON j."id"=t."jobId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId"
       WHERE ((t."state"='QUEUED' AND t."availableAt"<=CURRENT_TIMESTAMP) OR (t."state"='RUNNING' AND (t."leaseUntil" IS NULL OR t."leaseUntil"<CURRENT_TIMESTAMP)))
-        AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING')
+        AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE')
         AND j."resultJson"->'posHandoff' IS NOT NULL
       ORDER BY t."availableAt",t."createdAt" FOR UPDATE OF t SKIP LOCKED LIMIT 1
     ) UPDATE "PosInvoiceBackgroundTask" t SET "state"='RUNNING',"attemptCount"=t."attemptCount"+1,"leaseToken"=${leaseToken},"leaseOwner"=${posBackgroundWorkerId},"leaseUntil"=${leaseUntil},"updatedAt"=CURRENT_TIMESTAMP
@@ -397,7 +397,7 @@ async function claimFastBackground(){
   const claimed=rows[0];if(!claimed)return null;
   const jobs=await prisma.$queryRaw`SELECT "resultJson","status" FROM "AiReaderJob" WHERE "id"=${claimed.jobId} AND "companyId"=${claimed.companyId} AND "storeId"=${claimed.storeId} LIMIT 1`;
   const handoff=jobs[0]?.resultJson?.posHandoff;
-  if(!handoff||!["LOCAL_COMPLETE","POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING"].includes(jobs[0]?.status)){
+  if(!handoff||!["LOCAL_COMPLETE","POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(jobs[0]?.status)){
     await prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "state"='FAILED',"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"='MISSING_OR_TERMINAL_HANDOFF',"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${claimed.jobId} AND "leaseToken"=${leaseToken}`;
     return null;
   }
@@ -910,7 +910,8 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
     const staleProcessing=job.status==="POS_PROCESSING"&&new Date(job.updatedAt).getTime()<Date.now()-60*1000;
     let scheduledHandoff=handoff,rereadClaimed=false,retryClaimed=false;
-    let shouldSchedule=hasRecoverableHandoff&&(["POS_QUEUED","POS_DRAFT_READY"].includes(job.status)||staleProcessing);
+    const completedAiNeedsHandoff=job.status==="AI_COMPLETE"&&Array.isArray(job.resultJson?.productLines)&&job.resultJson.productLines.length>0&&background.status!=="COMPLETED";
+    let shouldSchedule=hasRecoverableHandoff&&(["POS_QUEUED","POS_DRAFT_READY"].includes(job.status)||staleProcessing||completedAiNeedsHandoff);
     if(hasRecoverableHandoff&&needsDraftReread){
       const marker={mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery?completeRecoveryStrategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:needsCompleteTableReplayRecovery?(completeRecoveryStrategy===POS_LEVENTOPOULOS_EMPTY_TABLE_RECOVERY_STRATEGY?"LEVENTOPOULOS_EMPTY_COMPLETE_TABLE":"COMPLETE_TABLE_TRAILING_REPLAY"):needsFailedRereadAdvance?"PREVIOUS_SAFE_INFERIOR_REREAD":needsLegacyAmbiguityReread?"MANTZILAS_LEGACY_AMBIGUITY":null,previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0),trigger:"POS_STATUS"};
       const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('AWAITING_APPROVAL','POS_FAILED')`;

@@ -62,7 +62,7 @@ test("a live POS worker heartbeats a short lease and an orphan is reclaimed",()=
 
 test("startup reconciles an eligible job whose durable task is terminal or mis-scoped",()=>{
   const schema=route.slice(route.indexOf("async function ensureFastHandoffSchema"),route.indexOf("async function enqueueFastBackground"));
-  assert.match(schema,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING'\)/);
+  assert.match(schema,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE'\)/);
   assert.match(schema,/j\."resultJson"->'posHandoff' IS NOT NULL/);
   assert.match(schema,/ON CONFLICT \("jobId"\) DO UPDATE SET/);
   assert.match(schema,/"state"='QUEUED',"availableAt"=NOW\(\),"attemptCount"=0/);

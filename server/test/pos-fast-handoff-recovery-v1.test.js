@@ -168,7 +168,7 @@ test("queued recovery uses the existing database lease and skips a completed dra
   const claim=route.slice(route.indexOf("async function claimFastBackground"),route.indexOf("async function runPosInvoiceBackgroundSweep"));
   assert.match(queue,/"state"='RUNNING' AND "PosInvoiceBackgroundTask"\."leaseUntil">CURRENT_TIMESTAMP/);
   assert.match(claim,/FOR UPDATE OF t SKIP LOCKED LIMIT 1/);
-  assert.match(claim,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING'\)/);
+  assert.match(claim,/j\."status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE'\)/);
   assert.doesNotMatch(claim,/AWAITING_APPROVAL|CONFIRMED/);
 });
 
@@ -205,7 +205,7 @@ test("AI recheck applies verified printed column recovery before reconciliation"
 
 test("completed background OCR can fill only its own linked empty POS draft",()=>{
   assert.match(reader,/source:z\.enum\(\["V2\.4\.4","V2\.4\.4_USER_REVIEW"\]\)/);
-  assert.match(reader,/backgroundMayFillLinkedDraft=Boolean\(job\.purchaseDocumentId&&body\.source==="V2\.4\.4"&&job\.status==="AI_COMPLETE"/);
+  assert.match(reader,/backgroundMayFillLinkedDraft=Boolean\(job\.purchaseDocumentId&&body\.source==="V2\.4\.4"&&\["AI_COMPLETE","POS_PROCESSING"\]\.includes\(job\.status\)&&req\.user\?\.tokenType==="POS_BACKGROUND"/);
   assert.match(reader,/job\.resultJson\?\.posHandoff&&job\.documentSourceType==="POS_OCR_DRAFT"&&job\.documentStatus==="DRAFT"/);
   assert.match(reader,/if\(job\.purchaseDocumentId&&!backgroundMayFillLinkedDraft\)return res\.status\(409\)/);
   assert.match(reader,/POS_BACKGROUND_V2\.4\.4/);
