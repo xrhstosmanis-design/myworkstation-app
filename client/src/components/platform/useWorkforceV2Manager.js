@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from "react";
 import {
-  emptyWorkforceEmployee,emptyWorkforceRule,emptyWorkforceShiftTemplate,workforceDateInput,workforceToday
+  emptyWorkforceEmployee,emptyWorkforceRule,emptyWorkforceShiftTemplate,workforceDateEndIso,workforceDateInput,workforceDateStartIso,workforceToday
 } from "./workforce-v2-ui-utils.js";
 
 export default function useWorkforceV2Manager({company,store,request}){
@@ -66,7 +66,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     fullName:form.fullName.trim(),phone:form.phone.trim()||null,email:form.email.trim()||null,baseStoreId:form.baseStoreId,
     paymentType:form.paymentType,hourlyRate:form.paymentType==="HOURLY"?Number(form.hourlyRate):null,
     fixedMonthlyAmount:form.paymentType==="FIXED_MONTHLY"?Number(form.fixedMonthlyAmount):null,
-    effectiveFrom:new Date(`${form.effectiveFrom}T00:00:00`).toISOString(),maxDaysPerWeek:Number(form.maxDaysPerWeek),
+    effectiveFrom:workforceDateStartIso(form.effectiveFrom),maxDaysPerWeek:Number(form.maxDaysPerWeek),
     maxHoursPerWeek:Number(form.maxHoursPerWeek),minimumDaysOff:Number(form.minimumDaysOff),canChangeStore:Boolean(form.canChangeStore),
     worksMorning:Boolean(form.worksMorning),worksAfternoon:Boolean(form.worksAfternoon),worksNight:Boolean(form.worksNight),worksWeekend:Boolean(form.worksWeekend),
     notes:form.notes.trim()||null,pin:form.pin.trim()||null,roleIds:form.roleIds,primaryRoleId:form.primaryRoleId,
@@ -144,8 +144,8 @@ export default function useWorkforceV2Manager({company,store,request}){
       employeeId:ruleForm.employeeId,ruleType:ruleForm.ruleType,severity:ruleForm.severity,
       relatedEmployeeId:definition?.valueKind==="RELATED_EMPLOYEE"?(ruleForm.relatedEmployeeId||null):null,value,
       note:ruleForm.note.trim()||null,
-      validFrom:ruleForm.validFrom?new Date(`${ruleForm.validFrom}T00:00:00`).toISOString():null,
-      validTo:ruleForm.validTo?new Date(`${ruleForm.validTo}T23:59:59.999`).toISOString():null
+      validFrom:workforceDateStartIso(ruleForm.validFrom),
+      validTo:workforceDateEndIso(ruleForm.validTo)
     };
   };
   const previewRule=()=>{

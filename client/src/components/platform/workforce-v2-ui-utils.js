@@ -15,3 +15,5 @@ export const workforceMigrationStatusLabel={READY:"Έτοιμο",NEEDS_REVIEW:"�
 export const workforceRuleSeverityLabel={WARNING:"Προειδοποίηση",ERROR:"Σφάλμα",APPROVAL_REQUIRED:"Χρειάζεται έγκριση"};
 export const formatWorkforceMoney=value=>value===null||value===undefined?"—":Number(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 export const workforceDateInput=value=>value?new Date(value).toISOString().slice(0,10):"";
+export const workforceDateStartIso=value=>value?`${value}T00:00:00.000Z`:null;
+export const workforceDateEndIso=value=>value?`${value}T23:59:59.999Z`:null;
