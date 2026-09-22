@@ -661,7 +661,14 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   if(!pages.length||pages.length>5||pages.some(page=>!page.fileData||typeof page.fileData!=="string"))return res.status(400).json({error:"Επίλεξε από 1 έως 5 έγκυρες σελίδες του ίδιου τιμολογίου."});
   if(pages.length>1&&pages.some(page=>page.mimeType==="application/pdf"))return res.status(400).json({error:"Επίλεξε είτε ένα PDF είτε έως 5 φωτογραφίες του ίδιου τιμολογίου."});
   const readFingerprint=invoiceReadFingerprint(pages.map(page=>page.fileData).join("|PAGE|"),pages.map(page=>page.mimeType).join("|")),cachedRead=invoiceLearningReadCache.get(readFingerprint);
-  if(cachedRead?.stableRead)return res.json({...cachedRead.winner,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true});
+  if(cachedRead?.stableRead){
+    // Supplier layout rules can be corrected between two checks of the same
+    // image. Reapply current central knowledge to the cached raw rows instead
+    // of returning the stale pre-correction interpretation.
+    const refreshed=await applyLearnedKnowledge(await applyCentralSupplierProfile(structuredClone(cachedRead.winner)));
+    const completeness=invoiceReadingCompleteness(refreshed);
+    return res.json({...refreshed,completeness,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true,profileReapplied:true});
+  }
   const cacheResult=result=>cacheInvoiceLearningResult(readFingerprint,result);
   let azureFailure="",azureFailureCode="",azureDraft=null,azureState=azureConfigured()?"NO_SAFE_RESULT":"NOT_CONFIGURED";
   if(azureConfigured()){
