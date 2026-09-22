@@ -2146,5 +2146,8 @@ Total output lines: 1413
 - [x] LAB FAIL: ΤΑΛΩΣ `01T00125909`, 2 σελίδες, `252,06 €`, έμεινε πάνω από 10 λεπτά σε `AI_COMPLETE` με 0 είδη.
 - [x] Εντοπίστηκε κενό ανάμεσα στην ολοκλήρωση AI και στο durable background handoff.
 - [x] Το ίδιο `AI_COMPLETE` job γίνεται recoverable από τις ήδη αποθηκευμένες γραμμές, χωρίς νέο upload ή νέα πληρωμή.
-- [ ] Tests, πράσινο CI, merge, ακριβές Render deploy και αυτόματη συνέχιση του υπάρχοντος job.
+- [x] Η πρώτη πραγματική επανάληψη αποκάλυψε ότι το BackOffice `fast-recover` παρέλειπε το `AI_COMPLETE`, παρότι startup/worker το δέχονταν.
+- [x] Το refresh της λίστας επιλέγει πλέον `AI_COMPLETE`, το προωθεί σε `POS_QUEUED` και επανεκκινεί το ίδιο durable handoff.
+- [x] Στοχευμένα recovery tests `41/41` PASS.
+- [ ] Πράσινο CI, merge, ακριβές Render deploy και αυτόματη συνέχιση του υπάρχοντος job.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-gate3-multipage-ai-complete-resume.md`

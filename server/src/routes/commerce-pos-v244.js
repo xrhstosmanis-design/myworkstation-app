@@ -840,7 +840,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       SELECT "id","storeId","status","resultJson","purchaseDocumentId","createdAt"
       FROM "AiReaderJob"
       WHERE "companyId"=${req.user.companyId}
-        AND ("status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR "status"='AWAITING_APPROVAL')
+        AND ("status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED','AI_COMPLETE') OR ("status"='POS_PROCESSING' AND "updatedAt"<${staleBefore}) OR "status"='AWAITING_APPROVAL')
         AND (${storeId}='' OR "storeId"=${storeId})
       ORDER BY CASE WHEN "status"='AWAITING_APPROVAL' THEN 0 ELSE 1 END,
         CASE WHEN "status"='AWAITING_APPROVAL' THEN "updatedAt" END DESC,
@@ -877,7 +877,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       }else{
         if(reprocess.mode==="RECONCILIATION_REREAD")handoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true};
         const recoveryBackground={status:"RECOVERING",recoveredAt:new Date().toISOString(),previousError:storedBackgroundError||null};
-        await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:recoveryBackground})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')`;
+        await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_RECOVERING',"status"='POS_QUEUED',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:recoveryBackground})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')`;
       }
       const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
       await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED')`;

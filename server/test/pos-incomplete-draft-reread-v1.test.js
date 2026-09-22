@@ -9,10 +9,13 @@ const aiRecheck=await readFile(new URL("../src/routes/commerce-pos-ai-recheck.js
 test("a stranded AI_COMPLETE multipage handoff resumes from its stored lines",()=>{
   const schema=wrapper.slice(wrapper.indexOf("async function ensureFastHandoffSchema"),wrapper.indexOf("async function enqueueFastBackground"));
   const claim=wrapper.slice(wrapper.indexOf("async function claimFastBackground"),wrapper.indexOf("async function repairStaleRecoveringTasks"));
+  const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   const status=wrapper.slice(wrapper.indexOf('router.get("/ai-reader/fast-status'),wrapper.indexOf('router.use("/ai-reader/jobs/:jobId/product-lines'));
   assert.match(schema,/POS_REPROCESSING','AI_COMPLETE/);
   assert.match(claim,/POS_REPROCESSING','AI_COMPLETE/);
   assert.match(claim,/"POS_REPROCESSING","AI_COMPLETE"/);
+  assert.match(recover,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_FAILED','AI_COMPLETE'\)/);
+  assert.match(recover,/"status" IN \('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE'\)/);
   assert.match(status,/job\.status==="AI_COMPLETE"&&Array\.isArray\(job\.resultJson\?\.productLines\)/);
   assert.match(status,/staleProcessing\|\|completedAiNeedsHandoff/);
   assert.match(aiRecheck,/\["AI_COMPLETE","POS_PROCESSING"\]\.includes\(job\.status\)&&req\.user\?\.tokenType==="POS_BACKGROUND"/);
