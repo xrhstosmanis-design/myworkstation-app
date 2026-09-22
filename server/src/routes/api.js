@@ -182,13 +182,25 @@ function writtenRuleSegments(employees,instructions){
   const unique=hits.filter((hit,index)=>!index||hit.at!==hits[index-1].at);
   return unique.map((hit,index)=>({employee:hit.employee,text:text.slice(hit.at,unique[index+1]?.at??text.length).trim()}));
 }
+function requestedWeeklyDays(line){
+  if(!["ΜΠΟΡΕΙ","ΔΟΥΛΕΥ","ΔΟΥΛΕΨ","ΕΡΓΑΣΤ","ΕΩΣ","ΜΕΧΡΙ"].some(word=>line.includes(word)))return null;
+  const match=line.match(/(?:^|\\D)([56])\\s*(?:Η\\s*)?(?:ΗΜΕΡ|ΜΕΡ)/);
+  return match?Number(match[1]):null;
+}
 function applyWrittenRules(employees,shifts,instructions,dateFrom,dateTo){
   const lines=String(instructions||"").split(/\r?\n|[;.]/).map(plain).filter(Boolean);
   const segments=writtenRuleSegments(employees,instructions);
   for(const employee of employees){
     const names=plain(employee.fullName).split(/\s+/).filter(x=>x.length>=3),ownLines=[...lines.filter(line=>names.some(name=>line.includes(name))),...segments.filter(x=>x.employee.id===employee.id).map(x=>x.text)];employee._briefUnavailableDates=new Set();
     for(const line of ownLines){
-      if(line.includes("ΧΩΡΙΣ ΡΕΠΟ")){employee.maxDaysPerWeek=7;employee.allowSixthDay=true;employee.maxHoursPerWeek=Math.max(employee.maxHoursPerWeek,72)}
+      const extraDays=requestedWeeklyDays(line);
+      if(extraDays){
+        if(employee.allowSixthDay){
+          employee._briefApprovedMaxDays=Math.max(employee.maxDaysPerWeek,extraDays);
+          employee._briefApprovedMaxHours=Math.max(employee.maxHoursPerWeek,extraDays*8);
+          employee._briefExtraDayApproval=`Επιβεβαιωμένη εξαίρεση περιόδου: έως ${extraDays} ημέρες / ${employee._briefApprovedMaxHours} ώρες`;
+        }else employee._briefExtraDayDenied=`Ζητήθηκαν ${extraDays} ημέρες για ${employee.fullName}, αλλά δεν είναι ενεργή η δυνατότητα 5ης/6ης ημέρας στην καρτέλα εργαζομένου.`;
+      }
       const mentioned=shifts.filter(shift=>line.includes(plain(shift.name))||line.includes(plain(shift.code)));
       if(line.includes("ΜΟΝΟ")&&mentioned.length)employee.rules=employee.rules.filter(rule=>mentioned.some(shift=>shift.id===rule.shiftTypeId));
       if((line.includes("ΠΑΝΤΑ")||line.includes("ΣΤΑΘΕΡ"))&&mentioned.length)for(const rule of employee.rules)if(mentioned.some(shift=>shift.id===rule.shiftTypeId))rule.priority=Math.max(rule.priority||0,100);
@@ -300,15 +312,17 @@ function candidateScore({emp,shift,counts,assignedToday,isWeekend,currentDate,hi
   const totalDays=counts[emp.id]?.days||0;
   const totalHours=counts[emp.id]?.hours||0;
   const shiftHours=hoursForShift(shift);
-  const maxDays=emp.allowSixthDay?Math.max(emp.maxDaysPerWeek,6):emp.maxDaysPerWeek;
+  const maxDays=emp._briefApprovedMaxDays??emp.maxDaysPerWeek;
+  const maxHours=emp._briefApprovedMaxHours??emp.maxHoursPerWeek;
   if(totalDays>=maxDays)return null;
-  if(totalHours+shiftHours>emp.maxHoursPerWeek)return null;
+  if(totalHours+shiftHours>maxHours)return null;
 
   const consecutive=consecutiveDays(emp,currentDate,history);
   if(consecutive>=6)return null;
 
   let score=100;
   const reasons=[];
+  if(emp._briefExtraDayApproval)reasons.push(emp._briefExtraDayApproval);
 
   // Fairness: fewer days/hours receive priority.
   score-=totalDays*12;
@@ -441,6 +455,10 @@ router.post("/schedules/generate",async(req,res,next)=>{
     const planned=[];
     const warnings=[];
     const explanations=[];
+    for(const employee of store.employees){
+      if(employee._briefExtraDayApproval)warnings.push({type:"WEEKLY_EXTRA_DAYS_APPROVED",employeeId:employee.id,message:`${employee.fullName}: ${employee._briefExtraDayApproval}. Ισχύει μόνο για ${dateKey(dateFrom)}–${dateKey(dateTo)}.`});
+      if(employee._briefExtraDayDenied)warnings.push({type:"WEEKLY_EXTRA_DAYS_BLOCKED",employeeId:employee.id,message:employee._briefExtraDayDenied});
+    }
 
     // Fill specialist shifts first, then night, intermediate, afternoon, morning.
     const order={MANAGER:0,DELIVERY:1,NIGHT:2,MIDDLE:3,AFTERNOON:4,MORNING:5};
