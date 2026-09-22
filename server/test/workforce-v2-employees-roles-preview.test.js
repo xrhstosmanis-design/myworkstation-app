@@ -109,7 +109,7 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and migratio
   assert.match(route,/WORKFORCE_EMPLOYEE_CREATED/);
   assert.match(route,/WORKFORCE_ROLE_UPDATED/);
   assert.match(route,/mode:"REVIEW_REQUIRED"/);
-  assert.match(route,/applyAvailable:true/);
+  assert.match(route,/applyAvailable=isSuperAdmin\(req\.user\)/);
   assert.match(route,/router\.post\("\/apply"/);
   assert.match(route,/WORKFORCE_MIGRATION_PREVIEW_STALE/);
   assert.match(route,/WORKFORCE_MIGRATION_SELECTION_INVALID/);
