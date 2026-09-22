@@ -31,7 +31,7 @@ export function stockMultiplierForPersistedInvoiceLine(line){
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||'ΤΜΧ');
   const invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
   const invoiceIsWeight=/(KG|KGR|ΚΙΛ)/i.test(invoiceUnit);
-  const invoiceIsPiece=/^(?:ΤΜΧ|TEM|TMX|PCS|PIECE)$/i.test(invoiceUnit.trim());
+  const invoiceIsPiece=/^(?:ΤΜΧ|TEM|TMX|PC|PCS|PIECE)$/i.test(invoiceUnit.trim());
   // A raw stockUnitsPerInvoiceUnit value is not proof of a package mapping:
   // older OCR output filled it from 1LT/450ML in the description. A printed
   // piece row must always stay one stock piece unless the invoice itself says
@@ -68,7 +68,7 @@ export function normalizePersistedInvoiceEconomics(line){
 
 export function shouldApplyLearnedPack(line,learnedPack){
   const unit=String(line?.invoiceUnit||line?.unit||'').trim();
-  const verifiedPrintedPieces=line?.sourceColumnsVerified===true&&/^(?:ΤΜΧ|TEM|TMX|PCS|PIECE)$/i.test(unit);
+  const verifiedPrintedPieces=line?.sourceColumnsVerified===true&&/^(?:ΤΜΧ|TEM|TMX|PC|PCS|PIECE)$/i.test(unit);
   return Number(learnedPack||0)>1&&Number(line?.unitsPerPackage||0)<=1&&!verifiedPrintedPieces;
 }
 
