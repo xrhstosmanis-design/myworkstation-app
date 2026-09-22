@@ -19,7 +19,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
   const ruleCount=data.employees.reduce((total,employee)=>total+(employee.rules?.filter(rule=>rule.active).length||0),0);
   return <div className="workforce-manager">
     <div className="workforce-manager-head">
-      <div><span>WORKFORCE V2 · ΛΕΙΤΟΥΡΓΙΚΟ CHECKPOINT</span><h3>Εργαζόμενοι, ρόλοι, κανόνες & βάρδιες</h3><p>Όλες οι αλλαγές καταγράφονται στο Workforce audit. Η μεταφορά του παλιού module παραμένει μόνο σε προεπισκόπηση.</p></div>
+      <div><span>WORKFORCE V2 · ΛΕΙΤΟΥΡΓΙΚΟ CHECKPOINT</span><h3>Εργαζόμενοι, ρόλοι, κανόνες & βάρδιες</h3><p>Όλες οι αλλαγές και οι επιβεβαιωμένες μεταφορές καταγράφονται στο Workforce audit.</p></div>
       <button className="secondary" onClick={load} disabled={Boolean(busy)}><RefreshCw/> Ανανέωση</button>
     </div>
     <div className="workforce-summary-row">
@@ -28,7 +28,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
       <div><AlertTriangle/><b>{ruleCount}</b><span>κανόνες προσωπικού</span></div>
       <div><Clock3/><b>{data.shiftTemplates.length}</b><span>πρότυπα βαρδιών</span></div>
       <div><Building2/><b>{data.stores.length}</b><span>διαθέσιμα καταστήματα</span></div>
-      <div><ShieldCheck/><b>Μόνο preview</b><span>μεταφορά παλιών δεδομένων</span></div>
+      <div><ShieldCheck/><b>Με έγκριση</b><span>ελεγχόμενη μεταφορά παλιών δεδομένων</span></div>
     </div>
     <nav className="workforce-tabs">
       <button className={tab==="employees"?"active":""} onClick={()=>setTab("employees")}><Users/> Εργαζόμενοι</button>
