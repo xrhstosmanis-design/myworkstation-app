@@ -72,9 +72,9 @@ router.get("/bootstrap",async(req,res,next)=>{
       moduleStates:moduleStates.states,
       capabilities:{
         employeeCreate:true,employeeUpdate:true,roleManagement:true,multiStoreAccess:true,
-        rulesManagement,shiftTemplateManagement:true,migrationPreview:true,migrationApply:false
+        rulesManagement,shiftTemplateManagement:true,migrationPreview:true,migrationApply:isSuperAdmin(req.user)
       },
-      migration:{mode:"PREVIEW_ONLY",applyAvailable:false,applyEndpoint:null}
+      migration:{mode:"REVIEW_REQUIRED",applyAvailable:isSuperAdmin(req.user),applyEndpoint:isSuperAdmin(req.user)?"./migration/apply":null}
     });
   }catch(error){next(error)}
 });
@@ -119,9 +119,8 @@ router.use("/attendance",attendanceRoutes);
 router.use("/payroll",payrollRoutes);
 router.use("/migration",migrationRoutes);
 
-// Deliberately terminate unknown Workforce routes here. This guarantees that
-// a non-existent migration/apply action remains an explicit 404 and can never
-// fall through into another Platform router or a broader privilege gate.
+// Deliberately terminate unknown Workforce routes here so they can never fall
+// through into another Platform router or a broader privilege gate.
 router.use((req,res)=>res.status(404).json({error:"Δεν βρέθηκε η λειτουργία Workforce v2.",code:"WORKFORCE_ROUTE_NOT_FOUND"}));
 
 export default router;

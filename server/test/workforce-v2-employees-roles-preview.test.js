@@ -85,7 +85,7 @@ test("an already-linked legacy employee is identified and never proposed as a ne
   assert.equal(preview.summary.alreadyLinked,1);
 });
 
-test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-only",()=>{
+test("Workforce v2 API is tenant/package scoped, confirmation gated and migration-safe",()=>{
   const route=[
     "../src/routes/platform-workforce-v2.js",
     "../src/routes/platform-workforce-v2-employees.js",
@@ -108,12 +108,16 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
   assert.match(route,/const confirmed=z\.literal\(true\)/);
   assert.match(route,/WORKFORCE_EMPLOYEE_CREATED/);
   assert.match(route,/WORKFORCE_ROLE_UPDATED/);
-  assert.match(route,/mode:"PREVIEW_ONLY"/);
-  assert.match(route,/readOnly:true/);
-  assert.match(route,/applyAvailable:false/);
-  assert.match(route,/applyEndpoint:null/);
+  assert.match(route,/mode:"REVIEW_REQUIRED"/);
+  assert.match(route,/applyAvailable=isSuperAdmin\(req\.user\)/);
+  assert.match(route,/router\.post\("\/apply"/);
+  assert.match(route,/WORKFORCE_MIGRATION_PREVIEW_STALE/);
+  assert.match(route,/WORKFORCE_MIGRATION_SELECTION_INVALID/);
+  assert.match(route,/WORKFORCE_MIGRATION_DUPLICATE/);
+  assert.match(route,/WORKFORCE_LEGACY_EMPLOYEE_MIGRATED/);
+  assert.match(route,/WORKFORCE_MIGRATION_APPLIED/);
   assert.match(route,/WORKFORCE_ROUTE_NOT_FOUND/);
-  assert.doesNotMatch(route,/router\.(?:post|put|patch)\("\/migration\/apply/);
+  assert.match(route,/router\.post\("\/apply"/);
 
   const packageChildMount=packageMount.indexOf('router.use("/companies/:companyId/stores/:storeId/workforce-v2",platformWorkforceV2Routes)');
   const packageSuperAdminGuard=packageMount.indexOf('router.use((req,res,next)=>isSuperAdmin(req.user)?next()');
@@ -137,10 +141,11 @@ test("Workforce v2 API is tenant/package scoped, confirmation gated and preview-
     assert.ok(laterMount>firstSharedPlatformMount,`${laterRouter} must stay after the shared Workforce entry`);
   }
 
-  assert.match(ui,/ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΟΝΟ — ΚΑΜΙΑ ΜΕΤΑΦΟΡΑ/);
-  assert.match(ui,/Δεν υπάρχει κουμπί εφαρμογής/);
+  assert.match(ui,/ΠΡΩΤΑ ΠΡΟΕΠΙΣΚΟΠΗΣΗ — ΜΕΤΑ ΡΗΤΗ ΜΕΤΑΦΟΡΑ/);
+  assert.match(ui,/Μεταφορά επιλεγμένων/);
+  assert.match(ui,/previewHash:migration\.previewHash/);
   assert.match(ui,/confirmed:true/);
-  assert.doesNotMatch(ui,/migration\/apply/);
+  assert.match(ui,/migration\/apply/);
 
   for(const model of ["WorkforceEmployee","WorkforceRole","WorkforceEmployeeStoreAccess","WorkforceHourlyRate","WorkforceAuditLog"]){
     assert.match(schema,new RegExp(`model ${model}\\b`));

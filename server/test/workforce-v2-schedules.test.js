@@ -17,7 +17,6 @@ test("Workforce v2 schedule routes keep the protected lifecycle and assignment c
   assert.match(route,/router\.get\("\/:scheduleId\/validation"/);
   assert.match(route,/WORKFORCE_EXCEPTION_APPROVED/);
   assert.match(route,/Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει εξαίρεση/);
-  assert.doesNotMatch(route,/migration\/apply/);
 });
 
 test("Workforce v2 schedule UI exposes all requested operational views",()=>{
