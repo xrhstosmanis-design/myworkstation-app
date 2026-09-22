@@ -3,7 +3,7 @@
 // fresh, complete visual reread of every printed row and the VAT footer.
 export const FRESH_SNACK_PROFILE={
   supplierName:'FRESH SNACK AE',
-  supplierTaxId:'099162880',
+  supplierTaxId:'999162880',
   ruleKey:'FRESH_SNACK_COMPLETE_PRINTED_TABLE',
   central:true,
   source:'LAB_21_TLA_006019_LAYOUT_VERIFIED_FOR_SAFE_RECHECK',
