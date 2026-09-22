@@ -18,11 +18,14 @@ test("new invoice products offer provided, internal, or pending barcode", () => 
   assert.match(client, /Barcode νέου είδους/);
   assert.match(client, /Έχω barcode είδους/);
   assert.match(client, /Δημιουργία εσωτερικού MyWorkStation/);
+  assert.match(client, /Generate Barcode/);
+  assert.match(client, /generateInternalBarcode/);
   assert.match(client, /Χωρίς barcode προς το παρόν/);
-  assert.match(client, /ocr-lines\/\$\{l\.id\}\/create-product/);
+  assert.match(client, /\/api\/commerce\/purchase-orders\/\$\{data\.order\.id\}\/ocr-lines\/\$\{l\.id\}\/create-product/);
   assert.match(resolution, /barcodeMode:z\.enum\(\["PROVIDED","GENERATED","NONE"\]\)/);
   assert.match(resolution, /generateInternalBarcode/);
   assert.match(resolution, /const ean13=/);
+  assert.match(resolution, /barcode\|\|await generateInternalBarcode/);
 });
 
 test("decimal amount editor keeps comma input while the user is typing", () => {
