@@ -44,3 +44,4 @@
 - Full server suite: `1385/1385 PASS`.
 - Client production build: PASS.
 - Server route syntax and `git diff --check`: PASS.
+- CI #2752: initial E2E FAIL because the previous flow asserted that no apply endpoint existed; updated to require Owner `403` and Platform Super Admin-only apply. Retest pending.
