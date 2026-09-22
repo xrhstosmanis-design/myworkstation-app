@@ -44,7 +44,8 @@ test('checkpoint-verified STEFANIDIS layout is seeded centrally without old invo
 test('FRESH SNACK profile requires a current-image complete-table reread, not historical prices',async()=>{
   const seed=await readFile(new URL('../src/lib/invoice-learning-fresh-snack-seed.js',import.meta.url),'utf8');
   const route=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
-  assert.match(seed,/supplierTaxId:'099162880'/);
+  assert.match(seed,/supplierTaxId:'999162880'/);
+  assert.doesNotMatch(seed,/supplierTaxId:'099162880'/);
   assert.match(seed,/requireCompletePrintedTableOnMismatch:true/);
   assert.match(seed,/CURRENT_IMAGE_ROWS_PLUS_VAT_FOOTER_PLUS_TOTAL/);
   assert.doesNotMatch(seed,/99\.99|68\.12|SPECIAL BOLIKO|TIME OUT/);
