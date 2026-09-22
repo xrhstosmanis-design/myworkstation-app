@@ -2141,3 +2141,10 @@ Total output lines: 1413
 - [x] Διόρθωση client API prefix σε `/api/commerce/purchase-orders/.../ocr-lines/.../create-product`.
 - [x] Πράσινο CI, merge και ακριβές Render deploy (`dc79662a`, PR #1074).
 - [x] Νέα πραγματική δοκιμή χρήστη ολοκληρώθηκε χωρίς `404`; το εσωτερικό barcode αποθηκεύτηκε στο νέο προϊόν.
+## 2026-09-22 — Πολυσέλιδο `AI_COMPLETE` resume — IN PROGRESS
+
+- [x] LAB FAIL: ΤΑΛΩΣ `01T00125909`, 2 σελίδες, `252,06 €`, έμεινε πάνω από 10 λεπτά σε `AI_COMPLETE` με 0 είδη.
+- [x] Εντοπίστηκε κενό ανάμεσα στην ολοκλήρωση AI και στο durable background handoff.
+- [x] Το ίδιο `AI_COMPLETE` job γίνεται recoverable από τις ήδη αποθηκευμένες γραμμές, χωρίς νέο upload ή νέα πληρωμή.
+- [ ] Tests, πράσινο CI, merge, ακριβές Render deploy και αυτόματη συνέχιση του υπάρχοντος job.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-gate3-multipage-ai-complete-resume.md`
