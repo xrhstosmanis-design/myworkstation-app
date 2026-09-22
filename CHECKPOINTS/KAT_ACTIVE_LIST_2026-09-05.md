@@ -2157,18 +2157,10 @@ Total output lines: 1413
 ## 2026-09-22 — Invoice Learning πολυσέλιδο upload — LAB FAIL / LOCAL PASS
 
 - [x] Πραγματικό Gate 3 δείγμα ΤΑΛΩΣ: το Learning δέχεται μόνο μία φωτογραφία και δεν μπορεί να εκπαιδεύσει το δισέλιδο παραστατικό.
+- [x] Post-deploy LAB FAIL: η σελίδα έμεινε λευκή από recursive `MutationObserver` μετά την αλλαγή της ετικέτας του κουμπιού.
+- [x] Idempotent hotfix: η ετικέτα γράφεται μόνο όταν διαφέρει και δεν ξαναπυροδοτεί ατέρμονα observer loop.
 - [x] Επιλογή έως 5 φωτογραφιών, διατήρηση σειράς και ενιαία Azure → AI ανάγνωση όλων των σελίδων.
 - [x] Targeted `23/23`, πλήρες server suite `1402/1402`, client build και server build PASS.
 - [ ] Πράσινο CI, merge, ακριβές deploy και LAB επανάληψη.
 - [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, χωρίς οριστικοποίηση/stock/νέα πληρωμή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-multipage-upload.md`.
-
-## 2026-09-22 — Workforce V2 επιλογέας καταστήματος — LAB FAIL / LOCAL TEST PASS
-
-- [x] Πραγματικό LAB: τα πρότυπα βαρδιών δημιουργούνται σωστά στο επιλεγμένο κατάστημα, αλλά μέσα στο Workforce δεν υπάρχει επιλογέας για μετάβαση σε άλλο κατάστημα.
-- [x] Προστέθηκε ορατό dropdown «Κατάστημα» στην κορυφή του Workforce Super Admin με επιλογές `Εταιρεία · Κατάστημα` από όλες τις ενεργές εταιρείες.
-- [x] Η αλλαγή επιλογής επαναφορτώνει πακέτα, εργαζομένους, κανόνες, πρότυπα, πρόγραμμα και παρουσίες στο νέο company/store scope.
-- [x] Το store-scoped panel κάνει πλήρες remount και αγνοούνται καθυστερημένες απαντήσεις φόρτωσης του προηγούμενου καταστήματος.
-- [x] Targeted regression `7/7`, client production build και diff check PASS.
-- [ ] Πράσινο CI → merge/deploy → LAB επιλογή LAB/ΚΑΤ και επιβεβαίωση διαφορετικών προτύπων.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-workforce-v2-store-selector.md`.
