@@ -2185,3 +2185,12 @@ Total output lines: 1413
 - [ ] Πράσινο CI → merge → ακριβές deploy → Ctrl+F5 και επανέλεγχος των 2 σελίδων.
 - [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, πριν από οποιαδήποτε «Επιβεβαίωση & Εκμάθηση».
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-talos-column-map-recheck.md`.
+
+
+## 2026-09-22 — Workforce μήνυμα απόρριψης ανάθεσης — LOCAL PASS / AWAITING CI
+
+- [x] Επιβεβαιώθηκε στο LAB ότι ο κανόνας «Νωπή μόνο πρωί» μπλοκάρει σωστά την αλλαγή σε απογευματινή βάρδια.
+- [x] Το μήνυμα απόρριψης εμφανίζεται πλέον μέσα στην «Αλλαγή ανάθεσης», χωρίς να χρειάζεται κύλιση στην κορυφή.
+- [x] Regression test και client production build PASS.
+- [ ] Πράσινο CI → merge/deploy → επανάληψη LAB δοκιμής.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-workforce-assignment-error-visibility.md`.
