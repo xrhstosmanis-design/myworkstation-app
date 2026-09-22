@@ -27,7 +27,8 @@ test("invoice and payment evidence share the same preprocessing path",()=>{
     assert.match(source,/strict:true/);
   }
   assert.match(invoice,/pages\.map\(page=>\(\{filename:page\.file\.name/);
-  assert.match(learning,/selectedFile=prepared\.file/);
+  assert.match(learning,/selectedFiles\.push\(prepared\.file\)/);
+  assert.match(learning,/for\(const file of incoming\).*prepareDocumentFile/s);
   assert.match(learning,/maxSide:3000,enhance:true/);
 });
 
