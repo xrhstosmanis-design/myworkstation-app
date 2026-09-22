@@ -28,6 +28,14 @@ test("camera and QR files use the same Azure and AI reader path",()=>{
   assert.doesNotMatch(dispatch,/invoice-learning-azure-only-reader/);
 });
 
+test("crop recovery never exposes extra rows before the merged invoice balances",()=>{
+  assert.match(reader,/const cropMergeBalances=/);
+  assert.match(reader,/if\(cropMergeBalances\(merged,declared\)\)best=\{\.\.\.best,productLines:merged/);
+  assert.match(reader,/cropRecoveryRejected:true/);
+  assert.match(reader,/requiresManualCompletion:true,partialResult:true/);
+  assert.doesNotMatch(reader,/best=\{\.\.\.best,productLines:merged,cropRecovery:true[^}]*\};if\(declared/);
+});
+
 test("mobile QR upload is short-lived and scoped to the signed-in Platform Super Admin",()=>{
   assert.match(platformRoute,/isPlatformSuper/);
   assert.match(platformRoute,/ownerKey/);

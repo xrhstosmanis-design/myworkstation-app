@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: απόρριψη πρόσθετων γραμμών από crops όταν το συγχωνευμένο αποτέλεσμα δεν συμφωνεί με το δηλωμένο σύνολο.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-reject-invalid-crops.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: πλήρης επανάγνωση με μεγέθυνση του πίνακα ώστε να μη χάνονται γραμμές και μπλοκάρισμα εκμάθησης σε ελλιπές αποτέλεσμα.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-complete-table-reread.md`
 
