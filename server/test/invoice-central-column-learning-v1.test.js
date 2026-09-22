@@ -188,7 +188,19 @@ test('manual supplier map accepts an inline printed unit with a safe piece fallb
   assert.equal(result.productLines[0].quantity,1);
   assert.equal(result.productLines[0].unitPrice,1.62);
   assert.equal(result.productLines[0].invoiceUnit,'ΤΕΜ');
-  assert.equal(result.productLines[0].supplierProfileRule,'DECLARED_COLUMNS_LINE_TOTAL_RECOVERY');
+  assert.equal(result.productLines[0].supplierProfileRule,'DECLARED_COLUMNS');
+});
+
+test('TALOS manual map overrides a shifted provider map without changing learned mappings',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const mappings={3759850:{barcode:'5200000000000',verified:true}};
+  const profile={supplierKey:'800802293',supplierTaxId:'800802293',supplierName:'ΤΑΛΩΣ ΑΕ',profileVersion:4,ruleKey:'DECLARED_COLUMNS',mappings,readingRule:{layoutMode:'DECLARED_COLUMNS',quantityMode:'LINE_TOTAL_MATCH',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'}}};
+  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule,mappings}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const result=await context.apply({supplier:{taxId:'800802293'},productLines:[{code:'3759850',azureRawRow:'3759850 MI OREO COOKIES 66GX20CA TEM 6 0.78 4.68 11.50 18.00 1.28 3.40 13',quantity:.78,unitPrice:4.68,unitCost:4.68,netAmount:11.5,sourceColumnMap:true}]});
+  const line=result.productLines[0];
+  assert.equal(line.quantity,6);assert.equal(line.unitPrice,.78);assert.equal(line.netAmount,3.4);assert.equal(line.discount1,18);assert.equal(line.vatRate,13);assert.equal(line.invoiceUnit,'TEM');assert.equal(line.supplierProfileRule,'DECLARED_COLUMNS');
+  assert.equal(line.barcode,'5200000000000');assert.deepEqual(mappings,{3759850:{barcode:'5200000000000',verified:true}});
 });
 
 
@@ -210,8 +222,18 @@ test('both column-map editors allow a missing unit and persist the piece fallbac
     const source=await readFile(new URL(file,import.meta.url),'utf8');
     assert.ok(source.includes("['SUPPLIER_CODE','DESCRIPTION','QUANTITY','UNIT_PRICE']"));
     assert.ok(source.includes("defaultUnit:Object.values(columns).includes('UNIT')?null:'ΤΜΧ'"));
+    assert.ok(source.includes('/api/platform/invoice-learning/supplier-profile/column-map'));
     assert.doesNotMatch(source,/κωδικό, περιγραφή, μονάδα, ποσότητα/);
   }
+});
+
+test('column-map save is target-only and cached rereads apply the latest central profile',async()=>{
+  const workspace=await readFile(new URL('../src/routes/platform-invoice-learning-workspace.js',import.meta.url),'utf8');
+  const ai=await readFile(new URL('../src/routes/platform-invoice-learning-ai.js',import.meta.url),'utf8');
+  assert.match(workspace,/onlyTargetSupplierUpdated:true,existingLearningPreserved:true/);
+  assert.match(workspace,/const profile=\{\.\.\.previous/);
+  assert.match(ai,/cachedRead\?\.stableRead[\s\S]*applyCentralSupplierProfile\(structuredClone\(cachedRead\.winner\)\)/);
+  assert.match(ai,/profileReapplied:true/);
 });
 
 test('actual multipage recovery consumes repeated occurrences once and retains their printed order',async()=>{

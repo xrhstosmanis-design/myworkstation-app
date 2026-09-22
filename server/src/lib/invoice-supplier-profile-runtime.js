@@ -130,10 +130,17 @@ function recoverDeclaredColumns(line,profile){
   const quantity=mapped("QUANTITY"),unitPrice=mapped("UNIT_PRICE"),before=mapped("AMOUNT_BEFORE_DISCOUNT"),after=mapped("AMOUNT_AFTER_DISCOUNT");
   if(!(quantity>0&&unitPrice>0))return line;
   const amount=after>0?after:before>0?before:null;
+  const discount1=mapped("DISCOUNT_1"),discount2=mapped("DISCOUNT_2"),discount3=mapped("DISCOUNT_3"),vatRate=mapped("VAT_RATE");
+  const discountFactor=[discount1,discount2,discount3].reduce((value,discount)=>value*(1-Math.max(0,Math.min(100,Number(discount||0)))/100),1);
   // Do not override a row if the selected columns do not reconcile. A column map
   // is an aid, never permission to invent values.
-  if(amount!==null&&!close(quantity*unitPrice,amount,Math.max(.03,amount*.012))){const recovered=amount/unitPrice;if(!(recovered>0&&recovered<=100000&&close(recovered,Math.round(recovered),.05)))return line;return {...line,quantity:Math.round(recovered),invoiceQuantity:Math.round(recovered),unitPrice:money4(unitPrice),unitCost:money4(unitPrice),netAmount:money2(amount),netValue:money2(amount),invoiceUnit:words[unitIndex],unit:words[unitIndex],supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_LINE_TOTAL_RECOVERY"};}
-  const discount1=mapped("DISCOUNT_1"),discount2=mapped("DISCOUNT_2"),discount3=mapped("DISCOUNT_3"),vatRate=mapped("VAT_RATE");
+  const beforeValid=!(before>0)||close(quantity*unitPrice,before,Math.max(.03,before*.012));
+  // When both printed gross and net line amounts exist, the net may include a
+  // separate discount-value column intentionally marked IGNORE. The verified
+  // gross equation plus a non-increasing positive net is sufficient; never
+  // infer the ignored commercial adjustment.
+  const afterValid=!(after>0)||(beforeValid&&before>0&&after<=before+.02)||close(quantity*unitPrice*discountFactor,after,Math.max(.03,after*.012));
+  if(!beforeValid||!afterValid){const recovered=amount/unitPrice;if(discountFactor!==1||!(recovered>0&&recovered<=100000&&close(recovered,Math.round(recovered),.05)))return line;return {...line,quantity:Math.round(recovered),invoiceQuantity:Math.round(recovered),unitPrice:money4(unitPrice),unitCost:money4(unitPrice),netAmount:money2(amount),netValue:money2(amount),invoiceUnit:words[unitIndex],unit:words[unitIndex],supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_LINE_TOTAL_RECOVERY"};}
   const unit=words[unitIndex]||fallbackUnit;const net=amount===null?Number(line?.netAmount??line?.netValue??0):amount;
   return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),invoiceUnit:unit||line?.invoiceUnit,unit:unit||line?.unit,netAmount:net>0?money2(net):line?.netAmount,netValue:net>0?money2(net):line?.netValue,discount1:discount1!==null?money4(discount1):line?.discount1,discount2:discount2!==null?money4(discount2):line?.discount2,discount3:discount3!==null?money4(discount3):line?.discount3,vatRate:vatRate!==null?money4(vatRate):line?.vatRate,supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS",supplierProfileEvidence:{unitColumn,quantityColumn,priceColumn,amountColumn:after>0?indexOf("AMOUNT_AFTER_DISCOUNT"):indexOf("AMOUNT_BEFORE_DISCOUNT"),quantity,unitPrice:money4(unitPrice),amount:net>0?money2(net):null}};
 }
@@ -183,7 +190,11 @@ export async function applyCentralSupplierProfile(parsed){
   if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverIfantisLine(line));
   if(profile.ruleKey==="STEFANIDIS_FOOD_PRINTED_COLUMNS")productLines=productLines.map(recoverStefanidisFoodLine);
   if(profile.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS")productLines=productLines.map(recoverLeventopoulosMmPos1Columns);
-  if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverDeclaredColumns(line,profile));
+  // An explicitly saved supplier map is the operator's verified description
+  // of the printed layout. Re-evaluate the current raw row even when the OCR
+  // provider supplied its own (possibly shifted) column map. The recovery
+  // remains fail-closed unless the printed row equation reconciles.
+  if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>recoverDeclaredColumns(line,profile));
   if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverQuantityFromLineTotal(line));
   productLines=productLines.map(line=>{const source=unitRelativeValues(sourceRow(line)),signature=source?Object.keys(source.values).join(","):"",columns=profile.readingRule?.confirmedColumnLayouts?.[signature];return columns&&!line.sourceColumnMap?applyConfirmedColumns(line,columns):line});
   productLines=applyMappings(productLines,profile);
