@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — POS: η τυπωμένη μονάδα `pc` θεωρείται τεμάχιο και δεν πολλαπλασιάζεται ξανά από `8TMX/9TMX/10TMX` της περιγραφής.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-pos-pc-quantity-no-double-conversion.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: η αλλαγή ΦΠΑ ενημερώνει άμεσα τη γραμμή, τα σύνολα και την επαγγελματική προβολή.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-vat-live-update.md`
 

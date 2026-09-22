@@ -33,6 +33,19 @@ test("invoice 28897 does not convert litres or ml into thousands of pieces",()=>
   assert.equal(stockMultiplierForPersistedInvoiceLine({...rows[0],unit:"PACKAGE",invoiceUnit:"PACKAGE",unitsPerPackage:12,packRule:"LEARNED_PACK_12"}),12);
 });
 
+test("printed pc quantities are not multiplied again by 8TMX, 9TMX or 10TMX in the product name",()=>{
+  const cases=[
+    {quantity:24,description:"ALWAYS ZERBIETA ULTRA LONG PLUS 8TMX"},
+    {quantity:16,description:"ALWAYS ZERBIETA ULTRA NORMAL 9TMX"},
+    {quantity:36,description:"EVERYDAY HYPERDRY ZERBIETA NORMAL ULTRA PLUS 10TMX"}
+  ];
+  for(const line of cases){
+    const printed={...line,unit:"pc",invoiceUnit:"pc",unitsPerPackage:0,stockUnitsPerInvoiceUnit:0,packageConversionApplied:false,confirmedPackMapping:false};
+    assert.equal(stockMultiplierForPersistedInvoiceLine(printed),1);
+    assert.equal(shouldApplyLearnedPack({...printed,sourceColumnsVerified:true},10),false);
+  }
+});
+
 test("invoice 28897 repairs corrupted display economics from intact row totals",()=>{
   const repaired=rows.map(line=>normalizePersistedInvoiceEconomics({...line,discount1:99.9,vatRate:0}));
   assert.deepEqual(repaired.map(line=>line.discount1),discounts);
