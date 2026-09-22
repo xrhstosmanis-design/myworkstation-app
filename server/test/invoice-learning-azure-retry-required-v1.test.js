@@ -25,7 +25,7 @@ test("Invoice Learning exposes only safe actionable Azure diagnostics",()=>{
 test("Invoice Learning uses the configured POS-style fallback after an Azure request failure",()=>{
   const providerFailure=route.indexOf('azureState="REQUEST_FAILED"');
   const openAiGuard=route.indexOf('if(!process.env.OPENAI_API_KEY)',providerFailure);
-  const openAi=route.indexOf('const base64=String(fileData)',openAiGuard);
+  const openAi=route.indexOf('const fileParts=pages.map',openAiGuard);
   assert.ok(providerFailure>0);
   assert.ok(openAiGuard>providerFailure);
   assert.ok(openAi>openAiGuard);
