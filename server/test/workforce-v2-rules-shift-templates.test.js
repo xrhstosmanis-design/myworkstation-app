@@ -86,6 +86,19 @@ test("Workforce bootstrap and UI mount rules, shifts and Super Admin migration a
   assert.match(`${panel}\n${preview}\n${manager}`,/request\([^\n]*migration\/apply/);
 });
 
+
+test("Super Admin Workforce exposes a store selector and remounts store-scoped data",()=>{
+  const scheduler=read("../../client/src/components/platform/SuperAdminStaffScheduler.jsx");
+  const admin=read("../../client/src/components/platform/PlatformAdminApp.jsx");
+
+  assert.match(scheduler,/className="workforce-store-selector"/);
+  assert.match(scheduler,/availableStores\.map/);
+  assert.match(scheduler,/setTarget\(next\)/);
+  assert.match(scheduler,/key=\{`\$\{selectedCompany\.id\}:\$\{selectedStore\.id\}`\}/);
+  assert.match(scheduler,/companies=\[\]/);
+  assert.match(admin,/companies=\{data\?\.companies\|\|\[\]\}/);
+});
+
 test("new Workforce server modules pass Node syntax check",()=>{
   for(const relative of [
     "../src/workforce-v2-rules.js",
