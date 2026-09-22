@@ -1,5 +1,8 @@
 # ACTIVE CHECKPOINT
 
+- Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: πλήρης επανάγνωση με μεγέθυνση του πίνακα ώστε να μη χάνονται γραμμές και μπλοκάρισμα εκμάθησης σε ελλιπές αποτέλεσμα.
+- Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-complete-table-reread.md`
+
 - Ενεργή αλλαγή: 2026-09-22 — Invoice Learning: ο πίνακας προσαρμόζεται στο πλάτος οθόνης χωρίς δεξιά–αριστερά.
 - Checkpoint αλλαγής: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-no-horizontal-scroll.md`
 
