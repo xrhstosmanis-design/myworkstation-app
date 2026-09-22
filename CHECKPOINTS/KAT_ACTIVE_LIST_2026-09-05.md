@@ -2154,3 +2154,11 @@ Total output lines: 1413
 - [x] Στοχευμένα recovery tests `44/44` PASS και πλήρες server suite `1399/1399` PASS.
 - [ ] Πράσινο CI, merge, ακριβές Render deploy και αυτόματη συνέχιση του υπάρχοντος job.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-gate3-multipage-ai-complete-resume.md`
+## 2026-09-22 — Invoice Learning πολυσέλιδο upload — LAB FAIL / LOCAL PASS
+
+- [x] Πραγματικό Gate 3 δείγμα ΤΑΛΩΣ: το Learning δέχεται μόνο μία φωτογραφία και δεν μπορεί να εκπαιδεύσει το δισέλιδο παραστατικό.
+- [x] Επιλογή έως 5 φωτογραφιών, διατήρηση σειράς και ενιαία Azure → AI ανάγνωση όλων των σελίδων.
+- [x] Targeted `23/23`, πλήρες server suite `1402/1402`, client build και server build PASS.
+- [ ] Πράσινο CI, merge, ακριβές deploy και LAB επανάληψη.
+- [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, χωρίς οριστικοποίηση/stock/νέα πληρωμή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-22-invoice-learning-multipage-upload.md`.
