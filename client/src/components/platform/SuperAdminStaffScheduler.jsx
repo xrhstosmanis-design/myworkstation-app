@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Banknote,CalendarClock,CheckCircle2,LockKeyhole,Printer,RefreshCw,Save,Send,ShieldCheck,Sparkles,Users,X} from "lucide-react";
 import WorkforceV2EmployeesPanel from "./WorkforceV2EmployeesPanel.jsx";
 import "./personnel-program.css";
@@ -13,7 +13,8 @@ const FALLBACK_PACKAGES=[
 const PACKAGE_ICONS={PERSONNEL_BASIC:Users,PERSONNEL_PRO:ShieldCheck,PERSONNEL_AI:Sparkles,PERSONNEL_PAYROLL:Banknote};
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 
-export default function SuperAdminStaffScheduler({company,store,request,onClose}){
+export default function SuperAdminStaffScheduler({company,store,companies=[],request,onClose}){
+  const[target,setTarget]=useState(()=>({company,store}));
   const[weekStart,setWeekStart]=useState("");
   const[schedule,setSchedule]=useState(null);
   const[warnings,setWarnings]=useState([]);
@@ -21,6 +22,13 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
   const[prices,setPrices]=useState({});
   const[busy,setBusy]=useState("");
   const[error,setError]=useState("");
+  const packageLoadSequence=useRef(0);
+  const availableStores=useMemo(()=>{
+    const source=(companies.length?companies:[company]).filter(item=>item?.active!==false);
+    return source.flatMap(item=>(item?.stores||[]).filter(candidate=>candidate.active!==false).map(candidate=>({company:item,store:candidate})));
+  },[companies,company]);
+  const selectedCompany=target.company;
+  const selectedStore=target.store;
 
   const days=useMemo(()=>{
     const result={};
@@ -35,26 +43,28 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
   const stateFor=key=>moduleInfo?.states?.[key]||{moduleKey:key,active:false,effectiveActive:false,inherited:false,monthlyPrice:0};
 
   const loadPackages=async()=>{
-    if(!company?.id||!store?.id)return;
+    if(!selectedCompany?.id||!selectedStore?.id)return;
+    const sequence=++packageLoadSequence.current;
     setBusy("packages");
     setError("");
     try{
-      const result=await request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}`);
+      const result=await request(`/api/platform/store-modules/companies/${selectedCompany.id}/stores/${selectedStore.id}`);
+      if(sequence!==packageLoadSequence.current)return;
       setModuleInfo(result);
       setPrices(Object.fromEntries((result.packages||FALLBACK_PACKAGES).map(item=>[item.key,String(result.states?.[item.key]?.monthlyPrice??0)])));
-    }catch(e){setError(e.message)}finally{setBusy("")}
+    }catch(e){if(sequence===packageLoadSequence.current)setError(e.message)}finally{if(sequence===packageLoadSequence.current)setBusy("")}
   };
 
-  useEffect(()=>{loadPackages()},[company?.id,store?.id]);
+  useEffect(()=>{loadPackages()},[selectedCompany?.id,selectedStore?.id]);
 
   const savePackage=async(moduleKey,nextActive,priceOnly=false)=>{
     const definition=packages.find(item=>item.key===moduleKey)||{title:moduleKey};
     const action=priceOnly?"αποθηκευτεί η νέα τιμή για":nextActive?"ενεργοποιηθεί":"απενεργοποιηθεί";
-    if(!window.confirm(`Να ${action} το πακέτο «${definition.title}» για το κατάστημα «${store.name}»;`))return;
+    if(!window.confirm(`Να ${action} το πακέτο «${definition.title}» για το κατάστημα «${selectedStore.name}»;`))return;
     setBusy(moduleKey);
     setError("");
     try{
-      const result=await request(`/api/platform/store-modules/companies/${company.id}/stores/${store.id}`,{
+      const result=await request(`/api/platform/store-modules/companies/${selectedCompany.id}/stores/${selectedStore.id}`,{
         method:"PUT",
         body:JSON.stringify({moduleKey,active:nextActive,monthlyPrice:Number(prices[moduleKey]||0),startsAt:null,endsAt:null,notes:stateFor(moduleKey).notes||""})
       });
@@ -67,7 +77,7 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
     setBusy("generate");
     setError("");
     try{
-      const result=await request("/api/schedules/generate",{method:"POST",body:JSON.stringify({storeId:store.id,...(weekStart?{weekStart}:{})})});
+      const result=await request("/api/schedules/generate",{method:"POST",body:JSON.stringify({storeId:selectedStore.id,...(weekStart?{weekStart}:{})})});
       setSchedule(result.schedule);
       setWarnings(result.warnings||[]);
     }catch(e){setError(e.message)}finally{setBusy("")}
@@ -89,7 +99,17 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
         <div>
           <span className="workforce-v2-kicker">ΝΕΑ ΥΛΟΠΟΙΗΣΗ · WORKFORCE V2</span>
           <h2><CalendarClock/> Προσωπικό & Πρόγραμμα</h2>
-          <p>{company.name} · <b>{store.name}</b></p>
+          <p>{selectedCompany.name} · <b>{selectedStore.name}</b></p>
+          <label className="workforce-store-selector">Κατάστημα
+            <select value={selectedStore.id} onChange={event=>{
+              const next=availableStores.find(item=>item.store.id===event.target.value);
+              if(!next)return;
+              packageLoadSequence.current+=1;
+              setTarget(next);setSchedule(null);setWarnings([]);setModuleInfo(null);setError("");
+            }}>
+              {availableStores.map(item=><option key={item.store.id} value={item.store.id}>{item.company.name} · {item.store.name}</option>)}
+            </select>
+          </label>
         </div>
         <div className="workforce-v2-super-access"><LockKeyhole/> Ο Super Admin έχει πάντα πλήρη πρόσβαση</div>
       </header>
@@ -128,7 +148,7 @@ export default function SuperAdminStaffScheduler({company,store,request,onClose}
       </section>
 
       <section className="workforce-v2-section">
-        <WorkforceV2EmployeesPanel company={company} store={store} request={request}/>
+        <WorkforceV2EmployeesPanel key={`${selectedCompany.id}:${selectedStore.id}`} company={selectedCompany} store={selectedStore} request={request}/>
       </section>
 
       <section className="workforce-v2-section">
