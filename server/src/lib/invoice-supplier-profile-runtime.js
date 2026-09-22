@@ -1,5 +1,6 @@
 import {prisma} from "../prisma.js";
 import {applyConfirmedColumns,recoverLeventopoulosMmPos1Columns,recoverStefanidisFoodLine,unitRelativeValues} from "./invoice-column-reading.js";
+import {recoverFreshSnackWrappedLines} from "./invoice-fresh-snack-wrapped-lines.js";
 
 const cleanTaxId=v=>String(v||"").replace(/\D/g,"");
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
@@ -177,6 +178,7 @@ function applyMappings(lines,profile){
 export async function applyCentralSupplierProfile(parsed){
   const profile=await resolveCentralSupplierProfile(parsed?.supplier||{});
   if(!profile)return {...parsed,supplierReadingProfile:null};
+  if(profile.ruleKey==="FRESH_SNACK_COMPLETE_PRINTED_TABLE")parsed=recoverFreshSnackWrappedLines(parsed);
   let productLines=Array.isArray(parsed?.productLines)?parsed.productLines.map(x=>({...x})):[];
   if(profile.ruleKey==="IFANTIS_FOOD_GROUP")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverIfantisLine(line));
   if(profile.ruleKey==="STEFANIDIS_FOOD_PRINTED_COLUMNS")productLines=productLines.map(recoverStefanidisFoodLine);
