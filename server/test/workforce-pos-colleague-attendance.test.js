@@ -4,6 +4,7 @@ import fs from "node:fs";
 
 const source=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
+const modal=fs.readFileSync(new URL("../../client/src/components/store/PosAttendanceCardModal.jsx",import.meta.url),"utf8");
 
 test("POS colleague card is store-scoped, hashed and toggles attendance",()=>{
   assert.ok(source.includes('attendance-card/scan'));
@@ -18,4 +19,15 @@ test("POS exposes a compact card-work launcher without replacing the cashier",()
   assert.ok(panel.includes("PosAttendanceCardModal"));
   assert.ok(panel.includes("Κάρτα εργασίας"));
   assert.ok(panel.includes("> Barcode</button>"));
+});
+
+test("POS colleague can use a protected personal PIN without changing the cashier",()=>{
+  assert.ok(source.includes('attendance-pin/submit'));
+  assert.ok(source.includes('method:"POS_PIN"'));
+  assert.ok(source.includes('bcrypt.compare(body.pin,credential.pinHash)'));
+  assert.ok(source.includes('c."companyId"=${req.user.companyId} AND c."storeId"=${store.id} AND c."employeeId"=${body.employeeId}'));
+  assert.ok(source.includes('"StoreOperatorLoginGuard"'));
+  assert.ok(source.includes('nextCount>=5'));
+  assert.ok(modal.includes("PIN"));
+  assert.ok(modal.includes("employeeId,pin"));
 });

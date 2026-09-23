@@ -32,7 +32,8 @@
 .pos-attendance-card-instructions{display:grid;gap:6px;padding:14px;border-radius:11px;background:#e9f7f1;color:#154c3b}
 .pos-attendance-card-instructions span{font-size:13px;line-height:1.45}
 .pos-attendance-card-body label{display:grid;gap:7px;font-weight:900}
-.pos-attendance-card-body input{min-height:56px;border:2px solid #7bb8a4;border-radius:11px;padding:0 14px;background:#fff;font-size:20px}
+.pos-attendance-card-body input,.pos-attendance-card-body select{min-height:56px;border:2px solid #7bb8a4;border-radius:11px;padding:0 14px;background:#fff;font-size:18px}
+.pos-attendance-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pos-attendance-methods button{min-height:42px;border:1px solid #8eb9aa;border-radius:9px;background:#fff;color:#19533f;font-weight:900;display:flex;align-items:center;justify-content:center;gap:7px}.pos-attendance-methods button.active{background:#087a52;color:#fff;border-color:#087a52}.pos-attendance-methods svg{width:17px}
 .pos-attendance-card-success{display:flex;align-items:center;gap:12px;padding:14px;border-radius:11px;background:#dff7e9;color:#12623f}
 .pos-attendance-card-success svg{width:28px;height:28px;flex:none}.pos-attendance-card-success div{display:grid;gap:3px}
 @media(max-width:700px){.store-chat-top-host{top:108px;right:6px;left:6px;max-width:none;justify-content:flex-end;overflow-x:auto}.store-chat-top-button{padding:6px 8px;font-size:11px}.pos-attendance-card-body{padding:14px}}
