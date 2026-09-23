@@ -2318,3 +2318,14 @@ Total output lines: 1413
 - [x] Audit POS_SHIFT με Cash Shift ID και προστασία από διπλή παρουσία.
 - [ ] Πράσινο CI → merge → exact deploy → LAB με PIN εργαζομένου, άνοιγμα και κλείσιμο POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-pos-attendance.md`.
+## 2026-09-23 — TALOS POS learned mismatch — LAB FAIL / LOCAL PASS / AWAITING CI
+
+- [x] Real POS draft `01T00125909`: 44 rows, `825,82 €` against `252,06 €`; repeating `13,00 €`/`14,69 €` values. No approval or deletion.
+- [x] Production revision observed as `d426f2df`, behind main `d8abc2cf` and its later TALOS changes.
+- [x] Read-only live Learning view: VAT `800802293`, learned number `00125909`, 44 rows, `223,05 € + 29,00 € = 252,05 €`. POS sent `01T00125909`, `252,06 €`: series mismatch skipped exact replay.
+- [x] TALOS-only full-series alias enables exact learned replay if every row and the total pass; invalid learned economics stop without generic AI substitution.
+- [x] Centrally learned complete-table profiles now block POS orders with mismatched totals across all stores. Learning reports shared success only after row reconciliation and central profile save complete.
+- [x] Targeted exact-learning, profile-sync and POS contract tests `16/16` PASS; full server suite `1420/1420`, client build and diff check PASS.
+- [ ] Green CI → merge → verify exact Render revision → inspect all 44 learned rows and reconcile `223,05 € + 29,01 € = 252,06 €`.
+- [ ] LAB PASS only after one new POS submission creates a single correct BackOffice draft without manual refresh or resubmission; do not approve or post stock before reconciliation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-talos-pos-learned-mismatch.md`.
