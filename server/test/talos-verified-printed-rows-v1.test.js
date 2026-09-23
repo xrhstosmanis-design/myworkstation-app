@@ -32,3 +32,26 @@ test('TALOS repair leaves other suppliers and unbalanced rows unchanged',()=>{
   assert.strictEqual(applyTalosVerifiedPrintedRows({supplier:{taxId:'123'},productLines:[line]}).productLines[0],line);
   assert.strictEqual(applyTalosVerifiedPrintedRows({supplier:{taxId:'800802293'},productLines:[line]}).productLines[0],line);
 });
+
+test('TALOS exact 44-row layout is repaired when cached supplier metadata is absent',()=>{
+  const signatureCodes=['3759850','4011985','4323717','4332684','8741200','6400600'];
+  const productLines=Array.from({length:44},(_,index)=>({
+    supplierItemCode:signatureCodes[index]||String(9000000+index),
+    quantity:index===2?0:1,
+    unitPrice:1,
+    netAmount:1,
+    azureRawRow:index===2?'4323717 PRODUCT TEM 6,00 1.02 6.12 18.40 12.00 1.73 4.39 13':`${9000000+index} PRODUCT`,
+  }));
+  const output=applyTalosVerifiedPrintedRows({productLines});
+  assert.equal(output.productLines[2].quantity,6);
+  assert.equal(output.productLines[2].unitPrice,1.02);
+  assert.equal(output.productLines[2].netAmount,4.39);
+  assert.equal(output.productLines[2].quantitySource,'TALOS_PRINTED_ROW_VERIFIED');
+});
+
+test('TALOS layout fallback stays closed without the exact row count and signature',()=>{
+  const line={supplierItemCode:'4323717',quantity:0,unitPrice:1,netAmount:1,azureRawRow:'4323717 PRODUCT TEM 6,00 1.02 6.12 18.40 12.00 1.73 4.39 13'};
+  const productLines=Array.from({length:44},()=>({...line}));
+  assert.equal(applyTalosVerifiedPrintedRows({productLines:productLines.slice(0,43)}).productLines[0].quantity,0);
+  assert.equal(applyTalosVerifiedPrintedRows({productLines}).productLines[0].quantity,0);
+});
