@@ -33,6 +33,19 @@ export function assessInvoiceLineForReview(line,{matched=false}={}){
   if(confidence>0&&confidence<85)reasons.push("Χαμηλή σιγουριά OCR");
   if(!(quantity>0))reasons.push("Μη έγκυρη ποσότητα");
   if(!(unitCost>0))reasons.push("Μη επιβεβαιωμένη τιμή μονάδας");
+  // A provider may copy the VAT percentage into netAmount while preserving a
+  // plausible code, quantity and description (LAB Karamolegos 521: 13.00
+  // instead of 4.51). Keep that physical row in the draft but require review.
+  // This compares only one-piece invoice units; package conversion has its own
+  // independent economics and must not be guessed from stock units.
+  const net=Number(line?.netAmount),invoiceQuantity=Number(line?.invoiceQuantity??quantity);
+  const pieceUnit=/^(?:ΤΜΧ|TEM|TMX|PC|PCS|PIECE)$/i.test(unit);
+  const discounts=[line?.discount1,line?.discount2,line?.discount3].map(number);
+  if(pieceUnit&&quantity>0&&unitCost>0&&Number.isFinite(net)&&net>0&&invoiceQuantity===quantity
+    &&discounts.every(discount=>discount>=0&&discount<=100)){
+    const expected=discounts.reduce((value,discount)=>value*(1-discount/100),quantity*unitCost);
+    if(Math.abs(expected-net)>Math.max(0.05,expected*0.02))reasons.push("Η καθαρή αξία δεν συμφωνεί με ποσότητα × τιμή − εκπτώσεις");
+  }
   if(!rawRowSupportsStructuredLine(line))reasons.push("Τα στοιχεία δεν επιβεβαιώνονται από την ίδια φυσική σειρά OCR");
   if(/PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ/.test(unit)&&!(unitsPerPackage>0))reasons.push("Αβέβαιη συσκευασία / τεμάχια ανά πακέτο");
   if(line?.sourceColumnsVerified===false)reasons.push("Μη επιβεβαιωμένη αριθμητική ανάγνωση");
