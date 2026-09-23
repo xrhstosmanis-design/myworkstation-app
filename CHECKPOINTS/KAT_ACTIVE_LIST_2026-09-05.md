@@ -2424,6 +2424,13 @@ Total output lines: 1413
 - [ ] Πράσινο CI → merge → ακριβές deploy → νέα κανονική υποβολή POS από διαφορετικούς προμηθευτές καθώς έρχονται. Τεστ και CI δεν είναι LAB PASS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-cross-supplier-regression-matrix.md`.
 
+## 2026-09-23 — Fresh Delicacies ΒΒ 6529 — LAB FAIL / LOCAL TESTING
+
+- [x] Πραγματικό LAB POS 2: τυπωμένες 14 γραμμές / 47,02 €· αυτόματο πρόχειρο 16 γραμμές / 17.443,47 €. Πλήρης επανανάγνωση απέτυχε και διατήρησε το λανθασμένο πρόχειρο.
+- [x] Στοχευμένη προστασία πριν από αποθήκευση ακραία διογκωμένου, μη επαληθευμένου πίνακα για προφίλ που απαιτεί πλήρη επαλήθευση. Το υπάρχον πρόχειρο δεν μεταβάλλεται.
+- [ ] Πράσινο CI, merge, ακριβές deploy και νέα γνήσια υποβολή POS με διαφορετικό νέο τιμολόγιο. Η προστασία δεν είναι διόρθωση της ανάγνωσης ούτε LAB PASS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-fresh-delicacies-bb6529-catastrophic-draft.md`.
+
 
 ## 2026-09-23 — POS camera scanner fallback — CI RECHECK
 

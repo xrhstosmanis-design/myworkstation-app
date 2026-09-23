@@ -10,6 +10,7 @@ import {claimsCompletePrintedTable,reconcileInvoiceLines,reviewablePrintedTableF
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
+import {catastrophicUnverifiedInvoiceMismatch} from "../lib/pos-invoice-catastrophic-mismatch.js";
 
 const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
@@ -222,6 +223,9 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // invoice header total needs manual reconciliation.
           const productLines=verifiedProductLines||verifiedAtOwnTotal||reviewableProductLines||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
+          if(catastrophicUnverifiedInvoiceMismatch({requiresCompletePrintedTable,verifiedProductLines,verifiedAtOwnTotal,reviewableProductLines,productLines,expectedGross:handoff.totalGross})){
+            throw new Error(`Η ανάγνωση έδωσε ακραία απόκλιση από το τιμολόγιο (${productLines.length} γραμμές). Οι μη επαληθευμένες γραμμές δεν αποθηκεύτηκαν στο πρόχειρο.`);
+          }
           // Persist recognizable rows as a DRAFT even if their arithmetic
           // does not reconcile with the invoice header. The purchase-order
           // FINAL guard prevents ordinary posting and stock changes while the
