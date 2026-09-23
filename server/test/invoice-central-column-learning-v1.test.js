@@ -252,6 +252,22 @@ test('Invoice Learning totals retain a source-proven printed line net',async()=>
   assert.match(lab,/printedNet\/quantity/);
   assert.match(lab,/\['quantity','unitPrice','discount1','discount2','discount3'\]\.includes\(changedKey\)/);
   assert.match(lab,/line\.supplierProfileRecovered\?rawQ/);
+  assert.match(lab,/function verifiedTalosPrintedQuantity/);
+  assert.match(lab,/!=='800802293'/);
+  assert.match(lab,/const quantity=printedQ\?\?/);
+  assert.match(lab,/invoiceQuantity:printedQ\?\?/);
+});
+
+test('Invoice Learning accepts only mathematically proven TALOS printed quantities',async()=>{
+  const lab=await readFile(new URL('../../client/src/invoice-learning-lab-bootstrap.js',import.meta.url),'utf8');
+  const source=lab.match(/  function verifiedTalosPrintedQuantity[^\n]+/)?.[0];
+  assert.ok(source);
+  const context=vm.createContext({});
+  vm.runInContext(`${source}\nthis.recover=verifiedTalosPrintedQuantity;`,context);
+  assert.equal(context.recover({azureRawRow:'4266583 KAP HLS ΜΕΛΙ ΛΕΜΟΝΙ X/Z 32GX20 TEM 20.00 1.05 21.00 21.00 30.00 9.39 11.61 13'},'800802293'),20);
+  assert.equal(context.recover({azureRawRow:'4327325 EXTRA ΤΥΡΟΓΑΡ. ΤΥΡΙ 80GX20 TEM 1.67 4.28 13 0.85 5.95 18.30 12.00'},'800802293'),7);
+  assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 99 21 30 9.39 11.61 13'},'800802293'),null);
+  assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 21 21 30 9.39 11.61 13'},'999999999'),null);
 });
 
 test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{
