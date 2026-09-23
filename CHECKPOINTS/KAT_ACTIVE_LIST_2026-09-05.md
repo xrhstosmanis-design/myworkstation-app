@@ -1,3 +1,13 @@
+## 2026-09-23 — Workforce προσωπικό PIN συναδέλφου από POS — AWAITING CI / LAB
+
+- [x] Πραγματικό LAB: δεν υπάρχει ακόμη φυσική κάρτα για δοκιμή· απαιτείται ασφαλής εναλλακτική με το υπάρχον προσωπικό PIN.
+- [x] Το παράθυρο «Κάρτα εργασίας» προσφέρει PIN ή Κάρτα χωρίς αλλαγή ενεργού χειριστή.
+- [x] Το PIN επαληθεύεται με bcrypt σε ενεργό employee/credential του ίδιου company/store και δεν αποθηκεύεται στον browser.
+- [x] Πέντε αποτυχίες κλειδώνουν τη συγκεκριμένη προσπάθεια για 15 λεπτά μέσω `StoreOperatorLoginGuard`.
+- [x] Διατηρούνται η κάρτα `POS_CARD`, το card audit και η αυτόματη παρουσία ταμία.
+- [ ] Green CI → merge → exact deploy → LAB PIN προσέλευση/αποχώρηση και έλεγχος Attendance/Audit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-pos-colleague-pin.md`.
+
 ## 2026-09-23 — Workforce πρόγραμμα ανά εργαζόμενο — AWAITING CI / LAB
 
 - [x] Πραγματικό LAB: η προβολή ανά ημέρα είναι σωστή· το Chat χρειάζεται καθαρή ομαδοποίηση ανά εργαζόμενο.
