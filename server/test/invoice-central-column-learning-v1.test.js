@@ -258,7 +258,8 @@ test('Invoice Learning totals retain a source-proven printed line net',async()=>
   assert.match(lab,/invoiceQuantity:printedQ\?\?/);
   assert.match(lab,/const printed=verifiedTalosPrintedEconomics\(source,result\?\.supplierTaxId,result\?\.supplierName\)/);
   assert.match(lab,/if\(printed\)\{\s*applyVerifiedTalosPrintedEconomics\(draft,printed\);/);
-  assert.match(lab,/setTimeout\(\(\)=>\{const taxId=\$\('#supplierTaxId'\)\.value\|\|result\.supplierTaxId/);
+  assert.match(lab,/metadataChecks\+\+<50/);
+  assert.match(lab,/setTimeout\(applyAfterSupplierMetadata,100\)/);
   assert.match(lab,/verifiedTalosPrintedEconomics\(draft,taxId,supplierName\)/);
 });
 

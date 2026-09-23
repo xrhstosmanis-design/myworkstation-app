@@ -28,6 +28,13 @@
 - Added verified seven-number layouts for omitted quantity / reordered price, supplier-name fallback, and per-line VAT rounding.
 - No confirmation or learning was executed on the failing draft.
 
+## Fourth autonomous browser LAB and bounded metadata wait
+
+- A fresh browser tab on production revision `9053b68a` uploaded both original photos and completed all three stability passes: still `44 / 218,66 € / 28,44 € / 247,10 €`.
+- The outer upload workflow populates supplier identity later than one event-loop tick, so the deferred verifier still failed closed.
+- The verifier now waits for at most five seconds in 100 ms intervals for the TALOS identity, then applies the same strict arithmetic proof to the already-rendered raw rows. It exits unchanged if that identity never appears.
+- No confirmation or learning was executed on the failing draft.
+
 ## Third autonomous browser LAB and metadata timing
 
 - Production revision `2cf30505` and its new hashed LAB bundle were both verified before the two original photos were uploaded again.
