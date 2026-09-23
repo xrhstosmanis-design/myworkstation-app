@@ -26,6 +26,9 @@ test("Workforce v2 schedule routes keep the protected lifecycle and assignment c
   assert.match(route,/canSchedule:true/);
   assert.match(route,/orderBy:\{version:"desc"\}/);
   assert.match(route,/version=\(latest\?\.version\|\|0\)\+1/);
+  assert.match(route,/ΑΝΑ ΕΡΓΑΖΟΜΕΝΟ/);
+  assert.match(route,/· ΡΕΠΟ/);
+  assert.match(route,/storeAccess:\{some:\{storeId:context\.store\.id,active:true\}\}/);
 });
 
 test("Workforce v2 schedule UI exposes all requested operational views",()=>{
@@ -33,6 +36,9 @@ test("Workforce v2 schedule UI exposes all requested operational views",()=>{
   assert.match(ui,/Αναλυτική ημέρας/);
   assert.match(ui,/Συνοπτική εβδομάδας/);
   assert.match(ui,/Αναλυτική εβδομάδας/);
+  assert.match(ui,/Ανά εργαζόμενο/);
+  assert.match(ui,/ΡΕΠΟ/);
+  assert.match(ui,/workforce-employee-schedule/);
   assert.match(ui,/Άδειες, ρεπό και απουσίες/);
   assert.match(ui,/Υποχρεωτική αιτιολογία έγκρισης εξαίρεσης/);
   assert.match(ui,/νέα έκδοση από το δημοσιευμένο πρόγραμμα/i);
