@@ -116,7 +116,7 @@ if(path==='/platform-admin/invoice-learning-lab'){
       draft.packageConversionApplied=true;
     });
     if(result)renderLines();
-    if(result)setTimeout(()=>{const taxId=$('#supplierTaxId').value||result.supplierTaxId,supplierName=$('#supplierName').value||result.supplierName;let changed=false;(result.lines||[]).forEach(draft=>{const printed=verifiedTalosPrintedEconomics(draft,taxId,supplierName);if(!printed)return;applyVerifiedTalosPrintedEconomics(draft,printed);changed=true});if(changed)renderLines()},0);
+    if(result){let metadataChecks=0;const applyAfterSupplierMetadata=()=>{const taxId=$('#supplierTaxId').value||result.supplierTaxId,supplierName=$('#supplierName').value||result.supplierName,supplier=String(supplierName||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(),isTalos=String(taxId||'').replace(/\D/g,'')==='800802293'||supplier.includes('ΤΑΛΩΣ')||supplier.includes('TALOS');if(!isTalos&&metadataChecks++<50){setTimeout(applyAfterSupplierMetadata,100);return}if(!isTalos)return;let changed=false;(result.lines||[]).forEach(draft=>{const printed=verifiedTalosPrintedEconomics(draft,taxId,supplierName);if(!printed)return;applyVerifiedTalosPrintedEconomics(draft,printed);changed=true});if(changed)renderLines()};setTimeout(applyAfterSupplierMetadata,0)}
     return result;
   };
   function changeMeta(){if(!current)return;$('#supplierName').value=current.supplierName||'';$('#supplierTaxId').value=current.supplierTaxId||'';$('#invoiceNo').value=current.invoiceNo||'';$('#invoiceDate').value=current.invoiceDate||''}
