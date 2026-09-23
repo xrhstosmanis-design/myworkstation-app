@@ -327,10 +327,17 @@ export function applyTalosVerifiedPrintedRows(result){
     const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/\s(?:TEM|ΤΕΜ|TMX|ΤΜΧ)\s+(.+)$/i);
     if(!match)return line;
     const values=(match[1].replace(/,/g,".").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number).filter(Number.isFinite);
-    if(values.length<8)return line;
-    const [quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate]=values.slice(-8);
-    if(!(quantity>0&&unitPrice>0&&netAmount>0&&[0,6,13,17,24].includes(vatRate)))return line;
-    if(!close(quantity*unitPrice,before)||!close(before-discountAmount,netAmount))return line;
+    const candidates=[];
+    if(values.length>=8){const [quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate]=values.slice(-8);candidates.push({quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate})}
+    if(values.length===7){
+      const add=(unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate)=>candidates.push({quantity:Math.round(before/unitPrice),unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate});
+      add(values[0],values[1],values[2],values[3],values[4],values[5],values[6]);
+      add(values[6],values[0],values[1],values[2],values[3],values[4],values[5]);
+      add(values[3],values[4],values[5],values[6],values[0],values[1],values[2]);
+    }
+    const verified=candidates.find(x=>x.quantity>0&&x.unitPrice>0&&x.netAmount>0&&[0,6,13,17,24].includes(x.vatRate)&&close(x.quantity*x.unitPrice,x.before)&&close(x.before-x.discountAmount,x.netAmount));
+    if(!verified)return line;
+    const {quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate}=verified;
     return {...line,quantity,invoiceQuantity:quantity,unitPrice,packageUnitPrice:unitPrice,
       initialAmount:money4(before),retailPrice:retail,discount1,discount2:0,discount3:0,
       discount1Amount:money4(discountAmount),netAmount:money4(netAmount),

@@ -265,6 +265,8 @@ test('Invoice Learning accepts only mathematically proven TALOS printed quantiti
   const context=vm.createContext({});
   vm.runInContext(`${source}\nthis.recover=verifiedTalosPrintedQuantity;`,context);
   assert.equal(context.recover({azureRawRow:'4266583 KAP HLS ΜΕΛΙ ΛΕΜΟΝΙ X/Z 32GX20 TEM 20.00 1.05 21.00 21.00 30.00 9.39 11.61 13'},'800802293'),20);
+  assert.equal(context.recover({azureRawRow:'4266583 KAP HLS ΜΕΛΙ ΛΕΜΟΝΙ X/Z 32GX20 TEM 1.05 21.00 21.00 30.00 9.39 11.61 13'},'', 'ΤΑΛΩΣ ΑΕ'),20);
+  assert.equal(context.recover({azureRawRow:'4323717 CHIPITA CHIPS ΑΛΑΤΙ 80GX20 TEM 6.12 18.40 12.00 1.73 4.39 13 1.02'},'', 'ΤΑΛΩΣ ΑΕ'),6);
   assert.equal(context.recover({azureRawRow:'4327325 EXTRA ΤΥΡΟΓΑΡ. ΤΥΡΙ 80GX20 TEM 1.67 4.28 13 0.85 5.95 18.30 12.00'},'800802293'),7);
   assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 99 21 30 9.39 11.61 13'},'800802293'),null);
   assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 21 21 30 9.39 11.61 13'},'999999999'),null);

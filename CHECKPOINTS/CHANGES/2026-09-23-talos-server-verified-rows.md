@@ -20,6 +20,14 @@
 - Client production build: PASS.
 - Awaiting CI, deploy and autonomous browser LAB against the two supplied page images.
 
+## First autonomous browser LAB
+
+- Production revision `183079ca` loaded and both original page photos uploaded by Codex.
+- Azure returned 44 physical rows.
+- Result remained `218,66 € + 28,43 € = 247,09 €` because three OCR row-order variants were not normalized completely.
+- Added verified seven-number layouts for omitted quantity / reordered price, supplier-name fallback, and per-line VAT rounding.
+- No confirmation or learning was executed on the failing draft.
+
 ## LAB acceptance
 
 - Exactly 44 rows.
