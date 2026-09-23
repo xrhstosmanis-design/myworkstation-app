@@ -1,11 +1,12 @@
-## 2026-09-23 — efood / Pelican LAB schema bootstrap — LAB FAIL / AWAITING CI
+## 2026-09-23 — efood / Pelican LAB schema bootstrap — LAB PASS / FORM LOAD COMPLETE
 
-- [x] Πραγματικό LAB FAIL: στο `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` η ασφαλής οθόνη έδειξε «Παρουσιάστηκε εσωτερικό σφάλμα» και δεν φόρτωσε τη φόρμα efood.
-- [x] Αιτία: παλαιός CHECK constraint του `StoreIntegrationCredential.kind` δεν εντοπιζόταν αξιόπιστα και η επαναδημιουργία του canonical constraint μπορούσε να αποτύχει με duplicate constraint πριν φορτωθεί το LAB endpoint.
-- [x] Η διόρθωση αφαιρεί idempotently κάθε παλαιό CHECK που αφορά ακριβώς τη στήλη `kind` και επαναφέρει έναν canonical constraint με `MYDATA`, `VAT_LOOKUP`, `EFOOD`.
-- [x] Διατηρούνται αυστηρά LAB-only, SANDBOX, `enabled=false`, `externalCallsEnabled=false` και μηδενικές μεταβολές σε παραγγελίες, πωλήσεις, stock, πληρωμές, RBS/EFTPOS, fiscal ή myDATA.
-- [ ] Green CI → merge → exact deploy → Ctrl+F5 και εκ νέου άνοιγμα «Ασφαλείς διασυνδέσεις καταστήματος».
-- [ ] LAB PASS μόνο όταν φορτωθεί η φόρμα `efood / Pelican — Indirect POS` στο σωστό LAB χωρίς εσωτερικό σφάλμα. Η αποθήκευση credentials και οποιαδήποτε επόμενη δοκιμή είναι ξεχωριστό βήμα.
+- [x] Το αρχικό LAB FAIL ήταν «Παρουσιάστηκε εσωτερικό σφάλμα» πριν φορτωθεί η φόρμα efood.
+- [x] Η διόρθωση του legacy CHECK constraint έγινε στο PR #1110 και ενσωματώθηκε στο κεντρικό `main`, revision `195a2a27c6c7a8a61d577682215ac432d1d4b582`.
+- [x] Main CI #2838 PASS και Render deploy #1397 PASS με επιβεβαίωση της ακριβούς revision.
+- [x] Πραγματικό LAB PASS: η φόρμα `efood / Pelican — Indirect POS` ανοίγει στο σωστό `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` χωρίς εσωτερικό σφάλμα και εμφανίζει τα SANDBOX πεδία Chain ID, Vendor / Store ID, Client ID, Client Secret και Authorization webhook.
+- [x] Η ένδειξη `LAB — ΔΕΝ ΕΧΕΙ ΠΡΟΕΤΟΙΜΑΣΤΕΙ` είναι αναμενόμενη επειδή δεν έχουν ακόμη αποθηκευτεί credentials· δεν αποτελεί αποτυχία του schema bootstrap.
+- [x] Δεν καταχωρήθηκε ή εκτέθηκε credential, δεν πατήθηκε αποθήκευση και δεν έγινε εξωτερική κλήση, παραγγελία, πώληση, stock, πληρωμή, fiscal ή myDATA μεταβολή.
+- [ ] Επόμενο ξεχωριστό βήμα: έλεγχος του κάτω μέρους της φόρμας, τοπική συμπλήρωση των test credentials χωρίς κοινοποίηση μυστικών και αποθήκευση με όλους τους fail-closed διακόπτες ανενεργούς.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-efood-lab-schema-bootstrap.md`.
 
 ## 2026-09-23 — Workforce προσωπικό PIN συναδέλφου από POS — AWAITING CI / LAB

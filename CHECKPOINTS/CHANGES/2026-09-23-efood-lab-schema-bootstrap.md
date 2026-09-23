@@ -31,19 +31,20 @@
 - No myDATA/accounting mutation.
 - No API secret is written to source code, logs, checkpoints or GitHub.
 
-## Verification state
+## Verification result
 
-- Source regression added: `server/test/efood-lab-schema-repair.test.js`.
-- CI/build: **AWAITING CI**.
-- Deployment: **NOT DEPLOYED**.
-- LAB: **NOT RETESTED**.
+- PR: **#1110**, merged to the single central `main`.
+- Exact merged/deployed revision: `195a2a27c6c7a8a61d577682215ac432d1d4b582`.
+- PR CI **#2837: PASS**.
+- Main CI **#2838: PASS**, including server tests, client build and real HTTP E2E flows.
+- Render deploy **#1397: PASS**, with exact-revision verification.
+- LAB retest on 2026-09-23: **PASS for schema bootstrap and form loading**.
+- The `efood / Pelican — Indirect POS` modal now opens in the correct LAB without the previous internal error and visibly loads the SANDBOX fields for Chain ID, Vendor / Store ID, optional external partner config ID, Client ID, Client Secret and Authorization webhook.
+- The red label `LAB — ΔΕΝ ΕΧΕΙ ΠΡΟΕΤΟΙΜΑΣΤΕΙ` is expected at this stage because no credentials have yet been saved; it is not a recurrence of the schema/bootstrap failure.
+- No credential was entered or exposed, no save was performed and no external sandbox/API call was made during this acceptance test.
 
-## Required acceptance
+## Acceptance status
 
-1. Green GitHub CI.
-2. Merge to the single central `main`.
-3. Verify the exact merged revision is deployed on Render.
-4. Ctrl+F5 in Platform Super Admin.
-5. Open `MYWORKSTATION LAB` → `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` → `Ασφαλείς διασυνδέσεις καταστήματος`.
-6. The `efood / Pelican — Indirect POS` form must load without an internal error.
-7. Credential entry and any sandbox/API call are separate approved steps; this checkpoint alone does not authorize external calls.
+**LAB PASS — FORM LOAD COMPLETE.**
+
+The schema/bootstrap correction is complete. Credential entry, validation, test-vendor mapping, webhook preparation and any sandbox/API call remain separate approved steps. Live order creation, sales, stock, payments, RBS/EFTPOS, fiscal execution and myDATA/accounting remain disabled.
