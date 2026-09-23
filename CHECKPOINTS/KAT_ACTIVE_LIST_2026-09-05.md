@@ -2433,3 +2433,13 @@ Total output lines: 1413
 - [x] Νέο regression αποδεικνύει ότι η εκμάθηση ποσοτήτων ΤΑΛΩΣ δεν ξαναγράφει τέσσερις άλλους προμηθευτές και η επιλογή εικόνας Λεβεντόπουλου δεν αντικαθιστά τρεις άλλους πίνακες.
 - [ ] Πλήρης suite, πράσινο CI, merge και έλεγχος ακριβούς deploy. Κατόπιν ξεχωριστό νέο πραγματικό POS παραστατικό από διαφορετικούς προμηθευτές, χωρίς επανυποβολές των παλιών τιμολογίων. Καμία δήλωση LAB PASS από αυτοματοποιημένα τεστ.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-cross-supplier-regression-matrix.md`.
+
+
+## 2026-09-23 — POS camera preview startup race — LOCAL PASS / CI RECHECK
+
+- [x] Πραγματικό LAB FAIL: το φωτάκι της κάμερας άναβε και έσβηνε αμέσως χωρίς να εμφανιστεί προεπισκόπηση.
+- [x] Αιτία: το camera stream μπορούσε να ζητηθεί πριν το React δημιουργήσει το στοιχείο video.
+- [x] Η προεπισκόπηση δημιουργείται πλέον συγχρονισμένα πριν από το `getUserMedia`, και μετά συνδέονται stream και decoder.
+- [x] Camera regression 2/2 PASS, client production build PASS και diff check PASS.
+- [ ] Αναμένεται πλήρες CI, merge, exact Render revision και νέα πραγματική δοκιμή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
