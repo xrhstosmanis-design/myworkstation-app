@@ -1,3 +1,12 @@
+## 2026-09-23 — Workforce κάρτα QR για κάμερα — LOCAL PASS / AWAITING CI
+
+- [x] Πραγματικό LAB: η webcam άνοιγε σωστά αλλά δεν αναγνώρισε αξιόπιστα το τυπωμένο Code 128, ακόμη και κοντά και μέσα στο πλαίσιο.
+- [x] Η κάρτα εκτυπώνει πλέον QR για την κάμερα και διατηρεί Code 128 για κανονικό scanner, με τον ίδιο ασφαλή store-scoped κωδικό.
+- [x] Η κάμερα δέχεται QR ή Code 128 χωρίς αλλαγή backend, PIN ή credential.
+- [x] Targeted tests 5/5, client production build και git diff --check PASS.
+- [ ] Green CI → squash merge → exact Render revision → νέο πραγματικό LAB με επανεκτύπωση της κάρτας.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
 ## 2026-09-23 — efood / Pelican LAB schema bootstrap — LAB PASS / FORM LOAD COMPLETE
 
 - [x] Το αρχικό LAB FAIL ήταν «Παρουσιάστηκε εσωτερικό σφάλμα» πριν φορτωθεί η φόρμα efood.

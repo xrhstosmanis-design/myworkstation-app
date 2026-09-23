@@ -24,11 +24,11 @@ function barcodeSvg(value){
   return `<svg role="img" aria-label="Barcode κάρτας εργασίας" viewBox="0 0 ${x+quietZone} 54" preserveAspectRatio="none">${bars}</svg>`;
 }
 
-function printPage(payload){
+function printPage(payload,qrSvg){
   const employee=escapeHtml(payload.employee.fullName),store=escapeHtml(payload.store.name),code=escapeHtml(payload.cardCode);
   return `<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Κάρτα εργασίας — ${employee}</title><style>
-  *{box-sizing:border-box}body{margin:0;background:#eef3f7;color:#08283f;font-family:Arial,sans-serif}.toolbar{display:flex;justify-content:center;gap:12px;padding:18px}.toolbar button{border:0;border-radius:9px;background:#087f5b;color:#fff;font-weight:800;font-size:16px;padding:12px 24px;cursor:pointer}.card{width:85.6mm;height:54mm;margin:10mm auto;background:#fff;border:1px solid #b8ccda;border-radius:4mm;padding:6mm;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 30px #173a5522}.brand{font-size:9px;font-weight:900;letter-spacing:1.4px;color:#087f5b}.title{font-size:13px;font-weight:800}.name{font-size:20px;font-weight:900;margin-top:2mm}.store{font-size:11px;color:#49677d;margin-top:1mm}.barcode svg{display:block;width:100%;height:14mm;fill:#071f32}.code{text-align:center;font:9px monospace;letter-spacing:1px;margin-top:1mm}.hint{text-align:center;font-size:9px;color:#49677d}@page{size:A4;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}.card{margin:0 auto;box-shadow:none;break-inside:avoid}}
-  </style></head><body><div class="toolbar"><button onclick="window.print()">Εκτύπωση κάρτας</button></div><main class="card"><div><div class="brand">MYWORKSTATION · ΚΑΡΤΑ ΕΡΓΑΣΙΑΣ</div><div class="name">${employee}</div><div class="store">${store}</div></div><div class="barcode">${barcodeSvg(payload.cardCode)}<div class="code">${code}</div></div><div class="hint">Σκάναρε στο POS για προσέλευση ή αποχώρηση</div></main></body></html>`;
+  *{box-sizing:border-box}body{margin:0;background:#eef3f7;color:#08283f;font-family:Arial,sans-serif}.toolbar{display:flex;justify-content:center;gap:12px;padding:18px}.toolbar button{border:0;border-radius:9px;background:#087f5b;color:#fff;font-weight:800;font-size:16px;padding:12px 24px;cursor:pointer}.card{width:85.6mm;height:54mm;margin:10mm auto;background:#fff;border:1px solid #b8ccda;border-radius:4mm;padding:5mm 6mm;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 30px #173a5522}.identity{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm}.identity-copy{min-width:0}.qr{width:17mm;height:17mm;flex:none}.qr svg{display:block;width:100%;height:100%}.brand{font-size:9px;font-weight:900;letter-spacing:1.4px;color:#087f5b}.title{font-size:13px;font-weight:800}.name{font-size:18px;font-weight:900;margin-top:2mm}.store{font-size:11px;color:#49677d;margin-top:1mm}.barcode svg{display:block;width:100%;height:11mm;fill:#071f32}.code{text-align:center;font:8px monospace;letter-spacing:.7px;margin-top:.5mm}.hint{text-align:center;font-size:9px;color:#49677d}@page{size:A4;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}.card{margin:0 auto;box-shadow:none;break-inside:avoid}}
+  </style></head><body><div class="toolbar"><button onclick="window.print()">Εκτύπωση κάρτας</button></div><main class="card"><div class="identity"><div class="identity-copy"><div class="brand">MYWORKSTATION · ΚΑΡΤΑ ΕΡΓΑΣΙΑΣ</div><div class="name">${employee}</div><div class="store">${store}</div></div><div class="qr" aria-label="QR κάρτας εργασίας">${qrSvg}</div></div><div class="barcode">${barcodeSvg(payload.cardCode)}<div class="code">${code}</div></div><div class="hint">Κάμερα: QR · Scanner: barcode</div></main></body></html>`;
 }
 
 export async function openWorkforceCardPrint({request,base,employee}){
@@ -37,7 +37,8 @@ export async function openWorkforceCardPrint({request,base,employee}){
   preview.document.write("<!doctype html><title>Προετοιμασία κάρτας</title><p style='font:16px Arial;padding:24px'>Προετοιμασία κάρτας εργασίας…</p>");
   try{
     const payload=await request(`${base}/employees/${employee.id}/work-card`,{method:"POST"});
-    preview.document.open();preview.document.write(printPage(payload));preview.document.close();preview.focus();
+    const {default:QRCode}=await import("qrcode"),qrSvg=await QRCode.toString(payload.cardCode,{type:"svg",errorCorrectionLevel:"M",margin:2});
+    preview.document.open();preview.document.write(printPage(payload,qrSvg));preview.document.close();preview.focus();
     return payload;
   }catch(error){preview.close();throw error}
 }
