@@ -34,12 +34,12 @@ export default function PosAttendanceCardModal({api,store,onClose}){
       if("BarcodeDetector" in window){
         const supported=await window.BarcodeDetector.getSupportedFormats?.();
         if(!supported||supported.includes("code_128")){
-          const detector=new window.BarcodeDetector({formats:["code_128"]});
+          const detector=new window.BarcodeDetector({formats:["code_128","qr_code"]});
           const scan=async()=>{if(!streamRef.current||scanningRef.current)return;try{const codes=await detector.detect(videoRef.current);const value=codes.find(code=>code.rawValue)?.rawValue;if(value)return accept(value)}catch{}frameRef.current=requestAnimationFrame(scan)};
           frameRef.current=requestAnimationFrame(scan);return;
         }
       }
-      const hints=new Map([[DecodeHintType.POSSIBLE_FORMATS,[BarcodeFormat.CODE_128]],[DecodeHintType.TRY_HARDER,true]]);
+      const hints=new Map([[DecodeHintType.POSSIBLE_FORMATS,[BarcodeFormat.QR_CODE,BarcodeFormat.CODE_128]],[DecodeHintType.TRY_HARDER,true]]);
       const reader=new BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:80,delayBetweenScanSuccess:500});
       scannerControlsRef.current=await reader.decodeFromVideoElement(videoRef.current,(decoded)=>decoded&&accept(decoded.getText()));
     }catch(err){stopCamera();setError(err?.name==="NotAllowedError"?"Δεν δόθηκε άδεια χρήσης της κάμερας. Πάτησε Άδεια στον browser και δοκίμασε ξανά.":err.message||"Δεν άνοιξε η κάμερα.")}

@@ -11,10 +11,11 @@ test("POS attendance card modal supports camera Code 128 scanning",()=>{
   const source=read("client/src/components/store/PosAttendanceCardModal.jsx");
   assert.match(source,/Σάρωση με κάμερα/);
   assert.match(source,/navigator\.mediaDevices\?\.getUserMedia/);
-  assert.match(source,/new window\.BarcodeDetector\(\{formats:\["code_128"\]\}\)/);
+  assert.match(source,/new window\.BarcodeDetector\(\{formats:\["code_128","qr_code"\]\}\)/);
   assert.match(source,/BrowserMultiFormatReader/);
   assert.match(source,/decodeFromVideoElement/);
-  assert.match(source,/DecodeHintType\.POSSIBLE_FORMATS,\[BarcodeFormat\.CODE_128\]/);
+  assert.match(source,/DecodeHintType\.POSSIBLE_FORMATS,\[BarcodeFormat\.QR_CODE,BarcodeFormat\.CODE_128\]/);
+  assert.match(source,/formats:\["code_128","qr_code"\]/);
   assert.match(source,/DecodeHintType\.TRY_HARDER,true/);
   assert.match(source,/width:\{ideal:1920\},height:\{ideal:1080\}/);
   assert.match(source,/flushSync\(\(\)=>setCameraActive\(true\)\)/);

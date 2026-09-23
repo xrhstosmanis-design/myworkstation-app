@@ -38,6 +38,7 @@ test("employee UI offers a printable Code 128 card without a PIN",()=>{
   assert.match(tab,/employee\.baseStoreId!==store\.id/);
   assert.match(printable,/CODE128/);
   assert.match(printable,/const quietZone=24/);
-  assert.match(printable,/Σκάναρε στο POS για προσέλευση ή αποχώρηση/);
+  assert.match(printable,/QRCode\.toString\(payload\.cardCode/);
+  assert.match(printable,/Κάμερα: QR · Scanner: barcode/);
   assert.doesNotMatch(printable,/Προσωπικό PIN|pinHash/);
 });
