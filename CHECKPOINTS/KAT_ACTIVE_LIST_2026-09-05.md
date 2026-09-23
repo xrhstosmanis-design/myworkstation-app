@@ -2257,3 +2257,13 @@ Total output lines: 1413
 - [x] Targeted tests, syntax and diff checks PASS.
 - [ ] Green CI → merge → exact Render deploy → LAB retry of AI preview and DRAFT save.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-ai-draft-employee-week.md`.
+
+
+## 2026-09-23 — Workforce εύκολη ροή και καθαρή εβδομάδα — AWAITING CI + LAB
+
+- [x] Η αναλυτική εβδομάδα χωρίστηκε σε responsive κάρτες ημέρας και βάρδιας χωρίς επικαλύψεις.
+- [x] Οι καθημερινές ενέργειες κρατούν αυτόματη αιτιολογία στο Audit χωρίς textarea.
+- [x] Η δημοσίευση έχει μία σύντομη τελική επιβεβαίωση.
+- [x] Μετά τη δημοσίευση ανοίγει αυτόματα η τελική αναλυτική εβδομάδα.
+- [ ] Πράσινο CI → merge → ακριβές Render deploy → browser LAB της πλήρους ροής.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-easy-week-view.md`.
