@@ -9,7 +9,7 @@
 ## Bounded containment
 
 - In the existing POS background path, a supplier profile requiring a complete printed table may not persist a *nonverified* table whose gross exceeds both 3× the operator-confirmed invoice total and that total by 500 €. This would have prevented the ΒΒ 6529 inflation from becoming a purchase draft.
-- Independently verified full tables and the existing bounded reviewable path remain eligible. Other supplier profiles retain their existing flow. The existing ΒΒ 6529 draft remains untouched.
+- Full tables verified against the operator-confirmed total and ordinary bounded review differences remain eligible. Internal row arithmetic alone cannot excuse a catastrophic header difference, even when at most two rows are marked uncertain. Other supplier profiles retain their existing flow. The existing ΒΒ 6529 draft remains untouched.
 - This gate cannot fix OCR punctuation, duplicated rows or create a correct draft; it is a containment step, **not LAB PASS**. The original image and provider candidate need line-level forensic replay before a reading change.
 
 ## Verification and next acceptance

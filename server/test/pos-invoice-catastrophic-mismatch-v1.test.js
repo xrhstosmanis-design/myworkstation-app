@@ -11,7 +11,9 @@ test("BB 6529 cannot publish the 17443.47 EUR unverified table against 47.02 EUR
   ]};
   assert.equal(catastrophicUnverifiedInvoiceMismatch(candidate),true);
   assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,requiresCompletePrintedTable:false}),false,"other suppliers retain their present flow");
-  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,verifiedAtOwnTotal:[{code:"VERIFIED"}]}),false,"independently verified tables retain their review path");
-  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,reviewableProductLines:[{code:"REVIEW"}]}),false,"the bounded two-row review path remains available");
+  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,verifiedAtOwnTotal:[{code:"VERIFIED"}]}),true,"internal row arithmetic cannot override the printed total");
+  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,reviewableProductLines:[{code:"REVIEW"}]}),true,"two review lines cannot excuse a 17k EUR overage");
+  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,verifiedProductLines:[{code:"VERIFIED"}]}),false,"a full table verified against the printed total remains available");
+  assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,productLines:[{grossAmount:90}]}),false,"ordinary header differences remain reviewable");
   assert.equal(catastrophicUnverifiedInvoiceMismatch({...candidate,productLines:[{grossAmount:47.02}]}),false,"a reconciled draft is unaffected");
 });
