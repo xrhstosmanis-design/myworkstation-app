@@ -316,6 +316,30 @@ function applyMathematicalDiscountRecovery(result){
   return result;
 }
 
+// TALOS prints a stable eight-value financial suffix after TEM:
+// quantity, unit price, value before discount, retail, discount %, discount
+// amount, net value and VAT %. Accept it only when both equations reconcile.
+export function applyTalosVerifiedPrintedRows(result){
+  const taxId=String(result?.supplier?.taxId||"").replace(/\D/g,""),supplier=norm(result?.supplier?.name);
+  if(taxId!=="800802293"&&!supplier.includes("ΤΑΛΩΣ")&&!supplier.includes("TALOS"))return result;
+  const close=(a,b,tolerance=Math.max(.03,Math.abs(b)*.008))=>Math.abs(a-b)<=tolerance;
+  const productLines=(result?.productLines||[]).map(line=>{
+    const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/\s(?:TEM|ΤΕΜ|TMX|ΤΜΧ)\s+(.+)$/i);
+    if(!match)return line;
+    const values=(match[1].replace(/,/g,".").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number).filter(Number.isFinite);
+    if(values.length<8)return line;
+    const [quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate]=values.slice(-8);
+    if(!(quantity>0&&unitPrice>0&&netAmount>0&&[0,6,13,17,24].includes(vatRate)))return line;
+    if(!close(quantity*unitPrice,before)||!close(before-discountAmount,netAmount))return line;
+    return {...line,quantity,invoiceQuantity:quantity,unitPrice,packageUnitPrice:unitPrice,
+      initialAmount:money4(before),retailPrice:retail,discount1,discount2:0,discount3:0,
+      discount1Amount:money4(discountAmount),netAmount:money4(netAmount),
+      netUnitCost:money4(netAmount/quantity),vatRate,grossAmount:money4(netAmount*(1+vatRate/100)),
+      mathValidated:true,needsReview:false,quantitySource:"TALOS_PRINTED_ROW_VERIFIED"};
+  });
+  return {...result,productLines,talosPrintedRowsVerified:true};
+}
+
 function discountsReconcile(discounts,quantity,unitPrice,netAmount){
   if(!discounts.length)return false;
   const q=Math.max(0,Number(quantity||0)),price=Math.max(0,Number(unitPrice||0)),amount=Math.max(0,Number(netAmount||0));
@@ -665,7 +689,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     // Supplier layout rules can be corrected between two checks of the same
     // image. Reapply current central knowledge to the cached raw rows instead
     // of returning the stale pre-correction interpretation.
-    const refreshed=await applyLearnedKnowledge(await applyCentralSupplierProfile(structuredClone(cachedRead.winner)));
+    const refreshed=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(structuredClone(cachedRead.winner))));
     const completeness=invoiceReadingCompleteness(refreshed);
     return res.json({...refreshed,completeness,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true,profileReapplied:true});
   }
@@ -677,7 +701,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       for(const page of pages)azurePages.push(normalizeAzure(await callAzure(page.fileData,page.mimeType)));
       let azure=mergeInvoiceLearningPages(azurePages);
       azure=await applyCentralSupplierProfile(azure);
-      azure=repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure));
+      azure=applyTalosVerifiedPrintedRows(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure)));
       azureDraft=azure;
       const completeness=invoiceReadingCompleteness(azure);
       if(completeness.complete)return res.json(cacheResult({...azure,azureState:"READY",completeness}))
@@ -704,10 +728,10 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=applyMathematicalDiscountRecovery(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result}))));
+  result=applyTalosVerifiedPrintedRows(applyMathematicalDiscountRecovery(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result})))));
   let completeness=invoiceReadingCompleteness(result);
   if(!completeness.complete&&azureDraft?.productLines?.length){
-    const hybrid=await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result)));
+    const hybrid=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result))));
     const hybridCompleteness=invoiceReadingCompleteness(hybrid);
     if(hybridCompleteness.complete){
       return res.json(cacheResult({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness}));
