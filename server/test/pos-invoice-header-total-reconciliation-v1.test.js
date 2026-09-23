@@ -50,7 +50,15 @@ test("a complete verified printed table persists without a second heuristic rein
     ["12798",1,"PACKAGE",12,19,1.3,5.52]
   ]);
   assert.equal(verifiedPrintedTableForPersistence(lines,62),null,"the independent invoice total remains mandatory");
+  const ownTotal=lines.reduce((sum,line)=>sum+line.grossAmount,0);
+  assert.equal(verifiedPrintedTableForPersistence(lines,ownTotal)?.length,3,"valid physical rows remain available for a draft when the header differs");
   assert.equal(verifiedPrintedTableForPersistence([{...lines[0],sourceColumnsVerified:false}],29.83),null,"partial OCR rows still use the guarded finalizer");
+});
+
+test("POS keeps verified printed rows reviewable when the header total differs",()=>{
+  const route=fs.readFileSync(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
+  assert.match(route,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|reviewableProductLines/);
+  assert.match(route,/if\(requiresCompletePrintedTable&&!verifiedAtOwnTotal&&!reviewableProductLines&&Math\.abs\(reconcileInvoiceLines/);
 });
 
 test("existing POS OCR drafts have an idempotent safe repair route",()=>{
