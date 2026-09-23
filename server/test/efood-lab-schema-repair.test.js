@@ -17,7 +17,7 @@ test("legacy integration kind constraints are replaced before EFOOD is added",()
   assert.match(storeBootstrap,/= ANY \(conkey\)/);
   assert.match(storeBootstrap,/DROP CONSTRAINT IF EXISTS %I/);
   assert.match(storeBootstrap,/CHECK \("kind" IN \('MYDATA','VAT_LOOKUP','EFOOD'\)\)/);
-  assert.doesNotMatch(storeBootstrap,/pg_get_constraintdef\(oid\) LIKE '%\\"kind\\"%'/);
+  assert.doesNotMatch(storeBootstrap,/pg_get_constraintdef\(oid\)\s+LIKE\s+'%"kind"%'/);
 });
 
 test("efood credentials remain LAB-only and fail closed",()=>{
