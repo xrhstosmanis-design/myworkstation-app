@@ -47,6 +47,19 @@ This gate applies to every module, page, conversation and agent working in this 
 
 For payment, invoice, stock, fiscal, accounting and finalization flows, also preserve idempotency: no duplicate payment, no resurrection of a deliberately deleted draft, no stock posting and no finalization during diagnostic testing unless the checkpoint explicitly authorizes it.
 
+## Mandatory PASS → manual gate
+
+This gate applies to every module, page, conversation and agent. It is mandatory immediately after a real `LAB PASS`, `LIVE PASS` or `USER PASS`.
+
+1. Update the relevant checkpoint with the real observation, date, tested scope and exact production revision when applicable.
+2. Update `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md`, closing superseded `AWAITING LAB`, `RETEST` or `OPEN` items for the same flow. Historical entries may remain for traceability, but the newest top entry must state the authoritative status.
+3. Create or update `docs/manual/<module>/PASS.md` in the same pull request. A PASS is not fully recorded until the manual contains the tested usage instructions.
+4. The manual entry must include: who may use the feature, where it is opened, the verified step-by-step flow, security/tenant boundaries, PASS criteria, known limits and practical troubleshooting.
+5. Never add CI-only, local-only, simulated or untested behavior to `docs/manual/`. CI PASS alone remains `AWAITING LAB`.
+6. If a newer real test fails, update or remove the contradicted manual claim in the same change. The newest real observation is authoritative.
+7. Before starting new work, read the relevant `docs/manual/<module>/PASS.md`. Do not rebuild or retest a flow already recorded there unless a newer FAIL, regression or explicitly expanded requirement exists.
+8. Do not merge a checkpoint-only PASS closure that omits the corresponding manual update. This rule is repository-wide and is not optional for parallel Work pages.
+
 ## POS invoice acceptance invariant
 
 A POS invoice change is accepted only when one genuinely new invoice submission
