@@ -7,6 +7,7 @@ import { auth } from "../middleware/auth.js";
 import { sendEmail } from "../services/mail.js";
 import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
+import {normalizeWorkCard} from "../workforce-card-code.js";
 
 const router = Router();
 let tablesPromise;
@@ -239,7 +240,7 @@ router.use(auth,requireCashAccess);
 
 const attendanceCardSchema=z.object({cardCode:z.string().trim().min(3).max(120)});
 const attendancePinSchema=z.object({employeeId:z.string().trim().min(2).max(120),pin:z.string().regex(/^\d{4,8}$/)});
-const normalizeAttendanceCard=value=>String(value||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+const normalizeAttendanceCard=normalizeWorkCard;
 const attendanceCardHash=value=>crypto.createHash("sha256").update(normalizeAttendanceCard(value)).digest("hex");
 
 router.post("/stores/:storeId/attendance-card/scan",route(async(req,res)=>{

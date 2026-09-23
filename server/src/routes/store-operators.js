@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import {normalizeWorkCard} from "../workforce-card-code.js";
 
 const router=Router();
 let tablesPromise;
@@ -124,7 +125,7 @@ function requireAdmin(req,res,next){
 }
 
 function normalizeCard(value){
-  return String(value||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+  return normalizeWorkCard(value);
 }
 function cardHash(value){
   return crypto.createHash("sha256").update(normalizeCard(value)).digest("hex");
