@@ -6,7 +6,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
 import {reviewStatusForInvoiceLine} from "../lib/invoice-line-review.js";
-import {exactLearnedInvoiceCandidate} from "../lib/invoice-learning-exact-document.js";
+import {exactLearnedInvoiceCandidate,hasLearnedInvoiceIdentity} from "../lib/invoice-learning-exact-document.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -268,6 +268,10 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const exactLearning=exactLearnedInvoiceCandidate(workspaceRows?.[0]?.state,{
       supplier:supplier[0],documentNumber:body.documentNumber,totalGross:body.totalGross
     });
+    if(String(supplier[0].taxId||"").replace(/\D/g,"")==="800802293"&&!exactLearning&&
+      hasLearnedInvoiceIdentity(workspaceRows?.[0]?.state,{supplier:supplier[0],documentNumber:body.documentNumber})){
+      return res.status(409).json({error:"Η εκμάθηση TALOS του ίδιου τιμολογίου δεν επαληθεύεται οικονομικά. Οι υπάρχουσες γραμμές διατηρήθηκαν για έλεγχο.",code:"POS_LEARNED_INVOICE_MISMATCH"});
+    }
     if(exactLearning)lines=exactLearning.lines;
     const invoiceReference=norm(body.documentNumber),supplierTaxId=String(supplier[0].taxId||"").replace(/\D/g,"");
     const invoiceSupplierKey=supplierTaxId?`VAT:${supplierTaxId}`:`ID:${body.supplierId}`;

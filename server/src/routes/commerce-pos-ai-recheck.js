@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
-import {exactLearnedInvoiceCandidate} from "../lib/invoice-learning-exact-document.js";
+import {exactLearnedInvoiceCandidate,hasLearnedInvoiceIdentity} from "../lib/invoice-learning-exact-document.js";
 import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
 
 const router=Router();
@@ -286,6 +286,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     documentNumber:String(posHandoff?.documentNumber||""),
     totalGross:confirmedHandoffTotal
   });
+  if(cleanTaxId(trustedHandoffSupplier?.taxId)==="800802293"&&!exactLearning&&
+    hasLearnedInvoiceIdentity(workspaceRows?.[0]?.state,{supplier:trustedHandoffSupplier,documentNumber:posHandoff?.documentNumber})){
+    throw Object.assign(new Error("Η εκμάθηση TALOS του ίδιου τιμολογίου δεν συμφωνεί με το ποσό ή τις γραμμές. Το πρόχειρο διατηρήθηκε χωρίς νέα AI αντικατάσταση."),{status:409,code:"POS_LEARNED_INVOICE_MISMATCH"});
+  }
   let parsed=exactLearning?{
     documentType:"INVOICE",aiConfidence:100,
     supplier:{name:trustedHandoffSupplier.name||"",taxId:trustedHandoffSupplier.taxId||""},
@@ -614,6 +618,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.rawText=parsed.rawText||parsed.auditLines.map(x=>x.text).join("\n")||localRawText;
   failureStage="match-supplier";
   const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
+  if(cleanTaxId(trustedHandoffSupplier?.taxId)==="800802293")parsed.supplierReadingProfile={...(parsed.supplierReadingProfile||{}),requireCompletePrintedTableOnMismatch:true};
   failureStage="save-ai-result";
   await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
   res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:FULL_OCR_MODEL});

@@ -2,6 +2,25 @@ const money4=value=>Math.round((Number(value||0)+Number.EPSILON)*10000)/10000;
 const cleanTaxId=value=>String(value||"").replace(/\D/g,"");
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9]/g,"");
 const invoiceKey=value=>norm(value).replace(/^0+(?=\d)/,"");
+function invoiceMatches(documentNumber,requestedNumber,supplier){
+  const learned=invoiceKey(documentNumber),requested=invoiceKey(requestedNumber);
+  if(!learned||!requested)return false;
+  if(learned===requested)return true;
+  // TALOS prints the series "01T" ahead of the numeric document number;
+  // Learning previously saved only that numeric number. Require the entire
+  // remaining number, a trusted TALOS VAT and the independent row/total proof.
+  const rawRequested=norm(requestedNumber),rawLearned=norm(documentNumber);
+  return cleanTaxId(supplier?.taxId)==="800802293"&&rawRequested.startsWith("01T")&&
+    rawLearned===rawRequested.slice(3);
+}
+
+export function hasLearnedInvoiceIdentity(state,{supplier,documentNumber}={}){
+  const number=invoiceKey(documentNumber);
+  return Boolean(number&&(Array.isArray(state?.documents)?state.documents:[]).some(document=>
+    String(document?.status||"").toUpperCase()==="LEARNED"&&
+    supplierMatches(document,supplier)&&
+    invoiceMatches(document?.invoiceNo||document?.invoiceNumber,documentNumber,supplier)));
+}
 
 function supplierMatches(document,supplier){
   const expectedTaxId=cleanTaxId(supplier?.taxId),documentTaxId=cleanTaxId(document?.supplierTaxId);
@@ -47,7 +66,7 @@ export function exactLearnedInvoiceCandidate(state,{supplier,documentNumber,tota
   if(!expectedNumber)return null;
   const documents=(Array.isArray(state?.documents)?state.documents:[])
     .filter(document=>String(document?.status||"").toUpperCase()==="LEARNED")
-    .filter(document=>supplierMatches(document,supplier)&&invoiceKey(document?.invoiceNo||document?.invoiceNumber)===expectedNumber)
+    .filter(document=>supplierMatches(document,supplier)&&invoiceMatches(document?.invoiceNo||document?.invoiceNumber,documentNumber,supplier))
     .sort((a,b)=>Date.parse(b?.updatedAt||b?.createdAt||0)-Date.parse(a?.updatedAt||a?.createdAt||0));
   for(const document of documents){
     const active=(Array.isArray(document?.lines)?document.lines:[]).filter(line=>String(line?.status||"").toUpperCase()!=="REJECTED");

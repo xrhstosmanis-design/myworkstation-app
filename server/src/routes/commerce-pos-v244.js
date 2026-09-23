@@ -221,6 +221,9 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // invoice header total needs manual reconciliation.
           const productLines=verifiedProductLines||verifiedAtOwnTotal||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
+          if(requiresCompletePrintedTable&&Math.abs(reconcileInvoiceLines(productLines,handoff.totalGross).grossTotal-Number(handoff.totalGross||0))>POS_HANDOFF_TOLERANCE){
+            throw new Error("Η κεντρική εκμάθηση προμηθευτή απαιτεί πλήρη συμφωνία των τυπωμένων γραμμών με το σύνολο τιμολογίου. Το πρόχειρο διατηρήθηκε χωρίς λανθασμένη παραγγελία.");
+          }
           if(handoff.replaceExistingDraft){
             const before=reconcileInvoiceLines(finalizeV244ProductLines(previousLines),handoff.totalGross);
             const after=reconcileInvoiceLines(productLines,handoff.totalGross);

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {exactLearnedInvoiceCandidate} from "../src/lib/invoice-learning-exact-document.js";
+import {exactLearnedInvoiceCandidate,hasLearnedInvoiceIdentity} from "../src/lib/invoice-learning-exact-document.js";
 
 const line=(overrides={})=>({status:"CONFIRMED",supplierItemCode:"720547",description:"ΚΑΘΗΜΕΡΙΝΑ ΦΡΕΣΚΟ ΓΑΛΑ ΠΛΗΡΕΣ 1LT",quantity:2,unit:"ΤΜΧ",unitPrice:1.74,discount1:10,discount2:0,discount3:0,netValue:3.13,vatRate:13,...overrides});
 const state=document=>({documents:[document]});
@@ -35,6 +35,33 @@ test("partial or unbalanced learning documents fail closed",()=>{
   const base={id:"learned-28897",status:"LEARNED",supplierTaxId:"053354239",invoiceNo:"28897",sourceGrossAmount:3.54};
   assert.equal(exactLearnedInvoiceCandidate(state({...base,lines:[line({status:"REVIEW"})]}),{supplier:{taxId:"053354239"},documentNumber:"28897",totalGross:3.54}),null);
   assert.equal(exactLearnedInvoiceCandidate(state({...base,lines:[line({netValue:2.25})]}),{supplier:{taxId:"053354239"},documentNumber:"28897",totalGross:3.54}),null);
+});
+
+test("TALOS learned identity survives arithmetic rejection without matching another invoice",()=>{
+  const learned={id:"talos",status:"LEARNED",supplierTaxId:"800802293",invoiceNo:"01T00125909",lines:[line({netValue:13,vatRate:13})]};
+  const args={supplier:{taxId:"800802293"},documentNumber:"01T00125909",totalGross:252.06};
+  assert.equal(exactLearnedInvoiceCandidate(state(learned),args),null);
+  assert.equal(hasLearnedInvoiceIdentity(state(learned),args),true);
+  assert.equal(hasLearnedInvoiceIdentity(state(learned),{...args,documentNumber:"01T00125910"}),false);
+  assert.equal(hasLearnedInvoiceIdentity(state(learned),{...args,supplier:{taxId:"000000000"}}),false);
+  const route=fs.readFileSync(new URL("../src/routes/commerce-pos-v244-core.js",import.meta.url),"utf8");
+  const reread=fs.readFileSync(new URL("../src/routes/commerce-pos-ai-recheck.js",import.meta.url),"utf8");
+  assert.match(route,/hasLearnedInvoiceIdentity\(workspaceRows\?\.\[0\]\?\.state/);
+  assert.match(reread,/hasLearnedInvoiceIdentity\(workspaceRows\?\.\[0\]\?\.state/);
+  assert.match(route,/POS_LEARNED_INVOICE_MISMATCH/);
+  assert.match(reread,/POS_LEARNED_INVOICE_MISMATCH/);
+});
+
+test("TALOS printed series resolves the centrally learned numeric document across stores",()=>{
+  const learned={id:"talos-125909",status:"LEARNED",supplierTaxId:"800802293",invoiceNo:"00125909",lines:[line({quantity:1,unitPrice:223.05,discount1:0,netValue:223.05,vatRate:13})]};
+  const request={supplier:{taxId:"800802293"},documentNumber:"01T00125909",totalGross:252.06};
+  const result=exactLearnedInvoiceCandidate(state(learned),request);
+  assert.ok(result);
+  assert.equal(result.documentId,"talos-125909");
+  assert.equal(result.lines[0].unitCost,223.05);
+  assert.equal(hasLearnedInvoiceIdentity(state(learned),request),true);
+  assert.equal(exactLearnedInvoiceCandidate(state(learned),{...request,documentNumber:"01T00125910"}),null);
+  assert.equal(exactLearnedInvoiceCandidate(state(learned),{...request,supplier:{taxId:"000000000"}}),null);
 });
 
 test("DELTA 28897 preserves the photographed quantities and discounts",()=>{
