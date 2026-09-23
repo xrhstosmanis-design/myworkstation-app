@@ -44,6 +44,13 @@
 - New positive and fail-closed regression coverage passes; full server suite is `1416/1416` and the client production build passes.
 - No confirmation or learning was executed on the failing draft.
 
+## Sixth autonomous browser LAB and response identity shape
+
+- Production revision `89589d1a` loaded and the two original photos were uploaded again; the read still returned `44 / 218,66 € / 28,44 € / 247,10 €`.
+- The live form proved that the current response exposes TALOS identity as top-level `supplierTaxId` / `supplierName`, while the server verifier read only the nested `supplier` object.
+- The same strict verifier now accepts both documented response shapes; its supplier scope and two-equation row proof are unchanged.
+- No confirmation or learning was executed on the failing draft.
+
 ## Third autonomous browser LAB and metadata timing
 
 - Production revision `2cf30505` and its new hashed LAB bundle were both verified before the two original photos were uploaded again.

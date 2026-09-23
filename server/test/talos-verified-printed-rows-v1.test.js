@@ -49,6 +49,13 @@ test('TALOS exact 44-row layout is repaired when cached supplier metadata is abs
   assert.equal(output.productLines[2].quantitySource,'TALOS_PRINTED_ROW_VERIFIED');
 });
 
+test('TALOS top-level supplier identity used by the Learning response is accepted',()=>{
+  const line={supplierItemCode:'4323717',quantity:0,unitPrice:1,netAmount:1,azureRawRow:'4323717 PRODUCT TEM 6,00 1.02 6.12 18.40 12.00 1.73 4.39 13'};
+  const output=applyTalosVerifiedPrintedRows({supplierTaxId:'800802293',supplierName:'ΤΑΛΩΣ ΑΕ',productLines:[line]});
+  assert.equal(output.productLines[0].quantity,6);
+  assert.equal(output.productLines[0].netAmount,4.39);
+});
+
 test('TALOS layout fallback stays closed without the exact row count and signature',()=>{
   const line={supplierItemCode:'4323717',quantity:0,unitPrice:1,netAmount:1,azureRawRow:'4323717 PRODUCT TEM 6,00 1.02 6.12 18.40 12.00 1.73 4.39 13'};
   const productLines=Array.from({length:44},()=>({...line}));

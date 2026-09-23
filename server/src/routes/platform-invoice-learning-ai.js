@@ -320,7 +320,7 @@ function applyMathematicalDiscountRecovery(result){
 // quantity, unit price, value before discount, retail, discount %, discount
 // amount, net value and VAT %. Accept it only when both equations reconcile.
 export function applyTalosVerifiedPrintedRows(result){
-  const taxId=String(result?.supplier?.taxId||"").replace(/\D/g,""),supplier=norm(result?.supplier?.name);
+  const taxId=String(result?.supplier?.taxId||result?.supplierTaxId||"").replace(/\D/g,""),supplier=norm(result?.supplier?.name||result?.supplierName);
   const lines=Array.isArray(result?.productLines)?result.productLines:[];
   const talosSignatureCodes=new Set(["3759850","4011985","4323717","4332684","8741200","6400600"]);
   const detectedCodes=new Set(lines.map(line=>{
