@@ -28,6 +28,14 @@
 - Added verified seven-number layouts for omitted quantity / reordered price, supplier-name fallback, and per-line VAT rounding.
 - No confirmation or learning was executed on the failing draft.
 
+## Third autonomous browser LAB and metadata timing
+
+- Production revision `2cf30505` and its new hashed LAB bundle were both verified before the two original photos were uploaded again.
+- Azure returned 44 rows but still rendered `218,66 € + 28,44 € = 247,10 €`.
+- Live evidence showed the supplier identity is populated by the outer upload workflow after the synchronous result hook; the supplier-scoped printed-row verifier therefore failed closed before that metadata was visible.
+- A deferred same-tick pass now reuses the already-rendered raw rows after supplier metadata is populated, with the identical TALOS scope and arithmetic proof. It does not issue a new OCR request and cannot touch unrelated suppliers.
+- No confirmation or learning was executed on the failing draft.
+
 ## Second autonomous browser LAB and overwrite root cause
 
 - Production revision `b0cae260` loaded and both original page photos were uploaded again by Codex.

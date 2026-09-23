@@ -257,8 +257,9 @@ test('Invoice Learning totals retain a source-proven printed line net',async()=>
   assert.match(lab,/const quantity=printedQ\?\?/);
   assert.match(lab,/invoiceQuantity:printedQ\?\?/);
   assert.match(lab,/const printed=verifiedTalosPrintedEconomics\(source,result\?\.supplierTaxId,result\?\.supplierName\)/);
-  assert.match(lab,/if\(printed\)\{\s*draft\.quantity=printed\.quantity;/);
-  assert.match(lab,/draft\.netValue=printed\.netAmount;\s*draft\.vatRate=printed\.vatRate;\s*return;/);
+  assert.match(lab,/if\(printed\)\{\s*applyVerifiedTalosPrintedEconomics\(draft,printed\);/);
+  assert.match(lab,/setTimeout\(\(\)=>\{const taxId=\$\('#supplierTaxId'\)\.value\|\|result\.supplierTaxId/);
+  assert.match(lab,/verifiedTalosPrintedEconomics\(draft,taxId,supplierName\)/);
 });
 
 test('Invoice Learning accepts only mathematically proven TALOS printed quantities',async()=>{
