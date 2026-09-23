@@ -24,6 +24,8 @@ test("Workforce v2 schedule routes keep the protected lifecycle and assignment c
   assert.match(route,/normalizedPeriodStart=iso\(weekStart\(body\.periodStart\)\)/);
   assert.match(route,/date<start\|\|date>end/);
   assert.match(route,/canSchedule:true/);
+  assert.match(route,/orderBy:\{version:"desc"\}/);
+  assert.match(route,/version=\(latest\?\.version\|\|0\)\+1/);
 });
 
 test("Workforce v2 schedule UI exposes all requested operational views",()=>{
@@ -39,6 +41,10 @@ test("Workforce v2 schedule UI exposes all requested operational views",()=>{
   assert.match(ui,/Ανανέωση Audit/);
   assert.doesNotMatch(ui,/window\.prompt/);
   assert.match(ui,/await load\(\{keepNotice:true\}\);setSelected\(result\.item\.id\)/);
+  assert.match(ui,/workforce-schedule-sections/);
+  assert.match(ui,/AI Πρόγραμμα/);
+  assert.match(ui,/Άδειες & Ρεπό/);
+  assert.match(ui,/activeSection==="AUDIT"/);
 });
 
 test("Workforce audit route exposes the required recorded fields",()=>{
