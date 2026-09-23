@@ -1,14 +1,16 @@
 import React,{useEffect,useRef,useState} from "react";
 import {BadgeCheck,Camera,CameraOff,Clock3,KeyRound,ScanLine,X} from "lucide-react";
+import {BrowserMultiFormatReader} from "@zxing/browser";
 
 export default function PosAttendanceCardModal({api,store,onClose}){
-  const [method,setMethod]=useState("PIN"),[cardCode,setCardCode]=useState(""),[pin,setPin]=useState(""),[employeeId,setEmployeeId]=useState(""),[operators,setOperators]=useState([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null),[cameraActive,setCameraActive]=useState(false),inputRef=useRef(null),videoRef=useRef(null),streamRef=useRef(null),frameRef=useRef(0),scanningRef=useRef(false);
+  const [method,setMethod]=useState("PIN"),[cardCode,setCardCode]=useState(""),[pin,setPin]=useState(""),[employeeId,setEmployeeId]=useState(""),[operators,setOperators]=useState([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null),[cameraActive,setCameraActive]=useState(false),inputRef=useRef(null),videoRef=useRef(null),streamRef=useRef(null),frameRef=useRef(0),scannerControlsRef=useRef(null),scanningRef=useRef(false);
   useEffect(()=>{let active=true;api(`/api/operators/stores/${store.id}/directory`).then(row=>{if(!active)return;const eligible=(row.operators||[]).filter(operator=>operator.hasPin);setOperators(eligible);setEmployeeId(current=>current||eligible[0]?.employeeId||"")}).catch(err=>active&&setError(err.message)).finally(()=>active&&setLoading(false));return()=>{active=false}},[store.id]);
   const stopCamera=()=>{
     cancelAnimationFrame(frameRef.current);frameRef.current=0;
+    scannerControlsRef.current?.stop?.();scannerControlsRef.current=null;
     streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;scanningRef.current=false;setCameraActive(false);
   };
-  useEffect(()=>()=>{cancelAnimationFrame(frameRef.current);streamRef.current?.getTracks().forEach(track=>track.stop())},[]);
+  useEffect(()=>()=>{cancelAnimationFrame(frameRef.current);scannerControlsRef.current?.stop?.();streamRef.current?.getTracks().forEach(track=>track.stop())},[]);
   useEffect(()=>{stopCamera();setError("");setResult(null);setTimeout(()=>inputRef.current?.focus(),0)},[method,loading]);
   const recordCard=async value=>{
     const normalized=String(value||"").trim();if(busy||scanningRef.current||normalized.length<3)return;
@@ -20,22 +22,23 @@ export default function PosAttendanceCardModal({api,store,onClose}){
   const startCamera=async()=>{
     setError("");setResult(null);
     if(!navigator.mediaDevices?.getUserMedia)return setError("Η κάμερα δεν είναι διαθέσιμη σε αυτόν τον υπολογιστή ή browser.");
-    if(!("BarcodeDetector" in window))return setError("Ο browser δεν υποστηρίζει σάρωση barcode από κάμερα. Χρησιμοποίησε Chrome/Edge ή το κανονικό scanner.");
     try{
-      const supported=await window.BarcodeDetector.getSupportedFormats?.();
-      if(supported&&!supported.includes("code_128"))throw new Error("Η κάμερα αυτού του browser δεν υποστηρίζει Code 128.");
       const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
       streamRef.current=stream;setCameraActive(true);
       await new Promise(resolve=>setTimeout(resolve,0));
       if(!videoRef.current){stream.getTracks().forEach(track=>track.stop());streamRef.current=null;setCameraActive(false);return}
       videoRef.current.srcObject=stream;await videoRef.current.play();
-      const detector=new window.BarcodeDetector({formats:["code_128"]});
-      const scan=async()=>{
-        if(!streamRef.current||scanningRef.current)return;
-        try{const codes=await detector.detect(videoRef.current);const value=codes.find(code=>code.rawValue)?.rawValue;if(value){setCardCode(value);stopCamera();await recordCard(value);return}}catch{}
-        frameRef.current=requestAnimationFrame(scan);
-      };
-      frameRef.current=requestAnimationFrame(scan);
+      const accept=async value=>{if(!value||scanningRef.current)return;setCardCode(value);stopCamera();await recordCard(value)};
+      if("BarcodeDetector" in window){
+        const supported=await window.BarcodeDetector.getSupportedFormats?.();
+        if(!supported||supported.includes("code_128")){
+          const detector=new window.BarcodeDetector({formats:["code_128"]});
+          const scan=async()=>{if(!streamRef.current||scanningRef.current)return;try{const codes=await detector.detect(videoRef.current);const value=codes.find(code=>code.rawValue)?.rawValue;if(value)return accept(value)}catch{}frameRef.current=requestAnimationFrame(scan)};
+          frameRef.current=requestAnimationFrame(scan);return;
+        }
+      }
+      const reader=new BrowserMultiFormatReader();
+      scannerControlsRef.current=await reader.decodeFromVideoElement(videoRef.current,(decoded)=>decoded&&accept(decoded.getText()));
     }catch(err){stopCamera();setError(err?.name==="NotAllowedError"?"Δεν δόθηκε άδεια χρήσης της κάμερας. Πάτησε Άδεια στον browser και δοκίμασε ξανά.":err.message||"Δεν άνοιξε η κάμερα.")}
   };
   const submit=async event=>{
