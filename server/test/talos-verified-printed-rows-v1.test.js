@@ -21,10 +21,13 @@ const rows=[
 ];
 
 test('TALOS repairs every mathematically verified printed quantity on the server',()=>{
-  const input={supplier:{name:'ΤΑΛΩΣ ΑΕ',taxId:'800802293'},productLines:rows.map(([code,quantity,suffix])=>({supplierItemCode:code,quantity,unitPrice:1,netAmount:1,azureRawRow:`${code} PRODUCT TEM ${suffix.replace(/^TEM /,'')}`}))};
+  const input={supplier:{name:'ΤΑΛΩΣ ΑΕ',taxId:'800802293'},productLines:rows.map(([code,quantity,suffix])=>({supplierItemCode:code,quantity,unitPrice:1,netAmount:1,retailPrice:999,azureRawRow:`${code} PRODUCT\nTEM ${suffix.replace(/^TEM /,'')}`}))};
   const output=applyTalosVerifiedPrintedRows(input);
   assert.deepEqual(output.productLines.map(line=>[line.supplierItemCode,line.quantity,line.netAmount]),rows.map(row=>[row[0],row[3],row[4]]));
   assert.ok(output.productLines.every(line=>line.quantitySource==='TALOS_PRINTED_ROW_VERIFIED'));
+  assert.ok(output.productLines.every(line=>line.retailPrice===null));
+  const repaired=output.productLines.find(line=>line.supplierItemCode==='4323717');
+  assert.deepEqual({quantity:repaired.quantity,unitPrice:repaired.unitPrice,discount1:repaired.discount1,discount2:repaired.discount2,netAmount:repaired.netAmount},{quantity:6,unitPrice:1.02,discount1:18.4,discount2:12,netAmount:4.39});
 });
 
 test('TALOS repair leaves other suppliers and unbalanced rows unchanged',()=>{
