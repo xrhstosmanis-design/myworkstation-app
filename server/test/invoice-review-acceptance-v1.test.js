@@ -22,6 +22,24 @@ test("swapped neighbouring OCR values are marked when their raw physical row dis
   assert.equal(rawRowSupportsStructuredLine(correct),true);
 });
 
+test("Karamolegos row 521 is flagged while its five balanced neighbours remain unchanged",()=>{
+  const supplierRows=[
+    ["100139",2,2.10,20,0,0,3.36],
+    ["103",3,2.15,35,20,0,3.35],
+    ["114",4,1.90,30,20,0,4.26],
+    ["521",3,1.88,0,0,10,13.00],
+    ["522",3,1.68,0,20,0,4.03],
+    ["650",4,1.49,0,20,0,4.77]
+  ];
+  const results=supplierRows.map(([code,quantity,unitCost,discount1,discount2,discount3,netAmount])=>
+    reviewStatusForInvoiceLine({code,description:`Προϊόν ${code}`,rawText:`${code} Προϊόν ${code} ${quantity} ${unitCost}`,
+      quantity,unit:"ΤΜΧ",unitCost,discount1,discount2,discount3,netAmount,confidence:95,sourceColumnsVerified:true},{matched:true}));
+  assert.deepEqual(results.map(row=>row.resolutionStatus),["MATCHED","MATCHED","MATCHED","NEEDS_REVIEW","MATCHED","MATCHED"]);
+  assert.match(results[3].reasons.join(" "),/καθαρή αξία/);
+  assert.equal(reviewStatusForInvoiceLine({quantity:3,unitCost:1.88,discount2:20,netAmount:4.51,unit:"ΤΜΧ",rawText:"521 Προϊόν 3 1,88 4,51",code:"521",description:"Προϊόν 521"},{matched:true}).needsReview,false);
+  assert.equal(reviewStatusForInvoiceLine({quantity:3,unitCost:1.88,netAmount:13,unit:"ΚΙΒ",rawText:"521 3 1,88 13",code:"521",description:"Προϊόν 521"},{matched:true}).reasons.some(reason=>reason.includes("καθαρή αξία")),false);
+});
+
 test("column verification survives the POS OCR handoff",()=>{
   for(const path of [
     new URL("../../client/src/lib/invoice-v244-core.js",import.meta.url),
