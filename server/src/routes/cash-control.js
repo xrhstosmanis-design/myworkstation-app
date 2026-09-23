@@ -192,7 +192,7 @@ async function reviewSnapshot(companyId,storeId,sessionId){
 function sameSnapshot(left,right){return JSON.stringify(left||{})===JSON.stringify(right||{})}
 function suspiciousOperatorEvent(eventType){return /CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(eventType||""))}
 function auditAmount(details){for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}return null}
-function route(handler){return async(req,res)=>{try{await ensureTables();await handler(req,res)}catch(error){console.error("Cash Control:",error);if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα ποσά και τα στοιχεία της φόρμας.",details:error.issues});if(error?.code==="P2010"||error?.code==="23505")return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});return res.status(error?.status||500).json({error:error?.message||"Σφάλμα στον Έλεγχο Ταμείου."})}}}
+function route(handler){return async(req,res)=>{try{await ensureTables();await handler(req,res)}catch(error){console.error("Cash Control:",error);if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα ποσά και τα στοιχεία της φόρμας.",details:error.issues});if(error?.code==="23505"||error?.meta?.code==="23505")return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});return res.status(error?.status||500).json({error:error?.message||"Σφάλμα στον Έλεγχο Ταμείου."})}}}
 
 
 const workforceDate=value=>new Date(value).toISOString().slice(0,10);
@@ -262,7 +262,7 @@ router.post("/stores/:storeId/attendance-pin/submit",route(async(req,res)=>{
   const credential=(await prisma.$queryRaw`
     SELECT c."employeeId",c."pinHash"
     FROM "StoreOperatorCredential" c
-    JOIN "Employee" e ON e."id"=c."employeeId" AND e."companyId"=c."companyId"
+    JOIN "Employee" e ON e."id"=c."employeeId" AND e."storeId"=c."storeId"
     WHERE c."companyId"=${req.user.companyId} AND c."storeId"=${store.id} AND c."employeeId"=${body.employeeId}
       AND c."active"=TRUE AND e."active"=TRUE
     LIMIT 1

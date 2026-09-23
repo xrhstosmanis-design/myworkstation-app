@@ -26,8 +26,15 @@ test("POS colleague can use a protected personal PIN without changing the cashie
   assert.ok(source.includes('method:"POS_PIN"'));
   assert.ok(source.includes('bcrypt.compare(body.pin,credential.pinHash)'));
   assert.ok(source.includes('c."companyId"=${req.user.companyId} AND c."storeId"=${store.id} AND c."employeeId"=${body.employeeId}'));
+  assert.ok(source.includes('e."id"=c."employeeId" AND e."storeId"=c."storeId"'));
+  assert.ok(!source.includes('e."id"=c."employeeId" AND e."companyId"=c."companyId"'));
   assert.ok(source.includes('"StoreOperatorLoginGuard"'));
   assert.ok(source.includes('nextCount>=5'));
   assert.ok(modal.includes("PIN"));
   assert.ok(modal.includes("employeeId,pin"));
+});
+
+test("raw query failures are not mislabeled as an existing cash shift",()=>{
+  assert.ok(source.includes('error?.meta?.code==="23505"'));
+  assert.ok(!source.includes('error?.code==="P2010"||error?.code==="23505"'));
 });
