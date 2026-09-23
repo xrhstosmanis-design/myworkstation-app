@@ -256,6 +256,9 @@ test('Invoice Learning totals retain a source-proven printed line net',async()=>
   assert.match(lab,/!=='800802293'/);
   assert.match(lab,/const quantity=printedQ\?\?/);
   assert.match(lab,/invoiceQuantity:printedQ\?\?/);
+  assert.match(lab,/const printed=verifiedTalosPrintedEconomics\(source,result\?\.supplierTaxId,result\?\.supplierName\)/);
+  assert.match(lab,/if\(printed\)\{\s*draft\.quantity=printed\.quantity;/);
+  assert.match(lab,/draft\.netValue=printed\.netAmount;\s*draft\.vatRate=printed\.vatRate;\s*return;/);
 });
 
 test('Invoice Learning accepts only mathematically proven TALOS printed quantities',async()=>{
@@ -270,6 +273,17 @@ test('Invoice Learning accepts only mathematically proven TALOS printed quantiti
   assert.equal(context.recover({azureRawRow:'4327325 EXTRA ΤΥΡΟΓΑΡ. ΤΥΡΙ 80GX20 TEM 1.67 4.28 13 0.85 5.95 18.30 12.00'},'800802293'),7);
   assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 99 21 30 9.39 11.61 13'},'800802293'),null);
   assert.equal(context.recover({azureRawRow:'4266583 KAP HLS TEM 20 1.05 21 21 30 9.39 11.61 13'},'999999999'),null);
+});
+
+test('Invoice Learning preserves the full verified TALOS printed economics',async()=>{
+  const lab=await readFile(new URL('../../client/src/invoice-learning-lab-bootstrap.js',import.meta.url),'utf8');
+  const source=lab.match(/  function verifiedTalosPrintedEconomics[^\n]+/)?.[0];
+  assert.ok(source);
+  const context=vm.createContext({});
+  vm.runInContext(`${source}\nthis.recover=verifiedTalosPrintedEconomics;`,context);
+  const line=context.recover({azureRawRow:'4323717 CHIPITA CHIPS ΑΛΑΤΙ 80GX20 TEM 6.12 18.40 12.00 1.73 4.39 13 1.02'},'', 'ΤΑΛΩΣ ΑΕ');
+  assert.deepEqual({...line},{quantity:6,unitPrice:1.02,before:6.12,retail:18.4,discount1:12,discountAmount:1.73,netAmount:4.39,vatRate:13});
+  assert.equal(context.recover({azureRawRow:'4323717 CHIPITA TEM 6.12 18.40 12.00 9.99 4.39 13 1.02'},'800802293'),null);
 });
 
 test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{

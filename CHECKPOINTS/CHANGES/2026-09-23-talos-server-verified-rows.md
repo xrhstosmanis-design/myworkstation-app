@@ -28,6 +28,14 @@
 - Added verified seven-number layouts for omitted quantity / reordered price, supplier-name fallback, and per-line VAT rounding.
 - No confirmation or learning was executed on the failing draft.
 
+## Second autonomous browser LAB and overwrite root cause
+
+- Production revision `b0cae260` loaded and both original page photos were uploaded again by Codex.
+- Azure returned 44 physical rows and per-line VAT rounding improved the result to `218,66 € + 28,44 € = 247,10 €`, but acceptance still failed.
+- The first client renderer had already reconstructed the verified TALOS economics; a later package-conversion wrapper then overwrote three verified rows (`4320394`, `4323717`, `4332684`) with stale provider values.
+- The wrapper now preserves the complete printed economics only when quantity, price, discount, net and VAT jointly balance. All unrelated and already-correct rows keep their existing path.
+- No confirmation or learning was executed on the failing draft.
+
 ## LAB acceptance
 
 - Exactly 44 rows.
