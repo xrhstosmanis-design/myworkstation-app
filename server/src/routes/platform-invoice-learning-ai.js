@@ -317,7 +317,7 @@ function applyMathematicalDiscountRecovery(result){
 }
 
 // TALOS prints a stable eight-value financial suffix after TEM:
-// quantity, unit price, value before discount, retail, discount %, discount
+// quantity, unit price, value before discount, industry discount %, extra discount %,
 // amount, net value and VAT %. Accept it only when both equations reconcile.
 export function applyTalosVerifiedPrintedRows(result){
   const taxId=String(result?.supplier?.taxId||result?.supplierTaxId||"").replace(/\D/g,""),supplier=norm(result?.supplier?.name||result?.supplierName);
@@ -333,7 +333,7 @@ export function applyTalosVerifiedPrintedRows(result){
   if(!hasTalosIdentity&&!hasExactTalosLayout)return result;
   const close=(a,b,tolerance=Math.max(.03,Math.abs(b)*.008))=>Math.abs(a-b)<=tolerance;
   const productLines=lines.map(line=>{
-    const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/\s(?:TEM|ΤΕΜ|TMX|ΤΜΧ)\s+(.+)$/i);
+    const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/\s(?:TEM|ΤΕΜ|TMX|ΤΜΧ)\s+([\s\S]+)$/i);
     if(!match)return line;
     const values=(match[1].replace(/,/g,".").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number).filter(Number.isFinite);
     const candidates=[];
@@ -344,11 +344,11 @@ export function applyTalosVerifiedPrintedRows(result){
       add(values[6],values[0],values[1],values[2],values[3],values[4],values[5]);
       add(values[3],values[4],values[5],values[6],values[0],values[1],values[2]);
     }
-    const verified=candidates.find(x=>x.quantity>0&&x.unitPrice>0&&x.netAmount>0&&[0,6,13,17,24].includes(x.vatRate)&&close(x.quantity*x.unitPrice,x.before)&&close(x.before-x.discountAmount,x.netAmount));
+    const verified=candidates.find(x=>x.quantity>0&&x.unitPrice>0&&x.netAmount>0&&[0,6,13,17,24].includes(x.vatRate)&&close(x.quantity*x.unitPrice,x.before)&&close(x.before-x.discountAmount,x.netAmount)&&close(x.before*(1-x.retail/100)*(1-x.discount1/100),x.netAmount));
     if(!verified)return line;
     const {quantity,unitPrice,before,retail,discount1,discountAmount,netAmount,vatRate}=verified;
     return {...line,quantity,invoiceQuantity:quantity,unitPrice,packageUnitPrice:unitPrice,
-      initialAmount:money4(before),retailPrice:retail,discount1,discount2:0,discount3:0,
+      initialAmount:money4(before),retailPrice:null,listPrice:null,discount1:retail,discount2:discount1,discount3:0,
       discount1Amount:money4(discountAmount),netAmount:money4(netAmount),
       netUnitCost:money4(netAmount/quantity),vatRate,grossAmount:money4(netAmount*(1+vatRate/100)),
       mathValidated:true,needsReview:false,quantitySource:"TALOS_PRINTED_ROW_VERIFIED"};
