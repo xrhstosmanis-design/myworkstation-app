@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from "react";
 import {flushSync} from "react-dom";
 import {BadgeCheck,Camera,CameraOff,Clock3,KeyRound,ScanLine,X} from "lucide-react";
 import {BrowserMultiFormatReader} from "@zxing/browser";
+import {BarcodeFormat,DecodeHintType} from "@zxing/library";
 
 export default function PosAttendanceCardModal({api,store,onClose}){
   const [method,setMethod]=useState("PIN"),[cardCode,setCardCode]=useState(""),[pin,setPin]=useState(""),[employeeId,setEmployeeId]=useState(""),[operators,setOperators]=useState([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null),[cameraActive,setCameraActive]=useState(false),inputRef=useRef(null),videoRef=useRef(null),streamRef=useRef(null),frameRef=useRef(0),scannerControlsRef=useRef(null),scanningRef=useRef(false);
@@ -26,7 +27,7 @@ export default function PosAttendanceCardModal({api,store,onClose}){
     try{
       flushSync(()=>setCameraActive(true));
       if(!videoRef.current)throw new Error("Δεν δημιουργήθηκε η προεπισκόπηση της κάμερας. Δοκίμασε ξανά.");
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
       streamRef.current=stream;
       videoRef.current.srcObject=stream;await videoRef.current.play();
       const accept=async value=>{if(!value||scanningRef.current)return;setCardCode(value);stopCamera();await recordCard(value)};
@@ -38,7 +39,8 @@ export default function PosAttendanceCardModal({api,store,onClose}){
           frameRef.current=requestAnimationFrame(scan);return;
         }
       }
-      const reader=new BrowserMultiFormatReader();
+      const hints=new Map([[DecodeHintType.POSSIBLE_FORMATS,[BarcodeFormat.CODE_128]],[DecodeHintType.TRY_HARDER,true]]);
+      const reader=new BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:80,delayBetweenScanSuccess:500});
       scannerControlsRef.current=await reader.decodeFromVideoElement(videoRef.current,(decoded)=>decoded&&accept(decoded.getText()));
     }catch(err){stopCamera();setError(err?.name==="NotAllowedError"?"Δεν δόθηκε άδεια χρήσης της κάμερας. Πάτησε Άδεια στον browser και δοκίμασε ξανά.":err.message||"Δεν άνοιξε η κάμερα.")}
   };

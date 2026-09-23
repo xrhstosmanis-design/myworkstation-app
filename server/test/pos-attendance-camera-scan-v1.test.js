@@ -14,6 +14,9 @@ test("POS attendance card modal supports camera Code 128 scanning",()=>{
   assert.match(source,/new window\.BarcodeDetector\(\{formats:\["code_128"\]\}\)/);
   assert.match(source,/BrowserMultiFormatReader/);
   assert.match(source,/decodeFromVideoElement/);
+  assert.match(source,/DecodeHintType\.POSSIBLE_FORMATS,\[BarcodeFormat\.CODE_128\]/);
+  assert.match(source,/DecodeHintType\.TRY_HARDER,true/);
+  assert.match(source,/width:\{ideal:1920\},height:\{ideal:1080\}/);
   assert.match(source,/flushSync\(\(\)=>setCameraActive\(true\)\)/);
   assert.ok(source.indexOf("flushSync(()=>setCameraActive(true))")<source.indexOf("navigator.mediaDevices.getUserMedia({video"));
   assert.match(source,/attendance-card\/scan/);
