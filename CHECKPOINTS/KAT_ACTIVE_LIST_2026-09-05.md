@@ -2450,6 +2450,10 @@ Total output lines: 1413
 - [ ] Πράσινο CI, merge, ακριβές deploy και νέα γνήσια υποβολή POS με διαφορετικό νέο τιμολόγιο. Η προστασία δεν είναι διόρθωση της ανάγνωσης ούτε LAB PASS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-fresh-delicacies-bb6529-catastrophic-draft.md`.
 
+- [x] CI #2873 PASS, PR #1125 merged as `16007363`; exact production `/api/health` revision confirmed. Containment deployed, **reading remains LAB FAIL**.
+- [x] Recorded all 14 printed row equations (net 41,60 €, VAT 5,42 €, gross 47,02 €) and reproduced downstream amplification of one corrupt structured OCR row; raw provider/job row evidence is still unavailable.
+- [ ] Inspect only the ΒΒ 6529 job's original and reread outputs before a shared parsing change; replay across different suppliers. The administrative browser inspection was auto-review rejected as overly broad and was not repeated.
+
 
 ## 2026-09-23 — POS camera scanner fallback — CI RECHECK
 
