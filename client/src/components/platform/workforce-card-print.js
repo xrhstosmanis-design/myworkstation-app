@@ -11,7 +11,8 @@ function barcodeSvg(value){
   let checksum=104;
   for(let index=1;index<values.length;index+=1)checksum+=values[index]*index;
   values.push(checksum%103,106);
-  let x=12,bars="";
+  const quietZone=24;
+  let x=quietZone,bars="";
   for(const code of values){
     const pattern=CODE128[code];
     for(let index=0;index<pattern.length;index+=1){
@@ -20,7 +21,7 @@ function barcodeSvg(value){
       x+=width;
     }
   }
-  return `<svg role="img" aria-label="Barcode κάρτας εργασίας" viewBox="0 0 ${x+12} 54" preserveAspectRatio="none">${bars}</svg>`;
+  return `<svg role="img" aria-label="Barcode κάρτας εργασίας" viewBox="0 0 ${x+quietZone} 54" preserveAspectRatio="none">${bars}</svg>`;
 }
 
 function printPage(payload){

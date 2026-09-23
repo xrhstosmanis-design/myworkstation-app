@@ -2451,3 +2451,14 @@ Total output lines: 1413
 - [x] Camera regression 2/2 PASS, client production build PASS και diff check PASS.
 - [ ] Αναμένεται πλήρες CI, merge, exact Render revision και νέα πραγματική δοκιμή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
+
+## 2026-09-23 — POS Code 128 camera recognition hardening — LOCAL PASS / CI RECHECK
+
+- [x] Πραγματικό LAB: η κάμερα μένει ανοικτή, αλλά δεν αναγνώρισε την κάρτα ακόμη και όταν το barcode κάλυπτε σωστά το πράσινο πλαίσιο.
+- [x] Ο ZXing fallback περιορίστηκε αποκλειστικά σε Code 128 με `TRY_HARDER` και συχνότερες προσπάθειες.
+- [x] Η κάμερα ζητά πλέον ιδανική ανάλυση 1920×1080 για καθαρότερες λεπτές μπάρες.
+- [x] Η νέα εκτύπωση προσθέτει quiet zone 12 modules ανά πλευρά, πάνω από την απαίτηση Code 128.
+- [x] Camera/card regression 5/5 PASS, client production build PASS και diff check PASS.
+- [ ] Αναμένεται πλήρες CI, merge, exact Render revision και επανεκτύπωση κάρτας για πραγματικό LAB.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
