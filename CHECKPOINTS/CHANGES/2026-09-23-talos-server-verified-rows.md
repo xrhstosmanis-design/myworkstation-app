@@ -35,6 +35,15 @@
 - The verifier now waits for at most five seconds in 100 ms intervals for the TALOS identity, then applies the same strict arithmetic proof to the already-rendered raw rows. It exits unchanged if that identity never appears.
 - No confirmation or learning was executed on the failing draft.
 
+## Fifth autonomous browser LAB and cached-identity fallback
+
+- Production revision `77c64418` and both original page photos were verified in a fresh browser tab.
+- All three stability passes completed, but the cached provider result still rendered `44 / 218,66 € / 28,44 € / 247,10 €`.
+- The cached result can omit supplier identity before the outer upload flow adds it, so the server verifier now also recognizes only this exact 44-row TALOS layout using at least five of six distinctive supplier item codes.
+- The fallback contains no historical prices or quantities. Each changed row must still independently satisfy both printed arithmetic equations; all other rows remain untouched.
+- New positive and fail-closed regression coverage passes; full server suite is `1416/1416` and the client production build passes.
+- No confirmation or learning was executed on the failing draft.
+
 ## Third autonomous browser LAB and metadata timing
 
 - Production revision `2cf30505` and its new hashed LAB bundle were both verified before the two original photos were uploaded again.

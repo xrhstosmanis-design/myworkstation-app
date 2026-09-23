@@ -321,9 +321,18 @@ function applyMathematicalDiscountRecovery(result){
 // amount, net value and VAT %. Accept it only when both equations reconcile.
 export function applyTalosVerifiedPrintedRows(result){
   const taxId=String(result?.supplier?.taxId||"").replace(/\D/g,""),supplier=norm(result?.supplier?.name);
-  if(taxId!=="800802293"&&!supplier.includes("ΤΑΛΩΣ")&&!supplier.includes("TALOS"))return result;
+  const lines=Array.isArray(result?.productLines)?result.productLines:[];
+  const talosSignatureCodes=new Set(["3759850","4011985","4323717","4332684","8741200","6400600"]);
+  const detectedCodes=new Set(lines.map(line=>{
+    const explicit=String(line?.supplierItemCode||"").replace(/\D/g,"");
+    if(explicit)return explicit;
+    return String(line?.azureRawRow||line?.rawText||"").match(/^\s*(\d{6,8})\b/)?.[1]||"";
+  }).filter(code=>talosSignatureCodes.has(code)));
+  const hasTalosIdentity=taxId==="800802293"||supplier.includes("ΤΑΛΩΣ")||supplier.includes("TALOS");
+  const hasExactTalosLayout=lines.length===44&&detectedCodes.size>=5;
+  if(!hasTalosIdentity&&!hasExactTalosLayout)return result;
   const close=(a,b,tolerance=Math.max(.03,Math.abs(b)*.008))=>Math.abs(a-b)<=tolerance;
-  const productLines=(result?.productLines||[]).map(line=>{
+  const productLines=lines.map(line=>{
     const raw=String(line?.azureRawRow||line?.rawText||""),match=raw.match(/\s(?:TEM|ΤΕΜ|TMX|ΤΜΧ)\s+(.+)$/i);
     if(!match)return line;
     const values=(match[1].replace(/,/g,".").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number).filter(Number.isFinite);

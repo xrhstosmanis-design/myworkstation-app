@@ -2237,18 +2237,9 @@ Total output lines: 1413
 - [x] Προστέθηκε deferred same-tick εφαρμογή πάνω στις ίδιες ήδη διαβασμένες ωμές γραμμές, αφού εμφανιστεί η ταυτότητα προμηθευτή· χωρίς νέο OCR και χωρίς διεύρυνση σε άλλον προμηθευτή.
 - [x] Τέταρτο αυτόνομο LAB σε καθαρή καρτέλα στο `9053b68a`: `44 / 218,66 € / 28,44 € / 247,10 €`· η ταυτότητα προμηθευτή εμφανίζεται αργότερα από ένα event-loop tick.
 - [x] Ο TALOS verifier περιμένει πλέον οριοθετημένα έως 5 δευτερόλεπτα για το ΑΦΜ/επωνυμία και διαφορετικά βγαίνει χωρίς αλλαγή· δεν εκτελεί νέο OCR και δεν εφαρμόζεται σε άλλον προμηθευτή.
+- [x] Πέμπτο αυτόνομο LAB στο `77c64418`: το cached provider αποτέλεσμα παρέμενε χωρίς supplier identity και έδωσε `44 / 218,66 € / 28,44 € / 247,10 €`.
+- [x] Προστέθηκε fail-closed server fallback μόνο για ακριβώς 44 γραμμές και τουλάχιστον 5 από 6 διακριτούς κωδικούς TALOS· δεν αποθηκεύει παλιές οικονομικές τιμές και συνεχίζει να αλλάζει μόνο μαθηματικά επαληθευμένες γραμμές.
+- [x] Νέα θετικά και αρνητικά regressions PASS· πλήρες server suite `1416/1416` και client production build PASS.
 - [ ] Πράσινο CI → merge → ακριβές deploy → αυτόνομο browser LAB με τις 2 σελίδες.
 - [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, πριν από «Επιβεβαίωση & Εκμάθηση».
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-talos-server-verified-rows.md`.
-
-## 2026-09-23 — Workforce AI draft employee/week fix — AWAITING CI + LAB
-
-- [x] LAB FAIL: AI preview DRAFT save returned «Δεν βρέθηκε εργαζόμενος Workforce v2.».
-- [x] LAB FAIL: selected week 21/09–27/09 was previewed as 23/09–29/09.
-- [x] Authenticated Workforce validation context restored for AI apply.
-- [x] AI weeks normalized to Monday–Sunday with approved leave loaded from Monday.
-- [x] Stale employees, inactive templates and out-of-week dates rejected before persistence.
-- [x] Cross-store candidates require active `canSchedule` access.
-- [x] Targeted tests, syntax and diff checks PASS.
-- [ ] Green CI → merge → exact Render deploy → LAB retry of AI preview and DRAFT save.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-ai-draft-employee-week.md`.
