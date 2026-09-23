@@ -17,6 +17,9 @@ test("work cards are deterministic, store-scoped and POS-normalized",()=>{
   assert.notEqual(first,createWorkCardCode({...input,storeId:"store-2"}));
   assert.equal(normalizeWorkCard(` ${first.toLowerCase()} `),first);
   assert.equal(normalizeWorkCard("ΜΣ2266ΔΦΕ1424Ε8Β2Ψ7"),"MW2266DFE1424E8B2C7");
+  assert.equal(normalizeWorkCard("μς2αβψδεφ0123456789"),"MW2ABCDEF0123456789");
+  assert.equal(normalizeWorkCard("μςσςψαβψδεφ0123456789"),"MWSWCABCDEF0123456789");
+  assert.equal(normalizeWorkCard("ΜΣΣΣΨΑΒΨΔΕΦ0123456789"),"MWSWCABCDEF0123456789");
   assert.equal(workCardHash(first),workCardHash(first.toLowerCase()));
   assert.equal(workCardHash("MW2266DFE1424E8B2C7"),workCardHash("ΜΣ2266ΔΦΕ1424Ε8Β2Ψ7"));
   assert.equal(workCardLast4(first),first.slice(-4));
