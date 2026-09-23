@@ -7,7 +7,7 @@ import {
   audit,cleanText,contextFor,employeeInclude,employeeResponse,isSuperAdmin,loadEmployee,serializeEmployee,storesForContext
 } from "./workforce-v2-access.js";
 import {confirmed,employeeSchema,ensureEmployeeNameAvailable,validateEmployeeReferences} from "./workforce-v2-validation.js";
-import {createWorkCardCode,workCardHash,workCardLast4} from "../workforce-card-code.js";
+import {createLegacyWorkCardCode,createWorkCardCode,workCardHash,workCardLast4} from "../workforce-card-code.js";
 
 const router=Router({mergeParams:true});
 
@@ -80,7 +80,8 @@ router.post("/:employeeId/work-card",async(req,res,next)=>{
       const cardCodeHash=workCardHash(cardCode),cardCodeLast4=workCardLast4(cardCode);
       const existing=(await tx.$queryRaw`SELECT "id","cardCodeHash" FROM "StoreOperatorCredential" WHERE "companyId"=${context.company.id} AND "storeId"=${context.store.id} AND "employeeId"=${legacyEmployeeId} LIMIT 1`)[0];
       if(existing?.cardCodeHash&&existing.cardCodeHash!==cardCodeHash){
-        throw Object.assign(new Error("Ο εργαζόμενος έχει ήδη διαφορετική κάρτα. Δεν έγινε αντικατάσταση."),{status:409});
+        const legacyCode=createLegacyWorkCardCode({companyId:context.company.id,storeId:context.store.id,employeeId:legacyEmployeeId,secret});
+        if(existing.cardCodeHash!==workCardHash(legacyCode))throw Object.assign(new Error("Ο εργαζόμενος έχει ήδη διαφορετική κάρτα. Δεν έγινε αντικατάσταση."),{status:409});
       }
       if(existing)await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "displayName"=${employee.fullName},"cardCodeHash"=${cardCodeHash},"cardCodeLast4"=${cardCodeLast4},"active"=TRUE,"updatedAt"=NOW() WHERE "id"=${existing.id}`;
       else await tx.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","cardCodeHash","cardCodeLast4","active","createdBy","createdAt","updatedAt") VALUES (${crypto.randomUUID()},${context.company.id},${context.store.id},${legacyEmployeeId},${employee.fullName},'EMPLOYEE',${cardCodeHash},${cardCodeLast4},TRUE,${req.user?.id||null},NOW(),NOW())`;

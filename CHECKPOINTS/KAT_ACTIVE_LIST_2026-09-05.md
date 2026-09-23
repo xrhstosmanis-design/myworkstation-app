@@ -1,3 +1,13 @@
+## 2026-09-23 — Workforce φυσικό scanner κάρτας — LAB FAIL / LOCAL PASS
+
+- [x] Η webcam με το νέο QR κατέγραψε σωστά την προσέλευση του «Εργαστήριο Χειριστής 1» — πραγματικό LAB PASS.
+- [x] Το φυσικό scanner διάβασε τον πυκνό Code 128 ως διαφορετική τιμή και επέστρεψε «Η κάρτα δεν αντιστοιχεί σε ενεργό εργαζόμενο αυτού του καταστήματος» — πραγματικό LAB FAIL.
+- [x] Η νέα κάρτα χρησιμοποιεί μικρότερο deterministic token `MW2`, μεγαλύτερο quiet zone και σωστή αναλογία modules.
+- [x] Η ασφαλής μετάβαση επιτρέπει αντικατάσταση μόνο όταν η υπάρχουσα κάρτα ισούται με τον ακριβή παλιό deterministic κωδικό.
+- [x] Targeted tests 5/5, client production build και git diff --check PASS.
+- [ ] Green CI → squash merge → exact Render revision → επανεκτύπωση και LAB scan με φυσικό scanner.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
 ## 2026-09-23 — Workforce κάρτα QR για κάμερα — LOCAL PASS / AWAITING CI
 
 - [x] Πραγματικό LAB: η webcam άνοιγε σωστά αλλά δεν αναγνώρισε αξιόπιστα το τυπωμένο Code 128, ακόμη και κοντά και μέσα στο πλαίσιο.
