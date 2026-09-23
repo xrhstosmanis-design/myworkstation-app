@@ -549,6 +549,13 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // adding a new supplier must not require another hard-coded rule-key list.
   const supplierRequiresCompletePrintedTable=parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
   const hasUnverifiedPrintedRows=parsed.productLines.length===0||parsed.productLines.some(line=>line.sourceColumnsVerified!==true);
+  // A single-page invoice with a mismatched total needs a replacement of the
+  // whole printed table. Merging a second OCR table into the first can retain
+  // shifted rows as additional products when their codes differ. The verifier
+  // accepts a replacement only after every row, VAT group and the independent
+  // POS total reconcile. Already-reconciled invoices keep their existing path.
+  const genericSinglePageMismatch=!mantzilasInvoice&&!supplierRequiresCompletePrintedTable&&pageJobs.length===1&&invoiceTotal>0
+    &&Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
   const requiresCompleteReverification=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
     &&invoiceTotal>0
     &&(Math.abs(lineGrossTotal(parsed.productLines)-invoiceTotal)>TOTAL_TOLERANCE+0.000001
@@ -560,24 +567,30 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       const currentPage=pageJobs.length===1||line.sourceFileIndex===pageIndex;
       if(mantzilasInvoice)return currentPage&&(requiresCompleteReverification||!line.sourceColumnsVerified);
       if(supplierRequiresCompletePrintedTable)return currentPage&&requiresCompleteReverification;
+      if(genericSinglePageMismatch)return currentPage;
       return !line.sourceColumnsVerified&&currentPage&&q>0&&net>0&&(!hasDiscount||Math.abs(q*u-net)>Math.max(0.05,net*0.02));
     });
     // The initial OCR can legitimately return no product rows. A learned
     // complete-table supplier must still get one image-only reread; the
     // verifier will either rebuild every row with footer agreement or leave
     // the linked draft untouched.
-    const needsEmptyCompleteTableRead=(mantzilasInvoice||supplierRequiresCompletePrintedTable)
-      &&requiresCompleteReverification
+    const needsEmptyCompleteTableRead=(mantzilasInvoice||supplierRequiresCompletePrintedTable||genericSinglePageMismatch)
+      &&(requiresCompleteReverification||genericSinglePageMismatch)
       &&parsed.productLines.length===0;
     if(!unresolved.length&&!needsEmptyCompleteTableRead)continue;
     try{
-      const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable;
+      const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable||genericSinglePageMismatch;
       // The full-page verifier replaces its input array when it reconstructs
       // the printed table. For this learned single-page layout, pass the
       // actual candidate array: `unresolved` contains {line,index} wrappers
       // and replacing that temporary array loses every recovered row.
-      const verificationLines=verificationLinesForLeventopoulos({pageCount:pageJobs.length,ruleKey:parsed?.supplierReadingProfile?.ruleKey,completePrintedTable,needsEmptyCompleteTableRead,productLines:parsed.productLines,unresolved});
+      const verificationLines=genericSinglePageMismatch?parsed.productLines:verificationLinesForLeventopoulos({pageCount:pageJobs.length,ruleKey:parsed?.supplierReadingProfile?.ruleKey,completePrintedTable,needsEmptyCompleteTableRead,productLines:parsed.productLines,unresolved});
+      const originalGenericRows=genericSinglePageMismatch?verificationLines.map(line=>({...line})):null;
       const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:verificationLines,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
+      // For generic invoices, partial row-by-row OCR is not proof that a
+      // second table has replaced the first. Keep the original candidate if
+      // the full table and printed VAT footer cannot be verified together.
+      if(originalGenericRows&&!diagnostics.completePrintedTableRecovered)verificationLines.splice(0,verificationLines.length,...originalGenericRows);
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
