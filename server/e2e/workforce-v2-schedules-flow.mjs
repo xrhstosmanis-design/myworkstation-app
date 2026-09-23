@@ -10,6 +10,7 @@ const ownerPassword="ci-workforce-v2-schedules-password";
 const periodStart="2027-03-01";
 const roleCode="E2E_SCHEDULE_ROLE",morningCode="E2E_SCHEDULE_MORNING",afternoonCode="E2E_SCHEDULE_AFTERNOON";
 const employeeEmails=["e2e-schedule-a@example.test","e2e-schedule-b@example.test"];
+let disabledTemplateIds=[];
 
 async function request(path,{method="GET",token,body}={}){
   const response=await fetch(`${baseUrl}${path}`,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},body:body===undefined?undefined:JSON.stringify(body)});
@@ -53,6 +54,8 @@ async function main(){
   await prisma.company.update({where:{id:companyId},data:{active:true,licenseStatus:"ACTIVE",subscriptionEndsAt:new Date(Date.now()+7*86400000)}});
   await prisma.store.update({where:{id:storeId},data:{active:true}});
   await setPackage("PERSONNEL_BASIC",true);await setPackage("PERSONNEL_PRO",true);await clean();
+  disabledTemplateIds=(await prisma.workforceShiftTemplate.findMany({where:{companyId,storeId,active:true},select:{id:true}})).map(item=>item.id);
+  if(disabledTemplateIds.length)await prisma.workforceShiftTemplate.updateMany({where:{id:{in:disabledTemplateIds}},data:{active:false}});
   await prisma.user.update({where:{email:ownerEmail},data:{passwordHash:await bcrypt.hash(ownerPassword,4),mustChangePassword:false,role:"OWNER",companyId}});
   const login=await request("/api/auth/login",{method:"POST",body:{email:ownerEmail,password:ownerPassword,deviceName:"CI Workforce schedules E2E"}});
   assert.equal(login.response.status,200,JSON.stringify(login.payload));const token=login.payload.token;
@@ -103,4 +106,4 @@ async function main(){
   console.log("E2E Workforce v2 schedules flow passed",{scheduleId:schedule.id,revisionId:revision.payload.item.id,employeeA,employeeB,audits});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{if(disabledTemplateIds.length)await prisma.workforceShiftTemplate.updateMany({where:{id:{in:disabledTemplateIds}},data:{active:true}});await prisma.$disconnect()}
