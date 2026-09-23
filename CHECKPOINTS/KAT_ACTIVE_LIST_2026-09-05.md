@@ -1,3 +1,12 @@
+## 2026-09-23 — Πραγματικό Shift+W scanner σε ΕΛ — LOCAL PASS / AWAITING CI
+
+- [x] Καταγράφηκε η πραγματική έξοδος scanner: `Μ΅282261Ψ1Β9Ε1ΑΦ573`.
+- [x] Επιβεβαιώθηκε ότι το κεφαλαίο `W` με ελληνική διάταξη παράγεται ως `΅`, όχι ως `ς`.
+- [x] Προστέθηκε η αυστηρή αντιστοίχιση `΅ → W`.
+- [x] Regression test με τον πραγματικό κωδικό και συνολικά targeted tests 5/5 PASS.
+- [ ] Green CI → squash merge → exact Render revision → νέα LAB σάρωση με ΕΛ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
 ## 2026-09-23 — Legacy Workforce scanner σε ελληνική διάταξη — LOCAL PASS / AWAITING CI
 
 - [x] Πραγματικό LAB: η εκτυπωμένη legacy κάρτα `MWSWC…` λειτουργεί με ENG αλλά απέτυχε με ΕΛ.
