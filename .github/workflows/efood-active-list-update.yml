@@ -1,11 +1,11 @@
 name: Temporary efood active-list update
 
-on:
+"on":
   push:
     branches:
-      - fix/efood-lab-bootstrap
+      - "fix/efood-lab-bootstrap"
     paths:
-      - .github/workflows/efood-active-list-update.yml
+      - ".github/workflows/efood-active-list-update.yml"
 
 permissions:
   contents: write
@@ -18,28 +18,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Prepend efood LAB checkpoint
+        run: node tools/prepend-efood-active-checkpoint.mjs
+      - name: Commit active-list update
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md")
-          marker = "## 2026-09-23 — efood / Pelican LAB schema bootstrap"
-          entry = """## 2026-09-23 — efood / Pelican LAB schema bootstrap — LAB FAIL / AWAITING CI
-
-- [x] Πραγματικό LAB FAIL: στο `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` η ασφαλής οθόνη έδειξε «Παρουσιάστηκε εσωτερικό σφάλμα» και δεν φόρτωσε τη φόρμα efood.
-- [x] Αιτία: παλαιός CHECK constraint του `StoreIntegrationCredential.kind` δεν εντοπιζόταν αξιόπιστα και η επαναδημιουργία του canonical constraint μπορούσε να αποτύχει με duplicate constraint πριν φορτωθεί το LAB endpoint.
-- [x] Η διόρθωση αφαιρεί idempotently κάθε παλαιό CHECK που αφορά ακριβώς τη στήλη `kind` και επαναφέρει έναν canonical constraint με `MYDATA`, `VAT_LOOKUP`, `EFOOD`.
-- [x] Διατηρούνται αυστηρά LAB-only, SANDBOX, `enabled=false`, `externalCallsEnabled=false` και μηδενικές μεταβολές σε παραγγελίες, πωλήσεις, stock, πληρωμές, RBS/EFTPOS, fiscal ή myDATA.
-- [ ] Green CI → merge → exact deploy → Ctrl+F5 και εκ νέου άνοιγμα «Ασφαλείς διασυνδέσεις καταστήματος».
-- [ ] LAB PASS μόνο όταν φορτωθεί η φόρμα `efood / Pelican — Indirect POS` στο σωστό LAB χωρίς εσωτερικό σφάλμα. Η αποθήκευση credentials και οποιαδήποτε επόμενη δοκιμή είναι ξεχωριστό βήμα.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-efood-lab-schema-bootstrap.md`.
-
-"""
-          current = path.read_text(encoding="utf-8")
-          if marker not in current:
-              path.write_text(entry + current, encoding="utf-8")
-          PY
           if git diff --quiet -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md; then
             echo "Active list already contains the efood checkpoint."
             exit 0
