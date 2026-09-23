@@ -2240,6 +2240,8 @@ Total output lines: 1413
 - [x] Πέμπτο αυτόνομο LAB στο `77c64418`: το cached provider αποτέλεσμα παρέμενε χωρίς supplier identity και έδωσε `44 / 218,66 € / 28,44 € / 247,10 €`.
 - [x] Προστέθηκε fail-closed server fallback μόνο για ακριβώς 44 γραμμές και τουλάχιστον 5 από 6 διακριτούς κωδικούς TALOS· δεν αποθηκεύει παλιές οικονομικές τιμές και συνεχίζει να αλλάζει μόνο μαθηματικά επαληθευμένες γραμμές.
 - [x] Νέα θετικά και αρνητικά regressions PASS· πλήρες server suite `1416/1416` και client production build PASS.
+- [x] Έκτο αυτόνομο LAB στο `89589d1a`: η ζωντανή φόρμα απέδειξε ότι η ταυτότητα TALOS επιστρέφεται ως top-level `supplierTaxId` / `supplierName`, ενώ ο server verifier διάβαζε μόνο nested `supplier`.
+- [x] Ο verifier δέχεται πλέον και τα δύο response shapes με αμετάβλητο supplier scope και τον ίδιο αυστηρό μαθηματικό έλεγχο ανά γραμμή.
 - [ ] Πράσινο CI → merge → ακριβές deploy → αυτόνομο browser LAB με τις 2 σελίδες.
 - [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, πριν από «Επιβεβαίωση & Εκμάθηση».
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-talos-server-verified-rows.md`.
