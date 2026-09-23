@@ -2267,3 +2267,6 @@ Total output lines: 1413
 - [x] Μετά τη δημοσίευση ανοίγει αυτόματα η τελική αναλυτική εβδομάδα.
 - [ ] Πράσινο CI → merge → ακριβές Render deploy → browser LAB της πλήρους ροής.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-easy-week-view.md`.
+
+- [x] Δεύτερη οπτική διόρθωση Workforce: modal σχεδόν πλήρους οθόνης και scoped overrides ώστε οι τρεις βάρδιες να μην συγχωνεύονται.
+- [ ] Πράσινο CI → merge → ακριβές deploy → νέα οπτική δοκιμή εβδομαδιαίου προγράμματος.
