@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
+import {flushSync} from "react-dom";
 import {BadgeCheck,Camera,CameraOff,Clock3,KeyRound,ScanLine,X} from "lucide-react";
 import {BrowserMultiFormatReader} from "@zxing/browser";
 
@@ -23,10 +24,10 @@ export default function PosAttendanceCardModal({api,store,onClose}){
     setError("");setResult(null);
     if(!navigator.mediaDevices?.getUserMedia)return setError("Η κάμερα δεν είναι διαθέσιμη σε αυτόν τον υπολογιστή ή browser.");
     try{
+      flushSync(()=>setCameraActive(true));
+      if(!videoRef.current)throw new Error("Δεν δημιουργήθηκε η προεπισκόπηση της κάμερας. Δοκίμασε ξανά.");
       const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
-      streamRef.current=stream;setCameraActive(true);
-      await new Promise(resolve=>setTimeout(resolve,0));
-      if(!videoRef.current){stream.getTracks().forEach(track=>track.stop());streamRef.current=null;setCameraActive(false);return}
+      streamRef.current=stream;
       videoRef.current.srcObject=stream;await videoRef.current.play();
       const accept=async value=>{if(!value||scanningRef.current)return;setCardCode(value);stopCamera();await recordCard(value)};
       if("BarcodeDetector" in window){
