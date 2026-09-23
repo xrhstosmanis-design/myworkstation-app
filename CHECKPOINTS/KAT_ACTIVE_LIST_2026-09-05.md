@@ -2426,3 +2426,10 @@ Total output lines: 1413
 - [x] Τοπικά: camera regression 2/2 PASS, client production build PASS και diff check PASS.
 - [ ] Αναμένεται νέο πλήρες CI και ακριβής επιβεβαίωση production revision.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
+## 2026-09-23 — Κοινές δοκιμές τιμολογίων πολλών προμηθευτών — LOCAL PASS / LAB NOT TESTED
+
+- [x] Καταγράφηκε πίνακας με πραγματικούς στόχους ΤΑΛΩΣ, Λεβεντόπουλου, MANTZILAS, DELTA και Fresh Snack, μαζί με το όριο έως δύο ορατών αβέβαιων γραμμών ανά 20 προϊόντα.
+- [x] Νέο regression αποδεικνύει ότι η εκμάθηση ποσοτήτων ΤΑΛΩΣ δεν ξαναγράφει τέσσερις άλλους προμηθευτές και η επιλογή εικόνας Λεβεντόπουλου δεν αντικαθιστά τρεις άλλους πίνακες.
+- [ ] Πλήρης suite, πράσινο CI, merge και έλεγχος ακριβούς deploy. Κατόπιν ξεχωριστό νέο πραγματικό POS παραστατικό από διαφορετικούς προμηθευτές, χωρίς επανυποβολές των παλιών τιμολογίων. Καμία δήλωση LAB PASS από αυτοματοποιημένα τεστ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-cross-supplier-regression-matrix.md`.
