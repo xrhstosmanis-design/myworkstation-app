@@ -1,7 +1,12 @@
 import crypto from "crypto";
 
+const GREEK_SCANNER_KEYS={Μ:"M",Σ:"W",Α:"A",Β:"B",Ψ:"C",Δ:"D",Ε:"E",Φ:"F"};
+
 export function normalizeWorkCard(value){
-  return String(value||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+  return [...String(value||"").trim().toUpperCase()]
+    .map(char=>GREEK_SCANNER_KEYS[char]||char)
+    .join("")
+    .replace(/[^A-Z0-9]/g,"");
 }
 
 export function createWorkCardCode({companyId,storeId,employeeId,secret}){

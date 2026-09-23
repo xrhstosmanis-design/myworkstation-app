@@ -1,3 +1,14 @@
+## 2026-09-23 — Workforce scanner με ελληνικό πληκτρολόγιο — LOCAL PASS / AWAITING CI
+
+- [x] Πραγματικό LAB: QR/webcam και φυσικό scanner με ENG ολοκλήρωσαν σωστά προσέλευση/αποχώρηση.
+- [x] Η προστασία άμεσης διπλής σάρωσης λειτούργησε.
+- [x] Εντοπίστηκε ότι HID scanner με ενεργό ελληνικό πληκτρολόγιο έστελνε ελληνικούς χαρακτήρες αντί για το `MW2 + hex`.
+- [x] Προστέθηκε αυστηρή μετατροπή μόνο των αναμενόμενων ελληνικών πλήκτρων `ΜΣΑΒΨΔΕΦ` στα `MWABCDEF`, για παρουσία και login POS.
+- [x] Δεν αλλάζει ο αποθηκευμένος hash, το QR, ο κωδικός κάρτας ή το store scope.
+- [x] Targeted tests 12/12, syntax και git diff --check PASS.
+- [ ] Green CI → squash merge → exact Render revision → μία LAB σάρωση με Windows σε ΕΛ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
 ## 2026-09-23 — Workforce φυσικό scanner κάρτας — LAB FAIL / LOCAL PASS
 
 - [x] Η webcam με το νέο QR κατέγραψε σωστά την προσέλευση του «Εργαστήριο Χειριστής 1» — πραγματικό LAB PASS.
