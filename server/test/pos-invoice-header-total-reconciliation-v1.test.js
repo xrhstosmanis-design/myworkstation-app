@@ -58,7 +58,9 @@ test("a complete verified printed table persists without a second heuristic rein
 test("POS keeps verified printed rows reviewable when the header total differs",()=>{
   const route=fs.readFileSync(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
   assert.match(route,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|reviewableProductLines/);
-  assert.match(route,/if\(requiresCompletePrintedTable&&!verifiedAtOwnTotal&&!reviewableProductLines&&Math\.abs\(reconcileInvoiceLines/);
+  assert.doesNotMatch(route,/if\(requiresCompletePrintedTable&&!verifiedAtOwnTotal&&!reviewableProductLines&&Math\.abs\(reconcileInvoiceLines/);
+  const postingGuard=fs.readFileSync(new URL("../src/routes/purchase-order-unresolved-guard.js",import.meta.url),"utf8");
+  assert.match(postingGuard,/router\.use\(purchaseOrderTotalReconciliationGuard\)/);
 });
 
 test("existing POS OCR drafts have an idempotent safe repair route",()=>{
