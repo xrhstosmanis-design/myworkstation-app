@@ -1,12 +1,23 @@
 import crypto from "crypto";
 
-const GREEK_SCANNER_KEYS={Μ:"M",Σ:"W",Α:"A",Β:"B",Ψ:"C",Δ:"D",Ε:"E",Φ:"F"};
+const GREEK_SCANNER_KEYS={
+  μ:"M",Μ:"M",ς:"W",σ:"S",Σ:"S",
+  α:"A",Α:"A",β:"B",Β:"B",ψ:"C",Ψ:"C",δ:"D",Δ:"D",ε:"E",Ε:"E",φ:"F",Φ:"F"
+};
 
 export function normalizeWorkCard(value){
-  return [...String(value||"").trim().toUpperCase()]
+  const raw=String(value||"").trim();
+  const normalized=[...raw]
     .map(char=>GREEK_SCANNER_KEYS[char]||char)
     .join("")
+    .toUpperCase()
     .replace(/[^A-Z0-9]/g,"");
+  // Με Caps Lock το ελληνικό W και S καταλήγουν και τα δύο σε Σ.
+  // Τα δύο εκδοθέντα prefixes είναι γνωστά, οπότε αποκαθίστανται χωρίς
+  // να γίνεται γενική ή ασαφής μετατροπή του υπόλοιπου κωδικού.
+  if(/^ΜΣ2/u.test(raw.toUpperCase()))return `MW2${normalized.slice(3)}`;
+  if(/^ΜΣΣΣΨ/u.test(raw.toUpperCase()))return `MWSWC${normalized.slice(5)}`;
+  return normalized;
 }
 
 export function createWorkCardCode({companyId,storeId,employeeId,secret}){

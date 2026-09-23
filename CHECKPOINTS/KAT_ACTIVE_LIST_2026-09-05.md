@@ -1,3 +1,12 @@
+## 2026-09-23 — Legacy Workforce scanner σε ελληνική διάταξη — LOCAL PASS / AWAITING CI
+
+- [x] Πραγματικό LAB: η εκτυπωμένη legacy κάρτα `MWSWC…` λειτουργεί με ENG αλλά απέτυχε με ΕΛ.
+- [x] Αιτία: τα πλήκτρα `W` και `S` γίνονταν `ς` και `σ`, αλλά η πρόωρη κεφαλαιοποίηση τα έκανε και τα δύο `Σ`.
+- [x] Διατηρείται πλέον η διάκριση `ς → W`, `σ → S` και αναγνωρίζονται ρητά τα prefixes `MW2` και `MWSWC`.
+- [x] Targeted tests 5/5, syntax και git diff check PASS.
+- [ ] Green CI → squash merge → exact Render revision → μία LAB σάρωση με Windows σε ΕΛ.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
+
 ## 2026-09-23 — Workforce scanner με ελληνικό πληκτρολόγιο — LOCAL PASS / AWAITING CI
 
 - [x] Πραγματικό LAB: QR/webcam και φυσικό scanner με ENG ολοκλήρωσαν σωστά προσέλευση/αποχώρηση.
