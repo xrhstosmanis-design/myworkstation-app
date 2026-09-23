@@ -192,6 +192,40 @@ function suspiciousOperatorEvent(eventType){return /CANCEL|RETURN|VOID|REVERSE|D
 function auditAmount(details){for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}return null}
 function route(handler){return async(req,res)=>{try{await ensureTables();await handler(req,res)}catch(error){console.error("Cash Control:",error);if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα ποσά και τα στοιχεία της φόρμας.",details:error.issues});if(error?.code==="P2010"||error?.code==="23505")return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});return res.status(error?.status||500).json({error:error?.message||"Σφάλμα στον Έλεγχο Ταμείου."})}}}
 
+
+const workforceDate=value=>new Date(value).toISOString().slice(0,10);
+const workforceDayStart=value=>new Date(`${value}T00:00:00.000Z`);
+const workforceShiftMinutes=template=>{const [sh,sm]=template.startTime.split(":").map(Number),[eh,em]=template.endTime.split(":").map(Number),raw=eh*60+em-sh*60-sm;return raw<=0?raw+1440:raw};
+const workforceShiftAt=(date,time)=>new Date(`${date}T${time}:00.000Z`);
+
+async function syncOperatorWorkforceAttendance(tx,req,storeId,eventType,cashSessionId){
+  if(req.user?.tokenType!=="STORE_OPERATOR"||!req.user?.employeeId)return {status:"SKIPPED",reason:"NOT_STORE_OPERATOR"};
+  const employee=await tx.workforceEmployee.findFirst({where:{companyId:req.user.companyId,legacyEmployeeId:req.user.employeeId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]}});
+  if(!employee)return {status:"SKIPPED",reason:"WORKFORCE_EMPLOYEE_NOT_LINKED"};
+  const now=new Date(),date=workforceDate(now);
+  const open=await tx.workforceAttendanceSession.findFirst({where:{companyId:req.user.companyId,storeId,employeeId:employee.id,status:"OPEN"},orderBy:{startedAt:"desc"}});
+  if(eventType==="IN"&&open)return {status:"ALREADY_OPEN",sessionId:open.id};
+  if(eventType==="OUT"&&!open)return {status:"NO_OPEN_SESSION"};
+  if(eventType==="IN"){
+    const assignment=await tx.workforceScheduleAssignment.findFirst({where:{employeeId:employee.id,date:workforceDayStart(date),schedule:{companyId:req.user.companyId,storeId,status:"PUBLISHED"}},include:{shiftTemplate:true},orderBy:{createdAt:"desc"}});
+    const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"IN",method:"POS_SHIFT",occurredAt:now,sourceShiftId:assignment?.id||null,note:`Αυτόματη έναρξη από άνοιγμα POS ${cashSessionId}`,createdByUserId:null}});
+    const expected=assignment?workforceShiftAt(date,assignment.shiftTemplate.startTime):null,late=expected?Math.max(0,Math.round((now-expected)/60000)):0;
+    const session=await tx.workforceAttendanceSession.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,scheduledAssignmentId:assignment?.id||null,clockInEntryId:entry.id,startedAt:now,lateMinutes:late,status:"OPEN",issueJson:late?{issues:[{code:"LATE_ARRIVAL",message:`Καθυστέρηση ${late} λεπτών.`}]}:{issues:[]}}});
+    await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_IN",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,afterJson:{employeeId:employee.id,date,eventType:"IN",cashSessionId,method:"POS_SHIFT"},reason:"Αυτόματη έναρξη παρουσίας με το άνοιγμα της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
+    return {status:"CLOCKED_IN",sessionId:session.id};
+  }
+  const assignment=open.scheduledAssignmentId?await tx.workforceScheduleAssignment.findUnique({where:{id:open.scheduledAssignmentId},include:{shiftTemplate:true}}):null;
+  const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"OUT",method:"POS_SHIFT",occurredAt:now,sourceShiftId:assignment?.id||null,note:`Αυτόματη λήξη από κλείσιμο POS ${cashSessionId}`,createdByUserId:null}});
+  const worked=Math.max(0,Math.round((now-new Date(open.startedAt))/60000));
+  const expectedEnd=assignment?new Date(workforceShiftAt(workforceDate(assignment.date),assignment.shiftTemplate.startTime).getTime()+workforceShiftMinutes(assignment.shiftTemplate)*60000):null;
+  const scheduled=assignment?workforceShiftMinutes(assignment.shiftTemplate):null,early=expectedEnd?Math.max(0,Math.round((expectedEnd-now)/60000)):0,over=scheduled===null?0:Math.max(0,worked-scheduled);
+  const issues=[];if(worked>480)issues.push({code:"OVER_8_HOURS",message:`Υπέρβαση ορίου 8 ωρών: ${worked-480} λεπτά.`});if(open.lateMinutes)issues.push({code:"LATE_ARRIVAL",message:`Καθυστέρηση ${open.lateMinutes} λεπτών.`});if(early)issues.push({code:"EARLY_DEPARTURE",message:`Πρόωρη αποχώρηση ${early} λεπτών.`});if(over)issues.push({code:"OVERTIME",message:`Υπέρβαση ${over} λεπτών.`});
+  const status=worked>480?"NEEDS_APPROVAL":(open.lateMinutes||early||over)?"NEEDS_REVIEW":"CLOSED";
+  const session=await tx.workforceAttendanceSession.update({where:{id:open.id},data:{clockOutEntryId:entry.id,endedAt:now,workedMinutes:worked,earlyLeaveMinutes:early,overtimeMinutes:over,status,issueJson:{issues}}});
+  await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_OUT",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,beforeJson:{status:"OPEN"},afterJson:{employeeId:employee.id,date,eventType:"OUT",cashSessionId,method:"POS_SHIFT",workedMinutes:worked,status},reason:"Αυτόματη λήξη παρουσίας με το κλείσιμο της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
+  return {status:"CLOCKED_OUT",sessionId:session.id,workedMinutes:worked,reviewStatus:status};
+}
+
 router.use(auth,requireCashAccess);
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
@@ -329,7 +363,8 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
       }catch(mailError){console.error("Safe decrease email alert failed:",mailError?.message||mailError)}
     }
   }
-  res.status(201).json({...normalize(rows[0]),safeChange});
+  const attendanceSync=await prisma.$transaction(tx=>syncOperatorWorkforceAttendance(tx,req,store.id,"IN",sessionId));
+  res.status(201).json({...normalize(rows[0]),safeChange,attendanceSync});
 }));
 
 router.post("/sessions/:sessionId/close",route(async(req,res)=>{
@@ -358,11 +393,11 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
       WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
-    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null}:null;
+    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null,attendanceSync:await syncOperatorWorkforceAttendance(tx,req,session.storeId,"OUT",session.id)}:null;
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
-  const {closed,storeId,safeChange}=closeResult;
+  const {closed,storeId,safeChange,attendanceSync}=closeResult;
   const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);
   const recipients=[...new Set([...owners.map(owner=>owner.email),store?.responsibleEmail].filter(Boolean))];
   let safeEmailNotification={status:"SKIPPED",recipients:[]};
@@ -370,7 +405,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     const safeRecipients=[...new Set([...recipients,String(process.env.MAIL_TEST_RECIPIENT||"").trim()].filter(Boolean))];
     if(safeRecipients.length){try{const subject=`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · ${store?.name||"Κατάστημα"}`;const text=[subject,"",`Κατάστημα: ${store?.name||"Κατάστημα"}`,`Βάρδια: ${closed.shiftLabel}`,`Χειριστής: ${actorName}`,`Προηγούμενο ποσό: ${Number(safeChange.previousSafe).toFixed(2)} €`,`Νέο ποσό: ${Number(safeChange.newSafe).toFixed(2)} €`,`Μείωση: ${Math.abs(Number(safeChange.delta)).toFixed(2)} €`,`Αιτιολογία: ${safeChange.reason||"—"}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");const sent=await sendEmail({to:safeRecipients,subject,text,html:`<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><p><b>Κατάστημα:</b> ${store?.name||"Κατάστημα"}</p><p><b>Βάρδια:</b> ${closed.shiftLabel}</p><p><b>Χειριστής:</b> ${actorName}</p><p><b>Προηγούμενο:</b> ${Number(safeChange.previousSafe).toFixed(2)} €</p><p><b>Νέο:</b> ${Number(safeChange.newSafe).toFixed(2)} €</p><p><b>Μείωση:</b> ${Math.abs(Number(safeChange.delta)).toFixed(2)} €</p><p><b>Αιτιολογία:</b> ${safeChange.reason||"—"}</p></div>`});safeEmailNotification={status:"SENT",recipients:sent.recipients}}catch(error){console.error("Safe close decrease email failed",error?.message||error);safeEmailNotification={status:"FAILED",recipients:safeRecipients}}}
   }
-  res.json({...closed,emailNotification:{status:"MANUAL_SEND_REQUIRED",recipients:[]},safeChange,safeEmailNotification});
+  res.json({...closed,emailNotification:{status:"MANUAL_SEND_REQUIRED",recipients:[]},safeChange,safeEmailNotification,attendanceSync});
 }));
 
 export default router;
