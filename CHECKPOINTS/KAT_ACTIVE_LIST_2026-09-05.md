@@ -2415,3 +2415,14 @@ Total output lines: 1413
 - [x] Στοχευμένα 54/54, πλήρης server suite 1433 passed / 1 skipped / 0 failed πάνω στο προηγούμενο main.
 - [ ] Πράσινο CI → merge → ακριβές deploy → **νέα** κανονική υποβολή από POS. LAB PASS μόνο με όλες τις φυσικές σειρές, έως δύο συγκεκριμένες προς έλεγχο και σωστό σύνολο. Το υπάρχον πρόχειρο παραμένει αμετάβλητο.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-leventopoulos-full-image-reread-target.md`.
+
+
+## 2026-09-23 — POS camera scanner fallback — CI RECHECK
+
+- [x] Το πραγματικό Store Mode δεν διαθέτει εγγενές `BarcodeDetector` και εμφάνιζε μήνυμα ασυμβατότητας.
+- [x] Προστέθηκε ενσωματωμένος ZXing fallback decoder για Code 128, ενώ διατηρείται ο γρήγορος native decoder όπου υπάρχει.
+- [x] Η κάμερα και ο decoder κλείνουν μετά από επιτυχία, αλλαγή μεθόδου ή κλείσιμο παραθύρου.
+- [x] PIN, εξωτερικό scanner και χειροκίνητη εισαγωγή παραμένουν διαθέσιμα.
+- [x] Τοπικά: camera regression 2/2 PASS, client production build PASS και diff check PASS.
+- [ ] Αναμένεται νέο πλήρες CI και ακριβής επιβεβαίωση production revision.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-attendance-camera-scan.md`.
