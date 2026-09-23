@@ -11,3 +11,96 @@
   height: 18px;
   flex: 0 0 auto;
 }
+
+
+/* Clear, responsive weekly schedule cards */
+.workforce-week-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.workforce-week-day {
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.workforce-week-day > h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid #dbeafe;
+  background: #f8fafc;
+  color: #0f3158;
+}
+
+.workforce-week-day > h4 small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workforce-week-day-shifts {
+  display: grid;
+}
+
+.workforce-week-shift {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(130px, 1fr) minmax(190px, 1.45fr) minmax(150px, 1.1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 14px 16px;
+}
+
+.workforce-week-shift + .workforce-week-shift {
+  border-top: 1px solid #e2e8f0;
+}
+
+.workforce-week-shift > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.workforce-week-shift span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.workforce-week-shift b,
+.workforce-week-shift strong,
+.workforce-week-shift small {
+  overflow-wrap: anywhere;
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.workforce-week-shift small {
+  color: #475569;
+  font-weight: 600;
+}
+
+.workforce-reason-dialog > p {
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .workforce-week-shift {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .workforce-week-shift {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
