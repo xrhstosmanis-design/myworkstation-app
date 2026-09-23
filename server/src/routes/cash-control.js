@@ -393,9 +393,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
       WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
-    if(!rows[0])return null;
-    const attendanceSync=await syncOperatorWorkforceAttendance(tx,req,session.storeId,"OUT",session.id);
-    return {closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null,attendanceSync};
+    return rows[0]?{closed:normalize(rows[0]),storeId:session.storeId,safeChange:Math.abs(safeDelta)>0.009?{previousSafe,newSafe:body.safe,delta:safeDelta,reason:safeReason||null}:null,attendanceSync:await syncOperatorWorkforceAttendance(tx,req,session.storeId,"OUT",session.id)}:null;
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
