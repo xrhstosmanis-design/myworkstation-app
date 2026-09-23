@@ -15,6 +15,12 @@ The newest real Leventopoulos LAB is **FAIL**: a 22-row draft totals 450.96 EUR 
 
 The additional `pos-cross-supplier-isolation-v1` test challenges TALOS learning with TALOS-shaped text on four other suppliers and ensures Leventopoulos's one-page table selection cannot rewrite three other suppliers. The cross-supplier examples are intentionally synthetic isolation cases, not evidence of successful OCR of their original documents.
 
+## Additional printed-row evidence (current branch)
+
+The isolation test also challenges both supplier-specific rules using independently recorded printed rows from the existing MANTZILAS `12729`, DELTA `28897` and Fresh Snack regression tests. It checks that the original quantity, unit price, discounts, net, VAT and available gross/excise fields survive unchanged even when misleading TALOS-shaped text is present. This is a stronger cross-supplier boundary test than synthetic economics, but **still does not process an original image, test a full invoice, or establish LAB PASS**. Original files are not checked into this repository; their provenance and permitted use must be established before adding image-level replay fixtures. No reading or posting behavior changed.
+
+The next independent gate is an image-to-draft replay for each supplier using the original image, a separately verified physical row count and line-level expected values. Run it read-only against a fixture before any rule is promoted. A genuine new POS submission remains the only LAB acceptance test.
+
 ## Acceptance and safety
 
 Run the complete server suite and required CI gates for all suppliers together. After exact deployment, observe one genuinely new, ordinary POS submission from each different supplier as invoices naturally arrive; never resubmit an already processed invoice simply to test. Record supplier, store, invoice, original physical row count, each printed quantity and discount, VAT groups, printed gross, detected uncertainties and draft/job identity. LAB PASS for each requires one automatic draft with all physical rows, no duplicates, at most two *identified and visibly marked* uncertain lines, and reconciliation before operator approval. Report each supplier separately; a test pass does not establish LAB PASS. Do not delete old drafts, approve, move stock or initiate payment/fiscal actions for diagnostic testing.

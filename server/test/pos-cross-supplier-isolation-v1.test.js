@@ -12,6 +12,26 @@ const otherSuppliers=[
   {name:"FRESH SNACK",taxId:"",ruleKey:"FRESH_SNACK_COMPLETE_PRINTED_TABLE",line:{code:"101",quantity:6,unitPrice:2.1,netAmount:11.91}},
 ];
 
+// Independently recorded printed examples from invoice-12729-pos-regression-v1,
+// invoice-28897-pos-regression-v1 and invoice-fresh-snack-wrapped-lines.
+// These exercise supplier isolation with the actual quantities and economics
+// used by those tests; they are not a replay of the source images.
+const printedExamples=[
+  {name:"MANTZILAS",taxId:"",ruleKey:"MANTZILAS_COMPLETE_PRINTED_TABLE",line:{code:"12",description:"ΑΛΦΑ 0,5LT ΦΙΑΛΗ",quantity:1,unitPrice:19.04,discount1:22,netAmount:14.85,exciseTotal:5.72,vatRate:24,grossAmount:25.51}},
+  {name:"DELTA",taxId:"",ruleKey:"DELTA_COMPLETE_PRINTED_TABLE",line:{code:"720547",description:"ΚΑΘΗΜΕΡΙΝΑ ΦΡΕΣΚΟ ΓΑΛΑ ΠΛΗΡΕΣ 1LT",quantity:2,unitPrice:1.74,discount1:10,netAmount:3.13,vatRate:13,grossAmount:3.54}},
+  {name:"FRESH SNACK",taxId:"",ruleKey:"FRESH_SNACK_COMPLETE_PRINTED_TABLE",line:{code:"101",description:"SPECIAL BOLIKO",quantity:6,unitPrice:2.10,discount1:5.5,netAmount:11.91,vatRate:13}},
+];
+
+test("TALOS and Leventopoulos rules preserve recorded printed rows of other suppliers",()=>{
+  for(const supplier of printedExamples){
+    const line={...supplier.line,azureRawRow:`${supplier.line.code} ${supplier.line.description} TEM 6,00 1.02 6.12 18.40 12.00 1.73 4.39 13`};
+    const result=applyTalosVerifiedPrintedRows({supplier:{name:supplier.name,taxId:supplier.taxId},productLines:[line]});
+    assert.deepEqual(result.productLines,[line],supplier.name);
+    const unresolved=[{line,index:0}];
+    assert.strictEqual(verificationLinesForLeventopoulos({pageCount:1,ruleKey:supplier.ruleKey,completePrintedTable:true,needsEmptyCompleteTableRead:false,productLines:result.productLines,unresolved}),unresolved,supplier.name);
+  }
+});
+
 test("TALOS quantity learning cannot rewrite rows of four other suppliers",()=>{
   for(const supplier of otherSuppliers){
     // A TALOS-shaped suffix is deliberately present: the identity boundary,
