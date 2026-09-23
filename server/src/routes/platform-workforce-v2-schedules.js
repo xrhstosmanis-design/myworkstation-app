@@ -14,6 +14,7 @@ const dayStart=value=>new Date(`${value}T00:00:00.000Z`);
 const iso=value=>new Date(value).toISOString().slice(0,10);
 const weekStart=value=>{const date=dayStart(value),day=(date.getUTCDay()+6)%7;date.setUTCDate(date.getUTCDate()-day);return date};
 const dateBefore=(date,days)=>{const next=new Date(date);next.setUTCDate(next.getUTCDate()-days);return next};
+const datesInPeriod=(start,end)=>{const dates=[];for(const date=new Date(start);date<=end;date.setUTCDate(date.getUTCDate()+1))dates.push(new Date(date));return dates};
 const isWeekend=date=>[0,6].includes(new Date(date).getUTCDay());
 const shiftMinutes=template=>{const [sh,sm]=String(template.startTime).split(":").map(Number),[eh,em]=String(template.endTime).split(":").map(Number),value=eh*60+em-sh*60-sm;return value<=0?value+1440:value};
 const warningList=assignment=>Array.isArray(assignment.warningJson)?assignment.warningJson:Array.isArray(assignment.warningJson?.warnings)?assignment.warningJson.warnings:[];
@@ -82,9 +83,10 @@ async function scheduleValidation(context,schedule){
     if(!assignment.employeeId)addFinding(findings,{ruleCode:"UNCOVERED_SHIFT",message:`Η βάρδια «${assignment.shiftTemplate.name}» έχει κενή θέση.`,severity:"ERROR",assignmentId:assignment.id,date:assignment.date});
     if(assignment.warningState==="NEEDS_APPROVAL")for(const warning of warningList(assignment))addFinding(findings,{...warning,severity:"APPROVAL_REQUIRED",assignmentId:assignment.id,employeeId:assignment.employeeId,date:assignment.date});
   }
-  for(const rows of byShift.values()){
-    const template=rows[0].shiftTemplate,covered=rows.filter(row=>row.employeeId).length;
-    if(covered<template.minimumPeople)addFinding(findings,{ruleCode:"SHIFT_COVERAGE",message:`Η βάρδια «${template.name}» χρειάζεται ${template.minimumPeople} άτομα και έχει ${covered}.`,severity:"ERROR",date:rows[0].date});
+  const templates=await prisma.workforceShiftTemplate.findMany({where:{companyId:context.company.id,storeId:context.store.id,active:true},include:{requiredRole:true},orderBy:{startTime:"asc"}});
+  for(const date of datesInPeriod(schedule.periodStart,schedule.periodEnd))for(const template of templates){
+    const rows=byShift.get(`${iso(date)}:${template.id}`)||[],covered=rows.filter(row=>row.employeeId).length;
+    if(covered<template.minimumPeople)addFinding(findings,{ruleCode:"SHIFT_COVERAGE",message:`Η βάρδια «${template.name}» χρειάζεται ${template.minimumPeople} άτομα και έχει ${covered}.`,severity:"ERROR",date});
     if(template.maximumPeople&&covered>template.maximumPeople)addFinding(findings,{ruleCode:"SHIFT_CAPACITY",message:`Η βάρδια «${template.name}» υπερβαίνει το όριο ${template.maximumPeople} ατόμων.`,severity:"APPROVAL_REQUIRED",date:rows[0].date});
     for(const row of rows.filter(item=>item.employeeId)){
       const employee=await loadEmployeeForAssignment(context,row.employeeId);
