@@ -9,14 +9,17 @@
 - [ ] Επόμενο ξεχωριστό βήμα: έλεγχος του κάτω μέρους της φόρμας, τοπική συμπλήρωση των test credentials χωρίς κοινοποίηση μυστικών και αποθήκευση με όλους τους fail-closed διακόπτες ανενεργούς.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-efood-lab-schema-bootstrap.md`.
 
-## 2026-09-23 — Workforce προσωπικό PIN συναδέλφου από POS — AWAITING CI / LAB
+## 2026-09-23 — Workforce προσωπικό PIN συναδέλφου από POS — LAB FAIL / LOCAL PASS / AWAITING CI
 
 - [x] Πραγματικό LAB: δεν υπάρχει ακόμη φυσική κάρτα για δοκιμή· απαιτείται ασφαλής εναλλακτική με το υπάρχον προσωπικό PIN.
 - [x] Το παράθυρο «Κάρτα εργασίας» προσφέρει PIN ή Κάρτα χωρίς αλλαγή ενεργού χειριστή.
 - [x] Το PIN επαληθεύεται με bcrypt σε ενεργό employee/credential του ίδιου company/store και δεν αποθηκεύεται στον browser.
 - [x] Πέντε αποτυχίες κλειδώνουν τη συγκεκριμένη προσπάθεια για 15 λεπτά μέσω `StoreOperatorLoginGuard`.
 - [x] Διατηρούνται η κάρτα `POS_CARD`, το card audit και η αυτόματη παρουσία ταμία.
-- [ ] Green CI → merge → exact deploy → LAB PIN προσέλευση/αποχώρηση και έλεγχος Attendance/Audit.
+- [x] Νεότερο πραγματικό LAB FAIL στο deploy `f0ccd986`: η υποβολή PIN έδειξε λανθασμένα «Υπάρχει ήδη ανοιχτή βάρδια» χωρίς να δημιουργήσει παρουσία.
+- [x] Εντοπίστηκε invalid join σε ανύπαρκτο `Employee.companyId` και γενική λανθασμένη μετάφραση κάθε Prisma `P2010` ως διπλής βάρδιας.
+- [x] Targeted `4/4`, πλήρες server suite `1427/1427` με `1` skip, client production build και `git diff --check` PASS.
+- [ ] Διόρθωση με ίδιο `Employee.storeId` → green CI → merge → exact deploy → LAB PIN προσέλευση/αποχώρηση και έλεγχος Attendance/Audit.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-pos-colleague-pin.md`.
 
 ## 2026-09-23 — Workforce πρόγραμμα ανά εργαζόμενο — AWAITING CI / LAB
