@@ -31,7 +31,8 @@ test("a confirmed supplier profile requires a complete printed table before its 
   assert.match(source,/supplierRequiresCompletePrintedTable&&hasUnverifiedPrintedRows/);
   assert.match(source,/requiresCompleteReverification=.*supplierRequiresCompletePrintedTable/s);
   assert.match(source,/needsEmptyCompleteTableRead=.*parsed\.productLines\.length===0/s);
-  assert.match(source,/productLines:needsEmptyCompleteTableRead\?parsed\.productLines:unresolved/);
+  assert.match(source,/verificationLinesForLeventopoulos\(\{pageCount:pageJobs\.length/);
+  assert.match(source,/productLines:verificationLines/);
 });
 
 test("supplier OCR matching validates VAT and tolerates Greek/Latin OCR glyphs",()=>{

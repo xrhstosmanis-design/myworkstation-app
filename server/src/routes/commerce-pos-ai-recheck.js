@@ -5,6 +5,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
+import {verificationLinesForLeventopoulos} from "../lib/pos-complete-table-verification.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
 import {exactLearnedInvoiceCandidate,hasLearnedInvoiceIdentity} from "../lib/invoice-learning-exact-document.js";
 import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
@@ -569,7 +570,12 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     if(!unresolved.length&&!needsEmptyCompleteTableRead)continue;
     try{
       const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable;
-      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:needsEmptyCompleteTableRead?parsed.productLines:unresolved,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
+      // The full-page verifier replaces its input array when it reconstructs
+      // the printed table. For this learned single-page layout, pass the
+      // actual candidate array: `unresolved` contains {line,index} wrappers
+      // and replacing that temporary array loses every recovered row.
+      const verificationLines=verificationLinesForLeventopoulos({pageCount:pageJobs.length,ruleKey:parsed?.supplierReadingProfile?.ruleKey,completePrintedTable,needsEmptyCompleteTableRead,productLines:parsed.productLines,unresolved});
+      const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:verificationLines,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
