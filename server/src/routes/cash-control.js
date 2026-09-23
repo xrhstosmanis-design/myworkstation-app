@@ -98,6 +98,7 @@ async function requireCashAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
+  if(req.method==="POST"&&/\/stores\/[^/]+\/attendance-card\/scan$/.test(path))return next();
   const permissions=req.user?.permissions||[],path=String(req.originalUrl||"").split("?")[0];
   if(req.method==="GET"&&/\/api\/(?:cash|cash-control)\/stores\/[^/]+\/overview$/.test(path)&&permissions.includes("CASH_OVERVIEW"))return next();
   if(req.method==="POST"&&/\/stores\/[^/]+\/sessions\/open$/.test(path)){
@@ -198,35 +199,58 @@ const workforceDayStart=value=>new Date(`${value}T00:00:00.000Z`);
 const workforceShiftMinutes=template=>{const [sh,sm]=template.startTime.split(":").map(Number),[eh,em]=template.endTime.split(":").map(Number),raw=eh*60+em-sh*60-sm;return raw<=0?raw+1440:raw};
 const workforceShiftAt=(date,time)=>new Date(`${date}T${time}:00.000Z`);
 
-async function syncOperatorWorkforceAttendance(tx,req,storeId,eventType,cashSessionId){
-  if(req.user?.tokenType!=="STORE_OPERATOR"||!req.user?.employeeId)return {status:"SKIPPED",reason:"NOT_STORE_OPERATOR"};
-  const employee=await tx.workforceEmployee.findFirst({where:{companyId:req.user.companyId,legacyEmployeeId:req.user.employeeId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]}});
+async function syncOperatorWorkforceAttendance(tx,req,storeId,eventType,cashSessionId,options={}){
+  if(req.user?.tokenType!=="STORE_OPERATOR")return {status:"SKIPPED",reason:"NOT_STORE_OPERATOR"};
+  const legacyEmployeeId=options.legacyEmployeeId||req.user?.employeeId;
+  if(!legacyEmployeeId)return {status:"SKIPPED",reason:"EMPLOYEE_NOT_IDENTIFIED"};
+  const employee=await tx.workforceEmployee.findFirst({where:{companyId:req.user.companyId,legacyEmployeeId,active:true,OR:[{baseStoreId:storeId},{storeAccess:{some:{storeId,active:true}}}]}});
   if(!employee)return {status:"SKIPPED",reason:"WORKFORCE_EMPLOYEE_NOT_LINKED"};
   const now=new Date(),date=workforceDate(now);
   const open=await tx.workforceAttendanceSession.findFirst({where:{companyId:req.user.companyId,storeId,employeeId:employee.id,status:"OPEN"},orderBy:{startedAt:"desc"}});
-  if(eventType==="IN"&&open)return {status:"ALREADY_OPEN",sessionId:open.id};
-  if(eventType==="OUT"&&!open)return {status:"NO_OPEN_SESSION"};
-  if(eventType==="IN"){
+  const resolvedEventType=eventType==="TOGGLE"?(open?"OUT":"IN"):eventType;
+  if(resolvedEventType==="IN"&&open)return {status:"ALREADY_OPEN",sessionId:open.id,employeeName:employee.fullName,eventType:"IN"};
+  if(resolvedEventType==="OUT"&&!open)return {status:"NO_OPEN_SESSION",employeeName:employee.fullName,eventType:"OUT"};
+  if(resolvedEventType==="OUT"&&now-new Date(open.startedAt)<60000){const error=new Error("Η κάρτα μόλις χτυπήθηκε για προσέλευση. Περίμενε ένα λεπτό πριν από νέα σάρωση.");error.status=409;throw error}
+  const method=options.method||"POS_SHIFT",cardScan=method==="POS_CARD",operatorId=req.user.operatorId||req.user.id||null;
+  if(resolvedEventType==="IN"){
     const assignment=await tx.workforceScheduleAssignment.findFirst({where:{employeeId:employee.id,date:workforceDayStart(date),schedule:{companyId:req.user.companyId,storeId,status:"PUBLISHED"}},include:{shiftTemplate:true},orderBy:{createdAt:"desc"}});
-    const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"IN",method:"POS_SHIFT",occurredAt:now,sourceShiftId:assignment?.id||null,note:`Αυτόματη έναρξη από άνοιγμα POS ${cashSessionId}`,createdByUserId:null}});
+    const note=cardScan?"Σάρωση κάρτας εργασίας από το POS":`Αυτόματη έναρξη από άνοιγμα POS ${cashSessionId}`;
+    const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"IN",method,occurredAt:now,sourceShiftId:assignment?.id||null,note,createdByUserId:null}});
     const expected=assignment?workforceShiftAt(date,assignment.shiftTemplate.startTime):null,late=expected?Math.max(0,Math.round((now-expected)/60000)):0;
     const session=await tx.workforceAttendanceSession.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,scheduledAssignmentId:assignment?.id||null,clockInEntryId:entry.id,startedAt:now,lateMinutes:late,status:"OPEN",issueJson:late?{issues:[{code:"LATE_ARRIVAL",message:`Καθυστέρηση ${late} λεπτών.`}]}:{issues:[]}}});
-    await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_IN",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,afterJson:{employeeId:employee.id,date,eventType:"IN",cashSessionId,method:"POS_SHIFT"},reason:"Αυτόματη έναρξη παρουσίας με το άνοιγμα της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
-    return {status:"CLOCKED_IN",sessionId:session.id};
+    await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_IN",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,afterJson:{employeeId:employee.id,date,eventType:"IN",cashSessionId:cashSessionId||null,method,scannedByOperatorId:cardScan?operatorId:null},reason:cardScan?"Προσέλευση με σάρωση προσωπικής κάρτας στο POS":"Αυτόματη έναρξη παρουσίας με το άνοιγμα της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
+    return {status:"CLOCKED_IN",sessionId:session.id,employeeName:employee.fullName,eventType:"IN",occurredAt:now};
   }
   const assignment=open.scheduledAssignmentId?await tx.workforceScheduleAssignment.findUnique({where:{id:open.scheduledAssignmentId},include:{shiftTemplate:true}}):null;
-  const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"OUT",method:"POS_SHIFT",occurredAt:now,sourceShiftId:assignment?.id||null,note:`Αυτόματη λήξη από κλείσιμο POS ${cashSessionId}`,createdByUserId:null}});
+  const note=cardScan?"Σάρωση κάρτας εργασίας κατά την αποχώρηση από το POS":`Αυτόματη λήξη από κλείσιμο POS ${cashSessionId}`;
+  const entry=await tx.workforceTimeClockEntry.create({data:{companyId:req.user.companyId,storeId,employeeId:employee.id,eventType:"OUT",method,occurredAt:now,sourceShiftId:assignment?.id||null,note,createdByUserId:null}});
   const worked=Math.max(0,Math.round((now-new Date(open.startedAt))/60000));
   const expectedEnd=assignment?new Date(workforceShiftAt(workforceDate(assignment.date),assignment.shiftTemplate.startTime).getTime()+workforceShiftMinutes(assignment.shiftTemplate)*60000):null;
   const scheduled=assignment?workforceShiftMinutes(assignment.shiftTemplate):null,early=expectedEnd?Math.max(0,Math.round((expectedEnd-now)/60000)):0,over=scheduled===null?0:Math.max(0,worked-scheduled);
   const issues=[];if(worked>480)issues.push({code:"OVER_8_HOURS",message:`Υπέρβαση ορίου 8 ωρών: ${worked-480} λεπτά.`});if(open.lateMinutes)issues.push({code:"LATE_ARRIVAL",message:`Καθυστέρηση ${open.lateMinutes} λεπτών.`});if(early)issues.push({code:"EARLY_DEPARTURE",message:`Πρόωρη αποχώρηση ${early} λεπτών.`});if(over)issues.push({code:"OVERTIME",message:`Υπέρβαση ${over} λεπτών.`});
   const status=worked>480?"NEEDS_APPROVAL":(open.lateMinutes||early||over)?"NEEDS_REVIEW":"CLOSED";
   const session=await tx.workforceAttendanceSession.update({where:{id:open.id},data:{clockOutEntryId:entry.id,endedAt:now,workedMinutes:worked,earlyLeaveMinutes:early,overtimeMinutes:over,status,issueJson:{issues}}});
-  await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_OUT",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,beforeJson:{status:"OPEN"},afterJson:{employeeId:employee.id,date,eventType:"OUT",cashSessionId,method:"POS_SHIFT",workedMinutes:worked,status},reason:"Αυτόματη λήξη παρουσίας με το κλείσιμο της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
-  return {status:"CLOCKED_OUT",sessionId:session.id,workedMinutes:worked,reviewStatus:status};
+  await tx.workforceAuditLog.create({data:{companyId:req.user.companyId,storeId,actorUserId:null,action:"WORKFORCE_CLOCK_OUT",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:session.id,beforeJson:{status:"OPEN"},afterJson:{employeeId:employee.id,date,eventType:"OUT",cashSessionId:cashSessionId||null,method,scannedByOperatorId:cardScan?operatorId:null,workedMinutes:worked,status},reason:cardScan?"Αποχώρηση με σάρωση προσωπικής κάρτας στο POS":"Αυτόματη λήξη παρουσίας με το κλείσιμο της βάρδιας POS",deviceName:req.user.terminalPos||null,userAgent:String(req.headers?.["user-agent"]||"").slice(0,500)||null}});
+  return {status:"CLOCKED_OUT",sessionId:session.id,employeeName:employee.fullName,eventType:"OUT",occurredAt:now,workedMinutes:worked,reviewStatus:status};
 }
 
 router.use(auth,requireCashAccess);
+
+const attendanceCardSchema=z.object({cardCode:z.string().trim().min(3).max(120)});
+const normalizeAttendanceCard=value=>String(value||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+const attendanceCardHash=value=>crypto.createHash("sha256").update(normalizeAttendanceCard(value)).digest("hex");
+
+router.post("/stores/:storeId/attendance-card/scan",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),body=attendanceCardSchema.parse(req.body||{}),normalized=normalizeAttendanceCard(body.cardCode);
+  if(normalized.length<3)return res.status(400).json({error:"Η κάρτα εργασίας δεν είναι έγκυρη."});
+  const hash=attendanceCardHash(normalized);
+  const credentials=await prisma.$queryRaw`SELECT "employeeId" FROM "StoreOperatorCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "cardCodeHash"=${hash} AND "active"=TRUE LIMIT 1`;
+  if(!credentials[0]?.employeeId)return res.status(404).json({error:"Η κάρτα δεν αντιστοιχεί σε ενεργό εργαζόμενο αυτού του καταστήματος."});
+  const result=await prisma.$transaction(tx=>syncOperatorWorkforceAttendance(tx,req,store.id,"TOGGLE",null,{legacyEmployeeId:credentials[0].employeeId,method:"POS_CARD"}));
+  if(result.status==="WORKFORCE_EMPLOYEE_NOT_LINKED"||result.status==="SKIPPED")return res.status(409).json({error:"Ο εργαζόμενος δεν έχει συνδεθεί ακόμη με το Workforce."});
+  res.status(201).json({ok:true,...result});
+}));
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
