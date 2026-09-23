@@ -20,6 +20,10 @@ test("Workforce v2 schedule routes keep the protected lifecycle and assignment c
   assert.match(route,/datesInPeriod\(schedule\.periodStart,schedule\.periodEnd\)/);
   assert.match(route,/workforceShiftTemplate\.findMany\(\{where:\{companyId:context\.company\.id,storeId:context\.store\.id,active:true\}/);
   assert.match(route,/byShift\.get\(`\$\{iso\(date\)\}:\$\{template\.id\}`\)\|\|\[\]/);
+  assert.match(route,/context\.requestUser=req\.user/);
+  assert.match(route,/normalizedPeriodStart=iso\(weekStart\(body\.periodStart\)\)/);
+  assert.match(route,/date<start\|\|date>end/);
+  assert.match(route,/canSchedule:true/);
 });
 
 test("Workforce v2 schedule UI exposes all requested operational views",()=>{
