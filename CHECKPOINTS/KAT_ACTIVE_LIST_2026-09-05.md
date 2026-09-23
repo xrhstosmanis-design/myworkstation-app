@@ -2453,6 +2453,7 @@ Total output lines: 1413
 - [x] CI #2873 PASS, PR #1125 merged as `16007363`; exact production `/api/health` revision confirmed. Containment deployed, **reading remains LAB FAIL**.
 - [x] Recorded all 14 printed row equations (net 41,60 €, VAT 5,42 €, gross 47,02 €) and reproduced downstream amplification of one corrupt structured OCR row; raw provider/job row evidence is still unavailable.
 - [ ] Inspect only the ΒΒ 6529 job's original and reread outputs before a shared parsing change; replay across different suppliers. The administrative browser inspection was auto-review rejected as overly broad and was not repeated.
+- [ ] **AWAITING LAB:** bounded job-local evidence for a future successful complete reread records the original table, the provider candidates before recovery and the final table; it does not repair the existing ΒΒ 6529 draft or record a provider failure before it returns rows. The live LAB POS login is active, but the ΒΒ 6529 job's raw provider output remains unavailable. Do not infer LAB PASS from instrumentation.
 
 
 ## 2026-09-23 — POS camera scanner fallback — CI RECHECK

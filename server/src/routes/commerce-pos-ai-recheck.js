@@ -6,6 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {callAzure,normalizeAzure} from "./commerce-azure-invoice-reader.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {verificationLinesForLeventopoulos} from "../lib/pos-complete-table-verification.js";
+import {capturePosInvoiceProviderRows,preservePosInvoiceReadingEvidence} from "../lib/pos-invoice-reading-evidence.js";
 import {applyCentralSupplierProfile} from "../lib/invoice-supplier-profile-runtime.js";
 import {exactLearnedInvoiceCandidate,hasLearnedInvoiceIdentity} from "../lib/invoice-learning-exact-document.js";
 import {applyMantzilasPackaging,recoverMantzilasEconomics,recoverMixedVatFromPrintedSummary,recoverPrintedRetailColumns,recoverVatFromPrintedSummary,sourceOrder} from "../lib/invoice-column-reading.js";
@@ -385,6 +386,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     parsed.posConfirmedTotalSource=linkedDraft[0]?"LINKED_DRAFT":"POS_HANDOFF";
   }
   parsed.productLines=Array.isArray(parsed.productLines)?parsed.productLines.filter(x=>String(x?.description||x?.rawText||"").trim()).slice(0,500).map(normalizeProductLine):[];
+  const providerRows=posHandoff?capturePosInvoiceProviderRows(parsed):null;
   if(!String(parsed.rawText||"").trim())parsed.rawText=parsed.productLines.map(line=>String(line.rawText||[line.code,line.description].filter(Boolean).join(" ")).trim()).filter(Boolean).join("\n");
   const auditLines=Array.isArray(parsed.lines)&&parsed.lines.length
     ?parsed.lines.filter(x=>String(x?.text||"").trim()).slice(0,1000)
@@ -625,6 +627,8 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   failureStage="match-supplier";
   const match=await supplierMatch(req.user.companyId,parsed.supplier),aiConfidence=Math.max(0,Math.min(100,Number(parsed.aiConfidence||0)));
   if(cleanTaxId(trustedHandoffSupplier?.taxId)==="800802293")parsed.supplierReadingProfile={...(parsed.supplierReadingProfile||{}),requireCompletePrintedTableOnMismatch:true};
+  const readingEvidence=preservePosInvoiceReadingEvidence(previous,parsed,providerRows);
+  if(readingEvidence)parsed.posReadingEvidence=readingEvidence;
   failureStage="save-ai-result";
   await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
   res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:FULL_OCR_MODEL});
