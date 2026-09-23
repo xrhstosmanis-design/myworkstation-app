@@ -22,3 +22,17 @@
 @media(max-width:900px){.store-chat-search{grid-template-columns:1fr 1fr}.store-chat-search>input:first-child{grid-column:1/-1}}
 @media(max-width:520px){.store-chat-search{grid-template-columns:1fr}.store-chat-search>input:first-child{grid-column:auto}}
 .store-pos-top .store-chat-in-app-alert{display:flex;align-items:center;gap:7px;padding:5px 7px 5px 10px;border:2px solid #37d4a2;border-radius:11px;background:#e9fff6;color:#073f31;box-shadow:0 5px 16px #0017;white-space:nowrap;animation:store-chat-alert-in .2s ease-out}.store-pos-top .store-chat-in-app-alert b{font-size:12px}.store-pos-top .store-chat-in-app-alert button{height:32px;padding:0 9px;border:0;background:#087a52;color:#fff}.store-pos-top .store-chat-in-app-alert button:last-child{background:#dcebe6;color:#16473a;font-size:18px}@keyframes store-chat-alert-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}@media(max-width:850px){.store-pos-top .store-chat-in-app-alert{position:fixed;top:12px;left:12px;right:12px;z-index:12000;justify-content:center}}
+
+/* POS utility launchers stay compact so overlays and tables remain unobstructed. */
+.store-chat-top-host{top:120px;gap:6px;overflow:visible}
+.store-chat-top-button{min-height:34px;padding:6px 9px;border-radius:8px;font-size:12px;line-height:1;box-shadow:0 1px 5px #0003}
+.store-chat-top-button svg{width:15px;height:15px}
+.pos-attendance-card-modal>section{width:min(560px,94vw);max-height:86vh}
+.pos-attendance-card-body{padding:20px;display:grid;gap:14px;overflow:auto;background:#f7faf9}
+.pos-attendance-card-instructions{display:grid;gap:6px;padding:14px;border-radius:11px;background:#e9f7f1;color:#154c3b}
+.pos-attendance-card-instructions span{font-size:13px;line-height:1.45}
+.pos-attendance-card-body label{display:grid;gap:7px;font-weight:900}
+.pos-attendance-card-body input{min-height:56px;border:2px solid #7bb8a4;border-radius:11px;padding:0 14px;background:#fff;font-size:20px}
+.pos-attendance-card-success{display:flex;align-items:center;gap:12px;padding:14px;border-radius:11px;background:#dff7e9;color:#12623f}
+.pos-attendance-card-success svg{width:28px;height:28px;flex:none}.pos-attendance-card-success div{display:grid;gap:3px}
+@media(max-width:700px){.store-chat-top-host{top:108px;right:6px;left:6px;max-width:none;justify-content:flex-end;overflow-x:auto}.store-chat-top-button{padding:6px 8px;font-size:11px}.pos-attendance-card-body{padding:14px}}
