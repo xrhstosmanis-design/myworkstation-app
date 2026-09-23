@@ -2349,3 +2349,12 @@ Total output lines: 1413
 - [ ] Green CI → merge → verify exact Render revision → inspect all 44 learned rows and reconcile `223,05 € + 29,01 € = 252,06 €`.
 - [ ] LAB PASS only after one new POS submission creates a single correct BackOffice draft without manual refresh or resubmission; do not approve or post stock before reconciliation.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-talos-pos-learned-mismatch.md`.
+## 2026-09-23 — Ενιαίος κανόνας POS έως 2 γραμμές προς έλεγχο — LAB FAIL / LOCAL TESTING
+
+- [x] Ισχύει σε κάθε σελίδα και κατάστημα η απόφαση 19/09: έως 2 **υπαρκτές** αβέβαιες γραμμές ανά τιμολόγιο, με εμφανές «ΠΡΟΣ ΕΛΕΓΧΟ» και αιτία· ο χειριστής διορθώνει πριν από έγκριση. Καταγράφηκε στο root `AGENTS.md`.
+- [x] Νέο LAB FAIL: LAB POS 2 Λεβεντόπουλος `ΤΑΜΠΧ14 15` παραμένει `POS_FAILED` με 0 είδη. Αυτό δεν είναι αποδεκτή περίπτωση δύο διορθώσεων. Ο παλιός αριθμός `ΤΔΛΠΧ14 15` δεν ταυτίζεται αυθαίρετα.
+- [x] Η πρόσφατη καθολική πύλη απόλυτης συμφωνίας προσαρμόζεται: υποψήφιος πίνακας με έως 2 ρητά μη επαληθευμένες γραμμές και αποδεδειγμένη αριθμητική στις υπόλοιπες μπορεί να γίνει ασφαλές πρόχειρο προς έλεγχο. Κενός πίνακας, 3+ αβέβαιες ή αλλοιωμένη βεβαιωμένη γραμμή μπλοκάρονται.
+- [x] Στοχευμένα tests (17 + 46) και client build πέρασαν τοπικά.
+- [x] Πλήρης server suite: 1423/1423 passed.
+- [ ] Πράσινο CI → merge → ακριβές deploy → μία νέα γνήσια υποβολή POS για LAB αποδοχή. Το παλιό draft μόνο για διάγνωση, χωρίς νέο upload/διαγραφή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-pos-two-review-lines-central-rule.md`.

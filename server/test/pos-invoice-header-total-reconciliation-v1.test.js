@@ -1,7 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../src/invoice-line-reconciliation.js";
+import {reconcileInvoiceLines,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../src/invoice-line-reconciliation.js";
+
+test("a complete 20-row invoice may retain two identified uncertain rows for review",()=>{
+  const rows=Array.from({length:20},(_,index)=>({rawText:`${10000+index} PRODUCT ${index+1}`,code:String(10000+index),description:`PRODUCT ${index+1}`,quantity:1,unitCost:index>=18?2:1,netAmount:index>=18?2:1,vatRate:13,grossAmount:index>=18?2.26:1.13,sourceColumnsVerified:index<18}));
+  const result=reviewablePrintedTableForPersistence(rows,25);
+  assert.equal(result?.length,20);
+  assert.equal(result.filter(row=>row.sourceColumnsVerified===false).length,2);
+  assert.equal(reviewablePrintedTableForPersistence(rows.slice(0,2),25),null,"an incomplete read cannot masquerade as two corrections");
+  assert.equal(reviewablePrintedTableForPersistence(rows.map((row,index)=>({...row,sourceColumnsVerified:index<17})),25),null,"three uncertain lines exceed the accepted limit");
+  assert.equal(reviewablePrintedTableForPersistence(rows.map((row,index)=>index===0?{...row,netAmount:13}:row),25),null,"a verified row with corrupt economics remains blocked");
+});
 
 test("header total wins when it equals the sum of net OCR lines",()=>{
   const lines=[

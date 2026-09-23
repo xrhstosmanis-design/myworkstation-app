@@ -62,7 +62,7 @@ test("Leventopoulos never persists a free-form numeric-column guess",async()=>{
   assert.match(profile,/profile\.ruleKey==="LEVENTOPOULOS_MM_POS1_COLUMNS"/);
   assert.match(background,/requiresCompletePrintedTable/);
   assert.match(background,/const verifiedAtOwnTotal=sourceTableGross>0\?verifiedPrintedTableForPersistence/);
-  assert.match(background,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|finalizeV244ProductLines/);
-  assert.match(background,/if\(requiresCompletePrintedTable&&Math\.abs\(reconcileInvoiceLines\(productLines,handoff\.totalGross\)\.grossTotal/);
+  assert.match(background,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|reviewableProductLines\|\|finalizeV244ProductLines/);
+  assert.match(background,/requiresCompletePrintedTable&&!reviewableProductLines&&Math\.abs\(reconcileInvoiceLines/);
   assert.doesNotMatch(background,/\(handoff\.replaceExistingDraft\|\|requiresCompletePrintedTable\)&&!verifiedProductLines/);
 });
