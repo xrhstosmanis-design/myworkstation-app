@@ -144,6 +144,31 @@ function recoverDeclaredColumns(line,profile){
     if(grossValid&&netValid&&vatValid){
       return {...line,quantity,invoiceQuantity:quantity,unitPrice:money4(unitPrice),unitCost:money4(unitPrice),retailPrice:retail>0?money4(retail):line?.retailPrice,initialAmount:money2(before),invoiceUnit:words[unitIndex],unit:words[unitIndex],netAmount:money2(after),netValue:money2(after),netUnitCost:money4(after/quantity),discount1:money4(discount1),discount2:0,discount3:0,vatRate:money4(vatRate),grossAmount:money2(after*(1+vatRate/100)),supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_VERIFIED_SUFFIX",supplierProfileEvidence:{quantityInferred:!hasQuantity,quantity,unitPrice:money4(unitPrice),before:money2(before),discountAmount:money2(discountAmount),after:money2(after),vatRate}};
     }
+    // Azure occasionally returns the same physical cells in reading order
+    // instead of column order. Search the current row for one unique economic
+    // proof; never choose between multiple possible interpretations.
+    const candidates=[];
+    for(let p=0;p<tail.length;p++)for(let b=0;b<tail.length;b++){
+      if(p===b||!(tail[p]>0&&tail[b]>0))continue;
+      const inferred=tail[b]/tail[p],q=Math.round(inferred);
+      if(!(q>0&&q<=1000&&close(inferred,q,.02)))continue;
+      for(let d=0;d<tail.length;d++)for(let n=0;n<tail.length;n++){
+        // In this Azure fallback the printed right-hand cells arrive in visual
+        // reading order: discount value, net, VAT, unit price, gross, then the
+        // remaining retail/discount cells. This ordering disambiguates the
+        // inverse subtraction (gross-net) without guessing from invoice data.
+        if(!(d<n&&n<p&&p<b))continue;
+        if(new Set([p,b,d,n]).size<4||!(tail[d]>=0&&tail[n]>0&&tail[n]<=tail[b]+.02)||!close(tail[b]-tail[d],tail[n],Math.max(.03,tail[n]*.008)))continue;
+        for(let v=0;v<tail.length;v++)if(![p,b,d,n].includes(v)&&[0,6,13,17,24].includes(Number(tail[v])))candidates.push({p,b,d,n,v,quantity:q,unitPrice:tail[p],before:tail[b],discountAmount:tail[d],after:tail[n],vatRate:tail[v]});
+      }
+    }
+    const unique=[...new Map(candidates.map(candidate=>[[candidate.quantity,candidate.unitPrice,candidate.before,candidate.discountAmount,candidate.after,candidate.vatRate].join('|'),candidate])).values()];
+    if(unique.length===1){
+      const candidate=unique[0],unused=tail.map((value,index)=>({value,index})).filter(item=>![candidate.p,candidate.b,candidate.d,candidate.n,candidate.v].includes(item.index));
+      const discountOptions=unused.filter(item=>item.value>=0&&item.value<=100&&close(item.value,Math.round(item.value),.001));
+      const discount1=discountOptions.length===1?discountOptions[0].value:Number(line?.discount1||0),retail=unused.find(item=>item.index!==discountOptions[0]?.index&&item.value>0)?.value;
+      return {...line,quantity:candidate.quantity,invoiceQuantity:candidate.quantity,unitPrice:money4(candidate.unitPrice),unitCost:money4(candidate.unitPrice),retailPrice:retail>0?money4(retail):line?.retailPrice,initialAmount:money2(candidate.before),invoiceUnit:words[unitIndex],unit:words[unitIndex],netAmount:money2(candidate.after),netValue:money2(candidate.after),netUnitCost:money4(candidate.after/candidate.quantity),discount1:money4(discount1),discount2:0,discount3:0,vatRate:money4(candidate.vatRate),grossAmount:money2(candidate.after*(1+candidate.vatRate/100)),supplierProfileRecovered:true,supplierProfileRule:"DECLARED_COLUMNS_UNORDERED_VERIFIED_SUFFIX",supplierProfileEvidence:{quantityInferred:true,quantity:candidate.quantity,unitPrice:money4(candidate.unitPrice),before:money2(candidate.before),discountAmount:money2(candidate.discountAmount),after:money2(candidate.after),vatRate:candidate.vatRate}};
+    }
   }
   const atColumn=column=>numericNear(words,unitIndex+(column-unitColumn),column>=unitColumn?1:-1);
   const mapped=role=>{const column=indexOf(role);return column>0?atColumn(column):null};

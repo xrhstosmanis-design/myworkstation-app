@@ -234,11 +234,24 @@ test('TALOS declared suffix preserves printed net and reconstructs one omitted q
   assert.equal(omitted.supplierProfileEvidence.quantityInferred,true);
 });
 
+test('TALOS unordered Azure cells recover one uniquely balanced physical row',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'};
+  const profile={supplierTaxId:'800802293',readingRule:{layoutMode:'DECLARED_COLUMNS',columns}};
+  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const result=await context.apply({supplier:{taxId:'800802293'},productLines:[{azureRawRow:'4327325 EXTRA ΤΥΡΟΓΑΡ. ΤΥΡΙ 80GX20 TEM 1.67 4.28 13 0.85 5.95 18.30 12.00',quantity:0,unitPrice:1.67,netAmount:0,vatRate:0}]});
+  const line=result.productLines[0];
+  assert.deepEqual([line.quantity,line.unitPrice,line.netAmount,line.discount1,line.vatRate],[7,.85,4.28,12,13]);
+  assert.equal(line.supplierProfileRule,'DECLARED_COLUMNS_UNORDERED_VERIFIED_SUFFIX');
+});
+
 test('Invoice Learning totals retain a source-proven printed line net',async()=>{
   const lab=await readFile(new URL('../../client/src/invoice-learning-lab-bootstrap.js',import.meta.url),'utf8');
   assert.match(lab,/printedNet=money\(line\.netValue\?\?line\.netAmount\)/);
   assert.match(lab,/printedNet\/quantity/);
   assert.match(lab,/\['quantity','unitPrice','discount1','discount2','discount3'\]\.includes\(changedKey\)/);
+  assert.match(lab,/line\.supplierProfileRecovered\?rawQ/);
 });
 
 test('both column-map editors allow a missing unit and persist the piece fallback',async()=>{
