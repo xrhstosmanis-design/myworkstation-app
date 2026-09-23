@@ -60,7 +60,7 @@ async function main(){
   const role=await request(`${base}/roles`,{method:"POST",token,body:{name:"E2E Ρόλος Προγράμματος",code:roleCode,description:"Schedule E2E",confirmed:true,reason:"E2E schedule role"}});
   assert.equal(role.response.status,201,JSON.stringify(role.payload));const roleId=role.payload.item.id;
   const createEmployee=async(index)=>{
-    const result=await request(`${base}/employees`,{method:"POST",token,body:{fullName:`E2E Schedule Employee ${index+1}`,phone:null,email:employeeEmails[index],baseStoreId:storeId,paymentType:"HOURLY",hourlyRate:6,effectiveFrom:new Date().toISOString(),maxDaysPerWeek:6,maxHoursPerWeek:48,minimumDaysOff:1,canChangeStore:false,worksMorning:true,worksAfternoon:true,worksNight:false,worksWeekend:true,notes:"Schedule E2E",roleIds:[roleId],primaryRoleId:roleId,storeAccess:[{storeId,canSchedule:true}],confirmed:true,reason:"E2E schedule employee"}});
+    const result=await request(`${base}/employees`,{method:"POST",token,body:{fullName:`E2E Schedule Employee ${index+1}`,phone:null,email:employeeEmails[index],baseStoreId:storeId,paymentType:"HOURLY",hourlyRate:6,effectiveFrom:new Date().toISOString(),maxDaysPerWeek:7,maxHoursPerWeek:80,minimumDaysOff:0,canChangeStore:false,worksMorning:true,worksAfternoon:true,worksNight:false,worksWeekend:true,notes:"Schedule E2E",roleIds:[roleId],primaryRoleId:roleId,storeAccess:[{storeId,canSchedule:true}],confirmed:true,reason:"E2E schedule employee"}});
     assert.equal(result.response.status,201,JSON.stringify(result.payload));return result.payload.item.id;
   };
   const employeeA=await createEmployee(0),employeeB=await createEmployee(1);
@@ -72,12 +72,13 @@ async function main(){
   const afternoonId=await createTemplate({name:"E2E Απόγευμα",code:afternoonCode,category:"AFTERNOON",startTime:"15:00",endTime:"23:00"});
   const created=await request(`${base}/schedules`,{method:"POST",token,body:{periodStart,periodType:"WEEK",confirmed:true,reason:"E2E δημιουργία draft"}});
   assert.equal(created.response.status,201,JSON.stringify(created.payload));const schedule=created.payload.item;
-  const add=async({employeeId,shiftTemplateId,slot=1})=>{
-    const result=await request(`${base}/schedules/${schedule.id}/assignments`,{method:"POST",token,body:{version:schedule.version,date:periodStart,employeeId,shiftTemplateId,slot,confirmed:true,reason:"E2E ανάθεση"}});
+  const add=async({date=periodStart,employeeId,shiftTemplateId,slot=1})=>{
+    const result=await request(`${base}/schedules/${schedule.id}/assignments`,{method:"POST",token,body:{version:schedule.version,date,employeeId,shiftTemplateId,slot,confirmed:true,reason:"E2E ανάθεση"}});
     schedule.version=result.payload?.version||schedule.version;return result;
   };
   const first=await add({employeeId:employeeA,shiftTemplateId:morningId});assert.equal(first.response.status,201,JSON.stringify(first.payload));
   const second=await add({employeeId:employeeA,shiftTemplateId:afternoonId});assert.equal(second.response.status,201,JSON.stringify(second.payload));assert.ok(second.payload.warnings.some(item=>item.ruleCode==="DOUBLE_SHIFT"));assert.ok(second.payload.warnings.some(item=>item.ruleCode==="HOURS_EXCEEDED"));
+  for(let offset=1;offset<7;offset++){const date=new Date(`${periodStart}T00:00:00.000Z`);date.setUTCDate(date.getUTCDate()+offset);const dateText=date.toISOString().slice(0,10);const morning=await add({date:dateText,employeeId:employeeA,shiftTemplateId:morningId});assert.equal(morning.response.status,201,JSON.stringify(morning.payload));const afternoon=await add({date:dateText,employeeId:employeeB,shiftTemplateId:afternoonId});assert.equal(afternoon.response.status,201,JSON.stringify(afternoon.payload));}
   const preview=await request(`${base}/schedules/${schedule.id}/transition`,{method:"POST",token,body:{version:schedule.version,status:"PREVIEWED",confirmed:true,reason:"E2E προεπισκόπηση"}});assert.equal(preview.response.status,200,JSON.stringify(preview.payload));schedule.version=preview.payload.item.version;
   const read=await request(`${base}/schedules?from=${periodStart}`,{token});assert.equal(read.response.status,200,JSON.stringify(read.payload));const activeSchedule=read.payload.items.find(item=>item.id===schedule.id),warningAssignment=activeSchedule.assignments.find(item=>item.shiftTemplate.id===afternoonId);
   for(const warning of warningAssignment.warningJson){const exception=await request(`${base}/schedules/${schedule.id}/exceptions`,{method:"POST",token,body:{assignmentId:warningAssignment.id,ruleCode:warning.ruleCode,confirmed:true,reason:`E2E έγκριση ${warning.ruleCode}`}});assert.equal(exception.response.status,201,JSON.stringify(exception.payload));}
