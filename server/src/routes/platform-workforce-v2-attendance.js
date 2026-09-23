@@ -61,7 +61,7 @@ router.post("/clock",async(req,res,next)=>{try{
     let session;
     if(body.eventType==="IN"){
       const expected=assignment?atShiftTime(date,assignment.shiftTemplate.startTime):null,late=expected?Math.max(0,Math.round((now-expected)/60000)):0;
-      session=await tx.workforceAttendanceSession.create({data:{companyId:context.company.id,storeId:context.store.id,employeeId:employee.id,scheduledAssignmentId:assignment?.id||null,clockInEntryId:entry.id,startedAt:now,lateMinutes:late,status:late?"NEEDS_REVIEW":"OPEN"}});
+      session=await tx.workforceAttendanceSession.create({data:{companyId:context.company.id,storeId:context.store.id,employeeId:employee.id,scheduledAssignmentId:assignment?.id||null,clockInEntryId:entry.id,startedAt:now,lateMinutes:late,status:"OPEN",issueJson:late?{issues:[{code:"LATE_ARRIVAL",message:`Καθυστέρηση ${late} λεπτών.`}]}:{issues:[]}}});
     }else{
       const source=open.scheduledAssignmentId?await tx.workforceScheduleAssignment.findUnique({where:{id:open.scheduledAssignmentId},include:assignmentInclude}):null;
       const worked=Math.max(0,Math.round((now-new Date(open.startedAt))/60000)),expectedEnd=source?atShiftTime(iso(open.startedAt),source.shiftTemplate.endTime):null,early=expectedEnd?Math.max(0,Math.round((expectedEnd-now)/60000)):0,over=source?Math.max(0,worked-shiftMinutes(source.shiftTemplate)):0;
