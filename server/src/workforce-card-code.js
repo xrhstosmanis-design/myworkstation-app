@@ -7,6 +7,12 @@ export function normalizeWorkCard(value){
 export function createWorkCardCode({companyId,storeId,employeeId,secret}){
   if(!secret)throw Object.assign(new Error("Δεν έχει ρυθμιστεί ασφαλής έκδοση καρτών."),{status:503});
   const digest=crypto.createHmac("sha256",secret).update(`${companyId}:${storeId}:${employeeId}`).digest("hex").toUpperCase();
+  return `MW2${digest.slice(0,16)}`;
+}
+
+export function createLegacyWorkCardCode({companyId,storeId,employeeId,secret}){
+  if(!secret)throw Object.assign(new Error("Δεν έχει ρυθμιστεί ασφαλής έκδοση καρτών."),{status:503});
+  const digest=crypto.createHmac("sha256",secret).update(`${companyId}:${storeId}:${employeeId}`).digest("hex").toUpperCase();
   return `MWSWC${digest.slice(0,24)}`;
 }
 
