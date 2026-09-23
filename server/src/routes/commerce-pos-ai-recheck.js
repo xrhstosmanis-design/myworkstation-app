@@ -170,13 +170,21 @@ function mergeRecoveredLines(current,recovered){
   for(const candidate of recovered||[]){
     if(!String(candidate?.description||candidate?.rawText||"").trim())continue;
     const available=(line,index)=>!used.has(index)&&(line.sourceFileIndex===undefined||candidate.sourceFileIndex===undefined||line.sourceFileIndex===candidate.sourceFileIndex)&&(line.sourcePage===undefined||candidate.sourcePage===undefined||line.sourcePage===candidate.sourcePage);
+    // A table row is a physical occurrence. Its code may be misread by one
+    // provider, while repeated products on different rows must stay separate.
+    const samePrintedRow=line=>line.sourceTable!==undefined&&candidate.sourceTable!==undefined&&line.sourceRow!==undefined&&candidate.sourceRow!==undefined&&Number(line.sourceTable)===Number(candidate.sourceTable)&&Number(line.sourceRow)===Number(candidate.sourceRow)&&Number(line.sourcePage||1)===Number(candidate.sourcePage||1)&&Number(line.sourceFileIndex||0)===Number(candidate.sourceFileIndex||0);
+    const differentPrintedRow=line=>line.sourceTable!==undefined&&candidate.sourceTable!==undefined&&line.sourceRow!==undefined&&candidate.sourceRow!==undefined&&!samePrintedRow(line);
     let index=-1;
-    if(candidate.code)index=out.findIndex((line,i)=>available(line,i)&&line.code&&norm(line.code)===norm(candidate.code));
-    if(index<0)index=out.findIndex((line,i)=>available(line,i)&&!(line.code&&candidate.code&&norm(line.code)!==norm(candidate.code))&&descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
+    index=out.findIndex((line,i)=>available(line,i)&&samePrintedRow(line)&&(descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText)||(line.code&&candidate.code&&norm(line.code)===norm(candidate.code))));
+    if(index<0&&candidate.code)index=out.findIndex((line,i)=>available(line,i)&&!differentPrintedRow(line)&&line.code&&norm(line.code)===norm(candidate.code));
+    if(index<0)index=out.findIndex((line,i)=>available(line,i)&&!differentPrintedRow(line)&&!(line.code&&candidate.code&&norm(line.code)!==norm(candidate.code))&&descriptionsClose(line.description||line.rawText,candidate.description||candidate.rawText));
     if(index<0){used.add(out.length);out.push(normalizeProductLine(candidate));continue}
     used.add(index);
     const line=out[index];
     if(line.sourceColumnsVerified&&!candidate.sourceColumnsVerified)continue;
+    const unverifiedZeroVat=candidate.vatRate===0&&!candidate.sourceColumnsVerified&&Number(line.vatRate||0)>0;
+    const inconsistentZeroVat=candidate.vatRate===0&&candidate.sourceColumnsVerified&&Math.abs(Number(candidate.grossAmount||0)-Number(candidate.netAmount||0)-Number(candidate.exciseTotal||0))>.05;
+    if(unverifiedZeroVat||inconsistentZeroVat)continue;
     out[index]=normalizeProductLine({...line,...(candidate.sourceColumnsVerified?candidate:{}),
       rawText:candidate.rawText||line.rawText,code:candidate.code||line.code,barcode:candidate.barcode||line.barcode,description:candidate.description||line.description,
       quantity:Number(candidate.quantity||0)>0?candidate.quantity:line.quantity,unit:candidate.unit||line.unit,unitsPerPackage:Number(candidate.unitsPerPackage||0)>0?candidate.unitsPerPackage:line.unitsPerPackage,
@@ -184,7 +192,7 @@ function mergeRecoveredLines(current,recovered){
       discount1:Number(candidate.discount1||0)>0?candidate.discount1:line.discount1,discount1Amount:Number(candidate.discount1Amount||0)>0?candidate.discount1Amount:line.discount1Amount,
       discount2:Number(candidate.discount2||0)>0?candidate.discount2:line.discount2,discount2Amount:Number(candidate.discount2Amount||0)>0?candidate.discount2Amount:line.discount2Amount,
       discount3:Number(candidate.discount3||0)>0?candidate.discount3:line.discount3,discount3Amount:Number(candidate.discount3Amount||0)>0?candidate.discount3Amount:line.discount3Amount,
-      vatRate:Number(candidate.vatRate||0)>0?candidate.vatRate:line.vatRate,grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
+      vatRate:Number(candidate.vatRate||0)>0||(candidate.sourceColumnsVerified&&candidate.vatRate===0&&Math.abs(Number(candidate.grossAmount||0)-Number(candidate.netAmount||0)-Number(candidate.exciseTotal||0))<=.05)?candidate.vatRate:line.vatRate,grossAmount:Number(candidate.grossAmount||0)>0?candidate.grossAmount:line.grossAmount,
       confidence:Math.max(Number(line.confidence||0),Number(candidate.confidence||0))});
     if(candidate.sourceColumnsVerified)out[index]=normalizeProductLine({...out[index],...candidate});
   }

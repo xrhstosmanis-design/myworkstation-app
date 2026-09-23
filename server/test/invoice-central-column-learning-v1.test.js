@@ -317,6 +317,28 @@ test('actual multipage recovery consumes repeated occurrences once and retains t
   assert.equal(actual[0].retailPrice,4.8);
 });
 
+test('POS recovery keeps printed occurrences separate and accepts explicit zero VAT',async()=>{
+  const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
+  const context=vm.createContext({sourceOrder});
+  vm.runInContext("const norm=v=>String(v||'').replace(/[^A-Z0-9]/gi,'');\n"+source.slice(source.indexOf('const normalizeProductLine='),source.indexOf('function mergeAzureInvoicePages'))+'\nthis.merge=mergeRecoveredLines;',context);
+  const original=[
+    {code:'1140',description:'KARELIA S SLIMS',quantity:10,unitCost:3.862,netAmount:38.62,grossAmount:47.89,vatRate:24,sourceTable:0,sourceRow:1,sourcePage:1},
+    {code:'1140',description:'KARELIA S SLIMS',quantity:10,unitCost:3.862,netAmount:38.62,grossAmount:47.89,vatRate:24,sourceTable:0,sourceRow:2,sourcePage:1}
+  ];
+  const recovered=[
+    {code:'114O',description:'KARELIA S SLIMS',quantity:10,unitCost:3.862,netAmount:38.62,grossAmount:38.62,vatRate:0,sourceTable:0,sourceRow:1,sourcePage:1,sourceColumnsVerified:true},
+    {code:'1140',description:'KARELIA S SLIMS',quantity:10,unitCost:3.862,netAmount:38.62,grossAmount:38.62,vatRate:0,sourceTable:0,sourceRow:2,sourcePage:1,sourceColumnsVerified:true}
+  ];
+  const result=context.merge(original,recovered);
+  assert.equal(result.length,2);
+  assert.deepEqual(Array.from(result,line=>line.sourceRow),[1,2]);
+  assert.deepEqual(Array.from(result,line=>line.vatRate),[0,0]);
+  assert.deepEqual(Array.from(result,line=>line.grossAmount),[38.62,38.62]);
+  const unverified=context.merge([original[0]],[{...recovered[0],sourceColumnsVerified:false}]);
+  assert.equal(unverified[0].vatRate,24,'an unverified provider default of zero cannot override printed VAT');
+  assert.equal(unverified[0].grossAmount,47.89,'an unverified zero-VAT gross cannot be paired with 24%');
+});
+
 test('single-page adjacent OCR replay is collapsed only when the printed total corroborates one copy',async()=>{
   const source=await readFile(new URL('../src/routes/commerce-pos-ai-recheck.js',import.meta.url),'utf8');
   const context=vm.createContext({});
