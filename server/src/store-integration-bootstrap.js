@@ -18,16 +18,26 @@ export async function ensureStoreIntegrationSchema(){
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "externalCallsEnabled" BOOLEAN NOT NULL DEFAULT FALSE`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "sandboxValidatedAt" TIMESTAMPTZ`);
     await prisma.$executeRawUnsafe(`DO $constraint$
-      DECLARE current_name TEXT; current_definition TEXT;
+      DECLARE current_constraint RECORD;
       BEGIN
-        SELECT conname,pg_get_constraintdef(oid) INTO current_name,current_definition
-        FROM pg_constraint
-        WHERE conrelid='"StoreIntegrationCredential"'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%"kind"%'
-        LIMIT 1;
-        IF current_definition IS NULL OR POSITION('EFOOD' IN current_definition)=0 THEN
-          IF current_name IS NOT NULL THEN EXECUTE format('ALTER TABLE "StoreIntegrationCredential" DROP CONSTRAINT %I',current_name); END IF;
-          ALTER TABLE "StoreIntegrationCredential" ADD CONSTRAINT "StoreIntegrationCredential_kind_check" CHECK ("kind" IN ('MYDATA','VAT_LOOKUP','EFOOD'));
-        END IF;
+        ALTER TABLE "StoreIntegrationCredential" DROP CONSTRAINT IF EXISTS "StoreIntegrationCredential_kind_check";
+        FOR current_constraint IN
+          SELECT conname
+          FROM pg_constraint
+          WHERE conrelid='"StoreIntegrationCredential"'::regclass
+            AND contype='c'
+            AND (
+              SELECT attnum
+              FROM pg_attribute
+              WHERE attrelid='"StoreIntegrationCredential"'::regclass
+                AND attname='kind'
+            ) = ANY (conkey)
+        LOOP
+          EXECUTE format('ALTER TABLE "StoreIntegrationCredential" DROP CONSTRAINT IF EXISTS %I',current_constraint.conname);
+        END LOOP;
+        ALTER TABLE "StoreIntegrationCredential"
+          ADD CONSTRAINT "StoreIntegrationCredential_kind_check"
+          CHECK ("kind" IN ('MYDATA','VAT_LOOKUP','EFOOD'));
       END $constraint$`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreIntegrationCredential_company_store_idx" ON "StoreIntegrationCredential" ("companyId","storeId")`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "StoreIntegrationCredential_webhook_key" ON "StoreIntegrationCredential" ("webhookKey") WHERE "webhookKey" IS NOT NULL`);
