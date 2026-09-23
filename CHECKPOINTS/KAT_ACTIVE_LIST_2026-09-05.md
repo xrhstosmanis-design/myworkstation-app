@@ -2238,3 +2238,15 @@ Total output lines: 1413
 - [ ] Πράσινο CI → merge → ακριβές deploy → αυτόνομο browser LAB με τις 2 σελίδες.
 - [ ] LAB PASS μόνο με 44 γραμμές και `223,05 € + 29,01 € = 252,06 €`, πριν από «Επιβεβαίωση & Εκμάθηση».
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-talos-server-verified-rows.md`.
+
+## 2026-09-23 — Workforce AI draft employee/week fix — AWAITING CI + LAB
+
+- [x] LAB FAIL: AI preview DRAFT save returned «Δεν βρέθηκε εργαζόμενος Workforce v2.».
+- [x] LAB FAIL: selected week 21/09–27/09 was previewed as 23/09–29/09.
+- [x] Authenticated Workforce validation context restored for AI apply.
+- [x] AI weeks normalized to Monday–Sunday with approved leave loaded from Monday.
+- [x] Stale employees, inactive templates and out-of-week dates rejected before persistence.
+- [x] Cross-store candidates require active `canSchedule` access.
+- [x] Targeted tests, syntax and diff checks PASS.
+- [ ] Green CI → merge → exact Render deploy → LAB retry of AI preview and DRAFT save.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-workforce-ai-draft-employee-week.md`.
