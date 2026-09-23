@@ -98,8 +98,8 @@ async function requireCashAccess(req,res,next){
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
-  if(req.method==="POST"&&/\/stores\/[^/]+\/attendance-card\/scan$/.test(path))return next();
   const permissions=req.user?.permissions||[],path=String(req.originalUrl||"").split("?")[0];
+  if(req.method==="POST"&&/\/stores\/[^/]+\/attendance-card\/scan$/.test(path))return next();
   if(req.method==="GET"&&/\/api\/(?:cash|cash-control)\/stores\/[^/]+\/overview$/.test(path)&&permissions.includes("CASH_OVERVIEW"))return next();
   if(req.method==="POST"&&/\/stores\/[^/]+\/sessions\/open$/.test(path)){
     const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;
