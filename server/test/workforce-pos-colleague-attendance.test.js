@@ -6,16 +6,16 @@ const source=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta
 const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
 
 test("POS colleague card is store-scoped, hashed and toggles attendance",()=>{
-  assert.match(source,/attendance-card\\/scan/);
-  assert.match(source,/attendanceCardHash/);
-  assert.match(source,/"cardCodeHash"=\\$\\{hash\\}/);
-  assert.match(source,/syncOperatorWorkforceAttendance\\(tx,req,store.id,"TOGGLE"/);
-  assert.match(source,/method:"POS_CARD"/);
-  assert.match(source,/now-new Date\\(open.startedAt\\)<60000/);
+  assert.ok(source.includes('attendance-card/scan'));
+  assert.ok(source.includes("attendanceCardHash"));
+  assert.ok(source.includes('"cardCodeHash"=${hash}'));
+  assert.ok(source.includes('syncOperatorWorkforceAttendance(tx,req,store.id,"TOGGLE"'));
+  assert.ok(source.includes('method:"POS_CARD"'));
+  assert.ok(source.includes("now-new Date(open.startedAt)<60000"));
 });
 
 test("POS exposes a compact card-work launcher without replacing the cashier",()=>{
-  assert.match(panel,/PosAttendanceCardModal/);
-  assert.match(panel,/Κάρτα εργασίας/);
-  assert.match(panel,/Barcode<\\/button>/);
+  assert.ok(panel.includes("PosAttendanceCardModal"));
+  assert.ok(panel.includes("Κάρτα εργασίας"));
+  assert.ok(panel.includes("> Barcode</button>"));
 });
