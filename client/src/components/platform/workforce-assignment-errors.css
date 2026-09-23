@@ -104,3 +104,72 @@
     gap: 12px;
   }
 }
+
+
+/* Workforce schedule modal: use the available screen and override legacy week-grid rules. */
+.workforce-v2-dialog {
+  width: min(1540px, calc(100vw - 24px)) !important;
+  max-width: none !important;
+  max-height: 96vh !important;
+  padding: clamp(14px, 2vw, 24px) !important;
+}
+
+section.workforce-week-detail {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+}
+
+section.workforce-week-detail article.workforce-week-day {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+}
+
+section.workforce-week-detail article.workforce-week-day > div.workforce-week-day-shifts {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+section.workforce-week-detail .workforce-week-day-shifts > div.workforce-week-shift {
+  display: grid !important;
+  grid-template-columns: minmax(125px, .75fr) minmax(140px, .9fr) minmax(210px, 1.35fr) minmax(190px, 1.2fr) !important;
+  gap: 18px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 15px 18px !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+}
+
+section.workforce-week-detail .workforce-week-shift > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+@media (max-width: 900px) {
+  section.workforce-week-detail .workforce-week-day-shifts > div.workforce-week-shift {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .workforce-v2-dialog {
+    width: calc(100vw - 8px) !important;
+    padding: 10px !important;
+  }
+
+  section.workforce-week-detail .workforce-week-day-shifts > div.workforce-week-shift {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
