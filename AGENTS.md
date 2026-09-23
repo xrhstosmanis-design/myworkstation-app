@@ -54,7 +54,17 @@ from the POS creates the correct single BackOffice draft automatically. A POS or
 BackOffice refresh, status polling, reopening the draft, a second upload, or a
 startup reread may be used only for diagnosis and must never be reported as the
 acceptance result. The accepted draft must preserve the one settlement, one AI
-job and one purchase draft identities and must reconcile every printed row,
-discount, tax group and the invoice total before approval. No approval,
+job and one purchase draft identities. The owner's standing LAB rule permits
+at most **two identified uncertain or incorrect product lines per invoice**
+(including a 20-product invoice), provided they are present in the single
+automatically created draft, visibly marked **ΠΡΟΣ ΕΛΕΓΧΟ** with a reason,
+and corrected by the operator before approval. Zero recognized products,
+missing/duplicated physical rows, three or more uncertain lines, or any
+unresolved product cannot be called LAB PASS. A header-total mismatch may
+remain visible in the unapproved draft for correction; it must never silently
+mark an uncertain line as confirmed. Do not replace this review rule with a
+blanket exact-total gate in another page, module, branch or conversation.
+Every printed row, discount, tax group and invoice total must reconcile before
+approval. No approval,
 finalization, stock, fiscal, accounting or myDATA mutation is part of the LAB
 acceptance test.

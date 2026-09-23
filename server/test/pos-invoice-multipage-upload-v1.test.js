@@ -175,7 +175,7 @@ test("multipage OCR sends all ordered pages through one invoice analysis",()=>{
   assert.match(background,/ai-recheck.*additionalPageJobIds/s);
   assert.match(background,/const verifiedProductLines=verifiedPrintedTableForPersistence/);
   assert.match(background,/const verifiedAtOwnTotal=sourceTableGross>0\?verifiedPrintedTableForPersistence/);
-  assert.match(background,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|finalizeV244ProductLines/);
+  assert.match(background,/const productLines=verifiedProductLines\|\|verifiedAtOwnTotal\|\|reviewableProductLines\|\|finalizeV244ProductLines/);
   assert.match(background,/productLines/);
   assert.match(background,/additionalPageJobIds/);
   assert.match(aiRecheck,/const fileParts=pageJobs\.map/);

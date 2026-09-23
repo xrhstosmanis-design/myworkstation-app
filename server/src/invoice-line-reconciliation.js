@@ -65,3 +65,22 @@ export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tol
   // a malformed replay could otherwise turn printed VAT into zero.
   return lines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),discount1:Number(line.discount1||0),discount2:Number(line.discount2||0),discount3:Number(line.discount3||0),netAmount:round2(line.netAmount),exciseTotal:round2(line.exciseTotal),vatRate:Math.round(Number(line.vatRate||0)),vatAmount:round2(Number(line.grossAmount||0)-Number(line.netAmount||0)-Number(line.exciseTotal||0)),grossAmount:round2(line.grossAmount)}));
 }
+
+// An identified minority of uncertain rows can be reviewed in an unapproved
+// draft. The other rows must still carry independent printed-column proof.
+// Missing rows, an empty read, or three uncertain rows cannot use this path.
+export function reviewablePrintedTableForPersistence(productLines,invoiceTotal,tolerance=0.05){
+  const lines=Array.isArray(productLines)?productLines:[];
+  if(lines.length<3||!(Number(invoiceTotal)>0))return null;
+  const uncertain=lines.filter(line=>line?.sourceColumnsVerified!==true);
+  if(uncertain.length<1||uncertain.length>2)return null;
+  if(lines.some(line=>{
+    if(line?.sourceColumnsVerified===true)return !verifiedRowMathIsIntact(line);
+    return !String(line?.rawText||"").trim()||!String(line?.description||"").trim()||
+      !(Number(line?.quantity)>0&&Number(line?.unitCost)>0&&Number(line?.netAmount)>0&&Number(line?.grossAmount)>0)||
+      !CANONICAL_VAT.has(Math.round(Number(line?.vatRate)));
+  }))return null;
+  const gross=round2(lines.reduce((sum,line)=>sum+Number(line.grossAmount||0),0));
+  if(Math.abs(gross-round2(invoiceTotal))<=tolerance)return null;
+  return lines.map(line=>({...line,sourceColumnsVerified:line.sourceColumnsVerified===true}));
+}

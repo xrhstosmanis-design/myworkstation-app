@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
-import {claimsCompletePrintedTable,reconcileInvoiceLines,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
+import {claimsCompletePrintedTable,reconcileInvoiceLines,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
@@ -209,19 +209,20 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           const verifiedProductLines=verifiedPrintedTableForPersistence(sourceProductLines,handoff.totalGross);
           const sourceTableGross=round2(sourceProductLines.reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
           const verifiedAtOwnTotal=sourceTableGross>0?verifiedPrintedTableForPersistence(sourceProductLines,sourceTableGross):null;
+          const reviewableProductLines=requiresCompletePrintedTable?reviewablePrintedTableForPersistence(sourceProductLines,handoff.totalGross):null;
           // A complete printed table may be perfectly valid while its header
           // total is still different. Keep those rows so BackOffice can show
           // a reviewable draft; the intake route records the difference and
           // blocks approval/stock until the operator corrects it. Reject only
           // a table whose own row arithmetic is corrupted.
-          if(claimsCompletePrintedTable(sourceProductLines)&&!verifiedProductLines&&!verifiedAtOwnTotal)throw new Error("Οι επαληθευμένες τυπωμένες γραμμές αλλοιώθηκαν πριν από την καταχώριση (ποσότητα, έκπτωση ή ΦΠΑ). Το πρόχειρο δεν ενημερώθηκε.");
+          if(claimsCompletePrintedTable(sourceProductLines)&&!verifiedProductLines&&!verifiedAtOwnTotal&&!reviewableProductLines)throw new Error("Οι επαληθευμένες τυπωμένες γραμμές αλλοιώθηκαν πριν από την καταχώριση (ποσότητα, έκπτωση ή ΦΠΑ). Το πρόχειρο δεν ενημερώθηκε.");
           // Do not run a verified printed table through the legacy finalizer:
           // it can reinterpret printed piece units or discounts. A table that
           // is valid on its own arithmetic is safe to retain even when the
           // invoice header total needs manual reconciliation.
-          const productLines=verifiedProductLines||verifiedAtOwnTotal||finalizeV244ProductLines(sourceProductLines);
+          const productLines=verifiedProductLines||verifiedAtOwnTotal||reviewableProductLines||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
-          if(requiresCompletePrintedTable&&Math.abs(reconcileInvoiceLines(productLines,handoff.totalGross).grossTotal-Number(handoff.totalGross||0))>POS_HANDOFF_TOLERANCE){
+          if(requiresCompletePrintedTable&&!reviewableProductLines&&Math.abs(reconcileInvoiceLines(productLines,handoff.totalGross).grossTotal-Number(handoff.totalGross||0))>POS_HANDOFF_TOLERANCE){
             throw new Error("Η κεντρική εκμάθηση προμηθευτή απαιτεί πλήρη συμφωνία των τυπωμένων γραμμών με το σύνολο τιμολογίου. Το πρόχειρο διατηρήθηκε χωρίς λανθασμένη παραγγελία.");
           }
           if(handoff.replaceExistingDraft){
