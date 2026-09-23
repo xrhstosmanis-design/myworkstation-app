@@ -7,8 +7,20 @@ import {
   audit,cleanText,contextFor,employeeInclude,employeeResponse,isSuperAdmin,loadEmployee,serializeEmployee,storesForContext
 } from "./workforce-v2-access.js";
 import {confirmed,employeeSchema,ensureEmployeeNameAvailable,validateEmployeeReferences} from "./workforce-v2-validation.js";
+import {createWorkCardCode,workCardHash,workCardLast4} from "../workforce-card-code.js";
 
 const router=Router({mergeParams:true});
+
+async function ensureLegacyEmployee(tx,employee,storeId){
+  if(employee.legacyEmployeeId){
+    const legacy=await tx.employee.findFirst({where:{id:employee.legacyEmployeeId,storeId},select:{id:true}});
+    if(legacy)return legacy.id;
+    throw Object.assign(new Error("Η κάρτα εκδίδεται μόνο από το κατάστημα βάσης του εργαζομένου."),{status:409});
+  }
+  const row=await tx.employee.create({data:{fullName:employee.fullName,phone:employee.phone||null,email:employee.email||null,position:"Εργαζόμενος",storeId,active:true},select:{id:true}});
+  await tx.workforceEmployee.update({where:{id:employee.id},data:{legacyEmployeeId:row.id}});
+  return row.id;
+}
 
 async function syncPosCredential(tx,employee,storeId,pinHash,actorId){
   if(!pinHash||!employee?.id||!storeId)return;
@@ -51,6 +63,31 @@ router.get("/:employeeId",async(req,res,next)=>{
     const context=await contextFor(req),employee=await loadEmployee(req,context,req.params.employeeId);
     const stores=await prisma.store.findMany({where:{companyId:context.company.id},select:{id:true,name:true}});
     res.json({item:serializeEmployee(employee,new Map(stores.map(store=>[store.id,store])))});
+  }catch(error){next(error)}
+});
+
+router.post("/:employeeId/work-card",async(req,res,next)=>{
+  try{
+    const context=await contextFor(req),employee=await loadEmployee(req,context,req.params.employeeId);
+    if(!employee.active)throw Object.assign(new Error("Η κάρτα εκδίδεται μόνο για ενεργό εργαζόμενο."),{status:409});
+    if(employee.baseStoreId!==context.store.id)throw Object.assign(new Error("Άνοιξε το κατάστημα βάσης του εργαζομένου για να εκτυπώσεις την κάρτα."),{status:409});
+    const secret=process.env.WORKFORCE_CARD_SECRET||process.env.JWT_SECRET;
+    const result=await prisma.$transaction(async tx=>{
+      const table=await tx.$queryRaw`SELECT to_regclass('public."StoreOperatorCredential"')::text AS "tableName"`;
+      if(!table[0]?.tableName)throw Object.assign(new Error("Η υπηρεσία καρτών δεν είναι ακόμη διαθέσιμη."),{status:503});
+      const legacyEmployeeId=await ensureLegacyEmployee(tx,employee,context.store.id);
+      const cardCode=createWorkCardCode({companyId:context.company.id,storeId:context.store.id,employeeId:legacyEmployeeId,secret});
+      const cardCodeHash=workCardHash(cardCode),cardCodeLast4=workCardLast4(cardCode);
+      const existing=(await tx.$queryRaw`SELECT "id","cardCodeHash" FROM "StoreOperatorCredential" WHERE "companyId"=${context.company.id} AND "storeId"=${context.store.id} AND "employeeId"=${legacyEmployeeId} LIMIT 1`)[0];
+      if(existing?.cardCodeHash&&existing.cardCodeHash!==cardCodeHash){
+        throw Object.assign(new Error("Ο εργαζόμενος έχει ήδη διαφορετική κάρτα. Δεν έγινε αντικατάσταση."),{status:409});
+      }
+      if(existing)await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "displayName"=${employee.fullName},"cardCodeHash"=${cardCodeHash},"cardCodeLast4"=${cardCodeLast4},"active"=TRUE,"updatedAt"=NOW() WHERE "id"=${existing.id}`;
+      else await tx.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","cardCodeHash","cardCodeLast4","active","createdBy","createdAt","updatedAt") VALUES (${crypto.randomUUID()},${context.company.id},${context.store.id},${legacyEmployeeId},${employee.fullName},'EMPLOYEE',${cardCodeHash},${cardCodeLast4},TRUE,${req.user?.id||null},NOW(),NOW())`;
+      await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_WORK_CARD_PREPARED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,after:{employeeId:employee.id,legacyEmployeeId,cardLast4:cardCodeLast4,reprint:Boolean(existing)},reason:"Προετοιμασία εκτυπώσιμης κάρτας εργασίας"});
+      return {cardCode,cardCodeLast4,reprint:Boolean(existing)};
+    });
+    res.json({employee:{id:employee.id,fullName:employee.fullName},store:{id:context.store.id,name:context.store.name},...result});
   }catch(error){next(error)}
 });
 
