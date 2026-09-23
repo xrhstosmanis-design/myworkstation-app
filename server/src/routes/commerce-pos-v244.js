@@ -222,7 +222,12 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           // invoice header total needs manual reconciliation.
           const productLines=verifiedProductLines||verifiedAtOwnTotal||reviewableProductLines||finalizeV244ProductLines(sourceProductLines);
           if(!productLines.length)throw new Error("Δεν βρέθηκαν ασφαλείς γραμμές προϊόντων στο τιμολόγιο.");
-          if(requiresCompletePrintedTable&&!reviewableProductLines&&Math.abs(reconcileInvoiceLines(productLines,handoff.totalGross).grossTotal-Number(handoff.totalGross||0))>POS_HANDOFF_TOLERANCE){
+          // A table verified against its own printed row totals can enter a
+          // DRAFT even when the independent invoice header disagrees. Keep
+          // the mismatch visible for operator correction; never force a row
+          // amount to make the header fit. Only heuristic/unverified output
+          // remains subject to this supplier-specific hard stop.
+          if(requiresCompletePrintedTable&&!verifiedAtOwnTotal&&!reviewableProductLines&&Math.abs(reconcileInvoiceLines(productLines,handoff.totalGross).grossTotal-Number(handoff.totalGross||0))>POS_HANDOFF_TOLERANCE){
             throw new Error("Η κεντρική εκμάθηση προμηθευτή απαιτεί πλήρη συμφωνία των τυπωμένων γραμμών με το σύνολο τιμολογίου. Το πρόχειρο διατηρήθηκε χωρίς λανθασμένη παραγγελία.");
           }
           if(handoff.replaceExistingDraft){
