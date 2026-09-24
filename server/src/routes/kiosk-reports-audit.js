@@ -215,6 +215,9 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         AND (${storeId}::text IS NULL OR m."storeId"=${storeId})
         AND (${text}::text IS NULL OR COALESCE(p."name",'') ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR COALESCE(m."note",'') ILIKE ${text} OR COALESCE(m."movementType",'') ILIKE ${text})
       ORDER BY m."createdAt" DESC LIMIT 10000`;
+    const invoiceIds=[...new Set(operatorRows.flatMap(row=>Array.isArray(row.details?.allocations)?row.details.allocations.map(item=>item.purchaseDocumentId).filter(Boolean):[]))];
+    const invoiceRows=invoiceIds.length?await prisma.$queryRaw`SELECT "id","documentNumber" FROM "PurchaseDocument" WHERE "id"=ANY(${invoiceIds}::text[]) AND (${companyId}::text IS NULL OR "companyId"=${companyId})`:[];
+    const invoiceNumbers=new Map(invoiceRows.map(row=>[row.id,row.documentNumber]));
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),financialDetails:{amount:n(r.amount)},sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
@@ -254,7 +257,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const bankDifference=Math.abs(n(details.difference));
       const eventAmount=bankEvent?(r.eventType==="BANK_DEPOSIT_PROOF_DISCREPANCY"||r.eventType==="BANK_LEDGER_DISCREPANCY"?bankDifference:n(details.proofAmount??details.expectedAmount??details.amount)):expenseEvent||supplierEvent?n(details.amount):r.eventType==="POS_SALE_COMPLETED"?n(details.total??details.amount):n(details.shortage);
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
-        ?details.allocations.map(item=>`${item.documentNumber||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
+        ?details.allocations.map(item=>`${item.documentNumber||invoiceNumbers.get(item.purchaseDocumentId)||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
       const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED",invoiceDescription=invoiceAuditDescription(r.eventType,details);
       const description=invoiceDescription
