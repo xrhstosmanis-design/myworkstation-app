@@ -2,6 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-safe.js";
 
+test("printed ΦΑΚ columns repair a shifted decimal and preserve both printed discounts",()=>{
+  const rows=[
+    {code:"81363T",description:"JUMBO 85gr",rawText:"81363T JUMBO 85gr ΦΑΚ 3,00 0,970 0,00 0,970 2,91 30,00 0,87 2,04 13",quantity:3,unitCost:970,discount1:99.93,netAmount:2.04,grossAmount:2.31,vatRate:13},
+    {code:"81987T",description:"JUMBO 250gr",rawText:"81987T JUMBO 250gr ΦΑΚ 1,00 2,500 0,42 2,080 2,08 30,00 0,62 1,46 13",quantity:1,unitCost:2500,discount1:99.94,netAmount:1.46,grossAmount:1.65,vatRate:13}
+  ];
+  const [a,b]=finalizeV244ProductLines(rows);
+  assert.equal(a.unitCost,0.97);assert.equal(a.discount2,30);assert.equal(a.netAmount,2.04);
+  assert.equal(b.unitCost,2.5);assert.equal(b.discount1Amount,0.42);assert.equal(b.discount2Amount,0.62);assert.equal(b.netAmount,1.46);
+  const unrelated=finalizeV244ProductLines([{...rows[0],rawText:"81363T JUMBO 85gr",unitCost:0.97,discount1:30}])[0];
+  assert.equal(unrelated.unitCost,0.97);
+});
+
 test("normalizes AI lines to the server V2.4.4 contract",()=>{
   const [line]=finalizeV244ProductLines([{rawText:"X".repeat(5000),code:"1".repeat(100),barcode:"2".repeat(100),description:"ΔΟΚΙΜΗ ".repeat(100),quantity:2,unit:"ΜΟΝΑΔΑ".repeat(20),unitsPerPackage:200000,unitCost:3,initialAmount:6,discount1:914.69,discount1Amount:2,discount2:Infinity,discount2Amount:0,discount3:0,discount3Amount:0,netAmount:4,vatRate:124,grossAmount:8.96,confidence:180,packRule:"R".repeat(200)}]);
   assert.equal(line.rawText.length,4000);
