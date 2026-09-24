@@ -547,7 +547,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await tx.$executeRaw`
         INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'SUPPLIER_SETTLEMENT_CONFIRMED',${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations,status:initialStatus,note:"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
+        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'SUPPLIER_SETTLEMENT_CONFIRMED',${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations.map(row=>({...row,documentNumber:documents.find(document=>document.id===row.purchaseDocumentId)?.documentNumber||null})),status:initialStatus,note:"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
       `;
     }
     return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId,bankAccount};
