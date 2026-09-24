@@ -912,26 +912,6 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
   }catch(error){next(error)}
 });
 
-// One explicit operator action retries the original image and replaces only
-// the linked, unapproved draft. The worker requires complete printed-table
-// proof before it is allowed to persist any corrected line.
-router.post("/ai-reader/jobs/:jobId/ai-correct-draft",requireCompanyModule("AI_READER"),async(req,res,next)=>{
-  try{
-    const rows=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."purchaseDocumentId",j."resultJson",d."status" AS "draftStatus",d."sourceType" AS "draftSource" FROM "AiReaderJob" j JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
-    const job=rows[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε συνδεδεμένο προσχέδιο τιμολογίου."});
-    if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==String(job.storeId))return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    const handoff=job.resultJson?.posHandoff;
-    if(job.status!=="POS_FAILED"||job.draftStatus!=="DRAFT"||job.draftSource!=="POS_OCR_DRAFT"||!handoff?.pageJobIds?.includes(job.id))return res.status(409).json({error:"Η διόρθωση AI επιτρέπεται μόνο σε αποτυχημένη ανάγνωση με ενεργό προσχέδιο από το POS."});
-    const marker={mode:"RECONCILIATION_REREAD",strategy:"USER_AI_CORRECTION_V1",trigger:"USER_BUTTON",attemptedAt:new Date().toISOString()};
-    const nextHandoff={...handoff,resumeStoredProductLines:false,replaceExistingDraft:true,aiCorrectExistingDraft:true};
-    const claimed=await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_REPROCESSING',"status"='POS_REPROCESSING',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posReprocess:marker,posHandoff:nextHandoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} AND "status"='POS_FAILED'`;
-    if(!claimed)return res.status(409).json({error:"Η διόρθωση εκτελείται ήδη ή άλλαξε η κατάσταση του τιμολογίου."});
-    const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-    await enqueueFastBackground({companyId:req.user.companyId,storeId:job.storeId,jobId:job.id,publicOrigin});
-    res.status(202).json({ok:true,jobId:job.id,status:"POS_REPROCESSING",message:"Η διόρθωση AI ξεκίνησε. Το προσχέδιο διατηρείται μέχρι να επαληθευτούν όλες οι γραμμές."});
-  }catch(error){next(error)}
-});
-
 router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),async(req,res,next)=>{
   try{
     const rows=await prisma.$queryRaw`SELECT "id","storeId","stage","status","purchaseDocumentId","resultJson","updatedAt" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;

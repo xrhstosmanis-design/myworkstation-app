@@ -114,9 +114,9 @@ test("MANTZILAS rechecks Azure candidate rows against the corrected total and re
 
 test("MANTZILAS uses one complete verifier instead of stacking redundant provider passes",()=>{
   assert.match(aiRecheck,/const mantzilasSingleVerifierPath=preferCentralMantzilas&&parsed\.mantzilasCentralFastPath===true/);
-  assert.match(aiRecheck,/const needsTablePass=!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback/);
-  assert.match(aiRecheck,/if\(needsTablePass\|\|\(!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
-  assert.match(aiRecheck,/if\(!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
+  assert.match(aiRecheck,/const needsTablePass=!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback/);
+  assert.match(aiRecheck,/if\(needsTablePass\|\|\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
+  assert.match(aiRecheck,/if\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
   assert.match(aiRecheck,/reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs\.length===1\?invoiceTotal:0/);
   assert.match(discountVerifier,/export function buildCompletePrintedTableCandidate/);
   assert.match(discountVerifier,/const complete=buildCompletePrintedTableCandidate\(candidates,expectedGrossTotal,diagnostics\.vatSummary\)/);
@@ -292,8 +292,8 @@ test("additional page jobs are locked individually and internal intake errors id
 
 
 test("empty initial invoice extraction triggers the table recovery pass",()=>{
-  assert.match(aiRecheck,/const needsTablePass=!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
-  assert.match(aiRecheck,/if\(needsTablePass\|\|\(!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
+  assert.match(aiRecheck,/const needsTablePass=!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
+  assert.match(aiRecheck,/if\(needsTablePass\|\|\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
   assert.match(aiRecheck,/const recovered=Array\.isArray\(tableParsed\.productLines\)/);
 });
 
@@ -308,7 +308,7 @@ test("failed unified AI recovers every page through Azure without adding carry-f
   assert.match(aiRecheck,/parsed\.openAiUnifiedRecovery="AZURE_ALL_PAGES"/);
   assert.match(aiRecheck,/timeout=isProviderTimeout\(failure\)/);
   assert.match(aiRecheck,/AZURE_TIMEOUT\|TimeoutError\|aborted due to timeout/);
-  assert.match(aiRecheck,/if\(!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
+  assert.match(aiRecheck,/if\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
   assert.match(aiRecheck,/catch\{discountDiagnostics\.providerFailures=/);
 });
 
@@ -316,7 +316,7 @@ test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
   assert.match(aiRecheck,/import \{callAzure,normalizeAzure\} from ".\/commerce-azure-invoice-reader\.js"/);
   assert.match(aiRecheck,/const hasSafeLine=parsed\.productLines\.some/);
   assert.match(aiRecheck,/needsAzureFields=!hasSafeLine\|\|totalMismatch\|\|inconsistentRows\|\|parsed\.productLines\.some\(line=>Number\(line\?\.vatRate\|\|0\)<=0\)/);
-  assert.match(aiRecheck,/if\(!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
+  assert.match(aiRecheck,/if\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process\.env\.AZURE_DOCUMENT_INTELLIGENCE_KEY\)/);
   assert.match(aiRecheck,/for\(const \[pageIndex,page\] of pageJobs\.entries\(\)\)/);
   assert.match(aiRecheck,/azureRecovered\.push\(\.\.\.\(Array\.isArray\(azure\?\.productLines\)/);
   assert.match(aiRecheck,/parsed\.productLines=mergeRecoveredLines\(parsed\.productLines,azureRecovered\)/);

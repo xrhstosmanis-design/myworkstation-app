@@ -20,9 +20,7 @@ test('2621650: only a complete printed table can replace the shifted POS draft',
   const wrongAmount=structuredClone(rows);wrongAmount[7].netAmount=833.25;
   assert.equal(buildCompletePrintedTableCandidate(wrongAmount,1359.66,footer),null);
   const route=await readFile(new URL('../src/routes/commerce-pos-v244.js',import.meta.url),'utf8');
-  const section=route.slice(route.indexOf('router.post("/ai-reader/jobs/:jobId/ai-correct-draft"'),route.indexOf('router.get("/ai-reader/fast-status/:jobId"'));
-  assert.match(section,/job\.status!=="POS_FAILED"/);
-  assert.match(section,/job\.draftStatus!=="DRAFT"/);
-  assert.match(section,/job\.draftSource!=="POS_OCR_DRAFT"/);
-  assert.match(route,/handoff\.aiCorrectExistingDraft===true&&!verifiedProductLines/);
+  const panel=await readFile(new URL('../../client/src/components/commerce/AiReaderPanel.jsx',import.meta.url),'utf8');
+  assert.doesNotMatch(route,/router\.post\("\/ai-reader\/jobs\/:jobId\/ai-correct-draft"/);
+  assert.doesNotMatch(panel,/\/ai-correct-draft|Διόρθωση προσχεδίου με AI/);
 });

@@ -434,6 +434,27 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.productLines=parsed.productLines.map(line=>recoverPrintedRetailColumns(line,printedDocumentText));
   const initialLinesTotal=lineGrossTotal(parsed.productLines),invoiceTotal=money2(parsed.totalGross||0);
   const totalMismatch=invoiceTotal>0&&Math.abs(initialLinesTotal-invoiceTotal)>TOTAL_TOLERANCE+0.000001;
+  // A supplemental table or Azure result must not be merged into an already
+  // mismatched one-page table before the independent image verifier gets its
+  // first chance to reconstruct the complete printed table. Otherwise the
+  // same physical rows can enter the draft under different OCR codes.
+  let earlyCompleteTableAttempted=false,earlyCompleteTableRecovered=false;
+  if(totalMismatch&&pageJobs.length===1&&!isMantzilasInvoice(parsed)&&parsed?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch!==true){
+    earlyCompleteTableAttempted=true;
+    const verified=[];
+    try{
+      const evidence=await verifyInvoiceDiscounts({contentData:job.contentData,mimeType:job.mimeType,filename:job.filename,productLines:verified,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:true,expectedGrossTotal:invoiceTotal});
+      if(evidence.completePrintedTableRecovered){
+        parsed.productLines=verified;
+        if(Array.isArray(evidence.vatSummary)&&evidence.vatSummary.length){
+          parsed.vatSummary=evidence.vatSummary;
+          printedDocumentText=[parsed.rawText,localRawText,vatSummaryText(evidence.vatSummary)].filter(Boolean).join("\n");
+        }
+        parsed.earlyCompletePrintedTableRecovered=true;
+        earlyCompleteTableRecovered=true;
+      }
+    }catch{parsed.earlyCompletePrintedTableError="PROVIDER_FAILURE"}
+  }
   const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
   const partialNumericMissing=parsed.productLines.some(line=>Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0||Number(line.netAmount||0)<=0);
   // The MANTZILAS verifier below already rereads every physical row, rebuilds
@@ -442,9 +463,9 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // and then Azure again before that verifier made one attempt exceed the
   // background request budget and caused repeated six-minute POS_PROCESSING.
   const mantzilasSingleVerifierPath=preferCentralMantzilas&&parsed.mantzilasCentralFastPath===true;
-  const needsTablePass=!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
+  const needsTablePass=!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&(parsed.productLines.length===0||allNumericMissing||partialNumericMissing||totalMismatch);
   const inconsistentRows=parsed.productLines.some(line=>!line.sourceColumnsVerified&&Math.abs(Number(line.quantity||0)*Number(line.unitCost||0)*[line.discount1,line.discount2,line.discount3].reduce((f,d)=>f*(1-Number(d||0)/100),1)-Number(line.netAmount||0))>0.05);
-  if(needsTablePass||(!mantzilasSingleVerifierPath&&inconsistentRows)){
+  if(needsTablePass||(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&inconsistentRows)){
     failureStage="table-recheck";
     const anchors=parsed.productLines.map((line,index)=>`${index+1}. ${line.code||""} ${line.description||""}`.trim()).join("\n");
     const tablePrompt=`Είσαι εξειδικευμένος οπτικός ελεγκτής ΠΙΝΑΚΑ ΕΙΔΩΝ τιμολογίου. Κοίτα τον πίνακα προϊόντων και επέστρεψε ΟΛΕΣ τις πραγματικές σειρές προϊόντων που βλέπεις, όχι μόνο όσες υπάρχουν στα anchors. Αγνόησε κεφαλίδες, στοιχεία εταιρειών και τράπεζες/IBAN. Στο rawText αντέγραψε ολόκληρη τη φυσική σειρά κάθε προϊόντος. Στο vatSummary αντέγραψε χωριστά μόνο τις γραμμές της ΑΝΑΛΥΣΗΣ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ως rate, taxable, vat και gross.
@@ -477,7 +498,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   // a last recovery path only: the unified OpenAI pass and table pass remain
   // primary, and no empty invoice may pass through.
   const hasSafeLine=parsed.productLines.some(line=>String(line?.description||line?.rawText||"").trim()&&Number(line?.quantity||0)>0&&Number(line?.unitCost||0)>0),needsAzureFields=!hasSafeLine||totalMismatch||inconsistentRows||parsed.productLines.some(line=>Number(line?.vatRate||0)<=0);
-  if(!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+  if(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed.azureUnifiedFallback&&needsAzureFields&&process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
     failureStage="azure-field-recovery";
     const azureRecovered=[];
     for(const [pageIndex,page] of pageJobs.entries()){
@@ -585,7 +606,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     const needsEmptyCompleteTableRead=(mantzilasInvoice||supplierRequiresCompletePrintedTable||genericSinglePageMismatch)
       &&(requiresCompleteReverification||genericSinglePageMismatch)
       &&parsed.productLines.length===0;
-    if(!unresolved.length&&!needsEmptyCompleteTableRead)continue;
+    if((earlyCompleteTableAttempted&&!earlyCompleteTableRecovered&&genericSinglePageMismatch)||(!unresolved.length&&!needsEmptyCompleteTableRead))continue;
     try{
       const completePrintedTable=mantzilasInvoice||supplierRequiresCompletePrintedTable||genericSinglePageMismatch;
       // The full-page verifier replaces its input array when it reconstructs
@@ -611,10 +632,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   parsed.discountMathVerification=discountDiagnostics;
   if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>["AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED","MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED"].includes(line.quantitySource)?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
 
-  const mixedPrintedVat=recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
+  const mixedPrintedVat=earlyCompleteTableRecovered?{lines:parsed.productLines,recovered:false}:recoverMixedVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=mixedPrintedVat.lines;
   if(mixedPrintedVat.recovered){parsed.mixedPrintedVatSummaryRecovered=true;parsed.mixedPrintedVatSummary=mixedPrintedVat.summary}
-  const printedVat=recoverVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
+  const printedVat=earlyCompleteTableRecovered?{lines:parsed.productLines,recovered:false}:recoverVatFromPrintedSummary(parsed.productLines,printedDocumentText,invoiceTotal);
   parsed.productLines=printedVat.lines;
   if(printedVat.recovered){
     parsed.printedVatSummaryRecovered=true;
