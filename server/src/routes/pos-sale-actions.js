@@ -7,6 +7,16 @@ const router=Router();
 let readyPromise;
 const money=value=>Number(value||0);
 const actorName=req=>req.user?.fullName||req.user?.email||"Χρήστης";
+async function requestTerminal(req){
+  const test=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||"").trim():"";
+  if(test)return test.toUpperCase().slice(0,120);
+  if(req.user?.tokenType==="STORE_OPERATOR"){
+    if(req.user.terminalPos)return String(req.user.terminalPos).trim().toUpperCase().slice(0,120);
+    const rows=await prisma.$queryRaw`SELECT COALESCE(NULLIF(TRIM(p."terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" p WHERE p."companyId"=${req.user.companyId} AND p."storeId"=${req.user.storeId} AND p."employeeId"=${req.user.employeeId} LIMIT 1`;
+    return String(rows[0]?.terminalPos||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+  }
+  return String(req.headers?.["x-mws-terminal-pos"]||"MAIN").trim().toUpperCase().slice(0,120)||"MAIN";
+}
 
 export async function ensurePosSaleActionSchema(){
   if(!readyPromise){
@@ -114,7 +124,7 @@ router.post("/stores/:storeId/sales/:saleId/delayed",async(req,res,next)=>{
 const reverseSchema=z.object({kind:z.enum(["CANCEL","RETURN"]),reason:z.string().trim().min(3).max(500)});
 router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
   try{
-    const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{});
+    const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{}),terminalPos=await requestTerminal(req);
     // returnItems is enforced once by store-pos-catalog from the central BackOffice operator profile.
     const result=await prisma.$transaction(async tx=>{
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`reverse:${req.params.saleId}`})) IS NULL) AS locked`;
@@ -123,9 +133,11 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       if(sale.source!=="POS"||sale.status!=="COMPLETED"){const e=new Error("Ακύρωση/επιστροφή επιτρέπεται μόνο σε ολοκληρωμένη αρχική POS πώληση.");e.status=409;throw e}
       if(sale.fiscalStatus!=="NON_FISCAL"){const e=new Error("Η λειτουργία TEST δεν ακυρώνει φορολογικά εκδομένη συναλλαγή.");e.status=409;throw e}
       if(sale.reversalState){const e=new Error(`Η πώληση έχει ήδη ${sale.reversalState==="CANCEL"?"ακυρωθεί":"επιστραφεί"}.`);e.status=409;throw e}
-      const open=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
+      const open=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
       if(!open){const e=new Error("Δεν υπάρχει ανοιχτή βάρδια για την αντίστροφη εγγραφή.");e.status=409;throw e}
       const originalPattern=`%POS πώληση ${sale.id} ·%`;
+      const originalShift=(await tx.$queryRaw`SELECT s."terminalPos" FROM "StoreTransaction" st JOIN "CashShiftSession" s ON s."id"=st."sessionId" AND s."companyId"=st."companyId" AND s."storeId"=st."storeId" WHERE st."companyId"=${req.user.companyId} AND st."storeId"=${store.id} AND COALESCE(st."description",'') LIKE ${originalPattern} ORDER BY st."occurredAt" ASC LIMIT 1`)[0];
+      if(!originalShift||originalShift.terminalPos!==terminalPos){const e=new Error("Η πώληση ανήκει σε άλλο ταμείο. Κάνε την επιστροφή από το σωστό POS.");e.status=409;throw e}
       if(body.kind==="CANCEL"){
         const sameShift=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "sessionId"=${open.id} AND COALESCE("description",'') LIKE ${originalPattern} LIMIT 1`;
         if(!sameShift[0]){const e=new Error("Η Ακύρωση επιτρέπεται μόνο όσο η αρχική πώληση βρίσκεται στην τρέχουσα ανοιχτή βάρδια. Για παλιότερη πώληση χρησιμοποίησε Επιστροφή.");e.status=409;throw e}
