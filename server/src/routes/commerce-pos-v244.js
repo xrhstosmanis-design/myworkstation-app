@@ -610,8 +610,12 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const parsedDocumentDate=String(parsed.documentDate||"");
     const documentDate=/^\d{4}-\d{2}-\d{2}$/.test(parsedDocumentDate)?parsedDocumentDate:String(azureHeaderFallback?.documentDate||"");
     const parsedTotalGross=round2(parsed.totalGross||0);
-    const mantzilasInvoice=cleanTaxId(supplier?.taxId||supplierTaxId)==="081565488"||/ΜΑΝΤΖΙΛΑΣ|MANTZILAS/.test(norm(supplier?.name||supplierName));
-    const verifiedVatSummaryTotal=mantzilasInvoice?recoverVatSummaryInvoiceTotal(azureRawText):0;
+    // A printed VAT-analysis TOTALS equation belongs to the invoice rather
+    // than an adjacent receipt or the customer's running balance. Apply the
+    // existing cent-balanced footer proof to every supplier when Azure has
+    // actually transcribed it; an absent/unbalanced footer still falls back
+    // to the FAST header and leaves the normal review path intact.
+    const verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal(azureRawText);
     const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
