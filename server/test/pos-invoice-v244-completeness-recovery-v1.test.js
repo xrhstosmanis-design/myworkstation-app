@@ -8,8 +8,9 @@ const commerceSource=await readFile(new URL("../src/routes/commerce-v1.js",impor
 test("V2.4.4 table pass is triggered by invoice total mismatch",()=>{
   assert.match(source,/TOTAL_TOLERANCE=0\.05/);
   assert.match(source,/totalMismatch=invoiceTotal>0&&Math\.abs\(initialLinesTotal-invoiceTotal\)>TOTAL_TOLERANCE/);
-  assert.match(source,/needsTablePass=!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
-  assert.match(source,/if\(needsTablePass\|\|\(!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
+  assert.match(source,/needsTablePass=!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&\(parsed\.productLines\.length===0\|\|allNumericMissing\|\|partialNumericMissing\|\|totalMismatch\)/);
+  assert.match(source,/if\(needsTablePass\|\|\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&inconsistentRows\)\)/);
+  assert.match(source,/if\(evidence\.completePrintedTableRecovered\)\{\s*parsed\.productLines=verified/);
 });
 
 test("V2.4.4 recovery asks for all visible product rows and can append missing rows",()=>{
