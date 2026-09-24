@@ -47,7 +47,10 @@ function validatePrintedEconomics(candidate){
   for(const pair of pairs){
     const percent=Math.max(0,Number(pair.percent||0)),amount=Math.max(0,Number(pair.amount||0));
     if(percent>99.99)return null;
-    if((percent>0)!==(amount>0))return null;
+    // A printed percentage can have a zero-cent discount on a tiny line
+    // (for example 7% of €0.02). Accept it only when rounding to cents is zero.
+    if(amount>0&&percent===0)return null;
+    if(percent>0&&amount===0&&running*percent/100>=.005)return null;
     if(percent>0&&Math.abs(running*percent/100-amount)>Math.max(.025,amount*.025))return null;
     percents.push(money4(percent));amounts.push(money4(amount));running-=amount;
   }
