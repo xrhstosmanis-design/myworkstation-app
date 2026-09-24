@@ -57,6 +57,12 @@ This gate applies to every module, page, conversation and agent working in this 
 
 For payment, invoice, stock, fiscal, accounting and finalization flows, also preserve idempotency: no duplicate payment, no resurrection of a deliberately deleted draft, no stock posting and no finalization during diagnostic testing unless the checkpoint explicitly authorizes it.
 
+## Mandatory before/after evidence for every LAB test
+
+For **every** future LAB test on any page or Gate, identify the store, physical terminal, operator/shift, action, item/SKU, quantity, payment method and test time. **Before** each transaction or state-changing action, refresh and record the relevant starting values: each affected POS shift's transaction count, cash, card, IRIS and total; stock quantity and latest movement time for affected SKUs; and any relevant report/audit balance or record ID. Preserve the other terminal as a control. Record the before values in the active checkpoint before executing the action.
+
+Perform **one identified action at a time**. **After** it, refresh the same sources and record the same fields, the new transaction/movement IDs or exact timestamps, and the expected versus observed difference. A sale, return, VOID, discount, cancellation, payment, invoice, or shift closing receives a scoped `LAB PASS` only when the affected values and the unaffected control agree; if before values are missing, call the unmeasured effect `NOT TESTED`, never infer a stock or financial delta from an after-only snapshot. Do not repeat an existing transaction to repair a missing measurement; use a separately identified new test after a fresh baseline. Keep customer/real-store data out of the LAB and never label CI alone as LAB PASS.
+
 ## Mandatory PASS → manual gate
 
 This gate applies to every module, page, conversation and agent. It is mandatory immediately after a real `LAB PASS`, `LIVE PASS` or `USER PASS`.
