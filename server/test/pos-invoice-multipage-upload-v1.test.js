@@ -93,8 +93,18 @@ test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account
   assert.equal(recoverVatSummaryInvoiceTotal(printed),318.74);
   assert.equal(recoverVatSummaryInvoiceTotal("ΝΕΟ ΥΠΟΛΟΙΠΟ 4.531,01"),0,"an account balance alone is never an invoice total proof");
   assert.equal(recoverVatSummaryInvoiceTotal("ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 264,27 54,47 319,74"),0,"an unbalanced summary is rejected");
-  assert.match(wrapper,/verifiedVatSummaryTotal=mantzilasInvoice\?recoverVatSummaryInvoiceTotal\(azureRawText\):0/);
+  assert.match(wrapper,/verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal\(azureRawText\)/);
   assert.match(wrapper,/ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ/);
+});
+
+test("a separate receipt total cannot displace another supplier's balanced printed invoice footer",()=>{
+  const text=`ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ 70,36
+    ΤΙΜΟΛΟΓΙΟ 13461
+    ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ
+    ΣΥΝΟΛΑ 66,90 8,70 75,60`;
+  assert.equal(recoverVatSummaryInvoiceTotal(text),75.60);
+  assert.equal(recoverVatSummaryInvoiceTotal('ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ 70,36'),0);
+  assert.equal(recoverVatSummaryInvoiceTotal('ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 66,90 8,70 70,36'),0);
 });
 
 test("MANTZILAS rechecks Azure candidate rows against the corrected total and recovers its existing draft first",()=>{
