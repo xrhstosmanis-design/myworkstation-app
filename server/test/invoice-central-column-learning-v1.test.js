@@ -565,6 +565,20 @@ test('MANTZILAS 11998 rebuilds all 14 physical rows when the first OCR guide omi
   assert.equal(packaged[0].supplierProfileEvidence.stockQuantity,24);assert.equal(packaged[1].supplierProfileEvidence.stockQuantity,480);assert.equal(packaged[2].supplierProfileEvidence.stockQuantity,60);
 });
 
+test('a complete thermal table with VAT only in its footer derives tax per row after full reconciliation',()=>{
+  const rows=[
+    {supplierCode:'340061153',description:'TASTY SNACKS',printedQuantity:2,originalUnitPrice:1.42,initialAmount:2.84,discountPercent1:15,discountAmount1:.43,netAmount:2.41,vatRate:13},
+    {supplierCode:'340061155',description:'POPPERS',printedQuantity:4,originalUnitPrice:1.06,initialAmount:4.24,discountPercent1:15,discountAmount1:.64,netAmount:3.60,vatRate:13}
+  ].map((row,index)=>({index:index+1,printedUnit:'TEM',discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,exciseTotal:0,taxableAmount:0,vatAmount:0,grossAmount:0,confidence:99,...row}));
+  const footer=[{rate:13,taxable:6.01,vat:.78,gross:6.79}];
+  const result=buildCompletePrintedTableCandidate(rows,6.79,footer);
+  assert.deepEqual(result.map(line=>line.vatAmount),[.31,.47]);
+  assert.equal(roundForTest(result.reduce((sum,line)=>sum+line.grossAmount,0)),6.79);
+  assert.equal(buildCompletePrintedTableCandidate(rows,7.00,footer),null);
+  assert.equal(buildCompletePrintedTableCandidate(rows,6.79,[{...footer[0],vat:.90}]),null);
+  assert.equal(buildCompletePrintedTableCandidate(rows.slice(0,1),6.79,footer),null);
+});
+
 test('MANTZILAS mixed VAT footer uniquely repairs the three shifted rates and exact invoice total',()=>{
   const bases=[24.91,19.38,9.60,16.29,26.98,13.49,34.51,45.60,26.40,6.82,5.80,17.55,32.40,11.00,23.09,28.80,11.13,12.00];
   const correct=[24,24,24,24,13,13,13,13,13,13,13,13,13,13,24,24,24,24];

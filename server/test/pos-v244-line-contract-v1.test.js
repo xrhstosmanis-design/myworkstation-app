@@ -50,6 +50,16 @@ test("does not restore shifted retail as quantity over a verified reader line",(
   assert.equal(line.quantity,20);assert.equal(line.retailPrice,4.8);
 });
 
+test("keeps an inconsistent physical OCR row for review instead of silently changing its economics",()=>{
+  const original={sourceRow:13,sourceTable:0,sourcePage:1,sourceFileIndex:0,code:'340058991',description:'RUFFLES ΑΛΑΤΙ',rawText:'340058991 RUFFLES ΑΛΑΤΙ TEM 3 1,42 4,26 15 0,64 3,62 13',quantity:3,unit:'TEM',unitCost:1.42,discount1:0,netAmount:3.62,grossAmount:4.09,vatRate:13};
+  const [line]=finalizeV244ProductLines([original]);
+  assert.equal(line.quantity,3);
+  assert.equal(line.netAmount,3.62);
+  assert.equal(line.grossAmount,4.09);
+  assert.equal(line.sourceColumnsVerified,false);
+  assert.equal(line.structuredGuard,false);
+});
+
 test("prefers the verified duplicate even when source coordinates collide",()=>{
   const rows=[
     {sourceRow:3,sourceTable:0,sourcePage:1,sourceFileIndex:0,code:"01801",description:"MARLBORO GOLD",quantity:32,unit:"TEM",unitCost:4.7795,retailPrice:0,netAmount:152.94,grossAmount:152.94},
