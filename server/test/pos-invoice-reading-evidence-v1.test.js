@@ -28,5 +28,18 @@ test("the evidence stays bounded and cannot leak a supplier's rows to another in
   assert.equal(result.original.lines[0].rawText.length,320);
   assert.equal(result.original.truncated,true);
   assert.equal(preservePosInvoiceReadingEvidence({...previous,posHandoff:null},next),null);
-  assert.equal(preservePosInvoiceReadingEvidence(previous,{...next,supplierReadingProfile:{requireCompletePrintedTableOnMismatch:false}}),null);
+  assert.equal(preservePosInvoiceReadingEvidence(previous,{...next,supplierReadingProfile:{requireCompletePrintedTableOnMismatch:false}}).original.lineCount,110);
+});
+
+test("generic POS keeps its first complete table when a later reread fails",()=>{
+  const handoff={totalGross:46.65};
+  const first={productLines:[{code:"1000010",quantity:4,grossAmount:4.45},{code:"",quantity:500,grossAmount:13,vatRate:0}]};
+  const initial=preservePosInvoiceReadingEvidence({posHandoff:handoff,productLines:[]},first,capturePosInvoiceProviderRows({productLines:first.productLines.slice(0,1)}));
+  assert.equal(initial.original.stage,"FIRST_COMPLETE_READ");
+  assert.equal(initial.original.lineCount,2);
+  assert.equal(initial.provider.lineCount,1);
+  const later=preservePosInvoiceReadingEvidence({posHandoff:handoff,productLines:first.productLines,posReadingEvidence:initial},{productLines:[first.productLines[0]]});
+  assert.equal(later.original.lineCount,2);
+  assert.equal(later.original.lines[1].quantity,500);
+  assert.equal(later.reread.lineCount,1);
 });
