@@ -17,7 +17,7 @@ export default function StoreShiftTransactionsModal({api,store,operator,allowAll
   const popup=window.open("","_blank","width=480,height=700");
   if(!popup){setError("Ο browser μπλόκαρε το παράθυρο εκτύπωσης.");return}
   try{
-   await api(`/api/store-pos/stores/${store.id}/audit`,{method:"POST",body:JSON.stringify({actionType:"NON_FISCAL_COPY_PRINT",details:{saleId:row.id.slice(5),sessionId:overview?.openSession?.id,terminalPos:overview?.openSession?.terminalPos||null}})});
+   await api(`/api/store-pos/stores/${store.id}/audit`,{method:"POST",body:JSON.stringify({actionType:"NON_FISCAL_COPY_PRINT_REQUEST",saleId:row.id.slice(5),details:{sessionId:overview?.openSession?.id,terminalPos:overview?.openSession?.terminalPos||null}})});
    const doc=popup.document;doc.title="Αντίγραφο NON_FISCAL πώλησης";doc.body.style.cssText="font:16px Arial,sans-serif;max-width:380px;margin:28px auto;line-height:1.5";
    const add=(tag,value)=>{const el=doc.createElement(tag);el.textContent=value;doc.body.appendChild(el);return el};
    add("h2","ΑΝΤΙΓΡΑΦΟ · NON_FISCAL");add("p",store.name);add("p",`${when(row.at)} · ${overview?.openSession?.terminalPos||"POS"} · ${row.actor}`);add("p",`Πώληση ${row.id.slice(5)}`);
