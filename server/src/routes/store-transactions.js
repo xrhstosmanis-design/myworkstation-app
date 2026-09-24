@@ -485,7 +485,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   // The company owner confirms their own BackOffice payment at submission.
   // A store operator's POS payment still waits for the owner's review.
-  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER";
+  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
   const initialStatus=ownerPayment?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
