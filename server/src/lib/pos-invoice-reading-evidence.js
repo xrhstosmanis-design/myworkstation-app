@@ -28,9 +28,12 @@ export function capturePosInvoiceProviderRows(result){
 }
 
 export function preservePosInvoiceReadingEvidence(previous,next,providerRows){
-  if(!previous?.posHandoff||next?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch!==true)return null;
-  const original=previous?.posReadingEvidence?.original?.stage==="BEFORE_COMPLETE_REREAD"
-    ?previous.posReadingEvidence.original
-    :snapshot(previous,"BEFORE_COMPLETE_REREAD");
+  if(!previous?.posHandoff)return null;
+  const saved=previous?.posReadingEvidence?.original;
+  // The first POS pass often starts with an empty fast-handoff job. Preserve
+  // the first populated table, then retain it across subsequent rereads.
+  const original=saved?.lineCount>0?saved
+    :Array.isArray(previous.productLines)&&previous.productLines.length?snapshot(previous,"BEFORE_COMPLETE_REREAD")
+    :snapshot(next,"FIRST_COMPLETE_READ");
   return {version:1,original,provider:providerRows?.stage==="PROVIDER_BEFORE_RECOVERY"?providerRows:null,reread:snapshot(next,"AFTER_COMPLETE_REREAD")};
 }
