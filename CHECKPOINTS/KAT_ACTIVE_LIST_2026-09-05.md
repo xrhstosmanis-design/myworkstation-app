@@ -57,6 +57,7 @@
 
 ## 2026-09-24 — Gate 4 POS 1/POS 2 και πιλοτική εγκατάσταση — ΑΝΑΤΕΘΗΚΕ
 
+- Πραγματική ανάγνωση Render `e1f0d770`: και τα δύο LAB POS καταχωρισμένα αλλά **OFFLINE**, 5 υποχρεωτικές εκκρεμότητες στην οθόνη ετοιμότητας και μία ήδη ανοικτή βάρδια. Πλήρες Gate 4 **LAB BLOCKED / NOT TESTED**· απαιτείται σύνδεση των δύο πραγματικών συσκευών πριν από νέες πωλήσεις/βάρδιες. Βλέπε `CHECKPOINTS/CHANGES/2026-09-24-gate4-two-terminal-readiness.md`.
 - Ο έλεγχος καρτέλας δύο POS ετοιμάζεται στο `agent/gate4-two-terminal-readiness`: απαιτεί ακριβώς `POS_1`/`POS_2` με διαφορετικά Terminal IDs. Αυτό είναι μόνο οργανωτικός έλεγχος· πλήρες πραγματικό Gate 4 **NOT TESTED**. Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-two-terminal-readiness.md`.
 - Scope: πλήρες Gate 4 στα δύο LAB/POS, καρτέλα καταστήματος χωρίς μυστικά, αυτόματος έλεγχος `READY/NOT READY`, οδηγίες και checkpoint εγκατάστασης.
 - Branch: `agent/gate4-install-readiness` (νέα ανάληψη μετά τη διευκρίνιση του ιδιοκτήτη ότι καμία άλλη σελίδα δεν κατέχει το Gate 4).
