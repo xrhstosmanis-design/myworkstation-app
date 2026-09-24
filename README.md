@@ -1,5 +1,11 @@
 # MyWorkStation App v0.11 — Platform Admin & Commercial Pilot
 
+## Κεντρική συνέχεια εργασιών
+
+- Ενεργές εκκρεμότητες, Gate ownership και σειρά: `docs/roadmap/PENDING_WORK.md`
+- Εκτυπώσιμο κεντρικό PDF: `output/pdf/MyWorkStation_Central_Pending_Roadmap_2026-09-23.pdf`
+- Κανόνας: κάθε πραγματικό PASS διαγράφεται από την pending λίστα στο ίδιο PR και καταγράφεται στο αντίστοιχο `docs/manual/<module>/PASS.md`.
+
 > **Συνέχεια εργασιών ΚΑΤ:** Κάθε νέα συνεδρία πρέπει να διαβάζει πρώτα το
 > [`KAT_CONTINUATION_CHECKPOINT.md`](KAT_CONTINUATION_CHECKPOINT.md). Εκεί καταγράφονται
 > όσα είναι ήδη LIVE, τι δεν πρέπει να επαναληφθεί και το ακριβές επόμενο βήμα.

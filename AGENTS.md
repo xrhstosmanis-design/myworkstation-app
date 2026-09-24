@@ -59,6 +59,13 @@ This gate applies to every module, page, conversation and agent. It is mandatory
 6. If a newer real test fails, update or remove the contradicted manual claim in the same change. The newest real observation is authoritative.
 7. Before starting new work, read the relevant `docs/manual/<module>/PASS.md`. Do not rebuild or retest a flow already recorded there unless a newer FAIL, regression or explicitly expanded requirement exists.
 8. Do not merge a checkpoint-only PASS closure that omits the corresponding manual update. This rule is repository-wide and is not optional for parallel Work pages.
+9. Read `docs/roadmap/PENDING_WORK.md` before selecting new work. It is the authoritative list of unfinished work and the required implementation order.
+10. When an item in `docs/roadmap/PENDING_WORK.md` receives a real PASS, remove that item from the pending roadmap in the same pull request. Do not leave a checked item, duplicate historical task, or contradictory `AWAITING LAB` entry that could cause another page to repeat the work.
+11. The same PASS-closing pull request must update the checkpoint, active list, relevant `docs/manual/<module>/PASS.md`, pending roadmap and its central PDF. A PASS is not administratively complete until all five agree.
+12. Invoice/OCR and efood/Pelican work remain owned by their dedicated pages. Other pages must not restart or duplicate those flows from the general roadmap.
+13. Before editing, claim an unowned Gate or independent subtask in `docs/roadmap/PENDING_WORK.md` as `ASSIGNED - <page/branch>`. Work already marked `ASSIGNED` is locked to that page until it is explicitly released.
+14. Parallel pages may own different Gates or independent subtasks. They must never edit the same assigned scope concurrently.
+15. After a real PASS, delete the completed subtask from the active pending roadmap in the same pull request; do not leave a checked duplicate. When every subtask is removed, move the whole Gate to PASS/completed status.
 
 ## POS invoice acceptance invariant
 
