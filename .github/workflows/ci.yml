@@ -99,6 +99,8 @@ jobs:
         run: node server/e2e/kat-safe-vault-adjustment-invariants.mjs
       - name: Verify KAT aggregate pre-install readiness
         run: node server/e2e/kat-preinstall-readiness-invariants.mjs
+      - name: Verify pilot installation readiness workbook
+        run: node server/e2e/pilot-installation-readiness-v1.mjs
       - name: Prepare isolated E2E database
         run: |
           npm run prisma:push -w server

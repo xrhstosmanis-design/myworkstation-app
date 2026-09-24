@@ -34,6 +34,13 @@
 - Τιμολόγια/OCR και efood/Pelican συνεχίζονται αποκλειστικά από τις αντίστοιχες εξειδικευμένες σελίδες.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-central-pending-roadmap.md`.
 
+## 2026-09-24 — Gate 4 POS 1/POS 2 και πιλοτική εγκατάσταση — ΑΝΑΤΕΘΗΚΕ
+
+- Scope: πλήρες Gate 4 στα δύο LAB/POS, καρτέλα καταστήματος χωρίς μυστικά, αυτόματος έλεγχος `READY/NOT READY`, οδηγίες και checkpoint εγκατάστασης.
+- Branch: `codex/gate4-pilot-readiness`.
+- Δεν περιλαμβάνει Gate 3, τιμολόγια/OCR, efood/Pelican ή μη πιστοποιημένη fiscal ενεργοποίηση.
+- Η εργασία παραμένει ενεργή μέχρι πράσινο CI, merge, exact revision και πραγματική συμπλήρωση/εκτέλεση στο κατάστημα.
+
 ## 2026-09-23 — Workforce πρόγραμμα ανά εργαζόμενο — PRODUCTION + COMPLETE USER LAB PASS
 
 - [x] Η προβολή «Ανά εργαζόμενο» εμφανίζεται στο δημοσιευμένο πρόγραμμα έκδοσης 8.

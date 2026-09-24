@@ -27,6 +27,7 @@
 
 - Ενεργή λίστα και Gate ownership: `docs/roadmap/PENDING_WORK.md`
 - Εκτυπώσιμο PDF: `output/pdf/MyWorkStation_Central_Pending_Roadmap_2026-09-23.pdf`
+- Οδηγίες ετοιμότητας πιλοτικής εγκατάστασης (όχι PASS): `docs/manual/pilot-installation/README.md`
 
 ## Ενότητες
 - products-master-catalog/
@@ -41,3 +42,4 @@
 - payments-suppliers/ (μόνο όταν υπάρχει τελικό έγκυρο PASS)
 - online-delivery/ (μόνο όταν υπάρχει τελικό έγκυρο PASS)
 - reports/ (μόνο όταν υπάρχει τελικό έγκυρο PASS)
+- pilot-installation/ (προετοιμασία και STOP κανόνες· δεν δηλώνει PASS)
