@@ -82,7 +82,7 @@ test("fast handoff survives optimized image checksum changes using strict invoic
 test("durable POS task receives the complete cached-line handoff",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-handoff"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-recover"',start));
-  assert.match(body,/const handoff=\{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds\.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines\}/);
+  assert.match(body,/const handoff=\{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds\.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines\}/);
   assert.match(body,/posHandoff:primaryHandoff/);
   assert.match(body,/await enqueueFastBackground\(\{companyId,storeId,jobId,publicOrigin\}\)/);
 });

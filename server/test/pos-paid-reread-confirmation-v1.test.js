@@ -25,13 +25,15 @@ for(const mode of ["PAID","CREDIT"])test(`confirmed ${mode} reread hands off the
   assert.equal(result.requests[1].body.documentType,"INVOICE");
   assert.ok(result.messages.some(message=>message.includes("χωρίς νέα χρέωση")));
 });
-test("credit note cannot initiate duplicate check, payment or purchase handoff",async()=>{
-  for(const state of [{documentType:"CREDIT_NOTE"},{documentType:"INVOICE",creditDetected:true},{documentType:""}]){
-    const result=await submit({confirmed:true,mode:"PAID",...state});
-    assert.equal(result.requests.length,0);assert.equal(result.prompts,0);
-  }
+test("credit note hands off a draft without duplicate payment or cash movement",async()=>{
+  const result=await submit({confirmed:true,mode:"PAID",documentType:"CREDIT_NOTE",creditDetected:true});
+  assert.equal(result.requests.length,1);assert.equal(result.prompts,0);
+  assert.match(result.requests[0].path,/fast-handoff$/);
+  assert.equal(result.requests[0].body.documentType,"CREDIT_NOTE");
+  assert.equal(result.requests[0].body.settlementMode,"CREDIT");
+  assert.equal(result.requests[0].body.paymentTransactionId,null);
   const route=fs.readFileSync(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
   const handoff=route.slice(route.indexOf('router.post("/ai-reader/fast-handoff"'),route.indexOf('router.post("/ai-reader/fast-status'));
-  assert.match(handoff,/documentType!=="INVOICE"\|\|pages\.some\(page=>page\?\.documentType==="CREDIT_NOTE"\)/);
-  assert.ok(handoff.indexOf('code:"POS_CREDIT_NOTE_REQUIRES_BACKOFFICE"')<handoff.indexOf('findInvoicePayment(prisma'));
+  assert.match(handoff,/code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"/);
+  assert.ok(handoff.indexOf('code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"')<handoff.indexOf('findInvoicePayment(prisma'));
 });

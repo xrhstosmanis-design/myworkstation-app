@@ -157,7 +157,7 @@ async function rebuildLostFastHandoff(companyId,job){
   const storedLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
   if(!job.purchaseDocumentId||!job.createdAt||!storedLines.length)return null;
   const documents=await prisma.$queryRaw`
-    SELECT d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."settlementMode",d."paymentTransactionId",o."description"
+    SELECT d."documentType",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."settlementMode",d."paymentTransactionId",o."description"
     FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId"
     WHERE d."id"=${job.purchaseDocumentId} AND d."companyId"=${companyId} AND d."storeId"=${job.storeId}
       AND d."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' LIMIT 1`;
@@ -169,7 +169,7 @@ async function rebuildLostFastHandoff(companyId,job){
       AND "createdAt"=${job.createdAt} AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "id"`;
   if(siblings.length!==expectedPageCount||!siblings.some(row=>row.id===job.id))return null;
   const pageJobIds=[job.id,...siblings.map(row=>row.id).filter(id=>id!==job.id)];
-  const handoff={version:"POS_FAST_HANDOFF_REBUILT_V1",supplierId:document.supplierId,documentNumber:document.documentNumber,documentDate:document.documentDate,totalGross:Number(document.totalGross||0),settlementMode:document.settlementMode,paymentTransactionId:document.paymentTransactionId||null,pageCount:pageJobIds.length,pageJobIds,primaryJobId:job.id,resumeStoredProductLines:true,rebuiltAt:new Date().toISOString()};
+  const handoff={version:"POS_FAST_HANDOFF_REBUILT_V1",documentType:document.documentType||"INVOICE",supplierId:document.supplierId,documentNumber:document.documentNumber,documentDate:document.documentDate,totalGross:Number(document.totalGross||0),settlementMode:document.settlementMode,paymentTransactionId:document.paymentTransactionId||null,pageCount:pageJobIds.length,pageJobIds,primaryJobId:job.id,resumeStoredProductLines:true,rebuiltAt:new Date().toISOString()};
   await prisma.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${companyId} AND "status"='POS_FAILED'`;
   return handoff;
 }
@@ -243,6 +243,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
           await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/product-lines`,{backgroundScope,publicOrigin,method:"PUT",body:{source:"V2.4.4",productLines}});
           operationStage="purchase-intake";
           created=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-intake`,{backgroundScope,publicOrigin,method:"POST",body:{
+            documentType:handoff.documentType||"INVOICE",
             supplierId:handoff.supplierId,
             documentNumber:handoff.documentNumber,
             documentDate:handoff.documentDate,
@@ -708,7 +709,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     const totalGross=round2(intakeNumber(req.body?.totalGross));
     const documentType=req.body?.documentType;
     const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
-    if(documentType!=="INVOICE"||pages.some(page=>page?.documentType==="CREDIT_NOTE"))return res.status(409).json({error:"Πιστωτικό ή μη επιβεβαιωμένος τύπος παραστατικού: η γρήγορη ροή POS δεν δημιουργεί παραγγελία αγοράς ή πληρωμή. Χρησιμοποίησε την ειδική ροή πιστωτικού στο BackOffice.",code:"POS_CREDIT_NOTE_REQUIRES_BACKOFFICE"});
+    if(!["INVOICE","CREDIT_NOTE"].includes(documentType)||documentType==="INVOICE"&&pages.some(page=>page?.documentType==="CREDIT_NOTE"))return res.status(409).json({error:"Ο τύπος παραστατικού δεν συμφωνεί με την ανάγνωση. Δεν έγινε καταχώριση ή πληρωμή.",code:"POS_DOCUMENT_TYPE_CONFLICT"});
+    if(documentType==="CREDIT_NOTE"&&(req.body?.settlementMode!=="CREDIT"||req.body?.paymentTransactionId))return res.status(409).json({error:"Το πιστωτικό συμψηφίζεται με το υπόλοιπο του προμηθευτή, χωρίς πληρωμή POS.",code:"POS_CREDIT_NOTE_PAYMENT_FORBIDDEN"});
     let settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
     let paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
     if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||!pages.length)return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
@@ -718,7 +720,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
     const supplier=supplierRows[0];if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
     await ensureV244IntakeSchema();
-    const existingPayment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber});
+    const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber}):null;
     if(existingPayment){
       assertReusableInvoicePayment(existingPayment,{companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,totalGross});
       if(paymentTransactionId&&paymentTransactionId!==existingPayment.id)return res.status(409).json({error:"Η πληρωμή δεν είναι η αρχική πληρωμή αυτού του τιμολογίου."});
@@ -818,7 +820,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         // resume the same draft and payment, never turn into a duplicate file.
         const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')) AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "createdAt" DESC LIMIT 1`;
         const jobId=existingJobs[0]?.id||id();
-        const handoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+        const handoff={version:"POS_FAST_HANDOFF_V1",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
         if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
         else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${attachmentId} LIMIT 1 FOR UPDATE`;
@@ -829,15 +831,15 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:hasCompleteCachedProductLines,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:hasCompleteCachedProductLines,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;
     });
     const pageJobIds=result.map(job=>job.id),jobId=pageJobIds[0];
-    const handoff={supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines};
+    const handoff={documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines};
     const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-    const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • αναμονή πλήρους ανάγνωσης`}});
+    const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο ${documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • αναμονή πλήρους ανάγνωσης`}});
     await enqueueFastBackground({companyId,storeId,jobId,publicOrigin});
     const handoffMessage=myData
       ?"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση."

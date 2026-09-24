@@ -197,13 +197,14 @@ router.use(async(req,res,next)=>{try{await ensureV244IntakeSchema();next()}catch
 // an OCR failure can never hide that paid invoice from the Drafts list.
 router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
-    const body=z.object({supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
+    const body=z.object({documentType:z.enum(["INVOICE","CREDIT_NOTE"]).default("INVOICE"),supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
+    if(body.documentType==="CREDIT_NOTE"&&(body.settlementMode!=="CREDIT"||body.paymentTransactionId))return res.status(409).json({error:"Πιστωτικό χωρίς κίνηση ταμείου: επιτρέπεται μόνο συμψηφισμός προμηθευτή."});
     const result=await prisma.$transaction(async tx=>{
       const jobs=await tx.$queryRaw`SELECT "id","storeId","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE`;
       const job=jobs[0];
       if(!job)throw Object.assign(new Error("Δεν βρέθηκε η ανάγνωση του τιμολογίου."),{status:404});
       if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)throw Object.assign(new Error("Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."),{status:403});
-      if(job.purchaseDocumentId)return {documentId:job.purchaseDocumentId,reused:true};
+      if(job.purchaseDocumentId){const linked=await tx.$queryRaw`SELECT "documentType" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} LIMIT 1`;if(linked[0]?.documentType!==body.documentType)throw Object.assign(new Error("Το υπάρχον πρόχειρο έχει διαφορετικό τύπο παραστατικού."),{status:409});return {documentId:job.purchaseDocumentId,reused:true};}
       const suppliers=await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
       const supplier=suppliers[0];if(!supplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
       const payment=body.settlementMode==="PAID"?await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber}):null;
@@ -214,7 +215,7 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate)throw Object.assign(new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`),{status:409});
       const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
-      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId","paymentTransactionId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},'INVOICE',${body.documentNumber},${body.documentDate},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId},${payment?.id||null})`;
+      await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId","paymentTransactionId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId},${payment?.id||null})`;
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`POS πρόχειρο ${body.documentNumber} — αναμονή πλήρους ανάγνωσης`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
       if(payment)await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber} WHERE "id"=${payment.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_DRAFT_READY',"status"='POS_DRAFT_READY',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
@@ -244,11 +245,12 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
   let stage="validation";
   try{
     const body=z.object({documentType:z.enum(["INVOICE","CREDIT_NOTE"]).default("INVOICE"),supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date().optional().nullable(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable(),reconciliationRequired:z.boolean().optional().default(false),reconciliationDifference:z.coerce.number().min(0).optional().default(0),additionalPageJobIds:z.array(z.string().min(1)).max(4).optional().default([]),replaceExistingDraft:z.boolean().optional().default(false)}).parse(req.body||{});
-    if(body.documentType==="CREDIT_NOTE"&&body.settlementMode!=="CREDIT")return res.status(400).json({error:"Το πιστωτικό προμηθευτή δεν καταχωρίζεται ως πληρωμένο τιμολόγιο."});
+    if(body.documentType==="CREDIT_NOTE"&&(body.settlementMode!=="CREDIT"||body.paymentTransactionId))return res.status(400).json({error:"Το πιστωτικό συμψηφίζεται χωρίς πληρωμή POS."});
     stage="load-ai-job";
     const jobs=await prisma.$queryRaw`SELECT "id","storeId","attachmentId","status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     const job=jobs[0];
     if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση του τιμολογίου."});
+    if(job.resultJson?.posHandoff?.documentType&&job.resultJson.posHandoff.documentType!==body.documentType||job.resultJson?.documentType==="CREDIT_NOTE"&&body.documentType!=="CREDIT_NOTE")return res.status(409).json({error:"Το είδος παραστατικού δεν συμφωνεί με την αρχική ανάγνωση. Το πρόχειρο διατηρήθηκε χωρίς οικονομική κίνηση."});
     const replacementAuthorized=body.replaceExistingDraft===true&&job.purchaseDocumentId&&job.resultJson?.posReprocess?.mode==="RECONCILIATION_REREAD";
     if(!replacementAuthorized&&((job.purchaseDocumentId&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED","AI_COMPLETE"].includes(job.status))||["AWAITING_APPROVAL","CONFIRMED"].includes(job.status)))return res.status(409).json({error:"Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
@@ -340,8 +342,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       const matchedRows=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
       const centReconciliation=reconcileCentRoundingResidual(matchedRows,body.totalGross);
       const matched=centReconciliation.lines;
-      const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
+      const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId","documentType" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
+      if(skeletonRows[0]&&skeletonRows[0].documentType!==body.documentType)throw Object.assign(new Error("Το πρόχειρο έχει διαφορετικό τύπο παραστατικού. Δεν έγινε μετατροπή αγοράς σε πιστωτικό."),{status:409});
       const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
       const totalNet=money2(matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0)),totalVat=money2(Number(body.totalGross)-totalNet);
       stage="create-purchase-document";
@@ -354,6 +357,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       // import. Every successful fill/reread replaces its OCR lines atomically
       // while the document is still DRAFT, so retries cannot double the order.
       if(skeletonRows[0]){stage="replace-purchase-lines";await tx.$executeRaw`DELETE FROM "PurchaseOrderLine" WHERE "orderId"=${orderId}`;}
+      if(skeletonRows[0]&&body.documentType==="CREDIT_NOTE")await tx.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${documentId}`;
       for(const [index,rawLine] of matched.entries()){
         const line=normalizePersistedInvoiceEconomics(rawLine);
         const net=Math.max(0,Number(line.netAmount||0)),exciseTotal=Math.max(0,Number(line.exciseTotal||0)),gross=Math.max(net+exciseTotal,Number(line.grossAmount||0)),vatAmount=Math.max(0,gross-net-exciseTotal);
@@ -362,6 +366,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const review=reviewStatusForInvoiceLine({...line,invoiceUnit,stockUnitsPerInvoiceUnit},{matched:Boolean(line.product)});
         stage=`create-purchase-line-${index+1}`;
         await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","ocrReviewReasons","detectedBarcode","ocrSequence","ocrLineType","supplierCode","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${line.product?.id||null},${line.description},${line.quantity},${line.unitCost},${line.discount1||0},${line.discount2||0},${line.discount3||0},${exciseTotal},${line.vatRate},false,${line.unitCost},0,${Number(line.retailPrice||line.product?.salePrice||0)},${net},${vatAmount},${gross},${line.rawText||line.description},${line.confidence||0},${review.resolutionStatus},${review.reasons.join(" · ")||null},${line.barcode||null},${index+1},'PRODUCT',${line.code||null},${invoiceUnit},${stockUnitsPerInvoiceUnit})`;
+        if(body.documentType==="CREDIT_NOTE")await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitsPerPackage","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${documentId},${line.product?.id||null},${line.code||null},${line.description},${line.quantity},'PIECE',NULL,${line.unitCost},${net+exciseTotal},${line.vatRate},${vatAmount},${gross})`;
       }
       let paymentTransactionId=null;
       if(body.settlementMode==="PAID"){
