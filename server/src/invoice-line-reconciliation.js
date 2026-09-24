@@ -66,6 +66,12 @@ export function verifiedPrintedTableForPersistence(productLines,invoiceTotal,tol
   return lines.map(line=>({...line,quantity:Number(line.quantity),unitCost:Number(line.unitCost),discount1:Number(line.discount1||0),discount2:Number(line.discount2||0),discount3:Number(line.discount3||0),netAmount:round2(line.netAmount),exciseTotal:round2(line.exciseTotal),vatRate:Math.round(Number(line.vatRate||0)),vatAmount:round2(Number(line.grossAmount||0)-Number(line.netAmount||0)-Number(line.exciseTotal||0)),grossAmount:round2(line.grossAmount)}));
 }
 
+// A matching footer amount cannot prove that cached OCR contains every
+// physical row. Reuse only a table independently checked row by row.
+export function reusableVerifiedPrintedTable(productLines,invoiceTotal){
+  return verifiedPrintedTableForPersistence(productLines,invoiceTotal)!==null;
+}
+
 // An identified minority of uncertain rows can be reviewed in an unapproved
 // draft. The other rows must still carry independent printed-column proof.
 // Missing rows, an empty read, or three uncertain rows cannot use this path.

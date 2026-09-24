@@ -30,6 +30,11 @@ export function reconcileCentRoundingResidual(lines,invoiceTotal,tolerance=0.05)
 
 export function stockMultiplierForPersistedInvoiceLine(line){
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||'ΤΜΧ');
+  // A display containing a printed count is itself the invoiced item. Keep
+  // its one invoice line and price, but count the cards inside it in stock.
+  const display=String(line?.description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  const displayCount=display.match(/\bDISP(?:LAY)?\.?[^\n]{0,35}?(\d{1,3})\s*(?:ΤΥ|ΤΜΧ|ΤΕΜ|TMX|TEM)(?=\s|\)|$)/);
+  if(printedPieceUnit(invoiceUnit)&&Number(line?.quantity)===1&&displayCount&&Number(displayCount[1])>1)return Number(displayCount[1]);
   const invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
   const invoiceIsWeight=/(KG|KGR|ΚΙΛ)/i.test(invoiceUnit);
   const invoiceIsPiece=printedPieceUnit(invoiceUnit);

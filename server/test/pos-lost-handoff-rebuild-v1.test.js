@@ -21,7 +21,7 @@ test("lost handoff rebuild is restricted to the same draft, payment and transact
 });
 
 test("reconstructed recovery reuses stored lines and accepts the AI_COMPLETE bridge state",()=>{
-  assert.match(wrapper,/handoff\.resumeStoredProductLines\|\|\(storedLines\.length&&storedDifference<=POS_STORED_LINES_TOLERANCE\)/);
+  assert.match(wrapper,/reusableVerifiedPrintedTable\(storedLines,handoff\.totalGross\)/);
   assert.match(wrapper,/sourceLines=storedLines;usingStoredProductLines=true/);
   assert.match(core,/"POS_DRAFT_READY","POS_PROCESSING","POS_FAILED","AI_COMPLETE"/);
 });

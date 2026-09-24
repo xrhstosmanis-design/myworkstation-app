@@ -6,7 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
-import {claimsCompletePrintedTable,reconcileInvoiceLines,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
+import {claimsCompletePrintedTable,reconcileInvoiceLines,reusableVerifiedPrintedTable,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
@@ -194,7 +194,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
             // Old POS handoffs did not always persist the resume flag. Reuse
             // their table only when its own arithmetic proves that it belongs
             // to the operator-confirmed invoice total.
-            if(handoff.resumeStoredProductLines||(storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)){sourceLines=storedLines;usingStoredProductLines=true}
+            if((handoff.resumeStoredProductLines||storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)&&reusableVerifiedPrintedTable(storedLines,handoff.totalGross)){sourceLines=storedLines;usingStoredProductLines=true}
             previousLines=storedLines;
             requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
           }
@@ -556,7 +556,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       const documentNumber=String(handoff.documentNumber||"").trim(),documentDate=normalizeIntakeDate(handoff.documentDate),totalGross=round2(handoff.totalGross||0);
       const reconciliation=reconcileInvoiceLines(productLines,totalGross);
       const difference=round2(Math.abs(reconciliation.grossTotal-totalGross));
-      if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
+      if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE||!reusableVerifiedPrintedTable(row.resultJson?.productLines,totalGross))continue;
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,documentType:row.resultJson?.documentType==="CREDIT_NOTE"||handoff.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",provider:"DURABLE_POS_JOB",productLines});
     }
     let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
@@ -755,7 +755,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
           &&Math.abs(round2(candidateHandoff.totalGross||0)-totalGross)<=POS_STORED_LINES_TOLERANCE;
         if(!sameInvoice||!candidateLines.length)continue;
         const candidateDifference=round2(Math.abs(reconcileInvoiceLines(candidateLines,totalGross).grossTotal-totalGross));
-        if(candidateDifference>POS_STORED_LINES_TOLERANCE)continue;
+        if(candidateDifference>POS_STORED_LINES_TOLERANCE||!reusableVerifiedPrintedTable(candidate.resultJson?.productLines,totalGross))continue;
         page.cachedProductLines=candidateLines;
         break;
       }
@@ -778,12 +778,12 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
           &&Math.abs(round2(candidateHandoff.totalGross||0)-totalGross)<=POS_STORED_LINES_TOLERANCE;
         if(!sameInvoice||!candidateLines.length)continue;
         const candidateDifference=round2(Math.abs(reconcileInvoiceLines(candidateLines,totalGross).grossTotal-totalGross));
-        if(candidateDifference>POS_STORED_LINES_TOLERANCE)continue;
+        if(candidateDifference>POS_STORED_LINES_TOLERANCE||!reusableVerifiedPrintedTable(candidate.resultJson?.productLines,totalGross))continue;
         page.cachedProductLines=candidateLines;
         break;
       }
     }
-    const hasCompleteCachedProductLines=normalizedPages.every(page=>page.cachedProductLines.length>0);
+    const hasCompleteCachedProductLines=normalizedPages.length===1&&normalizedPages.every(page=>reusableVerifiedPrintedTable(page.cachedProductLines,totalGross));
     if(hasCompleteCachedProductLines){
       // FAST Azure can return a complete table while exposing the discounted
       // net unit price as UnitPrice. Recover printed price/discount pairs from

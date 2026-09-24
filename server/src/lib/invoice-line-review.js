@@ -1,3 +1,5 @@
+import {stockConversionFromDescription} from './invoice-column-reading.js';
+
 const number=value=>Number(value||0);
 const compact=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^A-ZΑ-Ω0-9.,-]/g,"");
 const words=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").split(/[^A-ZΑ-Ω0-9]+/).filter(word=>word.length>=4&&!/^\d+$/.test(word));
@@ -48,6 +50,11 @@ export function assessInvoiceLineForReview(line,{matched=false}={}){
   }
   if(!rawRowSupportsStructuredLine(line))reasons.push("Τα στοιχεία δεν επιβεβαιώνονται από την ίδια φυσική σειρά OCR");
   if(/PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ/.test(unit)&&!(unitsPerPackage>0))reasons.push("Αβέβαιη συσκευασία / τεμάχια ανά πακέτο");
+  if(/PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ/.test(unit)&&unitsPerPackage>1){
+    const printed=stockConversionFromDescription(line?.description,0,unit);
+    if(printed.inferred&&printed.stockMeasure==='PIECE'&&printed.multiplier!==unitsPerPackage)
+      reasons.push("Τα τεμάχια συσκευασίας διαφέρουν από την περιγραφή του τιμολογίου");
+  }
   if(line?.sourceColumnsVerified===false)reasons.push("Μη επιβεβαιωμένη αριθμητική ανάγνωση");
   return {needsReview:reasons.length>0,reasons};
 }
