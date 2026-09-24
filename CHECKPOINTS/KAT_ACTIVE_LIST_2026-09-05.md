@@ -1,3 +1,13 @@
+## 2026-09-24 — Gate 4 νέο VOID μετρητών — LAB PASS ποσού, stock και ιστορικού
+
+- [x] Από τη νέα πώληση POS02 στις 22:38:39, ένα VOID 0,50 € ΜΕΤΡΗΤΑ: POS02 8→9 κινήσεις, μετρητά 3,80→3,30 €, σύνολο 4,30→3,80 €, POS01 1 / 1,00 € αμετάβλητο, ΝΕΡΟ 500ML SKU 2269 −57→−56 και τελευταία κίνηση 22:42:01. Το φυσικό ιστορικό έδειξε **μία** «ΑΚΥΡΩΣΗ / VOID» −0,50 € ΜΕΤΡΗΤΑ στις 22:42:01. Ξεχωριστό Audit ID NOT TESTED· χωρίς δεύτερο VOID. Συνολικό Gate 4 PENDING.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-before-after-test-protocol.md` · Manual: `docs/manual/pos/PASS.md`.
+
+## 2026-09-24 — Gate 4 νέα POS02 πώληση μετρητών / ένα stock decrement — LAB PASS
+
+- [x] Νέα φυσική πώληση 22:38:39, 1 × ΝΕΡΟ 500ML 0,50 € ΜΕΤΡΗΤΑ: POS02 7→8 κινήσεις / μετρητά 3,30→3,80 € / σύνολο 3,80→4,30 €, POS01 1→1 / 1,00→1,00 €. Με δεύτερη ανανέωση Αρχείου ειδών SKU 2269 −56→−57, τελευταία κίνηση 21:46:05→22:38:39. Η πρώτη ανάγνωση αποθήκης ήταν stale. PASS μόνο αυτής της πώλησης· ξεχωριστό VOID με νέα προμέτρηση περιμένει αποτέλεσμα.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-before-after-test-protocol.md` · Manual: `docs/manual/pos/PASS.md`.
+
 ## 2026-09-24 — Gate 4 ακύρωση καλαθιού πριν πληρωμή — πραγματικό LAB PASS
 
 - [x] Φυσικό LAB-POS-02, 1 × ΝΕΡΟ 500ML 0,50 €, «ΑΚΥΡΩΣΗ» και επιβεβαίωση χωρίς πληρωμή. Πριν/μετά: καλάθι 0,50→0,00 €· POS02 7→7 κινήσεις / 3,80→3,80 €, POS01 1→1 / 1,00→1,00 €, SKU 2269 −56→−56 και τελευταία κίνηση 21:46:05 αμετάβλητη. Το UI επιβεβαίωσε τη διαγραφή με αιτιολογία. Audit εγγραφή δεν έχει διαβαστεί· συνολικό Gate 4 PENDING.
@@ -1241,7 +1251,7 @@ Total output lines: 2477
 - [x] LAB: 2612188 reached `POS_FAILED / POS_BACKGROUND_FAILED` at 20:17 after OCR, with generic internal error.
 - [x] Root cause: product-line save rejected the worker because the safe empty `POS_OCR_DRAFT` already existed.
 - [x] Fix: only `AI_COMPLETE` V2.4.4 background output with the same durable handoff may fill its still-DRAFT POS document; all other linked-document edits stay blocked.
-- [x] 53/53 targeted tests PASS; no payment, stock, approval or finalization change.
+- [x] 46/46 targeted tests PASS; no payment, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge/deploy και νέα καθαρή POS δοκιμή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-fill-linked-pos-draft.md`.
 
@@ -2750,10 +2760,3 @@ Total output lines: 1413
 - [x] Προστέθηκαν οι ολοκληρωμένες οδηγίες Workforce για πρόγραμμα ανά εργαζόμενο, Chat, εκτύπωση κάρτας και παρουσία μέσω PIN/QR/κάμερας/scanner.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-mandatory-pass-manual-workforce.md`.
 - Manual: `docs/manual/workforce/PASS.md`.
-
-## 2026-09-24 — Gate 3 COSMOS/PEGASOS κιβώτια και display — LOCAL PASS / LAB FAIL
-
-- [x] Τοπική μετατροπή ρητής ποσότητας κιβωτίου (`24PACK`, `1X6PACK`, `1X24P`, `(12T)`) σε τεμάχια stock και PEGASOS `Disp. 50τυ` σε 50 τεμάχια, χωρίς μεταβολή ποσού τιμολογίου. Η πράσινη ένδειξη διευκρινίζει ότι συμφωνεί μόνο το ποσό.
-- [x] Πλήρης server suite 1452 PASS / 1 SKIP / 0 FAIL· `git diff --check` και έλεγχος σύνταξης client PASS. Το FAST handoff και το resume δέχονται αποθηκευμένες σειρές μόνο με επαλήθευση ανά γραμμή, όχι μόνο με συμφωνία τελικού ποσού.
-- [ ] Τα πραγματικά OHONOS, PEGASOS, COSMOS παραμένουν LAB FAIL για χαμένες/πλεονάζουσες γραμμές. Χρειάζονται πλήρης αποκατάσταση πίνακα, CI/deploy και νέο μοναδικό παραστατικό για LAB· τα ήδη καταχωρισμένα δεν επανυποβάλλονται.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate3-carton-display-stock-local.md`.
