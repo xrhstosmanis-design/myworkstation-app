@@ -69,7 +69,7 @@ function renderReconciliation(modal,{invoiceTotal,lineTotal,difference,withinTol
   }
   const ok=withinTolerance;
   box.style.cssText=`border:2px solid ${ok?'#74b98a':'#e3a73c'};border-radius:12px;padding:11px 13px;margin:10px 0;background:${ok?'#effaf2':'#fff8e8'}`;
-  box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap"><div><b>Οικονομικός έλεγχος τιμολογίου</b><div style="margin-top:5px">Σύνολο τιμολογίου: <b>${money(invoiceTotal)}</b> · Σύνολο ${rowCount} γραμμών: <b>${money(lineTotal)}</b> · Διαφορά: <b>${money(Math.abs(difference))}</b> · Ανοχή: <b>0,05 €</b></div></div><strong style="color:${ok?'#14733c':'#a75d00'}">${ok?'✓ ΣΥΜΦΩΝΕΙ':'⚠ ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟ'}</strong></div>`;
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap"><div><b>Οικονομικός έλεγχος τιμολογίου</b><div style="margin-top:5px">Σύνολο τιμολογίου: <b>${money(invoiceTotal)}</b> · Σύνολο ${rowCount} γραμμών: <b>${money(lineTotal)}</b> · Διαφορά: <b>${money(Math.abs(difference))}</b> · Ανοχή: <b>0,05 €</b></div><small>Συγκρίνετε και το πλήθος, τους κωδικούς, τις ποσότητες και τις συσκευασίες με το έντυπο πριν από οριστικοποίηση.</small></div><strong style="color:${ok?'#14733c':'#a75d00'}">${ok?'✓ ΣΥΜΦΩΝΕΙ ΤΟ ΠΟΣΟ':'⚠ ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟ'}</strong></div>`;
 }
 
 async function inspect(orderId){

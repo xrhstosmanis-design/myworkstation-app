@@ -1228,7 +1228,7 @@ Total output lines: 2477
 - [x] LAB: 2612188 reached `POS_FAILED / POS_BACKGROUND_FAILED` at 20:17 after OCR, with generic internal error.
 - [x] Root cause: product-line save rejected the worker because the safe empty `POS_OCR_DRAFT` already existed.
 - [x] Fix: only `AI_COMPLETE` V2.4.4 background output with the same durable handoff may fill its still-DRAFT POS document; all other linked-document edits stay blocked.
-- [x] 46/46 targeted tests PASS; no payment, stock, approval or finalization change.
+- [x] 53/53 targeted tests PASS; no payment, stock, approval or finalization change.
 - [ ] Αναμονή CI, merge/deploy και νέα καθαρή POS δοκιμή.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-14-gate3-fill-linked-pos-draft.md`.
 
@@ -2737,3 +2737,10 @@ Total output lines: 1413
 - [x] Προστέθηκαν οι ολοκληρωμένες οδηγίες Workforce για πρόγραμμα ανά εργαζόμενο, Chat, εκτύπωση κάρτας και παρουσία μέσω PIN/QR/κάμερας/scanner.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-mandatory-pass-manual-workforce.md`.
 - Manual: `docs/manual/workforce/PASS.md`.
+
+## 2026-09-24 — Gate 3 COSMOS/PEGASOS κιβώτια και display — LOCAL PASS / LAB FAIL
+
+- [x] Τοπική μετατροπή ρητής ποσότητας κιβωτίου (`24PACK`, `1X6PACK`, `1X24P`, `(12T)`) σε τεμάχια stock και PEGASOS `Disp. 50τυ` σε 50 τεμάχια, χωρίς μεταβολή ποσού τιμολογίου. Η πράσινη ένδειξη διευκρινίζει ότι συμφωνεί μόνο το ποσό.
+- [x] Πλήρης server suite 1452 PASS / 1 SKIP / 0 FAIL· `git diff --check` και έλεγχος σύνταξης client PASS. Το FAST handoff και το resume δέχονται αποθηκευμένες σειρές μόνο με επαλήθευση ανά γραμμή, όχι μόνο με συμφωνία τελικού ποσού.
+- [ ] Τα πραγματικά OHONOS, PEGASOS, COSMOS παραμένουν LAB FAIL για χαμένες/πλεονάζουσες γραμμές. Χρειάζονται πλήρης αποκατάσταση πίνακα, CI/deploy και νέο μοναδικό παραστατικό για LAB· τα ήδη καταχωρισμένα δεν επανυποβάλλονται.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate3-carton-display-stock-local.md`.

@@ -15,8 +15,12 @@ export function stockConversionFromDescription(description,explicitMultiplier=0,
   // description is package information and must not multiply it a second time.
   if(/^(KG|KGR|KILO|KIL|ΚΙΛ|ΚΙΛΟ|ΚΙΛΑ)$/.test(unit))return {multiplier:1000,stockMeasure:"GRAM",inferred:true};
   const pieces=text.match(/(?:^|\D)(\d{1,4})\s*(?:TEM|TMX|ΤΕΜ|ΤΜΧ)(?=\D|$)/);
+  // Carton counts are printed as 24PACK, 1X6PACK or (12T) on some supplier
+  // invoices. Read them only for a carton invoice unit, never for a TEM row.
+  const carton=/^(?:PACKAGE|PACK|BOX|CASE|KIB|ΚΙΒ|ΚΒ|ΠΑΚ)/.test(unit);
+  const cartonPieces=carton&&text.match(/(?:^|[^\d])(?:1\s*[XΧ]\s*)?(\d{1,3})\s*(?:PACK|PK|P|T)(?=\s*\)|\b)/);
   const kilograms=text.match(/(?:^|\D)(\d+(?:[,.]\d+)?)\s*(?:KGR|KG|KILO|ΚΙΛ)(?=\D|$)/);
-  const inferred=pieces?Number(pieces[1]):kilograms?Number(kilograms[1].replace(",","."))*1000:0;
+  const inferred=pieces?Number(pieces[1]):cartonPieces?Number(cartonPieces[1]):kilograms?Number(kilograms[1].replace(",","."))*1000:0;
   const supplied=Number(explicitMultiplier||0),multiplier=supplied>1?supplied:inferred>1?inferred:supplied;
   return {multiplier:multiplier>0?multiplier:0,stockMeasure:kilograms?"GRAM":"PIECE",inferred:inferred>1};
 }
