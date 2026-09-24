@@ -1,0 +1,39 @@
+{
+  "store": {
+    "name": "",
+    "address": "",
+    "visitDate": "2026-09-27",
+    "visitTime": "",
+    "receiverName": "",
+    "rollbackOwner": ""
+  },
+  "release": {
+    "productionRevision": "",
+    "ciGreen": false,
+    "backupVerified": false,
+    "maintenanceWindowApproved": false
+  },
+  "terminals": [
+    {
+      "terminalId": "",
+      "device": "",
+      "role": "POS_1",
+      "scanner": "",
+      "printer": "",
+      "rbs": "NON_FISCAL",
+      "eftpos": "NOT_CONNECTED"
+    }
+  ],
+  "operations": {
+    "operatorsConfirmed": false,
+    "catalogPricesVatConfirmed": false,
+    "openingStockConfirmed": false,
+    "testBasketApproved": false,
+    "supportContactConfirmed": false
+  },
+  "safety": {
+    "nonFiscalScopeConfirmed": false,
+    "openGatesRecorded": false,
+    "credentialsExcluded": true
+  }
+}

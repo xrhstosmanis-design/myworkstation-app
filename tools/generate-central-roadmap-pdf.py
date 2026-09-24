@@ -74,7 +74,7 @@ bullet = ParagraphStyle(
 quote = ParagraphStyle(
     "QuoteGreek", parent=body, leftIndent=5 * mm, rightIndent=3 * mm,
     borderColor=TEAL, borderWidth=1.2, borderPadding=4 * mm,
-    backColor=PALE_GREEN, textColor=NAVY, spaceBefore=2 * mm, spaceAfter=4 * mm,
+    backColor=PALE_GREEN, textColor=NAVY, spaceBefore=5 * mm, spaceAfter=4 * mm,
 )
 small = ParagraphStyle(
     "SmallGreek", parent=body, fontSize=7.4, leading=10, textColor=MUTED,
