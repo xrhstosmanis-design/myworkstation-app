@@ -504,12 +504,13 @@ async function matchSupplier(companyId,candidate={}){
 // flow (or in Azure when Azure already returned a fully reconciled table).
 const fastHeaderSchema={type:"object",additionalProperties:false,properties:{
   confidence:{type:"number",minimum:0,maximum:100},
+  documentType:{type:"string",enum:["INVOICE","CREDIT_NOTE"]},
   supplierName:{type:"string"},
   supplierTaxId:{type:"string"},
   documentNumber:{type:"string"},
   documentDate:{type:"string"},
   totalGross:{type:"number",minimum:0}
-},required:["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
+},required:["confidence","documentType","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"]};
 const reconciledFastProductLines=(lines,totalGross)=>{
   const productLines=finalizeV244ProductLines(Array.isArray(lines)?lines:[]).slice(0,500);
   if(!productLines.length||!(Number(totalGross)>0))return [];
@@ -555,7 +556,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       const reconciliation=reconcileInvoiceLines(productLines,totalGross);
       const difference=round2(Math.abs(reconciliation.grossTotal-totalGross));
       if(!row.supplierId||!documentNumber||!documentDate||!(totalGross>0)||!productLines.length||difference>POS_STORED_LINES_TOLERANCE)continue;
-      return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,provider:"DURABLE_POS_JOB",productLines});
+      return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,documentType:row.resultJson?.documentType==="CREDIT_NOTE"||handoff.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",provider:"DURABLE_POS_JOB",productLines});
     }
     let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
@@ -566,7 +567,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
         const azureTotalGross=round2(parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
-        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
+        const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
         if(azureHasUsefulHeader&&azureProductLines.length)return res.json(azureHeader);
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
@@ -584,7 +585,8 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       :{type:"input_image",image_url:dataUrl,detail:"high"};
     const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού, τον πίνακα ειδών και την κάτω περιοχή για τα τελικά σύνολα.
 
-Χρειάζομαι αυτά τα 5 βασικά στοιχεία:
+Χρειάζομαι αυτά τα 6 βασικά στοιχεία:
+0. documentType = CREDIT_NOTE αν γράφει ΠΙΣΤΩΤΙΚΟ ή CREDIT NOTE, αλλιώς INVOICE. Μη θεωρήσεις την πίστωση ως τρόπο πληρωμής ένδειξη πιστωτικού.
 1. supplierName = ο ΕΚΔΟΤΗΣ/ΠΡΟΜΗΘΕΥΤΗΣ του παραστατικού, όχι ο πελάτης/παραλήπτης.
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
 3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
@@ -624,6 +626,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       supplierTaxId:supplier?.taxId||supplierTaxId,
       documentNumber:/\d/.test(documentNumber)?documentNumber:"",
       documentDate,
+      documentType:parsed.documentType==="CREDIT_NOTE"||azureHeaderFallback?.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",
       totalGross:totalGross>0?totalGross:0,
       productLines
     });
@@ -703,9 +706,11 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),supplierId=String(req.body?.supplierId||"");
     const documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80),documentDate=normalizeIntakeDate(req.body?.documentDate);
     const totalGross=round2(intakeNumber(req.body?.totalGross));
+    const documentType=req.body?.documentType;
+    const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
+    if(documentType!=="INVOICE"||pages.some(page=>page?.documentType==="CREDIT_NOTE"))return res.status(409).json({error:"Πιστωτικό ή μη επιβεβαιωμένος τύπος παραστατικού: η γρήγορη ροή POS δεν δημιουργεί παραγγελία αγοράς ή πληρωμή. Χρησιμοποίησε την ειδική ροή πιστωτικού στο BackOffice.",code:"POS_CREDIT_NOTE_REQUIRES_BACKOFFICE"});
     let settlementMode=req.body?.settlementMode==="PAID"?"PAID":"CREDIT";
     let paymentTransactionId=req.body?.paymentTransactionId?String(req.body.paymentTransactionId).slice(0,180):null;
-    const pages=Array.isArray(req.body?.pages)?req.body.pages.slice(0,5):[];
     if(!storeId||!supplierId||!documentNumber||!documentDate||!(totalGross>0)||!pages.length)return res.status(400).json({error:"Λείπουν στοιχεία για την ασφαλή παραλαβή του τιμολογίου."});
     const store=await prisma.store.findFirst({where:{id:storeId,companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
