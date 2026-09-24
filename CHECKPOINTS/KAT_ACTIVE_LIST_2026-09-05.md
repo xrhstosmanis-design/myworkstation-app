@@ -1,7 +1,7 @@
 ## 2026-09-24 — Gate 4 μικτή πληρωμή / Κέντρο Βαρδιών — LAB FAIL, διόρθωση AWAITING LAB
 
 - Στο LAB-POS-01 μία πώληση 1,00 € με 0,50 € μετρητά + 0,50 € κάρτα εμφανίστηκε στο Backoffice ως 1,00 € μετρητά / 0,00 € κάρτα. Το κοινό stock μειώθηκε μόνο μία φορά. Διορθώθηκε τοπικά η κατανομή προβολής με βάση τα αποθηκευμένα Payment ποσά.
-- [ ] CI, exact Render, επανάγνωση ίδιας συναλλαγής στο LAB· Gate 4 συνολικά PENDING.
+- [ ] CI #2968 PASS, PR #1168 merged, Render `bbeb730` επιβεβαιωμένο· εκκρεμεί επανάγνωση ίδιας συναλλαγής στο LAB (έληξε η συνεδρία Backoffice)· Gate 4 συνολικά PENDING.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-mixed-payment-shift-projection-awaiting-lab.md`.
 
 ## 2026-09-24 — PEPSICO 38 4687 003 04817 — LAB FAIL / διαπρομηθευτική εργασία
