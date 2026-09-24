@@ -21,11 +21,13 @@
 
 ## Platform Admin
 
-Διαδρομή:
+Μοναδικός σύνδεσμος που στέλνουμε για είσοδο Platform/Super Admin:
 
 ```text
-/platform-admin
+https://myworkstation-app.onrender.com/platform-admin
 ```
+
+Η αρχική διεύθυνση του Render, εσωτερικά `?supportPage=stores` και σύνδεσμοι `/store/<id>` δεν είναι σύνδεσμοι εισόδου Platform Admin. Οι σύνδεσμοι Store Mode δίνονται χωριστά, με σαφή σήμανση για το συγκεκριμένο κατάστημα και terminal.
 
 Δυνατότητες:
 

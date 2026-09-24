@@ -6,6 +6,10 @@ This is the single source repository for the MyWorkStation POS, BackOffice, Plat
 
 Work from a branch based on `main`. Preserve tenant isolation, licensing, authentication, fiscal gates, POS/BackOffice behavior and existing Render deployment safeguards.
 
+## Canonical Platform Admin link
+
+For every page, agent, checkpoint, message template and user-facing instruction, the Platform/Super Admin entry link is **https://myworkstation-app.onrender.com/platform-admin**. Never send the root URL, an internal `?supportPage=stores` URL or a `/store/<id>` URL as the Platform Admin login link. Store Mode links are separate and must be explicitly identified as such. This link rule does not grant access or change any application route.
+
 ## Runtime and setup
 
 - Use Node.js 20.
