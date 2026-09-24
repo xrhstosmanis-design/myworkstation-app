@@ -1,7 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {verifyInvoiceDiscounts} from "../src/lib/invoice-discount-verifier.js";
+import {verifyInvoiceDiscounts,buildCompletePrintedTableCandidate} from "../src/lib/invoice-discount-verifier.js";
+
+test("printed 7% discount rounding to zero cents keeps a two-cent 24% VAT row",()=>{
+  const tiny={index:1,supplierCode:"ES.BO.GR.020",description:"Γραβάτα πλαστική Haribo",printedQuantity:2,printedUnit:"ΤΕΜ",originalUnitPrice:.01,initialAmount:.02,discountPercent1:7,discountAmount1:0,discountPercent2:0,discountAmount2:0,discountPercent3:0,discountAmount3:0,netAmount:.02,exciseTotal:0,taxableAmount:.02,vatRate:24,vatAmount:0,grossAmount:.02,confidence:99,evidence:"2 × 0,01 · 7% = 0,00"};
+  const footer=[{rate:24,taxable:.02,vat:0,gross:.02}];
+  const rebuilt=buildCompletePrintedTableCandidate([tiny],.02,footer);
+  assert.equal(rebuilt?.length,1);
+  assert.equal(rebuilt[0].discount1,7);
+  assert.equal(rebuilt[0].discount1Amount,0);
+  assert.equal(rebuilt[0].vatRate,24);
+  assert.equal(rebuilt[0].grossAmount,.02);
+  assert.equal(buildCompletePrintedTableCandidate([{...tiny,initialAmount:1,originalUnitPrice:.5,netAmount:1,taxableAmount:1,grossAmount:1.24,vatAmount:.24}],1.24,[{rate:24,taxable:1,vat:.24,gross:1.24}]),null,"a material discount cannot be hidden as zero");
+});
 import {finalizeV244ProductLines} from "../../client/src/lib/invoice-v244-core.js";
 import {mergeFastInvoiceHeaders} from "../../client/src/lib/invoice-fast-header-merge.js";
 import {recoverVatSummaryInvoiceTotal} from "../src/lib/invoice-total-reading.js";
