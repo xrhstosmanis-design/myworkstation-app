@@ -22,6 +22,15 @@
       "printer": "",
       "rbs": "NON_FISCAL",
       "eftpos": "NOT_CONNECTED"
+    },
+    {
+      "terminalId": "",
+      "device": "",
+      "role": "POS_2",
+      "scanner": "",
+      "printer": "",
+      "rbs": "NON_FISCAL",
+      "eftpos": "NOT_CONNECTED"
     }
   ],
   "operations": {

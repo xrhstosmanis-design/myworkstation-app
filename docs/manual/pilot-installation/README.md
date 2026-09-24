@@ -6,6 +6,7 @@
 
 1. Αντιγράψτε το `tools/pilot-readiness/pilot-site.sample.json` σε αρχείο εκτός Git, π.χ. `pilot-site.json`.
 2. Συμπληρώστε πραγματικό κατάστημα, επίσκεψη, υπεύθυνους, production revision και κάθε terminal.
+   Απαιτούνται δύο διαφορετικά Terminal IDs, ένα για `POS_1` και ένα για `POS_2`.
 3. Μην γράψετε PIN, activation links, tokens, κωδικούς ή provider credentials.
 4. Για κάθε μη πιστοποιημένη σύνδεση δηλώστε `NON_FISCAL` ή `NOT_CONNECTED`.
 
