@@ -158,7 +158,7 @@ test("operator-facing FAST fallback reads only payment header fields and leaves 
   const promptStart=wrapper.indexOf('const prompt=`Είσαι FAST');
   const promptEnd=wrapper.indexOf('`;\n    let parsed;',promptStart);
   const prompt=wrapper.slice(promptStart,promptEnd);
-  assert.match(schema,/required:\["confidence","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"\]/);
+  assert.match(schema,/required:\["confidence","documentType","supplierName","supplierTaxId","documentNumber","documentDate","totalGross"\]/);
   assert.doesNotMatch(schema,/productLines|fastProductLineProperties/);
   assert.doesNotMatch(prompt,/στο productLines|ΟΛΕΣ τις πραγματικές γραμμές/);
   assert.match(wrapper,/if\(!sourceLines\)\{operationStage="ai-recheck"/);
