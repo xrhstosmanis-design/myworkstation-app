@@ -15,6 +15,7 @@ const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v||0)));
 const money2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
 const productLinesGross=lines=>money2((Array.isArray(lines)?lines:[]).reduce((sum,line)=>sum+Number(line?.grossAmount||0),0));
+const printedPieceUnit=unit=>/^(?:ΤΜΧ|ΤΕΜ|TEM|TMX|PC|PCS|PIECE)$/.test(String(unit||"").trim().toUpperCase().replace(/[.·]$/,""));
 
 export function reconcileCentRoundingResidual(lines,invoiceTotal,tolerance=0.05){
   const source=Array.isArray(lines)?lines:[],expected=money2(invoiceTotal),actual=productLinesGross(source),residual=money2(expected-actual);
@@ -31,7 +32,7 @@ export function stockMultiplierForPersistedInvoiceLine(line){
   const invoiceUnit=String(line?.invoiceUnit||line?.unit||'ΤΜΧ');
   const invoiceIsPackage=/(PACKAGE|PACK|BOX|CASE|ΚΙΒ|ΚΒ|ΠΑΚ)/i.test(invoiceUnit);
   const invoiceIsWeight=/(KG|KGR|ΚΙΛ)/i.test(invoiceUnit);
-  const invoiceIsPiece=/^(?:ΤΜΧ|TEM|TMX|PC|PCS|PIECE)$/i.test(invoiceUnit.trim());
+  const invoiceIsPiece=printedPieceUnit(invoiceUnit);
   // A raw stockUnitsPerInvoiceUnit value is not proof of a package mapping:
   // older OCR output filled it from 1LT/450ML in the description. A printed
   // piece row must always stay one stock piece unless the invoice itself says
@@ -68,7 +69,7 @@ export function normalizePersistedInvoiceEconomics(line){
 
 export function shouldApplyLearnedPack(line,learnedPack){
   const unit=String(line?.invoiceUnit||line?.unit||'').trim();
-  const verifiedPrintedPieces=line?.sourceColumnsVerified===true&&/^(?:ΤΜΧ|TEM|TMX|PC|PCS|PIECE)$/i.test(unit);
+  const verifiedPrintedPieces=line?.sourceColumnsVerified===true&&printedPieceUnit(unit);
   return Number(learnedPack||0)>1&&Number(line?.unitsPerPackage||0)<=1&&!verifiedPrintedPieces;
 }
 

@@ -46,6 +46,17 @@ test("printed pc quantities are not multiplied again by 8TMX, 9TMX or 10TMX in t
   }
 });
 
+test("TWINS 8217 printed Τεμ. preserves six pieces and printed price despite 6 τεμ in description",()=>{
+  const printed={description:"OSHEE ZERO Isotonic Λεμόνι 750ml * 6 τεμ",quantity:6,unit:"Τεμ.",unitCost:1.10,discount1:19,netAmount:5.35,grossAmount:6.05,unitsPerPackage:6,sourceColumnsVerified:true};
+  assert.equal(shouldApplyLearnedPack(printed,6),false);
+  const stockUnitsPerInvoiceUnit=stockMultiplierForPersistedInvoiceLine(printed);
+  assert.equal(printed.quantity*stockUnitsPerInvoiceUnit,6);
+  assert.equal(printed.unitCost/stockUnitsPerInvoiceUnit,1.10);
+  assert.equal(printed.netAmount,5.35);
+  assert.equal(printed.grossAmount,6.05);
+  assert.equal(stockMultiplierForPersistedInvoiceLine({...printed,unit:"ΚΙΒ",unitsPerPackage:6,packRule:"VERIFIED_CARTON"}),6);
+});
+
 test("invoice 28897 repairs corrupted display economics from intact row totals",()=>{
   const repaired=rows.map(line=>normalizePersistedInvoiceEconomics({...line,discount1:99.9,vatRate:0}));
   assert.deepEqual(repaired.map(line=>line.discount1),discounts);
