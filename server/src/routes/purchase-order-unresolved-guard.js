@@ -55,6 +55,10 @@ async function ensureSchema(){
 async function applyPackStockCorrection({orderId,companyId,userId,userName}){
   await ensureSchema();
   return prisma.$transaction(async tx=>{
+    // Supplier credit notes already post signed return quantities. The
+    // purchase pack correction is positive stock and must never run on them.
+    const credit=await tx.$queryRaw`SELECT d."id" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND d."documentType"='CREDIT_NOTE' LIMIT 1`;
+    if(credit[0])return {ok:true,skipped:"CREDIT_NOTE",correctedProducts:0};
     // Το INSERT λειτουργεί σαν idempotency lock. Αν υπάρχει ήδη, δεν αγγίζουμε stock.
     const marker=await tx.$queryRaw`
       INSERT INTO "PurchaseOrderPackCorrection" ("orderId","companyId","correctedByUserId","correctedByName","details")

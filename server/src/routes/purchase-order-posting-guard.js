@@ -179,6 +179,12 @@ router.patch("/:orderId",async(req,res,next)=>{
       if(requestedStatus==="INVOICED"&&found.status!=="FINAL"){
         const error=new Error("Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί.");error.status=409;throw error;
       }
+      // The approved document is necessarily visible to duplicateDetails.
+      // A repeat FINAL for its own posting is idempotent, not a second invoice.
+      if(requestedStatus==="FINAL"&&found.status==="FINAL"){
+        const ownPosting=await tx.$queryRaw`SELECT "purchaseDocumentId" FROM "PurchaseOrderPosting" WHERE "orderId"=${found.id} AND "companyId"=${companyId} LIMIT 1`;
+        if(ownPosting[0])return {ok:true,idempotent:true,status:"FINAL",purchaseDocumentId:ownPosting[0].purchaseDocumentId};
+      }
 
       const effectiveSupplierId=req.body?.supplierId??found.supplierId??null;
       const effectiveInvoiceNumber=req.body?.invoiceNumber??found.invoiceNumber??null;
@@ -206,10 +212,33 @@ router.patch("/:orderId",async(req,res,next)=>{
 
       if(requestedStatus==="FINAL"&&!existingPosting){
         const lines=await tx.$queryRaw`
-          SELECT l.* FROM "PurchaseOrderLine" l
+          SELECT l.*,p."trackStock" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId}
           WHERE l."orderId"=${found.id}
           ORDER BY l."createdAt",l."id"`;
         if(!lines.length){const error=new Error("Δεν μπορεί να οριστικοποιηθεί αγορά χωρίς είδη.");error.status=409;throw error}
+
+        const linkedCredit=found.sourceDocumentId?await tx.$queryRaw`SELECT "id","documentType","status","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "purchaseOrderId"=${found.id} FOR UPDATE`:[];
+        if(linkedCredit[0]?.documentType==="CREDIT_NOTE"){
+          const credit=linkedCredit[0];
+          if(credit.status!=="DRAFT")throw Object.assign(new Error("Το πιστωτικό έχει ήδη εγκριθεί ή δεν είναι πλέον πρόχειρο."),{status:409});
+          if(lines.some(line=>!line.productId||n(line.quantity)<=0||n(line.grossAmount)<0))throw Object.assign(new Error("Αντιστοίχισε όλα τα επιστρεφόμενα προϊόντα και τις θετικές ποσότητες πριν από την έγκριση του πιστωτικού."),{status:409});
+          const net=lines.reduce((sum,line)=>sum+n(line.netAmount)+n(line.exciseTotal),0);
+          const vat=lines.reduce((sum,line)=>sum+n(line.vatAmount),0);
+          const gross=lines.reduce((sum,line)=>sum+n(line.grossAmount),0);
+          if(Math.abs(gross-n(credit.totalGross))>0.05)throw Object.assign(new Error("Οι γραμμές πιστωτικού δεν συμφωνούν με το τυπωμένο συνολικό ποσό. Δεν έγινε κίνηση αποθήκης ή συμψηφισμός."),{status:409});
+          await tx.$executeRaw`DELETE FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${credit.id}`;
+          for(const line of lines){
+            await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${n(line.quantity)},'PIECE',${n(line.unitCost)},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
+            if(line.trackStock){
+              await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-n(line.quantity)}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-n(line.quantity)},"updatedAt"=NOW()`;
+              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-n(line.quantity)},${n(line.unitCost)},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.id})`;
+            }
+          }
+          await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${net},"totalVat"=${vat},"totalGross"=${gross},"status"='APPROVED',"updatedAt"=NOW() WHERE "id"=${credit.id} AND "companyId"=${companyId}`;
+          await tx.$executeRaw`INSERT INTO "PurchaseOrderPosting" ("orderId","companyId","supplierId","documentFingerprint","purchaseDocumentId","postedByUserId","postedByName") VALUES (${found.id},${companyId},${effectiveSupplierId},${fp},${credit.id},${req.user.id},${actor})`;
+          await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"updatedByName"=${actor},"finalizedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          return {ok:true,status:"FINAL",documentType:"CREDIT_NOTE",purchaseDocumentId:credit.id,postedProducts:lines.length,supplierBalanceChange:-gross,cashMovement:false};
+        }
 
         const totalNet=lines.reduce((sum,row)=>sum+n(row.netAmount),0);
         const totalVat=lines.reduce((sum,row)=>sum+n(row.vatAmount),0);

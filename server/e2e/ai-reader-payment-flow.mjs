@@ -114,6 +114,41 @@ async function main(){
   assert.equal(await stock(productId),10,"Second approval changed stock again");
   assert.equal(await movementCount(documentId),1,"Second approval created duplicate stock movement");
 
+  // A supplier credit note enters from POS as a reviewable credit document.
+  // Approval reverses stock and supplier balance exactly once, without a POS payment.
+  const creditNumber="E2E-CREDIT-9946";
+  const creditData=`data:image/png;base64,${Buffer.from("printed-credit-note-9946-".repeat(20)).toString("base64")}`;
+  const creditUpload=await request("/api/commerce/ai-reader/jobs",{method:"POST",token,body:{storeId,filename:"credit.png",mimeType:"image/png",dataUrl:creditData,localConfidence:95,result:{rawText:"ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ",lines:[],pageCount:1}}});
+  assert.equal(creditUpload.response.status,201,JSON.stringify(creditUpload.payload));
+  const creditJobId=creditUpload.payload.id;
+  const creditHeader={documentType:"CREDIT_NOTE",supplierId,documentNumber:creditNumber,documentDate:new Date().toISOString().slice(0,10),totalGross:6.04,settlementMode:"CREDIT"};
+  const creditDraft=await request(`/api/commerce/ai-reader/jobs/${creditJobId}/pos-draft`,{method:"POST",token,body:creditHeader});
+  assert.equal(creditDraft.response.status,201,JSON.stringify(creditDraft.payload));
+  const creditLines=await request(`/api/commerce/ai-reader/jobs/${creditJobId}/product-lines`,{method:"PUT",token,body:{source:"V2.4.4",productLines:[
+    {description:"E2E AI Product",quantity:2,unitCost:1.74,discount1:10,netAmount:3.13,vatRate:13,grossAmount:3.54,confidence:98},
+    {description:"E2E AI Product",quantity:1,unitCost:2.46,discount1:10,netAmount:2.21,vatRate:13,grossAmount:2.50,confidence:98}
+  ]}});
+  assert.equal(creditLines.response.status,200,JSON.stringify(creditLines.payload));
+  const creditIntake=await request(`/api/commerce/ai-reader/jobs/${creditJobId}/pos-intake`,{method:"POST",token,body:creditHeader});
+  assert.equal(creditIntake.response.status,201,JSON.stringify(creditIntake.payload));
+  assert.equal(await stock(productId),10,"Credit draft moved stock before approval");
+  const creditDocs=await prisma.$queryRawUnsafe(`SELECT "documentType","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=$1`,creditDraft.payload.documentId);
+  assert.equal(creditDocs[0].documentType,"CREDIT_NOTE");assert.equal(creditDocs[0].status,"DRAFT");assert.equal(creditDocs[0].paymentTransactionId,null);
+  const creditPosted=await request(`/api/purchase-orders/${creditIntake.payload.purchaseOrderId}`,{method:"PATCH",token,body:{status:"FINAL"}});
+  assert.equal(creditPosted.response.status,200,JSON.stringify(creditPosted.payload));
+  assert.equal(creditPosted.payload.documentType,"CREDIT_NOTE");
+  assert.equal(await stock(productId),7,"Approved credit should return exactly three pieces");
+  const postedAgain=await request(`/api/purchase-orders/${creditIntake.payload.purchaseOrderId}`,{method:"PATCH",token,body:{status:"FINAL"}});
+  assert.equal(postedAgain.response.status,200,JSON.stringify(postedAgain.payload));
+  assert.equal(await stock(productId),7,"Repeated approval moved credit stock twice");
+  const creditLedger=await prisma.$queryRawUnsafe(`SELECT "status","documentType","totalGross" FROM "PurchaseDocument" WHERE "id"=$1`,creditDraft.payload.documentId);
+  assert.equal(creditLedger[0].status,"APPROVED");assert.equal(creditLedger[0].documentType,"CREDIT_NOTE");assert.equal(Number(creditLedger[0].totalGross),6.04);
+  const supplierLedger=await request(`/api/supplier-control/${supplierId}/ledger`,{token});
+  assert.equal(supplierLedger.response.status,200,JSON.stringify(supplierLedger.payload));
+  assert.ok(supplierLedger.payload.rows.some(row=>row.type==="CREDIT_NOTE"&&row.ref===creditNumber&&Number(row.amount)===-6.04),"Supplier balance did not subtract the credit");
+  const creditPayment=await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreTransaction" WHERE "companyId"=$1 AND "invoiceDocumentNumber"=$2`,companyId,creditNumber);
+  assert.equal(creditPayment[0].count,0);
+
   // Delete/reread a paid draft through the real POS/BackOffice HTTP endpoints.
   // This fixture uses only the isolated CI database and no external AI calls.
   const invoiceNumber="E2E-REREAD-2612188";
@@ -204,7 +239,7 @@ async function main(){
   assert.equal(historicalCount[0].count,2,"Historical financial records must remain untouched");
   const canonical=await prisma.$queryRawUnsafe(`SELECT "supplierId" FROM "StoreTransaction" WHERE "id"=$1`,originalPaymentId);
   assert.equal(canonical[0].supplierId,aliasId,"Reread must not reassign the original payment supplier");
-  assert.equal(await stock(productId),10,"Draft reread changed stock");
+  assert.equal(await stock(productId),7,"Draft reread changed stock after the supplier credit");
   const raceNumber="E2E-REREAD-RACE";
   const race=await Promise.all([token,secondToken].map((raceToken,index)=>request(`/api/transactions/stores/${storeId}`,{method:"POST",token:raceToken,body:{type:"SUPPLIER_PAYMENT",amount:3,supplierId,invoiceDocumentNumber:raceNumber,description:`Τιμολόγιο ${raceNumber} — concurrency test`,evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:`e2e-reread-race-${index}`}})));
   assert.deepEqual(race.map(result=>result.response.status).sort(),[201,409],JSON.stringify(race.map(result=>result.payload)));
