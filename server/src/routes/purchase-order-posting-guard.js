@@ -179,6 +179,12 @@ router.patch("/:orderId",async(req,res,next)=>{
       if(requestedStatus==="INVOICED"&&found.status!=="FINAL"){
         const error=new Error("Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί.");error.status=409;throw error;
       }
+      // The approved document is necessarily visible to duplicateDetails.
+      // A repeat FINAL for its own posting is idempotent, not a second invoice.
+      if(requestedStatus==="FINAL"&&found.status==="FINAL"){
+        const ownPosting=await tx.$queryRaw`SELECT "purchaseDocumentId" FROM "PurchaseOrderPosting" WHERE "orderId"=${found.id} AND "companyId"=${companyId} LIMIT 1`;
+        if(ownPosting[0])return {ok:true,idempotent:true,status:"FINAL",purchaseDocumentId:ownPosting[0].purchaseDocumentId};
+      }
 
       const effectiveSupplierId=req.body?.supplierId??found.supplierId??null;
       const effectiveInvoiceNumber=req.body?.invoiceNumber??found.invoiceNumber??null;
