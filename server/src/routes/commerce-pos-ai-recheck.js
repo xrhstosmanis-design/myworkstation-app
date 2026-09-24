@@ -451,7 +451,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
 
 Ο πρώτος έλεγχος βρήκε προσωρινά:\n${anchors||"(καμία ασφαλής γραμμή)"}
 
-Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?`Υπάρχει διαφορά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €, άρα αναζήτησε ειδικά γραμμές προϊόντων που παραλείφθηκαν.`:""}
+Τελικό πληρωτέο τιμολογίου: ${invoiceTotal.toFixed(2)} €. Άθροισμα grossAmount των προσωρινών γραμμών: ${initialLinesTotal.toFixed(2)} €. ${totalMismatch?(initialLinesTotal>invoiceTotal?`Οι προσωρινές γραμμές υπερβαίνουν το τιμολόγιο κατά ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €. Έλεγξε αν η ίδια φυσική σειρά εμφανίστηκε ξανά ή αν μεταφέρθηκαν αριθμοί από γειτονική σειρά. Μην αφαιρέσεις πραγματικά επαναλαμβανόμενο προϊόν χωρίς οπτική απόδειξη.`:`Λείπουν ${Math.abs(invoiceTotal-initialLinesTotal).toFixed(2)} €. Έλεγξε αν παραλείφθηκαν πραγματικές τυπωμένες γραμμές ή μεταφέρθηκαν αριθμοί από γειτονική σειρά.`):""}
 
 Επέστρεψε ΚΑΘΕ ορατή γραμμή προϊόντος μία φορά. Για κάθε σειρά διάβασε οριζόντια: Κωδικός/Περιγραφή | Μ.Μ. | ποσότητα | αρχική Τιμή Μονάδας | αξία προ έκπτωσης | έκπτωση % και ποσό | αξία μετά την έκπτωση | ΕΦΚ | φορολογητέα αξία | ΦΠΑ % και ποσό. unitCost=αρχική τιμή πριν από εκπτώσεις, discount1/2/3=ποσοστά, discount1Amount/2Amount/3Amount=ποσά, netAmount=αξία μετά την έκπτωση, exciseTotal=ΕΦΚ, vatRate=%ΦΠΑ και grossAmount=φορολογητέα αξία+ποσό ΦΠΑ. Μην συγχέεις αριθμούς συσκευασίας με quantity/unitCost. Μην εφευρίσκεις. Αν ένα πεδίο δεν φαίνεται βάλε 0, αλλά ΜΗΝ παραλείψεις τη γραμμή.`;
     try{
@@ -592,13 +592,17 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       // the printed table. For this learned single-page layout, pass the
       // actual candidate array: `unresolved` contains {line,index} wrappers
       // and replacing that temporary array loses every recovered row.
-      const verificationLines=genericSinglePageMismatch?parsed.productLines:verificationLinesForLeventopoulos({pageCount:pageJobs.length,ruleKey:parsed?.supplierReadingProfile?.ruleKey,completePrintedTable,needsEmptyCompleteTableRead,productLines:parsed.productLines,unresolved});
-      const originalGenericRows=genericSinglePageMismatch?verificationLines.map(line=>({...line})):null;
+      // On an ordinary single-page mismatch, the prior provider/Azure merge
+      // may already contain the same physical row twice. Reread the original
+      // image without those candidate rows as anchors. Only a fully proved
+      // image-only table may replace the existing candidate.
+      const originalGenericRows=genericSinglePageMismatch?parsed.productLines:null;
+      const verificationLines=genericSinglePageMismatch?[]:verificationLinesForLeventopoulos({pageCount:pageJobs.length,ruleKey:parsed?.supplierReadingProfile?.ruleKey,completePrintedTable,needsEmptyCompleteTableRead,productLines:parsed.productLines,unresolved});
       const diagnostics=await verifyInvoiceDiscounts({contentData:page.contentData,mimeType:page.mimeType,filename:page.filename,productLines:verificationLines,apiKey:process.env.OPENAI_API_KEY,model:FULL_OCR_MODEL,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS,reverifyAll:completePrintedTable,expectedGrossTotal:completePrintedTable&&pageJobs.length===1?invoiceTotal:0,supplierRule:mantzilasInvoice?"MANTZILAS":supplierRequiresCompletePrintedTable?String(parsed?.supplierReadingProfile?.ruleKey||""):""});
       // For generic invoices, partial row-by-row OCR is not proof that a
       // second table has replaced the first. Keep the original candidate if
       // the full table and printed VAT footer cannot be verified together.
-      if(originalGenericRows&&!diagnostics.completePrintedTableRecovered)verificationLines.splice(0,verificationLines.length,...originalGenericRows);
+      if(originalGenericRows&&diagnostics.completePrintedTableRecovered)parsed.productLines=verificationLines;
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
