@@ -30,7 +30,7 @@ export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],
       const attachment={dataUrl:await readFile(file),filename:file.name||"apodeixi.jpg"};
       const result=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-settlements`,{method:"POST",body:JSON.stringify({supplierId,paymentMethod,paidAt,note:note.trim()||null,attachment,allocations:rows,idempotencyKey:key()})});
       if(paymentMethod==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:total,storeId:store.id,transactionId:result?.transaction?.id}}))}catch{}
-      setMessage?.(`✅ Πληρωμή ${euro(total)} για ${selected.name} καταχωρίστηκε σε αναμονή ελέγχου. Δεν αλλάζει δεύτερη φορά κανένα τιμολόγιο ή απόθεμα.`);
+      setMessage?.(`✅ Πληρωμή ${euro(total)} για ${selected.name} ${result?.status==="CONFIRMED"?"επιβεβαιώθηκε ως πληρωμή ιδιοκτήτη":"καταχωρίστηκε σε αναμονή ελέγχου"}. Δεν αλλάζει δεύτερη φορά κανένα τιμολόγιο ή απόθεμα.`);
       setItems([]);setAllocations({});setFile(null);setNote("");onChanged?.();
     }catch(error){setMessage?.(`❌ ${error?.message||"Δεν καταχωρίστηκε η πληρωμή."}`)}finally{setBusy(false)}
   };

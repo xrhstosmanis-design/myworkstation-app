@@ -483,6 +483,10 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const paymentSource=body.paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey);
   const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
+  // The company owner confirms their own BackOffice payment at submission.
+  // A store operator's POS payment still waits for the owner's review.
+  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
+  const initialStatus=ownerPayment?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
@@ -529,7 +533,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     `;
     await tx.$executeRaw`
       INSERT INTO "SupplierPaymentSettlement" ("id","companyId","storeId","transactionId","supplierId","status","paymentMethod","paidAt","note","createdBy","createdByName")
-      VALUES (${settlementId},${req.user.companyId},${store.id},${transactionId},${body.supplierId},'PENDING_REVIEW',${body.paymentMethod},${body.paidAt},${body.note||null},${req.user.id},${actorName})
+      VALUES (${settlementId},${req.user.companyId},${store.id},${transactionId},${body.supplierId},${initialStatus},${body.paymentMethod},${body.paidAt},${body.note||null},${req.user.id},${actorName})
     `;
     for(const allocation of body.allocations)await tx.$executeRaw`
       INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount")
@@ -537,11 +541,18 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     `;
     if(bankAccount)await tx.$executeRaw`
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
-      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},'PENDING_REVIEW',${transactionId},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${body.paidAt},${req.user.id},${actorName})
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},${initialStatus},${transactionId},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${body.paidAt},${req.user.id},${actorName})
     `;
+    if(ownerPayment){
+      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await tx.$executeRaw`
+        INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'SUPPLIER_SETTLEMENT_CONFIRMED',${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations,status:initialStatus,note:"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
+      `;
+    }
     return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId,bankAccount};
   });
-  res.status(201).json({...result,paymentSource,status:"PENDING_REVIEW",total});
+  res.status(201).json({...result,paymentSource,status:initialStatus,total});
 }));
 
 function isSuperAdminReview(req){
