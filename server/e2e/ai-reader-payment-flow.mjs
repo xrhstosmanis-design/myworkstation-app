@@ -180,7 +180,7 @@ async function main(){
   const staleCheck=await request("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",token:secondToken,body:duplicateBody});
   assert.equal(staleCheck.response.status,200,JSON.stringify(staleCheck.payload));
   assert.equal(staleCheck.payload.paymentTransactionId,originalPaymentId);
-  const handedOff=await request("/api/commerce/ai-reader/fast-handoff",{method:"POST",token:secondToken,body:{...intakeBody,storeId,paymentTransactionId:originalPaymentId,pages:[{filename:"reread.png",mimeType:"image/png",dataUrl:sourceData}]}});
+  const handedOff=await request("/api/commerce/ai-reader/fast-handoff",{method:"POST",token:secondToken,body:{...intakeBody,documentType:"INVOICE",storeId,paymentTransactionId:originalPaymentId,pages:[{filename:"reread.png",mimeType:"image/png",dataUrl:sourceData}]}});
   assert.equal(handedOff.response.status,202,JSON.stringify(handedOff.payload));
   const secondJob=handedOff.payload.jobId;
   assert.notEqual(secondJob,firstJob);assert.notEqual(secondJob,staleJob,"Handoff reused a deleted invoice's extraction");
