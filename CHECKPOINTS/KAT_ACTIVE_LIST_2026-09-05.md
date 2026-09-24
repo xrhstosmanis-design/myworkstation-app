@@ -50,6 +50,7 @@
 
 ## 2026-09-24 — Gate 4 POS 1/POS 2 και πιλοτική εγκατάσταση — ΑΝΑΤΕΘΗΚΕ
 
+- Ο έλεγχος καρτέλας δύο POS ετοιμάζεται στο `agent/gate4-two-terminal-readiness`: απαιτεί ακριβώς `POS_1`/`POS_2` με διαφορετικά Terminal IDs. Αυτό είναι μόνο οργανωτικός έλεγχος· πλήρες πραγματικό Gate 4 **NOT TESTED**. Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-two-terminal-readiness.md`.
 - Scope: πλήρες Gate 4 στα δύο LAB/POS, καρτέλα καταστήματος χωρίς μυστικά, αυτόματος έλεγχος `READY/NOT READY`, οδηγίες και checkpoint εγκατάστασης.
 - Branch: `agent/gate4-install-readiness` (νέα ανάληψη μετά τη διευκρίνιση του ιδιοκτήτη ότι καμία άλλη σελίδα δεν κατέχει το Gate 4).
 - Δεν περιλαμβάνει Gate 3, τιμολόγια/OCR, efood/Pelican ή μη πιστοποιημένη fiscal ενεργοποίηση.

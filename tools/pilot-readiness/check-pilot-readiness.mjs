@@ -40,8 +40,8 @@ requireTrue(profile.release?.ciGreen,"Πράσινο CI");
 requireTrue(profile.release?.backupVerified,"Επιβεβαιωμένο backup");
 requireTrue(profile.release?.maintenanceWindowApproved,"Εγκεκριμένο maintenance window");
 
-if(!Array.isArray(profile.terminals)||profile.terminals.length===0)missing.push("Τουλάχιστον ένα POS terminal");
-else profile.terminals.forEach((terminal,index)=>{
+if(!Array.isArray(profile.terminals)||profile.terminals.length!==2)missing.push("Ακριβώς δύο POS terminals (POS_1 και POS_2)");
+if(Array.isArray(profile.terminals))profile.terminals.forEach((terminal,index)=>{
   const prefix=`Terminal ${index+1}`;
   requireText(terminal?.terminalId,`${prefix}: Terminal ID`);
   requireText(terminal?.device,`${prefix}: πραγματική συσκευή`);
@@ -51,6 +51,12 @@ else profile.terminals.forEach((terminal,index)=>{
   requireText(terminal?.rbs,`${prefix}: RBS/NON_FISCAL κατάσταση`);
   requireText(terminal?.eftpos,`${prefix}: EFTPOS κατάσταση`);
 });
+if(Array.isArray(profile.terminals)){
+  const roles=profile.terminals.map(terminal=>terminal?.role);
+  const ids=profile.terminals.map(terminal=>String(terminal?.terminalId??"").trim().toUpperCase()).filter(Boolean);
+  if(roles.length!==2||!roles.includes("POS_1")||!roles.includes("POS_2"))missing.push("Διακριτοί ρόλοι POS_1 και POS_2");
+  if(ids.length!==new Set(ids).size)missing.push("Μοναδικό Terminal ID ανά POS");
+}
 
 requireTrue(profile.operations?.operatorsConfirmed,"Χειριστές/PIN/κάρτες/ρόλοι");
 requireTrue(profile.operations?.catalogPricesVatConfirmed,"Κατάλογος/τιμές/ΦΠΑ");
