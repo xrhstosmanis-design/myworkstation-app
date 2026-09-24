@@ -1,7 +1,12 @@
-## 2026-09-24 — Gate 4 μικτή πληρωμή / Κέντρο Βαρδιών — LAB FAIL, διόρθωση AWAITING LAB
+## 2026-09-24 — Gate 4 μικτή πληρωμή / Κέντρο Βαρδιών — LAB PASS
+
+- [x] Στο ακριβές Render `bbeb730c931218510a23f7c80074a79f943e8cfc` το LAB-POS-01 εμφανίζει την ήδη καταχωρισμένη μία μικτή πώληση: μετρητά 0,50 €, κάρτα 0,50 €, IRIS 0,00 €, σύνολο 1,00 €, μία κίνηση. Το LAB-POS-02 μένει 3,30 € μετρητά, 1,00 € κάρτες/IRIS, 4,30 € σύνολο, έξι συναλλαγές. Χωρίς νέα πώληση ή stock posting. Το συγκεκριμένο σκέλος αφαιρέθηκε από τα pending· Gate 4 συνολικά PENDING.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-mixed-payment-shift-projection-awaiting-lab.md` · Manual: `docs/manual/pos/PASS.md`.
+
+## Ιστορικό Gate 4 — μικτή πληρωμή / Κέντρο Βαρδιών — παλιό LAB FAIL, αντικαταστάθηκε από PASS
 
 - Στο LAB-POS-01 μία πώληση 1,00 € με 0,50 € μετρητά + 0,50 € κάρτα εμφανίστηκε στο Backoffice ως 1,00 € μετρητά / 0,00 € κάρτα. Το κοινό stock μειώθηκε μόνο μία φορά. Διορθώθηκε τοπικά η κατανομή προβολής με βάση τα αποθηκευμένα Payment ποσά.
-- [ ] CI #2968 PASS, PR #1168 merged, Render `bbeb730` επιβεβαιωμένο· εκκρεμεί επανάγνωση ίδιας συναλλαγής στο LAB (έληξε η συνεδρία Backoffice)· Gate 4 συνολικά PENDING.
+- [x] CI #2968 PASS, PR #1168 merged, Render `bbeb730` επιβεβαιωμένο· η επανάγνωση ολοκληρώθηκε με το παραπάνω LAB PASS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-24-gate4-mixed-payment-shift-projection-awaiting-lab.md`.
 
 ## 2026-09-24 — PEPSICO 38 4687 003 04817 — LAB FAIL / διαπρομηθευτική εργασία
