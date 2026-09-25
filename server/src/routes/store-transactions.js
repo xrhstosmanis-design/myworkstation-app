@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { sendLedgerAlertEmail } from "../services/mail.js";
+import { expenseReviewStatus } from "./expense-review-policy.js";
 
 const router=Router();
 let tablesPromise;
@@ -955,16 +956,17 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   }else rows=await insertTransaction(prisma);
   if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
   const transaction=normalize(rows[0]);
+  const expenseStatus=expenseReviewStatus(req.user);
   if(body.type==="OTHER_EXPENSE")await prisma.$executeRaw`
-    INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId")
-    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id})
+    INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status","reviewedBy","reviewedAt","reviewNote")
+    VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id},${expenseStatus},${expenseStatus==="CONFIRMED"?req.user.id:null},${expenseStatus==="CONFIRMED"?new Date():null},${expenseStatus==="CONFIRMED"?"Καταχώριση από ιδιοκτήτη / υπερδιαχειριστή":null})
     ON CONFLICT ("transactionId") DO NOTHING
   `;
   if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt)await prisma.$transaction(async tx=>{
     const account=await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id});
     await tx.$executeRaw`
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
-      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},${selectedPaymentMethod},${-Math.abs(Number(transaction.amount||0))},'PENDING_REVIEW',${transaction.id},${legacyAttachment?.dataUrl||null},${legacyAttachment?.mimeType||null},${legacyAttachment?.filename||null},${transaction.occurredAt||new Date()},${req.user.id},${actorName})
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},${selectedPaymentMethod},${-Math.abs(Number(transaction.amount||0))},${expenseStatus},${transaction.id},${legacyAttachment?.dataUrl||null},${legacyAttachment?.mimeType||null},${legacyAttachment?.filename||null},${transaction.occurredAt||new Date()},${req.user.id},${actorName})
       ON CONFLICT ("sourceTransactionId") DO NOTHING
     `;
   });
