@@ -2384,3 +2384,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 ## 2026-09-25 — Gate 5 ακριβές σφάλμα πληρωμής μέσα στη φόρμα
 
 - [ ] Στο deployed `d7be682` η σωστή τραπεζική πληρωμή 0,10 € με αναγνώσιμο PDF δεν καταχωρίστηκε και η ΔΑ0011467 έμεινε 1.380,24 €. Η φόρμα πλέον εμφανίζει το ακριβές μήνυμα του API μέσα στο modal για μία διαγνωστική επανάληψη μετά από CI/deploy. Gate 5 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate5-readable-payment-proof-awaiting-lab.md`.
+
+## 2026-09-25 — Gate 4 ανάγνωση τοπικής offline ουράς — AWAITING LAB
+
+- [ ] Εμφάνιση «Τοπική ουρά: N · IDs» στην κεφαλίδα POS για να αντιπαραβληθούν με BackOffice τα PENDING `4437bc8e`, `d203e422` χωρίς νέα πώληση. Client build PASS, αναμένονται CI/merge/deploy και μία εικόνα από το ίδιο φυσικό POS. Συνολικό Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-offline-local-queue-readback-awaiting-lab.md`.
