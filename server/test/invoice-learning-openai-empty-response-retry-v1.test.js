@@ -15,6 +15,13 @@ test("Invoice Learning bounds the OpenAI fallback before the Render gateway time
   assert.match(route,/OPENAI_INVOICE_FAST_MODEL\|\|process\.env\.OPENAI_INVOICE_MODEL\|\|"gpt-5-mini"/);
   assert.match(route,/signal:AbortSignal\.timeout\(OPENAI_FALLBACK_TIMEOUT_MS\)/);
   assert.match(route,/reasoning:\{effort:"minimal"\}/);
-  assert.match(route,/code:"AI_PROVIDER_TIMEOUT"/);
-  assert.match(route,/code:"AI_RETRY_TIMEOUT"/);
+  assert.match(route,/supervisedTimeoutResponse\("AI_PROVIDER_TIMEOUT"/);
+  assert.match(route,/supervisedTimeoutResponse\("AI_RETRY_TIMEOUT"/);
+});
+
+test("Invoice Learning exposes only supervised partial rows when OpenAI times out",()=>{
+  assert.match(route,/const supervisedTimeoutResponse=/);
+  assert.match(route,/draft\?\.productLines\?\.length/);
+  assert.match(route,/requiresManualCompletion:true,partialResult:true,providerTimeout:true/);
+  assert.match(route,/stableRead:false/);
 });
