@@ -12,7 +12,10 @@ export const writeOfflineSaleQueue=(storeId,rows,storage=globalThis.localStorage
 
 export function queueOfflineCashSale(storeId,payload,{storage=globalThis.localStorage,id=uuid(),now=()=>new Date()}={}){
   const rows=readOfflineSaleQueue(storeId,storage);
-  const row={id,createdAt:now().toISOString(),state:"PENDING",attempts:0,...payload,request:{...(payload.request||{}),clientTransactionId:id}};
+  const queuedAt=now();
+  const duplicate=rows.find(row=>row.state!=="SYNCED"&&row.total===payload.total&&JSON.stringify(row.request?.items)===JSON.stringify(payload.request?.items)&&queuedAt.getTime()-new Date(row.createdAt).getTime()<3000);
+  if(duplicate)throw new Error(`Η πώληση βρίσκεται ήδη στην offline ουρά με κωδικό ${duplicate.id.slice(0,8)}. Μην την καταχωρίσεις ξανά.`);
+  const row={id,createdAt:queuedAt.toISOString(),state:"PENDING",attempts:0,...payload,request:{...(payload.request||{}),clientTransactionId:id}};
   rows.push(row);
   if(!writeOfflineSaleQueue(storeId,rows,storage))throw new Error("Δεν ήταν δυνατή η ασφαλής τοπική αποθήκευση της offline πώλησης.");
   return row;
@@ -33,7 +36,11 @@ export async function syncOfflineSales({storeId,send,report=async()=>{},storage=
         synced+=1;
       }catch(error){const attempts=Number(row.attempts||0)+1,lastError=String(error?.message||error);remaining.push({...row,state:"FAILED",attempts,lastError,lastAttemptAt:attemptedAt});await report({clientTransactionId:row.request.clientTransactionId,status:"FAILED",attempts,lastErrorCode:String(error?.code||"SYNC_FAILED").slice(0,120)}).catch(()=>{})}
     }
-    if(!writeOfflineSaleQueue(storeId,remaining,storage))throw new Error("Η offline ουρά δεν ενημερώθηκε με ασφάλεια.");
+    // Another checkout can append to localStorage while a network request is pending.
+    // Keep those new rows instead of replacing the entire queue with our snapshot.
+    const processedIds=new Set(pending.map(row=>row.id));
+    const appended=readOfflineSaleQueue(storeId,storage).filter(row=>!processedIds.has(row.id));
+    if(!writeOfflineSaleQueue(storeId,[...remaining,...appended],storage))throw new Error("Η offline ουρά δεν ενημερώθηκε με ασφάλεια.");
     if(!persist(storage,historyKey(storeId),history.slice(-500)))throw new Error("Το ιστορικό offline συγχρονισμού δεν αποθηκεύτηκε.");
     return {skipped:false,synced,pending:remaining.length,failed:remaining.length};
   }finally{locks.delete(storeId)}
