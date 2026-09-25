@@ -228,6 +228,26 @@ test('DELTA invoice 30721 central map reconciles all 18 printed rows and exact t
   assert.ok(result.productLines.every(line=>line.supplierProfileRule==='DECLARED_COLUMNS'));
 });
 
+test('DELTA invoice 30721 recovers Azure visual reading order with exact printed totals',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT_PRICE',4:'DISCOUNT_1',5:'DISCOUNT_2',6:'AMOUNT_AFTER_DISCOUNT',7:'VAT_RATE',8:'IGNORE',9:'UNIT',10:'QUANTITY',11:'IGNORE',12:'IGNORE'};
+  const profile={supplierKey:'066880843',supplierTaxId:'066880843',supplierName:'ΘΕΟΔΩΡΟΠΟΥΛΟΣ ΑΓΓΕΛΟΣ ΕΠΑΜΕΙΝΩΝΔΑΣ',commercialFamily:'ΔΕΛΤΑ',profileVersion:4,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',quantityMode:'LINE_TOTAL_MATCH',columns}};
+  const rawRows=[
+    '720586 MILKO XAPTI HP 500ML RA MB TH 4,000 1,18 0 8.00 4,34 13 4.90','720584 MILKO XAPTI HP 3×250ML RA MB TM 1,000 1,78 0 8.00 1,64 13 1,85','720557 MILKO MIOYKAAI 450ML RA MB TM 6, 000 9,67 1,55 0 8.00 8.56 13','720558 MILKO FREE MITOYKAAI 450ML RA MB IN 4,000 1.58 0 8.00 5.81 13 6,57','720542 ΔΕΛΤΑ ΤΟΥΤΟΠΟΥΜΑΣ ΚΑΚΑΟ 500MLEL -21. 1363 TH 4,000 0 8.00 6.15 13 6.95 1.67',
+    '720562 TOY TONOY MAE RA 500ML EL-21. 1251 TM 4,000 1.12 0 0.00 4.48 13 5,06','720563 TOY TONOY MAE EA 500ML EL-21. 1252 TM 3.000 1.12 0 0.00 3.36 13 3,80','730437 LIFE NOPTOKAAI MITOYKAAI 400ML TM 10,000 1,60 0 12.50 14.00 13 15,82','730438 LIFE MHAD HOPTOKAAI KAPOTO MIOYKAA1400ML IM 10,000 1,46 0 12.50 12.77 13 14,43','730440 LIFE ΣΤΑΦΥΛΙ ΠΟΡΤΟΚΑΛΙ ΡΟΔΙ 400ML IN 2,000 1.42 0 12.50 2.48 13 2.80',
+    '730441 LIFE KPANMIT-PAIMIT-MIAOYMNEPI MIOYK. 400ML TM 4,000 1.34 0 12,50 4,69 13 5.30','730430 LIFE @PAOYAA MIANANA MITOYKAAI 400ML TM 4,000 1.38 0 12.50 4.83 13 5.46','730522 LIFE MA NOPTOKAAI 250ML TM 6,000 0.72 0 15.00 3.67 13 4,15','730524 LIFE MA MULTIFRUITS 250ML TM 6,000 0.85 0 15.00 4,33 13 4.89','730528 LIFE MA POMAKINO 250ML TM 4,000 0.59 0 15.00 2.01 13 2,27',
+    '751454 VITALINE En.FIA. POMAKINO 3X1800P TM 1,000 3,07 0 8.00 2,82 13 3.19','751444 VITALINE PISTACHIO PUDDING 200TP TM 4,000 1,91 0 8,00 7.03 13 7.94','751415 VITALINE DOUBLE CHOCO 2000P TM 8,000 1.91 0 8.00 14,06 13 15.89'
+  ];
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{commercialFamily:'ΔΕΛΤΑ',readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const result=await context.apply({supplier:{taxId:'066880843'},productLines:rawRows.map((azureRawRow,index)=>({supplierItemCode:String(index),azureRawRow,quantity:0,unitPrice:1,netAmount:1,vatRate:0}))});
+  assert.equal(result.productLines.length,18);
+  assert.equal(result.productLines.reduce((sum,line)=>sum+line.quantity,0),85);
+  assert.equal(Math.round(result.productLines.reduce((sum,line)=>sum+line.netAmount,0)*100)/100,107.03);
+  assert.equal(Math.round(result.productLines.reduce((sum,line)=>sum+line.grossAmount,0)*100)/100,120.94);
+  assert.ok(result.productLines.every(line=>line.supplierProfileRule==='DECLARED_COLUMNS_READING_ORDER'));
+});
+
 test('TALOS manual map overrides a shifted provider map without changing learned mappings',async()=>{
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const mappings={3759850:{barcode:'5200000000000',verified:true}};
