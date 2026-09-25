@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 51830)
+Total output lines: 1204
+
 Warning: truncated output (original token count: 50163)
 Total output lines: 1169
 
@@ -411,65 +414,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 
 - **Νεότερο LAB 24/09:** δύο δεσμευμένα terminal άνοιξαν χωριστές βάρδιες και καταχώρισαν χωριστές πωλήσεις 0,50 € (POS01) / 1,50 € (POS02). Η οθόνη επιστροφής του Εργαστηρίου 1 πρότεινε τη συναλλαγή 1,50 € του POS02: **LAB FAIL**, καμία επιβεβαίωση αυτής της ξένης επιστροφής. Διόρθωση terminal/session σε εξέλιξη, **AWAITING CI / DEPLOY / LAB RETEST**. Το Gate 4 παραμένει pending· λεπτομέρειες στο checkpoint.
 
-- Νεότερο πραγματικό LAB: ακύρωση καλαθιού πριν από πώληση PASS και μία NON_FISCAL πώληση 0,50 € PASS ως καταχώριση. Το Backoffice την αποδίδει στη βάρδια **MAIN**, όχι στο `LAB-POS-02`, παρότι ο χειριστής ονομάζεται LAB POS 2. Το browser της δοκιμής δεν δείχνει δέσμευση Terminal ID. Δύο ενεργά terminal είναι καταχωρισμένα, αλλά χωριστές βάρδιες και κοινό stock δύο δεσμευμένων POS **NOT TESTED**. Συνολικό Gate 4 **LAB PARTIAL / PENDING**. Το νέο link ενεργοποίησης μπλοκαρίστηκε από αυτόματο έλεγχο έγκρισης· δεν έγινε περιστροφή διαπιστευτηρίου. Βλέπε `CHECKPOINTS/CHANGES/2026-09-24-gate4-two-terminal-readiness.md`.
-- Πραγματική ανάγνωση Render `e1…163 tokens truncated…Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
-
-## 2026-09-17 — MANTZILAS 11998 complete printed-table recovery
-
-- [x] LAB FAIL: fresh POS-front invoice `11998` had the correct four-field header but ended in `POS_BACKGROUND_AI` instead of completing automatically.
-- [x] Treat `330.37 EUR` as the invoice total; never select the account balance or handwritten returnable-container note.
-- [x] Recover all 14 physical rows even when the initial OCR guide omitted a row.
-- [x] Accept the rebuilt table only when every printed row equation, each VAT-footer group and the POS-confirmed invoice total reconcile.
-- [x] Preserve current-image supplier codes/descriptions/units for packaging conversion; use no economics from a previous invoice.
-- [x] Focused invoice/POS tests `55/55` and full server suite `1302/1302`: PASS.
-- [x] Client production build and server/Prisma build: PASS.
-- [ ] AWAITING commit, green CI, merge, exact Render revision and one POS-front LAB/recovery without BackOffice refresh or duplicate submission.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-complete-printed-table-recovery.md`.
-## 2026-09-18 — POS first-pass invoice acceptance without refresh
-
-- [x] **LAB FAIL** on production `ce88c2a6e0a263f66288d3bbef42edc96f0ca286`: invoice `12674` remains `12` rows / `430.29 EUR` against printed `366.47 EUR`; the latest candidate was safely rejected at `12` rows / `10.15 EUR` difference.
-- [x] Acceptance rule: one genuinely new POS submission must create the correct single BackOffice draft automatically. Refresh, reopening, polling, startup reread and a second upload are diagnostic only and can never be reported as LAB PASS.
-- [x] Root cause: the one complete visual verifier knew the expected total in server code but its prompt omitted the expected total, current guide total and exact gap, so it could return individually balanced yet incomplete rows.
-- [x] Keep one provider call and give it the independent reconciliation anchor; require physical-row count, gross agreement within `0.05 EUR` and VAT-footer agreement before response. Server-side exact-total rejection remains authoritative.
-- [x] Preserve the original attachment, settlement, job and draft identities; no duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
-- [x] Focused POS/MANTZILAS tests `90/90`, complete server suite `1311/1311`, production build, syntax and diff checks: PASS.
-- [ ] Require green CI, merge and exact deployment. LAB PASS still requires a future new one-submit POS-front invoice without any refresh.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-pos-first-pass-no-refresh.md`.
-
-## 2026-09-18 — Preserve the POS-confirmed supplier during full OCR
-
-- [x] LAB FAIL on invoice `12674`: POS confirmed MANTZILAS, but the full OCR result could omit or garble the supplier header and bypass the supplier-specific complete-table verifier.
-- [x] Reload the trusted active tenant supplier from the durable POS handoff and reapply its name/VAT before supplier profiling, reconciliation and fail-closed verification.
-- [x] Preserve the existing attachment, settlement, AI job and unapproved draft; no duplicate payment/credit/draft, approval, finalization, stock, fiscal, accounting or myDATA mutation.
-- [x] Focused regression, complete server suite `1312/1312` and production build: PASS locally.
-- [ ] Require green CI, squash merge and exact Render revision. LAB PASS still requires one future new POS-front submission without refresh or second upload.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-18-pos-confirmed-supplier-full-ocr.md`.
-## 2026-09-19 — Invoice 12729 verified-row persistence and packaging restore
-
-- [x] **LAB FAIL** from one POS-front credit submission of invoice `12729`: one automatic 10-line draft reached `AWAITING_APPROVAL / POS_BACKGROUND_COMPLETE`, but displayed `200.09 EUR` instead of `200.08 EUR`, lost printed discounts/excise and exposed package quantities as `1 / 2 / 3` stock pieces.
-- [x] Root cause: the complete MANTZILAS verifier emitted safe `AI_PRINTED_ROW_FULL_MATH_VERIFIED` rows, while `verifiedPrintedTableForPersistence` accepted only `AI_COMPLETE_PRINTED_TABLE_VERIFIED`. The worker therefore sent the verified rows through the older lossy finalizer a second time.
-- [x] Preserve every complete, source-column-verified row for the bounded safe marker set; retain current-image price, discount, excise, VAT and package metadata. Unverified or materially mismatched tables remain fail-closed.
-- [x] Reconcile only a cent-level gross rounding residual (maximum `0.05 EUR`) on one final line so invoice `12729` persists exact `164.66 + 35.42 = 200.08 EUR` without changing net values or discounts.
-- [x] Advance the one-attempt strategy to V14 and automatically reread only a recent unapproved MANTZILAS POS draft with a completed mismatch or demonstrably lost `4PACK / 6PACK / KIB` multiplier. Reuse the same attachment, handoff, credit identity, job and draft.
-- [x] Exact `12729` fixture expects stock quantities `20, 1, 24, 24, 24, 24, 12, 48, 8, 12`, discounts `22, 0, 17, 17, 17, 17, 0, 0, 31, 0`, ten physical rows and exact totals.
-- [x] Focused invoice/POS regressions `49/49`: PASS.
-- [x] Exact regressions and focused invoice/POS tests `49/49`, complete server suite `1316/1316`, production client/server/Prisma build and diff checks: PASS.
-- [ ] Require green CI, merge, exact deploy and automatic same-draft reread verification. No second upload, BackOffice manual save, approval, finalization, payment, stock, fiscal, accounting or myDATA mutation.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-invoice-12729-verified-row-persistence.md`.
-
-## 2026-09-19 — Invoice 12729 V15 printed-economics persistence
-
-- [x] **LAB FAIL** evidence: the V14 same-draft reread still reached the legacy finalizer after a printed-column reconstruction did not expose a persistence-safe source marker. The screen retained `1 / 2 / 3` package quantities and lost discounts/excise.
-- [x] Mark only four-equation reconstructed printed rows as `MANTZILAS_PRINTED_ECONOMICS_VERIFIED` and admit them only with source-column verification plus the independent invoice-total gate.
-- [x] A same-draft replacement is now fail-closed: it cannot use the legacy finalizer. Unsafe rereads preserve the existing draft instead of writing incorrect values.
-- [x] Advance automatic same-attachment recovery to V15; no second upload, approval, finalization, payment, inventory, fiscal, accounting or myDATA mutation.
-- [x] Focused invoice/POS regressions `50/50`, complete server suite `1317/1317`, production client/server/Prisma build and diff checks: PASS.
-- [ ] Require green CI, merge, exact deploy and automatic same-draft reread verification.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-invoice-12729-v15-printed-economics-persistence.md`.
-
-## 2026-09-19 — Νέο κριτήριο αποδοχής POS Invoice OCR
-
-- [x] **Απόφαση ιδιοκτήτη:** το LAB PASS δεν απαιτεί πλέον 100% άψογη αυτόματη ανάγνωση κάθε γραμμής, έκπτωσης, ΦΠΑ ή συσκευασίας σε κάθε τιμολόγιο.
+- Νεότερο πραγματικό LAB: ακύρωση καλαθιού πριν από πώληση PASS και μία NON_FISCAL πώληση 0,50 € PASS ως καταχώριση. Το Backoffice την αποδίδει στη βάρδια **MAIN**, όχι στο `LAB-POS-02`, παρότι ο χειριστής ονομάζεται LAB POS 2. Το browser της δοκιμής δεν δείχνει δέσμευση Terminal ID. Δύο ενεργά terminal είναι καταχωρισμένα, αλλά χωριστές βάρδιες και κοινό stock δύο δεσμευμένων POS **NOT TESTED**. Συνολικό Gate 4 **LAB PARTIAL / PENDING**. Το νέο link ενεργοποίησης μπλοκαρίστηκε από αυτόματο έλεγχο έγκρισης· δεν έγινε περιστροφή διαπιστευτηρίου. Βλέπε `CHECKPOINTS/CHANGES/2026-09-24-ga…1830 tokens truncated…γιο.
 - [x] Νέο LAB PASS: μία υποβολή από το POS δημιουργεί αυτόματα ένα και μόνο ασφαλές πρόχειρο, χωρίς διπλή πληρωμή/πίστωση, οριστικοποίηση, κίνηση αποθήκης, φορολογική, λογιστική ή myDATA ενέργεια. Επιτρέπονται έως **2 λανθασμένες ή αβέβαιες γραμμές ανά τιμολόγιο**, εφόσον επισημαίνονται ως **ΠΡΟΣ ΕΛΕΓΧΟ**.
 - [x] Κάθε γραμμή χαμηλής σιγουριάς ή χωρίς επαρκή αριθμητική/μονάδα/συσκευασία επιβεβαίωση πρέπει να επισημαίνεται οπτικά ως **ΠΡΟΣ ΕΛΕΓΧΟ** στο BackOffice. Ο χειριστής διορθώνει μόνο αυτές τις γραμμές πριν από ρητή έγκριση.
 - [x] Οι χειροκίνητες διορθώσεις χρησιμοποιούν το υπάρχον Invoice Learning και αποθηκεύονται ως κανόνες ανά προμηθευτή, ώστε επόμενο τιμολόγιο του ίδιου προμηθευτή να βελτιώνεται χωρίς να επηρεάζονται άλλοι.
@@ -1192,3 +1137,13 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 ## 25/09/2026 — Gate 8 lifecycle χειριστών και κεντρικό Audit — CI PENDING
 
 Πραγματικό LAB: προσωρινός Manager δημιουργήθηκε, μπήκε με PIN στο σωστό κατάστημα/POS και μετά την απενεργοποίηση η ενεργή συνεδρία ανακλήθηκε αμέσως· ο λογαριασμός διατηρήθηκε ανενεργός για ιστορικό. Οι πραγματικοί Employee/Seller έχουν POS πρόσβαση χωρίς BackOffice/Power User, ενώ PIN και πλήρης κάρτα δεν αποκαλύπτονται στο UI. Εντοπίστηκε πραγματικό FAIL: τα ήδη καταγεγραμμένα lifecycle rows δεν εμφανίζονταν στο κεντρικό Audit. PR #1298 προσθέτει δημιουργία, αλλαγή προφίλ/ρόλου, αλλαγή PIN, είσοδο PIN/κάρτας, έξοδο και απενεργοποίηση με αυστηρή allow-list metadata χωρίς PIN/hashes/πλήρη κάρτα. 13/13 στοχευμένα tests PASS· πλήρες CI, deploy και production readback εκκρεμούν. Owner cross-tenant και πραγματική λήξη άδειας/store override παραμένουν NOT TESTED. Συνολικό Gate 8 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-operator-lifecycle-audit.md`.
+
+## 25/09/2026 — Invoice Learning ΔΕΛΤΑ visual reading order — AWAITING CI
+
+- [x] Επιβεβαιώθηκε ότι η επιχειρησιακή ανοχή έως **0,05 €** είναι PASS και διαφορά **0,01 €** δεν μπλοκάρει το POS.
+- [x] Βρέθηκε η πραγματική αιτία της χειροκίνητης διόρθωσης: ο αποθηκευμένος χάρτης ΔΕΛΤΑ δεν εφαρμοζόταν όταν το Azure επέστρεφε τις στήλες σε οπτική σειρά.
+- [x] Η νέα ανάκτηση είναι fail-closed και απαιτεί συμφωνία καθαρής και μικτής εξίσωσης κάθε γραμμής.
+- [x] Το πραγματικό δείγμα 30721 περνά regression με **18 γραμμές / ποσότητα 85 / 107,03 € / 120,94 €**.
+- [x] Πλήρες server suite **1.517 PASS / 0 FAIL / 1 SKIP** και production client build PASS.
+- [ ] PR #1299: νέο CI, merge, ακριβές deploy και production readback χωρίς χειροκίνητη διόρθωση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-delta-reading-order.md`.
