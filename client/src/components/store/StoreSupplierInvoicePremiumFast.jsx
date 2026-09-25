@@ -15,7 +15,7 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
       if(result?.done){
         const review=Boolean(result.reconciliationRequired),difference=Number(result.reconciliationDifference||0),lineCount=Number(result.lineCount||0);
         if(lineCount<=0){setMessage?.(`❌ Τιμολόγιο ${documentNumber}: η ανάγνωση ολοκληρώθηκε χωρίς γραμμές. Δεν θεωρείται επιτυχής και χρειάζεται ασφαλές retry του ίδιου job.`);return}
-        setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: δημιουργήθηκε πρόχειρο με ${lineCount} γραμμές, αλλά ο οικονομικός έλεγχος έχει διαφορά ${difference.toFixed(2)} €. Δεν θεωρείται ολοκληρωμένο.`:`✅ Τιμολόγιο ${documentNumber}: ολοκληρώθηκε σωστά στο BackOffice (${lineCount} γραμμές, οικονομικός έλεγχος ΟΚ).`);
+        setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: πέρασε κανονικά στο BackOffice ως πρόχειρο με ${lineCount} γραμμές. Ο οικονομικός έλεγχος έχει διαφορά ${difference.toFixed(2)} € και χρειάζεται διόρθωση πριν από έγκριση ή αποθήκη.`:`✅ Τιμολόγιο ${documentNumber}: ολοκληρώθηκε σωστά στο BackOffice (${lineCount} γραμμές, οικονομικός έλεγχος ΟΚ).`);
         onChanged?.();return;
       }
       if(result?.failed){setMessage?.(`❌ Τιμολόγιο ${documentNumber}: η αυτόματη ανάγνωση απέτυχε${result.error?` — ${result.error}`:""}. Χρησιμοποίησε ασφαλές retry του ίδιου job· μην ανεβάσεις ξανά το αρχείο.`);return}

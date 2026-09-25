@@ -34,7 +34,7 @@ test("POS reports success only after non-empty reconciled background completion"
   assert.match(route,/const lineCount=Number\(background\.lineCount\|\|job\.resultJson\?\.productLines\?\.length\|\|0\)/);
   assert.match(route,/const done=background\.status==="COMPLETED"&&job\.status==="AWAITING_APPROVAL"&&!rereadClaimed&&lineCount>0/);
   assert.match(client,/if\(lineCount<=0\).*Δεν θεωρείται επιτυχής/s);
-  assert.match(client,/review\?`⚠️[\s\S]*Δεν θεωρείται ολοκληρωμένο\.`:`✅[\s\S]*οικονομικός έλεγχος ΟΚ/);
+  assert.match(client,/review\?`⚠️[\s\S]*πέρασε κανονικά στο BackOffice ως πρόχειρο[\s\S]*χρειάζεται διόρθωση πριν από έγκριση ή αποθήκη\.`:`✅[\s\S]*οικονομικός έλεγχος ΟΚ/);
   assert.match(client,/safe retry του ίδιου job|ασφαλές retry του ίδιου job/);
 });
 

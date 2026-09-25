@@ -175,8 +175,9 @@ test('every reading entry point can consume the same supplier profile, including
   tx.profileRow.profile.mappings['01669'].invoiceUnit='PACKAGE';
   tx.profileRow.profile.mappings['01669'].unitsPerPackage=20;
   const pieces=await context.apply({supplier:{taxId:'998878583'},productLines:[{code:'01669',unit:'TEM',quantity:30,unitCost:4.75,netAmount:142.5}]});
-  assert.equal(pieces.productLines[0].unit,'TEM');
-  assert.equal(pieces.productLines[0].unitsPerPackage,undefined);
+  assert.equal(pieces.productLines[0].unit,'PACKAGE');
+  assert.equal(pieces.productLines[0].unitsPerPackage,20);
+  assert.equal(pieces.productLines[0].confirmedPackMapping,true);
 });
 
 

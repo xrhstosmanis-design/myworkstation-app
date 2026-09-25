@@ -78,7 +78,7 @@ test("package conversion is learned and reused for later supplier invoices",()=>
   const intake=read("server/src/routes/commerce-pos-v244-core.js");
   const posting=read("server/src/routes/purchase-order-unresolved-guard.js");
   assert.match(resolution,/"unitsPerPackage"=COALESCE\(EXCLUDED\."unitsPerPackage"/);
-  assert.match(intake,/SELECT "supplierItemCode","productId","unitsPerPackage" FROM "SupplierProductMapping"/);
+  assert.match(intake,/SELECT "supplierItemCode","productId","unitsPerPackage","lastDiscount1","lastDiscount2","lastDiscount3","confirmedByUserId" FROM "SupplierProductMapping"/);
   assert.match(intake,/useLearnedPack\?\{unit:"PACKAGE",unitsPerPackage:learnedPack/);
   assert.match(intake,/invoiceIsPackage=.*PACKAGE\|PACK\|BOX\|CASE\|ΚΙΒ\|ΚΒ\|ΠΑΚ/);
   assert.match(posting,/if\(hasExplicit\)return \{size:selected/);

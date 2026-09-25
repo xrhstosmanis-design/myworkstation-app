@@ -230,7 +230,13 @@ function applyMappings(lines,profile){
     const code=norm(line?.supplierItemCode||line?.code);const m=code?mappings[code]:null;
     if(!m)return line;
     const printedKind=unitKind(unitRelativeValues(sourceRow(line))?.unit||line.invoiceUnit||line.unit),learnedKind=unitKind(m.invoiceUnit);
-    const compatible=!printedKind||!learnedKind||printedKind===learnedKind;
+    // A Super Admin line correction is the explicit resolution of a conflict
+    // observed in a real draft (for example OCR says TEM while the operator
+    // confirms PACKAGE x 100).  That exact supplier-code rule must outrank the
+    // provider's unit label.  Older catalogue/profile metadata remains
+    // fail-closed and cannot override a verified printed piece row.
+    const explicitLineCorrection=m.verified===true&&m.source==="SUPER_ADMIN_LINE_CORRECTION";
+    const compatible=explicitLineCorrection||!printedKind||!learnedKind||printedKind===learnedKind;
     const mapped={...line,...(compatible&&m.verified&&Number(m.unitsPerPackage)>=1?{unitsPerPackage:Number(m.unitsPerPackage),unit:m.invoiceUnit||line.unit,invoiceUnit:m.invoiceUnit||line.invoiceUnit,confirmedPackMapping:true}:{}),barcode:line.barcode||m.barcode||"",masterProductId:line.masterProductId||m.masterProductId||"",masterProductName:line.masterProductName||m.masterProductName||"",supplierProfileMappingApplied:true};
     return compatible?applySupplierStockConversion(mapped,m):mapped;
   });

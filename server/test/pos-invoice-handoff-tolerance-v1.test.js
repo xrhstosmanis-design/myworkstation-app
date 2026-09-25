@@ -7,7 +7,8 @@ const backoffice=await readFile(new URL("../src/routes/purchase-order-total-reco
 
 test("POS sends every invoice line difference to BackOffice draft review",()=>{
   assert.match(source,/const POS_HANDOFF_TOLERANCE=5/);
-  assert.match(source,/const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE/);
+  assert.match(source,/const POS_STORED_LINES_TOLERANCE=0\.05/);
+  assert.match(source,/const reconciliationRequired=diff>POS_STORED_LINES_TOLERANCE/);
   assert.doesNotMatch(source,/if\(diff>POS_HANDOFF_TOLERANCE\)return res\.status\(409\)/);
   assert.match(source,/ΕΛΕΓΧΟΣ BACKOFFICE/);
 });
