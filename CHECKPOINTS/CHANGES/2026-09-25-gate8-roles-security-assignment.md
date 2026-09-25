@@ -66,3 +66,12 @@
 ## Κριτήριο συνολικού PASS
 
 Κάθε ρόλος βλέπει και εκτελεί μόνο ό,τι δικαιούται, σε σωστή εταιρεία και κατάστημα, με σωστή άδεια/module και πλήρες Audit. Τοπικά tests ή CI δεν αποτελούν LAB PASS.
+
+## 25/09/2026 — πραγματική άδεια/module αποδοχή
+
+- **LAB PASS module:** το `ONLINE_ORDERING` απενεργοποιήθηκε προσωρινά μόνο στο MYWORKSTATION LAB, τα ενεργά modules έγιναν 20→19 και το δημόσιο LAB κατάστημα απάντησε «Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα». Επαναφέρθηκε αμέσως σε 20/20 και το προϊόν/checkout εμφανίστηκαν ξανά.
+- **LAB PASS άδεια POS:** η άδεια LAB άλλαξε προσωρινά `ACTIVE`→`EXPIRED`. Το Store Mode/POS απέρριψε πρόσβαση με σαφές μήνυμα ληγμένης/ανεσταλμένης άδειας. Επαναφέρθηκε αμέσως `ACTIVE`, χωρίς αλλαγή δεδομένων ή οικονομική πράξη.
+- **LAB FAIL άδεια Online Store:** με `EXPIRED` άδεια, το δημόσιο Online Store συνέχισε να εμφανίζει προϊόν και checkout. Αιτία: οι δύο public online routes έλεγχαν μόνο το company module και όχι `licenseAllowed` ή `StorePaidModule` override.
+- **Τοπική διόρθωση:** και οι δύο public online routes χρησιμοποιούν πλέον το κεντρικό `companyModuleState`, απορρίπτουν μη ενεργή άδεια και εφαρμόζουν fail-closed store override μέσω `effectiveModuleEnabled`.
+- **Αρχική κατάσταση αποκαταστάθηκε:** LAB `ACTIVE`, Enterprise, 20 modules, χωρίς ημερομηνία λήξης. ΚΑΤ αμετάβλητο.
+- Νέο CI/deploy και επανάληψη της ληγμένης άδειας στο public Online Store εκκρεμούν. Gate 8 παραμένει OPEN.
