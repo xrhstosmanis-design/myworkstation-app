@@ -1,6 +1,6 @@
-## 2026-09-25 — Gate 5 G5-P06 έξοδο ιδιοκτήτη — AWAITING LAB
+## 2026-09-25 — Gate 5 G5-P06 έξοδο ιδιοκτήτη — περιορισμένο LAB PASS
 
-- [ ] Στο deployed `2522dad5` owner «Λοιπά Έξοδα» δημιουργεί περιττή δεύτερη έγκριση. Διόρθωση: owner/super-admin `CONFIRMED` στην πράξη και στο εικονικό τραπεζικό ταμείο, χειριστής POS `PENDING_REVIEW`. Πριν από δοκιμή LAB POS2 14 κινήσεις/0,10 € έξοδα, POS1 1/0, LAB τράπεζα 3,40 € επιβεβαιωμένα, ΚΑΤ 22,36 €. Τοπικές δοκιμές/build PASS· απαιτούνται πράσινο CI, ακριβές deploy και μία νέα LAB πράξη με μετά/Audit πριν από scoped PASS. Συνολικό Gate 5 OPEN. `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.
+- [x] PR #1222, CI #3095 πράσινο, merge/deployed `352f636a`. Μία BackOffice δαπάνη ιδιοκτήτη **0,10 €** `G5-P06 VIRTUAL LAB`, ενεργή εγγραφή `#pay_3ffd…` 10:37, εξωτερική πληρωμή: LAB τράπεζα λογιστικό/επιβεβαιωμένο **3,40→3,30 €**, αναμονή και ουρά ιδιοκτήτη **0**, LAB POS 2 **14 κινήσεις/0,10 € έξοδα** ίδια, POS 1 **1/0** ίδιο, ΚΑΤ **22,36 €** ίδιο. Μόνο δαπάνη ιδιοκτήτη χωρίς δεύτερη έγκριση PASS· δαπάνη POS και τελική συμφωνία OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
 
 ## 2026-09-25 — Gate 3 διαπρομηθευτική απογραφή τεκμηρίων — OCR REPLAY NOT TESTED
 
