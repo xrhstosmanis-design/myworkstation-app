@@ -60,3 +60,11 @@ button,input,select,textarea{max-width:100%}
 
 /* Keep long employee/rules dialogs fully usable on desktop and mobile. */
 .modal{z-index:1000;overflow-y:auto;align-items:start;padding:24px 15px}.modal form{max-height:calc(100vh - 48px);overflow-y:auto;overscroll-behavior:contain;margin:auto}.modal form>h3{position:sticky;top:-24px;background:#fff;z-index:2;padding:6px 0 12px;margin-top:0}.natural-rule-editor textarea{width:100%;min-height:110px;resize:vertical;padding:12px;border:1px solid #d9dfeb;border-radius:10px}.modal .actions{position:sticky;bottom:-24px;background:#fff;padding:12px 0 2px;z-index:2}@media(max-height:700px){.modal{padding:10px}.modal form{max-height:calc(100vh - 20px);padding:18px}.modal form>h3{top:-18px}.modal .actions{bottom:-18px}}
+
+/* Gate 8: roomy employee editor with one contained scroll surface. */
+.modal form:has(>.natural-rule-editor){width:min(860px,calc(100vw - 30px));display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px;align-content:start}
+.modal form:has(>.natural-rule-editor)>h3,.modal form:has(>.natural-rule-editor)>.check,.modal form:has(>.natural-rule-editor)>small,.modal form:has(>.natural-rule-editor)>.natural-rule-editor,.modal form:has(>.natural-rule-editor)>.actions{grid-column:1/-1}
+.modal form:has(>.natural-rule-editor)>input,.modal form:has(>.natural-rule-editor)>select,.modal form:has(>.natural-rule-editor)>label{min-width:0}
+.modal form:has(>.natural-rule-editor)>.natural-rule-editor{margin-top:8px;padding:16px 18px;border:1px solid #dfe6f1;border-radius:14px;background:#f8faff}
+.natural-rule-editor h4{margin:0 0 6px}.natural-rule-editor p{margin:0 0 12px}
+@media(max-width:700px){.modal form:has(>.natural-rule-editor){width:min(100%,560px);grid-template-columns:1fr}.modal form:has(>.natural-rule-editor)>*{grid-column:1!important}}
