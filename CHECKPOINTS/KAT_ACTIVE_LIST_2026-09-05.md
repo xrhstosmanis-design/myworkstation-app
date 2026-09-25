@@ -1,3 +1,7 @@
+## 25/09/2026 — Gate 5 αποδεικτικό πληρωμής: ψευδής αυτόματη συμφωνία — AWAITING CI / LAB
+
+Στατική αναπαραγωγή: το `automaticCheck.matched` γινόταν true με μόνο συνημμένο αρχείο και ίσο άθροισμα κατανομών, χωρίς ανάγνωση ποσού/μεθόδου από το αρχείο. Το ιστορικό P08 PDF BANK_TRANSFER είχε υποβληθεί ως CASH_SHIFT. Στενή αλλαγή: ρητή προειδοποίηση ελέγχου περιεχομένου όταν υπάρχει αρχείο, ώστε να μην αποδίδεται αυτόματη συμφωνία. Η οικονομική ροή μένει ίδια. Απαιτούνται CI, ακριβές deploy και read-only LAB οπτική επιβεβαίωση σε νέα εκκρεμή πληρωμή· χωρίς νέα οικονομική πράξη μόνο για αυτή τη δοκιμή. Πραγματική ανάγνωση αποδεικτικού, API/race και τελική συμφωνία OPEN. `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.
+
 ## 25/09/2026 — Gate 3: ρητή μετατροπή έναντι παλιού product knowledge — LOCAL 14 PASS / AWAITING CI-LAB
 
 Ίδιος owner, branch `agent/gate3-explicit-conversion-priority-20260925`. Το υπάρχον Coffee profile δηλώνει stockConversion.factor χωρίς unitsPerPackage, με αποτέλεσμα να μην ορίζεται confirmedPackMapping πριν από το product knowledge. Αναπαραγωγή FAIL PACKAGE αντί ΚΙΛΟ στο υπάρχον profile μέσω πραγματικών συναρτήσεων· μετά τη στενή διόρθωση προτεραιότητας 14 tests PASS. Όχι νέο OCR ή αλλαγή κοινών κανόνων. Τελευταίο πραγματικό αποτέλεσμα #1251 FAIL, όλα τα νέα POS NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-explicit-conversion-priority.md`.
