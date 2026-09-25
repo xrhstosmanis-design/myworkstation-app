@@ -1,3 +1,7 @@
+## 25/09/2026 — Gate 3: live recheck μετά #1255 FAIL · ρητή αποθήκευση κανόνα LOCAL 18 PASS / AWAITING CI-LAB
+
+CI #3177/#3178 και exact Render b05fe33 επιβεβαιώθηκαν. Παλιός και φρέσκος client, καθώς και μία ελεγμένη διόρθωση DEL005 από τον υπάρχοντα editor, επέστρεψαν PACKAGE/ΤΜΧ στον ολοκληρωμένο recheck. Δεν υπάρχει LAB PASS. Η γενική αποθήκευση κρατά παλιές SUPER_ADMIN_LINE_CORRECTION πάνω από νέα UI mappings. Στο ίδιο scope διορθώνεται η ρητή αποθήκευση επιλεγμένων κανόνων και η ανάγνωση κεντρικού προφίλ. Χωρίς POS/οριστικοποίηση. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-explicit-conversion-priority.md`.
+
 ## 25/09/2026 — Gate 3: ρητή μετατροπή έναντι παλιού product knowledge — LOCAL 14 PASS / AWAITING CI-LAB
 
 Ίδιος owner, branch `agent/gate3-explicit-conversion-priority-20260925`. Το υπάρχον Coffee profile δηλώνει stockConversion.factor χωρίς unitsPerPackage, με αποτέλεσμα να μην ορίζεται confirmedPackMapping πριν από το product knowledge. Αναπαραγωγή FAIL PACKAGE αντί ΚΙΛΟ στο υπάρχον profile μέσω πραγματικών συναρτήσεων· μετά τη στενή διόρθωση προτεραιότητας 14 tests PASS. Όχι νέο OCR ή αλλαγή κοινών κανόνων. Τελευταίο πραγματικό αποτέλεσμα #1251 FAIL, όλα τα νέα POS NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-explicit-conversion-priority.md`.
