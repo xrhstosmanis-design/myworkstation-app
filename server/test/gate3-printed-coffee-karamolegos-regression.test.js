@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildCompletePrintedTableCandidate} from '../src/lib/invoice-discount-verifier.js';
+import {recoverBalancedInvoicePayable} from '../src/lib/invoice-total-reading.js';
 
 // Physical rows transcribed from the archived LAB originals, not earlier OCR output.
 const row=(index,code,description,quantity,price,discount1,amount1,net,vat,gross,discount2=0,amount2=0)=>({
@@ -42,4 +43,13 @@ test('Καραμολέγκος ΙΔΑ-126-009370: six discounted rows reconcile 
   const footer=[{rate:13,taxable:24.28,vat:3.16,gross:27.44}];
   assert.equal(buildCompletePrintedTableCandidate(rows,27.44,footer)?.length,6);
   assert.equal(buildCompletePrintedTableCandidate(rows,37.03,footer),null);
+});
+
+test('PANINI 13461: invoice payable wins over different amount in appended receipt',()=>{
+  const printed=`ΤΙΜΟΛΟΓΙΟ Δ.Α. 13461
+  ΜΙΚΤΗ ΑΞΙΑ 74,34 ΕΚΠΤΩΣΗ 7,44 Κ ΑΞΙΑ 66,90 ΦΠΑ 8,70 ΠΛΗΡΩΤΕΟ 75,60
+  ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ Α. ΜΕΤΡΗΤΑ 70,36 ΣΥΝΟΛΙΚΟ ΠΟΣΟ ΕΙΣΠΡΑΞΗΣ 70,36`;
+  assert.equal(recoverBalancedInvoicePayable(printed),75.60);
+  assert.equal(recoverBalancedInvoicePayable('ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ ΠΛΗΡΩΤΕΟ 70,36 ΦΠΑ 8,70'),0);
+  assert.equal(recoverBalancedInvoicePayable('Κ ΑΞΙΑ 66,90 ΦΠΑ 8,70 ΠΛΗΡΩΤΕΟ 70,36'),0);
 });
