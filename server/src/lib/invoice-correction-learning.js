@@ -24,6 +24,11 @@ export async function learnCentralInvoiceCorrection(tx,{actor,companyId,supplier
   const mapping={...existing,supplierItemCode:code,description:String(line.description||""),
     invoiceUnit:line.invoiceUnit||"PIECE",stockUnit:"ΤΜΧ",unitsPerPackage:Math.max(1,Number(line.stockUnitsPerInvoiceUnit||1)),
     verified:true,source:"SUPER_ADMIN_LINE_CORRECTION"};
+  // A generic POS product correction has no gram-unit editor. Retain the
+  // explicit stock rule until the Super Admin changes that rule explicitly.
+  if(existing.source==="SUPER_ADMIN_STOCK_RULE"){
+    for(const key of ["invoiceUnit","stockUnit","unitsPerPackage","conversionFactor","stockConversion","source"])mapping[key]=existing[key];
+  }
   const version=Number(current?.profileVersion||0)+1;
   const next={...profile,supplierTaxId:taxId,supplierName:supplier.name,central:true,profileVersion:version,
     readingRule,mappings:{...(profile.mappings||{}),[mappingKey]:mapping}};

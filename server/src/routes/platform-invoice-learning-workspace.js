@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {validateExplicitStockRules,applyExplicitStockRules} from "../lib/invoice-explicit-stock-rules.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {COFFEE_UNION_PROFILE} from "../lib/invoice-learning-coffee-union-seed.js";
 import {PREMIUM_BAKERY_PROFILE} from "../lib/invoice-learning-premium-bakery-seed.js";
@@ -47,7 +48,7 @@ async function upsertSupplierProfiles(profiles,userId=null){
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-profile:${taxId||supplierKey}`}))`;
     const existing=await tx.$queryRawUnsafe(`SELECT "profileVersion","profile" FROM "InvoiceSupplierReadingProfile" WHERE "supplierKey"=$1 LIMIT 1`,supplierKey);
     const version=Math.max(1,Number(existing?.[0]?.profileVersion||0)+1),builtInRule=taxId==="094095506"?"IFANTIS_FOOD_GROUP":null,ruleKey=String(p.ruleKey||p.readingRuleKey||builtInRule||"")||null,profile={...(existing?.[0]?.profile||{}),...p,supplierName,supplierTaxId:taxId,ruleKey,central:true,profileVersion:version,readingRule:{...(existing?.[0]?.profile?.readingRule||{}),...(p.readingRule||{}),confirmedColumnLayouts:{...(existing?.[0]?.profile?.readingRule?.confirmedColumnLayouts||{}),...(p.readingRule?.confirmedColumnLayouts||{})}},mappings:{...(existing?.[0]?.profile?.mappings||{}),...(p.mappings||{})}};
-    for(const [key,mapping] of Object.entries(existing?.[0]?.profile?.mappings||{}))if(mapping.source==="SUPER_ADMIN_LINE_CORRECTION")profile.mappings[key]={...(profile.mappings[key]||{}),...mapping};
+    for(const [key,mapping] of Object.entries(existing?.[0]?.profile?.mappings||{}))if(["SUPER_ADMIN_LINE_CORRECTION","SUPER_ADMIN_STOCK_RULE"].includes(mapping.source))profile.mappings[key]={...(profile.mappings[key]||{}),...mapping};
     await tx.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","commercialFamily","distributorName","normalizedName","ruleKey","profileVersion","profile","isActive","updatedByUserId","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,TRUE,$10,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "supplierTaxId"=EXCLUDED."supplierTaxId","supplierName"=EXCLUDED."supplierName","commercialFamily"=EXCLUDED."commercialFamily","distributorName"=EXCLUDED."distributorName","normalizedName"=EXCLUDED."normalizedName","ruleKey"=EXCLUDED."ruleKey","profileVersion"=EXCLUDED."profileVersion","profile"=EXCLUDED."profile","isActive"=TRUE,"updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,supplierKey,taxId||null,supplierName||null,commercialFamily||null,distributorName||null,normalizedName||null,ruleKey,version,JSON.stringify(profile),userId);
     });
   }
@@ -123,6 +124,22 @@ router.post("/invoice-learning/master-products",async(req,res,next)=>{try{
 
 router.get("/invoice-learning/workspace",async(req,res,next)=>{try{const rows=await prisma.$queryRawUnsafe(`SELECT "state","updatedAt" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"=$1 LIMIT 1`,SCOPE),row=rows?.[0];res.json({ok:true,state:row?.state||{documents:[],profiles:{},master:[]},updatedAt:row?.updatedAt||null})}catch(error){next(error)}});
 const COLUMN_MAP_ROLES=new Set(["IGNORE","SUPPLIER_CODE","DESCRIPTION","RETAIL_PRICE","UNIT","QUANTITY","UNIT_PRICE","AMOUNT_BEFORE_DISCOUNT","DISCOUNT_1","DISCOUNT_2","DISCOUNT_3","AMOUNT_AFTER_DISCOUNT","VAT_RATE"]);
+// Explicit Super Admin action; never infer this intent from workspace autosync.
+router.put("/invoice-learning/supplier-profile/stock-rules",async(req,res,next)=>{try{
+  const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
+  if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις κανόνα."});
+  let rules;try{rules=validateExplicitStockRules(req.body?.rules)}catch(error){return res.status(400).json({error:error.message})}
+  const userId=String(req.user?.id||req.user?.userId||req.user?.sub||"")||null;
+  const saved=await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-profile:${supplierTaxId}`}))`;
+    const rows=await tx.$queryRawUnsafe(`SELECT "supplierKey","profileVersion","profile" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 LIMIT 1`,supplierTaxId);
+    const existing=rows?.[0]||{},supplierKey=existing.supplierKey||supplierTaxId,profileVersion=Number(existing.profileVersion||0)+1;
+    const profile={...applyExplicitStockRules(existing.profile||{},rules),supplierTaxId,supplierName:supplierName||existing.profile?.supplierName||"",central:true,profileVersion};
+    await tx.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","profileVersion","profile","isActive","updatedByUserId","updatedAt") VALUES ($1,$2,$3,$4,$5,$6::jsonb,TRUE,$7,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "profile"=EXCLUDED."profile","profileVersion"=EXCLUDED."profileVersion","updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,supplierKey,supplierTaxId,profile.supplierName,normName(profile.supplierName),profileVersion,JSON.stringify(profile),userId);
+    return {supplierKey,profileVersion,profile};
+  });
+  res.json({ok:true,...saved,onlyTargetSupplierUpdated:true});
+}catch(error){next(error)}});
 router.put("/invoice-learning/supplier-profile/column-map",async(req,res,next)=>{try{
   const body=req.body&&typeof req.body==="object"?req.body:{},supplierTaxId=cleanTaxId(body.supplierTaxId),supplierName=String(body.supplierName||"").trim(),columns=body.columns&&typeof body.columns==="object"&&!Array.isArray(body.columns)?body.columns:null;
   if(!supplierTaxId&&!supplierName)return res.status(400).json({error:"Συμπλήρωσε προμηθευτή ή ΑΦΜ."});
