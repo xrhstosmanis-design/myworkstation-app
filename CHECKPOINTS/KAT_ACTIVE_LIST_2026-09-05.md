@@ -2380,3 +2380,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 
 - [x] Φυσικό POS02 16:07 εκτός σύνδεσης: τοπικό μήνυμα 0,50 € `4437bc8e`. Μετά reconnect νέα βάρδια 0→1 κίνηση / CASH 0→0,50 €, SKU2269 −62→−63 και Audit sale `1434f91d-6f6d-4658-8a46-9aff14907ec3`, αλλά συνδεδεμένο SYNCED client ID `48d724fd`. Το `4437bc8e` παραμένει PENDING/0 προσπάθειες. Προηγούμενο ζεύγος 15:28: SYNCED `f111b785` / PENDING `d203e422`. Συνολικά 2 PENDING, 2 SYNCED, 0 replay. Δεν θεωρούμε PASS ή αφαιρούμε PENDING χωρίς απόδειξη.
 - [ ] Προστασία checkout από δεύτερο πάτημα, άρνηση γρήγορης ίδιας offline καταχώρισης και διατήρηση νέων εγγραφών κατά τον συγχρονισμό: AWAITING CI/DEPLOY/LAB. Καμία νέα πώληση μέχρι να ελεγχθούν οι τοπικές ουρές και τα δύο PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-offline-dual-id-awaiting-lab.md`.
+
+## 2026-09-25 — Gate 4 ανάγνωση τοπικής offline ουράς — AWAITING LAB
+
+- [ ] Εμφάνιση «Τοπική ουρά: N · IDs» στην κεφαλίδα POS για να αντιπαραβληθούν με BackOffice τα PENDING `4437bc8e`, `d203e422` χωρίς νέα πώληση. Client build PASS, αναμένονται CI/merge/deploy και μία εικόνα από το ίδιο φυσικό POS. Συνολικό Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-offline-local-queue-readback-awaiting-lab.md`.
