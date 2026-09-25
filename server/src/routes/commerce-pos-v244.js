@@ -9,7 +9,7 @@ import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./co
 import {claimsCompletePrintedTable,reconcileInvoiceLines,reusableVerifiedPrintedTable,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
-import {recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
+import {recoverBalancedInvoicePayable,recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
 import {catastrophicUnverifiedInvoiceMismatch} from "../lib/pos-invoice-catastrophic-mismatch.js";
 
 const router=Router();
@@ -570,7 +570,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
-        const azureTotalGross=round2(parsed.totalGross||0);
+        const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||recoverBalancedInvoicePayable(azureRawText)||parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
         const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
@@ -596,7 +596,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 2. supplierTaxId = το ΑΦΜ του εκδότη/προμηθευτή.
 3. documentNumber = ο ακριβής αριθμός/σειρά παραστατικού. Μπορεί να εμφανίζεται ως Αρ. Παραστατικού, Αριθμός, ΤΙΜ, ΤΔΑ, Invoice No, Σειρά/Αριθμός. ΠΡΕΠΕΙ να περιέχει τουλάχιστον ένα ψηφίο. Μην βάλεις λέξη κεφαλίδας.
 4. documentDate = η ημερομηνία έκδοσης του παραστατικού σε YYYY-MM-DD. Μην χρησιμοποιήσεις σημερινή ημερομηνία αν δεν φαίνεται στο χαρτί.
-5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal. ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ, ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ, BALANCE ή αξία/υπόλοιπο εγγυοδοσίας. Αν υπάρχει «ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.», προτίμησε το μικτό ποσό της γραμμής «ΣΥΝΟΛΑ» που αποδεικνύεται από καθαρή αξία + ΦΠΑ.
+5. totalGross = το ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ ποσό με ΦΠΑ του ΤΙΜΟΛΟΓΙΟΥ. Αν παρακάτω υπάρχει ξεχωριστή «ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ» ή PAYMENT RECEIPT, αγνόησε το ποσό της απόδειξης: μπορεί να διαφέρει από το πληρωτέο του τιμολογίου. Ψάξε ενδείξεις όπως ΠΛΗΡΩΤΕΟ, ΓΕΝΙΚΟ ΣΥΝΟΛΟ, ΤΕΛΙΚΟ ΣΥΝΟΛΟ, ΣΥΝΟΛΟ, TOTAL DUE, GRAND TOTAL. Μην χρησιμοποιήσεις καθαρή αξία, αξία ΦΠΑ ή ενδιάμεσο subtotal. ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ, ΥΠΟΛΟΙΠΟ ΛΟΓΑΡΙΑΣΜΟΥ, BALANCE ή αξία/υπόλοιπο εγγυοδοσίας. Αν υπάρχει «ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.», προτίμησε το μικτό ποσό της γραμμής «ΣΥΝΟΛΑ» που αποδεικνύεται από καθαρή αξία + ΦΠΑ.
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
@@ -616,7 +616,8 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // actually transcribed it; an absent/unbalanced footer still falls back
     // to the FAST header and leaves the normal review path intact.
     const verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal(azureRawText);
-    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
+    const verifiedPayableTotal=recoverBalancedInvoicePayable(azureRawText);
+    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background
