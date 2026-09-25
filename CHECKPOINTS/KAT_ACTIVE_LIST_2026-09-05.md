@@ -2,9 +2,9 @@
 
 - [ ] Read-only έλεγχος στη θυρίδα LAB: 34 συνημμένα, 11/12 τιμολόγια συνδεδεμένα· ΤΑΛΩΣ δεν εμφανίστηκε. Καραμολέγκος έντυπο **ΙΔΑ**-126-009370, 6/27,44 €. Coffee Union job `a1ec2efc-977c-4563-af3c-ce7a57f5091b`: πρώτη ανάγνωση DEL005=12 και 4 σειρές, provider 3 σειρές αλλά DEL005=12, reread 4 σειρές/+36,49 €, POS_FAILED· διπλή γραμμή και ποσότητα ακόμη **OPEN**. Μουχλάκης first-pass 27 / provider 13 / reread 27· άλλοι τέσσερις προμηθευτές επίσης POS_FAILED. PANINI πρωτότυπο **ΠΛΗΡΩΤΕΟ 75,60 €**, χωριστή απόδειξη είσπραξης **70,36 €**: εστιασμένη διόρθωση επιλογής συνολικού ποσού FAST με επαλήθευση καθαρής+ΦΠΑ, 59 targeted tests PASS, **AWAITING CI / LAB**. Κανένα νέο POS upload/OCR replay, πληρωμή ή stock. **Gate 3 OPEN.** `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.
 
-## 2026-09-25 — Gate 4 ανάγνωση υπάρχοντος Audit έκπτωσης · ΑΝΑΤΕΘΗΚΕ / AWAITING LAB
+## 2026-09-25 — Gate 4 Audit μαζικής έκπτωσης — LAB PASS ανάγνωσης
 
-- [ ] `agent/gate4-audience-discount-audit-read-20260925`: η εγγραφή `StoreProductAudienceDiscountAudit` δημιουργείται στην αποθήκευση, αλλά δεν εκτίθεται στην οθόνη. Προστίθεται μόνο ανάγνωση ανά εταιρεία, κατάστημα και δικαιούχο, χωρίς νέα αποθήκευση ή πώληση. Μετά από CI/merge/exact deploy θα αναζητηθεί η υπάρχουσα εγγραφή 10:01 στο LAB. Αρχικό before/after του κανόνα και μη επιλεγμένα είδη παραμένουν NOT TESTED. Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`.
+- [x] Το PR #1229, CI #3113 και ακριβές Render `2c1e4b3f` εκθέτουν μόνο για ανάγνωση το υπάρχον Audit. Στο LAB/Ιατροί βρέθηκε η εγγραφή 10:00:45, 10%, δύο product IDs `4f126988…`, `79dd9494…`, Audit `e5073b16…`, και δύο παλαιότερες μονές εγγραφές 09:52:30/09:15:15. **LAB PASS μόνο ανάκτησης του ιστορικού συμβάντος** χωρίς νέα αποθήκευση/πώληση. Αρχικό πλήρες before/after κανόνα και μη επιλεγμένα είδη NOT TESTED· Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`, manual `docs/manual/pos/PASS.md`.
 
 ## 2026-09-25 — Gate 4 έκπτωση Ιατρού, LAB POS 2 — LAB PASS μίας πώλησης
 
