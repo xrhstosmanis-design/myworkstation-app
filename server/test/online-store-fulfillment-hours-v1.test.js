@@ -53,6 +53,7 @@ test("checkout reads order fields explicitly instead of relying on window named 
 
 test("order creation reports a safe transaction stage without exposing database details",()=>{
   assert.match(publicRoute,/createStage="LOCK"/);
+  assert.match(publicRoute,/createStage="LOCK";await tx\.\$executeRaw`SELECT pg_advisory_xact_lock/);
   assert.match(publicRoute,/ONLINE_ORDER_\$\{createStage\}/);
   assert.match(publicRoute,/Η καταχώριση online παραγγελίας απέτυχε στο στάδιο/);
 });
