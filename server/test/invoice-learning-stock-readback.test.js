@@ -2,6 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {COFFEE_UNION_PROFILE} from '../src/lib/invoice-learning-coffee-union-seed.js';
+
+const profileSource = await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js', import.meta.url), 'utf8');
+const profileContext = vm.createContext({console, unitRelativeValues: () => null});
+vm.runInContext(profileSource.replace(/^import .*;\n/gm, '').replaceAll('export async function', 'async function')
+  + '\nthis.map=applyMappings;', profileContext);
 
 const source = await readFile(new URL('../src/routes/platform-invoice-learning-ai.js', import.meta.url), 'utf8');
 const normalizer = source.slice(source.indexOf('function normalizeRetailPackaging('), source.indexOf('\nfunction rowTail('));
@@ -54,4 +60,32 @@ test('older knowledge cannot overwrite the explicit supplier gram rule', async (
   assert.equal(result.productLines[0].stockUnit, 'GR');
   assert.equal(result.productLines[0].quantity, 1000);
   assert.equal(result.productLines[0].invoiceUnit, 'ΚΙΛΟ');
+});
+
+test('existing Coffee profile conversion survives subsequent legacy knowledge without unitsPerPackage metadata', async () => {
+  const runtime = evaluate([{supplierItemCode:'ES01000',stockUnit:'ΤΜΧ',invoiceUnit:'PACKAGE',unitsPerPackage:1000}]);
+  const printed = {supplierItemCode:'ES01000',description:'Coffee',invoiceUnit:'ΚΙΛΟ',
+    quantity:12,unitPrice:36.2,netAmount:286.36,grossAmount:323.59,discount1:34.08};
+  const mapped = profileContext.map([printed], COFFEE_UNION_PROFILE)[0];
+  assert.equal(mapped.quantity, 12);
+  assert.equal(mapped.unitPrice, 36.2);
+  const result = await runtime.apply({supplier:{},productLines:[mapped]});
+  const row = result.productLines[0];
+  assert.equal(row.invoiceUnit, 'ΚΙΛΟ');
+  assert.equal(row.stockUnit, 'GR');
+  assert.equal(row.quantity, 12000);
+  assert.equal(row.unitPrice, .0362);
+  assert.equal(row.netAmount, 286.36);
+  assert.equal(row.discount1, 34.08);
+  assert.equal(runtime.normalize(row).quantity, 12000);
+});
+
+test('unverified conversion and bare metadata do not gain confirmed conversion priority', () => {
+  const printed = {supplierItemCode:'X',quantity:2,unitPrice:10,netAmount:20};
+  for (const mapping of [{stockConversion:{factor:1000,to:'GR'}}, {unitsPerPackage:1000}]) {
+    const row = profileContext.map([printed], {mappings:{X:mapping}})[0];
+    assert.equal(row.confirmedPackMapping, undefined);
+    assert.equal(row.packageConversionApplied, undefined);
+    assert.equal(row.quantity, 2);
+  }
 });
