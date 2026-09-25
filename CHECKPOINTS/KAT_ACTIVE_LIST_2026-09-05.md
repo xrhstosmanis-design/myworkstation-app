@@ -1,3 +1,7 @@
+## Gate 5 — G5-P09 ολική εικονική τραπεζική πληρωμή ιδιοκτήτη, περιορισμένο LAB PASS · UI AWAITING LAB 25/09/2026
+
+- [x] Render `55dbbf3`, FRESH/ΒΒ 6529 46,92→0 €, LAB εικονική τράπεζα επιβεβαιωμένη 3,30→−43,62 €, αναμονή/ουρά 0, POS1 1 κίνηση/0 έξοδα, POS2 16 κινήσεις/0,20 € έξοδα και ΚΑΤ 22,36 € αμετάβλητα. Audit αυτόματη επιβεβαίωση 13:19 χωρίς δεύτερη έγκριση. Αρνητικό LAB bank balance ως περιορισμός· κανένα πραγματικό έμβασμα. Στενή φόρμα/πληκτρολόγιο εκτός παραθύρου: bounded UI fix, frontend build PASS, CI/deploy και οπτικό LAB **AWAITING LAB**. Διπλή/υπερπληρωμή, mismatch, τελική συμφωνία OPEN. `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.
+
 ## 2026-09-25 — Gate 3 μονάδα στην επαναφόρτωση — LOCAL 53 PASS / AWAITING CI / LAB
 
 Ίδιος owner, συνέχεια #1247. Η μετατροπή του Learning reader έγραφε PCS παρά ρητό ΓΡ. Διατήρηση δηλωμένης μονάδας και προτεραιότητα επιβεβαιωμένου supplier mapping έναντι παλιού product knowledge. Δεν αλλάζουν οικονομικά ή OCR. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-stock-unit-readback.md`. Gate 3 OPEN.
