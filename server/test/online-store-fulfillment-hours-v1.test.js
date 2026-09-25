@@ -44,3 +44,9 @@ test("management and storefront UI expose and respect fulfillment settings",()=>
   assert.match(storefront,/settings\.pickupEnabled/);
   assert.match(storefront,/settings\.deliveryEnabled/);
 });
+
+test("checkout reads order fields explicitly instead of relying on window named properties",()=>{
+  assert.match(storefront,/const orderFields=\{name:document\.getElementById\('name'\)/);
+  assert.match(storefront,/customerName:orderFields\.name\.value\.trim\(\)/);
+  assert.doesNotMatch(storefront,/customerName:name\.value\.trim\(\)/);
+});
