@@ -1,3 +1,7 @@
+## 2026-09-25 — Gate 3 μονάδα στην επαναφόρτωση — LOCAL 53 PASS / AWAITING CI / LAB
+
+Ίδιος owner, συνέχεια #1247. Η μετατροπή του Learning reader έγραφε PCS παρά ρητό ΓΡ. Διατήρηση δηλωμένης μονάδας και προτεραιότητα επιβεβαιωμένου supplier mapping έναντι παλιού product knowledge. Δεν αλλάζουν οικονομικά ή OCR. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-stock-unit-readback.md`. Gate 3 OPEN.
+
 ## 2026-09-25 — Gate 3 εκμάθηση γραμμαρίων — LOCAL 50 PASS / AWAITING CI / LAB
 
 Ίδιος owner, branch `agent/gate3-preserve-stock-learning-20260925`. Το learning serializer αποθήκευε πάντα PCS και έχανε ρητό stockConversion. Περιορισμένη διόρθωση διατήρησης μονάδας/συντελεστή· όχι αλλαγή OCR. Ανεξάρτητη Coffee Union ανάγνωση: 3 / 344,53 €, αλλά κωδικός/έκπτωση/ετικέτες παραμένουν λανθασμένα· όχι POS PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-preserve-learned-stock-units.md`.

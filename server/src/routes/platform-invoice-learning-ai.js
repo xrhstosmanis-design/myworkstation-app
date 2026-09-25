@@ -212,7 +212,7 @@ function findAntzoulatosRow(rows,description){
 }
 
 /*
- * Retail stock is always posted in pieces.  OCR values remain visible for
+ * Preserve the declared stock unit (pieces, grams, etc.). OCR values remain visible for
  * audit (invoiceQuantity/invoiceUnit/packageUnitPrice), while quantity and
  * unitPrice become the values that are safe to send to stock/costing.
  */
@@ -230,7 +230,8 @@ function normalizeRetailPackaging(line){
   const netAmount=Math.max(0,Number(line?.netAmount||0));
   const netUnitCost=netAmount>0?money4(netAmount/quantity):applyDiscounts(unitPrice,[line?.discount1,line?.discount2,line?.discount3]);
   const grossAmount=Math.max(0,Number(line?.grossAmount||0));
-  return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||"ΚΙΒ",packageUnitPrice,quantity,unit:"PCS",stockUnit:"PCS",unitsPerPackage:pack,unitPrice,netUnitCost,netAmount,grossAmount,packageConversionApplied:true,conversionFactor:pack,needsReview:Boolean(line?.needsReview)};
+  const stockUnit=String(line?.stockUnit||"PCS").trim()||"PCS";
+  return {...line,invoiceQuantity,invoiceUnit:invoiceUnit||"ΚΙΒ",packageUnitPrice,quantity,unit:stockUnit,stockUnit,unitsPerPackage:pack,unitPrice,netUnitCost,netAmount,grossAmount,packageConversionApplied:true,conversionFactor:pack,needsReview:Boolean(line?.needsReview)};
 }
 
 function rowTail(content,description,supplierItemCode){
@@ -648,7 +649,7 @@ async function applyLearnedKnowledge(result){
     result.productLines=(result.productLines||[]).map(line=>{
       let best=null,score=0;for(const k of supplierKnowledge){const s=learnedScore(line,k);if(s>score){score=s;best=k}}
       if(!best||score<120)return normalizeRetailPackaging(line);
-      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:line.confirmedPackMapping?line.invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:line.confirmedPackMapping?Number(line.unitsPerPackage):Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:line.sourceColumnMap?Number(line.vatRate||0):Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:best.stockUnit||"",conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
+      return normalizeRetailPackaging({...line,supplierItemCode:line.supplierItemCode||best.supplierItemCode||"",description:best.description||line.description,barcode:best.barcode||line.barcode||"",invoiceUnit:line.confirmedPackMapping?line.invoiceUnit:best.invoiceUnit||line.invoiceUnit||line.unit||"",unitsPerPackage:line.confirmedPackMapping?Number(line.unitsPerPackage):Number(best.unitsPerPackage||line.unitsPerPackage||0),vatRate:line.sourceColumnMap?Number(line.vatRate||0):Number(best.vatRate??line.vatRate??0),category:best.category||"",subcategory:best.subcategory||"",stockUnit:line.confirmedPackMapping?(line.stockUnit||best.stockUnit||""):(best.stockUnit||line.stockUnit||""),conversionFactor:Number(best.conversionFactor||0),internalCode:best.internalCode||"",masterProductId:best.masterProductId||"",masterProductName:best.masterProductName||"",learnedMatch:true,learnedMatchScore:score});
     });
   }catch(error){console.warn("Invoice Learning knowledge apply skipped:",error?.message||error)}
   return result;
