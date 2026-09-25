@@ -64,7 +64,9 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
           const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
           const difference=Math.abs(Number(after.totals.gross||0)-Number(source.document.totalGross||0));
           status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · τυπωμένο ${euro(source.document.totalGross)} € · διαφορά ${euro(difference)} €.${difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Συμφωνεί εντός 0,05 €."}`;
-          apply.hidden=true;await onComplete?.()
+          lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
+          current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map((line,index)=>`<div style="border-top:1px solid #e2ebef;padding:5px 0"><b>${index+1}. ${esc(line.description)}</b> · ${esc(line.quantity)} × ${esc(line.unitCost)} · ΕΦΚ ${euro(line.exciseTotal)} · ${euro(line.grossAmount)} €</div>`).join("")}</div>`;
+          proposals.replaceChildren();apply.hidden=true;await onComplete?.()
         }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
       status.textContent=`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. Τυπωμένο πληρωτέο ${euro(source.document.totalGross)} €.`;
