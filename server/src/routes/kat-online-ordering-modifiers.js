@@ -118,14 +118,16 @@ router.post(["/orders-with-modifiers","/:publicSlug/orders-with-modifiers"],safe
   const subtotal=money(lines.reduce((s,l)=>s+l.lineTotal,0)),minimum=money(config.minimumOrderRetail||0);if(subtotal<minimum)return res.status(409).json({error:`Η ελάχιστη παραγγελία είναι ${minimum.toFixed(2).replace(".",",")} €.`});const deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0,total=money(subtotal+deliveryFee),id=crypto.randomUUID();
   const prefix=String(store.name||"").toLocaleLowerCase("el-GR").includes("κυλικείο κατ")?"KAT":"ONL";
   let orderNumber;
-  await prisma.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${'online-order-number:'+store.id}))`;
+  let createStage="START";
+  try{await prisma.$transaction(async tx=>{
+    createStage="LOCK";await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${'online-order-number:'+store.id}))`;
+    createStage="SERIAL";
     const serialRow=(await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "orderNumber" ~ ${`^${prefix}-[0-9]+$`} THEN split_part("orderNumber",'-',2)::int ELSE 0 END),0)::int AS value FROM "OnlineOrder" WHERE "storeId"=${store.id}`)[0];
     const serial=Number(serialRow?.value||0)+1;orderNumber=`${prefix}-${String(serial).padStart(3,"0")}`;
-    await tx.$executeRaw`INSERT INTO "OnlineOrder" ("id","companyId","storeId","orderNumber","channel","fulfillmentType","status","paymentMethod","customerName","customerPhone","building","floor","department","room","deliveryNotes","subtotal","deliveryFee","total","idempotencyKey") VALUES (${id},${store.companyId},${store.id},${orderNumber},${body.fulfillmentType==="DELIVERY"?"ONLINE_DELIVERY":"ONLINE"},${body.fulfillmentType},'NEW',${body.paymentMethod},${body.customerName},${body.customerPhone},${body.building||null},${body.floor||null},${body.department||null},${body.room||null},${body.deliveryNotes||null},${subtotal},${deliveryFee},${total},${body.idempotencyKey})`;
-    for(const row of lines)await tx.$executeRaw`INSERT INTO "OnlineOrderLine" ("id","orderId","productId","productName","quantity","storeUnitPrice","onlineSurcharge","onlineUnitPrice","lineTotal","modifiersJson") VALUES (${crypto.randomUUID()},${id},${row.productId},${row.productName},${row.quantity},${row.storeUnitPrice},${row.onlineSurcharge},${row.onlineUnitPrice},${row.lineTotal},${JSON.stringify(row.modifiers)}::jsonb)`;
-    await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","toStatus","note") VALUES (${crypto.randomUUID()},${id},'NEW','Online order submitted with authoritative modifiers')`;
-  });
+    createStage="ORDER";await tx.$executeRaw`INSERT INTO "OnlineOrder" ("id","companyId","storeId","orderNumber","channel","fulfillmentType","status","paymentMethod","customerName","customerPhone","building","floor","department","room","deliveryNotes","subtotal","deliveryFee","total","idempotencyKey") VALUES (${id},${store.companyId},${store.id},${orderNumber},${body.fulfillmentType==="DELIVERY"?"ONLINE_DELIVERY":"ONLINE"},${body.fulfillmentType},'NEW',${body.paymentMethod},${body.customerName},${body.customerPhone},${body.building||null},${body.floor||null},${body.department||null},${body.room||null},${body.deliveryNotes||null},${subtotal},${deliveryFee},${total},${body.idempotencyKey})`;
+    createStage="LINES";for(const row of lines)await tx.$executeRaw`INSERT INTO "OnlineOrderLine" ("id","orderId","productId","productName","quantity","storeUnitPrice","onlineSurcharge","onlineUnitPrice","lineTotal","modifiersJson") VALUES (${crypto.randomUUID()},${id},${row.productId},${row.productName},${row.quantity},${row.storeUnitPrice},${row.onlineSurcharge},${row.onlineUnitPrice},${row.lineTotal},${JSON.stringify(row.modifiers)}::jsonb)`;
+    createStage="EVENT";await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","toStatus","note") VALUES (${crypto.randomUUID()},${id},'NEW','Online order submitted with authoritative modifiers')`;
+  })}catch(error){const safeError=new Error(`Η καταχώριση online παραγγελίας απέτυχε στο στάδιο ${createStage}.`);safeError.status=500;safeError.code=`ONLINE_ORDER_${createStage}`;safeError.cause=error;throw safeError}
   res.status(201).json({ok:true,order:{id,orderNumber,status:"NEW",fulfillmentType:body.fulfillmentType,paymentMethod:body.paymentMethod,subtotal,deliveryFee,total}});
 }));
 

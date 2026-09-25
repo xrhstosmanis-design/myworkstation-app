@@ -50,3 +50,9 @@ test("checkout reads order fields explicitly instead of relying on window named 
   assert.match(storefront,/customerName:orderFields\.name\.value\.trim\(\)/);
   assert.doesNotMatch(storefront,/customerName:name\.value\.trim\(\)/);
 });
+
+test("order creation reports a safe transaction stage without exposing database details",()=>{
+  assert.match(publicRoute,/createStage="LOCK"/);
+  assert.match(publicRoute,/ONLINE_ORDER_\$\{createStage\}/);
+  assert.match(publicRoute,/Η καταχώριση online παραγγελίας απέτυχε στο στάδιο/);
+});
