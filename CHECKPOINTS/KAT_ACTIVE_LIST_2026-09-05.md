@@ -2388,3 +2388,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 ## 2026-09-25 — Gate 4 ανάγνωση τοπικής offline ουράς — PASS
 
 - [x] Το ίδιο φυσικό LAB POS 2 έδειξε «Τοπική ουρά: 0» στις 16:45 μετά το deploy. Η offline πώληση καταχωρίστηκε ακριβώς μία φορά, με μία κίνηση βάρδιας και μία μεταβολή stock. Τα PENDING `4437bc8e`, `d203e422` με 0 προσπάθειες παραμένουν μόνο ως ιστορικό audit exception· δεν διαγράφονται και δεν επαναποστέλλονται. Δεν απαιτείται νέα πώληση. **Gate 4 PASS.** Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-offline-local-queue-readback-awaiting-lab.md`.
+
+## 2026-09-25 — Gate 7 αναφορές και στατιστικά — ΑΝΑΤΕΘΗΚΕ / OPEN
+
+- [ ] Ανάθεση στο `agent/gate7-reports-reconciliation-20260925`. Πρώτο scope: read-only συμφωνία πραγματικών δεδομένων ανά ημέρα/ώρα, βάρδια/terminal, χειριστή, προϊόν/κατηγορία και τρόπο πληρωμής, χωρίς νέα πώληση ή οικονομική κίνηση. Δεν περιλαμβάνονται Gate 3, Gate 5 ή η ειδική εξωτερική σελίδα Gate 6. Τελικό Gate 7 PASS μόνο όταν συμφωνούν και τα πραγματικά δεδομένα των προηγούμενων Gates. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate7-reports-reconciliation-assignment.md`.
