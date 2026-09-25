@@ -71,3 +71,4 @@
 - Στοχευμένο πακέτο `online-store-*.test.js`: **22 PASS / 0 FAIL**.
 - Το Gate 6 παραμένει **OPEN** μέχρι deployment και μία επιτυχημένη συγκεντρωτική φυσική ροή δημιουργία → σωστό POS/BackOffice → checkout → παράδοση → Audit.
 - Μετά το deployment του checkout fix, η εγκεκριμένη υποβολή έφτασε στο API αλλά επέστρεψε γενικό HTTP 500. Η ίδια idempotency key επαναχρησιμοποιήθηκε μόνο για επιβεβαίωση και δεν υπήρξε επιτυχής δημιουργία. Προστέθηκε ασφαλής κωδικοποίηση σταδίου (`LOCK`, `SERIAL`, `ORDER`, `LINES`, `EVENT`) ώστε το production να εντοπίσει το σημείο αστοχίας χωρίς έκθεση στοιχείων βάσης.
+- Το production diagnostic επέστρεψε `LOCK`: το `pg_advisory_xact_lock`, που επιστρέφει PostgreSQL `void`, εκτελούνταν λανθασμένα με `$queryRaw`. Διορθώθηκε σε `$executeRaw`. Η ίδια idempotency key θα χρησιμοποιηθεί μετά το deploy.

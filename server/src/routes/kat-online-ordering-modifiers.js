@@ -120,7 +120,7 @@ router.post(["/orders-with-modifiers","/:publicSlug/orders-with-modifiers"],safe
   let orderNumber;
   let createStage="START";
   try{await prisma.$transaction(async tx=>{
-    createStage="LOCK";await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${'online-order-number:'+store.id}))`;
+    createStage="LOCK";await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'online-order-number:'+store.id}))`;
     createStage="SERIAL";
     const serialRow=(await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "orderNumber" ~ ${`^${prefix}-[0-9]+$`} THEN split_part("orderNumber",'-',2)::int ELSE 0 END),0)::int AS value FROM "OnlineOrder" WHERE "storeId"=${store.id}`)[0];
     const serial=Number(serialRow?.value||0)+1;orderNumber=`${prefix}-${String(serial).padStart(3,"0")}`;
