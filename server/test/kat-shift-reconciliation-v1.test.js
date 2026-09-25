@@ -47,8 +47,9 @@ test('BackOffice exposes printable reconciliation totals and explicit alerts',()
   assert.match(storePage,/mws:commerce-open/);
   assert.match(storePage,/RefreshCw\/>Ανανέωση[\s\S]{0,300}BriefcaseBusiness\/>Εμπορική λειτουργία/);
   assert.match(storePage,/ScreenRecorderWindowLauncher/);
-  assert.match(productCenter,/mws-audience-discount-layer[\s\S]{0,250}pointerEvents:"none"/);
-  assert.match(productCenter,/mws-audience-discount-btn[\s\S]{0,300}pointerEvents:"auto"/);
+  assert.doesNotMatch(productCenter,/mws-audience-discount-layer/);
+  assert.match(productCenter,/mws-audience-discount-btn/);
+  assert.match(fs.readFileSync(new URL("../../client/src/components/commerce/KioskStyleProductCenter.jsx",import.meta.url),"utf8"),/kiosk-list-footer[^\n]*mws-audience-discount-btn/);
   assert.match(commerce,/addEventListener\("mws:commerce-open"/);
   assert.doesNotMatch(commerce,/className="commerce-launcher"/);
   assert.doesNotMatch(entry,/PilotReportLauncherLive|pilot-report-root/);
