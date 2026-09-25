@@ -701,6 +701,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     const allocationTotal=Number(allocations.reduce((sum,item)=>sum+Number(item.amount||0),0).toFixed(2));
     const checks=[];
     if(!row.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό πληρωμής.");
+    else checks.push("Το περιεχόμενο του αποδεικτικού δεν έχει διαβαστεί: ελέγξτε ποσό, τρόπο πληρωμής και τιμολόγια πριν από επιβεβαίωση.");
     if(!allocations.length)checks.push("Δεν έχει αντιστοιχιστεί τιμολόγιο ή παραστατικό.");
     if(Math.abs(allocationTotal-amount)>.01)checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
     return {...row,amount,automaticCheck:{matched:checks.length===0,allocationTotal,checks}};
