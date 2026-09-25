@@ -1,3 +1,7 @@
+## 2026-09-25 — Gate 3 θυρίδα LAB: 11/12 πρωτότυπα συνδεδεμένα — OCR REPLAY NOT TESTED
+
+- [ ] Read-only έλεγχος στη θυρίδα LAB: 34 συνημμένα, 11/12 τιμολόγια συνδεδεμένα· ΤΑΛΩΣ δεν εμφανίστηκε. Καραμολέγκος έντυπο **ΙΔΑ**-126-009370, 6/27,44 €. Coffee Union job `a1ec2efc-977c-4563-af3c-ce7a57f5091b`: πρώτη ανάγνωση DEL005=12 και 4 σειρές, provider 3 σειρές αλλά DEL005=12, reread 4 σειρές/+36,49 €, POS_FAILED· διπλή γραμμή και ποσότητα ακόμη **OPEN**. Μουχλάκης first-pass 27 / provider 13 / reread 27· άλλοι τέσσερις προμηθευτές επίσης POS_FAILED. PANINI πρωτότυπο **ΠΛΗΡΩΤΕΟ 75,60 €**, χωριστή απόδειξη είσπραξης **70,36 €**: εστιασμένη διόρθωση επιλογής συνολικού ποσού FAST με επαλήθευση καθαρής+ΦΠΑ, 59 targeted tests PASS, **AWAITING CI / LAB**. Κανένα νέο POS upload/OCR replay, πληρωμή ή stock. **Gate 3 OPEN.** `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.
+
 ## 2026-09-25 — Gate 5 G5-P06 έξοδο ιδιοκτήτη — περιορισμένο LAB PASS
 
 - [x] PR #1222, CI #3095 πράσινο, merge/deployed `352f636a`. Μία BackOffice δαπάνη ιδιοκτήτη **0,10 €** `G5-P06 VIRTUAL LAB`, ενεργή εγγραφή `#pay_3ffd…` 10:37, εξωτερική πληρωμή: LAB τράπεζα λογιστικό/επιβεβαιωμένο **3,40→3,30 €**, αναμονή και ουρά ιδιοκτήτη **0**, LAB POS 2 **14 κινήσεις/0,10 € έξοδα** ίδια, POS 1 **1/0** ίδιο, ΚΑΤ **22,36 €** ίδιο. Μόνο δαπάνη ιδιοκτήτη χωρίς δεύτερη έγκριση PASS· δαπάνη POS και τελική συμφωνία OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
