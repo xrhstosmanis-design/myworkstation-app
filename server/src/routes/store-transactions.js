@@ -5,7 +5,7 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { sendLedgerAlertEmail } from "../services/mail.js";
 import { expenseReviewStatus } from "./expense-review-policy.js";
-import { readBankDepositProofPdf, readSupplierProofPdf, supplierProofMismatch } from "./supplier-proof-pdf-check.js";
+import { ownerSupplierProofError, readBankDepositProofPdf, readSupplierProofPdf, supplierProofMismatch } from "./supplier-proof-pdf-check.js";
 
 const router=Router();
 let tablesPromise;
@@ -482,6 +482,9 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const total=Number(body.allocations.reduce((sum,row)=>sum+Number(row.amount||0),0).toFixed(2));
   const proof=attachment.mimeType==="application/pdf"
     ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
+  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
+  const ownerProofError=ownerPayment?ownerSupplierProofError({mimeType:attachment.mimeType,proof}):null;
+  if(ownerProofError)return res.status(400).json({error:ownerProofError});
   const proofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod});
   if(proofError)return res.status(400).json({error:proofError});
   const distinct=new Set(body.allocations.map(row=>row.purchaseDocumentId));
@@ -491,7 +494,6 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
   // The company owner confirms their own BackOffice payment at submission.
   // A store operator's POS payment still waits for the owner's review.
-  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
   const initialStatus=ownerPayment?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
