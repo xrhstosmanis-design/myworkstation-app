@@ -1,3 +1,7 @@
+## Gate 5 — G5-P05 κατάθεση με αρχικό PDF, περιορισμένο LAB PASS 25/09/2026
+
+- Μία κατάθεση 0,10 € LAB POS 2 με αρχικό PDF: 13→14 κινήσεις, PENDING_REVIEW, LAB λογιστικό 3,30→3,40 €, αναμονή 0→0,10 €, μετά μία έγκριση ιδιοκτήτη στις 10:04, επιβεβαιωμένα 3,30→3,40 €, αναμονή 0, audit διαφορά 0. POS 1/ΚΑΤ ίδια. Γενικό «Ανανέωση» BackOffice δεν φόρτωνε ουρά ιδιοκτήτη· UI fix στο παρόν PR, επανέλεγχος μετά deploy. Gate 5 συνολικά OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
+
 ## Gate 5 — G5-P04 εικονική κατάθεση, περιορισμένο LAB PASS 25/09/2026
 
 - LAB POS 2: μία κατάθεση 0,10 € χωρίς αρχικό αποδεικτικό, μετά ίδιο PDF 0,10 € και αυτόματη αντιστοίχιση 09:25. Εικονική LAB τράπεζα επιβεβαιωμένα 3,20→3,30 €, αναμονή 0,10→0,00 €· POS 2 κινήσεις 12→13, πωλήσεις/έξοδα αμετάβλητα, POS 1 και ΚΑΤ αμετάβλητα. Κατάθεση με αρχικό PDF, απόκλιση, φυσικό συρτάρι και όλο το Gate 5 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
