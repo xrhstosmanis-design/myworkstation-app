@@ -1,3 +1,7 @@
+## 2026-09-25 — Gate 4 τρέχοντες κανόνες Ιατροί LAB · ΑΝΑΤΕΘΗΚΕ / AWAITING LAB
+
+- [ ] `agent/gate4-current-doctor-rules-read-20260925`: owner scoped ανάγνωση ενεργών κανόνων ανά κατάστημα/δικαιούχο, διασταύρωση με Audit και φυσικό POS «3 ενεργά προϊόντα». Χωρίς αποθήκευση ή πώληση. Αρχικό before/after και ιστορική συμπεριφορά μη επιλεγμένων NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`.
+
 ## 2026-09-25 — Gate 3 θυρίδα LAB: 11/12 πρωτότυπα συνδεδεμένα — OCR REPLAY NOT TESTED
 
 - [ ] Read-only έλεγχος στη θυρίδα LAB: 34 συνημμένα, 11/12 τιμολόγια συνδεδεμένα· ΤΑΛΩΣ δεν εμφανίστηκε. Καραμολέγκος έντυπο **ΙΔΑ**-126-009370, 6/27,44 €. Coffee Union job `a1ec2efc-977c-4563-af3c-ce7a57f5091b`: πρώτη ανάγνωση DEL005=12 και 4 σειρές, provider 3 σειρές αλλά DEL005=12, reread 4 σειρές/+36,49 €, POS_FAILED· διπλή γραμμή και ποσότητα ακόμη **OPEN**. Μουχλάκης first-pass 27 / provider 13 / reread 27· άλλοι τέσσερις προμηθευτές επίσης POS_FAILED. PANINI πρωτότυπο **ΠΛΗΡΩΤΕΟ 75,60 €**, χωριστή απόδειξη είσπραξης **70,36 €**: εστιασμένη διόρθωση επιλογής συνολικού ποσού FAST με επαλήθευση καθαρής+ΦΠΑ, 59 targeted tests PASS, **AWAITING CI / LAB**. Κανένα νέο POS upload/OCR replay, πληρωμή ή stock. **Gate 3 OPEN.** `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.

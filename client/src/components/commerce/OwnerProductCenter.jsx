@@ -47,6 +47,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
   const [masterAudienceStoreId,setMasterAudienceStoreId]=useState("");
   const [masterAudiencePercent,setMasterAudiencePercent]=useState("");
   const [discountAudit,setDiscountAudit]=useState(null);
+  const [currentDiscountRules,setCurrentDiscountRules]=useState(null);
   const [discountAuditBusy,setDiscountAuditBusy]=useState(false);
   const [discountAuditError,setDiscountAuditError]=useState("");
   const [activationStores,setActivationStores]=useState({});
@@ -96,6 +97,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
     setMasterAudience("DOCTOR");
     setMasterAudienceStoreId(activeStores[0]?.id||"");
     setDiscountAudit(null);
+    setCurrentDiscountRules(null);
     setMasterAudiencePercent("");
     setBasePrice(row.defaultRetailPrice===null||row.defaultRetailPrice===undefined?"":String(Number(row.defaultRetailPrice)));
     const config={};
@@ -128,6 +130,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
     try{
       const result=await api("/api/owner-products/bulk-audience-discount",{method:"PUT",body:JSON.stringify({storeId:masterAudienceStoreId,productIds,audience:masterAudience,discountPercent})});
       setDiscountAudit(null);
+      setCurrentDiscountRules(null);
       setMessage(masterDiscountMode==="single"?`Αποθηκεύτηκε έκπτωση ${discountPercent}% για το «${selectedMaster.name}» σε ${result.changed} προϊόν.`:`Αποθηκεύτηκε έκπτωση ${discountPercent}% σε ${result.changed} επιλεγμένα προϊόντα.`);
     }catch(e){setError(e.message||"Η αποθήκευση έκπτωσης απέτυχε.")}finally{setBusy(false)}
   };
@@ -135,7 +138,7 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
   const loadDiscountAudit=async()=>{
     if(!masterAudienceStoreId)return;
     setDiscountAuditError("");setDiscountAuditBusy(true);
-    try{const result=await api(`/api/owner-products/audience-discount-audit?storeId=${encodeURIComponent(masterAudienceStoreId)}&audience=${encodeURIComponent(masterAudience)}`);setDiscountAudit(result.items||[])}
+    try{const result=await api(`/api/owner-products/audience-discount-audit?storeId=${encodeURIComponent(masterAudienceStoreId)}&audience=${encodeURIComponent(masterAudience)}`);setDiscountAudit(result.items||[]);setCurrentDiscountRules(result.currentRules||[])}
     catch(e){setDiscountAuditError(e.message||"Αποτυχία ανάγνωσης ιστορικού.")}
     finally{setDiscountAuditBusy(false)}
   };
@@ -267,10 +270,11 @@ export default function OwnerProductCenter({api,stores=[],onOpenFullProduct}){
 
     {tab==="master"&&<section className="op-box" aria-label="Ιστορικό εκπτώσεων δικαιούχων">
       <h3>Ιστορικό αποθήκευσης έκπτωσης</h3>
-      <label>Κατάστημα <select value={masterAudienceStoreId} onChange={e=>{setMasterAudienceStoreId(e.target.value);setDiscountAudit(null)}}><option value="">Επιλογή</option>{activeStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
-      <label>Δικαιούχος <select value={masterAudience} onChange={e=>{setMasterAudience(e.target.value);setDiscountAudit(null)}}><option value="DOCTOR">Ιατροί</option><option value="NURSE">Νοσηλευτές / Νοσοκόμοι</option><option value="STAFF">Προσωπικό</option><option value="CUSTOMER">Πελάτες</option></select></label>
-      <button type="button" disabled={!masterAudienceStoreId||discountAuditBusy} onClick={loadDiscountAudit}>Ανάγνωση ιστορικού (χωρίς αποθήκευση)</button>
+      <label>Κατάστημα <select value={masterAudienceStoreId} onChange={e=>{setMasterAudienceStoreId(e.target.value);setDiscountAudit(null);setCurrentDiscountRules(null)}}><option value="">Επιλογή</option>{activeStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
+      <label>Δικαιούχος <select value={masterAudience} onChange={e=>{setMasterAudience(e.target.value);setDiscountAudit(null);setCurrentDiscountRules(null)}}><option value="DOCTOR">Ιατροί</option><option value="NURSE">Νοσηλευτές / Νοσοκόμοι</option><option value="STAFF">Προσωπικό</option><option value="CUSTOMER">Πελάτες</option></select></label>
+      <button type="button" disabled={!masterAudienceStoreId||discountAuditBusy} onClick={loadDiscountAudit}>Ανάγνωση κανόνων και ιστορικού (χωρίς αποθήκευση)</button>
       {discountAuditError&&<p role="alert">{discountAuditError}</p>}
+      {currentDiscountRules!==null&&<><h4>Ενεργοί κανόνες τώρα: {currentDiscountRules.length} προϊόντα</h4>{currentDiscountRules.length?<ul>{currentDiscountRules.map(row=><li key={row.productId}>{row.productName||"Προϊόν χωρίς όνομα"} · {row.discountPercent}% · ID {row.productId}</li>)}</ul>:<p>Δεν υπάρχουν ενεργοί κανόνες σε αυτή την επιλογή.</p>}</>}
       {discountAudit!==null&&(discountAudit.length?<ul>{discountAudit.map(row=><li key={row.id}>{new Date(row.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} · {row.discountPercent}% · {Array.isArray(row.productIds)?row.productIds.length:0} προϊόντα · IDs: {Array.isArray(row.productIds)?row.productIds.join(", "):"—"} · χρήστης {row.actorId||"—"} · Audit {row.id}</li>)}</ul>:<p>Δεν βρέθηκαν εγγραφές για αυτή την επιλογή.</p>)}
     </section>}
 
