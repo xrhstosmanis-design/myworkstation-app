@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
-import {parseSupplierProofText,readBankDepositProofPdf,readSupplierProofPdf,supplierProofMismatch} from '../src/routes/supplier-proof-pdf-check.js';
+import {ownerSupplierProofError,parseSupplierProofText,readBankDepositProofPdf,readSupplierProofPdf,supplierProofMismatch} from '../src/routes/supplier-proof-pdf-check.js';
 
 const fixture=async name=>readFile(new URL(`./fixtures/${name}`,import.meta.url));
 
@@ -23,6 +23,9 @@ test('P09 matching synthetic PDF passes explicit amount, method and invoice chec
 test('unreadable PDF remains unverified for human review',async()=>{
   assert.equal(await readSupplierProofPdf(Buffer.from('%PDF- unreadable')),null);
   assert.equal(supplierProofMismatch(null,{amount:1,method:'BANK_TRANSFER'}),null);
+  assert.match(ownerSupplierProofError({mimeType:'application/pdf',proof:null}),/PDF δεν διαβάστηκε/);
+  assert.equal(ownerSupplierProofError({mimeType:'application/pdf',proof:{amount:1,method:'BANK_TRANSFER',invoiceReference:'A1'}}),null);
+  assert.equal(ownerSupplierProofError({mimeType:'image/jpeg',proof:null}),null);
 });
 
 test('ambiguous printed payment fields are not used to reject a payment',()=>{

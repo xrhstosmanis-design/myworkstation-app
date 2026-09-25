@@ -61,3 +61,8 @@ export function supplierProofMismatch(proof,{amount,method,documentNumbers=[]}){
   if(proof.invoiceReference&&documentNumbers.length===1&&reference(documentNumbers[0])!==proof.invoiceReference)return "Το παραστατικό στο αποδεικτικό διαφέρει από το επιλεγμένο τιμολόγιο.";
   return null;
 }
+
+export function ownerSupplierProofError({mimeType,proof}){
+  if(mimeType==="application/pdf"&&!proof)return "Το PDF δεν διαβάστηκε. Ανέβασε καθαρό PDF με εμφανές ποσό, τρόπο πληρωμής και παραστατικό.";
+  return null;
+}
