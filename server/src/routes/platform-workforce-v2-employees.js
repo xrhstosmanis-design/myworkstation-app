@@ -100,7 +100,7 @@ router.post("/",async(req,res,next)=>{
       const employee=await tx.workforceEmployee.create({data:{
         companyId:context.company.id,baseStoreId:body.baseStoreId,fullName:body.fullName,phone:cleanText(body.phone),
         email:cleanText(body.email)?.toLowerCase()||null,pinHash:body.pin?await bcrypt.hash(body.pin,12):null,paymentType:body.paymentType,
-        fixedMonthlyAmount:body.paymentType==="FIXED_MONTHLY"?body.fixedMonthlyAmount:null,maxDaysPerWeek:body.maxDaysPerWeek,
+        dailyRate:body.paymentType==="DAILY"?body.dailyRate:null,fixedMonthlyAmount:body.paymentType==="FIXED_MONTHLY"?body.fixedMonthlyAmount:null,maxDaysPerWeek:body.maxDaysPerWeek,
         maxHoursPerWeek:body.maxHoursPerWeek,minimumDaysOff:body.minimumDaysOff,canChangeStore:body.canChangeStore,
         worksMorning:body.worksMorning,worksAfternoon:body.worksAfternoon,worksNight:body.worksNight,
         worksWeekend:body.worksWeekend,notes:cleanText(body.notes),active:true,createdByUserId:req.user?.id||null
@@ -130,7 +130,7 @@ router.put("/:employeeId",async(req,res,next)=>{
       await tx.workforceEmployee.update({where:{id:existing.id},data:{
         baseStoreId:body.baseStoreId,fullName:body.fullName,phone:cleanText(body.phone),email:cleanText(body.email)?.toLowerCase()||null,
         ...(body.pin?{pinHash:await bcrypt.hash(body.pin,12)}:{}),
-        paymentType:body.paymentType,fixedMonthlyAmount:body.paymentType==="FIXED_MONTHLY"?body.fixedMonthlyAmount:null,
+        paymentType:body.paymentType,dailyRate:body.paymentType==="DAILY"?body.dailyRate:null,fixedMonthlyAmount:body.paymentType==="FIXED_MONTHLY"?body.fixedMonthlyAmount:null,
         maxDaysPerWeek:body.maxDaysPerWeek,maxHoursPerWeek:body.maxHoursPerWeek,minimumDaysOff:body.minimumDaysOff,
         canChangeStore:body.canChangeStore,worksMorning:body.worksMorning,worksAfternoon:body.worksAfternoon,
         worksNight:body.worksNight,worksWeekend:body.worksWeekend,notes:cleanText(body.notes)

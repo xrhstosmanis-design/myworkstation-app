@@ -1,6 +1,6 @@
 export const workforceToday=()=>new Date().toISOString().slice(0,10);
 export const emptyWorkforceEmployee=storeId=>({
-  fullName:"",phone:"",email:"",baseStoreId:storeId||"",paymentType:"HOURLY",hourlyRate:"",fixedMonthlyAmount:"",effectiveFrom:workforceToday(),
+  fullName:"",phone:"",email:"",baseStoreId:storeId||"",paymentType:"HOURLY",hourlyRate:"",dailyRate:"",fixedMonthlyAmount:"",effectiveFrom:workforceToday(),
   maxDaysPerWeek:"5",maxHoursPerWeek:"40",minimumDaysOff:"2",canChangeStore:false,worksMorning:true,worksAfternoon:true,worksNight:false,worksWeekend:true,
   notes:"",pin:"",roleIds:[],primaryRoleId:"",storeIds:storeId?[storeId]:[]
 });

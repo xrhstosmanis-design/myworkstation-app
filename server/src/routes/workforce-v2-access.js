@@ -101,6 +101,7 @@ export function serializeEmployee(employee,storeMap=new Map()){
     legacyEmployeeId:employee.legacyEmployeeId||null,fullName:employee.fullName,phone:employee.phone||null,email:employee.email||null,
     hasPin:Boolean(employee.pinHash),
     paymentType:employee.paymentType,
+    dailyRate:employee.dailyRate===null||employee.dailyRate===undefined?null:Number(employee.dailyRate),
     fixedMonthlyAmount:employee.fixedMonthlyAmount===null||employee.fixedMonthlyAmount===undefined?null:Number(employee.fixedMonthlyAmount),
     maxDaysPerWeek:employee.maxDaysPerWeek,maxHoursPerWeek:Number(employee.maxHoursPerWeek),minimumDaysOff:employee.minimumDaysOff,
     canChangeStore:employee.canChangeStore,worksMorning:employee.worksMorning,worksAfternoon:employee.worksAfternoon,

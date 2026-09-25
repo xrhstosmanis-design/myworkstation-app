@@ -19,7 +19,8 @@ export const employeeSchema=z.object({
   fullName:z.string().trim().min(2).max(160),phone:z.string().trim().max(50).optional().nullable(),
   email:z.union([z.string().trim().email(),z.literal(""),z.null()]).optional(),baseStoreId:z.string().min(1),
   pin:z.union([z.string().regex(/^\d{4,8}$/,"Ο PIN πρέπει να έχει 4 έως 8 ψηφία."),z.literal(""),z.null()]).optional(),
-  paymentType:z.enum(["HOURLY","FIXED_MONTHLY"]),hourlyRate:z.coerce.number().positive().max(10000).optional().nullable(),
+  paymentType:z.enum(["HOURLY","DAILY","FIXED_MONTHLY"]),hourlyRate:z.coerce.number().positive().max(10000).optional().nullable(),
+  dailyRate:z.coerce.number().positive().max(100000).optional().nullable(),
   fixedMonthlyAmount:z.coerce.number().positive().max(10000000).optional().nullable(),effectiveFrom:z.coerce.date(),
   maxDaysPerWeek:z.coerce.number().int().min(1).max(7),maxHoursPerWeek:z.coerce.number().min(1).max(168),
   minimumDaysOff:z.coerce.number().int().min(0).max(6),canChangeStore:z.boolean(),worksMorning:z.boolean(),
@@ -28,6 +29,7 @@ export const employeeSchema=z.object({
   storeAccess:z.array(storeAccessSchema).min(1).max(100),confirmed,reason:z.string().trim().min(3).max(500)
 }).superRefine((value,ctx)=>{
   if(value.paymentType==="HOURLY"&&!(Number(value.hourlyRate)>0))ctx.addIssue({code:z.ZodIssueCode.custom,path:["hourlyRate"],message:"Απαιτείται ωρομίσθιο."});
+  if(value.paymentType==="DAILY"&&!(Number(value.dailyRate)>0))ctx.addIssue({code:z.ZodIssueCode.custom,path:["dailyRate"],message:"Απαιτείται ημερομίσθιο."});
   if(value.paymentType==="FIXED_MONTHLY"&&!(Number(value.fixedMonthlyAmount)>0))ctx.addIssue({code:z.ZodIssueCode.custom,path:["fixedMonthlyAmount"],message:"Απαιτείται σταθερό μηνιαίο ποσό."});
   if(!value.roleIds.includes(value.primaryRoleId))ctx.addIssue({code:z.ZodIssueCode.custom,path:["primaryRoleId"],message:"Ο κύριος ρόλος πρέπει να περιλαμβάνεται στους επιλεγμένους ρόλους."});
 });
