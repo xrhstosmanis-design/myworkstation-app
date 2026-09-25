@@ -1,6 +1,10 @@
-## 26/09/2026 — Gate 3: POS βοηθός τιμολογίου / CI PASS, LAB AWAITING
+## 26/09/2026 — Gate 3: βοηθός επάνω στο POS draft / AWAITING CI-LAB
 
-Ο ιδιοκτήτης ενέκρινε την ανάληψη του Gate 3 από αυτή τη σελίδα. Backup branch `backup/pre-invoice-assistant-20260926` στο `b9ddca396af0caae744820e4268bddbcfce718bb`. Draft PR #1313, branch `agent/gate3-integrate-invoice-assistant-20260926`: διατηρεί ΕΦΚ στην εισαγωγή, υπολογίζει ΦΠΑ στη φορολογητέα αξία καθαρής γραμμής + ΕΦΚ και δεν εκτελεί την παλιά αυτόματη συμφωνία που αγνοούσε τον ΕΦΚ. CI #3324 PASS για το πρώτο βήμα· συμπληρωματικό CI και πραγματικό LAB POS εκκρεμούν. Καμία δήλωση παραγωγικού PASS.
+Το branch `agent/gate3-pos-invoice-assistant-review-20260926` συνεχίζει το PR #1313 (ΕΦΚ, CI #3327 PASS). Σχεδιάστηκε επιθεώρηση έως 5 φωτογραφιών, εντολές στα ελληνικά, χρωματισμένες προτάσεις ανά πεδίο και ρητή αποδοχή σε ήδη υπάρχουσες γραμμές. Εφαρμογή μέσω της υπάρχουσας διόρθωσης με audit/learning, χωρίς δεύτερη πληρωμή, stock ή οριστικοποίηση. Η οθόνη είναι σε υλοποίηση· **AWAITING CI/LAB**, κανένα πραγματικό PASS.
+
+## 26/09/2026 — Gate 3: ΕΦΚ POS draft / CI PASS, LAB AWAITING
+
+Ο ιδιοκτήτης ενέκρινε την ανάληψη του Gate 3 από αυτή τη σελίδα. Backup branch `backup/pre-invoice-assistant-20260926` στο `b9ddca396af0caae744820e4268bddbcfce718bb`. Draft PR #1313, branch `agent/gate3-integrate-invoice-assistant-20260926`: διατηρεί ΕΦΚ στην εισαγωγή, υπολογίζει ΦΠΑ στη φορολογητέα αξία καθαρής γραμμής + ΕΦΚ και δεν εκτελεί την παλιά αυτόματη συμφωνία που αγνοούσε τον ΕΦΚ. CI #3327 PASS· πραγματικό LAB POS εκκρεμεί.
 
 ## 25/09/2026 — Workforce μισθοδοσία / AWAITING LAB
 

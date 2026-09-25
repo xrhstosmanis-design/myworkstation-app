@@ -69,6 +69,7 @@ import commercePosV244Routes,{ensurePosInvoiceBackgroundWorkerSchema,startPosInv
 import commerceAzureInvoiceReaderRoutes from "./routes/commerce-azure-invoice-reader.js";
 import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
+import invoiceAssistantPosRoutes from "./routes/invoice-assistant-pos.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
@@ -228,6 +229,7 @@ app.use("/api/commerce",auth,commerceTenantGuard,commercePosV244Routes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceAzureInvoiceReaderRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosAiRecheckRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);
+app.use("/api/commerce",auth,commerceTenantGuard,invoiceAssistantPosRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceDraftApprovalRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceMyDataInboxRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceVatLookupRoutes);
