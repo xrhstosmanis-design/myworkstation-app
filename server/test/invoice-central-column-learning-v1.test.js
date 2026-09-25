@@ -7,6 +7,7 @@ import {learnCentralInvoiceCorrection} from '../src/lib/invoice-correction-learn
 import {reconcileAzureInvoice} from '../src/lib/invoice-azure-reconciler.js';
 import {finalizeV244ProductLines} from '../../client/src/lib/invoice-v244-safe.js';
 import {buildCompletePrintedTableCandidate} from '../src/lib/invoice-discount-verifier.js';
+import {applyVerifiedCodeCorrections} from '../src/lib/invoice-explicit-code-rules.js';
 
 const headers=['ΚΩΔΙΚΟΣ','ΠΕΡΙΓΡΑΦΗ','ΛΙΑΝΙΚΗ ΤΙΜΗ','Μ.Μ.','ΠΟΣΟΤΗΤΑ','ΤΙΜΗ ΜΟΝΑΔΑΣ','ΑΞΙΑ ΠΡΟ ΕΚΠΤΩΣΗΣ','ΕΚΠΤΩΣΗ %','ΕΚΠΤΩΣΗ ΠΟΣΟ','ΑΞΙΑ ΜΕΤΑ ΤΗΝ ΕΚΠΤΩΣΗ','ΦΠΑ'];
 const decimal=n=>String(n).replace('.',',');
@@ -159,7 +160,7 @@ test('every reading entry point can consume the same supplier profile, including
   await learnCentralInvoiceCorrection(tx,{actor:{role:'SUPER_ADMIN'},companyId:'a',supplierId:'a',line:corrected});
   const source=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const queries=[];
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues:(await import('../src/lib/invoice-column-reading.js')).unitRelativeValues,console,
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues:(await import('../src/lib/invoice-column-reading.js')).unitRelativeValues,console,
     prisma:{$queryRawUnsafe:async(sql,tax)=>{queries.push(tax);return tax==='998878583'?[{...tx.profileRow,supplierTaxId:tax}]:[]}}});
   vm.runInContext(source.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   for(const companyId of ['a','b']){
@@ -182,7 +183,7 @@ test('every reading entry point can consume the same supplier profile, including
 test('manual supplier map accepts an inline printed unit with a safe piece fallback',async()=>{
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const profile={supplierKey:'fresh-milk',supplierTaxId:'803151400',supplierName:'FRESH MILK LOGISTICS',profileVersion:1,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',defaultUnit:'ΤΜΧ',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'QUANTITY',4:'UNIT_PRICE',5:'DISCOUNT_1',6:'VAT_RATE',7:'AMOUNT_AFTER_DISCOUNT'}}};
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'803151400'},productLines:[{rawText:'051 ΓΑΛΑ 3,7% ΕΠΙΛΕΓΜΕΝΟ ΟΛΥΜΠΟΥ 1LT ΤΕΜ 1 1,620 5 13 1,54',quantity:9,unitCost:9,netAmount:1.54}]});
   assert.equal(result.productLines[0].quantity,1);
@@ -195,7 +196,7 @@ test('TALOS manual map overrides a shifted provider map without changing learned
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const mappings={3759850:{barcode:'5200000000000',verified:true}};
   const profile={supplierKey:'800802293',supplierTaxId:'800802293',supplierName:'ΤΑΛΩΣ ΑΕ',profileVersion:4,ruleKey:'DECLARED_COLUMNS',mappings,readingRule:{layoutMode:'DECLARED_COLUMNS',quantityMode:'LINE_TOTAL_MATCH',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'}}};
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule,mappings}}]}});
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule,mappings}}]}});
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'800802293'},productLines:[{code:'3759850',azureRawRow:'3759850 MI OREO COOKIES 66GX20CA TEM 6 0.78 4.68 11.50 18.00 1.28 3.40 13',quantity:.78,unitPrice:4.68,unitCost:4.68,netAmount:11.5,sourceColumnMap:true}]});
   const line=result.productLines[0];
@@ -207,7 +208,7 @@ test('TALOS manual map overrides a shifted provider map without changing learned
 test('manual no-unit map repairs only a source-proven lost decimal separator',async()=>{
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const profile={supplierTaxId:'803151400',readingRule:{layoutMode:'DECLARED_COLUMNS',defaultUnit:'ΤΜΧ',columns:{1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'QUANTITY',4:'UNIT_PRICE',5:'DISCOUNT_1',6:'VAT_RATE',7:'AMOUNT_AFTER_DISCOUNT'}}};
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'803151400'},productLines:[{rawText:'051 ΓΑΛΑ 3,7% ΕΠΙΛΕΓΜΕΝΟ ΟΛΥΜΠΟΥ 1LT 1 1620 5 13 1,54',quantity:1,unitCost:1620,netAmount:1.54}]});
   assert.equal(result.productLines[0].quantity,1);
@@ -221,7 +222,7 @@ test('TALOS declared suffix preserves printed net and reconstructs one omitted q
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'};
   const profile={supplierTaxId:'800802293',readingRule:{layoutMode:'DECLARED_COLUMNS',columns}};
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'800802293'},productLines:[
     {azureRawRow:'4322626 ΣΟΚ. LACTA ΟΛΟΚΛ ΦΟΥΝΤ BAR 45G X30 TEM 6 1.06 6.36 15.00 18.00 1.93 4.43 13',quantity:6,unitPrice:1.06,netAmount:5.22,vatRate:13},
@@ -238,7 +239,7 @@ test('TALOS unordered Azure cells recover one uniquely balanced physical row',as
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT',4:'QUANTITY',5:'UNIT_PRICE',6:'AMOUNT_BEFORE_DISCOUNT',7:'RETAIL_PRICE',8:'DISCOUNT_1',9:'IGNORE',10:'AMOUNT_AFTER_DISCOUNT',11:'VAT_RATE',12:'IGNORE'};
   const profile={supplierTaxId:'800802293',readingRule:{layoutMode:'DECLARED_COLUMNS',columns}};
-  const context=vm.createContext({applyConfirmedColumns,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{readingRule:profile.readingRule}}]}});
   vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
   const result=await context.apply({supplier:{taxId:'800802293'},productLines:[{azureRawRow:'4327325 EXTRA ΤΥΡΟΓΑΡ. ΤΥΡΙ 80GX20 TEM 1.67 4.28 13 0.85 5.95 18.30 12.00',quantity:0,unitPrice:1.67,netAmount:0,vatRate:0}]});
   const line=result.productLines[0];
