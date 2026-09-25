@@ -8,12 +8,16 @@ const prisma=new PrismaClient();
 const statements=[
   `CREATE TABLE IF NOT EXISTS "WorkforceEmployee" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"baseStoreId" TEXT,"userId" TEXT UNIQUE,"legacyEmployeeId" TEXT UNIQUE,"fullName" TEXT NOT NULL,"phone" TEXT,"email" TEXT,
-    "paymentType" TEXT NOT NULL DEFAULT 'HOURLY',"fixedMonthlyAmount" DECIMAL(12,2),"maxDaysPerWeek" INTEGER NOT NULL DEFAULT 5,"maxHoursPerWeek" DECIMAL(6,2) NOT NULL DEFAULT 40,
+    "paymentType" TEXT NOT NULL DEFAULT 'HOURLY',"dailyRate" DECIMAL(12,2),"fixedMonthlyAmount" DECIMAL(12,2),"maxDaysPerWeek" INTEGER NOT NULL DEFAULT 5,"maxHoursPerWeek" DECIMAL(6,2) NOT NULL DEFAULT 40,
     "minimumDaysOff" INTEGER NOT NULL DEFAULT 1,"canChangeStore" BOOLEAN NOT NULL DEFAULT false,"worksMorning" BOOLEAN NOT NULL DEFAULT true,"worksAfternoon" BOOLEAN NOT NULL DEFAULT true,
     "worksNight" BOOLEAN NOT NULL DEFAULT false,"worksWeekend" BOOLEAN NOT NULL DEFAULT true,"notes" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"createdByUserId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `ALTER TABLE "WorkforceEmployee" ADD COLUMN IF NOT EXISTS "pinHash" TEXT`,
+  `ALTER TABLE "WorkforceEmployee" ADD COLUMN IF NOT EXISTS "dailyRate" DECIMAL(12,2)`,
+  `ALTER TABLE "WorkforcePayrollLine" ADD COLUMN IF NOT EXISTS "dailyRate" DECIMAL(12,2)`,
+  `ALTER TABLE "WorkforceEmployeePayment" ADD COLUMN IF NOT EXISTS "requestKey" TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "WorkforceEmployeePayment_requestKey_key" ON "WorkforceEmployeePayment" ("requestKey")`,
   `CREATE TABLE IF NOT EXISTS "WorkforceRole" (
     "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"name" TEXT NOT NULL,"code" TEXT NOT NULL,"description" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP

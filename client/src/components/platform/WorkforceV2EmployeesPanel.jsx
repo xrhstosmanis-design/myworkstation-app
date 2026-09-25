@@ -1,5 +1,5 @@
 import React from "react";
-import {AlertTriangle,Briefcase,Building2,Clock3,Eye,RefreshCw,ShieldCheck,Users} from "lucide-react";
+import {AlertTriangle,Banknote,Briefcase,Building2,Clock3,Eye,RefreshCw,ShieldCheck,Users} from "lucide-react";
 import WorkforceV2ActionPreview from "./WorkforceV2ActionPreview.jsx";
 import WorkforceV2EmployeeTab from "./WorkforceV2EmployeeTab.jsx";
 import WorkforceV2MigrationTab from "./WorkforceV2MigrationTab.jsx";
@@ -8,9 +8,11 @@ import WorkforceV2RulesTab from "./WorkforceV2RulesTab.jsx";
 import WorkforceV2ShiftTemplatesTab from "./WorkforceV2ShiftTemplatesTab.jsx";
 import WorkforceV2ScheduleTab from "./WorkforceV2ScheduleTab.jsx";
 import WorkforceV2AttendanceTab from "./WorkforceV2AttendanceTab.jsx";
+import WorkforceV2PayrollTab from "./WorkforceV2PayrollTab.jsx";
 import useWorkforceV2Manager from "./useWorkforceV2Manager.js";
 import "./workforce-v2-employees.css";
 import "./workforce-v2-rules-shifts.css";
+import "./workforce-v2-payroll.css";
 
 export default function WorkforceV2EmployeesPanel({company,store,request}){
   const manager=useWorkforceV2Manager({company,store,request});
@@ -37,6 +39,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
       <button className={tab==="shifts"?"active":""} onClick={()=>setTab("shifts")}><Clock3/> Πρότυπα βαρδιών</button>
       <button className={tab==="schedule"?"active":""} onClick={()=>setTab("schedule")}><Clock3/> Πρόγραμμα & Άδειες</button>
       <button className={tab==="attendance"?"active":""} onClick={()=>setTab("attendance")}><Clock3/> Παρουσίες</button>
+      <button className={tab==="payroll"?"active":""} onClick={()=>setTab("payroll")}><Banknote/> Μισθοδοσία</button>
       <button className={tab==="migration"?"active":""} onClick={()=>setTab("migration")}><Eye/> Προεπισκόπηση μεταφοράς</button>
     </nav>
     {error&&<div className="platform-alert error">{error}</div>}
@@ -47,6 +50,7 @@ export default function WorkforceV2EmployeesPanel({company,store,request}){
     {tab==="shifts"&&<WorkforceV2ShiftTemplatesTab manager={manager}/>} 
     {tab==="schedule"&&<WorkforceV2ScheduleTab company={company} store={store} request={request} data={data}/>}
     {tab==="attendance"&&<WorkforceV2AttendanceTab company={company} store={store} request={request}/>}
+    {tab==="payroll"&&<WorkforceV2PayrollTab company={company} store={store} request={request}/>}
     {tab==="migration"&&<WorkforceV2MigrationTab manager={manager} store={store}/>} 
     <WorkforceV2ActionPreview manager={manager}/>
   </div>;

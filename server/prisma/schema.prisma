@@ -292,6 +292,7 @@ model WorkforceEmployee {
   email                String?
   pinHash              String?
   paymentType          String   @default("HOURLY")
+  dailyRate            Decimal? @db.Decimal(12, 2)
   fixedMonthlyAmount   Decimal? @db.Decimal(12, 2)
   maxDaysPerWeek       Int      @default(5)
   maxHoursPerWeek      Decimal  @default(40) @db.Decimal(6, 2)
@@ -587,6 +588,7 @@ model WorkforcePayrollLine {
   overtimeMinutes Int                    @default(0)
   absenceMinutes  Int                    @default(0)
   hourlyRate      Decimal?               @db.Decimal(12, 4)
+  dailyRate       Decimal?               @db.Decimal(12, 2)
   fixedAmount     Decimal?               @db.Decimal(12, 2)
   grossAmount     Decimal                @default(0) @db.Decimal(12, 2)
   paidAmount      Decimal                @default(0) @db.Decimal(12, 2)
@@ -615,6 +617,7 @@ model WorkforceEmployeePayment {
   paymentMethod    String
   sourceType       String?
   sourceId         String?
+  requestKey       String?                 @unique
   proofUrl         String?
   note             String?
   approvalStatus   String                  @default("APPROVED")

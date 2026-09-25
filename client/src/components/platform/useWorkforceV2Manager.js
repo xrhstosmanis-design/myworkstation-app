@@ -52,7 +52,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     setEditingId(employee.id);
     setForm({
       fullName:employee.fullName||"",phone:employee.phone||"",email:employee.email||"",baseStoreId:employee.baseStoreId||store.id,
-      paymentType:employee.paymentType||"HOURLY",hourlyRate:employee.currentHourlyRate?.hourlyRate??"",fixedMonthlyAmount:employee.fixedMonthlyAmount??"",
+      paymentType:employee.paymentType||"HOURLY",hourlyRate:employee.currentHourlyRate?.hourlyRate??"",dailyRate:employee.dailyRate??"",fixedMonthlyAmount:employee.fixedMonthlyAmount??"",
       effectiveFrom:workforceToday(),maxDaysPerWeek:String(employee.maxDaysPerWeek??5),maxHoursPerWeek:String(employee.maxHoursPerWeek??40),minimumDaysOff:String(employee.minimumDaysOff??1),
       canChangeStore:Boolean(employee.canChangeStore),worksMorning:Boolean(employee.worksMorning),worksAfternoon:Boolean(employee.worksAfternoon),worksNight:Boolean(employee.worksNight),worksWeekend:Boolean(employee.worksWeekend),
       notes:employee.notes||"",roleIds:activeEmployeeRoles.map(role=>role.id),primaryRoleId:activeEmployeeRoles.find(role=>role.primary)?.id||activeEmployeeRoles[0]?.id||"",
@@ -65,6 +65,7 @@ export default function useWorkforceV2Manager({company,store,request}){
   const employeePayload=()=>({
     fullName:form.fullName.trim(),phone:form.phone.trim()||null,email:form.email.trim()||null,baseStoreId:form.baseStoreId,
     paymentType:form.paymentType,hourlyRate:form.paymentType==="HOURLY"?Number(form.hourlyRate):null,
+    dailyRate:form.paymentType==="DAILY"?Number(form.dailyRate):null,
     fixedMonthlyAmount:form.paymentType==="FIXED_MONTHLY"?Number(form.fixedMonthlyAmount):null,
     effectiveFrom:workforceDateStartIso(form.effectiveFrom),maxDaysPerWeek:Number(form.maxDaysPerWeek),
     maxHoursPerWeek:Number(form.maxHoursPerWeek),minimumDaysOff:Number(form.minimumDaysOff),canChangeStore:Boolean(form.canChangeStore),
@@ -78,6 +79,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     if(!form.baseStoreId)return setError("Επίλεξε κατάστημα βάσης.");
     if(!form.roleIds.length||!form.primaryRoleId)return setError("Επίλεξε τουλάχιστον έναν ρόλο και κύριο ρόλο.");
     if(form.paymentType==="HOURLY"&&!(Number(form.hourlyRate)>0))return setError("Συμπλήρωσε έγκυρο ωρομίσθιο.");
+    if(form.paymentType==="DAILY"&&!(Number(form.dailyRate)>0))return setError("Συμπλήρωσε έγκυρο ημερομίσθιο.");
     if(form.paymentType==="FIXED_MONTHLY"&&!(Number(form.fixedMonthlyAmount)>0))return setError("Συμπλήρωσε σταθερό μηνιαίο ποσό.");
     if(form.pin.trim()&&!/^\d{4,8}$/.test(form.pin.trim()))return setError("Ο PIN πρέπει να έχει 4 έως 8 ψηφία.");
     setPending({type:"employee",payload:employeePayload(),reason:editingId?"Ενημέρωση καρτέλας εργαζομένου":"Δημιουργία νέου εργαζομένου"});
