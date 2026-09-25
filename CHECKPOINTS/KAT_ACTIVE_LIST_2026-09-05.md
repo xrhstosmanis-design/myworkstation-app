@@ -2395,6 +2395,14 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 
 - [x] **Περιορισμένο LAB PASS 25/09/2026:** PR #1280 / deploy `be8be8f0`. Read-only επανέλεγχος στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, χωρίς νέα οικονομική κίνηση. Η ώρα πώλησης εμφανίστηκε 16:07:55 Ελλάδας, οι ενεργές βάρδιες `MAIN` και `LAB-POS-02` εμφανίστηκαν μαζί, και η βάρδια POS2 έδειξε `ΝΕΡΟ 500ML` ποσότητα 1 / έκπτωση 0,00 € / τζίρο 0,50 € και χειριστή `LAB POS 2` / 1 πώληση / 0,50 €. Ελληνικές επικεφαλίδες PASS. Η ίδια συμφωνία δεν επαναλαμβάνεται.
 - [ ] Συνολικό Gate 7 παραμένει `OPEN`: εκκρεμούν τελικά πραγματικά δεδομένα Gate 3/5/6 και πλήρης κάλυψη ακυρώσεων, voids, επιστροφών, εκπτώσεων, τρόπων πληρωμής και stock/audit. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate7-reports-reconciliation-assignment.md`, manual `docs/manual/reports/PASS.md`.
+
+## 2026-09-25 — Gate 6 Online παραγγελίες και Delivery — ΑΝΑΤΕΘΗΚΕ / OPEN
+
+- [ ] Ανάθεση στο `agent/gate6-online-delivery-20260925`. Το Gate 6 είναι η γενική ροή Online Ordering/Delivery του MyWorkStation και **δεν είναι** η εξωτερική σύνδεση efood/Pelican.
+- [ ] Scope: σωστό κατάστημα και ξεχωριστό online/delivery ταμείο, ετεροχρονισμένη χρέωση, ακριβώς μία αφαίρεση αποθέματος, idempotent retry/διπλή παραγγελία, ακύρωση/απόρριψη/ολοκλήρωση και συμφωνία POS–BackOffice–Audit.
+- [ ] Υπάρχει παλιό CI/E2E τεκμήριο δημιουργίας→duplicate retry→accept→prepare→ready→POS checkout→deliver με μία μείωση stock, αλλά δεν ισοδυναμεί με νέο πραγματικό LAB PASS. Πρώτα γίνεται απογραφή του σημερινού production και μετά συγκεντρωτική φυσική δοκιμή με πλήρες πριν/μετά.
+- [ ] efood/Pelican και credentials παραμένουν ανεξάρτητα στην ειδική σελίδα και δεν μπλοκάρουν το Gate 6.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate6-online-delivery-assignment.md`.
 - [ ] Πρώτος φυσικός έλεγχος: βρέθηκαν λανθασμένη ώρα UTC και ελλιπής λίστα βαρδιών λόγω terminal-scoped ανάγνωσης. Υλοποιήθηκαν ώρα Ελλάδας, ασφαλές store-wide BackOffice reporting, ελληνικές επικεφαλίδες και αναλυτικές ενότητες προϊόντων/χειριστών. Τοπικά 13/13 tests και production build PASS· αναμένονται πράσινο CI, deploy και φυσικός επανέλεγχος. Δεν δημιουργήθηκε νέα πώληση.
 
 ## 25/09/2026 — Gate 3: ΔΕΛΤΑ 30721 κεντρικό προφίλ POS + BackOffice / LOCAL FULL PASS, AWAITING CI-LAB
