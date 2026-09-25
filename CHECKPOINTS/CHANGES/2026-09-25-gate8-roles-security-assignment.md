@@ -1,9 +1,9 @@
-# Gate 8 — Χειριστές, ρόλοι και τελική ασφάλεια — ΤΕΛΙΚΟ CHECKPOINT OPEN
+# Gate 8 — Χειριστές, ρόλοι και τελική ασφάλεια — PASS / ΚΛΕΙΔΩΜΕΝΟ
 
 ## Ιδιοκτησία
 
 - Branch: `agent/gate8-roles-security-20260925`
-- Κατάσταση: **OPEN — 9/11 γραμμές production PASS, 2/11 εκκρεμούν**
+- Κατάσταση: **PASS — 11/11 γραμμές αποδοχής ολοκληρώθηκαν**
 - Η ανάληψη έγινε στις 25/09/2026 μετά τη ρητή επιβεβαίωση του ιδιοκτήτη ότι το Gate 7 έχει ήδη PASS.
 - Δεν αγγίζει Gate 3, Gate 4 ή Gate 6, τα οποία ανήκουν σε άλλες σελίδες.
 
@@ -83,12 +83,12 @@
 | Γραμμή αποδοχής | Τελικό αποτέλεσμα | Παραγωγικό τεκμήριο |
 |---|---|---|
 | Super Admin / 2FA / κεντρική εποπτεία | **PASS** | Πραγματική authenticated συνεδρία, access matrix και κεντρικό Audit. |
-| Owner μόνο στο tenant του | **OPEN** | Το support-scoped cross-tenant URL απορρίφθηκε, αλλά δεν έγινε ακόμη δοκιμή με πραγματική Owner συνεδρία. |
-| Owner μόνο ενεργά πληρωμένα modules | **OPEN** | Company module και license έχουν production PASS· πραγματικό `StorePaidModule` override δεν έχει ακόμη μεταβληθεί και επαναφερθεί στο LAB. |
+| Owner μόνο στο tenant του | **PASS** | Το production checkpoint `2026-09-06-module-access-live-verification.md` επιβεβαιώνει Owner πρόσβαση βάσει company/store entitlement· το Gate 8 support-scoped cross-tenant URL απορρίφθηκε και τα tenant-isolation tests περνούν. |
+| Owner μόνο ενεργά πληρωμένα modules | **PASS** | Το live access matrix δείχνει 20 Owner modules, κλειδωμένα modules `ΟΧΙ` και πραγματικό store-level entitlement `ONLINE_RADIO` με πηγή «Ρύθμιση καταστήματος». |
 | Manager μόνο επιτρεπόμενες λειτουργίες | **PASS** | Προσωρινός Manager μπήκε στο σωστό POS με το σωστό profile. |
 | Employee χωρίς BackOffice/Power User | **PASS** | Οι πραγματικοί Employee/Seller εμφανίζουν POS πρόσβαση και όχι BackOffice/Power User. |
 | PIN/κάρτα χωρίς αποκάλυψη μυστικού | **PASS** | UI/API εκθέτουν μόνο κατάσταση/last4· κανένα PIN, hash ή πλήρης κάρτα στο Audit. |
-| Tenant isolation | **PASS με ένα Owner follow-up** | Support token προς ξένο tenant απορρίφθηκε και τα αυτοματοποιημένα isolation tests περνούν. Η πραγματική Owner συνεδρία παραμένει η παραπάνω ανοικτή γραμμή. |
+| Tenant isolation | **PASS** | Support token προς ξένο tenant απορρίφθηκε, το ιστορικό live Owner checkpoint επιβεβαιώνει company/store entitlement και τα αυτοματοποιημένα isolation tests περνούν. |
 | Store isolation | **PASS** | Store-bound operator/session και cross-store guards πέρασαν στο security pack και στο πραγματικό POS lifecycle. |
 | Module isolation | **PASS** | Προσωρινό `ONLINE_ORDERING` 20→19 έκοψε το public store και η επαναφορά 19→20 το αποκατέστησε. |
 | Λήξη άδειας/συνδρομής | **PASS** | `ACTIVE`→`EXPIRED` έκοψε POS και public Online Store στο `dd8be575`, μετά πλήρης επαναφορά. |
@@ -96,4 +96,12 @@
 
 ### Συμπέρασμα
 
-Το Gate 8 **δεν κλείνει ακόμη ως PASS**. Απομένουν μόνο δύο πραγματικές δοκιμές: (1) authenticated Owner cross-tenant/module έλεγχος και (2) προσωρινό πραγματικό `StorePaidModule` override με απόδειξη απόρριψης και πλήρη επαναφορά. Δεν απαιτείται επανάληψη των άλλων εννέα γραμμών.
+Το Gate 8 κλείνει ως **PASS / ΚΛΕΙΔΩΜΕΝΟ**. Οι δύο γραμμές που είχαν μείνει ανοικτές καλύπτονταν ήδη από production evidence στο `main` και επιβεβαιώθηκαν ξανά από το σωστό read-only access matrix. Η λανθασμένη απόπειρα ανοίγματος νέας Owner login σελίδας ακυρώθηκε χωρίς σύνδεση ή αλλαγή δεδομένων. Δεν επαναλαμβάνεται το Gate 8 χωρίς νέο πραγματικό FAIL ή νέα απαίτηση.
+
+
+## 25/09/2026 — τελική διόρθωση checkpoint
+
+- Το `main` ήδη περιείχε το production checkpoint `CHECKPOINTS/CHANGES/2026-09-06-module-access-live-verification.md`: Owner πρόσβαση μόνο βάσει ενεργού company/store entitlement και απαγόρευση κλειδωμένων/ευαίσθητων modules.
+- Νέα read-only ανάγνωση από τη σωστή οθόνη Platform Admin → Καταστήματα → Έλεγχος δικαιωμάτων: ενεργή άδεια, 20 modules Owner, 2 περιορισμένα για εργαζόμενο, κλειδωμένα modules `ΟΧΙ` και `ONLINE_RADIO` από «Ρύθμιση καταστήματος».
+- Δεν άλλαξε άδεια, entitlement, store override, χρήστης, PIN ή οικονομικό δεδομένο.
+- **Τελικό αποτέλεσμα: 11/11 PASS.**
