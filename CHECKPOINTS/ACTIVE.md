@@ -1,3 +1,7 @@
+## Gate 5 — G5-P06 λοιπό έξοδο ιδιοκτήτη, AWAITING LAB 25/09/2026
+
+- Στο deployed `2522dad5` η καταχώριση owner «Λοιπά Έξοδα» θα δημιουργούσε περιττή `PENDING_REVIEW`. Περιορισμένη διόρθωση για άμεσο `CONFIRMED` owner/super-admin, POS παραμένει σε έγκριση. Βάση LAB POS2: 14 κινήσεις/έξοδα 0,10 €, POS1: 1/0, LAB τράπεζα 3,40 € επιβεβαιωμένα/0 αναμονή, ΚΑΤ 22,36 €. Τοπικές δοκιμές/build PASS, CI/deploy/νέα LAB πράξη OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`. Συνολικό Gate 5 OPEN.
+
 ## Gate 5 — G5-P05 κατάθεση με αρχικό PDF, περιορισμένο LAB PASS 25/09/2026
 
 - Μία κατάθεση 0,10 € LAB POS 2 με αρχικό PDF: 13→14 κινήσεις, PENDING_REVIEW, LAB λογιστικό 3,30→3,40 €, αναμονή 0→0,10 €, μετά μία έγκριση ιδιοκτήτη στις 10:04, επιβεβαιωμένα 3,30→3,40 €, αναμονή 0, audit διαφορά 0. POS 1/ΚΑΤ ίδια. Γενικό «Ανανέωση» BackOffice δεν φόρτωνε ουρά ιδιοκτήτη· UI fix στο παρόν PR, επανέλεγχος μετά deploy. Gate 5 συνολικά OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
