@@ -1,3 +1,7 @@
+## 26/09/2026 01:30 (Ελλάδα) — Render #1316 DEPLOY PASS / Gate 3 LAB AWAITING
+
+Το πράσινο Render deploy του PR #1316 επιβεβαιώθηκε στο δημόσιο `/api/health`: `ok=true`, ακριβές revision `6345a6d268977117ca1b86f66a22c4d02a145fb3`. Το startup blocker `WorkforcePayrollLine` δεν εμποδίζει πλέον την εκκίνηση. Ο ιδιοκτήτης θα υποβάλει ένα νέο τιμολόγιο από το POS· πρώτο αυτόματο πρόχειρο, φωτογραφίες, γραμμές, ΕΦΚ/ΦΠΑ, πληρωμή και stock παραμένουν NOT TESTED. Gate 3 OPEN.
+
 ## 26/09/2026 — Render startup Workforce payroll / LAB FAIL, AWAITING CI + DEPLOY
 
 Στο τελευταίο deploy του merge `158806f`, το Render απέτυχε στην εκκίνηση: Prisma P2010/42P01, `relation "WorkforcePayrollLine" does not exist` στο `ensure-workforce-v2-schema.js`. Το δημόσιο `/api/health` εξακολουθούσε να αναφέρει `b9ddca396af0caae744820e4268bddbcfce718bb`. PR #1316 προσθέτει μόνο ελλείποντες πίνακες Payroll πριν από τα ήδη υπάρχοντα ALTER/INDEX. Τοπικό `node --check` PASS· CI, ακριβές Render revision και πραγματικό POS invoice LAB NOT TESTED. Δεν υπάρχει Gate 3 PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-render-workforce-startup-failure.md`.
