@@ -2888,3 +2888,6 @@ Total output lines: 1413
 - [x] Προστέθηκαν οι ολοκληρωμένες οδηγίες Workforce για πρόγραμμα ανά εργαζόμενο, Chat, εκτύπωση κάρτας και παρουσία μέσω PIN/QR/κάμερας/scanner.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-23-mandatory-pass-manual-workforce.md`.
 - Manual: `docs/manual/workforce/PASS.md`.
+## Gate 5 — G5-P08 LAB FAIL / διόρθωση σε ανάπτυξη, 25/09/2026
+
+Μία πληρωμή προμηθευτή 46,92 € καταχωρίστηκε ως μετρητά POS2, παρά το τραπεζικό συνθετικό PDF. Μία εκκρεμότητα και έξοδα βάρδιας 0,20→47,12 €, POS1 αμετάβλητο. Μην επιβεβαιώσετε/επαναλάβετε την πληρωμή. Διορθώνεται η ψευδής επιβεβαίωση «Απόκλιση» και προστίθεται ασφαλής ακύρωση εκκρεμούς με αναστροφή. CI/deploy και LAB ακύρωση **AWAITING LAB**, Gate 5 OPEN. Λεπτομέρειες `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.
