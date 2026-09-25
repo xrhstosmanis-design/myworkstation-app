@@ -25,3 +25,9 @@ test("invoice and stock units offer popup suggestions while allowing custom text
   assert.match(lab,/fields\.invoiceUnit=unitInput\('Μονάδα τιμολογίου'/);
   assert.match(lab,/fields\.stockUnit=unitInput\('Μονάδα stock'/);
 });
+
+test("manual line correction recalculates economics from corrected discounts",()=>{
+  assert.match(lab,/const correctedNetUnit=pct\(line\.unitPrice,line\.discount1,line\.discount2,line\.discount3\)/);
+  assert.match(lab,/line\.netValue=correctedNetUnit===null\?0:line\.quantity\*correctedNetUnit/);
+  assert.doesNotMatch(lab,/line\.netValue=lineAmount\(line\);line\.netAmount=line\.netValue;line\.netUnitCost=net\(line\)/);
+});

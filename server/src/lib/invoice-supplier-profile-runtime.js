@@ -78,7 +78,7 @@ function recoverQuantityFromLineTotal(line){
   return {...line,quantity,invoiceQuantity:quantity,supplierProfileRecovered:true,supplierProfileRule:"LINE_TOTAL_MATCH",supplierProfileEvidence:{quantity,unitPrice:money4(price),netAmount:money2(net)}};
 }
 
-const unitWords=new Set(["TEM","ΤΕΜ","TMX","ΤΜΧ","PCS","PC","KIB","ΚΙΒ","KΒ","ΚΒ","KG","ΚG","ΚΙΛΑ","LT","LIT","ΦΑΚ"]);
+const unitWords=new Set(["TEM","ΤΕΜ","TM","ΤΜ","TMX","ΤΜΧ","PCS","PC","KIB","ΚΙΒ","KΒ","ΚΒ","KG","ΚG","ΚΙΛΑ","LT","LIT","ΦΑΚ"]);
 const parseNumber=value=>{const n=Number(String(value||"").replace(",","."));return Number.isFinite(n)?n:null};
 const wordsOf=line=>String(sourceRow(line)).trim().split(/\s+/).filter(Boolean);
 const numericNear=(words,start,direction)=>{
@@ -101,7 +101,7 @@ function recoverDeclaredColumns(line,profile){
   if(!(unitColumn>0&&quantityColumn>0&&priceColumn>0))return line;
   const words=wordsOf(line);if(!words.length)return line;
   let unitIndex=words.findIndex(word=>unitWords.has(norm(word)));
-  if(unitIndex<0){unitIndex=words.findIndex(word=>/^(TEM|ΤΕΜ|TMX|ΤΜΧ|PCS|KIB|ΚΙΒ|KG|ΚG|LT|ΦΑΚ)$/i.test(word))}
+  if(unitIndex<0){unitIndex=words.findIndex(word=>/^(TEM|ΤΕΜ|TM|ΤΜ|TMX|ΤΜΧ|PCS|KIB|ΚΙΒ|KG|ΚG|LT|ΦΑΚ)$/i.test(word))}
   // Some Azure rows omit the inline TEM token altogether and, on this compact
   // layout, can also return 1,620 as 1620. A no-unit map still has a stable
   // numeric tail: quantity, price, discounts, VAT and final line value.

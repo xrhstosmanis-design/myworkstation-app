@@ -219,19 +219,20 @@ async function main(){
   assert.equal(handedOff.response.status,202,JSON.stringify(handedOff.payload));
   const secondJob=handedOff.payload.jobId;
   assert.notEqual(secondJob,firstJob);assert.notEqual(secondJob,staleJob,"Handoff reused a deleted invoice's extraction");
-  // CI has no external AI credentials: wait for the durable worker's explicit
-  // failure, then supply verified source lines through the normal review API.
+  // CI has no external AI credentials. The durable draft must remain available
+  // for BackOffice review instead of being mislabeled as a failed POS handoff.
   let workerStatus;
   for(let attempt=0;attempt<100;attempt++){
     workerStatus=await request(`/api/commerce/ai-reader/fast-status/${secondJob}`,{token:secondToken});
-    if(workerStatus.payload.failed)break;
+    if(workerStatus.payload.draftReady&&workerStatus.payload.stage==='POS_BACKGROUND_COMPLETE')break;
     await new Promise(resolve=>setTimeout(resolve,50));
   }
-  assert.equal(workerStatus.payload.failed,true,JSON.stringify(workerStatus.payload));
-  const verified=await request(`/api/commerce/ai-reader/jobs/${secondJob}/product-lines`,{method:"PUT",token:secondToken,body:{source:"V2.4.4",productLines:[{description:"E2E AI Product",quantity:10,unitCost:1,retailPrice:2,netAmount:10,vatRate:24,grossAmount:12.4,confidence:95}]}});
-  assert.equal(verified.response.status,200,JSON.stringify(verified.payload));
-  const secondIntake=await request(`/api/commerce/ai-reader/jobs/${secondJob}/pos-intake`,{method:"POST",token:secondToken,body:{...intakeBody,settlementMode:"PAID",paymentTransactionId:reusable.payload.paymentTransactionId}});
-  assert.equal(secondIntake.response.status,201,JSON.stringify(secondIntake.payload));
+  assert.equal(workerStatus.payload.failed,false,JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.draftReady,true,JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.status,'AWAITING_APPROVAL',JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.stage,'POS_BACKGROUND_COMPLETE',JSON.stringify(workerStatus.payload));
+  const preservedDraft=await prisma.$queryRawUnsafe(`SELECT "id","status" FROM "PurchaseDocument" WHERE "id"=$1 AND "companyId"=$2 LIMIT 1`,workerStatus.payload.purchaseDocumentId,companyId);
+  assert.equal(preservedDraft.length,1,"Background failure removed the durable BackOffice draft");
   assert.deepEqual(await paymentSnapshot(),before,"Rereading must not reassign payment to a new shift or change amounts");
   const paymentCount=await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreTransaction" WHERE "companyId"=$1 AND "invoiceDocumentNumber"=$2`,companyId,invoiceNumber);
   assert.equal(paymentCount[0].count,1,"Reread charged the invoice again");
