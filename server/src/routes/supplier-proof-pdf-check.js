@@ -63,6 +63,6 @@ export function supplierProofMismatch(proof,{amount,method,documentNumbers=[]}){
 }
 
 export function ownerSupplierProofError({mimeType,proof}){
-  if(mimeType==="application/pdf"&&!proof)return "Το PDF δεν διαβάστηκε. Ανέβασε καθαρό PDF με εμφανές ποσό, τρόπο πληρωμής και παραστατικό.";
+  if(mimeType==="application/pdf"&&(!proof||proof.amount==null||!proof.method||!proof.invoiceReference))return "Το PDF δεν διαβάστηκε πλήρως. Ανέβασε καθαρό PDF με εμφανές ποσό, τρόπο πληρωμής και παραστατικό.";
   return null;
 }
