@@ -15,6 +15,51 @@ const statements=[
   )`,
   `ALTER TABLE "WorkforceEmployee" ADD COLUMN IF NOT EXISTS "pinHash" TEXT`,
   `ALTER TABLE "WorkforceEmployee" ADD COLUMN IF NOT EXISTS "dailyRate" DECIMAL(12,2)`,
+  // The Render startup command can run without prisma db push. Create the
+  // payroll tables before applying additive columns and indexes to them.
+  `CREATE TABLE IF NOT EXISTS "WorkforcePayrollPeriod" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT,"name" TEXT NOT NULL,
+    "periodStart" TIMESTAMP(3) NOT NULL,"periodEnd" TIMESTAMP(3) NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'DRAFT',"createdByUserId" TEXT,"closedByUserId" TEXT,
+    "closedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS "WorkforcePayrollLine" (
+    "id" TEXT PRIMARY KEY,"payrollPeriodId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,
+    "plannedMinutes" INTEGER NOT NULL DEFAULT 0,"actualMinutes" INTEGER NOT NULL DEFAULT 0,
+    "overtimeMinutes" INTEGER NOT NULL DEFAULT 0,"absenceMinutes" INTEGER NOT NULL DEFAULT 0,
+    "hourlyRate" DECIMAL(12,4),"dailyRate" DECIMAL(12,2),"fixedAmount" DECIMAL(12,2),
+    "grossAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,"paidAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "balanceAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,"calculationJson" JSONB,"issueJson" JSONB,
+    "notes" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "WorkforcePayrollLine_payrollPeriodId_fkey" FOREIGN KEY ("payrollPeriodId") REFERENCES "WorkforcePayrollPeriod"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "WorkforcePayrollLine_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "WorkforceEmployee"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE IF NOT EXISTS "WorkforceEmployeePayment" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT,"employeeId" TEXT NOT NULL,
+    "payrollPeriodId" TEXT,"paymentDate" TIMESTAMP(3) NOT NULL,"paymentType" TEXT NOT NULL,
+    "amount" DECIMAL(12,2) NOT NULL,"paymentMethod" TEXT NOT NULL,"sourceType" TEXT,"sourceId" TEXT,
+    "requestKey" TEXT,"proofUrl" TEXT,"note" TEXT,"approvalStatus" TEXT NOT NULL DEFAULT 'APPROVED',
+    "approvedByUserId" TEXT,"createdByUserId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "WorkforceEmployeePayment_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "WorkforceEmployee"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "WorkforceEmployeePayment_payrollPeriodId_fkey" FOREIGN KEY ("payrollPeriodId") REFERENCES "WorkforcePayrollPeriod"("id") ON DELETE SET NULL ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE IF NOT EXISTS "WorkforcePayrollClosing" (
+    "id" TEXT PRIMARY KEY,"payrollPeriodId" TEXT NOT NULL UNIQUE,"previewJson" JSONB NOT NULL,
+    "totalsJson" JSONB NOT NULL,"reason" TEXT,"closedByUserId" TEXT NOT NULL,
+    "closedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"reopenedByUserId" TEXT,
+    "reopenedAt" TIMESTAMP(3),"reopenReason" TEXT,
+    CONSTRAINT "WorkforcePayrollClosing_payrollPeriodId_fkey" FOREIGN KEY ("payrollPeriodId") REFERENCES "WorkforcePayrollPeriod"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "WorkforcePayrollPeriod_companyId_storeId_periodStart_periodEnd_key" ON "WorkforcePayrollPeriod" ("companyId","storeId","periodStart","periodEnd")`,
+  `CREATE INDEX IF NOT EXISTS "WorkforcePayrollPeriod_companyId_periodStart_idx" ON "WorkforcePayrollPeriod" ("companyId","periodStart")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "WorkforcePayrollLine_payrollPeriodId_employeeId_key" ON "WorkforcePayrollLine" ("payrollPeriodId","employeeId")`,
+  `CREATE INDEX IF NOT EXISTS "WorkforcePayrollLine_employeeId_idx" ON "WorkforcePayrollLine" ("employeeId")`,
+  `CREATE INDEX IF NOT EXISTS "WorkforceEmployeePayment_companyId_paymentDate_idx" ON "WorkforceEmployeePayment" ("companyId","paymentDate")`,
+  `CREATE INDEX IF NOT EXISTS "WorkforceEmployeePayment_employeeId_paymentDate_idx" ON "WorkforceEmployeePayment" ("employeeId","paymentDate")`,
   `ALTER TABLE "WorkforcePayrollLine" ADD COLUMN IF NOT EXISTS "dailyRate" DECIMAL(12,2)`,
   `ALTER TABLE "WorkforceEmployeePayment" ADD COLUMN IF NOT EXISTS "requestKey" TEXT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "WorkforceEmployeePayment_requestKey_key" ON "WorkforceEmployeePayment" ("requestKey")`,
