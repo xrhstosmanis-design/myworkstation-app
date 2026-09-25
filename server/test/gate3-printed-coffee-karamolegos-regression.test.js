@@ -24,6 +24,9 @@ test('Coffee Union ΤΔΑ0012183: three physical rows reconcile to the printed 3
   assert.equal(verified[1].unit,'ΚΙΛΟ');
   assert.equal(buildCompletePrintedTableCandidate([...rows,rows[0]],344.53,footer),null);
   assert.equal(buildCompletePrintedTableCandidate(rows.map((line,i)=>i===1?{...line,printedQuantity:12}:line),344.53,footer),null);
+  // Model the actual LAB first pass: 12-kilo DEL005 plus repeated ES21005.
+  const labFirstPass=[rows[0],{...rows[1],printedQuantity:12,initialAmount:162,discountAmount1:40.50,netAmount:121.50,taxableAmount:121.50,vatAmount:15.795,grossAmount:137.295},rows[2],{...rows[0],index:4}];
+  assert.equal(buildCompletePrintedTableCandidate(labFirstPass,344.53,footer),null);
   assert.equal(buildCompletePrintedTableCandidate(rows,479.87,footer),null);
 });
 
