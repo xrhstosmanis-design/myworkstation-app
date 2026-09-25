@@ -22,9 +22,9 @@ export function parseSupplierProofText(source){
 
 // Scans and unrecognised PDFs remain unverified for a human reviewer.
 async function readProofPdfText(bytes){
-  const {getDocument}=await import("pdfjs-dist/legacy/build/pdf.mjs");
   let task;
   try{
+    const {getDocument}=await import("pdfjs-dist/legacy/build/pdf.mjs");
     task=getDocument({data:new Uint8Array(bytes),disableFontFace:true,useSystemFonts:true});
     const doc=await task.promise;
     if(doc.numPages>5)return null;
