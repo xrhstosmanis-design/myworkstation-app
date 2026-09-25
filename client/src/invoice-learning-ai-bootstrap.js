@@ -59,7 +59,7 @@ if(labPath){
     let best=null;
     for(let attempt=1;attempt<=3;attempt++){
       const first=selectedPages[0];
-      const response=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:first.filename,mimeType:first.mimeType,fileData:first.fileData,pages:selectedPages.map(({filename,mimeType,fileData})=>({filename,mimeType,fileData})),ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});
+      const response=await fetch('/api/platform/invoice-learning/ai-recheck',{method:'POST',headers:{Authorization:`Bearer ${token()}`,'Content-Type':'application/json'},body:JSON.stringify({filename:first.filename,mimeType:first.mimeType,fileData:first.fileData,pages:selectedPages.map(({filename,mimeType,fileData})=>({filename,mimeType,fileData})),supplierName:document.querySelector('#supplierName')?.value||'',supplierTaxId:document.querySelector('#supplierTaxId')?.value||'',ocrRows:collectRows(),ocrConfidence:currentOcrConfidence()})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok){const providerState=data.azureState?` Azure: ${data.azureState}.`:'';throw new Error(`${data.error||`AI σφάλμα ${response.status}`}${providerState}`)}
       best=data;

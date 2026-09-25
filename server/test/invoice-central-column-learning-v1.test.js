@@ -338,12 +338,16 @@ test('both column-map editors allow a missing unit and persist the piece fallbac
 test('column-map save is target-only and cached rereads apply the latest central profile',async()=>{
   const workspace=await readFile(new URL('../src/routes/platform-invoice-learning-workspace.js',import.meta.url),'utf8');
   const ai=await readFile(new URL('../src/routes/platform-invoice-learning-ai.js',import.meta.url),'utf8');
+  const client=await readFile(new URL('../../client/src/invoice-learning-ai-bootstrap.js',import.meta.url),'utf8');
   assert.match(workspace,/onlyTargetSupplierUpdated:true,existingLearningPreserved:true/);
   assert.match(workspace,/scope:"ALL_STORES",consumers:\["POS","BACKOFFICE"\]/);
   assert.match(workspace,/"commercialFamily"=EXCLUDED\."commercialFamily","distributorName"=EXCLUDED\."distributorName"/);
   assert.match(workspace,/const profile=\{\.\.\.previous/);
-  assert.match(ai,/cachedRead\?\.stableRead[\s\S]*applyCentralSupplierProfile\(structuredClone\(cachedRead\.winner\)\)/);
+  assert.match(ai,/cachedRead\?\.stableRead[\s\S]*applyCentralSupplierProfile\(withRequestedSupplierIdentity\(structuredClone\(cachedRead\.winner\)\)\)/);
   assert.match(ai,/profileReapplied:true/);
+  assert.match(client,/supplierName:document\.querySelector\('#supplierName'\)\?\.value\|\|''/);
+  assert.match(client,/supplierTaxId:document\.querySelector\('#supplierTaxId'\)\?\.value\|\|''/);
+  assert.match(ai,/applyCentralSupplierProfile\(withRequestedSupplierIdentity\(azure\)\)/);
 });
 
 test('column-map editor sends DELTA family and distributor to the central POS and BackOffice profile',async()=>{
