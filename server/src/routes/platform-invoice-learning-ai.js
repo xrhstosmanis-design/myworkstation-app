@@ -698,6 +698,8 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
+  const requestedSupplierTaxId=String(req.body?.supplierTaxId||"").replace(/\\D/g,"").slice(0,16),requestedSupplierName=String(req.body?.supplierName||"").trim().slice(0,240);
+  const withRequestedSupplierIdentity=result=>({...result,supplier:{...(result?.supplier||{}),...(requestedSupplierName?{name:requestedSupplierName}:{}),...(requestedSupplierTaxId?{taxId:requestedSupplierTaxId}:{})}});
   const requestedPages=Array.isArray(req.body?.pages)?req.body.pages:[],pages=(requestedPages.length?requestedPages:[{filename,mimeType,fileData}]).map((page,index)=>({filename:String(page?.filename||`invoice-page-${index+1}`),mimeType:String(page?.mimeType||"image/jpeg"),fileData:page?.fileData}));
   if(!pages.length||pages.length>5||pages.some(page=>!page.fileData||typeof page.fileData!=="string"))return res.status(400).json({error:"Επίλεξε από 1 έως 5 έγκυρες σελίδες του ίδιου τιμολογίου."});
   if(pages.length>1&&pages.some(page=>page.mimeType==="application/pdf"))return res.status(400).json({error:"Επίλεξε είτε ένα PDF είτε έως 5 φωτογραφίες του ίδιου τιμολογίου."});
@@ -706,7 +708,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     // Supplier layout rules can be corrected between two checks of the same
     // image. Reapply current central knowledge to the cached raw rows instead
     // of returning the stale pre-correction interpretation.
-    const refreshed=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(structuredClone(cachedRead.winner))));
+    const refreshed=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(withRequestedSupplierIdentity(structuredClone(cachedRead.winner)))));
     const completeness=invoiceReadingCompleteness(refreshed);
     return res.json({...refreshed,completeness,readAttempts:cachedRead.candidates.length,stableRead:true,readFingerprint:readFingerprint.slice(0,16),sameImageCached:true,profileReapplied:true});
   }
@@ -717,7 +719,7 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
       const azurePages=[];
       for(const page of pages)azurePages.push(normalizeAzure(await callAzure(page.fileData,page.mimeType)));
       let azure=mergeInvoiceLearningPages(azurePages);
-      azure=await applyCentralSupplierProfile(azure);
+      azure=await applyCentralSupplierProfile(withRequestedSupplierIdentity(azure));
       azure=applyTalosVerifiedPrintedRows(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(azure)));
       azureDraft=azure;
       const completeness=invoiceReadingCompleteness(azure);
@@ -745,10 +747,10 @@ router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
     text=outputText(raw);try{result=JSON.parse(text)}catch{return res.status(502).json({error:"Το AI επέστρεψε μη έγκυρο δομημένο αποτέλεσμα και στη δεύτερη προσπάθεια.",code:"AI_INVALID_STRUCTURED_RESPONSE",azureState})};
   }
   result.documentType=result.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE";
-  result=applyTalosVerifiedPrintedRows(applyMathematicalDiscountRecovery(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result})))));
+  result=applyTalosVerifiedPrintedRows(applyMathematicalDiscountRecovery(repairExactDuplicateInvoiceOverage(await applyLearnedKnowledge(await applyCentralSupplierProfile(withRequestedSupplierIdentity({ok:true,provider:"OPENAI",model:openAiFallbackModel(),...result}))))));
   let completeness=invoiceReadingCompleteness(result);
   if(!completeness.complete&&azureDraft?.productLines?.length){
-    const hybrid=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(mergeProviderInvoiceDrafts(azureDraft,result))));
+    const hybrid=applyTalosVerifiedPrintedRows(await applyLearnedKnowledge(await applyCentralSupplierProfile(withRequestedSupplierIdentity(mergeProviderInvoiceDrafts(azureDraft,result)))));
     const hybridCompleteness=invoiceReadingCompleteness(hybrid);
     if(hybridCompleteness.complete){
       return res.json(cacheResult({...hybrid,azureState:"READY_WITH_AI_RECOVERY",completeness:hybridCompleteness}));
