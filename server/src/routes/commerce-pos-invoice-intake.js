@@ -4,6 +4,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {stockConversionFromDescription} from "../lib/invoice-column-reading.js";
+import {invoiceLineWithExcise,invoiceLineTaxAmounts} from "../lib/invoice-excise-intake.js";
 
 const router=Router();
 const id=()=>crypto.randomUUID();
@@ -86,12 +87,9 @@ function candidateOcrRows(resultJson){
   if(structured.length){
     return structured.slice(0,500).map((entry,index)=>{
       const quantity=Math.max(0,Number(entry?.quantity||0));
-      const netAmount=Math.max(0,Number(entry?.netAmount||0));
+      const {netAmount,exciseTotal,vatRate,grossAmount}=invoiceLineWithExcise(entry);
       let unitCost=Math.max(0,Number(entry?.unitCost||0));
       if(!unitCost&&quantity>0&&netAmount>0)unitCost=netAmount/quantity;
-      const vatRate=Math.max(0,Number(entry?.vatRate||0));
-      let grossAmount=Math.max(0,Number(entry?.grossAmount||0));
-      if(!grossAmount&&netAmount>0)grossAmount=netAmount*(1+vatRate/100);
       const code=String(entry?.code||"").trim();
       const description=String(entry?.description||entry?.rawText||"").replace(/^\s*\d{4,10}\s+/,'').replace(/\s+/g," ").trim();
       const barcode=String(entry?.barcode||"").trim()||null;
@@ -102,7 +100,7 @@ function candidateOcrRows(resultJson){
       const conversion=stockConversionFromDescription(description,suppliedMultiplier,entry?.invoiceUnit||entry?.unit),rawPackageSize=conversion.multiplier;
       const invoiceUnit=String(entry?.invoiceUnit||entry?.unit||"").toUpperCase()==="PACKAGE"||rawPackageSize>1?"PACKAGE":"PIECE";
       const stockUnitsPerInvoiceUnit=invoiceUnit==="PACKAGE"?(rawPackageSize>0?rawPackageSize:0):1;
-      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
+      return {sequence:index+1,text:String(entry?.rawText||description).trim(),description,barcode,code,unitCost,quantity,netAmount,exciseTotal,vatRate,grossAmount,invoiceUnit,stockUnitsPerInvoiceUnit,stockMeasure:conversion.stockMeasure,packSizeNeedsReview:invoiceUnit==="PACKAGE"&&stockUnitsPerInvoiceUnit<1,confidence:Number(entry?.confidence||resultJson?.aiConfidence||0),lineType:"PRODUCT",structured:true};
     }).filter(row=>row.description.length>=2);
   }
   const source=Array.isArray(resultJson?.lines)?resultJson.lines:[];
@@ -195,10 +193,9 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         const calculatedNet=quantity*unitCost;
         const netAmount=row.structured&&Number(row.netAmount||0)>0?Math.max(0,Number(row.netAmount)):calculatedNet;
         const structuredGross=row.structured?Math.max(0,Number(row.grossAmount||0)):0;
-        const vatAmount=structuredGross>0&&structuredGross>=netAmount?structuredGross-netAmount:netAmount*vatRate/100;
-        const grossAmount=structuredGross>0?structuredGross:netAmount+vatAmount;
+        const {exciseTotal,vatAmount,grossAmount}=invoiceLineTaxAmounts({netAmount,exciseTotal:row.structured?row.exciseTotal:0,grossAmount:structuredGross,vatRate});
         const resolutionStatus=product&&!row.packSizeNeedsReview?"MATCHED":"UNRESOLVED";
-        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,0,${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT',${row.invoiceUnit||'PIECE'},${Number(row.stockUnitsPerInvoiceUnit||1)})`;
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderLine" ("id","orderId","productId","description","quantity","unitCost","discount1","discount2","discount3","exciseTotal","vatRate","gift","initialUnitCost","markupPercent","proposedSalePrice","netAmount","vatAmount","grossAmount","ocrRawText","ocrConfidence","resolutionStatus","detectedBarcode","ocrSequence","ocrLineType","invoiceUnit","stockUnitsPerInvoiceUnit") VALUES (${id()},${orderId},${product?.id||null},${row.description},${quantity},${unitCost},0,0,0,${exciseTotal},${vatRate},false,${unitCost},0,${Number(product?.salePrice||0)},${netAmount},${vatAmount},${grossAmount},${row.text},${row.confidence},${resolutionStatus},${row.barcode||null},${row.sequence},'PRODUCT',${row.invoiceUnit||'PIECE'},${Number(row.stockUnitsPerInvoiceUnit||1)})`;
       }
 
       let paymentTransactionId=null;
