@@ -1177,3 +1177,12 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 ## 25/09/2026 — Gate 8 BackOffice οπτική απλοποίηση — PRODUCTION VISUAL PASS
 
 Στο Gate 8 εντοπίστηκαν δύο πραγματικά οπτικά FAIL: κυριολεκτικό `\\n` στη μπάρα modules μεταξύ «RBS Observer» και «Κάμερες / Video Audit», και στενή καρτέλα εργαζομένου 500 px με δύσχρηστη κύλιση. PR #1292 / CI #3271 / ακριβές Render `96fb51f6`: η παραγωγική μπάρα δεν εμφανίζει πλέον το escaped κείμενο και η πραγματική καρτέλα μετρήθηκε στα 860 px, σε δύο στήλες 397 px, editor 812 px και χωρίς οριζόντια υπερχείλιση. **PRODUCTION VISUAL PASS** χωρίς αποθήκευση δεδομένων. Το συνολικό Gate 8 παραμένει OPEN για ρόλους/απομόνωση/άδειες/PIN/συνεδρίες/Audit. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-roles-security-assignment.md`.
+
+
+## 2026-09-25 — Gate 6 Online Store stock policy — AWAITING CI
+
+- [x] Στο LAB Online Store δημοσιεύτηκε μόνο το «ΝΕΡΟ 500ML» (SKU 2269, 0,50 €), χωρίς δημιουργία παραγγελίας ή πώλησης.
+- [x] Διορθώθηκε η ροή `catalog-modifiers`: όταν ο «Έλεγχος διαθέσιμου stock» είναι ανενεργός, αρνητικό stock δεν εμφανίζει ψευδώς το προϊόν ως «Εξαντλήθηκε» και δεν μπλοκάρει το submit. Όταν είναι ενεργός, η ποσότητα ελέγχεται server-side.
+- [x] Τοπικό τεχνικό αποτέλεσμα Gate 6: **68 PASS / 0 FAIL**· πακέτο `online-store-*.test.js`: **21 PASS / 0 FAIL**.
+- [ ] PR / CI σε αναμονή. Μετά από πράσινο deploy θα γίνει μία συγκεντρωτική φυσική παραγγελία με πλήρες πριν/μετά σε POS, stock και Audit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate6-online-delivery-assignment.md`.
