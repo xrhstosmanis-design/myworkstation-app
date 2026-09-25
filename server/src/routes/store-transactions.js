@@ -710,8 +710,8 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
 
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
-  const body=z.object({note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
-  const status="CONFIRMED";
+  const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]).optional().default("CONFIRMED"),note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
+  const status=body.status;
   const rows=await prisma.$transaction(async tx=>{
     const updated=await tx.$queryRaw`
       UPDATE "SupplierPaymentSettlement" SET "status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.note}
@@ -734,6 +734,36 @@ router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettle
   });
   if(!rows[0])return res.status(409).json({error:"Η πληρωμή έχει ήδη ελεγχθεί ή δεν βρέθηκε."});
   res.json({ok:true,status:rows[0].status});
+}));
+
+router.post("/supplier-settlements/:settlementId/cancel",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
+  const body=z.object({reason:z.string().trim().min(3).max(500)}).parse(req.body||{});
+  const cancelled=await prisma.$transaction(async tx=>{
+    const rows=await tx.$queryRaw`
+      SELECT ss."id",ss."companyId",ss."storeId",ss."transactionId",ss."supplierId",
+             t."amount",t."sessionId",t."paymentMethod",t."supplierName"
+      FROM "SupplierPaymentSettlement" ss
+      JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
+      WHERE ss."id"=${req.params.settlementId} AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
+        AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY') AND t."reversedAt" IS NULL
+      FOR UPDATE OF ss,t
+    `;
+    const settlement=rows[0];
+    if(!settlement)return null;
+    if(settlement.sessionId){
+      const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${settlement.sessionId} AND "companyId"=${settlement.companyId} AND "storeId"=${settlement.storeId} AND "status"='OPEN' FOR UPDATE`;
+      if(!open[0]){const error=new Error("Η βάρδια έχει κλείσει. Δεν επιτρέπεται ακύρωση της πληρωμής.");error.status=409;throw error}
+    }
+    await tx.$executeRaw`UPDATE "StoreTransaction" SET "reversedAt"=NOW(),"reversedBy"=${req.user.id},"reversedByName"=${req.user.fullName||"Χρήστης"},"reversalReason"=${body.reason} WHERE "id"=${settlement.transactionId} AND "companyId"=${settlement.companyId} AND "reversedAt" IS NULL`;
+    await tx.$executeRaw`UPDATE "SupplierPaymentSettlement" SET "status"='CANCELLED',"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.reason} WHERE "id"=${settlement.id} AND "companyId"=${settlement.companyId}`;
+    await tx.$executeRaw`UPDATE "BankLedgerEntry" SET "status"='CANCELLED',"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${body.reason} WHERE "companyId"=${settlement.companyId} AND "sourceTransactionId"=${settlement.transactionId} AND "status"<>'CANCELLED'`;
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${settlement.companyId},${settlement.storeId},${req.user.operatorId||req.user.id},${req.user.id},'SUPPLIER_SETTLEMENT_CANCELLED',${JSON.stringify({settlementId:settlement.id,transactionId:settlement.transactionId,supplierId:settlement.supplierId,supplierName:settlement.supplierName,amount:Number(settlement.amount||0),paymentMethod:settlement.paymentMethod,reason:body.reason})}::jsonb)`;
+    return settlement;
+  });
+  if(!cancelled)return res.status(409).json({error:"Η πληρωμή έχει ήδη ελεγχθεί, ακυρωθεί ή δεν βρέθηκε."});
+  res.json({ok:true,status:"CANCELLED",transactionId:cancelled.transactionId});
 }));
 
 router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
