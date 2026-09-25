@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
 import {ensureKatOnlineOrderingSchema,getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
 
 const router=Router();
@@ -43,8 +44,10 @@ async function context(publicSlug=null){
     ?await prisma.$queryRaw`SELECT s."id",s."name",s."companyId" FROM "Store" s JOIN "OnlineOrderingConfig" oc ON oc."storeId"=s."id" WHERE s."active"=TRUE AND LOWER(oc."publicSlug")=LOWER(${publicSlug}) LIMIT 1`
     :await prisma.$queryRaw`SELECT "id","name","companyId" FROM "Store" WHERE "active"=TRUE AND LOWER("name")=LOWER(${KAT_STORE_NAME}) ORDER BY "createdAt" LIMIT 1`;
   const store=stores[0];if(!store){const e=new Error(publicSlug?"Δεν βρέθηκε το Online Store.":"Το Κυλικείο ΚΑΤ δεν είναι διαθέσιμο.");e.status=503;throw e}
-  const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
-  const m=modules[0],now=Date.now(),active=Boolean(m?.active)&&(!m.startsAt||new Date(m.startsAt).getTime()<=now)&&(!m.endsAt||new Date(m.endsAt).getTime()>=now);
+  const state=await companyModuleState(store.companyId);
+  if(!state?.licenseAllowed){const e=new Error("Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.");e.status=403;throw e}
+  const storeModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
+  const storeModule=storeModules[0],active=effectiveModuleEnabled(state.activeModules.includes("ONLINE_ORDERING"),storeModule?{...storeModule,configured:true}:{configured:false});
   if(!active){const e=new Error("Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα.");e.status=403;throw e}
   const config=await getOnlineOrderingConfig(store.id);if(!config?.enabled){const e=new Error("Το Online κατάστημα είναι προσωρινά κλειστό.");e.status=503;throw e}
   return{store,config};

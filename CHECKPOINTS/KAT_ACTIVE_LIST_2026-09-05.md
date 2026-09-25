@@ -1125,7 +1125,9 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 
 Στο Gate 8 εντοπίστηκαν δύο πραγματικά οπτικά FAIL: κυριολεκτικό `\\n` στη μπάρα modules μεταξύ «RBS Observer» και «Κάμερες / Video Audit», και στενή καρτέλα εργαζομένου 500 px με δύσχρηστη κύλιση. PR #1292 / CI #3271 / ακριβές Render `96fb51f6`: η παραγωγική μπάρα δεν εμφανίζει πλέον το escaped κείμενο και η πραγματική καρτέλα μετρήθηκε στα 860 px, σε δύο στήλες 397 px, editor 812 px και χωρίς οριζόντια υπερχείλιση. **PRODUCTION VISUAL PASS** χωρίς αποθήκευση δεδομένων. Το συνολικό Gate 8 παραμένει OPEN για ρόλους/απομόνωση/άδειες/PIN/συνεδρίες/Audit. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-roles-security-assignment.md`.
 
+## 25/09/2026 — Gate 8 λήξη άδειας και Online Store — LOCAL FIX / AWAITING CI
 
+Πραγματικό LAB: προσωρινό κλείσιμο `ONLINE_ORDERING` έδωσε 20→19 modules και σωστή απόρριψη, μετά πλήρη επαναφορά 20/20. Προσωρινό `ACTIVE`→`EXPIRED` έκοψε σωστά Store Mode/POS, αλλά το public Online Store παρέμεινε ενεργό: **LAB FAIL**. Η αρχική κατάσταση αποκαταστάθηκε (`ACTIVE`, Enterprise, 20 modules, χωρίς λήξη, ΚΑΤ αμετάβλητο). Στενή διόρθωση εφαρμόζει company license και store override και στις δύο public online routes. CI/deploy/retest εκκρεμούν· Gate 8 OPEN.
 ## 2026-09-25 — Gate 6 Online Store stock policy — AWAITING CI
 
 - [x] Στο LAB Online Store δημοσιεύτηκε μόνο το «ΝΕΡΟ 500ML» (SKU 2269, 0,50 €), χωρίς δημιουργία παραγγελίας ή πώλησης.

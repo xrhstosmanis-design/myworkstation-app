@@ -3,6 +3,7 @@ import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
 import {getOnlineOrderingConfig,onlineSurchargeAmount,onlineUnitPrice} from "../kat-online-ordering-bootstrap.js";
 
 const router=Router();
@@ -36,9 +37,10 @@ async function katStore(){
 }
 
 async function onlineContextForStore(store){
-  const modules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "CompanyModule" WHERE "companyId"=${store.companyId} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
-  const module=modules[0],now=Date.now();
-  const moduleActive=Boolean(module?.active)&&(!module.startsAt||new Date(module.startsAt).getTime()<=now)&&(!module.endsAt||new Date(module.endsAt).getTime()>=now);
+  const state=await companyModuleState(store.companyId);
+  if(!state?.licenseAllowed){const error=new Error("Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.");error.status=403;throw error}
+  const storeModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;
+  const storeModule=storeModules[0],moduleActive=effectiveModuleEnabled(state.activeModules.includes("ONLINE_ORDERING"),storeModule?{...storeModule,configured:true}:{configured:false});
   if(!moduleActive){const error=new Error("Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα.");error.status=403;throw error}
   const config=await getOnlineOrderingConfig(store.id);
   if(!config?.enabled){const error=new Error("Το Online κατάστημα είναι προσωρινά κλειστό.");error.status=503;throw error}
