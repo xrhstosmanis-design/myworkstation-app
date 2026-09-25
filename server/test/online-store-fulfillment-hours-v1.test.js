@@ -60,6 +60,8 @@ test("order creation reports a safe transaction stage without exposing database 
 });
 
 test("online order launcher mounts for every authenticated store POS",()=>{
+  assert.match(posLauncher,/sessionStorage\.getItem\("storeOperatorSession"\)\|\|localStorage\.getItem\("storeOperatorSession"\)/);
+  assert.match(posLauncher,/sessionStorage\.getItem\("storeOperatorToken"\)\|\|localStorage\.getItem\("token"\)/);
   assert.match(posLauncher,/function isKat\(value\)\{return Boolean\(value\?\.store\?\.id\)\}/);
   assert.match(posLauncher,/function mountButton\(\)\{const s=session\(\);if\(!isKat\(s\)\)return removeUi\(\)/);
 });

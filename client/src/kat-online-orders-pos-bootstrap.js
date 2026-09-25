@@ -5,8 +5,8 @@ let state={storeId:null,rows:[],activeCount:0,newCount:0,open:false,busy:false,e
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
-function session(){try{return JSON.parse(sessionStorage.getItem("storeOperatorSession")||"null")}catch{return null}}
-function token(){return sessionStorage.getItem("storeOperatorToken")||""}
+function session(){try{return JSON.parse(sessionStorage.getItem("storeOperatorSession")||localStorage.getItem("storeOperatorSession")||"null")}catch{return null}}
+function token(){return sessionStorage.getItem("storeOperatorToken")||localStorage.getItem("token")||""}
 function isKat(value){return Boolean(value?.store?.id)}
 async function api(path,options={}){const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token()?{Authorization:`Bearer ${token()}`}:{}) ,...(options.headers||{})}});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data}
 
