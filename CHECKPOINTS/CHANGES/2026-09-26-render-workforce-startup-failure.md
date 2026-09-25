@@ -16,3 +16,8 @@ The existing additive startup script now creates the four Prisma payroll tables 
 - Local syntax: `node --check server/src/ensure-workforce-v2-schema.js` PASS.
 - Full CI #3337 pending at initial checkpoint. No isolated database execution has been performed; database compatibility remains to be verified in Render.
 - Required sequence: green CI, merge, successful Render deployment, exact `/api/health.revision` matching the merged commit, then one genuinely new POS invoice in LAB with original photos and measured before/after state. Review all printed rows, ΕΦΚ, VAT and total with 0.05 € tolerance, and verify no extra payment/stock movement. Gate 3 stays OPEN until recorded real evidence.
+
+## Observed deployment
+
+- 26/09/2026 01:30 Europe/Athens: Render deployment for PR #1316 showed green and the public `/api/health` returned `revision=6345a6d268977117ca1b86f66a22c4d02a145fb3`, `ok=true`.
+- This is **DEPLOY PASS only**. The owner will submit one new invoice through POS. Invoice parsing, ΕΦΚ/VAT, assistant suggestions, payment and stock effects remain **NOT TESTED** on this revision until the first automatically created draft and before/after evidence are inspected.
