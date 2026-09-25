@@ -106,7 +106,7 @@ export default function StoreCloudPage({api,store,onBack}){
     <div className="store-operations-actions">
       <BarcodeRadioManagement api={api} store={store}/>
       <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
-      <OwnerPendingApprovals api={api} store={store} onChanged={refresh}/>
+      <OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/>
     </div>
   </section>;
 }
