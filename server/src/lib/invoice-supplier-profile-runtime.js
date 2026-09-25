@@ -204,7 +204,13 @@ function applySupplierStockConversion(line,mapping={}){
   // A learned mapping may describe packaging, never the commercial terms of
   // a later invoice. Derive the discount only from this row's printed/current
   // quantity, price and net amount; otherwise retain the current extraction.
-  const calculatedDiscount=netAmount>0&&netAmount<=initialAmount+.02?money2(Math.max(0,(1-netAmount/initialAmount)*100)):Number(line?.discount1||0);
+  const currentDiscounts=[line?.discount1,line?.discount2,line?.discount3].map(value=>Number(value??0));
+  const hasCurrentDiscount=[line?.discount1,line?.discount2,line?.discount3].some(value=>value!==undefined&&value!==null&&value!=="");
+  const currentDiscountsMatch=hasCurrentDiscount&&currentDiscounts.every(value=>Number.isFinite(value)&&value>=0&&value<=100)
+    &&netAmount>0&&money2(currentDiscounts.reduce((amount,value)=>amount*(1-value/100),invoiceQuantity*packageUnitPrice))===money2(netAmount);
+  // Preserve the printed percentages when their rounded row total agrees.
+  // Reverse division of 10.13 / 13.50 would otherwise turn 25% into 24.96%.
+  const calculatedDiscount=currentDiscountsMatch?currentDiscounts[0]:netAmount>0&&netAmount<=initialAmount+.02?money2(Math.max(0,(1-netAmount/initialAmount)*100)):Number(line?.discount1||0);
   const stockQuantity=money4(invoiceQuantity*factor);
   const stockUnit=String(mapping.stockUnit||mapping.stockConversion?.to||line?.stockUnit||line?.unit||"").trim();
   const invoiceUnit=String(mapping.invoiceUnit||line?.invoiceUnit||line?.unit||"").trim();
