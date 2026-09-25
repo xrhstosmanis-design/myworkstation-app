@@ -39,3 +39,21 @@ test("offline state never calls the server",async()=>{
   let calls=0;const result=await syncOfflineSales({storeId:"kat",storage:local,online:()=>false,send:async()=>{calls+=1}});
   assert.equal(result.skipped,true);assert.equal(calls,0);assert.equal(readOfflineSaleQueue("kat",local).length,1);
 });
+
+test("a cash sale queued during reconnect remains in the durable queue",async()=>{
+  const local=storage(),first="44444444-4444-4444-8444-444444444444",second="55555555-5555-4555-8555-555555555555";
+  queueOfflineCashSale("kat",{total:2,request},{storage:local,id:first});
+  await syncOfflineSales({storeId:"kat",storage:local,send:async()=>{
+    queueOfflineCashSale("kat",{total:3,request:{...request,items:[{productId:"water",quantity:1,unitPriceOverride:3}]}},{storage:local,id:second});
+    return{saleId:"sale-first"};
+  }});
+  assert.deepEqual(readOfflineSaleQueue("kat",local).map(row=>row.id),[second]);
+  assert.deepEqual(readOfflineSaleHistory("kat",local).map(row=>row.id),[first]);
+});
+
+test("rapid repeat of an identical offline checkout cannot create a second client ID",()=>{
+  const local=storage(),id="66666666-6666-4666-8666-666666666666";
+  queueOfflineCashSale("kat",{total:2,request},{storage:local,id});
+  assert.throws(()=>queueOfflineCashSale("kat",{total:2,request},{storage:local,id:"77777777-7777-4777-8777-777777777777"}),/ήδη στην offline ουρά/);
+  assert.equal(readOfflineSaleQueue("kat",local).length,1);
+});
