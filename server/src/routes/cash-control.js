@@ -293,6 +293,42 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
 
+router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
+  if(req.user?.tokenType==="STORE_OPERATOR"||!["OWNER","ADMIN","MANAGER"].includes(req.user?.role))return res.status(403).json({error:"Η συγκεντρωτική αναφορά βαρδιών είναι διαθέσιμη μόνο στο BackOffice."});
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  const sessionRows=await prisma.$queryRaw`
+    SELECT s.*,
+      COALESCE(t."cashSales",0) AS "liveCashSales",
+      COALESCE(t."cardSales",0) AS "liveCardSales",
+      COALESCE(t."expenses",0) AS "liveExpenses",
+      COALESCE(t."transactionCount",0)::int AS "transactionCount"
+    FROM "CashShiftSession" s
+    LEFT JOIN (
+      SELECT "sessionId",
+        SUM("amount") FILTER (WHERE "type" IN ('SALE_CASH','CUSTOMER_RECEIPT_CASH') AND "reversedAt" IS NULL) AS "cashSales",
+        SUM("amount") FILTER (WHERE "type" IN ('SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD') AND "reversedAt" IS NULL) AS "cardSales",
+        SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=TRUE AND "reversedAt" IS NULL) AS "expenses",
+        COUNT(*) FILTER (WHERE "reversedAt" IS NULL) AS "transactionCount"
+      FROM "StoreTransaction"
+      WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}
+      GROUP BY "sessionId"
+    ) t ON t."sessionId"=s."id"
+    WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id}
+    ORDER BY s."openedAt" DESC LIMIT 20`;
+  const sessions=sessionRows.map(row=>{
+    const session=normalize(row),open=session.status==="OPEN";
+    return {...session,cashSales:open?money(row.liveCashSales):session.cashSales,cardSales:open?money(row.liveCardSales):session.cardSales,expenses:open?money(row.liveExpenses):session.expenses,transactionCount:Number(row.transactionCount||0)};
+  });
+  const ids=sessions.map(row=>row.id);
+  const recentTransactions=ids.length?await prisma.$queryRaw`
+    SELECT "id","sessionId","type","amount","description","supplierName","actorName","occurredAt","reversedAt"
+    FROM "StoreTransaction"
+    WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "sessionId"=ANY(${ids}::text[])
+    ORDER BY "occurredAt" DESC LIMIT 500`:[];
+  res.json({store:{id:store.id,name:store.name},timeZone:"Europe/Athens",recent:sessions,openSessions:sessions.filter(row=>row.status==="OPEN"),recentTransactions:recentTransactions.map(row=>({...row,amount:money(row.amount)}))});
+}));
+
 router.get("/stores/:storeId/daily-summary",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);

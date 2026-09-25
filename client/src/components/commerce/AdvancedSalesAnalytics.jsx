@@ -5,7 +5,7 @@ import "./advanced-sales-analytics.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=value=>Number(value||0);
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
 const duration=(from,to)=>{if(!from)return"—";const ms=Math.max(0,new Date(to||Date.now())-new Date(from)),mins=Math.floor(ms/60000);return `${String(Math.floor(mins/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`};
 const txLabel=type=>({SALE_CASH:"Πώληση λιανικής",SALE_CARD:"Πώληση λιανικής",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Έξοδο",PERCENTAGES:"Ποσοστά"}[type]||String(type||"Συναλλαγή"));
 const palette=["#55b85b","#3b82d0","#f1c232","#e94b4b","#8854b8","#f28c52","#4aa3a1","#9aa4b1"];
@@ -27,25 +27,25 @@ export default function AdvancedSalesAnalytics({api,stores=[],initialStoreId=""}
   const load=async(preferredId=null)=>{
     if(!storeId)return;setBusy(true);setError("");
     try{
-      const [cashData,ledgerData]=await Promise.all([api(`/api/cash-control/stores/${encodeURIComponent(storeId)}/overview`),api(`/api/transactions/stores/${encodeURIComponent(storeId)}/overview`)]);
+      const [cashData,ledgerData]=await Promise.all([api(`/api/cash-control/stores/${encodeURIComponent(storeId)}/reporting-overview`),api(`/api/transactions/stores/${encodeURIComponent(storeId)}/overview`)]);
       setCash(cashData);setLedger(ledgerData);
-      const shifts=cashData.recent||[];const next=shifts.find(row=>row.id===(preferredId||selected?.id))||cashData.openSession||shifts[0]||null;setSelected(next);
+      const shifts=cashData.recent||[];const next=shifts.find(row=>row.id===(preferredId||selected?.id))||cashData.openSessions?.[0]||shifts[0]||null;setSelected(next);
       if(next){const from=new Date(next.openedAt).toISOString(),to=new Date(next.closedAt||Date.now()).toISOString();const q=new URLSearchParams({storeId,from,to});setReport(await api(`/api/commerce/sales/advanced-report?${q}`));}else setReport(null);
     }catch(e){setError(e.message)}finally{setBusy(false)}
   };
   useEffect(()=>{load()},[storeId]);
 
   const shifts=useMemo(()=>cash?.recent||[],[cash]);
-  const transactions=useMemo(()=>selected?(ledger?.recent||[]).filter(row=>row.sessionId===selected.id):[],[ledger,selected]);
-  const selectedIsOpen=selected&&cash?.openSession?.id===selected.id;
-  const liveSummary=selectedIsOpen?ledger?.summary:null;
-  const cashSales=selectedIsOpen?num(liveSummary?.cashSales):num(selected?.cashSales);
-  const cardSales=selectedIsOpen?num(liveSummary?.cardSales):num(selected?.cardSales);
-  const expenses=selectedIsOpen?num(liveSummary?.expensesTotal):num(selected?.expenses);
+  const transactions=useMemo(()=>selected?(cash?.recentTransactions||[]).filter(row=>row.sessionId===selected.id):[],[cash,selected]);
+  const cashSales=num(selected?.cashSales);
+  const cardSales=num(selected?.cardSales);
+  const expenses=num(selected?.expenses);
   const shiftTotal=cashSales+cardSales;
   const txCount=transactions.filter(row=>!row.reversedAt).length;
   const average=txCount?shiftTotal/txCount:0;
   const categories=(report?.categories||[]).map(row=>({...row,category:row.category||"Χωρίς κατηγορία"}));
+  const products=report?.products||[];
+  const employees=report?.employees||[];
   const categoryTotal=categories.reduce((sum,row)=>sum+num(row.revenue),0)||1;
 
   const chooseShift=async row=>{setSelected(row);setDrawerOpen(false);setBusy(true);setError("");try{const q=new URLSearchParams({storeId,from:new Date(row.openedAt).toISOString(),to:new Date(row.closedAt||Date.now()).toISOString()});setReport(await api(`/api/commerce/sales/advanced-report?${q}`))}catch(e){setError(e.message)}finally{setBusy(false)}};
@@ -60,13 +60,16 @@ export default function AdvancedSalesAnalytics({api,stores=[],initialStoreId=""}
 
       <section className="kiosk-panel shift-panel"><div className="kiosk-panel-head"><h3>Βάρδιες σε εξέλιξη <span>{shifts.length}</span></h3><div><button onClick={()=>load(selected?.id)}><RefreshCw/></button><button><SlidersHorizontal/>Στήλες</button><button><Filter/>Φίλτρα</button></div></div>
         <div className="shift-table"><div className="shift-row head"><span>Χειριστής<br/>Έναρξη βάρδιας</span><span>Διάρκεια</span><span>Μετρητά</span><span>Κάρτες<br/><small>IRIS / POS</small></span><span>Σύνολο βάρδιας</span><span>Πληρωμές<br/><small>Συναλλαγές</small></span><span>Τελ. Πώληση</span><span>Μ.Ο. Πώλησης</span></div>
-          {shifts.map(row=>{const open=cash?.openSession?.id===row.id;const c=open?num(ledger?.summary?.cashSales):num(row.cashSales),card=open?num(ledger?.summary?.cardSales):num(row.cardSales),exp=open?num(ledger?.summary?.expensesTotal):num(row.expenses),rowTx=open?(ledger?.summary?.count||0):0;return <div className={`shift-row ${selected?.id===row.id?"selected":""}`} key={row.id} onClick={()=>chooseShift(row)}><span className="shift-person"><button onClick={e=>{e.stopPropagation();openDetails(row)}}><Search/></button><b>{row.openedByName||row.shiftLabel||"Χειριστής"}</b><small>{fmt(row.openedAt)}</small></span><span>{duration(row.openedAt,row.closedAt)}</span><strong className="cash-drill" onClick={e=>{e.stopPropagation();setCapitalOpen(true)}} title="Άνοιγμα κινήσεων κεφαλαίου">{money(c)}</strong><span><b>{money(card)}</b><small>{rowTx}</small></span><strong className="blue">{money(c+card)}</strong><span><b>{money(exp)}</b><small>{rowTx||"—"}</small></span><span>{fmt(row.closedAt||row.updatedAt||row.openedAt)}</span><strong>{money(rowTx?(c+card)/rowTx:0)}</strong></div>})}
+          {shifts.map(row=>{const c=num(row.cashSales),card=num(row.cardSales),exp=num(row.expenses),rowTx=num(row.transactionCount);return <div className={`shift-row ${selected?.id===row.id?"selected":""}`} key={row.id} onClick={()=>chooseShift(row)}><span className="shift-person"><button onClick={e=>{e.stopPropagation();openDetails(row)}}><Search/></button><b>{row.openedByName||row.shiftLabel||"Χειριστής"}</b><small>{fmt(row.openedAt)}</small></span><span>{duration(row.openedAt,row.closedAt)}</span><strong className="cash-drill" onClick={e=>{e.stopPropagation();setCapitalOpen(true)}} title="Άνοιγμα κινήσεων κεφαλαίου">{money(c)}</strong><span><b>{money(card)}</b><small>{rowTx}</small></span><strong className="blue">{money(c+card)}</strong><span><b>{money(exp)}</b><small>{rowTx||"—"}</small></span><span>{fmt(row.closedAt||row.updatedAt||row.openedAt)}</span><strong>{money(rowTx?(c+card)/rowTx:0)}</strong></div>})}
           {!shifts.length&&<div className="kiosk-empty">Δεν υπάρχουν καταγεγραμμένες βάρδιες.</div>}
         </div>
       </section>
 
-      <div className="kiosk-lower-grid"><section className="kiosk-panel"><div className="kiosk-panel-head"><h3>Πωλήσεις βάρδιας ανά υποκατηγορία</h3><button>Ανάπτυξη όλων</button></div><div className="category-table"><div className="category-row head"><span>Περιγραφή</span><span>Ποσό</span><span>Τζίρος</span><span>% Τζίρου</span><span>Κέρδος</span><span>Margin</span></div>{categories.slice(0,12).map((row,index)=><div className={`category-row ${index===0?"selected":""}`} key={`${row.category}-${index}`}><span><ChevronRight/><b>{row.category}</b></span><span>{Number(row.quantity||row.count||0).toFixed(0)}</span><b>{money(row.revenue)}</b><span>{(num(row.revenue)/categoryTotal*100).toFixed(2)}%</span><span>{money(row.profit||0)}</span><span>{num(row.margin||0).toFixed(2)}%</span></div>)}{!categories.length&&<div className="kiosk-empty">Δεν υπάρχουν ακόμη στοιχεία κατηγοριών.</div>}</div></section>
+      <div className="kiosk-lower-grid"><section className="kiosk-panel"><div className="kiosk-panel-head"><h3>Πωλήσεις βάρδιας ανά υποκατηγορία</h3><button>Ανάπτυξη όλων</button></div><div className="category-table"><div className="category-row head"><span>Περιγραφή</span><span>Ποσότητα</span><span>Τζίρος</span><span>% Τζίρου</span><span>Κέρδος</span><span>Περιθώριο</span></div>{categories.slice(0,12).map((row,index)=><div className={`category-row ${index===0?"selected":""}`} key={`${row.category}-${index}`}><span><ChevronRight/><b>{row.category}</b></span><span>{Number(row.quantity||row.count||0).toFixed(0)}</span><b>{money(row.revenue)}</b><span>{(num(row.revenue)/categoryTotal*100).toFixed(2)}%</span><span>{money(row.profit||0)}</span><span>{num(row.margin||0).toFixed(2)}%</span></div>)}{!categories.length&&<div className="kiosk-empty">Δεν υπάρχουν ακόμη στοιχεία κατηγοριών.</div>}</div></section>
         <section className="kiosk-panel"><div className="kiosk-panel-head"><h3>Κατανομή πωλήσεων βάρδιας ανά υποκατηγορία</h3></div><Donut rows={categories}/></section></div>
+
+      <div className="kiosk-lower-grid"><section className="kiosk-panel"><div className="kiosk-panel-head"><h3>Αναλυτικά προϊόντα <span>{products.length}</span></h3></div><div className="drawer-summary">{products.map((row,index)=><div key={`${row.description}-${index}`}><span><b>{row.description||"Χωρίς περιγραφή"}</b><small> · Ποσότητα {num(row.quantity)} · Εκπτώσεις {money(row.discounts)}</small></span><b>{money(row.revenue)}</b></div>)}{!products.length&&<div className="kiosk-empty">Δεν υπάρχουν προϊόντα στη βάρδια.</div>}</div></section>
+        <section className="kiosk-panel"><div className="kiosk-panel-head"><h3>Αναλυτικά ανά χειριστή <span>{employees.length}</span></h3></div><div className="drawer-summary">{employees.map((row,index)=><div key={`${row.employee}-${index}`}><span><b>{row.employee||"Χωρίς χειριστή"}</b><small> · Πωλήσεις {num(row.sales)}</small></span><b>{money(row.revenue)}</b></div>)}{!employees.length&&<div className="kiosk-empty">Δεν υπάρχουν κινήσεις χειριστών στη βάρδια.</div>}</div></section></div>
     </section>
 
     {drawerOpen&&selected&&<aside className="shift-drawer"><div className="drawer-title"><div><h2>Συναλλαγές Βάρδιας <small>#{String(selected.id).slice(0,6)}</small></h2></div><button onClick={()=>setDrawerOpen(false)}><X/></button></div><div className="drawer-shift"><b>Στοιχεία Βάρδιας</b><div><strong>{fmt(selected.openedAt)}</strong><strong>{selected.openedByName||selected.shiftLabel||"Χειριστής"}</strong><span>{selected.status||"—"}</span></div></div><div className="drawer-tabs"><button className={drawerTab==="ledger"?"active":""} onClick={()=>setDrawerTab("ledger")}>Ημερολόγιο κινήσεων</button><button className={drawerTab==="category"?"active":""} onClick={()=>setDrawerTab("category")}>ανά κατηγορία</button><button className={drawerTab==="vat"?"active":""} onClick={()=>setDrawerTab("vat")}>ανά Τμήμα ΦΠΑ</button><button className={drawerTab==="summary"?"active":""} onClick={()=>setDrawerTab("summary")}>Συγκεντρωτικά</button><button className={drawerTab==="money"?"active":""} onClick={()=>setDrawerTab("money")}>Ανάλυση χρηματικού</button></div>
