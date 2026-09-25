@@ -1088,7 +1088,6 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate6-online-delivery-assignment.md`.
 - [ ] Στην πρώτη εγκεκριμένη πραγματική υποβολή το checkout σταμάτησε πριν από το API λόγω σύγκρουσης του πεδίου `name` με το `window.name`. Δεν δημιουργήθηκε παραγγελία/πώληση/stock κίνηση. Έγινε ρητή σύνδεση όλων των πεδίων με `document.getElementById` και regression test· `online-store-*.test.js` **22 PASS / 0 FAIL**. Αναμένονται deploy και μία μόνο πλήρης φυσική ροή. **Gate 6 OPEN.**
 - [ ] Μετά το checkout deploy, η πραγματική υποβολή έφτασε στο API αλλά επέστρεψε HTTP 500 χωρίς επιτυχή δημιουργία. Προστέθηκε ασφαλές production diagnostic ανά στάδιο συναλλαγής (`LOCK/SERIAL/ORDER/LINES/EVENT`) πριν από νέα απόπειρα. **Καμία επιβεβαιωμένη παραγγελία ή οικονομική κίνηση.**
-- [ ] Το production diagnostic απομόνωσε το 500 στο `LOCK`: το PostgreSQL advisory lock επέστρεφε `void` μέσω `$queryRaw`. Διορθώθηκε σε `$executeRaw`. Αναμένεται deploy και retry με την ίδια idempotency key.
 - [ ] Πρώτος φυσικός έλεγχος: βρέθηκαν λανθασμένη ώρα UTC και ελλιπής λίστα βαρδιών λόγω terminal-scoped ανάγνωσης. Υλοποιήθηκαν ώρα Ελλάδας, ασφαλές store-wide BackOffice reporting, ελληνικές επικεφαλίδες και αναλυτικές ενότητες προϊόντων/χειριστών. Τοπικά 13/13 tests και production build PASS· αναμένονται πράσινο CI, deploy και φυσικός επανέλεγχος. Δεν δημιουργήθηκε νέα πώληση.
 
 ## 25/09/2026 — Gate 3: ΔΕΛΤΑ 30721 κεντρικό προφίλ POS + BackOffice / LOCAL FULL PASS, AWAITING CI-LAB
@@ -1159,8 +1158,6 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [x] Διορθώθηκε ο μοναδικός OCR κωδικός `751454 → 751459` ως κανόνας του προμηθευτή `066880843`.
 - [x] Το Confirm/Learn συγχρονίζει πλέον τον συμπληρωμένο αριθμό και την ημερομηνία τιμολογίου πριν από την κεντρική αποθήκευση· 46 στοχευμένοι έλεγχοι και client build PASS.
 - [ ] Μετά το deploy επαναβεβαιώνεται η ίδια εγγραφή ως `30721`: πρέπει να παραμείνουν **9** learned documents και να μην υπάρξει stock, πληρωμή ή αποστολή POS.
+- [x] Production `0b6b9652`: η εγγραφή εμφανίζεται πλέον ως `30721` / `LEARNED` και το πλήθος παρέμεινε **9**.
+- [ ] Τελικό idempotency hotfix: οι μετρητές documents/lines του προφίλ επανυπολογίζονται από τις πραγματικές learned εγγραφές, ώστε επαναβεβαίωση του ίδιου id να μην τους αυξάνει και να διορθώνει τυχόν προηγούμενη υπερμέτρηση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-delta-reading-order.md`.
-
-## 25/09/2026 — Gate 8 ενιαίο production checkpoint — 9/11 PASS, OPEN
-
-PR #1298 / CI #3285 / Render `41e044eb`: το πραγματικό κεντρικό Audit εμφανίζει δημιουργία, PIN login και απενεργοποίηση χειριστή χωρίς PIN/hash/πλήρη κάρτα. PR #1301 / CI #3292 / Render `dd8be575`: προσωρινή `EXPIRED` άδεια απορρίπτει πλέον και POS και public Online Store. Η αρχική κατάσταση αποκαταστάθηκε πλήρως: LAB `ACTIVE`, Enterprise, 20 modules, χωρίς λήξη, Online Store/POS ενεργά και `TABLE_SERVICE` **ΑΝΕΝΕΡΓΟ**. Εννέα από τις έντεκα γραμμές αποδοχής έχουν PASS. Εκκρεμούν μόνο πραγματική authenticated Owner δοκιμή και πραγματικό `StorePaidModule` override με επαναφορά. Gate 8 παραμένει OPEN· Gate 6 και Gate 7 δεν αγγίζονται. Αναλυτικό checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-roles-security-assignment.md`.
