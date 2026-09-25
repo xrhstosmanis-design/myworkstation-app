@@ -8,7 +8,7 @@ test("Invoice Learning exposes a safe user correction flow for a draft line",()=
   assert.match(lab,/Διόρθωση ποσότητας \/ συσκευασίας/);
   assert.match(lab,/Διόρθωση γραμμής τιμολογίου/);
   assert.match(lab,/Ποσότητα τιμολογίου/);
-  assert.match(lab,/Αποθήκευση μονάδας, μετατροπής και έκπτωσης ως κανόνα προμηθευτή/);
+  assert.match(lab,/Αποθήκευση μονάδας και μετατροπής ως κανόνα προμηθευτή/);
   assert.match(lab,/Καμία κίνηση stock ή λογιστικής δεν δημιουργείται/);
 });
 
