@@ -38,3 +38,23 @@ export function recoverVatSummaryInvoiceTotal(rawText){
   }
   return 0;
 }
+
+// A receipt printed below an invoice can have a different collected amount.
+// Trust an invoice PAYABLE only when the preceding invoice footer independently
+// shows NET + VAT = PAYABLE. Never infer an amount from the receipt section.
+export function recoverBalancedInvoicePayable(rawText){
+  const text=fold(rawText).split(/ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ|RECEIPT OF PAYMENT|PAYMENT RECEIPT/)[0];
+  const amounts=/(?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2}/g;
+  const payable=/ΠΛΗΡΩΤΕΟ\s*:?[ ]*((?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2})/g;
+  let match;
+  while((match=payable.exec(text))){
+    const gross=money(match[1]),prefix=text.slice(Math.max(0,match.index-260),match.index);
+    const candidates=[...prefix.matchAll(amounts)].map(found=>money(found[0]));
+    // Label the amounts rather than accepting any arbitrary pair of numbers
+    // from the product table or an unrelated subtotal.
+    const net=[...prefix.matchAll(/(?:Κ ΑΞΙΑ|ΚΑΘΑΡΗ ΑΞΙΑ|NET VALUE|NET AMOUNT)\s*:?[ ]*((?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2})/g)].at(-1);
+    const vat=[...prefix.matchAll(/(?:ΑΞΙΑ ΦΠΑ|ΦΠΑ|VAT)\s*:?[ ]*((?:\d{1,3}(?:[. ]\d{3})+|\d+)[,.]\d{2})/g)].at(-1);
+    if(net&&vat&&candidates.length>=2&&gross>0&&Math.abs(money(net[1])+money(vat[1])-gross)<=.011)return gross;
+  }
+  return 0;
+}
