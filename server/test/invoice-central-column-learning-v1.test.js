@@ -348,6 +348,8 @@ test('column-map save is target-only and cached rereads apply the latest central
   assert.match(client,/supplierName:document\.querySelector\('#supplierName'\)\?\.value\|\|''/);
   assert.match(client,/supplierTaxId:document\.querySelector\('#supplierTaxId'\)\?\.value\|\|''/);
   assert.match(ai,/applyCentralSupplierProfile\(withRequestedSupplierIdentity\(azure\)\)/);
+  assert.match(ai,/const lineProperties=\{rawText:\{type:"string"\}/);
+  assert.match(ai,/rawText πρέπει να είναι πιστή μεταγραφή ολόκληρης της φυσικής τυπωμένης γραμμής/);
 });
 
 test('column-map editor sends DELTA family and distributor to the central POS and BackOffice profile',async()=>{
