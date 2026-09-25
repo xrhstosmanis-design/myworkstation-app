@@ -1,3 +1,7 @@
+## 2026-09-25 — Gate 4 έκπτωση Ιατρού, LAB POS 2 — LAB PASS μίας πώλησης
+
+- [x] Στις 10:49:31 φυσικό LAB POS 2 / Ιατρός: 1 × ΝΕΡΟ 1,5LT 0,90 € + 1 × EVIAN ΝΕΡΟ 500ML 1,40 € = **2,30 € ΜΕΤΡΗΤΑ**, NON_FISCAL. POS02 **14→15 κινήσεις**, μετρητά **4,70→7,00 €**, σύνολο **5,20→7,50 €**· POS01 **1 κίνηση / 1,00 €** αμετάβλητο. Stock 2270 **−6→−7**, EVIAN **0→−1**, τελευταία πώληση και στα δύο 10:49:31. Audit `3908c17a-ef8a-4e0b-a4bd-5db3a03ce82e` / Sale `7a7a29b8-c1ab-466c-a7b8-48e8cfb3f5cf` και «Ολοκλήρωση πώλησης — Ιατρός» συμφωνούν. **LAB PASS μόνο της συγκεκριμένης ροής.** Τα ατομικό/μαζικό USER PASS και το καλάθι PASS παραμένουν ολοκληρωμένα· δεν επαναλαμβάνονται. Αρχικό before/after κανόνα και μη επιλεγμένα είδη NOT TESTED, πλήρες Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`, manual `docs/manual/pos/PASS.md`.
+
 ## 2026-09-25 — Gate 5 G5-P06 έξοδο ιδιοκτήτη — περιορισμένο LAB PASS
 
 - [x] PR #1222, CI #3095 πράσινο, merge/deployed `352f636a`. Μία BackOffice δαπάνη ιδιοκτήτη **0,10 €** `G5-P06 VIRTUAL LAB`, ενεργή εγγραφή `#pay_3ffd…` 10:37, εξωτερική πληρωμή: LAB τράπεζα λογιστικό/επιβεβαιωμένο **3,40→3,30 €**, αναμονή και ουρά ιδιοκτήτη **0**, LAB POS 2 **14 κινήσεις/0,10 € έξοδα** ίδια, POS 1 **1/0** ίδιο, ΚΑΤ **22,36 €** ίδιο. Μόνο δαπάνη ιδιοκτήτη χωρίς δεύτερη έγκριση PASS· δαπάνη POS και τελική συμφωνία OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`, manual `docs/manual/payments/PASS.md`.
