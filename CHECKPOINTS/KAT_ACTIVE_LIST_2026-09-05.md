@@ -1,3 +1,7 @@
+## 26/09/2026 — Gate 3: ρυθμισμένο μοντέλο βοηθού / AWAITING CI-LAB
+
+Μετά το merged PR #1314 (CI #3333 PASS) ο βοηθός πρέπει να χρησιμοποιεί τη ρύθμιση `OPENAI_INVOICE_MODEL=gpt-5` που υπάρχει ήδη στο Render, με δυνατότητα ειδικής παράκαμψης `OPENAI_INVOICE_ASSISTANT_MODEL`. Μικρή αλλαγή στο branch `agent/gate3-invoice-assistant-configured-model-20260926`· νέο CI, πραγματικό deploy και LAB εκκρεμούν. Καμία δήλωση LAB PASS.
+
 ## 26/09/2026 — Gate 3: βοηθός επάνω στο POS draft / AWAITING CI-LAB
 
 Το branch `agent/gate3-pos-invoice-assistant-review-20260926` συνεχίζει το PR #1313 (ΕΦΚ, CI #3327 PASS). Σχεδιάστηκε επιθεώρηση έως 5 φωτογραφιών, εντολές στα ελληνικά, χρωματισμένες προτάσεις ανά πεδίο και ρητή αποδοχή σε ήδη υπάρχουσες γραμμές. Εφαρμογή μέσω της υπάρχουσας διόρθωσης με audit/learning, χωρίς δεύτερη πληρωμή, stock ή οριστικοποίηση. Η οθόνη είναι σε υλοποίηση· **AWAITING CI/LAB**, κανένα πραγματικό PASS.
