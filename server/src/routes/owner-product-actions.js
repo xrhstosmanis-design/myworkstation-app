@@ -56,8 +56,11 @@ router.get("/audience-discount-audit",requireCompanyModule("INVENTORY"),async(re
     const store=await prisma.store.findFirst({where:{id:query.storeId,companyId:company},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     await ensureAudienceDiscountTables();
-    const rows=await prisma.$queryRaw`SELECT "id","storeId","audience","discountPercent","productIds","actorId","createdAt" FROM "StoreProductAudienceDiscountAudit" WHERE "companyId"=${company} AND "storeId"=${store.id} AND "audience"=${query.audience} ORDER BY "createdAt" DESC LIMIT 30`;
-    res.json({items:rows.map(row=>({...row,discountPercent:Number(row.discountPercent)}))});
+    const [rows,currentRules]=await Promise.all([
+      prisma.$queryRaw`SELECT "id","storeId","audience","discountPercent","productIds","actorId","createdAt" FROM "StoreProductAudienceDiscountAudit" WHERE "companyId"=${company} AND "storeId"=${store.id} AND "audience"=${query.audience} ORDER BY "createdAt" DESC LIMIT 30`,
+      prisma.$queryRaw`SELECT d."productId",p."name" AS "productName",d."discountPercent",d."updatedAt" FROM "StoreProductAudienceDiscount" d LEFT JOIN "Product" p ON p."id"=d."productId" AND p."companyId"=${company} WHERE d."companyId"=${company} AND d."storeId"=${store.id} AND d."audience"=${query.audience} AND d."active"=true ORDER BY p."name",d."productId"`
+    ]);
+    res.json({items:rows.map(row=>({...row,discountPercent:Number(row.discountPercent)})),currentRules:currentRules.map(row=>({...row,discountPercent:Number(row.discountPercent)}))});
   }catch(error){next(error)}
 });
 
