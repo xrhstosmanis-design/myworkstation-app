@@ -1160,3 +1160,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [x] Το Confirm/Learn συγχρονίζει πλέον τον συμπληρωμένο αριθμό και την ημερομηνία τιμολογίου πριν από την κεντρική αποθήκευση· 46 στοχευμένοι έλεγχοι και client build PASS.
 - [ ] Μετά το deploy επαναβεβαιώνεται η ίδια εγγραφή ως `30721`: πρέπει να παραμείνουν **9** learned documents και να μην υπάρξει stock, πληρωμή ή αποστολή POS.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-delta-reading-order.md`.
+
+## 25/09/2026 — Gate 8 ενιαίο production checkpoint — 9/11 PASS, OPEN
+
+PR #1298 / CI #3285 / Render `41e044eb`: το πραγματικό κεντρικό Audit εμφανίζει δημιουργία, PIN login και απενεργοποίηση χειριστή χωρίς PIN/hash/πλήρη κάρτα. PR #1301 / CI #3292 / Render `dd8be575`: προσωρινή `EXPIRED` άδεια απορρίπτει πλέον και POS και public Online Store. Η αρχική κατάσταση αποκαταστάθηκε πλήρως: LAB `ACTIVE`, Enterprise, 20 modules, χωρίς λήξη, Online Store/POS ενεργά και `TABLE_SERVICE` **ΑΝΕΝΕΡΓΟ**. Εννέα από τις έντεκα γραμμές αποδοχής έχουν PASS. Εκκρεμούν μόνο πραγματική authenticated Owner δοκιμή και πραγματικό `StorePaidModule` override με επαναφορά. Gate 8 παραμένει OPEN· Gate 6 και Gate 7 δεν αγγίζονται. Αναλυτικό checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-roles-security-assignment.md`.
