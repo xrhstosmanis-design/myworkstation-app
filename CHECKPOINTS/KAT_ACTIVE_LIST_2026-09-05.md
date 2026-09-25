@@ -1150,3 +1150,11 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [x] Πλήρες server suite **1.517 PASS / 0 FAIL / 1 SKIP** και production client build PASS.
 - [ ] PR #1299: νέο CI, merge, ακριβές deploy και production readback χωρίς χειροκίνητη διόρθωση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-delta-reading-order.md`.
+
+## 25/09/2026 — Invoice Learning επιβεβαιωμένη ταυτότητα εγγράφου — AWAITING CI
+
+- [x] Το production readback του 30721 συμφώνησε σε **18 γραμμές / ποσότητα 85 / 107,03 € + 13,91 € = 120,94 €** και η κεντρική εκμάθηση αποθηκεύτηκε.
+- [x] Διορθώθηκε ο μοναδικός OCR κωδικός `751454 → 751459` ως κανόνας του προμηθευτή `066880843`.
+- [x] Το Confirm/Learn συγχρονίζει πλέον τον συμπληρωμένο αριθμό και την ημερομηνία τιμολογίου πριν από την κεντρική αποθήκευση· 46 στοχευμένοι έλεγχοι και client build PASS.
+- [ ] Μετά το deploy επαναβεβαιώνεται η ίδια εγγραφή ως `30721`: πρέπει να παραμείνουν **9** learned documents και να μην υπάρξει stock, πληρωμή ή αποστολή POS.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-delta-reading-order.md`.
