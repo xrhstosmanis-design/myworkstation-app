@@ -4,7 +4,7 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
-import coreRouter,{ensureV244IntakeSchema} from "./commerce-pos-v244-core.js";
+import coreRouter,{ensureV244IntakeSchema,normalizePersistedInvoiceEconomics} from "./commerce-pos-v244-core.js";
 import {callAzure,normalizeAzure,supplierMatch as azureSupplierMatch} from "./commerce-azure-invoice-reader.js";
 import {claimsCompletePrintedTable,reconcileInvoiceLines,reusableVerifiedPrintedTable,reviewablePrintedTableForPersistence,verifiedPrintedTableForPersistence} from "../invoice-line-reconciliation.js";
 import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js";
@@ -268,9 +268,10 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
       });
     }catch(error){
       const message=String(error?.message||error).slice(0,700);
-      const terminalRows=await prisma.$queryRaw`SELECT "status" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
-      if(["AWAITING_APPROVAL","CONFIRMED"].includes(terminalRows[0]?.status)){
+      const terminalRows=await prisma.$queryRaw`SELECT "status","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;
+      if(["AWAITING_APPROVAL","CONFIRMED"].includes(terminalRows[0]?.status)||terminalRows[0]?.purchaseDocumentId){
         await prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "state"='COMPLETED',"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "leaseToken"=${leaseToken}`;
+        if(terminalRows[0]?.purchaseDocumentId&&!['AWAITING_APPROVAL','CONFIRMED'].includes(terminalRows[0]?.status))await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_COMPLETE',"status"='AWAITING_APPROVAL',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"COMPLETED_WITH_REVIEW",completedAt:new Date().toISOString(),error:message,reconciliationRequired:true}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
         return;
       }
       const retryable=isRetryableBackgroundError(error)&&attemptCount<POS_BACKGROUND_MAX_ATTEMPTS;
@@ -992,7 +993,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     if(!documentNumber)missing.push("Αρ. τιμολογίου");
     if(!(requestedTotal>0))missing.push("Σύνολο με ΦΠΑ");
     if(missing.length)return res.status(400).json({error:`Λείπουν υποχρεωτικά στοιχεία: ${missing.join(", ")}.`,code:"POS_INTAKE_FIELDS_MISSING",fields:missing});
-    const lines=Array.isArray(result.productLines)?result.productLines:[];
+    const lines=(Array.isArray(result.productLines)?result.productLines:[]).map(normalizePersistedInvoiceEconomics);
     if(!lines.length)return res.status(409).json({error:"Δεν υπάρχουν ασφαλείς structured γραμμές V2.4.4. Η καταχώριση μπλοκαρίστηκε."});
 
     // Never trust a stale Azure grossAmount when netAmount + canonical VAT are known.

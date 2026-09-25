@@ -69,7 +69,24 @@ export function normalizePersistedInvoiceEconomics(line){
     const inferred=(grossAmount/netAmount-1)*100,nearest=canonicalVat.reduce((best,value)=>Math.abs(value-inferred)<Math.abs(best-inferred)?value:best,canonicalVat[0]);
     if(Math.abs(nearest-inferred)<=.6)vatRate=nearest;
   }
-  return {...line,discount1,discount2,discount3,vatRate};
+  // Some narrow printed tables expose both the discounted net and its
+  // VAT-inclusive line total. OCR can shift the VAT-inclusive value one
+  // column to the left, storing it as netAmount, and then calculate VAT once
+  // again. Repair only when the independently printed quantity, unit price,
+  // discounts and canonical VAT prove that exact one-column shift.
+  const normalizedFactor=[discount1,discount2,discount3].reduce((value,discount)=>value*(1-discount/100),1);
+  const calculatedNet=money2(initial*normalizedFactor);
+  const calculatedGross=money2(calculatedNet*(1+vatRate/100));
+  const shiftedGross=money2(netAmount*(1+vatRate/100));
+  const vatInclusiveNetShift=vatRate>0&&calculatedNet>0&&
+    Math.abs(netAmount-calculatedGross)<=Math.max(.02,calculatedGross*.002)&&
+    Math.abs(grossAmount-shiftedGross)<=Math.max(.02,shiftedGross*.002);
+  return vatInclusiveNetShift?{
+    ...line,discount1,discount2,discount3,vatRate,
+    netAmount:calculatedNet,grossAmount:calculatedGross,
+    vatAmount:money2(calculatedGross-calculatedNet),
+    vatInclusiveNetShiftRepaired:true
+  }:{...line,discount1,discount2,discount3,vatRate};
 }
 
 export function shouldApplyLearnedPack(line,learnedPack){
@@ -285,7 +302,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Το τιμολόγιο δεν ανήκει στο κατάστημα του χειριστή."});
     const rawLines=Array.isArray(job.resultJson?.productLines)?job.resultJson.productLines:[];
     if(job.resultJson?.v244Finalized!==true||rawLines.length===0)return res.status(409).json({error:"Δεν υπάρχουν τελικές γραμμές προϊόντων V2.4.4. Η καταχώριση σταμάτησε για να μη μεταφερθούν raw OCR/IBAN/headers ως προϊόντα."});
-    const parsedLines=z.array(lineSchema).min(1).max(500).parse(rawLines);
+    const parsedLines=z.array(lineSchema).min(1).max(500).parse(rawLines).map(normalizePersistedInvoiceEconomics);
     const finalGapRecovery=restoreUniqueExactGrossGap(parsedLines,body.totalGross);
     let lines=finalGapRecovery.lines;
     stage="validate-supplier";
@@ -368,7 +385,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         shift=shifts[0]||null;if(!shift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Πληρωμένο τιμολόγιο δεν μπορεί να καταχωρηθεί χωρίς ενεργή βάρδια.");error.status=409;throw error;}
       }
       stage="match-products";
-      const mappedRows=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
+      const mappedRows=(await productsForLines(tx,req.user.companyId,body.supplierId,lines)).map(normalizePersistedInvoiceEconomics);
       const matchedRows=applyLearnedDiscountsForReconciliation(mappedRows,body.totalGross);
       const centReconciliation=reconcileCentRoundingResidual(matchedRows,body.totalGross);
       const matched=centReconciliation.lines;

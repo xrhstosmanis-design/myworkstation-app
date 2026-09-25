@@ -63,6 +63,25 @@ test("invoice 28897 repairs corrupted display economics from intact row totals",
   assert.deepEqual(repaired.map(line=>line.vatRate),Array(11).fill(13));
 });
 
+test("DELTA 30721 repairs a VAT-inclusive line total shifted into netAmount",()=>{
+  const repaired=normalizePersistedInvoiceEconomics({
+    code:"720586",description:"MILKO ΧΑΡΤΙ HP 500ML RA MB",quantity:4,unitCost:1.18,
+    discount1:8,discount2:0,discount3:0,netAmount:4.90,vatRate:13,grossAmount:5.54
+  });
+  assert.equal(repaired.netAmount,4.34);
+  assert.equal(repaired.grossAmount,4.90);
+  assert.equal(repaired.vatAmount,0.56);
+  assert.equal(repaired.vatInclusiveNetShiftRepaired,true);
+});
+
+test("economics repair does not alter an already correct DELTA line",()=>{
+  const correct={code:"720586",quantity:4,unitCost:1.18,discount1:8,discount2:0,discount3:0,netAmount:4.34,vatRate:13,grossAmount:4.90};
+  const normalized=normalizePersistedInvoiceEconomics(correct);
+  assert.equal(normalized.netAmount,4.34);
+  assert.equal(normalized.grossAmount,4.90);
+  assert.equal(normalized.vatInclusiveNetShiftRepaired,undefined);
+});
+
 test("invoice 28897 fails closed if a verified discount or VAT is corrupted",()=>{
   const corrupt=rows.map((line,index)=>index?line:{...line,discount1:99.9,vatRate:0,netAmount:line.grossAmount});
   assert.equal(claimsCompletePrintedTable(corrupt),true);

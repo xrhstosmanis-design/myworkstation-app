@@ -193,6 +193,41 @@ test('manual supplier map accepts an inline printed unit with a safe piece fallb
   assert.equal(result.productLines[0].supplierProfileRule,'DECLARED_COLUMNS');
 });
 
+test('DELTA central 12-column map restores current-row economics for every store consumer',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT_PRICE',4:'DISCOUNT_1',5:'DISCOUNT_2',6:'AMOUNT_AFTER_DISCOUNT',7:'VAT_RATE',8:'IGNORE',9:'UNIT',10:'QUANTITY',11:'IGNORE',12:'IGNORE'};
+  const profile={supplierKey:'066880843',supplierTaxId:'066880843',supplierName:'ΘΕΟΔΩΡΟΠΟΥΛΟΣ ΑΓΓΕΛΟΣ ΕΠΑΜΕΙΝΩΝΔΑΣ',commercialFamily:'ΔΕΛΤΑ',distributorName:'',profileVersion:3,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',quantityMode:'LINE_TOTAL_MATCH',columns}};
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{commercialFamily:'ΔΕΛΤΑ',readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  for(const companyId of ['store-a','store-b']){
+    const result=await context.apply({companyId,supplier:{taxId:'066880843'},productLines:[{supplierItemCode:'720586',azureRawRow:'720586 ΓΑΛΑ ΠΛΗΡΕΣ 1LT 1.18 0 8.00 4.34 13 4.90 TM 4.000 0 0',quantity:1.18,unitPrice:4.34,netAmount:4.90,sourceColumnMap:true}]});
+    const line=result.productLines[0];
+    assert.equal(line.quantity,4);assert.equal(line.unitPrice,1.18);assert.equal(line.discount1,0);assert.equal(line.discount2,8);assert.equal(line.netAmount,4.34);assert.equal(line.vatRate,13);assert.equal(line.grossAmount,4.90);assert.equal(line.supplierProfileRule,'DECLARED_COLUMNS');
+    assert.equal(result.supplierReadingProfile.commercialFamily,'ΔΕΛΤΑ');
+  }
+});
+
+test('DELTA invoice 30721 central map reconciles all 18 printed rows and exact totals',async()=>{
+  const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
+  const columns={1:'SUPPLIER_CODE',2:'DESCRIPTION',3:'UNIT_PRICE',4:'DISCOUNT_1',5:'DISCOUNT_2',6:'AMOUNT_AFTER_DISCOUNT',7:'VAT_RATE',8:'IGNORE',9:'UNIT',10:'QUANTITY',11:'IGNORE',12:'IGNORE'};
+  const profile={supplierKey:'066880843',supplierTaxId:'066880843',supplierName:'ΘΕΟΔΩΡΟΠΟΥΛΟΣ ΑΓΓΕΛΟΣ ΕΠΑΜΕΙΝΩΝΔΑΣ',commercialFamily:'ΔΕΛΤΑ',profileVersion:4,ruleKey:'DECLARED_COLUMNS',readingRule:{layoutMode:'DECLARED_COLUMNS',quantityMode:'LINE_TOTAL_MATCH',columns}};
+  const printed=[
+    ['720586',4,1.18,8,4.34,4.90],['720584',1,1.78,8,1.64,1.85],['720557',6,1.55,8,8.56,9.67],['720558',4,1.58,8,5.81,6.57],['720542',4,1.67,8,6.15,6.95],
+    ['720562',4,1.12,0,4.48,5.06],['720563',3,1.12,0,3.36,3.80],['730437',10,1.60,12.5,14.00,15.82],['730438',10,1.46,12.5,12.77,14.43],['730440',2,1.42,12.5,2.48,2.80],
+    ['730441',4,1.34,12.5,4.69,5.30],['730430',4,1.38,12.5,4.83,5.46],['730522',6,.72,15,3.67,4.15],['730524',6,.85,15,4.33,4.89],['730528',4,.59,15,2.01,2.27],
+    ['751459',1,3.07,8,2.82,3.19],['751444',4,1.91,8,7.03,7.94],['751415',8,1.91,8,14.06,15.89]
+  ];
+  const context=vm.createContext({applyConfirmedColumns,applyVerifiedCodeCorrections,unitRelativeValues,console,prisma:{$queryRawUnsafe:async()=>[{...profile,profile:{commercialFamily:'ΔΕΛΤΑ',readingRule:profile.readingRule}}]}});
+  vm.runInContext(runtime.replace(/^import .*;\n/gm,'').replaceAll('export async function','async function')+'\nthis.apply=applyCentralSupplierProfile;',context);
+  const productLines=printed.map(([code,quantity,price,discount,net,gross])=>({supplierItemCode:code,azureRawRow:`${code} ΠΡΟΪΟΝ ${price} 0 ${discount} ${net} 13 ${gross} TM ${quantity} 0 0`,quantity:price,unitPrice:net,netAmount:gross,sourceColumnMap:true}));
+  const result=await context.apply({companyId:'any-store',supplier:{taxId:'066880843'},productLines});
+  assert.equal(result.productLines.length,18);
+  assert.equal(result.productLines.reduce((sum,line)=>sum+line.quantity,0),85);
+  assert.equal(Math.round(result.productLines.reduce((sum,line)=>sum+line.netAmount,0)*100)/100,107.03);
+  assert.equal(Math.round(result.productLines.reduce((sum,line)=>sum+line.grossAmount,0)*100)/100,120.94);
+  assert.ok(result.productLines.every(line=>line.supplierProfileRule==='DECLARED_COLUMNS'));
+});
+
 test('TALOS manual map overrides a shifted provider map without changing learned mappings',async()=>{
   const runtime=await readFile(new URL('../src/lib/invoice-supplier-profile-runtime.js',import.meta.url),'utf8');
   const mappings={3759850:{barcode:'5200000000000',verified:true}};
@@ -304,9 +339,18 @@ test('column-map save is target-only and cached rereads apply the latest central
   const workspace=await readFile(new URL('../src/routes/platform-invoice-learning-workspace.js',import.meta.url),'utf8');
   const ai=await readFile(new URL('../src/routes/platform-invoice-learning-ai.js',import.meta.url),'utf8');
   assert.match(workspace,/onlyTargetSupplierUpdated:true,existingLearningPreserved:true/);
+  assert.match(workspace,/scope:"ALL_STORES",consumers:\["POS","BACKOFFICE"\]/);
+  assert.match(workspace,/"commercialFamily"=EXCLUDED\."commercialFamily","distributorName"=EXCLUDED\."distributorName"/);
   assert.match(workspace,/const profile=\{\.\.\.previous/);
   assert.match(ai,/cachedRead\?\.stableRead[\s\S]*applyCentralSupplierProfile\(structuredClone\(cachedRead\.winner\)\)/);
   assert.match(ai,/profileReapplied:true/);
+});
+
+test('column-map editor sends DELTA family and distributor to the central POS and BackOffice profile',async()=>{
+  const source=await readFile(new URL('../../client/src/invoice-learning-catalog-publication.js',import.meta.url),'utf8');
+  assert.match(source,/persistColumnMap\(\{supplierName,supplierTaxId,commercialFamily,distributorName,columns\}\)/);
+  assert.match(source,/JSON\.stringify\(\{supplierName,supplierTaxId,commercialFamily,distributorName,columns\}\)/);
+  assert.match(source,/κεντρικός χάρτης αποθηκεύτηκε για POS και BackOffice όλων των καταστημάτων/);
 });
 
 test('actual multipage recovery consumes repeated occurrences once and retains their printed order',async()=>{
