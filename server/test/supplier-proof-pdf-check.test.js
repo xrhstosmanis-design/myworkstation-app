@@ -24,6 +24,7 @@ test('unreadable PDF remains unverified for human review',async()=>{
   assert.equal(await readSupplierProofPdf(Buffer.from('%PDF- unreadable')),null);
   assert.equal(supplierProofMismatch(null,{amount:1,method:'BANK_TRANSFER'}),null);
   assert.match(ownerSupplierProofError({mimeType:'application/pdf',proof:null}),/PDF δεν διαβάστηκε/);
+  assert.match(ownerSupplierProofError({mimeType:'application/pdf',proof:{amount:null,method:null,invoiceReference:null}}),/PDF δεν διαβάστηκε πλήρως/);
   assert.equal(ownerSupplierProofError({mimeType:'application/pdf',proof:{amount:1,method:'BANK_TRANSFER',invoiceReference:'A1'}}),null);
   assert.equal(ownerSupplierProofError({mimeType:'image/jpeg',proof:null}),null);
 });
