@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 50163)
+Total output lines: 1169
+
 Warning: truncated output (original token count: 80944)
 Total output lines: 2430
 
@@ -409,11 +412,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - **Νεότερο LAB 24/09:** δύο δεσμευμένα terminal άνοιξαν χωριστές βάρδιες και καταχώρισαν χωριστές πωλήσεις 0,50 € (POS01) / 1,50 € (POS02). Η οθόνη επιστροφής του Εργαστηρίου 1 πρότεινε τη συναλλαγή 1,50 € του POS02: **LAB FAIL**, καμία επιβεβαίωση αυτής της ξένης επιστροφής. Διόρθωση terminal/session σε εξέλιξη, **AWAITING CI / DEPLOY / LAB RETEST**. Το Gate 4 παραμένει pending· λεπτομέρειες στο checkpoint.
 
 - Νεότερο πραγματικό LAB: ακύρωση καλαθιού πριν από πώληση PASS και μία NON_FISCAL πώληση 0,50 € PASS ως καταχώριση. Το Backoffice την αποδίδει στη βάρδια **MAIN**, όχι στο `LAB-POS-02`, παρότι ο χειριστής ονομάζεται LAB POS 2. Το browser της δοκιμής δεν δείχνει δέσμευση Terminal ID. Δύο ενεργά terminal είναι καταχωρισμένα, αλλά χωριστές βάρδιες και κοινό stock δύο δεσμευμένων POS **NOT TESTED**. Συνολικό Gate 4 **LAB PARTIAL / PENDING**. Το νέο link ενεργοποίησης μπλοκαρίστηκε από αυτόματο έλεγχο έγκρισης· δεν έγινε περιστροφή διαπιστευτηρίου. Βλέπε `CHECKPOINTS/CHANGES/2026-09-24-gate4-two-terminal-readiness.md`.
-- Πραγματική ανάγνωση Render `e1f0d770`: και τα δύο LAB POS καταχωρισμένα αλλά **OFFLINE*…30944 tokens truncated…`, client production build and server/Prisma build: PASS.
-- [x] PR #931 / CI #2417 / exact production revision `6b7b33a3f4f8be88fe7816b0cd677891ce14c915`: PASS.
-- [x] FINAL POS-FRONT LAB PASS: fresh `12665` completed with 18 rows and both targets correct simultaneously: `00009 = 24 pieces / 31% / 13.49 EUR / 15.24 EUR`; `02410 = 24 pieces × 0.98 EUR / 23.52 EUR / 35.71 EUR`.
-- [x] Invoice `429.27 EUR`, line sum `429.26 EUR`, difference `0.01 EUR` within `0.05 EUR` tolerance. No approval, finalization or stock posting was performed.
-- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
+- Πραγματική ανάγνωση Render `e1…163 tokens truncated…Checkpoint: `CHECKPOINTS/CHANGES/2026-09-17-mantzilas-00009-corona-joint-normalization.md`.
 
 ## 2026-09-17 — MANTZILAS 11998 complete printed-table recovery
 
@@ -1162,6 +1161,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [x] Η fail-closed ροή POS, η επιβεβαίωση/εκμάθηση, το stock και η πληρωμή δεν αλλάζουν.
 - [x] Τοπικά: 42 invoice/profile tests PASS, 7 stability/timeout/multipage tests PASS και client build PASS.
 - [ ] Απαιτούνται πράσινο CI, ακριβές production deploy και νέο readback του ίδιου τιμολογίου για επιβεβαίωση 18 γραμμών / ποσότητα 85 / 107,03 € + 13,91 € = 120,94 €. Δεν πατιέται Confirm/Learn και δεν αποστέλλεται στο POS πριν τη συμφωνία.
+- [x] Production readback στο `760a123d`: δύο μερικές αναγνώσεις ολοκληρώθηκαν, ο επόμενος OpenAI έλεγχος έληξε σε timeout και το πλήρες-result safeguard τις απέρριψε σωστά. Νέα στενή διόρθωση εμφανίζει τις ασφαλείς μερικές Azure γραμμές μόνο για εποπτευόμενη διόρθωση, χωρίς να τις χαρακτηρίζει πλήρεις ή σταθερές. AWAITING CI/DEPLOY/LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-invoice-learning-stability-timeout-fallback.md`.
 ## 25/09/2026 — Gate 5 πληρωμές, πιστώσεις και συμφωνίες — LAB PASS
 

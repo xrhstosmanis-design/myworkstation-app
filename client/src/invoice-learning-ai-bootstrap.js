@@ -73,6 +73,7 @@ if(labPath){
         throw error;
       }
       best=data;
+      if(data.providerTimeout&&data.requiresManualCompletion)return data;
       if(data.stableRead)return best;
       const status=document.querySelector('#status');
       if(status&&attempt<3)status.textContent=`Έλεγχος σταθερότητας ίδιας φωτογραφίας ${attempt}/3…`;
