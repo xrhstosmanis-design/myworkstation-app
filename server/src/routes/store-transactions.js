@@ -709,6 +709,21 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
   res.json({items,companies,stores});
 }));
 
+router.get("/supplier-settlements/:settlementId/attachment",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scopeCompanyId=reviewScopeCompanyId(req);
+  const rows=await prisma.$queryRaw`
+    SELECT t."attachmentData",t."attachmentMimeType",t."attachmentFilename"
+    FROM "SupplierPaymentSettlement" ss
+    JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
+    WHERE ss."id"=${req.params.settlementId}
+      AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
+      AND ss."status" IN ('PENDING_REVIEW','DISCREPANCY')
+    LIMIT 1
+  `;
+  if(!rows[0]?.attachmentData)return res.status(404).json({error:"Δεν βρέθηκε αποδεικτικό εκκρεμούς πληρωμής."});
+  res.json({dataUrl:rows[0].attachmentData,mimeType:rows[0].attachmentMimeType,filename:rows[0].attachmentFilename});
+}));
+
 router.post("/supplier-settlements/:settlementId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
   const scopeCompanyId=reviewScopeCompanyId(req);
   const body=z.object({status:z.enum(["CONFIRMED","DISCREPANCY"]).optional().default("CONFIRMED"),note:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
