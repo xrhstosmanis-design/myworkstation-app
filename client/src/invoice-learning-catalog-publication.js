@@ -36,6 +36,6 @@ if(window.location.pathname.replace(/\/+$/,'')===PATH){
     const button=document.createElement('button');button.type='button';button.dataset.columnMap='1';button.textContent='Ρύθμιση στηλών προμηθευτή';button.style.cssText='margin:0 0 12px;border:1px solid #5b43ce;background:#f5f2ff;color:#4428a7;border-radius:8px;padding:9px 11px;font-weight:900;cursor:pointer';button.onclick=openColumnMap;
     review.querySelector('.sectionTitle')?.after(button);
   }
-  const install=()=>{installMasterButtons();installColumnMap()};install();new MutationObserver(install).observe(document.documentElement,{childList:true,subtree:true});
+  const install=()=>{installMaster();installColumnMap()};install();new MutationObserver(install).observe(document.documentElement,{childList:true,subtree:true});
 
 }
