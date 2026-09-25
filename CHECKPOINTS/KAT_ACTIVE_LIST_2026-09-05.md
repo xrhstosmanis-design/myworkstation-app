@@ -1086,6 +1086,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [ ] Υπάρχει παλιό CI/E2E τεκμήριο δημιουργίας→duplicate retry→accept→prepare→ready→POS checkout→deliver με μία μείωση stock, αλλά δεν ισοδυναμεί με νέο πραγματικό LAB PASS. Πρώτα γίνεται απογραφή του σημερινού production και μετά συγκεντρωτική φυσική δοκιμή με πλήρες πριν/μετά.
 - [ ] efood/Pelican και credentials παραμένουν ανεξάρτητα στην ειδική σελίδα και δεν μπλοκάρουν το Gate 6.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate6-online-delivery-assignment.md`.
+- [ ] Στην πρώτη εγκεκριμένη πραγματική υποβολή το checkout σταμάτησε πριν από το API λόγω σύγκρουσης του πεδίου `name` με το `window.name`. Δεν δημιουργήθηκε παραγγελία/πώληση/stock κίνηση. Έγινε ρητή σύνδεση όλων των πεδίων με `document.getElementById` και regression test· `online-store-*.test.js` **22 PASS / 0 FAIL**. Αναμένονται deploy και μία μόνο πλήρης φυσική ροή. **Gate 6 OPEN.**
 - [ ] Πρώτος φυσικός έλεγχος: βρέθηκαν λανθασμένη ώρα UTC και ελλιπής λίστα βαρδιών λόγω terminal-scoped ανάγνωσης. Υλοποιήθηκαν ώρα Ελλάδας, ασφαλές store-wide BackOffice reporting, ελληνικές επικεφαλίδες και αναλυτικές ενότητες προϊόντων/χειριστών. Τοπικά 13/13 tests και production build PASS· αναμένονται πράσινο CI, deploy και φυσικός επανέλεγχος. Δεν δημιουργήθηκε νέα πώληση.
 
 ## 25/09/2026 — Gate 3: ΔΕΛΤΑ 30721 κεντρικό προφίλ POS + BackOffice / LOCAL FULL PASS, AWAITING CI-LAB
