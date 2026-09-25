@@ -698,7 +698,7 @@ router.get("/invoice-learning/ai-status",(req,res)=>res.json({connected:azureCon
 
 router.post("/invoice-learning/ai-recheck",async(req,res,next)=>{try{
   const {filename="invoice",mimeType="image/jpeg",fileData=""}=req.body||{};
-  const requestedSupplierTaxId=String(req.body?.supplierTaxId||"").replace(/\\D/g,"").slice(0,16),requestedSupplierName=String(req.body?.supplierName||"").trim().slice(0,240);
+  const requestedSupplierTaxId=String(req.body?.supplierTaxId||"").replace(/\D/g,"").slice(0,16),requestedSupplierName=String(req.body?.supplierName||"").trim().slice(0,240);
   const withRequestedSupplierIdentity=result=>({...result,supplier:{...(result?.supplier||{}),...(requestedSupplierName?{name:requestedSupplierName}:{}),...(requestedSupplierTaxId?{taxId:requestedSupplierTaxId}:{})}});
   const requestedPages=Array.isArray(req.body?.pages)?req.body.pages:[],pages=(requestedPages.length?requestedPages:[{filename,mimeType,fileData}]).map((page,index)=>({filename:String(page?.filename||`invoice-page-${index+1}`),mimeType:String(page?.mimeType||"image/jpeg"),fileData:page?.fileData}));
   if(!pages.length||pages.length>5||pages.some(page=>!page.fileData||typeof page.fileData!=="string"))return res.status(400).json({error:"Επίλεξε από 1 έως 5 έγκυρες σελίδες του ίδιου τιμολογίου."});
