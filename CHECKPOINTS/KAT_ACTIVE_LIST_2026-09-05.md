@@ -1,3 +1,7 @@
+## 25/09/2026 — Gate 3: ρητή μετατροπή έναντι παλιού product knowledge — LOCAL 14 PASS / AWAITING CI-LAB
+
+Ίδιος owner, branch `agent/gate3-explicit-conversion-priority-20260925`. Το υπάρχον Coffee profile δηλώνει stockConversion.factor χωρίς unitsPerPackage, με αποτέλεσμα να μην ορίζεται confirmedPackMapping πριν από το product knowledge. Αναπαραγωγή FAIL PACKAGE αντί ΚΙΛΟ στο υπάρχον profile μέσω πραγματικών συναρτήσεων· μετά τη στενή διόρθωση προτεραιότητας 14 tests PASS. Όχι νέο OCR ή αλλαγή κοινών κανόνων. Τελευταίο πραγματικό αποτέλεσμα #1251 FAIL, όλα τα νέα POS NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-explicit-conversion-priority.md`.
+
 ## Gate 5 — G5-P10 υπερπληρωμή POS2 +0,01 €, περιορισμένο UI LAB PASS 25/09/2026
 
 - Φυσικό LAB POS2 απέρριψε COFFEE UNION/ΤΔΑ0012183 **344,54 €** έναντι διαθέσιμων **344,53 €** με σαφές μήνυμα. Μετά το τιμολόγιο 344,53 €, owner queue 0, LAB εικονική τράπεζα −43,62 €/αναμονή 0, POS1 1 κίνηση/0 έξοδα, POS2 16 κινήσεις/0,20 € έξοδα και ΚΑΤ 22,36 € ίδια. PASS μόνο client-side UI και απομόνωση· API/race, απόκλιση αποδεικτικού, τελική συμφωνία OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.

@@ -211,7 +211,9 @@ function applySupplierStockConversion(line,mapping={}){
   // PurchaseOrderLine.quantity and unitCost always retain the printed invoice
   // economics. stockUnitsPerInvoiceUnit is the only conversion multiplier; the
   // review UI and stock posting derive stock quantity exactly once from it.
-  return {...line,invoiceQuantity,invoiceUnit,packageUnitPrice,quantity:invoiceQuantity,unit:invoiceUnit,stockUnit,unitsPerPackage:factor,conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,unitPrice:packageUnitPrice,unitCost:packageUnitPrice,netUnitCost:netAmount>0?money4(netAmount/invoiceQuantity):Number(line?.netUnitCost||0),initialAmount,discount1:calculatedDiscount,packageConversionApplied:true,supplierProfileRecovered:true,supplierProfileRule:"SUPPLIER_STOCK_CONVERSION",supplierProfileEvidence:{invoiceQuantity,stockQuantity,conversionFactor:factor,discount1:calculatedDiscount}};
+  // A verified explicit conversion is authoritative even when legacy profiles
+  // omit the redundant unitsPerPackage field. Protect it from product knowledge.
+  return {...line,invoiceQuantity,invoiceUnit,packageUnitPrice,quantity:invoiceQuantity,unit:invoiceUnit,stockUnit,unitsPerPackage:factor,conversionFactor:factor,stockUnitsPerInvoiceUnit:factor,unitPrice:packageUnitPrice,unitCost:packageUnitPrice,netUnitCost:netAmount>0?money4(netAmount/invoiceQuantity):Number(line?.netUnitCost||0),initialAmount,discount1:calculatedDiscount,packageConversionApplied:true,confirmedPackMapping:true,supplierProfileRecovered:true,supplierProfileRule:"SUPPLIER_STOCK_CONVERSION",supplierProfileEvidence:{invoiceQuantity,stockQuantity,conversionFactor:factor,discount1:calculatedDiscount}};
 }
 
 function applyMappings(lines,profile){

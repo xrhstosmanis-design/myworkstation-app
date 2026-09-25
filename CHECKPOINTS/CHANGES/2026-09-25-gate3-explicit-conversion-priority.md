@@ -1,0 +1,11 @@
+# Gate 3 — προτεραιότητα ρητής μετατροπής χωρίς διπλό metadata
+
+Βάση main a6473c2, ίδιος owner Gate 3, branch agent/gate3-explicit-conversion-priority-20260925. Πριν: πραγματικός διαγνωστικός επανέλεγχος #1251 FAIL μονάδων, 3/344,53 € αλλά PACKAGE → ΤΜΧ. Τα #1247/#1248 έχουν πράσινο CI και exact deploy, όχι πλήρη LAB αποδοχή. Διαβάστηκαν οι σχετικές κεντρικές καταγραφές, manual και νέες αλλαγές main.
+
+Συγκεκριμένο κενό: το applyMappings ορίζει confirmedPackMapping μόνο όταν υπάρχει unitsPerPackage, ενώ η ρητή stockConversion.factor ενεργοποιεί ξεχωριστά τη μετατροπή. Το υπάρχον COFFEE_UNION_PROFILE έχει stockConversion αλλά όχι unitsPerPackage. Έτσι η πραγματική applyLearnedKnowledge μπορεί να αντικαταστήσει την ήδη εφαρμοσμένη μονάδα με παλιό product knowledge. Απαιτείται αναπαραγωγή από το υπάρχον profile μέσω και των δύο πραγματικών συναρτήσεων, χωρίς τεχνητή εισαγωγή confirmedPackMapping.
+
+Προστατεύονται: ποσότητα/τιμή τιμολογίου στο POS, μία μετατροπή, πακέτα/τεμάχια, απόρριψη ασύμβατης τυπωμένης μονάδας, μη μετατροπή σκέτου metadata ή μη επιβεβαιωμένου κανόνα. Δεν αλλάζουν OCR, κωδικοί, εκπτώσεις, πληρωμή, stock posting, άλλοι Gates ή κοινά δεδομένα. Το σφάλμα 24,96% και ο πρώτος κωδικός παραμένουν ανοικτά. Διαπρομηθευτικό πριν/μετά όπως ο πίνακας #1251: νέο POS όλων NOT TESTED.
+
+Αναπαραγωγή πριν: το υπάρχον COFFEE_UNION_PROFILE περνά από την πραγματική applyMappings και την πραγματική applyLearnedKnowledge με ελεγχόμενο παλιό knowledge. Η νέα δοκιμή αποτυγχάνει με PACKAGE αντί ΚΙΛΟ. Δεν είναι πραγματικό OCR ή snapshot βάσης. Μετά: η επιτυχώς εφαρμοσμένη verified stockConversion θέτει confirmedPackMapping, ώστε να διατηρούνται οι μονάδες. Node 20: 14 σχετικοί έλεγχοι PASS (5 readback, 5 serializer, 2 Coffee, 2 POS once). Η μη επιβεβαιωμένη μετατροπή και σκέτο metadata δεν αποκτούν προτεραιότητα. Δεν αλλάζει client· πλήρες build/server/isolated E2E αναμένονται στο CI.
+
+Κατάσταση: LOCAL PASS, CI/deploy/LAB NOT TESTED. Δεν αποτελεί πραγματικό LAB PASS. Μετά το exact deploy ελέγχεται το υπάρχον Learning preview χωρίς αποθήκευση/εκμάθηση/διαγραφή, με αρχικό τεκμήριο #1251. Απαιτείται ο editor να δείξει ΚΙΛΟ → GR/ΓΡ για DEL005/ES01000 και να διατηρηθούν οι τρέχουσες ποσότητες και αξίες. Νέο POS και οι άλλοι προμηθευτές παραμένουν NOT TESTED.
