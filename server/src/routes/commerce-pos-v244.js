@@ -890,7 +890,7 @@ router.post("/ai-reader/fast-recover",requireCompanyModule("AI_READER"),async(re
       const completeRecoveryStrategy=completeTableRecoveryStrategy(job,linkedSupplierName);
       const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
-      const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+      const needsReconciliationReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&Number(background.reconciliationDifference)>POS_HANDOFF_TOLERANCE&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
       const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
       const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==completeRecoveryStrategy&&isSafeCompleteTableReplayFailure(job,storedBackgroundError,linkedSupplierName);
       const needsDraftReread=needsReconciliationReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
@@ -933,7 +933,7 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     const retryableFailed=job.status==="POS_FAILED"&&isRetryableBackgroundError(storedBackgroundError);
     const eligibleLegacyDraft=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsLegacyAmbiguityReread=eligibleLegacyDraft&&(hasMantzilasLegacyAmbiguity(job.resultJson?.productLines)||await hasPersistedMantzilasLegacyAmbiguity(req.user.companyId,job));
-    const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&background.reconciliationRequired===true&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
+    const needsAutomaticReread=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED"&&Number(background.reconciliationDifference)>POS_HANDOFF_TOLERANCE&&reprocess.strategy!==POS_REPROCESS_STRATEGY;
     const needsFailedRereadAdvance=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==POS_REPROCESS_STRATEGY&&isSafeInferiorRereadFailure(storedBackgroundError);
     const needsCompleteTableReplayRecovery=job.status==="POS_FAILED"&&Boolean(job.purchaseDocumentId)&&reprocess.strategy!==completeRecoveryStrategy&&isSafeCompleteTableReplayFailure(job,storedBackgroundError,linkedSupplierName);
     const needsDraftReread=needsAutomaticReread||needsLegacyAmbiguityReread||needsFailedRereadAdvance||needsCompleteTableReplayRecovery;
@@ -1005,7 +1005,10 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
     const structuredNet=reconciliation.netTotal;
     if(!(structuredGross>0))return res.status(409).json({error:"Οι γραμμές V2.4.4 δεν έχουν έγκυρα σύνολα. Απαιτείται επανέλεγχος του τιμολογίου."});
     const diff=round2(Math.abs(structuredGross-requestedTotal));
-    const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE;
+    // Five euros is the bounded handoff/recovery guard, not permission to tell
+    // the operator that mismatched economics are OK.  The POS status follows
+    // the same five-cent accounting tolerance shown in BackOffice.
+    const reconciliationRequired=diff>POS_STORED_LINES_TOLERANCE;
     if(reconciliationRequired){
       const reviewNote=`⚠️ ΕΛΕΓΧΟΣ BACKOFFICE: σύνολο γραμμών ${structuredGross.toFixed(2)} €, τιμολόγιο ${requestedTotal.toFixed(2)} €, διαφορά ${diff.toFixed(2)} €. Διόρθωσε τις γραμμές πριν από την έγκριση και την ενημέρωση αποθήκης.`;
       req.body.note=[note,reviewNote].filter(Boolean).join(" • ").slice(0,500);

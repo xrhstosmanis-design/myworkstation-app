@@ -78,6 +78,29 @@ export function shouldApplyLearnedPack(line,learnedPack){
   return Number(learnedPack||0)>1&&Number(line?.unitsPerPackage||0)<=1&&!verifiedPrintedPieces;
 }
 
+export function applyLearnedDiscountsForReconciliation(lines,invoiceTotal){
+  const source=Array.isArray(lines)?lines:[],expected=money2(invoiceTotal);
+  if(!source.length||!(expected>0))return source;
+  let result=source.map(line=>({...line})),grossTotal=productLinesGross(result);
+  for(let index=0;index<result.length;index++){
+    const line=result[index],learned=line?.learnedDiscounts;
+    if(!learned||learned.confirmed!==true||learned.discount1==null)continue;
+    const discounts=[learned.discount1,learned.discount2??0,learned.discount3??0].map(Number);
+    if(discounts.some(value=>!Number.isFinite(value)||value<0||value>100))continue;
+    const quantity=Number(line.quantity||0),unitCost=Number(line.unitCost||0),vatRate=Number(line.vatRate||0),exciseTotal=Math.max(0,Number(line.exciseTotal||0));
+    if(!(quantity>0&&unitCost>=0&&vatRate>=0&&vatRate<=100))continue;
+    const factor=discounts.reduce((value,discount)=>value*(1-discount/100),1);
+    const netAmount=quantity*unitCost*factor;
+    const grossAmount=money2((netAmount+exciseTotal)*(1+vatRate/100));
+    const candidateTotal=money2(grossTotal-Number(line.grossAmount||0)+grossAmount);
+    if(Math.abs(candidateTotal-expected)+0.005>=Math.abs(grossTotal-expected))continue;
+    result[index]={...line,discount1:discounts[0],discount2:discounts[1],discount3:discounts[2],netAmount,grossAmount,
+      learnedDiscountCorrectionApplied:true,learnedDiscountCorrectionSource:"EXACT_SUPPLIER_ITEM_RECONCILIATION"};
+    grossTotal=candidateTotal;
+  }
+  return result;
+}
+
 // Last-resort POS safeguard for a printed line that OCR collapsed because it
 // is identical to another line. Restore it only when exactly one existing line
 // matches the whole invoice gap and the restored total reconciles within five
@@ -181,7 +204,7 @@ async function productsForLines(tx,companyId,supplierId,lines){
     FROM "Product" p WHERE p."companyId"=${companyId} AND p."active"=true`;
   const byBarcode=new Map();
   for(const p of products)for(const barcode of p.barcodes||[])byBarcode.set(String(barcode),p);
-  const mappings=await tx.$queryRaw`SELECT "supplierItemCode","productId","unitsPerPackage" FROM "SupplierProductMapping" WHERE "companyId"=${companyId} AND "supplierId"=${supplierId}`;
+  const mappings=await tx.$queryRaw`SELECT "supplierItemCode","productId","unitsPerPackage","lastDiscount1","lastDiscount2","lastDiscount3","confirmedByUserId" FROM "SupplierProductMapping" WHERE "companyId"=${companyId} AND "supplierId"=${supplierId}`;
   const bySupplierCode=new Map(mappings.map(m=>[norm(m.supplierItemCode),m]));
   const byId=new Map(products.map(p=>[p.id,p]));
   return lines.map(line=>{
@@ -191,7 +214,8 @@ async function productsForLines(tx,companyId,supplierId,lines){
     if(!product&&line.barcode)product=byBarcode.get(String(line.barcode))||null;
     if(!product){const key=norm(line.description);if(key.length>=4)product=products.find(p=>norm(p.name)===key)||products.find(p=>{const pk=norm(p.name);return key.length>=6&&pk.length>=6&&(pk.includes(key)||key.includes(pk))})||null;}
     const learnedPack=Math.max(0,Number(learned?.unitsPerPackage||0)),useLearnedPack=shouldApplyLearnedPack(line,learnedPack);
-    return {...line,product,...(useLearnedPack?{unit:"PACKAGE",unitsPerPackage:learnedPack,packRule:`LEARNED_SUPPLIER_CODE_${learnedPack}`}:{})};
+    const learnedDiscounts=learned?.lastDiscount1==null?null:{discount1:Number(learned.lastDiscount1),discount2:Number(learned.lastDiscount2||0),discount3:Number(learned.lastDiscount3||0),confirmed:Boolean(learned.confirmedByUserId)};
+    return {...line,product,...(learnedDiscounts?{learnedDiscounts}:{}),...(useLearnedPack?{unit:"PACKAGE",unitsPerPackage:learnedPack,packRule:`LEARNED_SUPPLIER_CODE_${learnedPack}`}:{})};
   });
 }
 
@@ -344,9 +368,19 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
         shift=shifts[0]||null;if(!shift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Πληρωμένο τιμολόγιο δεν μπορεί να καταχωρηθεί χωρίς ενεργή βάρδια.");error.status=409;throw error;}
       }
       stage="match-products";
-      const matchedRows=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
+      const mappedRows=await productsForLines(tx,req.user.companyId,body.supplierId,lines);
+      const matchedRows=applyLearnedDiscountsForReconciliation(mappedRows,body.totalGross);
       const centReconciliation=reconcileCentRoundingResidual(matchedRows,body.totalGross);
       const matched=centReconciliation.lines;
+      // Report the economics that will actually be persisted, after exact
+      // supplier-code learning and cent reconciliation.  The wrapper's earlier
+      // result describes provider output and may be stale once these safe rules
+      // have repaired (or exposed) the draft.
+      const persistedGross=productLinesGross(matched),persistedDifference=money2(Math.abs(persistedGross-Number(body.totalGross||0)));
+      body.reconciliationRequired=persistedDifference>0.05;
+      body.reconciliationDifference=body.reconciliationRequired?persistedDifference:0;
+      const baseNote=String(body.note||"").split(" • ⚠️ ΕΛΕΓΧΟΣ BACKOFFICE:")[0];
+      body.note=body.reconciliationRequired?[baseNote,`⚠️ ΕΛΕΓΧΟΣ BACKOFFICE: σύνολο γραμμών ${persistedGross.toFixed(2)} €, τιμολόγιο ${Number(body.totalGross).toFixed(2)} €, διαφορά ${persistedDifference.toFixed(2)} €. Διόρθωσε τις γραμμές πριν από την έγκριση και την ενημέρωση αποθήκης.`].filter(Boolean).join(" • ").slice(0,500):baseNote||null;
       const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId","documentType" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
       if(skeletonRows[0]&&skeletonRows[0].documentType!==body.documentType)throw Object.assign(new Error("Το πρόχειρο έχει διαφορετικό τύπο παραστατικού. Δεν έγινε μετατροπή αγοράς σε πιστωτικό."),{status:409});

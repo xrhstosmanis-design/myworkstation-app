@@ -89,3 +89,19 @@ test('unverified conversion and bare metadata do not gain confirmed conversion p
     assert.equal(row.quantity, 2);
   }
 });
+
+test('an exact Super Admin line correction outranks a conflicting OCR piece unit', () => {
+  const printed = {supplierItemCode:'FR1500',description:'CUP 12OZ',quantity:48,invoiceUnit:'ΤΜΧ',unit:'ΤΜΧ',
+    unitsPerPackage:0,unitPrice:10,netAmount:480,grossAmount:542.40,sourceColumnsVerified:true};
+  const explicit = profileContext.map([printed], {mappings:{FR1500:{supplierItemCode:'FR1500',invoiceUnit:'PACKAGE',
+    stockUnit:'ΤΜΧ',unitsPerPackage:100,verified:true,source:'SUPER_ADMIN_LINE_CORRECTION'}}})[0];
+  assert.equal(explicit.invoiceUnit, 'PACKAGE');
+  assert.equal(explicit.unit, 'PACKAGE');
+  assert.equal(explicit.unitsPerPackage, 100);
+  assert.equal(explicit.confirmedPackMapping, true);
+
+  const legacy = profileContext.map([printed], {mappings:{FR1500:{supplierItemCode:'FR1500',invoiceUnit:'PACKAGE',
+    stockUnit:'ΤΜΧ',unitsPerPackage:100,verified:true}}})[0];
+  assert.equal(legacy.invoiceUnit, 'ΤΜΧ');
+  assert.equal(legacy.confirmedPackMapping, undefined);
+});

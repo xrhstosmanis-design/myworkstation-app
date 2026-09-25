@@ -269,7 +269,7 @@ test("a multipage invoice is blocked rather than saved empty when no product lin
 });
 
 test("a total mismatch is created as a BackOffice draft without stock posting",()=>{
-  assert.match(wrapper,/const reconciliationRequired=diff>POS_HANDOFF_TOLERANCE/);
+  assert.match(wrapper,/const reconciliationRequired=diff>POS_STORED_LINES_TOLERANCE/);
   assert.doesNotMatch(wrapper,/if\(diff>POS_HANDOFF_TOLERANCE\)return res\.status\(409\)/);
   assert.match(wrapper,/ΕΛΕΓΧΟΣ BACKOFFICE/);
   assert.match(intake,/reconciliationRequired:z\.boolean\(\)\.optional\(\)\.default\(false\)/);
@@ -277,8 +277,8 @@ test("a total mismatch is created as a BackOffice draft without stock posting",(
   assert.match(intake,/reconciliationRequired:body\.reconciliationRequired/);
   assert.match(intake,/stockUpdated:false/);
   assert.match(client,/result\.reconciliationRequired/);
-  assert.match(client,/δημιουργήθηκε πρόχειρο με \$\{lineCount\} γραμμές, αλλά ο οικονομικός έλεγχος έχει διαφορά/);
-  assert.match(client,/Δεν θεωρείται ολοκληρωμένο/);
+  assert.match(client,/πέρασε κανονικά στο BackOffice ως πρόχειρο με \$\{lineCount\} γραμμές/);
+  assert.match(client,/χρειάζεται διόρθωση πριν από έγκριση ή αποθήκη/);
 });
 
 test("all page attachments are archived only after the single purchase is created",()=>{

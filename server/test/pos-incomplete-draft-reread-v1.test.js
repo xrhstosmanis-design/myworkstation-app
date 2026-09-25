@@ -28,7 +28,7 @@ test("a stranded AI_COMPLETE multipage handoff resumes from its stored lines",()
 test("a completed mismatched POS draft gets one full reread from its durable pages",()=>{
   const recover=wrapper.slice(wrapper.indexOf('router.post("/ai-reader/fast-recover"'),wrapper.indexOf('router.get("/ai-reader/fast-status'));
   assert.match(recover,/OR "status"='AWAITING_APPROVAL'/);
-  assert.match(recover,/background\.reconciliationRequired===true&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
+  assert.match(recover,/Number\(background\.reconciliationDifference\)>POS_HANDOFF_TOLERANCE&&reprocess\.strategy!==POS_REPROCESS_STRATEGY/);
   assert.match(recover,/mode:"RECONCILIATION_REREAD",strategy:needsCompleteTableReplayRecovery\?completeRecoveryStrategy:POS_REPROCESS_STRATEGY,attemptedAt:/);
   assert.match(recover,/resumeStoredProductLines:false,replaceExistingDraft:true/);
 });
