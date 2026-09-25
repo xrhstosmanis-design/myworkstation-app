@@ -72,4 +72,6 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       status.textContent=`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. Τυπωμένο πληρωτέο ${euro(source.document.totalGross)} €.`;
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
+  overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
+  overlay.querySelector("[data-ask]").click();
 }
