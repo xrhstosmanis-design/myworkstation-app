@@ -5,7 +5,7 @@ if(path==='/platform-admin/invoice-learning-lab'){
   const root=document.getElementById('root');
   const token=()=>localStorage.getItem('token')||'';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-  const money=v=>{const x=String(v??'').trim().replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.').replace(/[^0-9.-]/g,'');const n=Number(x);return Number.isFinite(n)?n:null};
+  const money=v=>{if(typeof v==='number')return Number.isFinite(v)?v:null;const raw=String(v??'').trim(),normalized=raw.includes(',')?raw.replace(/\./g,'').replace(',','.'):raw;const x=normalized.replace(/[^0-9.-]/g,'');const n=Number(x);return Number.isFinite(n)?n:null};
   const pct=(price,a,b,c)=>price==null?null:price*(1-(a||0)/100)*(1-(b||0)/100)*(1-(c||0)/100);
   const storeKey='mws_invoice_learning_lab_v1';
   const state=(()=>{try{return JSON.parse(localStorage.getItem(storeKey)||'null')||{documents:[],profiles:{},master:[]}}catch{return {documents:[],profiles:{},master:[]}}})();
