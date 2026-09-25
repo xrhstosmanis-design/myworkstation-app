@@ -1,6 +1,6 @@
 # Gate 4 — έκπτωση στο επιλεγμένο ενεργό Master προϊόν · 25/09/2026
 
-**Κατάσταση: CODE READY / CI PENDING / LAB NOT TESTED.** Ανεξάρτητη υποεργασία `agent/gate4-master-audience-discount-20260925` εντός Gate 4. Δεν ανοίγει ξανά η ήδη δοκιμασμένη γενική κάρτα δικαιούχου ή η εκτύπωση NON_FISCAL.
+**Κατάσταση: CI #3066 PASS / PR #1209 merged / exact Render `99ee5482f51ee3130df99493988127ee2c342ceb` verified / LAB NOT TESTED.** Ανεξάρτητη υποεργασία `agent/gate4-master-audience-discount-20260925` εντός Gate 4. Δεν ανοίγει ξανά η ήδη δοκιμασμένη γενική κάρτα δικαιούχου ή η εκτύπωση NON_FISCAL.
 
 ## Νεότερη πραγματική παρατήρηση
 
