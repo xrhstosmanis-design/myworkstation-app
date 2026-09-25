@@ -10,6 +10,9 @@ test("Invoice Learning confirms only reconciled economics and completed central 
   assert.match(client,/await persistWorkspaceNow\(\{syncProfiles:true\}\);save\(\)/);
   assert.match(client,/const syncConfirmedInvoiceIdentity=.*current\.invoiceNo=.*current\.invoiceDate=/);
   assert.match(client,/\$\('#learn'\)\.addEventListener\('click',syncConfirmedInvoiceIdentity,true\)/);
+  assert.match(client,/const learnedForProfile=state\.documents\.filter/);
+  assert.match(client,/p\.documents=learnedForProfile\.length;p\.lines=learnedForProfile\.reduce/);
+  assert.doesNotMatch(client,/p\.documents\+\+;p\.lines\+=active\.length/);
   assert.match(client,/Η εκμάθηση και το προφίλ αποθηκεύτηκαν κεντρικά για όλα τα καταστήματα/);
   assert.match(client,/state\.documents=before\.documents;state\.profiles=before\.profiles/);
   assert.match(client,/p\.mappings=p\.mappings\|\|\{\}/);
