@@ -8,6 +8,8 @@ test("Invoice Learning confirms only reconciled economics and completed central 
   assert.match(client,/Math\.abs\(calculated-declared\)>\.05/);
   assert.match(client,/Math\.abs\(expected-actual\)>Math\.max\(\.05,actual\*\.002\)/);
   assert.match(client,/await persistWorkspaceNow\(\{syncProfiles:true\}\);save\(\)/);
+  assert.match(client,/const syncConfirmedInvoiceIdentity=.*current\.invoiceNo=.*current\.invoiceDate=/);
+  assert.match(client,/\$\('#learn'\)\.addEventListener\('click',syncConfirmedInvoiceIdentity,true\)/);
   assert.match(client,/Η εκμάθηση και το προφίλ αποθηκεύτηκαν κεντρικά για όλα τα καταστήματα/);
   assert.match(client,/state\.documents=before\.documents;state\.profiles=before\.profiles/);
   assert.match(client,/p\.mappings=p\.mappings\|\|\{\}/);
