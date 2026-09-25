@@ -1,6 +1,7 @@
 import {prisma} from "../prisma.js";
 import {applyConfirmedColumns,recoverLeventopoulosMmPos1Columns,recoverStefanidisFoodLine,unitRelativeValues} from "./invoice-column-reading.js";
 import {recoverFreshSnackWrappedLines} from "./invoice-fresh-snack-wrapped-lines.js";
+import {applyVerifiedCodeCorrections} from "./invoice-explicit-code-rules.js";
 
 const cleanTaxId=v=>String(v||"").replace(/\D/g,"");
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g,"");
@@ -250,6 +251,7 @@ export async function applyCentralSupplierProfile(parsed){
   if(profile?.readingRule?.layoutMode==="DECLARED_COLUMNS")productLines=productLines.map(line=>recoverDeclaredColumns(line,profile));
   if(profile?.readingRule?.quantityMode==="LINE_TOTAL_MATCH")productLines=productLines.map(line=>line.sourceColumnMap?line:recoverQuantityFromLineTotal(line));
   productLines=productLines.map(line=>{const source=unitRelativeValues(sourceRow(line)),signature=source?Object.keys(source.values).join(","):"",columns=profile.readingRule?.confirmedColumnLayouts?.[signature];return columns&&!line.sourceColumnMap?applyConfirmedColumns(line,columns):line});
+  productLines=applyVerifiedCodeCorrections(productLines,profile);
   productLines=applyMappings(productLines,profile);
   // Existing LAB installations may already hold the first version of this
   // profile.  The fail-closed rule is intrinsic to this layout, so expose it
