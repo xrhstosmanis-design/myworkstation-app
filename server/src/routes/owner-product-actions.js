@@ -49,6 +49,18 @@ router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=
   }catch(error){next(error)}
 });
 
+router.get("/audience-discount-audit",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
+    const query=z.object({storeId:z.string().min(1),audience:z.enum(["DOCTOR","NURSE","STAFF","CUSTOMER"])}).parse(req.query);
+    const store=await prisma.store.findFirst({where:{id:query.storeId,companyId:company},select:{id:true}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    await ensureAudienceDiscountTables();
+    const rows=await prisma.$queryRaw`SELECT "id","storeId","audience","discountPercent","productIds","actorId","createdAt" FROM "StoreProductAudienceDiscountAudit" WHERE "companyId"=${company} AND "storeId"=${store.id} AND "audience"=${query.audience} ORDER BY "createdAt" DESC LIMIT 30`;
+    res.json({items:rows.map(row=>({...row,discountPercent:Number(row.discountPercent)}))});
+  }catch(error){next(error)}
+});
+
 router.put("/bulk-audience-discount",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});await ensureAudienceDiscountTables();
