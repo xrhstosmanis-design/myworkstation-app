@@ -61,6 +61,7 @@ const tableStatements=[
     "operatorId" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
     "storeId" TEXT NOT NULL,
+    "terminalPos" TEXT,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "lastSeenAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "expiresAt" TIMESTAMPTZ NOT NULL,
@@ -68,6 +69,7 @@ const tableStatements=[
     "userAgent" TEXT,
     "ipAddress" TEXT
   )`,
+  `ALTER TABLE "StoreOperatorSession" ADD COLUMN IF NOT EXISTS "terminalPos" TEXT`,
   `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_operator_active_idx"
    ON "StoreOperatorSession" ("operatorId","expiresAt") WHERE "revokedAt" IS NULL`,
   `CREATE INDEX IF NOT EXISTS "StoreOperatorSession_expiry_idx"
@@ -200,11 +202,27 @@ function operatorToken(row,sessionId){
 async function createOperatorSession(req,row){
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
-  await prisma.$executeRaw`
-    INSERT INTO "StoreOperatorSession"
-      ("id","operatorId","companyId","storeId","expiresAt","userAgent","ipAddress")
-    VALUES (${sessionId},${row.id},${row.companyId},${row.storeId},${expiresAt},${req.headers["user-agent"]||null},${req.ip||null})
-  `;
+  await prisma.$transaction(async tx=>{
+    // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
+    await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id} FOR UPDATE`;
+    const other=(await tx.$queryRaw`
+      SELECT "terminalPos" FROM "StoreOperatorSession"
+      WHERE "operatorId"=${row.id} AND "storeId"=${row.storeId}
+        AND "revokedAt" IS NULL AND "expiresAt">NOW()
+        AND "terminalPos" IS NOT NULL AND "terminalPos"<>${row.terminalPos}
+      LIMIT 1
+    `)[0];
+    if(other){
+      const error=new Error(`Ο χειριστής είναι ήδη συνδεδεμένος στο ${other.terminalPos}. Αποσυνδεθείτε εκεί πριν χρησιμοποιήσετε άλλο POS.`);
+      error.status=409;
+      throw error;
+    }
+    await tx.$executeRaw`
+      INSERT INTO "StoreOperatorSession"
+        ("id","operatorId","companyId","storeId","terminalPos","expiresAt","userAgent","ipAddress")
+      VALUES (${sessionId},${row.id},${row.companyId},${row.storeId},${row.terminalPos||null},${expiresAt},${req.headers["user-agent"]||null},${req.ip||null})
+    `;
+  });
   return sessionId;
 }
 async function assertOperatorTerminalAvailable(operator){
