@@ -1,3 +1,7 @@
+## 26/09/2026 — Render startup Workforce payroll / LAB FAIL, AWAITING CI + DEPLOY
+
+Στο τελευταίο deploy του merge `158806f`, το Render απέτυχε στην εκκίνηση: Prisma P2010/42P01, `relation "WorkforcePayrollLine" does not exist` στο `ensure-workforce-v2-schema.js`. Το δημόσιο `/api/health` εξακολουθούσε να αναφέρει `b9ddca396af0caae744820e4268bddbcfce718bb`. PR #1316 προσθέτει μόνο ελλείποντες πίνακες Payroll πριν από τα ήδη υπάρχοντα ALTER/INDEX. Τοπικό `node --check` PASS· CI, ακριβές Render revision και πραγματικό POS invoice LAB NOT TESTED. Δεν υπάρχει Gate 3 PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-render-workforce-startup-failure.md`.
+
 ## 26/09/2026 — Gate 3: ρυθμισμένο μοντέλο βοηθού / AWAITING CI-LAB
 
 Μετά το merged PR #1314 (CI #3333 PASS) ο βοηθός πρέπει να χρησιμοποιεί τη ρύθμιση `OPENAI_INVOICE_MODEL=gpt-5` που υπάρχει ήδη στο Render, με δυνατότητα ειδικής παράκαμψης `OPENAI_INVOICE_ASSISTANT_MODEL`. Μικρή αλλαγή στο branch `agent/gate3-invoice-assistant-configured-model-20260926`· νέο CI, πραγματικό deploy και LAB εκκρεμούν. Καμία δήλωση LAB PASS.
