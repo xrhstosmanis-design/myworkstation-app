@@ -1,9 +1,9 @@
-# Gate 8 — Χειριστές, ρόλοι και τελική ασφάλεια — ΑΝΑΤΕΘΗΚΕ
+# Gate 8 — Χειριστές, ρόλοι και τελική ασφάλεια — ΤΕΛΙΚΟ CHECKPOINT OPEN
 
 ## Ιδιοκτησία
 
 - Branch: `agent/gate8-roles-security-20260925`
-- Κατάσταση: **OPEN / ΑΝΑΤΕΘΗΚΕ**
+- Κατάσταση: **OPEN — 9/11 γραμμές production PASS, 2/11 εκκρεμούν**
 - Η ανάληψη έγινε στις 25/09/2026 μετά τη ρητή επιβεβαίωση του ιδιοκτήτη ότι το Gate 7 έχει ήδη PASS.
 - Δεν αγγίζει Gate 3, Gate 4 ή Gate 6, τα οποία ανήκουν σε άλλες σελίδες.
 
@@ -74,4 +74,26 @@
 - **LAB FAIL άδεια Online Store:** με `EXPIRED` άδεια, το δημόσιο Online Store συνέχισε να εμφανίζει προϊόν και checkout. Αιτία: οι δύο public online routes έλεγχαν μόνο το company module και όχι `licenseAllowed` ή `StorePaidModule` override.
 - **Τοπική διόρθωση:** και οι δύο public online routes χρησιμοποιούν πλέον το κεντρικό `companyModuleState`, απορρίπτουν μη ενεργή άδεια και εφαρμόζουν fail-closed store override μέσω `effectiveModuleEnabled`.
 - **Αρχική κατάσταση αποκαταστάθηκε:** LAB `ACTIVE`, Enterprise, 20 modules, χωρίς ημερομηνία λήξης. ΚΑΤ αμετάβλητο.
-- Νέο CI/deploy και επανάληψη της ληγμένης άδειας στο public Online Store εκκρεμούν. Gate 8 παραμένει OPEN.
+- **CI/deploy PASS:** PR #1301, CI #3292 και ακριβές Render revision `dd8be5757f1435bd1c2036be0df2dfc115186a6d`.
+- **Production retest PASS:** με προσωρινή άδεια `EXPIRED` απορρίφθηκαν πλέον και το POS και το public Online Store με σαφές μήνυμα ληγμένης/ανεσταλμένης άδειας.
+- **Τελική επαναφορά PASS:** LAB `ACTIVE`, Enterprise, 20 modules, χωρίς ημερομηνία λήξης· Online Store και POS λειτουργούν ξανά. Το προσωρινό `TABLE_SERVICE` επιβεβαιώθηκε τελικά **ΑΝΕΝΕΡΓΟ**, όπως στην αρχική κατάσταση.
+
+## 25/09/2026 — ενιαίο τελικό checkpoint
+
+| Γραμμή αποδοχής | Τελικό αποτέλεσμα | Παραγωγικό τεκμήριο |
+|---|---|---|
+| Super Admin / 2FA / κεντρική εποπτεία | **PASS** | Πραγματική authenticated συνεδρία, access matrix και κεντρικό Audit. |
+| Owner μόνο στο tenant του | **OPEN** | Το support-scoped cross-tenant URL απορρίφθηκε, αλλά δεν έγινε ακόμη δοκιμή με πραγματική Owner συνεδρία. |
+| Owner μόνο ενεργά πληρωμένα modules | **OPEN** | Company module και license έχουν production PASS· πραγματικό `StorePaidModule` override δεν έχει ακόμη μεταβληθεί και επαναφερθεί στο LAB. |
+| Manager μόνο επιτρεπόμενες λειτουργίες | **PASS** | Προσωρινός Manager μπήκε στο σωστό POS με το σωστό profile. |
+| Employee χωρίς BackOffice/Power User | **PASS** | Οι πραγματικοί Employee/Seller εμφανίζουν POS πρόσβαση και όχι BackOffice/Power User. |
+| PIN/κάρτα χωρίς αποκάλυψη μυστικού | **PASS** | UI/API εκθέτουν μόνο κατάσταση/last4· κανένα PIN, hash ή πλήρης κάρτα στο Audit. |
+| Tenant isolation | **PASS με ένα Owner follow-up** | Support token προς ξένο tenant απορρίφθηκε και τα αυτοματοποιημένα isolation tests περνούν. Η πραγματική Owner συνεδρία παραμένει η παραπάνω ανοικτή γραμμή. |
+| Store isolation | **PASS** | Store-bound operator/session και cross-store guards πέρασαν στο security pack και στο πραγματικό POS lifecycle. |
+| Module isolation | **PASS** | Προσωρινό `ONLINE_ORDERING` 20→19 έκοψε το public store και η επαναφορά 19→20 το αποκατέστησε. |
+| Λήξη άδειας/συνδρομής | **PASS** | `ACTIVE`→`EXPIRED` έκοψε POS και public Online Store στο `dd8be575`, μετά πλήρης επαναφορά. |
+| Audit αλλαγών/χειριστών | **PASS** | PR #1298, CI #3285, Render `41e044ebb122f109ae3a4b3dfaee657dfe9b704b`: δημιουργία, PIN login και απενεργοποίηση εμφανίζονται κεντρικά με ασφαλές metadata. |
+
+### Συμπέρασμα
+
+Το Gate 8 **δεν κλείνει ακόμη ως PASS**. Απομένουν μόνο δύο πραγματικές δοκιμές: (1) authenticated Owner cross-tenant/module έλεγχος και (2) προσωρινό πραγματικό `StorePaidModule` override με απόδειξη απόρριψης και πλήρη επαναφορά. Δεν απαιτείται επανάληψη των άλλων εννέα γραμμών.
