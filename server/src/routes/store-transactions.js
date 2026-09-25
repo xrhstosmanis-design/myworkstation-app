@@ -5,6 +5,7 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import { sendLedgerAlertEmail } from "../services/mail.js";
 import { expenseReviewStatus } from "./expense-review-policy.js";
+import { readBankDepositProofPdf, readSupplierProofPdf, supplierProofMismatch } from "./supplier-proof-pdf-check.js";
 
 const router=Router();
 let tablesPromise;
@@ -479,6 +480,10 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId),body=supplierSettlementSchema.parse(req.body||{});
   const attachment=parseAttachment(body.attachment);
   const total=Number(body.allocations.reduce((sum,row)=>sum+Number(row.amount||0),0).toFixed(2));
+  const proof=attachment.mimeType==="application/pdf"
+    ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
+  const proofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod});
+  if(proofError)return res.status(400).json({error:proofError});
   const distinct=new Set(body.allocations.map(row=>row.purchaseDocumentId));
   if(distinct.size!==body.allocations.length)return res.status(400).json({error:"Κάθε τιμολόγιο μπορεί να επιλεγεί μία φορά στην ίδια πληρωμή."});
   const paymentSource=body.paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
@@ -503,6 +508,8 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
       FOR UPDATE
     `;
     if(documents.length!==documentIds.length){const error=new Error("Επιλέχθηκε τιμολόγιο που δεν είναι πλέον ανοιχτή οφειλή του προμηθευτή.");error.status=409;throw error}
+    const invoiceProofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod,documentNumbers:documents.map(document=>document.documentNumber).filter(Boolean)});
+    if(invoiceProofError){const error=new Error(invoiceProofError);error.status=400;throw error}
     for(const allocation of body.allocations){
       const document=documents.find(row=>row.id===allocation.purchaseDocumentId);
       const allocated=await tx.$queryRaw`
@@ -598,6 +605,8 @@ router.get("/stores/:storeId/bank-deposits/pending-proof",route(async(req,res)=>
 router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
   const body=z.object({attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}),proofAmount:z.coerce.number().positive().max(999999999).optional()}).parse(req.body||{});
   const attachment=parseAttachment(body.attachment);
+  const parsedAmount=attachment.mimeType==="application/pdf"
+    ?await readBankDepositProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
   const result=await prisma.$transaction(async tx=>{
     const found=await tx.$queryRaw`SELECT "id","storeId","companyId" FROM "BankLedgerEntry" WHERE "id"=${req.params.entryId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(!found[0])return [];
@@ -606,16 +615,20 @@ router.post("/bank-ledger/:entryId/attachment",route(async(req,res)=>{
     // are still awaiting their first proof and must be uploadable exactly once.
     const pending=await tx.$queryRaw`SELECT "id","companyId","storeId","amount","sourceTransactionId" FROM "BankLedgerEntry" WHERE "id"=${found[0].id} AND "status" IN ('PENDING_PROOF','PENDING_REVIEW') AND "attachmentData" IS NULL FOR UPDATE`;
     if(!pending[0])return [];
-    const expectedAmount=Number(pending[0].amount||0),proofAmount=Number(body.proofAmount??expectedAmount),difference=Number((proofAmount-expectedAmount).toFixed(2)),status=Math.abs(difference)>.005?'DISCREPANCY':'CONFIRMED';
-    const note=status==='CONFIRMED'?'Αυτόματη αντιστοίχιση απόδειξης κατάθεσης':`Αυτόματη απόκλιση αποδεικτικού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount.toFixed(2)} €, διαφορά ${difference.toFixed(2)} €.`;
-    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"proofAmount"=${proofAmount},"status"=${status},"reviewedBy"=${req.user.id},"reviewedAt"=NOW(),"reviewNote"=${note} WHERE "id"=${pending[0].id} RETURNING "id","status","companyId","storeId","amount","proofAmount"`;
+    const expectedAmount=Number(pending[0].amount||0),proofAmount=parsedAmount??body.proofAmount??null;
+    const difference=proofAmount==null?0:Number((proofAmount-expectedAmount).toFixed(2));
+    const declaredDifference=parsedAmount!=null&&body.proofAmount!=null?Number((body.proofAmount-parsedAmount).toFixed(2)):0;
+    const status=Math.abs(difference)>.005||Math.abs(declaredDifference)>.005?'DISCREPANCY':parsedAmount!=null?'CONFIRMED':'PENDING_REVIEW';
+    const note=status==='CONFIRMED'?'Συμφωνία με ποσό αναγνωσμένου αποδεικτικού PDF':status==='DISCREPANCY'?`Διαφορά ποσού: κατάθεση ${expectedAmount.toFixed(2)} €, αποδεικτικό ${proofAmount?.toFixed(2)} €, δηλωμένο ${body.proofAmount?.toFixed(2)??'άγνωστο'} €.`:'Το περιεχόμενο του αποδεικτικού δεν αναγνωρίστηκε. Απαιτείται ανθρώπινος έλεγχος.';
+    const reviewedBy=status==='PENDING_REVIEW'?null:req.user.id;
+    const updated=await tx.$queryRaw`UPDATE "BankLedgerEntry" SET "attachmentData"=${attachment.dataUrl},"attachmentMimeType"=${attachment.mimeType},"attachmentFilename"=${attachment.filename},"proofAmount"=${proofAmount},"status"=${status},"reviewedBy"=${reviewedBy},"reviewedAt"=${status==='PENDING_REVIEW'?null:new Date()},"reviewNote"=${note} WHERE "id"=${pending[0].id} RETURNING "id","status","companyId","storeId","amount","proofAmount"`;
     await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    const auditDetails={bankLedgerEntryId:updated[0].id,transactionId:pending[0].sourceTransactionId,expectedAmount,proofAmount,difference,attachmentFilename:attachment.filename};
+    const auditDetails={bankLedgerEntryId:updated[0].id,transactionId:pending[0].sourceTransactionId,expectedAmount,proofAmount,declaredAmount:body.proofAmount??null,difference,declaredDifference,attachmentFilename:attachment.filename,proofSource:parsedAmount==null?'DECLARED_OR_UNREADABLE':'PDF_TEXT'};
     await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},'BANK_DEPOSIT_PROOF_UPLOADED',${JSON.stringify(auditDetails)}::jsonb)`;
-    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify(auditDetails)}::jsonb)`;
+    if(status!=='PENDING_REVIEW')await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${updated[0].companyId},${updated[0].storeId},${req.user.operatorId||req.user.id},${req.user.id},${status==='CONFIRMED'?'BANK_DEPOSIT_AUTO_MATCHED':'BANK_DEPOSIT_PROOF_DISCREPANCY'},${JSON.stringify(auditDetails)}::jsonb)`;
     return {...updated[0],difference};
   });
-  if(!result)return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
+  if(!result?.id)return res.status(409).json({error:"Η απόδειξη έχει ήδη ανέβει ή η κίνηση δεν είναι πλέον σε αναμονή."});
   res.json({ok:true,status:result.status,automaticMatch:result.status==="CONFIRMED",proofAmount:Number(result.proofAmount||0),difference:Number(result.difference||0)});
 }));
 
