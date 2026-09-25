@@ -1187,3 +1187,8 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 - [x] Τοπικό τεχνικό αποτέλεσμα Gate 6: **68 PASS / 0 FAIL**· πακέτο `online-store-*.test.js`: **21 PASS / 0 FAIL**.
 - [ ] PR #1297 / CI σε αναμονή. Μετά από πράσινο deploy θα γίνει μία συγκεντρωτική φυσική παραγγελία με πλήρες πριν/μετά σε POS, stock και Audit.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-25-gate6-online-delivery-assignment.md`.
+
+
+## 25/09/2026 — Gate 8 lifecycle χειριστών και κεντρικό Audit — CI PENDING
+
+Πραγματικό LAB: προσωρινός Manager δημιουργήθηκε, μπήκε με PIN στο σωστό κατάστημα/POS και μετά την απενεργοποίηση η ενεργή συνεδρία ανακλήθηκε αμέσως· ο λογαριασμός διατηρήθηκε ανενεργός για ιστορικό. Οι πραγματικοί Employee/Seller έχουν POS πρόσβαση χωρίς BackOffice/Power User, ενώ PIN και πλήρης κάρτα δεν αποκαλύπτονται στο UI. Εντοπίστηκε πραγματικό FAIL: τα ήδη καταγεγραμμένα lifecycle rows δεν εμφανίζονταν στο κεντρικό Audit. PR #1298 προσθέτει δημιουργία, αλλαγή προφίλ/ρόλου, αλλαγή PIN, είσοδο PIN/κάρτας, έξοδο και απενεργοποίηση με αυστηρή allow-list metadata χωρίς PIN/hashes/πλήρη κάρτα. 13/13 στοχευμένα tests PASS· πλήρες CI, deploy και production readback εκκρεμούν. Owner cross-tenant και πραγματική λήξη άδειας/store override παραμένουν NOT TESTED. Συνολικό Gate 8 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate8-operator-lifecycle-audit.md`.
