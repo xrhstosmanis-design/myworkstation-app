@@ -1,3 +1,8 @@
+## 2026-09-25 — Gate 4 Master έκπτωση: ατομική αποθήκευση USER PASS / μαζική επιλογή AWAITING CI + LAB
+
+- [x] Εικόνα 09:15: πράσινο αποτέλεσμα «Αποθηκεύτηκε έκπτωση 10% … σε 1 προϊόν» για ενεργό ΝΕΡΟ 500ML 2269-5201219000118, LAB / Ιατροί. PASS μόνο για απάντηση αποθήκευσης· rule before/after, Audit και POS εφαρμογή NOT TESTED. Δεν επαναλαμβάνεται η ίδια αποθήκευση για τεκμηρίωση.
+- [ ] Νέα απαίτηση: ίδια φόρμα «Ένα προϊόν / Μαζικά», checkbox ενεργών προϊόντων, μετρητής/επιβεβαίωση. Κώδικας σε `agent/gate4-master-bulk-audience-20260925`, μαζική χρήση AWAITING CI/MERGE/DEPLOY/LAB. Συνολικό Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`.
+
 ## 2026-09-25 — Gate 5 G5-P03 πληρωμή χειριστή από ενεργή βάρδια — LAB PASS περιορισμένου scope
 
 - [x] LAB POS 2 / FRESH DELICACIES / ΒΒ 6529: 0,10 € μετρητά και PDF, μία αναμονή ιδιοκτήτη, μία έγκριση, οφειλή 47,02→46,92 €, έξοδο σωστής βάρδιας 0,00→0,10 €, εικονική τράπεζα 3,20 € και LAB POS 1 αμετάβλητα, audit 08:46 με ορθό παραστατικό. Ξεχωριστή πώληση 0,90 € εξηγεί τις πωλήσεις μετρητών POS 2 3,80→4,70 €· 10→12 κινήσεις συνολικά. Το προηγούμενο OPEN για πληρωμή χειριστή στο G5-P02 έχει κλείσει μόνο για αυτό το σενάριο. **Συνολικό Gate 5 OPEN.** Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md` · manual `docs/manual/payments/PASS.md` · roadmap/PDF ενημερωμένα.

@@ -24,6 +24,14 @@
 .op-search input{flex:1}
 .op-search input,.op-form input,.op-form select,.op-box>label input,.store-price input,.vat-row input{border:1px solid #ccd8e4;border-radius:10px;padding:10px;font:inherit;box-sizing:border-box}
 .op-list{display:grid;gap:6px;margin-top:12px;max-height:520px;overflow:auto}
+.op-master-result{display:flex;align-items:center;gap:8px}
+.op-master-select{display:flex;align-items:center;justify-content:center;flex:none;padding:8px;margin:0!important}
+.op-master-select input{width:18px;height:18px;cursor:pointer}
+.op-master-select input:disabled{cursor:not-allowed}
+.op-master-selection{font-size:13px;color:#475569;font-weight:700}
+.op-discount-mode{display:flex;gap:8px;flex-wrap:wrap}
+.op-discount-mode button{padding:9px 12px;border:1px solid #aebdcb;border-radius:9px;background:#fff;cursor:pointer;font-weight:700}
+.op-discount-mode button.active{border-color:#0f766e;background:#e5f7f1;color:#075e48}
 .product-quality-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;border-radius:11px}
 .product-quality-summary>div{display:grid;gap:2px}.product-quality-summary small{color:inherit;opacity:.85}
 .product-quality-summary.warning{background:#fff3cd;color:#765800}.product-quality-summary.ok{background:#dcfce7;color:#166534}
