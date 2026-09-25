@@ -80,7 +80,7 @@ function recoverQuantityFromLineTotal(line){
 
 const unitWords=new Set(["TEM","ΤΕΜ","TM","ΤΜ","TMX","ΤΜΧ","PCS","PC","KIB","ΚΙΒ","KΒ","ΚΒ","KG","ΚG","ΚΙΛΑ","LT","LIT","ΦΑΚ"]);
 const parseNumber=value=>{const n=Number(String(value||"").replace(",","."));return Number.isFinite(n)?n:null};
-const wordsOf=line=>String(sourceRow(line)).trim().split(/\s+/).filter(Boolean);
+const wordsOf=line=>String(sourceRow(line)).replace(/(\d),\s+(\d{3})(?=\s|$)/g,"$1.$2").trim().split(/\s+/).filter(Boolean);
 const numericNear=(words,start,direction)=>{
   for(let i=start;i>=0&&i<words.length;i+=direction){const n=parseNumber(words[i]);if(n!==null)return n}
   return null;
@@ -102,6 +102,30 @@ function recoverDeclaredColumns(line,profile){
   const words=wordsOf(line);if(!words.length)return line;
   let unitIndex=words.findIndex(word=>unitWords.has(norm(word)));
   if(unitIndex<0){unitIndex=words.findIndex(word=>/^(TEM|ΤΕΜ|TM|ΤΜ|TMX|ΤΜΧ|PCS|KIB|ΚΙΒ|KG|ΚG|LT|ΦΑΚ)$/i.test(word))}
+  // Azure can return the same DELTA table in visual reading order, with the
+  // unit immediately before the economics, instead of the supplier's declared
+  // column order. OCR also commonly reads TM as TH, IN or IM. Prove the row
+  // from quantity × price × discounts = net and net + VAT = gross before
+  // accepting this alternate order; otherwise leave the provider result alone.
+  if(unitIndex<0&&norm(profile?.commercialFamily)==='ΔΕΛΤΑ')unitIndex=words.findIndex(word=>/^(TH|IN|IM)$/i.test(word));
+  if(unitIndex>=0&&indexOf('DISCOUNT_1')>0&&indexOf('DISCOUNT_2')>0&&indexOf('AMOUNT_AFTER_DISCOUNT')>0&&indexOf('VAT_RATE')>0){
+    const tail=words.slice(unitIndex+1).map((word,index)=>({value:parseNumber(word),index})).filter(item=>item.value!==null),quantity=tail[0]?.value,candidates=[];
+    if(quantity>0&&tail.length>=7){
+      const rest=tail.slice(1),vatValues=new Set([0,6,13,17,24]);
+      for(const price of rest)for(const d1 of rest)for(const d2 of rest)for(const net of rest)for(const vat of rest)for(const gross of rest){
+        if(new Set([price.index,d1.index,d2.index,net.index,vat.index,gross.index]).size<6||d1.index>d2.index)continue;
+        if(!(price.value>0&&d1.value>=0&&d1.value<=100&&d2.value>=0&&d2.value<=100&&net.value>0&&gross.value>=net.value&&vatValues.has(vat.value)))continue;
+        const calculated=quantity*price.value*(1-d1.value/100)*(1-d2.value/100),calculatedGross=net.value*(1+vat.value/100);
+        if(!close(calculated,net.value,Math.max(.011,net.value*.002))||!close(calculatedGross,gross.value,Math.max(.011,gross.value*.002)))continue;
+        candidates.push({quantity,unitPrice:price.value,discount1:d1.value,discount2:d2.value,netAmount:net.value,vatRate:vat.value,grossAmount:gross.value});
+      }
+    }
+    const unique=[...new Map(candidates.map(candidate=>[[candidate.quantity,candidate.unitPrice,candidate.discount1,candidate.discount2,candidate.netAmount,candidate.vatRate,candidate.grossAmount].join('|'),candidate])).values()];
+    if(unique.length===1){
+      const x=unique[0],unit=words[unitIndex];
+      return {...line,quantity:x.quantity,invoiceQuantity:x.quantity,unitPrice:money4(x.unitPrice),unitCost:money4(x.unitPrice),initialAmount:money2(x.quantity*x.unitPrice),invoiceUnit:unit,unit,netAmount:money2(x.netAmount),netValue:money2(x.netAmount),netUnitCost:money4(x.netAmount/x.quantity),discount1:money4(x.discount1),discount2:money4(x.discount2),discount3:0,vatRate:x.vatRate,grossAmount:money2(x.grossAmount),supplierProfileRecovered:true,supplierProfileRule:'DECLARED_COLUMNS_READING_ORDER',supplierProfileEvidence:{quantity:x.quantity,unitPrice:money4(x.unitPrice),discount1:x.discount1,discount2:x.discount2,netAmount:money2(x.netAmount),vatRate:x.vatRate,grossAmount:money2(x.grossAmount)}};
+    }
+  }
   // Some Azure rows omit the inline TEM token altogether and, on this compact
   // layout, can also return 1,620 as 1620. A no-unit map still has a stable
   // numeric tail: quantity, price, discounts, VAT and final line value.
