@@ -7,6 +7,7 @@ const catalog=await readFile(new URL("../src/services/module-catalog.js",import.
 const route=await readFile(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/platform/CommercialLicensePanel.jsx",import.meta.url),"utf8");
 const publicRoute=await readFile(new URL("../src/routes/kat-online-ordering-modifiers.js",import.meta.url),"utf8");
+const legacyPublicRoute=await readFile(new URL("../src/routes/kat-online-ordering.js",import.meta.url),"utf8");
 
 test("Online Store remains an optional commercially ready module",()=>{
   assert.match(catalog,/key:"ONLINE_ORDERING"[\s\S]*?commercialReady:true/);
@@ -27,8 +28,12 @@ test("license UI manages price, setup fee, billing cycle and entitlement dates",
   assert.match(ui,/Συμφωνημένο μηνιαίο σύνολο/);
 });
 
-test("public access still enforces active and dated entitlement",()=>{
-  assert.match(publicRoute,/moduleKey"='ONLINE_ORDERING'/);
-  assert.match(publicRoute,/m\.startsAt/);
-  assert.match(publicRoute,/m\.endsAt/);
+test("every public online route fails closed for the company license and store override",()=>{
+  for(const source of [publicRoute,legacyPublicRoute]){
+    assert.match(source,/companyModuleState\(store\.companyId\)/);
+    assert.match(source,/state\?\.licenseAllowed/);
+    assert.match(source,/"StorePaidModule"/);
+    assert.match(source,/effectiveModuleEnabled\(state\.activeModules\.includes\("ONLINE_ORDERING"\)/);
+    assert.match(source,/Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει/);
+  }
 });
