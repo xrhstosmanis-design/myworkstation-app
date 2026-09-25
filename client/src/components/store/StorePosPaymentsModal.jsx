@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
+import {createPortal} from "react-dom";
 import {Camera,FileText,Upload,Wallet,X} from "lucide-react";
 import StoreSupplierInvoiceFast from "./StoreSupplierInvoiceFast.jsx";
 import StoreSupplierInvoicePremiumFast from "./StoreSupplierInvoicePremiumFast.jsx";
@@ -53,7 +54,7 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
     :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
  const supplierSettlement=<StoreSupplierOpenInvoicePayment api={api} store={store} suppliers={suppliers} allowCash={canSameShift&&!staleShift} onChanged={invoiceChanged} setMessage={invoiceMessage}/>;
  const blockPaidWithoutPermission=e=>{const button=e.target.closest?.("button");if(!button)return;const text=String(button.textContent||"").toLocaleUpperCase("el-GR");const isCashAction=text.includes("ΠΛΗΡΩΜΕΝΟ")||text.includes("ΠΛΗΡΩΜΗ &");if(!isCashAction)return;if(!canSameShift){e.preventDefault();e.stopPropagation();setPaymentError("Δεν έχεις δικαίωμα «Οι πληρωμές να αφαιρούνται από την ίδια βάρδια» από το BackOffice.");return}if(staleShift){e.preventDefault();e.stopPropagation();setPaymentError(staleShiftMessage)}};
- return <div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION · ΒΑΣΙΚΟ POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
+ return createPortal(<div className="pos-standard-modal" onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION · ΒΑΣΙΚΟ POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">
   {localError&&<div style={{margin:"0 0 10px",padding:"10px 12px",borderRadius:8,background:"#fee2e2",color:"#991b1b",fontWeight:800}}>{localError}</div>}
   {staleShift&&canSameShift&&<div style={{margin:"0 0 10px",padding:"10px 12px",borderRadius:8,background:"#fff5df",color:"#8a4b08",fontWeight:800}}>{staleShiftMessage}</div>}
   {!access?<div style={{padding:16,fontWeight:800}}>Έλεγχος δικαιωμάτων χειριστή…</div>:!hasPaymentAccess?<div style={{padding:16,fontWeight:800}}>Δεν έχεις ενεργό δικαίωμα πληρωμών από το BackOffice.</div>:<>
@@ -69,5 +70,5 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
    {negativeOtherExpense?<div style={{padding:"8px 10px",borderRadius:8,background:"#dff7e9",fontWeight:800}}>Αρνητική πληρωμή: το ποσό θα προστεθεί στο ταμείο της ενεργής βάρδιας.</div>:null}<button className="pos-primary-action" disabled={busy} onClick={submitOther}><Wallet/> {busy?"Καταχώριση…":"Καταχώριση εξόδου"}</button>
   </div>}</>}
- </div></main></section></div>
+ </div></main></section></div>,document.body)
 }
