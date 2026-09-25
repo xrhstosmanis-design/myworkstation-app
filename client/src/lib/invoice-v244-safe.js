@@ -9,7 +9,14 @@ const codeOf=x=>String(x?.code||'').trim()||(String(x?.rawText||'').match(/^\s*(
 const descOf=x=>norm(x?.description||x?.rawText||'');
 function originalFor(lines,out){if(out.sourceRow!==undefined){const exact=(lines||[]).filter(x=>x.sourceRow===out.sourceRow&&x.sourceTable===out.sourceTable&&x.sourcePage===out.sourcePage&&x.sourceFileIndex===out.sourceFileIndex),hit=exact.find(x=>x.sourceColumnsVerified)||exact[0];if(hit)return hit;}const code=codeOf(out);if(code){const hits=(lines||[]).filter(x=>codeOf(x)===code),hit=hits.find(x=>x.sourceColumnsVerified)||hits[0];if(hit)return hit;}const d=descOf(out);if(!d)return null;const hits=(lines||[]).filter(x=>{const od=descOf(x);return od&&(od===d||od.includes(d)||d.includes(od))});return hits.find(x=>x.sourceColumnsVerified)||hits[0]||null;}
 function structuredIsSane(x){const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate),factor=[x?.discount1,x?.discount2,x?.discount3].reduce((f,d)=>f*(1-n(d)/100),1);if(!(q>0&&u>0))return false;if(!x?.sourceColumnsVerified&&[x?.discount1,x?.discount2,x?.discount3].some(d=>n(d)>95))return false;if(net>0&&Math.abs(q*u*factor-net)>Math.max(0.05,net*0.02))return false;if(net>0&&gross>0){if(gross+0.05<net)return false;const expected=net*(1+Math.max(0,vat)/100);if(vat>0&&Math.abs(expected-gross)>Math.max(0.08,gross*0.03))return false;}return true;}
+function grossCopiedFromNet(x){const q=n(x?.quantity),u=n(x?.unitCost),net=n(x?.netAmount),gross=n(x?.grossAmount),vat=n(x?.vatRate),factor=[x?.discount1,x?.discount2,x?.discount3].reduce((f,d)=>f*(1-n(d)/100),1);return q>0&&u>0&&net>0&&vat>0&&vat<=24&&Math.abs(gross-net)<=.02&&Math.abs(q*u*factor-net)<=Math.max(.05,net*.02)&&![x?.discount1,x?.discount2,x?.discount3].some(d=>n(d)>95);}
 export function finalizeV244ProductLines(lines){const base=finalizeBase(lines||[]);return base.map(out=>{const original=originalFor(lines,out);if(!original)return out;if(!structuredIsSane(original)){
+  // Some providers copy the net amount into gross while correctly reading
+  // quantity, unit price, discounts and the VAT rate. Rebuild only this one
+  // value from the row equation. Re-parsing raw description text here can
+  // turn e.g. VEEV "1,8%" into quantity 1.8 and VAT 24 into a line amount.
+  // This remains an unverified row: invoice completeness is checked later.
+  if(grossCopiedFromNet(original))return {...out,...original,grossAmount:r2(n(original.netAmount)*(1+n(original.vatRate)/100)),sourceColumnsVerified:false,structuredGuard:false,grossRecoveredFromNetAndVat:true};
   // A source row with a complete numeric tuple must not be overwritten by a
   // free-form token guess. Keep its actual OCR values and require review.
   if(original.sourceRow!==undefined&&n(original.quantity)>0&&n(original.unitCost)>0&&n(original.netAmount)>0&&n(original.grossAmount)>0)return {...out,...original,sourceColumnsVerified:false,structuredGuard:false};
