@@ -8,6 +8,7 @@ const publicRoute=await readFile(new URL("../src/routes/kat-online-ordering-modi
 const bootstrap=await readFile(new URL("../src/kat-online-ordering-bootstrap.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/platform/OnlineStoreManager.jsx",import.meta.url),"utf8");
 const storefront=await readFile(new URL("../../client/public/kat/app.html",import.meta.url),"utf8");
+const posLauncher=await readFile(new URL("../../client/src/kat-online-orders-pos-bootstrap.js",import.meta.url),"utf8");
 
 test("Super Admin persists delivery, pickup, minimum and weekly hours per store",()=>{
   for(const field of ["pickupEnabled","deliveryEnabled","deliveryFee","minimumOrderRetail","cashEnabled","cardOnDeliveryEnabled","timezone","weeklyHours"])assert.match(admin,new RegExp(field));
@@ -56,4 +57,9 @@ test("order creation reports a safe transaction stage without exposing database 
   assert.match(publicRoute,/createStage="LOCK";await tx\.\$executeRaw`SELECT pg_advisory_xact_lock/);
   assert.match(publicRoute,/ONLINE_ORDER_\$\{createStage\}/);
   assert.match(publicRoute,/Η καταχώριση online παραγγελίας απέτυχε στο στάδιο/);
+});
+
+test("online order launcher mounts for every authenticated store POS",()=>{
+  assert.match(posLauncher,/function isKat\(value\)\{return Boolean\(value\?\.store\?\.id\)\}/);
+  assert.match(posLauncher,/function mountButton\(\)\{const s=session\(\);if\(!isKat\(s\)\)return removeUi\(\)/);
 });
