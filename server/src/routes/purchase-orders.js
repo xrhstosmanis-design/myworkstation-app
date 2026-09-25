@@ -208,7 +208,8 @@ router.post("/:orderId/reconcile-ocr-total",async(req,res,next)=>{try{
   const result=await prisma.$transaction(async tx=>{
     const documents=await tx.$queryRaw`SELECT "id","totalGross" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`;
     if(!documents[0])return {repaired:false,reason:"DOCUMENT_NOT_EDITABLE"};
-    const totals=await tx.$queryRaw`SELECT COALESCE(SUM("netAmount"),0) AS "net",COALESCE(SUM("grossAmount"),0) AS "gross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
+    const totals=await tx.$queryRaw`SELECT COALESCE(SUM("netAmount"),0) AS "net",COALESCE(SUM("exciseTotal"),0) AS "excise",COALESCE(SUM("grossAmount"),0) AS "gross" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
+    if(n(totals[0]?.excise)>0)return {repaired:false,reason:"EXCISE_REQUIRES_REVIEW"};
     const headerTotal=n(documents[0].totalGross),netTotal=n(totals[0]?.net),grossTotal=n(totals[0]?.gross);
     if(headerTotal<=0||Math.abs(headerTotal-netTotal)>0.05||Math.abs(headerTotal-grossTotal)<=0.05)return {repaired:false,reason:"NO_SAFE_HEADER_MATCH",headerTotal,netTotal,grossTotal};
     const changed=await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "vatRate"=0,"vatAmount"=0,"grossAmount"="netAmount","updatedAt"=NOW() WHERE "orderId"=${found.id}`;
