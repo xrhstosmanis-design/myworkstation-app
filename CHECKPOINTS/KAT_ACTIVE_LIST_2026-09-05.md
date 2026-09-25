@@ -1,3 +1,7 @@
+## 2026-09-25 — Gate 3 εκμάθηση γραμμαρίων — LOCAL 50 PASS / AWAITING CI / LAB
+
+Ίδιος owner, branch `agent/gate3-preserve-stock-learning-20260925`. Το learning serializer αποθήκευε πάντα PCS και έχανε ρητό stockConversion. Περιορισμένη διόρθωση διατήρησης μονάδας/συντελεστή· όχι αλλαγή OCR. Ανεξάρτητη Coffee Union ανάγνωση: 3 / 344,53 €, αλλά κωδικός/έκπτωση/ετικέτες παραμένουν λανθασμένα· όχι POS PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-preserve-learned-stock-units.md`.
+
 ## 2026-09-25 — Gate 3 νέα ανάθεση / πραγματικά διαγνωστικά / OPEN
 
 Ανάθεση `agent/gate3-evidence-recovery-20260925`, μετά την παράδοση #1239. Read-only LAB Coffee Union και ΜΟΥΧΑΛΗΣ επιβεβαιώνουν λάθη αρχικής ποσότητας και πρόσθετες σειρές μετά την ανάκτηση. Τοπική αναπαραγωγή συγχώνευσης διαφορετικών OCR κωδικών· 42 υπάρχοντα tests PASS δεν αποδεικνύουν σωστή ανάγνωση. Η μετατροπή κιλών σε γραμμάρια είναι υποχρεωτική: 1→1.000 g, 12→12.000 g, ίδια καθαρή αξία. Καμία νέα POS υποβολή/πληρωμή/απόθεμα. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-evidence-recovery-takeover.md`.
