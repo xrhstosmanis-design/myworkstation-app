@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {onlineStoreOpen} from "../src/routes/kat-online-ordering-modifiers.js";
+import {onlineProductAvailable,onlineStoreOpen} from "../src/routes/kat-online-ordering-modifiers.js";
 
 const admin=await readFile(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const publicRoute=await readFile(new URL("../src/routes/kat-online-ordering-modifiers.js",import.meta.url),"utf8");
@@ -28,6 +28,14 @@ test("public order endpoint enforces hours, minimum order and delivery fee",()=>
   assert.match(publicRoute,/Η ελάχιστη παραγγελία είναι/);
   assert.match(publicRoute,/fulfillmentType==="DELIVERY"\?money\(config\.deliveryFee\):0/);
   assert.match(publicRoute,/OnlineProductVisibility/);
+});
+
+test("stock is enforced only when the store setting enables it",()=>{
+  const product={name:"ΝΕΡΟ 500ML",trackStock:true,currentStock:-57};
+  assert.equal(onlineProductAvailable(product,{stockCheckEnabled:false}),true);
+  assert.equal(onlineProductAvailable(product,{stockCheckEnabled:true}),false);
+  assert.equal(onlineProductAvailable({...product,currentStock:2},{stockCheckEnabled:true},2),true);
+  assert.equal(onlineProductAvailable({...product,currentStock:1},{stockCheckEnabled:true},2),false);
 });
 
 test("management and storefront UI expose and respect fulfillment settings",()=>{
