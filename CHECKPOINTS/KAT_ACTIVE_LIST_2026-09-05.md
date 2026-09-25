@@ -6,13 +6,9 @@
 
 - [ ] Στο deployed `66fa833`, μία νέα POS υποβολή `090387`: έντυπο **7 σειρές / 60 τμχ / 127,90 € + ΦΠΑ 30,70 € = 158,60 €**· πρόχειρο **9 σειρές / 246,69 € (+88,09 €)**, ποσότητα `1,8%` από περιγραφή και %ΦΠΑ ως ποσό. Job `4d9f9af6-7539-412f-af14-0ee872af7052` POS_FAILED, προηγούμενο πρόχειρο διατηρήθηκε, χωρίς οριστικοποίηση/πληρωμή/stock. Provider 7 σειρές αλλά λανθασμένη έκτη ποσότητα και ΦΠΑ, table/Azure πρόσθεσαν δύο παρόμοιες σειρές. **Gate 3 OPEN.** Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.
 
-## 2026-09-25 — Gate 4 τρέχοντες κανόνες Ιατροί LAB · ΑΝΑΤΕΘΗΚΕ / AWAITING LAB
+## 2026-09-25 — Gate 4 ενεργοί κανόνες Ιατροί LAB — περιορισμένο LAB PASS
 
-- [ ] `agent/gate4-current-doctor-rules-read-20260925`: owner scoped ανάγνωση ενεργών κανόνων ανά κατάστημα/δικαιούχο, διασταύρωση με Audit και φυσικό POS «3 ενεργά προϊόντα». Χωρίς αποθήκευση ή πώληση. Αρχικό before/after και ιστορική συμπεριφορά μη επιλεγμένων NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`.
-
-## 2026-09-25 — Gate 3 θυρίδα LAB: 11/12 πρωτότυπα συνδεδεμένα — OCR REPLAY NOT TESTED
-
-- [ ] Read-only έλεγχος στη θυρίδα LAB: 34 συνημμένα, 11/12 τιμολόγια συνδεδεμένα· ΤΑΛΩΣ δεν εμφανίστηκε. Καραμολέγκος έντυπο **ΙΔΑ**-126-009370, 6/27,44 €. Coffee Union job `a1ec2efc-977c-4563-af3c-ce7a57f5091b`: πρώτη ανάγνωση DEL005=12 και 4 σειρές, provider 3 σειρές αλλά DEL005=12, reread 4 σειρές/+36,49 €, POS_FAILED· διπλή γραμμή και ποσότητα ακόμη **OPEN**. Μουχάλης first-pass 27 / provider 13 / reread 27· άλλοι τέσσερις προμηθευτές επίσης POS_FAILED. PANINI πρωτότυπο **ΠΛΗΡΩΤΕΟ 75,60 €**, χωριστή απόδειξη είσπραξης **70,36 €**: εστιασμένη διόρθωση επιλογής συνολικού ποσού FAST με επαλήθευση καθαρής+ΦΠΑ, 59 targeted tests PASS, **AWAITING CI / LAB**. Κανένα νέο POS upload/OCR replay, πληρωμή ή stock. **Gate 3 OPEN.** `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.
+- [x] PR #1231, CI #3117, exact Render `baf5d0b7`: owner scoped ανάγνωση έδειξε ΝΕΡΟ 500ML, ΝΕΡΟ 1,5LT και EVIAN 500ML, **10% έκαστο**, ακριβώς 3 ενεργούς κανόνες, με IDs που συμφωνούν με τις εγγραφές Audit 09:15:15/09:52:30/10:00:45 και το πλήθος στην ήδη καταγεγραμμένη οθόνη φυσικού POS. Χωρίς save/πώληση/βάρδια. PASS μόνο τωρινής κατάστασης· αρχικό before/after και διαχρονική προστασία μη επιλεγμένων NOT TESTED. Συνολικό Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`, manual `docs/manual/pos/PASS.md`.
 
 ## 2026-09-25 — Gate 4 Audit μαζικής έκπτωσης — LAB PASS ανάγνωσης
 
