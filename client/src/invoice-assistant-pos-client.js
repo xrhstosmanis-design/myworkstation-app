@@ -54,7 +54,18 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       if(valid.length){apply.hidden=false;apply.onclick=async()=>{
         const chosen=[...proposals.querySelectorAll("[data-change]:checked")].map(node=>valid[Number(node.dataset.change)]);if(!chosen.length){status.textContent="Επίλεξε πρώτα τις αλλαγές που επιβεβαίωσες.";return}
         const grouped=new Map();for(const change of chosen){const patch=grouped.get(change.lineId)||{};patch[change.field]=change.field==="description"||change.field==="invoiceUnit"?change.value:number(change.value);grouped.set(change.lineId,patch)}
-        apply.disabled=true;let done=0;try{for(const [lineId,patch] of grouped){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,{method:"PATCH",body:JSON.stringify(patch)});done++}status.textContent=`Αποθηκεύτηκαν ${done} γραμμές στο πρόχειρο. Έλεγξε ξανά τα σύνολα πριν από οποιαδήποτε οριστικοποίηση.`;apply.hidden=true;await onComplete?.()}catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Η επόμενη αλλαγή απέτυχε: ${error.message}. Άνοιξε ξανά το τιμολόγιο για έλεγχο.`}finally{apply.disabled=false}
+        for(const patch of grouped.values())if(Number(patch.stockUnitsPerInvoiceUnit)>1&&patch.invoiceUnit===undefined)patch.invoiceUnit="PACKAGE";
+        apply.disabled=true;let done=0;try{
+          const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
+          if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT")throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
+          const now=new Map(latest.lines.map(line=>[line.id,line]));
+          for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
+          for(const [lineId,patch] of grouped){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,{method:"PATCH",body:JSON.stringify(patch)});done++}
+          const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
+          const difference=Math.abs(Number(after.totals.gross||0)-Number(source.document.totalGross||0));
+          status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · τυπωμένο ${euro(source.document.totalGross)} € · διαφορά ${euro(difference)} €.${difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Συμφωνεί εντός 0,05 €."}`;
+          apply.hidden=true;await onComplete?.()
+        }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
       status.textContent=`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. Τυπωμένο πληρωτέο ${euro(source.document.totalGross)} €.`;
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
