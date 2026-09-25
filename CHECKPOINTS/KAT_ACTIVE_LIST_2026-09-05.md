@@ -1,3 +1,7 @@
+## Gate 5 — G5-P08 περιορισμένο LAB PASS ακύρωσης, 25/09/2026
+
+PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη μία ακύρωση FRESH/ΒΒ 6529 46,92 €: ουρά/κεντρικές δεσμεύσεις 0 €, ανοιχτή οφειλή 46,92 €, POS2 ενεργές κινήσεις 17→16, έξοδα 47,12→0,20 €, πωλήσεις 7,50 € ίδιες. POS1 έκλεισε σε παράλληλο Gate4· τράπεζα/audit ακύρωσης NOT TESTED. Μόνο η ακύρωση έχει περιορισμένο PASS. Η αρχική λάθος μέθοδος μένει ιστορικό FAIL· ολική εξόφληση/αρνητικοί έλεγχοι/τελική συμφωνία OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-24-gate5-payments-assignment.md`.
+
 ## 2026-09-25 — Gate 4 LAB/Νοσηλευτές: ένας νέος κανόνας 20% — περιορισμένο LAB PASS
 
 - [x] Στις 12:27:17, Owner στο LAB/Master Catalog αποθήκευσε μία φορά 20% στο ενεργό ΝΕΡΟ ΠΙΠΙΛΑ 750ML `2273~5201627260500`: πριν 0 κανόνες/0 Audit, μετά 1 κανόνας ID `3090fc47-ba76-44fc-8b3f-ffd9c279a016` / Audit `f63d7b2e-5a0e-4733-8267-53826d855385`. Ιατροί 3×10% με ίδια IDs/Audit μετά. Exact Render `db38b4de`. POS2 17 κινήσεις/7,50 € αμετάβλητο, POS1 έκλεισε χωριστά από ιδιοκτήτη· καμία πώληση ή stock PASS. Πλήρες Gate 4 PENDING. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-master-audience-discount-awaiting-lab.md`, manual `docs/manual/pos/PASS.md`.
