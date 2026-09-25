@@ -227,6 +227,8 @@ export async function auth(req,res,next){
     next();
   }catch(error){
     console.error("Authentication validation failed",error?.message||error);
-    res.status(401).json({error:"Η συνεδρία έληξε."});
+    if(error?.name==="TokenExpiredError")return res.status(401).json({error:"Η συνεδρία έληξε.",code:"AUTH_TOKEN_EXPIRED"});
+    if(error?.name==="JsonWebTokenError"||error?.name==="NotBeforeError")return res.status(401).json({error:"Η συνεδρία δεν είναι έγκυρη.",code:"AUTH_TOKEN_INVALID"});
+    res.status(503).json({error:"Ο έλεγχος συνεδρίας δεν είναι προσωρινά διαθέσιμος. Δοκίμασε ξανά — δεν έγινε αποσύνδεση.",code:"AUTH_VALIDATION_UNAVAILABLE"});
   }
 }

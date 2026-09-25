@@ -28,3 +28,12 @@ test("legacy Store Mode tokens are rejected after the session upgrade",()=>{
   assert.match(auth,/if\(!payload\.operatorSessionId\)/);
   assert.match(auth,/STORE_OPERATOR_SESSION_REQUIRED/);
 });
+
+test("a transient auth validation failure does not erase a valid POS operator session",()=>{
+  assert.match(auth,/TokenExpiredError[\s\S]*AUTH_TOKEN_EXPIRED/);
+  assert.match(auth,/JsonWebTokenError[\s\S]*AUTH_TOKEN_INVALID/);
+  assert.match(auth,/status\(503\)[\s\S]*AUTH_VALIDATION_UNAVAILABLE/);
+  assert.match(ui,/const terminalAuthCodes=new Set\(\[/);
+  assert.match(ui,/response\.status===401&&terminalAuthCodes\.has/);
+  assert.doesNotMatch(ui,/if\(response\.status===401\)\{sessionStorage\.removeItem/);
+});
