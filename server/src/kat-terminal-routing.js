@@ -27,13 +27,19 @@ export async function configuredKatDelayedTerminal(tx,{companyId,storeId,current
   if(environmentTerminal)return environmentTerminal;
 
   const requestedTerminal=normalizeTerminalPos(currentTerminalPos);
-  if(!requestedTerminal)return "";
 
   const tables=await tx.$queryRaw`SELECT to_regclass('public."StoreFiscalDevice"')::text AS fiscal,to_regclass('public."StoreEftposDevice"')::text AS eftpos`;
   if(!tables[0]?.fiscal||!tables[0]?.eftpos)return "";
 
   const rows=await tx.$queryRaw`
-    SELECT DISTINCT f."terminalPos"
+    SELECT DISTINCT f."terminalPos",
+      EXISTS (
+        SELECT 1 FROM "CashShiftSession" s
+        WHERE s."companyId"=f."companyId"
+          AND s."storeId"=f."storeId"
+          AND UPPER(TRIM(s."terminalPos"))=UPPER(TRIM(f."terminalPos"))
+          AND s."status"='OPEN'
+      ) AS "hasOpenShift"
     FROM "StoreFiscalDevice" f
     JOIN "StoreEftposDevice" e
       ON e."companyId"=f."companyId"
@@ -44,9 +50,12 @@ export async function configuredKatDelayedTerminal(tx,{companyId,storeId,current
     WHERE f."companyId"=${companyId}
       AND f."storeId"=${storeId}
       AND f."active"=TRUE
-      AND UPPER(TRIM(f."terminalPos"))=${requestedTerminal}
       AND NULLIF(TRIM(f."terminalPos"),'') IS NOT NULL
     ORDER BY f."terminalPos"`;
-  if(rows.length!==1)return "";
-  return normalizeTerminalPos(rows[0].terminalPos);
+  const exact=rows.filter(row=>normalizeTerminalPos(row.terminalPos)===requestedTerminal);
+  if(exact.length===1)return normalizeTerminalPos(exact[0].terminalPos);
+
+  const open=rows.filter(row=>row.hasOpenShift===true||row.hasopenshift===true);
+  if(open.length!==1)return "";
+  return normalizeTerminalPos(open[0].terminalPos);
 }
