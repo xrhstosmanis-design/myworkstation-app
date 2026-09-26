@@ -2,7 +2,7 @@ import {Router} from "express";
 import crypto from "crypto";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
-import {resolveKatOnlineRouting} from "../kat-terminal-routing.js";
+import {configuredKatDelayedTerminal,resolveKatOnlineRouting} from "../kat-terminal-routing.js";
 
 const router=Router();
 router.use(auth);
@@ -16,14 +16,6 @@ function assertOperator(req,storeId){
   }
 }
 
-async function delayedTerminalForStore(tx,{companyId,storeId}){
-  const configured=String(process.env.KAT_DELAYED_TERMINAL_POS||"").trim();
-  if(configured)return configured;
-  const rows=await tx.$queryRaw`SELECT DISTINCT NULLIF(TRIM("terminalPos"),'') AS "terminalPos" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='OPEN' AND NULLIF(TRIM("terminalPos"),'') IS NOT NULL ORDER BY "terminalPos"`;
-  const preferred=rows.map(row=>String(row.terminalPos||"").trim()).find(value=>/^(POS[-_ ]?2|2)$/i.test(value));
-  return preferred||"";
-}
-
 router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,next)=>{
   try{
     assertOperator(req,req.params.storeId);
@@ -34,7 +26,7 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
 
     const result=await prisma.$transaction(async tx=>{
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`KAT_ONLINE_COMPLETE:${req.params.orderId}`})) IS NULL) AS locked`;
-      const configuredTerminalPos=await delayedTerminalForStore(tx,{companyId:req.user.companyId,storeId:req.params.storeId});
+      const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:req.params.storeId});
       const routing=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:req.user?.terminalPos});
       const openShift=(await tx.$queryRaw`SELECT "id","terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.params.storeId} AND "status"='OPEN' AND UPPER(TRIM("terminalPos"))=${routing.terminalPos} ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
       if(!openShift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια στο ετεροχρονισμένο POS/Ταμείο 2.");error.status=409;error.code="KAT_DELAYED_SHIFT_NOT_OPEN";throw error}

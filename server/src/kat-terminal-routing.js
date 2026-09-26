@@ -21,3 +21,28 @@ export function resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPo
   }
   return {terminalPos:configured,delayed:true,purpose:KAT_DELAYED_TERMINAL_PURPOSE};
 }
+
+export async function configuredKatDelayedTerminal(tx,{companyId,storeId}={}){
+  const environmentTerminal=normalizeTerminalPos(process.env.KAT_DELAYED_TERMINAL_POS);
+  if(environmentTerminal)return environmentTerminal;
+
+  const tables=await tx.$queryRaw`SELECT to_regclass('public."StoreFiscalDevice"')::text AS fiscal,to_regclass('public."StoreEftposDevice"')::text AS eftpos`;
+  if(!tables[0]?.fiscal||!tables[0]?.eftpos)return "";
+
+  const rows=await tx.$queryRaw`
+    SELECT DISTINCT f."terminalPos"
+    FROM "StoreFiscalDevice" f
+    JOIN "StoreEftposDevice" e
+      ON e."companyId"=f."companyId"
+     AND e."storeId"=f."storeId"
+     AND e."fiscalDeviceCode"=f."deviceCode"
+     AND e."active"=TRUE
+     AND e."role"='DELIVERY'
+    WHERE f."companyId"=${companyId}
+      AND f."storeId"=${storeId}
+      AND f."active"=TRUE
+      AND NULLIF(TRIM(f."terminalPos"),'') IS NOT NULL
+    ORDER BY f."terminalPos"`;
+  if(rows.length!==1)return "";
+  return normalizeTerminalPos(rows[0].terminalPos);
+}

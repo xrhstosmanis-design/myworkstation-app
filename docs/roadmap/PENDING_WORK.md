@@ -281,6 +281,8 @@
 
 **ΑΝΑΤΕΘΗΚΕ — `agent/gate6-online-delivery-20260925` (25/09/2026):** Το Gate 6 είναι η γενική λειτουργία Online Ordering/Delivery του MyWorkStation και δεν ταυτίζεται με efood/Pelican. Η εξωτερική σύνδεση και τα credentials παραμένουν στην ειδική σελίδα, χωρίς να μπλοκάρουν το Gate 6. Στο κεντρικό προϊόν ελέγχονται:
 
+**Νεότερο LAB FAIL 26/09/2026 — στενή διόρθωση `agent/gate6-terminal-fail-closed-20260926`:** η `ONL-001` δημιούργησε Sale/μετρητά στη `MAIN` πριν αποτύχει ο terminal handoff, έμεινε `OUT_FOR_DELIVERY` και δεν συμφώνησαν fiscal/stock/terminal. Εκκρεμεί fail-closed έλεγχος mapped delayed terminal και ανοιχτής βάρδιας πριν από οποιαδήποτε Sale/Payment/stock μεταβολή. Η ίδια παραγγελία δεν ξαναπληρώνεται.
+
 - Σωστό κατάστημα και ξεχωριστό ταμείο online/delivery.
 - Ετεροχρονισμένη χρέωση όπου απαιτείται.
 - Μία μόνο αφαίρεση αποθέματος και προστασία retry/διπλής παραγγελίας.
