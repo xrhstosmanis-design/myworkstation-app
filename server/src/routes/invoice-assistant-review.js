@@ -22,8 +22,8 @@ export function assessInvoicePages(input){
 
 // The printed table often has net and VAT columns but no final gross per row.
 // Derive only the absent gross, leaving a supplied contradictory amount intact.
-export function fillMissingPrintedGross(lines,{printedNetTotal,printedTotal}){
-  if(!String(printedNetTotal??"").trim()||!Number.isFinite(printedTotal))return lines;
+export function fillMissingPrintedGross(lines,{printedTotal}){
+  if(!Number.isFinite(printedTotal))return lines;
   const decimal=value=>Number(String(value??"").trim().replace(",","."));
   return lines.map(line=>{
     if(String(line.grossAmount??"").trim())return line;

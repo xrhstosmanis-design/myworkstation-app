@@ -32,8 +32,9 @@ test("printed net and VAT supply an absent per-row gross when totals reconcile",
   assert.equal(source[0].grossAmount,"");
 });
 
-test("a supplied wrong gross or absent printed net cannot be silently repaired",()=>{
+test("a supplied wrong gross or absent printed payable cannot be silently repaired",()=>{
   const wrong={netAmount:"1.70",exciseTotal:"0",vatRate:"13",grossAmount:"9.99"};
   assert.equal(fillMissingPrintedGross([wrong],{printedNetTotal:"1.70",printedTotal:1.92})[0].grossAmount,"9.99");
-  assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:1.92})[0].grossAmount,"");
+  assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:null})[0].grossAmount,"");
+  assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:1.92})[0].grossAmount,"1.92");
 });
