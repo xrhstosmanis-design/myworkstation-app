@@ -115,7 +115,8 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       const matched=new Set(printed.map(line=>line.matchingLineId).filter(Boolean));
       const calculatedGross=printed.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
       const economicsAgree=printedTotal!==null&&printed.length>0&&Math.abs(calculatedGross-printedTotal)<=0.05;
-      const missing=result.pagesComplete?printed.filter(validPrinted).filter(line=>!line.matchingLineId):[];
+      const missingPhysical=result.pagesComplete?printed.filter(line=>!line.matchingLineId):[];
+      const missing=missingPhysical.filter(validPrinted);
       const extra=result.pagesComplete&&printed.length?[...lineById.values()].filter(line=>!matched.has(line.id)):[];
       if(!result.pagesComplete){status.textContent=result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";apply.hidden=true}
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
@@ -178,7 +179,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
           proposals.replaceChildren();apply.hidden=false;changed=true;
         }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
-      status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} διορθώσεις υπαρχουσών γραμμών, ${missing.length} γραμμές που λείπουν από το πρόχειρο, ${extra.length} γραμμές προς έλεγχο διαγραφής. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
+      status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} διορθώσεις υπαρχουσών γραμμών, ${missingPhysical.length} γραμμές που λείπουν από το πρόχειρο (${missing.length} πλήρως συμπληρωμένες), ${extra.length} γραμμές προς έλεγχο διαγραφής. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
   overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
