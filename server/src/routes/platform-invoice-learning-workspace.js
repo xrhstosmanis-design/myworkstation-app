@@ -70,7 +70,8 @@ router.put("/invoice-learning/supplier-profile/stock-rules",requireCompanyModule
   const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
   if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις κανόνα."});
   if(!isSuper(req)){
-    const supplier=await prisma.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "taxId"=${supplierTaxId} AND "active"=true LIMIT 1`;
+    const orderId=String(req.body?.orderId||"");
+    const supplier=await prisma.$queryRaw`SELECT s."id" FROM "PurchaseOrder" o JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${req.user.companyId} AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND s."taxId"=${supplierTaxId} AND s."active"=true LIMIT 1`;
     if(!supplier.length)return res.status(403).json({error:"Ο προμηθευτής δεν ανήκει στην εταιρεία σου."});
   }
   let rules;try{rules=validateExplicitStockRules(req.body?.rules)}catch(error){return res.status(400).json({error:error.message})}
