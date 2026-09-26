@@ -22,6 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.6",
     "pdfjs-dist": "4.10.38",
+    "sharp": "^0.34.4",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "zod": "^3.24.2"
