@@ -17,11 +17,17 @@ test("online KAT order cannot be completed from terminal 1",()=>{
 test("delayed terminal comes from the unique active fiscal and DELIVERY EFTPOS mapping",async()=>{
   const replies=[[{fiscal:'"StoreFiscalDevice"',eftpos:'"StoreEftposDevice"'}],[{terminalPos:"lab-pos-02"}]];
   const tx={$queryRaw:async()=>replies.shift()};
-  assert.equal(await configuredKatDelayedTerminal(tx,{companyId:"company",storeId:"store"}),"LAB-POS-02");
+  assert.equal(await configuredKatDelayedTerminal(tx,{companyId:"company",storeId:"store",currentTerminalPos:"lab-pos-02"}),"LAB-POS-02");
 });
 
-test("delayed terminal fails closed when device mapping is ambiguous",async()=>{
-  const replies=[[{fiscal:'"StoreFiscalDevice"',eftpos:'"StoreEftposDevice"'}],[{terminalPos:"POS-1"},{terminalPos:"POS-2"}]];
+test("delayed terminal fails closed when the current terminal has no unique delivery mapping",async()=>{
+  const replies=[[{fiscal:'"StoreFiscalDevice"',eftpos:'"StoreEftposDevice"'}],[]];
   const tx={$queryRaw:async()=>replies.shift()};
-  assert.equal(await configuredKatDelayedTerminal(tx,{companyId:"company",storeId:"store"}),"");
+  assert.equal(await configuredKatDelayedTerminal(tx,{companyId:"company",storeId:"store",currentTerminalPos:"POS-2"}),"");
+});
+
+test("delayed terminal does not require a store-wide unique POS when the current terminal is explicitly mapped",async()=>{
+  const replies=[[{fiscal:'"StoreFiscalDevice"',eftpos:'"StoreEftposDevice"'}],[{terminalPos:"POS-2"}]];
+  const tx={$queryRaw:async()=>replies.shift()};
+  assert.equal(await configuredKatDelayedTerminal(tx,{companyId:"company",storeId:"store",currentTerminalPos:"POS-2"}),"POS-2");
 });

@@ -119,7 +119,7 @@ const clientTransactionId=body.clientTransactionId||crypto.randomUUID(),fingerpr
         onlineOrder=(await tx.$queryRaw`SELECT "id","orderNumber","saleId","total","channel","fulfillmentType" FROM "OnlineOrder" WHERE "id"=${body.onlineOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
         if(!onlineOrder){const error=new Error("Η Online παραγγελία δεν βρέθηκε για το POS checkout.");error.status=409;throw error}
         if(body.onlineOrderNumber&&String(onlineOrder.orderNumber)!==String(body.onlineOrderNumber)){const error=new Error("Ο αριθμός Online παραγγελίας δεν συμφωνεί με το checkout.");error.status=409;throw error}
-        const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:store.id});
+        const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:store.id,currentTerminalPos:terminalPos});
         onlineRouting=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:terminalPos});
         if(onlineOrder.saleId){const linked=(await tx.$queryRaw`SELECT "id","total","fiscalStatus" FROM "Sale" WHERE "id"=${onlineOrder.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];if(!linked){const error=new Error("Η Online παραγγελία δείχνει σε πώληση που δεν βρέθηκε.");error.status=409;throw error}return {kind:"REPLAY",sale:linked}}
       }
