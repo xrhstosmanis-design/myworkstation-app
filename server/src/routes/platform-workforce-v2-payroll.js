@@ -12,6 +12,14 @@ router.use(async(req,res,next)=>{try{await requirePersonnelPackage(req,String(re
 const payrollEmployees=(context,from,to)=>prisma.workforceEmployee.findMany({where:{companyId:context.company.id,active:true,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]},include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}});
 const seedPayrollRows=employees=>new Map(employees.map(employee=>[employee.id,{employeeId:employee.id,employeeName:employee.fullName,paymentType:employee.paymentType,actualMinutes:0,overtimeMinutes:0,hourlyRate:employee.hourlyRates[0]?.hourlyRate==null?null:Number(employee.hourlyRates[0].hourlyRate),dailyRate:employee.paymentType==="DAILY"?Number(employee.dailyRate||0):null,fixedAmount:employee.paymentType==="FIXED_MONTHLY"?Number(employee.fixedMonthlyAmount||0):null,workDates:new Set()}]));
 
+router.get("/open-cash-sessions",async(req,res,next)=>{
+  try{
+    const context=await contextFor(req);
+    const openSessions=await prisma.$queryRaw`SELECT "id","shiftLabel","terminalPos","openedAt" FROM "CashShiftSession" WHERE "companyId"=${context.company.id} AND "storeId"=${context.store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC`;
+    res.json({openSessions});
+  }catch(error){next(error)}
+});
+
 async function addPayrollEvidence(context,from,to,rows){
   const employeeIds=[...rows.keys()];
   if(!employeeIds.length)return;
