@@ -1,3 +1,7 @@
+## 26/09/2026 — Workforce Payroll in-app οδηγός LAB PASS / περίοδος CLOSED
+
+PR #1359 CI #3466 PASS, Render exact `327c06e8`: ο `Αναλυτικός οδηγός μισθοδοσίας` εμφανίστηκε και άνοιξε στο Platform Admin → LAB → Μισθοδοσία, με πέντε βήματα, όρια και troubleshooting. Δίπλα του η υπάρχουσα περίοδος Σεπτεμβρίου παρέμεινε CLOSED, 313,00 € μικτά/πληρωμένα, 0,00 € υπόλοιπο. Το αρνητικό μηδέν διορθώθηκε οπτικά. **LAB PASS εγχειριδίου και εικονικής διαδρομής περιόδου**· ανεξάρτητη συμφωνία ταμειακής βάρδιας και τραπεζικό αποδεικτικό OPEN/NOT TESTED. `CHECKPOINTS/CHANGES/2026-09-26-workforce-payroll-lab-period-load.md`.
+
 ## 26/09/2026 — Workforce Payroll LAB περίοδος CLOSED / εγχειρίδιο AWAITING CI-LAB
 
 PR #1356 CI #3458 PASS, Render exact `bdaf98cb`: το ίδιο εικονικό DRAFT επανυπολογίστηκε 19,67 → 313,00 € διατηρώντας πληρωμές 19,67 €. `LAB-POS-02` δέχθηκε 20,00 € και 100,00 € μετρητά (LAB POS 2 υπόλοιπο 120 → 100 → 0 €). Ο Χειριστής 1 εξοφλήθηκε εσωτερικά με 173,33 € τραπεζική εγγραφή, ορατή σε αναμονή χωρίς αποδεικτικό. Περίοδος Σεπτεμβρίου CLOSED, μικτά/πληρωμένα 313,00 €, υπόλοιπο 0,00 €. **LAB PASS της διαδρομής UI**, όχι ανεξάρτητης συμφωνίας cash shift ή επιβεβαίωσης τραπεζικού αποδεικτικού (NOT TESTED/OPEN). Αναλυτικός οδηγός μέσα στο Payroll AWAITING CI/DEPLOY/LAB. Κοινό checkpoint `CHECKPOINTS/CHANGES/2026-09-26-workforce-payroll-lab-period-load.md`.
