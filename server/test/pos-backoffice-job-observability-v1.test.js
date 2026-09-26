@@ -12,8 +12,10 @@ test("purchase order report exposes only scoped OCR job diagnostics",()=>{
   assert.doesNotMatch(route,/AS "ocrJob"[\s\S]{0,80}resultJson/);
 });
 
-test("purchase order list renders the stored OCR status and error read-only",()=>{
-  assert.match(suite,/const ocrJobDiagnostic=job=>job\?/);
+test("purchase order list labels delivered assistant drafts while preserving failed OCR diagnostics",()=>{
+  assert.match(suite,/job\.status==="AWAITING_APPROVAL"&&job\.stage==="POS_BACKGROUND_COMPLETE"/);
+  assert.match(suite,/Ανάγνωση από βοηθό · πρόχειρο για έλεγχο/);
   assert.match(suite,/OCR job: \$\{esc\(job\.status\|\|"—"\)\} \/ \$\{esc\(job\.stage\|\|"—"\)\}/);
+  assert.match(suite,/job\.error\?` · \$\{esc\(job\.error\)\}`/);
   assert.match(suite,/ocrJobDiagnostic\(o\.ocrJob\)/);
 });
