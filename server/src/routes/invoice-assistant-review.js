@@ -20,6 +20,19 @@ export function assessInvoicePages(input){
   return checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
 }
 
+// The printed table often has net and VAT columns but no final gross per row.
+// Derive only the absent gross, leaving a supplied contradictory amount intact.
+export function fillMissingPrintedGross(lines,{printedNetTotal,printedTotal}){
+  if(!String(printedNetTotal??"").trim()||!Number.isFinite(printedTotal))return lines;
+  const decimal=value=>Number(String(value??"").trim().replace(",","."));
+  return lines.map(line=>{
+    if(String(line.grossAmount??"").trim())return line;
+    const net=decimal(line.netAmount),excise=decimal(line.exciseTotal),vat=decimal(line.vatRate);
+    if([line.netAmount,line.exciseTotal,line.vatRate].some(value=>String(value??"").trim()==="")||![net,excise,vat].every(Number.isFinite)||net<0||excise<0||![0,6,13,24].includes(vat))return line;
+    return {...line,grossAmount:((net+excise)*(1+vat/100)).toFixed(2)};
+  });
+}
+
 // A single physical sheet may have no page count (including "Σελίδα: 1").
 // Require the header, all rows and payable footer; a printed 2/2 never qualifies.
 export function normalizedAssistantPages({expectedPageCount,visiblePageNumbers,singlePageComplete,sourcePageCount}){

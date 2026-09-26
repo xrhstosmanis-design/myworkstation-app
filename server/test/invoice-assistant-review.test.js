@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {assessInvoicePages,invoicePageReviewChecks} from "../src/routes/invoice-assistant-review.js";
+import {assessInvoicePages,fillMissingPrintedGross,invoicePageReviewChecks} from "../src/routes/invoice-assistant-review.js";
 
 test("a photographed page 2/2 cannot authorize deletion from a partial POS draft",()=>{
   assert.equal(assessInvoicePages({expectedPageCount:2,visiblePageNumbers:[2],sourcePageCount:1,printedLines:[{grossAmount:"43.91"}],printedTotal:111.32}),false);
@@ -22,4 +22,18 @@ test("review reports the exact failing check without unlocking incomplete pages"
   const invoice={expectedPageCount:0,visiblePageNumbers:[1],sourcePageCount:1,printedLines:[{quantity:"2",netAmount:"1.70",grossAmount:"1.92"}],printedTotal:1.92,printedQuantityTotal:"2",printedNetTotal:"1.70"};
   assert.deepEqual(invoicePageReviewChecks(invoice),{pagesComplete:false,grossAgrees:true,quantityAgrees:true,netAgrees:true,grossSum:1.92,quantitySum:2,netSum:1.7});
   assert.equal(assessInvoicePages(invoice),false);
+});
+
+test("printed net and VAT supply an absent per-row gross when totals reconcile",()=>{
+  const source=[{quantity:"2",netAmount:"1.70",exciseTotal:"0",vatRate:"13",grossAmount:""}];
+  const lines=fillMissingPrintedGross(source,{printedNetTotal:"1.70",printedTotal:1.92});
+  assert.equal(lines[0].grossAmount,"1.92");
+  assert.equal(assessInvoicePages({expectedPageCount:1,visiblePageNumbers:[1],sourcePageCount:1,printedLines:lines,printedQuantityTotal:"2",printedNetTotal:"1.70",printedTotal:1.92}),true);
+  assert.equal(source[0].grossAmount,"");
+});
+
+test("a supplied wrong gross or absent printed net cannot be silently repaired",()=>{
+  const wrong={netAmount:"1.70",exciseTotal:"0",vatRate:"13",grossAmount:"9.99"};
+  assert.equal(fillMissingPrintedGross([wrong],{printedNetTotal:"1.70",printedTotal:1.92})[0].grossAmount,"9.99");
+  assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:1.92})[0].grossAmount,"");
 });
