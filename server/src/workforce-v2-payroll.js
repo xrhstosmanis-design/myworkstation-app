@@ -46,3 +46,12 @@ export function payrollClosingSummary(lines,payments){
   const rows=(lines||[]).map(line=>{const grossAmount=Number(line.grossAmount||0),paidAmount=Number(paidByEmployee.get(line.employeeId)||0),balanceAmount=Number((grossAmount-paidAmount).toFixed(2));return {employeeId:line.employeeId,grossAmount,paidAmount,balanceAmount}});
   return {employeeCount:rows.length,grossAmount:Number(rows.reduce((sum,row)=>sum+row.grossAmount,0).toFixed(2)),paidAmount:Number(rows.reduce((sum,row)=>sum+row.paidAmount,0).toFixed(2)),balanceAmount:Number(rows.reduce((sum,row)=>sum+row.balanceAmount,0).toFixed(2)),openEmployeeCount:rows.filter(row=>Math.abs(row.balanceAmount)>0.009).length,rows};
 }
+
+export function reconcilePayrollDraft(lines,previousLines,payments){
+  const paid=new Map();for(const payment of payments||[])paid.set(payment.employeeId,Number(((paid.get(payment.employeeId)||0)+Number(payment.amount)).toFixed(2)));
+  if((previousLines||[]).some(line=>!lines.some(row=>row.employeeId===line.employeeId)&&(paid.get(line.employeeId)||0)>0))return {valid:false,reason:"MISSING_PAID_EMPLOYEE"};
+  const rows=lines.map(row=>{const paidAmount=paid.get(row.employeeId)||0;return {...row,paidAmount,balanceAmount:Number((row.grossAmount-paidAmount).toFixed(2))}});
+  if(rows.some(row=>row.balanceAmount<0))return {valid:false,reason:"OVERPAYMENT"};
+  const totals={grossAmount:Number(rows.reduce((sum,row)=>sum+row.grossAmount,0).toFixed(2)),paidAmount:Number([...paid.values()].reduce((sum,value)=>sum+value,0).toFixed(2)),balanceAmount:Number(rows.reduce((sum,row)=>sum+row.balanceAmount,0).toFixed(2))};
+  return {valid:true,rows,totals};
+}

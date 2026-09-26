@@ -1,7 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {overlapDays,PAYROLLABLE_ATTENDANCE_STATUSES,paymentBalance,payrollClosingSummary,payrollGross,payrollableAttendanceWhere,payrollWorkDate,shiftDurationMinutes} from "../src/workforce-v2-payroll.js";
+import {overlapDays,PAYROLLABLE_ATTENDANCE_STATUSES,paymentBalance,payrollClosingSummary,payrollGross,payrollableAttendanceWhere,payrollWorkDate,reconcilePayrollDraft,shiftDurationMinutes} from "../src/workforce-v2-payroll.js";
+
+test("recalculation preserves existing payments and rejects a lower gross",()=>{
+  const old=[{employeeId:"pos2",grossAmount:19.67}];
+  const payments=[{employeeId:"pos2",amount:5},{employeeId:"pos2",amount:14.67}];
+  const reconciled=reconcilePayrollDraft([{employeeId:"pos2",grossAmount:139.67},{employeeId:"operator",grossAmount:173.33}],old,payments);
+  assert.equal(reconciled.valid,true);
+  assert.deepEqual(reconciled.totals,{grossAmount:313,paidAmount:19.67,balanceAmount:293.33});
+  assert.equal(reconciled.rows[0].balanceAmount,120);
+  assert.equal(reconcilePayrollDraft([{employeeId:"pos2",grossAmount:10}],old,payments).reason,"OVERPAYMENT");
+  assert.equal(reconcilePayrollDraft([],old,payments).reason,"MISSING_PAID_EMPLOYEE");
+});
 
 test("payroll includes closed and approved attendance plus legacy completed rows",()=>{
   assert.deepEqual(PAYROLLABLE_ATTENDANCE_STATUSES,["CLOSED","APPROVED","COMPLETED"]);
