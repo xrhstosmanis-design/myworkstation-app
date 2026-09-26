@@ -968,7 +968,8 @@ router.get("/ai-reader/fast-status/:jobId",requireCompanyModule("AI_READER"),asy
     }
     const lineCount=Number(background.lineCount||job.resultJson?.productLines?.length||0);
     const done=background.status==="COMPLETED"&&job.status==="AWAITING_APPROVAL"&&!rereadClaimed&&lineCount>0;
-    res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_RECOVERING":job.stage,status:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_QUEUED":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:job.status==="POS_FAILED"&&!retryClaimed,purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:retryClaimed?null:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount,pageCount:Number(background.pageCount||handoff?.pageCount||0)});
+    const reviewRequired=job.status==="AWAITING_APPROVAL"&&background.status==="COMPLETED_WITH_REVIEW";
+    res.json({id:job.id,stage:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_RECOVERING":job.stage,status:rereadClaimed?"POS_REPROCESSING":retryClaimed?"POS_QUEUED":job.status,draftReady:Boolean(job.purchaseDocumentId),done,failed:(job.status==="POS_FAILED"&&!retryClaimed)||reviewRequired,reviewRequired,purchaseDocumentId:job.purchaseDocumentId||null,updatedAt:job.updatedAt,error:retryClaimed?null:background.error||null,archived:background.archived,reconciliationRequired:Boolean(background.reconciliationRequired),reconciliationDifference:Number(background.reconciliationDifference||0),lineCount,pageCount:Number(background.pageCount||handoff?.pageCount||0)});
   }catch(error){next(error)}
 });
 
