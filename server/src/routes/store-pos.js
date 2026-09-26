@@ -6,7 +6,7 @@ import {auth} from "../middleware/auth.js";
 import {buildSaleFingerprint,ensurePosSaleSafetySchema,findRecentSimilarSale,findSaleByClientTransaction,insertPosSaleSafetyAudit,upsertOfflineSyncEvidence} from "../pos-sale-safety.js";
 import {sendEmail} from "../services/mail.js";
 import {resolvePaymentDeviceRoute} from "../payment-device-routing.js";
-import {configuredKatDelayedTerminal,resolveKatOnlineRouting} from "../kat-terminal-routing.js";
+import {configuredKatDelayedTerminal,normalizeTerminalPos,resolveKatOnlineRouting} from "../kat-terminal-routing.js";
 
 const router=Router();
 router.use(auth);
@@ -120,7 +120,8 @@ const clientTransactionId=body.clientTransactionId||crypto.randomUUID(),fingerpr
         if(!onlineOrder){const error=new Error("Η Online παραγγελία δεν βρέθηκε για το POS checkout.");error.status=409;throw error}
         if(body.onlineOrderNumber&&String(onlineOrder.orderNumber)!==String(body.onlineOrderNumber)){const error=new Error("Ο αριθμός Online παραγγελίας δεν συμφωνεί με το checkout.");error.status=409;throw error}
         const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:store.id,currentTerminalPos:terminalPos});
-        onlineRouting=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:terminalPos});
+        const routingSessionTerminal=normalizeTerminalPos(terminalPos)===normalizeTerminalPos(configuredTerminalPos)?terminalPos:"";
+        onlineRouting=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:routingSessionTerminal});
         if(onlineOrder.saleId){const linked=(await tx.$queryRaw`SELECT "id","total","fiscalStatus" FROM "Sale" WHERE "id"=${onlineOrder.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];if(!linked){const error=new Error("Η Online παραγγελία δείχνει σε πώληση που δεν βρέθηκε.");error.status=409;throw error}return {kind:"REPLAY",sale:linked}}
       }
       if(body.tableOrderId){if(!await hasTableService(req.user.companyId,store.id)){const error=new Error("Η Ασύρματη Παραγγελιοληψία δεν είναι ενεργή για αυτό το κατάστημα.");error.status=403;throw error}const tableOrder=(await tx.$queryRaw`SELECT "id","total" FROM "TableOrder" WHERE "id"=${body.tableOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('OPEN','SENT','READY') FOR UPDATE`)[0];if(!tableOrder){const error=new Error("Η παραγγελία τραπεζιού δεν βρέθηκε ή έχει ήδη κλείσει.");error.status=409;throw error}const tableLines=await tx.$queryRaw`SELECT "productId","quantity" FROM "TableOrderLine" WHERE "orderId"=${tableOrder.id} ORDER BY "productId"`,expected=new Map(tableLines.map(line=>[line.productId,money(line.quantity)])),actual=new Map();for(const item of items)actual.set(item.productId,money(actual.get(item.productId))+money(item.quantity));if(expected.size!==actual.size||[...expected].some(([id,quantity])=>Math.abs(quantity-money(actual.get(id)))>.0009)){const error=new Error("Τα προϊόντα της παραγγελίας τραπεζιού έχουν αλλάξει. Δημιούργησε νέα παραγγελία.");error.status=409;throw error}const preparationBatches=await tx.$queryRaw`SELECT "id","itemsJson" FROM "StorePreparationBatch" WHERE "tableOrderId"=${tableOrder.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status" IN ('SENT','READY') FOR UPDATE`;for(const batch of preparationBatches)for(const prepared of (Array.isArray(batch.itemsJson)?batch.itemsJson:[])){const item=items.find(candidate=>candidate.productId===prepared.productId);if(item)item.overrideReason=`PREPARATION:${batch.id}`}tableOrder.preparationBatchCount=preparationBatches.length}
