@@ -5,6 +5,7 @@ import fs from "node:fs";
 const handoff=fs.readFileSync(new URL("../src/routes/kat-online-pos-handoff.js",import.meta.url),"utf8");
 const routing=fs.readFileSync(new URL("../src/kat-terminal-routing.js",import.meta.url),"utf8");
 const checkout=fs.readFileSync(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
+const e2e=fs.readFileSync(new URL("../e2e/kat-online-ordering-flow.mjs",import.meta.url),"utf8");
 const legacy=fs.readFileSync(new URL("../src/routes/kat-online-ordering.js",import.meta.url),"utf8");
 
 test("safe POS handoff enforces configured delayed terminal and its open shift",()=>{
@@ -26,6 +27,13 @@ test("online checkout rejects a wrong terminal or missing device route before cr
   assert.ok(routingCheck>-1&&routingCheck<saleInsert);
   assert.ok(routeRequired>-1&&routeRequired<saleInsert);
   assert.ok(saleInsert>-1&&saleInsert<stockMutation);
+});
+
+test("real online ordering E2E declares its delayed fiscal and DELIVERY EFTPOS route",()=>{
+  assert.match(e2e,/INSERT INTO "StoreFiscalDevice"/);
+  assert.match(e2e,/INSERT INTO "StoreEftposDevice"/);
+  assert.match(e2e,/'DELIVERY'/);
+  assert.match(e2e,/operationChannel:"DELIVERY_DELAYED"/);
 });
 
 test("legacy DELIVERED commercial posting is identified as migration blocker",()=>{

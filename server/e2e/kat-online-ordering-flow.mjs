@@ -52,6 +52,16 @@ async function main(){
     VALUES (${crypto.randomUUID()},${companyId},${storeId},TRUE,'FIXED',0.10,0,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0)
     ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"surchargeType"='FIXED',"surchargeValue"=0.10,"deliveryFee"=0,"pickupEnabled"=TRUE,"deliveryEnabled"=TRUE,"cashEnabled"=TRUE,"cardOnDeliveryEnabled"=TRUE,"autoPrintOnAccept"=TRUE,"stockCheckEnabled"=TRUE,"minimumOrderRetail"=0,"updatedAt"=CURRENT_TIMESTAMP
   `;
+  await prisma.$executeRaw`
+    INSERT INTO "StoreFiscalDevice" ("id","companyId","storeId","deviceCode","displayName","terminalPos","active","createdBy")
+    VALUES (${crypto.randomUUID()},${companyId},${storeId},'E2E-KAT-FISCAL-02','E2E KAT Fiscal 02','POS2',TRUE,'E2E')
+    ON CONFLICT ("storeId","deviceCode") DO UPDATE SET "terminalPos"='POS2',"active"=TRUE,"updatedAt"=NOW()
+  `;
+  await prisma.$executeRaw`
+    INSERT INTO "StoreEftposDevice" ("id","companyId","storeId","deviceCode","displayName","fiscalDeviceCode","role","active","createdBy")
+    VALUES (${crypto.randomUUID()},${companyId},${storeId},'E2E-KAT-EFTPOS-02B','E2E KAT EFTPOS Delivery','E2E-KAT-FISCAL-02','DELIVERY',TRUE,'E2E')
+    ON CONFLICT ("storeId","deviceCode") DO UPDATE SET "fiscalDeviceCode"='E2E-KAT-FISCAL-02',"role"='DELIVERY',"active"=TRUE,"updatedAt"=NOW()
+  `;
 
   const product=await request("/api/commerce/products",{method:"POST",token:ownerToken,body:{
     name:"KAT P0 Online Product",sku:`KAT-ONLINE-${Date.now()}`,unit:"PIECE",vatRate:24,salePrice:2.5,costPrice:1,trackStock:true,barcodes:[],storeId,openingStock:10
@@ -111,7 +121,7 @@ async function main(){
   await setStatus(token,orderId,"PREPARING");
   await setStatus(token,orderId,"READY");
   const checkout=await request(`/api/store-pos/stores/${storeId}/checkout`,{method:"POST",token,body:{
-    paymentMethod:"CASH",clientTransactionId:crypto.randomUUID(),onlineOrderId:orderId,
+    paymentMethod:"CASH",operationChannel:"DELIVERY_DELAYED",clientTransactionId:crypto.randomUUID(),onlineOrderId:orderId,
     onlineOrderNumber:order.payload.order.orderNumber,onlineDeliveryFee:0,
     items:[{productId,quantity:1,unitPriceOverride:2.6,overrideReason:`ONLINE:${order.payload.order.orderNumber}`}]
   }});
