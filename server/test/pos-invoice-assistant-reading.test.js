@@ -87,3 +87,16 @@ test("small gross rounding noise across a full table uses net, excise and VAT be
 test("material gross contradiction in one row cannot be repaired by the footer",()=>{
   assert.throws(()=>assistantRowsToProductLines(reading({lines:[line({grossAmount:"2.40"})]}),{pageCount:1,totalGross:2.26}),/μικτή αξία της γραμμής/);
 });
+
+test("printed whole-line discount preserves the first physical row economics",()=>{
+  const item=line({rawText:"703177 ΓΑΛΟΠΟΥΛΑ 3 1,5900 4,77 1,91 2,86 13%",code:"703177",description:"ΓΑΛΟΠΟΥΛΑ",quantity:"3",unitCost:"1.59",lineDiscountAmount:"1.91",netAmount:"2.86",grossAmount:"3.23"});
+  const [row]=assistantRowsToProductLines(reading({printedTotal:"3.23",printedQuantityTotal:"3",printedNetTotal:"2.86",lines:[item]}),{pageCount:1,totalGross:3.23});
+  assert.equal(row.unitCost,1.59);
+  assert.ok(Math.abs(row.discount1-(1.91/4.77*100))<0.1);
+  assert.ok(Math.abs(row.quantity*row.unitCost*(1-row.discount1/100)-2.86)<0.000001);
+});
+
+test("contradictory printed whole-line discount remains blocked",()=>{
+  const item=line({rawText:"703177 ΓΑΛΟΠΟΥΛΑ 3 1,5900 4,77 1,91 2,86 13%",code:"703177",description:"ΓΑΛΟΠΟΥΛΑ",quantity:"3",unitCost:"1.59",lineDiscountAmount:"1.00",netAmount:"2.86",grossAmount:"3.23"});
+  assert.throws(()=>assistantRowsToProductLines(reading({printedTotal:"3.23",lines:[item]}),{pageCount:1,totalGross:3.23}),/τυπωμένη έκπτωση/);
+});
