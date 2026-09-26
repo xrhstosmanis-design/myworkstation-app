@@ -25,7 +25,8 @@ export function assessInvoicePages(input){
 export function fillMissingPrintedGross(lines,{printedTotal,exciseColumnAbsent=false}){
   if(!Number.isFinite(printedTotal))return lines;
   const decimal=value=>Number(String(value??"").trim().replace(",","."));
-  return lines.map(line=>{
+  return lines.map(original=>{
+    const line=String(original.exciseTotal??"").trim()===""&&exciseColumnAbsent?{...original,exciseTotal:"0"}:original;
     if(String(line.grossAmount??"").trim())return line;
     const net=decimal(line.netAmount),excise=String(line.exciseTotal??"").trim()===""&&exciseColumnAbsent?0:decimal(line.exciseTotal),vat=decimal(line.vatRate);
     if([line.netAmount,line.vatRate].some(value=>String(value??"").trim()==="")||String(line.exciseTotal??"").trim()===""&&!exciseColumnAbsent||![net,excise,vat].every(Number.isFinite)||net<0||excise<0||![0,6,13,24].includes(vat))return line;
