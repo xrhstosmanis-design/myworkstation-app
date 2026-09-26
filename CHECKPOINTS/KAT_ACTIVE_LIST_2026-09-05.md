@@ -1,4 +1,4 @@
-## 26/09/2026 12:52 — Gate 3 PR #1325 CI/DEPLOY PASS · ΝΤΑΒΟΥ LAB AWAITING
+## 26/09/2026 12:50 — Gate 3 PR #1325 CI/DEPLOY PASS · ΝΤΑΒΟΥ LAB AWAITING
 
 CI #3360 PASS, merge `cdfad903933301133f8451eae96f5b59831741d5`, Render `/api/health` exact ίδιο revision. Η ανάγνωση 19 γραμμών και αριθμητικών πεδίων στο υπάρχον πρόχειρο 23.991 παραμένει **AWAITING LAB**· καμία επανυποβολή POS/νέα πληρωμή ή οριστικοποίηση. Gate 3 OPEN.
 
