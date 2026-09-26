@@ -64,6 +64,28 @@ router.get("/invoice-learning/supplier-profile/resolve",requireCompanyModule("AI
   const row=rows?.[0];if(!row)return res.json({ok:true,found:false,profile:null});res.json({ok:true,found:true,profile:{supplierKey:row.supplierKey,supplierTaxId:row.supplierTaxId,supplierName:row.supplierName,commercialFamily:row.commercialFamily,distributorName:row.distributorName,ruleKey:row.ruleKey,profileVersion:row.profileVersion,...(row.profile||{}),updatedAt:row.updatedAt}});
 }catch(error){next(error)}});
 
+router.put("/invoice-learning/supplier-profile/stock-rules",requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  const allowed=isSuper(req)||req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
+  if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση ιδιοκτήτη ή ελεγκτή τιμολογίων."});
+  const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
+  if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις κανόνα."});
+  if(!isSuper(req)){
+    const orderId=String(req.body?.orderId||"");
+    const supplier=await prisma.$queryRaw`SELECT s."id" FROM "PurchaseOrder" o JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${req.user.companyId} AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND s."taxId"=${supplierTaxId} AND s."active"=true LIMIT 1`;
+    if(!supplier.length)return res.status(403).json({error:"Ο προμηθευτής δεν ανήκει στην εταιρεία σου."});
+  }
+  let rules;try{rules=validateExplicitStockRules(req.body?.rules)}catch(error){return res.status(400).json({error:error.message})}
+  const userId=String(req.user?.id||req.user?.userId||req.user?.sub||"")||null;
+  const saved=await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-profile:${supplierTaxId}`}))`;
+    const rows=await tx.$queryRawUnsafe(`SELECT "supplierKey","profileVersion","profile" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 LIMIT 1`,supplierTaxId);
+    const existing=rows?.[0]||{},supplierKey=existing.supplierKey||supplierTaxId,profileVersion=Number(existing.profileVersion||0)+1;
+    const profile={...applyExplicitStockRules(existing.profile||{},rules),supplierTaxId,supplierName:supplierName||existing.profile?.supplierName||"",central:true,profileVersion};
+    await tx.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","profileVersion","profile","isActive","updatedByUserId","updatedAt") VALUES ($1,$2,$3,$4,$5,$6::jsonb,TRUE,$7,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "profile"=EXCLUDED."profile","profileVersion"=EXCLUDED."profileVersion","updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,supplierKey,supplierTaxId,profile.supplierName,normName(profile.supplierName),profileVersion,JSON.stringify(profile),userId);
+    return {supplierKey,profileVersion,profile};
+  });
+  res.json({ok:true,...saved,onlyTargetSupplierUpdated:true});
+}catch(error){next(error)}});
 router.use((req,res,next)=>{if(!isSuper(req))return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});next()});
 
 router.get("/invoice-learning/product-knowledge",async(req,res,next)=>{try{
@@ -126,21 +148,6 @@ router.post("/invoice-learning/master-products",async(req,res,next)=>{try{
 router.get("/invoice-learning/workspace",async(req,res,next)=>{try{const rows=await prisma.$queryRawUnsafe(`SELECT "state","updatedAt" FROM "InvoiceLearningWorkspaceState" WHERE "scopeKey"=$1 LIMIT 1`,SCOPE),row=rows?.[0];res.json({ok:true,state:row?.state||{documents:[],profiles:{},master:[]},updatedAt:row?.updatedAt||null})}catch(error){next(error)}});
 const COLUMN_MAP_ROLES=new Set(["IGNORE","SUPPLIER_CODE","DESCRIPTION","RETAIL_PRICE","UNIT","QUANTITY","UNIT_PRICE","AMOUNT_BEFORE_DISCOUNT","DISCOUNT_1","DISCOUNT_2","DISCOUNT_3","AMOUNT_AFTER_DISCOUNT","VAT_RATE"]);
 // Explicit Super Admin action; never infer this intent from workspace autosync.
-router.put("/invoice-learning/supplier-profile/stock-rules",async(req,res,next)=>{try{
-  const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
-  if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις κανόνα."});
-  let rules;try{rules=validateExplicitStockRules(req.body?.rules)}catch(error){return res.status(400).json({error:error.message})}
-  const userId=String(req.user?.id||req.user?.userId||req.user?.sub||"")||null;
-  const saved=await prisma.$transaction(async tx=>{
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-profile:${supplierTaxId}`}))`;
-    const rows=await tx.$queryRawUnsafe(`SELECT "supplierKey","profileVersion","profile" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 LIMIT 1`,supplierTaxId);
-    const existing=rows?.[0]||{},supplierKey=existing.supplierKey||supplierTaxId,profileVersion=Number(existing.profileVersion||0)+1;
-    const profile={...applyExplicitStockRules(existing.profile||{},rules),supplierTaxId,supplierName:supplierName||existing.profile?.supplierName||"",central:true,profileVersion};
-    await tx.$executeRawUnsafe(`INSERT INTO "InvoiceSupplierReadingProfile" ("supplierKey","supplierTaxId","supplierName","normalizedName","profileVersion","profile","isActive","updatedByUserId","updatedAt") VALUES ($1,$2,$3,$4,$5,$6::jsonb,TRUE,$7,CURRENT_TIMESTAMP) ON CONFLICT ("supplierKey") DO UPDATE SET "profile"=EXCLUDED."profile","profileVersion"=EXCLUDED."profileVersion","updatedByUserId"=EXCLUDED."updatedByUserId","updatedAt"=CURRENT_TIMESTAMP`,supplierKey,supplierTaxId,profile.supplierName,normName(profile.supplierName),profileVersion,JSON.stringify(profile),userId);
-    return {supplierKey,profileVersion,profile};
-  });
-  res.json({ok:true,...saved,onlyTargetSupplierUpdated:true});
-}catch(error){next(error)}});
 router.put("/invoice-learning/supplier-profile/code-rules",async(req,res,next)=>{try{
   const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
   if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις διόρθωση κωδικού."});

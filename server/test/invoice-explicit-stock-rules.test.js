@@ -40,9 +40,15 @@ test('generic POS correction retains an explicit gram rule',async()=>{
   assert.equal(saved.mappings.DEL005.source,'SUPER_ADMIN_STOCK_RULE');
 });
 
-test('explicit saving is behind the Super Admin gate and workspace sync protects it',async()=>{
+test('explicit saving permits invoice reviewers only for an active supplier in their company',async()=>{
   const source=await readFile(new URL('../src/routes/platform-invoice-learning-workspace.js',import.meta.url),'utf8');
+  const route=source.indexOf('router.put("/invoice-learning/supplier-profile/stock-rules"');
   const gate=source.indexOf('router.use((req,res,next)=>{if(!isSuper(req))');
-  assert.ok(gate>=0&&gate<source.indexOf('router.put("/invoice-learning/supplier-profile/stock-rules"'));
+  assert.ok(route>=0&&route<gate);
+  assert.match(source.slice(route,gate),/requireCompanyModule\("AI_READER"\)/);
+  assert.match(source.slice(route,gate),/\["OWNER","ADMIN","MANAGER"\]/);
+  assert.match(source.slice(route,gate),/tokenType!=="STORE_OPERATOR"/);
+  assert.match(source.slice(route,gate),/o\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.match(source.slice(route,gate),/s\."taxId"=\$\{supplierTaxId\}/);
   assert.match(source,/\["SUPER_ADMIN_LINE_CORRECTION","SUPER_ADMIN_STOCK_RULE"\]\.includes\(mapping.source\)/);
 });

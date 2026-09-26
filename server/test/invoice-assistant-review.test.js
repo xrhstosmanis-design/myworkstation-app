@@ -38,3 +38,12 @@ test("a supplied wrong gross or absent printed payable cannot be silently repair
   assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:null})[0].grossAmount,"");
   assert.equal(fillMissingPrintedGross([{...wrong,grossAmount:""}],{printedNetTotal:"",printedTotal:1.92})[0].grossAmount,"1.92");
 });
+
+
+test("an absent excise column permits zero excise only when explicitly confirmed",()=>{
+  const line={netAmount:"77.08",exciseTotal:"",vatRate:"13",grossAmount:""};
+  assert.equal(fillMissingPrintedGross([line],{printedTotal:87.10})[0].grossAmount,"");
+  const filled=fillMissingPrintedGross([line],{printedTotal:87.10,exciseColumnAbsent:true})[0];
+  assert.equal(filled.exciseTotal,"0");
+  assert.equal(filled.grossAmount,"87.10");
+});

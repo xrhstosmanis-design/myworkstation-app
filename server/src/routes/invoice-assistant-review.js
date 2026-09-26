@@ -22,14 +22,15 @@ export function assessInvoicePages(input){
 
 // The printed table often has net and VAT columns but no final gross per row.
 // Derive only the absent gross, leaving a supplied contradictory amount intact.
-export function fillMissingPrintedGross(lines,{printedTotal}){
+export function fillMissingPrintedGross(lines,{printedTotal,exciseColumnAbsent=false}){
   if(!Number.isFinite(printedTotal))return lines;
   const decimal=value=>Number(String(value??"").trim().replace(",","."));
-  return lines.map(line=>{
+  return lines.map(original=>{
+    const line=String(original.exciseTotal??"").trim()===""&&exciseColumnAbsent?{...original,exciseTotal:"0"}:original;
     if(String(line.grossAmount??"").trim())return line;
-    const net=decimal(line.netAmount),excise=decimal(line.exciseTotal),vat=decimal(line.vatRate);
-    if([line.netAmount,line.exciseTotal,line.vatRate].some(value=>String(value??"").trim()==="")||![net,excise,vat].every(Number.isFinite)||net<0||excise<0||![0,6,13,24].includes(vat))return line;
-    return {...line,grossAmount:((net+excise)*(1+vat/100)).toFixed(2)};
+    const net=decimal(line.netAmount),excise=String(line.exciseTotal??"").trim()===""&&exciseColumnAbsent?0:decimal(line.exciseTotal),vat=decimal(line.vatRate);
+    if([line.netAmount,line.vatRate].some(value=>String(value??"").trim()==="")||String(line.exciseTotal??"").trim()===""&&!exciseColumnAbsent||![net,excise,vat].every(Number.isFinite)||net<0||excise<0||![0,6,13,24].includes(vat))return line;
+    return {...line,exciseTotal:String(excise),grossAmount:((net+excise)*(1+vat/100)).toFixed(2)};
   });
 }
 
