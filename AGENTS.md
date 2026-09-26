@@ -95,15 +95,27 @@ This gate applies to every module, page, conversation and agent. It is mandatory
 
 ### Κοινός κανόνας Gate 3 για όλες τις σελίδες
 
+Νεότερη ρητή προτεραιότητα ιδιοκτήτη (26/09/2026): η πληρωμή POS πρέπει να
+παραδίδει με μία υποβολή ένα επεξεργάσιμο πρόχειρο και τις φωτογραφίες,
+με ένδειξη «Ανάγνωση από βοηθό». Ο βοηθός διαβάζει όλες τις φυσικές γραμμές
+από το πρωτότυπο και ο ελεγκτής διορθώνει το ίδιο πρόχειρο πριν από την
+καταχώριση. Η ακρίβεια της πρώτης αυτόματης ανάγνωσης γραμμών είναι χωριστή
+μελλοντική βελτίωση και δεν αποτελεί πλέον προϋπόθεση για δοκιμή του βοηθού.
+Αποτυχία παράδοσης του πρόχειρου ή της πληρωμής παραμένει πραγματικό σφάλμα.
+Τα ιστορικά FAIL της πρώτης ανάγνωσης παραμένουν καταγεγραμμένα, χωρίς να
+μετατρέπονται σε PASS. Το Gate 3 παραμένει OPEN ώσπου να ελεγχθούν οι
+φυσικές γραμμές, τα οικονομικά, οι κανόνες και η ασφαλής τελική καταχώριση.
+
 Το Gate 3 παραμένει **OPEN** έως ότου δοκιμαστούν πραγματικά τιμολόγια
 διαφορετικών προμηθευτών, συμπεριλαμβανομένων παλαιότερων PASS και FAIL.
-Πηγή αλήθειας είναι το τυπωμένο πρωτότυπο και το πρώτο πρόχειρο που
-δημιουργεί αυτόματα **μία νέα υποβολή POS**. Η θυρίδα είναι πηγή
+Πηγή αλήθειας είναι το τυπωμένο πρωτότυπο. Καταγράψτε χωριστά το πρώτο
+πρόχειρο που δημιουργεί **μία νέα υποβολή POS** και την ανάγνωση του βοηθού
+στο ίδιο πρόχειρο. Η θυρίδα είναι πηγή
 πρωτοτύπων/διαγνωστικών, όχι απόδειξη επιτυχούς ανάγνωσης. Πριν από αλλαγή
 στο OCR, στο recheck, στη συγχώνευση γραμμών ή στο invoice learning, καταγράψτε
 ανά παραστατικό αριθμό και προμηθευτή, φυσικές γραμμές, κωδικούς, ποσότητες,
 μονάδες/συσκευασίες, αρχικές τιμές, εκπτώσεις, καθαρές αξίες, ΦΠΑ και
-πληρωτέο, και συγκρίνετέ τα με το πρώτο πρόχειρο. Η συμφωνία μόνο του
+πληρωτέο, και συγκρίνετέ τα με την ανάγνωση του βοηθού και το πρόχειρο. Η συμφωνία μόνο του
 πληρωτέου ή ένα επιτυχημένο τιμολόγιο δεν αποτελούν PASS του Gate.
 
 Κάθε αλλαγή επανελέγχεται με τα διαθέσιμα τεκμήρια **όλων** των καταγεγραμμένων
@@ -121,15 +133,15 @@ NOT TESTED πριν/μετά, προστατεύστε τα παλιά PASS κα
 `CHECKPOINTS/CHANGES/2026-09-25-gate3-cross-supplier-evidence-inventory.md`.
 Οι άλλες σελίδες δεν αλλάζουν παράλληλα το ανατεθειμένο Gate 3.
 
-A POS invoice change is accepted only when one genuinely new invoice submission
-from the POS creates the correct single BackOffice draft automatically. A POS or
-BackOffice refresh, status polling, reopening the draft, a second upload, or a
-startup reread may be used only for diagnosis and must never be reported as the
-acceptance result. The accepted draft must preserve the one settlement, one AI
-job and one purchase draft identities. The owner's standing LAB rule permits
+The assistant pathway requires one genuinely new POS submission to create one
+durable, editable BackOffice draft with the original photos and the existing
+settlement. Refreshing or reopening the same draft is permitted to review the
+assistant's work; a second upload/payment is not. Preserve the one settlement,
+one AI job and one purchase draft identities. The accuracy of initial automatic
+line extraction is tracked separately for a future upgrade. The owner's standing LAB rule permits
 at most **two identified uncertain or incorrect product lines per invoice**
 (including a 20-product invoice), provided they are present in the single
-automatically created draft, visibly marked **ΠΡΟΣ ΕΛΕΓΧΟ** with a reason,
+assistant-reviewed draft, visibly marked **ΠΡΟΣ ΕΛΕΓΧΟ** with a reason,
 and corrected by the operator before approval. Zero recognized products,
 missing/duplicated physical rows, three or more uncertain lines, or any
 unresolved product cannot be called LAB PASS. A header-total mismatch may

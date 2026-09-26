@@ -15,7 +15,7 @@ const generateInternalBarcode=()=>{const data=`29${Math.floor(Math.random()*1e10
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const fmt=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
 const statusLabel=value=>({NEW:"Νέα παραγγελία",FINAL:"Οριστική",INVOICED:"Τιμολογημένη"}[value]||value||"—");
-const ocrJobDiagnostic=job=>job?`<small data-ocr-job-status style="display:block;margin-top:4px;color:${job.error?"#a12622":"#6a5200"};font-weight:800">OCR job: ${esc(job.status||"—")} / ${esc(job.stage||"—")} · ${fmt(job.updatedAt)}${job.error?` · ${esc(job.error)}`:""}</small>`:"";
+const ocrJobDiagnostic=job=>{if(!job)return "";const draftForAssistant=job.status==="AWAITING_APPROVAL"&&job.stage==="POS_BACKGROUND_COMPLETE";return draftForAssistant?`<small data-ocr-job-status style="display:block;margin-top:4px;color:#6a5200;font-weight:800">Ανάγνωση από βοηθό · πρόχειρο για έλεγχο · ${fmt(job.updatedAt)}</small>`:`<small data-ocr-job-status style="display:block;margin-top:4px;color:${job.error?"#a12622":"#6a5200"};font-weight:800">OCR job: ${esc(job.status||"—")} / ${esc(job.stage||"—")} · ${fmt(job.updatedAt)}${job.error?` · ${esc(job.error)}`:""}</small>`};
 const state={active:false,tab:"orders",from:monthStart(),to:today(),storeId:"",supplierId:"",status:"ALL",q:"",report:null,proposal:[],loading:false,lastRefresh:null,recovery:null};
 let reportRequestId=0;
 let suiteListenersInstalled=false;
