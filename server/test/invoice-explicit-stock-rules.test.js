@@ -48,7 +48,7 @@ test('explicit saving permits invoice reviewers only for an active supplier in t
   assert.match(source.slice(route,gate),/requireCompanyModule\("AI_READER"\)/);
   assert.match(source.slice(route,gate),/\["OWNER","ADMIN","MANAGER"\]/);
   assert.match(source.slice(route,gate),/tokenType!=="STORE_OPERATOR"/);
-  assert.match(source.slice(route,gate),/"companyId"=\$\{req\.user\.companyId\}/);
-  assert.match(source.slice(route,gate),/"taxId"=\$\{supplierTaxId\}/);
+  assert.match(source.slice(route,gate),/o\."companyId"=\$\{req\.user\.companyId\}/);
+  assert.match(source.slice(route,gate),/s\."taxId"=\$\{supplierTaxId\}/);
   assert.match(source,/\["SUPER_ADMIN_LINE_CORRECTION","SUPER_ADMIN_STOCK_RULE"\]\.includes\(mapping.source\)/);
 });
