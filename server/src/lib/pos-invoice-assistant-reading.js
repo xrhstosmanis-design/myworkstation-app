@@ -2,6 +2,7 @@ import {prisma} from "../prisma.js";
 import {assessInvoicePages,normalizedAssistantPages} from "../routes/invoice-assistant-review.js";
 import {rawRowSupportsStructuredLine} from "./invoice-line-review.js";
 import {invoiceAssistantImageViews} from "./invoice-assistant-image-views.js";
+import {invoiceAssistantDiscounts} from "./invoice-assistant-discounts.js";
 
 const number=value=>Number(String(value??"").replace(",","."));
 const responseText=value=>typeof value?.output_text==="string"?value.output_text:(value?.output||[]).flatMap(item=>item.content||[]).find(part=>part.type==="output_text")?.text||"";
@@ -28,7 +29,7 @@ export function assistantRowsToProductLines(reading,{pageCount,totalGross}){
     const page=number(line.page),quantity=number(line.quantity),unitCost=number(line.unitCost),netAmount=number(line.netAmount),exciseTotal=number(line.exciseTotal),vatRate=number(line.vatRate),grossAmount=number(line.grossAmount);
     const printedDiscounts=[line.discount1,line.discount2,line.discount3].map(number),unitDiscountAmount=number(line.unitDiscountAmount||0),unitsPerPackage=number(line.unitsPerPackage);
     if(unitDiscountAmount<0||unitDiscountAmount>=unitCost||unitDiscountAmount>0&&printedDiscounts[2]>0)throw new Error(`Η έκπτωση καλαθιού της γραμμής ${index+1} χρειάζεται έλεγχο.`);
-    const discounts=unitDiscountAmount>0?[unitDiscountAmount/unitCost*100,printedDiscounts[0],printedDiscounts[1]]:printedDiscounts;
+    const discounts=invoiceAssistantDiscounts({quantity,unitCost,unitDiscountAmount,printedDiscounts,netAmount});
     const description=String(line.description||"").trim(),unit=String(line.unit||"").trim().toUpperCase();
     if(!Number.isInteger(page)||page<1||page>pageCount||!description||description.length>500||!(quantity>0)||!(unitCost>0)||![0,6,13,24].includes(vatRate)||![quantity,unitCost,unitDiscountAmount,netAmount,exciseTotal,grossAmount,unitsPerPackage,...discounts].every(Number.isFinite)||[netAmount,exciseTotal,grossAmount].some(value=>value<0)||discounts.some(value=>value<0||value>=100)||!(unitsPerPackage>=1)||!(["PIECE","PACKAGE"].includes(unit)))throw new Error(`Η γραμμή ${index+1} του βοηθού χρειάζεται έλεγχο.`);
     const calculated=quantity*unitCost*discounts.reduce((factor,discount)=>factor*(1-discount/100),1);
