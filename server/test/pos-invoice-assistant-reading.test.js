@@ -1,0 +1,29 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {assistantRowsToProductLines} from "../src/lib/pos-invoice-assistant-reading.js";
+
+const line=(overrides={})=>({page:"1",rawText:"001 ΚΑΦΕΣ 2 1,00 2,00 13% 2,26",code:"001",description:"ΚΑΦΕΣ",quantity:"2",unit:"PIECE",unitsPerPackage:"1",unitCost:"1",discount1:"0",discount2:"0",discount3:"0",netAmount:"2",exciseTotal:"0",vatRate:"13",grossAmount:"2.26",confidence:"certain",...overrides});
+const reading=(overrides={})=>({expectedPageCount:1,visiblePageNumbers:[1],printedTotal:"2.26",lines:[line()],...overrides});
+
+test("assistant maps a complete physical line into the existing POS draft format",()=>{
+  const rows=assistantRowsToProductLines(reading(),{pageCount:1,totalGross:2.26});
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].quantity,2);
+  assert.equal(rows[0].sourceColumnsVerified,true);
+  assert.equal(rows[0].sourceFileIndex,0);
+});
+
+test("assistant cannot fill a draft when only page two of two is visible",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({expectedPageCount:2,visiblePageNumbers:[2]}),{pageCount:1,totalGross:2.26}),/όλες τις σελίδες/);
+});
+
+test("matching header total does not conceal a wrong physical row",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({lines:[line({quantity:"3"})]}),{pageCount:1,totalGross:2.26}),/αριθμητική/);
+});
+
+test("printed invoice quantity stays separate from stock package conversion",()=>{
+  const rows=assistantRowsToProductLines(reading({printedTotal:"5424",lines:[line({rawText:"001 ΚΑΦΕΣ 48 ΠΑΚ 100 100,00 4800,00 13% 5424,00",quantity:"48",unit:"PACKAGE",unitsPerPackage:"100",unitCost:"100",netAmount:"4800",grossAmount:"5424"})]}),{pageCount:1,totalGross:5424});
+  assert.equal(rows[0].quantity,48);
+  assert.equal(rows[0].unitsPerPackage,100);
+  assert.equal(rows[0].unit,"PACKAGE");
+});
