@@ -1240,6 +1240,7 @@ PR #1237 CI #3135 πράσινο/deploy `148c6b1`. Μία ακύρωση FRESH/�
 
 ## 2026-09-25 — Gate 6 Online παραγγελίες και Delivery — ΑΝΑΤΕΘΗΚΕ / OPEN
 
+- [ ] **Νεότερο πραγματικό LAB αποτέλεσμα 26/09 — FAIL:** η `ONL-001` δημιούργησε πώληση 0,50 € / `SALE_CASH` στη λανθασμένη `MAIN` πριν αποτύχει ο τελικός handoff. Η παραγγελία έμεινε `OUT_FOR_DELIVERY`, terminal/fiscal/stock έμειναν λανθασμένα ή ελλιπή και η `MAIN` ξανάνοιξε παράλληλα με την `LAB-POS-02`. Δεν επαναλαμβάνεται πληρωμή της ίδιας παραγγελίας. Στενή fail-closed διόρθωση στο `agent/gate6-terminal-fail-closed-20260926`. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate6-terminal-fail-closed.md`. **Gate 6 OPEN.**
 - [ ] Ανάθεση στο `agent/gate6-online-delivery-20260925`. Το Gate 6 είναι η γενική ροή Online Ordering/Delivery του MyWorkStation και **δεν είναι** η εξωτερική σύνδεση efood/Pelican.
 - [ ] Scope: σωστό κατάστημα και ξεχωριστό online/delivery ταμείο, ετεροχρονισμένη χρέωση, ακριβώς μία αφαίρεση αποθέματος, idempotent retry/διπλή παραγγελία, ακύρωση/απόρριψη/ολοκλήρωση και συμφωνία POS–BackOffice–Audit.
 - [ ] Υπάρχει παλιό CI/E2E τεκμήριο δημιουργίας→duplicate retry→accept→prepare→ready→POS checkout→deliver με μία μείωση stock, αλλά δεν ισοδυναμεί με νέο πραγματικό LAB PASS. Πρώτα γίνεται απογραφή του σημερινού production και μετά συγκεντρωτική φυσική δοκιμή με πλήρες πριν/μετά.
