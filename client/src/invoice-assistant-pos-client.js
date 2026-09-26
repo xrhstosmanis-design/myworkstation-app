@@ -1,6 +1,7 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const normalizePrintedUnit=value=>{const unit=String(value??"").trim().toUpperCase();if(["PIECE","ΤΜ","ΤΜΧ","ΤΕΜ","TM","TMX","TEM","PCS"].includes(unit))return "PIECE";if(["PACKAGE","ΠΑΚ","ΠΑΚ.","ΚΙΒ","ΚΙΒ.","BOX"].includes(unit))return "PACKAGE";return unit};
 const validPrinted=(line,manuallyConfirmed=false)=>{
   if(!manuallyConfirmed&&line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
   const fields=["quantity","unitCost","vatRate","discount1","discount2","discount3","exciseTotal","netAmount","grossAmount","stockUnitsPerInvoiceUnit"];
@@ -99,7 +100,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
       overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
       overlay.querySelector("[data-answer]").textContent=result.assistantMessage||"Ο έλεγχος ολοκληρώθηκε.";
-      const printed=Array.isArray(result.printedLines)?result.printedLines:[];
+      const printed=Array.isArray(result.printedLines)?result.printedLines.map(line=>({...line,invoiceUnit:normalizePrintedUnit(line.invoiceUnit),stockUnitsPerInvoiceUnit:normalizePrintedUnit(line.invoiceUnit)==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?"1":line.stockUnitsPerInvoiceUnit})):[];
       const printedTotal=Number.isFinite(result.printedTotal)?result.printedTotal:null;
       const matched=new Set(printed.map(line=>line.matchingLineId).filter(Boolean));
       const calculatedGross=printed.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
@@ -110,8 +111,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       activePagesComplete=result.pagesComplete;activePrintedTotal=printedTotal;
       const working=printed.map(line=>({...line,
-        stockUnitsPerInvoiceUnit:line.invoiceUnit==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?1:line.stockUnitsPerInvoiceUnit,
-        exciseTotal:String(line.exciseTotal??"").trim()===""?0:line.exciseTotal
+        stockUnitsPerInvoiceUnit:line.stockUnitsPerInvoiceUnit
       }));
       activePrintedRows=working;
       const printedArea=overlay.querySelector("[data-printed]");
