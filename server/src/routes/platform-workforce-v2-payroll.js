@@ -112,6 +112,8 @@ router.post("/periods/:id/close",async(req,res,next)=>{try{
     if(period.status!=="DRAFT"||period.closing)throw Object.assign(new Error("Η περίοδος έχει ήδη οριστικοποιηθεί."),{status:409});
     const unresolvedAttendance=await tx.workforceAttendanceSession.count({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:period.periodStart,lt:period.periodEnd},status:{in:["OPEN","NEEDS_REVIEW","NEEDS_APPROVAL"]}}});
     if(unresolvedAttendance)throw Object.assign(new Error(`Υπάρχουν ${unresolvedAttendance} παρουσίες που χρειάζονται κλείσιμο ή έγκριση.`),{status:409});
+    const changedAttendance=await tx.workforceAttendanceSession.count({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:period.periodStart,lt:period.periodEnd},updatedAt:{gt:period.createdAt}}});
+    if(changedAttendance)throw Object.assign(new Error("Οι παρουσίες άλλαξαν μετά τη δημιουργία της περιόδου. Απαιτείται επανυπολογισμός και συμφωνία πριν από το κλείδωμα."),{status:409});
     const totals=payrollClosingSummary(period.lines,period.payments);
     if(totals.openEmployeeCount)throw Object.assign(new Error(`Η περίοδος έχει υπόλοιπο ${totals.balanceAmount.toFixed(2)} € σε ${totals.openEmployeeCount} εργαζόμενους.`),{status:409});
     for(const row of totals.rows)await tx.workforcePayrollLine.update({where:{payrollPeriodId_employeeId:{payrollPeriodId:period.id,employeeId:row.employeeId}},data:{paidAmount:row.paidAmount,balanceAmount:row.balanceAmount}});
