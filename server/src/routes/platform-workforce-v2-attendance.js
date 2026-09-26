@@ -75,12 +75,50 @@ router.post("/clock",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 const approvalBody=z.object({confirmed,reason:z.string().trim().min(3).max(500)});
+const correctionBody=approvalBody.extend({workedMinutes:z.number().int().min(1).max(1440)});
+router.post("/:sessionId/correct-hours",async(req,res,next)=>{try{
+  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης διορθώνει ώρες παρουσίας."),{status:403});
+  const context=await contextFor(req),body=correctionBody.parse(req.body||{});
+  const updated=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=${String(req.params.sessionId)} AND "companyId"=${context.company.id} AND "storeId"=${context.store.id} FOR UPDATE`;
+    const session=await tx.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
+    if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
+    if(!["OPEN","NEEDS_REVIEW","NEEDS_APPROVAL"].includes(session.status))throw Object.assign(new Error("Η παρουσία δεν είναι εκκρεμής για διόρθωση."),{status:409});
+    const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
+    if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
+    const endedAt=new Date(new Date(session.startedAt).getTime()+body.workedMinutes*60000);
+    const status=body.workedMinutes>480?"NEEDS_APPROVAL":"NEEDS_REVIEW";
+    const before={startedAt:session.startedAt,endedAt:session.endedAt,workedMinutes:session.workedMinutes,status:session.status};
+    const item=await tx.workforceAttendanceSession.update({where:{id:session.id},data:{endedAt,workedMinutes:body.workedMinutes,overtimeMinutes:Math.max(0,body.workedMinutes-480),status,issueJson:{issues:[{code:"MANUAL_HOURS_CORRECTION",message:"Οι ώρες διορθώθηκαν από υπεύθυνο και απαιτούν έγκριση."}],original:before,correctedBy:req.user.id,correctedAt:new Date().toISOString(),correctionReason:body.reason}}});
+    await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ATTENDANCE_HOURS_CORRECTED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before,after:{endedAt:item.endedAt,workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
+    return {...item,employee:session.employee};
+  });
+  res.json({item:serializeSession({...updated,assignment:null})});
+}catch(error){next(error)}});
+router.post("/:sessionId/approve-review",async(req,res,next)=>{try{
+  if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει παρουσία."),{status:403});
+  const context=await contextFor(req),body=approvalBody.parse(req.body||{});
+  const updated=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=${String(req.params.sessionId)} AND "companyId"=${context.company.id} AND "storeId"=${context.store.id} FOR UPDATE`;
+    const session=await tx.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
+    if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
+    if(session.status!=="NEEDS_REVIEW"||!session.endedAt||session.workedMinutes>480)throw Object.assign(new Error("Η παρουσία δεν είναι έτοιμη για έγκριση ελέγχου."),{status:409});
+    const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
+    if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
+    const item=await tx.workforceAttendanceSession.update({where:{id:session.id},data:{status:"APPROVED",issueJson:{...(session.issueJson||{}),approvedBy:req.user.id,approvedAt:new Date().toISOString(),approvalReason:body.reason}}});
+    await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_ATTENDANCE_REVIEW_APPROVED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before:{workedMinutes:session.workedMinutes,status:session.status},after:{workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
+    return {...item,employee:session.employee};
+  });
+  res.json({item:serializeSession({...updated,assignment:null})});
+}catch(error){next(error)}});
 router.post("/:sessionId/approve-over-8-hours",async(req,res,next)=>{try{
   if(!isApprovalUser(req.user))throw Object.assign(new Error("Μόνο Super Admin ή Ιδιοκτήτης εγκρίνει υπέρβαση 8 ωρών."),{status:403});
   const context=await contextFor(req),body=approvalBody.parse(req.body||{}),session=await prisma.workforceAttendanceSession.findFirst({where:{id:String(req.params.sessionId),companyId:context.company.id,storeId:context.store.id},include:{employee:true}});
   if(!session)throw Object.assign(new Error("Δεν βρέθηκε παρουσία Workforce v2."),{status:404});
   if(session.status!=="NEEDS_APPROVAL"||Number(session.workedMinutes)<=480)throw Object.assign(new Error("Η παρουσία δεν έχει εκκρεμή υπέρβαση 8 ωρών προς έγκριση."),{status:409});
   const updated=await prisma.$transaction(async tx=>{
+    const locked=await tx.workforcePayrollPeriod.findFirst({where:{companyId:context.company.id,storeId:context.store.id,status:"CLOSED",periodStart:{lte:session.startedAt},periodEnd:{gt:session.startedAt}},select:{id:true}});
+    if(locked)throw Object.assign(new Error("Η περίοδος μισθοδοσίας έχει κλειδώσει."),{status:409});
     const item=await tx.workforceAttendanceSession.update({where:{id:session.id},data:{status:"APPROVED",issueJson:{...(session.issueJson||{}),approvedBy:req.user.id,approvedAt:new Date().toISOString(),approvalReason:body.reason}}});
     await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_OVER_8_HOURS_APPROVED",entityType:"WORKFORCE_ATTENDANCE_SESSION",entityId:item.id,before:{employeeId:session.employeeId,workedMinutes:session.workedMinutes,status:session.status},after:{employeeId:session.employeeId,workedMinutes:item.workedMinutes,status:item.status},reason:body.reason});
     return item;
