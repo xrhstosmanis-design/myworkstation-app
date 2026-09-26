@@ -171,7 +171,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
           proposals.replaceChildren();apply.hidden=false;changed=true;
         }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
-      status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
+      status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} διορθώσεις υπαρχουσών γραμμών, ${missing.length} γραμμές που λείπουν από το πρόχειρο, ${extra.length} γραμμές προς έλεγχο διαγραφής. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
   overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
