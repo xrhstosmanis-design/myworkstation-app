@@ -5,6 +5,7 @@ import fs from "node:fs";
 const handoff=fs.readFileSync(new URL("../src/routes/kat-online-pos-handoff.js",import.meta.url),"utf8");
 const routing=fs.readFileSync(new URL("../src/kat-terminal-routing.js",import.meta.url),"utf8");
 const checkout=fs.readFileSync(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
+const posOrders=fs.readFileSync(new URL("../../client/src/components/store/StoreOnlineOrdersV2.jsx",import.meta.url),"utf8");
 const e2e=fs.readFileSync(new URL("../e2e/kat-online-ordering-flow.mjs",import.meta.url),"utf8");
 const legacy=fs.readFileSync(new URL("../src/routes/kat-online-ordering.js",import.meta.url),"utf8");
 
@@ -27,6 +28,15 @@ test("online checkout rejects a wrong terminal or missing device route before cr
   assert.ok(routingCheck>-1&&routingCheck<saleInsert);
   assert.ok(routeRequired>-1&&routeRequired<saleInsert);
   assert.ok(saleInsert>-1&&saleInsert<stockMutation);
+  assert.match(checkout,/routedTerminalPos=onlineRouting\?\.terminalPos\|\|terminalPos/);
+  assert.match(checkout,/terminalPos:routedTerminalPos,channel:paymentChannel/);
+  assert.match(checkout,/terminalPos:routedTerminalPos\}\)/);
+});
+
+test("online payment keeps a checkout failure visible inside the active payment dialog",()=>{
+  assert.match(posOrders,/\[payError,setPayError\]/);
+  assert.match(posOrders,/setPayError\(e\.message\|\|"Η πληρωμή δεν ολοκληρώθηκε\."\)/);
+  assert.match(posOrders,/role="alert"/);
 });
 
 test("real online ordering E2E declares its delayed fiscal and DELIVERY EFTPOS route",()=>{
