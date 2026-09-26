@@ -30,10 +30,10 @@ const api=async(path,options={})=>{
 
 export async function openPosInvoiceAssistant(orderId,order,onComplete){
   const overlay=document.createElement("div");
-  overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:12px;display:grid;place-items:center";
-  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="Βοηθός τιμολογίου POS" style="width:min(1800px,100%);height:min(96vh,1100px);background:#f7fafc;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px #0005">
+  overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:0;display:block";
+  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="Βοηθός τιμολογίου POS" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
     <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>Βοηθός τιμολογίου POS</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></header>
-    <div style="display:grid;grid-template-columns:minmax(280px,42%) minmax(350px,1fr);min-height:0;flex:1">
+    <div style="display:grid;grid-template-columns:minmax(280px,35%) minmax(0,1fr);min-height:0;flex:1">
       <div style="min-height:0;overflow:auto;padding:12px;background:#e9f0f5"><div data-pages></div></div>
       <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">Δες τις φωτογραφίες, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
         <details><summary style="cursor:pointer;font-weight:700">Αρχικό πρόχειρο POS · άνοιγμα για σύγκριση</summary><div data-current style="border:1px solid #d4e1e8;background:white;border-radius:10px;padding:9px;max-height:26vh;overflow:auto"></div></details>
