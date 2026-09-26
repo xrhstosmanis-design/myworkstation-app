@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
 import QRCode from "qrcode";
 import {mergeFastInvoiceHeaders} from "../../lib/invoice-fast-header-merge.js";
+import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-match.js";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
@@ -72,12 +73,13 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       if(processedPages.some(page=>page.fastDocumentType==="CREDIT_NOTE")){setDocumentType("CREDIT_NOTE");setCreditDetected(true)}
       if(!headerResults.length)throw headerErrors.at(-1)||new Error("Δεν διαβάστηκαν βασικά στοιχεία από τις επιλεγμένες σελίδες.");
       const {supplierHeader:supplierMeta,documentHeader:documentMeta,totalHeader:totalMeta,confidence}=mergeFastInvoiceHeaders(headerResults);
-      if(supplierMeta?.supplierId&&(initial||!supplierId))setSupplierId(supplierMeta.supplierId);
+      const knownSupplier=knownSupplierFromFastHeaders(headerResults,supplierOptions);
+      if(knownSupplier&&(initial||!supplierId))setSupplierId(knownSupplier.id);
       if(supplierMeta&&(initial||!supplierCandidate.name))setSupplierCandidate({name:String(supplierMeta.supplierName||""),taxId:String(supplierMeta.supplierTaxId||"")});
       if(documentMeta?.documentNumber&&(initial||!documentNumber))setDocumentNumber(documentMeta.documentNumber);
       if(documentMeta?.documentDate&&(initial||!documentDate))setDocumentDate(documentMeta.documentDate);
       if(totalMeta)setAmount(Number(totalMeta.totalGross).toFixed(2).replace(".",","));
-      const foundSupplier=Boolean(supplierMeta?.supplierId||supplierId),baseComplete=Boolean((documentMeta?.documentNumber||documentNumber)&&(documentMeta?.documentDate||documentDate)&&Number(totalMeta?.totalGross||num(amount))>0);
+      const foundSupplier=Boolean(knownSupplier||(!initial&&supplierId)),baseComplete=Boolean((documentMeta?.documentNumber||documentNumber)&&(documentMeta?.documentDate||documentDate)&&Number(totalMeta?.totalGross||num(amount))>0);
       if(!foundSupplier){setStatus(`${nextPages.length} ${nextPages.length===1?"σελίδα επιλέχθηκε":"σελίδες επιλέχθηκαν"}. Ο προμηθευτής δεν υπάρχει στη βάση. Έλεγξε/συμπλήρωσε Επωνυμία και ΑΦΜ.`)}
       else{setStatus(baseComplete?`${nextPages.length} ${nextPages.length===1?"σελίδα έτοιμη":"σελίδες έτοιμες"} (${Math.round(confidence)}%). Έλεγξε τα 4 στοιχεία και συνέχισε.`:`${nextPages.length} ${nextPages.length===1?"σελίδα έτοιμη":"σελίδες έτοιμες"}. Συμπλήρωσε μόνο όποιο βασικό στοιχείο λείπει.`)}
     }catch(error){setStatus(`Δεν ολοκληρώθηκε η επιλογή/ανάγνωση των σελίδων. ${error?.message||""}`);setMessage?.(`⚠️ ${error?.message||"Δεν διαβάστηκαν οι σελίδες."}`)}finally{setReading(false)}
@@ -99,6 +101,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const lookupVat=async()=>{
     const taxId=String(supplierCandidate.taxId||"").replace(/\D/g,"");
     if(taxId.length!==9)return setVatLookup({busy:false,verified:false,message:"Το ΑΦΜ πρέπει να έχει 9 ψηφία."});
+    const knownSupplier=knownSupplierFromFastHeaders([{supplierTaxId:taxId}],supplierOptions);
+    if(knownSupplier){setSupplierId(knownSupplier.id);setVatLookup({busy:false,verified:true,message:`Υπάρχει ήδη: ${knownSupplier.name}`});return}
     setVatLookup({busy:true,verified:false,message:"Έλεγχος επίσημων στοιχείων…"});
     try{
       const data=await api(`/api/commerce/vat-lookup?storeId=${encodeURIComponent(store.id)}&taxId=${encodeURIComponent(taxId)}`);
