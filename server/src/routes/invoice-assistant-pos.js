@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {assessInvoicePages,normalizedAssistantPages} from "./invoice-assistant-review.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
+import {invoiceAssistantDiscounts} from "../lib/invoice-assistant-discounts.js";
 
 const router=Router();
 const managers=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -83,10 +84,8 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     }).filter(item=>{const before=current.find(row=>row.id===item.lineId)?.[item.field];return numericFields.has(item.field)?Math.abs(number(before)-number(item.value))>0.000001:String(before??"").trim()!==String(item.value).trim()}).slice(0,100).map(item=>({lineId:item.lineId,field:item.field,value:String(item.value).slice(0,250),reason:String(item.reason||"").slice(0,400)}));
     const used=new Set();const printedLines=(Array.isArray(parsed.printedLines)?parsed.printedLines:[]).slice(0,150).map((line,index)=>{const matchingLineId=ids.has(line.matchingLineId)&&!used.has(line.matchingLineId)?line.matchingLineId:"";if(matchingLineId)used.add(matchingLineId);const unitCost=number(line.unitCost),basket=number(line.unitDiscountAmount);
       const hasBasket=Number.isFinite(unitCost)&&unitCost>0&&Number.isFinite(basket)&&basket>0&&basket<unitCost;
-      const discount1=hasBasket?String(basket/unitCost*100):line.discount1;
-      const discount2=hasBasket?line.discount1:line.discount2;
-      const discount3=hasBasket?line.discount2:line.discount3;
-      return {...line,discount1,discount2,discount3,sequence:String(index+1),matchingLineId}});
+      const [discount1,discount2,discount3]=invoiceAssistantDiscounts({quantity:number(line.quantity),unitCost,unitDiscountAmount:hasBasket?basket:0,printedDiscounts:[line.discount1,line.discount2,line.discount3].map(number),netAmount:number(line.netAmount)});
+      return {...line,discount1:String(discount1),discount2:String(discount2),discount3:String(discount3),sequence:String(index+1),matchingLineId}});
     const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
     const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
     const reviewReady=assessInvoicePages({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal});
