@@ -1,6 +1,7 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const normalizePrintedUnit=value=>{const unit=String(value??"").trim().toUpperCase();if(["PIECE","ΤΜ","ΤΜΧ","ΤΕΜ","TM","TMX","TEM","PCS"].includes(unit))return "PIECE";if(["PACKAGE","ΠΑΚ","ΠΑΚ.","ΚΙΒ","ΚΙΒ.","BOX"].includes(unit))return "PACKAGE";return unit};
 const validPrinted=(line,manuallyConfirmed=false)=>{
   if(!manuallyConfirmed&&line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
   const fields=["quantity","unitCost","vatRate","discount1","discount2","discount3","exciseTotal","netAmount","grossAmount","stockUnitsPerInvoiceUnit"];
@@ -45,7 +46,8 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
     </div>
   </section>`;
   document.body.appendChild(overlay);
-  const close=()=>overlay.remove(),status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
+  let changed=false;
+  const close=()=>{overlay.remove();if(changed)Promise.resolve(onComplete?.()).catch(error=>alert(error.message))},status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
   overlay.querySelector("[data-close]").onclick=close;
   overlay.querySelector("[data-save-rule]").onclick=async()=>{
     const tax=overlay.querySelector("[data-rule-tax]").value.trim(),code=overlay.querySelector("[data-rule-code]").value.trim(),factor=Number(overlay.querySelector("[data-rule-factor]").value),ruleStatus=overlay.querySelector("[data-rule-status]");
@@ -66,7 +68,10 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       else await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:code,description:row.description.trim().slice(0,250),quantity:number(row.quantity),unitCost:number(row.unitCost),invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor,discount1:number(row.discount1),discount2:number(row.discount2),discount3:number(row.discount3),exciseTotal:number(row.exciseTotal),vatRate:number(row.vatRate)})});
       const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
       ruleStatus.textContent=`Ο κανόνας αποθηκεύτηκε και η γραμμή ${code} ενημερώθηκε στο υπάρχον πρόχειρο. Πλέον ${after.lines.length} γραμμές, πληρωτέο ${euro(after.totals.gross)} €. Έλεγξε τις υπόλοιπες γραμμές πριν από οριστικοποίηση.`;
-      lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));await onComplete?.();
+      lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
+      const savedLine=after.lines.find(line=>String(line.supplierCode||"").trim().toUpperCase()===code.toUpperCase());
+      if(savedLine){matches[0].matchingLineId=savedLine.id;const index=activePrintedRows.indexOf(matches[0]),box=overlay.querySelector(`[data-edit-select="${index}"]`);if(box){box.checked=false;box.closest("tr").style.background="#fff"}}
+      changed=true;
     }
     catch(error){ruleStatus.textContent=error.message}finally{button.disabled=false}
   };
@@ -99,7 +104,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
       overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
       overlay.querySelector("[data-answer]").textContent=result.assistantMessage||"Ο έλεγχος ολοκληρώθηκε.";
-      const printed=Array.isArray(result.printedLines)?result.printedLines:[];
+      const printed=Array.isArray(result.printedLines)?result.printedLines.map(line=>({...line,invoiceUnit:normalizePrintedUnit(line.invoiceUnit),stockUnitsPerInvoiceUnit:normalizePrintedUnit(line.invoiceUnit)==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?"1":line.stockUnitsPerInvoiceUnit})):[];
       const printedTotal=Number.isFinite(result.printedTotal)?result.printedTotal:null;
       const matched=new Set(printed.map(line=>line.matchingLineId).filter(Boolean));
       const calculatedGross=printed.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
@@ -110,12 +115,15 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       activePagesComplete=result.pagesComplete;activePrintedTotal=printedTotal;
       const working=printed.map(line=>({...line,
-        stockUnitsPerInvoiceUnit:line.invoiceUnit==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?1:line.stockUnitsPerInvoiceUnit,
-        exciseTotal:String(line.exciseTotal??"").trim()===""?0:line.exciseTotal
+        stockUnitsPerInvoiceUnit:line.stockUnitsPerInvoiceUnit
       }));
       activePrintedRows=working;
       const printedArea=overlay.querySelector("[data-printed]");
-      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc(result.pageWarning||"Ελλιπές τιμολόγιο")} Μην εφαρμόσεις αλλαγές.</p>`}<h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.${working.some(line=>number(line.unitDiscountAmount)>0)?" Η Έκπτωση 1 είναι το ισοδύναμο ποσοστό της τυπωμένης έκπτωσης ανά τεμάχιο, προσαρμοσμένο στη στρογγυλοποιημένη καθαρή αξία της ίδιας γραμμής. Έλεγξε την τυπωμένη έκπτωση στη φωτογραφία.":""}</p>${working.length?`<label style="display:block;margin:8px 0;font-weight:700"><input type="checkbox" data-select-all> Επιλογή όλων των γραμμών που έλεγξα στη φωτογραφία</label>${editableTable(working)}`:"Δεν αναγνωρίστηκαν γραμμές."}<p data-working-total style="font-weight:800"></p><div data-detailed-totals></div>`;
+      proposals.after(apply);
+      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc(result.pageWarning||"Ελλιπές τιμολόγιο")} Μην εφαρμόσεις αλλαγές.</p>`}<h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.${working.some(line=>number(line.unitDiscountAmount)>0)?" Η Έκπτωση 1 είναι το ισοδύναμο ποσοστό της τυπωμένης έκπτωσης ανά τεμάχιο, προσαρμοσμένο στη στρογγυλοποιημένη καθαρή αξία της ίδιας γραμμής. Έλεγξε την τυπωμένη έκπτωση στη φωτογραφία.":""}</p>${working.length?`<label style="display:block;margin:8px 0;font-weight:700"><input type="checkbox" data-select-all> Επιλογή όλων των γραμμών που έλεγξα στη φωτογραφία</label>${editableTable(working)}`:"Δεν αναγνωρίστηκαν γραμμές."}<div data-apply-slot style="margin:10px 0"></div><p data-apply-status role="status" style="font-weight:700;color:#18506b"></p><p data-working-total style="font-weight:800"></p><div data-detailed-totals></div>`;
+      printedArea.querySelector("[data-apply-slot]").appendChild(apply);
+      const applyNote=printedArea.querySelector("[data-apply-status]");
+      const setApplyStatus=message=>{status.textContent=message;applyNote.textContent=message};
       const workingTotal=printedArea.querySelector("[data-working-total]");
       const refreshTotal=()=>{const amounts=working.map(rowAmounts);const net=working.reduce((sum,line,index)=>sum+amounts[index].net+number(line.exciseTotal),0);const vat=amounts.reduce((sum,row)=>sum+row.vat,0);const gross=amounts.reduce((sum,row)=>sum+row.gross,0);workingTotal.textContent=`Καθαρό με ΕΦΚ ${euro(net)} € + ΦΠΑ ${euro(vat)} € = ${euro(gross)} € · τυπωμένο ${printedTotal===null?"μη αναγνώσιμο":`${euro(printedTotal)} €`} · διαφορά ${printedTotal===null?"—":`${euro(Math.abs(gross-printedTotal))} €`}`;const taxGroups=new Map();working.forEach((line,index)=>{const rate=number(line.vatRate),group=taxGroups.get(rate)||{net:0,vat:0};group.net+=amounts[index].net+number(line.exciseTotal);group.vat+=amounts[index].vat;taxGroups.set(rate,group)});printedArea.querySelector("[data-detailed-totals]").innerHTML=`<div style="background:#eef4f7;padding:12px;border-radius:8px"><b>Σύνολα τιμολογίου</b><div>Σύνολο ποσότητας παραστατικού: <b>${euro(working.reduce((sum,line)=>sum+number(line.quantity),0))}</b></div>${[...taxGroups].sort((a,b)=>a[0]-b[0]).map(([rate,group])=>`<div>Καθαρή αξία ΦΠΑ ${esc(rate)}%: ${euro(group.net)} € · ΦΠΑ: ${euro(group.vat)} €</div>`).join("")}<div>Καθαρή αξία: <b>${euro(net)} €</b> · ΦΠΑ: <b>${euro(vat)} €</b></div><div style="background:#daf3e5;padding:8px;margin-top:6px;font-size:20px;font-weight:800">Πληρωτέο ${euro(gross)} €</div></div>`;apply.hidden=!result.pagesComplete||printedTotal===null||Math.abs(gross-printedTotal)>0.05};
       refreshTotal();
@@ -124,23 +132,23 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       printedArea.addEventListener("input",event=>{const field=event.target.dataset.field,index=Number(event.target.dataset.row);if(!field||!working[index])return;working[index][field]=event.target.value;const amounts=rowAmounts(working[index]);working[index].netAmount=amounts.net.toFixed(2);working[index].grossAmount=amounts.gross.toFixed(2);for(const [name,value] of Object.entries(amounts)){const cell=printedArea.querySelector(`[data-${name}="${index}"]`);if(cell)cell.textContent=euro(value)}refreshTotal()});
 
       const valid=result.corrections.filter(change=>lineById.has(change.lineId)&&labels[change.field]);
-      proposals.innerHTML=`<h3>Προτάσεις για το πρόχειρο</h3><p>Επίλεξε μόνο όσα επιβεβαιώνεις στη φωτογραφία. Η επιλογή δεν αλλάζει ακόμη το πρόχειρο.</p>${valid.map((change,index)=>{const line=lineById.get(change.lineId);return `<label style="display:block;background:#fff9dc;border-left:4px solid #c48009;margin:6px 0;padding:9px"><input type="checkbox" data-change="${index}"> <b>${esc(line.description)} · ${esc(labels[change.field])}</b><br><small>Τώρα: ${esc(line[change.field]??"—")} → Πρόταση: ${esc(change.value)}</small><br><small>${esc(change.reason)}</small></label>`}).join("")}${missing.map((line,index)=>`<label style="display:block;background:#e7f7ef;margin:6px 0;padding:9px"><input type="checkbox" data-add="${index}"> Προσθήκη: ${esc(line.description)} · ${esc(line.quantity)} × ${esc(line.unitCost)} · ${euro(line.grossAmount)} €</label>`).join("")}${extra.map((line,index)=>`<label style="display:block;background:#ffe8e6;margin:6px 0;padding:9px"><input type="checkbox" data-delete="${index}"> Διαγραφή από πρόχειρο: ${esc(line.description)} · ${euro(line.grossAmount)} € <small>(δεν αντιστοιχίστηκε στο έντυπο· επιβεβαίωσε ότι δεν υπάρχει σε άλλη σελίδα)</small></label>`).join("")}${!valid.length&&!missing.length&&!extra.length?"Δεν βρέθηκαν ασφαλείς αλλαγές. Έλεγξε τις φωτογραφίες χειροκίνητα.":""}`;
+      proposals.innerHTML=`${valid.length||extra.length?`<h3>Άλλες προτάσεις για το πρόχειρο</h3><p>Επίλεξε μόνο όσα επιβεβαιώνεις στη φωτογραφία.</p>`:""}${valid.map((change,index)=>{const line=lineById.get(change.lineId);return `<label style="display:block;background:#fff9dc;border-left:4px solid #c48009;margin:6px 0;padding:9px"><input type="checkbox" data-change="${index}"> <b>${esc(line.description)} · ${esc(labels[change.field])}</b><br><small>Τώρα: ${esc(line[change.field]??"—")} → Πρόταση: ${esc(change.value)}</small><br><small>${esc(change.reason)}</small></label>`}).join("")}${extra.map((line,index)=>`<label style="display:block;background:#ffe8e6;margin:6px 0;padding:9px"><input type="checkbox" data-delete="${index}"> Διαγραφή από πρόχειρο: ${esc(line.description)} · ${euro(line.grossAmount)} € <small>(δεν αντιστοιχίστηκε στο έντυπο· επιβεβαίωσε ότι δεν υπάρχει σε άλλη σελίδα)</small></label>`).join("")}`;
       if(result.pagesComplete){apply.hidden=!economicsAgree;apply.onclick=async()=>{
         const currentGross=working.reduce((sum,line)=>sum+rowAmounts(line).gross,0);
-        if(printedTotal===null||Math.abs(currentGross-printedTotal)>0.05){status.textContent="Οι υπολογισμένες γραμμές δεν συμφωνούν με το τυπωμένο πληρωτέο εντός 0,05 €. Διόρθωσε πρώτα τις αξίες.";return}
+        if(printedTotal===null||Math.abs(currentGross-printedTotal)>0.05){setApplyStatus("Οι υπολογισμένες γραμμές δεν συμφωνούν με το τυπωμένο πληρωτέο εντός 0,05 €. Διόρθωσε πρώτα τις αξίες.");return}
         let chosen=[...proposals.querySelectorAll("[data-change]:checked")].map(node=>valid[Number(node.dataset.change)]);
         const additions=[...proposals.querySelectorAll("[data-add]:checked")].map(node=>missing[Number(node.dataset.add)]);
         const deletions=[...proposals.querySelectorAll("[data-delete]:checked")].map(node=>extra[Number(node.dataset.delete)]);
         const edited=[...printedArea.querySelectorAll("[data-edit-select]:checked")].map(node=>working[Number(node.dataset.editSelect)]);
         const rowPatches=new Map();
         for(const row of edited){
-          if(!validPrinted(row,true)){status.textContent=`Έλεγξε τα ποσά και τα υποχρεωτικά πεδία της γραμμής ${row.sequence}.`;return}
+          if(!validPrinted(row,true)){setApplyStatus(`Έλεγξε τα ποσά και τα υποχρεωτικά πεδία της γραμμής ${row.sequence}.`);return}
           if(!row.matchingLineId){const previous=additions.findIndex(line=>line.sequence===row.sequence);if(previous>=0)additions[previous]=row;else additions.push(row);continue}
-          const before=lineById.get(row.matchingLineId);if(!before){status.textContent="Η γραμμή του πρόχειρου άλλαξε. Άνοιξε ξανά τον βοηθό.";return}
+          const before=lineById.get(row.matchingLineId);if(!before){setApplyStatus("Η γραμμή του πρόχειρου άλλαξε. Άνοιξε ξανά τον βοηθό.");return}
           const patch={};for(const field of editableFields){const value=row[field];if(field==="supplierCode"||field==="description"||field==="invoiceUnit"){if(String(value??"")!==String(before[field]??""))patch[field]=value}else if(Math.abs(number(value)-number(before[field]))>0.000001)patch[field]=number(value)}
           if(Object.keys(patch).length){rowPatches.set(row.matchingLineId,patch);chosen=chosen.filter(change=>change.lineId!==row.matchingLineId)}
         }
-        if(!chosen.length&&!additions.length&&!deletions.length&&!rowPatches.size){status.textContent="Επίλεξε τις γραμμές στον πίνακα ή την επιλογή όλων αφού τις συγκρίνεις με τη φωτογραφία. Έπειτα πάτησε ξανά Εφαρμογή.";return}
+        if(!chosen.length&&!additions.length&&!deletions.length&&!rowPatches.size){setApplyStatus("Επίλεξε τις γραμμές στον πίνακα ή την επιλογή όλων αφού τις συγκρίνεις με τη φωτογραφία. Έπειτα πάτησε ξανά Εφαρμογή.");return}
         const grouped=new Map();for(const change of chosen){const patch=grouped.get(change.lineId)||{};patch[change.field]=change.field==="description"||change.field==="invoiceUnit"?change.value:number(change.value);grouped.set(change.lineId,patch)}
         for(const [lineId,patch] of rowPatches)grouped.set(lineId,patch);
         for(const patch of grouped.values())if(Number(patch.stockUnitsPerInvoiceUnit)>1&&patch.invoiceUnit===undefined)patch.invoiceUnit="PACKAGE";
@@ -151,14 +159,16 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
           if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||["description","quantity","unitCost","netAmount","grossAmount"].some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const [lineId,patch] of grouped){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,{method:"PATCH",body:JSON.stringify(patch)});done++}
-          for(const line of additions){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:line.supplierCode||null,description:line.description.trim().slice(0,250),quantity:number(line.quantity),unitCost:number(line.unitCost),invoiceUnit:line.invoiceUnit,stockUnitsPerInvoiceUnit:number(line.stockUnitsPerInvoiceUnit),discount1:number(line.discount1),discount2:number(line.discount2),discount3:number(line.discount3),exciseTotal:number(line.exciseTotal),vatRate:number(line.vatRate)})});done++}
+          for(const line of additions){const created=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:line.supplierCode||null,description:line.description.trim().slice(0,250),quantity:number(line.quantity),unitCost:number(line.unitCost),invoiceUnit:line.invoiceUnit,stockUnitsPerInvoiceUnit:number(line.stockUnitsPerInvoiceUnit),discount1:number(line.discount1),discount2:number(line.discount2),discount3:number(line.discount3),exciseTotal:number(line.exciseTotal),vatRate:number(line.vatRate)})});line.matchingLineId=created.id;done++}
           for(const line of deletions){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(line.id)}`,{method:"DELETE"});done++}
           const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
           const difference=Math.abs(Number(after.totals.gross||0)-Number(printedTotal??source.document.totalGross??0));
-          status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · ${printedTotal===null?"προηγούμενη ανάγνωση":"τυπωμένο"} ${euro(printedTotal??source.document.totalGross)} € · διαφορά ${euro(difference)} €.${printedTotal===null?" Επιβεβαίωσε το πληρωτέο στο έντυπο.":difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Το πληρωτέο συμφωνεί εντός 0,05 €· έλεγξε και κάθε είδος."}`;
+          setApplyStatus(`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · ${printedTotal===null?"προηγούμενη ανάγνωση":"τυπωμένο"} ${euro(printedTotal??source.document.totalGross)} € · διαφορά ${euro(difference)} €.${printedTotal===null?" Επιβεβαίωσε το πληρωτέο στο έντυπο.":difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Το πληρωτέο συμφωνεί εντός 0,05 €· έλεγξε και κάθε είδος."}`);
           lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
           current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · καθαρό ${euro(after.totals.net)} € · ΦΠΑ ${euro(after.totals.vat)} € · πληρωτέο ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map(lineHtml).join("")}</div>`;
-          proposals.replaceChildren();apply.hidden=true;await onComplete?.()
+          printedArea.querySelectorAll("[data-edit-select]:checked").forEach(box=>box.checked=false);
+          working.forEach((row,index)=>{const tr=printedArea.querySelector(`[data-edit-select="${index}"]`)?.closest("tr");if(tr&&row.matchingLineId)tr.style.background="#fff"});
+          proposals.replaceChildren();apply.hidden=false;changed=true;
         }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
       status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";

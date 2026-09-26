@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {assessInvoicePages,fillMissingPrintedGross,invoicePageReviewChecks} from "../src/routes/invoice-assistant-review.js";
+import {assessInvoicePages,fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks} from "../src/routes/invoice-assistant-review.js";
 
 test("a photographed page 2/2 cannot authorize deletion from a partial POS draft",()=>{
   assert.equal(assessInvoicePages({expectedPageCount:2,visiblePageNumbers:[2],sourcePageCount:1,printedLines:[{grossAmount:"43.91"}],printedTotal:111.32}),false);
@@ -46,4 +46,13 @@ test("an absent excise column permits zero excise only when explicitly confirmed
   const filled=fillMissingPrintedGross([line],{printedTotal:87.10,exciseColumnAbsent:true})[0];
   assert.equal(filled.exciseTotal,"0");
   assert.equal(filled.grossAmount,"87.10");
+});
+
+
+test("equivalent unit discount and percent discount do not create false corrections",()=>{
+  const saved={quantity:2,unitCost:2.26,netAmount:3.28,vatRate:13,grossAmount:3.71,discount1:11.50442,discount2:18};
+  const printed={quantity:"2",unitCost:"2.260",netAmount:"3.28",vatRate:"13",grossAmount:"3.71",unitDiscountAmount:"0.26",discount2:"18"};
+  assert.equal(hasEquivalentPrintedEconomics(saved,printed),true);
+  assert.equal(hasEquivalentPrintedEconomics({...saved,netAmount:3.04},printed),false);
+  assert.equal(hasEquivalentPrintedEconomics(saved,{...printed,grossAmount:""}),false);
 });
