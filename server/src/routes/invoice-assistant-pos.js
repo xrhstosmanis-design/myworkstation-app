@@ -2,7 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
-import {fillMissingPrintedGross,invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
+import {fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
 import {invoiceAssistantDiscounts} from "../lib/invoice-assistant-discounts.js";
 
@@ -90,7 +90,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
     const printedLines=fillMissingPrintedGross(mappedLines,{printedTotal,exciseColumnAbsent:parsed.exciseColumnAbsent===true});
     const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
-    const equivalentDiscountLines=new Set(printedLines.filter(line=>{const existing=current.find(row=>row.id===line.matchingLineId);if(!existing)return false;const values=[line.quantity,line.unitCost,line.netAmount,line.vatRate,line.grossAmount].map(number);return values.every(Number.isFinite)&&Math.abs(existing.quantity-values[0])<0.001&&Math.abs(existing.unitCost-values[1])<0.001&&Math.abs(existing.netAmount-values[2])<=0.05&&Math.abs(existing.vatRate-values[3])<0.001&&Math.abs(existing.grossAmount-values[4])<=0.05}).map(line=>line.matchingLineId));
+    const equivalentDiscountLines=new Set(printedLines.filter(line=>hasEquivalentPrintedEconomics(current.find(row=>row.id===line.matchingLineId),line)).map(line=>line.matchingLineId));
     const safeCorrections=corrections.filter(change=>!change.field.startsWith("discount")||!equivalentDiscountLines.has(change.lineId));
     const checks=invoicePageReviewChecks({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal});
     const reviewReady=checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
