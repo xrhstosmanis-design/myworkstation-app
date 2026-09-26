@@ -2,7 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
-import {invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
+import {fillMissingPrintedGross,invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
 import {invoiceAssistantDiscounts} from "../lib/invoice-assistant-discounts.js";
 
@@ -82,12 +82,13 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
       const n=number(item.value);
       return Number.isFinite(n)&&n>=0&&n<=1000000&&(item.field!=="quantity"||n>0)&&(item.field!=="vatRate"||n<=100)&&(item.field!=="stockUnitsPerInvoiceUnit"||n>=1)&&(item.field!=="stockUnitsPerInvoiceUnit"||Number.isInteger(n))&&(!item.field.startsWith("discount")||n<=100);
     }).filter(item=>{const before=current.find(row=>row.id===item.lineId)?.[item.field];return numericFields.has(item.field)?Math.abs(number(before)-number(item.value))>0.000001:String(before??"").trim()!==String(item.value).trim()}).slice(0,100).map(item=>({lineId:item.lineId,field:item.field,value:String(item.value).slice(0,250),reason:String(item.reason||"").slice(0,400)}));
-    const used=new Set();const printedLines=(Array.isArray(parsed.printedLines)?parsed.printedLines:[]).slice(0,150).map((line,index)=>{const matchingLineId=ids.has(line.matchingLineId)&&!used.has(line.matchingLineId)?line.matchingLineId:"";if(matchingLineId)used.add(matchingLineId);const unitCost=number(line.unitCost),basket=number(line.unitDiscountAmount);
+    const used=new Set();const mappedLines=(Array.isArray(parsed.printedLines)?parsed.printedLines:[]).slice(0,150).map((line,index)=>{const matchingLineId=ids.has(line.matchingLineId)&&!used.has(line.matchingLineId)?line.matchingLineId:"";if(matchingLineId)used.add(matchingLineId);const unitCost=number(line.unitCost),basket=number(line.unitDiscountAmount);
       const hasBasket=Number.isFinite(unitCost)&&unitCost>0&&Number.isFinite(basket)&&basket>0&&basket<unitCost;
       const [discount1,discount2,discount3]=invoiceAssistantDiscounts({quantity:number(line.quantity),unitCost,unitDiscountAmount:hasBasket?basket:0,printedDiscounts:[line.discount1,line.discount2,line.discount3].map(number),netAmount:number(line.netAmount)});
       return {...line,discount1:String(discount1),discount2:String(discount2),discount3:String(discount3),sequence:String(index+1),matchingLineId}});
-    const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
     const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
+    const printedLines=fillMissingPrintedGross(mappedLines,{printedNetTotal:parsed.printedNetTotal,printedTotal});
+    const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
     const checks=invoicePageReviewChecks({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal});
     const reviewReady=checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
     const issues=[!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φωτογραφίες ${result.pages.length}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
