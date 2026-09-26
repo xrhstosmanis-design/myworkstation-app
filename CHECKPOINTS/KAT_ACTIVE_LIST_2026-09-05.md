@@ -1,3 +1,7 @@
+## 26/09/2026 — Gate 3 Mini εικόνα πίνακα PR #1327 — CI/DEPLOY PASS, LAB AWAITING
+
+Πλήρες CI #3364 PASS, merge `3906600d0d3d83cc55dc932562ac581ff7d068c1`, ακριβές Render `/api/health` `ok=true` με ίδιο revision. Η νέα ανάγνωση των φωτογραφιών του υπάρχοντος ΝΤΑΒΟΥ 23.991 **AWAITING LAB**. Το προηγούμενο αποτέλεσμα 20 κενών σειρών παραμένει LAB FAIL και δεν αναιρείται από CI. Καμία POS επανυποβολή/νέα πληρωμή/οριστικοποίηση. Gate 3 OPEN.
+
 ## 26/09/2026 12:56 — Gate 3 ΝΤΑΒΟΥ μετά #1325 — LAB FAIL 20 κενές σειρές / Mini pipeline AWAITING
 
 Exact Render `cdfad903933301133f8451eae96f5b59831741d5`: ίδιο πρόχειρο ΝΤΑΒΟΥ 23.991, μία νέα προεπισκόπηση επιστρέφει 20 κενές σειρές παρότι διαβάζει 87/77,08/10,02/87,10 € από τα συνολικά. **LAB FAIL** έναντι 19 φυσικών γραμμών. Εφαρμογή μπλοκαρίστηκε· καμία POS επανυποβολή/πληρωμή/οριστικοποίηση. Read-only πηγή Mini αποκαλύπτει πλήρη εικόνα + μεγεθυμένο πίνακα και `gpt-5.6-sol`; μεταφορά αυτής της εισόδου στον server AWAITING CI/DEPLOY/LAB. Οικονομικά/stock NOT TESTED, Gate 3 OPEN. `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
