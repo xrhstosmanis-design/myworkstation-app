@@ -81,3 +81,5 @@ CI #3343 ολοκληρώθηκε επιτυχώς, το PR #1318 συγχωνε
 CI #3352 FAIL στο απομονωμένο HTTP E2E: χωρίς κλειδί OpenAI, το νέο terminal `COMPLETED_WITH_REVIEW` επέστρεψε ορθά `failed=true`, `reviewRequired=true` με διατήρηση του ίδιου πρόχειρου, αλλά το παλιό E2E ανέμενε `failed=false`. Το E2E πλέον ελέγχει τη νέα τερματική ένδειξη και συνεχίζει να ελέγχει μοναδική πληρωμή, αμετάβλητο stock και υπάρχον draft. Νέο πλήρες CI **AWAITING**· δεν έγινε merge.
 
 Το διορθωμένο πλήρες **CI #3353 PASS** (build, server tests, security/licensing, production invariants, isolated HTTP E2E). Τοπικά server 1.548 PASS / 1 SKIP και frontend build PASS. Το PR #1322 παραμένει **AWAITING merge/exact Render deploy/νέο LAB**· οι δύο αποτυχίες ΠΗΓΑΣΟΣ και ΚΑΜΑΡΑΣ δεν αναιρούνται από CI.
+
+Το τελικό CI #3354 PASS· PR #1322 συγχωνεύτηκε στο `main` ως `ba95ceb4252da8345b19996ec3d75c935cec4e03`. Ακριβές `/api/health` στο Render: `ok=true`, `revision=ba95ceb4252da8345b19996ec3d75c935cec4e03`. **AWAITING νέο πραγματικό LAB** για γραμμές/αξίες και POS terminal status. Τα 006266 και 510/18435 παραμένουν LAB FAIL της προηγούμενης revision.
