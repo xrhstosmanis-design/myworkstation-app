@@ -24,7 +24,7 @@ assert.equal(blocked.status,1);
 assert.match(blocked.stdout,/Απαγορευμένα πεδία μυστικών: password/);
 
 const ready={
-  store:{name:"ΠΙΛΟΤΙΚΟ",address:"Δοκιμή",visitDate:"2026-09-27",visitTime:"10:00",receiverName:"Υπεύθυνος",rollbackOwner:"Super Admin"},
+  store:{name:"ΠΙΛΟΤΙΚΟ",address:"Δοκιμή",visitDate:"2026-09-28",visitTime:"10:00",receiverName:"Υπεύθυνος",rollbackOwner:"Super Admin"},
   release:{productionRevision:"a".repeat(40),ciGreen:true,backupVerified:true,maintenanceWindowApproved:true},
   terminals:[
     {terminalId:"PILOT-POS-01",device:"Windows tablet",role:"POS_1",scanner:"USB",printer:"Thermal",rbs:"NON_FISCAL",eftpos:"NOT_CONNECTED"},
@@ -39,10 +39,18 @@ const passed=run(complete);
 assert.equal(passed.status,0,passed.stderr||passed.stdout);
 assert.match(passed.stdout,/"status": "READY"/);
 
+for(const terminals of [ready.terminals.slice(0,1),Array.from({length:20},(_,index)=>({
+  ...ready.terminals[0],terminalId:`PILOT-POS-${index+1}`,role:`POS_${index+1}`
+}))]){
+  fs.writeFileSync(complete,JSON.stringify({...ready,terminals}));
+  const result=run(complete);
+  assert.equal(result.status,0,result.stderr||result.stdout);
+}
+
 for(const [label,terminals,reason] of [
-  ["single",ready.terminals.slice(0,1),"Ακριβώς δύο POS terminals"],
+  ["empty",[],"Τουλάχιστον ένα πραγματικό POS terminal"],
   ["duplicate-id",[{...ready.terminals[0]},{...ready.terminals[1],terminalId:"pilot-pos-01"}],"Μοναδικό Terminal ID"],
-  ["duplicate-role",[{...ready.terminals[0]},{...ready.terminals[1],role:"POS_1"}],"Διακριτοί ρόλοι"]
+  ["duplicate-role",[{...ready.terminals[0]},{...ready.terminals[1],role:"POS_1"}],"Μοναδικός ρόλος"]
 ]){
   fs.writeFileSync(complete,JSON.stringify({...ready,terminals}));
   const result=run(complete);
