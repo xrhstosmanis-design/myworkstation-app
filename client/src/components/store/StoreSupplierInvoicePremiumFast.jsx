@@ -18,6 +18,7 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
         setMessage?.(review?`⚠️ Τιμολόγιο ${documentNumber}: πέρασε κανονικά στο BackOffice ως πρόχειρο με ${lineCount} γραμμές. Ο οικονομικός έλεγχος έχει διαφορά ${difference.toFixed(2)} € και χρειάζεται διόρθωση πριν από έγκριση ή αποθήκη.`:`✅ Τιμολόγιο ${documentNumber}: ολοκληρώθηκε σωστά στο BackOffice (${lineCount} γραμμές, οικονομικός έλεγχος ΟΚ).`);
         onChanged?.();return;
       }
+      if(result?.reviewRequired){setMessage?.(`⚠️ Τιμολόγιο ${documentNumber}: η αυτόματη ανάγνωση χρειάζεται έλεγχο στο υπάρχον πρόχειρο${result.error?` — ${result.error}`:""}. Μην ανεβάσεις ξανά το αρχείο.`);onChanged?.();return}
       if(result?.failed){setMessage?.(`❌ Τιμολόγιο ${documentNumber}: η αυτόματη ανάγνωση απέτυχε${result.error?` — ${result.error}`:""}. Χρησιμοποίησε ασφαλές retry του ίδιου job· μην ανεβάσεις ξανά το αρχείο.`);return}
     }catch{}
     const elapsed=Date.now()-startedAt;
@@ -37,7 +38,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
-  const file=pages[0]?.file||null,fileDataUrl=pages[0]?.dataUrl||"";
+  const file=pages[0]?.originalFile||pages[0]?.file||null,fileDataUrl=pages[0]?.originalDataUrl||pages[0]?.dataUrl||"";
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const selectFiles=async selected=>{
     const incoming=Array.from(selected||[]).filter(Boolean);
@@ -47,7 +48,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     setReading(true);setStatus("Προετοιμασία σελίδων και γρήγορη ανάγνωση βασικών στοιχείων…");
     try{
       const prepared=[];
-      for(const next of incoming){const result=await prepareDocumentFile(next,{strict:true,maxSide:3000,enhance:true}),clean=result.file;prepared.push({file:clean,dataUrl:await readFile(clean),imageQuality:result.quality})}
+      for(const next of incoming){const result=await prepareDocumentFile(next,{strict:true,maxSide:3000,enhance:true}),clean=result.file;prepared.push({file:clean,dataUrl:await readFile(clean),originalFile:next,originalDataUrl:result.changed?await readFile(next):null,imageQuality:result.quality})}
       const nextPages=[...pages,...prepared];setPages(nextPages);
       if(initial){setSupplierId("");setAmount("");setDocumentNumber("");setDocumentDate("");setDocumentType("");setCreditDetected(false);setMode("");setCreatedSupplier(null);setSupplierCandidate({name:"",taxId:""})}
       const headerPages=initial&&nextPages.length>1?[nextPages[0],nextPages[nextPages.length-1]]:[nextPages[nextPages.length-1]];
@@ -134,7 +135,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,documentType,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:page.file.name||"timologio.jpg",mimeType:page.file.type||"image/jpeg",dataUrl:page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross,documentType,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
       setStatus(documentType==="CREDIT_NOTE"?"Το πιστωτικό αποθηκεύτηκε ως πρόχειρο. Οι γραμμές ελέγχονται στο BackOffice πριν από κίνηση αποθήκης και συμψηφισμό.":handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
       const accepted=documentType==="CREDIT_NOTE"?`⏳ Το πιστωτικό ${documentNumber.trim()} παραλήφθηκε για έλεγχο στο BackOffice. Δεν έγινε πληρωμή ή αλλαγή αποθήκης.`:duplicateCheck?.paymentReused?`⏳ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} επανελέγχεται χωρίς νέα χρέωση· αναμονή τελικού αποτελέσματος.`:effectiveMode==="PAID"?`⏳ Η πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`:`⏳ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε μία φορά. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`;
