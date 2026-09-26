@@ -1,8 +1,8 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
-const validPrinted=line=>{
-  if(line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
+const validPrinted=(line,manuallyConfirmed=false)=>{
+  if(!manuallyConfirmed&&line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
   const fields=["quantity","unitCost","vatRate","discount1","discount2","discount3","exciseTotal","netAmount","grossAmount","stockUnitsPerInvoiceUnit"];
   if(fields.some(field=>String(line[field]??"").trim()===""||!Number.isFinite(number(line[field]))||number(line[field])<0))return false;
   if(number(line.quantity)<=0||number(line.vatRate)>100||number(line.stockUnitsPerInvoiceUnit)<1||!Number.isInteger(number(line.stockUnitsPerInvoiceUnit))||["discount1","discount2","discount3"].some(field=>number(line[field])>100))return false;
@@ -79,7 +79,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       const working=printed.map(line=>({...line}));
       const printedArea=overlay.querySelector("[data-printed]");
-      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc(result.pageWarning||"Ελλιπές τιμολόγιο")} Μην εφαρμόσεις αλλαγές.</p>`}<h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.</p>${working.length?editableTable(working):"Δεν αναγνωρίστηκαν γραμμές."}<p data-working-total style="font-weight:800"></p>`;
+      printedArea.innerHTML=`${result.pagesComplete?"":`<p role="alert" style="background:#fff0d5;border:2px solid #b75300;padding:12px;font-weight:800">${esc(result.pageWarning||"Ελλιπές τιμολόγιο")} Μην εφαρμόσεις αλλαγές.</p>`}<h3>Τιμολόγιο προς έλεγχο · ${working.length} γραμμές</h3><p>Διόρθωσε τα πεδία στον πίνακα. Οι αλλαγές μένουν εδώ μέχρι να επιλέξεις γραμμή και να πατήσεις εφαρμογή.${working.some(line=>number(line.unitDiscountAmount)>0)?" Η Έκπτωση 1 είναι το ισοδύναμο ποσοστό της τυπωμένης έκπτωσης ανά τεμάχιο, προσαρμοσμένο στη στρογγυλοποιημένη καθαρή αξία της ίδιας γραμμής. Έλεγξε την τυπωμένη έκπτωση στη φωτογραφία.":""}</p>${working.length?editableTable(working):"Δεν αναγνωρίστηκαν γραμμές."}<p data-working-total style="font-weight:800"></p>`;
       const workingTotal=printedArea.querySelector("[data-working-total]");
       const refreshTotal=()=>{const amounts=working.map(rowAmounts);const net=working.reduce((sum,line,index)=>sum+amounts[index].net+number(line.exciseTotal),0);const vat=amounts.reduce((sum,row)=>sum+row.vat,0);const gross=amounts.reduce((sum,row)=>sum+row.gross,0);workingTotal.textContent=`Καθαρό με ΕΦΚ ${euro(net)} € + ΦΠΑ ${euro(vat)} € = ${euro(gross)} € · τυπωμένο ${printedTotal===null?"μη αναγνώσιμο":`${euro(printedTotal)} €`} · διαφορά ${printedTotal===null?"—":`${euro(Math.abs(gross-printedTotal))} €`}`;apply.hidden=!result.pagesComplete||printedTotal===null||Math.abs(gross-printedTotal)>0.05};
       refreshTotal();
@@ -96,7 +96,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
         const edited=[...printedArea.querySelectorAll("[data-edit-select]:checked")].map(node=>working[Number(node.dataset.editSelect)]);
         const rowPatches=new Map();
         for(const row of edited){
-          if(!validPrinted(row)){status.textContent=`Έλεγξε τα ποσά και τα υποχρεωτικά πεδία της γραμμής ${row.sequence}.`;return}
+          if(!validPrinted(row,true)){status.textContent=`Έλεγξε τα ποσά και τα υποχρεωτικά πεδία της γραμμής ${row.sequence}.`;return}
           if(!row.matchingLineId){const previous=additions.findIndex(line=>line.sequence===row.sequence);if(previous>=0)additions[previous]=row;else additions.push(row);continue}
           const before=lineById.get(row.matchingLineId);if(!before){status.textContent="Η γραμμή του πρόχειρου άλλαξε. Άνοιξε ξανά τον βοηθό.";return}
           const patch={};for(const field of editableFields){const value=row[field];if(field==="supplierCode"||field==="description"||field==="invoiceUnit"){if(String(value??"")!==String(before[field]??""))patch[field]=value}else if(Math.abs(number(value)-number(before[field]))>0.000001)patch[field]=number(value)}
