@@ -55,8 +55,14 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
     ]);
     source=result;
     detail.lines.forEach(line=>lineById.set(line.id,line));
-    pages.innerHTML=result.pages.map(page=>`<article style="margin-bottom:13px;background:white;padding:9px;border-radius:10px"><b>Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}</b><div style="overflow:auto;max-height:75vh;margin-top:8px">${page.mimeType==="application/pdf"?`<iframe title="Σελίδα ${page.index}" src="${esc(page.dataUrl)}" style="width:100%;height:70vh;border:0"></iframe>`:`<img src="${esc(page.dataUrl)}" alt="Σελίδα ${page.index}" style="display:block;width:100%;transform-origin:top left" data-zoom-image>`}</div></article>`).join("");
-    pages.querySelectorAll("[data-zoom-image]").forEach(img=>{let zoom=1;img.addEventListener("wheel",event=>{event.preventDefault();zoom=Math.min(4,Math.max(0.75,zoom+(event.deltaY<0?0.15:-0.15)));img.style.width=`${zoom*100}%`},{passive:false})});
+    pages.innerHTML=result.pages.map(page=>`<article style="margin-bottom:13px;background:white;padding:9px;border-radius:10px"><b>Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}</b><div style="overflow:auto;max-height:75vh;margin-top:8px" data-image-viewport>${page.mimeType==="application/pdf"?`<iframe title="Σελίδα ${page.index}" src="${esc(page.dataUrl)}" style="width:100%;height:70vh;border:0"></iframe>`:`<img src="${esc(page.dataUrl)}" alt="Σελίδα ${page.index}" draggable="false" style="display:block;width:100%;transform-origin:top left;cursor:grab;user-select:none;touch-action:none" data-zoom-image>`}</div></article>`).join("");
+    pages.querySelectorAll("[data-zoom-image]").forEach(img=>{let zoom=1;const viewport=img.closest("[data-image-viewport]");let drag=null;
+      img.addEventListener("wheel",event=>{event.preventDefault();zoom=Math.min(4,Math.max(0.75,zoom+(event.deltaY<0?0.15:-0.15)));img.style.width=`${zoom*100}%`},{passive:false});
+      img.addEventListener("pointerdown",event=>{if(event.button!==0)return;event.preventDefault();drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};img.setPointerCapture(event.pointerId);img.style.cursor="grabbing"});
+      img.addEventListener("pointermove",event=>{if(!drag||event.pointerId!==drag.id)return;viewport.scrollLeft=drag.left-(event.clientX-drag.x);viewport.scrollTop=drag.top-(event.clientY-drag.y)});
+      const endDrag=event=>{if(!drag||event.pointerId!==drag.id)return;drag=null;img.style.cursor="grab";if(img.hasPointerCapture(event.pointerId))img.releasePointerCapture(event.pointerId)};
+      img.addEventListener("pointerup",endDrag);img.addEventListener("pointercancel",endDrag);
+    });
     current.innerHTML=`<b>Γραμμές που έχει τώρα το POS · ${detail.lines.length} · καθαρό ${euro(detail.totals.net)} € · ΦΠΑ ${euro(detail.totals.vat)} € · πληρωτέο ${euro(detail.totals.gross)} €</b><div style="margin-top:7px">${detail.lines.map(lineHtml).join("")}</div>`;
     status.textContent=`Προηγούμενη ανάγνωση πληρωτέου: ${euro(result.document.totalGross)} €. Επιβεβαίωσε στο έντυπο. Επίλεξε τι θα ελέγξει ο βοηθός.`;
   }catch(error){status.textContent=error.message;overlay.querySelector("[data-ask]").disabled=true;return}
