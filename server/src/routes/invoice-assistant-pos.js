@@ -89,7 +89,9 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
       const hasLineDiscount=Number.isFinite(lineDiscount)&&lineDiscount>0&&Number.isFinite(quantity)&&quantity>0&&Number.isFinite(unitCost)&&unitCost>0&&lineDiscount<quantity*unitCost&&!(basket>0)&&Math.abs((quantity*unitCost-lineDiscount)*printedPercentages.reduce((factor,discount)=>factor*(1-discount/100),1)-number(line.netAmount))<=0.05;
       const hasBasket=Number.isFinite(unitCost)&&unitCost>0&&Number.isFinite(basket)&&basket>0&&basket<unitCost;
       const [discount1,discount2,discount3]=invoiceAssistantDiscounts({quantity:number(line.quantity),unitCost,unitDiscountAmount:hasLineDiscount?lineDiscount/quantity:hasBasket?basket:0,printedDiscounts:printedPercentages,netAmount:number(line.netAmount)});
-      const invalidDiscount=lineDiscount>0&&!hasLineDiscount;
+      const percentageNet=quantity*unitCost*printedPercentages.reduce((factor,discount)=>factor*(1-discount/100),1);
+      const percentageExplainsNet=Number.isFinite(percentageNet)&&Number.isFinite(number(line.netAmount))&&Math.abs(percentageNet-number(line.netAmount))<=0.05;
+      const invalidDiscount=lineDiscount>0&&!hasLineDiscount&&!percentageExplainsNet;
       const reviewReason=invalidDiscount?"Η τυπωμένη έκπτωση γραμμής δεν συμφωνεί με την καθαρή αξία.":String(line.reviewReason||"").slice(0,300);
       return {...line,discount1:String(discount1),discount2:String(discount2),discount3:String(discount3),confidence:invalidDiscount||reviewReason.trim()?"uncertain":line.confidence,reviewReason,sequence:String(index+1),matchingLineId}});
     const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
