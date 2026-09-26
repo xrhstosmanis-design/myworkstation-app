@@ -1,9 +1,18 @@
-export function assessInvoicePages({expectedPageCount,visiblePageNumbers,sourcePageCount,printedLines,printedTotal}){
+export function assessInvoicePages({expectedPageCount,visiblePageNumbers,sourcePageCount,printedLines,printedTotal,printedQuantityTotal,printedNetTotal}){
   const pagesComplete=Number.isInteger(expectedPageCount)&&expectedPageCount>0&&expectedPageCount===sourcePageCount&&Array.isArray(visiblePageNumbers)&&visiblePageNumbers.length===sourcePageCount&&visiblePageNumbers.every((page,index)=>page===index+1);
   const amounts=printedLines.map(line=>String(line.grossAmount??"").trim());
   const gross=amounts.map(value=>Number(value.replace(",",".")));
   const totalsAgree=Number.isFinite(printedTotal)&&printedLines.length>0&&amounts.every(Boolean)&&gross.every(Number.isFinite)&&Math.abs(gross.reduce((sum,value)=>sum+value,0)-printedTotal)<=0.05;
-  return pagesComplete&&totalsAgree;
+  const printedQuantity=String(printedQuantityTotal??" ").trim(),printedNet=String(printedNetTotal??" ").trim();
+  const columnAgrees=(printed,field)=>{
+    if(!printed)return true;
+    const total=Number(printed.replace(",","."));
+    const values=printedLines.map(line=>String(line[field]??"").trim());
+    if(!Number.isFinite(total)||values.some(value=>!value))return false;
+    const numbers=values.map(value=>Number(value.replace(",",".")));
+    return numbers.every(Number.isFinite)&&Math.abs(numbers.reduce((sum,value)=>sum+value,0)-total)<=(field==="quantity"?0.001:0.05);
+  };
+  return pagesComplete&&totalsAgree&&columnAgrees(printedQuantity,"quantity")&&columnAgrees(printedNet,"netAmount");
 }
 
 // A single physical sheet may have no page count (including "Σελίδα: 1").
