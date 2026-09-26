@@ -14,7 +14,22 @@ test("assistant maps a complete physical line into the existing POS draft format
 });
 
 test("assistant cannot fill a draft when only page two of two is visible",()=>{
-  assert.throws(()=>assistantRowsToProductLines(reading({expectedPageCount:2,visiblePageNumbers:[2]}),{pageCount:1,totalGross:2.26}),/όλες τις σελίδες/);
+  assert.throws(()=>assistantRowsToProductLines(reading({expectedPageCount:2,visiblePageNumbers:[2]}),{pageCount:1,totalGross:2.26}),/όλες τις φυσικές σελίδες/);
+});
+
+test("one unnumbered full sheet can fill the existing draft",()=>{
+  const rows=assistantRowsToProductLines(reading({expectedPageCount:0,visiblePageNumbers:[],singlePageComplete:true}),{pageCount:1,totalGross:2.26});
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].sourceColumnsVerified,true);
+});
+
+test("one complete sheet marked page 1 without a printed page count can fill the draft",()=>{
+  const rows=assistantRowsToProductLines(reading({expectedPageCount:0,visiblePageNumbers:[1],singlePageComplete:true}),{pageCount:1,totalGross:2.26});
+  assert.equal(rows.length,1);
+});
+
+test("one unnumbered sheet with unverified footer cannot fill the draft",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({expectedPageCount:0,visiblePageNumbers:[],singlePageComplete:false}),{pageCount:1,totalGross:2.26}),/όλες τις φυσικές σελίδες/);
 });
 
 test("matching header total does not conceal a wrong physical row",()=>{

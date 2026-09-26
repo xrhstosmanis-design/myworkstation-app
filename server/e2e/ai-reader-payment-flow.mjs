@@ -219,15 +219,17 @@ async function main(){
   assert.equal(handedOff.response.status,202,JSON.stringify(handedOff.payload));
   const secondJob=handedOff.payload.jobId;
   assert.notEqual(secondJob,firstJob);assert.notEqual(secondJob,staleJob,"Handoff reused a deleted invoice's extraction");
-  // CI has no external AI credentials. The durable draft must remain available
-  // for BackOffice review instead of being mislabeled as a failed POS handoff.
+  // CI has no external AI credentials. The payment and durable draft remain,
+  // while the assistant read finishes with an explicit review status.
   let workerStatus;
   for(let attempt=0;attempt<100;attempt++){
     workerStatus=await request(`/api/commerce/ai-reader/fast-status/${secondJob}`,{token:secondToken});
     if(workerStatus.payload.draftReady&&workerStatus.payload.stage==='POS_BACKGROUND_COMPLETE')break;
     await new Promise(resolve=>setTimeout(resolve,50));
   }
-  assert.equal(workerStatus.payload.failed,false,JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.failed,true,JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.reviewRequired,true,JSON.stringify(workerStatus.payload));
+  assert.equal(workerStatus.payload.done,false,JSON.stringify(workerStatus.payload));
   assert.equal(workerStatus.payload.draftReady,true,JSON.stringify(workerStatus.payload));
   assert.equal(workerStatus.payload.status,'AWAITING_APPROVAL',JSON.stringify(workerStatus.payload));
   assert.equal(workerStatus.payload.stage,'POS_BACKGROUND_COMPLETE',JSON.stringify(workerStatus.payload));

@@ -244,7 +244,7 @@ test("a reclaimed discount failure stays in POS recovery instead of reporting th
   assert.match(route,/retryClaimed=false/);
   assert.match(route,/retryClaimed=Boolean\(reclaimed\);shouldSchedule=retryClaimed/);
   assert.match(route,/stage:rereadClaimed\?"POS_REPROCESSING":retryClaimed\?"POS_RECOVERING"/);
-  assert.match(route,/failed:job\.status==="POS_FAILED"&&!retryClaimed/);
+  assert.match(route,/failed:\(job\.status==="POS_FAILED"&&!retryClaimed\)\|\|reviewRequired/);
   assert.match(route,/error:retryClaimed\?null:background\.error\|\|null/);
   assert.match(route,/status:"RECOVERING",recoveredAt:new Date\(\)\.toISOString\(\),previousError/);
 });
