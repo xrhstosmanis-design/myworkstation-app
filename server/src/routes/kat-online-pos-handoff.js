@@ -26,7 +26,7 @@ router.post("/stores/:storeId/orders/:orderId/complete-from-pos",async(req,res,n
 
     const result=await prisma.$transaction(async tx=>{
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`KAT_ONLINE_COMPLETE:${req.params.orderId}`})) IS NULL) AS locked`;
-      const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:req.params.storeId});
+      const configuredTerminalPos=await configuredKatDelayedTerminal(tx,{companyId:req.user.companyId,storeId:req.params.storeId,currentTerminalPos:req.user?.terminalPos});
       const routing=resolveKatOnlineRouting({configuredTerminalPos,currentTerminalPos:req.user?.terminalPos});
       const openShift=(await tx.$queryRaw`SELECT "id","terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.params.storeId} AND "status"='OPEN' AND UPPER(TRIM("terminalPos"))=${routing.terminalPos} ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
       if(!openShift){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια στο ετεροχρονισμένο POS/Ταμείο 2.");error.status=409;error.code="KAT_DELAYED_SHIFT_NOT_OPEN";throw error}

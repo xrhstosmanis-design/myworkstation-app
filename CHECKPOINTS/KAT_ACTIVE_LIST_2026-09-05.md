@@ -1405,3 +1405,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 26/09/2026 — Πιλοτική εγκατάσταση νέου καταστήματος, 1 POS — AWAITING CI/FIELD TEST
 
 - [ ] Ο ιδιοκτήτης διευκρίνισε ότι κάθε κατάστημα έχει όσα πραγματικά POS θέλει. Ο offline readiness checker απαιτούσε δύο· στενή αλλαγή δέχεται 1 ή περισσότερα με μοναδικά Terminal IDs. Local tests 1/2/3/20 READY, 0/διπλό ID ή ρόλο NOT_READY. Γενική ετοιμότητα εξακολουθεί ανατεθειμένη στο `agent/gate4-install-readiness`, αυτή η ρητή διόρθωση στο `agent/pilot-variable-pos-20260926`. CI/deploy/πεδίο **NOT TESTED**. `CHECKPOINTS/CHANGES/2026-09-26-pilot-variable-pos-readiness.md`.
+
+
+## 26/09/2026 — Gate 6 πολλαπλά terminals / δεύτερο LAB FAIL — AWAITING CI
+
+Μετά το production `b17de87a` το ορατό σφάλμα αποκάλυψε ότι η `ONL-002` μπλοκαρίστηκε πριν από πώληση: «Δεν έχει οριστεί το ετεροχρονισμένο POS/Ταμείο 2». Η επαναποθήκευση του υπαρκτού mapping `LAB-POS-02` / `LAB-FISCAL-02` / `LAB-EFTPOS-02A` / `LAB-EFTPOS-02B` πέτυχε, αλλά το ίδιο fail παρέμεινε. Αιτία: ο server απαιτούσε ένα μοναδικό Delivery terminal σε ολόκληρο το κατάστημα, αντί να ελέγχει το συγκεκριμένο terminal της συνεδρίας. Η διόρθωση επιτρέπει απεριόριστα terminals και κάνει fail-closed έλεγχο μόνο στο ενεργό terminal και στο δικό του fiscal/Delivery mapping. 15/15 στοχευμένα tests PASS. `ONL-002` παραμένει χωρίς πώληση/πληρωμή και Gate 6 OPEN μέχρι CI/deploy/μία τελική δοκιμή. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate6-onl002-payment-routing.md`.
