@@ -52,6 +52,19 @@ async function main(){
     VALUES (${crypto.randomUUID()},${companyId},${storeId},TRUE,'FIXED',0.10,0,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0)
     ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"surchargeType"='FIXED',"surchargeValue"=0.10,"deliveryFee"=0,"pickupEnabled"=TRUE,"deliveryEnabled"=TRUE,"cashEnabled"=TRUE,"cardOnDeliveryEnabled"=TRUE,"autoPrintOnAccept"=TRUE,"stockCheckEnabled"=TRUE,"minimumOrderRetail"=0,"updatedAt"=CURRENT_TIMESTAMP
   `;
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreFiscalDevice" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "deviceCode" TEXT NOT NULL,"displayName" TEXT NOT NULL,"terminalPos" TEXT NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","deviceCode"),UNIQUE ("storeId","terminalPos"))`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreEftposDevice" (
+    "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
+    "deviceCode" TEXT NOT NULL,"displayName" TEXT NOT NULL,"fiscalDeviceCode" TEXT NOT NULL,
+    "role" TEXT NOT NULL CHECK ("role" IN ('STORE','DELIVERY')),
+    "active" BOOLEAN NOT NULL DEFAULT TRUE,"createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("storeId","deviceCode"),UNIQUE ("storeId","fiscalDeviceCode","role"))`);
   await prisma.$executeRaw`
     INSERT INTO "StoreFiscalDevice" ("id","companyId","storeId","deviceCode","displayName","terminalPos","active","createdBy")
     VALUES (${crypto.randomUUID()},${companyId},${storeId},'E2E-KAT-FISCAL-02','E2E KAT Fiscal 02','POS2',TRUE,'E2E')
