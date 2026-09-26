@@ -18,7 +18,8 @@ test("fast-status reclaims only retryable POS_FAILED jobs",()=>{
   assert.match(source,/hasRecoverableHandoff&&retryableFailed/);
   assert.match(source,/"status"='POS_FAILED'/);
   assert.match(source,/retryClaimed=Boolean\(reclaimed\);shouldSchedule=retryClaimed/);
-  assert.match(source,/failed:job\.status==="POS_FAILED"&&!retryClaimed/);
+  assert.match(source,/failed:\(job\.status==="POS_FAILED"&&!retryClaimed\)\|\|reviewRequired/);
+  assert.match(source,/reviewRequired=job\.status==="AWAITING_APPROVAL"&&background\.status==="COMPLETED_WITH_REVIEW"/);
 });
 
 test("non-transient failed jobs remain excluded",()=>{
