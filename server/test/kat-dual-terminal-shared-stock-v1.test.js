@@ -32,7 +32,7 @@ test("two terminals complete physical sales atomically and report a negative-sto
 
 test("checkout binds each sale to its own terminal shift and fail-closed device route",()=>{
   assert.match(storePos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
-  assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos,channel:paymentChannel\}\)/);
+  assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos:routedTerminalPos,channel:paymentChannel\}\)/);
   assert.match(storePos,/sessionId:open\[0\]\.id,terminalPos/);
   assert.match(storePos,/NEGATIVE_STOCK_RECORDED/);
   assert.doesNotMatch(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
