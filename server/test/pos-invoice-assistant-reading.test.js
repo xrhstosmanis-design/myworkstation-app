@@ -76,3 +76,14 @@ test("an incorrect printed net cannot be used to tune a basket discount",()=>{
   const discounts=invoiceAssistantDiscounts({quantity:2,unitCost:1.27,unitDiscountAmount:0.23,printedDiscounts:[18,0,0],netAmount:1.55});
   assert.ok(Math.abs(discounts[0]-0.23/1.27*100)<1e-8);
 });
+
+test("small gross rounding noise across a full table uses net, excise and VAT before footer comparison",()=>{
+  const lines=Array.from({length:18},()=>line({grossAmount:"2.27"}));
+  const rows=assistantRowsToProductLines(reading({printedTotal:"40.68",printedQuantityTotal:"36",printedNetTotal:"36.00",lines}),{pageCount:1,totalGross:40.68});
+  assert.equal(rows.length,18);
+  assert.ok(Math.abs(rows.reduce((sum,row)=>sum+row.grossAmount,0)-40.68)<0.000001);
+});
+
+test("material gross contradiction in one row cannot be repaired by the footer",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({lines:[line({grossAmount:"2.40"})]}),{pageCount:1,totalGross:2.26}),/μικτή αξία της γραμμής/);
+});

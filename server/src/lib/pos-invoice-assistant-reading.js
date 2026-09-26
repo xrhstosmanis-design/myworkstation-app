@@ -10,7 +10,14 @@ const rowSchema={type:"object",additionalProperties:false,required:["page","rawT
 const schema={type:"object",additionalProperties:false,required:["expectedPageCount","visiblePageNumbers","singlePageComplete","printedQuantityTotal","printedNetTotal","printedVatTotal","printedTotal","lines"],properties:{expectedPageCount:{type:"integer"},visiblePageNumbers:{type:"array",items:{type:"integer"}},singlePageComplete:{type:"boolean"},printedQuantityTotal:{type:"string"},printedNetTotal:{type:"string"},printedVatTotal:{type:"string"},printedTotal:{type:"string"},lines:{type:"array",items:rowSchema}}};
 
 export function assistantRowsToProductLines(reading,{pageCount,totalGross}){
-  const lines=Array.isArray(reading?.lines)?reading.lines:[];
+  const lines=Array.isArray(reading?.lines)?reading.lines.map((line,index)=>{
+    const net=number(line.netAmount),excise=number(line.exciseTotal),vat=number(line.vatRate);
+    if([line.netAmount,line.exciseTotal,line.vatRate].some(value=>String(value??"").trim()==="")||![net,excise,vat].every(Number.isFinite)||net<0||excise<0||![0,6,13,24].includes(vat))return line;
+    const calculated=((net+excise)*(1+vat/100)).toFixed(2);
+    const supplied=String(line.grossAmount??"").trim();
+    if(supplied&&(!Number.isFinite(number(supplied))||Math.abs(number(supplied)-number(calculated))>0.05))throw new Error(`Η μικτή αξία της γραμμής ${index+1} διαφέρει από καθαρό, ΕΦΚ και ΦΠΑ. Το ίδιο πρόχειρο διατηρήθηκε για έλεγχο.`);
+    return {...line,grossAmount:calculated};
+  }):[];
   const reviewLines=lines.map(line=>({grossAmount:line.grossAmount,confidence:line.confidence}));
   const printedTotal=number(reading?.printedTotal);
   const pages=normalizedAssistantPages({...reading,sourcePageCount:pageCount});
