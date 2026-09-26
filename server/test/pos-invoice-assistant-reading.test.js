@@ -42,3 +42,20 @@ test("printed invoice quantity stays separate from stock package conversion",()=
   assert.equal(rows[0].unitsPerPackage,100);
   assert.equal(rows[0].unit,"PACKAGE");
 });
+
+
+test("printed quantity catches an omitted physical row even when payable matches",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({printedQuantityTotal:"3"}),{pageCount:1,totalGross:2.26}),/τυπωμένες ποσότητες/);
+});
+
+test("printed net catches a description-only reading",()=>{
+  assert.throws(()=>assistantRowsToProductLines(reading({printedNetTotal:"3.00"}),{pageCount:1,totalGross:2.26}),/καθαρές αξίες/);
+});
+
+test("fixed basket discount preserves original price and printed percentage",()=>{
+  const item=line({rawText:"001 ΡΟΛΟ 2 1,270 0,23 1,040 18% 1,70 13%",unitCost:"1.27",unitDiscountAmount:"0.23",discount1:"18",netAmount:"1.70",grossAmount:"1.92"});
+  const [mapped]=assistantRowsToProductLines(reading({printedTotal:"1.92",printedQuantityTotal:"2",printedNetTotal:"1.70",lines:[item]}),{pageCount:1,totalGross:1.92});
+  assert.equal(mapped.unitCost,1.27);
+  assert.ok(Math.abs(mapped.discount1-0.23/1.27*100)<1e-8);
+  assert.equal(mapped.discount2,18);
+});
