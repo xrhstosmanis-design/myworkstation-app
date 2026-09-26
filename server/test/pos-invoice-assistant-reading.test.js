@@ -81,7 +81,7 @@ test("small gross rounding noise across a full table uses net, excise and VAT be
   const lines=Array.from({length:18},()=>line({grossAmount:"2.27"}));
   const rows=assistantRowsToProductLines(reading({printedTotal:"40.68",printedQuantityTotal:"36",printedNetTotal:"36.00",lines}),{pageCount:1,totalGross:40.68});
   assert.equal(rows.length,18);
-  assert.equal(rows.reduce((sum,row)=>sum+row.grossAmount,0),40.68);
+  assert.ok(Math.abs(rows.reduce((sum,row)=>sum+row.grossAmount,0)-40.68)<0.000001);
 });
 
 test("material gross contradiction in one row cannot be repaired by the footer",()=>{
