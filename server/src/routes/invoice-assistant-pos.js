@@ -2,7 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
-import {assessInvoicePages,normalizedAssistantPages} from "./invoice-assistant-review.js";
+import {invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
 import {invoiceAssistantDiscounts} from "../lib/invoice-assistant-discounts.js";
 
@@ -88,8 +88,10 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
       return {...line,discount1:String(discount1),discount2:String(discount2),discount3:String(discount3),sequence:String(index+1),matchingLineId}});
     const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
     const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
-    const reviewReady=assessInvoicePages({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal});
-    res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?corrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":"Δεν επιβεβαιώθηκαν όλες οι φυσικές σελίδες και το άθροισμα των γραμμών με το τυπωμένο πληρωτέο. Οι προτάσεις δεν εφαρμόζονται."});
+    const checks=invoicePageReviewChecks({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal});
+    const reviewReady=checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
+    const issues=[!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φωτογραφίες ${result.pages.length}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
+    res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?corrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":`${issues.join(" ")} Οι προτάσεις δεν εφαρμόζονται.`});
   }catch(error){next(error)}
 });
 
