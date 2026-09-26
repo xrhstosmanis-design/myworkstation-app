@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {assistantRowsToProductLines} from "../src/lib/pos-invoice-assistant-reading.js";
+import {invoiceAssistantDiscounts} from "../src/lib/invoice-assistant-discounts.js";
 
 const line=(overrides={})=>({page:"1",rawText:"001 ΚΑΦΕΣ 2 1,00 2,00 13% 2,26",code:"001",description:"ΚΑΦΕΣ",quantity:"2",unit:"PIECE",unitsPerPackage:"1",unitCost:"1",discount1:"0",discount2:"0",discount3:"0",netAmount:"2",exciseTotal:"0",vatRate:"13",grossAmount:"2.26",confidence:"certain",...overrides});
 const reading=(overrides={})=>({expectedPageCount:1,visiblePageNumbers:[1],printedTotal:"2.26",lines:[line()],...overrides});
@@ -56,6 +57,22 @@ test("fixed basket discount preserves original price and printed percentage",()=
   const item=line({rawText:"001 ΡΟΛΟ 2 1,270 0,23 1,040 18% 1,70 13%",unitCost:"1.27",unitDiscountAmount:"0.23",discount1:"18",netAmount:"1.70",grossAmount:"1.92"});
   const [mapped]=assistantRowsToProductLines(reading({printedTotal:"1.92",printedQuantityTotal:"2",printedNetTotal:"1.70",lines:[item]}),{pageCount:1,totalGross:1.92});
   assert.equal(mapped.unitCost,1.27);
-  assert.ok(Math.abs(mapped.discount1-0.23/1.27*100)<1e-8);
+  assert.ok(Math.abs(mapped.discount1-0.23/1.27*100)<0.5);
   assert.equal(mapped.discount2,18);
+  assert.ok(Math.abs(mapped.quantity*mapped.unitCost*(1-mapped.discount1/100)*(1-mapped.discount2/100)-1.70)<1e-8);
+});
+
+test("cent-rounded printed net survives the draft percentage calculation across many lines",()=>{
+  const rows=Array.from({length:18},()=>({quantity:2,unitCost:1.27,unitDiscountAmount:0.23,printedDiscounts:[18,0,0],netAmount:1.70}));
+  const calculated=rows.reduce((sum,row)=>{
+    const discounts=invoiceAssistantDiscounts(row);
+    assert.equal(discounts[1],18);
+    return sum+row.quantity*row.unitCost*discounts.reduce((factor,value)=>factor*(1-value/100),1);
+  },0);
+  assert.ok(Math.abs(calculated-18*1.70)<1e-8);
+});
+
+test("an incorrect printed net cannot be used to tune a basket discount",()=>{
+  const discounts=invoiceAssistantDiscounts({quantity:2,unitCost:1.27,unitDiscountAmount:0.23,printedDiscounts:[18,0,0],netAmount:1.55});
+  assert.ok(Math.abs(discounts[0]-0.23/1.27*100)<1e-8);
 });
