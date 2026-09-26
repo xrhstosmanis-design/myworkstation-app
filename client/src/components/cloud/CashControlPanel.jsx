@@ -29,6 +29,7 @@ export default function CashControlPanel({api,store}){
     setLoading(true);setError("");
     try{
       const [result,dailyResult]=await Promise.all([api(`/api/cash/stores/${store.id}/overview`),api(`/api/cash/stores/${store.id}/daily-summary?date=${encodeURIComponent(reportDate)}`)]);
+      if(!result||typeof result!=="object")throw new Error("Ο έλεγχος ταμείων δεν επέστρεψε στοιχεία. Πάτησε Ανανέωση.");
       setData(result);
       setDaily(dailyResult);
       if(!result.openSession){

@@ -52,6 +52,16 @@ async function main(){
   assert.equal(login.response.status,200,JSON.stringify(login.payload));
   const token=login.payload?.token;
   assert.ok(token);
+  const renewed=await request("/api/auth/renew",{method:"POST",token,body:{companyId:otherCompanyId,supportContext:{companyId:otherCompanyId}}});
+  assert.equal(renewed.response.status,200,JSON.stringify(renewed.payload));
+  const renewedClaims=JSON.parse(Buffer.from(renewed.payload.token.split(".")[1],"base64url").toString());
+  assert.equal(renewedClaims.companyId,companyId,"Renewal must retain the signed company scope");
+  assert.equal(renewedClaims.sessionId,login.payload.session.id);
+  assert.equal((await request("/api/dashboard",{token:renewed.payload.token})).response.status,200);
+  const disposable=await request("/api/auth/login",{method:"POST",body:{email:ownerEmail,password:ownerPassword,deviceName:"CI disposable renewal"}});
+  assert.equal(disposable.response.status,200);
+  assert.equal((await request("/api/auth/logout",{method:"POST",token:disposable.payload.token,body:{}})).response.status,200);
+  assert.equal((await request("/api/auth/renew",{method:"POST",token:disposable.payload.token,body:{}})).response.status,401,"Logout must prevent renewal");
 
   const supplierA=await request("/api/commerce/suppliers",{method:"POST",token,body:{name:"E2E Boundary Supplier A",taxId:"E2E-BOUND-A"}});
   const supplierB=await request("/api/commerce/suppliers",{method:"POST",token,body:{name:"E2E Boundary Supplier B",taxId:"E2E-BOUND-B"}});

@@ -17,6 +17,7 @@ import {
 
 const router = Router();
 const SESSION_HOURS=12;
+const SUPPORT_TOKEN_HOURS=2;
 
 function ipAddress(req){
   const forwarded=req.headers["x-forwarded-for"];
@@ -81,6 +82,25 @@ async function issueSession(user,req,deviceName){
   },process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
   return {token,user:publicUser(user),session:{id:session.id,deviceName:session.deviceName,expiresAt}};
 }
+
+// Renew only an already authenticated, non-revoked BackOffice session. Keep the
+// support scope identical to the verified token; a client cannot choose a company.
+router.post("/renew",auth,async(req,res,next)=>{
+  try{
+    if(req.user.tokenType!=="BACKOFFICE_USER"||!req.user.sessionId)return res.status(403).json({error:"Η ανανέωση αφορά μόνο ενεργή σύνδεση BackOffice."});
+    const user=await prisma.user.findUnique({where:{id:req.user.id},include:{company:true}});
+    const platformRole=req.user.platformRole||req.user.role;
+    if(!user||user.role!==platformRole||user.sessionVersion!==req.user.sessionVersion||(!user.company.active&&user.role!=="SUPER_ADMIN"))return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
+    const supportContext=req.user.supportContext;
+    if(supportContext&&user.role!=="SUPER_ADMIN")return res.status(403).json({error:"Η πρόσβαση υποστήριξης δεν είναι έγκυρη."});
+    const extended=await prisma.userSession.updateMany({where:{id:req.user.sessionId,userId:user.id,revokedAt:null,expiresAt:{gt:new Date()}},data:{expiresAt:new Date(Date.now()+SESSION_HOURS*60*60*1000),lastSeenAt:new Date()}});
+    if(extended.count!==1)return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
+    const base={id:user.id,companyId:user.companyId,role:user.role==="SUPER_ADMIN"?"OWNER":user.role,platformRole:user.role,isSuperAdmin:user.role==="SUPER_ADMIN",fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion};
+    const platformToken=jwt.sign(base,process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
+    const token=supportContext?jwt.sign({...base,companyId:supportContext.companyId,role:"OWNER",supportContext},process.env.JWT_SECRET,{expiresIn:`${SUPPORT_TOKEN_HOURS}h`}):platformToken;
+    res.json({token,...(supportContext?{platformToken}:{})});
+  }catch(error){next(error)}
+});
 
 router.post("/login", async (req,res,next)=>{
   try{
