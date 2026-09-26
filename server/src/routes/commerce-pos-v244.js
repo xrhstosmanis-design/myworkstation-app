@@ -11,6 +11,7 @@ import {finalizeV244ProductLines} from "../../../client/src/lib/invoice-v244.js"
 import {verifyInvoiceDiscounts} from "../lib/invoice-discount-verifier.js";
 import {recoverBalancedInvoicePayable,recoverVatSummaryInvoiceTotal} from "../lib/invoice-total-reading.js";
 import {catastrophicUnverifiedInvoiceMismatch} from "../lib/pos-invoice-catastrophic-mismatch.js";
+import {readPosInvoiceWithAssistant} from "../lib/pos-invoice-assistant-reading.js";
 
 const router=Router();
 // The POS must hand the invoice off quickly. Small OCR reconciliation differences
@@ -194,11 +195,16 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
             // Old POS handoffs did not always persist the resume flag. Reuse
             // their table only when its own arithmetic proves that it belongs
             // to the operator-confirmed invoice total.
-            if((handoff.resumeStoredProductLines||storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)&&reusableVerifiedPrintedTable(storedLines,handoff.totalGross)){sourceLines=storedLines;usingStoredProductLines=true}
+            if(handoff.fullReader!=="ASSISTANT"&&(handoff.resumeStoredProductLines||storedLines.length&&storedDifference<=POS_STORED_LINES_TOLERANCE)&&reusableVerifiedPrintedTable(storedLines,handoff.totalGross)){sourceLines=storedLines;usingStoredProductLines=true}
             previousLines=storedLines;
             requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;
           }
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;sourceLines=null}
+          if(!sourceLines&&handoff.fullReader==="ASSISTANT"){
+            operationStage="assistant-read";
+            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross});
+            requiresCompletePrintedTable=true;
+          }
           if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines;requiresCompletePrintedTable=ai?.result?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true}
           // A repeated POS intake can legitimately reuse the same failed job
           // after its draft was deleted. In that case the browser may send
@@ -264,7 +270,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
       await prisma.$transaction(async tx=>{
         const completed=await tx.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "state"='COMPLETED',"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"lastError"=NULL,"completedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "leaseToken"=${leaseToken}`;
         if(!completed)return;
-        await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_COMPLETE',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"COMPLETED",completedAt:new Date().toISOString(),archived:created?.archived!==false,reconciliationRequired:Boolean(created?.reconciliationRequired),reconciliationDifference:Number(created?.reconciliationDifference||0),lineCount:Number(created?.lineCount||0),pageCount:Number(created?.pageCount||pageJobIds.length)}})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
+        await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_COMPLETE',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posBackground:{status:"COMPLETED",completedAt:new Date().toISOString(),archived:created?.archived!==false,reconciliationRequired:Boolean(created?.reconciliationRequired),reconciliationDifference:Number(created?.reconciliationDifference||0),lineCount:Number(created?.lineCount||0),pageCount:Number(created?.pageCount||pageJobIds.length)},...(handoff.fullReader==="ASSISTANT"?{posReprocess:{strategy:POS_REPROCESS_STRATEGY,mode:"ASSISTANT_INITIAL_READ"}}:{})})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
       });
     }catch(error){
       const message=String(error?.message||error).slice(0,700);
@@ -830,7 +836,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         // resume the same draft and payment, never turn into a duplicate file.
         const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')) AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "createdAt" DESC LIMIT 1`;
         const jobId=existingJobs[0]?.id||id();
-        const handoff={version:"POS_FAST_HANDOFF_V1",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+        const handoff={version:"POS_FAST_HANDOFF_V1",fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
         if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
         else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${attachmentId} LIMIT 1 FOR UPDATE`;
@@ -841,7 +847,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:hasCompleteCachedProductLines,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      const primaryHandoff={version:"POS_FAST_HANDOFF_V1",fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:false,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;
