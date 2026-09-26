@@ -55,7 +55,8 @@ router.get("/purchase-orders/:orderId/invoice-assistant/source",requireCompanyMo
     const result=await source(req.user.companyId,req.params.orderId);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
     if(!result.pages.length)return res.status(409).json({error:"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
-    res.json({document:{id:result.document.id,documentNumber:result.document.documentNumber,totalGross:Number(result.document.totalGross||0)},pages:result.pages.map((page,index)=>({index:index+1,filename:page.filename,mimeType:page.mimeType,dataUrl:page.contentData}))});
+    const supplier=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${result.document.supplierId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    res.json({document:{id:result.document.id,documentNumber:result.document.documentNumber,totalGross:Number(result.document.totalGross||0),supplierTaxId:String(supplier[0]?.taxId||"")},pages:result.pages.map((page,index)=>({index:index+1,filename:page.filename,mimeType:page.mimeType,dataUrl:page.contentData}))});
   }catch(error){next(error)}
 });
 
