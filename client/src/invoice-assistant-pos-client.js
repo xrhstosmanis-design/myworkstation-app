@@ -1,6 +1,15 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const validPrinted=line=>{
+  if(line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
+  const fields=["quantity","unitCost","vatRate","discount1","discount2","discount3","exciseTotal","netAmount","grossAmount","stockUnitsPerInvoiceUnit"];
+  if(fields.some(field=>String(line[field]??"").trim()===""||!Number.isFinite(number(line[field]))||number(line[field])<0))return false;
+  if(number(line.quantity)<=0||number(line.vatRate)>100||number(line.stockUnitsPerInvoiceUnit)<1||!Number.isInteger(number(line.stockUnitsPerInvoiceUnit))||["discount1","discount2","discount3"].some(field=>number(line[field])>100))return false;
+  const net=number(line.quantity)*number(line.unitCost)*["discount1","discount2","discount3"].reduce((factor,field)=>factor*(1-number(line[field])/100),1);
+  return Math.abs(net-number(line.netAmount))<=0.05&&Math.abs((net+number(line.exciseTotal))*(1+number(line.vatRate)/100)-number(line.grossAmount))<=0.05;
+};
+const lineHtml=(line,index)=>`<div style="border-top:1px solid #e2ebef;padding:7px 0"><b>${index+1}. ${esc(line.description)}</b> ${line.supplierCode?`· ${esc(line.supplierCode)}`:""}<br>${esc(line.quantity)} ${line.invoiceUnit==="PACKAGE"?"πακέτα":"τεμ."} × ${esc(line.unitCost)} €${line.invoiceUnit==="PACKAGE"?` · απόθεμα ${esc(number(line.quantity)*number(line.stockUnitsPerInvoiceUnit))} τεμ.`:""} · εκπτώσεις ${esc(line.discount1||0)}/${esc(line.discount2||0)}/${esc(line.discount3||0)}%<br>Καθαρό ${euro(line.netAmount)} € · ΕΦΚ ${euro(line.exciseTotal)} € · ΦΠΑ ${esc(line.vatRate)}% · Πληρωτέο ${euro(line.grossAmount)} €</div>`;
 const labels={description:"Περιγραφή",quantity:"Ποσότητα τιμολογίου",unitCost:"Τιμή μονάδας",invoiceUnit:"Μονάδα τιμολογίου",stockUnitsPerInvoiceUnit:"Τεμάχια ανά συσκευασία",discount1:"Έκπτωση 1",discount2:"Έκπτωση 2",discount3:"Έκπτωση 3",exciseTotal:"ΕΦΚ",vatRate:"ΦΠΑ %"};
 const api=async(path,options={})=>{
   const token=localStorage.getItem("token");
@@ -21,7 +30,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
         <div data-current style="border:1px solid #d4e1e8;background:white;border-radius:10px;padding:9px;max-height:26vh;overflow:auto"></div>
         <label style="display:block;margin-top:12px;font-weight:700">Εντολή προς τον βοηθό<textarea data-message rows="3" style="box-sizing:border-box;width:100%;margin-top:5px;padding:10px;border:1px solid #a7bdc9;border-radius:8px" placeholder="π.χ. Οι γραμμές 1–3 είναι σε γραμμάρια και η 4 είναι 48 πακέτα × 100 τεμάχια"></textarea></label>
         <button data-ask type="button" style="margin-top:8px;padding:10px 15px;background:#075c8d;color:white;border:0;border-radius:7px;font-weight:800">Έλεγχος φωτογραφιών</button>
-        <p data-status role="status" style="min-height:24px;color:#284d64"></p><div data-answer></div><div data-proposals></div>
+        <p data-status role="status" style="min-height:24px;color:#284d64"></p><div data-history aria-live="polite"></div><div data-answer></div><div data-printed></div><div data-proposals></div>
         <button data-apply type="button" hidden style="margin-top:12px;padding:11px 15px;background:#087762;color:white;border:0;border-radius:8px;font-weight:800">Εφαρμογή επιλεγμένων στο πρόχειρο</button>
       </div>
     </div>
@@ -30,7 +39,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
   const close=()=>overlay.remove(),status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
   overlay.querySelector("[data-close]").onclick=close;
   const lineById=new Map();
-  let source;
+  let source;const history=[];
   try{
     const [result,detail]=await Promise.all([
       api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source`),
@@ -40,36 +49,50 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
     detail.lines.forEach(line=>lineById.set(line.id,line));
     pages.innerHTML=result.pages.map(page=>`<article style="margin-bottom:13px;background:white;padding:9px;border-radius:10px"><b>Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}</b><div style="overflow:auto;max-height:75vh;margin-top:8px">${page.mimeType==="application/pdf"?`<iframe title="Σελίδα ${page.index}" src="${esc(page.dataUrl)}" style="width:100%;height:70vh;border:0"></iframe>`:`<img src="${esc(page.dataUrl)}" alt="Σελίδα ${page.index}" style="display:block;width:100%;transform-origin:top left" data-zoom-image>`}</div></article>`).join("");
     pages.querySelectorAll("[data-zoom-image]").forEach(img=>{let zoom=1;img.addEventListener("wheel",event=>{event.preventDefault();zoom=Math.min(4,Math.max(0.75,zoom+(event.deltaY<0?0.15:-0.15)));img.style.width=`${zoom*100}%`},{passive:false})});
-    current.innerHTML=`<b>Γραμμές που έχει τώρα το POS · ${detail.lines.length} · ${euro(detail.totals.gross)} €</b><div style="margin-top:7px">${detail.lines.map((line,index)=>`<div style="border-top:1px solid #e2ebef;padding:5px 0"><b>${index+1}. ${esc(line.description)}</b> · ${esc(line.quantity)} × ${esc(line.unitCost)} · ΕΦΚ ${euro(line.exciseTotal)} · ${euro(line.grossAmount)} €</div>`).join("")}</div>`;
-    status.textContent=`Τυπωμένο πληρωτέο: ${euro(result.document.totalGross)} €. Επίλεξε τι θα ελέγξει ο βοηθός.`;
+    current.innerHTML=`<b>Γραμμές που έχει τώρα το POS · ${detail.lines.length} · καθαρό ${euro(detail.totals.net)} € · ΦΠΑ ${euro(detail.totals.vat)} € · πληρωτέο ${euro(detail.totals.gross)} €</b><div style="margin-top:7px">${detail.lines.map(lineHtml).join("")}</div>`;
+    status.textContent=`Προηγούμενη ανάγνωση πληρωτέου: ${euro(result.document.totalGross)} €. Επιβεβαίωσε στο έντυπο. Επίλεξε τι θα ελέγξει ο βοηθός.`;
   }catch(error){status.textContent=error.message;overlay.querySelector("[data-ask]").disabled=true;return}
   overlay.querySelector("[data-ask]").onclick=async()=>{
     const message=overlay.querySelector("[data-message]").value.trim();if(!message){status.textContent="Γράψε πρώτα τι θέλεις να ελέγξει.";return}
     const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent="Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
     try{
-      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message})});
+      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12)})});
+      history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
+      overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
       overlay.querySelector("[data-answer]").textContent=result.assistantMessage||"Ο έλεγχος ολοκληρώθηκε.";
+      const printed=Array.isArray(result.printedLines)?result.printedLines:[];
+      const printedTotal=Number.isFinite(result.printedTotal)?result.printedTotal:null;
+      const matched=new Set(printed.map(line=>line.matchingLineId).filter(Boolean));
+      const missing=printed.filter(validPrinted).filter(line=>!line.matchingLineId);
+      const extra=printed.length? [...lineById.values()].filter(line=>!matched.has(line.id)):[];
+      overlay.querySelector("[data-printed]").innerHTML=printed.length?`<h3>Γραμμές από το έντυπο · ${printed.length}</h3><div style="background:#fff;border:1px solid #cbdde7;border-radius:8px;padding:10px;max-height:35vh;overflow:auto">${printed.map((line,index)=>`${lineHtml(line,index)}<small>${line.matchingLineId?"Αντιστοιχίστηκε στο πρόχειρο":"Δεν αντιστοιχίστηκε · έλεγξε αν λείπει"}${line.confidence==="uncertain"?" · αβέβαιη ανάγνωση":""}</small>`).join("")}</div><p>Σύνολο αναγνωρισμένων μικτών ${euro(printed.reduce((sum,line)=>sum+(Number.isFinite(number(line.grossAmount))?number(line.grossAmount):0),0))} € · έντυπο ${printedTotal===null?"μη αναγνώσιμο":`${euro(printedTotal)} €`}. Σύγκρινε κάθε είδος ακόμη και όταν το σύνολο διαφέρει έως 0,05 €.</p>`:"Δεν αναγνωρίστηκαν με βεβαιότητα γραμμές στο έντυπο.";
       const valid=result.corrections.filter(change=>lineById.has(change.lineId)&&labels[change.field]);
-      proposals.innerHTML=valid.length?`<h3>Προτεινόμενες αλλαγές</h3><p>Επίλεξε μόνο όσα επιβεβαιώνεις στη φωτογραφία.</p>${valid.map((change,index)=>{const line=lineById.get(change.lineId);return `<label style="display:block;background:#fff9dc;border-left:4px solid #c48009;margin:6px 0;padding:9px"><input type="checkbox" data-change="${index}"> <b>${esc(line.description)} · ${esc(labels[change.field])}</b><br><small>Τώρα: ${esc(line[change.field]??"—")} → Πρόταση: ${esc(change.value)}</small><br><small>${esc(change.reason)}</small></label>`}).join("")}`:"Δεν βρέθηκαν ασφαλείς διορθώσεις. Έλεγξε τη φωτογραφία και τις γραμμές χειροκίνητα.";
-      if(valid.length){apply.hidden=false;apply.onclick=async()=>{
-        const chosen=[...proposals.querySelectorAll("[data-change]:checked")].map(node=>valid[Number(node.dataset.change)]);if(!chosen.length){status.textContent="Επίλεξε πρώτα τις αλλαγές που επιβεβαίωσες.";return}
+      proposals.innerHTML=`<h3>Προτάσεις για το πρόχειρο</h3><p>Επίλεξε μόνο όσα επιβεβαιώνεις στη φωτογραφία. Η επιλογή δεν αλλάζει ακόμη το πρόχειρο.</p>${valid.map((change,index)=>{const line=lineById.get(change.lineId);return `<label style="display:block;background:#fff9dc;border-left:4px solid #c48009;margin:6px 0;padding:9px"><input type="checkbox" data-change="${index}"> <b>${esc(line.description)} · ${esc(labels[change.field])}</b><br><small>Τώρα: ${esc(line[change.field]??"—")} → Πρόταση: ${esc(change.value)}</small><br><small>${esc(change.reason)}</small></label>`}).join("")}${missing.map((line,index)=>`<label style="display:block;background:#e7f7ef;margin:6px 0;padding:9px"><input type="checkbox" data-add="${index}"> Προσθήκη: ${esc(line.description)} · ${esc(line.quantity)} × ${esc(line.unitCost)} · ${euro(line.grossAmount)} €</label>`).join("")}${extra.map((line,index)=>`<label style="display:block;background:#ffe8e6;margin:6px 0;padding:9px"><input type="checkbox" data-delete="${index}"> Διαγραφή από πρόχειρο: ${esc(line.description)} · ${euro(line.grossAmount)} € <small>(δεν αντιστοιχίστηκε στο έντυπο· επιβεβαίωσε ότι δεν υπάρχει σε άλλη σελίδα)</small></label>`).join("")}${!valid.length&&!missing.length&&!extra.length?"Δεν βρέθηκαν ασφαλείς αλλαγές. Έλεγξε τις φωτογραφίες χειροκίνητα.":""}`;
+      if(valid.length||missing.length||extra.length){apply.hidden=false;apply.onclick=async()=>{
+        const chosen=[...proposals.querySelectorAll("[data-change]:checked")].map(node=>valid[Number(node.dataset.change)]);
+        const additions=[...proposals.querySelectorAll("[data-add]:checked")].map(node=>missing[Number(node.dataset.add)]);
+        const deletions=[...proposals.querySelectorAll("[data-delete]:checked")].map(node=>extra[Number(node.dataset.delete)]);
+        if(!chosen.length&&!additions.length&&!deletions.length){status.textContent="Επίλεξε πρώτα τις αλλαγές που επιβεβαίωσες.";return}
         const grouped=new Map();for(const change of chosen){const patch=grouped.get(change.lineId)||{};patch[change.field]=change.field==="description"||change.field==="invoiceUnit"?change.value:number(change.value);grouped.set(change.lineId,patch)}
         for(const patch of grouped.values())if(Number(patch.stockUnitsPerInvoiceUnit)>1&&patch.invoiceUnit===undefined)patch.invoiceUnit="PACKAGE";
         apply.disabled=true;let done=0;try{
           const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
           if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT")throw new Error("Το πρόχειρο δεν είναι πλέον διαθέσιμο για αλλαγές.");
           const now=new Map(latest.lines.map(line=>[line.id,line]));
+          if(now.size!==lineById.size||[...lineById].some(([id,line])=>!now.has(id)||["description","quantity","unitCost","netAmount","grossAmount"].some(field=>String(now.get(id)[field]??"")!==String(line[field]??""))))throw new Error("Το πρόχειρο άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const change of chosen)if(!now.has(change.lineId)||String(now.get(change.lineId)[change.field]??"")!==String(lineById.get(change.lineId)[change.field]??""))throw new Error("Μια επιλεγμένη γραμμή άλλαξε στο μεταξύ. Κλείσε και άνοιξε ξανά τον βοηθό.");
           for(const [lineId,patch] of grouped){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,{method:"PATCH",body:JSON.stringify(patch)});done++}
+          for(const line of additions){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:line.supplierCode||null,description:line.description.trim().slice(0,250),quantity:number(line.quantity),unitCost:number(line.unitCost),invoiceUnit:line.invoiceUnit,stockUnitsPerInvoiceUnit:number(line.stockUnitsPerInvoiceUnit),discount1:number(line.discount1),discount2:number(line.discount2),discount3:number(line.discount3),exciseTotal:number(line.exciseTotal),vatRate:number(line.vatRate)})});done++}
+          for(const line of deletions){await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(line.id)}`,{method:"DELETE"});done++}
           const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
-          const difference=Math.abs(Number(after.totals.gross||0)-Number(source.document.totalGross||0));
-          status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · τυπωμένο ${euro(source.document.totalGross)} € · διαφορά ${euro(difference)} €.${difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Συμφωνεί εντός 0,05 €."}`;
+          const difference=Math.abs(Number(after.totals.gross||0)-Number(printedTotal??source.document.totalGross??0));
+          status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · ${printedTotal===null?"προηγούμενη ανάγνωση":"τυπωμένο"} ${euro(printedTotal??source.document.totalGross)} € · διαφορά ${euro(difference)} €.${printedTotal===null?" Επιβεβαίωσε το πληρωτέο στο έντυπο.":difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Το πληρωτέο συμφωνεί εντός 0,05 €· έλεγξε και κάθε είδος."}`;
           lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
-          current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map((line,index)=>`<div style="border-top:1px solid #e2ebef;padding:5px 0"><b>${index+1}. ${esc(line.description)}</b> · ${esc(line.quantity)} × ${esc(line.unitCost)} · ΕΦΚ ${euro(line.exciseTotal)} · ${euro(line.grossAmount)} €</div>`).join("")}</div>`;
+          current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · καθαρό ${euro(after.totals.net)} € · ΦΠΑ ${euro(after.totals.vat)} € · πληρωτέο ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map(lineHtml).join("")}</div>`;
           proposals.replaceChildren();apply.hidden=true;await onComplete?.()
         }catch(error){status.textContent=`Αποθηκεύτηκαν ${done} γραμμές. ${error.message}`}finally{apply.disabled=false}
       }}
-      status.textContent=`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. Τυπωμένο πληρωτέο ${euro(source.document.totalGross)} €.`;
+      status.textContent=`Έλεγχος ολοκληρώθηκε · ${valid.length} προτάσεις. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`;
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
   overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
