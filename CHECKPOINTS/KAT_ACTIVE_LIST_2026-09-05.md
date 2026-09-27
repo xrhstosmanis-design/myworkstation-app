@@ -1,3 +1,10 @@
+## 27/09/2026 20:05 Ελλάδα — TABLE_SERVICE modifiers προϊόντος · LAB FAIL / FIX AWAITING CI-LAB
+
+- [x] BackOffice readback: ομάδα `LAB ΕΠΙΛΟΓΗ ΓΑΛΑΚΤΟΣ`, modifier `ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ`, σύνδεση μόνο στο `LAB ΚΑΦΕΣ ΔΟΚΙΜΗΣ`.
+- [ ] Production POS εμφάνισε ακόμη κενές πρόσθετες επιλογές: το client request παρέλειπε το `productId`. Στενή διόρθωση και regression coverage στο `fix/table-service-product-modifiers-20260927`, **AWAITING CI / DEPLOY / LAB RETEST**.
+- [ ] Δεν στάλθηκε παραγγελία και δεν έγινε πώληση, πληρωμή ή stock. Μετά το deploy απαιτείται μία ελεγχόμενη αποστολή με modifier και σημείωση, readback στο πόστο ΚΑΦΕ και ξεχωριστή αξιολόγηση αλλεργιογόνων.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+
 ## 27/09/2026 — Ετικέτα EAN-13: USER PASS φυσικής εκτύπωσης→σάρωσης
 
 Μετά το PR #1420 / deployed `4cc01eec` και τα περιορισμένα visual LAB PASS, ο ιδιοκτήτης επιβεβαίωσε «εκτυπωσα και την σκαναρα ειναι οκ». **USER PASS για πραγματικό χαρτί→scanner**· ακριβές είδος/EAN, ώρα, φυσική συσκευή και POS readback δεν δόθηκαν, άρα δεν εικάζονται. Το σκέλος δεν επαναλαμβάνεται μόνο για τεκμηρίωση. Μη έγκυρο EAN, Audit και tenant isolation NOT TESTED· συνολικό scope OPEN. `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
