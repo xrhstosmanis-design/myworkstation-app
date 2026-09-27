@@ -1,3 +1,8 @@
+export function parsePrintedPayable(value){
+  const printed=String(value??"").trim();
+  return /^\d+(?:[.,]\d{1,3})?$/.test(printed)?Number(printed.replace(",",".")):null;
+}
+
 export function invoicePageReviewChecks({expectedPageCount,visiblePageNumbers,sourcePageCount,printedLines,printedTotal,printedQuantityTotal,printedNetTotal,unnumberedPageEvidence,documentNumber}){
   const numberedPagesComplete=Number.isInteger(expectedPageCount)&&expectedPageCount>0&&expectedPageCount===sourcePageCount&&Array.isArray(visiblePageNumbers)&&visiblePageNumbers.length===sourcePageCount&&visiblePageNumbers.every((page,index)=>page===index+1);
   const amounts=printedLines.map(line=>String(line.grossAmount??"").trim());
