@@ -21,7 +21,17 @@ const META_SEP="::MWSMETA::";
 
 function assertStore(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
 async function storeFor(req,storeId){const row=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true,companyId:true}});if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return row}
-async function hasTableService(companyId,storeId){try{const rows=await prisma.$queryRaw`SELECT EXISTS(SELECT 1 FROM "CompanyModule" cm JOIN "StoreTableServiceConfig" cfg ON cfg."companyId"=cm."companyId" WHERE cm."companyId"=${companyId} AND cm."moduleKey"='TABLE_SERVICE' AND cm."active"=TRUE AND cfg."storeId"=${storeId} AND cfg."enabled"=TRUE) AS enabled`;return Boolean(rows[0]?.enabled)}catch{return false}}
+async function hasTableService(companyId,storeId){
+  // Store POS can be opened before the table-service router has received its
+  // first request. Ensure the store-level configuration table exists here as
+  // well, otherwise the old silent fallback hides the ΤΡΑΠΕΖΙΑ action.
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreTableServiceConfig" ("companyId" TEXT NOT NULL,"storeId" TEXT PRIMARY KEY,"enabled" BOOLEAN NOT NULL DEFAULT FALSE,"updatedBy" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  const [module,config]=await Promise.all([
+    prisma.companyModule.findFirst({where:{companyId,moduleKey:"TABLE_SERVICE",active:true},select:{id:true}}),
+    prisma.$queryRaw`SELECT "enabled" FROM "StoreTableServiceConfig" WHERE "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1`,
+  ]);
+  return Boolean(module&&config[0]?.enabled);
+}
 async function requestTerminal(req){
   const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
   if(testTerminal)return testTerminal.toUpperCase().slice(0,120);
