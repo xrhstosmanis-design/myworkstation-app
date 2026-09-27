@@ -2,7 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
-import {fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,normalizedAssistantPages} from "./invoice-assistant-review.js";
+import {fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,normalizedAssistantPages,parsePrintedPayable} from "./invoice-assistant-review.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
 import {invoiceAssistantProviderError} from "../lib/invoice-assistant-provider-error.js";
 import {invoiceAssistantDiscounts} from "../lib/invoice-assistant-discounts.js";
@@ -121,7 +121,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
       const invalidDiscount=lineDiscount>0&&!hasLineDiscount&&!percentageExplainsNet;
       const reviewReason=invalidDiscount?"Η τυπωμένη έκπτωση γραμμής δεν συμφωνεί με την καθαρή αξία.":String(line.reviewReason||"").slice(0,300);
       return verifiedSetUnit({...line,discount1:String(discount1),discount2:String(discount2),discount3:String(discount3),confidence:invalidDiscount||reviewReason.trim()?"uncertain":line.confidence,reviewReason,sequence:String(index+1),matchingLineId},learnedStockRules)});
-    const printedTotal=/^\d+(?:[.,]\d{1,2})?$/.test(String(parsed.printedTotal||""))?number(parsed.printedTotal):null;
+    const printedTotal=parsePrintedPayable(parsed.printedTotal);
     const printedLines=fillMissingPrintedGross(mappedLines,{printedTotal,exciseColumnAbsent:parsed.exciseColumnAbsent===true});
     const matchedIds=new Set(printedLines.map(line=>line.matchingLineId).filter(Boolean));
     const equivalentDiscountLines=new Set(printedLines.filter(line=>hasEquivalentPrintedEconomics(current.find(row=>row.id===line.matchingLineId),line)).map(line=>line.matchingLineId));
