@@ -37,6 +37,7 @@ test("BackOffice queue refreshes and shows accountable preparation controls",()=
   assert.match(backoffice,/batch\.operatorName/);
   assert.match(backoffice,/setInterval\(\(\)=>load\(\),10000\)/);
   assert.match(backoffice,/ΕΤΟΙΜΗ ΣΤΟ/);
+  assert.match(backoffice,/item\.notes\?` · \$\{item\.notes\}`/);
 });
 
 test("BackOffice separates kitchen coffee bar and every configured production station",()=>{
