@@ -1,3 +1,7 @@
+## 27/09/2026 ~22:35 Ελλάδα — TABLE_SERVICE κινητό · visual LAB FAIL / στενή διόρθωση
+
+- [ ] #1451 / CI #3678 / exact Render `acdb57c5`: κουμπί LAB εμφανίστηκε, αλλά η οθόνη έδειξε ψευδές ανενεργό module λόγω διπλού ελέγχου POS catalog. Καμία παραγγελία. Αφαιρέθηκε μόνο ο πρόσθετος έλεγχος· νέο CI/deploy/visual readback AWAITING. Αποστολή, stock και βάρδιες NOT TESTED. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
+
 ## 27/09/2026 22:29 Ελλάδα — Ετικέτα EAN-13: απομόνωση σε code test, live OPEN
 
 Στο Platform Admin διαβάστηκαν χωρίς αποθήκευση οι ρυθμίσεις LAB 60 × 40 mm / «LAB δοκιμαστικός εκτυπωτής» και ΚΑΤ 60 × 38 mm / κενός εκτυπωτής. Η διαδρομή Store Mode ΚΑΤ από το LAB POS 2 εμφάνισε είσοδο PIN ΚΑΤ· η LAB συνεδρία επανήλθε. `server/test/pos-label-tenant-isolation.test.js` 3/3 τοπικά PASS για ίδια/δεύτερη LAB/ΚΑΤ πρόσβαση και company/store scoping. Αυτό **δεν είναι live API denial**. Το LAB έχει μόνο ένα κατάστημα και η οθόνη Super Admin δεν δημιουργεί δεύτερο στην ίδια εταιρεία. Live API αίτημα και δεύτερο LAB κατάστημα NOT TESTED, συνολικό scope OPEN. PR #1450 / CI αναμένεται. Καμία αλλαγή στο ΚΑΤ.
