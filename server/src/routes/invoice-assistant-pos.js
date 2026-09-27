@@ -25,9 +25,14 @@ const number=value=>Number(String(value??"").replace(",","."));
 const pageEvidenceSchema={type:"object",additionalProperties:false,required:["printedTotal","printedQuantityTotal","printedNetTotal","unnumberedPageEvidence"],properties:{printedTotal:{type:"string"},printedQuantityTotal:{type:"string"},printedNetTotal:{type:"string"},unnumberedPageEvidence:schema.properties.unnumberedPageEvidence}};
 
 async function readUnnumberedPageEvidence(files,documentNumber){
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"low"},max_output_tokens:1800,input:[{role:"user",content:[{type:"input_text",text:`Έλεγξε ΜΟΝΟ αν οι ${files.length} πλήρεις φωτογραφίες είναι αρίθμητα φύλλα του ίδιου παραστατικού με αριθμό ${documentNumber}. Για ΚΑΘΕ φωτογραφία, βάλε imageIndex από 1, documentNumber ακριβώς όπως είναι τυπωμένο εκεί, fullPageVisible=true μόνο αν φαίνονται η κεφαλίδα με τον αριθμό, όλες οι γραμμές και το κάτω άκρο, printedTotalsVisible=true μόνο αν φαίνονται τα τελικά τυπωμένα σύνολα. Διάβασε από το τελευταίο φύλλο την ΤΕΛΙΚΗ ΑΞΙΑ ως printedTotal, τη ΣΥΝ. ΠΟΣ/ΤΑΣ ως printedQuantityTotal και την ΚΑΘΑΡΗ ΑΞΙΑ μετά την έκπτωση ως printedNetTotal. Το ΝΕΟ ΥΠΟΛΟΙΠΟ λογαριασμού δεν είναι printedTotal. Άφησε κενό string για κάθε δυσανάγνωστο σύνολο και false για αβέβαιη ορατότητα. Μη βγάλεις συμπέρασμα από την προηγούμενη συνομιλία.`},...files]}],text:{format:{type:"json_schema",name:"invoice_assistant_page_evidence",strict:true,schema:pageEvidenceSchema}}})});
-  if(!response.ok)throw new Error("Δεν ολοκληρώθηκε ο ανεξάρτητος έλεγχος σελίδων.");
-  return JSON.parse(responseText(await response.json()));
+  const pageViews=[];
+  for(let index=0;index<files.length-1;index++)if(files[index]?.type==="input_text"&&(/Σελίδα \d+ από \d+: πλήρης φωτογραφία/.test(files[index].text)||/Σελίδα \d+, κάτω ζώνη/.test(files[index].text))&&files[index+1]?.type==="input_image")pageViews.push(files[index],files[index+1]);
+  if(!pageViews.length)throw new Error("Δεν υπάρχουν πλήρεις εικόνες για έλεγχο σελίδων.");
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"low"},max_output_tokens:5000,input:[{role:"user",content:[{type:"input_text",text:`Έλεγξε ΜΟΝΟ αν οι φωτογραφίες είναι αρίθμητα φύλλα του ίδιου παραστατικού με αριθμό ${documentNumber}. Κάθε φύλλο έχει πλήρη φωτογραφία και μεγέθυνση κάτω μέρους. Για ΚΑΘΕ φύλλο, βάλε imageIndex από 1, documentNumber ακριβώς όπως είναι τυπωμένο εκεί, fullPageVisible=true μόνο αν φαίνονται η κεφαλίδα με τον αριθμό, όλες οι γραμμές και το κάτω άκρο, printedTotalsVisible=true μόνο αν φαίνονται τα τελικά τυπωμένα σύνολα. Διάβασε από το τελευταίο φύλλο την ΤΕΛΙΚΗ ΑΞΙΑ ως printedTotal, τη ΣΥΝ. ΠΟΣ/ΤΑΣ ως printedQuantityTotal και την ΚΑΘΑΡΗ ΑΞΙΑ μετά την έκπτωση ως printedNetTotal. Το ΝΕΟ ΥΠΟΛΟΙΠΟ λογαριασμού δεν είναι printedTotal. Άφησε κενό string για κάθε δυσανάγνωστο σύνολο και false για αβέβαιη ορατότητα.`},...pageViews]}],text:{format:{type:"json_schema",name:"invoice_assistant_page_evidence",strict:true,schema:pageEvidenceSchema}}})});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const body=await response.json(),answer=responseText(body);
+  if(!answer)throw new Error(`Απάντηση χωρίς δομημένα δεδομένα (${body.status||"άγνωστη κατάσταση"}, ${body.incomplete_details?.reason||"άγνωστη αιτία"}).`);
+  return JSON.parse(answer);
 }
 
 function manager(req,res,next){
@@ -86,15 +91,16 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"medium"},max_output_tokens:30000,input:[{role:"user",content:[{type:"input_text",text:instruction},...files]}],text:{format:{type:"json_schema",name:"invoice_assistant_preview",strict:true,schema}}})});
     if(!response.ok){const failure=await invoiceAssistantProviderError(response);return res.status(failure.status).json({error:failure.message})}
     const parsed=JSON.parse(responseText(await response.json()));
+    let pageVerificationIssue="";
     if(result.pages.length>1&&parsed.expectedPageCount===0&&Array.isArray(parsed.visiblePageNumbers)&&parsed.visiblePageNumbers.length===0){
       const missingEvidence=!Array.isArray(parsed.unnumberedPageEvidence)||parsed.unnumberedPageEvidence.length!==result.pages.length;
       const missingTotals=![parsed.printedTotal,parsed.printedQuantityTotal,parsed.printedNetTotal].every(value=>String(value??"").trim());
       if(missingEvidence||missingTotals){
         try{
           const verification=await readUnnumberedPageEvidence(files,result.document.documentNumber);
-          if(missingEvidence)parsed.unnumberedPageEvidence=verification.unnumberedPageEvidence;
+          if(missingEvidence||missingTotals)parsed.unnumberedPageEvidence=verification.unnumberedPageEvidence;
           for(const field of ["printedTotal","printedQuantityTotal","printedNetTotal"])if(!String(parsed[field]??"").trim())parsed[field]=verification[field];
-        }catch{/* Keep the review blocked if the independent page check fails. */}
+        }catch(error){pageVerificationIssue=`Ανεξάρτητος έλεγχος σελίδων: ${String(error.message||error).slice(0,180)}.`;}
       }
     }
     const ids=new Set(current.map(row=>row.id));
@@ -122,7 +128,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const safeCorrections=corrections.filter(change=>!change.field.startsWith("discount")||!equivalentDiscountLines.has(change.lineId));
     const checks=invoicePageReviewChecks({...normalizedAssistantPages({...parsed,sourcePageCount:result.pages.length}),sourcePageCount:result.pages.length,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,unnumberedPageEvidence:parsed.unnumberedPageEvidence,documentNumber:result.document.documentNumber});
     const reviewReady=checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
-    const issues=[!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φωτογραφίες ${result.pages.length}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
+    const issues=[pageVerificationIssue||null,!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φωτογραφίες ${result.pages.length}, τεκμήρια ${JSON.stringify(parsed.unnumberedPageEvidence||[]).slice(0,500)}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
     res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?safeCorrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":`${issues.join(" ")} Οι προτάσεις δεν εφαρμόζονται.`});
   }catch(error){next(error)}
 });
