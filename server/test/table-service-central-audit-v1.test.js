@@ -26,3 +26,15 @@ test("new table configuration audit rows retain Greek actor identity",()=>{
   assert.match(tableRoute,/terminalPos:"BACKOFFICE"/);
   assert.match(auditRoute,/LEFT JOIN "User" u ON u\."id"=a\."actorId"/);
 });
+
+test("central audit reads table rounds and preparation as nonfinancial events",()=>{
+  for(const event of ["TABLE_ORDER_SENT","TABLE_ORDER_ROUND_SENT","TABLE_PREPARATION_READY"]){
+    assert.match(auditRoute,new RegExp(`auditEventLabels\\.${event}`));
+    assert.match(auditRoute,new RegExp(`'${event}'`));
+    assert.match(tableRoute,new RegExp(`'${event}'|${event}`));
+  }
+  assert.match(auditRoute,/ΑΠΟΣΤΟΛΗ ΝΕΟΥ ΓΥΡΟΥ/);
+  assert.match(auditRoute,/ΟΛΟΚΛΗΡΩΣΗ ΠΑΡΑΣΚΕΥΗΣ/);
+  assert.match(auditRoute,/amount:operatorLifecycle\|\|diningDescription\?0:eventAmount/);
+  assert.match(auditRoute,/χωρίς πώληση/);
+});

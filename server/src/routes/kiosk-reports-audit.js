@@ -32,6 +32,9 @@ auditEventLabels.OPERATOR_LOGOUT="Έξοδος χειριστή";
 auditEventLabels.DINING_AREA_CREATED="Δημιουργία σάλας";
 auditEventLabels.DINING_TABLE_CREATED="Δημιουργία τραπεζιού";
 auditEventLabels.DINING_TABLE_UPDATED="Ενημέρωση τραπεζιού";
+auditEventLabels.TABLE_ORDER_SENT="Αποστολή παραγγελίας τραπεζιού";
+auditEventLabels.TABLE_ORDER_ROUND_SENT="Αποστολή νέου γύρου τραπεζιού";
+auditEventLabels.TABLE_PREPARATION_READY="Ολοκλήρωση παρασκευής τραπεζιού";
 const operatorLifecycleEvents=new Set(["OPERATOR_CREATED","OPERATOR_PROFILE_UPDATED","OPERATOR_PIN_CHANGED","OPERATOR_PIN_RANDOMIZED","OPERATOR_DEACTIVATED","OPERATOR_LOGIN_PIN","OPERATOR_LOGIN_CARD","OPERATOR_LOGOUT"]);
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
@@ -72,6 +75,8 @@ const diningAuditDescription=(eventType,details={},areaNames=new Map())=>{
     const areaName=areaNames.get(details.areaId)||details.areaName||details.areaId||"Χωρίς σάλα";
     return `${action} · ${details.name||"Χωρίς όνομα"} · Σάλα ${areaName} · ${n(details.capacity)} άτομα · ${diningShapeLabel(details.shape)}`;
   }
+  if(eventType==="TABLE_ORDER_SENT"||eventType==="TABLE_ORDER_ROUND_SENT")return `${eventType==="TABLE_ORDER_SENT"?"ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ":"ΑΠΟΣΤΟΛΗ ΝΕΟΥ ΓΥΡΟΥ"} · ${details.tableName||details.tableId||"Τραπέζι"} · Γύρος ${n(details.roundNumber)} · ${n(details.itemCount)} είδη · προσθήκη ${n(details.addedTotal).toFixed(2)} € · λογαριασμός ${n(details.total).toFixed(2)} € · χωρίς πώληση`;
+  if(eventType==="TABLE_PREPARATION_READY")return `ΟΛΟΚΛΗΡΩΣΗ ΠΑΡΑΣΚΕΥΗΣ · ${details.productionStation||"Σταθμός"} · δελτίο ${details.batchId||"—"} · χωρίς πώληση`;
   return null;
 };
 
@@ -241,7 +246,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
           'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','SUPPLIER_SETTLEMENT_CANCELLED','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
           ,'OPERATOR_CREATED','OPERATOR_PROFILE_UPDATED','OPERATOR_PIN_CHANGED','OPERATOR_PIN_RANDOMIZED','OPERATOR_DEACTIVATED','OPERATOR_LOGIN_PIN','OPERATOR_LOGIN_CARD','OPERATOR_LOGOUT'
-          ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED'
+          ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED','TABLE_ORDER_SENT','TABLE_ORDER_ROUND_SENT','TABLE_PREPARATION_READY'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
