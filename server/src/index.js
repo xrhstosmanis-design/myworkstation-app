@@ -2,7 +2,9 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
+import {readFile} from "fs/promises";
 import { fileURLToPath } from "url";
+import {storeHtmlWithManifest,storeManifest,validPwaStoreId} from "./store-pwa.js";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
@@ -246,6 +248,14 @@ app.use((err,req,res,next)=>{console.error(err);if(err?.name==="ZodError") retur
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
+app.get("/store/:storeId/manifest.webmanifest",(req,res)=>{
+  if(!validPwaStoreId(req.params.storeId))return res.sendStatus(404);
+  res.set("Cache-Control","no-store").type("application/manifest+json").json(storeManifest(req.params.storeId));
+});
+app.get("/store/:storeId",async(req,res,next)=>{
+  if(!validPwaStoreId(req.params.storeId))return res.sendStatus(404);
+  try{res.set("Cache-Control","no-store").type("html").send(storeHtmlWithManifest(await readFile(path.join(dist,"index.html"),"utf8"),req.params.storeId))}catch(error){next(error)}
+});
 app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
