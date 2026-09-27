@@ -33,6 +33,17 @@ test("two unnumbered full sheets with the same invoice and reconciled printed to
   assert.equal(assessInvoicePages({...invoice,unnumberedPageEvidence:[invoice.unnumberedPageEvidence[0],{...invoice.unnumberedPageEvidence[1],fullPageVisible:false}]}),false);
 });
 
+
+test("printed taxable net can include explicit excise without hiding a net mismatch",()=>{
+  const lines=[{quantity:"77",netAmount:"280.93",exciseTotal:"64.14",grossAmount:"410.15"}];
+  const invoice={expectedPageCount:1,visiblePageNumbers:[1],sourcePageCount:1,printedLines:lines,printedTotal:410.15,printedQuantityTotal:"77",printedNetTotal:"345.07"};
+  assert.equal(assessInvoicePages(invoice),true);
+  assert.equal(invoicePageReviewChecks(invoice).netSum,345.07);
+  assert.equal(assessInvoicePages({...invoice,printedNetTotal:"280.93"}),true);
+  assert.equal(assessInvoicePages({...invoice,printedNetTotal:"350.00"}),false);
+  assert.equal(assessInvoicePages({...invoice,printedLines:[{...lines[0],exciseTotal:""}]}),false);
+  assert.equal(assessInvoicePages({...invoice,printedTotal:420.15}),false);
+});
 test("printed quantity and net expose a missing row even if gross is copied from the footer",()=>{
   const invoice={expectedPageCount:1,visiblePageNumbers:[1],sourcePageCount:1,printedLines:[{quantity:"2",netAmount:"2.00",grossAmount:"2.26"}],printedTotal:2.26};
   assert.equal(assessInvoicePages({...invoice,printedQuantityTotal:"3",printedNetTotal:"2.00"}),false);
