@@ -1,7 +1,7 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
-const normalizePrintedUnit=value=>{const unit=String(value??"").trim().toUpperCase();if(["PIECE","ΤΜ","ΤΜΧ","ΤΕΜ","TM","TMX","TEM","PCS"].includes(unit))return "PIECE";if(["PACKAGE","ΠΑΚ","ΠΑΚ.","ΚΙΒ","ΚΙΒ.","BOX"].includes(unit))return "PACKAGE";return unit};
+const normalizePrintedUnit=value=>{const unit=String(value??"").trim().toUpperCase();if(["PIECE","ΤΜ","ΤΜΧ","ΤΕΜ","TM","TMX","TEM","PCS","ΣΕΤ","SET"].includes(unit))return "PIECE";if(["PACKAGE","ΠΑΚ","ΠΑΚ.","ΚΙΒ","ΚΙΒ.","BOX"].includes(unit))return "PACKAGE";return unit};
 const validPrinted=(line,manuallyConfirmed=false)=>{
   if(!manuallyConfirmed&&line.confidence!=="certain"||!line.description?.trim()||!["PIECE","PACKAGE"].includes(line.invoiceUnit))return false;
   const fields=["quantity","unitCost","vatRate","discount1","discount2","discount3","exciseTotal","netAmount","grossAmount","stockUnitsPerInvoiceUnit"];
