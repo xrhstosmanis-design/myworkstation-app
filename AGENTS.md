@@ -91,6 +91,16 @@ This gate applies to every module, page, conversation and agent. It is mandatory
 14. Parallel pages may own different Gates or independent subtasks. They must never edit the same assigned scope concurrently.
 15. After a real PASS, delete the completed subtask from the active pending roadmap in the same pull request; do not leave a checked duplicate. When every subtask is removed, move the whole Gate to PASS/completed status.
 
+## Mandatory assignment handoff before a page stops
+
+When an assigned Gate or independent scope is not fully complete and the responsible page/conversation is about to end, the assignment must not disappear or become silently unowned.
+
+1. The current page first publishes a final handoff checkpoint to `main`: exact completed/remaining scope, newest real LAB evidence, current branch/PR/CI/deploy revision, protected PASS behaviors, known failures and the single next action.
+2. The active list and pending roadmap must identify the current owner until the receiving page is named. No second page may work the same scope in parallel.
+3. The receiving page must read the checkpoint and record `ΑΝΑΛΗΨΗ ΑΠΟ <old branch/page> — ASSIGNED <new branch/page>` in the active list and roadmap before changing code or running a state-changing test.
+4. Only after that record is merged may the old page mark itself released. The transfer must leave no interval in which two pages both own the scope or neither page owns it.
+5. This rule applies to the restaurant/TABLE_SERVICE assignment and to every future Gate or independent module assignment.
+
 ## POS invoice acceptance invariant
 
 ### Κοινός κανόνας Gate 3 για όλες τις σελίδες
