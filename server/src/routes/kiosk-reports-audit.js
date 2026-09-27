@@ -28,6 +28,9 @@ auditEventLabels.OPERATOR_DEACTIVATED="Απενεργοποίηση χειρισ
 auditEventLabels.OPERATOR_LOGIN_PIN="Είσοδος χειριστή με PIN";
 auditEventLabels.OPERATOR_LOGIN_CARD="Είσοδος χειριστή με κάρτα";
 auditEventLabels.OPERATOR_LOGOUT="Έξοδος χειριστή";
+auditEventLabels.DINING_AREA_CREATED="Δημιουργία σάλας";
+auditEventLabels.DINING_TABLE_CREATED="Δημιουργία τραπεζιού";
+auditEventLabels.DINING_TABLE_UPDATED="Ενημέρωση τραπεζιού";
 const operatorLifecycleEvents=new Set(["OPERATOR_CREATED","OPERATOR_PROFILE_UPDATED","OPERATOR_PIN_CHANGED","OPERATOR_PIN_RANDOMIZED","OPERATOR_DEACTIVATED","OPERATOR_LOGIN_PIN","OPERATOR_LOGIN_CARD","OPERATOR_LOGOUT"]);
 const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
@@ -59,6 +62,16 @@ const operatorLifecycleDescription=(eventType,details={})=>{
   if(safe.cardLast4)parts.push(`Κάρτα •••• ${safe.cardLast4}`);
   if(safe.terminalPos)parts.push(`Τερματικό ${safe.terminalPos}`);
   return parts.join(" · ");
+};
+const diningShapeLabel=shape=>({SQUARE:"Τετράγωνο",ROUND:"Στρογγυλό",RECTANGLE:"Ορθογώνιο"}[shape]||shape||"—");
+const diningAuditDescription=(eventType,details={},areaNames=new Map())=>{
+  if(eventType==="DINING_AREA_CREATED")return `ΔΗΜΙΟΥΡΓΙΑ ΣΑΛΑΣ · ${details.name||"Χωρίς όνομα"}`;
+  if(eventType==="DINING_TABLE_CREATED"||eventType==="DINING_TABLE_UPDATED"){
+    const action=eventType==="DINING_TABLE_CREATED"?"ΔΗΜΙΟΥΡΓΙΑ ΤΡΑΠΕΖΙΟΥ":"ΕΝΗΜΕΡΩΣΗ ΤΡΑΠΕΖΙΟΥ";
+    const areaName=areaNames.get(details.areaId)||details.areaName||details.areaId||"Χωρίς σάλα";
+    return `${action} · ${details.name||"Χωρίς όνομα"} · Σάλα ${areaName} · ${n(details.capacity)} άτομα · ${diningShapeLabel(details.shape)}`;
+  }
+  return null;
 };
 
 const router=Router();
@@ -227,6 +240,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
           'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','SUPPLIER_SETTLEMENT_CANCELLED','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
           ,'OPERATOR_CREATED','OPERATOR_PROFILE_UPDATED','OPERATOR_PIN_CHANGED','OPERATOR_PIN_RANDOMIZED','OPERATOR_DEACTIVATED','OPERATOR_LOGIN_PIN','OPERATOR_LOGIN_CARD','OPERATOR_LOGOUT'
+          ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
@@ -248,6 +262,9 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
     const invoiceIds=[...new Set(operatorRows.flatMap(row=>Array.isArray(row.details?.allocations)?row.details.allocations.map(item=>item.purchaseDocumentId).filter(Boolean):[]))];
     const invoiceRows=invoiceIds.length?await prisma.$queryRaw`SELECT "id","documentNumber" FROM "PurchaseDocument" WHERE "id"=ANY(${invoiceIds}::text[]) AND (${companyId}::text IS NULL OR "companyId"=${companyId})`:[];
     const invoiceNumbers=new Map(invoiceRows.map(row=>[row.id,row.documentNumber]));
+    const diningAreaIds=[...new Set(operatorRows.map(row=>row.details?.areaId).filter(Boolean))];
+    const diningAreaRows=diningAreaIds.length?await prisma.$queryRaw`SELECT "id","name" FROM "DiningArea" WHERE "id"=ANY(${diningAreaIds}::text[]) AND (${companyId}::text IS NULL OR "companyId"=${companyId})`:[];
+    const diningAreaNames=new Map(diningAreaRows.map(row=>[row.id,row.name]));
     const transactionItems=transactionRows.map(r=>({...r,amount:n(r.amount),financialDetails:{amount:n(r.amount)},sourceType:"StoreTransaction",paymentSource:r.subtractFromShift?"CASH_SHIFT":"EXTERNAL"}));
     const actionItems=actionRows.map(r=>{
       const details=r.details&&typeof r.details==="object"?r.details:{};
@@ -293,7 +310,8 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         :"";
       const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED",invoiceDescription=invoiceAuditDescription(r.eventType,details);
       const operatorLifecycle=operatorLifecycleEvents.has(r.eventType),safeLifecycleDetails=operatorLifecycle?safeOperatorLifecycleDetails(details):null;
-      const description=operatorLifecycle?operatorLifecycleDescription(r.eventType,details):invoiceDescription
+      const diningDescription=diningAuditDescription(r.eventType,details,diningAreaNames);
+      const description=operatorLifecycle?operatorLifecycleDescription(r.eventType,details):invoiceDescription||diningDescription
         ||(purchaseOrderDeleted
         ?`ΔΙΑΓΡΑΦΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${details.invoiceNumber||details.orderId||"—"} · ${details.supplierName||"Χωρίς προμηθευτή"} · ${n(details.lineCount)} γραμμές · ${n(details.totalGross).toFixed(2)} €`
         :productCorrection
@@ -307,7 +325,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           :r.eventType==="POS_SALE_COMPLETED"
             ?`ΟΛΟΚΛΗΡΩΣΗ ΠΩΛΗΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"} · ${details.paymentMethod||"—"} · ${n(details.total).toFixed(2)} €`
             :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`);
-      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:operatorLifecycle?0:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:safeLifecycleDetails||details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
+      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:operatorLifecycle||diningDescription?0:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:safeLifecycleDetails||details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
     const stockItems=stockRows.map(r=>{const quantity=n(r.quantity),eventType=r.movementType==="MANUAL_ADJUSTMENT"?"STOCK_MANUAL_ADJUSTMENT":`STOCK_${r.movementType}`;return {id:r.id,createdAt:r.createdAt,eventType,amount:null,description:`${r.note||greekAuditEventLabel(eventType)} · ${r.productName} · SKU ${r.sku||"—"} · ${quantity>=0?"IN":"OUT"} ${Math.abs(quantity)}`,supplierId:null,supplierName:null,shiftId:null,actorId:r.actorId,actorName:r.actorName||r.actorId||"—",subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:"BACKOFFICE",financialDetails:{productName:r.productName,sku:r.sku,quantity,unitCost:n(r.unitCost),movementType:r.movementType,sourceType:r.sourceType,sourceId:r.sourceId},sourceType:"StockMovement",paymentSource:"AUDIT_EVENT"}});
     const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems,...stockItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
