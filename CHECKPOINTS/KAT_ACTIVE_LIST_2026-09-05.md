@@ -18,6 +18,8 @@
 
 **TABLE_SERVICE Φάση A2 — LOCAL PASS / AWAITING CI-LAB (27/09/2026):** Υλοποιήθηκε ένας ανοικτός λογαριασμός ανά τραπέζι με αριθμημένους γύρους, transaction lock, αποστολή μόνο των νέων γραμμών στα πόστα, χωριστό Audit και σωστή συγκέντρωση ίδιου προϊόντος στο checkout. 18/18 στοχευμένοι έλεγχοι και production build PASS. Συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 
+**TABLE_SERVICE Φάση A1 BackOffice — LOCAL PASS / AWAITING CI-LAB (27/09/2026):** Στο κοινό πάνελ Owner και Super Admin προστέθηκαν δημιουργία σάλας, δημιουργία και επεξεργασία τραπεζιού ανά κατάστημα, με κοινά δεδομένα, role guard και Audit. 19/19 στοχευμένοι έλεγχοι και production build PASS. Δεν έγινε ακόμη state-changing LAB καταχώρηση· συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+
 
 
 **Gate 3 — καρτέλα προμηθευτή RETEST (27/09/2026 12:42 Ελλάδα):** `image(20260927-094146).png`: το κουμπί ΑΑΔΕ επέστρεψε μόνο VIES και σωστά δεν αποθήκευσε αυτόματα, αλλά το χειροκίνητο «Καταχώρηση» δεν ανταποκρίθηκε. Ρητή σύνδεση click με αποθήκευση και ορατό readback ΑΦΜ σε νέο PR/CI AWAITING. Υφιστάμενο 053688, 5 γραμμές/185,99 €, χωρίς νέα POS πράξη. Gate 3 OPEN.

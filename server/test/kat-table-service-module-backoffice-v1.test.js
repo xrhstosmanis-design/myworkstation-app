@@ -49,3 +49,17 @@ test("BackOffice includes complete searchable table history",()=>{
   assert.match(backoffice,/Τραπέζι, σερβιτόρος, είδος, πώληση/);
   assert.match(backoffice,/toLocaleString\("el-GR"/);
 });
+
+test("Owner and Super Admin configure dining areas and tables from the shared BackOffice",()=>{
+  assert.match(launcher,/<TableServiceBackofficePanel api=\{request\} stores=\{stores\} activeStoreId=\{supportStoreId\}/);
+  assert.match(backoffice,/ΡΥΘΜΙΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ/);
+  assert.match(backoffice,/ΔΗΜΙΟΥΡΓΙΑ ΣΑΛΑΣ/);
+  assert.match(backoffice,/ΔΗΜΙΟΥΡΓΙΑ ΤΡΑΠΕΖΙΟΥ/);
+  assert.match(backoffice,/ΑΠΟΘΗΚΕΥΣΗ ΑΛΛΑΓΩΝ/);
+  assert.match(backoffice,/table-service\/areas/);
+  assert.match(backoffice,/\/tables\/\$\{encodeURIComponent\(editingId\)\}/);
+  assert.match(tableRoute,/DINING_AREA_CREATED/);
+  assert.match(tableRoute,/DINING_TABLE_CREATED/);
+  assert.match(tableRoute,/DINING_TABLE_UPDATED/);
+  assert.match(tableRoute,/tokenType!=="STORE_OPERATOR"\|\|req\.user\?\.role==="MANAGER"/);
+});
