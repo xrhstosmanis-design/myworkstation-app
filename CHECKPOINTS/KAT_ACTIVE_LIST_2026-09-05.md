@@ -18,7 +18,7 @@
 
 **TABLE_SERVICE Φάση A2 — LOCAL PASS / AWAITING CI-LAB (27/09/2026):** Υλοποιήθηκε ένας ανοικτός λογαριασμός ανά τραπέζι με αριθμημένους γύρους, transaction lock, αποστολή μόνο των νέων γραμμών στα πόστα, χωριστό Audit και σωστή συγκέντρωση ίδιου προϊόντος στο checkout. 18/18 στοχευμένοι έλεγχοι και production build PASS. Συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 
-**TABLE_SERVICE Φάση A1 BackOffice — LOCAL PASS / AWAITING CI-LAB (27/09/2026):** Στο κοινό πάνελ Owner και Super Admin προστέθηκαν δημιουργία σάλας, δημιουργία και επεξεργασία τραπεζιού ανά κατάστημα, με κοινά δεδομένα, role guard και Audit. 19/19 στοχευμένοι έλεγχοι και production build PASS. Δεν έγινε ακόμη state-changing LAB καταχώρηση· συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+**TABLE_SERVICE Φάση A1 BackOffice — VISUAL LAB PASS / STATE CHANGE NOT TESTED (27/09/2026):** PR #1402, CI #3568 και Render exact `3c516853` PASS. Στην πραγματική συνεδρία Super Admin εμφανίστηκαν η κοινή διαχείριση σαλών/τραπεζιών και όλα τα πεδία για το ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Παραμένουν 0 σάλες / 0 τραπέζια, επειδή δεν έγινε αποθήκευση. Δημιουργία, Audit και εμφάνιση στο POS NOT TESTED· συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 
 
 

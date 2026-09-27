@@ -156,3 +156,10 @@ Branch: `agent/table-service-floor-plan-20260927`
 - Απλός χειριστής POS δεν λαμβάνει τα controls παραμετροποίησης· επιτρέπονται Manager, Owner και Super Admin.
 - Έλεγχοι: **19/19 TABLE_SERVICE tests PASS**, frontend production build **PASS**, `git diff --check` **PASS**.
 - Κατάσταση: **LOCAL PASS / AWAITING CI, DEPLOY AND LAB VISUAL READBACK**. Δεν δημιουργήθηκαν ακόμη πραγματικές σάλες ή τραπέζια στο LAB. Το συνολικό TABLE_SERVICE παραμένει **OPEN**.
+
+### CI, deploy και Super Admin readback
+
+- PR #1402, CI #3568 **PASS** και Render exact revision `3c5168538c2cdaa81ddd1b7b4dff882be492afd1`.
+- Στην πραγματική συνεδρία υποστήριξης Super Admin για `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` εμφανίστηκαν επιτυχώς τα controls «Σάλες και τραπέζια», «Νέα σάλα», «Νέο τραπέζι», σάλα, θέσεις και σχήμα.
+- Η ένδειξη παρέμεινε `0 σάλες · 0 τραπέζια`: δεν πατήθηκε αποθήκευση και δεν έγινε state-changing LAB εγγραφή.
+- Κατάσταση υποφάσης UI/πρόσβασης Super Admin: **VISUAL LAB PASS**. Η πραγματική δημιουργία/επεξεργασία και η εμφάνιση στο POS παραμένουν **NOT TESTED**, επομένως το συνολικό TABLE_SERVICE παραμένει **OPEN**.
