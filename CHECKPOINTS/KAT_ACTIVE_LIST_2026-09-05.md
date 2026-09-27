@@ -1,3 +1,8 @@
+## 27/09/2026 — Ετικέτες: δεύτερο LAB readback PASS, HTTP E2E AWAITING CI
+
+Στο exact Render `3895e89a`, δεύτερο LAB `cmuk8gxui000ppabfykdxwb1y` αποθηκεύει/ξαναδιαβάζει 50 × 30 mm και δικό του εκτυπωτή· αρχικό LAB μένει 60 × 40 mm. ΚΑΤ αμετάβλητο. Προστέθηκε απομονωμένο πραγματικό HTTP E2E για δικό του endpoint 200 και sibling/foreign 403 χωρίς διαρροή, αναμένει CI. Production API denial με πραγματικό LAB token NOT TESTED, συνολικό isolation OPEN. `CHECKPOINTS/CHANGES/2026-09-27-label-http-isolation-awaiting-ci.md`.
+
+
 ## 27/09/2026 ~22:43 Ελλάδα — TABLE_SERVICE κινητό · οπτικό readback, αποστολή OPEN
 
 - [x] #1455 / CI #3682 / exact Render `0cc2f6d0`: στην καθαρή LAB συνεδρία χειριστή `LAB POS 2` η οθόνη άνοιξε. Εμφανίστηκαν `ΚΕΝΤΡΙΚΗ ΣΑΛΑ LAB`, `ΤΡΑΠΕΖΙ LAB 1` READY 2,00 €, νέος γύρος στον ίδιο λογαριασμό, και αναζήτηση `LAB ΚΑΦΕΣ` → SKU `LAB-CAFE-20260927` 1,00 €.
