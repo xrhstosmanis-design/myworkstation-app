@@ -1,3 +1,9 @@
+## 27/09/2026 23:42 Ελλάδα — TABLE_SERVICE κινητό · φυσική αποστολή LAB PASS περιορισμένου σκέλους
+
+- [x] Android/Chrome, προσωπικό PIN LAB POS 2 (κεντρικό Audit 23:37), ΤΡΑΠΕΖΙ LAB 1 READY 2,00 € → μία αποστολή Γύρου 3, 1× LAB ΚΑΦΕΣ ΔΟΚΙΜΗΣ με δωρεάν product-specific «ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ», SENT 3,00 €. BackOffice ΚΑΦΕ εμφάνισε τη σωστή επιλογή, πόστο ΕΤΟΙΜΗ και ενεργή ουρά 1→0. PR #1461 / CI #3694 / exact προηγούμενο Render `c64c80da`. Φωτογραφίες ιδιοκτήτη 23:38/23:41.
+- [x] Πριν/μετά: MAIN 0,00 €/0, LAB-POS-02 0,00 €/2, stock LAB καφέ −2 με ίδια τελευταία πώληση· χωρίς Sale/Payment. Η κεντρική προβολή Audit έδειξε login PIN αλλά όχι ξεχωριστό event γύρου, παρότι η server ροή γράφει `TABLE_ORDER_ROUND_SENT` στο `StoreOperatorAudit`. Ορατότητα event OPEN. Αριθμητικό baseline ουράς ακριβώς πριν την αποστολή NOT RECORDED.
+- [ ] Εγκατάσταση PWA, offline/reconnect, αρνητικό cross-store, επιλογές με χρέωση, πλήρες KDS, μεταφορά/ένωση/split και συνολικό TABLE_SERVICE OPEN. Το πλήρες manual εργαζομένου/ιδιοκτήτη/Super Admin μόνο στο συνολικό PASS. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
+
 ## 27/09/2026 ~23:17 Ελλάδα — TABLE_SERVICE κινητό · product-specific οπτικό readback
 
 - [x] #1461 / CI #3694 / exact Render `c64c80da`: καθαρή LAB συνεδρία `LAB POS 2`, οθόνη κινητής παραγγελίας, `ΤΡΑΠΕΖΙ LAB 1` READY 2,00 €. Αναζήτηση `LAB ΚΑΦΕΣ`, προσθήκη μη σταλμένης γραμμής 1,00 € φόρτωσε μόνο `LAB ΕΠΙΛΟΓΗ ΓΑΛΑΚΤΟΣ` και επιλογή `ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ` 0→1. Η γραμμή αφαιρέθηκε, αποστολή disabled, επιστροφή POS.
