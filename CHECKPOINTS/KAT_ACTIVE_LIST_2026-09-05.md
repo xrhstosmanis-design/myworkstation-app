@@ -1,3 +1,8 @@
+## 27/09/2026 — EAN-13 ετικέτα: απομόνωση καταστημάτων PASS / scope κλειστό
+
+PR #1457 / CI #3685 / exact Render `3895e89a`: δεύτερο LAB `cmuk8gxui000ppabfykdxwb1y` 50 × 30 mm / δικός του εκτυπωτής μετά από αποθήκευση και νέα ανάγνωση· πρώτο LAB αμετάβλητο 60 × 40 mm. PR #1459 / CI #3690 / main `0fc6805c`: απομονωμένο HTTP E2E με χειριστή PIN, ίδιο κατάστημα 200, sibling ίδιας εταιρείας 403, ξένη εταιρεία 403, χωρίς διαρροή ρυθμίσεων. Production LAB token προς ξένο store API NOT TESTED. Το ΚΑΤ δεν άλλαξε. Η εκκρεμότητα EAN-13 ετικέτας αφαιρέθηκε· άλλα barcode scopes χωριστά. `CHECKPOINTS/CHANGES/2026-09-27-ean13-label-isolation-final.md`.
+
+
 ## 27/09/2026 — Ετικέτες: δεύτερο LAB readback PASS, HTTP E2E AWAITING CI
 
 Στο exact Render `3895e89a`, δεύτερο LAB `cmuk8gxui000ppabfykdxwb1y` αποθηκεύει/ξαναδιαβάζει 50 × 30 mm και δικό του εκτυπωτή· αρχικό LAB μένει 60 × 40 mm. ΚΑΤ αμετάβλητο. Προστέθηκε απομονωμένο πραγματικό HTTP E2E για δικό του endpoint 200 και sibling/foreign 403 χωρίς διαρροή, αναμένει CI. Production API denial με πραγματικό LAB token NOT TESTED, συνολικό isolation OPEN. `CHECKPOINTS/CHANGES/2026-09-27-label-http-isolation-awaiting-ci.md`.
