@@ -30,10 +30,19 @@ test("one station can mark ready and table becomes ready only after all stations
 });
 
 test("BackOffice queue refreshes and shows accountable preparation controls",()=>{
-  assert.match(backoffice,/Ουρά παρασκευής/);
+  assert.match(backoffice,/Ξεχωριστές ουρές παραγωγής/);
   assert.match(backoffice,/ΣΕ ΠΑΡΑΣΚΕΥΗ/);
   assert.match(backoffice,/batch\.terminalPos/);
   assert.match(backoffice,/batch\.operatorName/);
   assert.match(backoffice,/setInterval\(\(\)=>load\(\),10000\)/);
-  assert.match(backoffice,/>ΕΤΟΙΜΗ<\/button>/);
+  assert.match(backoffice,/ΕΤΟΙΜΗ ΣΤΟ/);
+});
+
+test("BackOffice separates kitchen coffee bar and every configured production station",()=>{
+  assert.match(backoffice,/const stations=useMemo/);
+  assert.match(backoffice,/const visibleQueue=useMemo/);
+  assert.match(backoffice,/role="tablist"/);
+  assert.match(backoffice,/data-production-station/);
+  assert.match(backoffice,/ΕΤΟΙΜΗ ΣΤΟ/);
+  assert.match(backoffice,/queue\.filter\(row=>row\.productionStation===name/);
 });
