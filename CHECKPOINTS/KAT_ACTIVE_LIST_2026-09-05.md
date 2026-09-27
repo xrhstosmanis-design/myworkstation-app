@@ -1,3 +1,7 @@
+## 27/09/2026 ~23:08 Ελλάδα — TABLE_SERVICE κινητό · product-specific επιλογές σε υλοποίηση
+
+- [ ] Μετά το οπτικό readback #1458, νέα περιορισμένη αλλαγή φορτώνει ομάδες modifiers ανά προϊόν, μόνο επιλογές χωρίς πρόσθετη χρέωση, με min/max και χωριστές γραμμές ίδιου είδους. Χρεώσιμες επιλογές/εισφορά μένουν στο POS επειδή το συνολικό table order δεν τις τιμολογεί. Branch `feat/table-service-mobile-modifiers-20260927`, CI/deploy/LAB AWAITING. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
+
 ## 27/09/2026 — EAN-13 ετικέτα: απομόνωση καταστημάτων PASS / scope κλειστό
 
 PR #1457 / CI #3685 / exact Render `3895e89a`: δεύτερο LAB `cmuk8gxui000ppabfykdxwb1y` 50 × 30 mm / δικός του εκτυπωτής μετά από αποθήκευση και νέα ανάγνωση· πρώτο LAB αμετάβλητο 60 × 40 mm. PR #1459 / CI #3690 / main `0fc6805c`: απομονωμένο HTTP E2E με χειριστή PIN, ίδιο κατάστημα 200, sibling ίδιας εταιρείας 403, ξένη εταιρεία 403, χωρίς διαρροή ρυθμίσεων. Production LAB token προς ξένο store API NOT TESTED. Το ΚΑΤ δεν άλλαξε. Η εκκρεμότητα EAN-13 ετικέτας αφαιρέθηκε· άλλα barcode scopes χωριστά. `CHECKPOINTS/CHANGES/2026-09-27-ean13-label-isolation-final.md`.
