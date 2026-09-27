@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {assessInvoicePages,fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks} from "../src/routes/invoice-assistant-review.js";
+import {assessInvoicePages,fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,parsePrintedPayable} from "../src/routes/invoice-assistant-review.js";
+
+test("printed payable accepts the invoice's three decimal currency format",()=>{
+  assert.equal(parsePrintedPayable("173,680"),173.68);
+  assert.equal(parsePrintedPayable("173.680"),173.68);
+  assert.equal(parsePrintedPayable("173,43"),173.43);
+  assert.equal(parsePrintedPayable(""),null);
+  assert.equal(parsePrintedPayable("173,6800"),null);
+});
 
 test("a photographed page 2/2 cannot authorize deletion from a partial POS draft",()=>{
   assert.equal(assessInvoicePages({expectedPageCount:2,visiblePageNumbers:[2],sourcePageCount:1,printedLines:[{grossAmount:"43.91"}],printedTotal:111.32}),false);
