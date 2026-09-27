@@ -12,3 +12,8 @@
 .po-order-lines .row.head>*{font-size:12px;line-height:1.3}
 .po-order-lines .row.totals{position:sticky;bottom:0;z-index:1}
 @media(max-width:800px){.po-modal:has(.po-order-lines) .po-order-meta{grid-template-columns:1fr 1fr}.po-modal:has(.po-order-lines) .po-order-toolbar,.po-modal:has(.po-order-lines) .po-order-footer{flex-wrap:wrap}}
+
+/* Saved product matches stay visible while the reviewer moves through invoice lines. */
+.po-order-lines .row.po-line-linked:not(.head):not(.totals){background:#e5f5ea;border-left:4px solid #16804d}
+.po-order-lines .row.po-line-linked:not(.head):not(.totals)>*{border-bottom-color:#b8dec6}
+.po-order-lines .po-line-check{color:#087143;font-weight:900}
