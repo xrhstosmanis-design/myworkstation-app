@@ -2,3 +2,5 @@
 
 .mobile-waiter-launch{display:block;margin:0 0 7px auto;min-height:44px;border:1px solid #087a52;border-radius:10px;background:#e2f7e9;color:#07583b;font-weight:900;padding:8px 14px;cursor:pointer}
 .mobile-waiter-entry{min-height:52px;width:100%;border:0;border-radius:10px;background:#087a52;color:#fff;font-weight:900;font-size:16px}
+
+.mobile-waiter-modifiers{border:1px solid #d4e5db;border-radius:10px;margin:0;padding:10px}.mobile-waiter-modifiers legend{font-size:13px;font-weight:900;padding:0 5px}.mobile-waiter-modifiers>div{display:flex;flex-wrap:wrap;gap:7px}.mobile-waiter-modifiers button{min-height:44px;border:1px solid #b8d3c9;border-radius:9px;background:#fff;color:#154838;padding:8px 10px;font-weight:800}.mobile-waiter-modifiers button.selected{background:#087a52;border-color:#087a52;color:#fff}.mobile-waiter-modifiers button:disabled{opacity:.55;background:#f0f2f1}
