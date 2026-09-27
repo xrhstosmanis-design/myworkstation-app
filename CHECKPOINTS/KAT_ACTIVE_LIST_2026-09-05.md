@@ -10,7 +10,7 @@
 
 ## 27/09/2026 11:45 Ελλάδα — Gate 3 053688 λάθος επιλογή προμηθευτή POS / LAB FAIL, fix AWAITING CI-DEPLOY-LAB
 
-**Gate 6 — ΤΡΑΠΕΖΙΑ POS AWAITING LAB (27/09/2026):** Η ορατότητα και το άνοιγμα της οθόνης επιβεβαιώθηκαν στο LAB. Νέα διόρθωση μεταφέρει το κουμπί «ΤΡΑΠΕΖΙΑ» από την κάτω μπάρα στην επάνω πράσινη κεφαλίδα δίπλα στις «ΠΑΡΑΓΓΕΛΙΕΣ», επειδή κάτω αλλοίωνε τη διάταξη του POS. CI/Render και οπτικό LAB readback εκκρεμούν. Το συνολικό σκέλος OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+**Gate 6 — ΤΡΑΠΕΖΙΑ POS HEADER PASS (27/09/2026):** PR #1397, CI #3557 και Render revision `5867e7f8` PASS. Πραγματικό LAB visual readback επιβεβαίωσε το «ΤΡΑΠΕΖΙΑ» επάνω, δίπλα στις «ΠΑΡΑΓΓΕΛΙΕΣ», και πλήρη απουσία του από την κάτω μπάρα. Η συγκεκριμένη διόρθωση κλειδώθηκε PASS· το συνολικό TABLE_SERVICE παραμένει OPEN μέχρι το πλήρες end-to-end LAB PASS. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 
 
 
