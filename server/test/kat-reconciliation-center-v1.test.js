@@ -23,3 +23,13 @@ test('missing critical evidence is visible and never silently green',()=>{
   assert.match(panel,/ΛΕΙΠΕΙ/);
   assert.match(panel,/attempt\?\.status==='SUCCESS'/);
 });
+
+test('cash online sale uses fiscal route and direct shared-stock evidence without a false EFTPOS mismatch',()=>{
+  assert.match(route,/cardPayment&&attempt&&attempt\.role!==expectedRole/);
+  assert.match(route,/directSharedStockPosting/);
+  assert.match(route,/PaymentDeviceRouteAttempt" a LEFT JOIN "CashShiftSession"/);
+  assert.match(route,/StoreOperatorAudit/);
+  assert.match(route,/inventoryWarnings/);
+  assert.match(panel,/NON_FISCAL · δρομολόγηση καταγεγραμμένη/);
+  assert.match(panel,/ΑΠΕΥΘΕΙΑΣ ΑΦΑΙΡΕΣΗ/);
+});
