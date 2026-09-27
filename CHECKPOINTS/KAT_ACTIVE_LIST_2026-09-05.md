@@ -1431,3 +1431,10 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 27/09/2026 — Gate 6 ONL-002 πραγματική ολοκλήρωση PASS / readback AWAITING CI
 
 Στο production `e09d008a`, η `ONL-002` ολοκληρώθηκε μία φορά από το πραγματικό `LAB-POS-02`: `DELIVERED`, πώληση `c9eb5160-1c13-41f2-a7b9-356ce8f9ce5f`, μία πληρωμή CASH 0,50 €, μία `SALE_CASH` 0,50 € στη συνεδρία `b39ef41a-1d1a-4887-ac88-50ce92903773`, και δύο συμφωνημένα κεντρικά Audit rows στις 10:09 από `LAB POS 2`. Το `MAIN` έμεινε 0 κινήσεις / 0,00 €, η `ONL-001` έμεινε ανέγγιχτη και το SKU 2269 εμφανίζει −65 με τελευταία πώληση 10:09:27. Η εμπορική ροή έχει πραγματικό PASS. Στενή διόρθωση της ψευδούς BackOffice ένδειξης terminal/EFTPOS/fiscal/stock είναι AWAITING CI/deploy και ιστορικό readback της ίδιας παραγγελίας· δεν γίνεται νέα συναλλαγή. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate6-onl002-payment-routing.md`.
+## 27/09/2026 — Gate 6 Online παραγγελίες και Delivery — PASS / ΚΛΕΙΔΩΜΕΝΟ
+
+- [x] Το production revision `1704865d05b649ac4ef3f8c9d6fc14f2d7144daa` (PR `#1377`, CI `#3513` PASS) εμφάνισε σωστά το ιστορικό readback της ίδιας `ONL-002`, χωρίς νέα συναλλαγή.
+- [x] `DELIVERED`, μία πώληση `COMPLETED` 0,50 €, μία πληρωμή CASH, `LAB-POS-02`, `NON_FISCAL · LAB-FISCAL-02`, EFTPOS «Δεν απαιτείται», μία άμεση αφαίρεση stock `−64 → −65` και μία κίνηση βάρδιας `SALE_CASH` 0,50 €.
+- [x] `0` πιθανά duplicates, `MAIN` 0 κινήσεις / 0,00 € και `ONL-001` ανέγγιχτη.
+- [x] Οι παλιότερες εγγραφές Gate 6 με `OPEN`, `FAIL` ή `AWAITING` παραμένουν μόνο ως ιστορικό και **αντικαθίστανται από την παρούσα τελική εγγραφή**. Δεν αποτελούν ενεργή εκκρεμότητα και δεν επαναλαμβάνονται χωρίς νέο πραγματικό FAIL ή νέα απαίτηση.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-26-gate6-onl002-payment-routing.md`. Manual: `docs/manual/online-delivery/PASS.md`.
