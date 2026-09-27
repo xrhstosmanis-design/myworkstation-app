@@ -141,7 +141,7 @@ const checkout=async(paymentMethod,payments)=>{if(checkoutLock.current||!cart.le
     try{
       const config=await api(`/api/store-pos/stores/${store.id}/label-settings`);
       writeEan13Label(popup,{barcode:String(barcode).trim(),productName:row.name,price:row.salePrice,storeName:config.storeName,settings:config.settings});
-      await audit("LABEL_PRINT",{productId:row.productId||row.id,productName:row.name,sku:row.sku||null,barcode:String(barcode).trim()});
+      await audit("LABEL_PREVIEW_OPENED",{productId:row.productId||row.id,productName:row.name,sku:row.sku||null,barcode:String(barcode).trim(),source:"CART"});
       setMessage(`Άνοιξε η προεπισκόπηση ετικέτας για «${row.name}».`);
     }catch(err){popup.close();setError(`Δεν ανοίχτηκε ετικέτα: ${err.message}`)}
   };
