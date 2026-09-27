@@ -373,3 +373,5 @@
 - TABLE_SERVICE κεντρικό Audit: περιορισμένο PASS PR #1471 / CI #3711 / exact Render `755c976`. Ο ήδη σταλμένος Γύρος 3 και η ολοκλήρωση ΚΑΦΕ εμφανίστηκαν στα κεντρικά Συμβάντα με ελληνική περιγραφή, χειριστή και ποσό Audit 0,00 €, χωρίς νέα συναλλαγή. Το συνολικό TABLE_SERVICE και οι λοιποί έλεγχοι παραμένουν OPEN.
 
 - TABLE_SERVICE Store Mode PWA: το παλιό κοινό manifest άνοιγε `/`. Νέο store-specific manifest δείχνει το ίδιο `/store/<id>` με ξεχωριστό app id· PR #1474 / CI #3717 / exact Render `edf44d9`. Ο ιδιοκτήτης επιβεβαίωσε εγκατάσταση και επανεκκίνηση από εικονίδιο σε Android με LAB Store Mode/PIN (USER PASS). Offline/reconnect και αποστολή μέσα από το εικονίδιο NOT TESTED· καμία offline αποστολή τραπεζιού.
+
+- TABLE_SERVICE κινητό offline/reconnect UX: ένδειξη offline, ανάκτηση τραπεζιών/προϊόντων στην επανασύνδεση και αποστολή ανενεργή μέχρι τον συγχρονισμό. Τοπικό build PASS· CI/deploy/φυσική Android δοκιμή AWAITING. Δεν υπάρχει offline ουρά ή αυτόματο retry POST· το συνολικό TABLE_SERVICE OPEN. `CHECKPOINTS/CHANGES/2026-09-28-table-service-mobile-reconnect.md`.
