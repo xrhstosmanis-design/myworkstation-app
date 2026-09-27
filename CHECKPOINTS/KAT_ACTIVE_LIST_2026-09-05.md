@@ -1454,3 +1454,10 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - [ ] **Κανόνας handoff:** αν η παρούσα σελίδα σταματήσει πριν από το συνολικό PASS, δημοσιεύει τελικό checkpoint και η ανάθεση περνά σε ονομασμένη νέα σελίδα/branch. Η παλιά ανάθεση αποδεσμεύεται μόνο αφού η νέα ανάληψη καταγραφεί και συγχωνευτεί στο `main`· δεν επιτρέπεται κενό ή διπλή ιδιοκτησία.
 - [ ] Κρίσιμα ανοικτά: κάτοψη/σάλες, mobile waiter PWA, πολλοί γύροι στον ίδιο λογαριασμό, μεταφορά/ένωση/split, οικονομικά modifiers, stage-aware ακύρωση/φύρα, ανεξάρτητο KDS και εκτυπωτές ανά πόστο, live ειδοποιήσεις και πλήρης συμφωνία Sale/Payment/fiscal/stock/βάρδιας/Audit.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+## 27/09/2026 — Εστίαση A1 / σάλες και οπτική διάταξη — LOCAL PASS, AWAITING CI/LAB
+
+- [x] `agent/table-service-floor-plan-20260927`: store-scoped σάλες/ζώνες, χωρητικότητα και σχήμα τραπεζιού, φίλτρα σάλας και χρωματική κατάσταση ΕΛΕΥΘΕΡΟ / ΑΝΟΙΚΤΟ / ΕΤΟΙΜΟ.
+- [x] Δημιουργία/μεταβολή μόνο από Manager/Owner/Super Admin, με tenant/store isolation και Audit.
+- [x] **21/21** στοχευμένα tests και frontend production build PASS.
+- [ ] CI, exact deploy και πραγματικό LAB/USER αποτέλεσμα εκκρεμούν. Δεν έγινε ενεργοποίηση module, εγγραφή LAB ή εμπορική συναλλαγή. Συνολικό TABLE_SERVICE **OPEN / LAB NOT TESTED**.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.

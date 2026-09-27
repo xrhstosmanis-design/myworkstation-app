@@ -40,6 +40,26 @@ test("responsive POS UI can send, monitor and load table orders",()=>{
   assert.match(pos,/tableOrderId/);
 });
 
+test("restaurant floor plan supports store-scoped areas and table metadata",()=>{
+  assert.match(route,/"DiningArea"/);
+  assert.match(route,/"areaId"/);
+  assert.match(route,/"capacity"/);
+  assert.match(route,/"shape"/);
+  assert.match(route,/DINING_AREA_CREATED/);
+  assert.match(route,/DINING_TABLE_CREATED/);
+  assert.match(route,/DINING_TABLE_UPDATED/);
+  assert.match(ui,/Σάλες, τραπέζια και παραγγελίες/);
+  assert.match(ui,/ΕΛΕΥΘΕΡΟ/);
+  assert.match(ui,/ΕΤΟΙΜΟ ΓΙΑ ΠΑΡΑΛΑΒΗ/);
+});
+
+test("only managers and owners receive restaurant configuration controls",()=>{
+  assert.match(route,/canConfigure:canConfigure\(req\)/);
+  assert.match(route,/Μόνο υπεύθυνος, Owner ή Super Admin μπορεί να δημιουργεί σάλες/);
+  assert.match(route,/Μόνο υπεύθυνος, Owner ή Super Admin μπορεί να αλλάζει τραπέζια/);
+  assert.match(ui,/data\.canConfigure/);
+});
+
 test("table waste uses the normal turnover flow without issuing a receipt",()=>{
   assert.match(route,/table-orders\/:orderId\/waste/);
   assert.match(route,/"source"\) VALUES[\s\S]*'WASTE'/);
