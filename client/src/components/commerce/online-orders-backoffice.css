@@ -491,4 +491,5 @@
   }
 }
 .table-station-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.table-station-tabs button{border:1px solid #94a3b8;border-radius:10px;background:#fff;color:#173f37;padding:10px 14px;font-weight:800;cursor:pointer}.table-station-tabs button b{display:inline-flex;align-items:center;justify-content:center;min-width:24px;margin-left:6px;padding:2px 7px;border-radius:999px;background:#e2e8f0}.table-station-tabs button.active{background:#075f4d;color:#fff;border-color:#075f4d}.table-station-tabs button.active b{background:#fff;color:#075f4d}
-\n.table-allergen-alert{display:block;margin-top:8px;padding:9px 11px;border:2px solid #b91c1c;border-radius:10px;background:#fff1f2;color:#991b1b;font-weight:1000;letter-spacing:.02em}\n
+
+.table-allergen-alert{display:block;margin-top:8px;padding:9px 11px;border:2px solid #b91c1c;border-radius:10px;background:#fff1f2;color:#991b1b;font-weight:1000;letter-spacing:.02em}
