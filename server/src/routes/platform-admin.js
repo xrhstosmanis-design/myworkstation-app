@@ -381,6 +381,27 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.post("/companies/:companyId/stores",async(req,res,next)=>{
+  try{
+    const body=z.object({name:z.string().trim().min(2).max(160),city:z.string().trim().max(100).optional().default("")}).strict().parse(req.body||{});
+    const company=await prisma.company.findFirst({where:{id:req.params.companyId,active:true},select:{id:true}});
+    if(!company)return res.status(404).json({error:"Δεν βρέθηκε ενεργός πελάτης."});
+    const existing=await prisma.store.findFirst({where:{companyId:company.id,name:body.name},select:{id:true}});
+    if(existing)return res.status(409).json({error:"Υπάρχει ήδη κατάστημα με αυτό το όνομα στον πελάτη."});
+    const store=await prisma.$transaction(async tx=>{
+      const created=await tx.store.create({data:{companyId:company.id,name:body.name,city:body.city||null}});
+      await tx.shiftType.createMany({data:[
+        {storeId:created.id,code:"MORNING",name:"Πρωί",startTime:"07:00",endTime:"15:00",requiredCount:1},
+        {storeId:created.id,code:"AFTERNOON",name:"Απόγευμα",startTime:"15:00",endTime:"23:00",requiredCount:1},
+        {storeId:created.id,code:"NIGHT",name:"Βράδυ",startTime:"23:00",endTime:"07:00",requiredCount:1}
+      ]});
+      return created;
+    });
+    res.status(201).json({store:{id:store.id,name:store.name,city:store.city,companyId:store.companyId,active:store.active}});
+  }catch(error){next(error)}
+});
+
+
 router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   try{
     const body=z.object({
