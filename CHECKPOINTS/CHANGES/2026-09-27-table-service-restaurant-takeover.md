@@ -146,3 +146,13 @@ Branch: `agent/table-service-floor-plan-20260927`
 - UI: σε ανοικτό τραπέζι εμφανίζεται «ΠΡΟΣΘΗΚΗ ΝΕΟΥ ΓΥΡΟΥ», ενώ η λίστα δείχνει `Γ1`, `Γ2` κ.ο.κ.
 - Έλεγχοι: **18/18 TABLE_SERVICE tests PASS**, frontend production build **PASS**.
 - Κατάσταση: **LOCAL PASS / AWAITING CI, DEPLOY AND LAB RETEST**. Το συνολικό TABLE_SERVICE παραμένει **OPEN**.
+
+## 27/09/2026 — Φάση A1 BackOffice: κοινή ρύθμιση Owner και Super Admin
+
+- Στο κοινό BackOffice «Τραπέζια / Σερβιτόροι» προστέθηκε διαχείριση σαλών και τραπεζιών ανά επιλεγμένο κατάστημα.
+- Owner και Super Admin χρησιμοποιούν το ίδιο UI, τα ίδια store-scoped endpoints και την ίδια βάση δεδομένων. Δεν δημιουργήθηκε δεύτερη ή ασύνδετη παραμετροποίηση.
+- Υποστηρίζονται δημιουργία σάλας, δημιουργία τραπεζιού και επεξεργασία ονομασίας, σάλας, χωρητικότητας και σχήματος.
+- Κάθε αλλαγή συνεχίζει να γράφει τα υπάρχοντα Audit events `DINING_AREA_CREATED`, `DINING_TABLE_CREATED` ή `DINING_TABLE_UPDATED`.
+- Απλός χειριστής POS δεν λαμβάνει τα controls παραμετροποίησης· επιτρέπονται Manager, Owner και Super Admin.
+- Έλεγχοι: **19/19 TABLE_SERVICE tests PASS**, frontend production build **PASS**, `git diff --check` **PASS**.
+- Κατάσταση: **LOCAL PASS / AWAITING CI, DEPLOY AND LAB VISUAL READBACK**. Δεν δημιουργήθηκαν ακόμη πραγματικές σάλες ή τραπέζια στο LAB. Το συνολικό TABLE_SERVICE παραμένει **OPEN**.
