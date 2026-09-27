@@ -5,6 +5,10 @@
 - [ ] Η σημείωση `LAB ΑΛΛΕΡΓΙΑ: ΓΑΛΑ · ΠΟΛΥ ΖΕΣΤΟ` διατηρήθηκε στο `itemsJson` αλλά δεν εμφανίστηκε στην κάρτα BackOffice. Στενή διόρθωση και regression assertion στο PR #1430, **AWAITING CI / DEPLOY / LAB RETEST**.
 - [x] Δεν έγινε πώληση ή πληρωμή και το baseline οικονομικών/stock παραμένει αμετάβλητο. Η ρητή μοντελοποίηση αλλεργιογόνων παραμένει OPEN.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+## 27/09/2026 — Ετικέτες: Audit code-level FAIL / διόρθωση AWAITING CI-LAB
+
+Στο main `0af41adf`, `LABEL_PRINT` από προεπισκόπηση καλαθιού εξαιρείται από το φίλτρο της κεντρικής αναφοράς Audit και η προεπισκόπηση κάτω Barcode δεν γράφει συμβάν. Προστίθεται η ορατή μη οικονομική εγγραφή και στις δύο διαδρομές, χωρίς αλλαγή στην εκτύπωση, τιμή ή stock. Τοπικός έλεγχος EAN checksum 95 bits/λάθος ψηφίο PASS· **LAB Audit, αρνητικό EAN και άλλο κατάστημα NOT TESTED**. USER PASS φυσικής σάρωσης διατηρείται. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
+
 ## 27/09/2026 — Ετικέτα EAN-13: USER PASS φυσικής εκτύπωσης→σάρωσης
 
 Μετά το PR #1420 / deployed `4cc01eec` και τα περιορισμένα visual LAB PASS, ο ιδιοκτήτης επιβεβαίωσε «εκτυπωσα και την σκαναρα ειναι οκ». **USER PASS για πραγματικό χαρτί→scanner**· ακριβές είδος/EAN, ώρα, φυσική συσκευή και POS readback δεν δόθηκαν, άρα δεν εικάζονται. Το σκέλος δεν επαναλαμβάνεται μόνο για τεκμηρίωση. Μη έγκυρο EAN, Audit και tenant isolation NOT TESTED· συνολικό scope OPEN. `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
