@@ -6,6 +6,8 @@
 
 
 **Κατάσταση:** Ενεργή πηγή αλήθειας για όσα δεν έχουν ακόμη πραγματικό PASS
+
+**TABLE_SERVICE modifiers/σημειώσεις/αλλεργίες — ASSIGNED `fix/table-service-product-modifiers-20260927` / OPEN:** Πραγματικό LAB FAIL: η αποθηκευμένη product-specific ομάδα modifier δεν εμφανίστηκε στο POS επειδή το request παρέλειπε `productId`. Στενή διόρθωση AWAITING CI/deploy/LAB. Καμία παραγγελία, πληρωμή ή stock. Σημειώσεις και αλλεργιογόνα παραμένουν OPEN.
 **Εκτυπώσιμο συνοπτικό στιγμιότυπο 27/09:** `output/pdf/MyWorkStation_Central_Status_2026-09-27.pdf` (Gate, αναθέσεις efood/τραπεζιών, εγκατάσταση). Σε μεταγενέστερη αλλαγή υπερισχύει πάντα το παρόν αρχείο και απαιτείται ενημέρωση του PDF στο ίδιο τελικό PASS PR.
 **Εξαιρέσεις από αυτή τη σελίδα:** Τιμολόγια/OCR και η εξωτερική διασύνδεση efood/Pelican εκτελούνται από τις αντίστοιχες εξειδικευμένες σελίδες. Το γενικό Online Ordering/Delivery του MyWorkStation ολοκληρώθηκε ως Gate 6 και παραμένει ανεξάρτητο από efood/Pelican.
 
