@@ -1,3 +1,8 @@
+## 27/09/2026 — Δεύτερο LAB κατάστημα για απομόνωση ετικέτας: AWAITING CI/DEPLOY/LIVE
+
+Προστέθηκε στη Super Admin καρτέλα εταιρείας η δημιουργία νέου καταστήματος με χωριστό κατάλογο/στοκ/χειριστές και αρχικές βάρδιες. Τοπικό frontend build και server syntax PASS. Δεν δημιουργήθηκε ακόμη το δεύτερο LAB κατάστημα: αναμένεται CI/deploy και πραγματικό readback, κατόπιν API denial χειριστή LAB προς το δεύτερο LAB και ΚΑΤ. Συνολικό isolation OPEN. `CHECKPOINTS/CHANGES/2026-09-27-lab-second-store-setup-awaiting-live.md`.
+
+
 ## 27/09/2026 22:29 Ελλάδα — Ετικέτα EAN-13: απομόνωση σε code test, live OPEN
 
 Στο Platform Admin διαβάστηκαν χωρίς αποθήκευση οι ρυθμίσεις LAB 60 × 40 mm / «LAB δοκιμαστικός εκτυπωτής» και ΚΑΤ 60 × 38 mm / κενός εκτυπωτής. Η διαδρομή Store Mode ΚΑΤ από το LAB POS 2 εμφάνισε είσοδο PIN ΚΑΤ· η LAB συνεδρία επανήλθε. `server/test/pos-label-tenant-isolation.test.js` 3/3 τοπικά PASS για ίδια/δεύτερη LAB/ΚΑΤ πρόσβαση και company/store scoping. Αυτό **δεν είναι live API denial**. Το LAB έχει μόνο ένα κατάστημα και η οθόνη Super Admin δεν δημιουργεί δεύτερο στην ίδια εταιρεία. Live API αίτημα και δεύτερο LAB κατάστημα NOT TESTED, συνολικό scope OPEN. PR #1450 / CI αναμένεται. Καμία αλλαγή στο ΚΑΤ.
