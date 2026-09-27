@@ -33,6 +33,9 @@ test("POS checkout locks and closes the exact table order once",()=>{
 });
 
 test("responsive POS UI can send, monitor and load table orders",()=>{
+  assert.match(ui,/Map as MapIcon/);
+  assert.match(ui,/new Map\(/);
+  assert.doesNotMatch(ui,/import \{Armchair,Map,Plus/);
   assert.match(ui,/ΑΣΥΡΜΑΤΗ ΠΑΡΑΓΓΕΛΙΟΛΗΨΙΑ/);
   assert.match(ui,/ΑΠΟΣΤΟΛΗ ΤΡΕΧΟΥΣΑΣ ΠΑΡΑΓΓΕΛΙΑΣ/);
   assert.match(ui,/ΦΟΡΤΩΣΗ ΣΤΟ POS/);
