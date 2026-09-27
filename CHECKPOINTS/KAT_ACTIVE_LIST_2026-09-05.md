@@ -1,7 +1,11 @@
+## 27/09/2026 ~22:43 Ελλάδα — TABLE_SERVICE κινητό · οπτικό readback, αποστολή OPEN
+
+- [x] #1455 / CI #3682 / exact Render `0cc2f6d0`: στην καθαρή LAB συνεδρία χειριστή `LAB POS 2` η οθόνη άνοιξε. Εμφανίστηκαν `ΚΕΝΤΡΙΚΗ ΣΑΛΑ LAB`, `ΤΡΑΠΕΖΙ LAB 1` READY 2,00 €, νέος γύρος στον ίδιο λογαριασμό, και αναζήτηση `LAB ΚΑΦΕΣ` → SKU `LAB-CAFE-20260927` 1,00 €.
+- [ ] Δεν προστέθηκε είδος ή στάλθηκε γύρος· κινητή συσκευή, PIN/κάρτα νέας συνεδρίας, ουρά/Audit/βάρδιες/stock και αρνητικό άλλο κατάστημα NOT TESTED. Δεν είναι mobile LAB PASS. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
+
 ## 27/09/2026 — Δεύτερο LAB κατάστημα για απομόνωση ετικέτας: AWAITING CI/DEPLOY/LIVE
 
 Προστέθηκε στη Super Admin καρτέλα εταιρείας η δημιουργία νέου καταστήματος με χωριστό κατάλογο/στοκ/χειριστές και αρχικές βάρδιες. Τοπικό frontend build και server syntax PASS. Δεν δημιουργήθηκε ακόμη το δεύτερο LAB κατάστημα: αναμένεται CI/deploy και πραγματικό readback, κατόπιν API denial χειριστή LAB προς το δεύτερο LAB και ΚΑΤ. Συνολικό isolation OPEN. `CHECKPOINTS/CHANGES/2026-09-27-lab-second-store-setup-awaiting-live.md`.
-
 
 ## 27/09/2026 ~22:35 Ελλάδα — TABLE_SERVICE κινητό · visual LAB FAIL / στενή διόρθωση
 
