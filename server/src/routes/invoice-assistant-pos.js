@@ -29,7 +29,7 @@ function manager(req,res,next){
 
 async function source(companyId,orderId){
   const docs=await prisma.$queryRaw`
-    SELECT d."id",d."storeId",d."documentNumber",d."totalGross",COALESCE(d."supplierId",o."supplierId") AS "supplierId"
+    SELECT d."id",d."storeId",d."documentNumber",d."totalGross",COALESCE(o."supplierId",d."supplierId") AS "supplierId"
     FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId"
     WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."status"='NEW'
       AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' LIMIT 1`;

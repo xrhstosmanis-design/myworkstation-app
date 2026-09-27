@@ -192,7 +192,18 @@ router.patch("/:orderId",async(req,res,next)=>{try{
   const body=z.object({supplierId:z.string().optional().nullable(),invoiceNumber:z.string().trim().max(100).optional().nullable(),description:z.string().trim().max(300).optional().nullable(),status:z.enum(["NEW","FINAL","INVOICED"]).optional()}).parse(req.body||{});if(body.supplierId&&!await supplier(companyId,body.supplierId))return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
   if(body.status==="INVOICED"&&found.status!=="FINAL")return res.status(409).json({error:"Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί."});const actor=req.user.fullName||"Χρήστης";
   const after={supplierId:body.supplierId??found.supplierId,invoiceNumber:body.invoiceNumber??found.invoiceNumber,description:body.description??found.description,status:body.status??found.status};
-  await prisma.$transaction(async tx=>{await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=COALESCE(${body.supplierId??null},"supplierId"),"invoiceNumber"=COALESCE(${body.invoiceNumber??null},"invoiceNumber"),"description"=COALESCE(${body.description??null},"description"),"status"=COALESCE(${body.status??null},"status"),"updatedByName"=${actor},"finalizedAt"=CASE WHEN ${body.status||null}='FINAL' THEN NOW() ELSE "finalizedAt" END,"invoicedAt"=CASE WHEN ${body.status||null}='INVOICED' THEN NOW() ELSE "invoicedAt" END,"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;await writePurchaseAudit(tx,req,{storeId:found.storeId,eventType:"PURCHASE_ORDER_DRAFT_UPDATED",details:{orderId:found.id,before:{supplierId:found.supplierId,invoiceNumber:found.invoiceNumber,description:found.description,status:found.status},after}})});res.json({ok:true});
+  await prisma.$transaction(async tx=>{
+    if(found.sourceType==="POS_OCR_DRAFT"&&body.supplierId&&body.supplierId!==found.supplierId){
+      const locked=await tx.$queryRaw`SELECT "status","supplierId" FROM "PurchaseOrder" WHERE "id"=${found.id} AND "companyId"=${companyId} FOR UPDATE`;
+      if(locked[0]?.status!=="NEW"||locked[0]?.supplierId!==found.supplierId)throw Object.assign(new Error("Το πρόχειρο άλλαξε. Ανανέωσε πριν διορθώσεις τον προμηθευτή."),{status:409});
+      const documents=await tx.$queryRaw`SELECT "id","status","paymentTransactionId" FROM "PurchaseDocument" WHERE "id"=${found.sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${found.storeId} AND "purchaseOrderId"=${found.id} FOR UPDATE`;
+      if(documents.length!==1||documents[0].status!=="DRAFT")throw Object.assign(new Error("Δεν βρέθηκε το συνδεδεμένο ενεργό παραστατικό POS."),{status:409});
+      if(documents[0].paymentTransactionId)throw Object.assign(new Error("Το παραστατικό έχει συνδεδεμένη πληρωμή. Η διόρθωση προμηθευτή χρειάζεται έλεγχο της υπάρχουσας πληρωμής, χωρίς νέα χρέωση."),{status:409});
+      await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${body.supplierId},"updatedAt"=NOW() WHERE "id"=${documents[0].id} AND "companyId"=${companyId}`;
+    }
+    await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=COALESCE(${body.supplierId??null},"supplierId"),"invoiceNumber"=COALESCE(${body.invoiceNumber??null},"invoiceNumber"),"description"=COALESCE(${body.description??null},"description"),"status"=COALESCE(${body.status??null},"status"),"updatedByName"=${actor},"finalizedAt"=CASE WHEN ${body.status||null}='FINAL' THEN NOW() ELSE "finalizedAt" END,"invoicedAt"=CASE WHEN ${body.status||null}='INVOICED' THEN NOW() ELSE "invoicedAt" END,"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+    await writePurchaseAudit(tx,req,{storeId:found.storeId,eventType:"PURCHASE_ORDER_DRAFT_UPDATED",details:{orderId:found.id,before:{supplierId:found.supplierId,invoiceNumber:found.invoiceNumber,description:found.description,status:found.status},after}});
+  });res.json({ok:true});
 }catch(error){next(error)}});
 
 router.get("/:orderId/detail",async(req,res,next)=>{try{
