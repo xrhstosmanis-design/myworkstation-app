@@ -1720,3 +1720,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 - [ ] Μετά το PASS κάτοψης #1445 και την τεκμηρίωση #1448, ξεκίνησε περιορισμένη οθόνη παραγγελίας κινητού στο υπάρχον Store Mode, με προσωπικό PIN/κάρτα, έλεγχο βάρδιας για POS, κατάστημα/module και server τιμές. Χωρίς πληρωμή ή φύρα από την οθόνη. Branch `feat/table-service-mobile-waiter-20260927`· CI/deploy/LAB AWAITING. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
 - [ ] Στο συνολικό TABLE_SERVICE PASS απαιτείται πλήρες manual χρήσης ανά ρόλο: εργαζόμενος, ιδιοκτήτης, Super Admin. Δεν χαρακτηρίζονται ενδιάμεσα μη δοκιμασμένες λειτουργίες ως PASS.
+## 28/09/2026 00:30 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 1 · AWAITING CI/LAB
+
+- [ ] Νέα ανεξάρτητη read-only οθόνη δίπλα στο σημερινό Super Admin, με βασική επισκόπηση από το υπάρχον `/api/platform/overview` και συνδέσμους προς τους υπάρχοντες Ελέγχους, Ταμεία, Πληρωμές, Τράπεζα και Συμβάντα. Καμία δεύτερη βάση/API/οικονομική ενέργεια και καμία αντικατάσταση υπάρχουσας λειτουργίας. Branch `feat/super-admin-ai-command-center-phase1-20260928`. Στοχευμένα 4/4, client build και πλήρης server suite 1.608/1.608 PASS (1 SKIP). CI, exact deploy και LAB οπτικό readback AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase1.md`.
