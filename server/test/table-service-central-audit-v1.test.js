@@ -24,4 +24,5 @@ test("central audit renders detailed Greek dining descriptions",()=>{
 test("new table configuration audit rows retain Greek actor identity",()=>{
   assert.match(tableRoute,/actorName:req\.user\.fullName\|\|req\.user\.email\|\|"Χειριστής BackOffice"/);
   assert.match(tableRoute,/terminalPos:"BACKOFFICE"/);
+  assert.match(auditRoute,/LEFT JOIN "User" u ON u\."id"=a\."actorId"/);
 });
