@@ -1731,3 +1731,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 00:30 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 1 · AWAITING CI/LAB
 
 - [ ] Νέα ανεξάρτητη read-only οθόνη δίπλα στο σημερινό Super Admin, με βασική επισκόπηση από το υπάρχον `/api/platform/overview` και συνδέσμους προς τους υπάρχοντες Ελέγχους, Ταμεία, Πληρωμές, Τράπεζα και Συμβάντα. Καμία δεύτερη βάση/API/οικονομική ενέργεια και καμία αντικατάσταση υπάρχουσας λειτουργίας. Branch `feat/super-admin-ai-command-center-phase1-20260928`. Στοχευμένα 4/4, client build και πλήρης server suite 1.608/1.608 PASS (1 SKIP). CI, exact deploy και LAB οπτικό readback AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase1.md`.
+## 28/09/2026 01:01 Ελλάδα — Κουμπί Εκτέλεσης Ελέγχου responsive · AWAITING CI/READBACK
+
+- [ ] Το στιγμιότυπο χρήστη δείχνει ότι η ομάδα `Εκτέλεση ελέγχου` / `Καθαρισμός` κόβεται στο δεξί όριο σε ενδιάμεσο πλάτος. Μοναδική αλλαγή: το υπάρχον 3-column responsive breakpoint μεταφέρεται από 1100px σε 1250px. Στοχευμένα tests 4/4 και client build PASS. Καμία αλλαγή λειτουργίας/API/δεδομένων. CI/deploy/readback AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-check-button-responsive.md`.
