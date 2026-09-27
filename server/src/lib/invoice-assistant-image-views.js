@@ -1,6 +1,7 @@
 import sharp from "sharp";
 
-// Match the Mini reader's two views: one complete page and one enlarged table.
+// Keep the complete page for the header/footer and overlapping enlarged bands
+// for small product codes across the entire printed table.
 // These are only model inputs; the original attachment remains untouched.
 export async function invoiceAssistantImageViews(pages){
   const content=[];
@@ -18,11 +19,15 @@ export async function invoiceAssistantImageViews(pages){
     const {width,height}=await sharp(oriented).metadata();
     if(!width||!height)throw new Error("Η φωτογραφία του τιμολογίου δεν έχει έγκυρες διαστάσεις.");
     const full=await sharp(oriented).resize({width:3000,height:3000,fit:"inside",withoutEnlargement:true}).flatten({background:"#fff"}).jpeg({quality:83}).toBuffer();
-    const left=Math.round(width*.06),top=Math.round(height*.32),cropWidth=Math.round(width*.88),cropHeight=Math.round(height*.38);
-    const table=await sharp(oriented).extract({left,top,width:Math.min(cropWidth,width-left),height:Math.min(cropHeight,height-top)}).resize({width:Math.min(2200,Math.max(cropWidth,1400))}).jpeg({quality:90}).toBuffer();
-    content.push({type:"input_text",text:`Σελίδα ${index+1} από ${pages.length}: πλήρης φωτογραφία και αμέσως μετά μεγέθυνση του ίδιου πίνακα. Μη διπλασιάσεις τις γραμμές.`});
+    const left=Math.round(width*.04),cropWidth=Math.min(Math.round(width*.92),width-left);
+    content.push({type:"input_text",text:`Σελίδα ${index+1} από ${pages.length}: πλήρης φωτογραφία και τρεις επικαλυπτόμενες μεγεθύνσεις του ίδιου φύλλου από πάνω προς τα κάτω. Ανάγνωσε κωδικούς και ονομασίες από τη σχετική μεγέθυνση, και μέτρησε κάθε φυσική γραμμή μόνο μία φορά.`});
     content.push({type:"input_image",image_url:`data:image/jpeg;base64,${full.toString("base64")}`,detail:"high"});
-    content.push({type:"input_image",image_url:`data:image/jpeg;base64,${table.toString("base64")}`,detail:"high"});
+    for(const [band,start,end] of [["επάνω",.17,.43],["μέση",.40,.66],["κάτω",.63,.89]]){
+      const top=Math.round(height*start),cropHeight=Math.min(Math.round(height*(end-start)),height-top);
+      const table=await sharp(oriented).extract({left,top,width:cropWidth,height:cropHeight}).resize({width:Math.min(2400,Math.max(cropWidth,1600))}).jpeg({quality:90}).toBuffer();
+      content.push({type:"input_text",text:`Σελίδα ${index+1}, ${band} ζώνη του ίδιου πίνακα. Οι επικαλύψεις δεν είναι νέες γραμμές.`});
+      content.push({type:"input_image",image_url:`data:image/jpeg;base64,${table.toString("base64")}`,detail:"high"});
+    }
   }
   return content;
 }
