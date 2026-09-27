@@ -230,7 +230,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         s."name" AS "storeName",a."storeId"
       FROM "StoreOperatorAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      LEFT JOIN "User" u ON u."id"=a."actorId" AND u."companyId"=a."companyId"
+      LEFT JOIN "User" u ON u."id"=a."actorId"
       LEFT JOIN "StoreOperatorCredential" operator ON operator."id"=COALESCE(a."operatorId",a."actorId") AND operator."companyId"=a."companyId" AND operator."storeId"=a."storeId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."eventType" IN (
