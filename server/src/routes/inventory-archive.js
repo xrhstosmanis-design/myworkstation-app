@@ -90,7 +90,11 @@ router.get("/",async(req,res,next)=>{
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
       ) pb ON true
       LEFT JOIN LATERAL (
-        SELECT CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END AS "unitCost",
+        SELECT COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
+                         WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d."id"
+                           AND sm."productId"=l."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+                         ORDER BY sm."createdAt" DESC LIMIT 1),
+                    CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "unitCost",
                d."documentDate",d."documentNumber",sup."name" AS "supplierName"
         FROM "PurchaseDocumentLine" l
         JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
@@ -99,7 +103,11 @@ router.get("/",async(req,res,next)=>{
         ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
       ) lp ON true
       LEFT JOIN LATERAL (
-        SELECT AVG(CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END) AS "averagePurchasePrice"
+        SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
+                             WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
+                               AND sm."productId"=l2."productId" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+                             ORDER BY sm."createdAt" DESC LIMIT 1),
+                            CASE WHEN l2."unit"='PACKAGE' THEN l2."unitCost"/NULLIF(l2."unitsPerPackage",0) ELSE l2."unitCost" END)) AS "averagePurchasePrice"
         FROM "PurchaseDocumentLine" l2 JOIN "PurchaseDocument" d2 ON d2."id"=l2."purchaseDocumentId"
         WHERE d2."companyId"=${companyId} AND d2."storeId"=${storeId} AND d2."status"='APPROVED' AND l2."productId"=p."id"
           AND d2."documentDate">=NOW()-INTERVAL '180 days'
