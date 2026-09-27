@@ -17,6 +17,9 @@
 .op-grid{display:grid;gap:14px}
 .op-grid.two{grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr)}
 .op-box{background:#fff;border:1px solid #dce5ef;border-radius:16px;padding:16px;min-width:0}
+.preparation-quick-access{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#f0fdfa;border-color:#99f6e4}
+.preparation-quick-access>div{display:grid;gap:4px}.preparation-quick-access small{color:#475569}
+.preparation-quick-access select{min-width:320px;max-width:50%;border:1px solid #94a3b8;border-radius:10px;padding:10px;background:#fff;font:inherit;font-weight:700}
 .op-box h3{margin:0 0 12px}
 .op-box p{color:#64748b}
 .op-box.empty,.empty{display:grid;place-items:center;min-height:180px;color:#64748b}
