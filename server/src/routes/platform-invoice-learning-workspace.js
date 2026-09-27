@@ -69,15 +69,26 @@ router.put("/invoice-learning/supplier-profile/stock-rules",requireCompanyModule
   if(!allowed)return res.status(403).json({error:"Απαιτείται πρόσβαση ιδιοκτήτη ή ελεγκτή τιμολογίων."});
   const supplierTaxId=cleanTaxId(req.body?.supplierTaxId),supplierName=String(req.body?.supplierName||"").trim();
   if(!/^\d{9}$/.test(supplierTaxId))return res.status(400).json({error:"Συμπλήρωσε το ΑΦΜ προμηθευτή πριν αποθηκεύσεις κανόνα."});
-  if(!isSuper(req)){
-    const orderId=String(req.body?.orderId||"");
-    const supplier=await prisma.$queryRaw`SELECT s."id" FROM "PurchaseOrder" o JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${req.user.companyId} AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND s."taxId"=${supplierTaxId} AND s."active"=true LIMIT 1`;
-    if(!supplier.length)return res.status(403).json({error:"Ο προμηθευτής δεν ανήκει στην εταιρεία σου."});
+  const orderId=String(req.body?.orderId||"");
+  const supplier=await prisma.$queryRaw`SELECT s."id",s."taxId" FROM "PurchaseOrder" o JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${req.user.companyId} AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT' AND s."active"=true LIMIT 1`;
+  if(!supplier.length)return res.status(403).json({error:"Δεν βρέθηκε ενεργό πρόχειρο με αυτόν τον προμηθευτή."});
+  const existingTaxId=cleanTaxId(supplier[0].taxId);
+  if(existingTaxId&&existingTaxId!==supplierTaxId)return res.status(409).json({error:"Το ΑΦΜ διαφέρει από την καρτέλα προμηθευτή. Έλεγξε την καρτέλα πριν αποθηκεύσεις κανόνα."});
+  if(!existingTaxId&&!req.body?.confirmSupplierTaxId)return res.status(400).json({error:"Επιβεβαίωσε το ΑΦΜ από το έντυπο πριν συμπληρωθεί στην καρτέλα προμηθευτή."});
+  if(!existingTaxId){
+    const digits=supplierTaxId.split("").map(Number),checksum=digits.slice(0,8).reduce((sum,digit,index)=>sum+digit*2**(8-index),0)%11%10;
+    if(checksum!==digits[8])return res.status(400).json({error:"Το ΑΦΜ δεν είναι έγκυρο. Έλεγξέ το στο πρωτότυπο."});
   }
   let rules;try{rules=validateExplicitStockRules(req.body?.rules)}catch(error){return res.status(400).json({error:error.message})}
   const userId=String(req.user?.id||req.user?.userId||req.user?.sub||"")||null;
   const saved=await prisma.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-profile:${supplierTaxId}`}))`;
+    if(!existingTaxId){
+      const duplicate=await tx.$queryRaw`SELECT "id" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "taxId"=${supplierTaxId} AND "id"<>${supplier[0].id} LIMIT 1`;
+      if(duplicate.length)throw new Error("Το ΑΦΜ υπάρχει ήδη σε άλλον προμηθευτή της εταιρείας.");
+      const updated=await tx.$queryRaw`UPDATE "Supplier" SET "taxId"=${supplierTaxId} WHERE "id"=${supplier[0].id} AND "companyId"=${req.user.companyId} AND ("taxId" IS NULL OR "taxId"='') RETURNING "id"`;
+      if(!updated.length)throw new Error("Η καρτέλα προμηθευτή άλλαξε. Ανανέωσε και δοκίμασε ξανά.");
+    }
     const rows=await tx.$queryRawUnsafe(`SELECT "supplierKey","profileVersion","profile" FROM "InvoiceSupplierReadingProfile" WHERE "supplierTaxId"=$1 LIMIT 1`,supplierTaxId);
     const existing=rows?.[0]||{},supplierKey=existing.supplierKey||supplierTaxId,profileVersion=Number(existing.profileVersion||0)+1;
     const profile={...applyExplicitStockRules(existing.profile||{},rules),supplierTaxId,supplierName:supplierName||existing.profile?.supplierName||"",central:true,profileVersion};
