@@ -3,9 +3,14 @@ import crypto from "crypto";
 import {prisma} from "../prisma.js";
 import {advancedOnlineProductSearch} from "../advanced-online-product-search.js";
 import {z} from "zod";
+import {getStoreLabelSettings} from "../services/store-label-settings.js";
 
 const router=Router();
 const money=value=>Number(value||0);
+
+router.get("/stores/:storeId/label-settings",async(req,res,next)=>{
+  try{assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);res.json({storeName:store.name,settings:await getStoreLabelSettings(store.companyId,store.id)})}catch(error){next(error)}
+});
 
 function assertStore(req,storeId){
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){

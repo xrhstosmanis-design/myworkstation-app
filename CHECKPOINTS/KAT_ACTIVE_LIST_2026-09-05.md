@@ -1,3 +1,7 @@
+## 27/09/2026 — POS ετικέτα EAN-13: επωνυμία και Super Admin ρυθμίσεις · AWAITING CI/DEPLOY/LAB
+
+Ανάληψη επέκτασης του ήδη ανατεθειμένου `feat/barcode-ean13-label-print-20260927` από `feat/store-ean13-label-settings-20260927`. Οι 4 εικόνες ιδιοκτήτη δείχνουν LAB POS 2 / ΝΕΡΟ 500ML / SKU 2269 / EAN-13 `5201219000118` / 0,50 €: η προεπισκόπηση εμφάνισε προϊόν, SKU και τιμή, αλλά απουσίαζαν οπτικά επωνυμία και γραμμές barcode. Προστίθεται μικρή επωνυμία, ορατό EAN-13, και server-side ανά κατάστημα παραμετροποίηση 30–100 × 25–80 mm και προτεινόμενου εκτυπωτή μόνο από Platform Super Admin. Browser εκτυπωτή επιλέγει ο χρήστης. Η εικόνα είναι παρατήρηση παλιάς έκδοσης, όχι LAB PASS της νέας εκτύπωσης. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
+
 ## 27/09/2026 — POS εκτύπωση EAN-13 ετικέτας · ΑΝΑΤΕΘΗΚΕ / AWAITING CI-LAB
 
 Ανεξάρτητη υποεργασία `feat/barcode-ean13-label-print-20260927`: ετικέτα από ήδη καταχωρισμένο έγκυρο EAN-13 στο σωστό προϊόν, χωρίς μεταβολή τιμής/stock ή κλήση fiscal. Ελέγχονται checksum και 95 μονάδες scanner. Το CI/deploy και πραγματική LAB εκτύπωση→σάρωση παραμένουν NOT TESTED. Η γενική online αναζήτηση, μεταφορά barcode και άλλοι τύποι ετικέτας μένουν OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.

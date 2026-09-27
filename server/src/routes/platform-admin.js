@@ -12,6 +12,7 @@ import { ensureKatOnlineOrderingSchema } from "../kat-online-ordering-bootstrap.
 import {videoAdapterDescriptor} from "../services/video-adapters.js";
 import {enqueueVideoCommand,readyVideoArtifact,videoCommandStatus,videoConnectorStatus} from "../services/video-connector-commands.js";
 import { ensureCashControlSchema } from "./cash-control.js";
+import {getStoreLabelSettings,saveStoreLabelSettings} from "../services/store-label-settings.js";
 
 const router=Router();
 router.use(auth);
@@ -396,6 +397,14 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     });
     res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
   }catch(error){next(error)}
+});
+
+const labelSettingsSchema=z.object({widthMm:z.number().int().min(30).max(100),heightMm:z.number().int().min(25).max(80),printerName:z.string().trim().max(120)}).strict();
+router.get("/companies/:companyId/stores/:storeId/label-settings",async(req,res,next)=>{
+  try{const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId,active:true},select:{id:true,name:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});res.json({store,settings:await getStoreLabelSettings(req.params.companyId,store.id)})}catch(error){next(error)}
+});
+router.put("/companies/:companyId/stores/:storeId/label-settings",async(req,res,next)=>{
+  try{const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId,active:true},select:{id:true,name:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const settings=labelSettingsSchema.parse(req.body);const saved=await saveStoreLabelSettings(req.params.companyId,store.id,req.user.id,settings);await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_LABEL_SETTINGS_UPDATED",success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});res.json({ok:true,settings:saved})}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Μη έγκυρες διαστάσεις ή όνομα εκτυπωτή."});next(error)}
 });
 
 router.get("/companies/:companyId/stores/:storeId/installation-terminals",async(req,res,next)=>{
