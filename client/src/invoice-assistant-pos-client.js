@@ -65,21 +65,20 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       if(!activePagesComplete||activePrintedTotal===null)throw new Error("Δεν έχει επιβεβαιωθεί ολόκληρο το τιμολόγιο και το τυπωμένο σύνολο. Ο κανόνας δεν αποθηκεύτηκε.");
       const row={...selected,invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor};
       const code=String(row.supplierCode).trim();
-      if(!validPrinted(row,true))throw new Error("Η γραμμή δεν έχει όλα τα ποσά. Διόρθωσέ την στον πίνακα πριν αποθηκεύσεις κανόνα.");
+      const rowEconomicsVerified=validPrinted(row,true);
       const result=await api("/api/platform/invoice-learning/supplier-profile/stock-rules",{method:"PUT",body:JSON.stringify({orderId,supplierTaxId:tax,confirmSupplierTaxId,supplierName:order.supplierName||"",rules:[{supplierItemCode:code,invoiceUnit:"PACKAGE",stockUnit:"PIECE",factor}]})});
-      ruleStatus.textContent=`Ο κανόνας αποθηκεύτηκε (έκδοση ${result.profileVersion}). Ενημερώνεται η γραμμή στο ίδιο πρόχειρο…`;
+      ruleStatus.textContent=`Ο κανόνας αποθηκεύτηκε (έκδοση ${result.profileVersion}). Ελέγχεται αν υπάρχει γραμμή στο ίδιο πρόχειρο…`;
       const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
       if(latest.order.status!=="NEW"||latest.order.sourceType!=="POS_OCR_DRAFT")throw new Error("Ο κανόνας αποθηκεύτηκε, αλλά το πρόχειρο δεν είναι πλέον επεξεργάσιμο.");
       const existing=latest.lines.filter(line=>String(line.supplierCode||"").trim().toUpperCase()===code.toUpperCase());
-      if(existing.length>1)throw new Error("Ο κανόνας αποθηκεύτηκε, αλλά υπάρχουν πολλαπλές γραμμές με τον ίδιο κωδικό στο πρόχειρο.");
       if(existing.length===1)await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(existing[0].id)}`,{method:"PATCH",body:JSON.stringify({invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor})});
-      else await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:code,description:row.description.trim().slice(0,250),quantity:number(row.quantity),unitCost:number(row.unitCost),invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor,discount1:number(row.discount1),discount2:number(row.discount2),discount3:number(row.discount3),exciseTotal:number(row.exciseTotal),vatRate:number(row.vatRate)})});
+      else if(existing.length===0&&rowEconomicsVerified)await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/lines`,{method:"POST",body:JSON.stringify({supplierCode:code,description:row.description.trim().slice(0,250),quantity:number(row.quantity),unitCost:number(row.unitCost),invoiceUnit:"PACKAGE",stockUnitsPerInvoiceUnit:factor,discount1:number(row.discount1),discount2:number(row.discount2),discount3:number(row.discount3),exciseTotal:number(row.exciseTotal),vatRate:number(row.vatRate)})});
       const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
       current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · καθαρό ${euro(after.totals.net)} € · ΦΠΑ ${euro(after.totals.vat)} € · πληρωτέο ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map(lineHtml).join("")}</div>`;
       selected.invoiceUnit="PACKAGE";selected.stockUnitsPerInvoiceUnit=factor;
       const factorInput=overlay.querySelector(`[data-row="${index}"][data-field="stockUnitsPerInvoiceUnit"]`),unitInput=overlay.querySelector(`[data-row="${index}"][data-field="invoiceUnit"]`);
       if(factorInput)factorInput.value=String(factor);if(unitInput)unitInput.value="PACKAGE";
-      ruleStatus.textContent=`✓ Αποθηκεύτηκε κανόνας: ${order.supplierName||"προμηθευτής"} · ${row.description} · 1 ΚΒ = ${factor} ΤΜ. Η γραμμή ${code} ενημερώθηκε στο ίδιο πρόχειρο (${after.lines.length} γραμμές, ${euro(after.totals.gross)} €).`;
+      ruleStatus.textContent=`✓ Αποθηκεύτηκε κανόνας: ${order.supplierName||"προμηθευτής"} · ${row.description} · 1 ΚΒ = ${factor} ΤΜ. ${existing.length>1?"Πολλαπλές γραμμές με τον ίδιο κωδικό στο πρόχειρο· έλεγξέ τες χωριστά.":existing.length===0&&!rowEconomicsVerified?"Η οικονομική γραμμή δεν μπήκε στο πρόχειρο επειδή δεν έχει επαληθευτεί· διόρθωσέ την και εφάρμοσέ την χωριστά.":`Η γραμμή ${code} ενημερώθηκε στο ίδιο πρόχειρο (${after.lines.length} γραμμές, ${euro(after.totals.gross)} €).`}`;
       lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
       const savedLine=after.lines.find(line=>String(line.supplierCode||"").trim().toUpperCase()===code.toUpperCase());
       if(savedLine){selected.matchingLineId=savedLine.id;const box=overlay.querySelector(`[data-edit-select="${index}"]`);if(box){box.checked=false;box.closest("tr").style.background="#fff"}}
