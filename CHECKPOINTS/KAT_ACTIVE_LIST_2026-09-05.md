@@ -1,3 +1,7 @@
+## 27/09/2026 16:05 Ελλάδα — POS ετικέτα Super Admin LAB FAIL / fix AWAITING CI-LAB
+
+Exact Render `c1a871e0` μέσω deploy run #1685, πραγματικό Platform Admin → MYWORKSTATION LAB → Καταστήματα → Ρυθμίσεις ετικέτας: το κουμπί εμφανίστηκε, αλλά στο άνοιγμα η σελίδα έγινε λευκή. Browser console `Cannot read properties of undefined (reading widthMm)`· το parent περνούσε `settings`, ενώ το component ανέμενε `initialSettings`. Περιορισμένη διόρθωση ονόματος prop και ασφαλές default ώστε να μη συντριβεί η οθόνη. Αποθήκευση ρυθμίσεων, προεπισκόπηση, εκτύπωση και σάρωση NOT TESTED. `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
+
 ## 27/09/2026 — POS ετικέτα EAN-13: επωνυμία και Super Admin ρυθμίσεις · AWAITING CI/DEPLOY/LAB
 
 Ανάληψη επέκτασης του ήδη ανατεθειμένου `feat/barcode-ean13-label-print-20260927` από `feat/store-ean13-label-settings-20260927`. Οι 4 εικόνες ιδιοκτήτη δείχνουν LAB POS 2 / ΝΕΡΟ 500ML / SKU 2269 / EAN-13 `5201219000118` / 0,50 €: η προεπισκόπηση εμφάνισε προϊόν, SKU και τιμή, αλλά απουσίαζαν οπτικά επωνυμία και γραμμές barcode. Προστίθεται μικρή επωνυμία, ορατό EAN-13, και server-side ανά κατάστημα παραμετροποίηση 30–100 × 25–80 mm και προτεινόμενου εκτυπωτή μόνο από Platform Super Admin. Browser εκτυπωτή επιλέγει ο χρήστης. Η εικόνα είναι παρατήρηση παλιάς έκδοσης, όχι LAB PASS της νέας εκτύπωσης. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
