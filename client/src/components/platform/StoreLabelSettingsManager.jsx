@@ -2,7 +2,7 @@ import React,{useState} from "react";
 import {X} from "lucide-react";
 
 export default function StoreLabelSettingsManager({company,store,initialSettings,request,onClose,onSaved}){
-  const [settings,setSettings]=useState(initialSettings),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const [settings,setSettings]=useState(initialSettings||{widthMm:60,heightMm:38,printerName:""}),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const save=async(event)=>{
     event.preventDefault();setBusy(true);setError("");
     try{
