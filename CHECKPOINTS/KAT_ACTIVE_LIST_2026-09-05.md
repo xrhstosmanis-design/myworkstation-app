@@ -1478,3 +1478,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - [x] **21/21** στοχευμένα tests και frontend production build PASS.
 - [ ] CI, exact deploy και πραγματικό LAB/USER αποτέλεσμα εκκρεμούν. Δεν έγινε ενεργοποίηση module, εγγραφή LAB ή εμπορική συναλλαγή. Συνολικό TABLE_SERVICE **OPEN / LAB NOT TESTED**.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+# TABLE_SERVICE — ενεργή εργασία 27/09/2026
+
+- Κατάσταση: OPEN — όχι PASS.
+- Διορθώνεται η ορατότητα του κουμπιού «ΤΡΑΠΕΖΙΑ» στο LAB POS με έλεγχο του προστατευμένου endpoint του module.
+- Επόμενο υποχρεωτικό βήμα: deploy ακριβούς revision και φυσικός έλεγχος στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ πριν συνεχιστούν σάλες, τραπέζια, σερβιτόροι και αποστολή σε κουζίνα/καφέ.
