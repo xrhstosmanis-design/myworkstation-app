@@ -120,3 +120,10 @@ Branch: `agent/table-service-floor-plan-20260927`
 - Το POS πλέον κάνει δεύτερο, αυθεντικό read-only έλεγχο στο προστατευμένο endpoint `/table-service`. Το κουμπί εμφανίζεται μόνο όταν αυτό το endpoint επιτρέψει πρόσβαση, επομένως διατηρείται ο κανόνας paid module + ενεργοποίηση ανά κατάστημα.
 - Προστέθηκε production-build guard που αποτυγχάνει αν το τελικό bundle δεν περιέχει `tableServiceEnabled` και «ΤΡΑΠΕΖΙΑ».
 - Το TABLE_SERVICE παραμένει OPEN μέχρι το τελικό LAB PASS. Δεν χαρακτηρίζεται PASS από CI ή build.
+
+## LAB readback μετά το revision 3d91181f
+
+- Το κουμπί «ΤΡΑΠΕΖΙΑ» εμφανίστηκε στο LAB POS μετά την πλήρη φόρτωση.
+- Στο πρώτο άνοιγμα της οθόνης εντοπίστηκε runtime σύγκρουση ονομάτων: το icon `Map` της βιβλιοθήκης σκίαζε το native JavaScript `Map` που χρησιμοποιείται για τις ανοιχτές παραγγελίες.
+- Διορθώθηκε με σαφή μετονομασία σε `MapIcon` και προστέθηκε regression test.
+- Αποτέλεσμα: AWAITING CI / DEPLOY / νέο LAB readback. Παραμένει OPEN.
