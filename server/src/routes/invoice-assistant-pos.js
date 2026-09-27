@@ -22,6 +22,13 @@ const schema={
 };
 const responseText=value=>typeof value?.output_text==="string"?value.output_text:(value?.output||[]).flatMap(item=>item.content||[]).find(part=>part.type==="output_text")?.text||"";
 const number=value=>Number(String(value??"").replace(",","."));
+const pageEvidenceSchema={type:"object",additionalProperties:false,required:["printedTotal","printedQuantityTotal","printedNetTotal","unnumberedPageEvidence"],properties:{printedTotal:{type:"string"},printedQuantityTotal:{type:"string"},printedNetTotal:{type:"string"},unnumberedPageEvidence:schema.properties.unnumberedPageEvidence}};
+
+async function readUnnumberedPageEvidence(files,documentNumber){
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"low"},max_output_tokens:1800,input:[{role:"user",content:[{type:"input_text",text:`Έλεγξε ΜΟΝΟ αν οι ${files.length} πλήρεις φωτογραφίες είναι αρίθμητα φύλλα του ίδιου παραστατικού με αριθμό ${documentNumber}. Για ΚΑΘΕ φωτογραφία, βάλε imageIndex από 1, documentNumber ακριβώς όπως είναι τυπωμένο εκεί, fullPageVisible=true μόνο αν φαίνονται η κεφαλίδα με τον αριθμό, όλες οι γραμμές και το κάτω άκρο, printedTotalsVisible=true μόνο αν φαίνονται τα τελικά τυπωμένα σύνολα. Διάβασε από το τελευταίο φύλλο την ΤΕΛΙΚΗ ΑΞΙΑ ως printedTotal, τη ΣΥΝ. ΠΟΣ/ΤΑΣ ως printedQuantityTotal και την ΚΑΘΑΡΗ ΑΞΙΑ μετά την έκπτωση ως printedNetTotal. Το ΝΕΟ ΥΠΟΛΟΙΠΟ λογαριασμού δεν είναι printedTotal. Άφησε κενό string για κάθε δυσανάγνωστο σύνολο και false για αβέβαιη ορατότητα. Μη βγάλεις συμπέρασμα από την προηγούμενη συνομιλία.`},...files]}],text:{format:{type:"json_schema",name:"invoice_assistant_page_evidence",strict:true,schema:pageEvidenceSchema}}})});
+  if(!response.ok)throw new Error("Δεν ολοκληρώθηκε ο ανεξάρτητος έλεγχος σελίδων.");
+  return JSON.parse(responseText(await response.json()));
+}
 
 function manager(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!managers.has(req.user?.role))return res.status(403).json({error:"Ο έλεγχος τιμολογίου είναι διαθέσιμος μόνο σε ιδιοκτήτη ή διαχειριστή."});
@@ -79,6 +86,17 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"medium"},max_output_tokens:30000,input:[{role:"user",content:[{type:"input_text",text:instruction},...files]}],text:{format:{type:"json_schema",name:"invoice_assistant_preview",strict:true,schema}}})});
     if(!response.ok){const failure=await invoiceAssistantProviderError(response);return res.status(failure.status).json({error:failure.message})}
     const parsed=JSON.parse(responseText(await response.json()));
+    if(result.pages.length>1&&parsed.expectedPageCount===0&&Array.isArray(parsed.visiblePageNumbers)&&parsed.visiblePageNumbers.length===0){
+      const missingEvidence=!Array.isArray(parsed.unnumberedPageEvidence)||parsed.unnumberedPageEvidence.length!==result.pages.length;
+      const missingTotals=![parsed.printedTotal,parsed.printedQuantityTotal,parsed.printedNetTotal].every(value=>String(value??"").trim());
+      if(missingEvidence||missingTotals){
+        try{
+          const verification=await readUnnumberedPageEvidence(files,result.document.documentNumber);
+          if(missingEvidence)parsed.unnumberedPageEvidence=verification.unnumberedPageEvidence;
+          for(const field of ["printedTotal","printedQuantityTotal","printedNetTotal"])if(!String(parsed[field]??"").trim())parsed[field]=verification[field];
+        }catch{/* Keep the review blocked if the independent page check fails. */}
+      }
+    }
     const ids=new Set(current.map(row=>row.id));
     const corrections=(Array.isArray(parsed.corrections)?parsed.corrections:[]).filter(item=>ids.has(item.lineId)&&fields.has(item.field)).filter(item=>{
       if(item.field==="invoiceUnit")return ["PIECE","PACKAGE"].includes(item.value);
