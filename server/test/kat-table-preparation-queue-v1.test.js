@@ -50,6 +50,16 @@ test("BackOffice separates kitchen coffee bar and every configured production st
 });
 
 
+test("structured allergens remain separate from free notes through the table queue",()=>{
+  assert.match(preparationModal,/const ALLERGENS=/);
+  assert.match(preparationModal,/allergens,setAllergens/);
+  assert.match(route,/"allergensJson" JSONB/);
+  assert.match(route,/allergens:z\.array/);
+  assert.match(route,/allergens:line\.allergens\|\|\[\]/);
+  assert.match(backoffice,/table-allergen-alert/);
+  assert.match(backoffice,/ΑΛΛΕΡΓΙΟΓΟΝΑ:/);
+});
+
 test("POS preparation loads only the selected product modifiers and settings",()=>{
   assert.match(preparationModal,/modifiers\?productId=\$\{encodeURIComponent\(line\.id\)\}/);
   assert.match(preparationModal,/const loadedGroups=r\.groups\|\|\[\],next=\{\}/);
