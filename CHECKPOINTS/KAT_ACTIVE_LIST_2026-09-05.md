@@ -1,3 +1,8 @@
+## 27/09/2026 20:36 Ελλάδα — TABLE_SERVICE PASS διοικητικά πλήρες
+
+- [x] Manual, checkpoint, ενεργή λίστα, pending roadmap και κεντρικό PDF συμφωνούν για το production LAB PASS modifiers και ελεύθερης σημείωσης.
+- [ ] Νεότερο ενεργό scope: δομημένα αλλεργιογόνα, `ASSIGNED agent/table-service-restaurant-20260927`, NOT TESTED. Δεν έγινε αλλαγή εφαρμογής ή production κίνηση σε αυτό το διοικητικό κλείσιμο.
+
 ## 27/09/2026 20:15 Ελλάδα — TABLE_SERVICE modifiers / σημειώσεις · LAB PASS
 
 - [x] PR #1428: production POS φόρτωσε τη product-specific ομάδα `LAB ΕΠΙΛΟΓΗ ΓΑΛΑΚΤΟΣ` και εφαρμόστηκε `ΓΑΛΑ ΧΩΡΙΣ ΛΑΚΤΟΖΗ` στο `LAB ΚΑΦΕΣ ΔΟΚΙΜΗΣ`.
