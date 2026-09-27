@@ -17,4 +17,8 @@ test("printed set count is proposed from a clear 3X250ML name and remains review
   const unknown=verifiedSetUnit({...line,description:"ΧΙΟΣ ΛΕΜ 250ML"},[]);
   assert.equal(unknown.stockUnitsPerInvoiceUnit,"");
   assert.equal(unknown.confidence,"uncertain");
+  const abbreviated=verifiedSetUnit({...line,supplierCode:"667 1004932",description:"ΧΙΟΣ ΧΥΜ ΠΟΡΤ 3X250"},[]);
+  assert.equal(abbreviated.quantity,"2");
+  assert.equal(abbreviated.stockUnitsPerInvoiceUnit,"3");
+  assert.equal(abbreviated.confidence,"uncertain");
 });
