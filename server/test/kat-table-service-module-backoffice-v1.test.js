@@ -29,7 +29,8 @@ test("Super Admin can enable the module per store with audit",()=>{
 test("inactive table service is hidden and checkout is blocked",()=>{
   assert.match(posRoute,/tableServiceEnabled/);
   assert.match(posRoute,/if\(!await hasTableService/);
-  assert.match(posUi,/data\?\.tableServiceEnabled&&<button[\s\S]*ΤΡΑΠΕΖΙΑ/);
+  assert.match(posUi,/api\(`\/api\/store-pos\/stores\/\$\{store\.id\}\/table-service`\)\.then\(\(\)=>true\)\.catch\(\(\)=>false\)/);
+  assert.match(posUi,/tableServiceAvailable&&<button[\s\S]*ΤΡΑΠΕΖΙΑ/);
   assert.match(launcher,/activeModules\.includes\("TABLE_SERVICE"\)/);
   assert.match(launcher,/\/api\/license\/current/);
 });

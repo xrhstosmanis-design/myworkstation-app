@@ -113,3 +113,10 @@ Branch: `agent/table-service-floor-plan-20260927`
 - Διόρθωση: το Store POS εξασφαλίζει πρώτα το store-level configuration schema και ελέγχει ανεξάρτητα το ενεργό εταιρικό module και την ενεργή ρύθμιση του συγκεκριμένου καταστήματος.
 - Έλεγχοι: **13/13 TABLE_SERVICE tests PASS**, frontend production build **PASS**.
 - Κατάσταση: **LOCAL PASS / AWAITING CI, DEPLOY AND LAB RETEST**. Το συνολικό TABLE_SERVICE παραμένει **OPEN**.
+# Συμπληρωματικό checkpoint — ορατότητα «ΤΡΑΠΕΖΙΑ» στο LAB POS
+
+- Αναπαράχθηκε στο production και στον Cloud Browser ότι το κουμπί «ΤΡΑΠΕΖΙΑ» δεν εμφανιζόταν, παρότι το εταιρικό module και η ρύθμιση του καταστήματος ήταν ενεργά.
+- Επιβεβαιώθηκε από το Platform Admin ότι η επόμενη ενέργεια ήταν «Απενεργοποίηση», άρα η ρύθμιση του ΕΡΓΑΣΤΗΡΙΟΥ ΔΟΚΙΜΩΝ ήταν ήδη ενεργή. Δεν έγινε αλλαγή της ρύθμισης.
+- Το POS πλέον κάνει δεύτερο, αυθεντικό read-only έλεγχο στο προστατευμένο endpoint `/table-service`. Το κουμπί εμφανίζεται μόνο όταν αυτό το endpoint επιτρέψει πρόσβαση, επομένως διατηρείται ο κανόνας paid module + ενεργοποίηση ανά κατάστημα.
+- Προστέθηκε production-build guard που αποτυγχάνει αν το τελικό bundle δεν περιέχει `tableServiceEnabled` και «ΤΡΑΠΕΖΙΑ».
+- Το TABLE_SERVICE παραμένει OPEN μέχρι το τελικό LAB PASS. Δεν χαρακτηρίζεται PASS από CI ή build.
