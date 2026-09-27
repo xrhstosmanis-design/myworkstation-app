@@ -26,7 +26,7 @@
 ## Κεντρικό roadmap
 
 - Ενεργή λίστα και Gate ownership: `docs/roadmap/PENDING_WORK.md`
-- Εκτυπώσιμο PDF: `output/pdf/MyWorkStation_Central_Pending_Roadmap_2026-09-23.pdf`
+- Εκτυπώσιμη τρέχουσα σύνοψη: `output/pdf/MyWorkStation_Central_Status_2026-09-27.pdf` (η αναλυτική παλαιότερη έκδοση 23/09 διατηρείται για ιστορικό).
 - Οδηγίες ετοιμότητας πιλοτικής εγκατάστασης (όχι PASS): `docs/manual/pilot-installation/README.md`
 
 ## Ενότητες
