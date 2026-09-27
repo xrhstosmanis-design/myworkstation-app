@@ -1,5 +1,5 @@
-export function invoicePageReviewChecks({expectedPageCount,visiblePageNumbers,sourcePageCount,printedLines,printedTotal,printedQuantityTotal,printedNetTotal}){
-  const pagesComplete=Number.isInteger(expectedPageCount)&&expectedPageCount>0&&expectedPageCount===sourcePageCount&&Array.isArray(visiblePageNumbers)&&visiblePageNumbers.length===sourcePageCount&&visiblePageNumbers.every((page,index)=>page===index+1);
+export function invoicePageReviewChecks({expectedPageCount,visiblePageNumbers,sourcePageCount,printedLines,printedTotal,printedQuantityTotal,printedNetTotal,unnumberedPageEvidence,documentNumber}){
+  const numberedPagesComplete=Number.isInteger(expectedPageCount)&&expectedPageCount>0&&expectedPageCount===sourcePageCount&&Array.isArray(visiblePageNumbers)&&visiblePageNumbers.length===sourcePageCount&&visiblePageNumbers.every((page,index)=>page===index+1);
   const amounts=printedLines.map(line=>String(line.grossAmount??"").trim());
   const gross=amounts.map(value=>Number(value.replace(",",".")));
   const totalsAgree=Number.isFinite(printedTotal)&&printedLines.length>0&&amounts.every(Boolean)&&gross.every(Number.isFinite)&&Math.abs(gross.reduce((sum,value)=>sum+value,0)-printedTotal)<=0.05;
@@ -12,7 +12,11 @@ export function invoicePageReviewChecks({expectedPageCount,visiblePageNumbers,so
     const numbers=values.map(value=>Number(value.replace(",",".")));
     return numbers.every(Number.isFinite)&&Math.abs(numbers.reduce((sum,value)=>sum+value,0)-total)<=(field==="quantity"?0.001:0.05);
   };
-  return {pagesComplete,grossAgrees:totalsAgree,quantityAgrees:columnAgrees(printedQuantity,"quantity"),netAgrees:columnAgrees(printedNet,"netAmount"),grossSum:gross.every(Number.isFinite)?gross.reduce((sum,value)=>sum+value,0):null,quantitySum:printedLines.reduce((sum,line)=>sum+Number(String(line.quantity??"").replace(",",".")),0),netSum:printedLines.reduce((sum,line)=>sum+Number(String(line.netAmount??"").replace(",",".")),0)};
+  const quantityAgrees=columnAgrees(printedQuantity,"quantity"),netAgrees=columnAgrees(printedNet,"netAmount");
+  // Unnumbered multi-sheet invoices need evidence from every uploaded sheet and
+  // all three printed totals. A missing middle sheet cannot pass the sums.
+  const unnumberedPagesComplete=expectedPageCount===0&&Array.isArray(visiblePageNumbers)&&visiblePageNumbers.length===0&&sourcePageCount>1&&sourcePageCount<=5&&Array.isArray(unnumberedPageEvidence)&&unnumberedPageEvidence.length===sourcePageCount&&String(documentNumber??"").trim()!==""&&unnumberedPageEvidence.every((page,index)=>page?.imageIndex===index+1&&String(page.documentNumber??"").trim()===String(documentNumber).trim()&&page.fullPageVisible===true)&&unnumberedPageEvidence.at(-1)?.printedTotalsVisible===true&&Number.isFinite(printedTotal)&&printedQuantity!==""&&printedNet!==""&&totalsAgree&&quantityAgrees&&netAgrees;
+  return {pagesComplete:numberedPagesComplete||unnumberedPagesComplete,grossAgrees:totalsAgree,quantityAgrees,netAgrees,grossSum:gross.every(Number.isFinite)?gross.reduce((sum,value)=>sum+value,0):null,quantitySum:printedLines.reduce((sum,line)=>sum+Number(String(line.quantity??"").replace(",",".")),0),netSum:printedLines.reduce((sum,line)=>sum+Number(String(line.netAmount??"").replace(",",".")),0)};
 }
 
 export function assessInvoicePages(input){

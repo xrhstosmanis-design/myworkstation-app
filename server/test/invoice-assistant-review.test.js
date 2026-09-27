@@ -11,6 +11,20 @@ test("all photographed pages and matching line totals allow human review",()=>{
   assert.equal(assessInvoicePages({expectedPageCount:2,visiblePageNumbers:[1,2],sourcePageCount:2,printedLines:[{grossAmount:"67.41"},{grossAmount:"43.91"}],printedTotal:111.32}),true);
 });
 
+test("two unnumbered full sheets with the same invoice and reconciled printed totals allow review",()=>{
+  const invoice={expectedPageCount:0,visiblePageNumbers:[],sourcePageCount:2,documentNumber:"52244",unnumberedPageEvidence:[
+    {imageIndex:1,documentNumber:"52244",fullPageVisible:true,printedTotalsVisible:false},
+    {imageIndex:2,documentNumber:"52244",fullPageVisible:true,printedTotalsVisible:true}
+  ],printedLines:[{quantity:"64",netAmount:"90.00",grossAmount:"101.70"},{quantity:"46",netAmount:"63.70",grossAmount:"71.98"}],printedQuantityTotal:"110",printedNetTotal:"153.70",printedTotal:173.68};
+  assert.equal(assessInvoicePages(invoice),true);
+  assert.equal(assessInvoicePages({...invoice,printedTotal:null}),false);
+  assert.equal(assessInvoicePages({...invoice,printedQuantityTotal:""}),false);
+  assert.equal(assessInvoicePages({...invoice,printedLines:invoice.printedLines.slice(1)}),false);
+  assert.equal(assessInvoicePages({...invoice,unnumberedPageEvidence:[invoice.unnumberedPageEvidence[1]]}),false);
+  assert.equal(assessInvoicePages({...invoice,unnumberedPageEvidence:[invoice.unnumberedPageEvidence[0],{...invoice.unnumberedPageEvidence[1],documentNumber:"52245"}]}),false);
+  assert.equal(assessInvoicePages({...invoice,unnumberedPageEvidence:[invoice.unnumberedPageEvidence[0],{...invoice.unnumberedPageEvidence[1],fullPageVisible:false}]}),false);
+});
+
 test("printed quantity and net expose a missing row even if gross is copied from the footer",()=>{
   const invoice={expectedPageCount:1,visiblePageNumbers:[1],sourcePageCount:1,printedLines:[{quantity:"2",netAmount:"2.00",grossAmount:"2.26"}],printedTotal:2.26};
   assert.equal(assessInvoicePages({...invoice,printedQuantityTotal:"3",printedNetTotal:"2.00"}),false);
