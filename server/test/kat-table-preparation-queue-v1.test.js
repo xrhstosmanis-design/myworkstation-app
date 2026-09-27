@@ -9,7 +9,7 @@ test("every table order records waiter and physical POS terminal",()=>{
   assert.match(route,/ALTER TABLE "TableOrder" ADD COLUMN IF NOT EXISTS "terminalPos"/);
   assert.match(route,/req\.user\?\.terminalPos\|\|req\.headers/);
   assert.match(route,/"operatorName","terminalPos","status"/);
-  assert.match(route,/tableName:table\.name,terminalPos,total/);
+  assert.match(route,/tableName:table\.name,terminalPos,roundNumber,addedTotal,total:finalTotal/);
 });
 
 test("preparation queue is store scoped and exposes station table waiter and items",()=>{
