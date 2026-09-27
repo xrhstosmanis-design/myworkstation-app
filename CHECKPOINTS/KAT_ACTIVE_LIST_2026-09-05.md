@@ -1,3 +1,9 @@
+## 27/09/2026 — Κεντρικές αναθέσεις efood / Εστίασης και κανόνας PASS
+
+- **efood/Pelican — ΑΝΑΤΕΘΗΚΕ ΑΛΛΟΥ · OPEN:** υπεύθυνη η εξειδικευμένη σελίδα efood/Pelican. Phase A και φόρμα LAB έχουν επιμέρους PASS, όχι τελικό end-to-end/sandbox/production PASS. Δεν συγχέεται με το κλειδωμένο Gate 6 Online/Delivery. Checkpoints `2026-09-13-efood-pelican-phase-a-foundation.md`, `2026-09-23-efood-lab-schema-bootstrap.md`.
+- **Εστίαση / TABLE_SERVICE — ΑΝΑΤΕΘΗΚΕ ΑΛΛΟΥ · OPEN:** `agent/table-service-restaurant-20260927` έχει τραπέζια, σερβιτόρους, ασύρματη παραγγελιοληψία, ξεχωριστά πόστα παραγωγής και λογαριασμό. Contract/local tests δεν αποτελούν συνολικό LAB PASS. Checkpoint `2026-09-27-table-service-restaurant-takeover.md`.
+- **Για κάθε σελίδα από εδώ και πέρα:** πριν αρχίσει ελέγχει το μητρώο στο `docs/roadmap/PENDING_WORK.md` και καταγράφει αποκλειστική ανάθεση. Σε πραγματικό επιμέρους PASS ενημερώνει αμέσως το κοινό checkpoint και αφαιρεί μόνο το ολοκληρωμένο σκέλος. Σε τελικό PASS η υπεύθυνη σελίδα ενημερώνει στο ίδιο PR ενεργή λίστα, pending roadmap, PASS manual και κεντρικό PDF, διαγράφει την ολοκληρωμένη εκκρεμότητα και κλειδώνει το scope ώστε να μην το ξαναπάρει άλλη σελίδα. Χωρίς PASS η ανάθεση μένει στον ιδιοκτήτη της μέχρι συγχωνευμένο handoff και ρητή νέα ανάληψη.
+
 ## 27/09/2026 11:45 Ελλάδα — Gate 3 053688 λάθος επιλογή προμηθευτή POS / LAB FAIL, fix AWAITING CI-DEPLOY-LAB
 
 **Gate 6 — ΤΡΑΠΕΖΙΑ POS AWAITING LAB (27/09/2026):** Το #1389 διόρθωσε τον έλεγχο ενεργού TABLE_SERVICE/ρύθμισης καταστήματος πριν προβληθεί το κουμπί «ΤΡΑΠΕΖΙΑ». CI/Render και πραγματικό LAB readback πρέπει να επαληθευτούν στην αντίστοιχη σελίδα. Το συνολικό σκέλος OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
