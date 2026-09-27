@@ -125,7 +125,8 @@ function calc(input,current={}){
   const vatBase=netAmount+exciseTotal;
   const vatAmount=vatBase*vatRate/100;
   const grossAmount=vatBase+vatAmount;
-  const grossUnit=grossAmount/quantity;
+  const stockUnitsPerInvoiceUnit=(input.invoiceUnit??current.invoiceUnit)==="PACKAGE"?Math.max(1,n(input.stockUnitsPerInvoiceUnit??current.stockUnitsPerInvoiceUnit??1)):1;
+  const grossUnit=grossAmount/(quantity*stockUnitsPerInvoiceUnit);
   let markupPercent=n(input.markupPercent??current.markupPercent??0);
   let proposedSalePrice=n(input.proposedSalePrice??current.proposedSalePrice??grossUnit);
   if(input.calculateFrom==="MARKUP")proposedSalePrice=Math.max(0,grossUnit*(1+markupPercent/100));
