@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const route=await readFile(new URL("../src/routes/store-table-orders.js",import.meta.url),"utf8");
 const backoffice=await readFile(new URL("../../client/src/components/commerce/TableServiceBackofficePanel.jsx",import.meta.url),"utf8");
+const preparationModal=await readFile(new URL("../../client/src/components/store/StorePreparationModal.jsx",import.meta.url),"utf8");
 
 test("every table order records waiter and physical POS terminal",()=>{
   assert.match(route,/ALTER TABLE "TableOrder" ADD COLUMN IF NOT EXISTS "terminalPos"/);
@@ -45,4 +46,12 @@ test("BackOffice separates kitchen coffee bar and every configured production st
   assert.match(backoffice,/data-production-station/);
   assert.match(backoffice,/ΕΤΟΙΜΗ ΣΤΟ/);
   assert.match(backoffice,/queue\.filter\(row=>row\.productionStation===name/);
+});
+
+
+test("POS preparation loads only the selected product modifiers and settings",()=>{
+  assert.match(preparationModal,/modifiers\?productId=\$\{encodeURIComponent\(line\.id\)\}/);
+  assert.match(preparationModal,/const loadedGroups=r\.groups\|\|\[\],next=\{\}/);
+  assert.match(preparationModal,/for\(const g of loadedGroups\)/);
+  assert.match(preparationModal,/setSettings\(r\.settings\|\|null\)/);
 });
