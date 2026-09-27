@@ -1,3 +1,9 @@
+## 27/09/2026 20:40 Ελλάδα — TABLE_SERVICE δομημένα αλλεργιογόνα · ASSIGNED
+
+- [ ] `feat/table-service-structured-allergens-20260927`: ξεχωριστές επιλογές αλλεργιογόνων στο POS, δομημένη μετάδοση/αποθήκευση ανά γραμμή και εμφανής ένδειξη στην ουρά παραγωγής.
+- [x] Προστατευμένο baseline: modifiers + ελεύθερη σημείωση PASS, MAIN 6,00 €/2, LAB-POS-02 0,00 €/2, stock καφέ -2, τοπική ουρά 0.
+- [ ] Κατάσταση: NOT TESTED / OPEN. CI/deploy/LAB απαιτούνται· καμία πληρωμή δεν εγκρίνεται.
+
 ## 27/09/2026 20:36 Ελλάδα — TABLE_SERVICE PASS διοικητικά πλήρες
 
 - [x] Manual, checkpoint, ενεργή λίστα, pending roadmap και κεντρικό PDF συμφωνούν για το production LAB PASS modifiers και ελεύθερης σημείωσης.
