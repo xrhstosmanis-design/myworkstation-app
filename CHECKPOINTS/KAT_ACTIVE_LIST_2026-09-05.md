@@ -1446,3 +1446,10 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - [x] `0` πιθανά duplicates, `MAIN` 0 κινήσεις / 0,00 € και `ONL-001` ανέγγιχτη.
 - [x] Οι παλιότερες εγγραφές Gate 6 με `OPEN`, `FAIL` ή `AWAITING` παραμένουν μόνο ως ιστορικό και **αντικαθίστανται από την παρούσα τελική εγγραφή**. Δεν αποτελούν ενεργή εκκρεμότητα και δεν επαναλαμβάνονται χωρίς νέο πραγματικό FAIL ή νέα απαίτηση.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-26-gate6-onl002-payment-routing.md`. Manual: `docs/manual/online-delivery/PASS.md`.
+## 27/09/2026 — Εστίαση / TABLE_SERVICE — ΑΝΑΤΕΘΗΚΕ / OPEN
+
+- [ ] Ρητή ανάθεση ιδιοκτήτη στο `agent/table-service-restaurant-20260927`: τραπέζια/τραπεζοκαθίσματα, σάλες, σερβιτόροι, mobile ασύρματη παραγγελιοληψία, χωριστή αποστολή σε κουζίνα/καφέ/μπαρ ή άλλο πόστο, KDS/εκτύπωση, εκτέλεση, λογαριασμός, πληρωμή, φύρα και αναφορές εστίασης.
+- [x] Απογραφή production base `3d963d2c`: υπάρχουν module/store licensing, βασικά τραπέζια, order/lines, χειριστής/terminal, batches ανά `productionStation`, κοινή ουρά παρασκευής, READY, φόρτωση/πληρωμή στο POS, φύρα και BackOffice ιστορικό. Στοχευμένα contract tests **19/19 PASS**.
+- [ ] Συνολικό πραγματικό αποτέλεσμα: **LAB NOT TESTED / OPEN**. Το `TABLE_SERVICE` στο LAB παραμένει ανενεργό από την τελική επαναφορά Gate 8 και δεν ενεργοποιείται πριν από ελεγχόμενο baseline.
+- [ ] Κρίσιμα ανοικτά: κάτοψη/σάλες, mobile waiter PWA, πολλοί γύροι στον ίδιο λογαριασμό, μεταφορά/ένωση/split, οικονομικά modifiers, stage-aware ακύρωση/φύρα, ανεξάρτητο KDS και εκτυπωτές ανά πόστο, live ειδοποιήσεις και πλήρης συμφωνία Sale/Payment/fiscal/stock/βάρδιας/Audit.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
