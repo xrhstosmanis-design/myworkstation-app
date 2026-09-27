@@ -1,3 +1,8 @@
+## 27/09/2026 — Δεύτερο LAB κατάστημα για απομόνωση ετικέτας: AWAITING CI/DEPLOY/LIVE
+
+Προστέθηκε στη Super Admin καρτέλα εταιρείας η δημιουργία νέου καταστήματος με χωριστό κατάλογο/στοκ/χειριστές και αρχικές βάρδιες. Τοπικό frontend build και server syntax PASS. Δεν δημιουργήθηκε ακόμη το δεύτερο LAB κατάστημα: αναμένεται CI/deploy και πραγματικό readback, κατόπιν API denial χειριστή LAB προς το δεύτερο LAB και ΚΑΤ. Συνολικό isolation OPEN. `CHECKPOINTS/CHANGES/2026-09-27-lab-second-store-setup-awaiting-live.md`.
+
+
 ## 27/09/2026 ~22:35 Ελλάδα — TABLE_SERVICE κινητό · visual LAB FAIL / στενή διόρθωση
 
 - [ ] #1451 / CI #3678 / exact Render `acdb57c5`: κουμπί LAB εμφανίστηκε, αλλά η οθόνη έδειξε ψευδές ανενεργό module λόγω διπλού ελέγχου POS catalog. Καμία παραγγελία. Αφαιρέθηκε μόνο ο πρόσθετος έλεγχος· νέο CI/deploy/visual readback AWAITING. Αποστολή, stock και βάρδιες NOT TESTED. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
