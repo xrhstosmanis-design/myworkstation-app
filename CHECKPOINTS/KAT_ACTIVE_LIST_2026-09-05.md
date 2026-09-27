@@ -12,6 +12,8 @@
 
 **Gate 6 — ΤΡΑΠΕΖΙΑ POS HEADER PASS (27/09/2026):** PR #1397, CI #3557 και Render revision `5867e7f8` PASS. Πραγματικό LAB visual readback επιβεβαίωσε το «ΤΡΑΠΕΖΙΑ» επάνω, δίπλα στις «ΠΑΡΑΓΓΕΛΙΕΣ», και πλήρη απουσία του από την κάτω μπάρα. Η συγκεκριμένη διόρθωση κλειδώθηκε PASS· το συνολικό TABLE_SERVICE παραμένει OPEN μέχρι το πλήρες end-to-end LAB PASS. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 
+**TABLE_SERVICE Φάση A2 — LOCAL PASS / AWAITING CI-LAB (27/09/2026):** Υλοποιήθηκε ένας ανοικτός λογαριασμός ανά τραπέζι με αριθμημένους γύρους, transaction lock, αποστολή μόνο των νέων γραμμών στα πόστα, χωριστό Audit και σωστή συγκέντρωση ίδιου προϊόντος στο checkout. 18/18 στοχευμένοι έλεγχοι και production build PASS. Συνολικό TABLE_SERVICE OPEN. Τεκμήριο `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
+
 
 
 **Gate 3 — καρτέλα προμηθευτή RETEST (27/09/2026 12:42 Ελλάδα):** `image(20260927-094146).png`: το κουμπί ΑΑΔΕ επέστρεψε μόνο VIES και σωστά δεν αποθήκευσε αυτόματα, αλλά το χειροκίνητο «Καταχώρηση» δεν ανταποκρίθηκε. Ρητή σύνδεση click με αποθήκευση και ορατό readback ΑΦΜ σε νέο PR/CI AWAITING. Υφιστάμενο 053688, 5 γραμμές/185,99 €, χωρίς νέα POS πράξη. Gate 3 OPEN.

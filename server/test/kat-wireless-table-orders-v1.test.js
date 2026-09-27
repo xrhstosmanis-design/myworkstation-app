@@ -21,7 +21,18 @@ test("sending an order snapshots products without reducing stock",()=>{
   assert.match(route,/INSERT INTO "TableOrderLine"/);
   assert.match(route,/COALESCE\(sp\."salePrice",p\."salePrice"\)/);
   assert.doesNotMatch(orderCreate,/UPDATE "StoreProduct" SET "currentStock"/);
-  assert.match(route,/'TABLE_ORDER_SENT'/);
+  assert.match(route,/"TABLE_ORDER_SENT"/);
+});
+
+test("one open table account accepts auditable new rounds without resending old lines",()=>{
+  assert.match(route,/ADD COLUMN IF NOT EXISTS "roundNumber" INTEGER NOT NULL DEFAULT 1/);
+  assert.match(route,/pg_advisory_xact_lock\(hashtext/);
+  assert.match(route,/"tableId"=\$\{table\.id\}[\s\S]*FOR UPDATE/);
+  assert.match(route,/MAX\("roundNumber"\)/);
+  assert.match(route,/TABLE_ORDER_ROUND_SENT/);
+  assert.match(route,/Γύρος \$\{roundNumber\}/);
+  assert.match(ui,/ΠΡΟΣΘΗΚΗ ΝΕΟΥ ΓΥΡΟΥ/);
+  assert.match(ui,/Σύνολο λογαριασμού/);
 });
 
 test("POS checkout locks and closes the exact table order once",()=>{
@@ -30,6 +41,7 @@ test("POS checkout locks and closes the exact table order once",()=>{
   assert.match(checkout,/FROM "TableOrderLine"/);
   assert.match(checkout,/SET "status"='PAID',"saleId"=\$\{saleId\}/);
   assert.match(checkout,/linkedCount/);
+  assert.match(checkout,/for\(const line of tableLines\)expected\.set\(line\.productId/);
 });
 
 test("responsive POS UI can send, monitor and load table orders",()=>{
@@ -37,7 +49,8 @@ test("responsive POS UI can send, monitor and load table orders",()=>{
   assert.match(ui,/new Map\(/);
   assert.doesNotMatch(ui,/import \{Armchair,Map,Plus/);
   assert.match(ui,/ΑΣΥΡΜΑΤΗ ΠΑΡΑΓΓΕΛΙΟΛΗΨΙΑ/);
-  assert.match(ui,/ΑΠΟΣΤΟΛΗ ΤΡΕΧΟΥΣΑΣ ΠΑΡΑΓΓΕΛΙΑΣ/);
+  assert.match(ui,/ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ/);
+  assert.match(ui,/ΠΡΟΣΘΗΚΗ ΝΕΟΥ ΓΥΡΟΥ/);
   assert.match(ui,/ΦΟΡΤΩΣΗ ΣΤΟ POS/);
   assert.match(pos,/ΤΡΑΠΕΖΙΑ/);
   assert.match(pos,/tableOrderId/);
