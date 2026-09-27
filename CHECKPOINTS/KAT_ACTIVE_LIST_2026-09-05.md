@@ -4,6 +4,10 @@
 - [x] Προστατευμένο baseline: modifiers + ελεύθερη σημείωση PASS, MAIN 6,00 €/2, LAB-POS-02 0,00 €/2, stock καφέ -2, τοπική ουρά 0.
 - [ ] Υλοποιήθηκαν 14 δομημένες επιλογές, `allergensJson`, μεταφορά στο batch, κόκκινη ένδειξη BackOffice/εκτύπωσης και regression coverage. **AWAITING CI / DEPLOY / LAB**· καμία πληρωμή δεν εγκρίνεται.
 
+## 27/09/2026 — Ετικέτα EAN-13: Audit preview fix AWAITING CI/DEPLOY/LAB
+
+Συνέχεια ίδιας ανάθεσης από `feat/barcode-ean13-label-print-20260927` στο `feat/ean13-label-audit-20260927`. USER PASS φυσικής εκτύπωσης→σάρωσης και LAB PASS προεπισκόπησης προστατεύονται. Τοπικά 3/3 EAN tests PASS, μαζί με άκυρο checksum χωρίς εκτυπώσιμο έγγραφο. Οι δύο διαδρομές πλέον εκπέμπουν `LABEL_PREVIEW_OPENED`, με κεντρική ελληνική προβολή ως προεπισκόπηση 0 €, όχι ως φυσική εκτύπωση. CI/deploy/LAB readback AWAITING. UI αρνητικό EAN και cross-store LAB isolation NOT TESTED· συνολικό scope OPEN. `CHECKPOINTS/CHANGES/2026-09-27-pos-ean13-label-print.md`.
+
 ## 27/09/2026 20:36 Ελλάδα — TABLE_SERVICE PASS διοικητικά πλήρες
 
 - [x] Manual, checkpoint, ενεργή λίστα, pending roadmap και κεντρικό PDF συμφωνούν για το production LAB PASS modifiers και ελεύθερης σημείωσης.
