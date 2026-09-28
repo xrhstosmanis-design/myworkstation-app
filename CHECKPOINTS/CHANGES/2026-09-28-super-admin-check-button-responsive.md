@@ -2,7 +2,7 @@
 
 **Ημερομηνία:** 28/09/2026 01:01 Ελλάδα  
 **Branch:** `fix/super-admin-check-button-responsive-20260928`  
-**Κατάσταση:** `USER SCREENSHOT FAIL · CONTAINER-AWARE FIX LOCAL PASS`
+**Κατάσταση:** `USER VISUAL PASS · CLOSED`
 
 ## Παρατήρηση χρήστη
 
@@ -28,3 +28,8 @@
 
 - Στοχευμένα responsive + AI Command Center regression tests: 4/4 PASS.
 - Πλήρες `npm run build`: PASS.
+
+
+## USER visual PASS — 28/09/2026 11:49 Ελλάδα
+
+Το `image(3).png` επιβεβαιώνει στην production έκδοση `f102089532cc1304e2a2b53df35dc2e45d069703` ότι τα `Εκτέλεση ελέγχου` και `Καθαρισμός` εμφανίζονται ολόκληρα μέσα στο panel, χωρίς οριζόντια κύλιση. Ο χρήστης δήλωσε ρητά «ΕΙΝΑΙ ΟΚ». Περιορισμένο PASS μόνο της responsive διάταξης αυτών των controls· handlers, API και δεδομένα δεν μεταβλήθηκαν.
