@@ -1,6 +1,6 @@
 # AI Command Center · ΦΑΣΗ 10 — Morning Briefing
 
-Κατάσταση: **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS**
+Κατάσταση: **LIMITED USER VISUAL PASS · CLOSED**
 
 ## Checkpoint πριν την αλλαγή
 
@@ -31,3 +31,12 @@
 - Στοχευμένα AI Command Center tests: **11/11 PASS**.
 - Πλήρες server suite: **1.628 PASS, 1 SKIP, 0 FAIL**.
 - Production client build: **PASS**.
+
+## CI / production / οπτική αποδοχή
+
+- PR `#1524` έγινε squash merge μετά από πράσινο `MyWorkStation CI #3840`.
+- Exact production revision: `60ed1d1bfa9bda82bc293bab33492afc13888cdb`.
+- Η `image(20260928-195513).png` επιβεβαιώνει οπτικά την ενότητα `MORNING BRIEFING · ΦΑΣΗ 10` και ώρα Ελλάδας `Δευτέρα 28 Σεπτεμβρίου, 22:54`.
+- Παρατηρήθηκαν και οι πέντε κάρτες: δίκτυο `0 πρόβλημα · 4 προς έλεγχο · 0 ΟΚ`, Ταμεία & Πληρωμές `ΟΚ`, Τιμολόγια & προμηθευτές `2`, Αποθήκη `5` και Προσωπικό `2`.
+- Η επεξήγηση δηλώνει σωστά ότι δεν αποστέλλεται μήνυμα, δεν προγραμματίζεται εργασία και δεν αλλάζει δεδομένο.
+- Το συγκεκριμένο read-only οπτικό scope κλειδώνει **LIMITED USER VISUAL PASS · CLOSED**.
