@@ -1,3 +1,7 @@
+## 28/09/2026 — Κεντρικό αριθμημένο μητρώο / αναμονή CI
+
+- [ ] Νέα σταθερή αρίθμηση G01–G08 και 01–36, προτεραιότητες, υπάρχουσες αναθέσεις και φωτογραφίες ιδιοκτήτη. `docs/roadmap/CENTRAL_NUMBERED_WORK_2026-09-28.md`, εκτυπώσιμο `output/pdf/MyWorkStation_Numbered_Work_2026-09-28.pdf`. PR #1504· CI και merge αναμένονται. Δεν έγινε νέα LAB κίνηση ούτε νέο λειτουργικό PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-central-numbered-work-register.md`.
+
 ## 28/09/2026 — TABLE_SERVICE ασφαλής επανάληψη γύρου · CI/DEPLOY PASS · AWAITING LAB
 
 - [ ] Ο ίδιος αμετάβλητος mobile γύρος φέρει μοναδικό key και η επανάληψη της ίδιας προσπάθειας επιστρέφει το αρχικό αποτέλεσμα χωρίς δεύτερο γύρο/πόστο/Audit· σύγκρουση payload ή χειριστή απορρίπτεται. 11 tests και production build PASS· PR #1501 / CI #3782 / merge και exact Render `675ee74` PASS· database/φυσικό LAB AWAITING. Δεν στάλθηκε νέος γύρος. `CHECKPOINTS/CHANGES/2026-09-28-table-service-round-idempotency.md`. Συνολικό TABLE_SERVICE OPEN.
