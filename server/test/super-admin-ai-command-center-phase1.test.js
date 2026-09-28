@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-6"/);
+  assert.match(center,/data-ai-command-center="phase-7"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -23,8 +23,8 @@ test("phase 2 reuses existing read-only checks and existing centers",()=>{
 });
 
 test("future AI modules are labelled as later phases instead of simulated results",()=>{
-  assert.match(center,/Ρώτα το MyWorkStation/);
-  assert.match(center,/Φάση 3 · ενεργό/);
+  assert.match(center,/ΡΩΤΑ ΤΟ MYWORKSTATION/i);
+  assert.match(center,/Φάση 7 · ενεργό/);
   assert.match(center,/Digital Twin/);
   assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
 });
@@ -68,4 +68,15 @@ test("phase 6 reads the existing Invoice Learning workspace without invoice writ
   assert.match(app,/\/platform-admin\/invoice-learning-lab/);
   assert.match(center,/δεν γίνεται OCR, διόρθωση, πληρωμή, οριστικοποίηση ή κίνηση stock/);
   assert.doesNotMatch(center,/invoice-learning\/workspace",\{method:"(?:POST|PUT|DELETE)"/);
+});
+
+test("phase 7 explains existing cash and payment checks without financial writes",()=>{
+  assert.match(center,/const cashPaymentIntel=useMemo/);
+  assert.match(center,/AI ΤΑΜΕΙΩΝ &amp; ΠΛΗΡΩΜΩΝ · ΦΑΣΗ 7/);
+  for(const label of ["Έλλειμμα μετρητών","Πλεόνασμα","Διαφορά POS–EFTPOS","Χωρίς αποδεικτικό","Πιθανά διπλά","Αποκλίσεις πληρωμών \/ τράπεζας"])assert.match(center,new RegExp(label));
+  assert.match(center,/δεν εγκρίνεται, δεν διορθώνεται, δεν συμψηφίζεται και δεν δημιουργείται πληρωμή ή χρέωση/);
+  for(const callback of ["onOpenCash","onOpenPayments","onOpenBank"])assert.match(center,new RegExp(callback));
+  for(const endpoint of ["cash-control/daily","supplier-settlements/review","bank-ledger/review"]){
+    assert.doesNotMatch(center,new RegExp(`request\\([^)]*${endpoint}[^)]*method:\"(?:POST|PUT|PATCH|DELETE)\"`));
+  }
 });
