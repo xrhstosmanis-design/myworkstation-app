@@ -207,7 +207,7 @@ export async function auth(req,res,next){
 
     let currentUser=null;
     if(payload.sessionId){
-      const session=await prisma.userSession.findUnique({where:{id:payload.sessionId},include:{user:{select:{sessionVersion:true,role:true,mustChangePassword:true,company:{select:{active:true}}}}}});
+      const session=await prisma.userSession.findUnique({where:{id:payload.sessionId},include:{user:{select:{sessionVersion:true,role:true,companyId:true,mustChangePassword:true,company:{select:{active:true}}}}}});
       const expired=!session||session.expiresAt.getTime()<=Date.now();
       const revoked=!!session?.revokedAt;
       const versionChanged=session?.user?.sessionVersion!==payload.sessionVersion;
@@ -215,6 +215,14 @@ export async function auth(req,res,next){
       if(expired||revoked||versionChanged||inactiveCompany)return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
       currentUser=session.user;
       if(Date.now()-session.lastSeenAt.getTime()>5*60*1000)prisma.userSession.update({where:{id:session.id},data:{lastSeenAt:new Date()}}).catch(()=>{});
+    }
+
+    if(payload.ownerCompanyId){
+      if(!currentUser||currentUser.role!=="OWNER"||payload.role!=="OWNER"||payload.companyId!==payload.ownerCompanyId||payload.isSuperAdmin||payload.supportContext)return res.status(401).json({error:"Μη έγκυρη επιλογή εταιρείας."});
+      if(payload.companyId!==currentUser.companyId){
+        const access=await prisma.$queryRaw`SELECT 1 FROM "OwnerCompanyAccess" a JOIN "Company" c ON c."id"=a."companyId" WHERE a."ownerId"=${payload.id} AND a."companyId"=${payload.companyId} AND c."active"=TRUE LIMIT 1`;
+        if(!access.length)return res.status(403).json({error:"Η πρόσβαση σε αυτή την εταιρεία έχει αφαιρεθεί."});
+      }
     }
 
     const passwordChangeAllowed=req.originalUrl.startsWith("/api/auth/change-password")||req.originalUrl.startsWith("/api/auth/logout");
