@@ -1,6 +1,6 @@
 # AI Command Center · ΦΑΣΗ 9 — Workforce Intelligence
 
-Κατάσταση: **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS**
+Κατάσταση: **LIMITED USER VISUAL PASS · CLOSED**
 
 ## Checkpoint πριν την αλλαγή
 
@@ -36,3 +36,13 @@
 - Στοχευμένα AI Command Center tests: **10/10 PASS**.
 - Πλήρες server suite: **1.627 PASS, 1 SKIP, 0 FAIL**.
 - Production client build: **PASS**.
+
+## CI / production / οπτική αποδοχή
+
+- PR `#1521` έγινε squash merge μετά από πράσινο `MyWorkStation CI #3835`.
+- Exact production revision: `878f2251d653acdb7e0f7c3595246d9ba1168fdc`.
+- Η `image(20260928-193431).png` επιβεβαιώνει οπτικά την ενότητα `WORKFORCE INTELLIGENCE · ΦΑΣΗ 9`.
+- Παρατηρήθηκαν `10` ενεργοί εργαζόμενοι, `0` στο σημερινό πρόγραμμα, `0` ανοικτές παρουσίες, `0` προς έλεγχο, `0` καθυστερήσεις και `0′` υπερωρία.
+- Εμφανίστηκαν δύο πραγματικά ευρήματα `Χωρίς δημοσιευμένο πρόγραμμα`: `ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` και `Κυλικείο ΚΑΤ`, με σαφή ένδειξη `ΠΡΟΒΛΗΜΑ`.
+- Δεν παρατηρήθηκε μεταβολή βάρδιας, παρουσίας, άδειας, έγκρισης ή μισθοδοσίας. Το άνοιγμα του συνδέσμου προς την κανονική οθόνη Workforce δεν ελέγχθηκε στο συγκεκριμένο screenshot.
+- Το συγκεκριμένο read-only οπτικό scope κλειδώνει **LIMITED USER VISUAL PASS · CLOSED**.
