@@ -1,4 +1,4 @@
-## 28/09/2026 — Διαδόχου Παύλου / πολλαπλά ΑΦΜ · AWAITING CI / LAB
+## 28/09/2026 — Διαδόχου Παύλου / πολλαπλά ΑΦΜ · CI PASS / AWAITING LAB
 
 - [ ] Νίκη Ραζάτου: χωριστή εταιρεία ανά ΑΦΜ, κοινή είσοδος ιδιοκτήτη, Super Admin ιεραρχία και ασφαλής αφαίρεση λανθασμένου καταστήματος ΚΑΤ. Κλάδος `codex/owner-multi-company-20260928`· κανένα παραγωγικό δεδομένο ή είδος δεν μεταβλήθηκε. `CHECKPOINTS/CHANGES/2026-09-28-diadochou-owner-multi-company.md`.
 
@@ -22,7 +22,7 @@
 
 - [x] Ο ιδιοκτήτης επιβεβαίωσε ότι τα ίδια βήματα και οι εικόνες έχουν ήδη δοθεί και δεν επαναλαμβάνονται. Το `image(20260928-123047).png` δείχνει στο υπάρχον ΜΑΝΤΖΙΛΑΣ 13241 22 είδη, 345,07 € καθαρό με ΕΦΚ, 410,15 € πληρωτέο και ορατό «Ανάγνωση από βοηθό · πρόχειρο για έλεγχο». Οι προηγούμενες εικόνες + έντυπο τεκμηριώνουν 22/22 φυσικές σειρές/κωδικούς/ποσότητες. Διαπρομηθευτικά τεκμήρια: ΣΙΓΜΑ 180557 (10), ΓΕΩΡΓΙΑΔΟΥ Β 1970 (6 και ορατή οριστική αγορά/stock), ΜΑΓΑΚΗΣ 52244 (δίφυλλο 30), ΜΑΝΤΖΙΛΑΣ 13234 (17) / 13241 (22, ΕΦΚ) και ΧΩΡΙΑΤΙΚΗ ΖΥΜΗ 053688 (οριστική αγορά/stock). #1490 CI #3755 merge `fbba0eac`, #1491 CI #3757 merge `628470dd`, ακριβές Render `628470dd`. **PASS του Gate 3 για POS → βοηθό → ίδιο επεξεργάσιμο πρόχειρο → ανθρώπινο έλεγχο/εφαρμογή και ασφαλή ορατή τελική πορεία στα ξεχωριστά δοκιμασμένα δείγματα.** Δεν έγινε νέο POS upload/πληρωμή. Το παλιό κείμενο περιγραφής στη συγκεκριμένη εικόνα δεν είναι νέο οπτικό PASS του #1491. Η αρχική αυτόματη εξαγωγή, ιστορικό ατομικό FAIL ΑΛΦΑ, ανεξάρτητο DB count settlement/job και πλήρες μετρημένο πριν/μετά είναι εκτός επιβεβαιωμένου PASS και παραμένουν ρητά NOT TESTED/μελλοντική εργασία. Αναλυτικό `CHECKPOINTS/CHANGES/2026-09-28-gate3-acceptance-reconciliation.md` και `docs/manual/invoices/PASS.md`. Τα παλιότερα OPEN παρακάτω είναι ιστορικές χρονικές καταγραφές, όχι η σημερινή κατάσταση.
 
-## 28/09/2026 — Gate 3 ένδειξη υπάρχοντος POS προχείρου · AWAITING CI/LAB
+## 28/09/2026 — Gate 3 ένδειξη υπάρχοντος POS προχείρου · CI PASS / AWAITING LAB
 
 - [ ] Το #1490 / CI #3755 συγχωνεύτηκε ως `fbba0eac95efc6c942ed78f53eac941c9ee7cc45`. Η δημιουργία νέου προχείρου γράφει «Ανάγνωση από βοηθό», όμως το ήδη αποθηκευμένο 13241 διατηρεί την παλιά περιγραφή. Στενή αλλαγή προβολής αντικαθιστά μόνο την παλιά φράση «αναμονή πλήρους ανάγνωσης» στην κεντρική λίστα και στο πεδίο περιγραφής της επεξεργασίας· δεν αλλάζει βάση, πληρωμή ή γραμμές. Μετά CI/merge/exact deploy, ανανέωση του **ίδιου** 13241 επιβεβαιώνει την ένδειξη χωρίς νέο POS upload. `CHECKPOINTS/CHANGES/2026-09-28-gate3-acceptance-reconciliation.md`.
 
@@ -139,7 +139,7 @@ PR #1457 / CI #3685 / exact Render `3895e89a`: δεύτερο LAB `cmuk8gxui000p
 - [ ] Το συνολικό TABLE_SERVICE παραμένει OPEN για mobile σερβιτόρο, μεταφορά/ένωση/split, πλήρες KDS/ειδοποιήσεις και λοιπές ανεξάρτητες επεκτάσεις. Η κάτοψη κλείνει PASS, δεν επαναλαμβάνεται μόνο για τεκμηρίωση. `CHECKPOINTS/CHANGES/2026-09-27-table-service-layout-takeover.md`.
 
 
-## 27/09/2026 21:53 Ελλάδα — TABLE_SERVICE μεταφορά σε νέα σελίδα · κάτοψη AWAITING CI/LAB
+## 27/09/2026 21:53 Ελλάδα — TABLE_SERVICE μεταφορά σε νέα σελίδα · κάτοψη CI PASS / AWAITING LAB
 
 - [x] Ο ιδιοκτήτης δήλωσε ότι η προηγούμενη σελίδα κόλλησε και έδωσε ρητή έγκριση να αναληφθεί εδώ η συνέχεια. Νέα υπεύθυνη σελίδα/branch: `agent/table-service-layout-takeover-20260927`. Η προηγούμενη ανάθεση `agent/table-service-restaurant-20260927` παραδίδεται με το παρόν συγχωνεύσιμο checkpoint.
 - [x] Διατηρείται το production LAB PASS δομημένων αλλεργιογόνων (#1439), χωριστά από σημείωση, ουρά ΚΑΦΕ 1→0, τραπέζι ΕΤΟΙΜΗ 2,00 €, χωρίς πώληση/stock/μεταβολή βαρδιών.
@@ -242,7 +242,7 @@ Exact Render `c1a871e0` μέσω deploy run #1685, πραγματικό Platform
 
 **Gate 3 — διόρθωση καρτέλας προμηθευτή AWAITING LAB (27/09/2026 12:29 Ελλάδα):** Το έντυπο ΧΩΡΙΑΤΙΚΗ ΖΥΜΗ 053688 έχει ΑΦΜ 800760691, η υπάρχουσα καρτέλα 80070669. Ο ιδιοκτήτης εισήγαγε το σωστό ΑΦΜ αλλά η φόρμα δεν αποθήκευσε (`image(20260927-092700).png`), χωρίς ορατό σφάλμα. Προστέθηκε μόνιμο μήνυμα προόδου/σφάλματος, readback και κουμπί ΑΑΔΕ για συμπλήρωση/αποθήκευση στην ίδια καρτέλα μόνο με επίσημη απάντηση ΑΑΔΕ· CI/deploy/LAB AWAITING. Διόρθωση ΑΦΜ, κανόνας 30, τελική καταχώριση και αποτελέσματα stock/πληρωμής NOT TESTED. Gate 3 OPEN.
 
-**Gate 3 — #1387 AWAITING CI/LAB (27/09/2026 12:08 Ελλάδα):** Στο υπάρχον 053688 η ανοιχτή λίστα προμηθευτών εμφανίζει μόνο ονόματα (`image(20260927-090811).png`), επομένως δεν μπορεί να επιλεγεί αξιόπιστα η καρτέλα από το τυπωμένο ΑΦΜ 800760691. Το #1387 εμφανίζει ΑΦΜ ή ρητή απουσία του στην επιλογή. Τοπικό build PASS· CI/merge/deploy και επιλογή σωστής καρτέλας, κανόνας 30 και readback στο ίδιο πρόχειρο AWAITING LAB. 5 γραμμές / 185,99 € πριν· οικονομικές και αποθηκευτικές επιδράσεις NOT TESTED. Gate 3 OPEN.
+**Gate 3 — #1387 CI PASS / AWAITING LAB (27/09/2026 12:08 Ελλάδα):** Στο υπάρχον 053688 η ανοιχτή λίστα προμηθευτών εμφανίζει μόνο ονόματα (`image(20260927-090811).png`), επομένως δεν μπορεί να επιλεγεί αξιόπιστα η καρτέλα από το τυπωμένο ΑΦΜ 800760691. Το #1387 εμφανίζει ΑΦΜ ή ρητή απουσία του στην επιλογή. Τοπικό build PASS· CI/merge/deploy και επιλογή σωστής καρτέλας, κανόνας 30 και readback στο ίδιο πρόχειρο AWAITING LAB. 5 γραμμές / 185,99 € πριν· οικονομικές και αποθηκευτικές επιδράσεις NOT TESTED. Gate 3 OPEN.
 Μετά το #1385 / CI #3527 / Render `2aa41fb`, η απόπειρα κανόνα για 16-0300 επέστρεψε «Το ΑΦΜ διαφέρει από την καρτέλα προμηθευτή» (`image(20260927-084549).png`). Ο ιδιοκτήτης εξηγεί ότι το POS επέλεξε λανθασμένο προμηθευτή. Καμία αποθήκευση κανόνα ή αλλαγή γραμμής· το ίδιο πρόχειρο 5 σειρές / 185,99 €. Κώδικας `agent/gate3-correct-pos-supplier-20260927`: τα ΑΦΜ φαίνονται στο dropdown, αλλαγή στο ίδιο `NEW` POS πρόχειρο συγχρονίζει το συνδεδεμένο έγγραφο μόνο χωρίς ήδη συνδεδεμένη πληρωμή, με Audit· ο βοηθός ακολουθεί τον τρέχοντα προμηθευτή. Υπάρχουσα πληρωμή μπλοκάρει αλλαγή μέχρι ασφαλή έλεγχο, χωρίς δεύτερη πληρωμή. CI/deploy/LAB AWAITING, Gate 3 OPEN. `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
 ## 27/09/2026 11:25 Ελλάδα — Gate 3 053688 κανόνας συσκευασίας / LAB FAIL, fix AWAITING CI-DEPLOY-LAB
@@ -257,7 +257,7 @@ Exact Render `c1a871e0` μέσω deploy run #1685, πραγματικό Platform
 
 Ο ιδιοκτήτης επέλεξε τις ελεγμένες γραμμές και η εικόνα `image(20260927-074633).png` δείχνει το ίδιο πρόχειρο 13234 με 17 είδη, καθαρό 326,87 € και μικτό 369,38 €, έναντι εντύπου 369,36 € (+0,02 € εντός ανοχής). Αυτό τεκμηριώνει περιορισμένα ότι οι 11 ελλείπουσες σειρές πέρασαν στο επεξεργάσιμο πρόχειρο μετά από ανθρώπινο έλεγχο. Δεν καταγράφηκε πριν/μετά βάρδιας, αποθήκης ή άλλου POS· οι επιδράσεις τους NOT TESTED. Καμία απόδειξη οριστικοποίησης. Gate 3 OPEN.
 
-## 27/09/2026 — Gate 3 ΜΑΝΤΖΙΛΑΣ 13234 / ρητοί κανόνες στον βοηθό — AWAITING CI/LAB
+## 27/09/2026 — Gate 3 ΜΑΝΤΖΙΛΑΣ 13234 / ρητοί κανόνες στον βοηθό — CI PASS / AWAITING LAB
 
 Το #1373 / CI #3507 / exact Render `78fa74e` έδωσε 17 γραμμές, 11 ελλείπουσες, +0,02 € και 3 «ΠΡΟΣ ΕΛΕΓΧΟ»: 046/045 μόνο για μη τυπωμένο συντελεστή συσκευασίας και 00211 για δυσδιάκριτη περιγραφή. Η εικόνα `image(20260927-071614).png` επιβεβαιώνει και τρίτο αποθηκευμένο κανόνα 043 1 ΚΒ=6 ΤΜ στο ίδιο πρόχειρο 6 γραμμών / 211,14 €. Η εικόνα `image(20260927-071728).png` δείχνει 0 αβέβαιες **μετά τις χειροκίνητες διορθώσεις/κανόνες και επανάγνωση του βοηθού**· ο ιδιοκτήτης επιβεβαίωσε σωστό readback, αλλά 11 γραμμές ακόμη λείπουν από το αποθηκευμένο πρόχειρο. Το `agent/gate3-known-rules-20260927` περνά στον βοηθό μόνο επιβεβαιωμένους κανόνες ίδιου ΑΦΜ/κωδικού· CI #3509 PASS, PR #1374 merged `470d740`, exact Render ίδιο· νέα LAB ανάγνωση AWAITING λόγω 2FA στην ανεξάρτητη καρτέλα. Δεν εφαρμόστηκαν οι 11 γραμμές ή νέα πληρωμή/stock/οριστικοποίηση. Πρώτο αυτόματο πρόχειρο FAIL και Gate 3 OPEN. `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
@@ -331,15 +331,15 @@ PR #1342 merged `3e0a5daca41b31dedc4cce3fdbaf4ba4fe14d728`, πλήρες CI #342
 
 ## 26/09/2026 15:45 (Ελλάδα) — ΥΦΑΝΤΗΣ διαδραστικός βοηθός, LAB FAIL εκπτώσεων
 
-`image(20260926-124321).png`: ο βοηθός διάβασε 8 φυσικές γραμμές και ποσότητα 28, αλλά έδωσε 0 σε όλες τις εκπτώσεις. Υπολογισμένο καθαρό 70,55 €, ΦΠΑ 9,17 €, πληρωτέο 79,72 € αντί τυπωμένου 42,32 € + 5,50 € = 47,82 €· διαφορά 31,90 €. Η στήλη «ΑΞΙΑ ΕΚΠΤΩΣΗΣ» είναι ευκρινής και αθροίζει 28,23 €. **LAB FAIL preview**, καμία εφαρμογή στο πρόχειρο. Το PR #1342 επεκτείνεται στην ίδια διάκριση lineDiscountAmount στη διαδραστική διαδρομή· AWAITING CI/LAB και νέα ανάγνωση του ίδιου πρόχειρου για preview μόνο. Το πρώτο αυτόματο πρόχειρο παραμένει αμετάκλητο LAB FAIL (0 γραμμές) για αυτή την POS υποβολή.
+`image(20260926-124321).png`: ο βοηθός διάβασε 8 φυσικές γραμμές και ποσότητα 28, αλλά έδωσε 0 σε όλες τις εκπτώσεις. Υπολογισμένο καθαρό 70,55 €, ΦΠΑ 9,17 €, πληρωτέο 79,72 € αντί τυπωμένου 42,32 € + 5,50 € = 47,82 €· διαφορά 31,90 €. Η στήλη «ΑΞΙΑ ΕΚΠΤΩΣΗΣ» είναι ευκρινής και αθροίζει 28,23 €. **LAB FAIL preview**, καμία εφαρμογή στο πρόχειρο. Το PR #1342 επεκτείνεται στην ίδια διάκριση lineDiscountAmount στη διαδραστική διαδρομή· CI PASS / AWAITING LAB και νέα ανάγνωση του ίδιου πρόχειρου για preview μόνο. Το πρώτο αυτόματο πρόχειρο παραμένει αμετάκλητο LAB FAIL (0 γραμμές) για αυτή την POS υποβολή.
 
 ## 26/09/2026 15:39 (Ελλάδα) — ΥΦΑΝΤΗΣ A1-92236, νέα υποβολή POS, LAB FAIL
 
-MYWORKSTATION LAB / LAB POS 2, μία νέα υποβολή τιμολογίου ΥΦΑΝΤΗΣ A1-92236 από φωτογραφία `ifantis.jpg`, χειριστής LAB POS 2. Έντυπο: 8 φυσικές γραμμές, 28 τεμάχια, αρχική αξία 70,55 €, έκπτωση 28,23 €, καθαρό 42,32 €, ΦΠΑ 13% 5,50 €, πληρωτέο 47,82 €. Εικόνες `image(20260926-123749).png`, `123839`, `123901`, `123916`: POS παραλήφθηκε μία φορά, background complete, πρώτο αυτόματο πρόχειρο **0 είδη / 0,00 €**, μήνυμα `POS_BACKGROUND_ASSISTANT_READ: Η αριθμητική της γραμμής 1 δεν συμφωνεί με το έντυπο`. **LAB FAIL** του πρώτου αυτόματου πρόχειρου, Gate 3 OPEN. Πρώτη τυπωμένη σειρά: 3 × 1,59 = 4,77 €, έκπτωση ολόκληρης γραμμής 1,91 €, καθαρό 2,86 €, ΦΠΑ 13%, μικτό 3,23 €. Η διάκριση έκπτωσης ανά μονάδα από έκπτωση ολόκληρης σειράς είναι αιτιολογημένη υπόθεση· το ακριβές JSON της αυτόματης ανάγνωσης δεν είναι διαθέσιμο. Bounded διόρθωση εισάγει ξεχωριστό lineDiscountAmount και επαληθεύει την καθαρή αξία πριν τη μετατροπή σε ισοδύναμο ποσοστό πρόχειρου. **AWAITING CI/LAB νέας POS υποβολής**. Δεν επαναλαμβάνουμε αυτό το τιμολόγιο, δεν κάνουμε άλλη πληρωμή/stock/οριστικοποίηση. Before/after βάρδιας και αποθήκης δεν καταγράφηκαν: οικονομική επίδραση NOT TESTED. Η ανάγνωση στον διαδραστικό βοηθό είναι ξεχωριστή διάγνωση, όχι PASS του πρώτου πρόχειρου.
+MYWORKSTATION LAB / LAB POS 2, μία νέα υποβολή τιμολογίου ΥΦΑΝΤΗΣ A1-92236 από φωτογραφία `ifantis.jpg`, χειριστής LAB POS 2. Έντυπο: 8 φυσικές γραμμές, 28 τεμάχια, αρχική αξία 70,55 €, έκπτωση 28,23 €, καθαρό 42,32 €, ΦΠΑ 13% 5,50 €, πληρωτέο 47,82 €. Εικόνες `image(20260926-123749).png`, `123839`, `123901`, `123916`: POS παραλήφθηκε μία φορά, background complete, πρώτο αυτόματο πρόχειρο **0 είδη / 0,00 €**, μήνυμα `POS_BACKGROUND_ASSISTANT_READ: Η αριθμητική της γραμμής 1 δεν συμφωνεί με το έντυπο`. **LAB FAIL** του πρώτου αυτόματου πρόχειρου, Gate 3 OPEN. Πρώτη τυπωμένη σειρά: 3 × 1,59 = 4,77 €, έκπτωση ολόκληρης γραμμής 1,91 €, καθαρό 2,86 €, ΦΠΑ 13%, μικτό 3,23 €. Η διάκριση έκπτωσης ανά μονάδα από έκπτωση ολόκληρης σειράς είναι αιτιολογημένη υπόθεση· το ακριβές JSON της αυτόματης ανάγνωσης δεν είναι διαθέσιμο. Bounded διόρθωση εισάγει ξεχωριστό lineDiscountAmount και επαληθεύει την καθαρή αξία πριν τη μετατροπή σε ισοδύναμο ποσοστό πρόχειρου. **CI PASS / AWAITING LAB νέας POS υποβολής**. Δεν επαναλαμβάνουμε αυτό το τιμολόγιο, δεν κάνουμε άλλη πληρωμή/stock/οριστικοποίηση. Before/after βάρδιας και αποθήκης δεν καταγράφηκαν: οικονομική επίδραση NOT TESTED. Η ανάγνωση στον διαδραστικό βοηθό είναι ξεχωριστή διάγνωση, όχι PASS του πρώτου πρόχειρου.
 
 ## 26/09/2026 15:18 (Ελλάδα) — ΝΤΑΒΟΥ πρώτο αυτόματο πρόχειρο, μικτό ανά γραμμή
 
-Οι νέες εικόνες `image(20260926-121530).png`/`121546` δείχνουν 19 γραμμές, 87 ποσότητα, 77,08 € καθαρό, 10,02 € ΦΠΑ και 87,10 € πληρωτέο στην προεπισκόπηση, αλλά το πρόχειρο έχει μόνο τη μία χειροκίνητα εφαρμοσμένη MERENDA. **LAB FAIL** πρώτου αυτόματου πρόχειρου· νέο POS μετά την αλλαγή **NOT TESTED**. Το αρχικό POS ΝΤΑΒΟΥ κατέγραψε αποτυχία συμφωνίας μικτών γραμμών/τυπωμένου συνόλου. Bounded αλλαγή υπολογίζει μικτό από καθαρό+ΕΦΚ+ΦΠΑ με στρογγυλοποίηση λεπτού, απορρίπτει αντίφαση >0,05 € ανά γραμμή και κρατά έλεγχο τυπωμένου συνόλου, ποσοτήτων, καθαρού, πληρότητας σελίδων και έως δύο αβέβαιων. Δεν επανεκτελεί το ίδιο POS, δεν αλλάζει πληρωμή/stock/οριστικοποίηση. **AWAITING CI/LAB**.
+Οι νέες εικόνες `image(20260926-121530).png`/`121546` δείχνουν 19 γραμμές, 87 ποσότητα, 77,08 € καθαρό, 10,02 € ΦΠΑ και 87,10 € πληρωτέο στην προεπισκόπηση, αλλά το πρόχειρο έχει μόνο τη μία χειροκίνητα εφαρμοσμένη MERENDA. **LAB FAIL** πρώτου αυτόματου πρόχειρου· νέο POS μετά την αλλαγή **NOT TESTED**. Το αρχικό POS ΝΤΑΒΟΥ κατέγραψε αποτυχία συμφωνίας μικτών γραμμών/τυπωμένου συνόλου. Bounded αλλαγή υπολογίζει μικτό από καθαρό+ΕΦΚ+ΦΠΑ με στρογγυλοποίηση λεπτού, απορρίπτει αντίφαση >0,05 € ανά γραμμή και κρατά έλεγχο τυπωμένου συνόλου, ποσοτήτων, καθαρού, πληρότητας σελίδων και έως δύο αβέβαιων. Δεν επανεκτελεί το ίδιο POS, δεν αλλάζει πληρωμή/stock/οριστικοποίηση. **CI PASS / AWAITING LAB**.
 
 ## 26/09/2026 15:03 (Ελλάδα) — Gate 3 ψευδής έκπτωση MERENDA
 
@@ -421,7 +421,7 @@ CI #3360 PASS, merge `cdfad903933301133f8451eae96f5b59831741d5`, Render `/api/he
 
 Νεότερη ρητή ροή ιδιοκτήτη: POS FAST ανάγνωση κεφαλίδας και μία πληρωμή/πίστωση → ανθεκτική αποθήκευση έως 5 φωτογραφιών στη Θυρίδα και ένα υπάρχον πρόχειρο Παραγγελιών & Αγορών → αυτόματη ανάγνωση φυσικών γραμμών από τον βοηθό στο ίδιο background job → ελεγκτής επεξεργάζεται το σημερινό συνδεδεμένο πρόχειρο → υπάρχουσα οριστικοποίηση/αποθήκη/υπόλοιπα/συμβάντα. Τοπική υλοποίηση σε `agent/gate3-assistant-editable-table-20260926` με φραγή ελλιπών σελίδων, αριθμητικής γραμμής και >2 αβέβαιων σειρών· κανένα παραγωγικό ή πραγματικό LAB PASS. Build και 4 στοχευμένοι έλεγχοι PASS· πλήρες CI/deploy/LAB εκκρεμούν. Δείγμα Ριζώ ΤΔΑ 6097 παραμένει LAB FAIL, οικονομικά/stock NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
-## 26/09/2026 — Gate 3 ενσωματωμένος επεξεργάσιμος πίνακας — AWAITING CI/LAB
+## 26/09/2026 — Gate 3 ενσωματωμένος επεξεργάσιμος πίνακας — CI PASS / AWAITING LAB
 
 Με βάση το Mini MyWorkStation, ο βοηθός προβάλλει φωτογραφία δίπλα σε πλήρη επεξεργάσιμο πίνακα με τοπικό επανυπολογισμό και επιλογή γραμμών πριν από αποθήκευση στο πρόχειρο. Το αρχικό POS πρόχειρο παραμένει ορατό για σύγκριση, η συζήτηση συνεχίζεται όσο το παράθυρο είναι ανοιχτό. Διατηρείται η φραγή του LAB FAIL ΤΔΑ 6097 για ελλιπείς φωτογραφίες. Τοπικός build PASS· CI/deploy/LAB εκκρεμούν· Gate 3 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
@@ -429,7 +429,7 @@ CI #3360 PASS, merge `cdfad903933301133f8451eae96f5b59831741d5`, Render `/api/he
 
 Πραγματικό `MYWORKSTATION LAB POS 2`: έντυπο 2/2, 111,32 €, αλλά στον βοηθό μόνο μία φωτογραφία και πρόχειρο 12 γραμμές / 53,82 €. Πρότεινε τις ίδιες τρεις μη αντιστοιχισμένες γραμμές για ΦΠΑ/έκπτωση και διαγραφή. Δεν εφαρμόστηκε τίποτα· βάρδια, stock, πληρωμή NOT TESTED χωρίς πριν/μετά. Στενή προστασία μπλοκάρει προτάσεις αν δεν επιβεβαιώνονται όλες οι φυσικές σελίδες και το άθροισμα με το έντυπο. AWAITING CI/DEPLOY/LAB, Gate 3 OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
-## 26/09/2026 — Gate 3 βοηθός πλήρους προεπισκόπησης — AWAITING CI/LAB
+## 26/09/2026 — Gate 3 βοηθός πλήρους προεπισκόπησης — CI PASS / AWAITING LAB
 
 Μετά το LAB FAIL ΑΡΒΑΝΙΤΗ #012766 (15 τυπωμένες γραμμές, 192,58 €, αρχικό πρόχειρο 359,66 €, άστοχες προτάσεις), ο ενσωματωμένος βοηθός αποκτά όλες τις φυσικές γραμμές, ιστορικό συνομιλίας, καθαρή/εκπτώσεις/ΕΦΚ/ΦΠΑ/πληρωτέο, προτεινόμενη προσθήκη και διαγραφή μόνο με ανθρώπινη επιλογή. ΧΑΤΖΗΒΑΣΙΛΟΓΛΟΥ #112263: περιορισμένο USER PASS περιγραφικής διόρθωσης, διαφορά 0,01 € αποδεκτή· το Gate 3 παραμένει OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`. PR #1318 / CI #3343 PASS / Render exact `425c5ebd` PASS. Νέο LAB POS **εκκρεμεί**.
 
@@ -447,7 +447,7 @@ CI #3360 PASS, merge `cdfad903933301133f8451eae96f5b59831741d5`, Render `/api/he
 
 ## 26/09/2026 — Gate 3: βοηθός επάνω στο POS draft / AWAITING CI-LAB
 
-Το branch `agent/gate3-pos-invoice-assistant-review-20260926` συνεχίζει το PR #1313 (ΕΦΚ, CI #3327 PASS). Σχεδιάστηκε επιθεώρηση έως 5 φωτογραφιών, εντολές στα ελληνικά, χρωματισμένες προτάσεις ανά πεδίο και ρητή αποδοχή σε ήδη υπάρχουσες γραμμές. Εφαρμογή μέσω της υπάρχουσας διόρθωσης με audit/learning, χωρίς δεύτερη πληρωμή, stock ή οριστικοποίηση. Η οθόνη είναι σε υλοποίηση· **AWAITING CI/LAB**, κανένα πραγματικό PASS.
+Το branch `agent/gate3-pos-invoice-assistant-review-20260926` συνεχίζει το PR #1313 (ΕΦΚ, CI #3327 PASS). Σχεδιάστηκε επιθεώρηση έως 5 φωτογραφιών, εντολές στα ελληνικά, χρωματισμένες προτάσεις ανά πεδίο και ρητή αποδοχή σε ήδη υπάρχουσες γραμμές. Εφαρμογή μέσω της υπάρχουσας διόρθωσης με audit/learning, χωρίς δεύτερη πληρωμή, stock ή οριστικοποίηση. Η οθόνη είναι σε υλοποίηση· **CI PASS / AWAITING LAB**, κανένα πραγματικό PASS.
 
 ## 26/09/2026 — Gate 3: ΕΦΚ POS draft / CI PASS, LAB AWAITING
 
@@ -467,11 +467,11 @@ COFFEE UNION νέα POS `ΤΔΑ0010517`: `FR1500` 24 pcs αντί 2.400, διο�
 
 Deployed `99dbb84` LAB επανέλεγχος: λάθος και σωστό PDF δεν καταχώρισαν πληρωμή, ΔΑ0011467 παρέμεινε 1.380,24 €, με γενικό σφάλμα. Διορθώνεται το απροστάτευτο import του PDF reader ώστε αποτυχία ανάγνωσης να πηγαίνει σε ανθρώπινο έλεγχο. RETEST μετά CI/deploy, Gate 5 OPEN.
 
-## 25/09/2026 — Gate 4 ίδιος χειριστής σε δύο POS — AWAITING CI/LAB
+## 25/09/2026 — Gate 4 ίδιος χειριστής σε δύο POS — CI PASS / AWAITING LAB
 
 Η υφιστάμενη φραγή εισόδου κάλυπτε μόνο ανοιχτή βάρδια στο άλλο POS. Στο branch `agent/gate4-operator-dual-session-20260925`, ανεξάρτητο υποσκέλος της συνολικής ανάθεσης Gate 4, η είσοδος PIN/κάρτας ελέγχει και ενεργή συνεδρία άλλου terminal με σειριοποίηση στον ίδιο χειριστή. Εξακολουθούν να επιτρέπονται δύο διαφορετικοί χειριστές στα δύο POS. Τοπικό node check και στοχευμένοι έλεγχοι PASS· πράσινο CI, ακριβές deploy και πραγματικό LAB δύο φυσικών POS εκκρεμούν. Κανένα νέο LAB PASS, καμία οικονομική πράξη. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate4-operator-dual-session.md`.
 
-## 25/09/2026 — Gate 5 ορατότητα αποδεικτικού και ακριβής κατάσταση — AWAITING CI/LAB
+## 25/09/2026 — Gate 5 ορατότητα αποδεικτικού και ακριβής κατάσταση — CI PASS / AWAITING LAB
 
 Μετά το G5-P11 η μη ελεγμένη εκκρεμότητα χαρακτηρίζεται λανθασμένα «ΑΠΟΚΛΙΣΗ» επειδή `matched=false`, ενώ η προβολή αποδεικτικού στο review χρησιμοποιεί endpoint δεμένο με το companyId του session και αποτυγχάνει σε πληρωμή άλλης εταιρείας για Super Admin. Το Super Admin analytics δείχνει μόνο όνομα αρχείου. Στενή αλλαγή: ξεχωριστή ανάγνωση αποδεικτικού μόνο για ιδιοκτήτη της ίδιας εταιρείας ή Super Admin και μόνο για PENDING_REVIEW/DISCREPANCY· σύνδεση και στις δύο οθόνες, σαφής «ΑΠΑΙΤΕΙΤΑΙ ΕΛΕΓΧΟΣ ΑΠΟΔΕΙΚΤΙΚΟΥ» αντί απόκλισης, μετρητής αποκλίσεων μόνο για πραγματικό DISCREPANCY. Δεν αλλάζουν καταχωρίσεις/εγκρίσεις/υπόλοιπα. Τοπικό build, node check και στοχευμένο τεστ PASS· CI, exact deploy, read-only LAB οπτική δοκιμή εκκρεμούν. Προηγούμενα P02–P10 διατηρούνται, πραγματικό content OCR, API/race, συνολικό Gate 5 OPEN.
 
@@ -554,7 +554,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 
 - [ ] Ισχύει το `AGENTS.md` § «Κοινός κανόνας Gate 3»: απογραφή και σύγκριση φυσικών γραμμών/ποσοτήτων/αξιών/εκπτώσεων/ΦΠΑ για πολλούς προμηθευτές, παλαιά PASS και FAIL, με πρώτο αυτόματο πρόχειρο από μία νέα POS υποβολή. Κάθε αλλαγή καταγράφει ανά τιμολόγιο PASS/FAIL/NOT TESTED πριν/μετά· unit test και συμφωνία συνόλου δεν είναι συνολικό LAB PASS. Η καταγεγραμμένη αποτυχία ΜΟΥΧΑΛΗΣ 090387 (7/158,60 € → 9/246,69 €) παραμένει FAIL. Καμία παράλληλη αλλαγή ή κλείσιμο Gate 3 από άλλη σελίδα. Checkpoint `CHECKPOINTS/CHANGES/2026-09-25-gate3-shared-acceptance-rule.md`.
 
-## 2026-09-25 — Gate 3 προστασία ποσότητας όταν OCR μικτό=καθαρό — AWAITING CI / LAB
+## 2026-09-25 — Gate 3 προστασία ποσότητας όταν OCR μικτό=καθαρό — CI PASS / AWAITING LAB
 
 - [ ] ΜΟΥΧΑΛΗΣ 090387: 7/158,60 € έντυπο, 9/246,69 € παλιό LAB πρόχειρο. Στο `finalizeV244ProductLines` ο αριθμός `1,8%` της περιγραφής δεν πρέπει να αντικαθιστά δομημένη ποσότητα όταν η μοναδική ασυνέπεια είναι μικτό=καθαρό με ΦΠΑ>0 και ισοσκελισμένα ποσότητα×τιμή−εκπτώσεις=καθαρό. Νέα προστασία στον κώδικα, 45 στοχευμένα tests PASS, CI/LAB PENDING. Δεν διορθώνει τις δύο επιπλέον γραμμές ούτε το ιστορικό πρόχειρο. Gate 3 OPEN. `CHECKPOINTS/CHANGES/2026-09-25-gate3-structured-gross-guard-awaiting-lab.md`.
 ## 2026-09-25 — Gate 4 μη επιλεγμένο SKU 2273 — USER PASS καλαθιού
@@ -898,7 +898,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [x] Δεν αλλάζει υπάρχον draft, πληρωμή, πίστωση, απόθεμα, οριστικοποίηση, fiscal, accounting ή myDATA.
 - [ ] Απαιτούνται πράσινο CI, merge/deploy και ένα νέο LAB τιμολόγιο Λεβεντόπουλου για επιβεβαίωση των ποσοτήτων `ΠΟΣ1`.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-19-leventopoulos-mm-pos1-safe-quantity.md`.
-## 2026-09-20 — Λεβεντόπουλος complete table fail-closed — AWAITING CI / LAB
+## 2026-09-20 — Λεβεντόπουλος complete table fail-closed — CI PASS / AWAITING LAB
 
 - [x] LAB evidence showed `ΤΔΛΠΧ14 15` was corrupted by a free-form numeric column scan: 17 candidate rows / `428,18 €` instead of the printed 9 rows / `194,77 €`.
 - [x] The supplier rule now treats `ΠΟΣ1` as quantity only through a verified printed table; `ΜΜ` and `ΠΟΣ2` cannot become quantity by numeric guessing.
@@ -915,7 +915,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Πράσινο CI → merge/deploy → έλεγχος του ίδιου `ΤΔΛΠΧ14 15` χωρίς νέο upload.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-leventopoulos-existing-failed-reread.md`.
 
-## 2026-09-20 — Λεβεντόπουλος empty OCR complete-table recovery — AWAITING CI / LAB
+## 2026-09-20 — Λεβεντόπουλος empty OCR complete-table recovery — CI PASS / AWAITING LAB
 
 - [x] The existing diagnostic draft `ΤΔΛΠΧ14 15` returned zero product rows after the fail-closed gate. The background reader now invokes the full image table verifier even when its first OCR pass is empty.
 - [x] It may reconstruct rows only when every physical row, the VAT footer and the operator-confirmed `194,77 €` total independently agree; otherwise the existing draft remains unchanged.
@@ -933,7 +933,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Offline contract των 33 ενεργών δειγμάτων → CI → LAB νέου απλού/πολυσέλιδου/μετατροπής/πιστωτικού.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
 
-## 2026-09-20 — Invoice Learning Azure footer VAT reconciliation — AWAITING CI / LAB
+## 2026-09-20 — Invoice Learning Azure footer VAT reconciliation — CI PASS / AWAITING LAB
 
 - [x] LAB evidence: το Azure/OpenAI αποτέλεσμα είχε καθαρές γραμμές `47,48 €`
   και τελικό `53,91 €`, αλλά απορριπτόταν επειδή έλειπε ΦΠΑ ανά γραμμή.
@@ -945,7 +945,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Green CI → merge/deploy → νέο upload του ίδιου δείγματος στο LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
 
-## 2026-09-20 — Invoice Learning κρατά Azure όταν λείπει μόνο SubTotal — AWAITING CI / LAB
+## 2026-09-20 — Invoice Learning κρατά Azure όταν λείπει μόνο SubTotal — CI PASS / AWAITING LAB
 
 - [x] LAB evidence: το Azure αποτέλεσμα `47,48 €` απορριπτόταν επειδή η φόρμα
   επέστρεφε `TotalTax`/`InvoiceTotal` αλλά όχι `SubTotal`, και το OpenAI-only
@@ -958,7 +958,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Green CI → merge/deploy → ίδιο upload στο Invoice Learning LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
 
-## 2026-09-20 — Invoice Learning Azure retry / no AI-only result — AWAITING CI / LAB
+## 2026-09-20 — Invoice Learning Azure retry / no AI-only result — CI PASS / AWAITING LAB
 
 - [x] LAB evidence: `Azure: REQUEST_FAILED` ακολουθήθηκε από μερικό AI-only
   αποτέλεσμα `40,90 € από 53,91 €`.
@@ -970,7 +970,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [x] Green CI → merge/deploy `b3e1b69b67a3c9c198fc904ea20784750e1086b0` → ίδιο upload στο Invoice Learning LAB.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
 
-## 2026-09-20 — Invoice Learning Azure safe diagnostics — AWAITING CI / LAB
+## 2026-09-20 — Invoice Learning Azure safe diagnostics — CI PASS / AWAITING LAB
 
 - [x] Το retry gate λειτουργεί: το LAB δεν παρουσίασε ξανά το ελλιπές
   OpenAI-only αποτέλεσμα μετά από Azure request failure.
@@ -981,7 +981,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Green CI → merge/deploy → ίδιο upload και καταγραφή του ακριβούς
   διαγνωστικού κωδικού.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-unified-supplier-rules-plan.md`.
-## 2026-09-20 — Invoice Learning Azure + OpenAI complementary-row recovery — AWAITING CI / LAB
+## 2026-09-20 — Invoice Learning Azure + OpenAI complementary-row recovery — CI PASS / AWAITING LAB
 
 - [x] Υποδομή LAB: σωστό endpoint, νέο Azure key και API-key authentication Enabled· το `ACCESS_403` εξαφανίστηκε.
 - [x] Νεότερο πραγματικό LAB αποτέλεσμα: Azure απάντησε, αλλά η συνολική ανάγνωση έμεινε ασφαλώς μπλοκαρισμένη ως `NO_SAFE_RESULT` με `35,72 € από 53,91 €`.
@@ -1021,7 +1021,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Push → PR → green CI → merge → exact Render deploy.
 - [ ] Delete the empty diagnostic draft and submit `28897` once after deploy.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
-## 2026-09-20 — DELTA 28897 POS economics + durable Learning draft — AWAITING CI / LAB
+## 2026-09-20 — DELTA 28897 POS economics + durable Learning draft — CI PASS / AWAITING LAB
 
 - [x] **LAB FAIL:** the first POS draft showed printed quantities multiplied by 1000 (`2 → 2000`, `1 → 1000`), discounts as `99,9` instead of `10/15`, and VAT `0` instead of `13`, despite gross `53,91 €`.
 - [x] Plain `ΤΜΧ/TEM` rows no longer interpret `1LT/450ML` capacity metadata as stock-piece multipliers; package/weight conversion still requires an explicit verified rule.
@@ -1046,7 +1046,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Delete this erroneous draft and retry once only after exact deployment.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-delta-28897-pos-economics-and-draft-save.md`.
 
-## 2026-09-20 — DELTA 28897 fresh-run display repair — AWAITING CI / LAB
+## 2026-09-20 — DELTA 28897 fresh-run display repair — CI PASS / AWAITING LAB
 
 - [x] Η ώρα `10:49 μ.μ.` επιβεβαίωσε ότι η προβληματική εγγραφή ήταν νέα και όχι παλιό πρόχειρο.
 - [x] Αφαιρέθηκε η εμπιστοσύνη σε raw OCR multiplier (`1LT → 1000`) για μονάδα `ΤΜΧ`.
@@ -1107,7 +1107,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Push → PR → green CI → merge → exact Render deploy.
 - [ ] Delete the empty diagnostic draft and submit `28897` once after deploy.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-20-invoice-learning-pos-verified-handoff.md`.
-## 2026-09-21 — Invoice Learning: supplier identity vs commercial format — AWAITING CI / LAB
+## 2026-09-21 — Invoice Learning: supplier identity vs commercial format — CI PASS / AWAITING LAB
 
 - [x] Νομικός εκδότης παραμένει δεμένος με επωνυμία και ΑΦΜ.
 - [x] Προστέθηκαν ξεχωριστά εμπορική οικογένεια τιμολογίου και διανομέας/περιοχή.
@@ -1115,7 +1115,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [x] Νέο migration και UI εκμάθησης για επιβεβαίωση του νέου ΑΦΜ ΜΑΝΤΖΑΒΑΣ με μορφή ΔΕΛΤΑ.
 - [ ] Πράσινο CI → merge → deploy → δοκιμή νέου τιμολογίου ΜΑΝΤΖΑΒΑΣ.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-supplier-commercial-family.md`.
-## 2026-09-21 — Invoice Learning supervised partial correction — AWAITING CI / LAB
+## 2026-09-21 — Invoice Learning supervised partial correction — CI PASS / AWAITING LAB
 
 - [x] Partial OCR/AI results now remain editable only inside Invoice Learning Lab.
 - [x] Added «＋ Προσθήκη γραμμής» so missing printed rows can be entered manually.
@@ -1123,7 +1123,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [x] Targeted invoice-learning tests and JavaScript syntax checks PASS.
 - [ ] Green CI → merge → deploy → retest the same DELTA invoice.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-supervised-partial-correction.md`.
-## 2026-09-21 — Invoice Learning mathematical discount recovery — AWAITING CI / LAB
+## 2026-09-21 — Invoice Learning mathematical discount recovery — CI PASS / AWAITING LAB
 
 - [x] Recover a missing discount only when quantity × unit price × discount reconciles with the printed net value.
 - [x] Example verified: `6 × 1,74 − 10% = 9,40 €`.
@@ -1132,7 +1132,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [ ] Green CI → merge → deploy → retest the DELTA invoice.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-discount-recovery.md`.
 
-## 2026-09-21 — Invoice Learning document management and AFM lookup — AWAITING CI / LAB
+## 2026-09-21 — Invoice Learning document management and AFM lookup — CI PASS / AWAITING LAB
 
 - [x] Added user-controlled deletion for an individual learned invoice, with confirmation.
 - [x] Deletion removes only the selected learning document; supplier profiles and DELTA format rules remain.
@@ -1176,7 +1176,7 @@ PR #1241 CI #3143 πράσινο, ακριβές Render `90ec8b7`. Μετά τη
 - [x] Targeted draft-save and POS contract tests PASS.
 - [ ] Green CI → merge → deploy → save the 12-line draft again and verify it remains after refresh.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-21-invoice-learning-draft-save.md`.
-## 2026-09-21 — Κοινός καθαρισμός φωτογραφιών παραστατικών — AWAITING CI / LAB
+## 2026-09-21 — Κοινός καθαρισμός φωτογραφιών παραστατικών — CI PASS / AWAITING LAB
 
 - [x] Μία κοινή ροή για φωτογραφίες από PC/κινητό/κάμερα σε νέο τιμολόγιο, πληρωμή ανοιχτών τιμολογίων, λοιπά έξοδα και κατάθεση.
 - [x] Αυτόματο συντηρητικό κόψιμο, ίσιωμα, αφαίρεση σκιάς, ενίσχυση αντίθεσης και διατήρηση έως 3000 px πριν από Azure OCR/upload.
@@ -1705,7 +1705,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - [ ] **Κανόνας handoff:** αν η παρούσα σελίδα σταματήσει πριν από το συνολικό PASS, δημοσιεύει τελικό checkpoint και η ανάθεση περνά σε ονομασμένη νέα σελίδα/branch. Η παλιά ανάθεση αποδεσμεύεται μόνο αφού η νέα ανάληψη καταγραφεί και συγχωνευτεί στο `main`· δεν επιτρέπεται κενό ή διπλή ιδιοκτησία.
 - [ ] Κρίσιμα ανοικτά: κάτοψη/σάλες, mobile waiter PWA, πολλοί γύροι στον ίδιο λογαριασμό, μεταφορά/ένωση/split, οικονομικά modifiers, stage-aware ακύρωση/φύρα, ανεξάρτητο KDS και εκτυπωτές ανά πόστο, live ειδοποιήσεις και πλήρης συμφωνία Sale/Payment/fiscal/stock/βάρδιας/Audit.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
-## 27/09/2026 — Εστίαση A1 / σάλες και οπτική διάταξη — LOCAL PASS, AWAITING CI/LAB
+## 27/09/2026 — Εστίαση A1 / σάλες και οπτική διάταξη — LOCAL PASS, CI PASS / AWAITING LAB
 
 - [x] `agent/table-service-floor-plan-20260927`: store-scoped σάλες/ζώνες, χωρητικότητα και σχήμα τραπεζιού, φίλτρα σάλας και χρωματική κατάσταση ΕΛΕΥΘΕΡΟ / ΑΝΟΙΚΤΟ / ΕΤΟΙΜΟ.
 - [x] Δημιουργία/μεταβολή μόνο από Manager/Owner/Super Admin, με tenant/store isolation και Audit.
@@ -1784,7 +1784,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 - [ ] Μετά το PASS κάτοψης #1445 και την τεκμηρίωση #1448, ξεκίνησε περιορισμένη οθόνη παραγγελίας κινητού στο υπάρχον Store Mode, με προσωπικό PIN/κάρτα, έλεγχο βάρδιας για POS, κατάστημα/module και server τιμές. Χωρίς πληρωμή ή φύρα από την οθόνη. Branch `feat/table-service-mobile-waiter-20260927`· CI/deploy/LAB AWAITING. `CHECKPOINTS/CHANGES/2026-09-27-table-service-mobile-waiter.md`.
 - [ ] Στο συνολικό TABLE_SERVICE PASS απαιτείται πλήρες manual χρήσης ανά ρόλο: εργαζόμενος, ιδιοκτήτης, Super Admin. Δεν χαρακτηρίζονται ενδιάμεσα μη δοκιμασμένες λειτουργίες ως PASS.
-## 28/09/2026 00:30 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 1 · AWAITING CI/LAB
+## 28/09/2026 00:30 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 1 · CI PASS / AWAITING LAB
 
 - [ ] Νέα ανεξάρτητη read-only οθόνη δίπλα στο σημερινό Super Admin, με βασική επισκόπηση από το υπάρχον `/api/platform/overview` και συνδέσμους προς τους υπάρχοντες Ελέγχους, Ταμεία, Πληρωμές, Τράπεζα και Συμβάντα. Καμία δεύτερη βάση/API/οικονομική ενέργεια και καμία αντικατάσταση υπάρχουσας λειτουργίας. Branch `feat/super-admin-ai-command-center-phase1-20260928`. Στοχευμένα 4/4, client build και πλήρης server suite 1.608/1.608 PASS (1 SKIP). CI, exact deploy και LAB οπτικό readback AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase1.md`.
 ## 28/09/2026 01:01 Ελλάδα — Κουμπί Εκτέλεσης Ελέγχου responsive · AWAITING CI/READBACK
