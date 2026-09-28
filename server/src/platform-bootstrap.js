@@ -25,6 +25,8 @@ export async function ensurePlatformSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "autoRenew" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "commercialNotes" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "responsibleEmail" TEXT`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OwnerCompanyAccess" ("ownerId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE, "companyId" TEXT NOT NULL REFERENCES "Company"("id") ON DELETE CASCADE, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY ("ownerId","companyId"))`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OwnerCompanyAccess_company_idx" ON "OwnerCompanyAccess" ("companyId")`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "cashCloseEmailEnabled" BOOLEAN NOT NULL DEFAULT true`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpSecret" TEXT`);
