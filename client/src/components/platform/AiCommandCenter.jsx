@@ -43,7 +43,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     setAskState({loading:true,error:"",result:null});
     try{
       const companyStates=companies.map(company=>({name:company.name,active:Boolean(company.active),stores:company.stores?.length||0}));
-      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,snapshot:{generatedAt:new Date().toISOString(),companies:summary,problems:problemSummary,companyStates}})});
+      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,snapshot:{generatedAt:new Date().toISOString(),companies:{active:summary.activeCompanies,inactive:summary.inactiveCompanies,stores:summary.stores,attention:summary.attention},problems:problemSummary,companyStates}})});
       setAskState({loading:false,error:"",result});
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
