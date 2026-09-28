@@ -1,8 +1,9 @@
 # efood / Pelican — ασφαλές προσωρινό LAB webhook
 
 Ημερομηνία: 2026-09-28  
-Ιδιοκτήτης εργασίας: παρούσα σελίδα — Gate 6 / efood-Pelican Phase A  
-Branch: `feat/efood-lab-safe-webhook-window`
+Ιδιοκτήτης εργασίας: παρούσα σελίδα — efood/Pelican Phase A  
+Αρχικό branch: `feat/efood-lab-safe-webhook-window`  
+PR: `#1514`
 
 ## Στόχος
 
@@ -39,7 +40,7 @@ Branch: `feat/efood-lab-safe-webhook-window`
 - άμεσο χειροκίνητο κλείδωμα,
 - σαφής ένδειξη ότι Order / Sale / Stock / Payment / Fiscal παραμένουν `ΟΧΙ`.
 
-## Έλεγχοι
+## Έλεγχοι και συγχώνευση
 
 Νέο test: `server/test/efood-lab-webhook-window-v1.test.js`
 
@@ -57,10 +58,16 @@ Branch: `feat/efood-lab-safe-webhook-window`
 - idempotent retry,
 - UI controls.
 
-Η ενιαία ενεργή λίστα ενημερώθηκε στο ίδιο branch πριν από τον τελικό κύκλο CI. Μετά την παράλληλη πρόοδο του `main`, το branch επανατοποθετήθηκε καθαρά πάνω στο `52b205969aed6e1913e3640d08925b876886b1b6`, διατηρώντας και τις νεότερες αλλαγές της εγκατάστασης Διαδόχου Παύλου.
+Μετά την παράλληλη πρόοδο του `main`, το branch επανατοποθετήθηκε καθαρά πάνω στο `52b205969aed6e1913e3640d08925b876886b1b6`, διατηρώντας και τις νεότερες αλλαγές της εγκατάστασης Διαδόχου Παύλου.
+
+- PR CI `#3827`: **PASS**.
+- PR `#1514`: **MERGED** ως `55f2a53c939cee230bab67b23645fd60555430bc`.
+- Main CI `#3829` στο merge revision: **PASS**.
+- Το επόμενο main `639944effe644d8709f5daefde18b33a428fa710`, που έχει γονέα το merge revision και συνεπώς περιλαμβάνει την αλλαγή, πέρασε επίσης main CI `#3830`: **PASS**.
+- Η ενιαία ενεργή λίστα ενημερώθηκε με την πραγματική κατάσταση.
 
 ## Κατάσταση
 
-`IMPLEMENTED — REBASED — FINAL CI RUNNING`
+`MERGED — CI PASS — AWAITING EXACT RENDER DEPLOY / REAL PARTNER LAB`
 
-Δεν έχει γίνει merge. Δεν έχει ενεργοποιηθεί παραγωγικό efood webhook και δεν έχει εκτελεστεί πραγματικό test order από το efood Partner.
+Δεν έχει τεκμηριωθεί ακόμη το ακριβές Render revision μέσω production health readback και δεν έχει εκτελεστεί πραγματικό `Trigger Test Order` από το efood Partner. Επομένως δεν δηλώνεται production ή LAB PASS. Παραγγελία, πώληση, stock, πληρωμή και φορολογική εκτέλεση παραμένουν κλειδωμένα από σχεδιασμό.
