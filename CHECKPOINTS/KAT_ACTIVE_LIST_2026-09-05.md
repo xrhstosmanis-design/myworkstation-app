@@ -1,6 +1,6 @@
 ## 28/09/2026 15:34 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 2 · Κέντρο Προβλημάτων
 
-- [ ] Read-only συγκέντρωση από τα υπάρχοντα GET Ταμείων, Πληρωμών Προμηθευτών και Τράπεζας, με μετρητές και μετάβαση στις κανονικές οθόνες. Κανένα νέο endpoint/δεύτερα δεδομένα/POST ή οικονομική μεταβολή. Στοχευμένα tests 4/4 και client build PASS· CI, deploy και USER/LAB visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase2-problems.md`.
+- [x] PR #1493 / CI #3763 και #3764 / deploy #1753 / exact production `083792d9fc943575b19ac52a55d059224d264689`: `image(4).png` δείχνει 3 ανοικτά σημεία (Ταμεία 0, Πληρωμές 0, Τράπεζα 3) και `image(5).png` επιβεβαιώνει μετάβαση στην κανονική οθόνη Τράπεζας με −193,00 € σε αναμονή και τις ανοικτές κινήσεις. Περιορισμένο USER visual PASS συγκέντρωσης/μετάβασης· καμία επιβεβαίωση, αποδεικτικό ή οικονομική/stock/fiscal μεταβολή. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase2-problems.md`.
 
 ## 28/09/2026 15:31 Ελλάδα — Gate 3 Βοηθός Τιμολογίου · PASS συμφωνημένης LAB ροής
 
