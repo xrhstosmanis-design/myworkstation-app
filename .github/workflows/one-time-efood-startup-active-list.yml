@@ -1,0 +1,51 @@
+name: One-time efood startup active-list update
+
+on:
+  push:
+    branches:
+      - "fix/efood-startup-schema-bootstrap-20260928"
+
+permissions:
+  contents: write
+
+jobs:
+  update-active-list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: "fix/efood-startup-schema-bootstrap-20260928"
+          fetch-depth: 0
+      - name: Replace current efood status and remove this workflow
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          active = Path("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md")
+          workflow = Path(".github/workflows/one-time-efood-startup-active-list.yml")
+          heading = "## 28/09/2026 — efood / Pelican startup schema bootstrap · LAB BLOCKED / FIX AWAITING CI-DEPLOY"
+          entry = (
+              heading + "\n\n"
+              "- [ ] Το PR #1514 / merge `55f2a53c939cee230bab67b23645fd60555430bc` και τα σχετικά CI είναι PASS, ενώ το Render ανέβασε live απόγονό του `6abd9213feaa139b4331e803bfc08c251d089cf1`. "
+              "Read-only έλεγχος της παραγωγικής PostgreSQL απέδειξε όμως ότι οι νέες στήλες `webhookTestOpenedAt`, `webhookTestExpiresAt`, `webhookTestConsumedAt`, `webhookTestClosedReason` και `webhookTestEventId` δεν είχαν δημιουργηθεί, επειδή τα efood schema bootstraps εκτελούνταν μόνο κατά το πρώτο route request. "
+              "Το `fix/efood-startup-schema-bootstrap-20260928` προσθέτει fail-fast startup bootstrap με σειρά StoreIntegration → efood evidence πριν από το HTTP server και regression της σειράς εκκίνησης. Δεν έγινε χειροκίνητο DDL, αλλαγή credential, άνοιγμα window ή `Trigger Test Order`; Order/Sale/Stock/Payment/RBS-EFTPOS/Fiscal/myDATA παραμένουν κλειδωμένα. "
+              "Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-efood-lab-safe-webhook-window.md`.\n\n"
+          )
+
+          text = active.read_text(encoding="utf-8")
+          if heading not in text:
+              next_heading = text.find("\n## ", 1)
+              if not text.startswith("## 28/09/2026 — efood / Pelican") or next_heading < 0:
+                  raise SystemExit("Unexpected active-list header; refusing to rewrite")
+              text = entry + text[next_heading + 1:]
+              active.write_text(text, encoding="utf-8")
+
+          workflow.unlink(missing_ok=True)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md .github/workflows/one-time-efood-startup-active-list.yml
+          git commit -m "docs: record efood startup schema blocker"
+          git push origin HEAD:fix/efood-startup-schema-bootstrap-20260928
