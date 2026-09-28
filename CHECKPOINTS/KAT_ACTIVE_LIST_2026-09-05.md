@@ -1789,16 +1789,16 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 28/09/2026 — Super Admin AI Command Center ΦΑΣΗ 3 · Ρώτα το MyWorkStation
 
-- [ ] Read-only ερωτήσεις πάνω στο ήδη φορτωμένο snapshot εταιρειών, καταστημάτων και μετρητών Ταμείων/Πληρωμών/Τράπεζας. Νέο αυστηρά επικυρωμένο Platform Super Admin endpoint χωρίς AI tools ή database writes· απάντηση με πηγές και εμφανή όρια. Local syntax, 4/4 targeted tests και client build PASS. CI, exact deploy και USER/LAB visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase3-ask.md`.
+- [x] PR #1496, διορθώσεις #1498/#1500/#1502, CI #3784/#3786 και production `948bbaa406d1641e59d18a6d6d54005edf1852a8`. Η `image(8).png` δείχνει read-only απάντηση με 3 τραπεζικά σημεία, 0 ταμεία/πληρωμές, 2 εταιρείες/3 καταστήματα, πηγή και όρια. Περιορισμένο USER visual PASS· καμία επιχειρηματική μεταβολή. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase3-ask.md`.
 ## 28/09/2026 — Barcode: έλεγχος και μεταφορά μεταξύ προϊόντων · ΑΝΑΤΕΘΗΚΕ
 
 - [ ] `agent/barcode-catalog-check-20260928`: πρώτη στενή υλοποίηση στην καρτέλα προϊόντος. Έλεγχος υπάρχουσας αντιστοίχισης, ρητή επιβεβαίωση προέλευσης/προορισμού, ατομική μεταφορά με επανέλεγχο και Audit. Δεν έγινε μεταφορά σε LAB, ούτε αλλαγή τιμής, stock ή πώλησης. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Πραγματική οπτική/λειτουργική αποδοχή LAB AWAITING. Αναζήτηση προσφορών/παραγγελίες παραμένουν OPEN χωριστά.
 ## 28/09/2026 — AI Command Center · ενεργό κουμπί «Ρώτα»
 
-- [ ] Το «Ρώτα» γίνεται άμεσα διαθέσιμο και με κενό πεδίο χρησιμοποιεί αυτόματα την προεπιλεγμένη ερώτηση. Καμία αλλαγή endpoint/δεδομένων/δικαιωμάτων. CI, deploy και USER visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-ask-button.md`.
+- [x] Το «Ρώτα» είναι ενεργό με κενό πεδίο και η `image(8).png` επιβεβαιώνει κανονική απάντηση μετά τις αντιστοιχίσεις του snapshot. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-ask-button.md`.
 ## 28/09/2026 19:32 Ελλάδα — AI Command Center · snapshot schema
 
-- [ ] `image(6).png`: το «Ρώτα» είναι ενεργό, αλλά εμφανίζει «Ελέγξτε τα στοιχεία της φόρμας» λόγω ασυμφωνίας `activeCompanies/inactiveCompanies` με `active/inactive`. Στενή ρητή αντιστοίχιση χωρίς αλλαγή endpoint/AI prompt/δεδομένων. CI, deploy και νέα USER απάντηση με πηγές AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-snapshot-schema.md`.
+- [x] Το validation error της `image(6).png` έκλεισε: η `image(8).png` δείχνει κανονική απάντηση μετά τη ρητή αντιστοίχιση εταιρειών. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-snapshot-schema.md`.
 ## 28/09/2026 19:41 Ελλάδα — AI Command Center · problem snapshot schema
 
-- [ ] `image(7).png`: δεύτερο πραγματικό validation error επειδή το UI έστελνε `cashIssues` αντί του contract `cash`. Το payload γίνεται πλήρως ρητό για όλα τα πεδία εταιρειών και προβλημάτων, χωρίς αλλαγή endpoint/AI prompt/δεδομένων. CI, deploy και USER απάντηση με πηγές AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-problem-schema.md`.
+- [x] Το δεύτερο validation error της `image(7).png` έκλεισε: η `image(8).png` επιβεβαιώνει σωστή απάντηση μετά την πλήρη ρητή αντιστοίχιση των μετρητών. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-problem-schema.md`.
