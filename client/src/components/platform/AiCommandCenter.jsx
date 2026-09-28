@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
+const commandMoney=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
 
 const athensToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(value)?value:null;const raw=String(value??"").trim();if(!raw)return null;const normalized=raw.includes(",")?raw.replace(/\./g,"").replace(",","."):raw,n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null};
@@ -97,6 +98,22 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const items=[...findings.values()].sort((a,b)=>(a.state==="danger"?0:1)-(b.state==="danger"?0:1)||new Date(b.document.updatedAt||b.document.createdAt||0)-new Date(a.document.updatedAt||a.document.createdAt||0)).slice(0,5);
     return{documents:documents.length,drafts,learned:documents.length-drafts,reviewLines,totalMismatches,discountReviews,duplicates:duplicates.length,priceChanges:priceChanges.length,profiles:Object.keys(profiles).length,items};
   },[invoiceIntel.workspace]);
+  const cashPaymentIntel=useMemo(()=>{
+    const totals=problems.cash?.totals||{},cashStores=problems.cash?.stores||[],paymentItems=problems.payments?.items||[],bankItems=problems.bank?.items||[],items=[];
+    const add=(id,state,title,context,detail,open)=>items.push({id,state,title,context,detail,open});
+    for(const store of cashStores){
+      const name=store.storeName||"Κατάστημα";
+      if(Number(store.shortage||0)>.009)add(`cash-shortage:${store.storeId}`,"danger",name,"Έλλειμμα μετρητών",`${commandMoney(store.shortage)} € λιγότερα από το αναμενόμενο κλείσιμο. Χρειάζεται έλεγχος της υπάρχουσας βάρδιας και των κινήσεων.`,onOpenCash);
+      if(Number(store.surplus||0)>.009)add(`cash-surplus:${store.storeId}`,"warn",name,"Πλεόνασμα μετρητών",`${commandMoney(store.surplus)} € περισσότερα από το αναμενόμενο κλείσιμο. Δεν γίνεται αυτόματος συμψηφισμός.`,onOpenCash);
+      if(Math.abs(Number(store.cardVariance||0))>.009)add(`card:${store.storeId}`,"danger",name,"Διαφορά POS–EFTPOS",`${commandMoney(Math.abs(Number(store.cardVariance)))} € μεταξύ καταγεγραμμένων καρτών και EFTPOS.`,onOpenCash);
+      if(Number(store.expensesWithoutDocument||0)>0)add(`evidence:${store.storeId}`,"warn",name,"Έξοδα χωρίς αποδεικτικό",`${Number(store.expensesWithoutDocument)} κινήσεις χρειάζονται το υπάρχον αποδεικτικό τους.`,onOpenCash);
+      if(Number(store.duplicateCandidates||0)>0)add(`duplicates:${store.storeId}`,"warn",name,"Πιθανές επαναλαμβανόμενες κινήσεις",`${Number(store.duplicateCandidates)} υποψήφιες κινήσεις μόνο για ανθρώπινο έλεγχο — δεν ακυρώνονται αυτόματα.`,onOpenCash);
+    }
+    for(const item of paymentItems.filter(row=>row.status==="DISCREPANCY")){const reasons=item.automaticCheck?.checks||item.checks||[];add(`payment:${item.id}`,"danger",item.supplierName||item.storeName||"Πληρωμή προμηθευτή","Καταγεγραμμένη απόκλιση πληρωμής",reasons.join(" · ")||`Η υπάρχουσα πληρωμή ${commandMoney(item.amount)} € χρειάζεται έλεγχο μαζί με το παραστατικό της.`,onOpenPayments)}
+    for(const item of bankItems.filter(row=>row.status==="DISCREPANCY")){const reasons=item.automaticCheck?.checks||item.checks||[];add(`bank:${item.id}`,"danger",item.storeName||item.bankName||"Τραπεζική κίνηση","Καταγεγραμμένη τραπεζική απόκλιση",reasons.join(" · ")||`Η υπάρχουσα τραπεζική κίνηση ${commandMoney(item.amount)} € χρειάζεται έλεγχο.`,onOpenBank)}
+    const weight={danger:0,warn:1};items.sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el"));
+    return{shortage:Number(totals.shortage||0),surplus:Number(totals.surplus||0),cardVariance:Number(totals.cardVariance||0),withoutEvidence:Number(totals.expensesWithoutDocument||0),duplicates:Number(totals.duplicateCandidates||0),paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,items:items.slice(0,5)};
+  },[onOpenBank,onOpenCash,onOpenPayments,problems]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel()};
   const ask=async event=>{
     event.preventDefault();
@@ -114,10 +131,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-6">
+  return <div className="ai-command-page" data-ai-command-center="phase-7">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 6</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 7</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -168,6 +185,14 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <small className="ai-daily-source">Μόνο ανάγνωση: δεν γίνεται OCR, διόρθωση, πληρωμή, οριστικοποίηση ή κίνηση stock από εδώ.</small>
       </section>
 
+      <section className="ai-command-cash-intel">
+        <div className="ai-command-panel-title"><div><small>AI ΤΑΜΕΙΩΝ &amp; ΠΛΗΡΩΜΩΝ · ΦΑΣΗ 7</small><h2>{problems.loading?"Ανάλυση αποκλίσεων…":cashPaymentIntel.items.length?`${cashPaymentIntel.items.length} οικονομικά σημεία εξηγούνται`:`Δεν υπάρχει καταγεγραμμένη οικονομική απόκλιση`}</h2><p>Εξήγηση από τους υπάρχοντες ελέγχους Ταμείων, Πληρωμών και Τράπεζας· χωρίς αυτόματη απόφαση ή μεταβολή.</p></div><WalletCards/></div>
+        <div className="ai-cash-metrics"><span><small>Έλλειμμα μετρητών</small><b>{commandMoney(cashPaymentIntel.shortage)} €</b></span><span><small>Πλεόνασμα</small><b>{commandMoney(cashPaymentIntel.surplus)} €</b></span><span><small>Διαφορά POS–EFTPOS</small><b>{commandMoney(cashPaymentIntel.cardVariance)} €</b></span><span><small>Χωρίς αποδεικτικό</small><b>{cashPaymentIntel.withoutEvidence}</b></span><span><small>Πιθανά διπλά</small><b>{cashPaymentIntel.duplicates}</b></span><span><small>Αποκλίσεις πληρωμών / τράπεζας</small><b>{cashPaymentIntel.paymentDiscrepancies+cashPaymentIntel.bankDiscrepancies}</b></span></div>
+        {!problems.loading&&!problems.error&&(cashPaymentIntel.items.length?<div className="ai-cash-list">{cashPaymentIntel.items.map(item=><button type="button" key={item.id} onClick={item.open}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.title} · {item.context}</b><small>{item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>:<div className="ai-daily-clear"><CheckCircle2/><div><b>Οι διαθέσιμοι έλεγχοι συμφωνούν</b><span>Δεν βρέθηκε απόκλιση στα σημερινά κλεισίματα ή στις ανοικτές πληρωμές και τραπεζικές κινήσεις.</span></div></div>)}
+        <div className="ai-cash-open"><button type="button" onClick={onOpenCash}><WalletCards/>Άνοιγμα Ταμείων<ChevronRight/></button><button type="button" onClick={onOpenPayments}><ReceiptText/>Άνοιγμα Πληρωμών<ChevronRight/></button><button type="button" onClick={onOpenBank}><Landmark/>Άνοιγμα Τράπεζας<ChevronRight/></button></div>
+        <small className="ai-daily-source">Μόνο ανάγνωση: δεν εγκρίνεται, δεν διορθώνεται, δεν συμψηφίζεται και δεν δημιουργείται πληρωμή ή χρέωση από εδώ.</small>
+      </section>
+
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
         <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
@@ -178,7 +203,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article className="current"><FileSearch/><b>Invoice Detective</b><span>Φάση 6 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article><FileSearch/><b>Invoice Detective</b><span>Φάση 6 · ενεργό</span></article><article className="current"><WalletCards/><b>AI Ταμείων &amp; Πληρωμών</b><span>Φάση 7 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
