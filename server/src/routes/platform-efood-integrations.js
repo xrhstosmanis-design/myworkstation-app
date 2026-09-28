@@ -11,6 +11,7 @@ import {recordEfoodWebhookEvent} from "./efood-pelican-webhook.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
+const sha256=value=>crypto.createHash("sha256").update(String(value)).digest("hex");
 router.use(auth);
 router.use((req,res,next)=>{
   if(req.user?.isSuperAdmin!==true&&req.user?.platformRole!=="SUPER_ADMIN")return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
@@ -26,19 +27,31 @@ async function context(companyId,storeId){
 }
 function requireEfoodLabStore(store){assertEfoodLabContext({companyName:store.companyName,storeName:store.name});return store}
 function safeMetadata(value){return value&&typeof value==="object"&&!Array.isArray(value)?value:{}}
+async function expireEfoodWebhookWindow(store){
+  await prisma.$executeRaw`UPDATE "StoreIntegrationCredential" SET "enabled"=false,"externalCallsEnabled"=false,"webhookTestClosedReason"='EXPIRED',"updatedAt"=NOW() WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "kind"='EFOOD' AND "webhookTestExpiresAt" IS NOT NULL AND "webhookTestExpiresAt"<=NOW() AND "webhookTestConsumedAt" IS NULL AND ("enabled"=true OR "webhookTestClosedReason" IS NULL)`;
+}
 async function integrationFor(store,{required=true}={}){
-  const row=(await prisma.$queryRaw`SELECT "id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","metadataJson","webhookKey","externalCallsEnabled","sandboxValidatedAt","updatedAt" FROM "StoreIntegrationCredential" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "kind"='EFOOD' LIMIT 1`)[0];
+  await expireEfoodWebhookWindow(store);
+  const row=(await prisma.$queryRaw`SELECT "id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","metadataJson","webhookKey","webhookSecretHash","webhookTestOpenedAt","webhookTestExpiresAt","webhookTestConsumedAt","webhookTestClosedReason","webhookTestEventId","externalCallsEnabled","sandboxValidatedAt","updatedAt" FROM "StoreIntegrationCredential" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "kind"='EFOOD' LIMIT 1`)[0];
   if(!row&&required)throw Object.assign(new Error("Η διασύνδεση efood δεν έχει ακόμη προετοιμαστεί για το LAB."),{status:404});
   return row||null;
+}
+function webhookTestView(row){
+  if(!row)return {status:"LOCKED",accepting:false,secretConfigured:false,oneShot:true,maxTtlSeconds:900};
+  const expiresAt=row.webhookTestExpiresAt?new Date(row.webhookTestExpiresAt):null;
+  const accepting=Boolean(row.environment==="SANDBOX"&&row.enabled===true&&row.webhookSecretHash&&row.webhookTestOpenedAt&&expiresAt&&expiresAt.getTime()>Date.now()&&!row.webhookTestConsumedAt);
+  const status=accepting?"OPEN":row.webhookTestConsumedAt?"CONSUMED":row.webhookTestClosedReason||((expiresAt&&expiresAt.getTime()<=Date.now())?"EXPIRED":"LOCKED");
+  return {status,accepting,secretConfigured:Boolean(row.webhookSecretHash),oneShot:true,maxTtlSeconds:900,openedAt:row.webhookTestOpenedAt||null,expiresAt:row.webhookTestExpiresAt||null,consumedAt:row.webhookTestConsumedAt||null,closedReason:row.webhookTestClosedReason||null,eventId:row.webhookTestEventId||null};
 }
 function view(row){
   if(!row)return null;
   const metadata=safeMetadata(row.metadataJson);
-  return {kind:"EFOOD",providerName:row.providerName,environment:row.environment,configured:true,accountHint:row.accountHint||null,enabled:false,updatedAt:row.updatedAt,phase:metadata.phase||"AWAITING_TEST_VENDOR",metadata:{chainId:metadata.chainId||null,vendorId:metadata.vendorId||null,externalPartnerConfigId:metadata.externalPartnerConfigId||null,testScope:metadata.testScope||"MYWORKSTATION_LAB_ONLY"},webhookPath:row.webhookKey?`/api/public/efood/pelican/${row.webhookKey}`:null,externalCallsEnabled:false,sandboxValidated:Boolean(row.sandboxValidatedAt),labOnly:true,orderPostingEnabled:false,stockMutationEnabled:false,paymentPostingEnabled:false,fiscalExecutionEnabled:false};
+  return {kind:"EFOOD",providerName:row.providerName,environment:row.environment,configured:true,accountHint:row.accountHint||null,enabled:false,updatedAt:row.updatedAt,phase:metadata.phase||"AWAITING_TEST_VENDOR",metadata:{chainId:metadata.chainId||null,vendorId:metadata.vendorId||null,externalPartnerConfigId:metadata.externalPartnerConfigId||null,testScope:metadata.testScope||"MYWORKSTATION_LAB_ONLY"},webhookPath:row.webhookKey?`/api/public/efood/pelican/${row.webhookKey}`:null,webhookTest:webhookTestView(row),externalCallsEnabled:false,sandboxValidated:Boolean(row.sandboxValidatedAt),labOnly:true,orderPostingEnabled:false,stockMutationEnabled:false,paymentPostingEnabled:false,fiscalExecutionEnabled:false};
 }
 function scopeResponse(store){return {labOnly:true,labAllowed:store.labAllowed,labScope:{companyName:EFOOD_LAB_COMPANY_NAME,storeName:EFOOD_LAB_STORE_NAME},selected:{companyName:store.companyName,storeName:store.name}}}
 const optionalText=max=>z.preprocess(value=>String(value??"").trim()||undefined,z.string().max(max).optional());
-const bodySchema=z.object({providerName:z.string().trim().min(2).max(120).default("efood / Delivery Hero"),environment:z.enum(["SANDBOX","PRODUCTION"]).default("SANDBOX"),chainId:optionalText(200),vendorId:optionalText(200),externalPartnerConfigId:optionalText(300),clientId:optionalText(500),clientSecret:optionalText(4000),webhookSecret:optionalText(4000)});
+const bodySchema=z.object({providerName:z.string().trim().min(2).max(120).default("efood / Delivery Hero"),environment:z.enum(["SANDBOX","PRODUCTION"]).default("SANDBOX"),chainId:optionalText(200),vendorId:optionalText(200),externalPartnerConfigId:optionalText(300),clientId:optionalText(500),clientSecret:optionalText(4000)});
+const webhookWindowSchema=z.object({ttlSeconds:z.coerce.number().int().min(60).max(900).default(300)}).strict();
 
 router.get("/companies/:companyId/stores/:storeId/efood",async(req,res,next)=>{try{
   await schemas();const store=await context(req.params.companyId,req.params.storeId);
@@ -54,25 +67,53 @@ router.put("/companies/:companyId/stores/:storeId/efood",async(req,res,next)=>{t
   if(existing?.credentialsEnc){try{credentials=decryptStoreIntegrationValue(existing.credentialsEnc)}catch(error){throw Object.assign(new Error("Δεν ήταν δυνατή η ασφαλής ανάγνωση των ήδη αποθηκευμένων efood credentials."),{status:503,cause:error})}}
   if(body.clientId)credentials.clientId=body.clientId;
   if(body.clientSecret)credentials.clientSecret=body.clientSecret;
-  if(body.webhookSecret)credentials.webhookSecret=body.webhookSecret;
+  delete credentials.webhookSecret;
   const previous=safeMetadata(existing?.metadataJson);
   const chainId=body.chainId??previous.chainId??null,vendorId=body.vendorId??previous.vendorId??null,externalPartnerConfigId=body.externalPartnerConfigId??previous.externalPartnerConfigId??null;
-  const hasProviderAccess=Boolean(credentials.clientId&&credentials.clientSecret&&credentials.webhookSecret&&vendorId);
+  const hasProviderAccess=Boolean(credentials.clientId&&credentials.clientSecret&&vendorId);
   const metadata={chainId,vendorId,externalPartnerConfigId,phase:hasProviderAccess?"CONFIGURED_NOT_VALIDATED":"AWAITING_TEST_VENDOR",integrationMode:"INDIRECT_POS_PELICAN",testScope:"MYWORKSTATION_LAB_ONLY"};
   const id=existing?.id||uid(),webhookKey=existing?.webhookKey||crypto.randomBytes(32).toString("hex"),credentialsEnc=encryptStoreIntegrationValue(credentials),hint=credentials.clientId?`••••${String(credentials.clientId).slice(-4)}`:null,metadataJson=JSON.stringify(metadata);
-  const rows=await prisma.$queryRaw`INSERT INTO "StoreIntegrationCredential" ("id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","metadataJson","webhookKey","externalCallsEnabled","sandboxValidatedAt","updatedBy") VALUES (${id},${store.companyId},${store.id},'EFOOD',${body.providerName},'SANDBOX',${credentialsEnc},${hint},false,${metadataJson}::jsonb,${webhookKey},false,NULL,${req.user.id||req.user.email||"platform-admin"}) ON CONFLICT ("storeId","kind") DO UPDATE SET "providerName"=EXCLUDED."providerName","environment"='SANDBOX',"credentialsEnc"=EXCLUDED."credentialsEnc","accountHint"=EXCLUDED."accountHint","enabled"=false,"metadataJson"=EXCLUDED."metadataJson","webhookKey"=COALESCE("StoreIntegrationCredential"."webhookKey",EXCLUDED."webhookKey"),"externalCallsEnabled"=false,"sandboxValidatedAt"=NULL,"updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW() RETURNING "id","companyId","storeId","kind","providerName","environment","accountHint","enabled","metadataJson","webhookKey","externalCallsEnabled","sandboxValidatedAt","updatedAt"`;
+  const rows=await prisma.$queryRaw`INSERT INTO "StoreIntegrationCredential" ("id","companyId","storeId","kind","providerName","environment","credentialsEnc","accountHint","enabled","metadataJson","webhookKey","externalCallsEnabled","sandboxValidatedAt","webhookTestClosedReason","updatedBy") VALUES (${id},${store.companyId},${store.id},'EFOOD',${body.providerName},'SANDBOX',${credentialsEnc},${hint},false,${metadataJson}::jsonb,${webhookKey},false,NULL,'CONFIG_CHANGED',${req.user.id||req.user.email||"platform-admin"}) ON CONFLICT ("storeId","kind") DO UPDATE SET "providerName"=EXCLUDED."providerName","environment"='SANDBOX',"credentialsEnc"=EXCLUDED."credentialsEnc","accountHint"=EXCLUDED."accountHint","enabled"=false,"metadataJson"=EXCLUDED."metadataJson","webhookKey"=COALESCE("StoreIntegrationCredential"."webhookKey",EXCLUDED."webhookKey"),"externalCallsEnabled"=false,"sandboxValidatedAt"=NULL,"webhookTestOpenedAt"=NULL,"webhookTestExpiresAt"=NULL,"webhookTestConsumedAt"=NULL,"webhookTestClosedReason"='CONFIG_CHANGED',"webhookTestEventId"=NULL,"updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW() RETURNING "id","companyId","storeId","kind","providerName","environment","accountHint","enabled","metadataJson","webhookKey","webhookSecretHash","webhookTestOpenedAt","webhookTestExpiresAt","webhookTestConsumedAt","webhookTestClosedReason","webhookTestEventId","externalCallsEnabled","sandboxValidatedAt","updatedAt"`;
   await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`STORE_INTEGRATION_PREPARED_LAB_ONLY:${store.companyId}:${store.id}:EFOOD`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
   res.json({ok:true,integration:view(rows[0]),...scopeResponse(store),message:"Η βάση efood/Pelican αποθηκεύτηκε αποκλειστικά στο LAB σε fail-closed SANDBOX κατάσταση. Δεν ενεργοποιήθηκε webhook, παραγγελία, stock, πληρωμή ή φορολογική ροή."});
 }catch(error){next(error)}});
 
-router.get("/companies/:companyId/stores/:storeId/efood/readiness",async(req,res,next)=>{try{
+router.post("/companies/:companyId/stores/:storeId/efood/webhook-secret",async(req,res,next)=>{try{
   await schemas();const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId)),integration=await integrationFor(store);
+  if(integration.environment!=="SANDBOX")return res.status(409).json({error:"Το προσωρινό webhook επιτρέπεται μόνο σε SANDBOX."});
+  const secret=`mws_lab_${crypto.randomBytes(32).toString("base64url")}`;
+  const secretHash=sha256(secret);
+  const rows=await prisma.$queryRaw`UPDATE "StoreIntegrationCredential" SET "webhookSecretHash"=${secretHash},"enabled"=false,"externalCallsEnabled"=false,"webhookTestOpenedAt"=NULL,"webhookTestExpiresAt"=NULL,"webhookTestConsumedAt"=NULL,"webhookTestClosedReason"='SECRET_ROTATED',"webhookTestEventId"=NULL,"updatedBy"=${req.user.id||req.user.email||"platform-admin"},"updatedAt"=NOW() WHERE "id"=${integration.id} RETURNING "id","companyId","storeId","kind","providerName","environment","accountHint","enabled","metadataJson","webhookKey","webhookSecretHash","webhookTestOpenedAt","webhookTestExpiresAt","webhookTestConsumedAt","webhookTestClosedReason","webhookTestEventId","externalCallsEnabled","sandboxValidatedAt","updatedAt"`;
+  await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EFOOD_LAB_WEBHOOK_SECRET_ROTATED:${store.companyId}:${store.id}`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+  res.status(201).json({ok:true,secret,authorizationHeader:secret,copyOnce:true,integration:view(rows[0]),...scopeResponse(store),message:"Δημιουργήθηκε νέο ισχυρό Authorization secret. Εμφανίζεται μόνο τώρα και στη βάση αποθηκεύτηκε μόνο SHA-256 hash."});
+}catch(error){next(error)}});
+
+router.post("/companies/:companyId/stores/:storeId/efood/webhook-test-window",async(req,res,next)=>{try{
+  await schemas();const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId)),body=webhookWindowSchema.parse(req.body||{}),integration=await integrationFor(store),config=safeMetadata(integration.metadataJson);
+  if(integration.environment!=="SANDBOX")return res.status(409).json({error:"Το προσωρινό webhook επιτρέπεται μόνο σε SANDBOX."});
+  if(!integration.webhookSecretHash)return res.status(409).json({error:"Δημιούργησε πρώτα νέο ισχυρό Authorization secret.",code:"EFOOD_TEST_SECRET_REQUIRED"});
+  if(!config.vendorId)return res.status(409).json({error:"Συμπλήρωσε πρώτα το Test Vendor / Store ID του efood.",code:"EFOOD_TEST_VENDOR_REQUIRED"});
+  const openedAt=new Date(),expiresAt=new Date(openedAt.getTime()+body.ttlSeconds*1000);
+  const rows=await prisma.$queryRaw`UPDATE "StoreIntegrationCredential" SET "enabled"=true,"externalCallsEnabled"=false,"webhookTestOpenedAt"=${openedAt},"webhookTestExpiresAt"=${expiresAt},"webhookTestConsumedAt"=NULL,"webhookTestClosedReason"=NULL,"webhookTestEventId"=NULL,"updatedBy"=${req.user.id||req.user.email||"platform-admin"},"updatedAt"=NOW() WHERE "id"=${integration.id} RETURNING "id","companyId","storeId","kind","providerName","environment","accountHint","enabled","metadataJson","webhookKey","webhookSecretHash","webhookTestOpenedAt","webhookTestExpiresAt","webhookTestConsumedAt","webhookTestClosedReason","webhookTestEventId","externalCallsEnabled","sandboxValidatedAt","updatedAt"`;
+  await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EFOOD_LAB_WEBHOOK_TEST_WINDOW_OPENED:${store.companyId}:${store.id}:${body.ttlSeconds}`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+  res.status(201).json({ok:true,integration:view(rows[0]),...scopeResponse(store),ttlSeconds:body.ttlSeconds,expiresAt,oneShot:true,externalCallsEnabled:false,orderPostingEnabled:false,stockMutationEnabled:false,paymentPostingEnabled:false,fiscalExecutionEnabled:false,message:"Άνοιξε προσωρινό one-shot LAB webhook. Θα κλειδώσει στο πρώτο έγκυρο event ή αυτόματα στη λήξη."});
+}catch(error){next(error)}});
+
+router.delete("/companies/:companyId/stores/:storeId/efood/webhook-test-window",async(req,res,next)=>{try{
+  await schemas();const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId)),integration=await integrationFor(store);
+  const rows=await prisma.$queryRaw`UPDATE "StoreIntegrationCredential" SET "enabled"=false,"externalCallsEnabled"=false,"webhookTestClosedReason"='MANUAL',"updatedBy"=${req.user.id||req.user.email||"platform-admin"},"updatedAt"=NOW() WHERE "id"=${integration.id} RETURNING "id","companyId","storeId","kind","providerName","environment","accountHint","enabled","metadataJson","webhookKey","webhookSecretHash","webhookTestOpenedAt","webhookTestExpiresAt","webhookTestConsumedAt","webhookTestClosedReason","webhookTestEventId","externalCallsEnabled","sandboxValidatedAt","updatedAt"`;
+  await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EFOOD_LAB_WEBHOOK_TEST_WINDOW_CLOSED:${store.companyId}:${store.id}`,success:true,deviceName:req.headers["x-device-name"]||null,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+  res.json({ok:true,integration:view(rows[0]),...scopeResponse(store),message:"Το προσωρινό LAB webhook κλειδώθηκε."});
+}catch(error){next(error)}});
+
+router.get("/companies/:companyId/stores/:storeId/efood/readiness",async(req,res,next)=>{try{
+  await schemas();const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId)),integration=await integrationFor(store),integrationView=view(integration);
   const [events,mappings,previews]=await Promise.all([
     prisma.$queryRaw`SELECT COUNT(*)::int AS "total",COUNT(*) FILTER (WHERE "processingStatus"='CONFLICT')::int AS "conflicts" FROM "EfoodWebhookEvent" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id}`,
     prisma.$queryRaw`SELECT COUNT(*)::int AS "total",COUNT(*) FILTER (WHERE "status"='MATCHED')::int AS "matched",COUNT(*) FILTER (WHERE "status"<>'MATCHED')::int AS "unmatched" FROM "EfoodProductMapping" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id}`,
     prisma.$queryRaw`SELECT COUNT(*)::int AS "total" FROM "EfoodIntegrationPreview" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id}`
   ]);
-  res.json({integration:view(integration),events:events[0]||{total:0,conflicts:0},mappings:mappings[0]||{total:0,matched:0,unmatched:0},previews:previews[0]?.total||0,...scopeResponse(store),externalCallsEnabled:false,webhookAcceptingLiveEvents:false,orderPostingEnabled:false,stockMutationEnabled:false,paymentPostingEnabled:false,fiscalExecutionEnabled:false,blocker:"AWAITING_EFOOD_TEST_VENDOR_AND_SANDBOX_PASS"});
+  res.json({integration:integrationView,events:events[0]||{total:0,conflicts:0},mappings:mappings[0]||{total:0,matched:0,unmatched:0},previews:previews[0]?.total||0,...scopeResponse(store),externalCallsEnabled:false,webhookAcceptingLiveEvents:integrationView.webhookTest.accepting,webhookTest:integrationView.webhookTest,orderPostingEnabled:false,stockMutationEnabled:false,paymentPostingEnabled:false,fiscalExecutionEnabled:false,blocker:integrationView.webhookTest.accepting?"ONE_SHOT_LAB_WEBHOOK_ONLY":"AWAITING_EFOOD_TEST_VENDOR_AND_SANDBOX_PASS"});
 }catch(error){next(error)}});
 
 router.get("/companies/:companyId/stores/:storeId/efood/events",async(req,res,next)=>{try{

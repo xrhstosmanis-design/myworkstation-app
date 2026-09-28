@@ -1,3 +1,7 @@
+## 28/09/2026 — efood / Pelican ασφαλές one-shot LAB webhook · PR #1514 / CI AWAITING
+
+- [ ] Στο αποκλειστικό `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` προστέθηκε προσωρινό one-shot SANDBOX webhook για το efood Partner `Trigger Test Order`: ξεχωριστό ισχυρό Authorization secret με hash-only αποθήκευση, 5λεπτο παράθυρο, `FOR UPDATE`, αυτόματο κλείδωμα στο πρώτο έγκυρο event ή στη λήξη, χειροκίνητο emergency lock και idempotent retry. Το event αποθηκεύεται μόνο κρυπτογραφημένο ως dry-run. Παραγγελία, πώληση, stock, πληρωμή, RBS/EFTPOS, fiscal/myDATA και outbound external calls παραμένουν κλειδωμένα. Branch `feat/efood-lab-safe-webhook-window`, PR #1514, CI AWAITING· δεν έγινε merge/deploy ούτε πραγματικό Partner trigger. Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-efood-lab-safe-webhook-window.md`.
+
 ## 28/09/2026 — Διαδόχου Παύλου / πολλαπλά ΑΦΜ · CI PASS / AWAITING LAB
 
 - [ ] Νίκη Ραζάτου: χωριστή εταιρεία ανά ΑΦΜ, κοινή είσοδος ιδιοκτήτη, Super Admin ιεραρχία και ασφαλής αφαίρεση λανθασμένου καταστήματος ΚΑΤ. Κλάδος `codex/owner-multi-company-20260928`· κανένα παραγωγικό δεδομένο ή είδος δεν μεταβλήθηκε. `CHECKPOINTS/CHANGES/2026-09-28-diadochou-owner-multi-company.md`.

@@ -33,16 +33,25 @@ export async function ensureStoreIntegrationSchema(){
       "providerName" TEXT NOT NULL,"environment" TEXT NOT NULL DEFAULT 'PRODUCTION',
       "credentialsEnc" TEXT NOT NULL,"accountHint" TEXT,"enabled" BOOLEAN NOT NULL DEFAULT TRUE,
       "metadataJson" JSONB NOT NULL DEFAULT '{}',"webhookKey" TEXT,
+      "webhookSecretHash" TEXT,"webhookTestOpenedAt" TIMESTAMPTZ,"webhookTestExpiresAt" TIMESTAMPTZ,
+      "webhookTestConsumedAt" TIMESTAMPTZ,"webhookTestClosedReason" TEXT,"webhookTestEventId" TEXT,
       "externalCallsEnabled" BOOLEAN NOT NULL DEFAULT FALSE,"sandboxValidatedAt" TIMESTAMPTZ,
       "updatedBy" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE ("storeId","kind"))`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "metadataJson" JSONB NOT NULL DEFAULT '{}'`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookKey" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookSecretHash" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookTestOpenedAt" TIMESTAMPTZ`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookTestExpiresAt" TIMESTAMPTZ`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookTestConsumedAt" TIMESTAMPTZ`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookTestClosedReason" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "webhookTestEventId" TEXT`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "externalCallsEnabled" BOOLEAN NOT NULL DEFAULT FALSE`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "StoreIntegrationCredential" ADD COLUMN IF NOT EXISTS "sandboxValidatedAt" TIMESTAMPTZ`);
     await prisma.$executeRawUnsafe(STORE_INTEGRATION_KIND_CONSTRAINT_SQL);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreIntegrationCredential_company_store_idx" ON "StoreIntegrationCredential" ("companyId","storeId")`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "StoreIntegrationCredential_webhook_key" ON "StoreIntegrationCredential" ("webhookKey") WHERE "webhookKey" IS NOT NULL`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreIntegrationCredential_webhook_test_expiry_idx" ON "StoreIntegrationCredential" ("webhookTestExpiresAt") WHERE "kind"='EFOOD' AND "webhookTestExpiresAt" IS NOT NULL`);
   })().catch(error=>{schemaPromise=undefined;throw error});
   return schemaPromise;
 }
