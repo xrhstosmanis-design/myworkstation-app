@@ -5,6 +5,8 @@ import test from "node:test";
 const platformRoute=await readFile(new URL("../src/routes/platform-efood-integrations.js",import.meta.url),"utf8");
 const webhookRoute=await readFile(new URL("../src/routes/efood-pelican-webhook.js",import.meta.url),"utf8");
 const storeBootstrap=await readFile(new URL("../src/store-integration-bootstrap.js",import.meta.url),"utf8");
+const startupBootstrap=await readFile(new URL("../src/ensure-efood-integration-schema.js",import.meta.url),"utf8");
+const serverPackage=JSON.parse(await readFile(new URL("../package.json",import.meta.url),"utf8"));
 const ui=await readFile(new URL("../../client/src/components/platform/StoreFiscalIntegrations.jsx",import.meta.url),"utf8");
 
 test("efood LAB webhook window schema is additive and fail-closed",()=>{
@@ -13,6 +15,22 @@ test("efood LAB webhook window schema is additive and fail-closed",()=>{
   }
   assert.match(storeBootstrap,/webhook_test_expiry_idx/);
   assert.match(platformRoute,/"enabled"=false,"externalCallsEnabled"=false/);
+});
+
+test("server startup applies StoreIntegration before efood evidence schema",()=>{
+  const storeCall=startupBootstrap.indexOf("await ensureStoreIntegrationSchema()");
+  const efoodCall=startupBootstrap.indexOf("await ensureEfoodIntegrationSchema()");
+  assert.ok(storeCall>=0,"missing StoreIntegration startup bootstrap");
+  assert.ok(efoodCall>storeCall,"efood evidence schema must run after StoreIntegration");
+  assert.match(startupBootstrap,/await prisma\.\$disconnect\(\)/);
+
+  for(const scriptName of ["dev","start"]){
+    const command=serverPackage.scripts?.[scriptName]||"";
+    const bootstrapPosition=command.indexOf("node src/ensure-efood-integration-schema.js");
+    const serverPosition=command.lastIndexOf("node src/index.js");
+    assert.ok(bootstrapPosition>=0,`${scriptName} does not run the efood startup bootstrap`);
+    assert.ok(serverPosition<0||bootstrapPosition<serverPosition,`${scriptName} starts HTTP before the efood schema bootstrap`);
+  }
 });
 
 test("Super Admin can generate a hash-only secret and open at most a 15 minute one-shot window",()=>{
