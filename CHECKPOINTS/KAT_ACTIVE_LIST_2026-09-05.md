@@ -1840,4 +1840,4 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 28/09/2026 — AI Command Center ΦΑΣΗ 11 · Night Briefing
 
-- [ ] Read-only νυχτερινός απολογισμός πέντε τομέων από τις ήδη ενεργές ενότητες, με ώρα Ελλάδας και μετάβαση στις κανονικές οθόνες. Κανένα νέο endpoint, κλείσιμο ημέρας, μεταφορά υπολοίπου, μήνυμα, scheduler ή μεταβολή δεδομένων. Τοπικά: **12/12 targeted PASS · 1.629 PASS + 1 SKIP full suite · production build PASS.** **AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-night-briefing-phase11.md`.
+- [x] Read-only νυχτερινός απολογισμός πέντε τομέων από τις ήδη ενεργές ενότητες, με ώρα Ελλάδας και μετάβαση στις κανονικές οθόνες. Κανένα νέο endpoint, κλείσιμο ημέρας, μεταφορά υπολοίπου, μήνυμα, scheduler ή μεταβολή δεδομένων. PR `#1526`, CI `#3845` PASS, exact production `2d4f2e071d8f4c107a31a31f4e2ca8c0fef9083c`. Η `image(20260928-201005).png` επιβεβαιώνει τις πέντε κάρτες, τους πραγματικούς μετρητές και τις καταστάσεις `ΑΥΡΙΟ`, `ΚΛΕΙΣΤΟ` και `ΠΡΟΒΛΗΜΑ`. **LIMITED USER VISUAL PASS · CLOSED.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-night-briefing-phase11.md`.
