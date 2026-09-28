@@ -57,10 +57,10 @@ Branch: `feat/efood-lab-safe-webhook-window`
 - idempotent retry,
 - UI controls.
 
-Η ενιαία ενεργή λίστα ενημερώθηκε στο ίδιο branch πριν από τον τελικό κύκλο CI.
+Η ενιαία ενεργή λίστα ενημερώθηκε στο ίδιο branch πριν από τον τελικό κύκλο CI. Μετά την παράλληλη πρόοδο του `main`, το branch επανατοποθετήθηκε καθαρά πάνω στο `52b205969aed6e1913e3640d08925b876886b1b6`, διατηρώντας και τις νεότερες αλλαγές της εγκατάστασης Διαδόχου Παύλου.
 
 ## Κατάσταση
 
-`IMPLEMENTED — AWAITING CI / PR REVIEW`
+`IMPLEMENTED — REBASED — FINAL CI RUNNING`
 
 Δεν έχει γίνει merge. Δεν έχει ενεργοποιηθεί παραγωγικό efood webhook και δεν έχει εκτελεστεί πραγματικό test order από το efood Partner.
