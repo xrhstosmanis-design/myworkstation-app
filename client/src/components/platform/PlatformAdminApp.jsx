@@ -96,6 +96,8 @@ export default function PlatformAdminApp(){
     try{return JSON.parse(localStorage.getItem("platformUser")||"null")}catch{return null}
   });
   const [data,setData]=useState(null);
+  const [owners,setOwners]=useState([]);
+  const [newOwnerCompany,setNewOwnerCompany]=useState(null);
   const [loading,setLoading]=useState(false);
   const [busy,setBusy]=useState("");
   const [error,setError]=useState("");
@@ -161,7 +163,7 @@ export default function PlatformAdminApp(){
   };
   const load=async()=>{
     setLoading(true);setError("");
-    try{setData(await request("/api/platform/overview"))}
+    try{const [overview,linkedOwners]=await Promise.all([request("/api/platform/overview"),request("/api/platform/owners")]);setData(overview);setOwners(linkedOwners.owners||[])}
     catch(err){
       setError(err.message);
       if(/σύνδεση|συνεδρία|Super Admin|2FA/i.test(err.message))clearSession(false);
@@ -184,6 +186,13 @@ export default function PlatformAdminApp(){
       setMessage(`Ο πελάτης «${result.company.name}» δημιουργήθηκε με πρώτο κατάστημα «${result.store.name}».`);
       setShowNew(false);event.currentTarget.reset();await load();
     }catch(err){setError(err.message)}finally{setBusy("")}
+  };
+
+  const createOwnerCompany=async event=>{
+    event.preventDefault();setBusy("owner-company-create");setError("");setMessage("");
+    const form=new FormData(event.currentTarget);const body=Object.fromEntries(form.entries());body.trialDays=Number(body.trialDays||14);
+    try{const result=await request(`/api/platform/owners/${newOwnerCompany.id}/companies`,{method:"POST",body:JSON.stringify(body)});setMessage(`Η εταιρεία «${result.company.name}» με ΑΦΜ ${result.company.taxId} και πρώτο κατάστημα «${result.store.name}» συνδέθηκε με ${newOwnerCompany.fullName}.`);setNewOwnerCompany(null);await load()}
+    catch(err){setError(err.message)}finally{setBusy("")}
   };
 
   const updateCompany=async(companyId,body,label)=>{
@@ -470,6 +479,7 @@ export default function PlatformAdminApp(){
         <article><Users/><div><span>Χρήστες</span><strong>{data?.stats?.users||0}</strong><small>{data?.stats?.employees||0} εργαζόμενοι</small></div></article>
         <article><UsersRound/><div><span>Δοκιμές</span><strong>{data?.stats?.trialCompanies||0}</strong><small>{expiringTrials} λήγουν σύντομα</small></div></article>
       </div>
+      <section className="platform-panel"><div className="platform-panel-head"><div><h2>Ιδιοκτήτες · εταιρείες · καταστήματα</h2><p>Κάθε ΑΦΜ είναι ξεχωριστή εταιρεία και κρατά τα δικά του δεδομένα.</p></div></div><div className="platform-company-list">{owners.map(owner=><article className="platform-company" key={owner.id}><div className="platform-company-main"><UsersRound/><div><h3>{owner.fullName}</h3><p>{owner.email}</p></div></div><div>{(data?.companies||[]).filter(company=>owner.companyIds.includes(company.id)).map(company=><div key={company.id}><b>{company.name} · ΑΦΜ {company.taxId||"Εκκρεμεί"}</b><p>{company.stores.map(store=>store.name).join(" · ")||"Χωρίς κατάστημα"}</p><button className="secondary" onClick={()=>setStoreCompany(company)}>Καταστήματα</button></div>)}</div><button onClick={()=>setNewOwnerCompany(owner)}><Plus/>Νέα εταιρεία / ΑΦΜ</button></article>)}</div></section>
       <section className="platform-panel">
         <div className="platform-panel-head"><div><h2>Εταιρείες πελατών</h2><p>Κάθε εταιρεία έχει απομονωμένα καταστήματα, χρήστες και δεδομένα.</p></div></div>
         {loading?<div className="platform-empty">Φόρτωση πλατφόρμας…</div>:(data?.companies||[]).length===0?<div className="platform-empty">Δεν υπάρχουν ακόμη πελάτες.</div>:<div className="platform-company-list">
@@ -510,6 +520,7 @@ export default function PlatformAdminApp(){
       </article>})}</section>}
     </section></div>}
 
+    {newOwnerCompany&&<div className="platform-modal"><form onSubmit={createOwnerCompany}><button type="button" className="modal-close" onClick={()=>setNewOwnerCompany(null)}><X/></button><h2>Νέα εταιρεία για {newOwnerCompany.fullName}</h2><p>Ξεχωριστό ΑΦΜ, κατάστημα και δεδομένα με την υπάρχουσα σύνδεση ιδιοκτήτη.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId" minLength="9" required/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setNewOwnerCompany(null)}>Ακύρωση</button><button disabled={busy==="owner-company-create"}>{busy==="owner-company-create"?"Δημιουργία…":"Δημιουργία εταιρείας"}</button></div></form></div>}
     {showNew&&<div className="platform-modal"><form onSubmit={createCompany}><button type="button" className="modal-close" onClick={()=>setShowNew(false)}><X/></button><h2>Νέος εμπορικός πελάτης</h2><p>Δημιουργούνται εταιρεία, ιδιοκτήτης και πρώτο κατάστημα.</p><div className="platform-form-grid"><label>Επωνυμία εταιρείας<input name="companyName" required/></label><label>ΑΦΜ<input name="taxId"/></label><label>Πόλη<input name="city"/></label><label>Τηλέφωνο<input name="phone"/></label><label>Email εταιρείας<input name="companyEmail" type="email"/></label><label>Πακέτο<select name="plan" defaultValue="TRIAL">{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><label>Ημέρες δοκιμής<input name="trialDays" type="number" min="1" max="365" defaultValue="14"/></label><div></div><label>Ονοματεπώνυμο ιδιοκτήτη<input name="ownerFullName" required/></label><label>Email ιδιοκτήτη<input name="ownerEmail" type="email" required/></label><label>Προσωρινός κωδικός<input name="temporaryPassword" type="password" minLength="8" required/></label><div></div><label>Πρώτο κατάστημα<input name="storeName" required/></label><label>Πόλη καταστήματος<input name="storeCity"/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setShowNew(false)}>Ακύρωση</button><button disabled={busy==="create"}>{busy==="create"?"Δημιουργία…":"Δημιουργία πελάτη"}</button></div></form></div>}
     {deleteCompany&&<div className="platform-modal"><form onSubmit={permanentlyDeleteCompany}><button type="button" className="modal-close" onClick={()=>setDeleteCompany(null)}><X/></button><h2>Οριστική διαγραφή KAT TEST</h2><p><AlertTriangle/> Θα διαγραφούν οριστικά η εταιρεία, τα καταστήματα, οι χρήστες, οι εργαζόμενοι και όλα τα δοκιμαστικά δεδομένα της. Η ενέργεια δεν αναιρείται.</p><div className="platform-form-grid"><label>Γράψε KAT TEST<input name="confirmationName" autoComplete="off" required/></label><label>Γράψε DELETE KAT TEST<input name="confirmationPhrase" autoComplete="off" required/></label></div><div className="platform-form-actions"><button type="button" className="secondary" onClick={()=>setDeleteCompany(null)}>Ακύρωση</button><button className="danger" disabled={busy==="delete-company"}>{busy==="delete-company"?"Οριστική διαγραφή…":"Διαγραφή όλων των δεδομένων"}</button></div></form></div>}
 
