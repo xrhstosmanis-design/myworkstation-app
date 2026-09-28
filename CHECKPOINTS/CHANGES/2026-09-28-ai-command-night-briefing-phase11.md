@@ -1,6 +1,6 @@
 # AI Command Center · ΦΑΣΗ 11 — Night Briefing
 
-Κατάσταση: **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS**
+Κατάσταση: **LIMITED USER VISUAL PASS · CLOSED**
 
 ## Checkpoint πριν την αλλαγή
 
@@ -31,3 +31,10 @@
 - Στοχευμένα AI Command Center tests: **12/12 PASS**.
 - Πλήρες server suite: **1.629 PASS, 1 SKIP, 0 FAIL**.
 - Production client build: **PASS**.
+
+## Ολοκλήρωση
+
+- PR `#1526`, CI `#3845` PASS και squash merge `2d4f2e071d8f4c107a31a31f4e2ca8c0fef9083c`.
+- Το δημόσιο `/api/health` επέστρεψε `ok=true` και ακριβώς το production revision `2d4f2e071d8f4c107a31a31f4e2ca8c0fef9083c`.
+- Η `image(20260928-201005).png` επιβεβαιώνει το `NIGHT BRIEFING · ΦΑΣΗ 11`, τις πέντε κάρτες, τους πραγματικούς μετρητές και τις ευδιάκριτες καταστάσεις `ΑΥΡΙΟ`, `ΚΛΕΙΣΤΟ` και `ΠΡΟΒΛΗΜΑ`.
+- **LIMITED USER VISUAL PASS · CLOSED.**
