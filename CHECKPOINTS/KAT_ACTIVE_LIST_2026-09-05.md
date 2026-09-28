@@ -1802,3 +1802,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 19:41 Ελλάδα — AI Command Center · problem snapshot schema
 
 - [x] Το δεύτερο validation error της `image(7).png` έκλεισε: η `image(8).png` επιβεβαιώνει σωστή απάντηση μετά την πλήρη ρητή αντιστοίχιση των μετρητών. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-problem-schema.md`.
+## 28/09/2026 — AI Command Center ΦΑΣΗ 4 · Κατάσταση καταστημάτων
+
+- [ ] Κάθε κατάστημα εμφανίζεται ξεχωριστά ως 🟢 ΟΚ / 🟠 ΕΛΕΓΧΟΣ / 🔴 ΠΡΟΒΛΗΜΑ από τα υπάρχοντα read-only αποτελέσματα Ταμείων, Πληρωμών και Τράπεζας. Το πάτημα οδηγεί στην κανονική σχετική οθόνη. Κανένα νέο endpoint ή write. CI, deploy και USER visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-store-status-phase4.md`.
