@@ -1778,3 +1778,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 — Super Admin AI Command Center ΦΑΣΗ 3 · Ρώτα το MyWorkStation
 
 - [ ] Read-only ερωτήσεις πάνω στο ήδη φορτωμένο snapshot εταιρειών, καταστημάτων και μετρητών Ταμείων/Πληρωμών/Τράπεζας. Νέο αυστηρά επικυρωμένο Platform Super Admin endpoint χωρίς AI tools ή database writes· απάντηση με πηγές και εμφανή όρια. Local syntax, 4/4 targeted tests και client build PASS. CI, exact deploy και USER/LAB visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase3-ask.md`.
+## 28/09/2026 — Barcode: έλεγχος και μεταφορά μεταξύ προϊόντων · ΑΝΑΤΕΘΗΚΕ
+
+- [ ] `agent/barcode-catalog-check-20260928`: πρώτη στενή υλοποίηση στην καρτέλα προϊόντος. Έλεγχος υπάρχουσας αντιστοίχισης, ρητή επιβεβαίωση προέλευσης/προορισμού, ατομική μεταφορά με επανέλεγχο και Audit. Δεν έγινε μεταφορά σε LAB, ούτε αλλαγή τιμής, stock ή πώλησης. CI, exact deploy και πραγματική οπτική/λειτουργική αποδοχή AWAITING. Αναζήτηση προσφορών/παραγγελίες παραμένουν OPEN χωριστά.
