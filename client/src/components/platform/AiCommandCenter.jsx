@@ -36,6 +36,32 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const bankItems=problems.bank?.items||[];
     return{cashIssues,payments:paymentItems.length,paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bank:bankItems.length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,total:cashIssues+paymentItems.length+bankItems.length};
   },[problems]);
+  const storeStatuses=useMemo(()=>{
+    const cashByStore=new Map((problems.cash?.stores||[]).map(item=>[item.storeId,item]));
+    const paymentsByStore=new Map(),bankByStore=new Map();
+    for(const item of problems.payments?.items||[]){const list=paymentsByStore.get(item.storeId)||[];list.push(item);paymentsByStore.set(item.storeId,list)}
+    for(const item of problems.bank?.items||[]){const list=bankByStore.get(item.storeId)||[];list.push(item);bankByStore.set(item.storeId,list)}
+    return companies.flatMap(company=>(company.stores||[]).map(store=>{
+      const cash=cashByStore.get(store.id),payments=paymentsByStore.get(store.id)||[],bank=bankByStore.get(store.id)||[];
+      const cashDanger=(Number(cash?.shortage||0)>.009?1:0)+(Math.abs(Number(cash?.cardVariance||0))>.009?1:0);
+      const cashReview=Number(cash?.expensesWithoutDocument||0)+Number(cash?.duplicateCandidates||0);
+      const discrepancies=payments.filter(item=>item.status==="DISCREPANCY").length+bank.filter(item=>item.status==="DISCREPANCY").length;
+      const pending=payments.length+bank.length-discrepancies;
+      const inactive=!company.active||store.active===false,missingCash=!cash;
+      const state=inactive||cashDanger||discrepancies?"danger":cashReview||pending||missingCash?"warn":"ok";
+      const label=state==="danger"?"ΠΡΟΒΛΗΜΑ":state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ";
+      const reasons=[];
+      if(inactive)reasons.push("Ανενεργή μονάδα");
+      if(cashDanger)reasons.push(`${cashDanger} σοβαρά ταμειακά`);
+      if(cashReview)reasons.push(`${cashReview} ταμειακά προς έλεγχο`);
+      if(payments.length)reasons.push(`${payments.length} πληρωμές`);
+      if(bank.length)reasons.push(`${bank.length} τραπεζικά`);
+      if(missingCash&&!inactive)reasons.push("Χωρίς σημερινό κλείσιμο");
+      const open=cashDanger||cashReview?onOpenCash:payments.length?onOpenPayments:bank.length?onOpenBank:missingCash?onOpenCash:onOpenChecks;
+      return{id:store.id,name:store.name,companyName:company.name,state,label,reasons,open};
+    }));
+  },[companies,problems,onOpenBank,onOpenCash,onOpenChecks,onOpenPayments]);
+  const storeStatusTotals=useMemo(()=>storeStatuses.reduce((all,item)=>{all[item.state]++;return all},{ok:0,warn:0,danger:0}),[storeStatuses]);
   const refresh=()=>{onRefresh?.();loadProblems()};
   const ask=async event=>{
     event.preventDefault();
@@ -53,10 +79,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-3">
+  return <div className="ai-command-page" data-ai-command-center="phase-4">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 3</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 4</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading}><RefreshCw/> {loading||problems.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -83,14 +109,11 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         </section>
 
         <section className="ai-command-panel">
-          <div className="ai-command-panel-title"><div><small>ΚΑΤΑΣΤΑΣΗ ΚΑΤΑΣΤΗΜΑΤΩΝ</small><h2>Όλη η πλατφόρμα</h2><p>Πρώτη λειτουργική ένδειξη από τα ήδη διαθέσιμα στοιχεία.</p></div><Store/></div>
+          <div className="ai-command-panel-title"><div><small>ΚΑΤΑΣΤΑΣΗ ΚΑΤΑΣΤΗΜΑΤΩΝ · ΦΑΣΗ 4</small><h2>{storeStatusTotals.ok} ΟΚ · {storeStatusTotals.warn} έλεγχος · {storeStatusTotals.danger} πρόβλημα</h2><p>Ανά κατάστημα, από τους ήδη διαθέσιμους ελέγχους.</p></div><Store/></div>
           <div className="ai-store-list">
-            {companies.length===0?<div className="ai-command-empty">{loading?"Φόρτωση επισκόπησης…":"Δεν υπάρχουν εταιρείες στην επισκόπηση."}</div>:companies.map(company=>{
-              const storeTotal=company.stores?.length||0;
-              const state=!company.active?"danger":storeTotal===0?"warn":"ok";
-              const label=!company.active?"ΑΝΕΝΕΡΓΗ":storeTotal===0?"ΕΛΕΓΧΟΣ":"ΟΚ";
-              return <article key={company.id}><span className={`ai-state-dot ${state}`} aria-hidden="true"/><div><b>{company.name}</b><small>{storeTotal} {storeTotal===1?"κατάστημα":"καταστήματα"}</small></div><strong className={state}>{label}</strong></article>;
-            })}
+            {storeStatuses.length===0?<div className="ai-command-empty">{loading?"Φόρτωση επισκόπησης…":"Δεν υπάρχουν καταστήματα στην επισκόπηση."}</div>:storeStatuses.map(store=>
+              <button type="button" key={store.id} onClick={store.open}><span className={`ai-state-dot ${store.state}`} aria-hidden="true"/><div><b>{store.name}</b><small>{store.companyName} · {store.reasons.join(" · ")||"Χωρίς ανοικτό εύρημα"}</small></div><strong className={store.state}>{store.label}</strong><ChevronRight/></button>
+            )}
           </div>
         </section>
       </div>
