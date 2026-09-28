@@ -99,11 +99,11 @@ router.post("/renew",auth,async(req,res,next)=>{
     const platformToken=jwt.sign(base,process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
     let ownerCompanyId=null;
     if(!supportContext&&user.role==="OWNER"&&req.user.ownerCompanyId&&req.user.ownerCompanyId!==user.companyId){
-      const access=await prisma.$queryRaw\`SELECT 1 FROM "OwnerCompanyAccess" a JOIN "Company" c ON c."id"=a."companyId" WHERE a."ownerId"=\${user.id} AND a."companyId"=\${req.user.ownerCompanyId} AND c."active"=TRUE LIMIT 1\`;
+      const access=await prisma.$queryRaw`SELECT 1 FROM "OwnerCompanyAccess" a JOIN "Company" c ON c."id"=a."companyId" WHERE a."ownerId"=${user.id} AND a."companyId"=${req.user.ownerCompanyId} AND c."active"=TRUE LIMIT 1`;
       if(!access.length)return res.status(401).json({error:"Η πρόσβαση στην εταιρεία έληξε."});
       ownerCompanyId=req.user.ownerCompanyId;
     }
-    const token=supportContext?jwt.sign({...base,companyId:supportContext.companyId,role:"OWNER",supportContext},process.env.JWT_SECRET,{expiresIn:\`\${SUPPORT_TOKEN_HOURS}h\`}):ownerCompanyId?jwt.sign({...base,companyId:ownerCompanyId,ownerCompanyId},process.env.JWT_SECRET,{expiresIn:\`\${SESSION_HOURS}h\`}):platformToken;
+    const token=supportContext?jwt.sign({...base,companyId:supportContext.companyId,role:"OWNER",supportContext},process.env.JWT_SECRET,{expiresIn:`${SUPPORT_TOKEN_HOURS}h`}):ownerCompanyId?jwt.sign({...base,companyId:ownerCompanyId,ownerCompanyId},process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`}):platformToken;
     res.json({token,...(supportContext?{platformToken}:{})});
   }catch(error){next(error)}
 });
@@ -113,7 +113,7 @@ router.get("/owner-companies",auth,async(req,res,next)=>{
     if(req.user.role!=="OWNER"||req.user.isSuperAdmin||req.user.supportContext)return res.status(403).json({error:"Η επιλογή εταιρείας αφορά τον ιδιοκτήτη."});
     const user=await prisma.user.findUnique({where:{id:req.user.id},select:{companyId:true}});
     if(!user)return res.status(401).json({error:"Η συνεδρία δεν είναι ενεργή."});
-    const access=await prisma.$queryRaw\`SELECT "companyId" FROM "OwnerCompanyAccess" WHERE "ownerId"=\${req.user.id}\`;
+    const access=await prisma.$queryRaw`SELECT "companyId" FROM "OwnerCompanyAccess" WHERE "ownerId"=${req.user.id}`;
     const ids=[...new Set([user.companyId,...access.map(row=>row.companyId)])];
     const companies=await prisma.company.findMany({where:{id:{in:ids},active:true},select:{id:true,name:true,taxId:true,stores:{where:{active:true},select:{id:true,name:true,city:true},orderBy:{name:"asc"}}},orderBy:{name:"asc"}});
     res.json({companies,currentCompanyId:req.user.companyId});
@@ -127,12 +127,12 @@ router.post("/owner-companies/select",auth,async(req,res,next)=>{
     const user=await prisma.user.findUnique({where:{id:req.user.id},include:{company:true}});
     if(!user||user.role!=="OWNER")return res.status(401).json({error:"Η συνεδρία δεν είναι ενεργή."});
     if(companyId!==user.companyId){
-      const access=await prisma.$queryRaw\`SELECT 1 FROM "OwnerCompanyAccess" WHERE "ownerId"=\${user.id} AND "companyId"=\${companyId} LIMIT 1\`;
+      const access=await prisma.$queryRaw`SELECT 1 FROM "OwnerCompanyAccess" WHERE "ownerId"=${user.id} AND "companyId"=${companyId} LIMIT 1`;
       if(!access.length)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτή την εταιρεία."});
     }
     const company=await prisma.company.findFirst({where:{id:companyId,active:true}});
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε ενεργή εταιρεία."});
-    const token=jwt.sign({id:user.id,companyId,ownerCompanyId:companyId,role:"OWNER",platformRole:"OWNER",isSuperAdmin:false,fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion},process.env.JWT_SECRET,{expiresIn:\`\${SESSION_HOURS}h\`});
+    const token=jwt.sign({id:user.id,companyId,ownerCompanyId:companyId,role:"OWNER",platformRole:"OWNER",isSuperAdmin:false,fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion},process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
     await audit(req,{userId:user.id,email:user.email,event:"OWNER_COMPANY_SELECTED",success:true});
     res.json({token,user:{...publicUser(user),company}});
   }catch(error){next(error)}
