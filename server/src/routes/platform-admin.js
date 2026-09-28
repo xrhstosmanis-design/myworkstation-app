@@ -405,6 +405,37 @@ router.post("/companies/:companyId/stores",async(req,res,next)=>{
 });
 
 
+
+router.delete("/companies/:companyId/stores/:storeId/empty-setup",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const body=z.object({confirmationName:z.string().trim()}).strict().parse(req.body||{});
+    const {companyId,storeId}=req.params;
+    const result=await prisma.$transaction(async tx=>{
+      const store=await tx.store.findFirst({where:{id:storeId,companyId}});
+      if(!store)return {status:404,error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."};
+      if(store.name!==body.confirmationName)return {status:400,error:"Γράψε ακριβώς το όνομα του καταστήματος για επιβεβαίωση."};
+      if(await tx.store.count({where:{companyId}})<2)return {status:409,error:"Δεν μπορεί να αφαιρεθεί το μοναδικό κατάστημα της εταιρείας."};
+      const terminals=await tx.$queryRaw`SELECT "id","terminalPos","active","activatedAt","lastSeenAt" FROM "StoreInstallationTerminal" WHERE "companyId"=${companyId} AND "storeId"=${storeId} FOR UPDATE`;
+      if(terminals.some(row=>row.active||row.activatedAt||row.lastSeenAt))return {status:409,error:"Υπάρχει ενεργό ή χρησιμοποιημένο τερματικό. Δεν επιτρέπεται διαγραφή."};
+      const tables=await tx.$queryRaw`SELECT table_schema,table_name FROM information_schema.columns WHERE column_name='storeId' AND table_schema=current_schema()`;
+      for(const {table_schema:schema,table_name:table} of tables){
+        if(["StoreInstallationTerminal","ShiftType","Store"].includes(table))continue;
+        const quoted=value=>'"'+String(value).replaceAll('"','""')+'"';
+        const found=await tx.$queryRawUnsafe(`SELECT EXISTS(SELECT 1 FROM ${quoted(schema)}.${quoted(table)} WHERE "storeId"=$1) AS used`,storeId);
+        if(found[0]?.used)return {status:409,error:"Το κατάστημα έχει δεδομένα και δεν μπορεί να διαγραφεί.",table};
+      }
+      await tx.$executeRaw`DELETE FROM "StoreInstallationTerminal" WHERE "companyId"=${companyId} AND "storeId"=${storeId}`;
+      await tx.shiftType.deleteMany({where:{storeId}});
+      await tx.store.delete({where:{id:storeId}});
+      await tx.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EMPTY_STORE_SETUP_DELETED:${companyId}:${storeId}:${store.name}`,success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+      return {ok:true,deleted:{id:storeId,name:store.name,terminals:terminals.length}};
+    });
+    if(result.status)return res.status(result.status).json({error:result.error});
+    res.json(result);
+  }catch(error){next(error)}
+});
+
 router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   try{
     const body=z.object({
