@@ -1,7 +1,7 @@
 # AI Command Center — ΦΑΣΗ 6 Invoice & Supplier Detective
 
 **Ημερομηνία:** 28/09/2026
-**Κατάσταση:** `IMPLEMENTED · AWAITING CI / DEPLOY / USER PASS`
+**Κατάσταση:** `LIMITED USER VISUAL PASS · CLOSED`
 
 ## Στενή αλλαγή
 
@@ -38,3 +38,11 @@
 - Στοχευμένα AI Command Center regression tests: `7/7 PASS`.
 - Πλήρες server test suite: `1.618 PASS · 1 SKIP · 0 FAIL`.
 - Production client build: `PASS`.
+
+## CI / production / οπτική αποδοχή
+
+- PR `#1510` έγινε squash merge μετά από πράσινο `MyWorkStation CI #3803`.
+- Exact production revision: `86f44b40b517dd538320bc35267ef5558388c994`.
+- Η `image(20260928-180759).png` επιβεβαιώνει οπτικά την ενότητα `INVOICE & SUPPLIER DETECTIVE · ΦΑΣΗ 6`, τους έξι μετρητές, δύο πραγματικές διαφορές συνόλου και το κουμπί `Άνοιγμα Invoice Learning Lab`.
+- Δεν παρατηρείται αλλαγή στις υπάρχουσες οθόνες ή αυτόματη οικονομική/stock ενέργεια.
+- Το συγκεκριμένο read-only scope κλειδώνει **LIMITED USER VISUAL PASS · CLOSED**.
