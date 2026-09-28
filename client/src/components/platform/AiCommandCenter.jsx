@@ -7,6 +7,8 @@ const athensToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",
 
 export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents}){
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
+  const [question,setQuestion]=useState("");
+  const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const loadProblems=async()=>{
     setProblems(current=>({...current,loading:true,error:""}));
     try{
@@ -35,11 +37,21 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     return{cashIssues,payments:paymentItems.length,paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bank:bankItems.length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,total:cashIssues+paymentItems.length+bankItems.length};
   },[problems]);
   const refresh=()=>{onRefresh?.();loadProblems()};
+  const ask=async event=>{
+    event.preventDefault();
+    const value=question.trim();if(value.length<3||askState.loading)return;
+    setAskState({loading:true,error:"",result:null});
+    try{
+      const companyStates=companies.map(company=>({name:company.name,active:Boolean(company.active),stores:company.stores?.length||0}));
+      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,snapshot:{generatedAt:new Date().toISOString(),companies:summary,problems:problemSummary,companyStates}})});
+      setAskState({loading:false,error:"",result});
+    }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
+  };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-1">
+  return <div className="ai-command-page" data-ai-command-center="phase-3">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 2</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 3</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading}><RefreshCw/> {loading||problems.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -78,9 +90,17 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         </section>
       </div>
 
+      <section className="ai-command-ask">
+        <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
+        <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading||question.trim().length<3}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
+        <div className="ai-command-prompts"><button type="button" onClick={()=>setQuestion("Ποια σημεία χρειάζονται έλεγχο σήμερα;")}>Τι χρειάζεται έλεγχο;</button><button type="button" onClick={()=>setQuestion("Υπάρχουν ανενεργές εταιρείες ή καταστήματα χωρίς κάλυψη;")}>Κατάσταση δικτύου</button><button type="button" onClick={()=>setQuestion("Σε ποια κανονική οθόνη πρέπει να πάω πρώτα και γιατί;")}>Πού να πάω πρώτα;</button></div>
+        {askState.error&&<div className="ai-command-problem-error"><AlertTriangle/>{askState.error}</div>}
+        {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p>{askState.result.answer}</p>{askState.result.highlights?.length>0&&<ul>{askState.result.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{askState.result.limitations&&<small><b>Όριο:</b> {askState.result.limitations}</small>}</article>}
+      </section>
+
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article className="current"><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Επόμενη φάση</span></article><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Επόμενη φάση</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article className="current"><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Επόμενη φάση</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
