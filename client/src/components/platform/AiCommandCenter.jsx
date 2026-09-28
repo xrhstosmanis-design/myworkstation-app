@@ -1,12 +1,16 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
 
 const athensToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(value)?value:null;const raw=String(value??"").trim();if(!raw)return null;const normalized=raw.includes(",")?raw.replace(/\./g,"").replace(",","."):raw,n=Number(normalized.replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null};
+const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
+const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents}){
+export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices}){
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
+  const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [question,setQuestion]=useState("");
   const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const loadProblems=async()=>{
@@ -21,7 +25,8 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       setProblems({loading:false,error:"",cash,payments,bank});
     }catch(error){setProblems(current=>({...current,loading:false,error:error.message||"Δεν φορτώθηκαν οι υπάρχοντες έλεγχοι."}))}
   };
-  useEffect(()=>{loadProblems()},[]);
+  const loadInvoiceIntel=async()=>{setInvoiceIntel(current=>({...current,loading:true,error:""}));try{const workspace=await request("/api/platform/invoice-learning/workspace");setInvoiceIntel({loading:false,error:"",workspace})}catch(error){setInvoiceIntel(current=>({...current,loading:false,error:error.message||"Δεν φορτώθηκε το Invoice Learning."}))}};
+  useEffect(()=>{loadProblems();loadInvoiceIntel()},[]);
   const summary=useMemo(()=>{
     const activeCompanies=companies.filter(company=>company.active);
     const inactiveCompanies=companies.filter(company=>!company.active);
@@ -74,7 +79,25 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const weight={danger:0,warn:1};
     return [...storeItems,...companyItems].sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el")).slice(0,5);
   },[companies,onOpenChecks,storeStatuses]);
-  const refresh=()=>{onRefresh?.();loadProblems()};
+  const invoiceDetective=useMemo(()=>{
+    const state=invoiceIntel.workspace?.state||{},documents=Array.isArray(state.documents)?state.documents:[],profiles=state.profiles&&typeof state.profiles==="object"?state.profiles:{};
+    const duplicateGroups=new Map();for(const document of documents){const key=invoiceIdentity(document);if(key.replaceAll("|","").trim()){const group=duplicateGroups.get(key)||[];group.push(document);duplicateGroups.set(key,group)}}
+    const duplicates=[...duplicateGroups.values()].filter(group=>group.length>1),findings=new Map(),add=(document,stateValue,reason)=>{const key=document.id||invoiceIdentity(document),current=findings.get(key)||{id:key,document,state:"warn",reasons:[]};if(stateValue==="danger")current.state="danger";if(!current.reasons.includes(reason))current.reasons.push(reason);findings.set(key,current)};
+    let drafts=0,reviewLines=0,totalMismatches=0,discountReviews=0;const priceChanges=[];
+    const ordered=[...documents].sort((a,b)=>new Date(a.updatedAt||a.createdAt||0)-new Date(b.updatedAt||b.createdAt||0)),lastPrices=new Map();
+    for(const document of ordered){
+      const lines=Array.isArray(document.lines)?document.lines.filter(line=>line.status!=="REJECTED"):[];if(document.status!=="LEARNED")drafts++;
+      const reviews=lines.filter(line=>line.status==="REVIEW"||line.resolutionStatus==="UNRESOLVED"||line.needsReview===true);reviewLines+=reviews.length;if(reviews.length)add(document,"warn",`${reviews.length} γραμμές προς έλεγχο`);
+      const discountIssues=lines.filter(line=>[line.reviewReason,line.ocrReviewReasons,...(Array.isArray(line.reasons)?line.reasons:[])].join(" ").match(/DISCOUNT|ΕΚΠΤ/i)||[line.discount1,line.discount2,line.discount3].some(value=>{const n=invoiceNumber(value);return n!==null&&(n<0||n>100)}));discountReviews+=discountIssues.length;if(discountIssues.length)add(document,"warn",`${discountIssues.length} εκπτώσεις προς έλεγχο`);
+      const calculated=lines.reduce((sum,line)=>{const net=invoiceLineNet(line),vat=invoiceNumber(line.vatRate)||0;return sum+net+Math.round(net*vat)/100},0),declared=invoiceNumber(document.sourceGrossAmount??document.totalGross??document.grossAmount),difference=declared===null?null:Math.abs(declared-calculated);
+      if(difference!==null&&difference>.05){totalMismatches++;add(document,"danger",`Διαφορά συνόλου ${difference.toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})} €`)}
+      for(const line of lines){const supplier=document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),code=line.supplierItemCode||line.code;if(!supplier||!code)continue;const quantity=invoiceNumber(line.quantity),net=invoiceLineNet(line),factor=invoiceNumber(line.stockUnitsPerInvoiceUnit??line.unitsPerPackage??line.conversionFactor)||1;if(!(quantity>0&&net>=0&&factor>0))continue;const price=net/quantity,key=`${supplier}|${code}|${factor}`,previous=lastPrices.get(key);if(previous&&Math.abs(price-previous.price)>.01&&Math.abs(price-previous.price)/Math.max(previous.price,.01)>.01){priceChanges.push({document,code,from:previous.price,to:price});add(document,"warn",`Μεταβολή τιμής στον κωδικό ${code}`)}lastPrices.set(key,{price,document})}
+    }
+    for(const group of duplicates)for(const document of group)add(document,"danger",`Πιθανό διπλό παραστατικό (${group.length} εγγραφές)`);
+    const items=[...findings.values()].sort((a,b)=>(a.state==="danger"?0:1)-(b.state==="danger"?0:1)||new Date(b.document.updatedAt||b.document.createdAt||0)-new Date(a.document.updatedAt||a.document.createdAt||0)).slice(0,5);
+    return{documents:documents.length,drafts,learned:documents.length-drafts,reviewLines,totalMismatches,discountReviews,duplicates:duplicates.length,priceChanges:priceChanges.length,profiles:Object.keys(profiles).length,items};
+  },[invoiceIntel.workspace]);
+  const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel()};
   const ask=async event=>{
     event.preventDefault();
     const value=question.trim()||"Ποια σημεία χρειάζονται έλεγχο σήμερα;";if(askState.loading)return;
@@ -91,11 +114,11 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-5">
+  return <div className="ai-command-page" data-ai-command-center="phase-6">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 5</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
-        <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading}><RefreshCw/> {loading||problems.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 6</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
       <div className="ai-command-safety"><ShieldCheck/><div><b>Μία πηγή δεδομένων</b><p>Το Command Center δεν κρατά δεύτερα στοιχεία. Διαβάζει τη σημερινή επισκόπηση και σε οδηγεί στις κανονικές οθόνες για έλεγχο και ενέργειες.</p></div></div>
@@ -136,6 +159,15 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <small className="ai-daily-source">Πηγή: σημερινή επισκόπηση, Ταμεία, Πληρωμές και Τράπεζα. Εμφανίζονται έως 5 προτεραιότητες.</small>
       </section>
 
+      <section className="ai-command-detective">
+        <div className="ai-command-panel-title"><div><small>INVOICE & SUPPLIER DETECTIVE · ΦΑΣΗ 6</small><h2>{invoiceIntel.loading?"Έλεγχος τιμολογίων…":invoiceDetective.items.length?`${invoiceDetective.items.length} τιμολόγια χρειάζονται προσοχή`:"Δεν υπάρχει ανοικτό εύρημα τιμολογίου"}</h2><p>Σύνοψη από το υπάρχον Invoice Learning· η διόρθωση και η εκμάθηση γίνονται μόνο στην κανονική οθόνη.</p></div><FileSearch/></div>
+        {invoiceIntel.error&&<div className="ai-command-problem-error"><AlertTriangle/>{invoiceIntel.error}</div>}
+        <div className="ai-detective-metrics"><span><small>Πρόχειρα</small><b>{invoiceDetective.drafts}</b></span><span><small>Γραμμές ελέγχου</small><b>{invoiceDetective.reviewLines}</b></span><span><small>Διαφορές συνόλου</small><b>{invoiceDetective.totalMismatches}</b></span><span><small>Εκπτώσεις ελέγχου</small><b>{invoiceDetective.discountReviews}</b></span><span><small>Πιθανά διπλά</small><b>{invoiceDetective.duplicates}</b></span><span><small>Μεταβολές τιμής</small><b>{invoiceDetective.priceChanges}</b></span></div>
+        {!invoiceIntel.loading&&!invoiceIntel.error&&(invoiceDetective.items.length?<div className="ai-detective-list">{invoiceDetective.items.map(item=><button type="button" key={item.id} onClick={onOpenInvoices}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.document.supplierName||"Χωρίς προμηθευτή"} · {item.document.invoiceNo||item.document.invoiceNumber||item.document.filename||"Χωρίς αριθμό"}</b><small>{item.reasons.join(" · ")}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>:<div className="ai-daily-clear"><CheckCircle2/><div><b>Δεν εντοπίστηκε ανοικτό εύρημα</b><span>{invoiceDetective.documents} τιμολόγια · {invoiceDetective.learned} εκπαιδευμένα · {invoiceDetective.profiles} κανόνες προμηθευτών.</span></div></div>)}
+        <button type="button" className="ai-detective-open" onClick={onOpenInvoices}><FileSearch/>Άνοιγμα Invoice Learning Lab<ChevronRight/></button>
+        <small className="ai-daily-source">Μόνο ανάγνωση: δεν γίνεται OCR, διόρθωση, πληρωμή, οριστικοποίηση ή κίνηση stock από εδώ.</small>
+      </section>
+
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
         <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
@@ -146,7 +178,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article className="current"><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article className="current"><FileSearch/><b>Invoice Detective</b><span>Φάση 6 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
