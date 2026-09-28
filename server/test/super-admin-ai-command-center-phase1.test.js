@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-4"/);
+  assert.match(center,/data-ai-command-center="phase-5"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -48,4 +48,13 @@ test("phase 4 derives every store status from existing read-only checks",()=>{
   assert.match(center,/ΠΡΟΒΛΗΜΑ/);
   assert.match(center,/Χωρίς σημερινό κλείσιμο/);
   assert.match(center,/store\.open/);
+});
+
+test("phase 5 ranks up to five daily priorities from the existing snapshot",()=>{
+  assert.match(center,/const dailyPriorities=useMemo/);
+  assert.match(center,/\.slice\(0,5\)/);
+  assert.match(center,/AI ΗΜΕΡΗΣΙΑ ΑΝΑΛΥΣΗ · ΦΑΣΗ 5/);
+  assert.match(center,/καμία αυτόματη ενέργεια ή μεταβολή/);
+  assert.match(center,/Πηγή: σημερινή επισκόπηση, Ταμεία, Πληρωμές και Τράπεζα/);
+  assert.doesNotMatch(center,/daily-analysis.*method:"POST"/s);
 });
