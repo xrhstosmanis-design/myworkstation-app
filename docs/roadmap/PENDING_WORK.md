@@ -126,19 +126,13 @@
 - Η ΦΑΣΗ 1 είναι μόνο ανάγνωσης: χρησιμοποιεί το υπάρχον `/api/platform/overview` και ανοίγει τους ήδη υπάρχοντες ελέγχους. Δεν δημιουργεί δεύτερα δεδομένα, νέο οικονομικό endpoint, αυτόματη ενέργεια ή μεταβολή POS/BackOffice.
 - Απαιτούνται στοχευμένα tests, πλήρες client build, πράσινο CI, merge, exact deploy και οπτικό LAB/USER PASS. Μέχρι τότε: `AWAITING LAB`.
 
-## 28/09/2026 — AI Command Center · ΦΑΣΗ 11 Night Briefing — ASSIGNED `feat/ai-command-night-briefing-phase11-20260928`
-
-- Read-only νυχτερινός απολογισμός από τις ήδη ενεργές ενότητες του Command Center.
-- Πέντε τομείς, ώρα Ελλάδας και σύνδεση στις υπάρχουσες κανονικές οθόνες.
-- Χωρίς endpoint, αποθήκευση κλεισίματος, μεταφορά υπολοίπου, αποστολή, scheduler ή μεταβολή δεδομένων.
-- `AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
-
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 
 - Workforce: εβδομαδιαίο πρόγραμμα, προβολή ανά ημέρα και ανά εργαζόμενο, ημερομηνίες/ώρες/ΡΕΠΟ, δημοσίευση στο Store Chat, εκτύπωση κάρτας εργασίας, PIN, QR/κάμερα, Code 128/scanner, ελληνικό και αγγλικό πληκτρολόγιο, προσέλευση/αποχώρηση, προστασία διπλής σάρωσης και Audit.
 - Video Audit/Dahua: σύνδεση POS με κάμερα, πραγματικό clip, μετατροπή MP4, αποθήκευση και browser playback.
 - Master Catalog: εισαγωγή Excel, κεντρικός κατάλογος, επιλογή προϊόντων καταστήματος και τιμή καταστήματος.
 - Super Admin: οι καταγεγραμμένοι Complete/Premium έλεγχοι.
+- AI Command Center ΦΑΣΗ 11 Night Briefing: LIMITED USER VISUAL PASS, PR #1526 / CI #3845 / exact production `2d4f2e071d8f4c107a31a31f4e2ca8c0fef9083c`. Δεν επαναλαμβάνεται.
 - Store Chat: βασική συνομιλία, αποστολή/ανανέωση και αναζήτηση.
 - Mobile: responsive χρήση και Android PWA.
 - POS: η καταγεγραμμένη δοκιμή εγγραφής οθόνης. Δεν αποτελεί συνολικό POS PASS.
