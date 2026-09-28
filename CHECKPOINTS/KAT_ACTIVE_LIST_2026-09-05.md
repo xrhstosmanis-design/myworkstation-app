@@ -1809,3 +1809,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 — AI Command Center ΦΑΣΗ 5 · AI ημερήσια ανάλυση
 
 - [x] Έως 5 σημερινές προτεραιότητες, με κόκκινα πριν από πορτοκαλί, πραγματική αιτία και σύνδεση στην υπάρχουσα κανονική οθόνη. Μόνο από τα υπάρχοντα read-only δεδομένα· κανένα νέο endpoint, write ή αυτόματη ενέργεια. PR `#1508`, CI `#3799` PASS, exact production `726808c49bc174ffd8ff824cf9ae77ed5e91bff4`. Τα `image(10).png` και `image(20260928-174514).png` επιβεβαιώνουν 4 προτεραιότητες σε συμφωνία με τα 4 καταστήματα προς έλεγχο, σωστή αιτία και ενεργό `Ρώτα`. LIMITED USER VISUAL PASS · CLOSED. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-daily-analysis-phase5.md`.
+
+## 28/09/2026 — AI Command Center ΦΑΣΗ 6 · Invoice & Supplier Detective
+
+- [ ] Read-only σύνοψη από το υπάρχον Invoice Learning workspace για πρόχειρα, γραμμές/εκπτώσεις προς έλεγχο, διαφορές συνόλου, πιθανά διπλά και μεταβολές τιμής. Έως 5 πραγματικά ευρήματα με μετάβαση στο κανονικό Invoice Learning Lab. Κανένα νέο endpoint, OCR, write, πληρωμή, stock ή οριστικοποίηση. CI, deploy και USER visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-invoice-detective-phase6.md`.

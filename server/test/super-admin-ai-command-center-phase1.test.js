@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-5"/);
+  assert.match(center,/data-ai-command-center="phase-6"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -57,4 +57,15 @@ test("phase 5 ranks up to five daily priorities from the existing snapshot",()=>
   assert.match(center,/καμία αυτόματη ενέργεια ή μεταβολή/);
   assert.match(center,/Πηγή: σημερινή επισκόπηση, Ταμεία, Πληρωμές και Τράπεζα/);
   assert.doesNotMatch(center,/daily-analysis.*method:"POST"/s);
+});
+
+test("phase 6 reads the existing Invoice Learning workspace without invoice writes",()=>{
+  assert.match(center,/request\("\/api\/platform\/invoice-learning\/workspace"\)/);
+  assert.match(center,/const invoiceDetective=useMemo/);
+  assert.match(center,/INVOICE & SUPPLIER DETECTIVE · ΦΑΣΗ 6/);
+  for(const label of ["Πρόχειρα","Γραμμές ελέγχου","Διαφορές συνόλου","Εκπτώσεις ελέγχου","Πιθανά διπλά","Μεταβολές τιμής"])assert.match(center,new RegExp(label));
+  assert.match(center,/onOpenInvoices/);
+  assert.match(app,/\/platform-admin\/invoice-learning-lab/);
+  assert.match(center,/δεν γίνεται OCR, διόρθωση, πληρωμή, οριστικοποίηση ή κίνηση stock/);
+  assert.doesNotMatch(center,/invoice-learning\/workspace",\{method:"(?:POST|PUT|DELETE)"/);
 });
