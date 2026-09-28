@@ -213,8 +213,8 @@ async function platformCashInvestigation(session,tables){
   return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
-function companyView(company,commercialTerms=[],managedControl=null){
-  const owner=company.users.find(user=>user.role==="OWNER")||null;
+function companyView(company,commercialTerms=[],managedControl=null,linkedOwner=null){
+  const owner=company.users.find(user=>user.role==="OWNER")||linkedOwner||null;
   const employees=company.stores.reduce((total,store)=>total+(store._count?.employees||0),0);
   return {
     id:company.id,
@@ -249,7 +249,7 @@ function companyView(company,commercialTerms=[],managedControl=null){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const [companies,allTerms,managedControls]=await Promise.all([prisma.company.findMany({
+    const [companies,allTerms,managedControls,ownerLinks]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -259,8 +259,8 @@ router.get("/overview",async(req,res,next)=>{
         }
       },
       orderBy:{createdAt:"desc"}
-    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`]);
-    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id)));
+    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`,prisma.$queryRaw`SELECT a."companyId",u."id",u."fullName",u."email",u."role" FROM "OwnerCompanyAccess" a JOIN "User" u ON u."id"=a."ownerUserId"`]);
+    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id),ownerLinks.find(link=>link.companyId===company.id)));
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({
@@ -291,18 +291,22 @@ router.post("/companies",async(req,res,next)=>{
       phone:z.string().trim().max(40).optional().or(z.literal("")),
       companyEmail:z.string().trim().email().optional().or(z.literal("")),
       ownerFullName:z.string().trim().min(2).max(160),
-      ownerEmail:z.string().trim().email(),
-      temporaryPassword:z.string().min(8).max(100),
+      ownerEmail:z.string().trim().email().optional(),
+      existingOwnerId:z.string().trim().optional(),
+      temporaryPassword:z.string().min(8).max(100).optional(),
       storeName:z.string().trim().min(2).max(160),
       storeCity:z.string().trim().max(100).optional().or(z.literal("")),
       plan:planSchema.default("TRIAL"),
       trialDays:z.coerce.number().int().min(1).max(365).default(14)
     }).parse(req.body||{});
 
-    const existing=await prisma.user.findUnique({where:{email:body.ownerEmail}});
-    if(existing)return res.status(409).json({error:"Υπάρχει ήδη χρήστης με αυτό το email."});
-
-    const passwordHash=await bcrypt.hash(body.temporaryPassword,12);
+    const linkedOwner=body.existingOwnerId?await prisma.user.findUnique({where:{id:body.existingOwnerId}}):null;
+    if(body.existingOwnerId&&(!linkedOwner||linkedOwner.role!=="OWNER"))return res.status(400).json({error:"Επίλεξε έγκυρο υπάρχοντα ιδιοκτήτη."});
+    if(linkedOwner&&body.ownerEmail&&linkedOwner.email.toLowerCase()!==body.ownerEmail.toLowerCase())return res.status(400).json({error:"Το email δεν συμφωνεί με τον επιλεγμένο ιδιοκτήτη."});
+    if(!linkedOwner&&(!body.ownerEmail||!body.temporaryPassword))return res.status(400).json({error:"Συμπλήρωσε email και προσωρινό κωδικό για νέο ιδιοκτήτη."});
+    const existing=body.ownerEmail?await prisma.user.findUnique({where:{email:body.ownerEmail}}):null;
+    if(!linkedOwner&&existing)return res.status(409).json({error:"Υπάρχει ήδη χρήστης με αυτό το email. Επίλεξέ τον ως υπάρχοντα ιδιοκτήτη."});
+    const passwordHash=linkedOwner?null:await bcrypt.hash(body.temporaryPassword,12);
     const trialEndsAt=body.plan==="TRIAL"?new Date(Date.now()+body.trialDays*24*60*60*1000):null;
     const licenseStatus=body.plan==="TRIAL"?"TRIAL":body.plan==="PILOT"?"PILOT":"ACTIVE";
     const defaultModules=planDefaults[body.plan]||planDefaults.TRIAL;
@@ -323,15 +327,10 @@ router.post("/companies",async(req,res,next)=>{
           subscriptionEndsAt:trialEndsAt
         }
       });
-      const owner=await tx.user.create({
-        data:{
-          email:body.ownerEmail,
-          passwordHash,
-          fullName:body.ownerFullName,
-          role:"OWNER",
-          companyId:company.id
-        }
+      const owner=linkedOwner||await tx.user.create({
+        data:{email:body.ownerEmail,passwordHash,fullName:body.ownerFullName,role:"OWNER",companyId:company.id}
       });
+      await tx.$executeRaw`INSERT INTO "OwnerCompanyAccess" ("ownerUserId","companyId") VALUES (${owner.id},${company.id}) ON CONFLICT DO NOTHING`;
       const store=await tx.store.create({
         data:{name:body.storeName,city:body.storeCity||body.city||null,companyId:company.id}
       });
