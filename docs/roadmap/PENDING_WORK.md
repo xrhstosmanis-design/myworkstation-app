@@ -126,6 +126,14 @@
 - Η ΦΑΣΗ 1 είναι μόνο ανάγνωσης: χρησιμοποιεί το υπάρχον `/api/platform/overview` και ανοίγει τους ήδη υπάρχοντες ελέγχους. Δεν δημιουργεί δεύτερα δεδομένα, νέο οικονομικό endpoint, αυτόματη ενέργεια ή μεταβολή POS/BackOffice.
 - Απαιτούνται στοχευμένα tests, πλήρες client build, πράσινο CI, merge, exact deploy και οπτικό LAB/USER PASS. Μέχρι τότε: `AWAITING LAB`.
 
+## 28/09/2026 — AI Command Center · ΦΑΣΗ 12 Digital Twin Lite — ASSIGNED `feat/ai-command-digital-twin-lite-phase12-20260928`
+
+- Read-only λειτουργική εικόνα ανά κατάστημα για POS, EFTPOS/ταμειακές, ταμείο, stock και προσωπικό.
+- Χρήση μόνο των υπαρχόντων overview, installation terminals, payment-device routing, Ταμείων, Stock και Workforce πηγών, με μετάβαση στις κανονικές οθόνες.
+- Χωρίς νέο endpoint, δεύτερο dataset, device control, άνοιγμα βάρδιας, EFTPOS/RBS εντολή, write ή κάμερα/NVR.
+- Τοπικά: `13/13 targeted PASS · 1.630 PASS + 1 SKIP full suite · production build PASS`.
+- `AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
+
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 
 - Workforce: εβδομαδιαίο πρόγραμμα, προβολή ανά ημέρα και ανά εργαζόμενο, ημερομηνίες/ώρες/ΡΕΠΟ, δημοσίευση στο Store Chat, εκτύπωση κάρτας εργασίας, PIN, QR/κάμερα, Code 128/scanner, ελληνικό και αγγλικό πληκτρολόγιο, προσέλευση/αποχώρηση, προστασία διπλής σάρωσης και Audit.
