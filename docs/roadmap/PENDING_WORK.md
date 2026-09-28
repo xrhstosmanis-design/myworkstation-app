@@ -133,6 +133,7 @@
 - Χωρίς νέο endpoint, δεύτερο dataset, device control, άνοιγμα βάρδιας, EFTPOS/RBS εντολή, write ή κάμερα/NVR.
 - Τοπικά: `13/13 targeted PASS · 1.630 PASS + 1 SKIP full suite · production build PASS`.
 - `AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
+- Πρώτο παραγωγικό readback `image(20260928-203008).png`: οι κάρτες/μετρητές εμφανίζονται, αλλά POS/EFTPOS είναι ψευδώς `ΜΗ ΔΙΑΘΕΣΙΜΟ` λόγω λάθος read-only URL. Η διόρθωση πέρασε 13/13 targeted, πλήρες suite και build. `DEVICE ROUTING FIX AWAITING CI / DEPLOY / RETEST`.
 
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 

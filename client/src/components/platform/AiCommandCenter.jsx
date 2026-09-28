@@ -34,7 +34,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const entries=await Promise.all(stores.map(async item=>{
       try{
         const base=`/api/platform/companies/${encodeURIComponent(item.companyId)}/stores/${encodeURIComponent(item.storeId)}`;
-        const [terminals,routing]=await Promise.all([request(`${base}/installation-terminals`),request(`${base}/payment-device-routing`)]);
+        const [terminals,routing]=await Promise.all([request(`${base}/installation-terminals`),request(`${base}/device-routing`)]);
         return[item.storeId,{terminals:terminals.terminals||[],fiscalDevices:routing.fiscalDevices||[],eftposDevices:routing.eftposDevices||[]}];
       }catch{return[item.storeId,{terminals:[],fiscalDevices:[],eftposDevices:[],unavailable:true}]}
     }));
