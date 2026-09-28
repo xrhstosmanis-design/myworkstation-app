@@ -220,6 +220,7 @@ function companyView(company,commercialTerms=[],managedControl=null,linkedOwner=
     id:company.id,
     name:company.name,
     taxId:company.taxId,
+    ownerLinked:Boolean(linkedOwner&&!company.users.some(user=>user.role==="OWNER")),
     city:company.city,
     email:company.email,
     phone:company.phone,
@@ -364,6 +365,7 @@ router.put("/companies/:companyId/owner",async(req,res,next)=>{
     if(!company)return res.status(404).json({error:"Δεν βρέθηκε πελάτης."});
 
     const currentOwner=await prisma.user.findFirst({where:{companyId:company.id,role:"OWNER"}});
+    if(!currentOwner){const linked=await prisma.$queryRaw`SELECT 1 FROM "OwnerCompanyAccess" WHERE "companyId"=${company.id} LIMIT 1`;if(linked.length)return res.status(409).json({error:"Ο κοινός ιδιοκτήτης διαχειρίζεται από την αρχική του εταιρεία."});}
     const emailUser=await prisma.user.findUnique({where:{email:body.email}});
     if(emailUser&&emailUser.id!==currentOwner?.id){
       return res.status(409).json({error:"Το email χρησιμοποιείται ήδη από άλλον λογαριασμό."});
