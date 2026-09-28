@@ -431,7 +431,7 @@ router.delete("/companies/:companyId/stores/:storeId/empty-setup",async(req,res,
       await tx.store.delete({where:{id:storeId}});
       await tx.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EMPTY_STORE_SETUP_DELETED:${companyId}:${storeId}:${store.name}`,success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
       return {ok:true,deleted:{id:storeId,name:store.name,terminals:terminals.length}};
-    });
+    },{timeout:30000,maxWait:5000});
     if(result.status)return res.status(result.status).json({error:result.error});
     res.json(result);
   }catch(error){next(error)}
