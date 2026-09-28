@@ -249,7 +249,7 @@ function companyView(company,commercialTerms=[],managedControl=null){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const [companies,allTerms,managedControls]=await Promise.all([prisma.company.findMany({
+    const [companies,allTerms,managedControls,ownerAccess]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -259,8 +259,8 @@ router.get("/overview",async(req,res,next)=>{
         }
       },
       orderBy:{createdAt:"desc"}
-    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`]);
-    const rows=companies.map(company=>companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id)));
+    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`,prisma.$queryRaw`SELECT a."companyId",u."id",u."fullName",u."email",u."role" FROM "OwnerCompanyAccess" a JOIN "User" u ON u."id"=a."ownerId" WHERE u."role"='OWNER'`]);
+    const rows=companies.map(company=>{const row=companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id));const linked=ownerAccess.find(access=>access.companyId===company.id);if(linked&&!row.owner)row.owner={id:linked.id,fullName:linked.fullName,email:linked.email,role:linked.role};return row});
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({
