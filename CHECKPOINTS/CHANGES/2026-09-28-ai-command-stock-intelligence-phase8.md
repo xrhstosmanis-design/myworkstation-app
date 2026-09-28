@@ -1,7 +1,7 @@
 # AI Command Center — ΦΑΣΗ 8 Stock Intelligence
 
 **Ημερομηνία:** 28/09/2026
-**Κατάσταση:** `IMPLEMENTED · AWAITING CI / DEPLOY / USER PASS`
+**Κατάσταση:** `LIMITED USER VISUAL PASS · CLOSED`
 
 ## Στενή αλλαγή
 
@@ -30,3 +30,11 @@
 - Στοχευμένα AI Command Center regression tests: `9/9 PASS`.
 - Πλήρες server test suite: `1.620 PASS · 1 SKIP · 0 FAIL`.
 - Production client build: `PASS`.
+
+## CI / production / οπτική αποδοχή
+
+- PR `#1518` έγινε squash merge μετά από πράσινο `MyWorkStation CI #3828`.
+- Exact production revision: `639944effe644d8709f5daefde18b33a428fa710`.
+- Η `image(20260928-190513).png` επιβεβαιώνει οπτικά την ενότητα `STOCK INTELLIGENCE · ΦΑΣΗ 8`, τους έξι μετρητές (`206` ενεργά, `0` χαμηλά, `125` μηδενικά, `15` αρνητικά, `65` slow movers και `0,00` πρόταση κάλυψης) και πέντε ιεραρχημένα ευρήματα με τα αρνητικά πρώτα.
+- Δεν παρατηρείται αυτόματη παραγγελία ή μεταβολή stock.
+- Το συγκεκριμένο read-only scope κλειδώνει **LIMITED USER VISUAL PASS · CLOSED**.
