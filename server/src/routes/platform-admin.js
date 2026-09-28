@@ -249,7 +249,7 @@ function companyView(company,commercialTerms=[],managedControl=null){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const [companies,allTerms,managedControls,ownerAccess]=await Promise.all([prisma.company.findMany({
+    const [companies,allTerms,managedControls,ownerAccess,stockRows]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -260,8 +260,20 @@ router.get("/overview",async(req,res,next)=>{
         }
       },
       orderBy:{createdAt:"desc"}
-    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`,prisma.$queryRaw`SELECT a."companyId",u."id",u."fullName",u."email",u."role" FROM "OwnerCompanyAccess" a JOIN "User" u ON u."id"=a."ownerId" WHERE u."role"='OWNER'`]);
-    const rows=companies.map(company=>{const row=companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id));const linked=ownerAccess.find(access=>access.companyId===company.id);if(linked&&!row.owner)row.owner={id:linked.id,fullName:linked.fullName,email:linked.email,role:linked.role};return row});
+    }),prisma.$queryRaw`SELECT "companyId","moduleKey","monthlyPrice","setupFee","billingCycle","currency" FROM "ModuleCommercialTerms"`,prisma.$queryRaw`SELECT "companyId","controlPlan","monthlyPrice","notes" FROM "CompanyManagedControlTerms"`,prisma.$queryRaw`SELECT a."companyId",u."id",u."fullName",u."email",u."role" FROM "OwnerCompanyAccess" a JOIN "User" u ON u."id"=a."ownerId" WHERE u."role"='OWNER'`,prisma.$queryRaw`
+      SELECT st."id" AS "storeId",
+        COUNT(sp."id") FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE)::int AS "trackedProducts",
+        COUNT(sp."id") FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE AND COALESCE(sp."minStock",0)>0 AND COALESCE(sp."currentStock",0)>0 AND sp."currentStock"<sp."minStock")::int AS "lowStock",
+        COUNT(sp."id") FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE AND COALESCE(sp."currentStock",0)=0)::int AS "outOfStock",
+        COUNT(sp."id") FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE AND COALESCE(sp."currentStock",0)<0)::int AS "negativeStock",
+        COUNT(sp."id") FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE AND COALESCE(sp."currentStock",0)>0 AND NOT EXISTS (SELECT 1 FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" WHERE sa."storeId"=st."id" AND sa."status"='COMPLETED' AND sa."occurredAt">=NOW()-INTERVAL '30 days' AND sl."productId"=sp."productId"))::int AS "slowMovers",
+        COALESCE(SUM(GREATEST(COALESCE(sp."minStock",0)-COALESCE(sp."currentStock",0),0)) FILTER (WHERE p."active"=TRUE AND sp."active"=TRUE AND COALESCE(sp."minStock",0)>0),0)::float AS "suggestedUnits",
+        COALESCE(mv."recentAdjustments",0)::int AS "recentAdjustments"
+      FROM "Store" st LEFT JOIN "StoreProduct" sp ON sp."storeId"=st."id" LEFT JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=st."companyId"
+      LEFT JOIN LATERAL (SELECT COUNT(*)::int AS "recentAdjustments" FROM "StockMovement" sm WHERE sm."storeId"=st."id" AND sm."createdAt">=NOW()-INTERVAL '7 days' AND sm."movementType" IN ('MANUAL_ADJUSTMENT','WASTE','DAMAGE','LOSS','TRANSFER_IN','TRANSFER_OUT')) mv ON TRUE
+      WHERE st."active"=TRUE GROUP BY st."id",mv."recentAdjustments"`]);
+    const stockByStore=new Map(stockRows.map(item=>[item.storeId,{trackedProducts:Number(item.trackedProducts||0),lowStock:Number(item.lowStock||0),outOfStock:Number(item.outOfStock||0),negativeStock:Number(item.negativeStock||0),slowMovers:Number(item.slowMovers||0),suggestedUnits:Number(item.suggestedUnits||0),recentAdjustments:Number(item.recentAdjustments||0)}]));
+    const rows=companies.map(company=>{const row=companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id));row.stores=row.stores.map(store=>({...store,stockSummary:stockByStore.get(store.id)||{trackedProducts:0,lowStock:0,outOfStock:0,negativeStock:0,slowMovers:0,suggestedUnits:0,recentAdjustments:0}}));const linked=ownerAccess.find(access=>access.companyId===company.id);if(linked&&!row.owner)row.owner={id:linked.id,fullName:linked.fullName,email:linked.email,role:linked.role};return row});
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({

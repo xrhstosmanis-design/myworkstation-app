@@ -9,7 +9,7 @@ const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(va
 const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
 const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices}){
+export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock}){
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [question,setQuestion]=useState("");
@@ -114,6 +114,13 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const weight={danger:0,warn:1};items.sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el"));
     return{shortage:Number(totals.shortage||0),surplus:Number(totals.surplus||0),cardVariance:Number(totals.cardVariance||0),withoutEvidence:Number(totals.expensesWithoutDocument||0),duplicates:Number(totals.duplicateCandidates||0),paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,items:items.slice(0,5)};
   },[onOpenBank,onOpenCash,onOpenPayments,problems]);
+  const stockIntel=useMemo(()=>{
+    const stores=companies.flatMap(company=>(company.stores||[]).map(store=>({company,store,summary:store.stockSummary||{}}))),items=[];
+    const totals=stores.reduce((all,item)=>{for(const key of Object.keys(all))all[key]+=Number(item.summary[key]||0);return all},{trackedProducts:0,lowStock:0,outOfStock:0,negativeStock:0,slowMovers:0,suggestedUnits:0,recentAdjustments:0});
+    const add=(item,state,context,detail)=>items.push({id:`${context}:${item.store.id}`,state,title:item.store.name,companyName:item.company.name,context,detail,open:()=>onOpenStock?.(item.company.id,item.store.id)});
+    for(const item of stores){const stock=item.summary;if(Number(stock.negativeStock)>0)add(item,"danger","Αρνητικό stock",`${stock.negativeStock} είδη έχουν αρνητικό υπόλοιπο και χρειάζονται έλεγχο στο υπάρχον ledger.`);if(Number(stock.outOfStock)>0)add(item,"warn","Μηδενικό stock",`${stock.outOfStock} ενεργά είδη εμφανίζονται χωρίς διαθέσιμο απόθεμα.`);if(Number(stock.lowStock)>0)add(item,"warn","Χαμηλό stock",`${stock.lowStock} είδη είναι κάτω από το αποθηκευμένο ελάχιστο · προτεινόμενη κάλυψη ${commandMoney(stock.suggestedUnits)} μονάδες.`);if(Number(stock.slowMovers)>0)add(item,"warn","Slow movers 30 ημερών",`${stock.slowMovers} είδη έχουν θετικό stock χωρίς καταγεγραμμένη πώληση τις τελευταίες 30 ημέρες.`);if(Number(stock.recentAdjustments)>0)add(item,"warn","Κινήσεις ελέγχου 7 ημερών",`${stock.recentAdjustments} χειροκίνητες κινήσεις, φύρες ή μεταφορές υπάρχουν στο ledger για έλεγχο.`)}
+    const weight={danger:0,warn:1};items.sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el"));return{...totals,items:items.slice(0,5)};
+  },[companies,onOpenStock]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel()};
   const ask=async event=>{
     event.preventDefault();
@@ -131,10 +138,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-7">
+  return <div className="ai-command-page" data-ai-command-center="phase-8">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 7</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 8</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -193,6 +200,13 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <small className="ai-daily-source">Μόνο ανάγνωση: δεν εγκρίνεται, δεν διορθώνεται, δεν συμψηφίζεται και δεν δημιουργείται πληρωμή ή χρέωση από εδώ.</small>
       </section>
 
+      <section className="ai-command-stock-intel">
+        <div className="ai-command-panel-title"><div><small>STOCK INTELLIGENCE · ΦΑΣΗ 8</small><h2>{loading?"Ανάλυση αποθήκης…":stockIntel.items.length?`${stockIntel.items.length} σημεία stock χρειάζονται έλεγχο`:"Δεν υπάρχει ανοικτό εύρημα stock"}</h2><p>Ζωντανή σύνοψη από το υπάρχον stock, τις πωλήσεις και το ledger κινήσεων· χωρίς αυτόματη παραγγελία ή μεταβολή.</p></div><Store/></div>
+        <div className="ai-stock-metrics"><span><small>Ενεργά είδη</small><b>{stockIntel.trackedProducts}</b></span><span><small>Χαμηλό stock</small><b>{stockIntel.lowStock}</b></span><span><small>Μηδενικό stock</small><b>{stockIntel.outOfStock}</b></span><span><small>Αρνητικό stock</small><b>{stockIntel.negativeStock}</b></span><span><small>Slow movers 30ημ.</small><b>{stockIntel.slowMovers}</b></span><span><small>Πρόταση κάλυψης</small><b>{commandMoney(stockIntel.suggestedUnits)}</b></span></div>
+        {stockIntel.items.length?<div className="ai-stock-list">{stockIntel.items.map(item=><button type="button" key={item.id} onClick={item.open}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.title} · {item.context}</b><small>{item.companyName} · {item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>:<div className="ai-daily-clear"><CheckCircle2/><div><b>Η διαθέσιμη εικόνα stock είναι καθαρή</b><span>Δεν βρέθηκε αρνητικό, μηδενικό ή χαμηλό stock ούτε slow mover στα ενεργά είδη.</span></div></div>}
+        <small className="ai-daily-source">Μόνο ανάγνωση: οι ποσότητες είναι προτάσεις ελέγχου. Δεν δημιουργείται παραγγελία, παραλαβή, μεταφορά, φύρα ή κίνηση stock από εδώ.</small>
+      </section>
+
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
         <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
@@ -203,7 +217,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article><FileSearch/><b>Invoice Detective</b><span>Φάση 6 · ενεργό</span></article><article className="current"><WalletCards/><b>AI Ταμείων &amp; Πληρωμών</b><span>Φάση 7 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><FileSearch/><b>Invoice Detective</b><span>Φάση 6 · ενεργό</span></article><article><WalletCards/><b>AI Ταμείων &amp; Πληρωμών</b><span>Φάση 7 · ενεργό</span></article><article className="current"><Store/><b>Stock Intelligence</b><span>Φάση 8 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;

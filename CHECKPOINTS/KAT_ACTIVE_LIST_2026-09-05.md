@@ -1821,3 +1821,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 — AI Command Center ΦΑΣΗ 7 · AI Ταμείων & Πληρωμών
 
 - [x] Read-only εξήγηση των υπαρχόντων αποκλίσεων μετρητών, POS–EFTPOS, αποδεικτικών, πιθανών διπλών, πληρωμών προμηθευτών και τραπεζικών εγγραφών. Έως 5 πραγματικά ευρήματα με μετάβαση στις κανονικές οθόνες. Κανένα νέο endpoint, write, πληρωμή, χρέωση, συμψηφισμός ή stock. PR `#1512`, CI `#3808` PASS, exact production `385f02460f389aa1928c669168c691df3bc67879`. Η `image(20260928-183817).png` επιβεβαιώνει τους έξι μηδενικούς μετρητές, την κατάσταση συμφωνίας και τα τρία κουμπιά μετάβασης. LIMITED USER VISUAL PASS · CLOSED. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-cash-payments-phase7.md`.
+
+## 28/09/2026 — AI Command Center ΦΑΣΗ 8 · Stock Intelligence
+
+- [ ] Read-only εικόνα ενεργών ειδών, χαμηλού/μηδενικού/αρνητικού stock, slow movers και πρότασης κάλυψης από το υπάρχον stock/POS/ledger. Έως 5 ευρήματα με μετάβαση στο κανονικό Backoffice. Κανένα νέο endpoint, δεύτερο ledger, παραγγελία, παραλαβή, μεταφορά, φύρα ή stock write. CI, deploy και USER visual PASS AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-stock-intelligence-phase8.md`.

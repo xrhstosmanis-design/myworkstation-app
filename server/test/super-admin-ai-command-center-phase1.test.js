@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-7"/);
+  assert.match(center,/data-ai-command-center="phase-8"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -24,7 +24,7 @@ test("phase 2 reuses existing read-only checks and existing centers",()=>{
 
 test("future AI modules are labelled as later phases instead of simulated results",()=>{
   assert.match(center,/ΡΩΤΑ ΤΟ MYWORKSTATION/i);
-  assert.match(center,/Φάση 7 · ενεργό/);
+  assert.match(center,/Φάση 8 · ενεργό/);
   assert.match(center,/Digital Twin/);
   assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
 });
@@ -79,4 +79,17 @@ test("phase 7 explains existing cash and payment checks without financial writes
   for(const endpoint of ["cash-control/daily","supplier-settlements/review","bank-ledger/review"]){
     assert.doesNotMatch(center,new RegExp(`request\\([^)]*${endpoint}[^)]*method:\"(?:POST|PUT|PATCH|DELETE)\"`));
   }
+});
+
+test("phase 8 reuses overview stock data without creating stock actions",()=>{
+  assert.match(platformRoutes,/stockRows/);
+  assert.match(platformRoutes,/"StoreProduct"/);
+  assert.match(platformRoutes,/"StockMovement"/);
+  assert.match(center,/const stockIntel=useMemo/);
+  assert.match(center,/STOCK INTELLIGENCE · ΦΑΣΗ 8/);
+  for(const label of ["Ενεργά είδη","Χαμηλό stock","Μηδενικό stock","Αρνητικό stock","Slow movers 30ημ.","Πρόταση κάλυψης"])assert.match(center,new RegExp(label));
+  assert.match(center,/Δεν δημιουργείται παραγγελία, παραλαβή, μεταφορά, φύρα ή κίνηση stock/);
+  assert.match(center,/onOpenStock/);
+  assert.match(app,/openCustomer\(company,store,"BACKOFFICE"\)/);
+  assert.doesNotMatch(center,/request\([^)]*(?:stock|inventory)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
 });
