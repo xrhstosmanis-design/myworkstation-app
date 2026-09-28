@@ -36,4 +36,5 @@ test("phase 3 asks through the guarded read-only Platform endpoint",()=>{
   assert.match(platformRoutes,/aiCommandQuestionSchema\.parse/);
   assert.match(center,/question\.trim\(\)\|\|\"Ποια σημεία χρειάζονται έλεγχο σήμερα;/);
   assert.doesNotMatch(center,/disabled=\{askState\.loading\|\|question\.trim\(\)\.length/);
+  assert.match(center,/companies:\{active:summary\.activeCompanies,inactive:summary\.inactiveCompanies/);
 });
