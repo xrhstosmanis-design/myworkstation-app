@@ -1,3 +1,7 @@
+## 28/09/2026 — TABLE_SERVICE ασφαλής επανάληψη γύρου · AWAITING CI/LAB
+
+- [ ] Ο ίδιος αμετάβλητος mobile γύρος φέρει μοναδικό key και η επανάληψη της ίδιας προσπάθειας επιστρέφει το αρχικό αποτέλεσμα χωρίς δεύτερο γύρο/πόστο/Audit· σύγκρουση payload ή χειριστή απορρίπτεται. Unit tests PASS, CI/deploy και database/φυσικό LAB AWAITING. Δεν στάλθηκε νέος γύρος. `CHECKPOINTS/CHANGES/2026-09-28-table-service-round-idempotency.md`. Συνολικό TABLE_SERVICE OPEN.
+
 ## 28/09/2026 19:19–19:20 Ελλάδα — TABLE_SERVICE εγκατεστημένο Android PWA · περιορισμένο USER PASS offline/reconnect οθόνης
 
 - [x] Φωτογραφίες ιδιοκτήτη `image-1790612351196.jpg` 19:19 και `image-1790612423703.jpg` 19:20: στην Παραγγελιοληψία κινητού LAB POS 2 εμφανίστηκε η ένδειξη «Χωρίς σύνδεση» και έπειτα εξαφανίστηκε με επαναφορά δικτύου. Το ΤΡΑΠΕΖΙ LAB 1 εμφανίστηκε READY · 3,00 € και στις δύο λήψεις. Βάση PR #1482 / CI #3732 / exact Render `ce6c6ccc19fc77ebcd7faea0cd740c75c6c9418f`. USER PASS μόνο ορατής offline/reconnect ένδειξης και διατήρησης της οθόνης· ανάκτηση προϊόντων, ενεργοποίηση κουμπιού, πραγματικό POST/απουσία POST στη βάση και οικονομικά/stock NOT TESTED. Συνολικό TABLE_SERVICE OPEN. `CHECKPOINTS/CHANGES/2026-09-28-table-service-mobile-reconnect.md`.
