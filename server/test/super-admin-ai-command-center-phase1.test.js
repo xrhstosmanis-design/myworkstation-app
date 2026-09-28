@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-9"/);
+  assert.match(center,/data-ai-command-center="phase-10"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -103,4 +103,13 @@ test("phase 9 summarizes existing Workforce data without workforce writes",()=>{
   assert.match(center,/onOpenWorkforce/);
   assert.match(app,/setWorkforceTarget\(\{company,store\}\)/);
   assert.doesNotMatch(center,/request\([^)]*workforce[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
+});
+
+test("phase 10 builds a read-only Morning Briefing from existing intelligence",()=>{
+  assert.match(center,/const morningBriefing=useMemo/);
+  assert.match(center,/MORNING BRIEFING · ΦΑΣΗ 10/);
+  for(const label of ["Κατάσταση δικτύου","Ταμεία & πληρωμές","Τιμολόγια & προμηθευτές","Αποθήκη","Προσωπικό"])assert.match(center,new RegExp(label));
+  assert.match(center,/Europe\/Athens/);
+  assert.match(center,/Δεν αποστέλλεται μήνυμα, δεν προγραμματίζεται εργασία και δεν αλλάζει κανένα δεδομένο/);
+  assert.doesNotMatch(center,/morning[^\n]*(?:POST|PUT|PATCH|DELETE|setInterval|Notification)/i);
 });
