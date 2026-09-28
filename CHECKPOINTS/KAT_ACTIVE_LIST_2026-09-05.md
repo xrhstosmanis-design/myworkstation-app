@@ -1829,3 +1829,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 — AI Command Center ΦΑΣΗ 8 · Stock Intelligence
 
 - [x] Read-only εικόνα ενεργών ειδών, χαμηλού/μηδενικού/αρνητικού stock, slow movers και πρότασης κάλυψης από το υπάρχον stock/POS/ledger. Έως 5 ευρήματα με μετάβαση στο κανονικό Backoffice. Κανένα νέο endpoint, δεύτερο ledger, παραγγελία, παραλαβή, μεταφορά, φύρα ή stock write. PR `#1518`, CI `#3828` PASS, exact production `639944effe644d8709f5daefde18b33a428fa710`. Η `image(20260928-190513).png` επιβεβαιώνει 206 ενεργά, 125 μηδενικά, 15 αρνητικά, 65 slow movers και πέντε σωστά ιεραρχημένα ευρήματα. LIMITED USER VISUAL PASS · CLOSED. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-stock-intelligence-phase8.md`.
+
+## 28/09/2026 — AI Command Center ΦΑΣΗ 9 · Workforce Intelligence
+
+- [ ] Read-only σύνοψη από τα υπάρχοντα Workforce V2 δεδομένα για ενεργούς εργαζομένους, πρόγραμμα, κενά, παρουσίες, καθυστερήσεις, υπερωρίες και αιτήματα αδειών. Έως 5 ευρήματα με μετάβαση στην κανονική οθόνη `Προσωπικό & Πρόγραμμα`. Κανένα νέο endpoint, δεύτερο dataset, write, έγκριση, δημοσίευση ή Payroll αλλαγή. Local 10/10 targeted, 1.627 PASS + 1 SKIP full server και production client build PASS. **AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-workforce-intelligence-phase9.md`.

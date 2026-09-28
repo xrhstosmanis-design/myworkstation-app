@@ -249,7 +249,7 @@ function companyView(company,commercialTerms=[],managedControl=null){
 
 router.get("/overview",async(req,res,next)=>{
   try{
-    const [companies,allTerms,managedControls,ownerAccess,stockRows]=await Promise.all([prisma.company.findMany({
+    const [companies,allTerms,managedControls,ownerAccess,stockRows,workforceRows]=await Promise.all([prisma.company.findMany({
       include:{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
@@ -271,9 +271,49 @@ router.get("/overview",async(req,res,next)=>{
         COALESCE(mv."recentAdjustments",0)::int AS "recentAdjustments"
       FROM "Store" st LEFT JOIN "StoreProduct" sp ON sp."storeId"=st."id" LEFT JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=st."companyId"
       LEFT JOIN LATERAL (SELECT COUNT(*)::int AS "recentAdjustments" FROM "StockMovement" sm WHERE sm."storeId"=st."id" AND sm."createdAt">=NOW()-INTERVAL '7 days' AND sm."movementType" IN ('MANUAL_ADJUSTMENT','WASTE','DAMAGE','LOSS','TRANSFER_IN','TRANSFER_OUT')) mv ON TRUE
-      WHERE st."active"=TRUE GROUP BY st."id",mv."recentAdjustments"`]);
+      WHERE st."active"=TRUE GROUP BY st."id",mv."recentAdjustments"`,prisma.$queryRaw`
+      SELECT st."id" AS "storeId",
+        COALESCE(em."activeEmployees",0)::int AS "activeEmployees",
+        COALESCE(sc."scheduledToday",0)::int AS "scheduledToday",
+        COALESCE(sc."unfilledShifts",0)::int AS "unfilledShifts",
+        COALESCE(sc."publishedToday",FALSE) AS "publishedToday",
+        COALESCE(att."attendanceOpen",0)::int AS "attendanceOpen",
+        COALESCE(att."attendanceReview",0)::int AS "attendanceReview",
+        COALESCE(att."lateArrivals",0)::int AS "lateArrivals",
+        COALESCE(att."overtimeMinutes",0)::int AS "overtimeMinutes",
+        COALESCE(lv."pendingLeaves",0)::int AS "pendingLeaves"
+      FROM "Store" st
+      LEFT JOIN LATERAL (
+        SELECT COUNT(DISTINCT we."id")::int AS "activeEmployees"
+        FROM "WorkforceEmployee" we
+        LEFT JOIN "WorkforceEmployeeStoreAccess" wesa ON wesa."employeeId"=we."id" AND wesa."storeId"=st."id" AND wesa."active"=TRUE
+        WHERE we."companyId"=st."companyId" AND we."active"=TRUE AND (we."baseStoreId"=st."id" OR wesa."id" IS NOT NULL)
+      ) em ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE wsa."date"=(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date AND wsa."employeeId" IS NOT NULL)::int AS "scheduledToday",
+          COUNT(*) FILTER (WHERE wsa."date">=(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date AND wsa."date"<(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date+7 AND wsa."employeeId" IS NULL)::int AS "unfilledShifts",
+          BOOL_OR(ws."periodStart"::date<=(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date AND ws."periodEnd"::date>=(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date) AS "publishedToday"
+        FROM "WorkforceSchedule" ws LEFT JOIN "WorkforceScheduleAssignment" wsa ON wsa."scheduleId"=ws."id"
+        WHERE ws."companyId"=st."companyId" AND ws."storeId"=st."id" AND ws."status"='PUBLISHED'
+      ) sc ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE was."status"='OPEN')::int AS "attendanceOpen",
+          COUNT(*) FILTER (WHERE was."status" IN ('NEEDS_REVIEW','NEEDS_APPROVAL'))::int AS "attendanceReview",
+          COUNT(*) FILTER (WHERE was."lateMinutes">0)::int AS "lateArrivals",
+          COALESCE(SUM(was."overtimeMinutes"),0)::int AS "overtimeMinutes"
+        FROM "WorkforceAttendanceSession" was
+        WHERE was."companyId"=st."companyId" AND was."storeId"=st."id" AND was."startedAt">=((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date AT TIME ZONE 'Europe/Athens') AND was."startedAt"<(((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date+1) AT TIME ZONE 'Europe/Athens')
+      ) att ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS "pendingLeaves" FROM "WorkforceLeaveRequest" wlr
+        WHERE wlr."companyId"=st."companyId" AND wlr."storeId"=st."id" AND wlr."status"='REQUESTED'
+      ) lv ON TRUE
+      WHERE st."active"=TRUE`]);
     const stockByStore=new Map(stockRows.map(item=>[item.storeId,{trackedProducts:Number(item.trackedProducts||0),lowStock:Number(item.lowStock||0),outOfStock:Number(item.outOfStock||0),negativeStock:Number(item.negativeStock||0),slowMovers:Number(item.slowMovers||0),suggestedUnits:Number(item.suggestedUnits||0),recentAdjustments:Number(item.recentAdjustments||0)}]));
-    const rows=companies.map(company=>{const row=companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id));row.stores=row.stores.map(store=>({...store,stockSummary:stockByStore.get(store.id)||{trackedProducts:0,lowStock:0,outOfStock:0,negativeStock:0,slowMovers:0,suggestedUnits:0,recentAdjustments:0}}));const linked=ownerAccess.find(access=>access.companyId===company.id);if(linked&&!row.owner)row.owner={id:linked.id,fullName:linked.fullName,email:linked.email,role:linked.role};return row});
+    const workforceByStore=new Map(workforceRows.map(item=>[item.storeId,{activeEmployees:Number(item.activeEmployees||0),scheduledToday:Number(item.scheduledToday||0),unfilledShifts:Number(item.unfilledShifts||0),publishedToday:Boolean(item.publishedToday),attendanceOpen:Number(item.attendanceOpen||0),attendanceReview:Number(item.attendanceReview||0),lateArrivals:Number(item.lateArrivals||0),overtimeMinutes:Number(item.overtimeMinutes||0),pendingLeaves:Number(item.pendingLeaves||0)}]));
+    const rows=companies.map(company=>{const row=companyView(company,allTerms.filter(term=>term.companyId===company.id),managedControls.find(term=>term.companyId===company.id));row.stores=row.stores.map(store=>({...store,stockSummary:stockByStore.get(store.id)||{trackedProducts:0,lowStock:0,outOfStock:0,negativeStock:0,slowMovers:0,suggestedUnits:0,recentAdjustments:0},workforceSummary:workforceByStore.get(store.id)||{activeEmployees:0,scheduledToday:0,unfilledShifts:0,publishedToday:false,attendanceOpen:0,attendanceReview:0,lateArrivals:0,overtimeMinutes:0,pendingLeaves:0}}));const linked=ownerAccess.find(access=>access.companyId===company.id);if(linked&&!row.owner)row.owner={id:linked.id,fullName:linked.fullName,email:linked.email,role:linked.role};return row});
     const now=Date.now();
     const month=30*24*60*60*1000;
     res.json({

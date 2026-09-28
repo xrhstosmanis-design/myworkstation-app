@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-8"/);
+  assert.match(center,/data-ai-command-center="phase-9"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -92,4 +92,15 @@ test("phase 8 reuses overview stock data without creating stock actions",()=>{
   assert.match(center,/onOpenStock/);
   assert.match(app,/openCustomer\(company,store,"BACKOFFICE"\)/);
   assert.doesNotMatch(center,/request\([^)]*(?:stock|inventory)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
+});
+
+test("phase 9 summarizes existing Workforce data without workforce writes",()=>{
+  for(const table of ["WorkforceEmployee","WorkforceSchedule","WorkforceScheduleAssignment","WorkforceAttendanceSession","WorkforceLeaveRequest"])assert.match(platformRoutes,new RegExp(`"${table}"`));
+  assert.match(center,/const workforceIntel=useMemo/);
+  assert.match(center,/WORKFORCE INTELLIGENCE · ΦΑΣΗ 9/);
+  for(const label of ["Ενεργοί εργαζόμενοι","Πρόγραμμα σήμερα","Ανοιχτές παρουσίες","Προς έλεγχο","Καθυστερήσεις","Υπερωρία σήμερα"])assert.match(center,new RegExp(label));
+  assert.match(center,/δεν δημιουργείται ή αλλάζει βάρδια, παρουσία, άδεια, έγκριση ή μισθοδοσία/);
+  assert.match(center,/onOpenWorkforce/);
+  assert.match(app,/setWorkforceTarget\(\{company,store\}\)/);
+  assert.doesNotMatch(center,/request\([^)]*workforce[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
 });
