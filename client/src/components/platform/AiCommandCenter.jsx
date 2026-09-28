@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
 const commandMoney=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -143,6 +143,16 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     else add("workforce","ok","Προσωπικό","Δεν υπάρχει ανοικτό εύρημα προσωπικού.",onOpenChecks);
     return items;
   },[cashPaymentIntel,invoiceDetective,onOpenCash,onOpenChecks,onOpenInvoices,stockIntel,storeStatusTotals,workforceIntel]);
+  const nightBriefing=useMemo(()=>{
+    const openAreas=morningBriefing.filter(item=>item.state!=="ok").length;
+    return [
+      {id:"tomorrow",state:openAreas?"warn":"ok",title:"Ανοικτά για αύριο",detail:openAreas?`${openAreas} από τους 5 τομείς χρειάζονται συνέχεια.`:"Δεν μένει ανοικτός τομέας στη διαθέσιμη εικόνα.",open:onOpenChecks},
+      {id:"stores",state:storeStatusTotals.danger?"danger":storeStatusTotals.warn?"warn":"ok",title:"Καταστήματα στο κλείσιμο",detail:`${storeStatusTotals.danger} πρόβλημα · ${storeStatusTotals.warn} έλεγχος · ${storeStatusTotals.ok} ΟΚ.`,open:onOpenChecks},
+      {id:"finance",state:cashPaymentIntel.items.some(item=>item.state==="danger")?"danger":cashPaymentIntel.items.length?"warn":"ok",title:"Οικονομικός έλεγχος",detail:cashPaymentIntel.items.length?`${cashPaymentIntel.items.length} σημεία δεν έχουν κλείσει.`:"Οι διαθέσιμοι οικονομικοί έλεγχοι συμφωνούν.",open:cashPaymentIntel.items[0]?.open||onOpenCash},
+      {id:"operations",state:invoiceDetective.items.some(item=>item.state==="danger")||stockIntel.items.some(item=>item.state==="danger")?"danger":invoiceDetective.items.length||stockIntel.items.length?"warn":"ok",title:"Τιμολόγια & stock",detail:`${invoiceDetective.items.length} τιμολόγια · ${stockIntel.items.length} σημεία stock για συνέχεια.`,open:invoiceDetective.items.length?onOpenInvoices:stockIntel.items[0]?.open||onOpenChecks},
+      {id:"people",state:workforceIntel.items.some(item=>item.state==="danger")?"danger":workforceIntel.items.length?"warn":"ok",title:"Προσωπικό αύριο",detail:workforceIntel.items.length?`${workforceIntel.items.length} σημεία προσωπικού παραμένουν ανοικτά.`:"Δεν υπάρχει ανοικτό εύρημα προσωπικού.",open:workforceIntel.items[0]?.open||onOpenChecks}
+    ];
+  },[cashPaymentIntel,invoiceDetective,morningBriefing,onOpenCash,onOpenChecks,onOpenInvoices,stockIntel,storeStatusTotals,workforceIntel]);
   const briefingTime=useMemo(()=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()),[companies,problems,invoiceIntel]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel()};
   const ask=async event=>{
@@ -161,10 +171,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-10">
+  return <div className="ai-command-page" data-ai-command-center="phase-11">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 10</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 11</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -212,6 +222,12 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <small className="ai-daily-source">Δημιουργείται όταν ανοίγεις ή ανανεώνεις το Command Center. Δεν αποστέλλεται μήνυμα, δεν προγραμματίζεται εργασία και δεν αλλάζει κανένα δεδομένο.</small>
       </section>
 
+      <section className="ai-command-night">
+        <div className="ai-command-panel-title"><div><small>NIGHT BRIEFING · ΦΑΣΗ 11</small><h2>Τι συνέβη σήμερα και τι μένει ανοικτό</h2><p>{briefingTime} · Απολογισμός από την ίδια τρέχουσα read-only εικόνα.</p></div><MoonStar/></div>
+        <div className="ai-night-list">{nightBriefing.map(item=><button type="button" key={item.id} onClick={item.open}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.title}</b><small>{item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":item.state==="warn"?"ΑΥΡΙΟ":"ΚΛΕΙΣΤΟ"}</strong><ChevronRight/></button>)}</div>
+        <small className="ai-daily-source">Στιγμιότυπο της τρέχουσας κατάστασης: δεν κλείνει εκκρεμότητα, δεν μεταφέρει υπόλοιπο, δεν στέλνει αναφορά και δεν προγραμματίζει ενέργεια.</small>
+      </section>
+
       <section className="ai-command-detective">
         <div className="ai-command-panel-title"><div><small>INVOICE & SUPPLIER DETECTIVE · ΦΑΣΗ 6</small><h2>{invoiceIntel.loading?"Έλεγχος τιμολογίων…":invoiceDetective.items.length?`${invoiceDetective.items.length} τιμολόγια χρειάζονται προσοχή`:"Δεν υπάρχει ανοικτό εύρημα τιμολογίου"}</h2><p>Σύνοψη από το υπάρχον Invoice Learning· η διόρθωση και η εκμάθηση γίνονται μόνο στην κανονική οθόνη.</p></div><FileSearch/></div>
         {invoiceIntel.error&&<div className="ai-command-problem-error"><AlertTriangle/>{invoiceIntel.error}</div>}
@@ -253,7 +269,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><Store/><b>Stock Intelligence</b><span>Φάση 8 · ενεργό</span></article><article><UsersRound/><b>Workforce Intelligence</b><span>Φάση 9 · ενεργό</span></article><article className="current"><Sunrise/><b>Morning Briefing</b><span>Φάση 10 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><UsersRound/><b>Workforce Intelligence</b><span>Φάση 9 · ενεργό</span></article><article><Sunrise/><b>Morning Briefing</b><span>Φάση 10 · ενεργό</span></article><article className="current"><MoonStar/><b>Night Briefing</b><span>Φάση 11 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
