@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,FileSearch,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
 const commandMoney=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -128,6 +128,22 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     for(const item of stores){const workforce=item.summary;if(Number(workforce.activeEmployees)>0&&!workforce.publishedToday)add(item,"danger","Χωρίς δημοσιευμένο πρόγραμμα","Υπάρχει ενεργό προσωπικό, αλλά δεν βρέθηκε δημοσιευμένο πρόγραμμα που να καλύπτει τη σημερινή ημέρα.");if(Number(workforce.unfilledShifts)>0)add(item,"danger","Κενά προγράμματος",`${workforce.unfilledShifts} θέσεις των επόμενων 7 ημερών δεν έχουν εργαζόμενο.`);if(Number(workforce.attendanceReview)>0)add(item,"danger","Παρουσίες προς έγκριση",`${workforce.attendanceReview} σημερινές παρουσίες χρειάζονται έλεγχο ή έγκριση.`);if(Number(workforce.attendanceOpen)>0)add(item,"warn","Ανοιχτές παρουσίες",`${workforce.attendanceOpen} εργαζόμενοι έχουν ενεργή παρουσία αυτή τη στιγμή.`);if(Number(workforce.lateArrivals)>0)add(item,"warn","Καθυστερήσεις",`${workforce.lateArrivals} σημερινές παρουσίες έχουν καταγεγραμμένη καθυστέρηση.`);if(Number(workforce.overtimeMinutes)>0)add(item,"warn","Υπερωρίες",`${workforce.overtimeMinutes} λεπτά υπερωρίας έχουν καταγραφεί σήμερα.`);if(Number(workforce.pendingLeaves)>0)add(item,"warn","Αιτήματα αδειών",`${workforce.pendingLeaves} αιτήματα άδειας περιμένουν απόφαση.`)}
     const weight={danger:0,warn:1};items.sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el"));return{...totals,items:items.slice(0,5)};
   },[companies,onOpenWorkforce]);
+  const morningBriefing=useMemo(()=>{
+    const items=[];
+    const add=(id,state,title,detail,open)=>items.push({id,state,title,detail,open});
+    if(storeStatusTotals.danger||storeStatusTotals.warn)add("network",storeStatusTotals.danger?"danger":"warn","Κατάσταση δικτύου",`${storeStatusTotals.danger} καταστήματα με πρόβλημα · ${storeStatusTotals.warn} προς έλεγχο · ${storeStatusTotals.ok} ΟΚ.`,onOpenChecks);
+    else add("network","ok","Κατάσταση δικτύου",`${storeStatusTotals.ok} καταστήματα χωρίς ανοικτό εύρημα στους διαθέσιμους ελέγχους.`,onOpenChecks);
+    if(cashPaymentIntel.items.length)add("cash",cashPaymentIntel.items.some(item=>item.state==="danger")?"danger":"warn","Ταμεία & πληρωμές",`${cashPaymentIntel.items.length} οικονομικά σημεία χρειάζονται έλεγχο.`,cashPaymentIntel.items[0]?.open||onOpenCash);
+    else add("cash","ok","Ταμεία & πληρωμές","Δεν υπάρχει καταγεγραμμένη οικονομική απόκλιση.",onOpenCash);
+    if(invoiceDetective.items.length)add("invoices",invoiceDetective.items.some(item=>item.state==="danger")?"danger":"warn","Τιμολόγια & προμηθευτές",`${invoiceDetective.items.length} τιμολόγια εμφανίζονται στις πρώτες προτεραιότητες ελέγχου.`,onOpenInvoices);
+    else add("invoices","ok","Τιμολόγια & προμηθευτές","Δεν υπάρχει ανοικτό εύρημα τιμολογίου.",onOpenInvoices);
+    if(stockIntel.items.length)add("stock",stockIntel.items.some(item=>item.state==="danger")?"danger":"warn","Αποθήκη",`${stockIntel.items.length} σημεία stock εμφανίζονται στις πρώτες προτεραιότητες.`,stockIntel.items[0]?.open||onOpenChecks);
+    else add("stock","ok","Αποθήκη","Δεν υπάρχει ανοικτό εύρημα stock.",onOpenChecks);
+    if(workforceIntel.items.length)add("workforce",workforceIntel.items.some(item=>item.state==="danger")?"danger":"warn","Προσωπικό",`${workforceIntel.items.length} σημεία προσωπικού χρειάζονται έλεγχο.`,workforceIntel.items[0]?.open||onOpenChecks);
+    else add("workforce","ok","Προσωπικό","Δεν υπάρχει ανοικτό εύρημα προσωπικού.",onOpenChecks);
+    return items;
+  },[cashPaymentIntel,invoiceDetective,onOpenCash,onOpenChecks,onOpenInvoices,stockIntel,storeStatusTotals,workforceIntel]);
+  const briefingTime=useMemo(()=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()),[companies,problems,invoiceIntel]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel()};
   const ask=async event=>{
     event.preventDefault();
@@ -145,10 +161,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-9">
+  return <div className="ai-command-page" data-ai-command-center="phase-10">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 9</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 10</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -188,6 +204,12 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <div className="ai-command-panel-title"><div><small>AI ΗΜΕΡΗΣΙΑ ΑΝΑΛΥΣΗ · ΦΑΣΗ 5</small><h2>{dailyPriorities.length?`${dailyPriorities.length} σημεία χρειάζονται σήμερα την προσοχή σου`:"Δεν υπάρχει ανοικτή προτεραιότητα σήμερα"}</h2><p>Αυτόματη ιεράρχηση από τα ίδια σημερινά δεδομένα· καμία αυτόματη ενέργεια ή μεταβολή.</p></div><BarChart3/></div>
         {problems.loading?<div className="ai-command-empty">Ανάλυση σημερινών δεδομένων…</div>:dailyPriorities.length===0?<div className="ai-daily-clear"><CheckCircle2/><div><b>Η σημερινή εικόνα είναι καθαρή</b><span>Δεν εντοπίστηκε ανοικτό σημείο στους διαθέσιμους ελέγχους.</span></div></div>:<div className="ai-daily-list">{dailyPriorities.map((item,index)=><button type="button" key={item.id} onClick={item.open}><span className={`ai-daily-rank ${item.state}`}>{index+1}</span><div><b>{item.title}</b><small>{item.context} · {item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΑΜΕΣΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>}
         <small className="ai-daily-source">Πηγή: σημερινή επισκόπηση, Ταμεία, Πληρωμές και Τράπεζα. Εμφανίζονται έως 5 προτεραιότητες.</small>
+      </section>
+
+      <section className="ai-command-morning">
+        <div className="ai-command-panel-title"><div><small>MORNING BRIEFING · ΦΑΣΗ 10</small><h2>Καλημέρα — αυτή είναι η πρωινή εικόνα της επιχείρησης</h2><p>{briefingTime} · Σύνοψη από τις ενεργές read-only ενότητες του Command Center.</p></div><Sunrise/></div>
+        <div className="ai-morning-list">{morningBriefing.map(item=><button type="button" key={item.id} onClick={item.open}><span className={`ai-state-dot ${item.state}`}/><div><b>{item.title}</b><small>{item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΠΡΟΒΛΗΜΑ":item.state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ"}</strong><ChevronRight/></button>)}</div>
+        <small className="ai-daily-source">Δημιουργείται όταν ανοίγεις ή ανανεώνεις το Command Center. Δεν αποστέλλεται μήνυμα, δεν προγραμματίζεται εργασία και δεν αλλάζει κανένα δεδομένο.</small>
       </section>
 
       <section className="ai-command-detective">
@@ -231,7 +253,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><WalletCards/><b>AI Ταμείων &amp; Πληρωμών</b><span>Φάση 7 · ενεργό</span></article><article><Store/><b>Stock Intelligence</b><span>Φάση 8 · ενεργό</span></article><article className="current"><UsersRound/><b>Workforce Intelligence</b><span>Φάση 9 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><Store/><b>Stock Intelligence</b><span>Φάση 8 · ενεργό</span></article><article><UsersRound/><b>Workforce Intelligence</b><span>Φάση 9 · ενεργό</span></article><article className="current"><Sunrise/><b>Morning Briefing</b><span>Φάση 10 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
