@@ -1,6 +1,6 @@
-## 28/09/2026 — TABLE_SERVICE ασφαλής επανάληψη γύρου · AWAITING CI/LAB
+## 28/09/2026 — TABLE_SERVICE ασφαλής επανάληψη γύρου · CI/DEPLOY PASS · AWAITING LAB
 
-- [ ] Ο ίδιος αμετάβλητος mobile γύρος φέρει μοναδικό key και η επανάληψη της ίδιας προσπάθειας επιστρέφει το αρχικό αποτέλεσμα χωρίς δεύτερο γύρο/πόστο/Audit· σύγκρουση payload ή χειριστή απορρίπτεται. Unit tests PASS, CI/deploy και database/φυσικό LAB AWAITING. Δεν στάλθηκε νέος γύρος. `CHECKPOINTS/CHANGES/2026-09-28-table-service-round-idempotency.md`. Συνολικό TABLE_SERVICE OPEN.
+- [ ] Ο ίδιος αμετάβλητος mobile γύρος φέρει μοναδικό key και η επανάληψη της ίδιας προσπάθειας επιστρέφει το αρχικό αποτέλεσμα χωρίς δεύτερο γύρο/πόστο/Audit· σύγκρουση payload ή χειριστή απορρίπτεται. 11 tests και production build PASS· PR #1501 / CI #3782 / merge και exact Render `675ee74` PASS· database/φυσικό LAB AWAITING. Δεν στάλθηκε νέος γύρος. `CHECKPOINTS/CHANGES/2026-09-28-table-service-round-idempotency.md`. Συνολικό TABLE_SERVICE OPEN.
 
 ## 28/09/2026 19:19–19:20 Ελλάδα — TABLE_SERVICE εγκατεστημένο Android PWA · περιορισμένο USER PASS offline/reconnect οθόνης
 
