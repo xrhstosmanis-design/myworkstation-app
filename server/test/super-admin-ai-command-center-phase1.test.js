@@ -126,9 +126,10 @@ test("phase 12 composes a read-only Digital Twin Lite from existing store source
   assert.match(center,/const digitalTwin=useMemo/);
   assert.match(center,/DIGITAL TWIN LITE · ΦΑΣΗ 12/);
   assert.match(center,/installation-terminals/);
-  assert.match(center,/payment-device-routing/);
+  assert.match(center,/device-routing/);
+  assert.doesNotMatch(center,/payment-device-routing/);
   for(const label of ["POS","EFTPOS","Ταμείο","Stock","Προσωπικό"])assert.match(center,new RegExp(label));
   assert.match(center,/δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν περιλαμβάνει κάμερες\/NVR/);
-  assert.doesNotMatch(center,/request\([^)]*(?:installation-terminals|payment-device-routing)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
+  assert.doesNotMatch(center,/request\([^)]*(?:installation-terminals|device-routing)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
   assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
 });

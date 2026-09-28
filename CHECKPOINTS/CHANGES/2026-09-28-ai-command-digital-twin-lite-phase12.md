@@ -1,6 +1,6 @@
 # AI Command Center · ΦΑΣΗ 12 — Digital Twin Lite
 
-Κατάσταση: **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS**
+Κατάσταση: **USER VISUAL FAIL · DEVICE ROUTING FIX AWAITING CI / DEPLOY / RETEST**
 
 ## Checkpoint πριν την αλλαγή
 
@@ -34,3 +34,12 @@
 - Στοχευμένα AI Command Center tests: **13/13 PASS**.
 - Πλήρες server suite: **1.630 PASS, 1 SKIP, 0 FAIL**.
 - Production client build: **PASS**.
+
+## Πρώτη παραγωγική οπτική δοκιμή
+
+- Η `image(20260928-203008).png` επιβεβαιώνει 4 κάρτες καταστημάτων και τις 5 περιοχές POS, EFTPOS, Ταμείο, Stock και Προσωπικό.
+- Τα Ταμείο, Stock και Προσωπικό εμφανίζουν πραγματικούς μετρητές.
+- **USER VISUAL FAIL για συσκευές:** POS και EFTPOS εμφανίζονται ψευδώς `ΜΗ ΔΙΑΘΕΣΙΜΟ` σε όλα τα καταστήματα.
+- Αιτία: το client ζήτησε `/payment-device-routing` αντί του υπάρχοντος read-only `/device-routing`.
+- Η διόρθωση αλλάζει μόνο το URL ανάγνωσης. Δεν εκτελεί device control, write ή οικονομική/stock/Workforce ενέργεια.
+- Έλεγχοι διόρθωσης: **13/13 targeted PASS · 1.630 PASS + 1 SKIP full suite · production build PASS**.
