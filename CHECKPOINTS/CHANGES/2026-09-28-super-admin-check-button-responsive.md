@@ -14,6 +14,8 @@
 
 Μετά το πρώτο production deploy, νέο στιγμιότυπο του χρήστη έδειξε ότι το viewport ήταν φαρδύ αλλά το εσωτερικό panel παρέμενε στενό. Επομένως το viewport breakpoint δεν ενεργοποιούνταν. Η διορθωτική έκδοση χρησιμοποιεί container query στο `.sa-checks-workspace`, ώστε η αναδίπλωση να εξαρτάται από το πραγματικό διαθέσιμο πλάτος του panel.
 
+Δεύτερο production στιγμιότυπο μετά το #1483 έδειξε ότι τα grid children διατηρούσαν intrinsic minimum width και συνέχιζαν να σπρώχνουν την ομάδα ενεργειών εκτός panel. Η τελική στενή διόρθωση επιτρέπει στα παιδιά του grid να συρρικνωθούν (`min-width:0`) και δίνει στα inputs/selects/buttons πλάτος 100% με `border-box`, χωρίς αλλαγή της λειτουργίας τους.
+
 - Δεν αλλάζει component, κείμενο, click handler ή API.
 - Δεν αλλάζει το AI Command Center ή άλλη λειτουργία Super Admin.
 - Δεν υπάρχει οικονομική, POS, invoice, stock ή server μεταβολή.

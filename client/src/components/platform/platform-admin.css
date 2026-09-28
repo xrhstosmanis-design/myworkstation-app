@@ -61,6 +61,7 @@
 
 /* Keep the check controls responsive to their panel, not only to the viewport. */
 .sa-checks-workspace{container-type:inline-size}
+.sa-checks-filters>*{min-width:0}.sa-checks-filters input,.sa-checks-filters select,.sa-filter-actions button{width:100%;box-sizing:border-box}
 @container(max-width:1100px){.supplier-review-filters.sa-checks-filters{grid-template-columns:1fr 1fr 1fr}.sa-filter-actions{grid-column:span 1}}
 @media(max-width:760px){.supplier-review-filters.sa-checks-filters{grid-template-columns:1fr}.sa-filter-actions{grid-column:auto}}
 
