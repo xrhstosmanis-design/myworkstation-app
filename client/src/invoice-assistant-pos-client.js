@@ -137,7 +137,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
       const economicsAgree=printedTotal!==null&&printed.length>0&&Math.abs(calculatedGross-printedTotal)<=0.05;
       const missingPhysical=result.pagesComplete?printed.filter(line=>!line.matchingLineId):[];
       const missing=missingPhysical.filter(validPrinted);
-      const uncertainPhysical=printed.filter(line=>line.confidence!=="certain");
+      const uncertainPhysical=printed.filter(line=>Boolean(printedReviewIssue(line)));
       const extra=result.pagesComplete&&printed.length?[...lineById.values()].filter(line=>!matched.has(line.id)):[];
       if(!result.pagesComplete){status.textContent=result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";apply.hidden=true}
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
