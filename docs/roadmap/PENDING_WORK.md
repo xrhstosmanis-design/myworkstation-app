@@ -126,6 +126,14 @@
 - Η ΦΑΣΗ 1 είναι μόνο ανάγνωσης: χρησιμοποιεί το υπάρχον `/api/platform/overview` και ανοίγει τους ήδη υπάρχοντες ελέγχους. Δεν δημιουργεί δεύτερα δεδομένα, νέο οικονομικό endpoint, αυτόματη ενέργεια ή μεταβολή POS/BackOffice.
 - Απαιτούνται στοχευμένα tests, πλήρες client build, πράσινο CI, merge, exact deploy και οπτικό LAB/USER PASS. Μέχρι τότε: `AWAITING LAB`.
 
+## 28/09/2026 — AI Command Center · ΦΑΣΗ 13 NVR / Cameras — ASSIGNED `feat/ai-command-nvr-cameras-phase13-20260928`
+
+- Προσθήκη read-only κατάστασης υπάρχοντος NVR/connector και αριθμού ενεργών καμερών ανά κατάστημα στις κάρτες Digital Twin.
+- Χρήση μόνο του υπάρχοντος `video-connection` GET και μετάβαση στην κανονική οθόνη Video Events.
+- Χωρίς νέο endpoint/dataset, αυτόματο snapshot, live stream, clip, pairing, test, connector command ή έκθεση credentials.
+- Τοπικά: `14/14 targeted PASS · 1.631 PASS + 1 SKIP full suite · production build PASS`.
+- `AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
+
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 
 - Workforce: εβδομαδιαίο πρόγραμμα, προβολή ανά ημέρα και ανά εργαζόμενο, ημερομηνίες/ώρες/ΡΕΠΟ, δημοσίευση στο Store Chat, εκτύπωση κάρτας εργασίας, PIN, QR/κάμερα, Code 128/scanner, ελληνικό και αγγλικό πληκτρολόγιο, προσέλευση/αποχώρηση, προστασία διπλής σάρωσης και Audit.

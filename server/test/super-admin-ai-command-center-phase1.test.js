@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-12"/);
+  assert.match(center,/data-ai-command-center="phase-13"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -124,12 +124,25 @@ test("phase 11 builds a read-only Night Briefing without closing or scheduling a
 
 test("phase 12 composes a read-only Digital Twin Lite from existing store sources",()=>{
   assert.match(center,/const digitalTwin=useMemo/);
-  assert.match(center,/DIGITAL TWIN LITE · ΦΑΣΗ 12/);
+  assert.match(center,/DIGITAL TWIN LITE · ΦΑΣΕΙΣ 12–13/);
   assert.match(center,/installation-terminals/);
   assert.match(center,/device-routing/);
   assert.doesNotMatch(center,/payment-device-routing/);
   for(const label of ["POS","EFTPOS","Ταμείο","Stock","Προσωπικό"])assert.match(center,new RegExp(label));
-  assert.match(center,/δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν περιλαμβάνει κάμερες\/NVR/);
+  assert.match(center,/δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό/);
   assert.doesNotMatch(center,/request\([^)]*(?:installation-terminals|device-routing)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
   assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
+});
+
+test("phase 13 adds read-only NVR and camera status to the existing Digital Twin",()=>{
+  assert.match(center,/data-ai-command-center="phase-13"/);
+  assert.match(center,/video-connection/);
+  assert.match(center,/Κάμερες/);
+  assert.match(center,/video\.connector\?\.online/);
+  assert.match(center,/Δεν έχει ρυθμιστεί/);
+  assert.match(center,/δεν ζητά snapshot, live video ή clip από NVR/);
+  assert.match(app,/onOpenVideo=/);
+  assert.match(app,/openVideoConnection\(company,store\)/);
+  assert.doesNotMatch(center,/request\([^)]*video-connection[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
+  assert.doesNotMatch(center,/video-connection\/(?:snapshot|test|time-check|commands)/);
 });
