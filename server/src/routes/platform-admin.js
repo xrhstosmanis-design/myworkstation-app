@@ -354,6 +354,34 @@ router.post("/companies",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+router.get("/owners",async(req,res,next)=>{
+  try{
+    const owners=await prisma.user.findMany({where:{role:"OWNER"},select:{id:true,fullName:true,email:true,companyId:true},orderBy:{fullName:"asc"}});
+    const access=await prisma.$queryRaw\`SELECT "ownerId","companyId" FROM "OwnerCompanyAccess"\`;
+    res.json({owners:owners.map(owner=>({...owner,companyIds:[...new Set([owner.companyId,...access.filter(row=>row.ownerId===owner.id).map(row=>row.companyId)])]}))});
+  }catch(error){next(error)}
+});
+
+router.post("/owners/:ownerId/companies",async(req,res,next)=>{
+  try{
+    const body=z.object({companyName:z.string().trim().min(2).max(160),taxId:z.string().trim().min(9).max(30),city:z.string().trim().max(100).optional().default(""),phone:z.string().trim().max(40).optional().default(""),companyEmail:z.string().trim().email().optional().or(z.literal("")).default(""),storeName:z.string().trim().min(2).max(160),storeCity:z.string().trim().max(100).optional().default(""),plan:planSchema.default("TRIAL"),trialDays:z.coerce.number().int().min(1).max(365).default(14)}).strict().parse(req.body||{});
+    const owner=await prisma.user.findFirst({where:{id:req.params.ownerId,role:"OWNER"},select:{id:true,fullName:true,email:true}});
+    if(!owner)return res.status(404).json({error:"Δεν βρέθηκε ο ιδιοκτήτης."});
+    const duplicate=await prisma.company.findFirst({where:{taxId:body.taxId},select:{id:true}});
+    if(duplicate)return res.status(409).json({error:"Υπάρχει ήδη εταιρεία με αυτό το ΑΦΜ."});
+    const trialEndsAt=body.plan==="TRIAL"?new Date(Date.now()+body.trialDays*86400000):null;
+    const created=await prisma.$transaction(async tx=>{
+      const company=await tx.company.create({data:{name:body.companyName,taxId:body.taxId,city:body.city||null,phone:body.phone||null,email:body.companyEmail||null,active:true,plan:body.plan,trialEndsAt,licenseStatus:body.plan==="TRIAL"?"TRIAL":body.plan==="PILOT"?"PILOT":"ACTIVE",subscriptionStartsAt:new Date(),subscriptionEndsAt:trialEndsAt}});
+      const store=await tx.store.create({data:{name:body.storeName,city:body.storeCity||body.city||null,companyId:company.id}});
+      await tx.shiftType.createMany({data:[{storeId:store.id,code:"MORNING",name:"Πρωί",startTime:"07:00",endTime:"15:00",requiredCount:1},{storeId:store.id,code:"AFTERNOON",name:"Απόγευμα",startTime:"15:00",endTime:"23:00",requiredCount:1},{storeId:store.id,code:"NIGHT",name:"Βράδυ",startTime:"23:00",endTime:"07:00",requiredCount:1}]});
+      await tx.companyModule.createMany({data:(planDefaults[body.plan]||planDefaults.TRIAL).map(moduleKey=>({companyId:company.id,moduleKey,active:true}))});
+      await tx.$executeRaw\`INSERT INTO "OwnerCompanyAccess" ("ownerId","companyId") VALUES (\${owner.id},\${company.id})\`;
+      return {company,store};
+    });
+    res.status(201).json({company:{id:created.company.id,name:created.company.name,taxId:created.company.taxId},store:{id:created.store.id,name:created.store.name},owner});
+  }catch(error){next(error)}
+});
+
 router.put("/companies/:companyId/owner",async(req,res,next)=>{
   try{
     const body=z.object({
