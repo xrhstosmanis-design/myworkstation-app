@@ -9,7 +9,7 @@ const platformRoutes=await readFile(new URL("../src/routes/platform-admin.js",im
 test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(app,/AI Command Center/);
   assert.match(app,/showAiCommandCenter/);
-  assert.match(center,/data-ai-command-center="phase-11"/);
+  assert.match(center,/data-ai-command-center="phase-12"/);
 });
 
 test("phase 2 reuses existing read-only checks and existing centers",()=>{
@@ -24,7 +24,7 @@ test("phase 2 reuses existing read-only checks and existing centers",()=>{
 
 test("future AI modules are labelled as later phases instead of simulated results",()=>{
   assert.match(center,/ΡΩΤΑ ΤΟ MYWORKSTATION/i);
-  assert.match(center,/Φάση 11 · ενεργό/);
+  assert.match(center,/Φάση 12 · ενεργό/);
   assert.match(center,/Digital Twin/);
   assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
 });
@@ -120,4 +120,15 @@ test("phase 11 builds a read-only Night Briefing without closing or scheduling a
   for(const label of ["Ανοικτά για αύριο","Καταστήματα στο κλείσιμο","Οικονομικός έλεγχος","Τιμολόγια & stock","Προσωπικό αύριο"])assert.match(center,new RegExp(label));
   assert.match(center,/δεν κλείνει εκκρεμότητα, δεν μεταφέρει υπόλοιπο, δεν στέλνει αναφορά και δεν προγραμματίζει ενέργεια/);
   assert.doesNotMatch(center,/night[^\n]*(?:POST|PUT|PATCH|DELETE|setInterval|Notification)/i);
+});
+
+test("phase 12 composes a read-only Digital Twin Lite from existing store sources",()=>{
+  assert.match(center,/const digitalTwin=useMemo/);
+  assert.match(center,/DIGITAL TWIN LITE · ΦΑΣΗ 12/);
+  assert.match(center,/installation-terminals/);
+  assert.match(center,/payment-device-routing/);
+  for(const label of ["POS","EFTPOS","Ταμείο","Stock","Προσωπικό"])assert.match(center,new RegExp(label));
+  assert.match(center,/δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν περιλαμβάνει κάμερες\/NVR/);
+  assert.doesNotMatch(center,/request\([^)]*(?:installation-terminals|payment-device-routing)[^)]*method:"(?:POST|PUT|PATCH|DELETE)"/i);
+  assert.doesNotMatch(center,/setInterval|WebSocket|EventSource/);
 });
