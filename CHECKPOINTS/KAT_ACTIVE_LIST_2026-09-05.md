@@ -1845,3 +1845,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 — AI Command Center ΦΑΣΗ 12 · Digital Twin Lite
 
 - [x] Read-only λειτουργική κάρτα ανά κατάστημα για POS, EFTPOS/ταμειακές, ταμείο, stock και προσωπικό, αποκλειστικά από τις υπάρχουσες πηγές και με μετάβαση στις κανονικές οθόνες. Κανένα νέο endpoint, device control, άνοιγμα βάρδιας, EFTPOS/RBS εντολή, write ή κάμερα/NVR. PR `#1529` / CI `#3851`, device-routing fix PR `#1530` / CI `#3853`, exact production `f58e19b946e1f3a05c5605a324c233605d14fb1c`. Η `image(20260928-203834).png` επιβεβαιώνει 4 κάρτες, 5 περιοχές και πραγματικούς POS/EFTPOS μετρητές: LAB `0/2` POS και `4 ενεργά · 2 ταμειακές`, ΚΑΤ `0/2` POS και `2 ενεργά · 1 ταμειακή`. Τα καταστήματα χωρίς ρυθμισμένες συσκευές δείχνουν σωστά μηδενικά, όχι `ΜΗ ΔΙΑΘΕΣΙΜΟ`. **LIMITED USER VISUAL PASS · CLOSED.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-digital-twin-lite-phase12.md`.
+
+## 28/09/2026 — AI Command Center ΦΑΣΗ 13 · NVR / Cameras
+
+- [ ] ASSIGNED `feat/ai-command-nvr-cameras-phase13-20260928`: read-only κατάσταση υπάρχοντος NVR/connector και ενεργών καμερών μέσα στις κάρτες Digital Twin, με μετάβαση στην κανονική οθόνη Video Events. Κανένα νέο endpoint, snapshot/live/clip request, pairing, command ή έκθεση credentials. Τοπικά: **14/14 targeted PASS · 1.631 PASS + 1 SKIP full suite · production build PASS.** **AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-nvr-cameras-phase13.md`.

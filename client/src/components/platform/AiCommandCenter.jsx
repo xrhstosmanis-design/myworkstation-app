@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BarChart3,BrainCircuit,Building2,Camera,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
 const commandMoney=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -9,7 +9,7 @@ const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(va
 const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
 const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce}){
+export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo}){
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
@@ -32,11 +32,11 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     setTwinDevices(current=>({...current,loading:true}));
     const stores=companies.flatMap(company=>(company.stores||[]).map(store=>({companyId:company.id,storeId:store.id})));
     const entries=await Promise.all(stores.map(async item=>{
-      try{
-        const base=`/api/platform/companies/${encodeURIComponent(item.companyId)}/stores/${encodeURIComponent(item.storeId)}`;
-        const [terminals,routing]=await Promise.all([request(`${base}/installation-terminals`),request(`${base}/device-routing`)]);
-        return[item.storeId,{terminals:terminals.terminals||[],fiscalDevices:routing.fiscalDevices||[],eftposDevices:routing.eftposDevices||[]}];
-      }catch{return[item.storeId,{terminals:[],fiscalDevices:[],eftposDevices:[],unavailable:true}]}
+      const base=`/api/platform/companies/${encodeURIComponent(item.companyId)}/stores/${encodeURIComponent(item.storeId)}`;
+      const [terminalsResult,routingResult,videoResult]=await Promise.allSettled([request(`${base}/installation-terminals`),request(`${base}/device-routing`),request(`${base}/video-connection`)]);
+      const devicesUnavailable=terminalsResult.status!=="fulfilled"||routingResult.status!=="fulfilled",videoUnavailable=videoResult.status!=="fulfilled";
+      const terminals=terminalsResult.status==="fulfilled"?terminalsResult.value:{},routing=routingResult.status==="fulfilled"?routingResult.value:{},video=videoResult.status==="fulfilled"?videoResult.value:null;
+      return[item.storeId,{terminals:terminals.terminals||[],fiscalDevices:routing.fiscalDevices||[],eftposDevices:routing.eftposDevices||[],video,unavailable:devicesUnavailable,videoUnavailable}];
     }));
     setTwinDevices({loading:false,rows:Object.fromEntries(entries)});
   };
@@ -174,8 +174,9 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       const devices=twinDevices.rows[store.id]||{terminals:[],fiscalDevices:[],eftposDevices:[]};
       const activeTerminals=devices.terminals.filter(item=>item.active!==false),recentTerminals=activeTerminals.filter(item=>item.lastSeenAt&&Date.now()-new Date(item.lastSeenAt).getTime()<=15*60*1000);
       const fiscalDevices=devices.fiscalDevices.filter(item=>item.active!==false),eftposDevices=devices.eftposDevices.filter(item=>item.active!==false);
-      const stock=store.stockSummary||{},workforce=store.workforceSummary||{};
-      return{id:store.id,companyId:company.id,name:store.name,companyName:company.name,status,devices,activeTerminals:activeTerminals.length,recentTerminals:recentTerminals.length,fiscalDevices:fiscalDevices.length,eftposDevices:eftposDevices.length,stock,workforce};
+      const stock=store.stockSummary||{},workforce=store.workforceSummary||{},video=devices.video,activeCameras=(video?.cameras||[]).filter(item=>item.active!==false).length;
+      const videoLabel=devices.videoUnavailable?"ΜΗ ΔΙΑΘΕΣΙΜΟ":!video?.connection?.active?"Δεν έχει ρυθμιστεί":`${video.connector?.online?"ONLINE":"OFFLINE"} · ${activeCameras} ${activeCameras===1?"κάμερα":"κάμερες"}`;
+      return{id:store.id,companyId:company.id,name:store.name,companyName:company.name,status,devices,activeTerminals:activeTerminals.length,recentTerminals:recentTerminals.length,fiscalDevices:fiscalDevices.length,eftposDevices:eftposDevices.length,stock,workforce,videoLabel};
     }));
   },[companies,onOpenChecks,storeStatuses,twinDevices.rows]);
   const briefingTime=useMemo(()=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()),[companies,problems,invoiceIntel]);
@@ -196,10 +197,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-12">
+  return <div className="ai-command-page" data-ai-command-center="phase-13">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 12</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 13</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -254,7 +255,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       </section>
 
       <section className="ai-command-twin">
-        <div className="ai-command-panel-title"><div><small>DIGITAL TWIN LITE · ΦΑΣΗ 12</small><h2>Ζωντανή λειτουργική εικόνα ανά κατάστημα</h2><p>POS, EFTPOS, ταμεία, stock και προσωπικό από τις υπάρχουσες read-only πηγές.</p></div><Building2/></div>
+        <div className="ai-command-panel-title"><div><small>DIGITAL TWIN LITE · ΦΑΣΕΙΣ 12–13</small><h2>Ζωντανή λειτουργική εικόνα ανά κατάστημα</h2><p>POS, EFTPOS, ταμεία, stock, προσωπικό και κάμερες από τις υπάρχουσες read-only πηγές.</p></div><Building2/></div>
         {twinDevices.loading&&digitalTwin.length===0?<div className="ai-command-empty">Σύνθεση καταστημάτων και συσκευών…</div>:<div className="ai-twin-grid">{digitalTwin.map(item=><article key={item.id} className={`ai-twin-card ${item.status.state}`}>
           <header><span className={`ai-state-dot ${item.status.state}`}/><div><b>{item.name}</b><small>{item.companyName}</small></div><strong>{item.status.label}</strong></header>
           <div className="ai-twin-map">
@@ -263,10 +264,11 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
             <button type="button" onClick={item.status.open}><WalletCards/><span><small>Ταμείο</small><b>{item.status.reasons[0]||"Χωρίς εύρημα"}</b></span></button>
             <button type="button" onClick={()=>onOpenStock?.(item.companyId,item.id)}><Store/><span><small>Stock</small><b>{Number(item.stock.negativeStock||0)} αρνητικά · {Number(item.stock.outOfStock||0)} μηδενικά</b></span></button>
             <button type="button" onClick={()=>onOpenWorkforce?.(item.companyId,item.id)}><UsersRound/><span><small>Προσωπικό</small><b>{Number(item.workforce.activeEmployees||0)} ενεργοί · {Number(item.workforce.scheduledToday||0)} σήμερα</b></span></button>
+            <button type="button" onClick={()=>onOpenVideo?.(item.companyId,item.id)}><Camera/><span><small>Κάμερες</small><b>{item.videoLabel}</b></span></button>
           </div>
           <footer><span>{item.status.reasons.join(" · ")||"Δεν υπάρχει ανοικτό εύρημα"}</span><ChevronRight/></footer>
         </article>)}</div>}
-        <small className="ai-daily-source">Digital Twin Lite μόνο ανάγνωσης: δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν περιλαμβάνει κάμερες/NVR.</small>
+        <small className="ai-daily-source">Digital Twin Lite μόνο ανάγνωσης: δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν ζητά snapshot, live video ή clip από NVR.</small>
       </section>
 
       <section className="ai-command-detective">
@@ -310,7 +312,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><Sunrise/><b>Morning Briefing</b><span>Φάση 10 · ενεργό</span></article><article><MoonStar/><b>Night Briefing</b><span>Φάση 11 · ενεργό</span></article><article className="current"><Building2/><b>Digital Twin Lite</b><span>Φάση 12 · ενεργό</span></article><article><Store/><b>Full Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><MoonStar/><b>Night Briefing</b><span>Φάση 11 · ενεργό</span></article><article><Building2/><b>Digital Twin Lite</b><span>Φάση 12 · ενεργό</span></article><article className="current"><Camera/><b>NVR / Cameras</b><span>Φάση 13 · ενεργό</span></article><article><Store/><b>Full Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
