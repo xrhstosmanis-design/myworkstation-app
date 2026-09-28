@@ -1795,3 +1795,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 28/09/2026 19:32 Ελλάδα — AI Command Center · snapshot schema
 
 - [ ] `image(6).png`: το «Ρώτα» είναι ενεργό, αλλά εμφανίζει «Ελέγξτε τα στοιχεία της φόρμας» λόγω ασυμφωνίας `activeCompanies/inactiveCompanies` με `active/inactive`. Στενή ρητή αντιστοίχιση χωρίς αλλαγή endpoint/AI prompt/δεδομένων. CI, deploy και νέα USER απάντηση με πηγές AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-snapshot-schema.md`.
+## 28/09/2026 19:41 Ελλάδα — AI Command Center · problem snapshot schema
+
+- [ ] `image(7).png`: δεύτερο πραγματικό validation error επειδή το UI έστελνε `cashIssues` αντί του contract `cash`. Το payload γίνεται πλήρως ρητό για όλα τα πεδία εταιρειών και προβλημάτων, χωρίς αλλαγή endpoint/AI prompt/δεδομένων. CI, deploy και USER απάντηση με πηγές AWAITING. `CHECKPOINTS/CHANGES/2026-09-28-ai-command-problem-schema.md`.
