@@ -1,3 +1,7 @@
+## 28/09/2026 — Διαδόχου Παύλου / πολλαπλά ΑΦΜ · AWAITING CI / LAB
+
+- [ ] Νίκη Ραζάτου: χωριστή εταιρεία ανά ΑΦΜ, κοινή είσοδος ιδιοκτήτη, Super Admin ιεραρχία και ασφαλής αφαίρεση λανθασμένου καταστήματος ΚΑΤ. Κλάδος `codex/owner-multi-company-20260928`· κανένα παραγωγικό δεδομένο ή είδος δεν μεταβλήθηκε. `CHECKPOINTS/CHANGES/2026-09-28-diadochou-owner-multi-company.md`.
+
 ## 28/09/2026 — Κεντρικό αριθμημένο μητρώο / αναμονή CI
 
 - [ ] Νέα σταθερή αρίθμηση G01–G08 και 01–36, προτεραιότητες, υπάρχουσες αναθέσεις και φωτογραφίες ιδιοκτήτη. `docs/roadmap/CENTRAL_NUMBERED_WORK_2026-09-28.md`, εκτυπώσιμο `output/pdf/MyWorkStation_Numbered_Work_2026-09-28.pdf`. PR #1504· CI και merge αναμένονται. Δεν έγινε νέα LAB κίνηση ούτε νέο λειτουργικό PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-central-numbered-work-register.md`.
