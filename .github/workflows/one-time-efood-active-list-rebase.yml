@@ -1,0 +1,42 @@
+name: One-time efood active-list rebase update
+
+on:
+  push:
+    branches:
+      - feat/efood-lab-safe-webhook-window
+
+permissions:
+  contents: write
+
+jobs:
+  prepend-active-list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/efood-lab-safe-webhook-window
+          fetch-depth: 0
+      - name: Reconcile efood checkpoint and remove one-time workflow
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          active = Path("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md")
+          workflow = Path(".github/workflows/one-time-efood-active-list-rebase.yml")
+          marker = "## 28/09/2026 — efood / Pelican ασφαλές one-shot LAB webhook · PR #1514 / CI AWAITING"
+          entry = """## 28/09/2026 — efood / Pelican ασφαλές one-shot LAB webhook · PR #1514 / CI AWAITING
+
+- [ ] Στο αποκλειστικό `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` προστέθηκε προσωρινό one-shot SANDBOX webhook για το efood Partner `Trigger Test Order`: ξεχωριστό ισχυρό Authorization secret με hash-only αποθήκευση, 5λεπτο παράθυρο, `FOR UPDATE`, αυτόματο κλείδωμα στο πρώτο έγκυρο event ή στη λήξη, χειροκίνητο emergency lock και idempotent retry. Το event αποθηκεύεται μόνο κρυπτογραφημένο ως dry-run. Παραγγελία, πώληση, stock, πληρωμή, RBS/EFTPOS, fiscal/myDATA και outbound external calls παραμένουν κλειδωμένα. Branch `feat/efood-lab-safe-webhook-window`, PR #1514, CI AWAITING· δεν έγινε merge/deploy ούτε πραγματικό Partner trigger. Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-efood-lab-safe-webhook-window.md`.
+"""
+          text = active.read_text(encoding="utf-8")
+          if marker not in text:
+              active.write_text(entry + "\n" + text, encoding="utf-8")
+          workflow.unlink(missing_ok=True)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md .github/workflows/one-time-efood-active-list-rebase.yml
+          git commit -m "docs: reconcile efood active list after rebase"
+          git push origin HEAD:feat/efood-lab-safe-webhook-window
