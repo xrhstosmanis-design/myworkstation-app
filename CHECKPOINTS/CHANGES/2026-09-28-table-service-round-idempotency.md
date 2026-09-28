@@ -13,6 +13,6 @@
 
 ## Έλεγχοι και όρια
 
-- Unit tests hash/replay/σύγκρουσης PASS, σύνταξη server PASS. Frontend build και CI προς έλεγχο. Database transaction concurrency και φυσικό Android αβέβαιο POST AWAITING LAB/isolated E2E. Καμία νέα παραγγελία, πώληση, πληρωμή ή stock κίνηση από αυτή την εργασία.
+- Unit tests hash/replay/σύγκρουσης PASS, σύνταξη server PASS. Frontend production build και TABLE_SERVICE bundle PASS· PR #1501, CI #3782 PASS, merge `675ee74b8f80ead57ed2884c08940fcec628f3a7`, exact Render `/api/health` revision PASS 28/09. Database transaction concurrency και φυσικό Android αβέβαιο POST AWAITING LAB/isolated E2E. Καμία νέα παραγγελία, πώληση, πληρωμή ή stock κίνηση από αυτή την εργασία.
 - Αποδοχή: σε απομονωμένο LAB σενάριο με νέο baseline, ίδιο `idempotencyKey`/payload δύο φορές δίνει ίδιο `orderId`/`roundNumber`, μία γραμμή/δελτίο/Audit και αμετάβλητα Sale/Payment/βάρδια/stock· διαφορετικό payload με ίδιο key 409. Η φυσική συσκευή δεν αποστέλλει αυτόματα σε reconnect. Η δοκιμή γίνεται μόνο με νέα ρητή δράση μετά από baseline, όχι επανάληψη του Γύρου 3.
 - Κλείσιμο εφαρμογής ή αλλαγή draft μετά από αβέβαιη απάντηση μπορεί να χάσει το αρχικό key. Ο χρήστης εξακολουθεί να ελέγχει τραπέζι/ουρά πριν από νέα χειροκίνητη αποστολή. Offline ουρά, πλήρες TABLE_SERVICE, χρεώσιμες επιλογές και άλλες εκκρεμότητες μένουν OPEN.
