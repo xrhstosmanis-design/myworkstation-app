@@ -841,7 +841,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
         else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${attachmentId} LIMIT 1 FOR UPDATE`;
         const inboxId=existingInbox[0]?.id||id();
-        const inboxNote=`Παραλήφθηκε από POS • Τιμολόγιο ${documentNumber} • αναμονή πλήρους ανάγνωσης`;
+        const inboxNote=`Παραλήφθηκε από POS • Τιμολόγιο ${documentNumber} • Ανάγνωση από βοηθό`;
         if(existingInbox[0])await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${inboxNote},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${inboxId} AND "companyId"=${companyId}`;
         else await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","attachmentId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${companyId},${storeId},${supplierId},${attachmentId},'IN_REVIEW',${inboxNote},${req.user.fullName||"Χειριστής"},${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
@@ -855,7 +855,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     const pageJobIds=result.map(job=>job.id),jobId=pageJobIds[0];
     const handoff={documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageCount:pageJobIds.length,pageJobIds,primaryJobId:jobId,resumeStoredProductLines:hasCompleteCachedProductLines};
     const publicOrigin=`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`;
-    const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο ${documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • αναμονή πλήρους ανάγνωσης`}});
+    const draft=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/pos-draft`,{authorization:req.get("authorization"),publicOrigin,method:"POST",body:{documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,note:`POS πρόχειρο ${documentType==="CREDIT_NOTE"?"πιστωτικό":"τιμολόγιο"} • ${result.length} ${result.length===1?"σελίδα":"σελίδες"} • Ανάγνωση από βοηθό`}});
     await enqueueFastBackground({companyId,storeId,jobId,publicOrigin});
     const handoffMessage=myData
       ?"Το πληρωμένο τιμολόγιο εμφανίστηκε αμέσως στα Πρόχειρα BackOffice και συνδέθηκε με το υπάρχον myDATA. Η πλήρης ανάγνωση συνεχίζεται χωρίς νέα χρέωση."
