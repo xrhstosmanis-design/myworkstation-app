@@ -1,9 +1,25 @@
-import React,{useMemo} from "react";
+import React,{useEffect,useMemo,useState} from "react";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,CheckCircle2,ChevronRight,Landmark,MessageCircle,ReceiptText,RefreshCw,ShieldCheck,Store,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
 
-export default function AiCommandCenter({companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents}){
+const athensToday=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+
+export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents}){
+  const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
+  const loadProblems=async()=>{
+    setProblems(current=>({...current,loading:true,error:""}));
+    try{
+      const date=athensToday();
+      const [cash,payments,bank]=await Promise.all([
+        request(`/api/platform/cash-control/daily?${new URLSearchParams({date,fromTime:"00:00",toTime:"23:59"})}`),
+        request("/api/transactions/supplier-settlements/review"),
+        request("/api/transactions/bank-ledger/review")
+      ]);
+      setProblems({loading:false,error:"",cash,payments,bank});
+    }catch(error){setProblems(current=>({...current,loading:false,error:error.message||"Δεν φορτώθηκαν οι υπάρχοντες έλεγχοι."}))}
+  };
+  useEffect(()=>{loadProblems()},[]);
   const summary=useMemo(()=>{
     const activeCompanies=companies.filter(company=>company.active);
     const inactiveCompanies=companies.filter(company=>!company.active);
@@ -11,12 +27,20 @@ export default function AiCommandCenter({companies=[],loading=false,onClose,onRe
     const attention=inactiveCompanies.length+activeCompanies.filter(company=>(company.stores?.length||0)===0).length;
     return{activeCompanies:activeCompanies.length,inactiveCompanies:inactiveCompanies.length,stores,attention};
   },[companies]);
+  const problemSummary=useMemo(()=>{
+    const cashTotals=problems.cash?.totals||{};
+    const cashIssues=(Number(cashTotals.shortage||0)>.009?1:0)+(Math.abs(Number(cashTotals.cardVariance||0))>.009?1:0)+Number(cashTotals.expensesWithoutDocument||0)+Number(cashTotals.duplicateCandidates||0);
+    const paymentItems=problems.payments?.items||[];
+    const bankItems=problems.bank?.items||[];
+    return{cashIssues,payments:paymentItems.length,paymentDiscrepancies:paymentItems.filter(item=>item.status==="DISCREPANCY").length,bank:bankItems.length,bankDiscrepancies:bankItems.filter(item=>item.status==="DISCREPANCY").length,total:cashIssues+paymentItems.length+bankItems.length};
+  },[problems]);
+  const refresh=()=>{onRefresh?.();loadProblems()};
 
   return <div className="ai-command-page" data-ai-command-center="phase-1">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 1</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
-        <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={onRefresh} disabled={loading}><RefreshCw/> {loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 2</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading}><RefreshCw/> {loading||problems.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
       <div className="ai-command-safety"><ShieldCheck/><div><b>Μία πηγή δεδομένων</b><p>Το Command Center δεν κρατά δεύτερα στοιχεία. Διαβάζει τη σημερινή επισκόπηση και σε οδηγεί στις κανονικές οθόνες για έλεγχο και ενέργειες.</p></div></div>
@@ -30,12 +54,13 @@ export default function AiCommandCenter({companies=[],loading=false,onClose,onRe
 
       <div className="ai-command-grid">
         <section className="ai-command-panel">
-          <div className="ai-command-panel-title"><div><small>ΚΕΝΤΡΟ ΠΡΟΒΛΗΜΑΤΩΝ</small><h2>Υπάρχοντες έλεγχοι</h2><p>Άνοιξε την κανονική λειτουργία που ήδη χρησιμοποιεί το Super Admin.</p></div><AlertTriangle/></div>
+          <div className="ai-command-panel-title"><div><small>ΚΕΝΤΡΟ ΠΡΟΒΛΗΜΑΤΩΝ · ΦΑΣΗ 2</small><h2>{problems.loading?"Φόρτωση ελέγχων…":`${problemSummary.total} ανοικτά σημεία`}</h2><p>Σύνοψη από τους υπάρχοντες ελέγχους· η διαχείριση γίνεται στις κανονικές οθόνες.</p></div><AlertTriangle/></div>
+          {problems.error&&<div className="ai-command-problem-error"><AlertTriangle/>{problems.error}</div>}
           <div className="ai-command-actions">
-            <button type="button" onClick={onOpenChecks}><BarChart3/><span><b>Έλεγχοι & Αναλύσεις</b><small>Συγκεντρωτικά ευρήματα</small></span><ChevronRight/></button>
-            <button type="button" onClick={onOpenCash}><WalletCards/><span><b>Ταμεία</b><small>Βάρδιες και αποκλίσεις</small></span><ChevronRight/></button>
-            <button type="button" onClick={onOpenPayments}><ReceiptText/><span><b>Πληρωμές</b><small>Παραστατικά προμηθευτών</small></span><ChevronRight/></button>
-            <button type="button" onClick={onOpenBank}><Landmark/><span><b>Τράπεζα</b><small>Υπάρχον ταμείο τράπεζας</small></span><ChevronRight/></button>
+            <button type="button" onClick={onOpenChecks}><BarChart3/><span><b>Έλεγχοι & Αναλύσεις</b><small>Πλήρης υφιστάμενος έλεγχος</small></span><ChevronRight/></button>
+            <button type="button" onClick={onOpenCash}><WalletCards/><span><b>Ταμεία</b><small>Έλλειμμα, POS–EFTPOS, αποδεικτικά και διπλότυπα</small></span><em className={problemSummary.cashIssues?"warn":"ok"}>{problemSummary.cashIssues}</em><ChevronRight/></button>
+            <button type="button" onClick={onOpenPayments}><ReceiptText/><span><b>Πληρωμές</b><small>{problemSummary.paymentDiscrepancies} με καταγεγραμμένη απόκλιση</small></span><em className={problemSummary.payments?"warn":"ok"}>{problemSummary.payments}</em><ChevronRight/></button>
+            <button type="button" onClick={onOpenBank}><Landmark/><span><b>Τράπεζα</b><small>{problemSummary.bankDiscrepancies} με καταγεγραμμένη απόκλιση</small></span><em className={problemSummary.bank?"warn":"ok"}>{problemSummary.bank}</em><ChevronRight/></button>
             <button type="button" onClick={onOpenEvents}><ShieldCheck/><span><b>Συμβάντα</b><small>Κεντρικό Audit</small></span><ChevronRight/></button>
           </div>
         </section>

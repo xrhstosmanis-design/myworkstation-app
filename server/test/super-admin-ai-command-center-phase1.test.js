@@ -11,9 +11,12 @@ test("AI Command Center is an additive Super Admin screen",()=>{
   assert.match(center,/data-ai-command-center="phase-1"/);
 });
 
-test("phase 1 reuses existing read-only overview and existing centers",()=>{
-  assert.doesNotMatch(center,/fetch\(|request\(|method="POST"|method:"POST"/);
+test("phase 2 reuses existing read-only checks and existing centers",()=>{
+  assert.doesNotMatch(center,/fetch\(|method="POST"|method:"POST"/);
   assert.match(center,/Μία πηγή δεδομένων/);
+  assert.match(center,/cash-control\/daily/);
+  assert.match(center,/supplier-settlements\/review/);
+  assert.match(center,/bank-ledger\/review/);
   for(const callback of ["onOpenChecks","onOpenCash","onOpenPayments","onOpenBank","onOpenEvents"]){
     assert.match(center,new RegExp(callback));
   }
