@@ -1,7 +1,7 @@
 # AI Command Center — ΦΑΣΗ 7 AI Ταμείων & Πληρωμών
 
 **Ημερομηνία:** 28/09/2026
-**Κατάσταση:** `IMPLEMENTED · AWAITING CI / DEPLOY / USER PASS`
+**Κατάσταση:** `LIMITED USER VISUAL PASS · CLOSED`
 
 ## Στενή αλλαγή
 
@@ -30,3 +30,11 @@
 - Στοχευμένα AI Command Center regression tests: `8/8 PASS`.
 - Πλήρες server test suite: `1.619 PASS · 1 SKIP · 0 FAIL`.
 - Production client build: `PASS`.
+
+## CI / production / οπτική αποδοχή
+
+- PR `#1512` έγινε squash merge μετά από πράσινο `MyWorkStation CI #3808`.
+- Exact production revision: `385f02460f389aa1928c669168c691df3bc67879`.
+- Η `image(20260928-183817).png` επιβεβαιώνει οπτικά την ενότητα `AI ΤΑΜΕΙΩΝ & ΠΛΗΡΩΜΩΝ · ΦΑΣΗ 7`, τους έξι μηδενικούς μετρητές, την κατάσταση συμφωνίας και τα τρία κουμπιά μετάβασης σε Ταμεία, Πληρωμές και Τράπεζα.
+- Δεν παρατηρείται αυτόματη οικονομική απόφαση ή μεταβολή.
+- Το συγκεκριμένο read-only scope κλειδώνει **LIMITED USER VISUAL PASS · CLOSED**.
