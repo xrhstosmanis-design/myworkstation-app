@@ -2,7 +2,7 @@
 
 **Ημερομηνία:** 28/09/2026 01:01 Ελλάδα  
 **Branch:** `fix/super-admin-check-button-responsive-20260928`  
-**Κατάσταση:** `LOCAL PASS · AWAITING CI / DEPLOY / USER READBACK`
+**Κατάσταση:** `USER SCREENSHOT FAIL · CONTAINER-AWARE FIX LOCAL PASS`
 
 ## Παρατήρηση χρήστη
 
@@ -11,6 +11,8 @@
 ## Μοναδική αλλαγή
 
 Το υπάρχον responsive breakpoint της γραμμής φίλτρων αλλάζει από 1100px σε 1250px, ώστε στα ενδιάμεσα πλάτη τα ίδια πεδία και κουμπιά να αναδιπλώνονται σε ασφαλές grid τριών στηλών.
+
+Μετά το πρώτο production deploy, νέο στιγμιότυπο του χρήστη έδειξε ότι το viewport ήταν φαρδύ αλλά το εσωτερικό panel παρέμενε στενό. Επομένως το viewport breakpoint δεν ενεργοποιούνταν. Η διορθωτική έκδοση χρησιμοποιεί container query στο `.sa-checks-workspace`, ώστε η αναδίπλωση να εξαρτάται από το πραγματικό διαθέσιμο πλάτος του panel.
 
 - Δεν αλλάζει component, κείμενο, click handler ή API.
 - Δεν αλλάζει το AI Command Center ή άλλη λειτουργία Super Admin.
