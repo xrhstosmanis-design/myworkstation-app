@@ -357,7 +357,7 @@ router.post("/companies",async(req,res,next)=>{
 router.get("/owners",async(req,res,next)=>{
   try{
     const owners=await prisma.user.findMany({where:{role:"OWNER"},select:{id:true,fullName:true,email:true,companyId:true},orderBy:{fullName:"asc"}});
-    const access=await prisma.$queryRaw\`SELECT "ownerId","companyId" FROM "OwnerCompanyAccess"\`;
+    const access=await prisma.$queryRaw`SELECT "ownerId","companyId" FROM "OwnerCompanyAccess"`;
     res.json({owners:owners.map(owner=>({...owner,companyIds:[...new Set([owner.companyId,...access.filter(row=>row.ownerId===owner.id).map(row=>row.companyId)])]}))});
   }catch(error){next(error)}
 });
@@ -375,7 +375,7 @@ router.post("/owners/:ownerId/companies",async(req,res,next)=>{
       const store=await tx.store.create({data:{name:body.storeName,city:body.storeCity||body.city||null,companyId:company.id}});
       await tx.shiftType.createMany({data:[{storeId:store.id,code:"MORNING",name:"Πρωί",startTime:"07:00",endTime:"15:00",requiredCount:1},{storeId:store.id,code:"AFTERNOON",name:"Απόγευμα",startTime:"15:00",endTime:"23:00",requiredCount:1},{storeId:store.id,code:"NIGHT",name:"Βράδυ",startTime:"23:00",endTime:"07:00",requiredCount:1}]});
       await tx.companyModule.createMany({data:(planDefaults[body.plan]||planDefaults.TRIAL).map(moduleKey=>({companyId:company.id,moduleKey,active:true}))});
-      await tx.$executeRaw\`INSERT INTO "OwnerCompanyAccess" ("ownerId","companyId") VALUES (\${owner.id},\${company.id})\`;
+      await tx.$executeRaw`INSERT INTO "OwnerCompanyAccess" ("ownerId","companyId") VALUES (${owner.id},${company.id})`;
       return {company,store};
     });
     res.status(201).json({company:{id:created.company.id,name:created.company.name,taxId:created.company.taxId},store:{id:created.store.id,name:created.store.name},owner});
