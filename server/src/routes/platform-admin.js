@@ -254,6 +254,7 @@ router.get("/overview",async(req,res,next)=>{
         users:{select:{id:true,fullName:true,email:true,role:true,createdAt:true}},
         modules:{orderBy:{moduleKey:"asc"}},
         stores:{
+          where:{active:true},
           select:{id:true,name:true,city:true,responsibleEmail:true,cashCloseEmailEnabled:true,active:true,_count:{select:{employees:true}}},
           orderBy:{name:"asc"}
         }
@@ -432,6 +433,22 @@ router.post("/companies/:companyId/stores",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+
+router.delete("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
+  try{
+    await ensureInstallationTables();
+    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId,active:true},include:{_count:{select:{employees:true,schedules:true}}}});
+    if(!store)return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα σε αυτή την εταιρεία."});
+    const terminals=await prisma.$queryRaw`SELECT "id","active","activatedAt","lastSeenAt" FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+    if(store._count.employees||store._count.schedules||terminals.some(row=>row.activatedAt||row.lastSeenAt))return res.status(409).json({error:"Το κατάστημα έχει προσωπικό, πρόγραμμα ή ενεργοποιημένο τερματικό. Απαιτείται ειδικός έλεγχος πριν από αφαίρεση."});
+    await prisma.$transaction(async tx=>{
+      await tx.$executeRaw`UPDATE "StoreInstallationTerminal" SET "active"=FALSE,"tokenHash"=NULL,"tokenExpiresAt"=NULL,"updatedAt"=NOW() WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}`;
+      await tx.store.update({where:{id:store.id},data:{active:false}});
+      await tx.authAudit.create({data:{userId:req.user.id,email:req.user.email||"platform-admin",event:`EMPTY_STORE_ARCHIVED:${store.companyId}:${store.id}`,success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+    });
+    res.json({ok:true,storeId:store.id});
+  }catch(error){next(error)}
+});
 
 router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   try{
