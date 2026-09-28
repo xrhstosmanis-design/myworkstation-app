@@ -1,3 +1,7 @@
+## 28/09/2026 19:19–19:20 Ελλάδα — TABLE_SERVICE εγκατεστημένο Android PWA · περιορισμένο USER PASS offline/reconnect οθόνης
+
+- [x] Φωτογραφίες ιδιοκτήτη `image-1790612351196.jpg` 19:19 και `image-1790612423703.jpg` 19:20: στην Παραγγελιοληψία κινητού LAB POS 2 εμφανίστηκε η ένδειξη «Χωρίς σύνδεση» και έπειτα εξαφανίστηκε με επαναφορά δικτύου. Το ΤΡΑΠΕΖΙ LAB 1 εμφανίστηκε READY · 3,00 € και στις δύο λήψεις. Βάση PR #1482 / CI #3732 / exact Render `ce6c6ccc19fc77ebcd7faea0cd740c75c6c9418f`. USER PASS μόνο ορατής offline/reconnect ένδειξης και διατήρησης της οθόνης· ανάκτηση προϊόντων, ενεργοποίηση κουμπιού, πραγματικό POST/απουσία POST στη βάση και οικονομικά/stock NOT TESTED. Συνολικό TABLE_SERVICE OPEN. `CHECKPOINTS/CHANGES/2026-09-28-table-service-mobile-reconnect.md`.
+
 ## 28/09/2026 15:34 Ελλάδα — Super Admin AI Command Center ΦΑΣΗ 2 · Κέντρο Προβλημάτων
 
 - [x] PR #1493 / CI #3763 και #3764 / deploy #1753 / exact production `083792d9fc943575b19ac52a55d059224d264689`: `image(4).png` δείχνει 3 ανοικτά σημεία (Ταμεία 0, Πληρωμές 0, Τράπεζα 3) και `image(5).png` επιβεβαιώνει μετάβαση στην κανονική οθόνη Τράπεζας με −193,00 € σε αναμονή και τις ανοικτές κινήσεις. Περιορισμένο USER visual PASS συγκέντρωσης/μετάβασης· καμία επιβεβαίωση, αποδεικτικό ή οικονομική/stock/fiscal μεταβολή. `CHECKPOINTS/CHANGES/2026-09-28-super-admin-ai-command-center-phase2-problems.md`.
@@ -38,9 +42,9 @@
 
 - [ ] Η εικόνα `image(20260927-215408).png` αποδεικνύει 22 τυπωμένες σειρές/77 μονάδες και προεπισκόπηση 410,15 €, όμως ο server φράσσει την εφαρμογή: συγκρίνει 280,93 € καθαρό χωρίς ΕΦΚ με 345,07 € τυπωμένη φορολογητέα καθαρή αξία **με ΕΦΚ 64,14 €**. 280,93 + 64,14 = 345,07 €. Στενή διόρθωση του gate δέχεται ρητά είτε καθαρό χωρίς ΕΦΚ είτε φορολογητέο καθαρό με ΕΦΚ, μόνο με πλήρη μη αρνητικά ποσά ΕΦΚ ανά σειρά. Παραμένουν απαιτούμενα πλήθος/σελίδες/ποσότητα/μικτό και ανθρώπινος έλεγχος γραμμών· καμία αυτόματη εφαρμογή, πληρωμή ή stock. CI/deploy/νέα ανάγνωση στο ίδιο πρόχειρο AWAITING LAB, Gate 3 OPEN. `CHECKPOINTS/CHANGES/2026-09-26-gate3-invoice-assistant-integration.md`.
 
-## 28/09/2026 — TABLE_SERVICE κινητό offline/reconnect UX · AWAITING LAB
+## 28/09/2026 — TABLE_SERVICE κινητό offline/reconnect UX · ιστορικό AWAITING LAB, οπτικό σκέλος κλείστηκε 19:20
 
-- [ ] Το εγκατεστημένο LAB PWA ανοίγει χωρίς δίκτυο με ορατή ένδειξη και ανενεργή αποστολή, επανασύνδεση ανακτά τραπέζια και προϊόντα πριν ενεργοποιηθεί η αποστολή και **δεν** στέλνει γύρο αυτόματα. Τοπικό build PASS, φυσική δοκιμή Android, CI και exact deploy AWAITING. Αβέβαιη αποτυχία POST απαιτεί έλεγχο τραπεζιού/ουράς πριν από χειροκίνητη επανάληψη· δεν υλοποιείται offline ουρά ή server idempotency με αυτό το σκέλος. Συνολικό TABLE_SERVICE OPEN. `CHECKPOINTS/CHANGES/2026-09-28-table-service-mobile-reconnect.md`.
+- [x] Η φυσική Android οθόνη εμφάνισε και αφαίρεσε την offline ένδειξη 19:19–19:20 μετά PR #1482 / CI #3732 / exact deploy `ce6c6cc`· τα υπόλοιπα κριτήρια της αρχικής πρότασης παραμένουν NOT TESTED όπως δηλώνει η νεότερη κορυφαία εγγραφή. Δεν υλοποιείται offline ουρά ή server idempotency. Συνολικό TABLE_SERVICE OPEN. `CHECKPOINTS/CHANGES/2026-09-28-table-service-mobile-reconnect.md`.
 
 ## 28/09/2026 ~00:52 Ελλάδα — TABLE_SERVICE Android Store Mode PWA · περιορισμένο USER PASS
 
