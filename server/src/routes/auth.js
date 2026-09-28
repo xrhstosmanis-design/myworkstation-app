@@ -83,6 +83,36 @@ async function issueSession(user,req,deviceName){
   return {token,user:publicUser(user),session:{id:session.id,deviceName:session.deviceName,expiresAt}};
 }
 
+router.get("/owner-companies",auth,async(req,res,next)=>{
+  try{
+    if(req.user.role!=="OWNER"||req.user.platformRole==="SUPER_ADMIN")return res.status(403).json({error:"Απαιτείται πρόσβαση ιδιοκτήτη."});
+    const rows=await prisma.$queryRaw`SELECT c."id",c."name",c."taxId",c."active",s."id" AS "storeId",s."name" AS "storeName",s."city" AS "storeCity"
+      FROM "Company" c LEFT JOIN "Store" s ON s."companyId"=c."id" AND s."active"=TRUE
+      WHERE c."active"=TRUE AND (c."id"=${req.user.primaryCompanyId||req.user.companyId}
+        OR EXISTS(SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."companyId"=c."id" AND a."ownerUserId"=${req.user.id}))
+      ORDER BY c."name",s."name"`;
+    const companies=[...new Map(rows.map(row=>[row.id,{id:row.id,name:row.name,taxId:row.taxId,stores:rows.filter(item=>item.id===row.id&&item.storeId).map(item=>({id:item.storeId,name:item.storeName,city:item.storeCity}))}])).values()];
+    res.json({companies,currentCompanyId:req.user.companyId});
+  }catch(error){next(error)}
+});
+
+router.post("/owner/select-company",auth,async(req,res,next)=>{
+  try{
+    if(req.user.role!=="OWNER"||req.user.platformRole==="SUPER_ADMIN"||!req.user.sessionId)return res.status(403).json({error:"Απαιτείται ενεργή σύνδεση ιδιοκτήτη."});
+    const {companyId}=z.object({companyId:z.string().min(1)}).strict().parse(req.body||{});
+    const user=await prisma.user.findUnique({where:{id:req.user.id},include:{company:true}});
+    const company=await prisma.company.findFirst({where:{id:companyId,active:true}});
+    if(!user||user.role!=="OWNER"||!company)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτή την εταιρεία."});
+    if(company.id!==user.companyId){
+      const allowed=await prisma.$queryRaw`SELECT 1 FROM "OwnerCompanyAccess" WHERE "ownerUserId"=${user.id} AND "companyId"=${company.id} LIMIT 1`;
+      if(!allowed.length)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτή την εταιρεία."});
+    }
+    const token=jwt.sign({id:user.id,companyId:company.id,primaryCompanyId:user.companyId,role:"OWNER",platformRole:"OWNER",isSuperAdmin:false,fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion},process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
+    await audit(req,{userId:user.id,email:user.email,event:`OWNER_COMPANY_SELECTED:${company.id}`,success:true});
+    res.json({token,user:{...publicUser(user),company}});
+  }catch(error){next(error)}
+});
+
 // Renew only an already authenticated, non-revoked BackOffice session. Keep the
 // support scope identical to the verified token; a client cannot choose a company.
 router.post("/renew",auth,async(req,res,next)=>{
@@ -95,7 +125,7 @@ router.post("/renew",auth,async(req,res,next)=>{
     if(supportContext&&user.role!=="SUPER_ADMIN")return res.status(403).json({error:"Η πρόσβαση υποστήριξης δεν είναι έγκυρη."});
     const extended=await prisma.userSession.updateMany({where:{id:req.user.sessionId,userId:user.id,revokedAt:null,expiresAt:{gt:new Date()}},data:{expiresAt:new Date(Date.now()+SESSION_HOURS*60*60*1000),lastSeenAt:new Date()}});
     if(extended.count!==1)return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
-    const base={id:user.id,companyId:user.companyId,role:user.role==="SUPER_ADMIN"?"OWNER":user.role,platformRole:user.role,isSuperAdmin:user.role==="SUPER_ADMIN",fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion};
+    const base={id:user.id,companyId:req.user.companyId,primaryCompanyId:user.companyId,role:user.role==="SUPER_ADMIN"?"OWNER":user.role,platformRole:user.role,isSuperAdmin:user.role==="SUPER_ADMIN",fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion};
     const platformToken=jwt.sign(base,process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
     const token=supportContext?jwt.sign({...base,companyId:supportContext.companyId,role:"OWNER",supportContext},process.env.JWT_SECRET,{expiresIn:`${SUPPORT_TOKEN_HOURS}h`}):platformToken;
     res.json({token,...(supportContext?{platformToken}:{})});

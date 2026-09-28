@@ -17,6 +17,13 @@ export async function ensurePlatformSchema(){
   // add only missing fields/tables and preserve all operational data.
   await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true`);
+  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OwnerCompanyAccess" (
+    "ownerUserId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+    "companyId" TEXT NOT NULL REFERENCES "Company"("id") ON DELETE CASCADE,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY ("ownerUserId","companyId"))`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OwnerCompanyAccess_company_idx" ON "OwnerCompanyAccess"("companyId")`);
+
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "plan" TEXT NOT NULL DEFAULT 'TRIAL'`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "trialEndsAt" TIMESTAMP(3)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "licenseStatus" TEXT NOT NULL DEFAULT 'TRIAL'`);
