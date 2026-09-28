@@ -62,6 +62,18 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }));
   },[companies,problems,onOpenBank,onOpenCash,onOpenChecks,onOpenPayments]);
   const storeStatusTotals=useMemo(()=>storeStatuses.reduce((all,item)=>{all[item.state]++;return all},{ok:0,warn:0,danger:0}),[storeStatuses]);
+  const dailyPriorities=useMemo(()=>{
+    const storeItems=storeStatuses.filter(store=>store.state!=="ok").map(store=>({
+      id:`store:${store.id}`,state:store.state,title:store.name,context:store.companyName,
+      detail:store.reasons.join(" · ")||"Χρειάζεται έλεγχο",open:store.open
+    }));
+    const companyItems=companies.filter(company=>(company.stores?.length||0)===0).map(company=>({
+      id:`company:${company.id}`,state:!company.active?"danger":"warn",title:company.name,context:"Εταιρεία",
+      detail:!company.active?"Ανενεργή εταιρεία":"Δεν έχει συνδεδεμένο κατάστημα",open:onOpenChecks
+    }));
+    const weight={danger:0,warn:1};
+    return [...storeItems,...companyItems].sort((a,b)=>weight[a.state]-weight[b.state]||a.title.localeCompare(b.title,"el")).slice(0,5);
+  },[companies,onOpenChecks,storeStatuses]);
   const refresh=()=>{onRefresh?.();loadProblems()};
   const ask=async event=>{
     event.preventDefault();
@@ -79,10 +91,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-4">
+  return <div className="ai-command-page" data-ai-command-center="phase-5">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 4</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 5</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading}><RefreshCw/> {loading||problems.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -118,6 +130,12 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         </section>
       </div>
 
+      <section className="ai-command-daily">
+        <div className="ai-command-panel-title"><div><small>AI ΗΜΕΡΗΣΙΑ ΑΝΑΛΥΣΗ · ΦΑΣΗ 5</small><h2>{dailyPriorities.length?`${dailyPriorities.length} σημεία χρειάζονται σήμερα την προσοχή σου`:"Δεν υπάρχει ανοικτή προτεραιότητα σήμερα"}</h2><p>Αυτόματη ιεράρχηση από τα ίδια σημερινά δεδομένα· καμία αυτόματη ενέργεια ή μεταβολή.</p></div><BarChart3/></div>
+        {problems.loading?<div className="ai-command-empty">Ανάλυση σημερινών δεδομένων…</div>:dailyPriorities.length===0?<div className="ai-daily-clear"><CheckCircle2/><div><b>Η σημερινή εικόνα είναι καθαρή</b><span>Δεν εντοπίστηκε ανοικτό σημείο στους διαθέσιμους ελέγχους.</span></div></div>:<div className="ai-daily-list">{dailyPriorities.map((item,index)=><button type="button" key={item.id} onClick={item.open}><span className={`ai-daily-rank ${item.state}`}>{index+1}</span><div><b>{item.title}</b><small>{item.context} · {item.detail}</small></div><strong className={item.state}>{item.state==="danger"?"ΑΜΕΣΑ":"ΕΛΕΓΧΟΣ"}</strong><ChevronRight/></button>)}</div>}
+        <small className="ai-daily-source">Πηγή: σημερινή επισκόπηση, Ταμεία, Πληρωμές και Τράπεζα. Εμφανίζονται έως 5 προτεραιότητες.</small>
+      </section>
+
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
         <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
@@ -128,7 +146,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article className="current"><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Επόμενη φάση</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><MessageCircle/><b>Ρώτα το MyWorkStation</b><span>Φάση 3 · ενεργό</span></article><article className="current"><BarChart3/><b>AI ημερήσια ανάλυση</b><span>Φάση 5 · ενεργό</span></article><article><Store/><b>Digital Twin</b><span>Αργότερα</span></article></div>
       </section>
     </section>
   </div>;
