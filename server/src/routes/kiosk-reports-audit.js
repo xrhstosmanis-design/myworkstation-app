@@ -10,6 +10,7 @@ const auditEventLabels={SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",O
 auditEventLabels.NON_FISCAL_COPY_PRINT_REQUEST="Αίτημα εκτύπωσης αντιγράφου NON_FISCAL";
 auditEventLabels.LABEL_PREVIEW_OPENED="Άνοιγμα προεπισκόπησης ετικέτας";
 auditEventLabels.PRODUCT_CARD_UPDATED="Διόρθωση είδους";
+auditEventLabels.PRODUCT_BARCODE_TRANSFERRED="Μεταφορά barcode";
 auditEventLabels.MASTER_PRODUCTS_DISPATCHED="Αποστολή προϊόντων από Master Catalog";
 auditEventLabels.STOCK_MANUAL_ADJUSTMENT="Χειροκίνητη διόρθωση αποθέματος";
 auditEventLabels.STOCK_STOCKTAKE_ADJUSTMENT="Διόρθωση αποθέματος από απογραφή";
@@ -244,7 +245,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           'BANK_DEPOSIT_PROOF_UPLOADED','BANK_DEPOSIT_AUTO_MATCHED','BANK_DEPOSIT_PROOF_DISCREPANCY',
           'BANK_LEDGER_CONFIRMED','BANK_LEDGER_DISCREPANCY','BANK_LEDGER_CANCELLED',
           'OTHER_EXPENSE_CONFIRMED','OTHER_EXPENSE_DISCREPANCY',
-          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','SUPPLIER_SETTLEMENT_CANCELLED','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
+          'SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_SETTLEMENT_DISCREPANCY','SUPPLIER_SETTLEMENT_CANCELLED','POS_SALE_COMPLETED','MASTER_PRODUCTS_DISPATCHED','PRODUCT_CARD_UPDATED','PRODUCT_BARCODE_TRANSFERRED','PURCHASE_ORDER_DELETED','INVOICE_LINE_CORRECTED','PURCHASE_ORDER_DRAFT_CREATED','PURCHASE_ORDER_DRAFT_UPDATED','PURCHASE_ORDER_LINE_ADDED','PURCHASE_ORDER_LINE_DELETED'
           ,'OPERATOR_CREATED','OPERATOR_PROFILE_UPDATED','OPERATOR_PIN_CHANGED','OPERATOR_PIN_RANDOMIZED','OPERATOR_DEACTIVATED','OPERATOR_LOGIN_PIN','OPERATOR_LOGIN_CARD','OPERATOR_LOGOUT'
           ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED','TABLE_ORDER_SENT','TABLE_ORDER_ROUND_SENT','TABLE_PREPARATION_READY'
         )
@@ -316,12 +317,14 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       const allocatedInvoices=supplierEvent&&Array.isArray(details.allocations)
         ?details.allocations.map(item=>`${item.documentNumber||invoiceNumbers.get(item.purchaseDocumentId)||item.purchaseDocumentId||"Τιμολόγιο"}: ${n(item.amount).toFixed(2)} €`).join(", ")
         :"";
-      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED",invoiceDescription=invoiceAuditDescription(r.eventType,details);
+      const catalogDispatch=r.eventType==="MASTER_PRODUCTS_DISPATCHED",productCorrection=r.eventType==="PRODUCT_CARD_UPDATED",barcodeTransfer=r.eventType==="PRODUCT_BARCODE_TRANSFERRED",purchaseOrderDeleted=r.eventType==="PURCHASE_ORDER_DELETED",invoiceDescription=invoiceAuditDescription(r.eventType,details);
       const operatorLifecycle=operatorLifecycleEvents.has(r.eventType),safeLifecycleDetails=operatorLifecycle?safeOperatorLifecycleDetails(details):null;
       const diningDescription=diningAuditDescription(r.eventType,details,diningAreaNames);
       const description=operatorLifecycle?operatorLifecycleDescription(r.eventType,details):invoiceDescription||diningDescription
         ||(purchaseOrderDeleted
         ?`ΔΙΑΓΡΑΦΗ ΠΡΟΧΕΙΡΟΥ ΤΙΜΟΛΟΓΙΟΥ · ${details.invoiceNumber||details.orderId||"—"} · ${details.supplierName||"Χωρίς προμηθευτή"} · ${n(details.lineCount)} γραμμές · ${n(details.totalGross).toFixed(2)} €`
+        :barcodeTransfer
+        ?`ΜΕΤΑΦΟΡΑ BARCODE · ${details.barcode||"—"} · ${details.sourceProductName||"—"} → ${details.targetProductName||"—"}`
         :productCorrection
         ?`ΔΙΟΡΘΩΣΗ ΕΙΔΟΥΣ · ${details.productName||"Άγνωστο προϊόν"} · ${(Array.isArray(details.changes)?details.changes:[]).map(change=>`${change.label}: ${change.before??"—"} → ${change.after??"—"}`).join(" · ")||"Αποθήκευση καρτέλας"}`
         :catalogDispatch

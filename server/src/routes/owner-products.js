@@ -311,6 +311,51 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
   }catch(error){next(error)}
 });
 
+router.get("/:productId/barcode-owner",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req),target=await ownedProduct(company,req.params.productId);
+    if(!target)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    const barcode=String(req.query.barcode||"").trim();
+    if(!/^\d{8,14}$/.test(barcode))return res.status(400).json({error:"Βάλε barcode 8–14 ψηφίων."});
+    const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name",p."sku",b."unitMultiplier",b."salePrice",b."name" AS "barcodeName"
+      FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId"
+      WHERE p."companyId"=${company} AND b."barcode"=${barcode} LIMIT 2`;
+    res.json({barcode,target:{id:target.id,name:target.name,sku:target.sku},owners:rows});
+  }catch(error){next(error)}
+});
+
+router.post("/:productId/barcode-transfer",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req),targetId=String(req.params.productId),barcode=String(req.body?.barcode||"").trim();
+    const expectedSourceId=String(req.body?.sourceProductId||"");
+    if(!/^\d{8,14}$/.test(barcode)||!expectedSourceId||expectedSourceId===targetId)
+      return res.status(400).json({error:"Έλεγξε το barcode και το προϊόν προέλευσης."});
+    const result=await prisma.$transaction(async tx=>{
+      // The lock serializes transfers of the same barcode within this company.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${company+":barcode:"+barcode}))`;
+      const products=await tx.$queryRaw`SELECT "id","name","sku" FROM "Product"
+        WHERE "companyId"=${company} AND "id" IN (${expectedSourceId},${targetId}) FOR UPDATE`;
+      const source=products.find(p=>p.id===expectedSourceId),target=products.find(p=>p.id===targetId);
+      if(!source||!target){const error=new Error("Δεν βρέθηκαν και τα δύο προϊόντα στην εταιρεία.");error.status=404;throw error}
+      const rows=await tx.$queryRaw`SELECT b."id",b."productId" FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId"
+        WHERE p."companyId"=${company} AND b."barcode"=${barcode} FOR UPDATE OF b`;
+      if(rows.length!==1||rows[0].productId!==expectedSourceId){
+        const error=new Error("Η αντιστοίχιση του barcode άλλαξε. Κάνε νέο έλεγχο πριν από τη μεταφορά.");error.status=409;throw error
+      }
+      await tx.$executeRaw`UPDATE "ProductBarcode" SET "productId"=${targetId},"unitMultiplier"=1,"salePrice"=NULL,"name"=NULL,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${rows[0].id}`;
+      const stores=await tx.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId"
+        WHERE s."companyId"=${company} AND sp."productId" IN (${expectedSourceId},${targetId})`;
+      if(!stores.length){const error=new Error("Δεν υπάρχει συνδεδεμένο κατάστημα για την καταγραφή Audit της μεταφοράς.");error.status=409;throw error}
+      const details=JSON.stringify({barcode,sourceProductId:source.id,sourceProductName:source.name,targetProductId:target.id,targetProductName:target.name,
+        resetBarcodeAttributes:true,actorName:req.user.fullName||req.user.name||req.user.email||"BackOffice",terminalPos:"BACKOFFICE"});
+      for(const store of stores)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
+        VALUES (${uid()},${company},${store.storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_BARCODE_TRANSFERRED',${details}::jsonb)`;
+      return {barcode,source:{id:source.id,name:source.name},target:{id:target.id,name:target.name},auditedStores:stores.length};
+    });
+    res.json({ok:true,...result});
+  }catch(error){next(error)}
+});
+
 router.patch("/:productId/prices",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);
