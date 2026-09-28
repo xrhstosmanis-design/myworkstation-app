@@ -486,10 +486,10 @@ export default function PlatformAdminApp(){
       <section className="platform-panel">
         <div className="platform-panel-head"><div><h2>Εταιρείες πελατών</h2><p>Κάθε εταιρεία έχει απομονωμένα καταστήματα, χρήστες και δεδομένα.</p></div></div>
         {loading?<div className="platform-empty">Φόρτωση πλατφόρμας…</div>:(data?.companies||[]).length===0?<div className="platform-empty">Δεν υπάρχουν ακόμη πελάτες.</div>:<div className="platform-company-list">
-          {data.companies.map(company=><article className={`platform-company ${!company.active?"inactive":""}`} key={company.id}>
+          {[...data.companies].sort((a,b)=>(a.owner?.email||"~").localeCompare(b.owner?.email||"~")||a.name.localeCompare(b.name)).map((company,index,ordered)=><React.Fragment key={company.id}>{(index===0||ordered[index-1].owner?.id!==company.owner?.id)&&<h3 style={{margin:"18px 4px 6px"}}>Ιδιοκτήτης: {company.owner?.fullName||"Δεν έχει οριστεί"} <small>{company.owner?.email||""}</small></h3>}<article className={`platform-company ${!company.active?"inactive":""}`}>
             <div className="platform-company-main"><div className="company-mark">{company.name.slice(0,2).toUpperCase()}</div><div><div className="company-name"><h3>{company.name}</h3><span className={`company-status ${company.active?"active":"inactive"}`}>{company.active?"ΕΝΕΡΓΗ":"ΑΝΕΝΕΡΓΗ"}</span></div><p>{company.city||"Χωρίς πόλη"}{company.taxId?` · ΑΦΜ ${company.taxId}`:""}</p><small>Δημιουργήθηκε {when(company.createdAt)}</small></div></div>
             <div className="platform-company-counts"><div><Store/><span>{company.storeCount} καταστήματα</span></div><div><Users/><span>{company.userCount} χρήστες</span></div><div><UsersRound/><span>{company.employeeCount} εργαζόμενοι</span></div></div>
-            <div className="platform-company-owner"><small>Ιδιοκτήτης πελάτη</small><b>{company.owner?.fullName||"Δεν έχει οριστεί"}</b><span>{company.owner?.email||"—"}</span></div>
+            <div className="platform-company-owner"><small>Εταιρεία · ΑΦΜ {company.taxId||"εκκρεμεί"}</small><b>{company.owner?.fullName||"Δεν έχει οριστεί"}</b><span>{company.stores.map(store=>store.name).join(" · ")}</span></div>
             <div className="platform-company-plan"><label>Πακέτο<select value={company.plan} onChange={e=>updateCompany(company.id,{plan:e.target.value},`Το πακέτο του ${company.name} ενημερώθηκε.`)} disabled={busy===company.id}>{plans.map(plan=><option value={plan} key={plan}>{planLabels[plan]}</option>)}</select></label><small>{company.plan==="TRIAL"?`Λήξη δοκιμής: ${when(company.trialEndsAt)}`:"Χωρίς ημερομηνία λήξης"}</small></div>
             <div className="platform-company-actions">
               <button className="secondary" onClick={()=>setStoreCompany(company)}><Store/>Καταστήματα</button>
@@ -499,7 +499,7 @@ export default function PlatformAdminApp(){
               <button className={company.active?"danger":"activate"} onClick={()=>updateCompany(company.id,{active:!company.active},company.active?`Ο πελάτης ${company.name} απενεργοποιήθηκε.`:`Ο πελάτης ${company.name} ενεργοποιήθηκε.`)} disabled={busy===company.id}>{company.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button>
               {company.name==="KAT TEST"&&<button className="danger" onClick={()=>setDeleteCompany(company)} disabled={Boolean(busy)}><Trash2/>Οριστική διαγραφή</button>}
             </div>
-          </article>)}
+          </article></React.Fragment>)}
         </div>}
       </section>
     </main>
