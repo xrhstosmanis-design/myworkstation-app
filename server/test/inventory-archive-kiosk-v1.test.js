@@ -96,6 +96,12 @@ test("Excel import is preview first and stock overwrite is explicit",()=>{
   assert.match(panel,/preview\.summary\.invalid/);
 });
 
+test("archive displays imported supplier and brand before the first purchase",()=>{
+  assert.match(archive,/COALESCE\(lp\."supplierName",linkedSupplier\."name"\) AS "supplierName"/);
+  assert.match(archive,/"SupplierProductLink" spl/);
+  assert.match(archive,/COALESCE\(pc\."name",mp\."brandName"\) AS "brandName"/);
+});
+
 test("new archive reuses existing navigation without an observer",()=>{
   assert.match(launcher,/mode===?"inventory"|mode==="inventory"/);
   assert.match(launcher,/Αποθήκη/);
