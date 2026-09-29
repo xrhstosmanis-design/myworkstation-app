@@ -14,7 +14,7 @@ function requireAccess(req,res,next){
 }
 router.use(requireAccess);
 
-async function ensureSchema(){
+export async function ensureProductCompanySchema(){
   if(schemaReady)return schemaReady;
   schemaReady=(async()=>{
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ManagementProductCompany" (
@@ -62,6 +62,7 @@ async function ensureSchema(){
   })().catch(error=>{schemaReady=null;throw error});
   return schemaReady;
 }
+const ensureSchema=ensureProductCompanySchema;
 
 async function ensureCompanyMappings(companyId){
   await ensureSchema();

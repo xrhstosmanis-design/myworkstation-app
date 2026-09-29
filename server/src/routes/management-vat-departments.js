@@ -27,7 +27,7 @@ function requireAccess(req,res,next){
 }
 router.use(requireAccess);
 
-async function ensureSchema(){
+export async function ensureVatDepartmentSchema(){
   if(schemaReady)return schemaReady;
   schemaReady=(async()=>{
     await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
@@ -52,6 +52,7 @@ async function ensureSchema(){
   })();
   return schemaReady;
 }
+const ensureSchema=ensureVatDepartmentSchema;
 
 const cleanRate=value=>Math.round(Number(value||0)*1000)/1000;
 const rateLabel=rate=>Number(rate||0).toLocaleString("el-GR",{maximumFractionDigits:3});
