@@ -52,3 +52,11 @@ test("official AADE lookup bypasses the local supplier shortcut and distinguishe
   assert.match(route,/if\(!result\.valid\)return res\.status\(502\)/);
   assert.match(supplier,/vat-lookup\?official=1&taxId=/);
 });
+
+test("AADE request matches the live WSDL SOAP 1.2 binding",()=>{
+  const route=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
+  assert.match(route,/http:\/\/www\.w3\.org\/2003\/05\/soap-envelope/);
+  assert.match(route,/application\/soap\+xml; charset=utf-8/);
+  assert.match(route,/RgWsPublic2Service:rgWsPublic2AfmMethod/);
+  assert.doesNotMatch(route,/"SOAPAction":/);
+});
