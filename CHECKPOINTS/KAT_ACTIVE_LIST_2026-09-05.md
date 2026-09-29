@@ -1852,7 +1852,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 29/09/2026 — AI Command Center ΦΑΣΗ 14 · Full Digital Twin
 
-- [ ] ASSIGNED `feat/ai-command-full-digital-twin-phase14-20260929`: ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και τους έξι υπάρχοντες τομείς POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες. Κανένα νέο endpoint/dataset, write, device/fiscal command, snapshot/live/clip ή polling. Στοχευμένα **15/15 PASS**, πλήρες server suite **1.634 PASS / 0 FAIL / 1 SKIP**, production client build **PASS**. **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS.** `CHECKPOINTS/CHANGES/2026-09-29-ai-command-full-digital-twin-phase14.md`.
+- [x] Ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και τους έξι υπάρχοντες τομείς POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες. PR `#1536`, CI `#3870` PASS, exact production `22f1914b40d30ba9d087db1ed58349d734dab48f`. Η `image(20260929-180520).png` επιβεβαιώνει τέσσερις επιλογές καταστημάτων, τους έξι τομείς και στο Περίπτερο Διαδόχου Παύλου `0 ΟΚ · 6 έλεγχος · 0 πρόβλημα`. Τα κλικ μετάβασης δεν δοκιμάστηκαν. **LIMITED USER VISUAL PASS · CLOSED.** `CHECKPOINTS/CHANGES/2026-09-29-ai-command-full-digital-twin-phase14.md`.
 
 ## 29/09/2026 — Εγκατάσταση Περιπτέρου Διαδόχου Παύλου · αρχείο ειδών
 

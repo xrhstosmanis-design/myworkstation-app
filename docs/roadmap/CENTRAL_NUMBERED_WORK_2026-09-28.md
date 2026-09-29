@@ -27,6 +27,7 @@
 
 - **AI Command Center ΦΑΣΗ 12 — Digital Twin Lite:** LIMITED USER VISUAL PASS 28/09/2026. Τέσσερις read-only κάρτες καταστημάτων με POS, EFTPOS/ταμειακές, Ταμείο, Stock και Προσωπικό. PR #1529 / CI #3851, device-routing fix PR #1530 / CI #3853, exact production `f58e19b946e1f3a05c5605a324c233605d14fb1c`. Τεκμήριο `image(20260928-203834).png`.
 - **AI Command Center ΦΑΣΗ 13 — NVR / Cameras:** LIMITED USER VISUAL PASS 29/09/2026. Read-only κατάσταση υπάρχοντος connector/NVR και ενεργών καμερών ανά κατάστημα. PR #1532 / CI #3857, exact production `9b8b0e0e00990fa19bf617fc17352af957c5a8f0`. Τεκμήριο `image(20260928-210335).png`.
+- **AI Command Center ΦΑΣΗ 14 — Full Digital Twin:** LIMITED USER VISUAL PASS 29/09/2026. Επιλογή τεσσάρων καταστημάτων και ενιαία read-only εικόνα POS, EFTPOS/Ταμειακών, Ταμείου, Stock, Προσωπικού και Καμερών. PR #1536 / CI #3870, exact production `22f1914b40d30ba9d087db1ed58349d734dab48f`. Τεκμήριο `image(20260929-180520).png`. Τα κλικ μετάβασης δεν δοκιμάστηκαν· το αρχικό πλάνο Φάσεων 1–14 έκλεισε.
 
 ## Προτεραιότητα 1 — πιλοτική εγκατάσταση και ασφαλής λειτουργία
 
