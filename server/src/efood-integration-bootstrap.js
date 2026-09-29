@@ -2,6 +2,22 @@ import {prisma} from "./prisma.js";
 
 let schemaPromise;
 
+export const EFOOD_PRODUCT_MAPPING_FK_SQL=`DO $constraint$
+  BEGIN
+    IF to_regclass('public."Product"') IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname='EfoodProductMapping_product_fkey'
+          AND conrelid=to_regclass('public."EfoodProductMapping"')
+      )
+    THEN
+      ALTER TABLE "EfoodProductMapping"
+        ADD CONSTRAINT "EfoodProductMapping_product_fkey"
+        FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL;
+    END IF;
+  END $constraint$`;
+
 export async function ensureEfoodIntegrationSchema(){
   if(!schemaPromise)schemaPromise=(async()=>{
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "EfoodWebhookEvent" (
@@ -28,8 +44,8 @@ export async function ensureEfoodIntegrationSchema(){
       CONSTRAINT "EfoodProductMapping_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE,
       CONSTRAINT "EfoodProductMapping_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE,
       CONSTRAINT "EfoodProductMapping_integration_fkey" FOREIGN KEY ("integrationId") REFERENCES "StoreIntegrationCredential"("id") ON DELETE CASCADE,
-      CONSTRAINT "EfoodProductMapping_product_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL,
       UNIQUE ("integrationId","externalProductId"))`);
+    await prisma.$executeRawUnsafe(EFOOD_PRODUCT_MAPPING_FK_SQL);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EfoodProductMapping_store_status_idx" ON "EfoodProductMapping" ("storeId","status")`);
 
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "EfoodIntegrationPreview" (
