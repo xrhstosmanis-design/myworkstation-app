@@ -1850,6 +1850,10 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 - [x] Read-only κατάσταση υπάρχοντος NVR/connector και ενεργών καμερών μέσα στις κάρτες Digital Twin, με μετάβαση στην κανονική οθόνη Video Events. Κανένα νέο endpoint, snapshot/live/clip request, pairing, command ή έκθεση credentials. PR `#1532`, CI `#3857` PASS, exact production `9b8b0e0e00990fa19bf617fc17352af957c5a8f0`. Η `image(20260928-210335).png` επιβεβαιώνει τέσσερις περιοχές `Κάμερες`: LAB `OFFLINE · 1 κάμερα`, απομονωμένο LAB `Δεν έχει ρυθμιστεί` και δύο `ΜΗ ΔΙΑΘΕΣΙΜΟ`, χωρίς απώλεια των POS/EFTPOS μετρητών. Το κλικ μετάβασης δεν δοκιμάστηκε. **LIMITED USER VISUAL PASS · CLOSED.** `CHECKPOINTS/CHANGES/2026-09-28-ai-command-nvr-cameras-phase13.md`.
 
+## 29/09/2026 — AI Command Center ΦΑΣΗ 14 · Full Digital Twin
+
+- [ ] ASSIGNED `feat/ai-command-full-digital-twin-phase14-20260929`: ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και τους έξι υπάρχοντες τομείς POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες. Κανένα νέο endpoint/dataset, write, device/fiscal command, snapshot/live/clip ή polling. Στοχευμένα **15/15 PASS**, πλήρες server suite **1.634 PASS / 0 FAIL / 1 SKIP**, production client build **PASS**. **LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS.** `CHECKPOINTS/CHANGES/2026-09-29-ai-command-full-digital-twin-phase14.md`.
+
 ## 29/09/2026 — Εγκατάσταση Περιπτέρου Διαδόχου Παύλου · αρχείο ειδών
 
 - [ ] Το αρχείο προέλευσης είχε 14.988 είδη. Εξαιρέθηκαν Τύπος και ποσότητες αποθήκης· με εντολή ιδιοκτήτη αφαιρέθηκαν όλες οι 1.249 γραμμές με συγκρουόμενο εσωτερικό κωδικό ή barcode. Το νέο αρχείο έχει 6.623 είδη με μοναδικούς μη κενούς κωδικούς και barcode. Το παλιό αρχείο παραμένει διαθέσιμο. Δεν έγινε καταχώρηση στο κατάστημα.

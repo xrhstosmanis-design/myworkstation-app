@@ -126,6 +126,14 @@
 - Η ΦΑΣΗ 1 είναι μόνο ανάγνωσης: χρησιμοποιεί το υπάρχον `/api/platform/overview` και ανοίγει τους ήδη υπάρχοντες ελέγχους. Δεν δημιουργεί δεύτερα δεδομένα, νέο οικονομικό endpoint, αυτόματη ενέργεια ή μεταβολή POS/BackOffice.
 - Απαιτούνται στοχευμένα tests, πλήρες client build, πράσινο CI, merge, exact deploy και οπτικό LAB/USER PASS. Μέχρι τότε: `AWAITING LAB`.
 
+## 29/09/2026 — AI Command Center · ΦΑΣΗ 14 Full Digital Twin — ASSIGNED `feat/ai-command-full-digital-twin-phase14-20260929`
+
+- Ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και έξι τομείς: POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες.
+- Χρήση αποκλειστικά των ήδη φορτωμένων δεδομένων και των υπαρχουσών μεταβάσεων των Φάσεων 12–13.
+- Χωρίς νέο endpoint/dataset, write, device/fiscal command, snapshot/live/clip ή polling.
+- Στοχευμένα tests **15/15 PASS**, πλήρες server suite **1.634 PASS / 0 FAIL / 1 SKIP**, production client build **PASS**.
+- `LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
+
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 
 - Workforce: εβδομαδιαίο πρόγραμμα, προβολή ανά ημέρα και ανά εργαζόμενο, ημερομηνίες/ώρες/ΡΕΠΟ, δημοσίευση στο Store Chat, εκτύπωση κάρτας εργασίας, PIN, QR/κάμερα, Code 128/scanner, ελληνικό και αγγλικό πληκτρολόγιο, προσέλευση/αποχώρηση, προστασία διπλής σάρωσης και Audit.
