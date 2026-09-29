@@ -13,6 +13,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
+  const [selectedTwinId,setSelectedTwinId]=useState("");
   const [question,setQuestion]=useState("");
   const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const loadProblems=async()=>{
@@ -179,6 +180,20 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       return{id:store.id,companyId:company.id,name:store.name,companyName:company.name,status,devices,activeTerminals:activeTerminals.length,recentTerminals:recentTerminals.length,fiscalDevices:fiscalDevices.length,eftposDevices:eftposDevices.length,stock,workforce,videoLabel};
     }));
   },[companies,onOpenChecks,storeStatuses,twinDevices.rows]);
+  const selectedTwin=useMemo(()=>digitalTwin.find(item=>item.id===selectedTwinId)||digitalTwin[0]||null,[digitalTwin,selectedTwinId]);
+  const fullTwinAreas=useMemo(()=>{
+    if(!selectedTwin)return[];
+    const unavailable=selectedTwin.devices.unavailable,video=selectedTwin.devices.video,stock=selectedTwin.stock,workforce=selectedTwin.workforce;
+    return[
+      {id:"pos",icon:Monitor,title:"POS",state:unavailable?"warn":selectedTwin.activeTerminals>0&&selectedTwin.recentTerminals===selectedTwin.activeTerminals?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.recentTerminals}/${selectedTwin.activeTerminals} πρόσφατα`,open:onOpenChecks},
+      {id:"eftpos",icon:CreditCard,title:"EFTPOS / Ταμειακές",state:unavailable?"warn":selectedTwin.eftposDevices>0&&selectedTwin.fiscalDevices>0?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.eftposDevices} EFTPOS · ${selectedTwin.fiscalDevices} ταμειακές`,open:onOpenCash},
+      {id:"cash",icon:WalletCards,title:"Ταμείο",state:selectedTwin.status.state,detail:selectedTwin.status.reasons[0]||"Χωρίς ανοικτό εύρημα",open:selectedTwin.status.open},
+      {id:"stock",icon:Store,title:"Stock",state:Number(stock.negativeStock||0)>0?"danger":Number(stock.outOfStock||0)>0?"warn":"ok",detail:`${Number(stock.negativeStock||0)} αρνητικά · ${Number(stock.outOfStock||0)} μηδενικά`,open:()=>onOpenStock?.(selectedTwin.companyId,selectedTwin.id)},
+      {id:"workforce",icon:UsersRound,title:"Προσωπικό",state:Number(workforce.attendanceReview||0)>0||Number(workforce.unfilledShifts||0)>0?"danger":Number(workforce.activeEmployees||0)>0&&!workforce.publishedToday?"warn":"ok",detail:`${Number(workforce.activeEmployees||0)} ενεργοί · ${Number(workforce.scheduledToday||0)} σήμερα`,open:()=>onOpenWorkforce?.(selectedTwin.companyId,selectedTwin.id)},
+      {id:"video",icon:Camera,title:"Κάμερες",state:selectedTwin.devices.videoUnavailable?"warn":!video?.connection?.active?"warn":video.connector?.online?"ok":"danger",detail:selectedTwin.videoLabel,open:()=>onOpenVideo?.(selectedTwin.companyId,selectedTwin.id)}
+    ];
+  },[onOpenCash,onOpenChecks,onOpenStock,onOpenVideo,onOpenWorkforce,selectedTwin]);
+  const fullTwinTotals=useMemo(()=>fullTwinAreas.reduce((all,item)=>{all[item.state]++;return all},{ok:0,warn:0,danger:0}),[fullTwinAreas]);
   const briefingTime=useMemo(()=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()),[companies,problems,invoiceIntel]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel();loadTwinDevices()};
   const ask=async event=>{
@@ -197,10 +212,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
-  return <div className="ai-command-page" data-ai-command-center="phase-13">
+  return <div className="ai-command-page" data-ai-command-center="phase-14">
     <section className="ai-command-shell">
       <header className="ai-command-header">
-        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 13</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
+        <div className="ai-command-heading"><span className="ai-command-mark"><BrainCircuit/></span><div><small>SUPER ADMIN · ΦΑΣΗ 14</small><h1>AI Command Center</h1><p>Μία κεντρική εικόνα της επιχείρησης, πάνω στις υπάρχουσες λειτουργίες του MyWorkStation.</p></div></div>
         <div className="ai-command-header-actions"><span><ShieldCheck/> Μόνο ανάγνωση</span><button type="button" onClick={refresh} disabled={loading||problems.loading||invoiceIntel.loading}><RefreshCw/> {loading||problems.loading||invoiceIntel.loading?"Ανανέωση…":"Ανανέωση"}</button><button type="button" className="ai-command-close" onClick={onClose} aria-label="Κλείσιμο AI Command Center"><X/></button></div>
       </header>
 
@@ -271,6 +286,13 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
         <small className="ai-daily-source">Digital Twin Lite μόνο ανάγνωσης: δεν ελέγχει συσκευή, δεν ανοίγει βάρδια, δεν εκτελεί EFTPOS, δεν αλλάζει stock ή προσωπικό και δεν ζητά snapshot, live video ή clip από NVR.</small>
       </section>
 
+      <section className="ai-command-full-twin">
+        <div className="ai-command-panel-title"><div><small>FULL DIGITAL TWIN · ΦΑΣΗ 14</small><h2>{selectedTwin?selectedTwin.name:"Δεν υπάρχει διαθέσιμο κατάστημα"}</h2><p>{selectedTwin?`${selectedTwin.companyName} · ${fullTwinTotals.ok} ΟΚ · ${fullTwinTotals.warn} έλεγχος · ${fullTwinTotals.danger} πρόβλημα`:"Η ενιαία εικόνα δημιουργείται από τις υπάρχουσες read-only πηγές."}</p></div><Building2/></div>
+        <div className="ai-full-twin-selector" aria-label="Επιλογή καταστήματος">{digitalTwin.map(item=><button type="button" key={item.id} className={selectedTwin?.id===item.id?"active":""} onClick={()=>setSelectedTwinId(item.id)}><span className={`ai-state-dot ${item.status.state}`}/>{item.name}</button>)}</div>
+        {selectedTwin&&<div className="ai-full-twin-areas">{fullTwinAreas.map(area=>{const Icon=area.icon;return <button type="button" key={area.id} className={area.state} onClick={area.open}><Icon/><span><small>{area.title}</small><b>{area.detail}</b></span><strong>{area.state==="danger"?"ΠΡΟΒΛΗΜΑ":area.state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ"}</strong><ChevronRight/></button>})}</div>}
+        <small className="ai-daily-source">Ενιαία λειτουργική εικόνα μόνο ανάγνωσης από τα δεδομένα των Φάσεων 12–13. Δεν δημιουργεί δεύτερο score ή dataset και δεν εκτελεί ενέργεια σε συσκευή, βάρδια, πληρωμή, stock, προσωπικό ή NVR.</small>
+      </section>
+
       <section className="ai-command-detective">
         <div className="ai-command-panel-title"><div><small>INVOICE & SUPPLIER DETECTIVE · ΦΑΣΗ 6</small><h2>{invoiceIntel.loading?"Έλεγχος τιμολογίων…":invoiceDetective.items.length?`${invoiceDetective.items.length} τιμολόγια χρειάζονται προσοχή`:"Δεν υπάρχει ανοικτό εύρημα τιμολογίου"}</h2><p>Σύνοψη από το υπάρχον Invoice Learning· η διόρθωση και η εκμάθηση γίνονται μόνο στην κανονική οθόνη.</p></div><FileSearch/></div>
         {invoiceIntel.error&&<div className="ai-command-problem-error"><AlertTriangle/>{invoiceIntel.error}</div>}
@@ -312,7 +334,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-roadmap">
         <div><small>ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ</small><h2>Η ανάπτυξη παραμένει σταδιακή</h2></div>
-        <div className="ai-roadmap-cards"><article><MoonStar/><b>Night Briefing</b><span>Φάση 11 · ενεργό</span></article><article><Building2/><b>Digital Twin Lite</b><span>Φάση 12 · ενεργό</span></article><article className="current"><Camera/><b>NVR / Cameras</b><span>Φάση 13 · ενεργό</span></article><article><Store/><b>Full Digital Twin</b><span>Αργότερα</span></article></div>
+        <div className="ai-roadmap-cards"><article><Building2/><b>Digital Twin Lite</b><span>Φάση 12 · ενεργό</span></article><article><Camera/><b>NVR / Cameras</b><span>Φάση 13 · ενεργό</span></article><article className="current"><Store/><b>Full Digital Twin</b><span>Φάση 14 · ενεργό</span></article><article><CheckCircle2/><b>Αρχικό πλάνο</b><span>Φάσεις 1–14</span></article></div>
       </section>
     </section>
   </div>;
