@@ -17,6 +17,9 @@ test("AADE pagination requires both continuation keys",()=>{
 test("myDATA documents are idempotent and remain inbox drafts",()=>{
   assert.match(route,/UNIQUE \("companyId","mark"\)/);assert.match(route,/SELECT "inboxId" FROM "MyDataInboundDocument"/);assert.match(route,/'RECEIVED'/);assert.match(route,/stockUpdated:false/);
 });
+test("zero results distinguish an empty AADE response from rejected documents",()=>{
+  assert.match(route,/fetched===0\?/);assert.match(route,/ignoredVat/);assert.match(route,/missingMark/);
+});
 test("invoice inbox exposes manual sync and ten minute refresh",()=>{
   assert.match(ui,/Λήψη από myDATA/);assert.match(ui,/10\*60\*1000/);assert.match(ui,/Η αποθήκη ενημερώνεται μόνο μετά τον έλεγχο/);
 });
