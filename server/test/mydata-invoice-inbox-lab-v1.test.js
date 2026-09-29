@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
-import {invoiceNodes,invoiceSummary,myDataError} from "../src/mydata-xml.js";
+import {invoiceNodes,invoiceSummary,myDataError,nextPage} from "../src/mydata-xml.js";
 
 const route=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/commerce/InvoiceInboxPanel.jsx",import.meta.url),"utf8");
 
-test("myDATA receiving is locked to configured LAB sandbox",()=>{
-  assert.match(route,/environment!=="SANDBOX"/);assert.match(route,/Δεν έγινε σύνδεση παραγωγής/);assert.match(route,/fiscalTransmission:false/);
+test("production receiving requires company VAT and leaves fiscal issuance untouched",()=>{
+  assert.match(route,/\["SANDBOX","PRODUCTION"\]/);assert.match(route,/doc.counterpartVat!==companyVat/);assert.match(route,/fiscalTransmission:false/);
+});
+test("AADE pagination requires both continuation keys",()=>{
+  assert.deepEqual(nextPage("<response><nextPartitionKey>p</nextPartitionKey><nextRowKey>r</nextRowKey></response>"),{partition:"p",row:"r"});
+  assert.equal(nextPage("<response></response>"),null);
+  assert.throws(()=>nextPage("<response><nextPartitionKey>p</nextPartitionKey></response>"));
 });
 test("myDATA documents are idempotent and remain inbox drafts",()=>{
   assert.match(route,/UNIQUE \("companyId","mark"\)/);assert.match(route,/SELECT "inboxId" FROM "MyDataInboundDocument"/);assert.match(route,/'RECEIVED'/);assert.match(route,/stockUpdated:false/);
