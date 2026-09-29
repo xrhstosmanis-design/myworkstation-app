@@ -77,15 +77,16 @@ router.get("/",async(req,res,next)=>{
     const rows=await prisma.$queryRaw`
       SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
-        c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",mp."brandName",
+        c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "brandName",
         sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",
-        pb."barcode",lp."unitCost" AS "lastPurchasePrice",lp."documentDate" AS "lastPurchaseAt",lp."supplierName",lp."documentNumber" AS "lastPurchaseDocument",
+        pb."barcode",lp."unitCost" AS "lastPurchasePrice",lp."documentDate" AS "lastPurchaseAt",COALESCE(lp."supplierName",linkedSupplier."name") AS "supplierName",lp."documentNumber" AS "lastPurchaseDocument",
         ap."averagePurchasePrice",COALESCE(sa."sales15Qty",0) AS "sales15Qty",sa."lastSaleAt"
       FROM "StoreProduct" sp
       JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId" AND pc."companyId"=${companyId}
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
       ) pb ON true
@@ -102,6 +103,12 @@ router.get("/",async(req,res,next)=>{
         WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='APPROVED' AND l."productId"=p."id"
         ORDER BY d."documentDate" DESC,d."createdAt" DESC LIMIT 1
       ) lp ON true
+      LEFT JOIN LATERAL (
+        SELECT sup0."name" FROM "SupplierProductLink" spl
+        JOIN "Supplier" sup0 ON sup0."id"=spl."supplierId" AND sup0."companyId"=${companyId}
+        WHERE spl."companyId"=${companyId} AND spl."productId"=p."id" AND spl."active"=true
+        ORDER BY spl."createdAt",spl."id" LIMIT 1
+      ) linkedSupplier ON true
       LEFT JOIN LATERAL (
         SELECT AVG(COALESCE((SELECT sm."unitCost" FROM "StockMovement" sm
                              WHERE sm."sourceType"='PURCHASE_ORDER' AND sm."sourceId"=d2."id"
