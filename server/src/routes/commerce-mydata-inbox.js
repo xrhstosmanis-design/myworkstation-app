@@ -39,7 +39,7 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
   // The cursor belongs to this store AND environment. Never reuse a sandbox MARK in production.
   const source=`AADE_MYDATA_${integration.environment}`;
   const previous=await prisma.$queryRaw`SELECT COALESCE(MAX(NULLIF("mark",'')::numeric),0)::text AS "lastMark" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "rawPayload"->>'source'=${source}`;
-  const mark=previous[0]?.lastMark||"0",created=[];let duplicates=0,ignored=0,fetched=0,page=null;
+  const mark=previous[0]?.lastMark||"0",created=[];let duplicates=0,ignored=0,ignoredVat=0,missingMark=0,fetched=0,page=null;
   const pages=new Set();
   do{
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
@@ -49,8 +49,8 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
     const remoteError=myDataError(xml);if(remoteError)throw syncError(`Το myDATA δεν ολοκλήρωσε τη λήψη: ${remoteError}`,409);
     const invoices=invoiceNodes(xml);fetched+=invoices.length;
   for(const invoice of invoices){
-    const doc=invoiceSummary(invoice);if(!doc.mark){ignored++;continue}
-    if(doc.counterpartVat!==companyVat){ignored++;continue}
+    const doc=invoiceSummary(invoice);if(!doc.mark){ignored++;missingMark++;continue}
+    if(doc.counterpartVat!==companyVat){ignored++;ignoredVat++;continue}
     const result=await prisma.$transaction(async tx=>{
       const existing=await tx.$queryRaw`SELECT "inboxId" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "mark"=${doc.mark} LIMIT 1`;
       if(existing[0])return null;
@@ -67,7 +67,8 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
     if(page){const key=`${page.partition}:${page.row}`;if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
     if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
   }while(page);
-  res.json({ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,documents:created,stockUpdated:false,fiscalTransmission:false,message:created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:"Δεν βρέθηκαν νέα παραστατικά. Δεν δημιουργήθηκαν διπλές εγγραφές."});
+  const message=created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:fetched===0?"Η ΑΑΔΕ δεν επέστρεψε εισερχόμενα παραστατικά για αυτή τη σύνδεση και αυτό το διάστημα ΜΑΡΚ.":`Η ΑΑΔΕ επέστρεψε ${fetched} παραστατικά: ${duplicates} υπήρχαν ήδη, ${ignoredVat} δεν ταίριαξαν με το ΑΦΜ εταιρείας, ${missingMark} δεν είχαν ΜΑΡΚ. Δεν δημιουργήθηκε πρόχειρο.`;
+  res.json({ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,stockUpdated:false,fiscalTransmission:false,message});
 }catch(error){next(error)}});
 
 router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
