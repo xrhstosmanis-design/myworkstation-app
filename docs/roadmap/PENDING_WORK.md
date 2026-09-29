@@ -322,7 +322,7 @@
 
 ## 12. Backup, monitoring και επαναφορά
 
-**ΑΝΑΤΕΘΗΚΕ — `feat/backup-monitoring-restore-dry-run-task18-20260929` (29/09/2026):** Εργασία #18. Αυτόματο off-site PostgreSQL backup ανά 3 ώρες, καταγραφή επιτυχίας/αποτυχίας/καθυστέρησης, Super Admin monitoring και archive restore dry-run χωρίς σύνδεση σε βάση. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. Η ενεργοποίηση απαιτεί εξωτερικό ιδιωτικό bucket και Render cron· μέχρι πραγματικό run παραμένει `NOT LIVE PASS`. `CHECKPOINTS/CHANGES/2026-09-29-task18-backup-monitoring-restore-dry-run.md`.
+**LOCAL PASS — AWAITING CI / DEPLOY / EXTERNAL SETUP / LIVE RUN (29/09/2026):** Εργασία #18. Υλοποιήθηκαν αυτόματο off-site PostgreSQL backup ανά 3 ώρες, καταγραφή επιτυχίας/αποτυχίας/καθυστέρησης, fail-soft Super Admin monitoring και archive dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Τοπικά: 4/4 στοχευμένα tests, 1.641 PASS / 0 FAIL / 1 SKIP πλήρες server suite και production build PASS. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. Εκκρεμούν CI/deploy, ιδιωτικό bucket, Render secrets/cron και πραγματικό upload + ανεξάρτητο dry-run· μέχρι τότε παραμένει `NOT LIVE PASS`. `CHECKPOINTS/CHANGES/2026-09-29-task18-backup-monitoring-restore-dry-run.md`.
 
 - Αυτόματο backup ανά τρεις ώρες.
 - Πραγματική δοκιμή επαναφοράς βάσης και αρχείων.

@@ -1,0 +1,19 @@
+.platform-stats {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.backup-monitor-stat.ok {
+  border-color: #86d8b5;
+  background: #f0fff8;
+}
+
+.backup-monitor-stat.failed,
+.backup-monitor-stat.overdue {
+  border-color: #f3a6a6;
+  background: #fff5f5;
+}
+
+.backup-monitor-stat.failed svg,
+.backup-monitor-stat.overdue svg {
+  color: #b4232d;
+}

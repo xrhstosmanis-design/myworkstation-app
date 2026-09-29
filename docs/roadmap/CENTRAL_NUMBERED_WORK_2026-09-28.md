@@ -51,7 +51,7 @@
 - **15 · OPEN · ελεύθερο scope:** Πρώτη αυτόματη OCR ανάγνωση τιμολογίου ως μελλοντική βελτίωση, χωρίς επανάληψη του G03 βοηθού.
 - **16 · OPEN · ελεύθερο scope:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
 - **17 · OPEN · ελεύθερο scope:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.
-- **18 · ΑΝΑΤΕΘΗΚΕ · `feat/backup-monitoring-restore-dry-run-task18-20260929`:** Off-site PostgreSQL backup ανά τρεις ώρες, αποτυχία/overdue monitoring και restore dry-run χωρίς σύνδεση σε βάση. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. Εξωτερικό bucket και Render cron απαιτούνται πριν από LIVE PASS.
+- **18 · LOCAL PASS · AWAITING CI / DEPLOY / EXTERNAL SETUP / LIVE RUN:** Off-site PostgreSQL backup ανά τρεις ώρες, αποτυχία/overdue monitoring και restore dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. 4/4 στοχευμένα tests, πλήρες suite 1.641 PASS / 0 FAIL / 1 SKIP και build PASS. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. Εξωτερικό bucket, secrets, Render cron και πραγματικό upload απαιτούνται πριν από LIVE PASS.
 - **19 · OPEN · ελεύθερο scope:** Περιορισμός περιττών GitHub/Render builds (HOME-06 από τη δεύτερη φωτογραφία). Δεν μπλοκάρει το pilot.
 
 ## Προτεραιότητα 3 — προχωρημένα και επί πληρωμή modules από τις φωτογραφίες

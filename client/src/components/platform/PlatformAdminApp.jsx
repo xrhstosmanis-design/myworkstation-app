@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
+import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,DatabaseBackup,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
@@ -23,6 +23,7 @@ import StoreChatPanel from "../store/StoreChatPanel.jsx";
 import InternetProductSearchPanel from "../commerce/InternetProductSearchPanel.jsx";
 import {deviceRoutingFormValues} from "./device-routing-form.js";
 import "./platform-admin.css";
+import "./backup-monitor.css";
 import "./platform-superadmin-inspection.css";
 import "./platform-super-access.css";
 import "./terminal-manager.css";
@@ -96,6 +97,7 @@ export default function PlatformAdminApp(){
     try{return JSON.parse(localStorage.getItem("platformUser")||"null")}catch{return null}
   });
   const [data,setData]=useState(null);
+  const [backupMonitor,setBackupMonitor]=useState(null);
   const [owners,setOwners]=useState([]);
   const [newOwnerCompany,setNewOwnerCompany]=useState(null);
   const [loading,setLoading]=useState(false);
@@ -163,7 +165,7 @@ export default function PlatformAdminApp(){
   };
   const load=async()=>{
     setLoading(true);setError("");
-    try{const [overview,linkedOwners]=await Promise.all([request("/api/platform/overview"),request("/api/platform/owners")]);setData(overview);setOwners(linkedOwners.owners||[])}
+    try{const [overview,linkedOwners,backup]=await Promise.all([request("/api/platform/overview"),request("/api/platform/owners"),request("/api/platform/backup-monitoring").catch(()=>({configured:false,status:"OVERDUE",lastSuccess:null}))]);setData(overview);setOwners(linkedOwners.owners||[]);setBackupMonitor(backup)}
     catch(err){
       setError(err.message);
       if(/σύνδεση|συνεδρία|Super Admin|2FA/i.test(err.message))clearSession(false);
@@ -485,6 +487,7 @@ export default function PlatformAdminApp(){
         <article><Store/><div><span>Καταστήματα</span><strong>{data?.stats?.stores||0}</strong><small>Σε όλη την πλατφόρμα</small></div></article>
         <article><Users/><div><span>Χρήστες</span><strong>{data?.stats?.users||0}</strong><small>{data?.stats?.employees||0} εργαζόμενοι</small></div></article>
         <article><UsersRound/><div><span>Δοκιμές</span><strong>{data?.stats?.trialCompanies||0}</strong><small>{expiringTrials} λήγουν σύντομα</small></div></article>
+        <article className={`backup-monitor-stat ${backupMonitor?.configured?(backupMonitor?.status?.toLowerCase()||"pending"):"pending"}`} data-backup-monitoring="true"><DatabaseBackup/><div><span>Backup ανά 3 ώρες</span><strong>{!backupMonitor?.configured?"ΡΥΘΜΙΣΗ":backupMonitor?.status==="OK"?"OK":backupMonitor?.status==="FAILED"?"FAIL":backupMonitor?.status==="OVERDUE"?"ΑΡΓΕΙ":"—"}</strong><small>{backupMonitor?.lastSuccess?`Τελευταίο ${new Date(backupMonitor.lastSuccess.completedAt||backupMonitor.lastSuccess.startedAt).toLocaleString("el-GR")}`:backupMonitor?.configured?"Αναμονή πρώτου cron run":"Απαιτείται εξωτερική ρύθμιση"}</small></div></article>
       </div>
       <section className="platform-panel"><div className="platform-panel-head"><div><h2>Ιδιοκτήτες · εταιρείες · καταστήματα</h2><p>Κάθε ΑΦΜ είναι ξεχωριστή εταιρεία και κρατά τα δικά του δεδομένα.</p></div></div><div className="platform-company-list">{owners.map(owner=><article className="platform-company" key={owner.id}><div className="platform-company-main"><UsersRound/><div><h3>{owner.fullName}</h3><p>{owner.email}</p></div></div><div>{(data?.companies||[]).filter(company=>owner.companyIds.includes(company.id)).map(company=><div key={company.id}><b>{company.name} · ΑΦΜ {company.taxId||"Εκκρεμεί"}</b><p>{company.stores.map(store=>store.name).join(" · ")||"Χωρίς κατάστημα"}</p><button className="secondary" onClick={()=>setStoreCompany(company)}>Καταστήματα</button></div>)}</div><button onClick={()=>setNewOwnerCompany(owner)}><Plus/>Νέα εταιρεία / ΑΦΜ</button></article>)}</div></section>
       <section className="platform-panel">
