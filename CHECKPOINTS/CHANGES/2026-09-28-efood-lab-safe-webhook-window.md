@@ -64,10 +64,18 @@ PR: `#1514`
 - PR `#1514`: **MERGED** ως `55f2a53c939cee230bab67b23645fd60555430bc`.
 - Main CI `#3829` στο merge revision: **PASS**.
 - Το επόμενο main `639944effe644d8709f5daefde18b33a428fa710`, που έχει γονέα το merge revision και συνεπώς περιλαμβάνει την αλλαγή, πέρασε επίσης main CI `#3830`: **PASS**.
-- Η ενιαία ενεργή λίστα ενημερώθηκε με την πραγματική κατάσταση.
+
+## Production schema blocker — 28/09/2026
+
+- Το Render ανέβασε επιτυχώς live revision `6abd9213feaa139b4331e803bfc08c251d089cf1`, το οποίο είναι απόγονος του merge `55f2a53c` και περιλαμβάνει τη λειτουργία one-shot webhook.
+- Read-only έλεγχος στην παραγωγική PostgreSQL απέδειξε ότι οι νέες στήλες `webhookTestOpenedAt`, `webhookTestExpiresAt`, `webhookTestConsumedAt`, `webhookTestClosedReason` και `webhookTestEventId` δεν είχαν δημιουργηθεί ακόμη.
+- Αιτία: τα `ensureStoreIntegrationSchema()` και `ensureEfoodIntegrationSchema()` καλούνταν μόνο όταν άνοιγε συγκεκριμένο efood route. Το HTTP service μπορούσε συνεπώς να ξεκινήσει πάνω σε παλαιότερο schema.
+- Περιορισμένη διόρθωση στο `fix/efood-startup-schema-bootstrap-20260928`: νέο fail-fast startup script εκτελεί πρώτα το Store Integration bootstrap και μετά το efood evidence bootstrap, πριν από το `server/src/index.js`, τόσο σε `start` όσο και σε `dev`.
+- Προστέθηκε regression που ελέγχει τη σειρά εξάρτησης και ότι το HTTP server δεν ξεκινά πριν ολοκληρωθεί το bootstrap.
+- Δεν έγινε χειροκίνητο DDL, αλλαγή credential, άνοιγμα webhook window ή `Trigger Test Order`. Παραγγελία, πώληση, stock, πληρωμή, RBS/EFTPOS, fiscal και myDATA παραμένουν αμετάβλητα και κλειδωμένα.
 
 ## Κατάσταση
 
-`MERGED — CI PASS — AWAITING EXACT RENDER DEPLOY / REAL PARTNER LAB`
+`LAB BLOCKED — STARTUP SCHEMA FIX AWAITING CI / MERGE / EXACT DEPLOY / DB READBACK`
 
-Δεν έχει τεκμηριωθεί ακόμη το ακριβές Render revision μέσω production health readback και δεν έχει εκτελεστεί πραγματικό `Trigger Test Order` από το efood Partner. Επομένως δεν δηλώνεται production ή LAB PASS. Παραγγελία, πώληση, stock, πληρωμή και φορολογική εκτέλεση παραμένουν κλειδωμένα από σχεδιασμό.
+Μετά το πράσινο CI και το ακριβές Render deploy απαιτείται read-only επιβεβαίωση ότι όλες οι νέες στήλες και οι τρεις efood evidence tables υπάρχουν, ενώ η υπάρχουσα integration εγγραφή παραμένει SANDBOX, `externalCallsEnabled=false` και χωρίς ανοικτό παράθυρο. Μόνο τότε επιτρέπεται ένα πραγματικό εικονικό `Trigger Test Order` από το efood Partner.
