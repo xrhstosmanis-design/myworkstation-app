@@ -60,3 +60,13 @@ test("AADE request matches the live WSDL SOAP 1.2 binding",()=>{
   assert.match(route,/RgWsPublic2Service:rgWsPublic2AfmMethod/);
   assert.doesNotMatch(route,/"SOAPAction":/);
 });
+
+test("AADE credentials use the official WS-Security UsernameToken header",()=>{
+  const route=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
+  assert.match(route,/oasis-200401-wss-wssecurity-secext-1\.0\.xsd/);
+  assert.match(route,/<wsse:Security/);
+  assert.match(route,/<wsse:UsernameToken>/);
+  assert.match(route,/<wsse:Username>\$\{xmlEscape\(credentials\.accountId\)\}/);
+  assert.match(route,/<wsse:Password>\$\{xmlEscape\(credentials\.secret\)\}/);
+  assert.doesNotMatch(route,/<ns2:AuthenticationHeader>/);
+});

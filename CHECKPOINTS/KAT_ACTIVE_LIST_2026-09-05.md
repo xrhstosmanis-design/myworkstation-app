@@ -1,3 +1,7 @@
+## 29/09/2026 — Κεντρική ΑΑΔΕ WS-Security · AWAITING CI/DEPLOY/LAB
+
+- [ ] Μετά το SOAP 1.2, η εικόνα `image(20260929-200753).png` έδειξε «Δεν ορίσθηκε ο χρήστης που καλεί την υπηρεσία». Το επίσημο XML της ΑΑΔΕ απαιτεί WS-Security UsernameToken αντί του υπάρχοντος AuthenticationHeader. Κοινή διόρθωση χωρίς αλλαγή κωδικών ή δεδομένων. Πραγματικό lookup AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-29-central-aade-wssecurity.md`.
+
 ## 29/09/2026 — Κεντρική ΑΑΔΕ SOAP 1.2 · AWAITING CI/DEPLOY/LAB
 
 - [ ] Η εικόνα `image(20260929-195410).png` έδειξε HTTP 415. Το ζωντανό επίσημο WSDL δηλώνει SOAP 1.2, ενώ το κοινό route έστελνε SOAP 1.1. Διορθώθηκε κεντρικά envelope/content-type/action· η ανώνυμη επίσημη μέθοδος VersionInfo απάντησε HTTP 200 με SOAP 1.2. Πιστοποιημένη αναζήτηση ΑΦΜ ακόμη AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-29-central-aade-soap12.md`.
