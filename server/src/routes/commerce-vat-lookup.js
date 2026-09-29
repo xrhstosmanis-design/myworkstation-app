@@ -24,13 +24,13 @@ export function normalizeAadeResult(xml,taxId){
 }
 
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
-  const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId);
+  const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1";
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
   const store=await prisma.store.findFirst({where:{...(storeId?{id:storeId}:{}),companyId:req.user.companyId},select:{id:true},orderBy:{createdAt:"asc"}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const existingRows=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'\\D','','g')=${taxId} LIMIT 1`;
   const existing=existingRows[0]||null;
-  if(existing)return res.json({valid:true,taxId,name:existing.name,address:"",source:"MYWORKSTATION",existingSupplier:existing,readOnly:true});
+  if(existing&&!official)return res.json({valid:true,taxId,name:existing.name,address:"",source:"MYWORKSTATION",existingSupplier:existing,readOnly:true});
   await ensureStoreIntegrationSchema();
   const configured=await prisma.$queryRaw`SELECT "credentialsEnc","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='VAT_LOOKUP' LIMIT 1`;
   if(configured[0]?.enabled){
@@ -39,9 +39,12 @@ router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>
     const envelope=`<?xml version="1.0" encoding="UTF-8"?><env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://rgwspublic2/RgWsPublic2Service" xmlns:ns2="http://rgwspublic2/RgWsPublic2"><env:Header><ns2:AuthenticationHeader><ns2:username>${xmlEscape(credentials.accountId)}</ns2:username><ns2:password>${xmlEscape(credentials.secret)}</ns2:password></ns2:AuthenticationHeader></env:Header><env:Body><ns1:rgWsPublic2AfmMethod><ns1:INPUT_REC><ns2:afm_called_by>${calledBy}</ns2:afm_called_by><ns2:afm_called_for>${taxId}</ns2:afm_called_for></ns1:INPUT_REC></ns1:rgWsPublic2AfmMethod></env:Body></env:Envelope>`;
     const aade=await fetch("https://www1.gsis.gr/wsaade/RgWsPublic2/RgWsPublic2",{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":"rgWsPublic2AfmMethod"},body:envelope,signal:AbortSignal.timeout(15000)});
     const result=normalizeAadeResult(await aade.text(),taxId);
-    if(!aade.ok||!result.valid)return res.status(404).json({error:result.error||"Το ΑΦΜ δεν βρέθηκε στο βασικό μητρώο ΑΑΔΕ. Δεν άλλαξαν στοιχεία.",taxId,source:result.source});
-    return res.json({...result,existingSupplier:null,readOnly:true});
+    if(!aade.ok)return res.status(502).json({error:result.error||`Η υπηρεσία ΑΑΔΕ δεν απάντησε σωστά (${aade.status}). Δεν άλλαξαν στοιχεία.`,source:result.source});
+    if(result.error)return res.status(422).json({error:result.error,source:result.source});
+    if(!result.valid)return res.status(502).json({error:"Η υπηρεσία ΑΑΔΕ δεν επέστρεψε αναγνώσιμα στοιχεία. Δεν άλλαξαν στοιχεία. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",source:result.source});
+    return res.json({...result,existingSupplier:existing,readOnly:true});
   }
+  if(official)return res.status(409).json({error:"Δεν έχει ενεργοποιηθεί η σύνδεση αναζήτησης ΑΦΜ της ΑΑΔΕ για αυτή την εταιρεία και το κατάστημα. Δεν άλλαξαν στοιχεία."});
   const response=await fetch("https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({countryCode:"EL",vatNumber:taxId}),signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw Object.assign(new Error(`Η επίσημη υπηρεσία VIES δεν απάντησε (${response.status}). Δοκίμασε ξανά.`),{status:502});
   const result=normalizeViesResult(await response.json(),taxId);

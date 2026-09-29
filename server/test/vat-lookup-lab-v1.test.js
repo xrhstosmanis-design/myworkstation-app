@@ -43,3 +43,12 @@ test("normalizes full AADE supplier identity",async()=>{
   const xml="<result><onomasia>ΠΡΟΜΗΘΕΥΤΗΣ ΑΕ</onomasia><postal_address>ΚΗΦΙΣΙΑΣ</postal_address><postal_address_no>10</postal_address_no><postal_zip_code>11526</postal_zip_code><postal_area_description>ΑΘΗΝΑ</postal_area_description><firm_act_descr>ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ</firm_act_descr></result>";
   assert.deepEqual(normalizeAadeResult(xml,"123456789"),{valid:true,taxId:"123456789",name:"ΠΡΟΜΗΘΕΥΤΗΣ ΑΕ",address:"ΚΗΦΙΣΙΑΣ 10 11526 ΑΘΗΝΑ",city:"ΑΘΗΝΑ",profession:"ΧΟΝΔΡΙΚΟ ΕΜΠΟΡΙΟ",source:"AADE_BASIC_REGISTRY"});
 });
+
+test("official AADE lookup bypasses the local supplier shortcut and distinguishes upstream failure",()=>{
+  const route=fs.readFileSync(new URL("../src/routes/commerce-vat-lookup.js",import.meta.url),"utf8");
+  const supplier=fs.readFileSync(new URL("../../client/src/components/commerce/installSupplierControlSuite.js",import.meta.url),"utf8");
+  assert.match(route,/existing&&!official/);
+  assert.match(route,/if\(!aade\.ok\)return res\.status\(502\)/);
+  assert.match(route,/if\(!result\.valid\)return res\.status\(502\)/);
+  assert.match(supplier,/vat-lookup\?official=1&taxId=/);
+});
