@@ -1862,6 +1862,10 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 - [x] Ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και τους έξι υπάρχοντες τομείς POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες. PR `#1536`, CI `#3870` PASS, exact production `22f1914b40d30ba9d087db1ed58349d734dab48f`. Η `image(20260929-180520).png` επιβεβαιώνει τέσσερις επιλογές καταστημάτων, τους έξι τομείς και στο Περίπτερο Διαδόχου Παύλου `0 ΟΚ · 6 έλεγχος · 0 πρόβλημα`. Τα κλικ μετάβασης δεν δοκιμάστηκαν. **LIMITED USER VISUAL PASS · CLOSED.** `CHECKPOINTS/CHANGES/2026-09-29-ai-command-full-digital-twin-phase14.md`.
 
+## 29/09/2026 — Εργασία #18 · Backup, monitoring και restore dry-run
+
+- [ ] **ASSIGNED `feat/backup-monitoring-restore-dry-run-task18-20260929`:** off-site PostgreSQL backup ανά 3 ώρες, κατάσταση `STARTED/SUCCEEDED/FAILED/OVERDUE`, read-only Super Admin monitoring και archive dry-run χωρίς σύνδεση σε βάση. Κανένα πραγματικό restore, migration, seed, `DROP`, `TRUNCATE` ή αλλαγή production δεδομένων. Υπάρχον χειροκίνητο safety backup/Recovery Workflow προστατεύεται. `CHECKPOINTS/CHANGES/2026-09-29-task18-backup-monitoring-restore-dry-run.md`.
+
 ## 29/09/2026 — Εγκατάσταση Περιπτέρου Διαδόχου Παύλου · αρχείο ειδών
 
 - [ ] Το αρχείο προέλευσης είχε 14.988 είδη. Εξαιρέθηκαν Τύπος και ποσότητες αποθήκης· με εντολή ιδιοκτήτη αφαιρέθηκαν όλες οι 1.249 γραμμές με συγκρουόμενο εσωτερικό κωδικό ή barcode. Το νέο αρχείο έχει 6.623 είδη με μοναδικούς μη κενούς κωδικούς και barcode. Το παλιό αρχείο παραμένει διαθέσιμο. Δεν έγινε καταχώρηση στο κατάστημα.
