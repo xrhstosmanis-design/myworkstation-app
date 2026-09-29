@@ -126,14 +126,6 @@
 - Η ΦΑΣΗ 1 είναι μόνο ανάγνωσης: χρησιμοποιεί το υπάρχον `/api/platform/overview` και ανοίγει τους ήδη υπάρχοντες ελέγχους. Δεν δημιουργεί δεύτερα δεδομένα, νέο οικονομικό endpoint, αυτόματη ενέργεια ή μεταβολή POS/BackOffice.
 - Απαιτούνται στοχευμένα tests, πλήρες client build, πράσινο CI, merge, exact deploy και οπτικό LAB/USER PASS. Μέχρι τότε: `AWAITING LAB`.
 
-## 29/09/2026 — AI Command Center · ΦΑΣΗ 14 Full Digital Twin — ASSIGNED `feat/ai-command-full-digital-twin-phase14-20260929`
-
-- Ενιαία read-only εικόνα επιλεγμένου καταστήματος με συνολική κατάσταση και έξι τομείς: POS, EFTPOS, Ταμείο, Stock, Προσωπικό και Κάμερες.
-- Χρήση αποκλειστικά των ήδη φορτωμένων δεδομένων και των υπαρχουσών μεταβάσεων των Φάσεων 12–13.
-- Χωρίς νέο endpoint/dataset, write, device/fiscal command, snapshot/live/clip ή polling.
-- Στοχευμένα tests **15/15 PASS**, πλήρες server suite **1.634 PASS / 0 FAIL / 1 SKIP**, production client build **PASS**.
-- `LOCAL PASS · AWAITING CI / DEPLOY / LIMITED USER VISUAL PASS`.
-
 ## Ήδη ολοκληρωμένα - δεν επαναλαμβάνονται
 
 - Workforce: εβδομαδιαίο πρόγραμμα, προβολή ανά ημέρα και ανά εργαζόμενο, ημερομηνίες/ώρες/ΡΕΠΟ, δημοσίευση στο Store Chat, εκτύπωση κάρτας εργασίας, PIN, QR/κάμερα, Code 128/scanner, ελληνικό και αγγλικό πληκτρολόγιο, προσέλευση/αποχώρηση, προστασία διπλής σάρωσης και Audit.
@@ -143,6 +135,7 @@
 - AI Command Center ΦΑΣΗ 11 Night Briefing: LIMITED USER VISUAL PASS, PR #1526 / CI #3845 / exact production `2d4f2e071d8f4c107a31a31f4e2ca8c0fef9083c`. Δεν επαναλαμβάνεται.
 - AI Command Center ΦΑΣΗ 12 Digital Twin Lite: LIMITED USER VISUAL PASS στην `image(20260928-203834).png`, PR #1529 / CI #3851, device-routing fix PR #1530 / CI #3853 / exact production `f58e19b946e1f3a05c5605a324c233605d14fb1c`. Τέσσερις κάρτες καταστημάτων με πραγματικούς μετρητές POS, EFTPOS/ταμειακών, ταμείου, stock και προσωπικού. Δεν επαναλαμβάνεται.
 - AI Command Center ΦΑΣΗ 13 NVR / Cameras: LIMITED USER VISUAL PASS στην `image(20260928-210335).png`, PR #1532 / CI #3857 / exact production `9b8b0e0e00990fa19bf617fc17352af957c5a8f0`. Τέσσερις read-only περιοχές καμερών με LAB `OFFLINE · 1 κάμερα`, μη ρυθμισμένη και μη διαθέσιμες πηγές χωρίς απώλεια των υπόλοιπων μετρητών. Δεν επαναλαμβάνεται.
+- AI Command Center ΦΑΣΗ 14 Full Digital Twin: LIMITED USER VISUAL PASS στην `image(20260929-180520).png`, PR #1536 / CI #3870 / exact production `22f1914b40d30ba9d087db1ed58349d734dab48f`. Επιλογή τεσσάρων καταστημάτων και ενιαία read-only εικόνα έξι τομέων· τα κλικ μετάβασης δεν δοκιμάστηκαν. **CLOSED · το αρχικό πλάνο Φάσεων 1–14 ολοκληρώθηκε.**
 - Store Chat: βασική συνομιλία, αποστολή/ανανέωση και αναζήτηση.
 - Mobile: responsive χρήση και Android PWA.
 - POS: η καταγεγραμμένη δοκιμή εγγραφής οθόνης. Δεν αποτελεί συνολικό POS PASS.
