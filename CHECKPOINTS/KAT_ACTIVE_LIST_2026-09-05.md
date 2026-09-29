@@ -1,3 +1,7 @@
+## 29/09/2026 — Κεντρική ΑΑΔΕ SOAP 1.2 · AWAITING CI/DEPLOY/LAB
+
+- [ ] Η εικόνα `image(20260929-195410).png` έδειξε HTTP 415. Το ζωντανό επίσημο WSDL δηλώνει SOAP 1.2, ενώ το κοινό route έστελνε SOAP 1.1. Διορθώθηκε κεντρικά envelope/content-type/action· η ανώνυμη επίσημη μέθοδος VersionInfo απάντησε HTTP 200 με SOAP 1.2. Πιστοποιημένη αναζήτηση ΑΦΜ ακόμη AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-29-central-aade-soap12.md`.
+
 ## 28/09/2026 — efood / Pelican ασφαλές one-shot LAB webhook · MERGED / CI PASS / AWAITING DEPLOY-LAB
 
 - [x] PR #1514 συγχωνεύτηκε ως `55f2a53c939cee230bab67b23645fd60555430bc`. PR CI #3827 και main CI #3829 PASS· το επόμενο main `639944effe644d8709f5daefde18b33a428fa710` πέρασε επίσης CI #3830 και περιλαμβάνει την αλλαγή. Το αποκλειστικό `MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ` διαθέτει πλέον προσωρινό one-shot SANDBOX webhook για το efood Partner `Trigger Test Order`, με hash-only Authorization secret, 5λεπτο παράθυρο, row lock, αυτόματο κλείδωμα/λήξη, idempotent retry και κρυπτογραφημένο dry-run event. Παραγγελία, πώληση, stock, πληρωμή, RBS/EFTPOS, fiscal/myDATA και outbound external calls παραμένουν κλειδωμένα. Render exact revision και πραγματικό Partner trigger παραμένουν AWAITING· δεν δηλώνεται LAB PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-09-28-efood-lab-safe-webhook-window.md`.
