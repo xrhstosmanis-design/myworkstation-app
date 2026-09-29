@@ -1892,3 +1892,6 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 29/09/2026 — Εισερχόμενα τιμολόγια προμηθευτών myDATA · PR #1547 / CI PASS / LIVE / AWAITING LAB
 
 - [ ] Η παραγωγική λήψη RequestDocs προστέθηκε στη Θυρίδα Τιμολογίων ανά εταιρεία/κατάστημα, με έλεγχο ΑΦΜ παραλήπτη, σελιδοποίηση και χωριστό cursor ανά περιβάλλον. Τα ευρήματα μπαίνουν ως πρόχειρα χωρίς ενημέρωση stock· έκδοση εξερχομένων με ΜΑΡΚ/QR και πραγματικό PASS εισερχομένων παραμένουν OPEN. `CHECKPOINTS/CHANGES/2026-09-29-mydata-inbound-production.md`.
+## 30/09/2026 — Ασφαλής εκκίνηση παραγωγής · AWAITING CI/DEPLOY
+
+- [ ] Τα deploys μετά το #1548/#1549 σταμάτησαν στο `prisma db push`, καθώς προτάθηκε διαγραφή πολλών μη κενών πινάκων. Δεν επιτράπηκε απώλεια δεδομένων· το προηγούμενο revision παρέμεινε live. Αλλαγή στο `prisma:push` παραλείπει το schema push μόνο με `NODE_ENV=production`, διατηρώντας Prisma client generation και τη δοκιμαστική ροή. Απαιτείται CI και exact live deploy· η λήψη του τιμολογίου Διαδόχου παραμένει AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-30-production-safe-prisma-startup.md`.
