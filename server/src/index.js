@@ -95,6 +95,7 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import backupMonitorRoutes from "./routes/backup-monitor.js";
 import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
 import platformStoreModulesRoutes from "./routes/platform-store-modules.js";
@@ -141,6 +142,7 @@ app.use("/api/public/online",katOnlineOrderingModifierRoutes);
 app.use("/api/public/efood",efoodPelicanWebhookRoutes);
 app.use("/api/auth",authRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
+app.use("/api/system/backup-monitor",backupMonitorRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
 app.use("/api/platform",platformAuditRoutes);
 app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoutes);

@@ -13,6 +13,7 @@ import {videoAdapterDescriptor} from "../services/video-adapters.js";
 import {enqueueVideoCommand,readyVideoArtifact,videoCommandStatus,videoConnectorStatus} from "../services/video-connector-commands.js";
 import { ensureCashControlSchema } from "./cash-control.js";
 import {getStoreLabelSettings,saveStoreLabelSettings} from "../services/store-label-settings.js";
+import {backupMonitorSummary} from "./backup-monitor.js";
 
 const router=Router();
 router.use(auth);
@@ -20,6 +21,10 @@ router.use((req,res,next)=>{
   const allowed=req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN";
   if(!allowed) return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
+});
+
+router.get("/backup-monitoring",async(_req,res,next)=>{
+  try{res.json(await backupMonitorSummary())}catch(error){next(error)}
 });
 
 const plans=["TRIAL","PILOT","BASIC","PRO","ENTERPRISE"];

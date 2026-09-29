@@ -31,6 +31,34 @@ services:
         value: Νίκη Ραζάτου
       - key: KAT_OWNER_EMAIL
         value: nikirazatou@hotmail.gr
+      - key: BACKUP_MONITOR_SECRET
+        sync: false
+  - type: cron
+    name: myworkstation-db-backup
+    runtime: docker
+    region: frankfurt
+    plan: standard
+    schedule: "0 */3 * * *"
+    dockerfilePath: ./ops/backup/Dockerfile
+    dockerContext: ./ops/backup
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: myworkstation-db
+          property: connectionString
+      - key: AWS_REGION
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: BACKUP_MONITOR_URL
+        value: https://myworkstation-app.onrender.com/api/system/backup-monitor
+      - key: BACKUP_MONITOR_SECRET
+        sync: false
 
 databases:
   - name: myworkstation-db
