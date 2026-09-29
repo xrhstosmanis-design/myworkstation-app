@@ -1,6 +1,6 @@
 # Εργασία #18 — Backup ανά 3 ώρες, monitoring και restore dry-run
 
-Κατάσταση: **LOCAL PASS · AWAITING CI / DEPLOY / EXTERNAL SETUP / LIVE RUN**
+Κατάσταση: **CI + EXACT DEPLOY PASS · AWAITING EXTERNAL SETUP / LIVE RUN**
 
 ## Βάση
 
@@ -39,3 +39,4 @@
 - Το dry-run εκτελεί αποκλειστικά `pg_restore --list` στο τοπικό προσωρινό archive, χωρίς host, database ή εντολή restore. Δεν έγινε πραγματική επαναφορά ή αντικατάσταση δεδομένων.
 - Στοχευμένα tests: **4/4 PASS**. Πλήρες server suite: **1.641 PASS, 0 FAIL, 1 SKIP**. Production client build: **PASS**. Shell/Node syntax, YAML parse και `git diff --check`: **PASS**.
 - Το bucket, τα AWS credentials, το κοινό monitoring secret και η δημιουργία/ενεργοποίηση του Render cron είναι εξωτερική εργασία. Μέχρι επιτυχημένο πραγματικό cron upload και ανεξάρτητο archive dry-run: **NOT LIVE PASS**.
+- PR `#1544`, CI `#3887` PASS και exact production revision `17c4735c54b9e66fdb90c45970e2171b48d20380` επιβεβαιώθηκαν. Το web service είναι υγιές· η εξωτερική cron/S3 ενεργοποίηση παραμένει ανοικτή.

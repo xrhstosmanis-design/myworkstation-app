@@ -1864,7 +1864,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 29/09/2026 — Εργασία #18 · Backup, monitoring και restore dry-run
 
-- [ ] **LOCAL PASS · AWAITING CI / DEPLOY / EXTERNAL SETUP / LIVE RUN:** υλοποιήθηκαν off-site PostgreSQL backup ανά 3 ώρες, κατάσταση `STARTED/SUCCEEDED/FAILED/OVERDUE`, fail-soft read-only Super Admin monitoring και archive dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Στοχευμένα tests 4/4, πλήρες server suite 1.641 PASS / 0 FAIL / 1 SKIP και production build PASS. Κανένα πραγματικό restore, migration, seed, `DROP`, `TRUNCATE` ή αλλαγή production δεδομένων. Εκκρεμούν πράσινο CI/deploy, ιδιωτικό S3 bucket, Render secrets/cron και πραγματικό upload + ανεξάρτητο dry-run πριν από LIVE PASS. `CHECKPOINTS/CHANGES/2026-09-29-task18-backup-monitoring-restore-dry-run.md`.
+- [ ] **CI + EXACT DEPLOY PASS · AWAITING EXTERNAL SETUP / LIVE RUN:** υλοποιήθηκαν off-site PostgreSQL backup ανά 3 ώρες, κατάσταση `STARTED/SUCCEEDED/FAILED/OVERDUE`, fail-soft read-only Super Admin monitoring και archive dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Στοχευμένα tests 4/4, πλήρες server suite 1.641 PASS / 0 FAIL / 1 SKIP και production build PASS. PR `#1544`, CI `#3887` PASS, exact production `17c4735c54b9e66fdb90c45970e2171b48d20380`. Κανένα πραγματικό restore ή αλλαγή production δεδομένων. Εκκρεμούν ιδιωτικό S3 bucket, Render secrets/cron και πραγματικό upload + ανεξάρτητο dry-run πριν από LIVE PASS. `CHECKPOINTS/CHANGES/2026-09-29-task18-backup-monitoring-restore-dry-run.md`.
 
 ## 29/09/2026 — Εγκατάσταση Περιπτέρου Διαδόχου Παύλου · αρχείο ειδών
 
