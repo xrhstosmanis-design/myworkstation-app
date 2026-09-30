@@ -52,6 +52,16 @@ async function source(companyId,orderId){
     WHERE j."companyId"=${companyId} AND j."storeId"=${document.storeId}
       AND j."purchaseDocumentId"=${document.id} ORDER BY j."createdAt",j."id" LIMIT 1`;
   const job=jobs[0];if(!job)return {document,pages:[]};
+  const receiptIds=job.resultJson?.mydataPosReceipt?.attachmentIds;
+  if(Array.isArray(receiptIds)&&receiptIds.length){
+    const receiptPages=[];
+    for(const attachmentId of [...new Set(receiptIds)].slice(0,5)){
+      const rows=await prisma.$queryRaw`SELECT "filename","mimeType","contentData" FROM "DocumentAttachment" WHERE "id"=${attachmentId} AND "companyId"=${companyId} AND "storeId"=${document.storeId} LIMIT 1`;
+      if(!rows[0]?.contentData)return {document,pages:[]};
+      receiptPages.push(rows[0]);
+    }
+    return {document,pages:receiptPages};
+  }
   const ids=[job.id,...(Array.isArray(job.resultJson?.posHandoff?.pageJobIds)?job.resultJson.posHandoff.pageJobIds:[]).filter(id=>id!==job.id)].slice(0,5);
   const pages=[];
   for(const pageId of ids){

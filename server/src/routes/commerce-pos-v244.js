@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
 import jwt from "jsonwebtoken";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -650,7 +651,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
   }catch(error){next(error)}
 });
 
-router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId;
     const storeId=String(req.body?.storeId||"");
@@ -666,6 +667,23 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     if(!supplierRows[0])return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
     const supplierTaxId=cleanTaxId(supplierRows[0].taxId);
     await ensureV244IntakeSchema();
+    await ensureFastHandoffSchema();
+    const myDataPurchase=await findMyDataPurchase(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
+    if(myDataPurchase){
+      if(myDataPurchase.resultJson?.mydataPosReceipt?.receivedAt||myDataPurchase.rawPayload?.mydataPosReceipt?.receivedAt)return res.status(409).json({error:"Το κανονικό τιμολόγιο έχει ήδη παραληφθεί από POS. Δεν έγινε νέα πληρωμή ή δεύτερη αγορά. Για εκκρεμή πίστωση χρησιμοποίησε «Πληρωμή ανοιχτών τιμολογίων».",code:"DUPLICATE_INVOICE",existing:{id:myDataPurchase.documentId,status:myDataPurchase.status}});
+      const uploaded=/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+      if(uploaded){
+        const uploadedChecksum=crypto.createHash("sha256").update(Buffer.from(uploaded[2],"base64")).digest("hex");
+        const otherSources=await prisma.$queryRaw`SELECT a."id" FROM "DocumentAttachment" a JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId" WHERE a."companyId"=${companyId} AND a."storeId"=${storeId} AND a."checksum"=${uploadedChecksum} AND j."purchaseDocumentId" IS NOT NULL AND j."purchaseDocumentId"<>${myDataPurchase.documentId} LIMIT 1`;
+        if(otherSources.length)return res.status(409).json({error:"Η ίδια φωτογραφία ανήκει σε άλλο τιμολόγιο. Δεν έγινε νέα πληρωμή.",code:"DUPLICATE_INVOICE_FILE"});
+        const filePayments=await prisma.$queryRaw`SELECT t.*,s."taxId" AS "supplierTaxId" FROM "StoreTransaction" t LEFT JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId" WHERE t."companyId"=${companyId} AND t."storeId"=${storeId} AND t."attachmentChecksum"=${uploadedChecksum} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL LIMIT 1`;
+        if(filePayments[0])assertReusableInvoicePayment(filePayments[0],{companyId,storeId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber,totalGross:intakeNumber(req.body.totalGross)});
+      }
+      const existing=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber});
+      if(existing)assertReusableInvoicePayment(existing,{companyId,storeId,supplierId,supplierTaxId,documentNumber:myDataPurchase.purchaseNumber,totalGross:intakeNumber(req.body.totalGross)});
+      if((myDataPurchase.paymentTransactionId&&myDataPurchase.paymentTransactionId!==existing?.id)||(myDataPurchase.settlementMode==="PAID"&&!existing))return res.status(409).json({error:"Η υπάρχουσα αγορά έχει πληρωμή που χρειάζεται έλεγχο. Δεν έγινε νέα χρέωση."});
+      return res.json({ok:true,duplicate:false,myDataMatched:true,canonicalDocumentNumber:myDataPurchase.purchaseNumber,purchaseDocumentId:myDataPurchase.documentId,paymentTransactionId:existing?.id||null,paymentReused:Boolean(existing)});
+    }
     const payment=await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber});
     if(payment)assertReusableInvoicePayment(payment,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,totalGross:intakeNumber(req.body.totalGross)});
     let resume=null;
@@ -718,7 +736,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
 // Durable POS handoff: the till may close immediately after this response. Every
 // source page and the operator-confirmed header are already stored on the server.
 // Full line recognition remains a BackOffice concern and may safely be retried.
-router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId,storeId=String(req.body?.storeId||""),supplierId=String(req.body?.supplierId||"");
     const documentNumber=String(req.body?.documentNumber||"").trim().slice(0,80),documentDate=normalizeIntakeDate(req.body?.documentDate);
@@ -736,9 +754,13 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
     const supplierRows=await prisma.$queryRaw`SELECT "id","taxId" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;
     const supplier=supplierRows[0];if(!supplier)return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
     await ensureV244IntakeSchema();
-    const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber}):null;
+    await ensureFastHandoffSchema();
+    const receiptIdentity={companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,documentDate,totalGross,documentType};
+    const myDataPurchase=await findMyDataPurchase(prisma,receiptIdentity);
+    const paymentNumber=myDataPurchase?.purchaseNumber||documentNumber;
+    const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber:paymentNumber}):null;
     if(existingPayment){
-      assertReusableInvoicePayment(existingPayment,{companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,totalGross});
+      assertReusableInvoicePayment(existingPayment,{companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber:paymentNumber,totalGross});
       if(paymentTransactionId&&paymentTransactionId!==existingPayment.id)return res.status(409).json({error:"Η πληρωμή δεν είναι η αρχική πληρωμή αυτού του τιμολογίου."});
       paymentTransactionId=existingPayment.id;settlementMode="PAID";
     }else if(paymentTransactionId||settlementMode==="PAID")return res.status(409).json({error:"Δεν βρέθηκε ενεργή πληρωμή που συμφωνεί με το τιμολόγιο. Δεν έγινε νέα χρέωση."});
@@ -750,6 +772,10 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),async(re
       const cachedProductLines=finalizeV244ProductLines(Array.isArray(page?.productLines)?page.productLines:[]).slice(0,500);
       return {filename,mimeType,dataUrl,checksum:crypto.createHash("sha256").update(bytes).digest("hex"),cachedProductLines};
     });
+    if(myDataPurchase){
+      const linked=await attachMyDataPosReceipt(prisma,receiptIdentity,normalizedPages,existingPayment,req.user);
+      return res.json({ok:true,accepted:true,draftReady:true,...linked,message:"Η φωτογραφία και η υπάρχουσα πληρωμή POS συνδέθηκαν με την ίδια αγορά myDATA. Οι ελεγμένες γραμμές και η αποθήκη διατηρήθηκαν."});
+    }
     // The browser can correctly recover the four FAST fields from an older
     // exact-file job while the newest job for that attachment is an empty
     // failed shell. Hydrate the handoff server-side so React timing or job

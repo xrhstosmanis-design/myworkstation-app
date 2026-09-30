@@ -44,7 +44,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
   try{
     const run=async()=>{
       let result,failure;
-      await handler({body:{storeId:"store-one"},license:{activeModules:["DOCUMENTS","AI_READER"]},user:{companyId:"company-one",id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
+      await handler({body:{storeId:"store-one"},license:{activeModules:["DOCUMENTS","AI_READER","INVENTORY"]},user:{companyId:"company-one",id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
       assert.ifError(failure);return result;
     };
     let result=await run();assert.equal(result.created,1);assert.equal(result.documents[0].supplierName,"Supplier One");

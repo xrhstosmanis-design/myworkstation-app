@@ -28,7 +28,7 @@ async function ensureSchema(){
 const endpoint=environment=>environment==="SANDBOX"?"https://mydataapidev.aade.gr/RequestDocs":"https://mydatapi.aade.gr/myDATA/RequestDocs";
 function syncError(message,status=502){const error=new Error(message);error.status=status;return error}
 
-router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{
   if(!canSync(req))return res.status(403).json({error:"Ο έλεγχος επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
   const store=await prisma.store.findFirst({where:{id:String(req.body?.storeId||""),companyId:req.user.companyId},select:{id:true}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
@@ -109,7 +109,7 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
   const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3 ORDER BY m."fetchedAt" ASC LIMIT 3`;
   let originalsDownloaded=0,originalsFailed=0;
   for(const item of pending){try{
-    const result=await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,Boolean(req.license?.superAdminBypass||req.license?.activeModules?.includes("AI_READER")));
+    const result=await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,Boolean(req.license?.superAdminBypass||(req.license?.activeModules?.includes("AI_READER")&&req.license?.activeModules?.includes("INVENTORY"))));
     if(result.downloaded)originalsDownloaded++;
   }catch{
     originalsFailed++;
