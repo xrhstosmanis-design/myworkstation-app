@@ -1,0 +1,23 @@
+const normalize=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ς/g,"σ").toLocaleLowerCase("el-GR");
+const escape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const from=`FROM "DocumentInbox" i LEFT JOIN "Supplier" s ON s."id"=i."supplierId" AND s."companyId"=i."companyId" LEFT JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId" LEFT JOIN "MyDataInboundDocument" m ON m."inboxId"=i."id" AND m."companyId"=i."companyId" AND m."storeId"=i."storeId"`;
+export function archiveQuery(companyId,storeId,filters={},count=false){
+  const values=[companyId,storeId],where=['i."companyId"=$1','i."storeId"=$2'];
+  const add=(sql,value)=>{values.push(value);where.push(sql.replace("?",`$${values.length}`))};
+  if(filters.supplier)add('s."name"=?',String(filters.supplier).slice(0,180));
+  if(filters.date){if(!/^\d{4}-\d{2}-\d{2}$/.test(filters.date)||Number.isNaN(Date.parse(filters.date)))throw Object.assign(new Error("Μη έγκυρη ημερομηνία."),{status:400});add('COALESCE(m."issueDate",(i."receivedAt" AT TIME ZONE \'UTC\' AT TIME ZONE \'Europe/Athens\')::date)=?::date',filters.date)}
+  if(filters.id)add('i."id"=?',String(filters.id));
+  const haystack=`translate(lower(concat_ws(' ',s."name",a."filename",i."note",m."mark",m."series",m."documentNumber",m."issuerVat")), 'άέήίόύώϊΐϋΰς', 'αεηιουωιιυυσ')`;
+  for(const term of normalize(String(filters.q||"").slice(0,200)).split(/\s+/).filter(Boolean))add(`strpos(${haystack},?)>0`,term);
+  const select=count?'COUNT(*)::int AS "count"':`i."id",i."status",i."receivedAt",i."note",i."responsibleName",i."supplierId",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment",m."mark",m."issuerVat",m."series",m."documentNumber",m."issueDate",m."currency",m."totalNet",m."totalVat",m."totalGross"`;
+  let sql=`SELECT ${select} ${from} WHERE ${where.join(" AND ")}`;
+  if(!count){const requestedLimit=Number(filters.limit),requestedOffset=Number(filters.offset),limit=Number.isFinite(requestedLimit)?Math.min(20001,Math.max(1,Math.floor(requestedLimit)||100)):100,offset=Number.isFinite(requestedOffset)?Math.max(0,Math.floor(requestedOffset)):0;values.push(limit,offset);sql+=` ORDER BY COALESCE(m."issueDate",i."receivedAt"::date) DESC,i."receivedAt" DESC,i."id" DESC LIMIT $${values.length-1} OFFSET $${values.length}`;}
+  return {sql,values};
+}
+export const archiveDate=row=>row.issueDate?new Date(row.issueDate).toISOString().slice(0,10):new Date(row.receivedAt).toISOString().slice(0,10);
+export const archiveStatus=row=>({RECEIVED:row.mark?"Εισερχόμενο myDATA - προς έλεγχο":"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"}[row.status]||row.status);
+export function archiveExportRows(rows){return rows.map(row=>({"Ημερομηνία":archiveDate(row),"Προμηθευτής":row.supplierName||"Χωρίς αντιστοίχιση","ΑΦΜ εκδότη":row.issuerVat||"","Σειρά":row.series||"","Αριθμός":row.documentNumber||"","MARK":row.mark||"","Καθαρή αξία":row.totalNet==null?null:Number(row.totalNet),"ΦΠΑ":row.totalVat==null?null:Number(row.totalVat),"Σύνολο":row.totalGross==null?null:Number(row.totalGross),"Νόμισμα":row.currency||"","Κατάσταση":archiveStatus(row),"Πρωτότυπο αρχείο":row.hasAttachment?"Διαθέσιμο":"Δεν έχει επισυναφθεί","Σημείωση":row.note||""}))}
+export function archiveReportHtml(rows,storeName){
+  const exported=archiveExportRows(rows),columns=["Ημερομηνία","Προμηθευτής","ΑΦΜ εκδότη","Σειρά","Αριθμός","MARK","Καθαρή αξία","ΦΠΑ","Σύνολο","Κατάσταση"];
+  return `<!doctype html><html lang="el"><meta charset="utf-8"><title>Αναφορά παραστατικών</title><style>@page{size:A4 landscape;margin:12mm}body{font:11px Arial,sans-serif;color:#173d59}h1{font-size:20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd7df;padding:5px;text-align:left;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}th{background:#e7eef5}.actions{margin:15px 0}@media print{.actions{display:none}}</style><h1>Αναφορά παραστατικών - ${escape(storeName)}</h1><p>${rows.length} παραστατικά. Στοιχεία θυρίδας/myDATA - δεν είναι πρωτότυπα PDF προμηθευτών ή απόδειξη τελικής καταχώρισης.</p><div class="actions"><button onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button></div><table><thead><tr>${columns.map(c=>`<th>${escape(c)}</th>`).join("")}</tr></thead><tbody>${exported.map(row=>`<tr>${columns.map(c=>`<td>${escape(row[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></html>`;
+}
