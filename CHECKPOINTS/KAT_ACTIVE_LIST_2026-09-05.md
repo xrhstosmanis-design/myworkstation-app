@@ -1,3 +1,7 @@
+## 30/09/2026 - myDATA full archive / Excel / PDF report - AWAITING CI-DEPLOY-USER
+
+- [ ] ASSIGNED `codex/mydata-archive-export-20260930`, same installation page, owner authorized 21:19. Full tenant/store archive search and paging, all-filtered XLSX export, generated PDF report via browser Print/Save as PDF, separate original attachment action. 14/14 targeted tests and frontend build PASS; generated workbook re-read with 5,269 fixtures. Production read-only search query finds known 135848 once. No user export PASS, no original/QR acquisition or final posting. Initial receiving PASS #1553 preserved. `CHECKPOINTS/CHANGES/2026-09-30-mydata-archive-export.md`.
+
 ## 30/09/2026 21:14 Greece - myDATA initial receiving LIVE PASS / remaining scope OPEN
 
 - [x] Initial production receiving closed after #1551/#1552, exact Render `5e5d12317d5677b77a742a898b033a55eab2acd7`. Before DB counts 0/0; owner screenshot shows 5,269 received records, DB 5,269 distinct MARK. Known 135848 / 75.14 joins RECEIVED inbox record. Prior internal error and zero-results AWAITING entries below are superseded for initial receiving.
@@ -1908,3 +1912,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 30/09/2026 — Ασφαλής εκκίνηση παραγωγής · AWAITING CI/DEPLOY
 
 - [ ] Τα deploys μετά το #1548/#1549 σταμάτησαν στο `prisma db push`, καθώς προτάθηκε διαγραφή πολλών μη κενών πινάκων. Δεν επιτράπηκε απώλεια δεδομένων· το προηγούμενο revision παρέμεινε live. Αλλαγή στο `prisma:push` παραλείπει το schema push μόνο με `NODE_ENV=production`, διατηρώντας Prisma client generation και τη δοκιμαστική ροή. Απαιτείται CI και exact live deploy· η λήψη του τιμολογίου Διαδόχου παραμένει AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-30-production-safe-prisma-startup.md`.
+
+
+## 30/09/2026 — Εργασία #18 · Backblaze B2
+
+- [ ] **BACKBLAZE B2 ADAPTER · PR #1555 / AWAITING CI:** Προστέθηκε υποχρεωτικό S3-compatible endpoint για Backblaze B2 πάνω στο σημερινό `main`, χωρίς αλλαγή στο 3ωρο schedule, στο monitoring ή στο dry-run-only όριο. Κανένα πραγματικό restore ή production data replacement. `CHECKPOINTS/CHANGES/2026-09-30-task18-backblaze-b2.md`.
