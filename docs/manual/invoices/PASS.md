@@ -1,3 +1,9 @@
+## 01/10/2026 - myDATA original to editable Orders draft: limited USER PASS
+
+Owner/BackOffice manager with DOCUMENTS, AI_READER and INVENTORY, in the selected company/store: open Θυρίδα Τιμολογίων, locate the supplier invoice, then Έλεγχος από βοηθό AI. Verified on Διαδόχου ΤΔΠΤΛ135848, runtime ae8fa98b: one editable draft opens in Παραγγελίες & Αγορές; Βοηθός τιμολογίου shows the original supplier PDF. Same existing job/attachment; no payment or stock movement, stock quantities unchanged against captured baseline. The shell initially has zero rows. This PASS covers delivery and original display only.
+
+Known limit: PDF assistant preview failed HTTP400 in image212128. Proposed data URL fix awaits live acceptance; line extraction/application and final posting are not verified for this invoice. On this error keep the same draft and original; do not recreate/upload/pay it again. POS payment continues from the physical supplier invoice; first receipt linkage/duplicate-payment blocking needs separate measured LAB acceptance. Existing cross-supplier Gate3 PASS remains protected.
+
 # 30/09/2026 — περιορισμένη επιβεβαίωση πρωτοτύπου 135848
 
 Στο Διαδόχου, ο ιδιοκτήτης άνοιξε τη Θυρίδα, επέλεξε135848 και κατέβασε το πρωτότυπο. Στο live472c746f επιβεβαιώθηκε αποθηκευμένο PDF και μία εργασία AI με τρεις γραμμές. Η παράδοση στις Παραγγελίες & Αγορές απέτυχε: purchaseDocumentId κενό. Αυτό το περιορισμένο αποτέλεσμα δεν πιστοποιεί πρόχειρη αγορά, έγκριση, πληρωμή ή απόθεμα. Εξουσιοδοτημένος BackOffice χρήστης της ίδιας εταιρείας/καταστήματος με DOCUMENTS/AI_READER ελέγχει την υπάρχουσα εγγραφή και το «Πρωτότυπο φωτογραφία/PDF», χωρίς επανάληψη πληρωμής. Η διόρθωση παράδοσης και η μεταγενέστερη σύνδεση φωτογραφίας POS παραμένουν αδοκίμαστες. Αν λείπει το πρόχειρο, μην καταχωρίζετε δεύτερη αγορά ή πληρωμή για να το ανακτήσετε. Τεκμήριο2026-09-30-mydata-provider-original.md.

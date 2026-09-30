@@ -25,7 +25,7 @@ export async function invoiceAssistantImageViews(pages){
   for(const [index,page] of pages.entries()){
     if(page.mimeType==="application/pdf"){
       content.push({type:"input_text",text:`Σελίδα ${index+1} από ${pages.length}: πλήρες αρχείο`});
-      content.push({type:"input_file",filename:page.filename||`page-${index+1}.pdf`,file_data:String(page.contentData).split(",").pop()});
+      content.push({type:"input_file",filename:page.filename||`page-${index+1}.pdf`,file_data:`data:application/pdf;base64,${String(page.contentData).split(",").pop()}`});
       continue;
     }
     if(!/^image\/(?:jpeg|png|webp)$/.test(page.mimeType||""))throw new Error("Μη υποστηριζόμενη φωτογραφία τιμολογίου.");

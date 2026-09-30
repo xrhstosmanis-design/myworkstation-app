@@ -3,6 +3,20 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 import {invoiceAssistantImageViews} from "../src/lib/invoice-assistant-image-views.js";
 
+test("PDF inputs retain the Responses API data URL and original bytes",async()=>{
+  const encoded=Buffer.from("%PDF-1.7\noriginal invoice bytes\n%%EOF").toString("base64");
+  for(const contentData of [encoded,`data:application/pdf;base64,${encoded}`]){
+    const pages=[{filename:"supplier-original.pdf",mimeType:"application/pdf",contentData}];
+    const content=await invoiceAssistantImageViews(pages);
+    assert.equal(content.length,2);
+    assert.equal(content[1].type,"input_file");
+    assert.equal(content[1].filename,"supplier-original.pdf");
+    assert.equal(content[1].file_data,`data:application/pdf;base64,${encoded}`);
+    assert.deepEqual(Buffer.from(content[1].file_data.split(",")[1],"base64"),Buffer.from(encoded,"base64"));
+    assert.equal(pages[0].contentData,contentData);
+  }
+});
+
 test("one page produces a full view and overlapping upper, middle and lower table bands",async()=>{
   const original=await sharp({create:{width:900,height:1600,channels:3,background:"white"}}).jpeg().toBuffer();
   const dataUrl=`data:image/jpeg;base64,${original.toString("base64")}`;
