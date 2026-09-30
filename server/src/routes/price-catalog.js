@@ -33,6 +33,8 @@ async function ensureSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotion_company_type_idx" ON "PriceCatalogPromotion"("companyId","promotionType","active","validFrom")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotion_product_idx" ON "PriceCatalogPromotion"("productId")`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "offerMode" TEXT NOT NULL DEFAULT 'FIXED_PRICE'`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "discountAmount" NUMERIC(14,4) NOT NULL DEFAULT 0`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "CustomerWholesalePrice" (
         "id" TEXT PRIMARY KEY,
         "companyId" TEXT NOT NULL,

@@ -9,7 +9,7 @@ function shell(){const overlay=document.createElement("div");overlay.className="
 function statusText(status){return ({READY:"Έτοιμη",UNRESOLVED:"Δεν βρέθηκε είδος",INVALID:"Μη έγκυρη",OVERLAP:"Επικάλυψη"})[status]||status}
 function rowHtml(row){return `<div class="li-row ${String(row.status||"").toLowerCase()}"><span>${row.rowNumber}</span><strong>${esc(statusText(row.status))}</strong><span>${esc(row.product?.name||row.description||"—")}</span><span>${esc(row.matchedBy||"—")}</span><span>${row.status==="READY"?money(row.offerPrice):"—"}</span><span>${row.validFrom?fmt(row.validFrom):"—"}</span><span>${row.validUntil?fmt(row.validUntil):"—"}</span><small>${esc(row.error||row.warnings?.join(" · ")||"")}</small></div>`}
 
-async function openImport(root){
+export async function openLeafletImport(root){
   const overlay=shell(),body=overlay.querySelector("[data-li-body]");let stores=[],file=null,fileData="",preview=null,filter="ALL";
   const lookups=await api("/api/price-catalog/lookups").catch(error=>{body.innerHTML=`<div class="li-error">${esc(error.message)}</div>`;return null});if(!lookups)return;stores=lookups.stores||[];
   const renderSetup=()=>{body.innerHTML=`<div class="li-grid"><label>Αρχείο XLSX / XLS / CSV<input type="file" data-li-file accept=".xlsx,.xls,.csv"></label><fieldset><legend>Καταστήματα POS</legend><div class="li-store-actions"><button type="button" data-li-all>Όλα</button><button type="button" data-li-none>Κανένα</button></div><div class="li-stores">${stores.map(store=>`<label><input type="checkbox" data-li-store value="${esc(store.id)}"> ${esc(store.name)}</label>`).join("")||"Δεν υπάρχουν ενεργά καταστήματα."}</div></fieldset></div><div class="li-help"><b>Αντιστοίχιση:</b> Barcode → SKU / εσωτερικός κωδικός → ακριβής Περιγραφή. Δεν δημιουργούνται νέα προϊόντα από το Excel.</div><footer><button class="secondary" data-li-close>Κλείσιμο</button><button class="primary" data-li-preview>Προεπισκόπηση</button></footer>`;
@@ -27,5 +27,5 @@ export function installLeafletImport(){
   const root=document.querySelector(".price-catalog-suite");if(!root)return;
   const leaflet=root.querySelector('[data-pc-tab="leaflet"].active');if(!leaflet)return;
   const newButton=root.querySelector('[data-pc-new-promo="LEAFLET"]');if(!newButton||root.querySelector("[data-li-launch]"))return;
-  const button=document.createElement("button");button.type="button";button.dataset.liLaunch="1";button.textContent="📥 Εισαγωγή από αρχείο";button.addEventListener("click",()=>openImport(root).catch(error=>alert(error.message)));newButton.insertAdjacentElement("afterend",button);
+  const button=document.createElement("button");button.type="button";button.dataset.liLaunch="1";button.textContent="📥 Εισαγωγή από αρχείο";button.addEventListener("click",()=>openLeafletImport(root).catch(error=>alert(error.message)));newButton.insertAdjacentElement("afterend",button);
 }

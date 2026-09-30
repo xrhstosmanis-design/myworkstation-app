@@ -24,6 +24,9 @@ async function ensureSchema(){
       "id" TEXT PRIMARY KEY,"actorId" TEXT,"promotionType" TEXT NOT NULL,"masterProductIdsJson" JSONB NOT NULL,"storeIdsJson" JSONB NOT NULL,
       "createdPromotions" INTEGER NOT NULL DEFAULT 0,"createdProducts" INTEGER NOT NULL DEFAULT 0,"activatedMappings" INTEGER NOT NULL DEFAULT 0,
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "offerMode" TEXT NOT NULL DEFAULT 'FIXED_PRICE'`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "discountAmount" NUMERIC(14,4) NOT NULL DEFAULT 0`);
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PriceCatalogPromotionGiftProduct" ("promotionId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY("promotionId","productId"))`);
   })().catch(error=>{schemaReady=undefined;throw error});
   return schemaReady;
 }
@@ -122,32 +125,38 @@ router.post("/dispatch",async(req,res,next)=>{
 
 const promotionSchema=z.object({
   masterProductIds:z.array(z.string().min(1)).min(1).max(200),storeIds:z.array(z.string().min(1)).min(1).max(200),
-  promotionType:z.enum(["LEAFLET","GIFT"]),offerMode:z.enum(["DISCOUNT_PERCENT","FIXED_PRICE"]).default("DISCOUNT_PERCENT"),
-  discountPercent:z.coerce.number().min(0).max(100).default(0),offerPrice:z.coerce.number().min(0).nullable().optional(),
+  giftMasterProductIds:z.array(z.string().min(1)).max(200).default([]),
+  promotionType:z.enum(["LEAFLET","GIFT"]),offerMode:z.enum(["DISCOUNT_PERCENT","DISCOUNT_AMOUNT","FIXED_PRICE"]).default("DISCOUNT_PERCENT"),
+  discountPercent:z.coerce.number().min(0).max(100).default(0),discountAmount:z.coerce.number().min(0).max(999999).default(0),offerPrice:z.coerce.number().min(0).nullable().optional(),
   saleQuantity:z.coerce.number().positive().max(9999).default(1),bonusQuantity:z.coerce.number().min(0).max(9999).default(0),
   validFrom:z.string().min(1),validUntil:z.string().nullable().optional(),active:z.boolean().default(true)
 }).superRefine((body,ctx)=>{
   if(body.masterProductIds.length*body.storeIds.length>10000)ctx.addIssue({code:z.ZodIssueCode.custom,message:"Επιτρέπονται έως 10.000 συνδυασμοί προϊόν × κατάστημα."});
   if(body.promotionType==="LEAFLET"&&body.offerMode==="FIXED_PRICE"&&(body.offerPrice===null||body.offerPrice===undefined))ctx.addIssue({code:z.ZodIssueCode.custom,path:["offerPrice"],message:"Χρειάζεται τιμή προσφοράς."});
+  if(body.promotionType==="LEAFLET"&&body.offerMode==="DISCOUNT_AMOUNT"&&body.discountAmount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["discountAmount"],message:"Χρειάζεται ποσό έκπτωσης μεγαλύτερο από 0."});
   if(body.promotionType==="GIFT"&&body.bonusQuantity<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["bonusQuantity"],message:"Η ποσότητα δώρου πρέπει να είναι μεγαλύτερη από 0."});
+  if(body.promotionType==="GIFT"&&!body.giftMasterProductIds.length)ctx.addIssue({code:z.ZodIssueCode.custom,path:["giftMasterProductIds"],message:"Επίλεξε τουλάχιστον ένα επιτρεπόμενο προϊόν δώρου."});
 });
 const asDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?null:d};
 
 router.post("/promotions",async(req,res,next)=>{
   try{
-    const body=promotionSchema.parse(req.body||{}),productIds=[...new Set(body.masterProductIds)],storeIds=[...new Set(body.storeIds)],validFrom=asDate(body.validFrom),validUntil=body.validUntil?asDate(body.validUntil):null;
+    const body=promotionSchema.parse(req.body||{}),productIds=[...new Set(body.masterProductIds)],giftMasterProductIds=[...new Set(body.giftMasterProductIds)],storeIds=[...new Set(body.storeIds)],validFrom=asDate(body.validFrom),validUntil=body.validUntil?asDate(body.validUntil):null;
     if(!validFrom||body.validUntil&&!validUntil)return res.status(400).json({error:"Μη έγκυρη ημερομηνία προσφοράς."});
     if(validUntil&&validUntil<validFrom)return res.status(400).json({error:"Η λήξη δεν μπορεί να είναι πριν από την έναρξη."});
-    const [masters,stores]=await Promise.all([
+    const [masters,giftMasters,stores]=await Promise.all([
       prisma.$queryRaw`SELECT "id","sourceCode","name","categoryName","subcategoryName","defaultRetailPrice","defaultCostPrice","vatRate","vatVerified" FROM "MasterProduct" WHERE "id"=ANY(${productIds}::text[]) AND "active"=true`,
+      giftMasterProductIds.length?prisma.$queryRaw`SELECT "id","sourceCode","name","categoryName","subcategoryName","defaultRetailPrice","defaultCostPrice","vatRate","vatVerified" FROM "MasterProduct" WHERE "id"=ANY(${giftMasterProductIds}::text[]) AND "active"=true`:Promise.resolve([]),
       prisma.store.findMany({where:{id:{in:storeIds},active:true},select:{id:true,name:true,companyId:true}})
     ]);
     if(masters.length!==productIds.length)return res.status(400).json({error:"Ένα ή περισσότερα προϊόντα δεν είναι ενεργά στον Master Catalog."});
+    if(giftMasters.length!==giftMasterProductIds.length)return res.status(400).json({error:"Ένα ή περισσότερα επιτρεπόμενα δώρα δεν είναι ενεργά στον Master Catalog."});
     if(stores.length!==storeIds.length)return res.status(400).json({error:"Ένα ή περισσότερα καταστήματα δεν είναι ενεργά."});
     const byCompany=new Map();for(const store of stores){const list=byCompany.get(store.companyId)||[];list.push(store);byCompany.set(store.companyId,list)}
     let createdPromotions=0,createdProducts=0,activatedMappings=0;
     await prisma.$transaction(async tx=>{
       for(const [companyId,targetStores] of byCompany){
+        const allowedGiftProducts=[];for(const giftMaster of giftMasters){const ensuredGift=await ensureTenantProduct(tx,companyId,giftMaster,targetStores);if(ensuredGift.createdProduct)createdProducts++;activatedMappings+=ensuredGift.activatedMappings;allowedGiftProducts.push(ensuredGift.product)}
         for(const master of masters){
           const ensured=await ensureTenantProduct(tx,companyId,master,targetStores);if(ensured.createdProduct)createdProducts++;activatedMappings+=ensured.activatedMappings;
           const product=ensured.product,targetStoreIds=targetStores.map(s=>s.id).sort();
@@ -158,8 +167,9 @@ router.post("/promotions",async(req,res,next)=>{
           }
           const originalPrice=Number(product.salePrice||0),offerPrice=body.promotionType==="LEAFLET"?(body.offerMode==="FIXED_PRICE"?Number(body.offerPrice):Math.max(0,Number((originalPrice*(1-body.discountPercent/100)).toFixed(4)))):null;
           const discount=body.promotionType==="LEAFLET"&&originalPrice>0?Number((((originalPrice-Number(offerPrice))/originalPrice)*100).toFixed(4)):0,promotionId=uid(),actor=req.user.fullName||req.user.email||"Platform Super Admin";
-          await tx.$executeRaw`INSERT INTO "PriceCatalogPromotion" ("id","companyId","productId","promotionType","originalPrice","offerPrice","discountPercent","saleQuantity","bonusQuantity","customerPoints","validFrom","validUntil","active","createdByUserId","createdByName") VALUES (${promotionId},${companyId},${product.id},${body.promotionType},${originalPrice},${offerPrice},${discount},${body.promotionType==="GIFT"?body.saleQuantity:1},${body.promotionType==="GIFT"?body.bonusQuantity:0},0,${validFrom},${validUntil},${body.active},${req.user.id},${actor})`;
+          await tx.$executeRaw`INSERT INTO "PriceCatalogPromotion" ("id","companyId","productId","promotionType","offerMode","originalPrice","offerPrice","discountPercent","discountAmount","saleQuantity","bonusQuantity","customerPoints","validFrom","validUntil","active","createdByUserId","createdByName") VALUES (${promotionId},${companyId},${product.id},${body.promotionType},${body.promotionType==="LEAFLET"?body.offerMode:"FIXED_PRICE"},${originalPrice},${offerPrice},${body.promotionType==="LEAFLET"&&body.offerMode==="DISCOUNT_PERCENT"?body.discountPercent:discount},${body.promotionType==="LEAFLET"&&body.offerMode==="DISCOUNT_AMOUNT"?body.discountAmount:0},${body.promotionType==="GIFT"?body.saleQuantity:1},${body.promotionType==="GIFT"?body.bonusQuantity:0},0,${validFrom},${validUntil},${body.active},${req.user.id},${actor})`;
           for(const store of targetStores)await tx.$executeRaw`INSERT INTO "PriceCatalogPromotionStore" ("promotionId","companyId","storeId") VALUES (${promotionId},${companyId},${store.id}) ON CONFLICT ("promotionId","storeId") DO NOTHING`;
+          for(const giftProduct of allowedGiftProducts)await tx.$executeRaw`INSERT INTO "PriceCatalogPromotionGiftProduct" ("promotionId","companyId","productId") VALUES (${promotionId},${companyId},${giftProduct.id}) ON CONFLICT ("promotionId","productId") DO NOTHING`;
           createdPromotions++;
         }
       }

@@ -19,7 +19,7 @@ test("promotion store guard server and client parse",()=>{
 
 test("manual promotion writes are tenant product and active-store scoped",()=>{
   assert.match(route,/WHERE \"companyId\"=\$\{companyId\} AND \"id\"=\$\{productId\} AND \"active\"=true/);
-  assert.match(route,/companyId,active:true,id:\{in:ids\}/);
+  assert.match(route,/companyId,\s*active:\s*true,\s*id:\s*\{\s*in:\s*ids\s*\}/);
   assert.match(route,/Επίλεξε τουλάχιστον ένα κατάστημα POS για ενεργή προσφορά/);
   assert.match(route,/PriceCatalogPromotionStore/);
 });
@@ -46,8 +46,8 @@ test("overlap validation is serialized inside the same database transaction",()=
 test("new and edit save promotion and store targeting atomically",()=>{
   assert.match(route,/router\.post\("\/promotions\/scoped"/);
   assert.match(route,/router\.patch\("\/promotions\/:promotionId\/scoped"/);
-  assert.match(route,/await replaceStores\(tx,companyId,promotionId,stores\)/);
-  assert.match(route,/await replaceStores\(tx,companyId,old\.id,stores\)/);
+  assert.match(route,/await replaceStores\(tx,\s*companyId,\s*promotionId,\s*stores\)/);
+  assert.match(route,/await replaceStores\(tx,\s*companyId,\s*old\.id,\s*stores\)/);
 });
 
 test("legacy POS-store reassignment cannot bypass the same overlap guard",()=>{

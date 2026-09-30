@@ -38,8 +38,8 @@ test("product quality catalogue never reuses stale supplier data",()=>{
 
 test("saving the full inventory card refreshes the outer product quality list",()=>{
   assert.match(inventoryCard,/dispatchEvent\(new CustomEvent\("mws:owner-products-refresh"/);
-  assert.match(client,/addEventListener\("mws:owner-products-refresh",refresh\)/);
-  assert.match(client,/removeEventListener\("mws:owner-products-refresh",refresh\)/);
+  assert.match(client,/addEventListener\("mws:owner-products-refresh",\s*refresh\)/);
+  assert.match(client,/removeEventListener\("mws:owner-products-refresh",\s*refresh\)/);
 });
 
 test("full product card is tenant scoped and keeps commercial history",()=>{
@@ -87,18 +87,18 @@ test("active catalog reloads every editable product-card switch",()=>{
 test("owner UI exposes a read-only LAB product quality audit",()=>{
   for(const label of ["Έλεγχος ποιότητας LAB","Μόνο προβλήματα","Αναμονή πρώτης αγοράς","Μη έγκυρο barcode","Barcode μέσα στο SKU","Κόστος ≥ λιανική","Χωρίς υποκατηγορία","Χωρίς προμηθευτή","Μονάδα μη ορισμένη"])assert.match(client,new RegExp(label));
   assert.match(client,/productQualityIssues/);
-  assert.match(client,/^const barcodeLooksValid=/m);
+  assert.match(client,/^const barcodeLooksValid\s*=/m);
   assert.match(client,/activeStoreSalePrices/);
   assert.match(client,/effectiveSalePrice/);
   assert.match(client,/money\(effectiveSalePrice\(row\)\)/);
   assert.match(client,/product\.hasSupplier/);
   assert.match(route,/SupplierProductLink[\s\S]*"hasSupplier"/);
-  assert.match(client,/encodeURIComponent\(catalogQuery\.trim\(\)\).*setCatalog\(fresh\)/);
+  assert.match(client,/encodeURIComponent\(catalogQuery\.trim\(\)\)[\s\S]*setCatalog\(fresh\)/);
 });
 
 test("store pricing opens the complete warehouse product card",()=>{
   assert.match(client,/onOpenFullProduct/);
-  assert.match(client,/onClick=\{\(\)=>openProduct\(row\)\}/);
+  assert.match(client,/onClick=\{\(\)\s*=>\s*openProduct\(row\)\}/);
   assert.match(launcher,/initialProduct=\{inventoryInitialProduct\}/);
   assert.match(inventoryCard,/openEdit\(initialProduct\)/);
 });

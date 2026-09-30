@@ -41,6 +41,8 @@ export async function ensurePosPricingSchema(){
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotion_company_type_idx" ON "PriceCatalogPromotion"("companyId","promotionType","active","validFrom")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotion_product_idx" ON "PriceCatalogPromotion"("productId")`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "offerMode" TEXT NOT NULL DEFAULT 'FIXED_PRICE'`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "discountAmount" NUMERIC(14,4) NOT NULL DEFAULT 0`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PriceCatalogPromotionStore" (
         "promotionId" TEXT NOT NULL,
         "companyId" TEXT NOT NULL,
@@ -49,6 +51,14 @@ export async function ensurePosPricingSchema(){
         PRIMARY KEY("promotionId","storeId")
       )`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotionStore_company_store_idx" ON "PriceCatalogPromotionStore"("companyId","storeId","promotionId")`);
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PriceCatalogPromotionGiftProduct" (
+        "promotionId" TEXT NOT NULL,
+        "companyId" TEXT NOT NULL,
+        "productId" TEXT NOT NULL,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY("promotionId","productId")
+      )`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotionGiftProduct_company_product_idx" ON "PriceCatalogPromotionGiftProduct"("companyId","productId","promotionId")`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "memberCard" TEXT`);
     })().catch(error=>{readyPromise=undefined;throw error});
   }

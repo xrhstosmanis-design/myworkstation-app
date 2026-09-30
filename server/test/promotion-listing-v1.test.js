@@ -9,9 +9,9 @@ const route=fs.readFileSync(path.join(repo,"server/src/routes/price-catalog-prom
 
 test("promotion listing is read-only and tenant scoped",()=>{
   assert.match(route,/router\.get\("\/promotions\/scoped"/);
-  assert.match(route,/const companyId=req\.user\.companyId/);
+  assert.match(route,/const companyId\s*=\s*req\.user\.companyId/);
   assert.match(route,/WHERE pr\."companyId"=\$\{companyId\}/);
   assert.match(route,/LIMIT 1000/);
-  assert.match(route,/res\.json\(\{items:rows,count:rows\.length\}\)/);
+  assert.match(route,/res\.json\(\{\s*items:\s*rows,\s*count:\s*rows\.length\s*\}\)/);
   assert.doesNotMatch(route,/router\.get\("\/promotions\/scoped"[\s\S]*?(INSERT INTO|UPDATE .*PriceCatalogPromotion|DELETE FROM)/);
 });
