@@ -19,3 +19,7 @@ Replace only the supplier lookup with tagged parameterized `tx.$queryRaw`, exact
 ## Remaining acceptance / handoff
 
 Owner stays assigned through production receiving and replay. After exact deploy, one fresh user sync in the same Diadochou store must create the known draft and allow independent DB readback. A subsequent sync must avoid duplicate drafts; review before requesting replay because the cursor may also return later invoices. No final invoice posting, payment, stock update or fiscal transmission is authorized by this diagnostic acceptance. Those effects were not independently measured in the failed user screenshot and remain NOT TESTED. No manual PASS closure or central PASS PDF yet.
+
+## Superseding result - 21:14 Greece
+
+#1552 CI passed, merged and exact production `5e5d12317d5677b77a742a898b033a55eab2acd7` live. Initial production receiving now has limited LIVE PASS: 5,269 unique MARK and known 135848 / 75.14 reference record, RECEIVED. Earlier FAIL/AWAITING paragraphs are historical. Replay/cursor, full archive search and final posting remain OPEN. See `2026-09-30-mydata-receiving-live-pass.md`, invoice manual and central PDF.
