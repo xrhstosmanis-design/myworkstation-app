@@ -1,9 +1,11 @@
 import crypto from "crypto";
+import * as XLSX from "xlsx";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
+import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 
 const router=Router();
 let schemaPromise;
@@ -24,6 +26,31 @@ async function ensureSchema(){
 }
 const endpoint=environment=>environment==="SANDBOX"?"https://mydataapidev.aade.gr/RequestDocs":"https://mydatapi.aade.gr/myDATA/RequestDocs";
 function syncError(message,status=502){const error=new Error(message);error.status=status;return error}
+
+router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
+  if(!canSync(req))return res.status(403).json({error:"Το αρχείο επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  const store=await prisma.store.findFirst({where:{id:String(req.query.storeId||""),companyId:req.user.companyId},select:{id:true,name:true}});
+  if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  await ensureSchema();
+  const format=req.query.format||"",exporting=["xlsx","pdf"].includes(format);
+  if(format&&!exporting)return res.status(400).json({error:"Μη έγκυρη μορφή εξαγωγής."});
+  const offset=exporting?0:Math.max(0,Math.floor(Number(req.query.offset)||0));
+  const filters={q:req.query.q,supplier:req.query.supplier,date:req.query.date,id:req.query.id,limit:exporting?20001:100,offset};
+  const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{},true);
+  const [rows,counts,totals]=await Promise.all([prisma.$queryRawUnsafe(query.sql,...query.values),prisma.$queryRawUnsafe(count.sql,...count.values),prisma.$queryRawUnsafe(all.sql,...all.values)]);
+  if(exporting){
+    if(rows.length>20000)return res.status(409).json({error:"Η εξαγωγή ξεπερνά 20.000 εγγραφές. Περιορίστε με ημερομηνία ή προμηθευτή."});
+    if(format==="pdf")return res.json({html:archiveReportHtml(rows,store.name),count:rows.length});
+    const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(archiveExportRows(rows));
+    sheet["!cols"]=[{wch:14},{wch:42},{wch:15},{wch:14},{wch:18},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:34},{wch:25},{wch:60}];
+    XLSX.utils.book_append_sheet(workbook,sheet,"Παραστατικά");
+    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||""})]]),"Πληροφορίες");
+    const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx"});
+    return res.json({filename:"mydata-invoices.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:rows.length});
+  }
+  const suppliers=await prisma.$queryRaw`SELECT DISTINCT s."name" FROM "DocumentInbox" i JOIN "Supplier" s ON s."id"=i."supplierId" AND s."companyId"=i."companyId" WHERE i."companyId"=${req.user.companyId} AND i."storeId"=${store.id} ORDER BY s."name"`;
+  res.json({items:rows,total:counts[0]?.count||0,archiveTotal:totals[0]?.count||0,offset,limit:100,suppliers:suppliers.map(s=>s.name)});
+}catch(error){next(error)}});
 
 router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   if(!canSync(req))return res.status(403).json({error:"Ο συγχρονισμός myDATA επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});

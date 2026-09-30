@@ -1,3 +1,7 @@
+## 30/09/2026 - myDATA full archive / Excel / PDF report - AWAITING CI-DEPLOY-USER
+
+- [ ] ASSIGNED `codex/mydata-archive-export-20260930`, same installation page, owner authorized 21:19. Full tenant/store archive search and paging, all-filtered XLSX export, generated PDF report via browser Print/Save as PDF, separate original attachment action. 14/14 targeted tests and frontend build PASS; generated workbook re-read with 5,269 fixtures. Production read-only search query finds known 135848 once. No user export PASS, no original/QR acquisition or final posting. Initial receiving PASS #1553 preserved. `CHECKPOINTS/CHANGES/2026-09-30-mydata-archive-export.md`.
+
 ## 30/09/2026 21:14 Greece - myDATA initial receiving LIVE PASS / remaining scope OPEN
 
 - [x] Initial production receiving closed after #1551/#1552, exact Render `5e5d12317d5677b77a742a898b033a55eab2acd7`. Before DB counts 0/0; owner screenshot shows 5,269 received records, DB 5,269 distinct MARK. Known 135848 / 75.14 joins RECEIVED inbox record. Prior internal error and zero-results AWAITING entries below are superseded for initial receiving.

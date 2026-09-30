@@ -11,7 +11,7 @@
 **27/09 — Ετικέτα EAN-13: συνολικό scope PASS / αφαιρέθηκε από τις εκκρεμότητες.** USER PASS φυσικής εκτύπωσης→σάρωσης, LAB PASS προεπισκόπησης/Audit και αποκλεισμού άκυρου EAN, δεύτερο LAB readback με διαφορετικές ρυθμίσεις, HTTP E2E 200/403/403 (#1459, CI #3690). Production εχθρικό API αίτημα με LAB token NOT TESTED. ΚΑΤ αμετάβλητο. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-ean13-label-isolation-final.md`.
 
 
-**ASSIGNED - `codex/mydata-receiving-evidence-20260930` (same installation page):** Subsequent myDATA sync/cursor and replay verification with fresh baseline; complete archive paging/search (current API returns only 300); Excel export and clear distinction between a generated PDF summary and the supplier's original PDF/QR (owner question 21:16 Greece). Initial receiving/envelope/Supplier failure completed: 5,269 unique MARK and known reference record confirmed 30/09 21:14 at exact production `5e5d12317d5677b77a742a898b033a55eab2acd7`. Original/QR, line extraction, final posting and stock/payment acceptance remain separate NOT TESTED work. `CHECKPOINTS/CHANGES/2026-09-30-mydata-receiving-live-pass.md`.
+**ASSIGNED - `codex/mydata-archive-export-20260930` (same installation page):** Owner authorized full archive search/paging, Excel export and generated PDF reports at 21:19. Implementation AWAITING CI / DEPLOY / USER. PDF uses Print / Save as PDF; original supplier PDF/QR acquisition is separate and still OPEN. Subsequent sync/cursor/replay and final posting remain NOT TESTED. Initial receiving PASS #1553 preserved. `CHECKPOINTS/CHANGES/2026-09-30-mydata-archive-export.md`.
 
 # MyWorkStation - Κεντρική λίστα εκκρεμοτήτων και σειρά υλοποίησης
 
