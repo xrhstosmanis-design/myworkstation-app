@@ -48,6 +48,14 @@ test("successful action writes promotions store targets and platform audit",()=>
   assert.match(route,/createdPromotions/);
 });
 
+test("platform Super Admin reads promotions and analysis across tenant companies",()=>{
+  assert.match(route,/router\.get\("\/promotions"/);
+  assert.match(route,/router\.get\("\/promotions\/analysis"/);
+  assert.match(route,/JOIN "Company" c ON c\."id"=pr\."companyId"/);
+  assert.match(route,/c\."name" AS "companyName"/);
+  assert.doesNotMatch(route.slice(route.indexOf('router.get("/promotions"'),route.indexOf('router.post("/promotions"')),/req\.user\.companyId/);
+});
+
 test("Super Admin UI supports offer or gift product and store selection",()=>{
   assert.match(client,/Κεντρικές Προσφορές & Δώρα/);
   assert.match(client,/promotionType:type/);
@@ -57,6 +65,9 @@ test("Super Admin UI supports offer or gift product and store selection",()=>{
   assert.match(client,/bulk\/promotions/);
   assert.match(client,/Όλες οι κατηγορίες/);
   assert.match(client,/Όλες οι υποκατηγορίες/);
+  assert.match(client,/\/api\/platform\/master-catalog\/bulk\/promotions\/analysis/);
+  assert.match(client,/p\.companyName/);
+  assert.match(client,/await load\(\);setDone/);
 });
 
 test("platform entry mounts promotion center only in Platform Admin composition",()=>{
