@@ -46,12 +46,13 @@ test("navigation lives inside the top commerce panel and remains observer-free",
 test("Kiosk actions include the required lower toolbar and leaflet modal",()=>{
   const c=read(controller);
   for(const label of ["Κλείσιμο","Νέα εγγραφή","Διόρθωση","Εισαγωγή από αρχείο","Excel","Ανανέωση"])assert.ok(c.includes(label),label);
-  assert.ok(c.includes('row?"Διόρθωση":"Νέα"'));
+  assert.match(c,/row\s*\?\s*"Διόρθωση"\s*:\s*"Νέα"/);
   assert.ok(c.includes("προσφορά για Φυλλάδιο"));
   for(const label of ["Είδος:","Κωδικός / Barcode:","Υποκατηγορία:","Τρέχουσα τιμή:","Νέα τιμή:","% έκπτωσης:","Ισχύει από:","Bonus πόντοι:","Ισχύει έως και:","Καταχώρηση"])assert.ok(c.includes(label),label);
-  assert.match(c,/offerPrice\.addEventListener\("input",recalcDiscount\)/);
-  assert.match(c,/discountPercent\.addEventListener\("input",recalcPrice\)/);
-  assert.match(c,/input\.accept="\.csv,text\/csv"/);
+  assert.match(c,/offerPrice\.addEventListener\("input",\s*recalcDiscount\)/);
+  assert.match(c,/discountPercent\.addEventListener\("input",\s*recalcPrice\)/);
+  assert.match(c,/openLeafletImport/);
+  assert.doesNotMatch(c,/function importLeaflet|input\.accept="\.csv,text\/csv"/);
 });
 
 test("late CSS override and installer remain wired after the global stylesheet",()=>{

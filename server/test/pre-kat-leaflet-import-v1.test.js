@@ -11,7 +11,7 @@ const read=file=>fs.readFileSync(path.join(repo,file),"utf8");
 const routePath="server/src/routes/price-catalog-import.js";
 const clientPath="client/src/components/commerce/installLeafletImport.js";
 const cssPath="client/src/components/commerce/leaflet-import.css";
-const route=read(routePath),client=read(clientPath),css=read(cssPath),index=read("server/src/index.js"),entry=read("client/src/entry.jsx");
+const route=read(routePath),client=read(clientPath),css=read(cssPath),index=read("server/src/index.js"),entry=read("client/src/entry.jsx"),controller=read("client/src/components/commerce/installPriceCatalogControllerV2.js");
 
 test("leaflet import server and client parse",()=>{
   execFileSync(process.execPath,["--check",path.join(repo,routePath)]);
@@ -74,6 +74,14 @@ test("leaflet UI exposes import button preview statuses and bounded rendering",(
   assert.match(client,/READY/);assert.match(client,/UNRESOLVED/);assert.match(client,/INVALID/);assert.match(client,/OVERLAP/);
   assert.match(client,/slice\(0,300\)/);
   assert.match(client,/Αποδέχομαι ότι/);
+});
+
+test("every visible leaflet import action uses the preview-first workflow",()=>{
+  assert.match(client,/export async function openLeafletImport/);
+  assert.match(controller,/import \{\s*openLeafletImport\s*\} from "\.\/installLeafletImport\.js"/);
+  assert.match(controller,/\[data-import\][\s\S]*openLeafletImport\(r\)/);
+  assert.doesNotMatch(controller,/function importLeaflet|function parseLine/);
+  assert.doesNotMatch(controller,/for\(const line of lines\.slice\(1\)\)/);
 });
 
 test("leaflet import reuses existing host observer and MyWorkStation palette",()=>{
