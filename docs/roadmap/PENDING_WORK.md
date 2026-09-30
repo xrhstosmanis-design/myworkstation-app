@@ -326,7 +326,7 @@
 
 **LIVE PASS (30/09/2026):** Εργασία #18. Αυτόματο off-site PostgreSQL backup ανά 3 ώρες σε ιδιωτικό Backblaze B2, καταγραφή επιτυχίας/αποτυχίας/καθυστέρησης και archive dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Το πραγματικό upload ήταν 161.286.652 bytes. Ανεξάρτητη λήψη έδωσε ίδιο SHA-256 και 436 table entries. PR `#1555`, merge `3868c16`. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. `CHECKPOINTS/CHANGES/2026-09-30-task18-backblaze-b2.md`.
 
-**ΑΝΑΤΕΘΗΚΕ (30/09/2026):** Εργασία #19 στο `fix/task19-build-filters`. Περιορίζονται τα περιττά builds με έναν guarded δρόμο production web deploy, service-specific Render build filters και ακύρωση superseded CI στο ίδιο PR/branch. Καμία αλλαγή σε POS, OCR, πληρωμές, stock, fiscal ή production δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
+**AWAITING FINAL CI (30/09/2026):** Εργασία #19. PR #1557 / CI #3917–3918 / exact production `7ee5ca6` PASS. Ενεργά: ένας guarded δρόμος production web deploy, web ignored paths, cron include μόνο `ops/backup/**` και ακύρωση superseded CI. Τελικό follow-up παραλείπει πλήρες CI και production deploy για documentation-only commits. Καμία αλλαγή σε POS, OCR, πληρωμές, stock, fiscal ή production δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
 
 - Αυτόματο backup ανά τρεις ώρες.
 - Πραγματική δοκιμή επαναφοράς βάσης και αρχείων.

@@ -1925,4 +1925,4 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 30/09/2026 — Εργασία #19 · Περιορισμός περιττών GitHub/Render builds
 
-- [ ] **LOCAL PASS · AWAITING CI · `fix/task19-build-filters`:** ένας guarded δρόμος production web deploy, Render build filters ανά service και ακύρωση superseded CI στο ίδιο PR/branch. Targeted 10/10, full server 1.653 PASS / 0 FAIL / 1 SKIP και production build PASS. Καμία αλλαγή σε επιχειρησιακή λειτουργία ή δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
+- [ ] **PR #1557 / CI #3917–3918 / EXACT PRODUCTION `7ee5ca6` PASS · FINAL DOCS-ONLY SKIP AWAITING CI:** ένας guarded δρόμος production web deploy, Render build filters ανά service, ακύρωση superseded CI και παράλειψη πλήρους CI/deploy για documentation-only commits. Render readback επιβεβαίωσε web Auto-Deploy Off, πέντε ignored paths και cron include μόνο `ops/backup/**` χωρίς νέο cron build. Καμία αλλαγή σε επιχειρησιακή λειτουργία ή δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
