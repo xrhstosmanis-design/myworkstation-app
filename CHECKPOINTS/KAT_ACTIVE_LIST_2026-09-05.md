@@ -1,3 +1,7 @@
+## 01/10 00:36 Greece - PDF input correction exact live / AWAITING USER
+
+PR #1564 merged e5e7c9cef7a7911ad406d7f3643a773b59dbf695. PR CI36779630475 and main CI36779959250 PASS including Node20 build/server/invariants/isolated HTTP E2E. Exact Render dep-dauo07u0tbcc73c11s60 LIVE2026-09-30T21:36:22.303437Z. PDF input prefix correction is deployed, not yet USER PASS. Limited draft delivery PASS and actual HTTP400 FAIL above remain the latest user evidence. Same owner ASSIGNED codex/mydata-draft-pos-receipt-20260930; next refresh/open same135848 assistant preview only, no draft recreation/payment/stock/finalization. No repeat Gate3 paid invoice. No additional runtime deployment requested by this documentation-only evidence update.
+
 ## 01/10/2026 00:24 Greece - draft delivery USER PASS; PDF assistant HTTP400 FAIL
 
 Same owner ASSIGNED codex/mydata-draft-pos-receipt-20260930. Runtime ae8fa98b, owner images 212022 / 212128: one editable ΤΔΠΤΛ135848 order opens, original mydata-135848-400015448413446.pdf visible in existing assistant; draft has zero lines before review. Scoped after read2026-09-30T21:24:26Z: PurchaseOrder count1, document e9d75e39-c60c-42ef-8e65-27ff1283c939 DRAFT, order d59fc7a4-aac9-4b14-b01c-ca17dfa122a6, same job2b5f8d7d-9527-40d7-9bc6-14e6866905cf AWAITING_APPROVAL. Versus recorded before: +1 draft/order, StoreTransaction0 and StockMovement0 unchanged, stock hash6fb0a432ecdef428ca5f1cb137189d40 unchanged; paymentTransactionIdnull. LIMITED USER/LIVE PASS only for draft delivery and original display. No payment, stock posting or approval.
