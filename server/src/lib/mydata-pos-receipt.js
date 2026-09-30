@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
-import {assertReusableInvoicePayment} from "./invoice-payment-reuse.js";
+import {assertReusableInvoicePayment,invoiceToken} from "./invoice-payment-reuse.js";
 const fail=message=>Object.assign(new Error(message),{status:409,code:"MYDATA_POS_IDENTITY_CONFLICT"});
-const normalized=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replace(/\s+/g,"");
+const normalized=invoiceToken;
 const day=value=>value?new Date(value).toISOString().slice(0,10):"";
 
 // This is a narrow exception to duplicate rejection, never a general duplicate bypass.
@@ -15,7 +15,7 @@ export async function findMyDataPurchase(db,{companyId,storeId,supplierId,suppli
     LEFT JOIN "PurchaseDocument" d ON d."id"=COALESCE(m."rawPayload"->>'mydataDraftDocumentId',j."purchaseDocumentId") AND d."companyId"=m."companyId"
     LEFT JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
     WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."issuerVat"=${supplierTaxId}
-      AND (UPPER(regexp_replace(m."documentNumber",'\\s+','','g'))=${normalized(documentNumber)} OR UPPER(regexp_replace(CONCAT_WS(' ',NULLIF(m."series",''),m."documentNumber"),'\\s+','','g'))=${normalized(documentNumber)})
+      AND (regexp_replace(UPPER(m."documentNumber"),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)} OR regexp_replace(UPPER(CONCAT_WS(' ',NULLIF(m."series",''),m."documentNumber")),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)})
       ORDER BY m."fetchedAt" DESC LIMIT 2`;
   if(!rows.length)return null;
   if(rows.length!==1)throw fail("Περισσότερες από μία εγγραφές myDATA ταιριάζουν. Απαιτείται έλεγχος στο BackOffice.");

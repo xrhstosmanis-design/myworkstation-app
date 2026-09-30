@@ -24,7 +24,7 @@ function fixture(overrides={}){
   return {db,row,writes,getResult:()=>resultJson};
 }
 test("receipt links the original job/order and one existing payment without replacing reviewed rows",async()=>{
-  const f=fixture();const first=await attachMyDataPosReceipt(f.db,identity,[page],payment,{id:"operator"});
+  const f=fixture();assert.ok(await findMyDataPurchase(f.db,{...identity,documentNumber:"A-42"}));const first=await attachMyDataPosReceipt(f.db,identity,[page],payment,{id:"operator"});
   assert.equal(first.purchaseDocumentId,"document");assert.equal(first.jobId,"job");assert.equal(first.stockUpdated,false);
   assert.equal(f.row.paymentTransactionId,"payment");assert.equal(f.row.settlementMode,"PAID");
   assert.deepEqual(f.getResult().productLines,[{code:"confirmed"}]);
