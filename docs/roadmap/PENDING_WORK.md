@@ -11,7 +11,7 @@
 **27/09 — Ετικέτα EAN-13: συνολικό scope PASS / αφαιρέθηκε από τις εκκρεμότητες.** USER PASS φυσικής εκτύπωσης→σάρωσης, LAB PASS προεπισκόπησης/Audit και αποκλεισμού άκυρου EAN, δεύτερο LAB readback με διαφορετικές ρυθμίσεις, HTTP E2E 200/403/403 (#1459, CI #3690). Production εχθρικό API αίτημα με LAB token NOT TESTED. ΚΑΤ αμετάβλητο. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-ean13-label-isolation-final.md`.
 
 
-**ASSIGNED — `codex/mydata-string-envelope-20260930`:** Συνέχιση εγκατάστασης Διαδόχου, ανεξάρτητη διόρθωση ανάγνωσης XML περιτυλίγματος `string` της RequestDocs. Live read-only αναπαραγωγή: η ΑΑΔΕ επιστρέφει το γνωστό παραστατικό, η τρέχουσα εφαρμογή μετρά 0. Δεν αφορά OCR/Gate 3, άλλες αναθέσεις, stock, πληρωμές ή έκδοση. AWAITING CI / DEPLOY / USER ACCEPTANCE.
+**ASSIGNED — `codex/mydata-supplier-lookup-20260930` (same page/owner continuing #1551):** Diadochou myDATA receiving. Envelope merged/deployed at `d2f768a4`; newest real-store screenshot 20:53 shows internal error. Live stack confirms unavailable Prisma Supplier delegate. Bounded raw SQL company/VAT supplier lookup; AWAITING CI / DEPLOY / USER receiving and idempotent replay. No OCR/Gate 3, stock, payment or fiscal changes. `CHECKPOINTS/CHANGES/2026-09-30-mydata-supplier-lookup.md`.
 
 # MyWorkStation - Κεντρική λίστα εκκρεμοτήτων και σειρά υλοποίησης
 

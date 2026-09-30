@@ -1,3 +1,7 @@
+## 30/09/2026 20:53 Greece — myDATA receiving LIVE FAIL / supplier lookup / AWAITING CI-DEPLOY-USER
+
+- [ ] ASSIGNED `codex/mydata-supplier-lookup-20260930`, same owner continuing #1551. Exact production `d2f768a4` now parses the AADE envelope, but owner screenshot shows internal error and 0 documents. Server 17:53:16Z: undefined `tx.supplier.findFirst` at route line 58. Supplier is a raw SQL table, absent from Prisma schema. Replace only lookup with parameterized company/VAT-scoped SQL; leave unmatched supplier nullable. 10/10 local tests, including execution of actual sync handler with raw-only transaction, matched/unmatched supplier and duplicate replay. Real-store import remains FAIL / AWAITING USER. No manual PASS closure. `CHECKPOINTS/CHANGES/2026-09-30-mydata-supplier-lookup.md`.
+
 ## 30/09/2026 — Εισερχόμενα myDATA · string envelope ROOT CAUSE / AWAITING CI / DEPLOY / USER
 
 - [ ] ASSIGNED `codex/mydata-string-envelope-20260930`. Owner screenshot 20:24 reports 0; production `08f532d3`, DB inbound 0. Direct read-only RequestDocs returns the known invoice inside an escaped .NET `string` envelope, which the current parser does not unwrap. Credentials work; account hint is not the key suffix. Bounded envelope decoding preserves VAT filtering, cursor/environment, duplicate guards and draft-only receiving. No stock/payment/fiscal/schema writes. 9/9 targeted tests PASS; application receiving remains NOT PASS. `CHECKPOINTS/CHANGES/2026-09-30-mydata-string-envelope.md`.
