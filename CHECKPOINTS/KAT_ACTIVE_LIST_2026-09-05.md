@@ -1,3 +1,7 @@
+## 01/10 00:10 Greece - #1562 exact live, draft/receipt AWAITING USER
+
+PR/main CI green, exact Render ae8fa98b / dep-dauniuou01pc738dq4rg live21:07:52Z. Same installation owner ASSIGNED codex/mydata-draft-pos-receipt-20260930. Before135848 review baseline:0 purchase docs/orders,0 transactions/open shifts/movements,6623 store products stock0.0000/hash6fb0a432ecdef428ca5f1cb137189d40. Original job/attachment unchanged and documentIdnull. No user action after deployment yet, no zero-delta or payment PASS claim. Next same135848 review only, no payment/finalization; physical POS acceptance separately measured in LAB. Checkpoint2026-09-30-mydata-provider-original.md.
+
 ## 30/09 23:46 Greece - myDATA draft + first physical POS receipt AWAITING USER
 
 ASSIGNED codex/mydata-draft-pos-receipt-20260930 same installation page. Newest owner instruction: preserve normal POS photo/payment, first arrival connects existing myDATA purchase; later manual submissions stop before payment. Transaction retries reuse same receipt/payment only. Original job/order and confirmed lines preserved; approved purchase gets receipt/payment metadata without stock/reapproval. Local full suite1658 PASS/1 SKIP, build PASS; schema EXPLAIN read-only PASS. CI/exact deploy and measured LAB acceptance pending. Original persistence limited LIVE PASS on472c746f; draft handoff FAIL on that old revision. No new store payment or stock test executed. Existing LAB Gate3 PASS protected; no repeated13241.
@@ -1939,6 +1943,3 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 30/09/2026 — Εργασία #19 · Περιορισμός περιττών GitHub/Render builds
 
 - [x] **FINAL PASS:** PR #1557 / CI #3917–3918 / exact production `7ee5ca6` και PR #1558 / CI #3919–3920 / exact production `6d6384c`. Ένας guarded δρόμος production web deploy, Render build filters ανά service, ακύρωση superseded CI και documentation-only skip επιβεβαιώθηκαν πραγματικά χωρίς νέο web deploy ή cron rebuild. Καμία αλλαγή σε επιχειρησιακή λειτουργία ή δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
-# Εργασία 20 — ασφαλής εισαγωγή προσφορών φυλλαδίου
-
-**ΑΝΑΤΕΘΗΚΕ 30/09/2026 — `task20-safe-offer-import` · AWAITING LAB/USER.** Το πρώτο περιορισμένο σκέλος συνδέει το ορατό V2 κουμπί «Εισαγωγή από αρχείο» αποκλειστικά με την υπάρχουσα preview-first ροή XLSX/XLS/CSV. Δεν έγινε πραγματική εισαγωγή, αλλαγή τιμών, POS πώληση ή συναλλαγή. Οι υπόλοιπες επεκτάσεις της εργασίας #20 μένουν OPEN. Checkpoint: `CHECKPOINTS/CHANGES/2026-09-30-task20-safe-offer-import.md`.
