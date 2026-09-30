@@ -7,7 +7,16 @@ services:
     buildCommand: npm install && npm run build:production
     startCommand: npm run prisma:push -w server && node server/scripts/ensure-pos-return-compat.js && node server/scripts/ensure-netlink-reports-compat.js && node server/scripts/patch-pos-return-diagnostics.js && node server/scripts/patch-pos-return-audit.js && node server/scripts/enforce-kiosk-modifier-only-milk-ice.js && npm run seed && npm start
     healthCheckPath: /api/health
-    autoDeployTrigger: checksPass
+    # Production deploys are triggered once by the guarded GitHub workflow,
+    # which captures rollback evidence and waits for the exact revision.
+    autoDeployTrigger: off
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - CHECKPOINTS/**
+        - .github/**
+        - ops/backup/**
+        - tools/windows-kat-setup-exe/**
     envVars:
       - key: NODE_VERSION
         value: 20
@@ -42,6 +51,9 @@ services:
     dockerfilePath: ./ops/backup/Dockerfile
     dockerContext: ./ops/backup
     autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - ops/backup/**
     envVars:
       - key: DATABASE_URL
         fromDatabase:
