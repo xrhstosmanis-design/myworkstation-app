@@ -1,3 +1,8 @@
+## 30/09/2026 22:40–22:46 Greece — PDF readability USER PASS; automatic originals AWAITING USER
+
+- [x] Images 194012/194043 confirm report and one-page print layout: issuer VAT, full MARK, amounts remain unbroken. Supersedes PDF layout AWAITING below; exact source #1556 d2f2cbaf, deployed descendant 6d6384ce. Full archive owner export cancelled by owner as unnecessary, not PASS.
+- [ ] ASSIGNED `codex/mydata-original-links-20260930`, same installation page: automatic provider original from downloadingInvoiceUrl, validated PDF attached to same inbox and one AI review job. First verified adapter Impact. 23 targeted tests/build PASS and real provider download 211398 bytes / identity PASS. App persistence and AI review AWAITING USER. No mass historic ingestion, purchase posting, stock or payments. `CHECKPOINTS/CHANGES/2026-09-30-mydata-provider-original.md`.
+
 ## 30/09/2026 22:08 Greece - full-archive known search and single-record XLSX USER PASS; PDF layout AWAITING
 
 - [x] Owner images confirm known 135848 search 1/5269 and XLSX opened with 60.60 / 14.54 / 75.14 and full MARK. PDF saved and opens as one page; do not request same artifacts again.
