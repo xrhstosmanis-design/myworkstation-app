@@ -1,3 +1,11 @@
+## 30/09 23:46 Greece - myDATA draft + first physical POS receipt AWAITING USER
+
+ASSIGNED codex/mydata-draft-pos-receipt-20260930 same installation page. Newest owner instruction: preserve normal POS photo/payment, first arrival connects existing myDATA purchase; later manual submissions stop before payment. Transaction retries reuse same receipt/payment only. Original job/order and confirmed lines preserved; approved purchase gets receipt/payment metadata without stock/reapproval. Local full suite1658 PASS/1 SKIP, build PASS; schema EXPLAIN read-only PASS. CI/exact deploy and measured LAB acceptance pending. Original persistence limited LIVE PASS on472c746f; draft handoff FAIL on that old revision. No new store payment or stock test executed. Existing LAB Gate3 PASS protected; no repeated13241.
+
+# 30/09 23:33 — myDATA draft handoff: LIVE FAIL, fix AWAITING CI/DEPLOY/USER
+
+ASSIGNED same installation page codex/mydata-original-links-20260930. Exact live472c746f original attachment + one AI job /3 rows observed for135848; purchaseDocumentId null, no Orders draft. Follow-up creates one editable shell using existing invoice assistant contract; repeats reuse same job/order and deleted drafts are not recreated. PDF/AI review only; no automatic product/payment/stock posting. POS arrival linkage is OPEN: existing duplicate guards may stop a later POS submission; do not claim automatic attachment/payment merge. Existing Gate3 PASS preserved; do not repeat13241. Checkpoint2026-09-30-mydata-provider-original.md.
+
 ## 30/09/2026 22:40–22:46 Greece — PDF readability USER PASS; automatic originals AWAITING USER
 
 - [x] Images 194012/194043 confirm report and one-page print layout: issuer VAT, full MARK, amounts remain unbroken. Supersedes PDF layout AWAITING below; exact source #1556 d2f2cbaf, deployed descendant 6d6384ce. Full archive owner export cancelled by owner as unnecessary, not PASS.

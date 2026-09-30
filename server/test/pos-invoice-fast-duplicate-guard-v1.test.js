@@ -37,7 +37,8 @@ test("POS invoice reuses a validated payment when no purchase draft exists",()=>
 });
 
 test("invoice payment uniqueness is enforced centrally across users, POS and stores",()=>{
-  assert.match(client,/invoiceDocumentNumber:documentNumber\.trim\(\)/);
+  assert.match(client,/submittedDocumentNumber=duplicateCheck\?\.canonicalDocumentNumber\|\|documentNumber\.trim\(\)/);
+  assert.match(client,/invoiceDocumentNumber:submittedDocumentNumber/);
   assert.match(legacyClient,/invoiceDocumentNumber:documentNumber\.trim\(\)\|\|null/);
   assert.match(transactions,/invoiceDocumentNumber:z\.string/);
   assert.match(transactions,/StoreTransaction_active_invoice_payment_unique/);
