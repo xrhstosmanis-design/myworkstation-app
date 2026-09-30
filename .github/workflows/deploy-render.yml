@@ -12,8 +12,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  classify-changes:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_required: ${{ steps.scope.outputs.deploy_required }}
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+      - name: Detect production source change
+        id: scope
+        env:
+          FORCE_DEPLOY: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ "$FORCE_DEPLOY" = "true" ]; then
+            echo "deploy_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          deploy_required=false
+          while IFS= read -r path; do
+            case "$path" in
+              docs/*|CHECKPOINTS/*|output/*|.github/*|ops/backup/*|tools/windows-kat-setup-exe/*|*.md) ;;
+              *) deploy_required=true; break ;;
+            esac
+          done <<EOF
+          $(git diff --name-only HEAD^ HEAD)
+          EOF
+          echo "deploy_required=$deploy_required" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: classify-changes
+    if: needs.classify-changes.outputs.deploy_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Resolve revision

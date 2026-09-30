@@ -14,6 +14,7 @@
 2. Αλλαγές μόνο σε docs/checkpoints, GitHub workflow, backup image ή Windows installer δεν προκαλούν αυτόματο web build.
 3. Το backup cron ξαναχτίζεται μόνο για αλλαγές στο `ops/backup/**`. Το `render.yaml` εξακολουθεί να συγχρονίζεται πάντα από το Blueprint.
 4. Νεότερο CI commit στο ίδιο PR/branch ακυρώνει την παλαιότερη εκτέλεση.
+5. Documentation-only commits ολοκληρώνουν μόνο τον ελαφρύ ταξινομητή και δεν ξεκινούν πλήρες test/build ή production deploy.
 
 ## Όρια ασφαλείας
 
@@ -23,7 +24,9 @@
 
 ## Αποδοχή
 
-- Targeted source tests: 10/10 PASS.
+- Targeted source tests: 12/12 PASS.
 - Πλήρες server suite: 1.653 PASS / 0 FAIL / 1 SKIP.
 - Production client/server build: PASS.
-- Εκκρεμούν πράσινο CI, merge και επιβεβαίωση ότι τα Render Build Filters συγχρονίστηκαν.
+- PR #1557 / CI #3917 και main CI #3918 PASS, merge/exact production `7ee5ca6`.
+- Render readback: web Auto-Deploy `Off`, πέντε ignored paths ενεργά, cron included path `ops/backup/**`, και κανένα νέο cron build για το web-only commit.
+- Εκκρεμεί CI/merge μόνο για το docs-only GitHub skip του ίδιου scope.
