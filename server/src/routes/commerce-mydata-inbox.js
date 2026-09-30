@@ -3,7 +3,7 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
-import {invoiceNodes,invoiceSummary,myDataError,nextPage} from "../mydata-xml.js";
+import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
 
 const router=Router();
 let schemaPromise;
@@ -45,7 +45,8 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
     const response=await fetch(url,{headers:{"aade-user-id":credentials.accountId,"Ocp-Apim-Subscription-Key":credentials.secret,"Accept":"application/xml"},signal:AbortSignal.timeout(30000)});
-    const xml=await response.text();if(!response.ok)throw syncError(`Το myDATA απάντησε με σφάλμα ${response.status}. Δεν αποθηκεύτηκε παραστατικό.`);
+    const responseXml=await response.text();if(!response.ok)throw syncError(`Το myDATA απάντησε με σφάλμα ${response.status}. Δεν αποθηκεύτηκε παραστατικό.`);
+    const xml=unwrapMyDataXml(responseXml);
     const remoteError=myDataError(xml);if(remoteError)throw syncError(`Το myDATA δεν ολοκλήρωσε τη λήψη: ${remoteError}`,409);
     const invoices=invoiceNodes(xml);fetched+=invoices.length;
   for(const invoice of invoices){

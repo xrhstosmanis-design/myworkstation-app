@@ -1,3 +1,7 @@
+## 30/09/2026 — Εισερχόμενα myDATA · string envelope ROOT CAUSE / AWAITING CI / DEPLOY / USER
+
+- [ ] ASSIGNED `codex/mydata-string-envelope-20260930`. Owner screenshot 20:24 reports 0; production `08f532d3`, DB inbound 0. Direct read-only RequestDocs returns the known invoice inside an escaped .NET `string` envelope, which the current parser does not unwrap. Credentials work; account hint is not the key suffix. Bounded envelope decoding preserves VAT filtering, cursor/environment, duplicate guards and draft-only receiving. No stock/payment/fiscal/schema writes. 9/9 targeted tests PASS; application receiving remains NOT PASS. `CHECKPOINTS/CHANGES/2026-09-30-mydata-string-envelope.md`.
+
 ## 29/09/2026 — Κεντρική ΑΑΔΕ · περιορισμένο production LAB PASS
 
 - [x] Μετά τα PR #1540–#1542 / CI #3883 / Render `dbea7e0`, η εικόνα `image(20260929-202826).png` δείχνει επίσημη επωνυμία, δραστηριότητα και διεύθυνση από ΑΑΔΕ σε υπάρχουσα καρτέλα προμηθευτή της εταιρείας Διαδόχου. Readback παραγωγής από `Supplier` επιβεβαίωσε τα τρία αποθηκευμένα πεδία και χρόνο ενημέρωσης 29/09 23:26 Ελλάδας. Περιορισμένο PASS αναζήτησης και αποθήκευσης στη συγκεκριμένη εταιρεία/καρτέλα· απομόνωση άλλων εταιρειών, myDATA, τιμολόγια και άλλες ροές δεν δοκιμάστηκαν. `CHECKPOINTS/CHANGES/2026-09-29-central-aade-live-pass.md`.
