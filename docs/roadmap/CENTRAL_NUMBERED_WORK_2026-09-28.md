@@ -52,7 +52,7 @@
 - **16 · OPEN · ελεύθερο scope:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
 - **17 · OPEN · ελεύθερο scope:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.
 - **18 · LIVE PASS 30/09/2026:** Off-site PostgreSQL backup ανά τρεις ώρες σε ιδιωτικό Backblaze B2, αποτυχία/overdue monitoring και restore dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Πραγματικό upload 161.286.652 bytes, ανεξάρτητη λήψη με ίδιο SHA-256 και 436 table entries. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων.
-- **19 · AWAITING FINAL CI:** Περιορισμός περιττών GitHub/Render builds (HOME-06): ένας guarded δρόμος web deploy, service-specific Render filters, ακύρωση superseded CI και παράλειψη πλήρους CI/deploy για documentation-only commits. PR #1557 / CI #3917–3918 / exact production `7ee5ca6` PASS· τελικό workflow follow-up σε έλεγχο. Δεν μπλοκάρει το pilot.
+- **19 · FINAL PASS 30/09/2026:** Περιορισμός περιττών GitHub/Render builds (HOME-06): ένας guarded δρόμος web deploy, service-specific Render filters, ακύρωση superseded CI και παράλειψη πλήρους CI/deploy για documentation-only commits. PR #1557 / CI #3917–3918 / exact production `7ee5ca6` και PR #1558 / CI #3919–3920 / exact production `6d6384c`. Το documentation-only proof δεν ξεκίνησε web deploy ή cron rebuild.
 
 ## Προτεραιότητα 3 — προχωρημένα και επί πληρωμή modules από τις φωτογραφίες
 
