@@ -139,6 +139,50 @@ const promotionSchema=z.object({
 });
 const asDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?null:d};
 
+router.get("/promotions",async(req,res,next)=>{
+  try{
+    const rows=await prisma.$queryRaw`
+      SELECT pr."id",pr."companyId",c."name" AS "companyName",pr."productId",p."name" AS "productName",p."sku",
+        pr."promotionType",pr."offerMode",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."discountAmount",
+        pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",
+        COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
+      FROM "PriceCatalogPromotion" pr
+      JOIN "Company" c ON c."id"=pr."companyId"
+      JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
+      LEFT JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
+      LEFT JOIN "Store" s ON s."id"=ps."storeId" AND s."companyId"=pr."companyId"
+      GROUP BY pr."id",c."name",p."name",p."sku"
+      ORDER BY pr."validFrom" DESC,pr."createdAt" DESC LIMIT 1000`;
+    res.json({items:rows,count:rows.length});
+  }catch(error){next(error)}
+});
+
+router.get("/promotions/analysis",async(req,res,next)=>{
+  try{
+    const rows=await prisma.$queryRaw`
+      SELECT pr."id",pr."companyId",c."name" AS "companyName",p."name" AS "productName",pr."promotionType",pr."active",pr."validFrom",pr."validUntil",
+        COUNT(DISTINCT sl."saleId") FILTER (WHERE sale."id" IS NOT NULL AND sl."quantity">0)::int AS "salesCount",
+        COALESCE(SUM(CASE WHEN sale."id" IS NOT NULL AND sl."quantity">0 THEN sl."quantity" ELSE 0 END),0) AS "soldQuantity",
+        COALESCE(SUM(CASE WHEN sale."id" IS NOT NULL AND sl."quantity">0 THEN sl."lineTotal" ELSE 0 END),0) AS "salesAmount",
+        COALESCE(SUM(CASE WHEN sale."id" IS NOT NULL AND sl."quantity">0 THEN sl."discount" ELSE 0 END),0) AS "discountAmount",
+        COALESCE(SUM(CASE WHEN sale."id" IS NOT NULL AND sl."quantity"<0 THEN -sl."quantity" ELSE 0 END),0) AS "returnedQuantity",
+        COALESCE(SUM(CASE WHEN sale."id" IS NOT NULL AND sl."quantity"<0 THEN -sl."lineTotal" ELSE 0 END),0) AS "returnedAmount"
+      FROM "PriceCatalogPromotion" pr
+      JOIN "Company" c ON c."id"=pr."companyId"
+      JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
+      LEFT JOIN "SaleLine" sl ON sl."promotionId"=pr."id"
+      LEFT JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=pr."companyId" AND sale."status"='COMPLETED'
+      GROUP BY pr."id",c."name",p."name"
+      ORDER BY "salesAmount" DESC,pr."validFrom" DESC LIMIT 1000`;
+    const totals=rows.reduce((sum,row)=>({
+      salesCount:sum.salesCount+Number(row.salesCount||0),soldQuantity:sum.soldQuantity+Number(row.soldQuantity||0),
+      salesAmount:sum.salesAmount+Number(row.salesAmount||0),discountAmount:sum.discountAmount+Number(row.discountAmount||0),
+      returnedQuantity:sum.returnedQuantity+Number(row.returnedQuantity||0),returnedAmount:sum.returnedAmount+Number(row.returnedAmount||0)
+    }),{salesCount:0,soldQuantity:0,salesAmount:0,discountAmount:0,returnedQuantity:0,returnedAmount:0});
+    res.json({items:rows,totals,note:"Η ανάλυση περιλαμβάνει όλες τις εταιρείες και μόνο πωλήσεις με συγκεκριμένο promotionId."});
+  }catch(error){next(error)}
+});
+
 router.post("/promotions",async(req,res,next)=>{
   try{
     const body=promotionSchema.parse(req.body||{}),productIds=[...new Set(body.masterProductIds)],giftMasterProductIds=[...new Set(body.giftMasterProductIds)],storeIds=[...new Set(body.storeIds)],validFrom=asDate(body.validFrom),validUntil=body.validUntil?asDate(body.validUntil):null;
