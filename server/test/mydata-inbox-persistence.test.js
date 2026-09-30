@@ -6,7 +6,8 @@ import * as xmlHelpers from "../src/mydata-xml.js";
 test("real sync handler uses raw Supplier lookup and writes one draft, including unmatched suppliers",async()=>{
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8");
   const routes=new Map(),queries=[],writes=[];
-  let matchingSupplier=true,alreadyExists=false;
+  let matchingSupplier=true,alreadyExists=false,pendingOriginals=[];
+  const acquired=[];
   const tx={
     async $queryRaw(strings,...values){
       const sql=strings.join("?");queries.push({sql,values});
@@ -23,14 +24,15 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
       const sql=strings.join("?");
       if(sql.includes('FROM "StoreIntegrationCredential"'))return [{enabled:true,environment:"PRODUCTION",credentialsEnc:"fixture"}];
       if(sql.includes('MAX('))return [{lastMark:"0"}];
+      if(sql.includes('originalPending'))return pendingOriginals;
       throw new Error(`Unexpected query: ${sql}`);
     },
     async $transaction(callback){return callback(tx)}
   };
   const key="__mydataPersistenceTest";
-  globalThis[key]={prisma,Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
+  globalThis[key]={prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
   const injected=`import crypto from "node:crypto";
-    const {prisma,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
+    const {prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
     const decryptStoreIntegrationCredentials=()=>({accountId:"fixture",secret:"fixture"});\n`;
@@ -42,7 +44,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
   try{
     const run=async()=>{
       let result,failure;
-      await handler({body:{storeId:"store-one"},user:{companyId:"company-one",id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
+      await handler({body:{storeId:"store-one"},license:{activeModules:["DOCUMENTS","AI_READER"]},user:{companyId:"company-one",id:"owner-one",role:"OWNER"}},{json(value){result=value}},error=>{failure=error});
       assert.ifError(failure);return result;
     };
     let result=await run();assert.equal(result.created,1);assert.equal(result.documents[0].supplierName,"Supplier One");
@@ -56,5 +58,10 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     result=await run();assert.equal(result.created,0);assert.equal(result.duplicates,1);assert.equal(writes.length,0);
     assert.equal(queries.some(q=>q.sql.includes('FROM "Supplier"')),false);
     assert.equal(result.stockUpdated,false);assert.equal(result.fiscalTransmission,false);
+    pendingOriginals=[{inboxId:"pending-one"}];
+    result=await run();assert.equal(result.originalsDownloaded,1);
+    assert.deepEqual(acquired[0].slice(1),["company-one","store-one","pending-one","owner-one",true]);
+    assert.equal(writes.length,0); // attachment helper mocked; receiving replay still writes nothing
+
   }finally{globalThis.fetch=previousFetch}
 });

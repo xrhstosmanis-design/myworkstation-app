@@ -6,6 +6,7 @@ import {requireCompanyModule} from "../middleware/module-access.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
+import {acquireOriginal} from "../mydata-original.js";
 
 const router=Router();
 let schemaPromise;
@@ -26,6 +27,14 @@ async function ensureSchema(){
 }
 const endpoint=environment=>environment==="SANDBOX"?"https://mydataapidev.aade.gr/RequestDocs":"https://mydatapi.aade.gr/myDATA/RequestDocs";
 function syncError(message,status=502){const error=new Error(message);error.status=status;return error}
+
+router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS"),requireCompanyModule("AI_READER"),async(req,res,next)=>{try{
+  if(!canSync(req))return res.status(403).json({error:"Ο έλεγχος επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  const store=await prisma.store.findFirst({where:{id:String(req.body?.storeId||""),companyId:req.user.companyId},select:{id:true}});
+  if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  await ensureSchema();
+  res.json(await acquireOriginal(prisma,req.user.companyId,store.id,req.params.inboxId,req.user.id,true));
+}catch(error){next(error)}});
 
 router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   if(!canSync(req))return res.status(403).json({error:"Το αρχείο επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
@@ -87,7 +96,7 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
       const inboxId=crypto.randomUUID(),recordId=crypto.randomUUID(),title=["myDATA",doc.series,doc.documentNumber].filter(Boolean).join(" ");
       const note=`${title} • MARK ${doc.mark} • ${doc.totalGross.toFixed(2)} € • Πρόχειρο — απαιτείται πρωτότυπο PDF/OCR και επιβεβαίωση πριν την αποθήκη`;
       await tx.$executeRaw`INSERT INTO "DocumentInbox" ("id","companyId","storeId","supplierId","status","note","responsibleName","createdByUserId") VALUES (${inboxId},${req.user.companyId},${store.id},${supplier?.id||null},'RECEIVED',${note},'Αυτόματη λήψη myDATA',${req.user.id})`;
-      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify({source,xml:invoice})}::jsonb)`;
+      await tx.$executeRaw`INSERT INTO "MyDataInboundDocument" ("id","companyId","storeId","inboxId","mark","uid","issuerVat","counterpartVat","series","documentNumber","issueDate","invoiceType","currency","totalNet","totalVat","totalGross","rawPayload") VALUES (${recordId},${req.user.companyId},${store.id},${inboxId},${doc.mark},${doc.uid},${doc.issuerVat},${doc.counterpartVat},${doc.series},${doc.documentNumber},${doc.issueDate?new Date(`${doc.issueDate}T00:00:00Z`):null},${doc.invoiceType},${doc.currency},${doc.totalNet},${doc.totalVat},${doc.totalGross},${JSON.stringify({source,xml:invoice,originalPending:true})}::jsonb)`;
       return {id:inboxId,...doc,supplierName:supplier?.name||null};
     });
     if(result)created.push(result);else duplicates++;
@@ -96,8 +105,18 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
     if(page){const key=`${page.partition}:${page.row}`;if(pages.has(key))throw syncError("Η σελιδοποίηση myDATA επανέλαβε την ίδια σελίδα.");pages.add(key)}
     if(pages.size>=100)throw syncError("Η λήψη σταμάτησε στο όριο 100 σελίδων. Επαναλάβετε τον συγχρονισμό.");
   }while(page);
+  // Bounded retries only for records received after this feature; no historic mass ingestion.
+  const pending=await prisma.$queryRaw`SELECT m."inboxId" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${req.user.companyId} AND m."storeId"=${store.id} AND m."rawPayload"->>'originalPending'='true' AND i."attachmentId" IS NULL AND i."status"='RECEIVED' AND COALESCE((m."rawPayload"->>'originalAttempts')::int,0)<3 ORDER BY m."fetchedAt" ASC LIMIT 3`;
+  let originalsDownloaded=0,originalsFailed=0;
+  for(const item of pending){try{
+    const result=await acquireOriginal(prisma,req.user.companyId,store.id,item.inboxId,req.user.id,Boolean(req.license?.superAdminBypass||req.license?.activeModules?.includes("AI_READER")));
+    if(result.downloaded)originalsDownloaded++;
+  }catch{
+    originalsFailed++;
+    await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
+  }}
   const message=created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:fetched===0?"Η ΑΑΔΕ δεν επέστρεψε εισερχόμενα παραστατικά για αυτή τη σύνδεση και αυτό το διάστημα ΜΑΡΚ.":`Η ΑΑΔΕ επέστρεψε ${fetched} παραστατικά: ${duplicates} υπήρχαν ήδη, ${ignoredVat} δεν ταίριαξαν με το ΑΦΜ εταιρείας, ${missingMark} δεν είχαν ΜΑΡΚ. Δεν δημιουργήθηκε πρόχειρο.`;
-  res.json({ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,stockUpdated:false,fiscalTransmission:false,message});
+  res.json({ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`});
 }catch(error){next(error)}});
 
 router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
