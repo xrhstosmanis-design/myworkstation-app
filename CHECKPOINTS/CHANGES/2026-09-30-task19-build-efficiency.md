@@ -29,4 +29,6 @@
 - Production client/server build: PASS.
 - PR #1557 / CI #3917 και main CI #3918 PASS, merge/exact production `7ee5ca6`.
 - Render readback: web Auto-Deploy `Off`, πέντε ignored paths ενεργά, cron included path `ops/backup/**`, και κανένα νέο cron build για το web-only commit.
-- Εκκρεμεί CI/merge μόνο για το docs-only GitHub skip του ίδιου scope.
+- PR #1558 / CI #3919 και main CI #3920 PASS, merge/exact production `6d6384c`.
+- Τελικό documentation-only proof: ο classifier ολοκλήρωσε επιτυχώς χωρίς το βαρύ `build-and-test`, χωρίς production deploy και χωρίς cron rebuild.
+- **FINAL PASS 30/09/2026.**
