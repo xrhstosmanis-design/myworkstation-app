@@ -1912,3 +1912,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 30/09/2026 — Ασφαλής εκκίνηση παραγωγής · AWAITING CI/DEPLOY
 
 - [ ] Τα deploys μετά το #1548/#1549 σταμάτησαν στο `prisma db push`, καθώς προτάθηκε διαγραφή πολλών μη κενών πινάκων. Δεν επιτράπηκε απώλεια δεδομένων· το προηγούμενο revision παρέμεινε live. Αλλαγή στο `prisma:push` παραλείπει το schema push μόνο με `NODE_ENV=production`, διατηρώντας Prisma client generation και τη δοκιμαστική ροή. Απαιτείται CI και exact live deploy· η λήψη του τιμολογίου Διαδόχου παραμένει AWAITING LAB. `CHECKPOINTS/CHANGES/2026-09-30-production-safe-prisma-startup.md`.
+
+
+## 30/09/2026 — Εργασία #18 · Backblaze B2
+
+- [ ] **BACKBLAZE B2 ADAPTER · PR #1555 / AWAITING CI:** Προστέθηκε υποχρεωτικό S3-compatible endpoint για Backblaze B2 πάνω στο σημερινό `main`, χωρίς αλλαγή στο 3ωρο schedule, στο monitoring ή στο dry-run-only όριο. Κανένα πραγματικό restore ή production data replacement. `CHECKPOINTS/CHANGES/2026-09-30-task18-backblaze-b2.md`.

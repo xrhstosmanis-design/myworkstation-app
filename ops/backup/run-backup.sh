@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-required="DATABASE_URL AWS_REGION S3_BUCKET_NAME BACKUP_MONITOR_URL BACKUP_MONITOR_SECRET"
+required="DATABASE_URL AWS_REGION S3_BUCKET_NAME S3_ENDPOINT_URL BACKUP_MONITOR_URL BACKUP_MONITOR_SECRET"
 for name in $required; do
   eval "value=\${$name:-}"
   if [ -z "$value" ]; then
@@ -17,6 +17,10 @@ archive="/tmp/myworkstation-${run_id}.dump"
 toc="/tmp/myworkstation-${run_id}.toc"
 object_key="myworkstation/$(date -u +%Y/%m/%d)/backup-${run_id}.dump"
 notified_success=0
+
+aws_s3api() {
+  aws s3api "$@" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL"
+}
 
 notify() {
   status="$1"; checksum="${2:-}"; size="${3:-0}"; error_code="${4:-}"
@@ -41,10 +45,10 @@ notify STARTED
 
 # The bucket must already exist, remain private, use versioning and have default
 # encryption. The job never creates or weakens storage security.
-aws s3api head-bucket --bucket "$S3_BUCKET_NAME" --region "$AWS_REGION" >/dev/null
-versioning="$(aws s3api get-bucket-versioning --bucket "$S3_BUCKET_NAME" --region "$AWS_REGION" --query Status --output text)"
+aws_s3api head-bucket --bucket "$S3_BUCKET_NAME" >/dev/null
+versioning="$(aws_s3api get-bucket-versioning --bucket "$S3_BUCKET_NAME" --query Status --output text)"
 [ "$versioning" = "Enabled" ] || { echo "S3 bucket versioning is not enabled" >&2; exit 3; }
-aws s3api get-bucket-encryption --bucket "$S3_BUCKET_NAME" --region "$AWS_REGION" >/dev/null
+aws_s3api get-bucket-encryption --bucket "$S3_BUCKET_NAME" >/dev/null
 
 pg_dump --format=custom --compress=6 --no-owner --no-privileges --file="$archive" "$DATABASE_URL"
 [ -s "$archive" ] || { echo "pg_dump produced an empty archive" >&2; exit 4; }
@@ -56,8 +60,8 @@ grep -Eq 'TABLE|TABLE DATA' "$toc" || { echo "Backup archive has no table entrie
 
 checksum="$(sha256sum "$archive" | awk '{print $1}')"
 size_bytes="$(wc -c <"$archive" | tr -d ' ')"
-aws s3 cp "$archive" "s3://$S3_BUCKET_NAME/$object_key" --region "$AWS_REGION" --only-show-errors --sse AES256 --metadata "sha256=$checksum,run-id=$run_id,dry-run=passed"
-remote_size="$(aws s3api head-object --bucket "$S3_BUCKET_NAME" --key "$object_key" --region "$AWS_REGION" --query ContentLength --output text)"
+aws s3 cp "$archive" "s3://$S3_BUCKET_NAME/$object_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL" --only-show-errors --sse AES256 --metadata "sha256=$checksum,run-id=$run_id,dry-run=passed"
+remote_size="$(aws_s3api head-object --bucket "$S3_BUCKET_NAME" --key "$object_key" --query ContentLength --output text)"
 [ "$remote_size" = "$size_bytes" ] || { echo "Uploaded object size mismatch" >&2; exit 6; }
 
 notify SUCCEEDED "$checksum" "$size_bytes"

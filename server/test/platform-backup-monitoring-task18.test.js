@@ -13,8 +13,10 @@ test("task 18 schedules one off-site encrypted backup every three hours",()=>{
   assert.match(render,/name: myworkstation-db-backup/);
   assert.match(render,/schedule: "0 \*\/3 \* \* \*"/);
   assert.match(render,/S3_BUCKET_NAME/);
+  assert.match(render,/S3_ENDPOINT_URL/);
   assert.match(job,/pg_dump --format=custom/);
   assert.match(job,/--sse AES256/);
+  assert.match(job,/--endpoint-url "\$S3_ENDPOINT_URL"/);
   assert.match(job,/get-bucket-versioning/);
   assert.match(job,/get-bucket-encryption/);
 });
