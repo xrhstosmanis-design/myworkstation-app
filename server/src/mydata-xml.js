@@ -3,6 +3,16 @@ const number=value=>{const n=Number(String(value??"").replace(",","."));return N
 const entity=value=>String(value||"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
 function tag(xml,name){const match=new RegExp(`<(?:[A-Za-z0-9_-]+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[A-Za-z0-9_-]+:)?${name}>`,`i`).exec(xml);return match?entity(match[1].trim()):null}
 
+// Production RequestDocs may serialize the entire XML document as an escaped
+// .NET string. Decode only that envelope, never the invoice's own text fields.
+export function unwrapMyDataXml(value){
+  const xml=String(value||"").trim();
+  if(!/^(?:<\?xml[^?]*\?>\s*)?<(?:[A-Za-z0-9_-]+:)?string(?:\s[^>]*)?>/i.test(xml))return xml;
+  const inner=tag(xml,"string");
+  if(!inner||!/^\s*(?:<\?xml[^?]*\?>\s*)?<(?:[A-Za-z0-9_-]+:)?(?:RequestedDoc|Response|InvoicesDoc)(?:\s|>)/i.test(inner))throw new Error("Μη έγκυρο XML περιτύλιγμα απάντησης myDATA.");
+  return inner;
+}
+
 export function myDataError(xml){return /<(?:[A-Za-z0-9_-]+:)?error(?:\s[^>]*)?>/i.test(String(xml||""))?(tag(xml,"message")||"Ελέγξτε τους κωδικούς και το δοκιμαστικό περιβάλλον."):null}
 export function invoiceNodes(xml){return [...String(xml||"").matchAll(/<(?:[A-Za-z0-9_-]+:)?invoice(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z0-9_-]+:)?invoice>/gi)].map(match=>match[1])}
 export function nextPage(xml){const partition=clean(tag(xml,"nextPartitionKey")),row=clean(tag(xml,"nextRowKey"));if(Boolean(partition)!==Boolean(row))throw new Error("Η απάντηση myDATA περιέχει ελλιπή στοιχεία σελιδοποίησης.");return partition?{partition,row}:null}
