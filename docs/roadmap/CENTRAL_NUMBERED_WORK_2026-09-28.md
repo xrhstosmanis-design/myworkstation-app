@@ -51,8 +51,8 @@
 - **15 · OPEN · ελεύθερο scope:** Πρώτη αυτόματη OCR ανάγνωση τιμολογίου ως μελλοντική βελτίωση, χωρίς επανάληψη του G03 βοηθού.
 - **16 · OPEN · ελεύθερο scope:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
 - **17 · OPEN · ελεύθερο scope:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.
-- **18 · BACKBLAZE B2 ADAPTER · AWAITING CI / EXTERNAL SETUP / LIVE RUN:** Off-site PostgreSQL backup ανά τρεις ώρες, αποτυχία/overdue monitoring και restore dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Η αρχική υλοποίηση είναι live από PR #1544 / CI #3887. Μετά από έξι ασφαλείς fail-closed εκτελέσεις χωρίς AWS ρύθμιση, επιλέχθηκε Backblaze B2 και προστέθηκε S3-compatible endpoint. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων. B2 bucket, Object Lock, secrets και πραγματικό upload απαιτούνται πριν από LIVE PASS.
-- **19 · OPEN · ελεύθερο scope:** Περιορισμός περιττών GitHub/Render builds (HOME-06 από τη δεύτερη φωτογραφία). Δεν μπλοκάρει το pilot.
+- **18 · LIVE PASS 30/09/2026:** Off-site PostgreSQL backup ανά τρεις ώρες σε ιδιωτικό Backblaze B2, αποτυχία/overdue monitoring και restore dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Πραγματικό upload 161.286.652 bytes, ανεξάρτητη λήψη με ίδιο SHA-256 και 436 table entries. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων.
+- **19 · ΑΝΑΤΕΘΗΚΕ · `fix/task19-build-filters`:** Περιορισμός περιττών GitHub/Render builds (HOME-06): ένας guarded δρόμος web deploy, service-specific Render filters και ακύρωση superseded CI. Δεν μπλοκάρει το pilot.
 
 ## Προτεραιότητα 3 — προχωρημένα και επί πληρωμή modules από τις φωτογραφίες
 

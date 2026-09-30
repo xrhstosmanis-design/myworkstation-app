@@ -1921,4 +1921,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 30/09/2026 — Εργασία #18 · Backblaze B2
 
-- [ ] **BACKBLAZE B2 ADAPTER · PR #1555 / AWAITING CI:** Προστέθηκε υποχρεωτικό S3-compatible endpoint για Backblaze B2 πάνω στο σημερινό `main`, χωρίς αλλαγή στο 3ωρο schedule, στο monitoring ή στο dry-run-only όριο. Κανένα πραγματικό restore ή production data replacement. `CHECKPOINTS/CHANGES/2026-09-30-task18-backblaze-b2.md`.
+- [x] **LIVE PASS:** PR #1555 / merge `3868c16`, επιτυχές πραγματικό upload 161.286.652 bytes, ίδιο SHA-256 μετά από ανεξάρτητη λήψη, `pg_restore --list` PASS με 436 table entries και ενεργό 3ωρο cron/monitoring. Κανένα πραγματικό restore ή production data replacement. `CHECKPOINTS/CHANGES/2026-09-30-task18-backblaze-b2.md`.
+
+## 30/09/2026 — Εργασία #19 · Περιορισμός περιττών GitHub/Render builds
+
+- [ ] **LOCAL PASS · AWAITING CI · `fix/task19-build-filters`:** ένας guarded δρόμος production web deploy, Render build filters ανά service και ακύρωση superseded CI στο ίδιο PR/branch. Targeted 10/10, full server 1.653 PASS / 0 FAIL / 1 SKIP και production build PASS. Καμία αλλαγή σε επιχειρησιακή λειτουργία ή δεδομένα. `CHECKPOINTS/CHANGES/2026-09-30-task19-build-efficiency.md`.
