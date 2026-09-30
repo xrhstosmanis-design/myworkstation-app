@@ -11,7 +11,7 @@
 **27/09 — Ετικέτα EAN-13: συνολικό scope PASS / αφαιρέθηκε από τις εκκρεμότητες.** USER PASS φυσικής εκτύπωσης→σάρωσης, LAB PASS προεπισκόπησης/Audit και αποκλεισμού άκυρου EAN, δεύτερο LAB readback με διαφορετικές ρυθμίσεις, HTTP E2E 200/403/403 (#1459, CI #3690). Production εχθρικό API αίτημα με LAB token NOT TESTED. ΚΑΤ αμετάβλητο. Checkpoint `CHECKPOINTS/CHANGES/2026-09-27-ean13-label-isolation-final.md`.
 
 
-**ASSIGNED - `codex/mydata-archive-export-20260930` (same installation page):** Owner authorized full archive search/paging, Excel export and generated PDF reports at 21:19. Implementation AWAITING CI / DEPLOY / USER. PDF uses Print / Save as PDF; original supplier PDF/QR acquisition is separate and still OPEN. Subsequent sync/cursor/replay and final posting remain NOT TESTED. Initial receiving PASS #1553 preserved. `CHECKPOINTS/CHANGES/2026-09-30-mydata-archive-export.md`.
+**ASSIGNED - `codex/mydata-report-layout-20260930` (same installation page):** PDF column readability after saved-file open split identifiers/VAT. AWAITING CI-DEPLOY-READBACK. Known-record full-archive search and filtered XLSX download/open/readback completed with owner evidence 22:08. PDF save/open confirmed; full archive user export, originals/QR, cursor/replay and final posting remain OPEN. `CHECKPOINTS/CHANGES/2026-09-30-mydata-export-user-evidence.md`.
 
 # MyWorkStation - Κεντρική λίστα εκκρεμοτήτων και σειρά υλοποίησης
 

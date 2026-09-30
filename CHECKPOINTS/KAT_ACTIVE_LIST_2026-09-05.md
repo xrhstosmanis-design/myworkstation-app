@@ -1,3 +1,8 @@
+## 30/09/2026 22:08 Greece - full-archive known search and single-record XLSX USER PASS; PDF layout AWAITING
+
+- [x] Owner images confirm known 135848 search 1/5269 and XLSX opened with 60.60 / 14.54 / 75.14 and full MARK. PDF saved and opens as one page; do not request same artifacts again.
+- [ ] ASSIGNED `codex/mydata-report-layout-20260930`, same installation page: fixed-width PDF report readability after identifier/VAT wrap FAIL. AWAITING CI-DEPLOY-READBACK. Full archive user export, replay/cursor, originals and final posting remain OPEN. `CHECKPOINTS/CHANGES/2026-09-30-mydata-export-user-evidence.md`.
+
 ## 30/09/2026 - myDATA full archive / Excel / PDF report - AWAITING CI-DEPLOY-USER
 
 - [ ] ASSIGNED `codex/mydata-archive-export-20260930`, same installation page, owner authorized 21:19. Full tenant/store archive search and paging, all-filtered XLSX export, generated PDF report via browser Print/Save as PDF, separate original attachment action. 14/14 targeted tests and frontend build PASS; generated workbook re-read with 5,269 fixtures. Production read-only search query finds known 135848 once. No user export PASS, no original/QR acquisition or final posting. Initial receiving PASS #1553 preserved. `CHECKPOINTS/CHANGES/2026-09-30-mydata-archive-export.md`.
