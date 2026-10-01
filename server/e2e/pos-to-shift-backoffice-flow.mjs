@@ -233,6 +233,46 @@ async function main(){
   }
   console.log('E2E task27 Athens calendar periods passed',{start:'2030-09-30T21Z',sales:5,purchases:7,expenses:12});
 
+  // Original-date cost anchoring for returns/cancellations, isolated CI only.
+  const reverseFixture=`task27-reverse-${saleId}`;
+  const reverseIds=['original-return','original-cancel','return','cancel','orphan'].map(x=>`${reverseFixture}-${x}`);
+  const reverseDocs=['old','new'].map(x=>`${reverseFixture}-${x}`);
+  const reversePath=(a,b=a)=>`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=${a}&calendarTo=${b}`;
+  try{
+    for(const [index,date,cost] of [[0,'2031-02-28T12:00:00Z',2],[1,'2031-03-02T12:00:00Z',9]]){
+      await prisma.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate") VALUES (${reverseDocs[index]},${companyId},${storeId},'APPROVED',${new Date(date)})`;
+      await prisma.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","unitCost","quantity","unit") VALUES (${reverseDocs[index]+"-line"},${reverseDocs[index]},${productId},'Isolated dated cost',${cost},1,'PIECE')`;
+    }
+    for(let index=0;index<reverseIds.length;index++){
+      const reversed=index>=2,total=index===0||index===2?20:10;
+      const kind=index===3?'CANCEL':reversed?'RETURN':null;
+      const original=index===2?reverseIds[0]:index===3?reverseIds[1]:index===4?'missing-original':null;
+      const date=index<2?'2031-03-01T12:00:00Z':index<4?'2031-03-03T12:00:00Z':'2031-03-04T12:00:00Z';
+      await prisma.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","occurredAt","total","source","originalSaleId","reversalKind") VALUES (${reverseIds[index]},${companyId},${storeId},${new Date(date)},${reversed?-total:total},${reversed?'POS_REVERSAL':'POS'},${original},${kind})`;
+      for(let line=0;line<total/10;line++)await prisma.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","vatRate","lineTotal") VALUES (${reverseIds[index]+"-line-"+line},${reverseIds[index]},${productId},'Isolated reversal line',${reversed?-1:1},0,${reversed?-10:10})`;
+    }
+    const beforeReversalRead=await snapshot();
+    const reversed=await request(reversePath('2031-03-03'),{token:ownerToken});
+    assert.equal(reversed.response.status,200,JSON.stringify(reversed.payload));
+    const r=reversed.payload.totals;
+    assert.equal(r.returnTransactions,1,'Multi-line return must count once');
+    assert.equal(r.cancelTransactions,1);
+    assert.equal(r.salesGross,-30);assert.equal(r.salesNet,-30);
+    assert.equal(r.costValue,-6,'Reversals must restore original-date cost2, not later cost9');
+    assert.equal(r.missingCostLines,0);assert.equal(r.grossProfit,-24);
+    for(const row of [...reversed.payload.daily,...reversed.payload.monthly]){assert.equal(row.returnTransactions,1);assert.equal(row.cancelTransactions,1);assert.equal(row.costValue,-6);}
+    const combined=await request(reversePath('2031-03-01','2031-03-03'),{token:ownerToken});
+    assert.equal(combined.payload.totals.salesGross,0);assert.equal(combined.payload.totals.costValue,0);assert.equal(combined.payload.totals.grossProfit,0);
+    const orphan=await request(reversePath('2031-03-04'),{token:ownerToken});
+    assert.equal(orphan.payload.totals.returnTransactions,1);assert.equal(orphan.payload.totals.missingCostLines,1);
+    for(const row of [orphan.payload.totals,...orphan.payload.monthly,...orphan.payload.daily]){assert.equal(row.grossProfit,null);assert.equal(row.netProfit,null);assert.equal(row.margin,null);}
+    assert.deepEqual(await snapshot(),beforeReversalRead,'Reversal report reads must not change ledgers');
+  }finally{
+    for(const id of reverseIds)await prisma.$executeRaw`DELETE FROM "Sale" WHERE "id"=${id} AND "companyId"=${companyId}`;
+    for(const id of reverseDocs)await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${id} AND "companyId"=${companyId}`;
+  }
+  console.log('E2E task27 original-date reversal cost passed',{returns:1,cancellations:1,sales:-30,cost:-6,laterCostNotUsed:9,orphanProfit:null});
+
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }
 
