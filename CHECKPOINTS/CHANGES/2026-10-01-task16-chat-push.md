@@ -13,3 +13,7 @@ LAB11/09 αποστολή/μία εμφάνιση μετά refresh/αναζήτ�
 ## Απομονωμένη αναπαραγωγή / ελάχιστη διόρθωση
 
 Πραγματικό sw.js εκτελέστηκε σε Node VM με WindowClient fixtures: πριν1/7PASS,6FAIL. PushB μεvisibleA δεν έδειχνε notification, και clickB μετέφερε το A. StorePosPanel ήδη απορρίπτει push διαφορετικού storeId, άρα η ειδοποίηση χανόταν. Μόνο sw.js αλλάζει: foreground μόνο ακριβές ίδιο store/origin, αλλιώς systemnotification με silent:false. Click εστιάζει μόνο το αντίστοιχο storepath ή ανοίγει νέα καρτέλα, χωρίς navigate άλλουPOS. Άκυρα/εξωτερικά destinations περιορίζονται στο origin.7/7 LOCAL PASS, Node24· απαιτείται Node20/full CI. Καμία αλλαγή API/δικαιωμάτων/DB/συνδρομών ή offlinefetch. Πραγματικό backgroundpush/ήχος AWAITING LAB.
+
+## Πραγματικό payload destination — συνέχεια ίδιου causal scope
+
+Μετά#1589/CI3992(1740PASS), το sendStoreChatPush payload διαβάστηκε πλήρως: url:"/", storeId πραγματικού καταστήματος. Το προηγούμενο fixture με/store/B δεν κάλυπτε αυτό το legacyroot. Προστίθεται όγδοο behavioral fixture με το πραγματικό rootpayload. Ο serviceworker παράγει ασφαλές /store/<encoded storeId> destination, χωρίς αλλαγή server/API/DB. Η ειδοποίηση δεν οδηγεί πλέον αυθαίρετα στοroot. AWAITING CI/exact deploy/real Push.
