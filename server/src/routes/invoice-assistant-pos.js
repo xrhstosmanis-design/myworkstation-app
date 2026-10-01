@@ -2,7 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
-import {fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,normalizedAssistantPages,parsePrintedPayable} from "./invoice-assistant-review.js";
+import {fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoiceHumanQuantityReview,normalizedAssistantPages,parsePrintedPayable} from "./invoice-assistant-review.js";
 import {invoiceAssistantPageCount,normalizePdfPageEvidence} from "../lib/invoice-assistant-page-count.js";
 import {invoiceAssistantImageViews} from "../lib/invoice-assistant-image-views.js";
 import {invoiceAssistantProviderError} from "../lib/invoice-assistant-provider-error.js";
@@ -140,10 +140,9 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const equivalentDiscountLines=new Set(printedLines.filter(line=>hasEquivalentPrintedEconomics(current.find(row=>row.id===line.matchingLineId),line)).map(line=>line.matchingLineId));
     const safeCorrections=corrections.filter(change=>!change.field.startsWith("discount")||!equivalentDiscountLines.has(change.lineId));
     parsed.unnumberedPageEvidence=normalizePdfPageEvidence(parsed.unnumberedPageEvidence,result.pages,result.document.documentNumber);
-    const checks=invoicePageReviewChecks({...normalizedAssistantPages({...parsed,sourcePageCount}),sourcePageCount,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,unnumberedPageEvidence:parsed.unnumberedPageEvidence,documentNumber:result.document.documentNumber});
-    const reviewReady=checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
+    const {checks,reviewReady,quantityReviewRequired}=invoiceHumanQuantityReview({...normalizedAssistantPages({...parsed,sourcePageCount}),sourcePageCount,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,unnumberedPageEvidence:parsed.unnumberedPageEvidence,documentNumber:result.document.documentNumber});
     const issues=[pageVerificationIssue||null,!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φυσικές σελίδες ${sourcePageCount}, τεκμήρια ${JSON.stringify(parsed.unnumberedPageEvidence||[]).slice(0,500)}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
-    res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?safeCorrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":`${issues.join(" ")} Οι προτάσεις δεν εφαρμόζονται.`});
+    res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?safeCorrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,quantityReviewRequired,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":`${issues.join(" ")} Οι προτάσεις δεν εφαρμόζονται.`});
   }catch(error){next(error)}
 });
 

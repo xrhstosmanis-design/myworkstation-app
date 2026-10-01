@@ -23,3 +23,7 @@ Full server suite:1691PASS/1SKIP,1692 total; no client source change. CI product
 
 **01/10 11:31 Greece — #1571 exact LIVE / AWAITING USER:** runtime `ca354a97821dd5696f45db81b65c5ba9d5894426`, Render `dep-dav1jgd9fdbs73as07rg` LIVE2026-10-01T08:31:29.263986Z; PR CI36836022482 and main CI36836320927 PASS (Node20/server/build/invariants/isolated HTTP E2E). Same real TDA0006538 PDF passes local identity verification; no production attachment/draft USER PASS yet. Read-only11:32:07 Greece target inbox remains RECEIVED, attachmentnull, attempts3, draftnull; store PurchaseDocument1/StoreTransaction0/StockMovement0, unchanged since before. Existing-record manual retry next; no attempt reset/new invoice/payment/posting. Same owner ASSIGNED; Epsilon remains OPEN.
 
+
+## 01/10 11:43 Greece - limited USER PASS original delivery
+
+Owner image084355/file_000000002f1481f4a02670f4f57280f4 and explicit confirmation show original TDA0006538 attached/displayed in the same draft after #1571. Before11:32:07 RECEIVED/noattachment/nodraft; after11:51:15 IN_REVIEW/oneattachment/one new draft, PurchaseDocument1→2, StoreTransaction0→0, StockMovement0→0. Scoped acquisition/linkage/display acceptance closed together with active/manual/roadmap/PDF in2026-10-01-mydata-quantity-human-review.md. Stock quantities/control financial balances NOT TESTED. New footer63-vs19 review-blocking FAIL remains assigned; no application/posting PASS.

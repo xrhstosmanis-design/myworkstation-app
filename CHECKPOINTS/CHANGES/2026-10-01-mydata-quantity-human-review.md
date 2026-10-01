@@ -1,0 +1,21 @@
+# TDA6538: original delivery USER PASS; footer quantity human confirmation — 01/10/2026
+
+ASSIGNED same owner `codex/mydata-draft-pos-receipt-20260930`. User11:47: original transfers correctly, but quantity disagreement prevents applying checked rows; requests human-confirmed progression. One bounded causal change, no OCR/model/prompt or finalization change. Existing Gate3 acceptance and POS physical-supplier payment remain protected.
+
+## Actual original delivery / limited USER PASS
+Owner image(20261001-084355).png / file_000000002f1481f4a02670f4f57280f4 at11:43 shows original mydata-6538-400015481646556.pdf one physical page inside existing editable TDA6538 draft. Owner explicitly confirms correct transfer. Runtime at screenshot ca354a97821dd5696f45db81b65c5ba9d5894426 (#1571, Render dep-dav1jgd9fdbs73as07rg LIVE11:31:29); next unrelated #1573 revision only became live11:48:20, after image.
+
+Before11:32:07.722226 Greece samecompanycmulmjjoa000oqlbfyi0h53ju/storecmulmjjoc000qqlbf2bn2ifj0: inbox0b60e1fe-b7cb-40a4-a134-47b40f2f2aa2 RECEIVED, attachmentnull/draftnull. PurchaseDocument1, StoreTransaction0, StockMovement0. After11:51:15.156663: inboxIN_REVIEW; attachment0a499a71-3fda-40c3-bbbe-36fd56703f0f; document5d61d44f-4611-4c2c-9f1b-c4d31bdb0a55; ordera0094679-8a4b-4333-a77b-9a4b793b34ba. PurchaseDocument2 (+1), transactions0/movements0. One original linked to one new draft. Stock quantities/control shift financial balances NOT TESTED; no stock-quantity or full financial PASS inferred.
+
+## New real FAIL / footer quantity
+7 physical rows quantities30,5,10,3,5,5,5 =>63. Same original prints “Σύνολο Τεμαχίων19”. Old assistant treats quantity disagreement as incomplete pages and hides apply even after row selection. All seven rows visible; net103.50, printedVAT13.46/gross116.96. UI row-tax rounding computes13.47/gross116.97 difference0.01, within existing0.05 financial tolerance; no new rounding correction/tolerance. This is NOT line-application or posting PASS. Do not replace63 with19 or infer packaging factor to force agreement.
+
+## Bounded correction / AWAITING CI-DEPLOY-USER
+Preview separates a readable contradictory footer quantity from missing pages/financial disagreement. Strict assessInvoicePages stays unchanged for automatic assessment; new human-review helper preserves original raw checks and independently requires complete page evidence plus net/gross agreement. Only positive readable row quantities with readable footer disagreement can offer human review. Missing/malformed quantities, missing page/evidence, different document page and financial mismatch cannot use this exception.
+
+UI shows original footer versus current row sum, requires every printed row selected and a separate explicit confirmation of checked row quantities. Apply button disabled and handler guard until both. Any field edit clears confirmation; partial selection cannot acknowledge aggregate discrepancy; completion/failure resets confirmation. Uses existing line validation, patch/add/delete and concurrent-edit guards. Selected rows remain proposals until human apply; no automatic stock/payment/approval action, no schema/credential change or supplier-rule invention.
+
+22 targeted tests pass including63-vs19, strict automatic rejection unchanged, missing-row selection/no checkbox rejection, financial/missing quantity/page failures and unnumbered multi-page evidence. Full local1693PASS/1SKIP/buildPASS. CI production checks still required; local checkout predates unrelated #1573, publication based currentmain and preserves its source.
+
+## Next acceptance
+After exact live revision, refresh existing draft only. Reuse saved assistant result if available; do not repeat a paid preview unless necessary to retrieve preview state. Observe warning and selected rows; explicit quantity checkbox unlocks apply only with all rows and reconciled finances. Fresh same-doc before/after immediately before applying; verify7 stored rows/63printedunits, no second order/attachment/job/payment/stock. Human application remains separate from approval/posting and physicalPOSarrival payment. Existing originals/Gate3 PASS protected. Epsilon unsupported remains OPEN. All five checkpoint/active/manual/roadmap/centralPDF record original-delivery scope together, new quantity confirmation remains AWAITING USER.

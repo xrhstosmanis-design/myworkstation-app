@@ -41,6 +41,18 @@ export function assessInvoicePages(input){
   return checks.pagesComplete&&checks.grossAgrees&&checks.quantityAgrees&&checks.netAgrees;
 }
 
+// A contradictory footer quantity can be reviewed by the human. This never
+// waives missing-page evidence or either financial total, and keeps the original checks.
+export function invoiceHumanQuantityReview(input){
+  const checks=invoicePageReviewChecks(input);
+  const printed=String(input.printedQuantityTotal??"").trim();
+  const readableQuantity=/^\d+(?:[.,]\d+)?$/.test(printed);
+  const positiveRows=input.printedLines.length>0&&input.printedLines.every(line=>String(line.quantity??"").trim()!==""&&Number.isFinite(Number(String(line.quantity).replace(",",".")))&&Number(String(line.quantity).replace(",","."))>0);
+  const review=checks.quantityAgrees?checks:readableQuantity&&positiveRows?invoicePageReviewChecks({...input,printedQuantityTotal:String(checks.quantitySum)}):checks;
+  const reviewReady=review.pagesComplete&&review.grossAgrees&&review.netAgrees&&(checks.quantityAgrees||readableQuantity&&positiveRows);
+  return {checks,reviewReady,quantityReviewRequired:reviewReady&&!checks.quantityAgrees};
+}
+
 // The printed table often has net and VAT columns but no final gross per row.
 // Derive only the absent gross, leaving a supplied contradictory amount intact.
 export function fillMissingPrintedGross(lines,{printedTotal,exciseColumnAbsent=false}){

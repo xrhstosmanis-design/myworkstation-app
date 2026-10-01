@@ -1,6 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {assessInvoicePages,fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,parsePrintedPayable} from "../src/routes/invoice-assistant-review.js";
+import {assessInvoicePages,fillMissingPrintedGross,hasEquivalentPrintedEconomics,invoicePageReviewChecks,invoiceHumanQuantityReview,parsePrintedPayable} from "../src/routes/invoice-assistant-review.js";
+import {invoiceQuantityConfirmation} from "../../shared/invoice-quantity-review.mjs";
+
+test("contradictory printed quantity requires all rows and explicit human confirmation",()=>{
+  const quantities=[30,5,10,3,5,5,5],nets=[39,8.5,14,7.5,10,17,7.5];
+  const printedLines=quantities.map((quantity,index)=>({quantity:String(quantity),netAmount:String(nets[index]),grossAmount:String(nets[index]*1.13)}));
+  const input={expectedPageCount:1,visiblePageNumbers:[1],sourcePageCount:1,printedLines,printedTotal:116.96,printedQuantityTotal:"19",printedNetTotal:"103.50"};
+  const review=invoiceHumanQuantityReview(input);
+  assert.equal(review.reviewReady,true);assert.equal(review.quantityReviewRequired,true);
+  assert.equal(review.checks.quantityAgrees,false);assert.equal(review.checks.quantitySum,63);
+  assert.equal(assessInvoicePages(input),false); // automatic strict assessment remains unchanged
+  assert.equal(invoiceQuantityConfirmation(printedLines,"19",{selectedCount:7}).allowed,false);
+  assert.equal(invoiceQuantityConfirmation(printedLines,"19",{confirmed:true,selectedCount:6}).allowed,false);
+  assert.equal(invoiceQuantityConfirmation(printedLines,"19",{confirmed:true,selectedCount:7}).allowed,true);
+  assert.equal(invoiceQuantityConfirmation(printedLines,"63",{selectedCount:0}).required,false);
+  assert.equal(invoiceQuantityConfirmation([{quantity:""}],"19",{confirmed:true,selectedCount:1}).allowed,false);
+  for(const bad of [{printedTotal:120},{printedNetTotal:"110"},{sourcePageCount:2},{visiblePageNumbers:[]},{printedQuantityTotal:"unreadable"},{printedLines:[{quantity:"",netAmount:"103.50",grossAmount:"116.96"}]}])assert.equal(invoiceHumanQuantityReview({...input,...bad}).reviewReady,false);
+});
+
+test("quantity confirmation cannot replace full evidence for unnumbered sheets",()=>{
+  const input={expectedPageCount:0,visiblePageNumbers:[],sourcePageCount:2,documentNumber:"6538",unnumberedPageEvidence:[{imageIndex:1,documentNumber:"6538",fullPageVisible:true,printedTotalsVisible:false},{imageIndex:2,documentNumber:"6538",fullPageVisible:true,printedTotalsVisible:true}],printedLines:[{quantity:"63",netAmount:"103.50",grossAmount:"116.96"}],printedTotal:116.96,printedNetTotal:"103.50",printedQuantityTotal:"19"};
+  assert.equal(invoiceHumanQuantityReview(input).quantityReviewRequired,true);
+  for(const evidence of [input.unnumberedPageEvidence.slice(1),[{...input.unnumberedPageEvidence[0],fullPageVisible:false},input.unnumberedPageEvidence[1]],[input.unnumberedPageEvidence[0],{...input.unnumberedPageEvidence[1],printedTotalsVisible:false}],[input.unnumberedPageEvidence[0],{...input.unnumberedPageEvidence[1],documentNumber:"6539"}]])assert.equal(invoiceHumanQuantityReview({...input,unnumberedPageEvidence:evidence}).reviewReady,false);
+});
 
 test("printed payable accepts the invoice's three decimal currency format",()=>{
   assert.equal(parsePrintedPayable("173,680"),173.68);
