@@ -1,5 +1,5 @@
 import React from "react";
-import {Activity,AlertTriangle,Eye,Pencil,Power,Printer} from "lucide-react";
+import {Activity,AlertTriangle,Eye,Pencil,Power,Printer,Send} from "lucide-react";
 import WorkforceV2EmployeePerformance from "./WorkforceV2EmployeePerformance.jsx";
 import {formatWorkforceMoney} from "./workforce-v2-ui-utils.js";
 import {openWorkforceCardPrint} from "./workforce-card-print.js";
@@ -13,6 +13,15 @@ export default function WorkforceV2EmployeeTab({manager,store}){
     setCardBusy(employee.id);setCardError("");
     try{await openWorkforceCardPrint({request:manager.request,base:`/api/platform/store-modules/companies/${data.company.id}/stores/${store.id}/workforce-v2`,employee})}
     catch(error){setCardError(error.message)}finally{setCardBusy("")}
+  };
+  const shareApp=async employee=>{
+    setCardBusy(employee.id);setCardError("");
+    try{
+      const payload=await manager.request(`/api/platform/store-modules/companies/${data.company.id}/stores/${store.id}/workforce-v2/employees/${employee.id}/work-card`,{method:"POST"});
+      const url=new URL(payload.mobileUrl,window.location.origin).href;
+      const share={title:"MyWorkStation · Η κάρτα μου",text:`${employee.fullName} — άνοιξε το MyWorkStation και συνδέσου με το προσωπικό σου PIN.`,url};
+      if(navigator.share)await navigator.share(share);else{await navigator.clipboard.writeText(`${share.text} ${url}`);window.alert("Ο σύνδεσμος αντιγράφηκε. Μπορείς να τον στείλεις στον εργαζόμενο.")}
+    }catch(error){if(error?.name!=="AbortError")setCardError(error.message)}finally{setCardBusy("")}
   };
   if(performanceEmployee)return <WorkforceV2EmployeePerformance employee={performanceEmployee} base={`/api/platform/store-modules/companies/${manager.data.company.id}/stores/${store.id}/workforce-v2`} request={manager.request} onClose={()=>setPerformanceEmployee(null)}/>;
   return <div className="workforce-two-column">
@@ -46,7 +55,7 @@ export default function WorkforceV2EmployeeTab({manager,store}){
       <div className="workforce-employee-list">{data.employees.length?data.employees.map(employee=><article className={!employee.active?"inactive":""} key={employee.id}>
         <div className="workforce-employee-main"><div><b>{employee.fullName}</b><span>{employee.primaryRole?.name||"Χωρίς κύριο ρόλο"} · {employee.baseStoreName||"Χωρίς κατάστημα βάσης"}</span></div><em>{employee.active?"Ενεργός":"Ανενεργός"}</em></div>
         <div className="workforce-employee-meta"><span>{employee.paymentType==="HOURLY"?`Ωρομίσθιο ${formatWorkforceMoney(employee.currentHourlyRate?.hourlyRate)}`:employee.paymentType==="DAILY"?`Ημερομίσθιο ${formatWorkforceMoney(employee.dailyRate)}`:`Σταθερό ${formatWorkforceMoney(employee.fixedMonthlyAmount)}`}</span><span>{employee.maxDaysPerWeek} μέρες · {employee.maxHoursPerWeek} ώρες</span><span>{employee.storeAccess.filter(access=>access.active).length} καταστήματα</span></div>
-        <div className="workforce-row-actions"><button className="secondary" onClick={()=>setPerformanceEmployee(employee)}><Activity/> Απόδοση & Ταμεία</button><button className="secondary" onClick={()=>printCard(employee)} disabled={Boolean(cardBusy)||!employee.active||employee.baseStoreId!==store.id}><Printer/> {cardBusy===employee.id?"Προετοιμασία…":"Εκτύπωση κάρτας"}</button><button className="secondary" onClick={()=>editEmployee(employee)}><Pencil/> Επεξεργασία</button><button className="secondary" onClick={()=>changeEmployeeStatus(employee)} disabled={Boolean(busy)}><Power/> {employee.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
+        <div className="workforce-row-actions"><button className="secondary" onClick={()=>setPerformanceEmployee(employee)}><Activity/> Απόδοση & Ταμεία</button><button className="secondary" onClick={()=>printCard(employee)} disabled={Boolean(cardBusy)||!employee.active||employee.baseStoreId!==store.id}><Printer/> {cardBusy===employee.id?"Προετοιμασία…":"Εκτύπωση κάρτας"}</button><button className="secondary" onClick={()=>shareApp(employee)} disabled={Boolean(cardBusy)||!employee.active||employee.baseStoreId!==store.id}><Send/> Αποστολή εφαρμογής</button><button className="secondary" onClick={()=>editEmployee(employee)}><Pencil/> Επεξεργασία</button><button className="secondary" onClick={()=>changeEmployeeStatus(employee)} disabled={Boolean(busy)}><Power/> {employee.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
       </article>):<div className="platform-empty">Δεν υπάρχουν ακόμη εργαζόμενοι στη νέα βάση.</div>}</div>
     </section>
   </div>;

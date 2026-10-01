@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
-import {normalizeWorkCard} from "../workforce-card-code.js";
+import {createLegacyWorkCardCode,createWorkCardCode,normalizeWorkCard} from "../workforce-card-code.js";
 
 const router=Router();
 let tablesPromise;
@@ -199,6 +199,10 @@ function operatorToken(row,sessionId){
     permissions
   },process.env.JWT_SECRET,{expiresIn:"12h"});
 }
+function mobileEmployeeToken(row){
+  return jwt.sign({id:row.id,operatorId:row.id,employeeId:row.employeeId,companyId:row.companyId,storeId:row.storeId,role:row.role,fullName:row.displayName,tokenType:"WORKFORCE_MOBILE",permissions:["WORK_CARD_SELF"]},process.env.JWT_SECRET,{expiresIn:"12h"});
+}
+
 async function createOperatorSession(req,row){
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
@@ -338,6 +342,18 @@ router.post("/login/pin",route(async(req,res)=>{
   });
 }));
 
+router.post("/login/mobile-pin",route(async(req,res)=>{
+  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\\d{4,8}$/)}).parse(req.body);
+  await activeStore(body.storeId);
+  const subjectKey=loginSubject("MOBILE_PIN",body.employeeId);await assertLoginAllowed(body.storeId,subjectKey);
+  const rows=await prisma.$queryRaw`SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName" FROM "StoreOperatorCredential" c JOIN "Employee" e ON e."id"=c."employeeId" JOIN "Store" s ON s."id"=c."storeId" JOIN "Company" co ON co."id"=c."companyId" WHERE c."storeId"=${body.storeId} AND c."employeeId"=${body.employeeId} AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE AND co."active"=TRUE LIMIT 1`;
+  const operator=rows[0];
+  if(!operator||!operator.pinHash||!(await bcrypt.compare(body.pin,operator.pinHash))){await recordLoginFailure(body.storeId,subjectKey);return res.status(401).json({error:"Λανθασμένο PIN."});}
+  await clearLoginFailures(body.storeId,subjectKey);
+  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"WORKFORCE_MOBILE_LOGIN",details:{employeeId:operator.employeeId}});
+  res.json({token:mobileEmployeeToken(operator),user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:["WORK_CARD_SELF"]},store:{id:operator.storeId,name:operator.storeName},company:{id:operator.companyId,name:operator.companyName}});
+}));
+
 router.post("/login/card",route(async(req,res)=>{
   const body=z.object({storeId:z.string().min(2),cardCode:z.string().min(3).max(120),terminalToken:z.string().optional().nullable()}).parse(req.body);
   await activeStore(body.storeId);
@@ -374,6 +390,22 @@ router.post("/login/card",route(async(req,res)=>{
     store:{id:operator.storeId,name:operator.storeName,terminalPos:operator.terminalPos},
     company:{id:operator.companyId,name:operator.companyName}
   });
+}));
+
+router.get("/me/work-card",route(async(req,res)=>{
+  const token=req.headers.authorization?.replace("Bearer ","");let mobile;
+  try{mobile=jwt.verify(token||"",process.env.JWT_SECRET)}catch{return res.status(401).json({error:"Η σύνδεση εργαζομένου έληξε. Συνδέσου ξανά."})}
+  if(mobile?.tokenType!=="WORKFORCE_MOBILE"||!mobile?.employeeId||!mobile?.storeId)return res.status(403).json({error:"Απαιτείται προσωπική σύνδεση εργαζομένου."});
+  req.user=mobile;
+  const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","employeeId","displayName","cardCodeHash","cardCodeLast4","active" FROM "StoreOperatorCredential" WHERE "id"=${req.user.operatorId||req.user.id} AND "storeId"=${req.user.storeId} AND "employeeId"=${req.user.employeeId} AND "active"=TRUE LIMIT 1`;
+  const operator=rows[0];
+  if(!operator?.cardCodeHash)return res.status(409).json({error:"Δεν έχει εκδοθεί ακόμη κάρτα εργασίας. Ζήτησε από τον υπεύθυνο να την ενεργοποιήσει."});
+  const secret=process.env.WORKFORCE_CARD_SECRET||process.env.JWT_SECRET;
+  const args={companyId:operator.companyId,storeId:operator.storeId,employeeId:operator.employeeId,secret};
+  const current=createWorkCardCode(args),legacy=createLegacyWorkCardCode(args);
+  const cardCode=cardHash(current)===operator.cardCodeHash?current:cardHash(legacy)===operator.cardCodeHash?legacy:null;
+  if(!cardCode)return res.status(409).json({error:"Η υπάρχουσα κάρτα δεν μπορεί να εμφανιστεί στο κινητό. Χρειάζεται επανέκδοση από το BackOffice."});
+  res.set("Cache-Control","no-store").json({employee:{id:operator.employeeId,fullName:operator.displayName},storeId:operator.storeId,cardCode,cardCodeLast4:operator.cardCodeLast4});
 }));
 
 router.post("/logout",auth,route(async(req,res)=>{
