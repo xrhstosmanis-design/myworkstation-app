@@ -8,3 +8,6 @@ Owner sales file01Jan–01Oct2026; 363593 net units after returns. Company catal
 
 ## Acceptance
 Select Diadochou company, use actual company Product IDs; import reviewed ranked category list without creating catalog products. Publish to only Diadochou; reload and match all product IDs, water labels and fixed limits. Reject publication/clone to different company. LAB and physical store acceptance remain separate. No repeated existing transaction.
+
+## Implementation
+Company picker returns Product IDs (not ambiguous SKUs). Scoped drafts preserve catalogCompanyId; save/import/publish/clone validate active IDs and cross-company targets. Prepared-list import validates exact14/20/40 limits and canonical quick labels without database writes. Scoped categories preserve ranked ID order. Existing legacy global layout behavior retained. Company-scoped POS catalog cap10000 supports6623 imported products; legacy remains5000. CI/exact deploy and LIVE UI/readback still AWAITING.
