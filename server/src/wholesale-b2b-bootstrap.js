@@ -1,0 +1,23 @@
+import {prisma} from "./prisma.js";
+
+let schemaReady;
+
+export async function ensureWholesaleSchema(){
+  if(schemaReady)return schemaReady;
+  schemaReady=(async()=>{
+    const statements=[
+      `CREATE TABLE IF NOT EXISTS "WholesaleCustomer" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"code" TEXT,"name" TEXT NOT NULL,"taxId" TEXT,"email" TEXT,"phone" TEXT,"address" TEXT,"city" TEXT,"contactName" TEXT,"creditLimit" NUMERIC(14,2) NOT NULL DEFAULT 0,"paymentTermsDays" INTEGER NOT NULL DEFAULT 0,"active" BOOLEAN NOT NULL DEFAULT true,"notes" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesaleCustomer_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "WholesaleCustomer_company_code_key" ON "WholesaleCustomer"("companyId","code") WHERE "code" IS NOT NULL`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "WholesaleCustomer_company_tax_key" ON "WholesaleCustomer"("companyId","taxId") WHERE "taxId" IS NOT NULL`,
+      `CREATE INDEX IF NOT EXISTS "WholesaleCustomer_company_name_idx" ON "WholesaleCustomer"("companyId","active","name")`,
+      `CREATE TABLE IF NOT EXISTS "WholesalePriceList" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"code" TEXT NOT NULL,"name" TEXT NOT NULL,"discountPercent" NUMERIC(6,3) NOT NULL DEFAULT 0,"active" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesalePriceList_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "WholesalePriceList_company_code_key" ON "WholesalePriceList"("companyId","code")`,
+      `CREATE TABLE IF NOT EXISTS "WholesalePriceListProduct" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"priceListId" TEXT NOT NULL,"productId" TEXT NOT NULL,"unitPrice" NUMERIC(14,4),"discountPercent" NUMERIC(6,3),"minimumQuantity" NUMERIC(14,4) NOT NULL DEFAULT 1,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesalePriceListProduct_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE,CONSTRAINT "WholesalePriceListProduct_list_fkey" FOREIGN KEY ("priceListId") REFERENCES "WholesalePriceList"("id") ON DELETE CASCADE,CONSTRAINT "WholesalePriceListProduct_product_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "WholesalePriceListProduct_unique" ON "WholesalePriceListProduct"("priceListId","productId","minimumQuantity")`,
+      `CREATE INDEX IF NOT EXISTS "WholesalePriceListProduct_company_product_idx" ON "WholesalePriceListProduct"("companyId","productId")`,
+      `CREATE TABLE IF NOT EXISTS "WholesaleCustomerPriceList" ("customerId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"priceListId" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesaleCustomerPriceList_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE,CONSTRAINT "WholesaleCustomerPriceList_customer_fkey" FOREIGN KEY ("customerId") REFERENCES "WholesaleCustomer"("id") ON DELETE CASCADE,CONSTRAINT "WholesaleCustomerPriceList_list_fkey" FOREIGN KEY ("priceListId") REFERENCES "WholesalePriceList"("id") ON DELETE CASCADE)`
+    ];
+    for(const sql of statements)await prisma.$executeRawUnsafe(sql);
+  })().catch(error=>{schemaReady=undefined;throw error});
+  return schemaReady;
+}
