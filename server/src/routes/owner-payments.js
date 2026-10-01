@@ -1,6 +1,7 @@
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import {businessPictureCalendarRange} from "../business-picture-dates.js";
 import {finishBusinessPictureRow} from "../business-picture-totals.js";
 
 const router=Router();
@@ -67,13 +68,16 @@ function mergeByKey(primary,secondary,key,fields){
 router.get("/business-picture",async(req,res,next)=>{
   try{
     requireOwnerReport(req);
-    const query=reportQuery.pick({from:true,to:true,storeId:true}).parse(req.query||{});
-    const {from,to}=dateRange(query),companyId=req.user.companyId,storeId=query.storeId||null;
+    const query=reportQuery.pick({from:true,to:true,storeId:true}).extend({calendarFrom:z.string().optional(),calendarTo:z.string().optional()}).parse(req.query||{});
+    const calendar=query.calendarFrom!==undefined||query.calendarTo!==undefined;
+    if(calendar&&(query.from!==undefined||query.to!==undefined))throw Object.assign(new Error("Μη συνδυάζεις ημερολογιακές και ISO ημερομηνίες."),{status:400});
+    const period=calendar?businessPictureCalendarRange(query.calendarFrom,query.calendarTo):{...dateRange(query),timeZone:"Europe/Athens"};
+    const {from,to}=period,companyId=req.user.companyId,storeId=query.storeId||null;
     await verifyStore(companyId,storeId);
     const [stores,sales,purchases,expenses]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
       prisma.$queryRaw`
-        SELECT DATE_TRUNC('month',sa."occurredAt") AS month,DATE(sa."occurredAt") AS day,
+        SELECT TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
           COUNT(DISTINCT sa."id")::int AS transactions,COALESCE(SUM(sl."lineTotal"),0) AS "salesGross",
           COUNT(*)::int AS "salesLines",
           COUNT(*) FILTER (WHERE pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0))::int AS "missingCostLines",
@@ -88,16 +92,16 @@ router.get("/business-picture",async(req,res,next)=>{
           WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=sa."occurredAt"
           ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
         ) pc ON true
-        WHERE sa."occurredAt">=${from} AND sa."occurredAt"<=${to} AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
-        GROUP BY DATE_TRUNC('month',sa."occurredAt"),DATE(sa."occurredAt") ORDER BY day`,
+        WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND sa."occurredAt"<=(${to}::timestamptz AT TIME ZONE 'UTC') AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
-        SELECT DATE_TRUNC('month',"documentDate") AS month,DATE("documentDate") AS day,COUNT(*)::int AS documents,
+        SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
           COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
-        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=${from} AND "documentDate"<=${to}
+        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND "documentDate"<=(${to}::timestamptz AT TIME ZONE 'UTC')
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
-        GROUP BY DATE_TRUNC('month',"documentDate"),DATE("documentDate") ORDER BY day`,
+        GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
-        SELECT DATE_TRUNC('month',tx."occurredAt") AS month,DATE(tx."occurredAt") AS day,
+        SELECT TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
           COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL)::int AS payments,
           COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS expenses,
           COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL),0) AS "paymentTotal",
@@ -106,7 +110,7 @@ router.get("/business-picture",async(req,res,next)=>{
         LEFT JOIN "PurchaseDocument" pd ON tx."attachmentMimeType"=${purchaseDocumentMime} AND pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId"
         WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND tx."occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
-        GROUP BY DATE_TRUNC('month',tx."occurredAt"),DATE(tx."occurredAt") ORDER BY day`
+        GROUP BY 1,2 ORDER BY day`
     ]);
     const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0});return rows.get(id)};
     for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
@@ -117,7 +121,7 @@ router.get("/business-picture",async(req,res,next)=>{
     const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
     const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0}));
     res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),from,to,stores,monthly,daily,totals,calculationNotes:{costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,calculationNotes:{costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
   }catch(error){next(error)}
 });
 

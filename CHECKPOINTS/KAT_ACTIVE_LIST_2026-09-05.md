@@ -1,3 +1,5 @@
+**01/10/2026 — #27 συνέχεια ίδιας σελίδας, `codex/task27-athens-periods-20261001`:** Διόρθωση ημερολογιακών περιόδων και ημερήσιας/μηνιαίας ομαδοποίησης σε Europe/Athens. Προστατεύεται το cost coverage LAB PASS του #1604/#1605, το παλιό ISO API και auth/licensing/stock/πληρωμές. AWAITING CI/exact deploy/LAB. Υπεύθυνος #27 παραμένει η ίδια σελίδα.
+
 **01/10/2026 — #27 LIMITED READ-ONLY LAB PASS / remaining ASSIGNED `codex/task27-profitability-20261001`:** PR #1604, CI #4029–4030, Render #1862 και exact `75f663e0f85dc0cd4079a5cf1ec4a493eb5e6188`. LAB: έλλειψη κόστους σε 8/75 γραμμές (Οκτώβριος 4/4, Σεπτέμβριος 4/71), κέρδος και margin «—» ανά ημέρα, μήνα και σύνολο. Πραγματικό CSV δύο μηνών με ίδιους μετρητές και κενά κέρδη. Πωλήσεις 54,60 € και δύο ταμεία αμετάβλητα. Καμία επιχειρησιακή εγγραφή. Περίοδοι ώρας Ελλάδας, επιστροφές, ΦΠΑ εξόδων, ιστορικό κόστος, Owner χωρίς SA και συνολικό module παραμένουν OPEN στον ίδιο υπεύθυνο. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task27-profitability.md`, manual `docs/manual/profitability/PASS.md`.
 
 
