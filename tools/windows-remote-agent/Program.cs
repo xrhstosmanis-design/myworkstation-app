@@ -17,13 +17,34 @@ internal sealed class AgentForm:Form {
  readonly HttpClient http=new(){BaseAddress=new Uri(Origin),Timeout=TimeSpan.FromSeconds(5)};
  CancellationTokenSource? session;string? token,sessionJob;
  public AgentForm(){
-  Text="MyWorkStation · Remote Assist";Width=620;Height=320;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;TopMost=true;
-  var panel=new FlowLayoutPanel(){Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(16)};
-  panel.Controls.Add(new Label(){Text="Πρόσβαση μόνο με δική σας αποδοχή. Κρατήστε το παράθυρο ανοικτό.\nΟ διαχειριστής μπορεί να δει όλη την κύρια οθόνη και να την χειριστεί.",AutoSize=true});
-  panel.Controls.Add(new Label(){Text="Εξαψήφιος κωδικός από τον διαχειριστή",AutoSize=true});panel.Controls.Add(code);
-  panel.Controls.Add(consent);panel.Controls.Add(connect);panel.Controls.Add(stop);panel.Controls.Add(status);Controls.Add(panel);
+  Text="MyWorkStation · Remote Assist";
+  AutoScaleDimensions=new SizeF(96F,96F);AutoScaleMode=AutoScaleMode.Dpi;
+  Font=new Font("Segoe UI",12F);ClientSize=new Size(700,500);MinimumSize=new Size(600,420);
+  FormBorderStyle=FormBorderStyle.Sizable;MaximizeBox=true;StartPosition=FormStartPosition.CenterScreen;TopMost=true;
+  code.Font=new Font("Segoe UI",20F);code.Width=220;code.Margin=new Padding(3,8,3,16);
+  consent.AutoSize=false;consent.Margin=new Padding(3,10,3,10);
+  var panel=new FlowLayoutPanel(){Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true,Padding=new Padding(20)};
+  var intro=new Label(){Text="Πρόσβαση μόνο με δική σας αποδοχή. Κρατήστε το παράθυρο ανοικτό.\nΟ διαχειριστής μπορεί να δει όλη την κύρια οθόνη και να την χειριστεί.",AutoSize=true,Margin=new Padding(3,3,3,16)};
+  var codeLabel=new Label(){Text="Εξαψήφιος κωδικός από τον διαχειριστή",AutoSize=true};
+  panel.Controls.Add(intro);panel.Controls.Add(codeLabel);panel.Controls.Add(code);panel.Controls.Add(consent);
+  var footer=new TableLayoutPanel(){Dock=DockStyle.Bottom,AutoSize=true,ColumnCount=2,RowCount=2,Padding=new Padding(16)};
+  footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50F));footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50F));
+  footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+  foreach(var button in new[]{connect,stop}){button.Dock=DockStyle.Fill;button.MinimumSize=new Size(0,56);button.Margin=new Padding(4);button.Padding=new Padding(8);}
+  footer.Controls.Add(connect,0,0);footer.Controls.Add(stop,1,0);
+  status.Margin=new Padding(4,10,4,4);footer.Controls.Add(status,0,1);footer.SetColumnSpan(status,2);
+  Controls.Add(panel);Controls.Add(footer);
+  void FitText(){
+   int width=Math.Max(200,panel.ClientSize.Width-panel.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-12);
+   intro.MaximumSize=new Size(width,0);codeLabel.MaximumSize=new Size(width,0);
+   consent.Width=width;
+   consent.Height=Math.Max(48,TextRenderer.MeasureText(consent.Text,consent.Font,new Size(Math.Max(100,width-32),0),TextFormatFlags.WordBreak).Height+16);
+   status.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-footer.Padding.Horizontal-12),0);
+  }
+  panel.Resize+=(_,_)=>FitText();footer.Resize+=(_,_)=>FitText();Shown+=(_,_)=>FitText();
   connect.Click+=async(_,_)=>await Start();stop.Click+=(_,_)=>Stop();consent.CheckedChanged+=(_,_)=>{if(!consent.Checked)Stop();};FormClosing+=(_,_)=>Stop();
  }
+
  void Stop(){session?.Cancel();status.Text="Η πρόσβαση διακόπηκε.";stop.Enabled=false;}
  async Task Start(){
   if(session!=null||!consent.Checked){status.Text="Απαιτείται τοπική αποδοχή.";return;}
