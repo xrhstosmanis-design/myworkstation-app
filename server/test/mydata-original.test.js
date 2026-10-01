@@ -3,6 +3,23 @@ import test from "node:test";
 import {originalDownloadUrl,verifyOriginalText,fetchOriginalPdf,acquireOriginal} from "../src/mydata-original.js";
 const base="https://einvoice.impact.gr/p/EL099999999/"+ "A".repeat(40)+"/"+"B".repeat(32);
 const row={inboxId:"inbox",issuerVat:"099999999",counterpartVat:"088888888",mark:"400000000000001",documentNumber:"42",totalGross:"12.4",status:"RECEIVED",invoiceType:"1.1",currency:"EUR",issueDate:"2026-09-28",rawPayload:{xml:`<invoice><downloadingInvoiceUrl>${base}</downloadingInvoiceUrl></invoice>`}};
+test("invoice number accepts leading zero padding without relaxing MARK or VAT",()=>{
+  const identity="099999999 088888888 400000000000001";
+  assert.doesNotThrow(()=>verifyOriginalText(identity+" ΤΔΑ0000042",row));
+  assert.doesNotThrow(()=>verifyOriginalText(identity+" ΤΔΑ42",{...row,documentNumber:"0000042"}));
+  assert.doesNotThrow(()=>verifyOriginalText(identity+" 0009007199254740993",{...row,documentNumber:"9007199254740993"}));
+  for(const number of ["142","420","00043","9007199254740992"]){
+    const expected=number.length>10?"9007199254740993":"42";
+    assert.throws(()=>verifyOriginalText(identity+" ΤΔΑ"+number,{...row,documentNumber:expected}),/δεν επιβεβαιώνει/);
+  }
+  for(const field of [row.mark,row.issuerVat,row.counterpartVat]){
+    assert.throws(()=>verifyOriginalText(identity.replace(field,"0"+field)+" ΤΔΑ0000042",row),/δεν επιβεβαιώνει/);
+    assert.throws(()=>verifyOriginalText(identity.replace(field,field.slice(1))+" ΤΔΑ0000042",row),/δεν επιβεβαιώνει/);
+  }
+  for(const number of ["",null,undefined,"42A"]){
+    assert.throws(()=>verifyOriginalText(identity+" ΤΔΑ0000042",{...row,documentNumber:number}),/δεν επιβεβαιώνει/);
+  }
+});
 test("provider adapter rejects arbitrary hosts, credentials, redirects targets and wrong issuer",()=>{
   assert.equal(originalDownloadUrl(row.rawPayload.xml,row.issuerVat),base+"/pdf");
   for(const url of [base.replace("https:","http:"),base.replace("einvoice.impact.gr","127.0.0.1"),base.replace("einvoice.impact.gr","einvoice.impact.gr.evil.test"),base.replace("//","//user:pass@"),base+"?redirect=evil",base.replace("099999999","088888888")])assert.throws(()=>originalDownloadUrl(`<downloadingInvoiceUrl>${url}</downloadingInvoiceUrl>`,row.issuerVat));

@@ -24,7 +24,12 @@ export async function readOriginalPdf(bytes){
 }
 export function verifyOriginalText(text,row){
   const tokens=String(text||"").match(/[0-9]+/g)||[];
-  for(const value of [row.mark,row.issuerVat,row.counterpartVat,row.documentNumber])if(!value||!tokens.includes(String(value)))throw error("Το πρωτότυπο δεν επιβεβαιώνει MARK, ΑΦΜ και αριθμό παραστατικού. Απαιτείται έλεγχος.");
+  const mismatch=()=>{throw error("Το πρωτότυπο δεν επιβεβαιώνει MARK, ΑΦΜ και αριθμό παραστατικού. Απαιτείται έλεγχος.")};
+  // MARK and VAT identifiers remain exact. Only the invoice number may be zero-padded.
+  for(const value of [row.mark,row.issuerVat,row.counterpartVat])if(!value||!tokens.includes(String(value)))mismatch();
+  const number=String(row.documentNumber??"");
+  const withoutPadding=value=>value.replace(/^0+(?=\d)/,"");
+  if(!number||!tokens.some(token=>token===number||(/^[0-9]+$/.test(number)&&withoutPadding(token)===withoutPadding(number))))mismatch();
 }
 export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf){
   const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat),signal=AbortSignal.timeout(15000);
