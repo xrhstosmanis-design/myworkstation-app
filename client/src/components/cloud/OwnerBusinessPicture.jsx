@@ -9,13 +9,14 @@ const monthLabel=value=>{const [year,month]=String(value).split("-");return `${y
 const dayLabel=value=>new Date(`${value}T00:00:00`).toLocaleDateString("el-GR",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
 const columns=[
   ["margin","Margin",pct],["salesVat","ΦΠΑ πωλήσεων",money],["salesGross","Πωλήσεις (με ΦΠΑ)",money],["purchaseGross","Αγορές (με ΦΠΑ)",money],
-  ["salesNet","Πωλήσεις (χ. ΦΠΑ)",money],["purchaseNet","Αγορές (χ. ΦΠΑ)",money],["grossProfit","Ακαθ. κέρδος",money],["expenses","Έξοδα (χ. ΦΠΑ)",money],
+  ["salesNet","Πωλήσεις (χ. ΦΠΑ)",money],["purchaseNet","Αγορές (χ. ΦΠΑ)",money],["grossProfit","Ακαθ. κέρδος",money],["expenseGross","Έξοδα (μικτά)",money],["expenses","Έξοδα (χ. ΦΠΑ)",money],
   ["netProfit","Καθ. κέρδος",money],["paymentTotal","Πληρωμές",money],["purchaseSalesPercent","Αγορές/Πωλήσεις (χ.ΦΠΑ)",pct],
   ["expenseSalesPercent","Έξοδα/Πωλήσεις (χ.ΦΠΑ)",pct],["purchaseVat","ΦΠΑ αγορών",money],["expenseVat","ΦΠΑ εξόδων",money],
   ["missingCostLines","Γραμμές χωρίς κόστος",value=>Number(value||0).toLocaleString("el-GR")],
   ["salesLines","Γραμμές πωλήσεων",value=>Number(value||0).toLocaleString("el-GR")],
   ["returnTransactions","Επιστροφές",value=>Number(value||0).toLocaleString("el-GR")],
-  ["cancelTransactions","Ακυρώσεις",value=>Number(value||0).toLocaleString("el-GR")]
+  ["cancelTransactions","Ακυρώσεις",value=>Number(value||0).toLocaleString("el-GR")],
+  ["missingExpenseVatPayments","Έξοδα χωρίς τεκμηρίωση ΦΠΑ",value=>Number(value||0).toLocaleString("el-GR")]
 ];
 
 export default function OwnerBusinessPicture({api,store,onClose}){
@@ -43,11 +44,12 @@ export default function OwnerBusinessPicture({api,store,onClose}){
       {data?.calendarFrom&&<p className="business-picture-loading">Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
       {!busy&&data?.totals&&<p className="business-picture-loading">Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
       {!busy&&data?.totals?.missingCostLines>0&&<div className="business-picture-error" role="status">Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
+      {!busy&&data?.totals?.missingExpenseVatPayments>0&&<div className="business-picture-error" role="status">Λείπει τεκμηρίωση ΦΠΑ σε {data.totals.missingExpenseVatPayments} από {data.totals.expensePayments} έξοδα. Τα μικτά ποσά εμφανίζονται· καθαρά έξοδα, ΦΠΑ, καθαρό κέρδος και ποσοστό εξόδων εμφανίζονται ως «—» στις επηρεαζόμενες περιόδους.</div>}
       {error&&<div className="business-picture-error">{error}</div>}
       {busy?<div className="business-picture-loading">Φόρτωση οικονομικής εικόνας…</div>:<div className="business-picture-table-wrap"><table><thead><tr><th>Έτος-Μήνας</th>{columns.map(([,label])=><th key={label}>{label}</th>)}</tr></thead><tbody>
         {(data?.monthly||[]).map(row=><React.Fragment key={row.month}><tr className="business-month" onClick={()=>setExpanded(expanded===row.month?"":row.month)}><td><button>{expanded===row.month?<ChevronDown/>:<ChevronRight/>}</button>{monthLabel(row.month)}</td>{rowCells(row)}</tr>{expanded===row.month&&(daysByMonth.get(row.month)||[]).map(day=><tr className="business-day" key={day.day}><td>{dayLabel(day.day)}<small>{day.transactions} συναλλαγές · {day.documents} αγορές</small></td>{rowCells(day)}</tr>)}</React.Fragment>)}
       </tbody>{data?.totals&&<tfoot><tr><td>ΣΥΝΟΛΟ</td>{rowCells(data.totals)}</tr></tfoot>}</table></div>}
-      <footer>{data?.calculationNotes?.costCoverage} <b>Υπολογισμός:</b> {data?.calculationNotes?.grossProfit} {data?.calculationNotes?.netProfit}</footer>
+      <footer>{data?.calculationNotes?.expenses} {data?.calculationNotes?.costCoverage} <b>Υπολογισμός:</b> {data?.calculationNotes?.grossProfit} {data?.calculationNotes?.netProfit}</footer>
     </section>
   </div>;
 }
