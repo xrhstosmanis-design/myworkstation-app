@@ -38,7 +38,10 @@ async function ensureMarketSchema(){
 async function companyFor(req,res,{moduleRequired=true}={}){
   const platform=isPlatformSuper(req),platformPath=String(req.baseUrl||"").startsWith("/api/platform");
   if(platformPath&&!platform){res.status(403).json({error:"Απαιτείται πρόσβαση Super Admin."});return null}
-  const companyId=platform?String(req.query.companyId||req.body?.companyId||"").trim():req.user.companyId;
+  // Support access already binds this BackOffice to a signed tenant. The global
+  // platform screen must still provide its company explicitly.
+  const supportCompanyId=!platformPath&&req.user?.supportContext?.companyId===req.user?.companyId?req.user.companyId:"";
+  const companyId=platform?String(req.query.companyId||req.body?.companyId||supportCompanyId||"").trim():req.user.companyId;
   if(!companyId){res.status(400).json({error:"Επίλεξε εταιρεία."});return null}
   if(!platform&&moduleRequired&&!await advancedOnlineSearchEntitlement(companyId)){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return null}
   if(!platform&&!isOwner(req)){res.status(403).json({error:"Η αναζήτηση Internet επιτρέπεται μόνο σε ιδιοκτήτη ή Super Admin.",code:"OWNER_ONLY"});return null}
