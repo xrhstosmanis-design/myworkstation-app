@@ -7,3 +7,13 @@ Scope: ημερολογιακά from/to με έγκυρες ημέρες, ελλ
 ## Τοπικοί έλεγχοι
 
 Node20:13targetedPASS,1773serverPASS/0FAIL/1optionalPostgreSQLSKIP, frontendbuildPASS. Χειμώνας/καλοκαίρι,23/25ωρα DST, leapday/invalidday/partial/inverted, current/default/previousquarter/yearrollover επαληθεύθηκαν. ΝέοactualisolatedHTTP/SQL test AWAITINGCI: Greekday01Oct2030, πωλήσεις πριν/start/last/end, αγορά και έξοδο στοUTC21της30Sep ομαδοποιούνται01Oct. Sales5/purchases7/expenses11, snapshotsledgerίδια. ΚαθαρισμόςfixturesfinallyμόνοCI. Sale/PurchaseDocument είναιUTC TIMESTAMP, StoreTransactionTIMESTAMPTZ: διαφορετικέςσωστέςμετατροπές. ΤοπαλιόISOAPI συνεχίζειμείδιαinstantbounds.
+
+## CI και merge
+
+PR #1606, head451f0014, CI4033PASS μαζί μεactualSQL/HTTPcalendarperiods17:14:31.935Z. Merge `16b1f76f1c6f0e6da1b7e25022127f1809960da7`. Boundarysales5/purchases7/expenses11 στοGreek01Oct2030, noledgermutation. ΠαλιόISOκαιmissingcostE2E επίσηςPASS. MainCI/exactdeploy/LAB AWAITING· όχιLABPASS.
+
+## Πρόσθετο όριο ακρίβειας — AWAITING CI/LAB
+
+Η StoreTransaction TIMESTAMPTZ διατηρεί μικροδευτερόλεπτα. Calendar query πλέον χρησιμοποιεί αποκλειστικό επόμενο midnight αντί inclusive23:59:59.999. Το παλιό ISO endpoint παραμένει inclusive. Απομονωμένο E2E περιλαμβάνει έξοδο στο23:59:59.9995 και αναμένει expenses12. Δεν έγιναν production writes.
+
+Local verification: Node20 npm test from server cwd1777PASS/0FAIL/1optionalPGSKIP;13targetedPASS;productionbuildPASS. Initial root-cwd direct glob invoked tests from incorrect cwd and failed ENOENT; correct npm workspace invocation passed. Extra100 expense exactly at next midnight must be excluded. Required CI actual isolated SQL/HTTP remains pending.
