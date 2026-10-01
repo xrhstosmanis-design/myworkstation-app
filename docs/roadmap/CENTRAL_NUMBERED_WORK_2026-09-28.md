@@ -63,7 +63,7 @@
 - **24 · OPEN:** Σύνδεση καναλιού/POS με AI Reader, Azure και BackOffice — ορισμός νέου scope μετά τον έλεγχο υπάρχοντος βοηθού.
 - **25 · LIMITED READ-ONLY LAB PASS01/10 + ΙΣΤΟΡΙΚΟ CHAT PASS12/09:** Νέα συγκεντρωτική προβολή21 LAB στοιχείων (10 τιμολόγια/11 αρνητικό stock), φίλτρα πηγής/προτεραιότητας/store και μετάβαση αποθήκης/θυρίδας στο exacta882bb4, #1595/CI4006–4007 PASS. Payment empty state0 μόνο. Θετικό payment/link, Owner χωρίς SA/adversarial roles και live errors/caps/χαμηλό μη αρνητικό stock παραμένουν ASSIGNED `codex/task25-pending-sources-20261001`. Καμία οικονομική/stock πράξη, δύο ταμεία ίδια. Δεν είναι συνολικό PASS και δεν αλλάζει #16/#17. `CHECKPOINTS/CHANGES/2026-10-01-task25-pending-sources.md`.
 - **26 · LIMITED UI LAB PASS01/10 / remaining ASSIGNED `codex/task26-monthly-cashier-20261001`:** Μηνιαία προβολή/rolling30 PASS στο exactedeba510, #1599/CI4016–4018/Render1856 PASS. Σεπτέμβριος27ω56λ/7ω, explicit unlinked operator, δύο ταμεία αμετάβλητα. Θετικές πωλήσεις/βάρδιες με verified σύνδεση και Owner χωρίς SA NOT TESTED. Συνολικό26/score OPEN, ανθρώπινη αξιολόγηση χωριστή, #10 δεν αλλάζει.
-- **27 · OPEN:** Κέντρο Κερδοφορίας καταστήματος.
+- **27 · ASSIGNED `codex/task27-profitability-20261001`:** Υπάρχουσα Εικόνα Επιχειρήσεις· read-only guard ελλιπούς κόστους πριν από συμπέρασμα κέρδους/margin. CI/exact deploy/LAB AWAITING, συνολική κερδοφορία OPEN.
 - **28 · OPEN:** Έλεγχος απωλειών/ύποπτων μοτίβων με ανθρώπινη επιβεβαίωση.
 - **29 · OPEN:** Σύγκριση Προμηθευτών.
 - **30 · OPEN:** Αυτόματες Προτάσεις Παραγγελίας.
