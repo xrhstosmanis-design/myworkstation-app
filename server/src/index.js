@@ -38,6 +38,7 @@ import purchaseDocumentAdjustmentRoutes from "./routes/purchase-document-adjustm
 import supplierControlRoutes from "./routes/supplier-control-normalized.js";
 import customerControlReversalAwareRoutes from "./routes/customer-control-reversal-aware.js";
 import customerControlRoutes from "./routes/customer-control-v2.js";
+import wholesaleB2BRoutes from "./routes/wholesale-b2b.js";
 import priceCatalogPromotionGuardRoutes from "./routes/price-catalog-promotion-guard.js";
 import priceCatalogImportRoutes from "./routes/price-catalog-import.js";
 import priceCatalogRoutes from "./routes/price-catalog-normalized.js";
@@ -189,6 +190,7 @@ app.use("/api/purchase-document-adjustments",auth,requireCompanyModule("INVENTOR
 app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierControlRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
+app.use("/api/wholesale",auth,requireCompanyModule("CORE"),wholesaleB2BRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogPromotionGuardRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogImportRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogRoutes);
