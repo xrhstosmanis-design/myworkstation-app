@@ -26,3 +26,37 @@ jobs:
           name: MyWorkStation-RemoteAgent-win-x64
           path: remote-agent-build/
           retention-days: 14
+
+      # Transfer-friendly pieces are reassembled into one ZIP for the owner.
+      - name: Package verified Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory remote-agent-package | Out-Null
+          Compress-Archive -Path remote-agent-build/* -DestinationPath remote-agent-package/agent.zip -CompressionLevel Optimal
+          $packageBytes = [IO.File]::ReadAllBytes("$PWD/remote-agent-package/agent.zip")
+          $pieceSize = 24 * 1024 * 1024
+          $pieceCount = [math]::Ceiling($packageBytes.Length / $pieceSize)
+          if ($pieceCount -ne 3) { throw "Unexpected package size: $pieceCount pieces" }
+          for ($pieceIndex = 0; $pieceIndex -lt $pieceCount; $pieceIndex++) {
+            $pieceLength = [math]::Min($pieceSize, $packageBytes.Length - $pieceIndex * $pieceSize)
+            $pieceBytes = New-Object byte[] $pieceLength
+            [Array]::Copy($packageBytes, $pieceIndex * $pieceSize, $pieceBytes, 0, $pieceLength)
+            New-Item -ItemType Directory "remote-agent-package/part-$pieceIndex" | Out-Null
+            [IO.File]::WriteAllBytes("$PWD/remote-agent-package/part-$pieceIndex/agent.part$pieceIndex", $pieceBytes)
+          }
+          (Get-FileHash remote-agent-package/agent.zip -Algorithm SHA256).Hash.ToLower() | Set-Content remote-agent-package/part-0/sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-RemoteAgent-PIN-part-0
+          path: remote-agent-package/part-0/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-RemoteAgent-PIN-part-1
+          path: remote-agent-package/part-1/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-RemoteAgent-PIN-part-2
+          path: remote-agent-package/part-2/
+          retention-days: 14
