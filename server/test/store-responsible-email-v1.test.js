@@ -16,7 +16,7 @@ test("store responsible email schema is additive",()=>{
 test("Super Admin can update only a store owned by the selected company",()=>{
   assert.match(platform,/\/companies\/:companyId\/stores\/:storeId/);
   assert.match(platform,/id:req\.params\.storeId,companyId:req\.params\.companyId/);
-  assert.match(platform,/responsibleEmail:z\.string\(\)\.trim\(\)\.email\(\)/);
+  assert.match(platform,/responsibleEmail:reportRecipientListSchema/);
   assert.match(ui,/Email υπευθύνου/);
   assert.match(ui,/Οι αναφορές στέλνονται μόνο όταν ο Super Admin πατήσει την αποστολή/);
 });
@@ -24,5 +24,5 @@ test("Super Admin can update only a store owned by the selected company",()=>{
 test("manual report deduplicates owner and store-responsible recipients",()=>{
   assert.match(platform,/store\.responsibleEmail/);
   assert.match(platform,/new Set/);
-  assert.match(fs.readFileSync(new URL("../src/services/mail.js",import.meta.url),"utf8"),/new Set/);
+  assert.match(fs.readFileSync(new URL("../src/services/report-recipients.js",import.meta.url),"utf8"),/new Set/);
 });
