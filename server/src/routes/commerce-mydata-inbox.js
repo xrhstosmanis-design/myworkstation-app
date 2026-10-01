@@ -75,12 +75,12 @@ export function syncMyDataStore(req){
 async function performSync(req){
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true,name:true,company:{select:{taxId:true}}}});
-  if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  if(!store)throw syncError("Δεν βρέθηκε το κατάστημα.",404);
   const companyVat=String(store.company?.taxId||"").replace(/\s/g,"");
-  if(!/^\d{9}$/.test(companyVat))return res.status(409).json({error:"Πρέπει πρώτα να οριστεί το εννεαψήφιο ΑΦΜ της εταιρείας για ασφαλή λήψη myDATA."});
+  if(!/^\d{9}$/.test(companyVat))throw syncError("Πρέπει πρώτα να οριστεί το εννεαψήφιο ΑΦΜ της εταιρείας για ασφαλή λήψη myDATA.",409);
   const rows=await prisma.$queryRaw`SELECT "environment","credentialsEnc","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
-  const integration=rows[0];if(!integration?.enabled)return res.status(409).json({error:"Δεν έχει ενεργοποιηθεί σύνδεση myDATA για αυτό το κατάστημα."});
-  if(!["SANDBOX","PRODUCTION"].includes(integration.environment))return res.status(409).json({error:"Μη έγκυρο περιβάλλον myDATA."});
+  const integration=rows[0];if(!integration?.enabled)throw syncError("Δεν έχει ενεργοποιηθεί σύνδεση myDATA για αυτό το κατάστημα.",409);
+  if(!["SANDBOX","PRODUCTION"].includes(integration.environment))throw syncError("Μη έγκυρο περιβάλλον myDATA.",409);
   const credentials=decryptStoreIntegrationCredentials(integration.credentialsEnc);
   // The cursor belongs to this store AND environment. Never reuse a sandbox MARK in production.
   const source=`AADE_MYDATA_${integration.environment}`;
