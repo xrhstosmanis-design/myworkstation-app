@@ -98,6 +98,7 @@ import platformAdminRoutes from "./routes/platform-admin.js";
 import backupMonitorRoutes from "./routes/backup-monitor.js";
 import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
+import remoteAgentRoutes from "./routes/remote-agent.js";
 import platformStoreModulesRoutes from "./routes/platform-store-modules.js";
 import platformStoreIntegrationsRoutes from "./routes/platform-store-integrations.js";
 import platformEfoodIntegrationRoutes from "./routes/platform-efood-integrations.js";
@@ -159,6 +160,7 @@ app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform",platformEfoodIntegrationRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
+app.use("/api/remote-agent",remoteAgentRoutes);
 app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);
 app.use("/api/video-admin",auth,backofficeVideoAdminRoutes);
@@ -269,3 +271,4 @@ app.listen(process.env.PORT||8080,()=>{
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
 });
+
