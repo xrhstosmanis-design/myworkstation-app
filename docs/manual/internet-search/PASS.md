@@ -20,3 +20,8 @@ Super Admin σε signed support εταιρεία ή Owner με ενεργό ADVA
 
 
 Το guard επαληθεύθηκε σε πραγματική νέα query στο exact revision386f5d7. Το προηγούμενο unit-price FAIL έκλεισε. Το margin παραμένει FAIL μέχρι διόρθωση/readback. Η φθηνότερη τιμή είναι ένδειξη provider, όχι εγκεκριμένη αγορά.
+
+
+## Margin correction — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
+
+Το market-search δικό μας προϊόν διαβάζει και το υπάρχον vatRate. Pure υπολογισμός αφαιρεί ΦΠΑ από τη μικτή λιανική πριν από καθαρό κόστος, όπως η canonical αποθήκη. Αγνώστη/άκυρη βάση δεν εμφανίζει φανταστικό margin. UI: Καθαρή αγορά / Λιανική με ΦΠΑ / Margin χωρίς ΦΠΑ. Καμία αλλαγή cost/sale/VAT/stock ή άλλης καρτέλας.25/25 targeted tests PASS (7 margin,10 item price,8 support context), τοπικός Node24· Node20/full CI/deploy/LAB απαιτούνται.
