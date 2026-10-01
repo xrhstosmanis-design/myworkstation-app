@@ -1,3 +1,4 @@
+import { normalizeReportRecipients } from "./report-recipients.js";
 import nodemailer from "nodemailer";
 
 const DEFAULT_PORT=465;
@@ -58,7 +59,7 @@ function createTransport(config){
 
 export async function sendEmail({to,subject,text,html,attachments=[]}){
   const config=requireMailConfig();
-  const recipients=[...new Set((Array.isArray(to)?to:[to]).map(value=>String(value||"").trim().toLowerCase()).filter(Boolean))];
+  const recipients=normalizeReportRecipients(to);
   if(!recipients.length){
     const error=new Error("Δεν έχει οριστεί παραλήπτης email.");
     error.status=422;

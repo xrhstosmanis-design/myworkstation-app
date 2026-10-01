@@ -1,3 +1,4 @@
+import { normalizeReportRecipients,reportRecipientListSchema } from "../services/report-recipients.js";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -244,7 +245,7 @@ function companyView(company,commercialTerms=[],managedControl=null){
     modules:catalogView(company.modules,commercialTerms),
     activeModuleCount:company.modules.filter(module=>module.active).length,
     createdAt:company.createdAt,
-    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,responsibleEmail:store.responsibleEmail,cashCloseEmailEnabled:store.cashCloseEmailEnabled,active:store.active,employees:store._count?.employees||0})),
+    stores:company.stores.map(store=>({id:store.id,name:store.name,city:store.city,address:store.address,responsibleEmail:store.responsibleEmail,cashCloseEmailEnabled:store.cashCloseEmailEnabled,active:store.active,employees:store._count?.employees||0})),
     storeCount:company.stores.length,
     userCount:company.users.length,
     employeeCount:employees,
@@ -260,7 +261,7 @@ router.get("/overview",async(req,res,next)=>{
         modules:{orderBy:{moduleKey:"asc"}},
         stores:{
           where:{active:true},
-          select:{id:true,name:true,city:true,responsibleEmail:true,cashCloseEmailEnabled:true,active:true,_count:{select:{employees:true}}},
+          select:{id:true,name:true,city:true,address:true,responsibleEmail:true,cashCloseEmailEnabled:true,active:true,_count:{select:{employees:true}}},
           orderBy:{name:"asc"}
         }
       },
@@ -512,16 +513,17 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     const body=z.object({
       name:z.string().trim().min(2).max(160),
       city:z.string().trim().max(100).optional().or(z.literal("")),
-      responsibleEmail:z.string().trim().email().optional().or(z.literal("")),
+      address:z.string().trim().max(220).optional(),
+      responsibleEmail:reportRecipientListSchema.optional(),
       cashCloseEmailEnabled:z.boolean().default(true)
     }).parse(req.body||{});
     const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
     const updated=await prisma.store.update({
       where:{id:store.id},
-      data:{name:body.name,city:body.city||null,responsibleEmail:body.responsibleEmail.toLowerCase()||null,cashCloseEmailEnabled:body.cashCloseEmailEnabled}
+      data:{name:body.name,city:body.city||null,...(body.address!==undefined?{address:body.address||null}:{}),...(body.responsibleEmail!==undefined?{responsibleEmail:body.responsibleEmail||null}:{}),cashCloseEmailEnabled:body.cashCloseEmailEnabled}
     });
-    res.json({id:updated.id,name:updated.name,city:updated.city,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
+    res.json({id:updated.id,name:updated.name,city:updated.city,address:updated.address,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
   }catch(error){next(error)}
 });
 
@@ -1266,7 +1268,7 @@ async function cashReportEmailData(storeId,date){
   const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,name:true,responsibleEmail:true,companyId:true,company:{select:{users:{where:{role:"OWNER"},select:{email:true}}}}}});
   if(!store)return null;
   const rows=await prisma.$queryRaw`SELECT s."id" AS "sessionId",s."shiftLabel",s."terminalPos",s."openedByName",s."variance",s."cardVariance",r."decision" AS "reviewDecision",r."actorName" AS "reviewedBy",r."createdAt" AS "reviewedAt",mv."lastMovementAt",(r."id" IS NOT NULL AND (mv."lastMovementAt" IS NULL OR r."createdAt">=mv."lastMovementAt")) AS "reviewValid" FROM "CashShiftSession" s LEFT JOIN LATERAL (SELECT cr."id",cr."decision",cr."actorName",cr."createdAt" FROM "CashControlReview" cr WHERE cr."companyId"=s."companyId" AND cr."storeId"=s."storeId" AND cr."sessionId"=s."id" ORDER BY cr."createdAt" DESC LIMIT 1) r ON TRUE LEFT JOIN LATERAL (SELECT MAX(GREATEST(t."createdAt",COALESCE(t."reversedAt",t."createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" t WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id") mv ON TRUE WHERE s."storeId"=${storeId} AND s."companyId"=${store.companyId} AND s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY s."openedAt"`;
-  const recipients=[...new Set([...store.company.users.map(row=>row.email),store.responsibleEmail].map(value=>String(value||"").trim().toLowerCase()).filter(Boolean))];
+  const recipients=normalizeReportRecipients([...store.company.users.map(row=>row.email),store.responsibleEmail]);
   return {store,recipients,rows:rows.map(row=>({...row,variance:Number(row.variance||0),cardVariance:Number(row.cardVariance||0),reviewValid:Boolean(row.reviewValid)}))};
 }
 
