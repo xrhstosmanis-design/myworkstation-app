@@ -86,9 +86,9 @@ router.post("/:employeeId/work-card",async(req,res,next)=>{
       if(existing)await tx.$executeRaw`UPDATE "StoreOperatorCredential" SET "displayName"=${employee.fullName},"cardCodeHash"=${cardCodeHash},"cardCodeLast4"=${cardCodeLast4},"active"=TRUE,"updatedAt"=NOW() WHERE "id"=${existing.id}`;
       else await tx.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","cardCodeHash","cardCodeLast4","active","createdBy","createdAt","updatedAt") VALUES (${crypto.randomUUID()},${context.company.id},${context.store.id},${legacyEmployeeId},${employee.fullName},'EMPLOYEE',${cardCodeHash},${cardCodeLast4},TRUE,${req.user?.id||null},NOW(),NOW())`;
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_WORK_CARD_PREPARED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,after:{employeeId:employee.id,legacyEmployeeId,cardLast4:cardCodeLast4,reprint:Boolean(existing)},reason:"Προετοιμασία εκτυπώσιμης κάρτας εργασίας"});
-      return {cardCode,cardCodeLast4,reprint:Boolean(existing)};
+      return {cardCode,cardCodeLast4,legacyEmployeeId,reprint:Boolean(existing)};
     });
-    res.json({employee:{id:employee.id,fullName:employee.fullName},store:{id:context.store.id,name:context.store.name},mobileUrl:`/store/${context.store.id}?employee-card=1&employee=${legacyEmployeeId}`,...result});
+    res.json({employee:{id:employee.id,fullName:employee.fullName},store:{id:context.store.id,name:context.store.name},mobileUrl:`/store/${context.store.id}?employee-card=1&employee=${result.legacyEmployeeId}`,...result});
   }catch(error){next(error)}
 });
 
