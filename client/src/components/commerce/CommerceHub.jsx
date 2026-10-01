@@ -33,6 +33,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [handover,setHandover]=useState([]);
   const [aiStatus,setAiStatus]=useState(null);
   const [aiFocusJobId,setAiFocusJobId]=useState("");
+  const [pendingSourceStoreId,setPendingSourceStoreId]=useState("");
   const [cart,setCart]=useState([]);
   const [posLayout,setPosLayout]=useState({title:"OPERATOR POS",productColumns:6,showSku:true,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},quickKeys:[],categories:[],buttons:[{id:"cash",label:"ΜΕΤΡΗΤΑ",action:"CASH",color:"#078a4d",visible:true},{id:"card",label:"ΚΑΡΤΑ",action:"CARD",color:"#3979cc",visible:true}]});
   const [posCategory,setPosCategory]=useState("");
@@ -40,7 +41,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [error,setError]=useState("");
   const active=new Set(activeModules);
 
-  useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,storeId,activeStoreId]);
+  useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,activeStoreId]);
   useEffect(()=>{
     const onModules=e=>setActiveModules(e.detail?.activeModules||readActive());
     window.addEventListener("myworkstation:modules-updated",onModules);
@@ -191,9 +192,17 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 
-    {tab==="pending"&&<PendingCenterPanel api={api} stores={stores}/>}
+    {tab==="pending"&&<PendingCenterPanel api={api} stores={stores} modules={activeModules} onOpenSource={row=>{
+      if(row.source==="PAYMENT"){
+        let user=null;try{user=JSON.parse(localStorage.getItem("user")||"null")}catch{}
+        const superAdmin=user?.role==="SUPER_ADMIN"||user?.platformRole==="SUPER_ADMIN"||user?.isSuperAdmin===true;
+        window.location.assign(superAdmin?"/platform-admin":`/?${new URLSearchParams({supportPage:"stores",supportStore:row.storeId})}`);return
+      }
+      setStoreId(row.storeId);setPendingSourceStoreId(row.storeId);setTab(row.source==="INVOICE"?"documents":"inventory");
+      setMessage(`Κατάστημα: ${row.storeName} · Αναγνωριστικό: ${row.sourceId}`);
+    }}/>}
 
-    {tab==="documents"&&<InvoiceInboxPanel api={api} stores={stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
+    {tab==="documents"&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 
