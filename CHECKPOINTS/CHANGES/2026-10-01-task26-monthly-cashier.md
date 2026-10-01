@@ -21,3 +21,13 @@ LIMITED LAB PASS ήδη δημοσιευμένο #1597, revisiona882bb4. Στι�
 ## Τοπική επικύρωση
 
 Node20.20.2:6 targeted PASS, frontend build PASS, server build PASS,1757serverPASS/0FAIL/1SKIP (optional PostgreSQL integration χωρίςDATABASE_URL). Νέο πραγματικό HTTP/SQL σενάριο στην υπάρχουσα isolatedCIWorkforce ροή: εικονική ανοικτή βάρδια με cached999, μήνας3.60, boundary-before/end excluded, reversed300excluded, δεύτεροstore0, foreigncompany404, invalidmonth400, ledger snapshotαμετάβλητο. Η εκτέλεσή του AWAITING CI· δεν δηλώνεται LAB PASS. Ο παλιός rolling30days κώδικας διατηρείται. DefaultUIμήνας, προαιρετική30days, race cancellation/error retry/close διαθέσιμα. Προβολή αναλυτικώνshiftIDs και warningspartial250shifts/500attendance/250actions. Δεν προστέθηκεmanualPASS.
+
+## CI/merge και πριν τη read-only LAB δοκιμή
+
+PR1599 head01728bbe, CI4016PASS μαζί με πραγματικό monthly SQL/HTTP σενάριο16:13:24Z. Mergeedeba510531b8e7940983f22c8a5e31ef3b90b19, mainCI4018PASS· Render1856in-progress16:16:54Z. Exact deploy ακόμη NOT VERIFIED, δεν ξεκίνησεmonthlyLAB.
+
+BEFORE16:16UTC περίπου/19:16Ελλάδας: MYWORKSTATION LAB, ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ cmtpopbgo000trhb5ng9ytiru, cloudChrome με SuperAdmin, φυσικόPOS/operatorN/A. Φρέσκο BackOffice: MAIN2συναλλαγές/μετρητά2.40/card0/IRIS0/total2.40, LAB-POS-02 2συναλλαγές/όλα0. Προβλεπόμενες ενέργειες μόνο επιλογή μήνα/εργαζομένου και ανάγνωση, quantity0/paymentN/A. Δεν επηρεάζεταιSKU, stock/latestmovement/hashNOTTESTED, καμία επιχειρησιακή εγγραφή επιτρέπεται.
+
+## Exact deploy και περιορισμένη LAB αποδοχή
+
+Render1856 completed success16:19:57Z, runtimehealth exactedeba510 επιβεβαιωμένο πρινmonthlyLAB. CanonicalPlatformAdmin→Προσωπικό & Πρόγραμμα→MYWORKSTATION LAB→ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ→LAB POS2→Απόδοση & Ταμεία. SuperAdmin/cloudChrome μόνο. Default2026-10 0παρουσίες, rolling30 27ω56λ/7ω, επιστροφήMONTH και πραγματική επιλογή2026-09 δείχνει27ω56λ/7ω: LIMITED UI LAB PASS. Explicit «Δεν υπάρχει verified POS operator» τόσοmonthlyόσοrolling. Δεν αποδεικνύονται θετικές πωλήσεις/βάρδιες από ίδιο όνομα και δεν δημιουργείται σύνδεση για διάγνωση. Human evaluation0, κανέναsubmit. Μετά freshreload MAIN2/2.40€/card0/IRIS0, LAB-POS-02 2/0€, αμετάβλητα. Financial/stockwrites0. Remaining ASSIGNED στον ίδιο υπεύθυνο: θετική verified identity/shift/ledger αποδοχή, Owner χωρίςSA, livecap/errors. Συνολικό#26 και automatic score OPEN.
