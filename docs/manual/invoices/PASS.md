@@ -1,3 +1,9 @@
+## 01/10/2026 11:43 - TDA6538 original delivery: limited USER PASS
+
+Selected company/store Διαδόχου Παύλου, authorized BackOffice owner/manager with DOCUMENTS, AI_READER and INVENTORY: locate the existing TDA6538/116.96 invoice in Θυρίδα Τιμολογίων, use Λήψη πρωτοτύπου για έλεγχο once, open the linked same draft/Βοηθός τιμολογίου. Owner confirms correct transfer; original one-page PDF is displayed (image084355, runtimeca354a97/#1571). Printed TDA0006538 matches myDATA6538; MARK and both VAT identifiers remain exact. Independent baseline confirms one new draft and no new StoreTransaction/StockMovement; stock quantities and control shifts NOT TESTED.
+
+This PASS is acquisition/linkage/display only. Current real FAIL:7 physical rows sum63, footer says19, so preview blocks application even after selection. Keep the same draft; do not reduce physical row quantities to19, recreate the invoice or pay again. Explicit human quantity confirmation correction awaits actual USER acceptance; no usage PASS for that new control yet. Existing gross/net/page checks remain required. Posting/stock and physical supplier payment at POS remain separate untested steps for this invoice. Troubleshooting: if an old warning remains after deployment, refresh the page and reopen the same draft, preserving its original. Checkpoint2026-10-01-mydata-quantity-human-review.md.
+
 ## 01/10/2026 - myDATA original to editable Orders draft: limited USER PASS
 
 Owner/BackOffice manager with DOCUMENTS, AI_READER and INVENTORY, in the selected company/store: open Θυρίδα Τιμολογίων, locate the supplier invoice, then Έλεγχος από βοηθό AI. Verified on Διαδόχου ΤΔΠΤΛ135848, runtime ae8fa98b: one editable draft opens in Παραγγελίες & Αγορές; Βοηθός τιμολογίου shows the original supplier PDF. Same existing job/attachment; no payment or stock movement, stock quantities unchanged against captured baseline. The shell initially has zero rows. This PASS covers delivery and original display only.
