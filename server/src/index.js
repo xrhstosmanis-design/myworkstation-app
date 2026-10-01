@@ -65,7 +65,7 @@ import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
 import storePosSaleDisplayRoutes from "./routes/store-pos-sale-display.js";
 import pilotReportRoutes from "./routes/pilot-report.js";
 import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-approval.js";
-import commerceMyDataInboxRoutes from "./routes/commerce-mydata-inbox.js";
+import commerceMyDataInboxRoutes,{startMyDataReceivingWorker} from "./routes/commerce-mydata-inbox.js";
 import commerceVatLookupRoutes from "./routes/commerce-vat-lookup.js";
 import commercePosV244Routes,{ensurePosInvoiceBackgroundWorkerSchema,startPosInvoiceBackgroundWorker} from "./routes/commerce-pos-v244.js";
 import commerceAzureInvoiceReaderRoutes from "./routes/commerce-azure-invoice-reader.js";
@@ -267,4 +267,5 @@ await ensurePosInvoiceBackgroundWorkerSchema();
 app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
+  startMyDataReceivingWorker();
 });

@@ -11,6 +11,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
   const tx={
     async $queryRaw(strings,...values){
       const sql=strings.join("?");queries.push({sql,values});
+      if(sql.includes("pg_try_advisory_xact_lock"))return [{held:true}];
       if(sql.includes('FROM "MyDataInboundDocument"'))return alreadyExists?[{inboxId:"existing"}]:[];
       if(sql.includes('FROM "Supplier"'))return matchingSupplier?[{id:"supplier-one",name:"Supplier One"}]:[];
       throw new Error(`Unexpected transaction query: ${sql}`);
