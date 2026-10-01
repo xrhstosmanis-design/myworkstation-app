@@ -30,6 +30,34 @@ test("two terminals complete physical sales atomically and report a negative-sto
   assert.equal(tx.stock,-1);
 });
 
+test("tracked POS sale records one idempotent stock movement for a gift line",async()=>{
+  const executions=[];
+  const tx={
+    async $queryRaw(){return[{trackStock:true,reserved:true,previousStock:1,nextStock:0}]},
+    async $executeRaw(strings,...values){executions.push({sql:strings.join("?"),values});return 1}
+  };
+  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"gift-product",quantity:2,productName:"Gift product",saleId:"sale-1",saleLineId:"line-1",priceSource:"GIFT"});
+  assert.equal(executions.length,1);
+  assert.match(executions[0].sql,/INSERT INTO "StockMovement"/);
+  assert.match(executions[0].sql,/'SALE'/);
+  assert.match(executions[0].sql,/'POS_SALE'/);
+  assert.match(executions[0].sql,/ON CONFLICT \("storeId","idempotencyKey"\)/);
+  assert.ok(executions[0].values.includes(-2));
+  assert.ok(executions[0].values.includes("sale-1"));
+  assert.ok(executions[0].values.includes("POS πώληση · Δώρο · Gift product"));
+  assert.ok(executions[0].values.includes("pos-sale:sale-1:line:line-1"));
+});
+
+test("untracked POS line does not create a stock movement",async()=>{
+  let movements=0;
+  const tx={
+    async $queryRaw(){return[{trackStock:false,reserved:false,previousStock:null,nextStock:null}]},
+    async $executeRaw(){movements+=1;return 1}
+  };
+  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"service",quantity:1,productName:"Service",saleId:"sale-2",saleLineId:"line-2"});
+  assert.equal(movements,0);
+});
+
 test("checkout binds each sale to its own terminal shift and fail-closed device route",()=>{
   assert.match(storePos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos:routedTerminalPos,channel:paymentChannel\}\)/);
@@ -37,6 +65,8 @@ test("checkout binds each sale to its own terminal shift and fail-closed device 
   assert.match(storePos,/NEGATIVE_STOCK_RECORDED/);
   assert.doesNotMatch(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
   assert.match(storePos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
+  assert.match(storePos,/const saleLineId=crypto\.randomUUID\(\)/);
+  assert.match(storePos,/saleId,saleLineId,priceSource:item\.priceSource/);
 });
 
 test("identical legitimate sales on POS-1 and POS-2 do not share the duplicate fingerprint",()=>{
