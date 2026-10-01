@@ -1,3 +1,5 @@
+**01/10/2026 — #27 reversal cost ASSIGNED `codex/task27-returns-review-20261001`, AWAITING CI/DEPLOY/LAB:** Same responsible page. Existing reversal revenue/quantity signs preserved; return/cancellation cost must use original sale date, not a later purchase. Add explicit counters and conservative unknown cost for broken original links. Expense VAT remains separate OPEN. No production writes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task27-returns-review.md`.
+
 **01/10/2026 — #27 remaining ASSIGNED `codex/task27-profitability-20261001` (same page):** Returns, expenseVAT, historicalcost, OwnerwithoutSA, printing and fullmodule OPEN. Missing-cost/day/month/CSV and Greekcalendar/default/quarter/currentmonth have LIMITED read-only LAB PASS; do not repeat completed scope or create financial fixtures. Latestexact4c5cc8d, PR1606/1609, CI4041/4042/Render1867PASS, both tills unchanged. Next action: read existing return/expenseVAT semantics before bounded correction. Checkpoints task27-profitability/task27-athens-periods, manualprofitability, centralPDF.
 
 

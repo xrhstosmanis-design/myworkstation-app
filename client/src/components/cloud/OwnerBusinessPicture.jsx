@@ -13,7 +13,9 @@ const columns=[
   ["netProfit","Καθ. κέρδος",money],["paymentTotal","Πληρωμές",money],["purchaseSalesPercent","Αγορές/Πωλήσεις (χ.ΦΠΑ)",pct],
   ["expenseSalesPercent","Έξοδα/Πωλήσεις (χ.ΦΠΑ)",pct],["purchaseVat","ΦΠΑ αγορών",money],["expenseVat","ΦΠΑ εξόδων",money],
   ["missingCostLines","Γραμμές χωρίς κόστος",value=>Number(value||0).toLocaleString("el-GR")],
-  ["salesLines","Γραμμές πωλήσεων",value=>Number(value||0).toLocaleString("el-GR")]
+  ["salesLines","Γραμμές πωλήσεων",value=>Number(value||0).toLocaleString("el-GR")],
+  ["returnTransactions","Επιστροφές",value=>Number(value||0).toLocaleString("el-GR")],
+  ["cancelTransactions","Ακυρώσεις",value=>Number(value||0).toLocaleString("el-GR")]
 ];
 
 export default function OwnerBusinessPicture({api,store,onClose}){
@@ -39,6 +41,7 @@ export default function OwnerBusinessPicture({api,store,onClose}){
       </div>
       <div className="business-picture-tools"><button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={()=>window.print()}><Printer/> Εκτύπωση</button></div>
       {data?.calendarFrom&&<p className="business-picture-loading">Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
+      {!busy&&data?.totals&&<p className="business-picture-loading">Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
       {!busy&&data?.totals?.missingCostLines>0&&<div className="business-picture-error" role="status">Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
       {error&&<div className="business-picture-error">{error}</div>}
       {busy?<div className="business-picture-loading">Φόρτωση οικονομικής εικόνας…</div>:<div className="business-picture-table-wrap"><table><thead><tr><th>Έτος-Μήνας</th>{columns.map(([,label])=><th key={label}>{label}</th>)}</tr></thead><tbody>
