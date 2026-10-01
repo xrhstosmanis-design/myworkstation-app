@@ -17,3 +17,8 @@ Local full server suite1689 PASS/1SKIP (1690total); client build PASS, server pr
 Read-only BEFORE2026-10-01T07:38:27.555529Z /10:38Greece, companycmulmjjoa000oqlbfyi0h53ju/storecmulmjjoc000qqlbf2bn2ifj0: inbound5270, PurchaseDocument1, StoreTransaction0, StockMovement0. No preview/payment/approval/write was run for this baseline. Direct owner absent; actual linked owner through OwnerCompanyAccess confirmed, DOCUMENTS active. PostgreSQL advisory-lock function confirmed read-only. Stock quantities/control shifts NOT TESTED in this scope; no economic delta claimed.
 
 After exact deployment: owner refreshes same inbox, searches a known interval by issueDate, checks daily arrivals by receipt date and original issue date, exports grouped PDF/Excel. Observe one scheduled cycle with browser closed, same identifiers and no new payment/stock; fresh before/after for any draft creation. No repeated paid LAB invoice or real purchase finalization. Only then scoped USER/LIVE PASS and all five checkpoint/manual/roadmap/active/PDF surfaces close together. Owner retained.
+
+## Exact deployment / still AWAITING USER
+
+**01/10 10:52 Greece — #1569 exact LIVE / AWAITING USER:** runtime `5e6bf57e7ae119066ec189e1bd8c4017f65e9422`, Render `dep-dav10tbncjis738o01h0` LIVE2026-10-01T07:52:00.015978Z; PR CI36832059077 and main CI36832327447 PASS (Node20/build/server/invariants/isolated HTTP E2E). Final local1690PASS/1SKIP. Search issue dates/from-to, Athens daily arrivals, grouped exports and 15minute server scheduler deployed, no actual first scheduled cycle or owner UI/export acceptance yet. Same owner ASSIGNED; Epsilon provider request pending. No additional runtime deploy from docs. `CHECKPOINTS/CHANGES/2026-10-01-mydata-date-range-daily-scheduler.md`.
+
