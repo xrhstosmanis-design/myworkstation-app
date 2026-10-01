@@ -154,6 +154,47 @@ async function main(){
   assert.equal(saleAudit.details?.items?.[0]?.priceSource,"MANUAL");
   assert.equal(saleAudit.details?.items?.[0]?.overrideReason,"E2E ελεγμένη αλλαγή τιμής");
 
+  // Task27: actual authenticated report / SQL cost coverage in isolated CI only.
+  const saleTime=(await prisma.$queryRaw`SELECT "occurredAt" FROM "Sale" WHERE "id"=${saleId}`)[0].occurredAt;
+  const picturePath=`/api/owner-payments/business-picture?storeId=${storeId}&from=${encodeURIComponent(saleTime.toISOString())}&to=${encodeURIComponent(saleTime.toISOString())}`;
+  const snapshot=()=>prisma.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "Sale" WHERE "id"=${saleId}) AS sales,(SELECT COUNT(*)::int FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${storeId}) AS transactions,(SELECT COUNT(*)::int FROM "StockMovement" WHERE "storeId"=${storeId}) AS movements,(SELECT "currentStock" FROM "StoreProduct" WHERE "productId"=${productId} AND "storeId"=${storeId}) AS stock`;
+  const beforePicture=await snapshot();
+  const known=await request(picturePath,{token:ownerToken});
+  assert.equal(known.response.status,200,JSON.stringify(known.payload));
+  assert.match(known.response.headers.get("cache-control"),/no-store/);
+  assert.equal(known.payload.totals.salesLines,1);
+  assert.equal(known.payload.totals.missingCostLines,0);
+  assert.equal(known.payload.totals.costValue,2);
+  assert.ok(Math.abs(known.payload.totals.grossProfit-(5/1.24-2))<0.001);
+  assert.equal((await request(picturePath)).response.status,401);
+  assert.equal((await request(picturePath,{token:operatorToken})).response.status,403);
+  assert.equal((await request(picturePath.replace(storeId,"task27-foreign-store"),{token:ownerToken})).response.status,404);
+  assert.equal((await request(`/api/owner-payments/business-picture?storeId=${storeId}&from=invalid`,{token:ownerToken})).response.status,400);
+  const fixtureDoc=`task27-free-${saleId}`;
+  try{
+    await prisma.$executeRaw`UPDATE "Product" SET "costPrice"=0 WHERE "id"=${productId} AND "companyId"=${companyId}`;
+    const missing=await request(picturePath,{token:ownerToken});
+    assert.equal(missing.response.status,200,JSON.stringify(missing.payload));
+    for(const r of [missing.payload.totals,...missing.payload.monthly,...missing.payload.daily]){
+      assert.equal(r.missingCostLines,1);assert.equal(r.costComplete,false);
+      assert.equal(r.grossProfit,null);assert.equal(r.netProfit,null);assert.equal(r.margin,null);
+    }
+    // Explicit approved free acquisition is different from an unknown default 0.
+    await prisma.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate") VALUES (${fixtureDoc},${companyId},${storeId},'APPROVED',${new Date(saleTime.getTime()-1)})`;
+    await prisma.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","description","unitCost","quantity","unit") VALUES (${fixtureDoc+"-line"},${fixtureDoc},${productId},'Isolated explicit free purchase',0,1,'PIECE')`;
+    const free=await request(picturePath,{token:ownerToken});
+    assert.equal(free.response.status,200,JSON.stringify(free.payload));
+    assert.equal(free.payload.totals.missingCostLines,0);
+    assert.equal(free.payload.totals.costComplete,true);
+    assert.equal(free.payload.totals.margin,100);
+    assert.equal(free.payload.totals.costValue,0);
+    assert.deepEqual(await snapshot(),beforePicture,"Report altered sale/payment/stock ledgers");
+  }finally{
+    await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${fixtureDoc} AND "companyId"=${companyId}`;
+    await prisma.$executeRaw`UPDATE "Product" SET "costPrice"=1 WHERE "id"=${productId} AND "companyId"=${companyId}`;
+  }
+  console.log("E2E task27 profitability cost coverage passed",{saleId,knownCost:2,unknownProfit:null,documentedFreeMargin:100});
+
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }
 

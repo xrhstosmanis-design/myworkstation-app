@@ -1,6 +1,7 @@
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import {finishBusinessPictureRow} from "../business-picture-totals.js";
 
 const router=Router();
 const reportQuery=z.object({
@@ -74,6 +75,8 @@ router.get("/business-picture",async(req,res,next)=>{
       prisma.$queryRaw`
         SELECT DATE_TRUNC('month',sa."occurredAt") AS month,DATE(sa."occurredAt") AS day,
           COUNT(DISTINCT sa."id")::int AS transactions,COALESCE(SUM(sl."lineTotal"),0) AS "salesGross",
+          COUNT(*)::int AS "salesLines",
+          COUNT(*) FILTER (WHERE pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0))::int AS "missingCostLines",
           COALESCE(SUM(CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesNet",
           COALESCE(SUM(sl."lineTotal"-CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesVat",
           COALESCE(SUM(sl."quantity"*COALESCE(pc."unitCost",p."costPrice",0)),0) AS "costValue"
@@ -105,15 +108,16 @@ router.get("/business-picture",async(req,res,next)=>{
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY DATE_TRUNC('month',tx."occurredAt"),DATE(tx."occurredAt") ORDER BY day`
     ]);
-    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0});return rows.get(id)};
-    for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
+    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0});return rows.get(id)};
+    for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
     for(const row of purchases)Object.assign(ensure(row.day,row.month),{documents:n(row.documents),purchaseNet:n(row.purchaseNet),purchaseVat:n(row.purchaseVat),purchaseGross:n(row.purchaseGross)});
     for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenses:n(row.expenses),paymentTotal:n(row.paymentTotal),expenseVat:n(row.expenseVat)});
-    const finish=row=>({...row,margin:row.salesNet?(row.salesNet-row.costValue)/row.salesNet*100:0,grossProfit:row.salesNet-row.costValue,netProfit:row.salesNet-row.costValue-row.expenses,purchaseSalesPercent:row.salesNet?row.purchaseNet/row.salesNet*100:0,expenseSalesPercent:row.salesNet?Math.max(0,row.expenses-row.expenseVat)/row.salesNet*100:0});
+    const finish=finishBusinessPictureRow;
     const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(finish);
-    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
-    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0}));
-    res.json({generatedAt:new Date().toISOString(),from,to,stores,monthly,daily,totals,calculationNotes:{grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
+    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0}));
+    res.set("Cache-Control","no-store, private");
+    res.json({generatedAt:new Date().toISOString(),from,to,stores,monthly,daily,totals,calculationNotes:{costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
   }catch(error){next(error)}
 });
 
