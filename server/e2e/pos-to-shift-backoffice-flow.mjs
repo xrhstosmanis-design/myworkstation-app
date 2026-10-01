@@ -195,6 +195,42 @@ async function main(){
   }
   console.log("E2E task27 profitability cost coverage passed",{saleId,knownCost:2,unknownProfit:null,documentedFreeMargin:100});
 
+  // Explicit Greek midnight boundary fixtures, isolated CI database only.
+  const periodFixture=`task27-period-${saleId}`;
+  const ids=[0,1,2,3].map(i=>`${periodFixture}-${i}`);
+  const times=['2030-09-30T20:59:59.999Z','2030-09-30T21:00:00.000Z','2030-10-01T20:59:59.999Z','2030-10-01T21:00:00.000Z'];
+  const dayPath=`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2030-10-01&calendarTo=2030-10-01`;
+  try{
+    for(let i=0;i<ids.length;i++){
+      await prisma.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","occurredAt","total") VALUES (${ids[i]},${companyId},${storeId},${new Date(times[i])},${i+1})`;
+      await prisma.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","vatRate","lineTotal") VALUES (${ids[i]+"-line"},${ids[i]},${productId},'Isolated Athens boundary',1,0,${i+1})`;
+    }
+    await prisma.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate","totalNet","totalGross") VALUES (${periodFixture+"-doc"},${companyId},${storeId},'APPROVED',${new Date(times[1])},7,7)`;
+    await prisma.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount","actorId","actorName","occurredAt") VALUES (${periodFixture+"-tx"},${companyId},${storeId},'OTHER_EXPENSE',11,'task27-e2e','Isolated Athens expense',${new Date(times[1])})`;
+    const beforeDay=await snapshot();
+    const day=await request(dayPath,{token:ownerToken});
+    assert.equal(day.response.status,200,JSON.stringify(day.payload));
+    assert.equal(day.payload.timeZone,'Europe/Athens');
+    assert.equal(day.payload.from,'2030-09-30T21:00:00.000Z');
+    assert.equal(day.payload.to,'2030-10-01T20:59:59.999Z');
+    assert.equal(day.payload.totals.salesGross,5);
+    assert.equal(day.payload.totals.salesLines,2);
+    assert.equal(day.payload.totals.purchaseGross,7);
+    assert.equal(day.payload.totals.expenses,11);
+    assert.equal(day.payload.daily.length,1);
+    assert.equal(day.payload.daily[0].day,'2030-10-01');
+    assert.equal(day.payload.daily[0].month,'2030-10');
+    assert.equal(day.payload.monthly[0].month,'2030-10');
+    assert.deepEqual(await snapshot(),beforeDay);
+    for(const suffix of ['&calendarFrom=2030-02-30','&from=2030-10-01T00:00Z'])assert.equal((await request(dayPath+suffix,{token:ownerToken})).response.status,400);
+    assert.equal((await request(`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2030-10-01`,{token:ownerToken})).response.status,400);
+  }finally{
+    for(const id of ids)await prisma.$executeRaw`DELETE FROM "Sale" WHERE "id"=${id} AND "companyId"=${companyId}`;
+    await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${periodFixture+"-doc"} AND "companyId"=${companyId}`;
+    await prisma.$executeRaw`DELETE FROM "StoreTransaction" WHERE "id"=${periodFixture+"-tx"} AND "companyId"=${companyId}`;
+  }
+  console.log('E2E task27 Athens calendar periods passed',{start:'2030-09-30T21Z',sales:5,purchases:7,expenses:11});
+
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }
 
