@@ -218,7 +218,10 @@ async function main(){
     assert.equal(day.payload.totals.salesGross,5);
     assert.equal(day.payload.totals.salesLines,2);
     assert.equal(day.payload.totals.purchaseGross,7);
-    assert.equal(day.payload.totals.expenses,12);
+    assert.equal(day.payload.totals.expenseGross,12);
+    assert.equal(day.payload.totals.expenses,null);
+    assert.equal(day.payload.totals.expenseVat,null);
+    assert.equal(day.payload.totals.missingExpenseVatPayments,2);
     assert.equal(day.payload.daily.length,1);
     assert.equal(day.payload.daily[0].day,'2030-10-01');
     assert.equal(day.payload.daily[0].month,'2030-10');
@@ -272,6 +275,41 @@ async function main(){
     for(const id of reverseDocs)await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${id} AND "companyId"=${companyId}`;
   }
   console.log('E2E task27 original-date reversal cost passed',{returns:1,cancellations:1,sales:-30,cost:-6,laterCostNotUsed:9,orphanProfit:null});
+
+  // Expense VAT requires one full, approved, reconciled document payment.
+  const vatFixture=`task27-vat-${saleId}`,vatDocs=[],vatTransactions=[];
+  const vatPath=day=>`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2032-05-${day}&calendarTo=2032-05-${day}`;
+  const addVatDoc=async(label,net,vat,gross,status='APPROVED')=>{const id=`${vatFixture}-${label}`;vatDocs.push(id);await prisma.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate","totalNet","totalVat","totalGross") VALUES (${id},${companyId},${storeId},${status},${new Date('2032-04-30T12:00Z')},${net},${vat},${gross})`;return id;};
+  const addVatPayment=async(label,day,amount,doc=null,reversed=false)=>{const id=`${vatFixture}-${label}`;vatTransactions.push(id);await prisma.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount","actorId","actorName","occurredAt","attachmentMimeType","attachmentFilename","reversedAt") VALUES (${id},${companyId},${storeId},'OTHER_EXPENSE',${amount},'task27-e2e','Isolated expense VAT',${new Date(`2032-05-${day}T12:00Z`)},${doc?'application/vnd.myworkstation.purchase-document':null},${doc},${reversed?new Date('2032-05-20T12:00Z'):null})`;};
+  try{
+    await addVatPayment('full','01',124,await addVatDoc('full-doc',100,24,124));
+    await addVatPayment('zero','02',100,await addVatDoc('zero-doc',100,0,100));
+    await addVatPayment('partial','03',62,await addVatDoc('partial-doc',100,24,124));
+    const split=await addVatDoc('split-doc',100,24,124);await addVatPayment('split1','04',62,split);await addVatPayment('split2','05',62,split);
+    await addVatPayment('draft','06',124,await addVatDoc('draft-doc',100,24,124,'DRAFT'));
+    await addVatPayment('inconsistent','07',124,await addVatDoc('bad-doc',90,24,124));
+    await addVatPayment('unlinked','08',10);
+    await addVatPayment('credit','09',-124,await addVatDoc('credit-doc',-100,-24,-124));
+    const duplicate=await addVatDoc('duplicate-doc',100,24,124);await addVatPayment('duplicate1','10',124,duplicate);await addVatPayment('duplicate2','11',124,duplicate);
+    await addVatPayment('reversed','12',124,await addVatDoc('reversed-doc',100,24,124),true);
+    const beforeVat=await snapshot();
+    for(const [day,gross,net,vat] of [['01',124,100,24],['02',100,100,0],['09',-124,-100,-24]]){
+      const result=await request(vatPath(day),{token:ownerToken});assert.equal(result.response.status,200,JSON.stringify(result.payload));
+      for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.expenseGross,gross);assert.equal(r.expenses,net);assert.equal(r.expenseVat,vat);assert.equal(r.netProfit,-net);assert.equal(r.missingExpenseVatPayments,0);}
+    }
+    for(const day of ['03','04','05','06','07','08','10','11']){
+      const result=await request(vatPath(day),{token:ownerToken});assert.equal(result.response.status,200,JSON.stringify(result.payload));
+      for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.missingExpenseVatPayments,1);assert.equal(r.expenses,null);assert.equal(r.expenseVat,null);assert.equal(r.netProfit,null);assert.equal(r.expenseSalesPercent,null);assert.equal(r.grossProfit,0);}
+    }
+    const reversed=await request(vatPath('12'),{token:ownerToken});assert.equal(reversed.payload.totals.expenseGross,0);assert.equal(reversed.payload.totals.expensePayments,0);assert.equal(reversed.payload.totals.missingExpenseVatPayments,0);
+    const mixed=await request(vatPath('01')+'&calendarTo=2032-05-11',{token:ownerToken});assert.equal(mixed.response.status,400,'Duplicate query field must be rejected');
+    const all=await request(vatPath('01').replace('calendarTo=2032-05-01','calendarTo=2032-05-11'),{token:ownerToken});assert.equal(all.payload.totals.missingExpenseVatPayments,8);assert.equal(all.payload.totals.expenses,null);assert.equal(all.payload.totals.expenseVat,null);assert.equal(all.payload.totals.netProfit,null);
+    assert.deepEqual(await snapshot(),beforeVat,'Expense report reads must leave ledgers unchanged');
+  }finally{
+    for(const id of vatTransactions)await prisma.$executeRaw`DELETE FROM "StoreTransaction" WHERE "id"=${id} AND "companyId"=${companyId}`;
+    for(const id of vatDocs)await prisma.$executeRaw`DELETE FROM "PurchaseDocument" WHERE "id"=${id} AND "companyId"=${companyId}`;
+  }
+  console.log('E2E task27 documented expense VAT passed',{fullGross:124,net:100,vat:24,zeroVatKnown:true,creditNet:-100,unknownPayments:8,partialAndDuplicateVat:null});
 
   console.log("E2E real POS -> shift -> BackOffice flow passed",{sessionId,saleId,operatorId,stockAfter:8,cash:2,card:3,manualPrice:2.5});
 }

@@ -106,27 +106,38 @@ router.get("/business-picture",async(req,res,next)=>{
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
+        WITH "expenseLinks" AS (
+          SELECT "companyId","storeId","attachmentFilename",COUNT(*) AS links
+          FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
+          GROUP BY "companyId","storeId","attachmentFilename"
+        )
         SELECT TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
           COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL)::int AS payments,
-          COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS expenses,
+          COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "expenseGross",
+          COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE')::int AS "expensePayments",
+          COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE' AND pd."id" IS NULL)::int AS "missingExpenseVatPayments",
           COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL),0) AS "paymentTotal",
-          COALESCE(SUM(pd."totalVat") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "expenseVat"
+          COALESCE(SUM(pd."totalVat") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "knownExpenseVat"
         FROM "StoreTransaction" tx
-        LEFT JOIN "PurchaseDocument" pd ON tx."attachmentMimeType"=${purchaseDocumentMime} AND pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId"
+        LEFT JOIN "expenseLinks" links ON links."companyId"=tx."companyId" AND links."storeId"=tx."storeId" AND links."attachmentFilename"=tx."attachmentFilename" AND tx."attachmentMimeType"=${purchaseDocumentMime}
+        LEFT JOIN "PurchaseDocument" pd ON tx."attachmentMimeType"=${purchaseDocumentMime} AND pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId" AND pd."storeId"=tx."storeId" AND pd."status"='APPROVED' AND links.links=1
+          AND pd."totalGross"<>0 AND ROUND(tx."amount",2)=ROUND(pd."totalGross",2)
+          AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
+          AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
         WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
     ]);
-    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0});return rows.get(id)};
+    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0});return rows.get(id)};
     for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),returnTransactions:n(row.returnTransactions),cancelTransactions:n(row.cancelTransactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
     for(const row of purchases)Object.assign(ensure(row.day,row.month),{documents:n(row.documents),purchaseNet:n(row.purchaseNet),purchaseVat:n(row.purchaseVat),purchaseGross:n(row.purchaseGross)});
-    for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenses:n(row.expenses),paymentTotal:n(row.paymentTotal),expenseVat:n(row.expenseVat)});
+    for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenseGross:n(row.expenseGross),expensePayments:n(row.expensePayments),missingExpenseVatPayments:n(row.missingExpenseVatPayments),knownExpenseVat:n(row.knownExpenseVat),paymentTotal:n(row.paymentTotal)});
     const finish=finishBusinessPictureRow;
     const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(finish);
-    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
-    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenses:0,paymentTotal:0,expenseVat:0}));
+    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
+    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0}));
     res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,calculationNotes:{reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Καθαρό ποσό και ΦΠΑ υπολογίζονται μόνο από μία πλήρη πληρωμή με συνεπές εγκεκριμένο παραστατικό· χωρίς τεκμηρίωση ή σε μερικές/πολλαπλές πληρωμές παραμένουν άγνωστα. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
   }catch(error){next(error)}
 });
 

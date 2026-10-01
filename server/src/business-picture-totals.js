@@ -3,10 +3,15 @@
 export function finishBusinessPictureRow(row) {
  const missingCostLines=Number(row.missingCostLines||0);
  const known=missingCostLines===0;
+ const expenseGross=Number(row.expenseGross||0),knownExpenseVat=Number(row.knownExpenseVat||0);
+ const missingExpenseVatPayments=Number(row.missingExpenseVatPayments||0);
+ const expenseVatComplete=missingExpenseVatPayments===0;
+ const expenses=expenseVatComplete?expenseGross-knownExpenseVat:null;
+ const expenseVat=expenseVatComplete?knownExpenseVat:null;
  const grossProfit=known?row.salesNet-row.costValue:null;
- return {...row,missingCostLines,costComplete:known,
+ return {...row,missingCostLines,costComplete:known,expenseGross,missingExpenseVatPayments,expenseVatComplete,expenses,expenseVat,
   margin:known?(row.salesNet?grossProfit/row.salesNet*100:0):null,
-  grossProfit,netProfit:known?grossProfit-row.expenses:null,
+  grossProfit,netProfit:known&&expenseVatComplete?grossProfit-expenses:null,
   purchaseSalesPercent:row.salesNet?row.purchaseNet/row.salesNet*100:0,
-  expenseSalesPercent:row.salesNet?Math.max(0,row.expenses-row.expenseVat)/row.salesNet*100:0};
+  expenseSalesPercent:expenseVatComplete?(row.salesNet?expenses/row.salesNet*100:0):null};
 }
