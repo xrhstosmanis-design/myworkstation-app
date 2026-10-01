@@ -19,3 +19,7 @@ https://webkit.org/blog/12945/meet-web-push/ : το WebKit απαιτεί ορα
 ## Τοπικό αποτέλεσμα
 
 Actualsender/worker fixtures πριν3/5PASS,2FAIL, μετά5/5PASS. Μαζίμε#16 routing8/8,13/13LOCALPASS Node24. AppleforegroundshowNotification αντίsilentpostMessage, strictendpoint URLhost αντιspoofing, tenant/company/store/sender bindings/TTL300/privacy διατηρούνται. Δεν είναιphysicaliOSLABPASS.
+
+## PWA εικονίδιο — δεύτερη οριοθετημένη διόρθωση συμβατότητας
+
+Προϋπάρχονmanifest/HTML είχεμόνοSVGicons από#679. ΗApple τεκμηριώνειPNG γιαπαλιότεραSafari, ενώSVGallinterface υποστήριξηαναφέρεταιμόλιςSafari26. Προστίθενται deterministicPNG του ίδιουυπάρχοντοςSVG:180appletouch,192/512manifest καιοήδηreferencednotification192. Καμίααλλαγήbrand/start_url/scope/display/AndroidSVG/manifestidentity ήappflow. Inkscape rasterization καιοπτικόςέλεγχος192PASS, dimensions PNG επιβεβαιώνονται180/192/512. ΠραγματικόiOSinstallation/icon NOTTESTED. Πηγές: https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html και https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/.
