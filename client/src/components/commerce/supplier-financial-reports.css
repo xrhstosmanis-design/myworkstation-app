@@ -1,0 +1,16 @@
+.sgr-table.balances .row {
+  grid-template-columns: 300px 130px repeat(6, 170px);
+  min-width: 1450px;
+}
+
+.sgr-table.balances .credit {
+  color: #a13f2c;
+}
+
+.sgr-readonly {
+  padding: 9px 12px;
+  background: #eef7fc;
+  border-bottom: 1px solid #c7dce9;
+  color: #405d70;
+  font-size: 13px;
+}

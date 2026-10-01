@@ -60,6 +60,7 @@ import "./components/commerce/pos-sale-audit-report.css";
 import "./components/commerce/supplier-product-transfer.css";
 import "./components/commerce/supplier-product-catalog.css";
 import "./components/commerce/supplier-global-reports.css";
+import "./components/commerce/supplier-financial-reports.css";
 import "./components/commerce/touch-keyboard.css";
 import "./components/commerce/commerce-home-modern.css";
 import "./styles.css";
