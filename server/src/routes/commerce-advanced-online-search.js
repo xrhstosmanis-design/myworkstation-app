@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {internetItemPrice} from "../internet-market-item-price.js";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {advancedOnlineProductSearch,advancedOnlineSearchEntitlement} from "../advanced-online-product-search.js";
@@ -50,8 +51,6 @@ async function companyFor(req,res,{moduleRequired=true}={}){
 
 async function validStore(companyId,storeId){return storeId?prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}}):null}
 
-const euroValues=value=>[...String(value||"").matchAll(/(?:€\s*|EUR\s*)(\d{1,4}(?:[.,]\d{1,2})?)|(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)/gi)]
-  .map(match=>Number(String(match[1]||match[2]).replace(",","."))).filter(value=>Number.isFinite(value)&&value>0&&value<100000);
 const offerText=value=>String(value||"").match(/(?:1\s*\+\s*1|2\s*\+\s*1|-?\s*\d{1,2}\s*%|έκπτωση[^.·|]{0,50}|προσφορά[^.·|]{0,50})/iu)?.[0]?.trim()||null;
 const sourceType=domain=>/skroutz|bestprice|shopflix/i.test(domain)?"ONLINE_STORE":/market|supermarket|sklavenitis|ab\.gr|mymarket|masoutis|kritikos/i.test(domain)?"SUPERMARKET":/cash|carry|wholesale|χονδρ/i.test(domain)?"WHOLESALER":"PUBLIC_INTERNET";
 const domainOf=url=>{try{return new URL(url).hostname.replace(/^www\./,"")}catch{return ""}};
@@ -84,7 +83,7 @@ async function internetMarketSearch(query){
     if(serperKey){const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":serperKey,"Content-Type":"application/json"},body:JSON.stringify({q:`${query} τιμή προσφορά αγορά Ελλάδα`,gl:"gr",hl:"el",num:10}),signal:controller.signal});if(response.ok){const data=await response.json();items=data.organic||[];provider="SERPER"}}
     if(!items.length&&googleKey&&googleCx){const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",googleKey);url.searchParams.set("cx",googleCx);url.searchParams.set("q",`${query} τιμή προσφορά αγορά Ελλάδα`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");const response=await fetch(url,{signal:controller.signal});if(response.ok){const data=await response.json();items=data.items||[];provider="GOOGLE_CSE"}}
     if(!items.length)return {configured:true,rows:[],reason:"PROVIDER_ERROR"};
-    return {configured:true,provider,reason:"FOUND",rows:items.slice(0,10).map((item,index)=>{const domain=domainOf(item.link),prices=euroValues(`${item.title||""} ${item.snippet||""}`);return {id:`internet:${index}`,productName:String(item.title||query).trim().slice(0,240),barcode:/^\d{6,18}$/.test(query)?query:null,sourceDomain:domain,sourceUrl:item.link||null,sourceType:sourceType(domain),price:prices[0]??null,offer:offerText(`${item.title||""} ${item.snippet||""}`),offerDate:null,snippet:String(item.snippet||"").trim().slice(0,500)}})};
+    return {configured:true,provider,reason:"FOUND",rows:items.slice(0,10).map((item,index)=>{const domain=domainOf(item.link),itemPrice=internetItemPrice(`${item.title||""} ${item.snippet||""}`);return {id:`internet:${index}`,productName:String(item.title||query).trim().slice(0,240),barcode:/^\d{6,18}$/.test(query)?query:null,sourceDomain:domain,sourceUrl:item.link||null,sourceType:sourceType(domain),price:itemPrice.price,priceReason:itemPrice.priceReason,offer:offerText(`${item.title||""} ${item.snippet||""}`),offerDate:null,snippet:String(item.snippet||"").trim().slice(0,500)}})};
   }catch(error){return {configured:true,rows:[],reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR"}
   }finally{clearTimeout(timer)}
 }
