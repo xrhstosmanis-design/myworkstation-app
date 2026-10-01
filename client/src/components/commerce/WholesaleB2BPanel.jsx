@@ -1,7 +1,8 @@
 import React,{useEffect,useState} from "react";
 
 export default function WholesaleB2BPanel({api}){
-  const [tab,setTab]=useState("customers"),[customers,setCustomers]=useState([]),[lists,setLists]=useState([]),[error,setError]=useState("");\n  const [selectedList,setSelectedList]=useState(""),[productQuery,setProductQuery]=useState(""),[products,setProducts]=useState([]);
+  const [tab,setTab]=useState("customers"),[customers,setCustomers]=useState([]),[lists,setLists]=useState([]),[error,setError]=useState("");
+  const [selectedList,setSelectedList]=useState(""),[productQuery,setProductQuery]=useState(""),[products,setProducts]=useState([]);
   const load=async()=>{try{setError("");const [c,p]=await Promise.all([api("/api/wholesale/customers"),api("/api/wholesale/price-lists")]);setCustomers(c.items||[]);setLists(p.items||[]);if(!selectedList&&p.items?.[0])setSelectedList(p.items[0].id)}catch(e){setError(e.message)}};
   useEffect(()=>{load()},[]);
   const addCustomer=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await api("/api/wholesale/customers",{method:"POST",body:JSON.stringify({name:f.get("name"),code:f.get("code")||null,taxId:f.get("taxId")||null,creditLimit:Number(f.get("creditLimit")||0),paymentTermsDays:Number(f.get("paymentTermsDays")||0),active:true})});e.currentTarget.reset();await load()}catch(x){setError(x.message)}};
