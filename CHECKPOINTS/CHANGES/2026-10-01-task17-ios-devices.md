@@ -1,25 +1,33 @@
-# Εργασία17 — iOS Push / PWA και συσκευές — 01/10/2026
+# Εργασία17 — Apple Push / iOS PWA και συσκευές — 01/10/2026
 
-ASSIGNED ίδια σελίδα με#16, εντολή ιδιοκτήτη «16-17», #15 εκτός. Ανεξάρτητο TABLE_SERVICE και οι ανατεθειμένες barcode/Gates δεν αλλάζουν.
+Κατάσταση: **λογισμικό deployed / AWAITING DEVICE LAB**.
+ASSIGNED `fix/task17-apple-push-20261001`, ίδια σελίδα με #16, μετά ρητή εντολή «16-17». #15/OCR και ανεξάρτητο TABLE_SERVICE δεν αλλάζουν.
 
-## Προστατευμένα PASS
+## Προστατευμένα πραγματικά PASS
 
-AndroidPWA11/09, mobile responsive11/09, cameraQR/Code128/scannerWorkforce23/09 (συμπεριλαμβανομένωνΕΛ/ENG), φυσική ετικέτα→scanner USER27/09 διατηρούνται. Δεν επαναλαμβάνονται για τεκμηρίωση. iPhone/Safari πραγματική εγκατάσταση/Push/QR, άλλοι θερμικοί/συρτάρι/display/scanners παραμένουν NOT TESTED.
+Android PWA και mobile responsive11/09, Workforce QR/Code128/scanner23/09 (ΕΛ/ENG) και USER ετικέτα→scanner27/09 διατηρούνται. Διαβάστηκαν τα σχετικά checkpoints/manual και ιστορικό PWA manifest/index από11/09. Τα ήδη περασμένα δεν επαναλαμβάνονται για τεκμηρίωση. Πραγματικό iPhone/Safari installation/Push/QR και πρόσθετοι θερμικοί/scanners/συρτάρι/display παραμένουν NOT TESTED.
 
-## Αποδεδειγμένο κενό συμβατότητας από πρωτογενή προδιαγραφή
+## Δύο χωριστές οριοθετημένες διορθώσεις
 
-https://webkit.org/blog/12945/meet-web-push/ : το WebKit απαιτεί ορατό NotificationsAPI αποτέλεσμα για κάθεPush και μπορεί να ανακαλέσει subscription αν παραβιάζεταιuserVisibleOnly. Ο υπάρχωνserviceworker επιστρέφει χωρίς showNotification όταν υπάρχειmatchingvisiblePOS. Αυτό είναι απόκλιση προδιαγραφής, όχι πραγματικό iPhoneLABFAIL.
+1. **Apple Push conformance:** το WebKit απαιτεί Notifications API notification για κάθε Push και μπορεί να ανακαλέσει subscription όταν παραβιάζεται userVisibleOnly. Ο worker πριν επέστρεφε χωρίς system notification όταν ήταν ορατό το matching POS. Είναι απόκλιση προδιαγραφής, όχι παρατηρημένο iPhone LAB FAIL. Ο sender προσθέτει boolean `requiresSystemNotification` ανά recipient μόνο για HTTPS hostname `push.apple.com` ή πραγματικό subdomain. Ο worker για αυτό το flag δείχνει system notification ακόμη και με matching visible POS. Άλλοι providers διατηρούν υπάρχον foreground in-app alert/ήχο. Δεν αλλάζουν subscriptions, DB ή permissions.
+2. **PNG icon fallback:** manifest/HTML είχαν μόνο SVG από#679. Προστέθηκαν180/192/512 PNG από το ίδιο υπάρχον SVG, χωρίς αλλαγή brand, start_url, scope, display, Android SVG ή app identity.180 χρησιμοποιείται ως apple-touch-icon,192/512 επιπλέον manifest icons·192 καλύπτει και την ήδη υπάρχουσα notification διαδρομή. Δεν ανασχεδιάζεται εφαρμογή.
 
-Ελάχιστο ανεξάρτητο scope: ο server προσθέτει boolean requiresSystemNotification μόνο σε subscription με ακριβέςHTTPShostname push.apple.com ή subdomain. Worker για αυτό τοflag διατηρεί systemnotification ακόμη και μεvisiblematchingPOS. Άλλοι providers κρατούν την παλιάinapp ορατήειδοποίηση/ήχο. Δεν αλλάζουνsubscriptions/DB/ρόλοι/εικόνες/QR/εκτυπωτές/ΠΟΣ/stock/OCR.
+Πρωτογενείς πηγές:
+- https://webkit.org/blog/12945/meet-web-push/
+- https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/
+- https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html
+- https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/
 
-## Αποδοχή
+## Πραγματικοί έλεγχοι λογισμικού και deploy
 
-Τοπικάbehavioral tests του πραγματικούsendStoreChatPush καιserviceworker μεApple/άλλους endpoints/visible/hidden, spoofedhosts καιreallegacyrootpayload. CI ≠ LABPASS. ΜετάgreenCI/merge/exactdeploy απαιτείταιπραγματικήiOSHomeScreenεγκατάσταση (iOS/iPadOS16.4+), usergesture permission,έναελεγχόμενοLABmessage απόάλλονLABλογαριασμό,background καιforegroundπαραλαβή/ήχος/click. Χωρίς πραγματικόiPhone/OSnotificationcenter/περιφερειακά, παραμένειAWAITINGDEVICE LAB.
+Πραγματικός sender/worker σε απομονωμένα fixtures: πριν3/5 PASS,2 FAIL· μετά5/5 PASS. Μαζί με routing#16:13/13 targeted PASS. Ελέγχονται strict host/spoofing, tenant/company/store/sender bindings, TTL300, privacy, foreground/background και legacy root destination. PNG rasterization από Inkscape, οπτικός έλεγχος και διαστάσεις180/192/512 επιβεβαιωμένα.
 
-## Τοπικό αποτέλεσμα
+PR#1591 merged `c260534436d986cdb003465d777d9a4c6e6e3fe7`. PR CI4000 / main CI4001 PASS: Node20.20.2,1746 server PASS,0FAIL,0SKIP, frontend build, invariants και isolated HTTP E2E. Guarded Render1850 PASS. Πραγματικό /api/health13:27Z επιβεβαιώνει ακριβώς αυτό το revision.
 
-Actualsender/worker fixtures πριν3/5PASS,2FAIL, μετά5/5PASS. Μαζίμε#16 routing8/8,13/13LOCALPASS Node24. AppleforegroundshowNotification αντίsilentpostMessage, strictendpoint URLhost αντιspoofing, tenant/company/store/sender bindings/TTL300/privacy διατηρούνται. Δεν είναιphysicaliOSLABPASS.
+13:28Z άνοιξαν από production τα τρία PNG και ο browser τα αποκωδικοποίησε σε180×180,192×192,512×512. Fresh HTML αναφέρει /apple-touch-icon.png και /manifest.webmanifest. MAIN2/2,40 € και LAB-POS-02 2/0 € ίδια μετά reload. Στο τελικό LAB Chat13:30:05Z παραμένουν49 μηνύματα/9 αδιάβαστα. Αυτά είναι asset/UI readbacks, **όχι πραγματική iOS εγκατάσταση, Push παραλαβή/ήχος ή hardware PASS**.
 
-## PWA εικονίδιο — δεύτερη οριοθετημένη διόρθωση συμβατότητας
+## Handoff / μοναδική επόμενη ενέργεια
 
-Προϋπάρχονmanifest/HTML είχεμόνοSVGicons από#679. ΗApple τεκμηριώνειPNG γιαπαλιότεραSafari, ενώSVGallinterface υποστήριξηαναφέρεταιμόλιςSafari26. Προστίθενται deterministicPNG του ίδιουυπάρχοντοςSVG:180appletouch,192/512manifest καιοήδηreferencednotification192. Καμίααλλαγήbrand/start_url/scope/display/AndroidSVG/manifestidentity ήappflow. Inkscape rasterization καιοπτικόςέλεγχος192PASS, dimensions PNG επιβεβαιώνονται180/192/512. ΠραγματικόiOSinstallation/icon NOTTESTED. Πηγές: https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html και https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/.
+Cloud Chrome επέστρεψε αποκλεισμένη άδεια σε μία μόνο ενεργοποίηση στο#16. Δεν υπάρχει πραγματικό iPhone/iPad, OS notification center ή φυσικός εκτυπωτής/scanner/συρτάρι/display στη διαθέσιμη συνεδρία. Επόμενη μία ενέργεια: πραγματική LAB συσκευή, Safari Home Screen PWA όπου απαιτείται, → Ενεργοποίηση Push με φρέσκο BEFORE. Με επιτυχή συνδρομή, ο χρήστης κάνει μία ξεχωριστή μετρημένη LAB αποστολή από δεύτερο εξουσιοδοτημένο LAB λογαριασμό.
+
+Τα foreground Apple, άλλο visible store, background ήχος/click, logout/login, QR iPhone, πρόσθετος εξοπλισμός και ασφαλές reconnect παραμένουν OPEN/NOT TESTED. Τα ήδη πραγματικά Android/Workforce/ετικέτα PASS δεν επαναλαμβάνονται. Η ίδια σελίδα κρατά την ανάθεση μέχρι ρητή μεταφορά· οδηγίες `docs/testing/task16-17-device-acceptance.md`. Δεν εστάλη μήνυμα και δεν έγινε read/upload/download/task/setting/stock/payment/OCR/TABLE_SERVICE πράξη. Δεν δηλώνεται συνολικό USER/LAB PASS.
