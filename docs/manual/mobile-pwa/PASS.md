@@ -10,3 +10,6 @@
 - Δεν δημιουργήθηκε ξεχωριστό Android package.
 
 Όριο: iPhone/Safari είχε καταγραφεί ως εκκρεμής δοκιμή στο συγκεκριμένο checkpoint.
+
+
+Η συμφιλίωση01/10/2026 διατηρεί τα παραπάνω πραγματικά Android/mobile PASS. iPhone/iPad, πρόσθετοι εκτυπωτές/scanners, συρτάρι και customer display παραμένουν χωριστά NOT TESTED· προετοιμασία λογισμικού/CI δεν προστίθεται ως PASS εδώ. Δοκιμές: `docs/testing/task16-17-device-acceptance.md`.
