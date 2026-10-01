@@ -88,7 +88,7 @@ router.post("/:employeeId/work-card",async(req,res,next)=>{
       await audit(tx,req,{companyId:context.company.id,storeId:context.store.id,action:"WORKFORCE_WORK_CARD_PREPARED",entityType:"WORKFORCE_EMPLOYEE",entityId:employee.id,after:{employeeId:employee.id,legacyEmployeeId,cardLast4:cardCodeLast4,reprint:Boolean(existing)},reason:"Προετοιμασία εκτυπώσιμης κάρτας εργασίας"});
       return {cardCode,cardCodeLast4,reprint:Boolean(existing)};
     });
-    res.json({employee:{id:employee.id,fullName:employee.fullName},store:{id:context.store.id,name:context.store.name},...result});
+    res.json({employee:{id:employee.id,fullName:employee.fullName},store:{id:context.store.id,name:context.store.name},mobileUrl:`/store/${context.store.id}?employee-card=1&employee=${legacyEmployeeId}`,...result});
   }catch(error){next(error)}
 });
 
