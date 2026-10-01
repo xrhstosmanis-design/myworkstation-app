@@ -47,7 +47,7 @@
 - **11 · ΑΝΑΤΕΘΗΚΕ · `agent/table-service-layout-takeover-20260927`:** TABLE_SERVICE, υπόλοιποι γύροι, κινητό/PWA, χρεώσιμοι modifiers, split/μεταφορά, KDS και απομόνωση καταστημάτων. Τα ήδη περασμένα σκέλη δεν επαναλαμβάνονται.
 - **12 · ΑΝΑΤΕΘΗΚΕ · εξειδικευμένη σελίδα efood/Pelican:** Test vendor/sandbox, πραγματική παραγγελία και παραγωγική πιστοποίηση. Αναμονή εξωτερικού test vendor, ανεξάρτητο από G06.
 - **13 · AWAITING LAB · `agent/barcode-catalog-check-20260928`:** Ασφαλής μεταφορά υπάρχοντος barcode. Κώδικας/CI PASS· καμία πραγματική μεταφορά δεν δοκιμάστηκε και ο ιδιοκτήτης δεν επιθυμεί δοκιμή τώρα. Δεν δηλώνεται τελικό PASS.
-- **14 · ΑΝΑΤΕΘΗΚΕ · `fix/task14-market-item-price`:** PARTIAL LAB PASS signed support αποθήκης/barcode/provider στο `fb58bf96`, #1582 / CI3975–3976. Μία query9 αποτελεσμάτων, history11→12, stock/τιμές/POS/Audit ίδια. PRICE FAIL: €/λίτρο εμφανίζεται ως €/τεμάχιο. Ασφαλής item-price parsing AWAITING CI/DEPLOY/LAB· συνολικό OPEN, χωρίς νέα οικονομική πράξη.
+- **14 · ΑΝΑΤΕΘΗΚΕ · `fix/task14-vat-margin`:** Unit/ambiguous price guard LAB PASS στο386f5d7, #1585 /CI3982–3983/deploy1843. Μία query10,history13→14,stock/τιμές/2POS/Audit ίδια. Margin FAIL37,38% έναντι29,24% με13%ΦΠΑ· bounded read-only correction AWAITING CI/DEPLOY/LAB. Συνολικό OPEN.
 - **15 · OPEN · ελεύθερο scope:** Πρώτη αυτόματη OCR ανάγνωση τιμολογίου ως μελλοντική βελτίωση, χωρίς επανάληψη του G03 βοηθού.
 - **16 · OPEN · ελεύθερο scope:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
 - **17 · OPEN · ελεύθερο scope:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.

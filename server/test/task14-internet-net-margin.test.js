@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {internetNetMargin} from "../src/internet-market-net-margin.js";
+test("observed LAB 13 percent VAT margin matches inventory archive",()=>assert.equal(internetNetMargin(.814,1.3,13),29.24));
+test("zero VAT retains the existing net calculation",()=>assert.equal(internetNetMargin(.814,1.3,0),37.38));
+test("24 percent VAT is removed before comparing net cost",()=>assert.equal(internetNetMargin(1,2.48,24),50));
+test("below-cost margin remains negative",()=>assert.equal(internetNetMargin(2,1.13,13),-100));
+test("missing VAT or cost cannot imply zero VAT or free stock",()=>{for(const args of [[1,2,null],[1,2,undefined],[1,2,""],[null,2,13],[0,2,13]])assert.equal(internetNetMargin(...args),null)});
+test("invalid non-finite or out of range values produce no margin",()=>{for(const args of [[1,0,13],[-1,2,13],[1,2,-1],[1,2,101],[Infinity,2,13],[1,2,"unknown"]])assert.equal(internetNetMargin(...args),null)});
+test("market own-product query includes VAT and uses only the pure net metric",()=>{const source=readFileSync(new URL("../src/routes/commerce-advanced-online-search.js",import.meta.url),"utf8");assert.match(source,/p\."costPrice",p\."vatRate",COALESCE/);assert.match(source,/margin=internetNetMargin\(own\?\.costPrice,own\?\.salePrice,own\?\.vatRate\)/);assert.doesNotMatch(source,/margin=sale>0\?\(\(sale-cost\)/)});

@@ -1,8 +1,8 @@
 # Αναζήτηση προϊόντων Internet — επιβεβαιωμένο περιορισμένο scope
 
-## PARTIAL LAB PASS — 01/10/2026
+## UNIT/AMBIGUOUS PRICE GUARD LAB PASS · συνολικό OPEN — 01/10/2026
 
-**01/10/2026 — #14 PARTIAL LAB PASS / PRICE FAIL — ίδια σελίδα, `fix/task14-market-item-price`:** exact `fb58bf9610bd1193dfe54355eb9393f2468d2338`, #1582 / CI3975–3976 / deploy1840 PASS. Signed support αποθήκη/σύνδεση barcode και λειτουργικός provider PASS. Μία online query SKU763 /5449000000996 επέστρεψε9 αποτελέσματα στις11:24:22 εμφανιζόμενη ώρα browser· ιστορικό11→12. Stock0→0 και λιανική1,30→1,30 €, control Coca1LT9/2,60 € και500ml0/1,60 € ίδια, MAIN2/2,40 € και POS02 2/0 € ίδια,1057 LAB Audit ακριβώς ίδια. Δεν δημιουργήθηκαν proposal/παραγγελία/πληρωμή ή stock πράξη. Πραγματικό FAIL: kalestimes αποτέλεσμα1627,20 € παρουσιάζεται ως τεμάχιο, ενώ η πρωτογενής σελίδα το ορίζει ανά λίτρο, διαφορετικά από την τιμή προϊόντος0,65 €. Ο υπάρχων parser παίρνει το πρώτο νόμισμα χωρίς μονάδα/αμφισημία. Επόμενη μοναδική αλλαγή: αποκλεισμός unit rates και αμφίσημων πολλαπλών ποσών από item price, σαφής έλεγχος πηγής, χωρίς αυτόματη τιμή/stock/παραγγελία. Συνολικό #14 OPEN· επόμενη νέα αναζήτηση μόνο μετά exact deploy και φρέσκο baseline. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md`.
+**01/10/2026 — #14 PARTIAL LAB PASS / MARGIN FAIL — `fix/task14-vat-margin`:** exact `386f5d7ee894dbb55469abbe539d31d4d17ebbc4`, #1585 / CI3982–3983 / deploy1843 PASS, Node20.20.2 /1720 tests PASS. Στις11:53:11 browser μία νέα query5449000000996 επέστρεψε10 αποτελέσματα, ιστορικό13→14. UNIT/AMBIGUOUS PRICE GUARD πραγματικό LAB PASS: kalestimes rate1627,20 €/λίτρο αποκλείεται με λόγο, mymarket/BestPrice/DailyMarket/Skroutz πολλαπλές τιμές κενές με λόγο· μόνο ασφαλή priced exact συμμετέχουν, φθηνότερη ένδειξη0,93 €. Matching5 exact/3 probable/2 non-comparable,0 manual confirmations. Stock/λιανική SKU763 0/1,30,1LT9/2,60,500ML0/1,60 ίδια, MAIN2/2,40 και POS02 2/0 ίδια,1057 Audit ακριβώς ίδια. Καμία proposal/order/payment/stock πράξη. Νέο πραγματικό FAIL: Internet margin37,38% έναντι αποθήκης29,24% για κόστος0,814, μικτή λιανική1,30,ΦΠΑ13%. Ο server συγκρίνει καθαρό κόστος με μικτή λιανική· canonical αποθήκη χρησιμοποιεί sale/(1+VAT/100). Μόνη επόμενη αλλαγή ο read-only margin υπολογισμός/σαφής ένδειξη, χωρίς αλλαγή τιμής ή ΦΠΑ δεδομένων. Συνολικό #14 OPEN· αναζήτηση μετά exact νέο deploy και νέο baseline. Latest StockMovement/independent SQL count, disabled provider live και proposal/approval/order write flows NOT TESTED.
 
 ## Πρόσβαση και επαληθευμένη χρήση
 
@@ -17,3 +17,13 @@ Super Admin σε signed support εταιρεία ή Owner με ενεργό ADVA
 ## Όρια / πρακτικός έλεγχος
 
 Η ανάγνωση αποθήκης δεν δημιουργεί οικονομική ή stock πράξη. Η online αναζήτηση γράφει InternetProductSearch ιστορικό. Δεν δοκιμάστηκαν υποβολή/έγκριση price proposal ή εξωτερική παραγγελία και δεν εκτελέστηκαν. Πιθανή αντιστοίχιση απαιτεί ανθρώπινο έλεγχο· άλλο barcode/παραλλαγή δεν είναι ασφαλής ταυτοποίηση. Ελέγξτε τεμάχιο/συσκευασία/ΦΠΑ/μεταφορικά στην πηγή. Αν εμφανιστεί Επίλεξε εταιρεία, ελέγξτε σωστή support συνεδρία και exact revision μετά το #1582. Μη ρυθμισμένος provider/timeout είναι χωριστή τεχνική κατάσταση, όχι κενός κατάλογος ή PASS τιμών.
+
+
+Το guard επαληθεύθηκε σε πραγματική νέα query στο exact revision386f5d7. Το προηγούμενο unit-price FAIL έκλεισε. Το margin παραμένει FAIL μέχρι διόρθωση/readback. Η φθηνότερη τιμή είναι ένδειξη provider, όχι εγκεκριμένη αγορά.
+
+
+## Margin correction — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
+
+Το market-search δικό μας προϊόν διαβάζει και το υπάρχον vatRate. Pure υπολογισμός αφαιρεί ΦΠΑ από τη μικτή λιανική πριν από καθαρό κόστος, όπως η canonical αποθήκη. Αγνώστη/άκυρη βάση δεν εμφανίζει φανταστικό margin. UI: Καθαρή αγορά / Λιανική με ΦΠΑ / Margin χωρίς ΦΠΑ. Καμία αλλαγή cost/sale/VAT/stock ή άλλης καρτέλας.25/25 targeted tests PASS (7 margin,10 item price,8 support context), τοπικός Node24· Node20/full CI/deploy/LAB απαιτούνται.
+
+CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατηρούνται οι αρχικές ετικέτες με διευκρινίσεις «Δική μας αγορά (καθαρή)» / «Δική μας πώληση (με ΦΠΑ)». Αριθμητικές7 και προηγούμενες18 PASS· νέο πλήρες CI απαιτείται.

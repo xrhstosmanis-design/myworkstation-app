@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {internetItemPrice} from "../internet-market-item-price.js";
+import {internetNetMargin} from "../internet-market-net-margin.js";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {advancedOnlineProductSearch,advancedOnlineSearchEntitlement} from "../advanced-online-product-search.js";
@@ -95,12 +96,12 @@ router.get("/market-search",async(req,res,next)=>{try{
   if(storeId&&!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
   let own=null;
   if(productId||/^\d{6,18}$/.test(query)){
-    own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
+    own=(await prisma.$queryRaw`SELECT p."id",p."name",p."sku",p."costPrice",p."vatRate",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."barcode") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND (${storeId}::text IS NULL OR sp."storeId"=${storeId}) WHERE p."companyId"=${companyId} AND p."active"=true AND (p."id"=${productId} OR p."sku"=${query} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode"=${query})) LIMIT 1`)[0]||null;
     if(own){const supplier=(await prisma.$queryRaw`SELECT sup."name" FROM "SupplierProductLink" spl JOIN "Supplier" sup ON sup."id"=spl."supplierId" AND sup."companyId"=spl."companyId" WHERE spl."companyId"=${companyId} AND spl."productId"=${own.id} AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1`.catch(()=>[]))[0];own.supplierName=supplier?.name||"Βασικός προμηθευτής"}
   }
   const providerQuery=own?[query,own.name].filter(Boolean).join(" "):query;
   const internet=await internetMarketSearch(providerQuery),results=internet.rows.map(row=>({...row,...marketMatch(own,row)})),safePriced=results.filter(row=>row.eligibleForOrder&&row.comparablePrice!=null),cheapest=safePriced.sort((a,b)=>a.comparablePrice-b.comparablePrice)[0]||null;
-  const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=sale>0?((sale-cost)/sale)*100:null,marketPrice=cheapest?.comparablePrice??null;
+  const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=internetNetMargin(own?.costPrice,own?.salePrice,own?.vatRate),marketPrice=cheapest?.comparablePrice??null;
   const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":marketPrice==null?"Δεν βρέθηκε ακόμη επιβεβαιωμένη τιμή για ασφαλή σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη επιβεβαιωμένη τιμή.":sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις επιβεβαιωμένες τιμές που εντοπίστηκαν.";
   for(const row of results)row.differenceFromOurSale=row.comparablePrice!=null&&sale?Number((row.comparablePrice-sale).toFixed(2)):null;
   const id=uid();await prisma.$executeRaw`INSERT INTO "InternetProductSearch" ("id","companyId","storeId","actorId","query","queryType","productId","resultCount","results") VALUES (${id},${companyId},${storeId},${req.user.id||null},${query},${/^\d{6,18}$/.test(query)?"BARCODE":"TEXT"},${own?.id||productId},${results.length},${JSON.stringify(results)}::jsonb)`;

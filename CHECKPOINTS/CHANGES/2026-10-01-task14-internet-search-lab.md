@@ -30,3 +30,20 @@
 ## Διόρθωση item price — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
 
 Προστέθηκε μικρός pure parser: αποκλείει ποσά €/λίτρο, €/kg, ανά βάρος/όγκο/τεμάχιο όταν δεν είναι απλό συνολικό item price, σαφώς παλιές τιμές και μεταφορικά, και δεν επιλέγει αυθαίρετα ανάμεσα σε διαφορετικά ποσά. Διατηρεί ελληνικά/αγγλικά νομίσματα, πλήρη αριθμητικά ποσά και επαναλαμβανόμενη ίδια τιμή. UI δείχνει γιατί δεν επιβεβαιώθηκε τιμή τεμαχίου. Δεν αλλάζει barcode matching, provider query, ιστορικό, price proposal/approval, stock ή schema. 18/18 τοπικά tests (10 price +8 support isolation) και syntax PASS. Συνολικό #14 παραμένει OPEN μέχρι πραγματική νέα online query στο exact deploy με φρέσκο baseline.
+
+
+## BEFORE ελέγχου της διόρθωσης
+
+**01/10/2026 — #14 BEFORE regression online query:** exact /api/health `386f5d7ee894dbb55469abbe539d31d4d17ebbc4`, PR #1585 / PR CI3982 / main CI3983 / guarded deploy1843 PASS, Node20.20.2 /1720 PASS /0FAIL /0SKIP /build/invariants/E2E PASS. Fresh signed support MYWORKSTATION LAB, ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. SKU763 /5449000000996 stock0, αγορά0,81 €, λιανική1,30 €· control1LT stock9 /αγορά1,74 /λιανική2,60,500ML stock0 /λιανική1,60. MAIN2/2,40 € και POS02 2/0 € ίδια, Audit1057 ακριβώς ίδιο. Φρέσκο ιστορικό13 (όχι αυθαίρετη υπόθεση12), latest barcode5449000000996 /11:24:22. Η5200040119037 /11:22:17 είναι ήδη υπάρχουσα, δεν εκτελέστηκε από αυτή τη σελίδα. Συνδέθηκε barcode χωρίς query. Επόμενη μία query μόνο για την αναπαραγωγή unit-rate/ambiguous price guard· μοναδική αναμενόμενη νέα εγγραφή ιστορικού, καμία τιμή/proposal/παραγγελία/πληρωμή/stock.
+
+
+## AFTER price guard / BEFORE margin correction
+
+**01/10/2026 — #14 PARTIAL LAB PASS / MARGIN FAIL — `fix/task14-vat-margin`:** exact `386f5d7ee894dbb55469abbe539d31d4d17ebbc4`, #1585 / CI3982–3983 / deploy1843 PASS, Node20.20.2 /1720 tests PASS. Στις11:53:11 browser μία νέα query5449000000996 επέστρεψε10 αποτελέσματα, ιστορικό13→14. UNIT/AMBIGUOUS PRICE GUARD πραγματικό LAB PASS: kalestimes rate1627,20 €/λίτρο αποκλείεται με λόγο, mymarket/BestPrice/DailyMarket/Skroutz πολλαπλές τιμές κενές με λόγο· μόνο ασφαλή priced exact συμμετέχουν, φθηνότερη ένδειξη0,93 €. Matching5 exact/3 probable/2 non-comparable,0 manual confirmations. Stock/λιανική SKU763 0/1,30,1LT9/2,60,500ML0/1,60 ίδια, MAIN2/2,40 και POS02 2/0 ίδια,1057 Audit ακριβώς ίδια. Καμία proposal/order/payment/stock πράξη. Νέο πραγματικό FAIL: Internet margin37,38% έναντι αποθήκης29,24% για κόστος0,814, μικτή λιανική1,30,ΦΠΑ13%. Ο server συγκρίνει καθαρό κόστος με μικτή λιανική· canonical αποθήκη χρησιμοποιεί sale/(1+VAT/100). Μόνη επόμενη αλλαγή ο read-only margin υπολογισμός/σαφής ένδειξη, χωρίς αλλαγή τιμής ή ΦΠΑ δεδομένων. Συνολικό #14 OPEN· αναζήτηση μετά exact νέο deploy και νέο baseline. Latest StockMovement/independent SQL count, disabled provider live και proposal/approval/order write flows NOT TESTED.
+
+
+## Margin correction — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
+
+Το market-search δικό μας προϊόν διαβάζει και το υπάρχον vatRate. Pure υπολογισμός αφαιρεί ΦΠΑ από τη μικτή λιανική πριν από καθαρό κόστος, όπως η canonical αποθήκη. Αγνώστη/άκυρη βάση δεν εμφανίζει φανταστικό margin. UI: Καθαρή αγορά / Λιανική με ΦΠΑ / Margin χωρίς ΦΠΑ. Καμία αλλαγή cost/sale/VAT/stock ή άλλης καρτέλας.25/25 targeted tests PASS (7 margin,10 item price,8 support context), τοπικός Node24· Node20/full CI/deploy/LAB απαιτούνται.
+
+CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατηρούνται οι αρχικές ετικέτες με διευκρινίσεις «Δική μας αγορά (καθαρή)» / «Δική μας πώληση (με ΦΠΑ)». Αριθμητικές7 και προηγούμενες18 PASS· νέο πλήρες CI απαιτείται.
