@@ -9,3 +9,7 @@
 ## Αποδοχή
 
 Η ίδια LAB εταιρεία ανοίγει αποθήκη χωρίς Επίλεξε εταιρεία. Νέα αναζήτηση μόνο μετά από φρέσκο baseline προϊόντος και καταγεγραμμένο ιστορικό· η μόνη αναμενόμενη εγγραφή είναι InternetProductSearch. Φυσικές τιμές από πηγές, συγκρισιμότητα, αφαίρεση μη ασφαλών αποτελεσμάτων και ανενεργός provider ελέγχονται χωρίς price proposal/approval ή επιχειρησιακή μεταβολή. Συνολικό #14 NOT TESTED / OPEN μέχρι πραγματικό αποτέλεσμα provider.
+
+## Διόρθωση — AWAITING CI / EXACT DEPLOY / LAB
+
+Χρησιμοποιείται μόνο signed supportContext με companyId που συμφωνεί με req.user.companyId, και μόνο στο commerce endpoint. Το platform παραμένει explicit-company. 8/8 τοπικά εκτελεσμένα tenant/role/module tests PASS και syntax check PASS· τοπικός Node24, υποχρεωτικό Node20/full suite/build στο CI. Δεν αλλάζει provider, matched price, approval, βάση ή schema. Δεν εκτελέστηκε online search.
