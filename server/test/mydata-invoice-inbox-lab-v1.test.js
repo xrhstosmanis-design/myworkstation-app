@@ -20,8 +20,8 @@ test("myDATA documents are idempotent and remain inbox drafts",()=>{
 test("zero results distinguish an empty AADE response from rejected documents",()=>{
   assert.match(route,/fetched===0\?/);assert.match(route,/ignoredVat/);assert.match(route,/missingMark/);
 });
-test("invoice inbox exposes manual sync and ten minute refresh",()=>{
-  assert.match(ui,/Λήψη από myDATA/);assert.match(ui,/10\*60\*1000/);assert.match(ui,/Η αποθήκη ενημερώνεται μόνο μετά τον έλεγχο/);
+test("invoice inbox exposes manual sync and fifteen minute refresh",()=>{
+  assert.match(ui,/Λήψη από myDATA/);assert.match(ui,/15\*60\*1000/);assert.match(ui,/Η αποθήκη ενημερώνεται μόνο μετά τον έλεγχο/);
 });
 test("AADE namespaced XML is parsed into the expected draft summary",()=>{
   const xml=`<RequestedDoc><invoicesDoc><invoice><uid>abc</uid><mark>12345</mark><issuer><vatNumber>099999999</vatNumber></issuer><counterpart><vatNumber>088888888</vatNumber></counterpart><invoiceHeader><series>A</series><aa>42</aa><issueDate>2026-09-10</issueDate><invoiceType>1.1</invoiceType><currency>EUR</currency></invoiceHeader><invoiceSummary><totalNetValue>10.00</totalNetValue><totalVatAmount>2.40</totalVatAmount><totalGrossValue>12.40</totalGrossValue></invoiceSummary></invoice></invoicesDoc></RequestedDoc>`;

@@ -27,7 +27,7 @@ test("actual archive handler exports all 5269 results, paginates and denies fore
   const page=await run({offset:"300"});assert.equal(page.data.items.length,100);assert.equal(page.data.items[0].id,"inbox-300");assert.equal(page.data.total,5269);
   const excel=await run({format:"xlsx",offset:"300"});assert.equal(excel.data.count,5269);
   const workbook=XLSX.read(Buffer.from(excel.data.dataUrl.split(",")[1],"base64"),{type:"buffer"});
-  const exported=XLSX.utils.sheet_to_json(workbook.Sheets["Παραστατικά"]);assert.equal(exported.length,5269);assert.equal(exported[5268].MARK,rows[5268].mark);assert.equal(exported[0]["Σύνολο"],75.14);
+  const exported=XLSX.utils.sheet_to_json(workbook.Sheets["Παραστατικά"]);assert.equal(exported.length,5269);assert.deepEqual(new Set(exported.map(row=>row.MARK)),new Set(rows.map(row=>row.mark)));assert.equal(exported[0]["Σύνολο"],75.14);
   const pdf=await run({format:"pdf"});assert.equal(pdf.data.count,5269);assert.match(pdf.data.html,/δεν είναι πρωτότυπα PDF/);
   assert.equal((await run({storeId:"foreign-store"})).status,404);
   assert.equal((await run({}, {companyId:"company-one",role:"OWNER",tokenType:"STORE_OPERATOR"})).status,403);
@@ -47,4 +47,22 @@ test("report preserves MARK as text, numeric amounts and original document disti
   const html=archiveReportHtml(rows,'<img onerror="bad">');
   assert.equal(html.includes("<script>"),false);assert.equal(html.includes('<img onerror'),false);
   assert.match(html,/&lt;script&gt;/);assert.match(html,/δεν είναι πρωτότυπα PDF/);assert.match(html,/window.print\(\)/);
+});
+
+
+test("issue-date range is inclusive and never substitutes receipt date; today is Athens receipt date",()=>{
+  const q=archiveQuery("c","s",{dateFrom:"2026-09-01",dateTo:"2026-09-30",receivedToday:true});
+  assert.deepEqual(q.values.slice(0,4),["c","s","2026-09-01","2026-09-30"]);
+  assert.match(q.sql,/m\."issueDate">=\$3::date/);assert.match(q.sql,/m\."issueDate"<=\$4::date/);
+  assert.match(q.sql,/CURRENT_TIMESTAMP AT TIME ZONE 'Europe\/Athens'/);
+  assert.throws(()=>archiveQuery("c","s",{dateFrom:"2026-09-30",dateTo:"2026-09-01"}),/προηγείται/);
+  assert.throws(()=>archiveQuery("c","s",{dateFrom:"2026-02-30"}),/ημερομηνία/);
+  assert.equal(archiveExportRows([{receivedAt:"2026-10-01T00:00:00Z"}])[0]["Ημερομηνία"],"");
+});
+
+test("exports group suppliers and issue dates while preserving separate receipt timestamp",()=>{
+  const rows=[{supplierName:"B",issueDate:"2026-09-28",receivedAt:"2026-10-01T01:00:00Z"},{supplierName:"A",issueDate:"2026-09-27",receivedAt:"2026-10-01T01:00:00Z"},{supplierName:"A",issueDate:"2026-09-29",receivedAt:"2026-10-01T01:00:00Z"}];
+  const result=archiveExportRows(rows);assert.deepEqual(result.map(r=>[r["Προμηθευτής"],r["Ημερομηνία"]]),[["A","2026-09-29"],["A","2026-09-27"],["B","2026-09-28"]]);
+  assert.equal(result[0]["Ημερομηνία λήψης"],"2026-10-01T01:00:00.000Z");
+  assert.match(archiveReportHtml(rows,"Store"),/A — 2026-09-29/);
 });

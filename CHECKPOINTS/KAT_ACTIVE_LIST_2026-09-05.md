@@ -1,3 +1,5 @@
+**01/10 — ASSIGNED `codex/mydata-draft-pos-receipt-20260930`:** issue-date from/to + Search, independent Athens daily arrivals, grouped PDF/Excel, 15-minute production server receiving implemented; local1689PASS/1SKIP/buildPASS, AWAITING CI/EXACT DEPLOY/USER. Purchase draft already uses supplier issue date; removed receipt-date fallback from archive. Existing financial/POS/Gate3 PASS protected. Epsilon CAPTCHA failure and official API request emailed; Epsilon remains OPEN. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-mydata-date-range-daily-scheduler.md`. Same owner retained; no duplicate paid-invoice test.
+
 ## 01/10/2026 01:20 Greece - #1567 exact live / AWAITING USER
 
 PR #1567 merged14ac644eb7f9f9539d4938cefdc845591c4fb287. PR CI36784064878 and main CI36784388453 PASS including Node20/server/build/invariants/isolated HTTP E2E. Render dep-dauokjp42hec73f9d37g exact14ac644e LIVE2026-09-30T22:19:38.040019Z. Physical-PDF count, inline wheel/hand viewer and printed rounding deployed, NOT USER/LAB PASS. No extra runtime deploy from this docs-only update.

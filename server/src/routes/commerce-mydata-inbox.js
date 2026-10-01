@@ -2,7 +2,7 @@ import crypto from "crypto";
 import * as XLSX from "xlsx";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {companyModuleState,requireCompanyModule} from "../middleware/module-access.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
@@ -44,16 +44,16 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   const format=req.query.format||"",exporting=["xlsx","pdf"].includes(format);
   if(format&&!exporting)return res.status(400).json({error:"Μη έγκυρη μορφή εξαγωγής."});
   const offset=exporting?0:Math.max(0,Math.floor(Number(req.query.offset)||0));
-  const filters={q:req.query.q,supplier:req.query.supplier,date:req.query.date,id:req.query.id,limit:exporting?20001:100,offset};
+  const filters={q:req.query.q,supplier:req.query.supplier,date:req.query.date,dateFrom:req.query.dateFrom,dateTo:req.query.dateTo,receivedToday:req.query.receivedToday==="true",id:req.query.id,limit:exporting?20001:100,offset};
   const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{},true);
   const [rows,counts,totals]=await Promise.all([prisma.$queryRawUnsafe(query.sql,...query.values),prisma.$queryRawUnsafe(count.sql,...count.values),prisma.$queryRawUnsafe(all.sql,...all.values)]);
   if(exporting){
     if(rows.length>20000)return res.status(409).json({error:"Η εξαγωγή ξεπερνά 20.000 εγγραφές. Περιορίστε με ημερομηνία ή προμηθευτή."});
     if(format==="pdf")return res.json({html:archiveReportHtml(rows,store.name),count:rows.length});
     const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(archiveExportRows(rows));
-    sheet["!cols"]=[{wch:14},{wch:42},{wch:15},{wch:14},{wch:18},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:34},{wch:25},{wch:60}];
+    sheet["!cols"]=[{wch:14},{wch:25},{wch:42},{wch:15},{wch:14},{wch:18},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:34},{wch:25},{wch:60}];
     XLSX.utils.book_append_sheet(workbook,sheet,"Παραστατικά");
-    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||""})]]),"Πληροφορίες");
+    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||"",dateFrom:filters.dateFrom||"",dateTo:filters.dateTo||"",receivedToday:filters.receivedToday})]]),"Πληροφορίες");
     const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx"});
     return res.json({filename:"mydata-invoices.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:rows.length});
   }
@@ -61,8 +61,18 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   res.json({items:rows,total:counts[0]?.count||0,archiveTotal:totals[0]?.count||0,offset,limit:100,suppliers:suppliers.map(s=>s.name)});
 }catch(error){next(error)}});
 
-router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
-  if(!canSync(req))return res.status(403).json({error:"Ο συγχρονισμός myDATA επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+const syncInFlight=new Map(),syncStatus=new Map();
+export function syncMyDataStore(req){
+  const key=String(req.user.companyId)+":"+String(req.body.storeId);
+  if(syncInFlight.has(key))return syncInFlight.get(key);
+  const run=prisma.$transaction(async lock=>{
+    const held=await lock.$queryRaw`SELECT pg_try_advisory_xact_lock(hashtextextended(${"mydata:"+key},0)) AS "held"`;
+    if(!held[0]?.held)throw syncError("Υπάρχει ήδη λήψη myDATA σε εξέλιξη.",409);
+    return performSync(req);
+  },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{syncStatus.set(key,{...syncStatus.get(key),lastSyncError:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
+  syncInFlight.set(key,run);return run;
+}
+async function performSync(req){
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true,name:true,company:{select:{taxId:true}}}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
@@ -116,15 +126,42 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
     await prisma.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||jsonb_build_object('originalAttempts',COALESCE(("rawPayload"->>'originalAttempts')::int,0)+1,'originalError','Το πρωτότυπο δεν κατέβηκε. Ελέγξτε τη διαθεσιμότητα και τον πάροχο.') WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "inboxId"=${item.inboxId}`;
   }}
   const message=created.length?`${created.length} νέα παραστατικά μπήκαν στα Πρόχειρα.`:fetched===0?"Η ΑΑΔΕ δεν επέστρεψε εισερχόμενα παραστατικά για αυτή τη σύνδεση και αυτό το διάστημα ΜΑΡΚ.":`Η ΑΑΔΕ επέστρεψε ${fetched} παραστατικά: ${duplicates} υπήρχαν ήδη, ${ignoredVat} δεν ταίριαξαν με το ΑΦΜ εταιρείας, ${missingMark} δεν είχαν ΜΑΡΚ. Δεν δημιουργήθηκε πρόχειρο.`;
-  res.json({ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`});
+  return {ok:true,environment:integration.environment,fetched,created:created.length,duplicates,ignored,ignoredVat,missingMark,documents:created,originalsDownloaded,originalsFailed,stockUpdated:false,fiscalTransmission:false,message:message+` Πρωτότυπα PDF: ${originalsDownloaded} λήψεις, ${originalsFailed} σε αναμονή/έλεγχο.`};
+}
+
+router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
+  if(!canSync(req))return res.status(403).json({error:"Ο συγχρονισμός myDATA επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  res.json(await syncMyDataStore(req));
 }catch(error){next(error)}});
+
+// Uses the same receiving service and entitlement checks; never approves or pays.
+let workerStarted=false,workerBusy=false;
+export function startMyDataReceivingWorker(){
+  if(workerStarted)return;workerStarted=true;
+  const tick=async()=>{
+    if(workerBusy)return;workerBusy=true;
+    try{
+      await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);
+      const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND c."environment"='PRODUCTION' AND s."active"=true ORDER BY c."companyId",c."storeId"`;
+      for(const target of targets){try{
+        const state=await companyModuleState(target.companyId);
+        if(!state?.licenseAllowed||!state.activeModules.includes("DOCUMENTS"))continue;
+        const owners=await prisma.$queryRaw`SELECT u."id" FROM "User" u WHERE u."role"='OWNER' AND (u."companyId"=${target.companyId} OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=${target.companyId})) ORDER BY u."id" LIMIT 1`;
+        const owner=owners[0];
+        if(!owner)continue;
+        await syncMyDataStore({user:{id:owner.id,companyId:target.companyId},body:{storeId:target.storeId},license:state});
+      }catch{console.warn("myDATA scheduled receiving failed; review the store integration status.")}}
+    }catch{console.warn("myDATA scheduled receiving unavailable.")}finally{workerBusy=false}
+  };
+  const timer=setInterval(tick,15*60*1000);timer.unref?.();
+}
 
 router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.query.storeId||"");
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const configured=await prisma.$queryRaw`SELECT "environment","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
   const stats=await prisma.$queryRaw`SELECT COUNT(*)::int AS "documents",MAX("fetchedAt") AS "lastSyncAt" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`;
-  const row=configured[0];res.json({configured:Boolean(row),enabled:Boolean(row?.enabled),environment:row?.environment||null,labLocked:!["SANDBOX","PRODUCTION"].includes(row?.environment),documents:stats[0]?.documents||0,lastSyncAt:stats[0]?.lastSyncAt||null,automaticIntervalMinutes:10,stockUpdated:false});
+  const row=configured[0];res.json({configured:Boolean(row),enabled:Boolean(row?.enabled),environment:row?.environment||null,labLocked:!["SANDBOX","PRODUCTION"].includes(row?.environment),documents:stats[0]?.documents||0,lastSyncAt:syncStatus.get(req.user.companyId+":"+store.id)?.lastSyncAt||null,lastReceivedAt:stats[0]?.lastSyncAt||null,lastSyncError:syncStatus.get(req.user.companyId+":"+store.id)?.lastSyncError||null,serverAutomatic:row?.environment==="PRODUCTION",automaticIntervalMinutes:15,stockUpdated:false});
 }catch(error){next(error)}});
 
 export default router;
