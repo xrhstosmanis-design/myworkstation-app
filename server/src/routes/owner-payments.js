@@ -73,6 +73,8 @@ router.get("/business-picture",async(req,res,next)=>{
     if(calendar&&(query.from!==undefined||query.to!==undefined))throw Object.assign(new Error("Μη συνδυάζεις ημερολογιακές και ISO ημερομηνίες."),{status:400});
     const period=calendar?businessPictureCalendarRange(query.calendarFrom,query.calendarTo):{...dateRange(query),timeZone:"Europe/Athens"};
     const {from,to}=period,companyId=req.user.companyId,storeId=query.storeId||null;
+    // Calendar periods end at the next midnight, including sub-millisecond ledger timestamps.
+    const upper=calendar?new Date(to.getTime()+1):to,inclusiveUpper=!calendar;
     await verifyStore(companyId,storeId);
     const [stores,sales,purchases,expenses]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
@@ -92,12 +94,12 @@ router.get("/business-picture",async(req,res,next)=>{
           WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=sa."occurredAt"
           ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
         ) pc ON true
-        WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND sa."occurredAt"<=(${to}::timestamptz AT TIME ZONE 'UTC') AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND (sa."occurredAt"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND sa."occurredAt"=(${upper}::timestamptz AT TIME ZONE 'UTC'))) AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
         SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
           COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
-        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND "documentDate"<=(${to}::timestamptz AT TIME ZONE 'UTC')
+        FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "status"='APPROVED' AND "documentDate">=(${from}::timestamptz AT TIME ZONE 'UTC') AND ("documentDate"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND "documentDate"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
@@ -108,7 +110,7 @@ router.get("/business-picture",async(req,res,next)=>{
           COALESCE(SUM(pd."totalVat") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "expenseVat"
         FROM "StoreTransaction" tx
         LEFT JOIN "PurchaseDocument" pd ON tx."attachmentMimeType"=${purchaseDocumentMime} AND pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId"
-        WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND tx."occurredAt"<=${to}
+        WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
     ]);
