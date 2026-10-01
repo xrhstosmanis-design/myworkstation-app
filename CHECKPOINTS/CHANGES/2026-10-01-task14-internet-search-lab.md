@@ -13,3 +13,8 @@
 ## Διόρθωση — AWAITING CI / EXACT DEPLOY / LAB
 
 Χρησιμοποιείται μόνο signed supportContext με companyId που συμφωνεί με req.user.companyId, και μόνο στο commerce endpoint. Το platform παραμένει explicit-company. 8/8 τοπικά εκτελεσμένα tenant/role/module tests PASS και syntax check PASS· τοπικός Node24, υποχρεωτικό Node20/full suite/build στο CI. Δεν αλλάζει provider, matched price, approval, βάση ή schema. Δεν εκτελέστηκε online search.
+
+
+## Ακριβές deploy και BEFORE πρώτης online δοκιμής
+
+**01/10/2026 — #14 BEFORE online query / `docs/task14-lab-evidence-20261001`:** exact LIVE `fb58bf9610bd1193dfe54355eb9393f2468d2338`, PR #1582 / PR CI #3975 / main CI #3976 / guarded deploy #1840 PASS. Support LAB αποθήκη ανοίγει χωρίς Επίλεξε εταιρεία. Query προς δοκιμή: barcode 5449000000996, συνδεδεμένο COCA COLA 330ML / SKU763 / b32e9be4-0283-4927-9a21-f81a232ca800, stock0, κόστος0,814 €, λιανική1,30 €, τελευταία απογραφή11/09/2026 16:00:28, τελευταία πώληση—. Latest StockMovement/SQL count NOT TESTED. MAIN2/2,40 € CASH, CARD/IRIS0· LAB-POS-02 2/0 € όλα0· LAB Audit1057 και ακριβώς ίδιο με #21. Πριν online search:11 ιστορικά αποτελέσματα, τελευταία ήδη υπάρχουσα 5449000054227 /9 αποτελέσματα /1/10/2026 11:20:52 εμφανιζόμενη ώρα browser. Η μόνη αναμενόμενη νέα εγγραφή είναι InternetProductSearch, όχι οικονομική/stock ή price proposal. Καμία νέα online query της σελίδας ακόμη.
