@@ -1,4 +1,46 @@
 const CACHE_NAME="myworkstation-shell-v1";
 self.addEventListener("install",event=>{self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(self.clients.claim())});
-self.addEventListener("push",event=>{let data={};try{data=event.data?.json()||{}}catch{}event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{const visibleStoreWindows=windows.filter(client=>client.visibilityState==="visible"&&new URL(client.url).pathname.startsWith("/store/"));if(visibleStoreWindows.length){visibleStoreWindows.forEach(client=>client.postMessage({type:"STORE_CHAT_PUSH",...data}));return}return self.registration.showNotification(data.title||"MyWorkStation · Chat",{body:data.body||"Νέο μήνυμα στο Chat",icon:"/pwa-192.png",badge:"/pwa-192.png",tag:`store-chat-${data.storeId||"message"}`,renotify:true,silent:false,vibrate:[200,100,200],data:{url:data.url||"/"}})}))});self.addEventListener("notificationclick",event=>{event.notification.close();event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{const existing=windows.find(client=>new URL(client.url).origin===self.location.origin);if(existing){existing.focus();return existing.navigate(event.notification.data?.url||"/")}return clients.openWindow(event.notification.data?.url||"/")}))});self.addEventListener("fetch",event=>{if(event.request.method!=="GET"||new URL(event.request.url).origin!==self.location.origin)return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request))) });
+
+const applicationUrl=value=>{
+  try{
+    const url=new URL(value||"/",self.location.origin);
+    if(url.origin===self.location.origin)return url;
+  }catch{}
+  return new URL("/",self.location.origin);
+};
+const sameStore=(client,storeId)=>{
+  if(!storeId)return false;
+  try{
+    const url=new URL(client.url);
+    return url.origin===self.location.origin&&url.pathname.replace(/\/$/,"")===`/store/${encodeURIComponent(String(storeId))}`;
+  }catch{return false}
+};
+self.addEventListener("push",event=>{
+  let data={};
+  try{data=event.data?.json()||{}}catch{}
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
+    const visibleStoreWindows=windows.filter(client=>client.visibilityState==="visible"&&sameStore(client,data.storeId));
+    if(visibleStoreWindows.length){
+      visibleStoreWindows.forEach(client=>client.postMessage({...data,type:"STORE_CHAT_PUSH"}));
+      return;
+    }
+    return self.registration.showNotification(data.title||"MyWorkStation · Chat",{
+      body:data.body||"Νέο μήνυμα στο Chat",icon:"/pwa-192.png",badge:"/pwa-192.png",
+      tag:`store-chat-${data.storeId||"message"}`,renotify:true,silent:false,vibrate:[200,100,200],
+      data:{url:applicationUrl(data.url).href}
+    });
+  }));
+});
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  const target=applicationUrl(event.notification.data?.url);
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
+    const existing=windows.find(client=>{
+      try{const url=new URL(client.url);return url.origin===target.origin&&url.pathname.replace(/\/$/,"")===target.pathname.replace(/\/$/,"")}catch{return false}
+    });
+    if(existing)return existing.focus();
+    return clients.openWindow(target.href);
+  }));
+});
+self.addEventListener("fetch",event=>{if(event.request.method!=="GET"||new URL(event.request.url).origin!==self.location.origin)return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request))) });

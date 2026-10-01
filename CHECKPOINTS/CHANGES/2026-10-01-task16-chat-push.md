@@ -9,3 +9,7 @@ LAB11/09 αποστολή/μία εμφάνιση μετά refresh/αναζήτ�
 ## Αποδοχή νέου scope
 
 Τοπική εκτέλεση πραγματικού service worker: incomingB με visibleA πρέπει να δείξει system notification, matching visibleB να λάβει εσωτερικό alert, hiddenB system alert, notification click να μην μετακινεί άλλο terminal. Πραγματικό background push/ήχος απαιτεί LAB παραλαβή από δεύτερη συσκευή· simulation/CI δεν είναι LAB PASS. #17 απαιτεί πραγματικό iPhone/εκτυπωτή/scanner. Δεν έχει σταλεί νέο μήνυμα ή μεταβληθεί δεδομένο.
+
+## Απομονωμένη αναπαραγωγή / ελάχιστη διόρθωση
+
+Πραγματικό sw.js εκτελέστηκε σε Node VM με WindowClient fixtures: πριν1/7PASS,6FAIL. PushB μεvisibleA δεν έδειχνε notification, και clickB μετέφερε το A. StorePosPanel ήδη απορρίπτει push διαφορετικού storeId, άρα η ειδοποίηση χανόταν. Μόνο sw.js αλλάζει: foreground μόνο ακριβές ίδιο store/origin, αλλιώς systemnotification με silent:false. Click εστιάζει μόνο το αντίστοιχο storepath ή ανοίγει νέα καρτέλα, χωρίς navigate άλλουPOS. Άκυρα/εξωτερικά destinations περιορίζονται στο origin.7/7 LOCAL PASS, Node24· απαιτείται Node20/full CI. Καμία αλλαγή API/δικαιωμάτων/DB/συνδρομών ή offlinefetch. Πραγματικό backgroundpush/ήχος AWAITING LAB.
