@@ -18,3 +18,8 @@ Only documentNumber comparison strips leading zeroes from complete digit tokens,
 Retry limit already exhausted; do not reset attempts or create a second invoice. After green CI and exact live revision, owner uses the existing record's “Λήψη πρωτοτύπου για έλεγχο” once, verifies original and same draft. Capture fresh baseline immediately before that action and after; existing original/job/order reused. Do not ask for repeated paid LAB sample or final posting. Epsilon unsupported/CAPTCHA remains separate OPEN. Complete scoped USER evidence closes checkpoint/active/manual/roadmap/PDF together.
 
 Full server suite:1691PASS/1SKIP,1692 total; no client source change. CI production build/invariants/isolated E2E still required.
+
+## Exact deployment / still AWAITING USER
+
+**01/10 11:31 Greece — #1571 exact LIVE / AWAITING USER:** runtime `ca354a97821dd5696f45db81b65c5ba9d5894426`, Render `dep-dav1jgd9fdbs73as07rg` LIVE2026-10-01T08:31:29.263986Z; PR CI36836022482 and main CI36836320927 PASS (Node20/server/build/invariants/isolated HTTP E2E). Same real TDA0006538 PDF passes local identity verification; no production attachment/draft USER PASS yet. Read-only11:32:07 Greece target inbox remains RECEIVED, attachmentnull, attempts3, draftnull; store PurchaseDocument1/StoreTransaction0/StockMovement0, unchanged since before. Existing-record manual retry next; no attempt reset/new invoice/payment/posting. Same owner ASSIGNED; Epsilon remains OPEN.
+
