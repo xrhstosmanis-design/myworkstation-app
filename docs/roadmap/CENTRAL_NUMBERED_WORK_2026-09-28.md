@@ -56,7 +56,7 @@
 
 ## Προτεραιότητα 3 — προχωρημένα και επί πληρωμή modules από τις φωτογραφίες
 
-- **20 · ΑΝΑΤΕΘΗΚΕ · `fix/promotion-stock-ledger`:** Το picker και η πληρωμή σύνθετου δώρου πέρασαν πραγματική LAB δοκιμή 01/10, αλλά το checkout ενημέρωσε τα τρέχοντα StoreProduct χωρίς να γράψει τις δύο απαιτούμενες SALE κινήσεις στο StockMovement. Βάρδια και Audit έχουν μία μόνο συναλλαγή/δύο γραμμές. Η περιορισμένη ατομική, idempotent εγγραφή ledger ανά πραγματική tracked-stock γραμμή μέσα στην ίδια transaction είναι LOCAL PASS (31/31 στοχευμένα, server 1693 PASS / 1 SKIP, production build PASS)· καμία αναδρομική κίνηση και καμία δεύτερη πληρωμή. AWAITING CI/MERGE/EXACT DEPLOY/LAB. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task20-pos-gift-stock-ledger.md`.
+- **20 · ΤΕΛΙΚΟ LAB PASS 01/10/2026:** Στο exact deployed `aace0e7b…` που περιέχει το merged fix `a50aa6b…`, μία μόνο πώληση 1,20 € με TEST 1 + TEST 2 δώρο μείωσε stock 12→11 και −1→−2, έγραψε ακριβώς μία SALE ανά γραμμή με «Δώρο» στη δεύτερη, αύξησε μόνο το MAIN 1/1,20 €→2/2,40 € και άφησε το LAB-POS-02 2/0 € αμετάβλητο. Καμία αναδρομική κίνηση ή δεύτερη πληρωμή. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task20-pos-gift-stock-ledger.md`.
 - **21 · OPEN:** Ποσά/πιστωτικά προμηθευτών και Excel/PDF exports.
 - **22 · OPEN:** Κανάλι/ομαδική τιμολόγηση ανά κατάστημα.
 - **23 · OPEN:** Κουμπί POS «Αποστολή Τιμολογίου» — έλεγχος υπάρχουσας ροής πριν από ανάθεση ώστε να μη διπλασιαστεί το G03.
