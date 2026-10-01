@@ -49,8 +49,8 @@
 - **13 · AWAITING LAB · `agent/barcode-catalog-check-20260928`:** Ασφαλής μεταφορά υπάρχοντος barcode. Κώδικας/CI PASS· καμία πραγματική μεταφορά δεν δοκιμάστηκε και ο ιδιοκτήτης δεν επιθυμεί δοκιμή τώρα. Δεν δηλώνεται τελικό PASS.
 - **14 · READ-ONLY USER/LAB PASS 01/10/2026 · ευρύτερο write scope OPEN:** Exact35a52c4, #1586/CI3985–3986/deploy1844,1727testsPASS. Αποθήκη/barcode/provider/unit-ambiguous guard/net margin29,24% πραγματικά PASS. Μία τελική query9,history14→15,stock/τιμές/2POS/1057Audit ίδια. Δεν δοκιμάστηκαν υποβολή/έγκριση ή παραγγελία· διατηρούνται χωριστά OPEN. Το περασμένο read-only σκέλος δεν επαναλαμβάνεται.
 - **15 · OPEN · ελεύθερο scope:** Πρώτη αυτόματη OCR ανάγνωση τιμολογίου ως μελλοντική βελτίωση, χωρίς επανάληψη του G03 βοηθού.
-- **16 · OPEN · ελεύθερο scope:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
-- **17 · OPEN · ελεύθερο scope:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.
+- **16 · ASSIGNED · `fix/task16-chat-push-routing-20261001`:** Chat καταστήματος, αξιόπιστο push/ήχος, αναγνωσμένα και αρχεία, με έλεγχο δικαιωμάτων.
+- **17 · ASSIGNED · ίδια σελίδα μετά τη #16:** iOS PWA/QR/ειδοποιήσεις και συσκευές εκτύπωσης/scanner. Διαφορετικό από το ήδη περασμένο Android PWA σενάριο.
 - **18 · LIVE PASS 30/09/2026:** Off-site PostgreSQL backup ανά τρεις ώρες σε ιδιωτικό Backblaze B2, αποτυχία/overdue monitoring και restore dry-run μόνο με `pg_restore --list`, χωρίς σύνδεση σε βάση. Πραγματικό upload 161.286.652 bytes, ανεξάρτητη λήψη με ίδιο SHA-256 και 436 table entries. Καμία πραγματική επαναφορά ή αντικατάσταση δεδομένων.
 - **19 · FINAL PASS 30/09/2026:** Περιορισμός περιττών GitHub/Render builds (HOME-06): ένας guarded δρόμος web deploy, service-specific Render filters, ακύρωση superseded CI και παράλειψη πλήρους CI/deploy για documentation-only commits. PR #1557 / CI #3917–3918 / exact production `7ee5ca6` και PR #1558 / CI #3919–3920 / exact production `6d6384c`. Το documentation-only proof δεν ξεκίνησε web deploy ή cron rebuild.
 
