@@ -36,7 +36,7 @@ test("tracked POS sale records one idempotent stock movement for a gift line",as
     async $queryRaw(){return[{trackStock:true,reserved:true,previousStock:1,nextStock:0}]},
     async $executeRaw(strings,...values){executions.push({sql:strings.join("?"),values});return 1}
   };
-  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"gift-product",quantity:2,productName:"Gift product",saleId:"sale-1",saleLineId:"line-1",actorId:"cashier-1",priceSource:"GIFT"});
+  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"gift-product",quantity:2,productName:"Gift product",saleId:"sale-1",saleLineId:"line-1",priceSource:"GIFT"});
   assert.equal(executions.length,1);
   assert.match(executions[0].sql,/INSERT INTO "StockMovement"/);
   assert.match(executions[0].sql,/'SALE'/);
@@ -54,7 +54,7 @@ test("untracked POS line does not create a stock movement",async()=>{
     async $queryRaw(){return[{trackStock:false,reserved:false,previousStock:null,nextStock:null}]},
     async $executeRaw(){movements+=1;return 1}
   };
-  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"service",quantity:1,productName:"Service",saleId:"sale-2",saleLineId:"line-2",actorId:"cashier-1"});
+  await reserveSharedStock(tx,{companyId:"kat-company",storeId:"kat-store",productId:"service",quantity:1,productName:"Service",saleId:"sale-2",saleLineId:"line-2"});
   assert.equal(movements,0);
 });
 
@@ -66,7 +66,7 @@ test("checkout binds each sale to its own terminal shift and fail-closed device 
   assert.doesNotMatch(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
   assert.match(storePos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
   assert.match(storePos,/const saleLineId=crypto\.randomUUID\(\)/);
-  assert.match(storePos,/saleId,saleLineId,actorId,priceSource:item\.priceSource/);
+  assert.match(storePos,/saleId,saleLineId,priceSource:item\.priceSource/);
 });
 
 test("identical legitimate sales on POS-1 and POS-2 do not share the duplicate fingerprint",()=>{

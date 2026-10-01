@@ -30,4 +30,6 @@ Sale `328547a7-3d2a-43e3-a34a-ae646add870d`, StoreTransaction `e56ac35d-454d-42a
 - Production client/server build και Prisma generate: `PASS`.
 - `git diff --check`: `PASS`.
 
+Το πρώτο PR CI `36837395173` έφτασε έως το πραγματικό HTTP E2E και αποκάλυψε ότι ένας νόμιμος χειριστής POS μπορεί να μην είναι εγγραφή του πίνακα `User`, άρα δεν επιτρέπεται να αποθηκεύεται στο `StockMovement.createdByUserId`. Η κίνηση διατηρεί Sale/SaleLine/source/idempotency και αφήνει αυτό το προαιρετικό ξένο κλειδί `NULL`· η ταυτότητα χειριστή παραμένει στο υπάρχον Sale/StoreTransaction/Audit. Απαιτείται νέο CI PASS.
+
 Δεν αποδίδεται πραγματικό PASS μόνο από τους τοπικούς ελέγχους. Μετά από CI/merge/exact deploy απαιτείται μία νέα, χωριστά ταυτοποιημένη LAB δοκιμή με πλήρες πριν/μετά για βάρδια, δύο stock, τελευταία κίνηση, Sale/Transaction/Audit IDs και αμετάβλητο δεύτερο terminal.
