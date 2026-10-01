@@ -21,6 +21,30 @@ router.post('/pair',rate,async(req,res,next)=>{try{
  if(!jobs[0])return res.status(404).json({error:'Λάθος, ληγμένος ή ήδη χρησιμοποιημένος κωδικός.'});
  const connection=sessions.start(jobs[0]);await audit(jobs[0],'REMOTE_AGENT_LOCAL_CONSENT');res.status(201).json(connection);
 }catch(e){next(e)}});
+// Code-only pairing stays scoped to the configured trial terminal; never search other stores.
+router.post('/pair-code',rate,async(req,res,next)=>{try{
+ const b=req.body||{};
+ if(typeof b.code!=='string'||!/^\d{6}$/.test(b.code)||b.localConsent!==true)return res.status(400).json({error:'Απαιτείται εξαψήφιος κωδικός και τοπική αποδοχή.'});
+ if(!sessions.canStart())return res.status(503).json({error:'Δεν υπάρχει διαθέσιμη συνεδρία.'});
+ const digest=crypto.createHash('sha256').update(b.code).digest('hex');
+ const jobs=await prisma.$queryRaw`WITH candidates AS MATERIALIZED (
+  SELECT j."id" FROM "DeviceDeploymentJob" j
+  JOIN "StoreInstallationTerminal" t ON t."id"=j."terminalId" AND t."companyId"=j."companyId" AND t."storeId"=j."storeId" AND t."active"=true
+  JOIN "Store" s ON s."id"=j."storeId" AND s."companyId"=j."companyId" AND s."active"=true
+  WHERE j."terminalId"=${trial.terminalId} AND j."jobType"='REMOTE_ASSIST' AND j."status"='AWAITING_DEVICE'
+   AND j."payloadJson"->>'supportCodeHash'=${digest} AND (j."payloadJson"->>'expiresAt')::timestamptz>NOW()
+  LIMIT 2
+ ), unique_candidate AS (
+  SELECT MIN("id"::text) AS id FROM candidates HAVING COUNT(*)=1
+ )
+ UPDATE "DeviceDeploymentJob" j SET "status"='DEVICE_ACCEPTED',"startedAt"=NOW(),"resultJson"='{"attendedAgent":true,"localConsent":true}'::jsonb
+ FROM unique_candidate c WHERE j."id"::text=c.id AND j."status"='AWAITING_DEVICE'
+  AND (j."payloadJson"->>'expiresAt')::timestamptz>NOW()
+ RETURNING j."id",j."createdBy",j."companyId",j."storeId",j."terminalId"`;
+ if(jobs.length!==1)return res.status(404).json({error:'Λάθος, ληγμένος, διπλός ή ήδη χρησιμοποιημένος κωδικός.'});
+ const connection=sessions.start(jobs[0]);await audit(jobs[0],'REMOTE_AGENT_LOCAL_CONSENT');
+ res.status(201).json({...connection,jobId:jobs[0].id});
+}catch(e){next(e)}});
 const device=req=>sessions.device(req.params.jobId,String(req.headers.authorization||'').replace(/^Bearer /,''));
 router.post('/:jobId/frame',async(req,res,next)=>{try{
  const s=device(req),b=req.body||{};
