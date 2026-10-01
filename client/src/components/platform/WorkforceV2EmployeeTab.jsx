@@ -6,7 +6,7 @@ import {openWorkforceCardPrint} from "./workforce-card-print.js";
 
 export default function WorkforceV2EmployeeTab({manager,store}){
   const [performanceEmployee,setPerformanceEmployee]=React.useState(null);
-  const [cardBusy,setCardBusy]=React.useState(""),[cardError,setCardError]=React.useState("");
+  const [cardBusy,setCardBusy]=React.useState(""),[cardError,setCardError]=React.useState(""),[invite,setInvite]=React.useState(null),[copyDone,setCopyDone]=React.useState(false);
   const {data,form,setForm,editingId,busy,activeRoles,roleMap,resetEmployee,setField,chooseBaseStore,toggleStore,toggleRole,editEmployee,previewEmployee,changeEmployeeStatus}=manager;
   const selectedStoreIds=new Set(form.storeIds);
   const printCard=async employee=>{
@@ -19,12 +19,15 @@ export default function WorkforceV2EmployeeTab({manager,store}){
     try{
       const payload=await manager.request(`/api/platform/store-modules/companies/${data.company.id}/stores/${store.id}/workforce-v2/employees/${employee.id}/work-card`,{method:"POST"});
       const url=new URL(payload.mobileUrl,window.location.origin).href;
-      const share={title:"MyWorkStation · Η κάρτα μου",text:`${employee.fullName} — άνοιξε το MyWorkStation και συνδέσου με το προσωπικό σου PIN.`,url};
-      if(navigator.share)await navigator.share(share);else{await navigator.clipboard.writeText(`${share.text} ${url}`);window.alert("Ο σύνδεσμος αντιγράφηκε. Μπορείς να τον στείλεις στον εργαζόμενο.")}
+      const text=`${employee.fullName} — άνοιξε το MyWorkStation και συνδέσου με το προσωπικό σου PIN.`;
+      setCopyDone(false);setInvite({employee,text,url,message:`${text} ${url}`});
     }catch(error){if(error?.name!=="AbortError")setCardError(error.message)}finally{setCardBusy("")}
   };
+  const copyInvite=async()=>{if(!invite)return;try{await navigator.clipboard.writeText(invite.message);setCopyDone(true)}catch{setCardError("Δεν μπόρεσα να αντιγράψω τον σύνδεσμο. Επίλεξέ τον χειροκίνητα.")}};
+  const encodedMessage=invite?encodeURIComponent(invite.message):"";
+  const nativeShare=async()=>{if(!invite||!navigator.share)return;try{await navigator.share({title:"MyWorkStation · Η κάρτα μου",text:invite.text,url:invite.url})}catch(error){if(error?.name!=="AbortError")setCardError(error.message)}};
   if(performanceEmployee)return <WorkforceV2EmployeePerformance employee={performanceEmployee} base={`/api/platform/store-modules/companies/${manager.data.company.id}/stores/${store.id}/workforce-v2`} request={manager.request} onClose={()=>setPerformanceEmployee(null)}/>;
-  return <div className="workforce-two-column">
+  return <>{invite&&<div className="platform-modal" role="dialog" aria-modal="true"><section className="platform-security-dialog" style={{width:"min(620px,94vw)"}}><h2>Αποστολή εφαρμογής</h2><p><b>{invite.employee.fullName}</b></p><p>Στείλε αυτόν τον προσωπικό σύνδεσμο στον εργαζόμενο. Θα συνδεθεί με το δικό του PIN και θα βλέπει μόνο «Η κάρτα μου».</p><input readOnly value={invite.url} onFocus={e=>e.currentTarget.select()} style={{width:"100%"}}/><div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}><button type="button" onClick={copyInvite}>{copyDone?"✓ Αντιγράφηκε":"Αντιγραφή συνδέσμου"}</button><a className="secondary" href={`https://wa.me/?text=${encodedMessage}`} target="_blank" rel="noreferrer">WhatsApp</a><a className="secondary" href={`viber://forward?text=${encodedMessage}`}>Viber</a>{navigator.share&&<button type="button" className="secondary" onClick={nativeShare}>Κοινοποίηση</button>}<button type="button" className="secondary" onClick={()=>setInvite(null)}>Κλείσιμο</button></div></section></div>}<div className="workforce-two-column">
     <section className="workforce-editor-card">
       <div className="workforce-card-title"><div><h4>{editingId?"Επεξεργασία εργαζομένου":"Νέος εργαζόμενος"}</h4><p>Η αποθήκευση γίνεται μόνο αφού εμφανιστεί και εγκριθεί η προεπισκόπηση.</p></div>{editingId&&<button className="secondary" onClick={resetEmployee}>Νέα καρτέλα</button>}</div>
       <div className="workforce-form-grid">
@@ -58,5 +61,5 @@ export default function WorkforceV2EmployeeTab({manager,store}){
         <div className="workforce-row-actions"><button className="secondary" onClick={()=>setPerformanceEmployee(employee)}><Activity/> Απόδοση & Ταμεία</button><button className="secondary" onClick={()=>printCard(employee)} disabled={Boolean(cardBusy)||!employee.active||employee.baseStoreId!==store.id}><Printer/> {cardBusy===employee.id?"Προετοιμασία…":"Εκτύπωση κάρτας"}</button><button className="secondary" onClick={()=>shareApp(employee)} disabled={Boolean(cardBusy)||!employee.active||employee.baseStoreId!==store.id}><Send/> Αποστολή εφαρμογής</button><button className="secondary" onClick={()=>editEmployee(employee)}><Pencil/> Επεξεργασία</button><button className="secondary" onClick={()=>changeEmployeeStatus(employee)} disabled={Boolean(busy)}><Power/> {employee.active?"Απενεργοποίηση":"Ενεργοποίηση"}</button></div>
       </article>):<div className="platform-empty">Δεν υπάρχουν ακόμη εργαζόμενοι στη νέα βάση.</div>}</div>
     </section>
-  </div>;
+  </div></>;
 }
