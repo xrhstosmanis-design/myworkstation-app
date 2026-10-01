@@ -21,7 +21,7 @@ self.addEventListener("push",event=>{
   try{data=event.data?.json()||{}}catch{}
   event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
     const visibleStoreWindows=windows.filter(client=>client.visibilityState==="visible"&&sameStore(client,data.storeId));
-    if(visibleStoreWindows.length){
+    if(visibleStoreWindows.length&&data.requiresSystemNotification!==true){
       visibleStoreWindows.forEach(client=>client.postMessage({...data,type:"STORE_CHAT_PUSH"}));
       return;
     }

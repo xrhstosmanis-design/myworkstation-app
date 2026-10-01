@@ -15,3 +15,7 @@ https://webkit.org/blog/12945/meet-web-push/ : το WebKit απαιτεί ορα
 ## Αποδοχή
 
 Τοπικάbehavioral tests του πραγματικούsendStoreChatPush καιserviceworker μεApple/άλλους endpoints/visible/hidden, spoofedhosts καιreallegacyrootpayload. CI ≠ LABPASS. ΜετάgreenCI/merge/exactdeploy απαιτείταιπραγματικήiOSHomeScreenεγκατάσταση (iOS/iPadOS16.4+), usergesture permission,έναελεγχόμενοLABmessage απόάλλονLABλογαριασμό,background καιforegroundπαραλαβή/ήχος/click. Χωρίς πραγματικόiPhone/OSnotificationcenter/περιφερειακά, παραμένειAWAITINGDEVICE LAB.
+
+## Τοπικό αποτέλεσμα
+
+Actualsender/worker fixtures πριν3/5PASS,2FAIL, μετά5/5PASS. Μαζίμε#16 routing8/8,13/13LOCALPASS Node24. AppleforegroundshowNotification αντίsilentpostMessage, strictendpoint URLhost αντιspoofing, tenant/company/store/sender bindings/TTL300/privacy διατηρούνται. Δεν είναιphysicaliOSLABPASS.
