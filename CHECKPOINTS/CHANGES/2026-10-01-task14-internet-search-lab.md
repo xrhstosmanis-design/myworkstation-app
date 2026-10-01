@@ -47,3 +47,8 @@
 Το market-search δικό μας προϊόν διαβάζει και το υπάρχον vatRate. Pure υπολογισμός αφαιρεί ΦΠΑ από τη μικτή λιανική πριν από καθαρό κόστος, όπως η canonical αποθήκη. Αγνώστη/άκυρη βάση δεν εμφανίζει φανταστικό margin. UI: Καθαρή αγορά / Λιανική με ΦΠΑ / Margin χωρίς ΦΠΑ. Καμία αλλαγή cost/sale/VAT/stock ή άλλης καρτέλας.25/25 targeted tests PASS (7 margin,10 item price,8 support context), τοπικός Node24· Node20/full CI/deploy/LAB απαιτούνται.
 
 CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατηρούνται οι αρχικές ετικέτες με διευκρινίσεις «Δική μας αγορά (καθαρή)» / «Δική μας πώληση (με ΦΠΑ)». Αριθμητικές7 και προηγούμενες18 PASS· νέο πλήρες CI απαιτείται.
+
+
+## BEFORE τελικού ελέγχου
+
+**01/10/2026 — #14 BEFORE τελική margin query:** exact `/api/health` `35a52c4ef056453955b3764aefc8cf16e978f750`, #1586 / PR CI3985 / mainCI3986 / deploy1844 PASS, Node20.20.2 /1727PASS /0FAIL /0SKIP /build/invariants/E2E PASS. Φρέσκο LAB: SKU763/barcode5449000000996 stock0/αγορά0,81/λιανική1,30, control1LT9/1,74/2,60 και500ML0/0/1,60 ίδια. MAIN2/2,40 CASH CARD/IRIS0,POS02 2/0 όλα0,1057Audit ακριβώς ίδια. Ιστορικό14 μεlatest11:53:11. Σύνδεσηbarcode χωρίς query. Μία νέα query θα ελέγξει margin29,24% (κόστος0,814,λιανική1,30,ΦΠΑ13%) και συνεχιζόμενο unit/ambiguous guard. Μόνο νέα InternetProductSearch εγγραφή αναμένεται· καμία οικονομική/stock/τιμή/ΦΠΑ/proposal/order πράξη.
