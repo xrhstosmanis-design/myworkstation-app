@@ -21,10 +21,21 @@ test("global supplier report server and client modules pass Node syntax check",(
 });
 
 test("global supplier reports support invoices payments purchases sales and optional supplier filter",()=>{
-  for(const path of ["/reports/invoices","/reports/payments","/reports/purchases","/reports/sales","/reports/sales/:supplierId/items"])assert.match(route,new RegExp(path.replace(/[/:]/g,"\\$&")));
+  for(const path of ["/reports/balances","/reports/balances/export","/reports/invoices","/reports/payments","/reports/purchases","/reports/sales","/reports/sales/:supplierId/items"])assert.match(route,new RegExp(path.replace(/[/:]/g,"\\$&")));
   assert.match(route,/supplierId:q\.supplierId\|\|null/);
   assert.match(client,/Όλοι οι προμηθευτές/);
-  for(const tab of ["invoices","payments","purchases","sales"])assert.match(client,new RegExp(tab));
+  for(const tab of ["balances","invoices","payments","purchases","sales"])assert.match(client,new RegExp(tab));
+});
+
+test("supplier balances are read-only, credit-aware and export the same filtered report",()=>{
+  assert.match(route,/d\."documentType"='CREDIT_NOTE'/);
+  assert.match(route,/periodNet:invoiceGross-creditGross-payments\+adjustments/);
+  assert.match(route,/z\.enum\(\["xlsx","pdf"\]\)/);
+  assert.match(route,/XLSX\.utils\.json_to_sheet/);
+  assert.match(client,/Excel \(\.xlsx\)/);
+  assert.match(client,/PDF \/ Εκτύπωση/);
+  assert.match(client,/Read-only εικόνα/);
+  assert.doesNotMatch(route,/router\.post\("\/reports\/balances/);
 });
 
 test("supplier sales mapping prefers current SupplierProductLink and falls back to latest approved purchase",()=>{

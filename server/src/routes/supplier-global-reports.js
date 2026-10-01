@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {z} from "zod";
+import * as XLSX from "xlsx";
 import {prisma} from "../prisma.js";
 
 const router=Router();
@@ -23,6 +24,36 @@ router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){ne
 const querySchema=z.object({from:z.string().optional(),to:z.string().optional(),supplierId:z.string().optional(),q:z.string().trim().max(200).optional()});
 function parseQuery(raw){const q=querySchema.parse(raw||{}),now=new Date(),to=q.to?new Date(q.to):now,from=q.from?new Date(q.from):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error}return{...q,from,to,supplierId:q.supplierId||null,text:q.q?`%${q.q}%`:null}}
 async function supplierOptions(companyId){return prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`}
+
+async function balanceReport(companyId,rawQuery){
+  const{from,to,supplierId,text}=parseQuery(rawQuery),suppliers=await supplierOptions(companyId);
+  const rows=await prisma.$queryRaw`
+    SELECT s."id" AS "supplierId",s."name" AS "supplierName",s."taxId",
+      COALESCE(pd."invoiceGross",0) AS "invoiceGross",COALESCE(pd."creditGross",0) AS "creditGross",COALESCE(pp."payments",0) AS "payments",COALESCE(pa."adjustments",0) AS "adjustments",
+      COALESCE(ad."invoiceGross",0)-COALESCE(ad."creditGross",0)-COALESCE(ap."payments",0)+COALESCE(aa."adjustments",0) AS "balance"
+    FROM "Supplier" s
+    LEFT JOIN LATERAL (SELECT SUM(d."totalGross") FILTER (WHERE d."documentType"<>'CREDIT_NOTE') AS "invoiceGross",SUM(d."totalGross") FILTER (WHERE d."documentType"='CREDIT_NOTE') AS "creditGross" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED' AND d."documentDate">=${from} AND d."documentDate"<=${to}) pd ON true
+    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL AND t."occurredAt">=${from} AND t."occurredAt"<=${to}) pp ON true
+    LEFT JOIN LATERAL (SELECT SUM(a."amount") AS "adjustments" FROM "SupplierBalanceAdjustment" a WHERE a."companyId"=${companyId} AND a."supplierId"=s."id" AND a."occurredAt">=${from} AND a."occurredAt"<=${to}) pa ON true
+    LEFT JOIN LATERAL (SELECT SUM(d."totalGross") FILTER (WHERE d."documentType"<>'CREDIT_NOTE') AS "invoiceGross",SUM(d."totalGross") FILTER (WHERE d."documentType"='CREDIT_NOTE') AS "creditGross" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED') ad ON true
+    LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL) ap ON true
+    LEFT JOIN LATERAL (SELECT SUM(a."amount") AS "adjustments" FROM "SupplierBalanceAdjustment" a WHERE a."companyId"=${companyId} AND a."supplierId"=s."id") aa ON true
+    WHERE s."companyId"=${companyId} AND s."active"=true AND (${supplierId}::text IS NULL OR s."id"=${supplierId}) AND (${text}::text IS NULL OR s."name" ILIKE ${text} OR COALESCE(s."taxId",'') ILIKE ${text}) ORDER BY ABS(COALESCE(ad."invoiceGross",0)-COALESCE(ad."creditGross",0)-COALESCE(ap."payments",0)+COALESCE(aa."adjustments",0)) DESC,s."name"`;
+  const items=rows.map(r=>{const invoiceGross=n(r.invoiceGross),creditGross=n(r.creditGross),payments=n(r.payments),adjustments=n(r.adjustments),balance=n(r.balance);return{...r,invoiceGross,creditGross,payments,adjustments,periodNet:invoiceGross-creditGross-payments+adjustments,balance}});
+  const summary=items.reduce((a,r)=>{a.suppliers++;a.invoiceGross+=r.invoiceGross;a.creditGross+=r.creditGross;a.payments+=r.payments;a.adjustments+=r.adjustments;a.periodNet+=r.periodNet;a.balance+=r.balance;return a},{suppliers:0,invoiceGross:0,creditGross:0,payments:0,adjustments:0,periodNet:0,balance:0});return{from,to,suppliers,items,summary};
+}
+const htmlEsc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
+const euro=value=>n(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+router.get("/reports/balances",async(req,res,next)=>{try{res.json(await balanceReport(req.user.companyId,req.query))}catch(error){next(error)}});
+router.get("/reports/balances/export",async(req,res,next)=>{try{
+  const data=await balanceReport(req.user.companyId,req.query),format=z.enum(["xlsx","pdf"]).parse(req.query.format),date=value=>new Date(value).toLocaleDateString("el-GR");
+  if(format==="xlsx"){
+    const rows=data.items.map(r=>({"Προμηθευτής":r.supplierName,"ΑΦΜ":r.taxId||"","Τιμολόγια περιόδου":r.invoiceGross,"Πιστωτικά περιόδου":-r.creditGross,"Πληρωμές περιόδου":-r.payments,"Διορθώσεις περιόδου":r.adjustments,"Καθαρή κίνηση περιόδου":r.periodNet,"Τρέχον υπόλοιπο":r.balance}));rows.push({"Προμηθευτής":"ΣΥΝΟΛΑ","ΑΦΜ":"","Τιμολόγια περιόδου":data.summary.invoiceGross,"Πιστωτικά περιόδου":-data.summary.creditGross,"Πληρωμές περιόδου":-data.summary.payments,"Διορθώσεις περιόδου":data.summary.adjustments,"Καθαρή κίνηση περιόδου":data.summary.periodNet,"Τρέχον υπόλοιπο":data.summary.balance});
+    const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(rows);sheet["!cols"]=[{wch:34},{wch:15},{wch:20},{wch:20},{wch:20},{wch:20},{wch:24},{wch:20}];XLSX.utils.book_append_sheet(workbook,sheet,"Προμηθευτές");const info=XLSX.utils.aoa_to_sheet([["Αναφορά","Ποσά και πιστωτικά προμηθευτών"],["Από",date(data.from)],["Έως",date(data.to)],["Σημείωση","Read-only αναφορά. Πιστωτικά και πληρωμές έχουν αρνητικό πρόσημο."]]);XLSX.utils.book_append_sheet(workbook,info,"Πληροφορίες");const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx"});return res.json({filename:"promitheftes-ypoloipa.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:data.items.length});
+  }
+  const body=data.items.map(r=>`<tr><td>${htmlEsc(r.supplierName)}</td><td>${htmlEsc(r.taxId||"—")}</td><td>${euro(r.invoiceGross)}</td><td>-${euro(r.creditGross)}</td><td>-${euro(r.payments)}</td><td>${euro(r.adjustments)}</td><td>${euro(r.periodNet)}</td><td><b>${euro(r.balance)}</b></td></tr>`).join("");const s=data.summary;
+  const html=`<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Ποσά και πιστωτικά προμηθευτών</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#17324a}h1{font-size:20px}p{font-size:12px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #b8c8d4;padding:6px;text-align:right}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}th{background:#173f61;color:#fff}tfoot{font-weight:bold;background:#eef5fa}.note{color:#526779}</style></head><body><h1>Ποσά και πιστωτικά προμηθευτών</h1><p>Περίοδος ${date(data.from)} – ${date(data.to)}</p><table><thead><tr><th>Προμηθευτής</th><th>ΑΦΜ</th><th>Τιμολόγια</th><th>Πιστωτικά</th><th>Πληρωμές</th><th>Διορθώσεις</th><th>Κίνηση περιόδου</th><th>Τρέχον υπόλοιπο</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>ΣΥΝΟΛΑ</td><td></td><td>${euro(s.invoiceGross)}</td><td>-${euro(s.creditGross)}</td><td>-${euro(s.payments)}</td><td>${euro(s.adjustments)}</td><td>${euro(s.periodNet)}</td><td>${euro(s.balance)}</td></tr></tfoot></table><p class="note">Read-only αναφορά. Δεν αλλάζει πληρωμές, υπόλοιπα ή απόθεμα.</p><script>addEventListener("load",()=>print())</script></body></html>`;res.json({filename:"promitheftes-ypoloipa.pdf",html,count:data.items.length});
+}catch(error){next(error)}});
 
 router.get("/reports/invoices",async(req,res,next)=>{try{
   const companyId=req.user.companyId,{from,to,supplierId,text}=parseQuery(req.query),suppliers=await supplierOptions(companyId);

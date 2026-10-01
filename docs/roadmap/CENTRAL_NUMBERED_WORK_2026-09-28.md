@@ -57,7 +57,7 @@
 ## Προτεραιότητα 3 — προχωρημένα και επί πληρωμή modules από τις φωτογραφίες
 
 - **20 · ΤΕΛΙΚΟ LAB PASS 01/10/2026:** Στο exact deployed `aace0e7b…` που περιέχει το merged fix `a50aa6b…`, μία μόνο πώληση 1,20 € με TEST 1 + TEST 2 δώρο μείωσε stock 12→11 και −1→−2, έγραψε ακριβώς μία SALE ανά γραμμή με «Δώρο» στη δεύτερη, αύξησε μόνο το MAIN 1/1,20 €→2/2,40 € και άφησε το LAB-POS-02 2/0 € αμετάβλητο. Καμία αναδρομική κίνηση ή δεύτερη πληρωμή. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task20-pos-gift-stock-ledger.md`.
-- **21 · ASSIGNED · `feat/task21-supplier-credit-exports`:** Read-only ποσά/πιστωτικά/πληρωμές/υπόλοιπο προμηθευτών και πραγματικά Excel/PDF exports, χωρίς νέα οικονομική ή stock πράξη. Αρχικό νέο scope NOT TESTED.
+- **21 · LOCAL PASS · AWAITING CI/DEPLOY/USER · `feat/task21-supplier-credit-exports`:** Read-only ποσά/πιστωτικά/πληρωμές/υπόλοιπο προμηθευτών και πραγματικά `.xlsx`/PDF των ίδιων φίλτρων. 1696 PASS / 1 SKIP / 0 FAIL και production frontend build PASS. Καμία νέα οικονομική ή stock πράξη.
 - **22 · OPEN:** Κανάλι/ομαδική τιμολόγηση ανά κατάστημα.
 - **23 · OPEN:** Κουμπί POS «Αποστολή Τιμολογίου» — έλεγχος υπάρχουσας ροής πριν από ανάθεση ώστε να μη διπλασιαστεί το G03.
 - **24 · OPEN:** Σύνδεση καναλιού/POS με AI Reader, Azure και BackOffice — ορισμός νέου scope μετά τον έλεγχο υπάρχοντος βοηθού.
