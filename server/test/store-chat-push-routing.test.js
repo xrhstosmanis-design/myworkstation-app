@@ -35,3 +35,7 @@ test("notification opens its store in a new window if only another POS exists",a
 test("invalid or foreign notification targets stay on the application origin",async()=>{
   for(const url of ["https://foreign.example/store/B","javascript:alert(1)"]){const h=harness();await h.click(url);assert.deepEqual(h.opened,[`${origin}/`]);}
 });
+
+test("real legacy root payload opens the notified store and preserves another POS",async()=>{
+  const h=harness([windowFor("a","A")]);await h.push({storeId:"B",url:"/"});const url=h.notifications[0].options.data.url;assert.equal(url,`${origin}/store/B`);await h.click(url);assert.deepEqual(h.opened,[`${origin}/store/B`]);assert.equal(h.navigated.length,0);
+});

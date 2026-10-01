@@ -28,7 +28,7 @@ self.addEventListener("push",event=>{
     return self.registration.showNotification(data.title||"MyWorkStation · Chat",{
       body:data.body||"Νέο μήνυμα στο Chat",icon:"/pwa-192.png",badge:"/pwa-192.png",
       tag:`store-chat-${data.storeId||"message"}`,renotify:true,silent:false,vibrate:[200,100,200],
-      data:{url:applicationUrl(data.url).href}
+      data:{url:applicationUrl(data.storeId?`/store/${encodeURIComponent(String(data.storeId))}`:data.url).href}
     });
   }));
 });
