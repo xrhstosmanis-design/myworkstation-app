@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState} from "react";
 import {ChevronDown,ChevronRight,Download,Maximize2,Minimize2,Printer,RefreshCw,Search,X} from "lucide-react";
 
 import {businessPicturePreset} from "./business-picture-dates.js";
+import {businessPicturePrintHtml} from "./business-picture-print.js";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const pct=value=>`${Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
@@ -30,6 +31,15 @@ export default function OwnerBusinessPicture({api,store,onClose}){
   const visible=(value,key)=>{if(scope==="WITH_VAT"&&["salesNet","purchaseNet"].includes(key))return null;if(scope==="WITHOUT_VAT"&&["salesGross","purchaseGross","salesVat","purchaseVat"].includes(key))return null;return value};
   const exportCsv=()=>{const lines=[["Περίοδος",...columns.map(([,label])=>label)]];for(const row of data?.monthly||[])lines.push([row.month,...columns.map(([key])=>row[key]??"")]);const blob=new Blob(["\ufeff"+lines.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`eikona-epixeiriseis-${data?.calendarFrom||from}-${data?.calendarTo||to}.csv`;a.click();URL.revokeObjectURL(url)};
   const rowCells=row=>columns.map(([key,,format])=>{const value=visible(row[key],key);return <td key={key} className={key==="netProfit"?"business-profit":key.includes("Vat")?"business-vat":""}>{value==null?"—":format(value)}</td>});
+  const printReport=()=>{
+    const popup=window.open("","_blank");
+    if(!popup){setError("Επίτρεψε το αναδυόμενο παράθυρο για την εκτυπώσιμη αναφορά.");return}
+    popup.opener=null;
+    const rows=[];
+    for(const row of data?.monthly||[]){rows.push({...row,label:monthLabel(row.month)});if(expanded===row.month)for(const day of daysByMonth.get(row.month)||[])rows.push({...day,label:dayLabel(day.day)})}
+    if(data?.totals)rows.push({...data.totals,label:"ΣΥΝΟΛΟ"});
+    popup.document.open();popup.document.write(businessPicturePrintHtml({data,storeName:store?.name||"Όλα τα καταστήματα",columns,rows,scope}));popup.document.close();
+  };
   return <div className="business-picture-overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
     <section className={`business-picture-dialog ${maximized?"maximized":""}`}>
       <header><div><small>MYWORKSTATION · ΙΔΙΟΚΤΗΤΗΣ</small><h2>Εικόνα Επιχειρήσεις</h2><p>{store?.name||"Όλα τα καταστήματα"} · πραγματικά δεδομένα εμπορικής λειτουργίας</p></div><div className="business-window-actions"><button onClick={()=>setMaximized(value=>!value)} aria-label={maximized?"Επαναφορά παραθύρου":"Μεγιστοποίηση παραθύρου"}>{maximized?<Minimize2/>:<Maximize2/>}</button><button onClick={onClose} aria-label="Κλείσιμο"><X/></button></div></header>
@@ -40,7 +50,7 @@ export default function OwnerBusinessPicture({api,store,onClose}){
         <span/><button onClick={()=>preset("PREVIOUS_QUARTER")}>Προηγούμενο Τρίμηνο</button><button onClick={()=>preset("CURRENT_MONTH")}>Τρέχων Μήνας</button>
         <button className="business-search" aria-label="Αναζήτηση περιόδου" onClick={load} disabled={busy}><Search/></button>
       </div>
-      <div className="business-picture-tools"><button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={()=>window.print()}><Printer/> Εκτύπωση</button></div>
+      <div className="business-picture-tools"><button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={printReport} disabled={busy||!!error||!data}><Printer/> Εκτύπωση</button></div>
       {data?.calendarFrom&&<p className="business-picture-loading">Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
       {!busy&&data?.totals&&<p className="business-picture-loading">Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
       {!busy&&data?.totals?.missingCostLines>0&&<div className="business-picture-error" role="status">Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
