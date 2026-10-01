@@ -94,7 +94,8 @@ const storeApi=async(path,options={})=>{
   const token=localStorage.getItem("token");
   const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const text=await response.text();let data={};if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
-  if(response.status===401&&storeMatch){localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");window.location.reload()}
+  const employeeCardLogin=Boolean(storeMatch&&new URLSearchParams(window.location.search).get("employee-card")==="1"&&path==="/api/operators/login/mobile-pin");
+  if(response.status===401&&storeMatch&&!employeeCardLogin){localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");window.location.reload()}
   if(response.status===401&&posMatch){localStorage.removeItem("token");localStorage.removeItem("storeOperatorSession");localStorage.removeItem("user");window.location.reload()}
   if(posMatch&&response.status===404&&data.error==="Δεν βρέθηκε ενεργό κατάστημα."){returnFromStaleTestPos();return new Promise(()=>{})}
   if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);return data;
