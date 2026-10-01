@@ -8,6 +8,8 @@ import SmartProductEntryBridge from "./SmartProductEntryBridge.jsx";
 import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
 import TableServiceBackofficePanel from "./TableServiceBackofficePanel.jsx";
 import InternetProductSearchPanel from "./InternetProductSearchPanel.jsx";
+import WholesaleB2BPanel from "./WholesaleB2BPanel.jsx";
+import "./wholesale-b2b.css";
 import "./inventory-archive-delivery.css";
 
 async function request(path,options={}){
@@ -112,9 +114,10 @@ export default function CommerceLauncher(){
         <div className="commerce-mode-switch">
           <button className={legacyView==="operations"?"active":""} onClick={()=>setLegacyView("operations")}>Εμπορικές λειτουργίες</button>
           <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
+          <button className={legacyView==="wholesale"?"active":""} onClick={()=>setLegacyView("wholesale")}>Χονδρική / B2B</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub api={request} stores={stores} activeStoreId={supportStoreId}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="wholesale"?<WholesaleB2BPanel api={request}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub api={request} stores={stores} activeStoreId={supportStoreId}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
