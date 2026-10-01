@@ -1,6 +1,6 @@
 # MyWorkStation Windows Remote Agent — AWAITING WINDOWS LAB
 
-First attended prototype; not a completed production installation feature. The server refuses all agent routes unless `REMOTE_AGENT_ENABLED=true`. Keep this unset in production until explicit acceptance. No new production session or device permission has been granted by publishing this code.
+First attended prototype; not a completed production installation feature. The server refuses all agent routes unless enabled for one exact `REMOTE_AGENT_TRIAL_TERMINAL_ID` with a future `REMOTE_AGENT_TRIAL_UNTIL` no more than30 minutes from process startup; `REMOTE_AGENT_ENABLED=true` alone never opens access. Keep this unset in production until explicit acceptance. No new production session or device permission has been granted by publishing this code.
 
 Build on Windows with .NET8 SDK:
 
@@ -12,7 +12,8 @@ The Windows Remote Agent build workflow produces a self-contained win-x64 execut
 
 Proposed test flow (NOT VERIFIED):
 1. Super Admin selects one store terminal and creates REMOTE_ASSIST in Installation Center.
-2. The user manually launches the agent on that store PC, enters the job ID, terminal ID and six-digit code, ticks local consent and presses Accept.
+2. The user manually launches the agent on that store PC, enters only the six-digit code, ticks local consent and presses Accept.
+   The server resolves exactly one unexpired pending job for the configured trial terminal. Zero or multiple matches are rejected; IDs are never typed by the local user. The previous three-field binary cannot use this simplified UI; download the new build.
 3. The session creator opens Windows Remote Assist in the same Super Admin session. Only that creator may view/control. The code is consumed atomically and a random device token lives only in memory.
 4. Click left/right, scroll or send text/special keys through the controller. The local agent window stays visible and on top.
 5. Local STOP or unchecking consent cancels capture/input immediately. Closing either endpoint makes the other fail closed within15 seconds. Explicit server stop revokes the token. Absolute maximum20 minutes; reconnect requires a fresh code.

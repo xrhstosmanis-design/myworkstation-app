@@ -10,29 +10,29 @@ internal static class Program {
 }
 internal sealed class AgentForm:Form {
  const string Origin="https://myworkstation-app.onrender.com";
- readonly TextBox job=new(){Width=380},terminal=new(){Width=380},code=new(){Width=120,MaxLength=6,UseSystemPasswordChar=true};
+ readonly TextBox code=new(){Width=120,MaxLength=6,UseSystemPasswordChar=true};
  readonly CheckBox consent=new(){Text="Επιτρέπω προβολή οθόνης και ποντίκι/πληκτρολόγιο τώρα.",AutoSize=true};
  readonly Label status=new(){Text="Δεν υπάρχει ενεργή σύνδεση.",AutoSize=true};
  readonly Button connect=new(){Text="Αποδοχή και σύνδεση",AutoSize=true},stop=new(){Text="ΔΙΑΚΟΠΗ ΠΡΟΣΒΑΣΗΣ",AutoSize=true,Enabled=false,BackColor=Color.LightCoral};
  readonly HttpClient http=new(){BaseAddress=new Uri(Origin),Timeout=TimeSpan.FromSeconds(5)};
  CancellationTokenSource? session;string? token,sessionJob;
  public AgentForm(){
-  Text="MyWorkStation · Remote Assist";Width=620;Height=420;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;TopMost=true;
+  Text="MyWorkStation · Remote Assist";Width=620;Height=320;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;TopMost=true;
   var panel=new FlowLayoutPanel(){Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(16)};
   panel.Controls.Add(new Label(){Text="Πρόσβαση μόνο με δική σας αποδοχή. Κρατήστε το παράθυρο ανοικτό.\nΟ διαχειριστής μπορεί να δει όλη την κύρια οθόνη και να την χειριστεί.",AutoSize=true});
-  foreach(var pair in new[]{("ID συνεδρίας",job),("ID τερματικού",terminal),("Προσωρινός κωδικός",code)}){panel.Controls.Add(new Label(){Text=pair.Item1,AutoSize=true});panel.Controls.Add(pair.Item2);}
+  panel.Controls.Add(new Label(){Text="Εξαψήφιος κωδικός από τον διαχειριστή",AutoSize=true});panel.Controls.Add(code);
   panel.Controls.Add(consent);panel.Controls.Add(connect);panel.Controls.Add(stop);panel.Controls.Add(status);Controls.Add(panel);
   connect.Click+=async(_,_)=>await Start();stop.Click+=(_,_)=>Stop();consent.CheckedChanged+=(_,_)=>{if(!consent.Checked)Stop();};FormClosing+=(_,_)=>Stop();
  }
  void Stop(){session?.Cancel();status.Text="Η πρόσβαση διακόπηκε.";stop.Enabled=false;}
  async Task Start(){
   if(session!=null||!consent.Checked){status.Text="Απαιτείται τοπική αποδοχή.";return;}
-  if(string.IsNullOrWhiteSpace(job.Text)||string.IsNullOrWhiteSpace(terminal.Text)||code.Text.Length!=6){status.Text="Συμπληρώστε τα στοιχεία από τον Super Admin.";return;}
-  connect.Enabled=false;job.Enabled=terminal.Enabled=code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;
+  if(code.Text.Length!=6||code.Text.Any(c=>c<'0'||c>'9')){status.Text="Συμπληρώστε μόνο τον εξαψήφιο κωδικό.";return;}
+  connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;
   try{
-   var paired=await http.PostAsJsonAsync("/api/remote-agent/pair",new{jobId=job.Text.Trim(),terminalId=terminal.Text.Trim(),code=code.Text,localConsent=true},ct);
+   var paired=await http.PostAsJsonAsync("/api/remote-agent/pair-code",new{code=code.Text,localConsent=true},ct);
    paired.EnsureSuccessStatusCode();var pair=await paired.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
-   token=pair.GetProperty("token").GetString();sessionJob=job.Text.Trim();code.Clear();stop.Enabled=true;status.Text="ΕΝΕΡΓΗ ΠΡΟΣΒΑΣΗ · Πατήστε ΔΙΑΚΟΠΗ οποιαδήποτε στιγμή.";
+   token=pair.GetProperty("token").GetString();sessionJob=pair.GetProperty("jobId").GetString()??throw new InvalidOperationException("Λείπει η συνεδρία.");code.Clear();stop.Enabled=true;status.Text="ΕΝΕΡΓΗ ΠΡΟΣΒΑΣΗ · Πατήστε ΔΙΑΚΟΠΗ οποιαδήποτε στιγμή.";
    var expiresAt=pair.GetProperty("expiresAt").GetInt64();
    while(!ct.IsCancellationRequested&&DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()<expiresAt){
     var bounds=Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.");
@@ -53,7 +53,7 @@ internal sealed class AgentForm:Form {
   }catch(OperationCanceledException){}catch(Exception){status.Text="Η σύνδεση σταμάτησε. Ελέγξτε τον κωδικό/διαθεσιμότητα με τον διαχειριστή.";}
   finally{
    if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"/api/remote-agent/{Uri.EscapeDataString(sessionJob)}/device-stop");request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
-   token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;job.Enabled=terminal.Enabled=code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
+   token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
   }
  }
  protected override void Dispose(bool disposing){if(disposing){session?.Cancel();http.Dispose();}base.Dispose(disposing);}
