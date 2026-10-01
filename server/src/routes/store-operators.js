@@ -343,7 +343,7 @@ router.post("/login/pin",route(async(req,res)=>{
 }));
 
 router.post("/login/mobile-pin",route(async(req,res)=>{
-  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\\d{4,8}$/)}).parse(req.body);
+  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/)}).parse(req.body);
   await activeStore(body.storeId);
   const subjectKey=loginSubject("MOBILE_PIN",body.employeeId);await assertLoginAllowed(body.storeId,subjectKey);
   const rows=await prisma.$queryRaw`SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName" FROM "StoreOperatorCredential" c JOIN "Employee" e ON e."id"=c."employeeId" JOIN "Store" s ON s."id"=c."storeId" JOIN "Company" co ON co."id"=c."companyId" WHERE c."storeId"=${body.storeId} AND c."employeeId"=${body.employeeId} AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE AND co."active"=TRUE LIMIT 1`;
