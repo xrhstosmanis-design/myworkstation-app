@@ -30,3 +30,8 @@
 ## Διόρθωση item price — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
 
 Προστέθηκε μικρός pure parser: αποκλείει ποσά €/λίτρο, €/kg, ανά βάρος/όγκο/τεμάχιο όταν δεν είναι απλό συνολικό item price, σαφώς παλιές τιμές και μεταφορικά, και δεν επιλέγει αυθαίρετα ανάμεσα σε διαφορετικά ποσά. Διατηρεί ελληνικά/αγγλικά νομίσματα, πλήρη αριθμητικά ποσά και επαναλαμβανόμενη ίδια τιμή. UI δείχνει γιατί δεν επιβεβαιώθηκε τιμή τεμαχίου. Δεν αλλάζει barcode matching, provider query, ιστορικό, price proposal/approval, stock ή schema. 18/18 τοπικά tests (10 price +8 support isolation) και syntax PASS. Συνολικό #14 παραμένει OPEN μέχρι πραγματική νέα online query στο exact deploy με φρέσκο baseline.
+
+
+## BEFORE ελέγχου της διόρθωσης
+
+**01/10/2026 — #14 BEFORE regression online query:** exact /api/health `386f5d7ee894dbb55469abbe539d31d4d17ebbc4`, PR #1585 / PR CI3982 / main CI3983 / guarded deploy1843 PASS, Node20.20.2 /1720 PASS /0FAIL /0SKIP /build/invariants/E2E PASS. Fresh signed support MYWORKSTATION LAB, ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. SKU763 /5449000000996 stock0, αγορά0,81 €, λιανική1,30 €· control1LT stock9 /αγορά1,74 /λιανική2,60,500ML stock0 /λιανική1,60. MAIN2/2,40 € και POS02 2/0 € ίδια, Audit1057 ακριβώς ίδιο. Φρέσκο ιστορικό13 (όχι αυθαίρετη υπόθεση12), latest barcode5449000000996 /11:24:22. Η5200040119037 /11:22:17 είναι ήδη υπάρχουσα, δεν εκτελέστηκε από αυτή τη σελίδα. Συνδέθηκε barcode χωρίς query. Επόμενη μία query μόνο για την αναπαραγωγή unit-rate/ambiguous price guard· μοναδική αναμενόμενη νέα εγγραφή ιστορικού, καμία τιμή/proposal/παραγγελία/πληρωμή/stock.
