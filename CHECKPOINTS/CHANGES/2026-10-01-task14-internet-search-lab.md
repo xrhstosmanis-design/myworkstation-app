@@ -45,3 +45,5 @@
 ## Margin correction — LOCAL PASS / AWAITING CI/EXACT DEPLOY/LAB
 
 Το market-search δικό μας προϊόν διαβάζει και το υπάρχον vatRate. Pure υπολογισμός αφαιρεί ΦΠΑ από τη μικτή λιανική πριν από καθαρό κόστος, όπως η canonical αποθήκη. Αγνώστη/άκυρη βάση δεν εμφανίζει φανταστικό margin. UI: Καθαρή αγορά / Λιανική με ΦΠΑ / Margin χωρίς ΦΠΑ. Καμία αλλαγή cost/sale/VAT/stock ή άλλης καρτέλας.25/25 targeted tests PASS (7 margin,10 item price,8 support context), τοπικός Node24· Node20/full CI/deploy/LAB απαιτούνται.
+
+CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατηρούνται οι αρχικές ετικέτες με διευκρινίσεις «Δική μας αγορά (καθαρή)» / «Δική μας πώληση (με ΦΠΑ)». Αριθμητικές7 και προηγούμενες18 PASS· νέο πλήρες CI απαιτείται.
