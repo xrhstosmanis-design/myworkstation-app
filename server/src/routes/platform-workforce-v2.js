@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {monthlyCashierPerformance} from "../workforce-cashier-monthly.js";
 import {PERSONNEL_PRO,isSuperAdmin} from "../store-paid-modules.js";
 import {
   WORKFORCE_RULE_DEFINITIONS,
@@ -96,6 +97,12 @@ router.get("/employees/:employeeId/performance",async(req,res,next)=>{
   try{
     const context=await contextFor(req),employee=await prisma.workforceEmployee.findFirst({where:{id:req.params.employeeId,companyId:context.company.id}});
     if(!employee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος."});
+    if(req.query.month!==undefined){
+      const scopedEmployee=await prisma.workforceEmployee.findFirst({where:{id:employee.id,companyId:context.company.id,OR:[{baseStoreId:context.store.id},{storeAccess:{some:{storeId:context.store.id,active:true}}}]}});
+      if(!scopedEmployee)return res.status(404).json({error:"Δεν βρέθηκε εργαζόμενος στο κατάστημα."});
+      res.setHeader("Cache-Control","no-store, private");
+      return res.json(await monthlyCashierPerformance(prisma,{companyId:context.company.id,storeId:context.store.id,employee:scopedEmployee,month:req.query.month}));
+    }
     const days=Math.min(366,Math.max(1,Number(req.query.days)||30)),from=new Date(Date.now()-days*86400000);
     const sessions=await prisma.workforceAttendanceSession.findMany({where:{companyId:context.company.id,employeeId:employee.id,startedAt:{gte:from}},orderBy:{startedAt:"desc"},take:500});
     const completed=sessions.filter(x=>x.status!=="OPEN"),workedMinutes=completed.reduce((s,x)=>s+Number(x.workedMinutes||0),0),overtimeMinutes=completed.reduce((s,x)=>s+Number(x.overtimeMinutes||0),0),lateMinutes=completed.reduce((s,x)=>s+Number(x.lateMinutes||0),0),earlyLeaveMinutes=completed.reduce((s,x)=>s+Number(x.earlyLeaveMinutes||0),0);

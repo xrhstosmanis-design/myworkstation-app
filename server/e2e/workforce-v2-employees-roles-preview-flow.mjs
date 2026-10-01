@@ -138,6 +138,50 @@ async function main(){
   assert.equal(employeeRead.payload?.item?.fullName,"E2E Workforce Employee");
   assert.ok(employeeRead.payload?.item?.storeAccess?.some(row=>row.storeId===secondaryStoreId));
 
+  // Isolated CI fixture only: verify actual SQL and HTTP without relying on cached close totals.
+  const monthlyOperator="e2e-task26-operator",monthlyShift="e2e-task26-shift";
+  await prisma.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","createdBy") VALUES (${monthlyOperator},${companyId},${storeId},${employeeId},'Monthly fixture',${owner.id})`;
+  try{
+    await prisma.$executeRaw`INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","status","openedBy","openedAt","cashSales") VALUES (${monthlyShift},${companyId},${storeId},'E2E-TASK26','OPEN',${monthlyOperator},'2026-09-01T00:00:00Z'::timestamptz,999)`;
+    for(const [id,at,amount,reversed] of [
+      ['start','2026-09-30T21:00:00Z',1.2,false],
+      ['inside','2026-10-15T12:00:00Z',2.4,false],
+      ['before','2026-09-30T20:59:59Z',100,false],
+      ['end','2026-10-31T22:00:00Z',200,false],
+      ['reversed','2026-10-15T12:00:00Z',300,true]
+    ]){
+      await prisma.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","actorId","actorName","occurredAt","reversedAt") VALUES (${`e2e-task26-${id}`},${companyId},${storeId},${monthlyShift},'SALE_CASH',${amount},${monthlyOperator},'Monthly fixture',${new Date(at)},${reversed?new Date(at):null})`;
+    }
+    const snapshot=await prisma.$queryRaw`SELECT COUNT(*)::int AS "count",SUM("amount") AS "total" FROM "StoreTransaction" WHERE "sessionId"=${monthlyShift}`;
+    const monthly=await request(`${base}/employees/${employeeId}/performance?month=2026-10`,{token});
+    assert.equal(monthly.response.status,200,JSON.stringify(monthly.payload));
+    assert.equal(monthly.payload.cashier.totalSales,3.6);
+    assert.equal(monthly.payload.cashier.transactions,2);
+    assert.equal(monthly.payload.cashier.reversed,1);
+    assert.equal(monthly.payload.cashier.openShifts,1);
+    assert.equal(monthly.payload.cashier.variance,0);
+    assert.equal(monthly.payload.cashier.recentShifts[0].id,monthlyShift);
+    assert.equal(monthly.payload.cashier.recentShifts[0].variance,null);
+    assert.equal(monthly.payload.period.from,'2026-09-30T21:00:00.000Z');
+    assert.equal(monthly.payload.period.to,'2026-10-31T22:00:00.000Z');
+    const secondBase=`/api/platform/store-modules/companies/${companyId}/stores/${secondaryStoreId}/workforce-v2`;
+    const otherStore=await request(`${secondBase}/employees/${employeeId}/performance?month=2026-10`,{token});
+    assert.equal(otherStore.response.status,200,JSON.stringify(otherStore.payload));
+    assert.equal(otherStore.payload.cashier.totalSales,0);
+    assert.equal(otherStore.payload.cashier.linked,false);
+    const wrongCompany=await request(`/api/platform/store-modules/companies/foreign/stores/${storeId}/workforce-v2/employees/${employeeId}/performance?month=2026-10`,{token});
+    assert.equal(wrongCompany.response.status,404);
+    const invalidMonth=await request(`${base}/employees/${employeeId}/performance?month=2026-13`,{token});
+    assert.equal(invalidMonth.response.status,400);
+    const after=await prisma.$queryRaw`SELECT COUNT(*)::int AS "count",SUM("amount") AS "total" FROM "StoreTransaction" WHERE "sessionId"=${monthlyShift}`;
+    assert.deepEqual(after,snapshot,'monthly reads altered ledger');
+    console.log('E2E monthly cashier actual SQL, Athens boundaries, reversal, open cached totals, store/tenant and read-only checks passed');
+  }finally{
+    await prisma.$executeRaw`DELETE FROM "StoreTransaction" WHERE "sessionId"=${monthlyShift}`;
+    await prisma.$executeRaw`DELETE FROM "CashShiftSession" WHERE "id"=${monthlyShift}`;
+    await prisma.$executeRaw`DELETE FROM "StoreOperatorCredential" WHERE "id"=${monthlyOperator}`;
+  }
+
   const roleInUse=await request(`${base}/roles/${roleId}/status`,{
     method:"PATCH",token,body:{active:false,confirmed:true,reason:"E2E dependency guard"}
   });
