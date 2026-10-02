@@ -15,7 +15,11 @@ if ([string]::IsNullOrWhiteSpace($DeviceToken)) {
 }
 if ([string]::IsNullOrWhiteSpace($DeviceToken)) { throw 'Pair this Windows user with Pair.ps1 before starting the writer.' }
 if ([string]::IsNullOrWhiteSpace($WorkFolder)) { $WorkFolder = 'C:\capture' }
-$ApiBase = $ApiBase.TrimEnd('/')
+$apiUri = $null
+if (-not [Uri]::TryCreate($ApiBase.Trim(), [UriKind]::Absolute, [ref]$apiUri) -or $apiUri.Scheme -ne 'https' -or -not [string]::IsNullOrEmpty($apiUri.UserInfo)) {
+  throw 'MWS_RBS_API_BASE must be an absolute HTTPS URL without embedded credentials.'
+}
+$ApiBase = $apiUri.GetLeftPart([UriPartial]::Path).TrimEnd('/')
 $WorkFolder = [IO.Path]::GetFullPath($WorkFolder)
 $CommandPath = Join-Path $WorkFolder 'Xcommand.txt'
 $Headers = @{ Authorization = "Bearer $DeviceToken" }
