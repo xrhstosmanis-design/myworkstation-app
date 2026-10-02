@@ -134,12 +134,11 @@ not show that MyWorkStation has issued a receipt.
 - PC1/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows configuration must remain unchanged. No automated test sends a fiscal command.
 
 
-## Follow-up — central category/VAT mapping correction (2026-10-02)
+## Follow-up — product-level VAT department selection (2026-10-02)
 
-- The owner clarified the required interaction: choose the product category, then explicitly select its VAT/fiscal department from a dropdown, matching the Kiosk Manager workflow. Once saved centrally, POS derives that department automatically for all products in the category.
-- The management VAT panel now provides those two selectors and an explicit “Αποθήκευση αντιστοίχισης” action. The selected department shows its cash-register department number and VAT rate.
-- Mapping is company-scoped and persists in `ManagementVatDepartmentCategory`. Checkout uses the category mapping first, then existing product assignment as fallback. VAT rate is never edited by this mapping.
-- A mixed-rate category is rejected with a clear validation error instead of guessing a department. Added a regression check that asserts this rejection/upsert behavior and that the mapping endpoint does not update product VAT.
-- Original PR #1635 did not start a new workflow after its amended head. The follow-up branch includes the implementation, KAT list and this checkpoint; opening a replacement PR is the next CI trigger attempt. Until green CI and deploy, no live change or mapping exists.
-- Initial CI #4117 stopped at the required checkpoint-policy check before application tests; the Windows PowerShell parse/writer smoke job passed. No application tests completed in that run.
-- After green CI/merge/deploy, configure the category-to-department selection centrally, read it back, verify a product resolves to that department and matching rate, then test only after reconciling the existing €1.20 attempt. Never retry while its outcome is uncertain.
+- The owner pointed out that a product can be placed in the wrong category. Therefore the category must not determine the fiscal VAT department.
+- Corrected the implementation so MyWorkStation POS reads the fiscal department, VAT code and configured rate from that product's own `Product.vatDepartmentId` selection. POS no longer joins or applies a category mapping. A wrong category cannot override the product's selected department.
+- The VAT panel now says “Τμήμα ΦΠΑ ανά προϊόν”. In a department's product list, select one product (or a deliberate group of products), choose the target department, then save, matching the Kiosk Manager's explicit department selection.
+- Reassignment validates that the selected department's VAT rate matches every selected product. It changes only `vatDepartmentId`; it does not modify a product's VAT rate. Mixed/mismatched selections are rejected.
+- Regression checks now verify the product-level POS source, absence of category lookup in checkout, and rate-preserving reassignment.
+- Follow-up branch: `agent/rbs-vat-category-mapping-followup-20261002`. No merge, deploy, live mapping changes, or new fiscal test. Open a replacement PR to trigger fresh CI; keep the existing uncertain €1.20 attempt reconciled before any retest.
