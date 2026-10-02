@@ -43,6 +43,35 @@ jobs:
           EOF
           echo "full_ci=$full_ci" >> "$GITHUB_OUTPUT"
 
+  rbs-capdriver-windows-script-parse:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Parse CAP Driver scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scriptPaths = @(
+            'tools/windows-rbs-capdriver-v1/Pair.ps1',
+            'tools/windows-rbs-capdriver-v1/Writer.ps1'
+          )
+          foreach ($scriptPath in $scriptPaths) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $scriptPath),
+              [ref]$tokens,
+              [ref]$parseErrors
+            ) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              $parseErrors | ForEach-Object { Write-Error $_.Message }
+              exit 1
+            }
+            Write-Host "Parsed $scriptPath successfully."
+          }
+
   build-and-test:
     needs: classify-changes
     if: needs.classify-changes.outputs.full_ci == 'true'
