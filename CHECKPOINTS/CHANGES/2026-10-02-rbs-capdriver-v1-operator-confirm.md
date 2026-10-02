@@ -141,3 +141,10 @@ not show that MyWorkStation has issued a receipt.
 - Mapping validation rejects categories containing products whose VAT rate differs from the selected VAT department. It never changes product VAT rates. This is a deliberate fail-closed guard; split mixed-rate products into appropriate categories before mapping.
 - CI #4117 is **in progress** on head `11952b03da564ec97bbb0510ba05a953168a2109`. PR is open and not merged; not deployed or active at KAT. No live category assignments have been written.
 - After CI passes: merge/deploy, verify exact Render revision, configure the beverage category against the confirmed Kiosk VAT department, verify the Coca-Cola item resolves to that department and correct 13% rate, then do a controlled one-time cash receipt test only after reconciling the prior €1.20 attempt. Never retry while the result is uncertain.
+
+
+## CI follow-up status (2026-10-02 22:30 Athens)
+
+- PR #1635 remains open with the category-mapping implementation and the required KAT active-list/checkpoint changes.
+- CI #4117 failed only at the checkpoint policy gate because those documentation files were missing from the original PR diff. The Windows PowerShell parse and mocked pairing/writer smoke job passed. The build-and-test job skipped application tests after the documentation gate failed.
+- The docs have since been added to the PR branch and PR #1635 reopened. No fresh CI run is visible yet for its current head `63653f898d09f283e174e25107cabc5381a32b1e`. Do not merge or deploy until a fresh full CI run passes.
