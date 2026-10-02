@@ -99,15 +99,15 @@ try {
     throw 'Pair.ps1 credential did not round-trip under the test Windows user.'
   }
 
-  $workFolder = Join-Path $testRoot 'work'
-  New-Item -ItemType Directory -Path $workFolder -Force | Out-Null
+  $writerWorkPath = Join-Path $testRoot 'work'
+  New-Item -ItemType Directory -Path $writerWorkPath -Force | Out-Null
   $previousApiBase = $env:MWS_RBS_API_BASE
   $previousDeviceToken = $env:MWS_RBS_DEVICE_TOKEN
   $previousWorkFolder = $env:MWS_RBS_WORKFOLDER
   try {
     $env:MWS_RBS_API_BASE = 'https://unit.test'
     $env:MWS_RBS_DEVICE_TOKEN = 'fake-token'
-    $env:MWS_RBS_WORKFOLDER = $workFolder
+    $env:MWS_RBS_WORKFOLDER = $writerWorkPath
     $boundedWriter = [IO.File]::ReadAllText($writerScript)
     if ([regex]::Matches($boundedWriter, [regex]::Escape('while ($true) {')).Count -ne 1) { throw 'Expected exactly one writer polling loop.' }
     $boundedWriter = $boundedWriter.Replace('while ($true) {', 'for ($iteration = 0; $iteration -lt 1; $iteration++) {')
@@ -118,7 +118,7 @@ try {
     $env:MWS_RBS_WORKFOLDER = $previousWorkFolder
   }
 
-  $commandPath = Join-Path $workFolder 'Xcommand.txt'
+  $commandPath = Join-Path $writerWorkPath 'Xcommand.txt'
   if (-not (Test-Path -LiteralPath $commandPath)) { throw 'Writer.ps1 did not create Xcommand.txt.' }
   $actual = [IO.File]::ReadAllBytes($commandPath)
   if ([Convert]::ToBase64String($actual) -ne [Convert]::ToBase64String($commandBytes)) {
