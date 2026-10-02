@@ -138,6 +138,7 @@ export default function StoreCloudPage({api,store,onBack}){
         </div>
         <p style={{margin:"8px 0 0"}}>Λήγει: {new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens"}).format(new Date(pairing.expiresAt))} · Χρησιμοποιείται μία φορά.</p>
         <small style={{display:"block",marginTop:8,color:"#475569"}}>Στον υπολογιστή του POS, εκτέλεσε το Pair.ps1 με τον ίδιο χρήστη Windows και βάλε τον κωδικό στην προτροπή. Έπειτα ξεκίνησε το Writer.ps1 και άφησέ το να εκτελείται. Κλείνοντας αυτή τη σελίδα, ο κωδικός δεν θα εμφανίζεται ξανά.</small>
+        <a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:8,color:"#0369a1",fontWeight:700}}>Οδηγίες και αρχεία Pair.ps1 / Writer.ps1</a>
       </div>}
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
     </section>
