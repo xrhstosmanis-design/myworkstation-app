@@ -1,3 +1,10 @@
+## 02/10/2026 — Κεντρική αντιστοίχιση Τμήματος ΦΠΑ ανά προϊόν · AWAITING CI / DEPLOY
+
+- Το προϊόν αποθηκεύει το επιλεγμένο Τμήμα ΦΠΑ. Το POS αντλεί από εκεί τον φορολογικό κωδικό, το τμήμα ταμειακής και τον συντελεστή· η κατηγορία δεν παρακάμπτει την επιλογή.
+- Η επανατοποθέτηση προϊόντος ελέγχει ότι το ποσοστό του τμήματος συμφωνεί και διατηρεί αμετάβλητο τον ΦΠΑ του προϊόντος.
+- Αλλαγές σε follow-up branch· απαιτείται νέο PR/CI, merge και deploy. Δεν έγινε live αλλαγή. Εκκρεμεί συμφωνία για την αβέβαιη Coca-Cola €1,20 δοκιμή· να μη γίνει επανάληψη.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-02-rbs-capdriver-v1-operator-confirm.md`.
+
 ## RBS CAP Driver v1 — LIVE TEST FAILED / investigation OPEN (02/10/2026)
 
 - MyWorkStation POS showed Coca-Cola 500 ml, 13% VAT, €1.20. Owner pressed **Μετρητά** once; generic internal error; **no receipt printed**. Do not retry, resend, reprint, or duplicate; owner has left KAT.
