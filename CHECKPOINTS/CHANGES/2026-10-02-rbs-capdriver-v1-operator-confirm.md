@@ -136,8 +136,10 @@ not show that MyWorkStation has issued a receipt.
 
 ## Follow-up — central category/VAT mapping correction (2026-10-02)
 
-- User clarified that the intended rule is automatic mapping from product **category** to the correct VAT/cash-register department. A VAT percentage alone is insufficient because multiple register departments share the same rate.
-- PR #1635: https://github.com/xrhstosmanis-design/myworkstation-app/pull/1635. Adds company-scoped category → VAT-department mapping in the management VAT panel; POS uses the mapped category department for fiscal dispatch, with existing product-level assignment as fallback.
-- Mapping validation rejects categories containing products whose VAT rate differs from the selected VAT department. It never changes product VAT rates. This is a deliberate fail-closed guard; split mixed-rate products into appropriate categories before mapping.
-- Initial CI #4117 failed at the required documentation policy check (KAT active list and changed checkpoint not included in PR); Windows PowerShell parse/smoke job passed. Added both required docs to the PR for rerun. No application tests completed in that CI run.
-- PR is open, not merged or deployed; no live category mappings were changed. After green CI/merge/deploy, map the beverage category to the confirmed Kiosk department, verify the Coca-Cola item resolves to that department and correct 13% rate, then test only after reconciling the existing €1.20 attempt. Never retry while outcome uncertain.
+- The owner clarified the required interaction: choose the product category, then explicitly select its VAT/fiscal department from a dropdown, matching the Kiosk Manager workflow. Once saved centrally, POS derives that department automatically for all products in the category.
+- The management VAT panel now provides those two selectors and an explicit “Αποθήκευση αντιστοίχισης” action. The selected department shows its cash-register department number and VAT rate.
+- Mapping is company-scoped and persists in `ManagementVatDepartmentCategory`. Checkout uses the category mapping first, then existing product assignment as fallback. VAT rate is never edited by this mapping.
+- A mixed-rate category is rejected with a clear validation error instead of guessing a department. Added a regression check that asserts this rejection/upsert behavior and that the mapping endpoint does not update product VAT.
+- Original PR #1635 did not start a new workflow after its amended head. The follow-up branch includes the implementation, KAT list and this checkpoint; opening a replacement PR is the next CI trigger attempt. Until green CI and deploy, no live change or mapping exists.
+- Initial CI #4117 stopped at the required checkpoint-policy check before application tests; the Windows PowerShell parse/writer smoke job passed. No application tests completed in that run.
+- After green CI/merge/deploy, configure the category-to-department selection centrally, read it back, verify a product resolves to that department and matching rate, then test only after reconciling the existing €1.20 attempt. Never retry while its outcome is uncertain.
