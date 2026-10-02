@@ -10,7 +10,7 @@ import {sendEmail} from "../services/mail.js";
 import {resolvePaymentDeviceRoute} from "../payment-device-routing.js";
 import {configuredKatDelayedTerminal,normalizeTerminalPos,resolveKatOnlineRouting} from "../kat-terminal-routing.js";
 import {storeAmountOfferPrice,storePercentageOfferPrice} from "../bundle-promotion-pricing.js";
-import {resolveRbsCapDriverFiscalProfile,transitionRbsCapDriverV1OperatorOutcome} from "../rbs-capdriver-v1.js";
+import {resolveRbsCapDriverFiscalProfile,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome} from "../rbs-capdriver-v1.js";
 import {ensureVatDepartmentSchema} from "./management-vat-departments.js";
 
 const router=Router();
@@ -204,8 +204,8 @@ const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "company
       if(capDriverV1Active){
         if(body.fiscalRequestId){
           const pending=(await tx.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "id"=${body.fiscalRequestId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
-          const expectedStatus=body.paymentMethod==="CARD"?"OPERATOR_CONFIRMED":"DISPATCHED";
-          if(!pending||pending.clientTransactionId!==clientTransactionId||pending.requestHash!==fingerprint||pending.paymentMethod!==body.paymentMethod||pending.status!==expectedStatus){const error=new Error("Η ταμειακή συναλλαγή δεν έχει επιβεβαιωθεί ή έχει ήδη ολοκληρωθεί.");error.status=409;throw error}
+          const approvedStatuses=body.paymentMethod==="CARD"?["OPERATOR_CONFIRMED"]:["DISPATCHED","OPERATOR_CONFIRMED"];
+          if(!pending||pending.clientTransactionId!==clientTransactionId||pending.requestHash!==fingerprint||pending.paymentMethod!==body.paymentMethod||!approvedStatuses.includes(pending.status)){const error=new Error("Η ταμειακή συναλλαγή δεν έχει επιβεβαιωθεί ή έχει ήδη ολοκληρωθεί.");error.status=409;throw error}
           approvedFiscalRequest=pending;
         }else{
           let command;
@@ -218,7 +218,7 @@ const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "company
           return {kind:"FISCAL_PENDING",request:pending};
         }
       }
-await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source","clientTransactionId","saleFingerprint","duplicateConfirmed","transactionMode","operationChannel","audience") VALUES (${saleId},${req.user.companyId},${store.id},${customer?.id||null},${employeeId},'NON_FISCAL',${summary.subtotal},${summary.discount},${summary.total},'COMPLETED',${body.onlineOrderId?'ONLINE_POS':'POS'},${clientTransactionId},${fingerprint},${Boolean(recent&&body.confirmDuplicate)},${creditAmount>0?"CREDIT":"NORMAL"},${body.operationChannel},${body.audience})`;
+await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source","clientTransactionId","saleFingerprint","duplicateConfirmed","transactionMode","operationChannel","audience") VALUES (${saleId},${req.user.companyId},${store.id},${customer?.id||null},${employeeId},${rbsCapDriverSaleFiscalStatus(approvedFiscalRequest)},${summary.subtotal},${summary.discount},${summary.total},'COMPLETED',${body.onlineOrderId?'ONLINE_POS':'POS'},${clientTransactionId},${fingerprint},${Boolean(recent&&body.confirmDuplicate)},${creditAmount>0?"CREDIT":"NORMAL"},${body.operationChannel},${body.audience})`;
       if(paymentRoute){await ensurePaymentRouteAttemptTable(tx);const routedAmount=cardAmount>0?cardAmount:summary.total;await tx.$executeRaw`INSERT INTO "PaymentDeviceRouteAttempt" ("id","companyId","storeId","saleId","sessionId","terminalPos","channel","fiscalDeviceCode","eftposDeviceCode","role","status","fallbackUsed","amount","idempotencyKey") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${saleId},${open[0].id},${paymentRoute.terminalPos},${paymentRoute.channel},${paymentRoute.fiscalDeviceCode},${paymentRoute.eftposDeviceCode},${paymentRoute.role},'PLANNED',FALSE,${routedAmount},${clientTransactionId})`}
       const inventoryWarnings=[];
       for(const item of items){
@@ -243,7 +243,7 @@ await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId
     if(txResult.kind==="BLOCKED")return res.status(409).json({error:`Πιθανή διπλή πώληση ${money(txResult.sale.total).toFixed(2)} € εντοπίστηκε πριν από λίγα δευτερόλεπτα. Επιβεβαίωσε ρητά αν πρόκειται για νέα πραγματική πώληση.`,code:"DUPLICATE_SIMILAR_SALE",previousSaleId:txResult.sale.id,previousAt:txResult.sale.occurredAt});
     if(txResult.kind==="REPLAY"){await insertPosSaleSafetyAudit(prisma,{companyId:req.user.companyId,storeId:store.id,saleId:txResult.sale.id,eventType:"IDEMPOTENT_REPLAY",clientTransactionId,saleFingerprint:fingerprint,actorId,actorName,details:{total:money(txResult.sale.total)}});if(offlineOrigin){await ensurePosSaleSafetySchema();await upsertOfflineSyncEvidence(prisma,{companyId:req.user.companyId,storeId:store.id,clientTransactionId,status:"SYNCED",saleId:txResult.sale.id,attempts:1,idempotentReplay:true})}return res.json({saleId:txResult.sale.id,total:money(txResult.sale.total),customer,idempotentReplay:true,paymentMethod:body.paymentMethod,payments,fiscalStatus:txResult.sale.fiscalStatus||"NON_FISCAL"})}
     let customerBalance=null,emailNotification={status:"SKIPPED",reason:"NO_CREDIT"};if(creditAmount>0){const updated=(await prisma.$queryRaw`SELECT "balance" FROM "Customer" WHERE "id"=${customer.id} AND "companyId"=${req.user.companyId} LIMIT 1`)[0];customerBalance=money(updated?.balance);emailNotification=await notifyCustomerBalance(customer,{kind:"Νέα αγορά επί πιστώσει",amount:creditAmount,balance:customerBalance})}
-const pointsRow=customer?(await prisma.$queryRaw`SELECT "points" FROM "Customer" WHERE "id"=${customer.id} AND "companyId"=${req.user.companyId} LIMIT 1`)[0]:null,loyaltyPoints=money(pointsRow?.points),wholesaleLines=items.filter(item=>item.priceSource==="WHOLESALE").length,promotionLines=items.filter(item=>["LEAFLET","GIFT"].includes(item.priceSource)).length;res.status(201).json({saleId,...summary,customer,customerBalance,emailNotification,earnedPoints,redeemedPoints,loyaltyPoints,wholesaleLines,promotionLines,inventoryWarnings:txResult.inventoryWarnings||[],idempotentReplay:false,duplicateConfirmed:Boolean(body.confirmDuplicate),paymentMethod:body.paymentMethod,payments,paymentRoute:txResult.paymentRoute||null,fiscalStatus:"NON_FISCAL"});
+const pointsRow=customer?(await prisma.$queryRaw`SELECT "points" FROM "Customer" WHERE "id"=${customer.id} AND "companyId"=${req.user.companyId} LIMIT 1`)[0]:null,loyaltyPoints=money(pointsRow?.points),wholesaleLines=items.filter(item=>item.priceSource==="WHOLESALE").length,promotionLines=items.filter(item=>["LEAFLET","GIFT"].includes(item.priceSource)).length;res.status(201).json({saleId,...summary,customer,customerBalance,emailNotification,earnedPoints,redeemedPoints,loyaltyPoints,wholesaleLines,promotionLines,inventoryWarnings:txResult.inventoryWarnings||[],idempotentReplay:false,duplicateConfirmed:Boolean(body.confirmDuplicate),paymentMethod:body.paymentMethod,payments,paymentRoute:txResult.paymentRoute||null,fiscalStatus:rbsCapDriverSaleFiscalStatus(approvedFiscalRequest)});
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.",details:error.issues});next(error)}
 });
 

@@ -18,6 +18,8 @@ export function resolveRbsCapDriverFiscalProfile({vatCode,department,vatRate}={}
   if(!profile||Number(department)!==profile.department||Math.abs(Number(vatRate)-profile.vatRate)>0.001)throw new Error("Kiosk VAT code, register department and VAT rate do not match the confirmed register profile");
   return profile;
 }
+
+export function rbsCapDriverSaleFiscalStatus(confirmedRequest){return confirmedRequest?"ISSUED":"NON_FISCAL"}
 const cp1253Decoder=new TextDecoder("windows-1253",{fatal:true});
 const cp1253EncodeMap=new Map();
 for(let byte=0;byte<256;byte++){

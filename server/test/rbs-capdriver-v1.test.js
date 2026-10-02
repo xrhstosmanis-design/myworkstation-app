@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {TextDecoder} from "node:util";
-import {buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
+import {buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
 
 const item={description:"ΝΕΡΟ 500ML",barcode:"",quantity:1,unitPrice:0.5,fiscalDepartment:"9",vatRate:13};
 
@@ -60,4 +60,9 @@ test("one-shot dispatch can be claimed only once and card Yes/No is separate fro
   assert.deepEqual(transitionRbsCapDriverV1OperatorOutcome("REQUIRES_CHECK","CASH","YES"),{status:"OPERATOR_CONFIRMED",allowSaleCommit:true,allowResend:false,manuallyReviewed:true});
   assert.deepEqual(transitionRbsCapDriverV1OperatorOutcome("CLAIMED","CARD","NO"),{status:"DECLINED",allowSaleCommit:false,allowResend:false,manuallyReviewed:true});
   assert.throws(()=>transitionRbsCapDriverV1OperatorOutcome("DISPATCHED","CASH","YES"),/unless an uncertain result/);
+});
+
+test("only a confirmed CAP receipt is marked fiscally issued",()=>{
+  assert.equal(rbsCapDriverSaleFiscalStatus(null),"NON_FISCAL");
+  assert.equal(rbsCapDriverSaleFiscalStatus({status:"OPERATOR_CONFIRMED"}),"ISSUED");
 });
