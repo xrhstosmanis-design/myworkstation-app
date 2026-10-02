@@ -101,12 +101,21 @@ try {
 
   $workFolder = Join-Path $testRoot 'work'
   New-Item -ItemType Directory -Path $workFolder -Force | Out-Null
+  $previousApiBase = $env:MWS_RBS_API_BASE
+  $previousDeviceToken = $env:MWS_RBS_DEVICE_TOKEN
+  $previousWorkFolder = $env:MWS_RBS_WORKFOLDER
   try {
-    & $writerScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $workFolder
-  } catch {
-    Write-Host "Writer smoke-test exception: $($_.Exception.Message)"
-    Write-Host ($_ | Format-List * -Force | Out-String)
-    if (-not $script:mockStopped) { throw }
+    $env:MWS_RBS_API_BASE = 'https://unit.test'
+    $env:MWS_RBS_DEVICE_TOKEN = 'fake-token'
+    $env:MWS_RBS_WORKFOLDER = $workFolder
+    $boundedWriter = [IO.File]::ReadAllText($writerScript)
+    if ($boundedWriter.Split('while ($true) {').Length -ne 2) { throw 'Expected exactly one writer polling loop.' }
+    $boundedWriter = $boundedWriter.Replace('while ($true) {', 'for ($iteration = 0; $iteration -lt 1; $iteration++) {')
+    Invoke-Expression $boundedWriter
+  } finally {
+    $env:MWS_RBS_API_BASE = $previousApiBase
+    $env:MWS_RBS_DEVICE_TOKEN = $previousDeviceToken
+    $env:MWS_RBS_WORKFOLDER = $previousWorkFolder
   }
 
   $commandPath = Join-Path $workFolder 'Xcommand.txt'
@@ -118,7 +127,7 @@ try {
   if ($script:dispatchResults.Count -ne 1 -or $script:dispatchResults[0] -ne 'WRITTEN') {
     throw 'Writer.ps1 did not acknowledge exactly one successful file write.'
   }
-  if ($script:nextCalls -ne 2) { throw "Unexpected request polling count: $($script:nextCalls)" }
+  if ($script:nextCalls -ne 1) { throw "Unexpected request polling count: $($script:nextCalls)" }
   Write-Host 'CAP Driver PowerShell isolated smoke tests passed.'
 } finally {
   $env:LOCALAPPDATA = $previousLocalAppData
