@@ -1,11 +1,11 @@
-## RBS CAP Driver v1 — LIVE TEST FAILED / investigation OPEN (02/10/2026)
+## RBS CAP Driver v1 — LIVE TEST FAILED / VAT CATEGORY FIX PR OPEN (02/10/2026)
 
 - MyWorkStation POS showed Coca-Cola 500 ml, 13% VAT, €1.20. Owner pressed **Μετρητά** once; generic internal error; **no receipt printed**. Do not retry, resend, reprint, or duplicate; owner has left KAT.
 - KAT Windows `CapDriverSVC` was Running, but `C:\\capture\\Xcommand.txt` was absent. Visible CAP log activity was from Kiosk Manager, not proof of this MyWorkStation dispatch. Root cause remains unknown; evidence does not establish whether dispatch reached the writer.
-- Pairing was performed; do not copy/store the one-time secret. Saved Fiscal/EFTPOS mapping is separate from CAP Driver pairing/delivery and is not proof of a receipt.
-- Main implementation PR #1632 is merged at `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f`; CI #4097/#4099/#4107 passed and Render deployment `dep-davqli0u01pc73fpjphg` was verified. This is **not** physical acceptance.
-- Next: when owner returns to KAT, reconcile the €1.20 checkout first; capture exact time/transaction ID; read-only inspect writer/service, command file and CAP log; correlate server dispatch/audit with writer poll/result. No retry while status is uncertain. Then, only under a controlled owner-led plan, run one low-value cash test and verify the physical fiscal receipt.
-- Full evidence, constraints, and sequence: `CHECKPOINTS/CHANGES/2026-10-02-rbs-capdriver-v1-operator-confirm.md`.
+- PR #1632 is merged at `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f`; CI #4097/#4099/#4107 passed and Render deployment `dep-davqli0u01pc73fpjphg` was verified. This is **not** physical acceptance.
+- **VAT category correction:** PR #1635 adds company-scoped category → VAT-department mapping; POS will take fiscal register department from product category and reject mixed-rate category mappings without changing product VAT. CI #4117 is in progress. Not merged or deployed; no live mappings changed yet.
+- Next: after PR #1635 CI/merge/deploy, configure the right beverage category to the confirmed Kiosk department and verify Coca-Cola’s effective 13% fiscal mapping. When owner returns to KAT, reconcile the €1.20 attempt first; inspect dispatch/writer evidence read-only; only then run one controlled cash test and verify the physical receipt. No retry while outcome is uncertain.
+- Full evidence and exact steps: `CHECKPOINTS/CHANGES/2026-10-02-rbs-capdriver-v1-operator-confirm.md`.
 
 ---
 
