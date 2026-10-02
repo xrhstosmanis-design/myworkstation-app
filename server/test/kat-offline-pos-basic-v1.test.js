@@ -53,6 +53,7 @@ test("locked offline prices do not grant arbitrary retail-price changes",()=>{
 
 test("offline replay remains explicitly non fiscal",()=>{
   assert.match(panel,/OFFLINE: Η πώληση/);
-  assert.match(checkout,/'NON_FISCAL'/);
-  assert.match(panel,/η πώληση καταγράφεται στο MyWorkStation ως NON_FISCAL/);
+  assert.match(panel,/offline και μη συνδεδεμένες πωλήσεις παραμένουν NON_FISCAL/);
+  assert.match(checkout,/capDriverV1Eligible=!offlineOrigin/);
+  assert.match(checkout,/rbsCapDriverSaleFiscalStatus\(approvedFiscalRequest\)/);
 });

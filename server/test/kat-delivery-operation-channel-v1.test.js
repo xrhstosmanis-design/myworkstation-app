@@ -5,11 +5,13 @@ import fs from "node:fs";
 const pos=fs.readFileSync(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
 const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
 
-test("KAT checkout records counter or delivery-delayed channel without issuing fiscal commands",()=>{
+test("RBS issuance is limited to the enabled counter checkout path",()=>{
   assert.match(pos,/operationChannel:z\.enum\(\["COUNTER","DELIVERY_DELAYED"\]\)/);
   assert.match(pos,/"operationChannel" TEXT NOT NULL DEFAULT 'COUNTER'/);
   assert.match(pos,/"transactionMode","operationChannel","audience"\) VALUES/);
-  assert.doesNotMatch(pos,/operationChannel[\s\S]{0,500}(?:CapDriver|RBS.*(?:issue|send)|sendToAade)/i);
+  assert.match(pos,/capDriverV1Eligible=!offlineOrigin&&!body\.onlineOrderId&&!body\.tableOrderId&&body\.operationChannel==="COUNTER"&&\["CASH","CARD"\]\.includes\(body\.paymentMethod\)/);
+  assert.match(pos,/if\(capDriverV1Active\)\{/);
+  assert.match(pos,/rbsCapDriverSaleFiscalStatus\(approvedFiscalRequest\)/);
 });
 
 test("POS exposes an explicit, safely reset delivery-delayed choice",()=>{

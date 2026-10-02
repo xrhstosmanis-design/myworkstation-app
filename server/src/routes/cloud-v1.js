@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import {companyModuleState} from "../middleware/module-access.js";
+import {ensureRbsCapDriverV1RequestSchema,rbsCapDriverV1DispatchTransition} from "../rbs-capdriver-v1-requests.js";
 
 const router = Router();
 const DEVICE_TOKEN_TTL = process.env.CLOUD_DEVICE_TOKEN_TTL || "180d";
@@ -192,6 +193,11 @@ async function requireObserverModule(device){
   if(!state?.licenseAllowed)fail(403,"Η άδεια της εταιρείας δεν είναι ενεργή.");
   if(!state.activeModules.includes("CONNECTOR_RBS"))fail(403,"Το Read-Only Observer δεν έχει ενεργοποιηθεί τεχνικά για την εταιρεία.");
 }
+async function requireRbsConnectorModule(device){
+  const state=await companyModuleState(device.companyId);
+  if(!state?.licenseAllowed)fail(403,"Η άδεια της εταιρείας δεν είναι ενεργή.");
+  if(!state.activeModules.includes("CONNECTOR_RBS"))fail(403,"Το CONNECTOR_RBS δεν έχει ενεργοποιηθεί τεχνικά για την εταιρεία.");
+}
 
 router.get("/health",route(async(req,res)=>{
   send(res,{ok:true,service:"Cloud Store Connector",version:"14.7.0C-HF1",time:new Date().toISOString()});
@@ -341,6 +347,38 @@ router.post("/device/observer/events",deviceAuth,route(async(req,res)=>{
   for(const event of body.events){const result=await prisma.$executeRaw`INSERT INTO "ConnectorEvent" ("id","connectorDeviceId","eventType","direction","payloadHash","success","errorText","eventKey","source","byteLength","messageType","observedAt") VALUES (${crypto.randomUUID()},${devices[0].id},'PROTOCOL_OBSERVED',${event.direction},${event.payloadHash},${event.success},${event.errorCode||null},${event.eventKey},${event.source},${event.byteLength},${event.messageType||null},${event.observedAt}) ON CONFLICT ("connectorDeviceId","eventKey") WHERE "eventKey" IS NOT NULL DO NOTHING`;if(result===1)accepted++;else duplicates++}
   await prisma.$executeRaw`UPDATE "ConnectorDevice" SET "lastSeenAt"=CURRENT_TIMESTAMP,"status"='OBSERVING',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${devices[0].id}`;
   send(res,{ok:true,accepted,duplicates,rawPayloadStored:false,outboundCommands:false});
+}));
+
+function requireCapDriverV1Writer(device){
+  if(device.platform!=="WINDOWS_RBS_CAPDRIVER_V1")fail(403,"Η συσκευή δεν έχει εγγραφεί ως CAP Driver v1 writer.");
+}
+router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
+  requireCapDriverV1Writer(req.device);
+  await requireRbsConnectorModule(req.device);
+  await ensureRbsCapDriverV1RequestSchema(prisma);
+  const request=await prisma.$transaction(async tx=>{
+    const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
+    if(!rows[0])return null;
+    const claimed=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"='CLAIMED',"claimedByDeviceId"=${req.device.id},"claimedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${rows[0].id} AND "status"='PREPARED' RETURNING "id","terminalPos","paymentMethod","total","commandText","commandHash","claimedAt"`;
+    return claimed[0]||null;
+  });
+  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
+  send(res,{request:request?{id:request.id,terminalPos:request.terminalPos,paymentMethod:request.paymentMethod,total:Number(request.total),commandText:request.commandText,commandHash:request.commandHash,claimedAt:request.claimedAt}:null,oneShot:true,outputFolderUsed:false});
+}));
+
+router.post("/device/rbs-capdriver-v1/:requestId/dispatch-result",deviceAuth,route(async(req,res)=>{
+  requireCapDriverV1Writer(req.device);
+  await requireRbsConnectorModule(req.device);
+  await ensureRbsCapDriverV1RequestSchema(prisma);
+  const body=z.object({result:z.enum(["WRITTEN","UNCERTAIN"])}).parse(req.body||{});
+  const rows=await prisma.$queryRaw`SELECT "status" FROM "RbsCapDriverV1Request" WHERE "id"=${req.params.requestId} AND "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "claimedByDeviceId"=${req.device.id} LIMIT 1`;
+  if(!rows[0])fail(404,"Δεν βρέθηκε η εντολή της συσκευής.");
+  let nextStatus;
+  try{nextStatus=rbsCapDriverV1DispatchTransition(rows[0].status,body.result)}catch{fail(409,"Η εντολή έχει ήδη προχωρήσει και δεν μπορεί να ξανασταλεί.")}
+  const updated=await prisma.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"=${nextStatus},"dispatchedAt"=CASE WHEN ${nextStatus}='DISPATCHED' THEN NOW() ELSE "dispatchedAt" END,"updatedAt"=NOW() WHERE "id"=${req.params.requestId} AND "status"='CLAIMED' AND "claimedByDeviceId"=${req.device.id} RETURNING "id","status","dispatchedAt"`;
+  if(!updated[0])fail(409,"Η εντολή έχει ήδη προχωρήσει και δεν μπορεί να ξανασταλεί.");
+  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
+  send(res,{ok:true,request:updated[0],automaticRetry:false});
 }));
 
 router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,res)=>{

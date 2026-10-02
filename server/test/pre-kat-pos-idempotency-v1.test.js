@@ -90,7 +90,9 @@ test("checkout safety is installed once before POS traffic",()=>{
   assert.match(client,/__mwsPosCheckoutSafetyInstalled/);
 });
 
-test("sale remains explicitly non fiscal",()=>{
-  assert.match(pos,/'NON_FISCAL'/);
-  assert.doesNotMatch(pos,/fiscalStatus[^\n]*ISSUED|sendToAade|CapDriver|RBS/i);
+test("only a confirmed RBS receipt is recorded as fiscally issued",()=>{
+  assert.match(pos,/rbsCapDriverSaleFiscalStatus\(approvedFiscalRequest\)/);
+  assert.match(pos,/fiscalStatus:rbsCapDriverSaleFiscalStatus\(approvedFiscalRequest\)/);
+  assert.doesNotMatch(pos,/fiscalStatus[^\n]*'ISSUED'/);
+  assert.doesNotMatch(pos,/sendToAade/i);
 });
