@@ -106,3 +106,29 @@ not show that MyWorkStation has issued a receipt.
 - Owner reports one KAT sale was recorded as NON_FISCAL and no receipt printed. Screenshot evidence shows the transaction in the BackOffice history, but the exact transaction ID and before/after financial/stock baselines were not captured here. Treat the transaction as existing; do not repeat it, resend it, reprint it, or infer a measured balance change.
 - The live application has no visible pairing-code generator. Follow-up branch `agent/rbs-capdriver-pairing-ui-20261002` adds an owner-scoped 15-minute one-time pairing panel to the existing BackOffice page, using the existing `POST /api/cloud/v1/stores/:storeId/pairing-code` route. The server continues to enforce OWNER/ADMIN plus active store/company ownership and audit the event.
 - No pairing code has been created, no Windows writer has been paired or started, and no fiscal command has been sent. UI build/CI, merge, exact deployment and owner-led physical acceptance remain pending. No LAB/physical receipt PASS is claimed.
+
+
+## Operator checkpoint — first live POS attempt, 2026-10-02
+
+**Result: FAIL / no fiscal receipt; investigation OPEN. Do not retry or duplicate the sale.** The owner has left KAT and cannot perform an on-site check now.
+
+- Pairing was completed on the KAT Windows account and the supplied `Writer.ps1` was started. Do not record or reuse the one-time pairing secret.
+- In Standard POS, the owner selected Coca-Cola 500 ml (shown under 13% VAT, “Αναψυκτικά”), total **€1.20**, then pressed **Μετρητά** once. POS showed a generic internal error; owner confirmed no receipt printed. The checkout screen still showed €1.20. Do not press cash again, resend, reprint, or assume the sale was fiscal.
+- Read-only PC checks: Windows service `CapDriverSVC` was **Running**; `C:\\capture\\Xcommand.txt` was **absent**. `C:\\capture` contained only `CapDriverSVC_log.txt` (about 1.06 MB). Visible CAP log lines were from Kiosk Manager activity; they are not evidence that this MyWorkStation attempt reached CAP Driver.
+- The application’s saved Fiscal/EFTPOS mapping is separate from CAP Driver pairing/dispatch. The mapping page showed the chosen terminal and “mapping saved”; reopening it reset to the empty selector in a separate view. Do not treat EFTPOS mapping as proof of CAP delivery or printer setup.
+- Current diagnostic evidence does **not** identify a root cause or prove a request reached the Windows writer. The earlier BackOffice history contained a NON_FISCAL €3.20 sale from a prior attempt; that is a distinct existing record and must not be repeated, resent, reprinted, or used to infer this €1.20 attempt’s outcome.
+- Render app error logs showed no correlated entry. Request-log query was unavailable (Loki 503), and metrics returned no useful records. No root cause established.
+
+### Next steps when the owner is back at KAT
+
+1. First reconcile the €1.20 attempt in BackOffice and confirm whether any transaction record exists. Do not create another sale until its state is known.
+2. Capture the exact timestamp, checkout/transaction ID, and visible error details. Read-only inspect the pairing/writer window and service state; check whether a new `Xcommand.txt` or CAP log entry appeared after the attempt. Preserve files; do not delete or replay commands.
+3. Correlate that transaction ID/time with server dispatch/result/audit records and the Windows writer poll/result. If no command was delivered, fix the app→writer request path before another physical attempt. If delivery is uncertain, keep the sale in reconciliation and do not resend.
+4. Only after a documented safe state and an owner-controlled test plan, use one controlled low-value product with its confirmed VAT-code→cash-register-department assignment. Click cash once, verify a physical fiscal receipt and transaction state, then record measured before/after values. Never test by charging a real card.
+5. Update this checkpoint with evidence and PASS/FAIL before any future page proceeds. A physical receipt PASS is still outstanding.
+
+## Current implementation and mainline
+
+- PR #1632 merged as `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f`; CI #4097, #4099, #4107 passed, including Windows PowerShell 5.1 parse and mocked pairing/writer smoke tests. Render deployment `dep-davqli0u01pc73fpjphg` was verified live on that revision.
+- Central VAT department handling and the ten Kiosk VAT-code→register-department profiles were read back before merge; product assignment and mapping work is recorded in the historical checkpoint above. The captured live attempt still did not print a receipt.
+- PC1/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows configuration must remain unchanged. No automated test sends a fiscal command.
