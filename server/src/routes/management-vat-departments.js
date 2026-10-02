@@ -181,8 +181,10 @@ router.patch("/products/bulk-assign",async(req,res,next)=>{
     const companyId=req.user.companyId;await ensureSchema();const body=z.object({productIds:z.array(z.string().min(1)).min(1).max(500),vatDepartmentId:z.string().min(1)}).parse(req.body||{}),ids=[...new Set(body.productIds)];
     const dep=await prisma.$queryRaw`SELECT "id","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${body.vatDepartmentId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`;if(!dep[0])return res.status(404).json({error:"Δεν βρέθηκε ενεργό τμήμα ΦΠΑ."});
     const found=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`;if(found.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο προϊόν στην επιλογή."});
-    await prisma.$executeRaw`UPDATE "Product" SET "vatDepartmentId"=${body.vatDepartmentId},"vatRate"=${Number(dep[0].vatRate||0)},"vatVerified"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`;
-    res.json({ok:true,changed:ids.length});
+    const mismatches=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[]) AND ABS(COALESCE("vatRate",0)-${Number(dep[0].vatRate)})>0.001`;
+    if(Number(mismatches[0]?.count||0)>0)return res.status(409).json({error:"Το επιλεγμένο Τμήμα ΦΠΑ έχει διαφορετικό συντελεστή από ένα ή περισσότερα προϊόντα. Δεν άλλαξε ο ΦΠΑ τους."});
+    await prisma.$executeRaw`UPDATE "Product" SET "vatDepartmentId"=${body.vatDepartmentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${companyId} AND "id"=ANY(${ids}::text[])`;
+    res.json({ok:true,changed:ids.length,vatRatesChanged:0});
   }catch(error){next(error)}
 });
 
