@@ -132,3 +132,12 @@ not show that MyWorkStation has issued a receipt.
 - PR #1632 merged as `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f`; CI #4097, #4099, #4107 passed, including Windows PowerShell 5.1 parse and mocked pairing/writer smoke tests. Render deployment `dep-davqli0u01pc73fpjphg` was verified live on that revision.
 - Central VAT department handling and the ten Kiosk VAT-code→register-department profiles were read back before merge; product assignment and mapping work is recorded in the historical checkpoint above. The captured live attempt still did not print a receipt.
 - PC1/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows configuration must remain unchanged. No automated test sends a fiscal command.
+
+
+## Follow-up — central category/VAT mapping correction (2026-10-02)
+
+- User clarified that the intended rule is automatic mapping from product **category** to the correct VAT/cash-register department. A VAT percentage alone is insufficient because multiple register departments share the same rate.
+- PR #1635: https://github.com/xrhstosmanis-design/myworkstation-app/pull/1635. Adds company-scoped category → VAT-department mapping in the management VAT panel; POS uses the mapped category department for fiscal dispatch, with existing product-level assignment as fallback.
+- Mapping validation rejects categories containing products whose VAT rate differs from the selected VAT department. It never changes product VAT rates. This is a deliberate fail-closed guard; split mixed-rate products into appropriate categories before mapping.
+- Initial CI #4117 failed at the required documentation policy check (KAT active list and changed checkpoint not included in PR); Windows PowerShell parse/smoke job passed. Added both required docs to the PR for rerun. No application tests completed in that CI run.
+- PR is open, not merged or deployed; no live category mappings were changed. After green CI/merge/deploy, map the beverage category to the confirmed Kiosk department, verify the Coca-Cola item resolves to that department and correct 13% rate, then test only after reconciling the existing €1.20 attempt. Never retry while outcome uncertain.
