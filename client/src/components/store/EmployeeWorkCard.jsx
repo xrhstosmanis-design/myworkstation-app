@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 
 export default function EmployeeWorkCard({api,session,onLogout}){
   const [data,setData]=useState(null),[qr,setQr]=useState(""),[error,setError]=useState("");
-  useEffect(()=>{let alive=true;api("/api/operators/me/work-card").then(async result=>{if(!alive)return;setData(result);setQr(await QRCode.toDataURL(result.cardCode,{errorCorrectionLevel:"M",margin:2,width:360}))}).catch(err=>{if(alive)setError(err.message)});return()=>{alive=false}},[api]);
+  useEffect(()=>{let alive=true;api(`/api/operators/me/work-card?storeId=${encodeURIComponent(session.store.id)}`).then(async result=>{if(!alive)return;setData(result);setQr(await QRCode.toDataURL(result.cardCode,{errorCorrectionLevel:"M",margin:2,width:360}))}).catch(err=>{if(alive)setError(err.message)});return()=>{alive=false}},[api]);
   return <main style={{minHeight:"100vh",background:"#eef3f7",display:"grid",placeItems:"center",padding:20}}>
     <section style={{width:"min(440px,100%)",background:"#fff",borderRadius:22,padding:24,boxShadow:"0 18px 55px #173a5522",textAlign:"center"}}>
       <small style={{fontWeight:900,letterSpacing:1.2,color:"#087f5b"}}>MYWORKSTATION · Η ΚΑΡΤΑ ΜΟΥ</small>
