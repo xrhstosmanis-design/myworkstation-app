@@ -109,7 +109,7 @@ try {
     $env:MWS_RBS_DEVICE_TOKEN = 'fake-token'
     $env:MWS_RBS_WORKFOLDER = $workFolder
     $boundedWriter = [IO.File]::ReadAllText($writerScript)
-    if ($boundedWriter.Split('while ($true) {').Length -ne 2) { throw 'Expected exactly one writer polling loop.' }
+    if ([regex]::Matches($boundedWriter, [regex]::Escape('while ($true) {')).Count -ne 1) { throw 'Expected exactly one writer polling loop.' }
     $boundedWriter = $boundedWriter.Replace('while ($true) {', 'for ($iteration = 0; $iteration -lt 1; $iteration++) {')
     Invoke-Expression $boundedWriter
   } finally {
