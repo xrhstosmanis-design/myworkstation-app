@@ -63,9 +63,10 @@ while ($true) {
       [IO.File]::Move($tempPath, $CommandPath)
       Send-DispatchResult $request.id 'WRITTEN'
     } catch {
+      $writeError = $_
       if (Test-Path -LiteralPath $tempPath) { Remove-Item -LiteralPath $tempPath -Force -ErrorAction SilentlyContinue }
       try { Send-DispatchResult $request.id 'UNCERTAIN' } catch { }
-      throw "One-shot write failed for request $($request.id); it will not be requested again. $($_.Exception.Message)"
+      throw "One-shot write failed for request $($request.id); it will not be requested again. $($writeError.Exception.Message)"
     }
   } catch {
     Write-Error $_
