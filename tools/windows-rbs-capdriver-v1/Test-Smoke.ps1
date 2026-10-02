@@ -41,6 +41,7 @@ function Invoke-RestMethod {
     [string]$Body
   )
   $script:networkCalls++
+  Write-Host "Mock request: $Method $Uri"
   if ($Uri -match '/api/cloud/v1/pair$') {
     return [pscustomobject]@{
       token = 'mock-device-token-for-local-smoke-test'
@@ -103,6 +104,8 @@ try {
   try {
     & $writerScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $workFolder
   } catch {
+    Write-Host "Writer smoke-test exception: $($_.Exception.Message)"
+    Write-Host ($_ | Format-List * -Force | Out-String)
     if (-not $script:mockStopped) { throw }
   }
 
