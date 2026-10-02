@@ -201,3 +201,12 @@ identified low-value physical test with a fresh measured baseline.
   outer `finally` block. This changes only the isolated test harness; production
   writer behavior, dispatch rules and KAT configuration remain unchanged.
 - Fresh Windows CI is required. No merge or deploy is allowed from CI #4126.
+
+
+## Follow-up — product-level VAT department selection (2026-10-02)
+
+- Ο χρήστης διευκρίνισε ότι η σωστή συμπεριφορά είναι όπως στο Kiosk Manager: το Τμήμα ΦΠΑ επιλέγεται πάνω στο προϊόν. Η κατηγορία δεν αποτελεί πηγή τμήματος ή συντελεστή, επειδή προϊόν σε λάθος κατηγορία θα μπορούσε να πάρει λάθος ΦΠΑ. Η παλαιότερη πρόταση category → VAT mapping στο παρόν checkpoint superseded από αυτή τη διευκρίνιση.
+- Στην επιλογή τμήματος εμφανίζεται το νούμερο «Τμήμα ταμειακής» μαζί με περιγραφή και ΦΠΑ, ώστε ο χειριστής να επιλέγει την αντίστοιχη εγγραφή του Kiosk.
+- Το κεντρικό bulk assignment επικυρώνει ότι το υφιστάμενο `Product.vatRate` συμφωνεί με το VAT department. Ασυμφωνία επιστρέφει 409 και δεν αλλάζει προϊόντα. Επιτυχής αλλαγή ενημερώνει μόνο `Product.vatDepartmentId`, διατηρεί `vatRate` και επιστρέφει `vatRatesChanged: 0`.
+- Η αλλαγή κώδικα και τα checkpoints βρίσκονται στο `agent/product-vat-dept-selection-20261002-r3`, σε αναμονή PR/CI/merge/deploy. Δεν έχουν γίνει live product edits ή αλλαγές σε KAT/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows.
+- Η προηγούμενη συναλλαγή €1,20 παραμένει αδιευκρίνιστη/προς συμφωνία. Καμία νέα χρέωση, επανάληψη εντολής ή εκτύπωση μέχρι να συμφωνηθεί η κατάστασή της.
