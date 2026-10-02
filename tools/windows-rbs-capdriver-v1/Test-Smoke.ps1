@@ -1,0 +1,123 @@
+$ErrorActionPreference = 'Stop'
+$pairScript = Join-Path $PSScriptRoot 'Pair.ps1'
+$writerScript = Join-Path $PSScriptRoot 'Writer.ps1'
+
+foreach ($scriptPath in @($pairScript, $writerScript)) {
+  $tokens = $null
+  $parseErrors = $null
+  [System.Management.Automation.Language.Parser]::ParseFile(
+    $scriptPath,
+    [ref]$tokens,
+    [ref]$parseErrors
+  ) | Out-Null
+  if ($parseErrors.Count -gt 0) {
+    $parseErrors | ForEach-Object { Write-Error $_.Message }
+    throw "PowerShell parse failed: $scriptPath"
+  }
+}
+
+$script:networkCalls = 0
+$script:nextCalls = 0
+$script:dispatchResults = New-Object 'System.Collections.Generic.List[string]'
+$script:mockStopped = $false
+$crlf = ([string][char]13) + ([string][char]10)
+$itemName = 'TEST' + [char]0x0394 + 'OKIMH'
+$script:commandText = 'HL/' + $crlf + 'SL/' + $itemName + '//1.000/1.00/1/13.0' + $crlf + 'CR/6/1.00/CASH'
+$encoding = [Text.Encoding]::GetEncoding(1253)
+$commandBytes = $encoding.GetBytes($script:commandText + $crlf)
+$sha = [Security.Cryptography.SHA256]::Create()
+try {
+  $script:commandHash = [BitConverter]::ToString($sha.ComputeHash($commandBytes)).Replace('-', '').ToLowerInvariant()
+} finally {
+  $sha.Dispose()
+}
+
+function Invoke-RestMethod {
+  param(
+    [string]$Method,
+    [string]$Uri,
+    [hashtable]$Headers,
+    [string]$ContentType,
+    [string]$Body
+  )
+  $script:networkCalls++
+  if ($Uri -match '/api/cloud/v1/pair$') {
+    return [pscustomobject]@{
+      token = 'mock-device-token-for-local-smoke-test'
+      device = [pscustomobject]@{ id = 'mock-device' }
+      store = [pscustomobject]@{ name = 'Mock Store' }
+    }
+  }
+  if ($Uri -match '/rbs-capdriver-v1/next$') {
+    $script:nextCalls++
+    if ($script:nextCalls -eq 1) {
+      return [pscustomobject]@{
+        request = [pscustomobject]@{
+          id = 'mock-request'
+          commandText = $script:commandText
+          commandHash = $script:commandHash
+        }
+      }
+    }
+    $script:mockStopped = $true
+    throw 'MOCK_STOP_AFTER_ONE_REQUEST'
+  }
+  if ($Uri -match '/rbs-capdriver-v1/mock-request/dispatch-result$') {
+    $payload = ConvertFrom-Json $Body
+    $script:dispatchResults.Add([string]$payload.result)
+    return [pscustomobject]@{ ok = $true }
+  }
+  throw "Unexpected request in isolated PowerShell smoke test: $Uri"
+}
+
+function Assert-RejectedHttp([string]$ScriptPath, [hashtable]$Arguments) {
+  try {
+    & $ScriptPath @Arguments
+    throw "Expected HTTPS validation to reject $ScriptPath"
+  } catch {
+    if ($_.Exception.Message -notmatch 'absolute HTTPS') { throw }
+  }
+}
+
+$testRoot = Join-Path $env:TEMP ("mws-capdriver-smoke-" + [guid]::NewGuid().ToString('N'))
+$previousLocalAppData = $env:LOCALAPPDATA
+try {
+  New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+  $env:LOCALAPPDATA = Join-Path $testRoot 'localappdata'
+  New-Item -ItemType Directory -Path $env:LOCALAPPDATA -Force | Out-Null
+
+  Assert-RejectedHttp $pairScript @{ ApiBase = 'http://unit.test'; PairingCode = '12345678' }
+  Assert-RejectedHttp $writerScript @{ ApiBase = 'http://unit.test'; DeviceToken = 'fake-token'; WorkFolder = (Join-Path $testRoot 'work') }
+  if ($script:networkCalls -ne 0) { throw 'An HTTP request occurred before insecure URL rejection.' }
+
+  & $pairScript -ApiBase 'https://unit.test' -PairingCode '12345678'
+  $credentialPath = Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1\device.credential.xml'
+  if (-not (Test-Path -LiteralPath $credentialPath)) { throw 'Pair.ps1 did not persist the mocked device credential.' }
+  $credential = Import-Clixml -LiteralPath $credentialPath
+  if ($credential.GetNetworkCredential().Password -ne 'mock-device-token-for-local-smoke-test') {
+    throw 'Pair.ps1 credential did not round-trip under the test Windows user.'
+  }
+
+  $workFolder = Join-Path $testRoot 'work'
+  New-Item -ItemType Directory -Path $workFolder -Force | Out-Null
+  try {
+    & $writerScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $workFolder
+  } catch {
+    if (-not $script:mockStopped) { throw }
+  }
+
+  $commandPath = Join-Path $workFolder 'Xcommand.txt'
+  if (-not (Test-Path -LiteralPath $commandPath)) { throw 'Writer.ps1 did not create Xcommand.txt.' }
+  $actual = [IO.File]::ReadAllBytes($commandPath)
+  if ([Convert]::ToBase64String($actual) -ne [Convert]::ToBase64String($commandBytes)) {
+    throw 'Writer.ps1 output bytes did not match the expected Windows-1253 command.'
+  }
+  if ($script:dispatchResults.Count -ne 1 -or $script:dispatchResults[0] -ne 'WRITTEN') {
+    throw 'Writer.ps1 did not acknowledge exactly one successful file write.'
+  }
+  if ($script:nextCalls -ne 2) { throw "Unexpected request polling count: $($script:nextCalls)" }
+  Write-Host 'CAP Driver PowerShell isolated smoke tests passed.'
+} finally {
+  $env:LOCALAPPDATA = $previousLocalAppData
+  if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
+}
