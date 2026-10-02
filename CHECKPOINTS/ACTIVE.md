@@ -1,3 +1,10 @@
+## 02/10/2026 — Κεντρική επιλογή Τμήματος ΦΠΑ ανά προϊόν · AWAITING CI
+
+- Το POS χρησιμοποιεί το τμήμα ΦΠΑ που έχει επιλεγεί στο ίδιο το προϊόν. Η κατηγορία δεν υπερισχύει.
+- Η αλλαγή εμφανίζει το τμήμα ταμειακής στην επιλογή, ελέγχει ίδιο ποσοστό και ενημερώνει μόνο το `vatDepartmentId`, διατηρώντας τον συντελεστή προϊόντος.
+- Branch `agent/product-vat-dept-selection-20261002`, AWAITING CI. Δεν έγινε merge, deploy ή live μεταβολή. Μην επαναλάβεις την αβέβαιη απόδειξη €1,20 πριν από συμφωνία.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-02-rbs-capdriver-v1-operator-confirm.md`.
+
 ## RBS CAP Driver v1 — LIVE TEST FAILED / VAT CATEGORY FIX PR OPEN (02/10/2026)
 
 - MyWorkStation POS showed Coca-Cola 500 ml, 13% VAT, €1.20. Owner pressed **Μετρητά** once; generic internal error; **no receipt printed**. Do not retry, resend, reprint, or duplicate; owner has left KAT.
