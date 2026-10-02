@@ -148,3 +148,12 @@ not show that MyWorkStation has issued a receipt.
 - PR #1635 remains open with the category-mapping implementation and the required KAT active-list/checkpoint changes.
 - CI #4117 failed only at the checkpoint policy gate because those documentation files were missing from the original PR diff. The Windows PowerShell parse and mocked pairing/writer smoke job passed. The build-and-test job skipped application tests after the documentation gate failed.
 - The docs have since been added to the PR branch and PR #1635 reopened. No fresh CI run is visible yet for its current head `63653f898d09f283e174e25107cabc5381a32b1e`. Do not merge or deploy until a fresh full CI run passes.
+
+
+## Follow-up — product-level VAT department selection (2026-10-02)
+
+- Ο χρήστης διευκρίνισε ότι η σωστή συμπεριφορά είναι όπως στο Kiosk Manager: το Τμήμα ΦΠΑ επιλέγεται πάνω στο προϊόν. Η κατηγορία δεν αποτελεί πηγή τμήματος ή συντελεστή, επειδή προϊόν σε λάθος κατηγορία θα μπορούσε να πάρει λάθος ΦΠΑ. Η παλαιότερη πρόταση category → VAT mapping στο παρόν checkpoint superseded από αυτή τη διευκρίνιση.
+- Στην επιλογή τμήματος εμφανίζεται το νούμερο «Τμήμα ταμειακής» μαζί με περιγραφή και ΦΠΑ, ώστε ο χειριστής να επιλέγει την αντίστοιχη εγγραφή του Kiosk.
+- Το κεντρικό bulk assignment επικυρώνει ότι το υφιστάμενο `Product.vatRate` συμφωνεί με το VAT department. Ασυμφωνία επιστρέφει 409 και δεν αλλάζει προϊόντα. Επιτυχής αλλαγή ενημερώνει μόνο `Product.vatDepartmentId`, διατηρεί `vatRate` και επιστρέφει `vatRatesChanged: 0`.
+- Η αλλαγή κώδικα και τα checkpoints βρίσκονται στο `agent/product-vat-dept-selection-20261002-r2`, σε αναμονή PR/CI/merge/deploy. Δεν έχουν γίνει live product edits ή αλλαγές σε KAT/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows.
+- Η προηγούμενη συναλλαγή €1,20 παραμένει αδιευκρίνιστη/προς συμφωνία. Καμία νέα χρέωση, επανάληψη εντολής ή εκτύπωση μέχρι να συμφωνηθεί η κατάστασή της.
