@@ -71,6 +71,9 @@ jobs:
             }
             Write-Host "Parsed $scriptPath successfully."
           }
+      - name: Run isolated CAP Driver pairing and writer smoke test
+        shell: powershell
+        run: ./tools/windows-rbs-capdriver-v1/Test-Smoke.ps1
 
   build-and-test:
     needs: classify-changes
