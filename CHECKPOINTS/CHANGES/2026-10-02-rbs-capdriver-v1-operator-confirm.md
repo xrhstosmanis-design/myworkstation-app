@@ -148,3 +148,56 @@ not show that MyWorkStation has issued a receipt.
 - PR #1635 remains open with the category-mapping implementation and the required KAT active-list/checkpoint changes.
 - CI #4117 failed only at the checkpoint policy gate because those documentation files were missing from the original PR diff. The Windows PowerShell parse and mocked pairing/writer smoke job passed. The build-and-test job skipped application tests after the documentation gate failed.
 - The docs have since been added to the PR branch and PR #1635 reopened. No fresh CI run is visible yet for its current head `63653f898d09f283e174e25107cabc5381a32b1e`. Do not merge or deploy until a fresh full CI run passes.
+
+
+## HOME safety follow-up — 2026-10-02 22:38 Europe/Athens
+
+Status: **LOCAL PASS / AWAITING WINDOWS CI, MERGE, DEPLOY AND PHYSICAL ACCEPTANCE**.
+
+- Root cause of the €1.20 attempt remains unproven. The observed absence of
+  `C:\\capture\\Xcommand.txt` only proves that no command file was visible at
+  inspection time; it does not prove whether the server request was prepared,
+  claimed or never reached by the writer.
+- A paired device no longer activates the fiscal path by itself. The POS now
+  requires the paired writer to have completed an authenticated `/next` poll
+  within the last 15 seconds. `Test-Connection.ps1` validates authentication,
+  module access and the configured work-folder path without claiming a request,
+  marking the writer online or creating `Xcommand.txt`.
+- If a writer is configured but not currently polling, cash/card checkout fails
+  closed with an explicit Writer-offline message before any sale, payment,
+  stock movement or CAP Driver command is created.
+- Before claiming a queued command, the server moves every `PREPARED` request
+  older than 60 seconds to `REQUIRES_CHECK`. Therefore an old request cannot be
+  delivered automatically when the writer is restarted later. No automatic
+  resend was added.
+- `Writer.ps1` stores timestamped diagnostics in
+  `%LOCALAPPDATA%\\MyWorkStation\\RbsCapDriverV1\\writer.log` without logging the
+  device token or raw command. BackOffice and POS display live ONLINE/OFFLINE
+  status based on the same 15-second poll window.
+- Local evidence: focused CAP Driver tests **9/9 PASS**; full server suite
+  **1796 PASS / 0 FAIL / 1 SKIP** after Prisma generation; frontend production
+  build PASS; diff check PASS. The local Linux environment has no PowerShell,
+  so the PowerShell 5.1 parse/mock smoke remains an explicit CI requirement.
+- No Render call, production database write, pairing operation, writer poll,
+  CAP file, RBS/EFTPOS action, sale, payment or stock change occurred during
+  this HOME work.
+
+Next action: push the bounded branch, require green CI including the Windows
+PowerShell smoke, merge and verify the exact Render revision. At KAT, first
+reconcile the existing €1.20 attempt read-only, run `Test-Connection.ps1`, start
+`Writer.ps1`, wait for `WRITER ONLINE`, and only then prepare one separately
+identified low-value physical test with a fresh measured baseline.
+
+
+## CI #4126 follow-up — Windows smoke assertion scope
+
+- Windows PowerShell 5.1 parsed `Pair.ps1` and `Writer.ps1` successfully.
+- The isolated smoke executed mocked pairing, the non-claiming connection test,
+  one writer poll, one `Xcommand.txt` write and one `WRITTEN` dispatch result.
+- The job failed only at the final connection-status call-count assertion because
+  `$script:statusCalls` resolved to the invoked child script's scope. The log
+  showed the expected `/status` request, but the parent assertion read zero.
+- The counter is now a namespaced global test variable and is removed in the
+  outer `finally` block. This changes only the isolated test harness; production
+  writer behavior, dispatch rules and KAT configuration remain unchanged.
+- Fresh Windows CI is required. No merge or deploy is allowed from CI #4126.

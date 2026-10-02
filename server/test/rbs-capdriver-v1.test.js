@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {TextDecoder} from "node:util";
+import {readFile} from "node:fs/promises";
 import {buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
+
+const [cloudRoute,posRoute,posUi,cloudUi]=await Promise.all([
+  readFile(new URL("../src/routes/cloud-v1.js",import.meta.url),"utf8"),
+  readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8"),
+  readFile(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8"),
+  readFile(new URL("../../client/src/components/cloud/StoreCloudPage.jsx",import.meta.url),"utf8")
+]);
 
 const item={description:"ΝΕΡΟ 500ML",barcode:"",quantity:1,unitPrice:0.5,fiscalDepartment:"9",vatRate:13};
 
@@ -65,4 +73,23 @@ test("one-shot dispatch can be claimed only once and card Yes/No is separate fro
 test("only a confirmed CAP receipt is marked fiscally issued",()=>{
   assert.equal(rbsCapDriverSaleFiscalStatus(null),"NON_FISCAL");
   assert.equal(rbsCapDriverSaleFiscalStatus({status:"OPERATOR_CONFIRMED"}),"ISSUED");
+});
+
+test("writer liveness requires a real recent poll rather than pairing alone",()=>{
+  assert.match(cloudRoute,/rbs-capdriver-v1\/status/);
+  assert.match(cloudRoute,/rbsCapDriverV1WriterPoll/);
+  assert.match(posRoute,/"lastSeenAt">NOW\(\)-INTERVAL '15 seconds'/);
+  assert.match(posRoute,/RBS_CAPDRIVER_V1_WRITER_OFFLINE/);
+  assert.match(posRoute,/Δεν καταχωρίστηκε πώληση και δεν στάλθηκε εντολή/);
+  assert.match(posUi,/RBS WRITER:/);
+  assert.match(cloudUi,/WRITER ONLINE/);
+  assert.match(cloudUi,/WRITER OFFLINE/);
+});
+
+test("stale unclaimed requests are quarantined before the writer can claim them",()=>{
+  assert.match(cloudRoute,/"status"='PREPARED' AND "createdAt"<NOW\(\)-INTERVAL '60 seconds'/);
+  assert.match(cloudRoute,/SET "status"='REQUIRES_CHECK'/);
+  const quarantineIndex=cloudRoute.indexOf(`SET "status"='REQUIRES_CHECK'`);
+  const claimIndex=cloudRoute.indexOf(`AND "status"='PREPARED' ORDER BY`);
+  assert.ok(quarantineIndex>=0&&claimIndex>quarantineIndex,"stale quarantine must run before request claim");
 });

@@ -38,6 +38,7 @@ export default function StoreCloudPage({api,store,onBack}){
   const [pairingBusy,setPairingBusy]=useState(false);
   const [pairingError,setPairingError]=useState("");
   const [pairingCopied,setPairingCopied]=useState(false);
+  const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
 
   const createPairingCode=async()=>{
     if(pairing&&Date.parse(pairing.expiresAt)>Date.now()&&!window.confirm("Θα ακυρωθεί ο προηγούμενος κωδικός, αν δεν έχει ήδη χρησιμοποιηθεί. Να δημιουργηθεί νέος;"))return;
@@ -104,6 +105,21 @@ export default function StoreCloudPage({api,store,onBack}){
     };
   },[api,store.id]);
 
+  useEffect(()=>{
+    let stopped=false;
+    const checkWriter=async()=>{
+      try{
+        const result=await api(`/api/cloud/v1/stores/${encodeURIComponent(store.id)}/overview?writer=${Date.now()}`,{cache:"no-store"});
+        const devices=(result.devices||[]).filter(device=>device.platform==="WINDOWS_RBS_CAPDRIVER_V1"&&device.status==="ACTIVE");
+        const writer=devices.sort((a,b)=>Date.parse(b.lastSeenAt||0)-Date.parse(a.lastSeenAt||0))[0]||null;
+        if(!stopped)setWriterState({loading:false,configured:Boolean(writer),online:Boolean(writer?.writerOnline),lastSeenAt:writer?.lastSeenAt||null});
+      }catch{if(!stopped)setWriterState(current=>({...current,loading:false,online:false}));}
+    };
+    checkWriter();
+    const timer=window.setInterval(checkWriter,5000);
+    return ()=>{stopped=true;window.clearInterval(timer)};
+  },[api,store.id]);
+
   return <section className="cloud-page store-operations-front">
     <div className="cloud-titlebar">
       <button className="cloud-back" onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
@@ -126,8 +142,10 @@ export default function StoreCloudPage({api,store,onBack}){
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <KeyRound aria-hidden="true" size={20}/>
         <h3 style={{margin:0}}>Σύνδεση RBS CAP Driver v1</h3>
+        <strong role="status" style={{marginLeft:"auto",padding:"6px 10px",borderRadius:999,background:writerState.online?"#dcfce7":writerState.configured?"#fee2e2":"#f1f5f9",color:writerState.online?"#166534":writerState.configured?"#991b1b":"#475569"}}>{writerState.loading?"ΕΛΕΓΧΟΣ…":writerState.online?"WRITER ONLINE":writerState.configured?"WRITER OFFLINE":"ΔΕΝ ΕΧΕΙ ΣΥΝΔΕΘΕΙ"}</strong>
       </div>
       <p style={{margin:"10px 0",color:"#475569"}}>Δημιουργεί κωδικό μίας χρήσης, διάρκειας 15 λεπτών, για τον writer αυτού του καταστήματος. Δεν στέλνει εντολή στην ταμειακή και δεν εκδίδει απόδειξη.</p>
+      {writerState.configured&&<p style={{margin:"8px 0",fontWeight:700,color:writerState.online?"#166534":"#991b1b"}}>{writerState.online?"Η εφαρμογή λαμβάνει πραγματικό heartbeat από τον Writer.":"Μην εκτελέσεις πώληση για απόδειξη. Ο Writer δεν επικοινώνησε τα τελευταία 15 δευτερόλεπτα."}{writerState.lastSeenAt?` Τελευταία επικοινωνία: ${new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Athens"}).format(new Date(writerState.lastSeenAt))}.`:""}</p>}
       <button type="button" onClick={createPairingCode} disabled={pairingBusy} style={{border:0,borderRadius:10,padding:"10px 14px",background:"#087eb8",color:"#fff",fontWeight:700,cursor:pairingBusy?"wait":"pointer"}}>
         {pairingBusy?"Δημιουργία…":pairing?"Δημιουργία νέου κωδικού":"Δημιουργία κωδικού ζεύξης"}
       </button>
@@ -137,8 +155,8 @@ export default function StoreCloudPage({api,store,onBack}){
           <button type="button" onClick={copyPairingCode} style={{display:"inline-flex",alignItems:"center",gap:6,border:"1px solid #cbd5e1",borderRadius:8,padding:"8px 10px",background:"#fff",cursor:"pointer"}}><Copy size={16}/>{pairingCopied?"Αντιγράφηκε":"Αντιγραφή κωδικού"}</button>
         </div>
         <p style={{margin:"8px 0 0"}}>Λήγει: {new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens"}).format(new Date(pairing.expiresAt))} · Χρησιμοποιείται μία φορά.</p>
-        <small style={{display:"block",marginTop:8,color:"#475569"}}>Στον υπολογιστή του POS, εκτέλεσε το Pair.ps1 με τον ίδιο χρήστη Windows και βάλε τον κωδικό στην προτροπή. Έπειτα ξεκίνησε το Writer.ps1 και άφησέ το να εκτελείται. Κλείνοντας αυτή τη σελίδα, ο κωδικός δεν θα εμφανίζεται ξανά.</small>
-        <a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:8,color:"#0369a1",fontWeight:700}}>Οδηγίες και αρχεία Pair.ps1 / Writer.ps1</a>
+        <small style={{display:"block",marginTop:8,color:"#475569"}}>Στον υπολογιστή του POS, εκτέλεσε το Pair.ps1 με τον ίδιο χρήστη Windows και βάλε τον κωδικό στην προτροπή. Έπειτα εκτέλεσε Test-Connection.ps1, ξεκίνησε το Writer.ps1 και περίμενε να εμφανιστεί WRITER ONLINE πριν από οποιαδήποτε δοκιμή. Κλείνοντας αυτή τη σελίδα, ο κωδικός δεν θα εμφανίζεται ξανά.</small>
+        <a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:8,color:"#0369a1",fontWeight:700}}>Οδηγίες και αρχεία Pair.ps1 / Test-Connection.ps1 / Writer.ps1</a>
       </div>}
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
     </section>

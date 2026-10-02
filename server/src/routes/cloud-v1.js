@@ -352,17 +352,26 @@ router.post("/device/observer/events",deviceAuth,route(async(req,res)=>{
 function requireCapDriverV1Writer(device){
   if(device.platform!=="WINDOWS_RBS_CAPDRIVER_V1")fail(403,"Η συσκευή δεν έχει εγγραφεί ως CAP Driver v1 writer.");
 }
+async function markCapDriverV1WriterOnline(device){
+  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=COALESCE("metadata",'{}'::jsonb)||jsonb_build_object('rbsCapDriverV1WriterPoll',TRUE,'rbsCapDriverV1WriterVersion','v1') WHERE "id"=${device.id}`;
+}
+router.post("/device/rbs-capdriver-v1/status",deviceAuth,route(async(req,res)=>{
+  requireCapDriverV1Writer(req.device);
+  await requireRbsConnectorModule(req.device);
+  send(res,{ok:true,connectionOk:true,writerOnline:false,serverTime:new Date().toISOString(),claimsRequest:false});
+}));
 router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
   requireCapDriverV1Writer(req.device);
   await requireRbsConnectorModule(req.device);
   await ensureRbsCapDriverV1RequestSchema(prisma);
+  await markCapDriverV1WriterOnline(req.device);
   const request=await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='REQUIRES_CHECK',"updatedAt"=NOW() WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' AND "createdAt"<NOW()-INTERVAL '60 seconds'`;
     const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
     if(!rows[0])return null;
     const claimed=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"='CLAIMED',"claimedByDeviceId"=${req.device.id},"claimedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${rows[0].id} AND "status"='PREPARED' RETURNING "id","terminalPos","paymentMethod","total","commandText","commandHash","claimedAt"`;
     return claimed[0]||null;
   });
-  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
   send(res,{request:request?{id:request.id,terminalPos:request.terminalPos,paymentMethod:request.paymentMethod,total:Number(request.total),commandText:request.commandText,commandHash:request.commandHash,claimedAt:request.claimedAt}:null,oneShot:true,outputFolderUsed:false});
 }));
 
@@ -390,7 +399,7 @@ router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,
     prisma.$queryRaw`SELECT * FROM "CloudAudit" WHERE "storeId"=${store.id} ORDER BY "createdAt" DESC LIMIT 20`
   ]);
   const now=Date.now();
-  const normalized=devices.map(device=>({...device,isOnline:device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000}));
+  const normalized=devices.map(device=>{const isWriter=device.platform==="WINDOWS_RBS_CAPDRIVER_V1",writerPolled=device.metadata?.rbsCapDriverV1WriterPoll===true,writerOnline=isWriter&&writerPolled&&device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<15000;return {...device,isOnline:isWriter?Boolean(writerOnline):Boolean(device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000),writerOnline:Boolean(writerOnline)}});
   send(res,{store,devices:normalized,catalog,latestChange:latestChange[0]||null,audit:auditRows});
 }));
 
