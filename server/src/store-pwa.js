@@ -1,4 +1,4 @@
-const storeIdPattern=/^[a-z0-9]{12,64}$/;
+const storeIdPattern=/^(?:[a-z0-9]{12,64}|[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9]))$/;
 
 export const validPwaStoreId=value=>storeIdPattern.test(String(value||""));
 
