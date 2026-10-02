@@ -148,3 +148,11 @@ not show that MyWorkStation has issued a receipt.
 - PR #1635 remains open with the category-mapping implementation and the required KAT active-list/checkpoint changes.
 - CI #4117 failed only at the checkpoint policy gate because those documentation files were missing from the original PR diff. The Windows PowerShell parse and mocked pairing/writer smoke job passed. The build-and-test job skipped application tests after the documentation gate failed.
 - The docs have since been added to the PR branch and PR #1635 reopened. No fresh CI run is visible yet for its current head `63653f898d09f283e174e25107cabc5381a32b1e`. Do not merge or deploy until a fresh full CI run passes.
+
+
+## Follow-up — explicit product-level VAT department selection (2026-10-02)
+
+- The owner clarified that products can be placed in the wrong category, so category-based fiscal assignment can send the wrong section. The POS uses the department selected directly on the product; product category does not override it.
+- The central VAT panel lets an administrator select product(s) and choose a VAT department. The dropdown now shows the cash-register department number, like Kiosk Manager.
+- Fixed bulk assignment: it validates that the selected department rate matches each selected product, changes only `vatDepartmentId`, and preserves each product's VAT rate. A mismatch returns an error without changing products.
+- PR replacement branch `agent/product-vat-dept-selection-20261002`: AWAITING CI. No merge/deploy or live data/config changes. Physical €1.20 Coca-Cola attempt remains unresolved; do not retry until reconciled.
