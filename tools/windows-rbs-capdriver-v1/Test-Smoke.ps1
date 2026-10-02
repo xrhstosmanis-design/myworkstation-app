@@ -1,8 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $pairScript = Join-Path $PSScriptRoot 'Pair.ps1'
 $writerScript = Join-Path $PSScriptRoot 'Writer.ps1'
+$connectionScript = Join-Path $PSScriptRoot 'Test-Connection.ps1'
 
-foreach ($scriptPath in @($pairScript, $writerScript)) {
+foreach ($scriptPath in @($pairScript, $writerScript, $connectionScript)) {
   $tokens = $null
   $parseErrors = $null
   [System.Management.Automation.Language.Parser]::ParseFile(
@@ -18,6 +19,7 @@ foreach ($scriptPath in @($pairScript, $writerScript)) {
 
 $script:networkCalls = 0
 $script:nextCalls = 0
+$global:MwsCapSmokeStatusCalls = 0
 $script:dispatchResults = New-Object 'System.Collections.Generic.List[string]'
 $script:mockStopped = $false
 $crlf = ([string][char]13) + ([string][char]10)
@@ -63,6 +65,10 @@ function Invoke-RestMethod {
     $script:mockStopped = $true
     throw 'MOCK_STOP_AFTER_ONE_REQUEST'
   }
+  if ($Uri -match '/rbs-capdriver-v1/status$') {
+    $global:MwsCapSmokeStatusCalls++
+    return [pscustomobject]@{ ok = $true; connectionOk = $true; writerOnline = $false; claimsRequest = $false }
+  }
   if ($Uri -match '/rbs-capdriver-v1/mock-request/dispatch-result$') {
     $payload = ConvertFrom-Json $Body
     $script:dispatchResults.Add([string]$payload.result)
@@ -89,6 +95,7 @@ try {
 
   Assert-RejectedHttp $pairScript @{ ApiBase = 'http://unit.test'; PairingCode = '12345678' }
   Assert-RejectedHttp $writerScript @{ ApiBase = 'http://unit.test'; DeviceToken = 'fake-token'; WorkFolder = (Join-Path $testRoot 'work') }
+  Assert-RejectedHttp $connectionScript @{ ApiBase = 'http://unit.test'; DeviceToken = 'fake-token'; WorkFolder = (Join-Path $testRoot 'work') }
   if ($script:networkCalls -ne 0) { throw 'An HTTP request occurred before insecure URL rejection.' }
 
   & $pairScript -ApiBase 'https://unit.test' -PairingCode '12345678'
@@ -101,6 +108,8 @@ try {
 
   $writerWorkPath = Join-Path $testRoot 'work'
   New-Item -ItemType Directory -Path $writerWorkPath -Force | Out-Null
+  & $connectionScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $writerWorkPath
+  if (Test-Path -LiteralPath (Join-Path $writerWorkPath 'Xcommand.txt')) { throw 'Connection test created a CAP Driver command file.' }
   $previousApiBase = $env:MWS_RBS_API_BASE
   $previousDeviceToken = $env:MWS_RBS_DEVICE_TOKEN
   $previousWorkFolder = $env:MWS_RBS_WORKFOLDER
@@ -128,8 +137,10 @@ try {
     throw 'Writer.ps1 did not acknowledge exactly one successful file write.'
   }
   if ($script:nextCalls -ne 1) { throw "Unexpected request polling count: $($script:nextCalls)" }
+  if ($global:MwsCapSmokeStatusCalls -ne 1) { throw "Unexpected writer status count: $($global:MwsCapSmokeStatusCalls)" }
   Write-Host 'CAP Driver PowerShell isolated smoke tests passed.'
 } finally {
   $env:LOCALAPPDATA = $previousLocalAppData
+  Remove-Variable -Name MwsCapSmokeStatusCalls -Scope Global -ErrorAction SilentlyContinue
   if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
 }

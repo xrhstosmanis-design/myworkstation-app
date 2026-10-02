@@ -39,10 +39,17 @@ several categories share a rate but use different register departments.
    approved work folder, then set `MWS_RBS_WORKFOLDER` to that exact folder.
    The default is `C:\Capture`. The writer requires `Xcommand.txt` to be absent;
    it never overwrites or removes it.
-4. Run `Writer.ps1` under the paired Windows user. Keep it running while POS
+4. Run `Test-Connection.ps1` first. It verifies the paired credential, the
+   server heartbeat and the configured work-folder path without claiming a
+   checkout request, marking the writer online or creating `Xcommand.txt`.
+5. Run `Writer.ps1` under the paired Windows user. Keep it running while POS
    requests are expected. It claims each request once, checks the Windows-1253
-   bytes against the server hash, then creates `Xcommand.txt` atomically.
-5. If a request is uncertain, inspect the register/EFTPOS and resolve it in the
+   bytes against the server hash, then creates `Xcommand.txt` atomically. The
+   durable diagnostic log is stored under
+   `%LOCALAPPDATA%\MyWorkStation\RbsCapDriverV1\writer.log` by default. Only
+   the running writer's real polling changes the BackOffice indicator to
+   `WRITER ONLINE`.
+6. If a request is uncertain, inspect the register/EFTPOS and resolve it in the
    POS review dialog. The writer never asks the server for the same request
    again after it has been claimed.
 
@@ -50,6 +57,11 @@ The first cash receipt needs a controlled physical print check. Card remains
 pending until an operator confirms the EFTPOS result. A manual result after an
 uncertain response requires checking the register/EFTPOS first. Never use a
 real customer sale as the first integration test.
+
+The POS treats the writer as online only after a real authenticated heartbeat
+within the last 15 seconds. A prepared request that remains unclaimed for more
+than 60 seconds is quarantined for manual review and is never dispatched later
+when the writer restarts.
 
 This package has not been run on the target Windows PC or against a physical
 register. Install/pair/run only during the owner-led controlled acceptance
