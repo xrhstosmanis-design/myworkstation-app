@@ -49,6 +49,15 @@ export async function ensureVatDepartmentSchema(){
     )`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementVatDepartment_company_idx" ON "ManagementVatDepartment"("companyId")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Product_vatDepartmentId_idx" ON "Product"("vatDepartmentId")`);
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ManagementVatDepartmentCategory" (
+      "companyId" TEXT NOT NULL,
+      "categoryId" TEXT NOT NULL,
+      "vatDepartmentId" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "ManagementVatDepartmentCategory_pkey" PRIMARY KEY ("companyId","categoryId")
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementVatDepartmentCategory_department_idx" ON "ManagementVatDepartmentCategory"("companyId","vatDepartmentId")`);
   })();
   return schemaReady;
 }
@@ -91,7 +100,34 @@ router.get("/",async(req,res,next)=>{
       WHERE vd."companyId"=${companyId}
       GROUP BY vd."id"
       ORDER BY vd."cashRegisterDepartment" NULLS LAST,vd."vatRate",vd."description"`;
-    res.json({items:rows.map(r=>({...r,vatRate:Number(r.vatRate||0),productCount:Number(r.productCount||0)})),exemptions:EXEMPTIONS});
+    const categories=await prisma.$queryRaw`
+      SELECT c."id",c."name",m."vatDepartmentId",vd."description" AS "departmentDescription",vd."cashRegisterDepartment",vd."vatRate"
+      FROM "ProductCategory" c
+      LEFT JOIN "ManagementVatDepartmentCategory" m ON m."companyId"=c."companyId" AND m."categoryId"=c."id"
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=m."vatDepartmentId" AND vd."companyId"=c."companyId"
+      WHERE c."companyId"=${companyId} AND c."active"=true
+      ORDER BY c."name",c."id"`;
+    res.json({items:rows.map(r=>({...r,vatRate:Number(r.vatRate||0),productCount:Number(r.productCount||0)})),categories:categories.map(r=>({...r,vatRate:r.vatRate==null?null:Number(r.vatRate)})),exemptions:EXEMPTIONS});
+  }catch(error){next(error)}
+});
+
+router.put("/category-mappings/:categoryId",async(req,res,next)=>{
+  try{
+    const companyId=req.user.companyId;await ensureCompanyDepartments(companyId);
+    const categoryId=String(req.params.categoryId||"").trim();
+    const vatDepartmentId=req.body?.vatDepartmentId==null?"":String(req.body.vatDepartmentId).trim();
+    const category=(await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${categoryId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`)[0];
+    if(!category)return res.status(404).json({error:"Δεν βρέθηκε ενεργή κατηγορία ειδών."});
+    if(!vatDepartmentId){
+      await prisma.$executeRaw`DELETE FROM "ManagementVatDepartmentCategory" WHERE "companyId"=${companyId} AND "categoryId"=${categoryId}`;
+      return res.json({ok:true,removed:true});
+    }
+    const department=(await prisma.$queryRaw`SELECT "id","vatRate" FROM "ManagementVatDepartment" WHERE "id"=${vatDepartmentId} AND "companyId"=${companyId} AND "active"=true LIMIT 1`)[0];
+    if(!department)return res.status(404).json({error:"Δεν βρέθηκε ενεργό Τμήμα ΦΠΑ."});
+    const mismatches=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Product" WHERE "companyId"=${companyId} AND "categoryId"=${categoryId} AND ABS(COALESCE("vatRate",0)-${Number(department.vatRate)})>0.001`;
+    if(Number(mismatches[0]?.count||0)>0)return res.status(409).json({error:"Η κατηγορία περιέχει είδη με διαφορετικό συντελεστή ΦΠΑ. Χώρισε πρώτα τα είδη σε σωστές κατηγορίες ή τμήματα ΦΠΑ."});
+    await prisma.$executeRaw`INSERT INTO "ManagementVatDepartmentCategory" ("companyId","categoryId","vatDepartmentId","updatedAt") VALUES (${companyId},${categoryId},${vatDepartmentId},CURRENT_TIMESTAMP) ON CONFLICT ("companyId","categoryId") DO UPDATE SET "vatDepartmentId"=EXCLUDED."vatDepartmentId","updatedAt"=CURRENT_TIMESTAMP`;
+    res.json({ok:true});
   }catch(error){next(error)}
 });
 
