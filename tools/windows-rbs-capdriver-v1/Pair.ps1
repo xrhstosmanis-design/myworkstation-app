@@ -13,7 +13,11 @@ if ([string]::IsNullOrWhiteSpace($PairingCode)) {
 }
 if ([string]::IsNullOrWhiteSpace($PairingCode)) { throw 'A pairing code is required.' }
 
-$ApiBase = $ApiBase.TrimEnd('/')
+$apiUri = $null
+if (-not [Uri]::TryCreate($ApiBase.Trim(), [UriKind]::Absolute, [ref]$apiUri) -or $apiUri.Scheme -ne 'https' -or -not [string]::IsNullOrEmpty($apiUri.UserInfo)) {
+  throw 'MWS_RBS_API_BASE must be an absolute HTTPS URL without embedded credentials.'
+}
+$ApiBase = $apiUri.GetLeftPart([UriPartial]::Path).TrimEnd('/')
 $body = @{
   code = $PairingCode.Trim()
   deviceName = $DeviceName
