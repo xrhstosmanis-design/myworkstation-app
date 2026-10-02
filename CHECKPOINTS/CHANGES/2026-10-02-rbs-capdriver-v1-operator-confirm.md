@@ -132,3 +132,12 @@ not show that MyWorkStation has issued a receipt.
 - PR #1632 merged as `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f`; CI #4097, #4099, #4107 passed, including Windows PowerShell 5.1 parse and mocked pairing/writer smoke tests. Render deployment `dep-davqli0u01pc73fpjphg` was verified live on that revision.
 - Central VAT department handling and the ten Kiosk VAT-code→register-department profiles were read back before merge; product assignment and mapping work is recorded in the historical checkpoint above. The captured live attempt still did not print a receipt.
 - PC1/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows configuration must remain unchanged. No automated test sends a fiscal command.
+
+
+## Follow-up — central category/VAT mapping correction (2026-10-02)
+
+- User clarified that the intended rule is automatic mapping from product **category** to the correct VAT/cash-register department. A VAT percentage alone is insufficient because multiple register departments share the same rate.
+- PR #1635: https://github.com/xrhstosmanis-design/myworkstation-app/pull/1635. Adds company-scoped category → VAT-department mapping in the management VAT panel; POS uses the mapped category department for fiscal dispatch, with existing product-level assignment as fallback.
+- Mapping validation rejects categories containing products whose VAT rate differs from the selected VAT department. It never changes product VAT rates. This is a deliberate fail-closed guard; split mixed-rate products into appropriate categories before mapping.
+- CI #4117 is **in progress** on head `11952b03da564ec97bbb0510ba05a953168a2109`. PR is open and not merged; not deployed or active at KAT. No live category assignments have been written.
+- After CI passes: merge/deploy, verify exact Render revision, configure the beverage category against the confirmed Kiosk VAT department, verify the Coca-Cola item resolves to that department and correct 13% rate, then do a controlled one-time cash receipt test only after reconciling the prior €1.20 attempt. Never retry while the result is uncertain.
