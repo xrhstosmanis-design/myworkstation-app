@@ -1,3 +1,7 @@
+## Authoritative installation guide (03 October 2026)
+
+Read [the Greek technician manual](../../docs/manual/pilot-installation/CAPDRIVER_TECHNICIAN.md) before a new installation. It distinguishes the observed KAT results from untested new-store acceptance and documents home preparation, pairing, mapping limits and mixed-payment blocking.
+
 # MyWorkStation RBS CAP Driver v1 writer
 
 This package targets the first/current CAP Driver file path. It does not read or
@@ -23,7 +27,7 @@ creating a request.
 | 228 | 14 | 24% | Είδη προστασίας περιβάλλοντος |
 | 63 | 21 | 0% | Είδη 0 |
 
-Cash uses payment code `6` and card uses payment code `2`, matching the
+KAT cash uses payment code `6`, counter card `2`, and standalone delayed card `3`. Delivery code3 is KAT-only; other-store Delivery mapping is not implemented. Mixed with a configured writer is blocked. Verify the new register before using 6/2, matching the
 provided Kiosk Manager capture. Do not add a VAT profile based only on rate;
 several categories share a rate but use different register departments.
 
@@ -37,8 +41,7 @@ several categories share a rate but use different register departments.
    user through the Windows PowerShell credential serialization mechanism.
 3. Confirm the CAP Driver v1 service is already configured to watch the
    approved work folder, then set `MWS_RBS_WORKFOLDER` to that exact folder.
-   The default is `C:\Capture`. The writer requires `Xcommand.txt` to be absent;
-   it never overwrites or removes it.
+   The default is `C:\Capture`. The writer creates request-specific `rbs.<requestId>.txt` files and never overwrites an existing request file. It does not clean unrelated legacy commands.
 4. Run `Test-Connection.ps1` first. It verifies the paired credential, the
    server heartbeat and the configured work-folder path without claiming a
    checkout request, marking the writer online or creating an `rbs.*.txt` file.
@@ -59,10 +62,6 @@ uncertain response requires checking the register/EFTPOS first. Never use a
 real customer sale as the first integration test.
 
 The POS treats the writer as online only after a real authenticated heartbeat
-within the last 15 seconds. A prepared request that remains unclaimed for more
-than 60 seconds is quarantined for manual review and is never dispatched later
-when the writer restarts.
+within the last 15 seconds. Prepared requests remain claimable until actually claimed; do not assume a 60-second expiry prevents dispatch after a restart.
 
-This package has not been run on the target Windows PC or against a physical
-register. Install/pair/run only during the owner-led controlled acceptance
-session after CI and code review pass.
+The KAT owner physically verified counter CARD and delayed CARD with receipts on 03 October 2026. These scoped results do not certify another Windows PC/register/store. Each new installation requires controlled acceptance after mapping and revision checks.
