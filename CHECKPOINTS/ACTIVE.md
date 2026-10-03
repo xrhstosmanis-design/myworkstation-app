@@ -1,3 +1,7 @@
+## 03/10/2026 — Startup regclass cleanup · AWAITING CI
+
+- After runtime reconciliation fix became LIVE, remaining regclass log errors were isolated to startup/repair helpers: online-transaction-actor-fix, repair-kat009-duplicate-sale and kat-online-ordering-bootstrap. All their to_regclass probes now cast to TEXT. These errors were startup maintenance paths, but production must be clean before next fiscal retest.
+
 ## 03/10/2026 — Runtime store-transactions regclass · AWAITING CI
 
 - Root cause of the post-deploy recurrence found: the previous patch script was corrected, but the generated runtime file server/src/routes/store-transactions.js still contained the uncased OnlineOrder to_regclass query. Runtime route now casts to TEXT directly. No physical retest until CI + exact deploy + clean logs.
