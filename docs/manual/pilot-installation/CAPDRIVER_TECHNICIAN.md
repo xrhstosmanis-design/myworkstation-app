@@ -1,6 +1,8 @@
 # MyWorkStation - Manual τεχνικού RBS CAPDriver
 
-Έκδοση 03/10/2026. Εγκατάσταση Διαδόχου Παύλου: 04/10/2026. Οδηγός προετοιμασίας και επιτόπιας αποδοχής, όχι γενικό PASS όλων των εγκαταστάσεων. Ο οδηγός Installation Center και η υποστήριξη ενός EFTPOS δημοσιεύθηκαν με PR #1676 / `45d6f92983163a57484b87ec7565fb5e4fcefb69`, CI #4210 PASS, Render LIVE 03/10 18:56:44 Ελλάδας. Οι νεότερες ρυθμίσεις ανά POS και το έτοιμο πακέτο Windows περιγράφονται παρακάτω· η φυσική εγκατάσταση Διαδόχου παραμένει NOT TESTED.
+Έκδοση 03/10/2026. Εγκατάσταση Διαδόχου Παύλου: 04/10/2026. Οδηγός προετοιμασίας και επιτόπιας αποδοχής, όχι γενικό PASS όλων των εγκαταστάσεων. Νεότερη έκδοση εφαρμογής: PR #1677, commit `1eaec42837cf916ea3d42b0fb4dd38fc460d9925`, CI #4212 και main #4213 PASS, Render LIVE 03/10/2026 19:16:17 Ελλάδας. Περιλαμβάνει τον οδηγό και το ένα EFTPOS του PR #1676, ρυθμίσεις ανά POS και έτοιμο πακέτο Windows. Η φυσική εγκατάσταση Διαδόχου παραμένει NOT TESTED.
+
+PDF: [Γενικό manual τεχνικού](CAPDRIVER_TECHNICIAN.pdf) · [Οδηγός Διαδόχου Παύλου με φύλλο παράδοσης](DIADOCHOU_INSTALLATION.pdf).
 
 ## 1. Τι συνδέουμε
 
@@ -111,4 +113,4 @@ Log: `%LOCALAPPDATA%\MyWorkStation\RbsCapDriverV1\writer.log`. Credential στο
 
 ## 9. Πηγές και κοινό σημείο αναφοράς
 
-Scripts: `tools/windows-rbs-capdriver-v1/`. Checkpoints: `2026-10-02-rbs-capdriver-pairing-ui.md`, `2026-10-03-rbs-delayed-card-gate.md`, `2026-10-03-rbs-delivery-payment-code.md`, `2026-10-03-rbs-mixed-payment-safety.md`. Το νεότερο αποτέλεσμα υπερισχύει των παλιών AWAITING. PR #1671 recovery, #1672 delayed gate, #1673 KAT code3, #1674 mixed safety. Οι νέες σελίδες διαβάζουν αυτόν τον οδηγό, την ενεργή λίστα και το pending roadmap πριν αλλάξουν ρυθμίσεις ή εκτελέσουν συναλλαγή.
+Scripts: `tools/windows-rbs-capdriver-v1/`. Checkpoints: `2026-10-02-rbs-capdriver-pairing-ui.md`, `2026-10-03-rbs-delayed-card-gate.md`, `2026-10-03-rbs-delivery-payment-code.md`, `2026-10-03-rbs-mixed-payment-safety.md`. Το νεότερο αποτέλεσμα υπερισχύει των παλιών AWAITING. PR #1671 recovery, #1672 delayed gate, #1673 KAT code3, #1674 mixed safety, #1676 installation guide, #1677 CAP settings / Windows package. Οι νέες σελίδες διαβάζουν αυτόν τον οδηγό, την ενεργή λίστα και το pending roadmap πριν αλλάξουν ρυθμίσεις ή εκτελέσουν συναλλαγή.

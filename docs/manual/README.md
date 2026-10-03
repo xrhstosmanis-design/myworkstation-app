@@ -47,3 +47,10 @@
 ## Γενικός οδηγός τεχνικού CAPDriver
 
 - [Εγκατάσταση, προετοιμασία από σπίτι και φυσική αποδοχή](pilot-installation/CAPDRIVER_TECHNICIAN.md). Οδηγός με συγκεκριμένα όρια, όχι γενικό PASS νέου καταστήματος.
+
+## PDF εγκατάστασης RBS CAPDriver - 03/10/2026
+
+- [Γενικό manual τεχνικού - νέα ροή Installation Center](pilot-installation/CAPDRIVER_TECHNICIAN.pdf)
+- [Διαδόχου Παύλου - αναλυτικά βήματα και φύλλο παράδοσης](pilot-installation/DIADOCHOU_INSTALLATION.pdf)
+
+Βάση PR #1677, CI/main PASS και exact Render LIVE· φυσική αποδοχή Διαδόχου NOT TESTED. Ένα POS / μία RBS / ένα STORE EFTPOS, όχι Delivery.
