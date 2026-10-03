@@ -2136,3 +2136,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Server-finalized RBS CASH must post to shift ledger
 
 - Fresh post-finalizer test succeeded fiscally and in Sale: request f6da179b-1c7f-4123-9688-287c851d217d became SALE_COMMITTED with sale ec026570-7188-48c5-a38b-091b9a88781f, 7UP €1.20, fiscalStatus ISSUED. User observed it missing from Shift Transactions and shift totals. Root cause: server finalizer created Sale/SaleLine only, bypassing normal checkout Payment + StoreTransaction entries. Finalizer now requires the open shift for the request terminal, writes Payment CASH and StoreTransaction SALE_CASH in the same DB transaction, then marks SALE_COMMITTED.
+
+
+## 03/10/2026 — KAT Ταμειακή 2 CARD route choice
+
+- CASH RBS flow is PASS and must remain unchanged. CARD on the currently tested Ταμειακή 2 now opens an explicit choice before checkout: POS ΚΑΤΑΣΤΗΜΑΤΟΣ · ΑΜΕΣΗ -> operationChannel COUNTER / STORE routing, or POS DELIVERY · ΕΤΕΡΟΧΡΟΝΙΣΜΕΝΗ -> operationChannel DELIVERY_DELAYED / DELIVERY routing. The selection is embedded in the checkout payload before any fiscal command is created. This reuses the existing main routing model instead of adding parallel device logic.
