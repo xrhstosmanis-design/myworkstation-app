@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-07 Inventory 2.0 unknown barcode · AWAITING CI
+
+- Mobile/tablet unknown barcode now offers attach-to-existing or new-product path with large touch UI. Existing-product search is company/store scoped; duplicate barcode ownership is blocked. Inventory return context is preserved for new-product continuation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-inventory-unknown-barcode.md`.
+
 ## 03/10/2026 — TODAY-06 Excel / Barcode UI · AWAITING CI
 
 - Καθαρός διαχωρισμός Barcode και Excel, μεγάλα ευδιάκριτα controls, scanner/touch-first barcode input και εμφανές Excel upload. Business logic αμετάβλητο.
