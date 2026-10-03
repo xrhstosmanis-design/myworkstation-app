@@ -69,8 +69,8 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: smaller module cards arranged across left/center/right instead of one long vertical row. Use available width. Remove the redundant POS module button from this section.
 
 ### TODAY-09 — Owner store page simplification
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1687, CI #4244 PASS, merged 1aef052d
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: on initial load show ONLY these two expanded panels:
 1. Shift Center (Κέντρο Βαρδιών)
 2. Owner / Manager Payments (Πληρωμές Ιδιοκτήτη / Διαχειριστή)
