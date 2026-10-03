@@ -2131,3 +2131,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Clear second pre-finalizer RBS request
 
 - Before the new server-side CASH finalizer was deployed, physical test request ab2e2a5a-127b-442d-97c9-8d739b1adf8c printed successfully but remained DISPATCHED / saleId NULL. Retargeted the existing exact guarded one-time cleanup to this request so the POS can be reset before testing the new server-side finalizer. Cleanup remains constrained to KAT-POS-02 / CASH / €1.20 / DISPATCHED / saleId NULL and never sends a fiscal command.
+
+
+## 03/10/2026 — Server-finalized RBS CASH must post to shift ledger
+
+- Fresh post-finalizer test succeeded fiscally and in Sale: request f6da179b-1c7f-4123-9688-287c851d217d became SALE_COMMITTED with sale ec026570-7188-48c5-a38b-091b9a88781f, 7UP €1.20, fiscalStatus ISSUED. User observed it missing from Shift Transactions and shift totals. Root cause: server finalizer created Sale/SaleLine only, bypassing normal checkout Payment + StoreTransaction entries. Finalizer now requires the open shift for the request terminal, writes Payment CASH and StoreTransaction SALE_CASH in the same DB transaction, then marks SALE_COMMITTED.
