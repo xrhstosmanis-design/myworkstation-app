@@ -2096,3 +2096,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — RBS Writer claim race root cause
 
 - Controlled cash checkout now creates a pending fiscal request, but C:\\capture remains empty. Root cause found in /device/rbs-capdriver-v1/next: every Writer poll first moved PREPARED requests older than 60s to REQUIRES_CHECK before selecting a request. With Render/free-instance latency or delayed polling, a valid pending request could therefore become permanently unclaimable while Writer heartbeat remained ONLINE. Removed this pre-claim expiry mutation; PREPARED requests remain claimable until the Writer actually claims them. No fiscal command/mapping change. Await CI/exact deploy before physical retry.
+
+
+## 03/10/2026 — Recover already-issued RBS cash receipt
+
+- User confirmed the pending 7UP €1.20 cash transaction physically printed a receipt. POS refresh restores the pending request, proving fiscal dispatch occurred but sale commit/UI cleanup did not finish. Recovery now treats a CASH request already in DISPATCHED as COMMITTING and automatically resumes checkout using the same fiscalRequestId/clientTransactionId and saved checkout snapshot. It does not resend the fiscal command. Goal: commit the already-issued sale once, clear the cart, and return POS to next transaction.
