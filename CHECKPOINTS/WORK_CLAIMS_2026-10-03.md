@@ -41,12 +41,13 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: implement the approved visual direction for Master Catalog / store prices / mass price changes / offers / Excel-Barcode / inventory. Larger buttons and inputs, cleaner cards, less clutter, touch-friendly. Preserve existing functionality.
 
 ### TODAY-04 — Mass price change UI
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1682, CI #4229 PASS, merged 68ce0f7e
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner step flow: product selection -> stores -> price action -> preview -> apply.
 
 ### TODAY-05 — Offers UI
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner layout with product search, offer settings, dates, stores and clear preview/info.
 
 ### TODAY-06 — Excel / Barcode UI
