@@ -41,10 +41,10 @@ several categories share a rate but use different register departments.
    it never overwrites or removes it.
 4. Run `Test-Connection.ps1` first. It verifies the paired credential, the
    server heartbeat and the configured work-folder path without claiming a
-   checkout request, marking the writer online or creating `Xcommand.txt`.
+   checkout request, marking the writer online or creating an `rbs.*.txt` file.
 5. Run `Writer.ps1` under the paired Windows user. Keep it running while POS
    requests are expected. It claims each request once, checks the Windows-1253
-   bytes against the server hash, then creates `Xcommand.txt` atomically. The
+   bytes against the server hash, then creates one request-specific `rbs.*.txt` atomically. The
    durable diagnostic log is stored under
    `%LOCALAPPDATA%\MyWorkStation\RbsCapDriverV1\writer.log` by default. Only
    the running writer's real polling changes the BackOffice indicator to
