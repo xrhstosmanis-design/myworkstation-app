@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {TextDecoder} from "node:util";
 import {readFile} from "node:fs/promises";
-import {buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
+import {resolveRbsCapDriverV1PaymentCode,buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
 
 const [cloudRoute,posRoute,posUi,cloudUi]=await Promise.all([
   readFile(new URL("../src/routes/cloud-v1.js",import.meta.url),"utf8"),
@@ -106,4 +106,17 @@ test("prepared requests remain claimable until the writer actually claims them",
   assert.doesNotMatch(cloudRoute,/"status"='PREPARED' AND "createdAt"<NOW\(\)-INTERVAL '60 seconds'/);
   assert.match(cloudRoute,/AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED/);
   assert.match(cloudRoute,/SET "status"='CLAIMED'/);
+});
+
+
+test("KAT delivery uses confirmed payment code3 while counter CARD2 and CASH6 stay unchanged",()=>{
+  for(const [paymentMethod,operationChannel,expected] of [["CARD","DELIVERY_DELAYED","3"],["CARD","COUNTER","2"],["CASH","COUNTER","6"]]){
+    const paymentCode=resolveRbsCapDriverV1PaymentCode({storeId:"kat-store",paymentMethod,operationChannel});
+    assert.equal(paymentCode,expected);
+    const command=buildRbsCapDriverV1Command({items:[item],paymentMethod,paymentCode,total:0.5});
+    assert.ok(command.text.includes(`CR/${expected}/0.50/`));
+    assert.equal((command.text.match(/\r\nCR\//g)||[]).length,1);
+  }
+  assert.throws(()=>resolveRbsCapDriverV1PaymentCode({storeId:"other-store",paymentMethod:"CARD",operationChannel:"DELIVERY_DELAYED"}),/επιβεβαιωθεί/);
+  assert.match(posRoute,/paymentCode:resolveRbsCapDriverV1PaymentCode\(\{storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel\}\)/);
 });
