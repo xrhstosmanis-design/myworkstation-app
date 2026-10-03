@@ -2071,3 +2071,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Startup regclass cleanup
 
 - Remaining startup regclass probes found in online transaction actor repair, KAT-009 duplicate repair and online-ordering actor protection; all cast to TEXT. Await green CI + exact deploy + clean logs before RBS physical retest.
+
+
+## 03/10/2026 — RBS itemSummary runtime blocker
+
+- After regclass cleanup, controlled checkout exposed ReferenceError itemSummary before initialization in store-pos.js before Writer claim. Snapshot construction corrected; await CI/exact deploy/log verification before physical retry.
