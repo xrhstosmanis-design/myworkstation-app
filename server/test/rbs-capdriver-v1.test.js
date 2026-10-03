@@ -120,3 +120,17 @@ test("KAT delivery uses confirmed payment code3 while counter CARD2 and CASH6 st
   assert.throws(()=>resolveRbsCapDriverV1PaymentCode({storeId:"other-store",paymentMethod:"CARD",operationChannel:"DELIVERY_DELAYED"}),/επιβεβαιωθεί/);
   assert.match(posRoute,/paymentCode:resolveRbsCapDriverV1PaymentCode\(\{storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel\}\)/);
 });
+
+ test("configured CAP writer blocks mixed checkout before any transaction even with a supplied fiscal id",()=>{
+  const expression=posRoute.match(/const capDriverV1UnsupportedMixed=([^;]+);/)[1];
+  const applies=new Function("body",`return (${expression});`);
+  for(const operationChannel of ["COUNTER","DELIVERY_DELAYED"])for(const fiscalRequestId of [undefined,"foreign-request"]){
+    assert.equal(applies({paymentMethod:"MIXED",operationChannel,fiscalRequestId}),true);
+  }
+  for(const paymentMethod of ["CASH","CARD","IRIS","CREDIT"])assert.equal(applies({paymentMethod}),false);
+  for(const linkage of [{onlineOrderId:"online"},{tableOrderId:"table"}])assert.equal(applies({paymentMethod:"MIXED",...linkage}),false);
+  assert.match(posRoute,/const capDriverV1State=\(capDriverV1UnsupportedMixed\|\|/);
+  assert.match(posRoute,/if\(capDriverV1UnsupportedMixed&&capDriverV1State\?\.configured\)/);
+  const guard=posRoute.indexOf("RBS_CAPDRIVER_V1_MIXED_UNSUPPORTED"),transaction=posRoute.indexOf("const txResult=await prisma.$transaction");
+  assert.ok(guard>0&&guard<transaction);
+ });
