@@ -1,3 +1,10 @@
+## 03/10/2026 — TODAY-01 Larger card-terminal selector · AWAITING CI
+
+- Εργασία αναλήφθηκε από την τρέχουσα σελίδα βάσει του κεντρικού WORK_CLAIMS board.
+- Το παράθυρο επιλογής EFTPOS έγινε μεγαλύτερο, με δύο μεγάλα touch-friendly κουμπιά και responsive mobile διάταξη.
+- Δεν άλλαξε RBS/CAPDriver/payment routing.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-card-terminal-picker-large-ui.md`.
+
 ## 03/10/2026 — Δημοσίευση CAP εγκατάστασης / ASSIGNED ίδια σελίδα
 
 PR #1677 / 1eaec42837cf916ea3d42b0fb4dd38fc460d9925: CI #4212 PASS (Windows smoke + isolated HTTP), main #4213 PASS, Render dep-db0ij70u01pc73ahoei0 LIVE 16:16:17Z. Δημοσιεύονται νέο γενικό PDF 5σελίδων και Διαδόχου 6σελίδων με φύλλο παράδοσης· source/manual/index συγχρονισμένα. Ρυθμίσεις CAP ανά POS και token-free πακέτο είναι υλοποιημένα, όχι physical PASS.

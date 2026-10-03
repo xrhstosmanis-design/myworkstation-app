@@ -23,3 +23,70 @@
 .store-pos-alert.store-pos-toast{position:fixed;top:100px;left:12px;z-index:4500;display:flex;align-items:flex-start;gap:8px;width:max-content;max-width:min(560px,calc(100vw - 24px));box-sizing:border-box;margin:0;padding:8px 10px;font-size:14px;line-height:1.4;border:1px solid #b5dcc9;box-shadow:0 4px 16px #173e3626}
 .store-pos-toast>span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .store-pos-toast>button{flex:none;width:32px;height:32px;padding:0;border:0;border-radius:6px;background:#ffffffa6;color:inherit;font-size:20px;cursor:pointer}
+
+
+/* 03/10/2026 — card terminal picker: large, clear and touch-friendly. */
+.pos-card-terminal-picker>section{
+  width:min(920px,96vw);
+  max-height:92vh;
+}
+.pos-card-terminal-picker>section>header{
+  padding:24px 28px;
+}
+.pos-card-terminal-picker>section>header h2{
+  font-size:30px;
+  line-height:1.15;
+}
+.pos-card-terminal-picker>section>header p{
+  font-size:17px;
+  margin-top:8px;
+}
+.pos-card-terminal-picker .pos-price-body{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px!important;
+  padding:28px;
+}
+.pos-card-terminal-picker .pos-price-body>button{
+  min-height:150px;
+  border:2px solid #c8d8d3;
+  border-radius:18px;
+  background:#fff;
+  color:#173e34;
+  padding:22px;
+  font-size:21px;
+  font-weight:900;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  cursor:pointer;
+  box-shadow:0 8px 22px #173e3414;
+}
+.pos-card-terminal-picker .pos-price-body>button strong{
+  font-size:24px;
+}
+.pos-card-terminal-picker .pos-price-body>button span{
+  font-size:17px;
+  font-weight:800;
+}
+.pos-card-terminal-picker .pos-price-body>button:hover,
+.pos-card-terminal-picker .pos-price-body>button:focus{
+  border-color:var(--pos-accent);
+  background:#eff8f4;
+}
+.pos-card-terminal-picker .pos-price-body>.pos-primary-inline{
+  background:var(--pos-accent);
+  color:#fff;
+  border-color:var(--pos-accent);
+}
+.pos-card-terminal-picker .pos-price-body>.pos-primary-inline:hover,
+.pos-card-terminal-picker .pos-price-body>.pos-primary-inline:focus{
+  background:var(--pos-accent);
+  filter:brightness(.96);
+}
+@media(max-width:700px){
+  .pos-card-terminal-picker .pos-price-body{grid-template-columns:1fr;padding:18px}
+  .pos-card-terminal-picker .pos-price-body>button{min-height:118px}
+  .pos-card-terminal-picker>section>header h2{font-size:25px}
+}
