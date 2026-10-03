@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
 export async function finalizeDispatchedCashRequest(requestId){
