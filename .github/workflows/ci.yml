@@ -226,4 +226,5 @@ jobs:
           run_flow server/e2e/workforce-v2-employees-roles-preview-flow.mjs
           run_flow server/e2e/workforce-v2-rules-shift-templates-flow.mjs
           run_flow server/e2e/workforce-v2-schedules-flow.mjs
+          run_flow server/e2e/rbs-installation-settings-flow.mjs
           cat /tmp/myworkstation-e2e-server.log

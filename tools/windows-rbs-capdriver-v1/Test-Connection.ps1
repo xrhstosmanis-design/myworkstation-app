@@ -1,7 +1,8 @@
 param(
   [string]$ApiBase = $env:MWS_RBS_API_BASE,
   [string]$DeviceToken = $env:MWS_RBS_DEVICE_TOKEN,
-  [string]$WorkFolder = $env:MWS_RBS_WORKFOLDER
+  [string]$WorkFolder = $env:MWS_RBS_WORKFOLDER,
+  [string]$ExpectedStoreId
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,7 @@ if (-not (Test-Path -LiteralPath $WorkFolder -PathType Container)) { throw "CAP 
 $headers = @{ Authorization = "Bearer $DeviceToken" }
 $result = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/cloud/v1/device/rbs-capdriver-v1/status" -Headers $headers -ContentType 'application/json' -Body '{}'
 if (-not $result.connectionOk -or $result.writerOnline -or $result.claimsRequest) { throw 'MyWorkStation did not confirm the safe Writer connection check.' }
+if ($ExpectedStoreId -and [string]$result.storeId -ne $ExpectedStoreId) { throw 'The saved Windows credential belongs to another store. Pair with the correct store before starting Writer.' }
 
 Write-Host 'PASS: Writer authentication and server connection are valid.'
 Write-Host "PASS: CAP Driver work folder exists: $WorkFolder"
