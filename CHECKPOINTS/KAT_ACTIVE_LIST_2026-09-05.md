@@ -1,3 +1,8 @@
+## 03/10/2026 — Verified production Archive legibility · AWAITING CI
+
+- Screenshot-matched production screen uses inventory-archive.css. Increased actual Archive header/row/filter/action typography and touch targets; widened table columns to prevent cramped 10–11px rendering.
+- Visual PASS requires user confirmation after LIVE deploy.
+
 ## 03/10/2026 — Production UI route verification / visible legibility fix · AWAITING CI
 
 - Verified real path: entry.jsx → CommerceLauncher → KioskStyleProductCenterWithStock → KioskStyleProductCenter → OwnerProductCenter for opening full product workspace.
