@@ -51,12 +51,13 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner layout with product search, offer settings, dates, stores and clear preview/info.
 
 ### TODAY-06 — Excel / Barcode UI
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1684, CI #4235 PASS, merged d957d10f
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner split between Barcode offer flow and Excel import, with large scanner/touch-friendly controls.
 
 ### TODAY-07 — Inventory 2.0 mobile/tablet + unknown barcode
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: make inventory cleaner/mobile/tablet friendly. When scanned barcode is unknown, offer:
 A) attach barcode to an existing product, or
 B) create a new product.
