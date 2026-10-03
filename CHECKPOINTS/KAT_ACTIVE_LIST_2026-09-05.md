@@ -2106,3 +2106,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — RBS recovery cart state race
 
 - Already-issued 7UP €1.20 CASH receipt remained in COMMITTING after refresh. Root cause: recovery called setCart(recovered) and immediately invoked checkout; React state had not committed, so checkout saw the previous empty cart and returned before the continuation request. Recovery now passes the reconstructed cart directly to continuation checkout and schedules the call after the recovery callback. Same fiscalRequestId/clientTransactionId; no fiscal resend.
+
+
+## 03/10/2026 — Normalize already-issued RBS recovery payload
+
+- Recovery now reaches continuation but UI reports product/payment validation. The saved request checkout view can contain enriched resolved-item fields and did not explicitly reassert paymentMethod in the continuation payload. Recovery now constructs a strict checkoutSchema-compatible payload: original productId/quantity/barcode/manual price fields only, plus paymentMethod from the persisted fiscal request. Same requestId/clientTransactionId; no fiscal resend.
