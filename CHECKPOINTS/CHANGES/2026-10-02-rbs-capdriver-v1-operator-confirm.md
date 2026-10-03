@@ -210,3 +210,16 @@ identified low-value physical test with a fresh measured baseline.
 - Το κεντρικό bulk assignment επικυρώνει ότι το υφιστάμενο `Product.vatRate` συμφωνεί με το VAT department. Ασυμφωνία επιστρέφει 409 και δεν αλλάζει προϊόντα. Επιτυχής αλλαγή ενημερώνει μόνο `Product.vatDepartmentId`, διατηρεί `vatRate` και επιστρέφει `vatRatesChanged: 0`.
 - PR #1642 merged στο `main` ως `511c72c92da7ddddafbe9ce2032301ece730e9bc` και CI #4131 PASS. Το Render deploy `dep-db011du0tbcc73fo5pr0` επιβεβαιώθηκε `live`. Νεότερο deploy για descendant commit `eb7e71db606fe3dea112a2e600cb1d69e1608a91` βρίσκεται σε εξέλιξη και περιλαμβάνει το merge. Δεν έχουν γίνει live product edits ή αλλαγές σε KAT/Kiosk Manager/RBS/CAP Driver/EFTPOS/Windows.
 - Η προηγούμενη συναλλαγή €1,20 παραμένει αδιευκρίνιστη/προς συμφωνία. Καμία νέα χρέωση, επανάληψη εντολής ή εκτύπωση μέχρι να συμφωνηθεί η κατάστασή της.
+
+
+## KAT protocol evidence — 2026-10-03
+
+Status: **IMPLEMENTATION UPDATED / AWAITING CI + EXACT DEPLOY + PHYSICAL ACCEPTANCE**.
+
+- On-site read-only inspection confirmed the installed AURORA/CAP Driver path uses TCP to `192.168.1.244`, code page 1253 and work folder `C:\\capture`. Kiosk Manager shows both the existing `RBS (CapDriver)` and the newer RBS profile pointing at `C:\\capture`; no Kiosk/RBS/CAP/EFTPOS setting was changed.
+- The supplied CAP Driver grammar confirms sale lines as `SL/name/barcode/qty/price/department/vat` and payment close as `CR/payment-code/amount/label`; department VAT must match the register department configuration.
+- Read-only inspection of the installed Kiosk Manager fiscal component copy (`Sabin.Fiscal.dll`) exposed the RBS command-file naming pattern `rbs.{...}.txt`. This is diagnostic evidence only; no vendor binary is copied into MyWorkStation and no reverse-engineered implementation is embedded.
+- The previous writer used the speculative fixed name `Xcommand.txt`. This branch changes only local command delivery naming to one request-specific `rbs.<safe-request-id>.txt`, written atomically in the already configured work folder. Existing-file collision fails closed as `UNCERTAIN`; no overwrite, delete, replay or automatic resend is allowed.
+- The existing €1.20 Coca-Cola attempt remains unresolved and MUST NOT be retried, resent or reprinted. Before any new physical test, reconcile it read-only and capture the mandatory fresh baseline.
+
+Owner/branch handoff: CAP Driver scope continues on `agent/rbs-capdriver-kiosk-file-20261003`. PC1 production configuration remains unchanged.
