@@ -339,7 +339,7 @@ async function notifyLedgerAlert({companyId,store,kind,transaction,actorName,rea
 async function reconcileOnlineSalesForOpenSession({store,companyId,openSession}){
   if(!openSession)return;
   try{
-    const exists=await prisma.$queryRawUnsafe(`SELECT to_regclass('"OnlineOrder"') AS "tableName"`);
+    const exists=await prisma.$queryRawUnsafe(`SELECT CAST(to_regclass('"OnlineOrder"') AS TEXT) AS "tableName"`);
     if(!exists?.[0]?.tableName)return;
     await prisma.$transaction(async tx=>{
       await tx.$executeRaw`

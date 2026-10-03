@@ -2061,3 +2061,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Remaining online reconciliation regclass
 
 - Exact deploy 88def886 did not eliminate all regclass errors. Production logs tied the remaining failure to Online shift reconciliation / OnlineOrder existence probe. Branch fix/all-regclass-runtime-20261003 casts that probe to TEXT. No further physical sale until CI/deploy verification.
+
+
+## 03/10/2026 — Runtime route regclass correction
+
+- Remaining production regclass was in server/src/routes/store-transactions.js itself; correcting only the patch generator did not alter the already-generated runtime route. Runtime query now casts OnlineOrder to_regclass to TEXT. Await CI/exact deploy/log verification before physical retest.
