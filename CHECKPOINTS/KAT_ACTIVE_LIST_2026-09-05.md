@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-02 VAT Department product editing · AWAITING CI
+
+- Από «Είδη τμήματος ΦΠΑ» το μολύβι ανοίγει επεξεργασία της πραγματικής καρτέλας προϊόντος και μετά την αποθήκευση επιστρέφει στην ίδια σελίδα/τμήμα. Δεν αλλάζει αυτόματα το VAT department από category.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-vat-department-product-edit.md`.
+
 ## 03/10/2026 — TODAY-01 Larger card-terminal selector · AWAITING CI
 
 - Εργασία αναλήφθηκε από την τρέχουσα σελίδα βάσει του κεντρικού WORK_CLAIMS board.
