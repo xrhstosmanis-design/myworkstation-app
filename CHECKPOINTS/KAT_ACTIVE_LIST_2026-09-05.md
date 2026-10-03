@@ -2126,3 +2126,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Move RBS CASH finalization server-side
 
 - Clean physical test request ab2e2a5a-127b-442d-97c9-8d739b1adf8c printed successfully and remained DISPATCHED/saleId NULL despite client polling. Permanent direction: CASH finalization is now triggered server-side immediately after the authenticated Writer reports WRITTEN -> DISPATCHED. The finalizer locks the same request, is idempotent by clientTransactionId, creates the sale/lines from the immutable saved checkout snapshot, marks fiscalStatus ISSUED, then marks the request SALE_COMMITTED. No browser timing dependency and no fiscal resend.
+
+
+## 03/10/2026 — Clear second pre-finalizer RBS request
+
+- Before the new server-side CASH finalizer was deployed, physical test request ab2e2a5a-127b-442d-97c9-8d739b1adf8c printed successfully but remained DISPATCHED / saleId NULL. Retargeted the existing exact guarded one-time cleanup to this request so the POS can be reset before testing the new server-side finalizer. Cleanup remains constrained to KAT-POS-02 / CASH / €1.20 / DISPATCHED / saleId NULL and never sends a fiscal command.

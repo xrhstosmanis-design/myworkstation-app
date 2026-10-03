@@ -1,6 +1,6 @@
 import {prisma} from "./prisma.js";
 
-const TARGET_REQUEST_ID="c9c6aa5a-5dc3-4fc7-8b29-0728081952ca";
+const TARGET_REQUEST_ID="ab2e2a5a-127b-442d-97c9-8d739b1adf8c";
 
 export async function clearKatStuckRbsRequest(){
   try{
