@@ -39,6 +39,7 @@ export default function StoreCloudPage({api,store,onBack}){
   const [pairingError,setPairingError]=useState("");
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
+  const [toolOpen,setToolOpen]=useState("");
 
   const createPairingCode=async()=>{
     if(pairing&&Date.parse(pairing.expiresAt)>Date.now()&&!window.confirm("Θα ακυρωθεί ο προηγούμενος κωδικός, αν δεν έχει ήδη χρησιμοποιηθεί. Να δημιουργηθεί νέος;"))return;
@@ -138,7 +139,15 @@ export default function StoreCloudPage({api,store,onBack}){
       </div>
     </div>
 
-    <section aria-label="Σύνδεση RBS CAP Driver" style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,margin:"0 0 18px",boxShadow:"0 8px 24px rgba(15,23,42,.05)"}}>
+    <section className="owner-store-tools" aria-label="Πρόσθετες λειτουργίες">
+      <h3>Πρόσθετες λειτουργίες</h3>
+      <div className="owner-store-tool-grid">
+        <button type="button" className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
+        <button type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/><b>Εμπορική λειτουργία</b><span>Προϊόντα, αποθήκη, modules</span></button>
+        <button type="button" className={toolOpen==="transactions"?"active":""} onClick={()=>setToolOpen(v=>v==="transactions"?"":"transactions")}><RefreshCw/><b>Συναλλαγές</b><span>Αναλυτικές κινήσεις καταστήματος</span></button>
+      </div>
+    </section>
+    {toolOpen==="rbs"&&<section aria-label="Σύνδεση RBS CAP Driver" style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,margin:"0 0 18px",boxShadow:"0 8px 24px rgba(15,23,42,.05)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <KeyRound aria-hidden="true" size={20}/>
         <h3 style={{margin:0}}>Σύνδεση RBS CAP Driver v1</h3>
@@ -159,18 +168,16 @@ export default function StoreCloudPage({api,store,onBack}){
         <a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:8,color:"#0369a1",fontWeight:700}}>Οδηγίες και αρχεία Pair.ps1 / Test-Connection.ps1 / Writer.ps1</a>
       </div>}
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
-    </section>
+    </section>}
 
-    <div id="backoffice-transactions" className="backoffice-anchor">
-      <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>
-    </div>
+
+    {toolOpen==="transactions"&&<div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>}
     <div id="backoffice-cash" className="backoffice-anchor">
       <CashControlPanel key={`cash-${version}`} api={api} store={store}/>
     </div>
     <div className="store-operations-actions">
-      <BarcodeRadioManagement api={api} store={store}/>
+      <div className="owner-store-secondary-actions"><BarcodeRadioManagement api={api} store={store}/><OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/></div>
       <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
-      <OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/>
     </div>
   </section>;
 }
