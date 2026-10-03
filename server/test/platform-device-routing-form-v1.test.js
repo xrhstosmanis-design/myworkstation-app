@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {deviceRoutingFormValues} from "../../client/src/components/platform/device-routing-form.js";
+import {deviceRoutingFormValues,buildDeviceRoutingUpdate} from "../../client/src/components/platform/device-routing-form.js";
 
 const platformUi=await readFile(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
 
@@ -56,4 +56,22 @@ test("Platform Admin binds the terminal selector to stored routing values",()=>{
   assert.match(platformUi,/defaultValue=\{routingFormValues\.storeEftposCode\}/);
   assert.match(platformUi,/defaultValue=\{routingFormValues\.deliveryEftposCode\}/);
   assert.match(platformUi,/Φορτώθηκε το αποθηκευμένο mapping του/);
+});
+
+const single={terminalPos:"DIADOXOU-POS-01",fiscalDeviceCode:"DIADOXOU-RBS-01",fiscalDisplayName:"RBS καταστήματος",storeEftposCode:"DIADOXOU-EFTPOS-01",storeEftposName:"EFTPOS καταστήματος",deliveryEftposCode:"",deliveryEftposName:""};
+test("single EFTPOS installation is complete without a phantom Delivery device",()=>{
+ const saved=buildDeviceRoutingUpdate({fiscalDevices:[],eftposDevices:[]},single);
+ assert.equal(saved.fiscalDevices.length,1);assert.equal(saved.eftposDevices.length,1);
+ assert.equal(saved.eftposDevices[0].role,"STORE");
+ assert.equal(deviceRoutingFormValues(saved,single.terminalPos).complete,true);
+ assert.equal(deviceRoutingFormValues(saved,single.terminalPos).deliveryEftposCode,"");
+});
+test("editing one installation preserves other terminal mappings and validates partial Delivery",()=>{
+ const result=buildDeviceRoutingUpdate(routing,{...single,terminalPos:"KAT-POS-02"});
+ assert.deepEqual(result.fiscalDevices.find(x=>x.terminalPos==="KAT-POS-01"),routing.fiscalDevices[0]);
+ assert.deepEqual(result.eftposDevices.filter(x=>x.fiscalDeviceCode==="KAT-FISCAL-01"),routing.eftposDevices.slice(0,2));
+ assert.equal(result.eftposDevices.some(x=>x.fiscalDeviceCode==="KAT-FISCAL-02"),false);
+ assert.throws(()=>buildDeviceRoutingUpdate(routing,{...single,deliveryEftposCode:"DELIVERY"}),/και όνομα/);
+ const both=buildDeviceRoutingUpdate({}, {...single,deliveryEftposCode:"DELIVERY",deliveryEftposName:"Delivery"});
+ assert.equal(both.eftposDevices.length,2);
 });

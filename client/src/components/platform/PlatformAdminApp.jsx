@@ -21,7 +21,7 @@ import AiCommandCenter from "./AiCommandCenter.jsx";
 import FiscalBridgeDryRunCenter from "./FiscalBridgeDryRunCenter.jsx";
 import StoreChatPanel from "../store/StoreChatPanel.jsx";
 import InternetProductSearchPanel from "../commerce/InternetProductSearchPanel.jsx";
-import {deviceRoutingFormValues} from "./device-routing-form.js";
+import {deviceRoutingFormValues,buildDeviceRoutingUpdate} from "./device-routing-form.js";
 import "./platform-admin.css";
 import "./backup-monitor.css";
 import "./platform-superadmin-inspection.css";
@@ -402,14 +402,8 @@ export default function PlatformAdminApp(){
   const inspectTerminal=async terminal=>{setBusy(`terminal-inspect:${terminal.id}`);setError("");try{const result=await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/installation-terminals/${terminal.id}/inspect`,{method:"POST",body:"{}"});window.open(`${window.location.origin}${result.inspectionPath}`,"_blank","noopener,noreferrer")}catch(err){setError(err.message)}finally{setBusy("")}};
   const saveTerminalDeviceRouting=async event=>{
     event.preventDefault();setBusy("device-routing");setError("");
-    const form=new FormData(event.currentTarget),terminalPos=String(form.get("terminalPos")||"").toUpperCase(),fiscalDeviceCode=String(form.get("fiscalDeviceCode")||"").toUpperCase();
-    const current=terminalManager.routing||{fiscalDevices:[],eftposDevices:[]};
-    const fiscalDevices=[...(current.fiscalDevices||[]).filter(row=>row.terminalPos!==terminalPos),{deviceCode:fiscalDeviceCode,displayName:form.get("fiscalDisplayName"),terminalPos,active:true}];
-    const retainedFiscalCodes=new Set(fiscalDevices.map(row=>row.deviceCode));
-    const eftposDevices=(current.eftposDevices||[]).filter(row=>retainedFiscalCodes.has(row.fiscalDeviceCode)&&row.fiscalDeviceCode!==fiscalDeviceCode);
-    eftposDevices.push({deviceCode:String(form.get("storeEftposCode")||"").toUpperCase(),displayName:form.get("storeEftposName"),fiscalDeviceCode,role:"STORE",active:true});
-    eftposDevices.push({deviceCode:String(form.get("deliveryEftposCode")||"").toUpperCase(),displayName:form.get("deliveryEftposName"),fiscalDeviceCode,role:"DELIVERY",active:true});
-    try{await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/device-routing`,{method:"PUT",body:JSON.stringify({fiscalDevices,eftposDevices})});await refreshTerminals();setRoutingTerminalPos(terminalPos);setMessage(`Αποθηκεύτηκε ασφαλές Fiscal/EFTPOS mapping για ${terminalPos}.`)}catch(err){setError(err.message)}finally{setBusy("")}
+    const values=Object.fromEntries(new FormData(event.currentTarget)),terminalPos=String(values.terminalPos||"").toUpperCase();
+    try{const mapping=buildDeviceRoutingUpdate(terminalManager.routing||{},values);await request(`/api/platform/companies/${terminalManager.company.id}/stores/${terminalManager.store.id}/device-routing`,{method:"PUT",body:JSON.stringify(mapping)});await refreshTerminals();setRoutingTerminalPos(terminalPos);setMessage(`Αποθηκεύτηκε η αντιστοίχιση ταμειακής / EFTPOS για ${terminalPos}.`)}catch(err){setError(err.message)}finally{setBusy("")}
   };
   const copyActivation=async()=>{try{await navigator.clipboard.writeText(terminalManager.activationUrl);setMessage(`Το link εγκατάστασης για ${terminalManager.activationTerminal} αντιγράφηκε.`)}catch{setError("Δεν ήταν δυνατή η αντιγραφή. Αντέγραψε χειροκίνητα το link.")}};
   const copyActivationNotice=async()=>{try{await navigator.clipboard.writeText(terminalActivationNotice.activationUrl);setMessage(`Το link εγκατάστασης για ${terminalActivationNotice.terminalPos} αντιγράφηκε.`)}catch{setError("Δεν ήταν δυνατή η αντιγραφή. Αντέγραψε χειροκίνητα το link.")}};
@@ -552,7 +546,7 @@ export default function PlatformAdminApp(){
     {readiness&&<button type="button" className="readiness-print-floating" onClick={()=>window.print()}><Printer/>Εκτύπωση ελέγχου</button>}
     {terminalManager&&terminalManager.terminals.length>0&&<div className="readiness-manager-floating terminal-routing-floating"><b>Έλεγχος Super Admin</b><select id="super-admin-inspection-terminal">{terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.id}>{row.terminalPos} · {row.displayName}</option>)}</select><button type="button" onClick={()=>{const id=document.getElementById("super-admin-inspection-terminal")?.value,terminal=terminalManager.terminals.find(row=>row.id===id);if(terminal)inspectTerminal(terminal)}}>Άνοιγμα μόνο για έλεγχο</button><small>Δεν ανοίγει βάρδια και δεν επιτρέπει πωλήσεις.</small></div>}
     {terminalManager&&terminalManager.terminals.length>0&&<form key={routingFormKey} className="readiness-manager-floating terminal-routing-floating" onSubmit={saveTerminalDeviceRouting}>
-      <b>Fiscal / EFTPOS mapping</b>
+      <b>POS → Ταμειακή → EFTPOS</b><small>Ένα EFTPOS: συμπλήρωσε μόνο το μηχάνημα καταστήματος. Delivery μόνο αν υπάρχει δεύτερο.</small>
       <select name="terminalPos" required value={routingTerminalPos} onChange={event=>setRoutingTerminalPos(event.target.value)}>
         <option value="" disabled>Επίλεξε terminal</option>
         {terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.terminalPos}>{row.terminalPos} · {row.displayName}</option>)}
@@ -561,8 +555,8 @@ export default function PlatformAdminApp(){
       <input name="fiscalDisplayName" defaultValue={routingFormValues.fiscalDisplayName} placeholder="π.χ. Ταμειακή 2" required disabled={!routingTerminalPos}/>
       <input name="storeEftposCode" defaultValue={routingFormValues.storeEftposCode} placeholder="π.χ. KAT-EFTPOS-02A" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="storeEftposName" defaultValue={routingFormValues.storeEftposName} placeholder="EFTPOS καταστήματος" required disabled={!routingTerminalPos}/>
-      <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="π.χ. KAT-EFTPOS-02B" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
-      <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="EFTPOS Delivery / Online" required disabled={!routingTerminalPos}/>
+      <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="Προαιρετικό: κωδικός δεύτερου EFTPOS Delivery" pattern="[A-Za-z0-9_-]+" disabled={!routingTerminalPos}/>
+      <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="Προαιρετικό: όνομα EFTPOS Delivery / Online" disabled={!routingTerminalPos}/>
       <button disabled={!routingTerminalPos||busy==="device-routing"}>{busy==="device-routing"?"Αποθήκευση…":"Αποθήκευση mapping"}</button>
       <small>{!routingTerminalPos?"Επίλεξε πρώτα terminal.":routingFormValues.complete?`Φορτώθηκε το αποθηκευμένο mapping του ${routingTerminalPos}.`:`Δεν υπάρχει αποθηκευμένο mapping για ${routingTerminalPos}.`}</small>
       <small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small>
