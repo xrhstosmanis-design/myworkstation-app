@@ -1,3 +1,9 @@
+## 03/10/2026 — Production UI route verification / visible legibility fix · AWAITING CI
+
+- Verified real path: entry.jsx → CommerceLauncher → KioskStyleProductCenterWithStock → KioskStyleProductCenter → OwnerProductCenter for opening full product workspace.
+- Added a production-visible legibility layer directly to kiosk-style-backoffice.css so the actual KioskStyle route has large readable controls, rows, tabs and product-card fields.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-production-route-ui-fix.md`.
+
 ## 03/10/2026 — TODAY-09 Owner store page simplification · AWAITING CI
 
 - Owner store landing view simplified: RBS and detailed transactions moved behind large clear action tiles; Owner/Manager payment quick actions remain directly visible alongside the cash/shift area. Large legible typography applied. Business logic unchanged.
