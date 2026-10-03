@@ -10,3 +10,25 @@
 .inv-camera-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}.inv-camera-button svg{width:19px!important;display:block!important}
 .inv-scanner{position:fixed;inset:0;z-index:100;background:#061a18dc;display:grid;place-items:center;padding:12px}.inv-scanner>section{width:min(620px,100%);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px #0008}.inv-scanner header{position:static;background:#075f55;padding:12px 14px}.inv-scanner header button{width:42px;height:42px;border:0;border-radius:9px;background:#ffffff22;color:#fff;display:grid;place-items:center}.inv-scanner-view{position:relative;background:#000;min-height:300px;display:grid;place-items:center;overflow:hidden}.inv-scanner video{display:block;width:100%;max-height:70vh;object-fit:cover}.inv-scanner-view i{position:absolute;width:min(82%,480px);height:150px;border:3px solid #35e4bd;border-radius:12px;box-shadow:0 0 0 999px #0005}.inv-scanner-view span{position:absolute;bottom:16px;color:#fff;background:#062d28d9;border-radius:999px;padding:8px 12px;font-weight:900;text-align:center}.inv-scanner>section>button{width:calc(100% - 24px);margin:12px;min-height:48px;border:0;border-radius:9px;background:#e7efed;color:#19443f;font-weight:900}
 @media(max-width:700px){.inv-mobile-fast form{grid-template-columns:1fr}.inv-mobile-fast label>span{flex-wrap:wrap}.inv-mobile-fast label>span svg{display:none}.inv-mobile-fast label>span button{width:100%}.inv-mobile-selected{display:grid}.inv-mobile-tools{flex-wrap:wrap}.inv-mobile-tools b{width:100%}}
+
+
+/* 03/10/2026 — unknown barcode resolution: large touch-first mobile/tablet UI. */
+.inv-unknown-barcode{position:fixed;inset:0;z-index:12000;background:#071a18b8;padding:14px;display:grid;place-items:center}
+.inv-unknown-barcode>section{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 24px 70px #0004}
+.inv-unknown-barcode header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #dce5e2}
+.inv-unknown-barcode header small{font-size:13px;font-weight:900;color:#9a3412}
+.inv-unknown-barcode header h2{font-size:27px;margin:4px 0 0;overflow-wrap:anywhere}
+.inv-unknown-barcode header button{width:48px;height:48px;border:0;border-radius:12px;background:#eef3f2;display:grid;place-items:center}
+.inv-unknown-barcode>section>p{font-size:17px;padding:0 20px}
+.inv-unknown-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px 20px}
+.inv-unknown-actions>div{border:1px solid #d6e1de;border-radius:16px;padding:16px;background:#f9fcfb}
+.inv-unknown-actions>div>b{font-size:19px}
+.inv-unknown-actions p{font-size:15px;line-height:1.45}
+.inv-unknown-actions form{display:grid;gap:9px;margin-top:12px}
+.inv-unknown-actions input{min-height:56px;border:2px solid #9fbab2;border-radius:12px;padding:10px 13px;font-size:17px}
+.inv-unknown-actions button{min-height:54px;border-radius:12px;font-size:16px;font-weight:900}
+.inv-link-results{display:grid;gap:8px;margin-top:10px}
+.inv-link-results button{text-align:left;padding:10px 12px;background:#fff;border:1px solid #cddbd7}
+.inv-link-results button b,.inv-link-results button small{display:block}
+.inv-link-results button small{font-size:14px;margin-top:3px}
+@media(max-width:650px){.inv-unknown-actions{grid-template-columns:1fr}.inv-unknown-barcode header h2{font-size:23px}}
