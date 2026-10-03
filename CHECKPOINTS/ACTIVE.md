@@ -1,3 +1,7 @@
+## 03/10/2026 — Runtime store-transactions regclass · AWAITING CI
+
+- Root cause of the post-deploy recurrence found: the previous patch script was corrected, but the generated runtime file server/src/routes/store-transactions.js still contained the uncased OnlineOrder to_regclass query. Runtime route now casts to TEXT directly. No physical retest until CI + exact deploy + clean logs.
+
 ## 03/10/2026 — RBS follow-up: online reconciliation regclass · AWAITING CI
 
 - After exact Render LIVE of 88def886, controlled 7UP €1.20 still failed before Writer claim; C:\\capture remained clean. Production logs identified the remaining Prisma regclass failure specifically in online shift reconciliation. Fixed the OnlineOrder existence probe to CAST(to_regclass(... ) AS TEXT). No fiscal mappings/Writer/CAPDriver settings changed. No more physical retries until green CI + exact deploy.
