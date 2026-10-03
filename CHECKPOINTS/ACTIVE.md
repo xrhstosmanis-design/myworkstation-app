@@ -1,3 +1,8 @@
+## 03/10/2026 — Larger card-terminal selector · AWAITING CI
+
+- TODAY-01 claimed by current ChatGPT page. EFTPOS/card-terminal picker enlarged with large touch targets and responsive mobile layout. No RBS/CAPDriver/payment-routing behavior changed.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-card-terminal-picker-large-ui.md`.
+
 ## 03/10/2026 — RBS checkout itemSummary runtime fix · AWAITING CI
 
 - With regclass errors cleared and Writer ONLINE, controlled 7UP €1.20 reached checkout but failed before Writer claim with ReferenceError: Cannot access 'itemSummary' before initialization at store-pos.js. RBS request snapshot now copies the already-resolved item summary and uses the final summary totals. No fiscal mapping/protocol change. No physical retry until green CI + exact deploy + clean logs.
