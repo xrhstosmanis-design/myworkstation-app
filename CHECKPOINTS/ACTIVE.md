@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-03 Product Management legibility refresh · AWAITING CI
+
+- Εφαρμόζεται ο εγκεκριμένος γενικός κανόνας: μεγάλα/ευδιάκριτα γράμματα, μεγάλα touch-friendly tabs, κουμπιά και πεδία στην Κεντρική Διαχείριση προϊόντων. Δεν αλλάζει business logic.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-product-management-legibility.md`.
+
 ## 03/10/2026 — TODAY-02 VAT Department product editing · AWAITING CI
 
 - Από «Είδη τμήματος ΦΠΑ» το μολύβι ανοίγει επεξεργασία της πραγματικής καρτέλας προϊόντος και μετά την αποθήκευση επιστρέφει στην ίδια σελίδα/τμήμα. Δεν αλλάζει αυτόματα το VAT department από category.
