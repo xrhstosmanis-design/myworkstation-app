@@ -5,11 +5,15 @@ import fs from "node:fs";
 const pos=fs.readFileSync(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
 const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
 
-test("RBS issuance is limited to the enabled counter checkout path",()=>{
+test("RBS issuance includes standalone delayed CARD and retains protected exclusions",()=>{
   assert.match(pos,/operationChannel:z\.enum\(\["COUNTER","DELIVERY_DELAYED"\]\)/);
   assert.match(pos,/"operationChannel" TEXT NOT NULL DEFAULT 'COUNTER'/);
   assert.match(pos,/"transactionMode","operationChannel","audience"\) VALUES/);
-  assert.match(pos,/capDriverV1Eligible=!offlineOrigin&&!body\.onlineOrderId&&!body\.tableOrderId&&body\.operationChannel==="COUNTER"&&\["CASH","CARD"\]\.includes\(body\.paymentMethod\)/);
+  const eligible=new Function("body","offlineOrigin",`return (${pos.match(/const capDriverV1Eligible=([^;]+);/)[1]});`);
+  assert.equal(eligible({operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD"},false),true);
+  assert.equal(eligible({operationChannel:"DELIVERY_DELAYED",paymentMethod:"CASH"},false),false);
+  assert.equal(eligible({operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD",onlineOrderId:"online"},false),false);
+  assert.equal(eligible({operationChannel:"COUNTER",paymentMethod:"CARD",tableOrderId:"table"},false),false);
   assert.match(pos,/if\(capDriverV1Active\)\{/);
   assert.match(pos,/rbsCapDriverSaleFiscalStatus\(approvedFiscalRequest\)/);
 });
