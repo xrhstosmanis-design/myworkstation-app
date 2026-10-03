@@ -2076,3 +2076,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — RBS itemSummary runtime blocker
 
 - After regclass cleanup, controlled checkout exposed ReferenceError itemSummary before initialization in store-pos.js before Writer claim. Snapshot construction corrected; await CI/exact deploy/log verification before physical retry.
+
+
+## 03/10/2026 — itemSummary TDZ root fix
+
+- Production still raised ReferenceError itemSummary before initialization after the snapshot-only change. Root cause is the chained const declaration in store-pos checkout where itemSummary and summary reference earlier declarators in the same statement. The runtime initialization is now split into ordered statements: customer → resolvedItems → items → itemSummary → onlineDeliveryFee → summary. No fiscal protocol/mapping changes. Await CI/exact deploy before physical retry.
