@@ -2151,3 +2151,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Fix CARD picker -> checkout handoff
 
 - Physical UI test: CARD picker opened correctly, but selecting POS ΚΑΤΑΣΤΗΜΑΤΟΣ closed the modal without creating any CARD RBS request in production. Root cause isolated to the picker callback handoff. Replaced queueMicrotask/state-dependent callback with an explicit checkoutCardRoute(channel) that snapshots the current cart and calls checkout directly with recoveredCart + immutable checkout payload. No fiscal command is sent before terminal selection. CASH path untouched.
+
+
+## 03/10/2026 — CARD picker checkout lock root cause
+
+- Second physical picker test still closed without creating a CARD RBS request. Production routing is correctly configured: KAT-FISCAL-02 / KAT-POS-02 has active STORE KAT-EFTPOS-02A and DELIVERY KAT-EFTPOS-02B. Root cause is client checkout re-entry protection: checkoutCardRoute calls checkout as a continuation while the shared checkout lock can still be set, so checkout returns before the API. Added an explicit allowLocked continuation flag only for the already-selected CARD route. It does not bypass empty-cart protection and does not affect CASH.
