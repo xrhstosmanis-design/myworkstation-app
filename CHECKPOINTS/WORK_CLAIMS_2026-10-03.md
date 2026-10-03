@@ -46,12 +46,13 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner step flow: product selection -> stores -> price action -> preview -> apply.
 
 ### TODAY-05 — Offers UI
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1683, CI #4232 PASS, merged 25085ddc
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner layout with product search, offer settings, dates, stores and clear preview/info.
 
 ### TODAY-06 — Excel / Barcode UI
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner split between Barcode offer flow and Excel import, with large scanner/touch-friendly controls.
 
 ### TODAY-07 — Inventory 2.0 mobile/tablet + unknown barcode
