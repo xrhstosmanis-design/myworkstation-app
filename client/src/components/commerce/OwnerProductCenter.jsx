@@ -1910,7 +1910,7 @@ export default function OwnerProductCenter({
       )}
 
       {tab === "promotions" && (
-        <div className="op-grid two">
+        <div className="op-grid two offers-workspace">
           <section className="op-box">
             <h3>Νέα μαζική προσφορά</h3>
             <form className="op-form" onSubmit={createPromotion}>
@@ -1976,6 +1976,10 @@ export default function OwnerProductCenter({
                     </label>
                   ))}
                 </div>
+              </div>
+              <div className="offers-summary">
+                <div><b>{promotionProducts.length}</b><span>Επιλεγμένα προϊόντα</span></div>
+                <div><b>{activeStores.length}</b><span>Διαθέσιμα καταστήματα</span></div>
               </div>
               <label>
                 Τύπος
