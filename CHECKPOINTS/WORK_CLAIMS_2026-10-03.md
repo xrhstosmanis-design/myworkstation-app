@@ -26,12 +26,13 @@ Owner instruction: every ChatGPT/page/agent MUST read this file before taking wo
 ## Work queue — 03/10/2026
 
 ### TODAY-01 — Larger card-terminal selector
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1679, CI #4219 PASS, merged 1af48271
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: make the EFTPOS/card-terminal selection dialog larger, clearer, touch-friendly, with larger controls.
 
 ### TODAY-02 — VAT Department product editing
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: from VAT Department -> department items, allow full product editing from the pencil action and return to the same department/list after save. Preserve the central rule: category never silently changes VAT department/rate.
 
 ### TODAY-03 — Central Product Management UI refresh
