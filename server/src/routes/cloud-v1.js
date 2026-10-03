@@ -6,6 +6,7 @@ import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
 import {companyModuleState} from "../middleware/module-access.js";
 import {ensureRbsCapDriverV1RequestSchema,rbsCapDriverV1DispatchTransition} from "../rbs-capdriver-v1-requests.js";
+import {finalizeDispatchedCashRequest} from "../rbs-capdriver-v1-sale-finalize.js";
 
 const router = Router();
 const DEVICE_TOKEN_TTL = process.env.CLOUD_DEVICE_TOKEN_TTL || "180d";
@@ -386,6 +387,7 @@ router.post("/device/rbs-capdriver-v1/:requestId/dispatch-result",deviceAuth,rou
   const updated=await prisma.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"=${nextStatus},"dispatchedAt"=CASE WHEN ${nextStatus}='DISPATCHED' THEN NOW() ELSE "dispatchedAt" END,"updatedAt"=NOW() WHERE "id"=${req.params.requestId} AND "status"='CLAIMED' AND "claimedByDeviceId"=${req.device.id} RETURNING "id","status","dispatchedAt"`;
   if(!updated[0])fail(409,"Η εντολή έχει ήδη προχωρήσει και δεν μπορεί να ξανασταλεί.");
   await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
+  if(updated[0].status==="DISPATCHED"){const payment=(await prisma.$queryRaw`SELECT "paymentMethod" FROM "RbsCapDriverV1Request" WHERE "id"=${updated[0].id} LIMIT 1`)[0];if(payment?.paymentMethod==="CASH")await finalizeDispatchedCashRequest(updated[0].id)}
   send(res,{ok:true,request:updated[0],automaticRetry:false});
 }));
 
