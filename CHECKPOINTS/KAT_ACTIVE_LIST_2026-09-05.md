@@ -2136,3 +2136,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Server-finalized RBS CASH must post to shift ledger
 
 - Fresh post-finalizer test succeeded fiscally and in Sale: request f6da179b-1c7f-4123-9688-287c851d217d became SALE_COMMITTED with sale ec026570-7188-48c5-a38b-091b9a88781f, 7UP €1.20, fiscalStatus ISSUED. User observed it missing from Shift Transactions and shift totals. Root cause: server finalizer created Sale/SaleLine only, bypassing normal checkout Payment + StoreTransaction entries. Finalizer now requires the open shift for the request terminal, writes Payment CASH and StoreTransaction SALE_CASH in the same DB transaction, then marks SALE_COMMITTED.
+
+
+## 03/10/2026 — KAT POS2 card terminal picker
+
+- User supplied Kiosk Manager reference showing a modal “Επιλογή PoS τερματικού”. Locked UX: pressing CARD must first open a terminal picker; no fiscal command is sent until the operator chooses. For the current Cash Register 2 flow the picker exposes POS ΚΑΤΑΣΤΗΜΑΤΟΣ (COUNTER / STORE / immediate) and DELIVERY (DELIVERY_DELAYED / DELIVERY / delayed). This reuses existing routing rather than creating a parallel payment path. CASH remains unchanged/PASS.
