@@ -2141,3 +2141,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — KAT POS2 card terminal picker
 
 - User supplied Kiosk Manager reference showing a modal “Επιλογή PoS τερματικού”. Locked UX: pressing CARD must first open a terminal picker; no fiscal command is sent until the operator chooses. For the current Cash Register 2 flow the picker exposes POS ΚΑΤΑΣΤΗΜΑΤΟΣ (COUNTER / STORE / immediate) and DELIVERY (DELIVERY_DELAYED / DELIVERY / delayed). This reuses existing routing rather than creating a parallel payment path. CASH remains unchanged/PASS.
+
+
+## 03/10/2026 — RBS BackOffice parity rebased after card picker
+
+- Rebased the already-reviewed BackOffice parity change after merging the KAT POS2 card-terminal picker. Server-finalized RBS sales preserve operator identity, exact terminal shift, stock reservation/StockMovement and POS_SALE_COMPLETED audit. No CASH fiscal-flow change.
