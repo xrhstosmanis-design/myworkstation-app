@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-04 Mass price change UI · AWAITING CI
+
+- Εγκεκριμένη ροή: 1 Προϊόντα → 2 Καταστήματα → 3 Ενέργεια → 4 Τιμή/ποσοστό, με μεγάλη γραμματοσειρά/controls και εμφανή σύνοψη πλήθους αλλαγών πριν την εφαρμογή. Business logic αμετάβλητο.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-bulk-price-ui.md`.
+
 ## 03/10/2026 — TODAY-03 Product Management legibility refresh · AWAITING CI
 
 - Εφαρμόζεται ο εγκεκριμένος γενικός κανόνας: μεγάλα/ευδιάκριτα γράμματα, μεγάλα touch-friendly tabs, κουμπιά και πεδία στην Κεντρική Διαχείριση προϊόντων. Δεν αλλάζει business logic.

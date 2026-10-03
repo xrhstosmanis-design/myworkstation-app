@@ -860,14 +860,14 @@ export default function OwnerProductCenter({
       {error && <div className="op-alert error">{error}</div>}
       {message && <div className="op-alert success">{message}</div>}
       {tab === "bulk" && (
-        <form className="op-box op-form" onSubmit={saveBulkPrices}>
+        <form className="op-box op-form bulk-price-workflow" onSubmit={saveBulkPrices}>
           <h3>Μαζική αλλαγή τιμών με επιλογή προϊόντων</h3>
           <p>
             Επίλεξε συγκεκριμένα προϊόντα και καταστήματα. Κάθε αλλαγή
             αποθηκεύεται στο ιστορικό τιμών.
           </p>
           <fieldset>
-            <legend>Προϊόντα</legend>
+            <legend>1. Επιλογή προϊόντων</legend>
             <div className="bulk-check-list">
               {catalog.map((product) => (
                 <label className="check" key={product.id}>
@@ -893,7 +893,7 @@ export default function OwnerProductCenter({
             </div>
           </fieldset>
           <fieldset>
-            <legend>Καταστήματα</legend>
+            <legend>2. Επιλογή καταστημάτων</legend>
             {activeStores.map((store) => (
               <label className="check" key={store.id}>
                 <input
@@ -911,9 +911,14 @@ export default function OwnerProductCenter({
               </label>
             ))}
           </fieldset>
+          <div className="bulk-price-summary">
+            <div><b>{bulkProducts.length}</b><span>Επιλεγμένα προϊόντα</span></div>
+            <div><b>{bulkStores.length}</b><span>Επιλεγμένα καταστήματα</span></div>
+            <div><b>{bulkProducts.length * bulkStores.length}</b><span>Συνολικές αλλαγές</span></div>
+          </div>
           <div className="op-two">
             <label>
-              Ενέργεια
+              3. Ενέργεια
               <select
                 value={bulkMode}
                 onChange={(e) => setBulkMode(e.target.value)}
@@ -924,7 +929,7 @@ export default function OwnerProductCenter({
               </select>
             </label>
             <label>
-              {bulkMode === "SET" ? "Νέα τιμή €" : "Ποσοστό %"}
+              4. {bulkMode === "SET" ? "Νέα τιμή €" : "Ποσοστό %"}
               <input
                 name="value"
                 type="number"

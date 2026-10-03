@@ -775,3 +775,68 @@
   .owner-product-tabs button{min-height:50px;font-size:15px}
   .op-box{padding:15px}
 }
+
+
+/* 03/10/2026 — TODAY-04 approved bulk price workflow. */
+.bulk-price-workflow{display:grid;gap:18px}
+.bulk-price-workflow>h3{font-size:24px;margin-bottom:0}
+.bulk-price-workflow>p{font-size:16px;margin-top:-8px}
+.bulk-price-workflow fieldset{
+  padding:18px;
+  border:1px solid #d6e1ec;
+  border-radius:16px;
+  background:#f8fbff;
+}
+.bulk-price-workflow fieldset legend{
+  padding:0 10px;
+  font-size:18px;
+  color:#123b5d;
+}
+.bulk-price-workflow fieldset legend::first-letter{font-weight:900}
+.bulk-check-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  max-height:360px;
+  overflow:auto;
+  padding:4px;
+}
+.bulk-check-list .check,
+.bulk-price-workflow fieldset>.check{
+  min-height:58px;
+  padding:10px 12px;
+  border:1px solid #dce5ef;
+  border-radius:12px;
+  background:#fff;
+}
+.bulk-check-list .check span{display:grid;gap:3px}
+.bulk-check-list .check small{font-size:14px;color:#64748b}
+.bulk-price-workflow .op-two{
+  padding:18px;
+  border:1px solid #d6e1ec;
+  border-radius:16px;
+  background:#f8fbff;
+}
+.bulk-price-workflow .op-two label{font-size:16px}
+.bulk-price-workflow .op-two select,
+.bulk-price-workflow .op-two input{min-height:56px;font-size:17px}
+.bulk-price-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.bulk-price-summary>div{
+  padding:14px;
+  border:1px solid #d6e1ec;
+  border-radius:12px;
+  background:#fff;
+  display:grid;
+  gap:3px;
+}
+.bulk-price-summary b{font-size:22px;color:#123b5d}
+.bulk-price-summary span{font-size:14px;color:#64748b}
+.bulk-price-workflow>.primary{min-height:60px;font-size:18px}
+@media(max-width:850px){
+  .bulk-check-list{grid-template-columns:1fr}
+  .bulk-price-summary{grid-template-columns:1fr}
+}
