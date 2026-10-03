@@ -2,7 +2,7 @@ import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
 async function repair(){
-  const tables=await prisma.$queryRawUnsafe(`SELECT to_regclass('"OnlineOrder"') AS orders,to_regclass('"StoreTransaction"') AS tx,to_regclass('"StoreOperatorAudit"') AS audit,to_regclass('"Sale"') AS sale,to_regclass('"Payment"') AS payment`);
+  const tables=await prisma.$queryRawUnsafe(`SELECT CAST(to_regclass('"OnlineOrder"') AS TEXT) AS orders,CAST(to_regclass('"StoreTransaction"') AS TEXT) AS tx,CAST(to_regclass('"StoreOperatorAudit"') AS TEXT) AS audit,CAST(to_regclass('"Sale"') AS TEXT) AS sale,CAST(to_regclass('"Payment"') AS TEXT) AS payment`);
   if(!tables?.[0]?.orders||!tables?.[0]?.tx)return;
 
   const order=(await prisma.$queryRawUnsafe(`SELECT "id","companyId","storeId","orderNumber","saleId","status","total" FROM "OnlineOrder" WHERE "orderNumber"='KAT-009' ORDER BY "createdAt" DESC LIMIT 1`))[0];

@@ -2,9 +2,9 @@ import {prisma} from "./prisma.js";
 
 async function repairOnlineTransactionActors(){
   const tables=await prisma.$queryRawUnsafe(`
-    SELECT to_regclass('"StoreTransaction"') AS st,
-           to_regclass('"StoreOperatorAudit"') AS audit,
-           to_regclass('"OnlineOrder"') AS orders
+    SELECT CAST(to_regclass('"StoreTransaction"') AS TEXT) AS st,
+           CAST(to_regclass('"StoreOperatorAudit"') AS TEXT) AS audit,
+           CAST(to_regclass('"OnlineOrder"') AS TEXT) AS orders
   `);
   if(!tables?.[0]?.st||!tables?.[0]?.audit||!tables?.[0]?.orders)return;
 

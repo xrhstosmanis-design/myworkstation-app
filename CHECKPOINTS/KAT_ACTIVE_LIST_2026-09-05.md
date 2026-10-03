@@ -2066,3 +2066,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Runtime route regclass correction
 
 - Remaining production regclass was in server/src/routes/store-transactions.js itself; correcting only the patch generator did not alter the already-generated runtime route. Runtime query now casts OnlineOrder to_regclass to TEXT. Await CI/exact deploy/log verification before physical retest.
+
+
+## 03/10/2026 — Startup regclass cleanup
+
+- Remaining startup regclass probes found in online transaction actor repair, KAT-009 duplicate repair and online-ordering actor protection; all cast to TEXT. Await green CI + exact deploy + clean logs before RBS physical retest.

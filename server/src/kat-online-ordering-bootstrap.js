@@ -138,7 +138,7 @@ async function ensureRecipeIngredientsTracked(){
 
 async function ensureOnlineActorProtection(){
   try{
-    const tables=await prisma.$queryRawUnsafe(`SELECT to_regclass('"StoreTransaction"') AS st,to_regclass('"StoreOperatorAudit"') AS audit`);
+    const tables=await prisma.$queryRawUnsafe(`SELECT CAST(to_regclass('"StoreTransaction"') AS TEXT) AS st,CAST(to_regclass('"StoreOperatorAudit"') AS TEXT) AS audit`);
     if(!tables?.[0]?.st||!tables?.[0]?.audit)return;
     await prisma.$executeRawUnsafe(`
       CREATE OR REPLACE FUNCTION mws_preserve_online_transaction_actor()
