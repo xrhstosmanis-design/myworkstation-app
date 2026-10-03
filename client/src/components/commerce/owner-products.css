@@ -840,3 +840,68 @@
   .bulk-check-list{grid-template-columns:1fr}
   .bulk-price-summary{grid-template-columns:1fr}
 }
+
+
+/* 03/10/2026 — TODAY-05 approved Offers workspace. */
+.offers-workspace{align-items:start}
+.offers-workspace>.op-box{padding:22px}
+.offers-workspace h3{font-size:24px}
+.offers-workspace .promotion-product-picker{gap:12px}
+.offers-workspace .promotion-product-picker>input{
+  min-height:56px;
+  border:2px solid #b9cadb;
+  border-radius:12px;
+  padding:12px 15px;
+  font-size:17px;
+}
+.offers-workspace .promotion-product-list{
+  max-height:390px;
+  padding:10px;
+  gap:8px;
+}
+.offers-workspace .promotion-product-list .check{
+  min-height:58px;
+  padding:11px 13px;
+}
+.offers-workspace .promotion-product-list .check b{font-size:16px}
+.offers-workspace .promotion-picker-actions button{min-height:44px;font-size:14px}
+.offers-workspace .op-form>label,
+.offers-workspace .op-two label{font-size:16px}
+.offers-workspace .op-form select,
+.offers-workspace .op-form input[type="number"],
+.offers-workspace .op-form input[type="datetime-local"]{
+  min-height:54px;
+  font-size:17px;
+}
+.offers-workspace fieldset{
+  padding:16px;
+  border-radius:14px;
+  background:#f8fbff;
+}
+.offers-workspace fieldset legend{font-size:17px;padding:0 8px}
+.offers-workspace fieldset .check{
+  min-height:48px;
+  padding:8px 10px;
+}
+.offers-workspace .primary{min-height:58px;font-size:18px}
+.offers-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:4px 0 2px;
+}
+.offers-summary>div{
+  border:1px solid #d8e3ed;
+  border-radius:12px;
+  padding:12px;
+  background:#fff;
+  display:grid;
+}
+.offers-summary b{font-size:22px;color:#123b5d}
+.offers-summary span{font-size:14px;color:#64748b}
+.offers-workspace .promo-list{gap:10px}
+.offers-workspace .promo-list article{min-height:88px;padding:14px}
+.offers-workspace .promo-list article b{font-size:16px}
+.offers-workspace .promo-list article small{font-size:14px}
+.offers-workspace .promo-list article button{min-height:46px;font-size:15px}
+@media(max-width:1050px){.offers-summary{grid-template-columns:1fr}}
