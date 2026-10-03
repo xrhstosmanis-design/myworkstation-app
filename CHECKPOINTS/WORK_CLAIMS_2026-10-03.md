@@ -36,7 +36,8 @@ Claimed by: current ChatGPT page — 2026-10-03
 Requirement: from VAT Department -> department items, allow full product editing from the pencil action and return to the same department/list after save. Preserve the central rule: category never silently changes VAT department/rate.
 
 ### TODAY-03 — Central Product Management UI refresh
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: implement the approved visual direction for Master Catalog / store prices / mass price changes / offers / Excel-Barcode / inventory. Larger buttons and inputs, cleaner cards, less clutter, touch-friendly. Preserve existing functionality.
 
 ### TODAY-04 — Mass price change UI
@@ -92,3 +93,6 @@ Remaining focus: installation/connection procedure and final onsite validation. 
 
 ## Permanent rule
 When a page/agent finishes an item, it MUST update this board first. The next page/agent then claims a different FREE item. This board is the canonical coordination point to prevent duplicate implementation.
+
+## Global UI rule — 03/10/2026
+All new and revised MyWorkStation screens must use large, highly legible typography, large touch-friendly buttons and inputs, clear contrast, and avoid cramped tiny helper text. Applies to desktop, POS, tablet and mobile.
