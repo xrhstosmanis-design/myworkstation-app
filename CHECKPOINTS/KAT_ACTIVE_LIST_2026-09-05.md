@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-08 Commercial Modules layout · AWAITING CI
+
+- POS removed from redundant commercial module navigation. Module cards now use compact responsive 3-column layout (2 tablet / 1 mobile), with large legible typography and touch-friendly navigation.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-modules-layout.md`.
+
 ## 03/10/2026 — TODAY-07 Inventory 2.0 unknown barcode · AWAITING CI
 
 - Mobile/tablet unknown barcode now offers attach-to-existing or new-product path with large touch UI. Existing-product search is company/store scoped; duplicate barcode ownership is blocked. Inventory return context is preserved for new-product continuation.
