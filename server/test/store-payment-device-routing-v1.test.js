@@ -11,7 +11,7 @@ test("Super Admin stores configurable fiscal and EFTPOS device mappings",()=>{
   assert.match(platformRoutes,/device-routing/);
   assert.match(platformRoutes,/STORE_PAYMENT_DEVICE_ROUTING_UPDATED/);
   assert.match(platformRoutes,/fallbackAllowed:false/);
-  assert.match(platformUi,/Fiscal \/ EFTPOS mapping/);
+  assert.match(platformUi,/POS → Ταμειακή → EFTPOS/);
   assert.match(platformUi,/saveTerminalDeviceRouting/);
   assert.match(platformUi,/Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS/);
 });
