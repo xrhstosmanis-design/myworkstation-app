@@ -13,7 +13,6 @@ import {storeAmountOfferPrice,storePercentageOfferPrice} from "../bundle-promoti
 import {resolveRbsCapDriverFiscalProfile,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome} from "../rbs-capdriver-v1.js";
 import {ensureVatDepartmentSchema} from "./management-vat-departments.js";
 import {finalizeConfirmedCardRequest} from "../rbs-capdriver-v1-sale-finalize.js";
-import {finalizeConfirmedCardRequest} from "../rbs-capdriver-v1-sale-finalize.js";
 
 const router=Router();
 router.use(auth);
