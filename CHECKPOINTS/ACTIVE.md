@@ -1,3 +1,7 @@
+## 03/10/2026 — Fiscal integration shared reference
+
+- Canonical cross-page reference added at `CHECKPOINTS/FISCAL_INTEGRATION_MASTER_2026-10-03.md`. It records the selected KAT RBS AURORA + CAP Driver v1 architecture, Writer/pairing/safety flow, VAT-department rule, newer OUTPUT-driver alternative, provider/myDATA separation, and future hardware criteria. All pages/agents should use this before changing fiscal integration.
+
 ## 03/10/2026 — RBS CAP Driver v1 · production regclass fix · AWAITING CI
 
 - KAT controlled cash test used 7UP 330ML, €1.20, confirmed VAT code 42 → register department 2 → 13%. POS returned internal error; cart remained open, no receipt printed.
