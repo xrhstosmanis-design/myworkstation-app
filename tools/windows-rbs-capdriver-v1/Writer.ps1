@@ -22,7 +22,6 @@ if (-not [Uri]::TryCreate($ApiBase.Trim(), [UriKind]::Absolute, [ref]$apiUri) -o
 }
 $ApiBase = $apiUri.GetLeftPart([UriPartial]::Path).TrimEnd('/')
 $WorkFolder = [IO.Path]::GetFullPath($WorkFolder)
-$CommandPath = Join-Path $WorkFolder 'Xcommand.txt'
 $Headers = @{ Authorization = "Bearer $DeviceToken" }
 if ([string]::IsNullOrWhiteSpace($LogPath)) {
   $LogPath = Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1\writer.log'
@@ -65,12 +64,18 @@ while ($true) {
       Send-DispatchResult $request.id 'UNCERTAIN'
       throw "CAP Driver work folder is missing. Request $($request.id) will not be requested again."
     }
+    $safeRequestId = ([string]$request.id) -replace '[^A-Za-z0-9_-]', '_'
+    if ([string]::IsNullOrWhiteSpace($safeRequestId)) {
+      Send-DispatchResult $request.id 'UNCERTAIN'
+      throw "CAP Driver request id cannot be converted to a safe file name."
+    }
+    $CommandPath = Join-Path $WorkFolder ("rbs.{0}.txt" -f $safeRequestId)
     if (Test-Path -LiteralPath $CommandPath) {
       Send-DispatchResult $request.id 'UNCERTAIN'
-      throw "Xcommand.txt already exists. It was left untouched; request $($request.id) will not be requested again."
+      throw "The request-specific CAP Driver file already exists. It was left untouched; request $($request.id) will not be requested again."
     }
 
-    $tempPath = Join-Path $WorkFolder ('.Xcommand.' + [guid]::NewGuid().ToString('N') + '.tmp')
+    $tempPath = Join-Path $WorkFolder ('.rbs.' + $safeRequestId + '.' + [guid]::NewGuid().ToString('N') + '.tmp')
     try {
       $stream = [IO.File]::Open($tempPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
       try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }

@@ -109,7 +109,7 @@ try {
   $writerWorkPath = Join-Path $testRoot 'work'
   New-Item -ItemType Directory -Path $writerWorkPath -Force | Out-Null
   & $connectionScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $writerWorkPath
-  if (Test-Path -LiteralPath (Join-Path $writerWorkPath 'Xcommand.txt')) { throw 'Connection test created a CAP Driver command file.' }
+  if (@(Get-ChildItem -LiteralPath $writerWorkPath -Filter 'rbs.*.txt' -File -ErrorAction SilentlyContinue).Count -ne 0) { throw 'Connection test created a CAP Driver command file.' }
   $previousApiBase = $env:MWS_RBS_API_BASE
   $previousDeviceToken = $env:MWS_RBS_DEVICE_TOKEN
   $previousWorkFolder = $env:MWS_RBS_WORKFOLDER
@@ -127,8 +127,8 @@ try {
     $env:MWS_RBS_WORKFOLDER = $previousWorkFolder
   }
 
-  $commandPath = Join-Path $writerWorkPath 'Xcommand.txt'
-  if (-not (Test-Path -LiteralPath $commandPath)) { throw 'Writer.ps1 did not create Xcommand.txt.' }
+  $commandPath = Join-Path $writerWorkPath 'rbs.mock-request.txt'
+  if (-not (Test-Path -LiteralPath $commandPath)) { throw 'Writer.ps1 did not create the request-specific rbs.*.txt command file.' }
   $actual = [IO.File]::ReadAllBytes($commandPath)
   if ([Convert]::ToBase64String($actual) -ne [Convert]::ToBase64String($commandBytes)) {
     throw 'Writer.ps1 output bytes did not match the expected Windows-1253 command.'
