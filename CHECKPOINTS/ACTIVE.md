@@ -1,3 +1,7 @@
+## 03/10/2026 — RBS follow-up: online reconciliation regclass · AWAITING CI
+
+- After exact Render LIVE of 88def886, controlled 7UP €1.20 still failed before Writer claim; C:\\capture remained clean. Production logs identified the remaining Prisma regclass failure specifically in online shift reconciliation. Fixed the OnlineOrder existence probe to CAST(to_regclass(... ) AS TEXT). No fiscal mappings/Writer/CAPDriver settings changed. No more physical retries until green CI + exact deploy.
+
 ## 03/10/2026 — RBS CAP Driver v1 · production regclass fix · AWAITING CI
 
 - KAT controlled cash test used 7UP 330ML, €1.20, confirmed VAT code 42 → register department 2 → 13%. POS returned internal error; cart remained open, no receipt printed.
