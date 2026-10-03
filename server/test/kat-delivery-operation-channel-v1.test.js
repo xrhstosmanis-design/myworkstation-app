@@ -18,5 +18,5 @@ test("POS exposes an explicit, safely reset delivery-delayed choice",()=>{
   assert.match(panel,/ΚΑΝΟΝΙΚΗ ΠΩΛΗΣΗ/);
   assert.match(panel,/DELIVERY \/ ΕΤΕΡΟΧΡΟΝΙΣΜΕΝΗ/);
   assert.match(panel,/setOperationChannel\("COUNTER"\)/);
-  assert.match(panel,/operationChannel,items:cart\.map/);
+  assert.match(panel,/operationChannel,items:activeCart\.map/);
 });
