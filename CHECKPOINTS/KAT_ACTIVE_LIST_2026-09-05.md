@@ -2146,3 +2146,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — RBS BackOffice parity rebased after card picker
 
 - Rebased the already-reviewed BackOffice parity change after merging the KAT POS2 card-terminal picker. Server-finalized RBS sales preserve operator identity, exact terminal shift, stock reservation/StockMovement and POS_SALE_COMPLETED audit. No CASH fiscal-flow change.
+
+
+## 03/10/2026 — Fix CARD picker -> checkout handoff
+
+- Physical UI test: CARD picker opened correctly, but selecting POS ΚΑΤΑΣΤΗΜΑΤΟΣ closed the modal without creating any CARD RBS request in production. Root cause isolated to the picker callback handoff. Replaced queueMicrotask/state-dependent callback with an explicit checkoutCardRoute(channel) that snapshots the current cart and calls checkout directly with recoveredCart + immutable checkout payload. No fiscal command is sent before terminal selection. CASH path untouched.
