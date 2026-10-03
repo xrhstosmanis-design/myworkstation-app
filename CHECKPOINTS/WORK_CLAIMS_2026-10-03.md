@@ -31,8 +31,8 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: make the EFTPOS/card-terminal selection dialog larger, clearer, touch-friendly, with larger controls.
 
 ### TODAY-02 — VAT Department product editing
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1680, CI #4222 PASS, Render b9d1143f LIVE
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: from VAT Department -> department items, allow full product editing from the pencil action and return to the same department/list after save. Preserve the central rule: category never silently changes VAT department/rate.
 
 ### TODAY-03 — Central Product Management UI refresh
