@@ -89,7 +89,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     if(tab==="ai")loadAi().catch(e=>setError(e.message));
   },[tab,storeId,activeModules.join("|")]);
 
-  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","POS","SALES_ANALYTICS","SHIFT_HANDOVER","STORE_CHAT","PENDING_CENTER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT"].includes(m.key)),[catalog]);
+  const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","SALES_ANALYTICS","SHIFT_HANDOVER","STORE_CHAT","PENDING_CENTER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT","VIDEO_EVENTS"].includes(m.key)),[catalog]);
 
   const addProduct=async event=>{
     event.preventDefault();setError("");setMessage("");
@@ -153,7 +153,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
       <div className="commerce-module-strip">
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
-        <button disabled={!active.has("POS")} className={`${tab==="pos"?"active":""} ${!active.has("POS")?"locked":""}`} onClick={()=>setTab("pos")}><ShoppingCart/> POS</button>
+        
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
         <button disabled={!active.has("PENDING_CENTER")} className={`${tab==="pending"?"active":""} ${!active.has("PENDING_CENTER")?"locked":""}`} onClick={()=>setTab("pending")}><ClipboardList/> Κέντρο Εκκρεμοτήτων</button>
