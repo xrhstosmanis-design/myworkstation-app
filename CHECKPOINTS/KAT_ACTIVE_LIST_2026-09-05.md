@@ -2166,3 +2166,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — CARD operator YES server-side finalization
 
 - First real CARD test succeeded through EFTPOS and operator YES. Production request f1d02def-d77e-4dee-9daa-bf6d917c6296 reached OPERATOR_CONFIRMED with operatorOutcome YES but saleId remained NULL and POS stuck on committing. CARD finalization is moved to the authoritative outcome endpoint: after YES transitions to OPERATOR_CONFIRMED, server atomically creates Sale/SaleLine, Payment CARD, exact-shift SALE_CARD, stock/StockMovement and POS_SALE_COMPLETED audit, then marks SALE_COMMITTED. This prevents browser polling from being responsible for committing an already-paid card transaction and never resends fiscal/EFTPOS command.
+
+
+## 03/10/2026 — Guarded recovery endpoint for already-confirmed CARD
+
+- Added an authenticated store-scoped recovery endpoint for pre-fix CARD requests that are exactly CARD + OPERATOR_CONFIRMED + operatorOutcome YES + saleId NULL. It calls the same idempotent server finalizer now used by live operator YES and explicitly cannot resend fiscal/EFTPOS commands. This provides a safe path to close already-paid requests without manual SQL or hard-coded startup scripts.
