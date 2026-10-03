@@ -39,6 +39,7 @@ export default function StoreCloudPage({api,store,onBack}){
   const [pairingError,setPairingError]=useState("");
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
+  const [toolOpen,setToolOpen]=useState("");
 
   const createPairingCode=async()=>{
     if(pairing&&Date.parse(pairing.expiresAt)>Date.now()&&!window.confirm("Θα ακυρωθεί ο προηγούμενος κωδικός, αν δεν έχει ήδη χρησιμοποιηθεί. Να δημιουργηθεί νέος;"))return;
@@ -138,7 +139,15 @@ export default function StoreCloudPage({api,store,onBack}){
       </div>
     </div>
 
-    <section aria-label="Σύνδεση RBS CAP Driver" style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,margin:"0 0 18px",boxShadow:"0 8px 24px rgba(15,23,42,.05)"}}>
+    <section className="owner-store-tools" aria-label="Πρόσθετες λειτουργίες">
+      <h3>Πρόσθετες λειτουργίες</h3>
+      <div className="owner-store-tool-grid">
+        <button type="button" className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
+        <button type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/><b>Εμπορική λειτουργία</b><span>Προϊόντα, αποθήκη, modules</span></button>
+        <button type="button" className={toolOpen==="transactions"?"active":""} onClick={()=>setToolOpen(v=>v==="transactions"?"":"transactions")}><RefreshCw/><b>Συναλλαγές</b><span>Αναλυτικές κινήσεις καταστήματος</span></button>
+      </div>
+    </section>
+    {toolOpen==="rbs"&&<section aria-label="Σύνδεση RBS CAP Driver" style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,margin:"0 0 18px",boxShadow:"0 8px 24px rgba(15,23,42,.05)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <KeyRound aria-hidden="true" size={20}/>
         <h3 style={{margin:0}}>Σύνδεση RBS CAP Driver v1</h3>
@@ -159,18 +168,17 @@ export default function StoreCloudPage({api,store,onBack}){
         <a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:8,color:"#0369a1",fontWeight:700}}>Οδηγίες και αρχεία Pair.ps1 / Test-Connection.ps1 / Writer.ps1</a>
       </div>}
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
-    </section>
+    </section>}
 
-    <div id="backoffice-transactions" className="backoffice-anchor">
-      <StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/>
-    </div>
+
+    {toolOpen==="transactions"&&<div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>}
     <div id="backoffice-cash" className="backoffice-anchor">
       <CashControlPanel key={`cash-${version}`} api={api} store={store}/>
     </div>
     <div className="store-operations-actions">
-      <BarcodeRadioManagement api={api} store={store}/>
+      <div className="owner-store-secondary-actions"><BarcodeRadioManagement api={api} store={store}/><OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/></div>
       <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
-      <OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/>
     </div>
+    <style>{`.owner-store-tools{background:#fff;border:1px solid #dce5ef;border-radius:18px;padding:18px;margin:0 0 18px}.owner-store-tools h3{font-size:22px;margin:0 0 14px}.owner-store-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.owner-store-tool-grid button{min-height:112px;border:1px solid #cddae6;border-radius:16px;background:#f8fbff;padding:16px;display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;text-align:left;align-items:center;gap:5px 10px;cursor:pointer}.owner-store-tool-grid button.active{border:2px solid #087eb8;background:#eef8ff}.owner-store-tool-grid svg{grid-row:1/3;width:26px;height:26px}.owner-store-tool-grid b{font-size:18px}.owner-store-tool-grid span{font-size:15px;color:#526276}.store-operations-front .cloud-hero h2{font-size:32px}.store-operations-front .cloud-hero p{font-size:17px;line-height:1.5}.owner-store-secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:850px){.owner-store-tool-grid{grid-template-columns:1fr}.owner-store-tool-grid button{min-height:90px}.owner-store-secondary-actions{grid-template-columns:1fr}}`}</style>
   </section>;
 }

@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-09 Owner store page simplification · AWAITING CI
+
+- Owner store landing view simplified: RBS and detailed transactions moved behind large clear action tiles; Owner/Manager payment quick actions remain directly visible alongside the cash/shift area. Large legible typography applied. Business logic unchanged.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-owner-store-page.md`.
+
 ## 03/10/2026 — TODAY-08 Commercial Modules layout · AWAITING CI
 
 - POS removed from redundant commercial module navigation. Module cards now use compact responsive 3-column layout (2 tablet / 1 mobile), with large legible typography and touch-friendly navigation.
