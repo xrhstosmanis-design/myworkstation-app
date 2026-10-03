@@ -947,9 +947,9 @@ export default function OwnerProductCenter({
         </form>
       )}
       {tab === "promotion-import" && (
-        <div className="op-grid two">
+        <div className="op-grid two promotion-import-workspace">
           <section className="op-box">
-            <h3>Νέα προσφορά με barcode</h3>
+            <div className="promotion-import-heading"><span>1</span><div><h3>Νέα προσφορά με Barcode</h3><p>Σκάναρε το προϊόν και συμπλήρωσε την προσφορά.</p></div></div>
             <form className="op-form" onSubmit={createPromotion}>
               <label>
                 Barcode προϊόντος
@@ -1054,7 +1054,7 @@ export default function OwnerProductCenter({
             </form>
           </section>
           <section className="op-box">
-            <h3>Εισαγωγή προσφορών από Excel</h3>
+            <div className="promotion-import-heading"><span>2</span><div><h3>Εισαγωγή προσφορών από Excel</h3><p>Ανέβασε το αρχείο και επίλεξε πού θα εφαρμοστούν οι προσφορές.</p></div></div>
             <form className="op-form" onSubmit={importPromotions}>
               <label>
                 Αρχείο Excel
