@@ -1,3 +1,7 @@
+## 03/10/2026 — RBS checkout itemSummary runtime fix · AWAITING CI
+
+- With regclass errors cleared and Writer ONLINE, controlled 7UP €1.20 reached checkout but failed before Writer claim with ReferenceError: Cannot access 'itemSummary' before initialization at store-pos.js. RBS request snapshot now copies the already-resolved item summary and uses the final summary totals. No fiscal mapping/protocol change. No physical retry until green CI + exact deploy + clean logs.
+
 ## 03/10/2026 — Startup regclass cleanup · AWAITING CI
 
 - After runtime reconciliation fix became LIVE, remaining regclass log errors were isolated to startup/repair helpers: online-transaction-actor-fix, repair-kat009-duplicate-sale and kat-online-ordering-bootstrap. All their to_regclass probes now cast to TEXT. These errors were startup maintenance paths, but production must be clean before next fiscal retest.
