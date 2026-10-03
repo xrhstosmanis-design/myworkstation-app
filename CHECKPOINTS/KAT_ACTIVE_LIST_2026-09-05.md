@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-06 Excel / Barcode UI · AWAITING CI
+
+- Καθαρός διαχωρισμός Barcode και Excel, μεγάλα ευδιάκριτα controls, scanner/touch-first barcode input και εμφανές Excel upload. Business logic αμετάβλητο.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-excel-barcode-ui.md`.
+
 ## 03/10/2026 — TODAY-05 Offers UI · AWAITING CI
 
 - Εγκεκριμένη καθαρή εμφάνιση Προσφορών με μεγάλα/ευδιάκριτα controls, μεγαλύτερη αναζήτηση και λίστα προϊόντων, καθαρές ημερομηνίες/καταστήματα και εμφανή σύνοψη επιλογών. Business logic αμετάβλητο.
