@@ -2056,3 +2056,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - Production Render logs identified Prisma regclass deserialization failures in the checkout/runtime path. PR #1645 casts store-pos table-existence probes to TEXT; CAPDriver/AURORA/Writer/VAT/payment mappings are unchanged.
 - Initial CI runs stopped only on checkpoint policy documentation gates; Windows CAPDriver parse/smoke passed. Fresh full CI required before merge/deploy/retest.
 - Do not repeat the physical cash attempt until green CI, exact Render deploy and production verification. Full checkpoint: CHECKPOINTS/CHANGES/2026-10-03-rbs-capdriver-regclass-runtime.md.
+
+
+## 03/10/2026 — Remaining online reconciliation regclass
+
+- Exact deploy 88def886 did not eliminate all regclass errors. Production logs tied the remaining failure to Online shift reconciliation / OnlineOrder existence probe. Branch fix/all-regclass-runtime-20261003 casts that probe to TEXT. No further physical sale until CI/deploy verification.
