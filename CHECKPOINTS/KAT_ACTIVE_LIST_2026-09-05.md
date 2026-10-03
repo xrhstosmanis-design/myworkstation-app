@@ -2056,3 +2056,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 - Production Render logs identified Prisma regclass deserialization failures in the checkout/runtime path. PR #1645 casts store-pos table-existence probes to TEXT; CAPDriver/AURORA/Writer/VAT/payment mappings are unchanged.
 - Initial CI runs stopped only on checkpoint policy documentation gates; Windows CAPDriver parse/smoke passed. Fresh full CI required before merge/deploy/retest.
 - Do not repeat the physical cash attempt until green CI, exact Render deploy and production verification. Full checkpoint: CHECKPOINTS/CHANGES/2026-10-03-rbs-capdriver-regclass-runtime.md.
+
+
+## 03/10/2026 — Κεντρική αναφορά διασύνδεσης φορολογικών
+
+- Όλες οι σελίδες/agents να διαβάζουν πρώτα `CHECKPOINTS/FISCAL_INTEGRATION_MASTER_2026-10-03.md` για RBS AURORA + CAP Driver v1, Writer, pairing, ΦΠΑ/τμήματα, safety/idempotency και τις εναλλακτικές λύσεις (new CAP Driver OUTPUT, πάροχος, myDATA/timologio, άλλο fiscal hardware). Μην αναμιγνύονται οι διαφορετικές αρχιτεκτονικές.
