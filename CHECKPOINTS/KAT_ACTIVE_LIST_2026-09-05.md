@@ -2156,3 +2156,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — CARD picker checkout lock root cause
 
 - Second physical picker test still closed without creating a CARD RBS request. Production routing is correctly configured: KAT-FISCAL-02 / KAT-POS-02 has active STORE KAT-EFTPOS-02A and DELIVERY KAT-EFTPOS-02B. Root cause is client checkout re-entry protection: checkoutCardRoute calls checkout as a continuation while the shared checkout lock can still be set, so checkout returns before the API. Added an explicit allowLocked continuation flag only for the already-selected CARD route. It does not bypass empty-cart protection and does not affect CASH.
+
+
+## 03/10/2026 — CARD picker Zod validation root cause
+
+- Physical test reached the server and returned the generic Zod message “Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.” before any RBS CARD request. The picker checkout payload explicitly sent payments:null. checkoutSchema defines payments as optional array, not nullable, so null is invalid. Removed payments:null from single-method CARD payload. Mixed-payment semantics unchanged; CASH untouched.
