@@ -1,3 +1,8 @@
+## 03/10/2026 — TODAY-02 VAT Department product editing · AWAITING CI
+
+- Από «Είδη τμήματος ΦΠΑ» το μολύβι ανοίγει επεξεργασία της πραγματικής καρτέλας προϊόντος και μετά την αποθήκευση επιστρέφει στην ίδια σελίδα/τμήμα. Δεν αλλάζει αυτόματα το VAT department από category.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-vat-department-product-edit.md`.
+
 ## 03/10/2026 — Larger card-terminal selector · AWAITING CI
 
 - TODAY-01 claimed by current ChatGPT page. EFTPOS/card-terminal picker enlarged with large touch targets and responsive mobile layout. No RBS/CAPDriver/payment-routing behavior changed.
