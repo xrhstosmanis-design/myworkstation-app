@@ -701,3 +701,77 @@
   padding: 6px 10px;
   font-size: 12px;
 }
+
+
+/* 03/10/2026 — approved BackOffice legibility baseline. */
+.owner-products{
+  font-size:16px;
+  line-height:1.45;
+}
+.owner-products-head h2{font-size:30px;line-height:1.15}
+.owner-products-head p{font-size:17px}
+.owner-product-tabs{gap:12px;padding-bottom:14px}
+.owner-product-tabs button{
+  min-height:52px;
+  padding:12px 18px;
+  border-radius:12px;
+  font-size:16px;
+}
+.owner-product-tabs svg,.owner-products-head svg,.op-search svg,.primary svg{
+  width:20px;
+  height:20px;
+}
+.op-box{padding:20px;border-radius:18px}
+.op-box h3{font-size:21px}
+.op-box h4{font-size:17px}
+.op-search{gap:10px}
+.op-search input,
+.op-form input,
+.op-form select,
+.op-box > label input,
+.store-price input,
+.vat-row input{
+  min-height:52px;
+  padding:12px 14px;
+  font-size:16px;
+}
+.op-search button,
+.owner-products-head > button,
+.primary,.secondary,.danger{
+  min-height:50px;
+  padding:12px 18px;
+  font-size:16px;
+}
+.op-product{
+  min-height:72px;
+  padding:14px 16px;
+  font-size:16px;
+}
+.op-product small,.promotion-product-list small,.promo-list small,.stocktake-card small{
+  font-size:14px;
+  line-height:1.35;
+}
+.op-product em,.stocktake-card em{font-size:12px;padding:5px 9px}
+.op-box > label,.op-form label{
+  font-size:15px;
+  gap:8px;
+}
+.check{font-size:15px}
+.check input{width:20px!important;height:20px!important}
+.product-card-fields label,.store-product-card > label{font-size:14px}
+.product-card input,.product-card select,.product-card textarea{
+  min-height:50px;
+  padding:12px;
+  font-size:16px;
+}
+.product-card textarea{min-height:92px}
+.product-card-title h3{font-size:22px}
+.product-card-title p,.section-heading small{font-size:14px}
+.barcode-row input{min-height:50px;font-size:16px}
+.promotion-product-list .check{padding:12px}
+@media(max-width:680px){
+  .owner-products{font-size:16px}
+  .owner-products-head h2{font-size:25px}
+  .owner-product-tabs button{min-height:50px;font-size:15px}
+  .op-box{padding:15px}
+}
