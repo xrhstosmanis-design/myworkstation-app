@@ -2116,3 +2116,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Manual cleanup of known stuck RBS request
 
 - User requested immediate cancellation/unblocking of the old pending 7UP €1.20 request after confirming the physical receipt had already printed. Read-only production DB inspection identified exactly one row: request c9c6aa5a-5dc3-4fc7-8b29-0728081952ca, KAT-POS-02, CASH €1.20, DISPATCHED, saleId NULL. Added an exact guarded one-time startup cleanup that changes only this row to DECLINED. It cannot resend a fiscal command and matches request id + store + terminal + payment + amount + status + saleId NULL.
+
+
+## 03/10/2026 — RBS CASH automatic finalization after dispatch
+
+- Fresh controlled 7UP €1.20 CASH test physically printed a receipt. Production DB showed the new request ab2e2a5a-127b-442d-97c9-8d739b1adf8c reached DISPATCHED at 12:25:36 Greece time but saleId remained NULL and the POS stayed on the pending overlay. Root cause: live checkout sets WAITING but there was no client poll that observes CASH transition PREPARED/CLAIMED -> DISPATCHED and invokes continuation. Added a short-lived poll only while the active CASH request is WAITING. On DISPATCHED it reuses the same request id/client transaction/saved checkout and performs continuation; it never creates/resends a fiscal command.
