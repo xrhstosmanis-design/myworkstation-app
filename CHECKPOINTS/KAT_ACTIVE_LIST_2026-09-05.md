@@ -2086,3 +2086,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — RBS pending snapshot expression isolation
 
 - Production on d650c3bf still raised itemSummary TDZ at the RbsCapDriverV1Request INSERT expression. The checkout snapshot and JSON serialization are now computed in separate statements before the tagged SQL query; pendingId and pending are also split. This removes complex lexical evaluation from the SQL declarator. No fiscal mapping/protocol changes. Await CI/exact deploy before physical retry.
+
+
+## 03/10/2026 — Remove itemSummary from RBS pending snapshot
+
+- Production on 9131adbb still raised itemSummary TDZ exactly while building checkoutSnapshot. The pending snapshot no longer serializes itemSummary at all. It keeps resolvedItems and baseSummary; resume logic already falls back to quoteSummary(resolvedItems) when itemSummary is absent. No fiscal protocol/mapping changes. Await CI/exact deploy before physical retry.
