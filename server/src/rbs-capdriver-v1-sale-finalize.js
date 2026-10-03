@@ -20,6 +20,8 @@ export async function finalizeDispatchedCashRequest(requestId){
     const shift=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${locked.companyId} AND "storeId"=${locked.storeId} AND UPPER(TRIM("terminalPos"))=UPPER(TRIM(${locked.terminalPos})) AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
     if(!shift)throw new Error(`RBS cash auto-finalize: no open shift for ${locked.terminalPos}.`);
     await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${crypto.randomUUID()},${locked.companyId},${locked.storeId},${shift.id},'SALE_CASH',${Number(summary.total||locked.total)},${`POS πώληση ${saleId} · ΜΕΤΡΗΤΑ`},${actorId},${actorName})`;
+    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${locked.companyId},${locked.storeId},${actorId},${actorId},'POS_SALE_COMPLETED',${JSON.stringify({source:"RBS_CAPDRIVER_V1",saleId,terminalPos:locked.terminalPos,total:Number(summary.total||locked.total),paymentMethod:"CASH",sessionId:shift.id,operatorEmployeeId})}::jsonb)`;
     await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='SALE_COMMITTED',"saleId"=${saleId},"updatedAt"=NOW() WHERE "id"=${locked.id} AND "status"='DISPATCHED'`;
     return {saleId};
   });
