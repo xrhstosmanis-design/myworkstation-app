@@ -366,7 +366,6 @@ router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
   await ensureRbsCapDriverV1RequestSchema(prisma);
   await markCapDriverV1WriterOnline(req.device);
   const request=await prisma.$transaction(async tx=>{
-    await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='REQUIRES_CHECK',"updatedAt"=NOW() WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' AND "createdAt"<NOW()-INTERVAL '60 seconds'`;
     const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
     if(!rows[0])return null;
     const claimed=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"='CLAIMED',"claimedByDeviceId"=${req.device.id},"claimedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${rows[0].id} AND "status"='PREPARED' RETURNING "id","terminalPos","paymentMethod","total","commandText","commandHash","claimedAt"`;

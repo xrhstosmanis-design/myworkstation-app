@@ -86,10 +86,8 @@ test("writer liveness requires a real recent poll rather than pairing alone",()=
   assert.match(cloudUi,/WRITER OFFLINE/);
 });
 
-test("stale unclaimed requests are quarantined before the writer can claim them",()=>{
-  assert.match(cloudRoute,/"status"='PREPARED' AND "createdAt"<NOW\(\)-INTERVAL '60 seconds'/);
-  assert.match(cloudRoute,/SET "status"='REQUIRES_CHECK'/);
-  const quarantineIndex=cloudRoute.indexOf(`SET "status"='REQUIRES_CHECK'`);
-  const claimIndex=cloudRoute.indexOf(`AND "status"='PREPARED' ORDER BY`);
-  assert.ok(quarantineIndex>=0&&claimIndex>quarantineIndex,"stale quarantine must run before request claim");
+test("prepared requests remain claimable until the writer actually claims them",()=>{
+  assert.doesNotMatch(cloudRoute,/"status"='PREPARED' AND "createdAt"<NOW\(\)-INTERVAL '60 seconds'/);
+  assert.match(cloudRoute,/AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED/);
+  assert.match(cloudRoute,/SET "status"='CLAIMED'/);
 });
