@@ -905,3 +905,76 @@
 .offers-workspace .promo-list article small{font-size:14px}
 .offers-workspace .promo-list article button{min-height:46px;font-size:15px}
 @media(max-width:1050px){.offers-summary{grid-template-columns:1fr}}
+
+
+/* 03/10/2026 — TODAY-06 Excel / Barcode: scanner and touch-first layout. */
+.promotion-import-workspace{align-items:start;gap:18px}
+.promotion-import-workspace>.op-box{
+  padding:22px;
+  border-radius:18px;
+}
+.promotion-import-heading{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding-bottom:14px;
+  margin-bottom:14px;
+  border-bottom:1px solid #dce5ef;
+}
+.promotion-import-heading>span{
+  width:42px;
+  height:42px;
+  flex:none;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#123b5d;
+  color:#fff;
+  font-size:21px;
+  font-weight:900;
+}
+.promotion-import-heading h3{font-size:23px;margin:0}
+.promotion-import-heading p{font-size:15px;color:#64748b;margin:4px 0 0}
+.promotion-import-workspace .op-form{gap:12px}
+.promotion-import-workspace .op-form>label{font-size:16px}
+.promotion-import-workspace .op-form input,
+.promotion-import-workspace .op-form select{
+  min-height:56px;
+  padding:12px 14px;
+  font-size:17px;
+}
+.promotion-import-workspace input[name="barcode"]{
+  min-height:64px;
+  border:2px solid #0f766e;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.promotion-import-workspace input[type="file"]{
+  min-height:64px;
+  padding:15px;
+  border:2px dashed #9fb3c8;
+  background:#f8fbff;
+}
+.promotion-import-workspace fieldset{
+  padding:16px;
+  border-radius:14px;
+  background:#f8fbff;
+}
+.promotion-import-workspace fieldset legend{font-size:17px;padding:0 8px}
+.promotion-import-workspace fieldset .check{
+  min-height:48px;
+  padding:8px 10px;
+}
+.promotion-import-workspace .op-alert{font-size:15px;line-height:1.5}
+.promotion-import-workspace .primary{
+  min-height:60px;
+  font-size:18px;
+  width:100%;
+}
+@media(max-width:680px){
+  .promotion-import-heading{align-items:flex-start}
+  .promotion-import-workspace>.op-box{padding:15px}
+  .promotion-import-workspace .op-form input,
+  .promotion-import-workspace .op-form select{font-size:16px}
+}
