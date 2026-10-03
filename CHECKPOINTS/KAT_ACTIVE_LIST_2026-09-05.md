@@ -2161,3 +2161,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — CARD picker Zod validation root cause
 
 - Physical test reached the server and returned the generic Zod message “Ελέγξτε τα προϊόντα και τον τρόπο πληρωμής.” before any RBS CARD request. The picker checkout payload explicitly sent payments:null. checkoutSchema defines payments as optional array, not nullable, so null is invalid. Removed payments:null from single-method CARD payload. Mixed-payment semantics unchanged; CASH untouched.
+
+
+## 03/10/2026 — CARD operator YES server-side finalization
+
+- First real CARD test succeeded through EFTPOS and operator YES. Production request f1d02def-d77e-4dee-9daa-bf6d917c6296 reached OPERATOR_CONFIRMED with operatorOutcome YES but saleId remained NULL and POS stuck on committing. CARD finalization is moved to the authoritative outcome endpoint: after YES transitions to OPERATOR_CONFIRMED, server atomically creates Sale/SaleLine, Payment CARD, exact-shift SALE_CARD, stock/StockMovement and POS_SALE_COMPLETED audit, then marks SALE_COMMITTED. This prevents browser polling from being responsible for committing an already-paid card transaction and never resends fiscal/EFTPOS command.
