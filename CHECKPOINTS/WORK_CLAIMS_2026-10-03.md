@@ -36,12 +36,13 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: from VAT Department -> department items, allow full product editing from the pencil action and return to the same department/list after save. Preserve the central rule: category never silently changes VAT department/rate.
 
 ### TODAY-03 — Central Product Management UI refresh
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1681, CI #4226 PASS, merged 461f09e9
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: implement the approved visual direction for Master Catalog / store prices / mass price changes / offers / Excel-Barcode / inventory. Larger buttons and inputs, cleaner cards, less clutter, touch-friendly. Preserve existing functionality.
 
 ### TODAY-04 — Mass price change UI
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner step flow: product selection -> stores -> price action -> preview -> apply.
 
 ### TODAY-05 — Offers UI
