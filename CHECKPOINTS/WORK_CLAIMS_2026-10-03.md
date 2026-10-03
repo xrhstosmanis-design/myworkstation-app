@@ -56,15 +56,16 @@ Completed by: current ChatGPT page — 2026-10-03
 Requirement: approved cleaner split between Barcode offer flow and Excel import, with large scanner/touch-friendly controls.
 
 ### TODAY-07 — Inventory 2.0 mobile/tablet + unknown barcode
-Status: CLAIMED / IN PROGRESS
-Claimed by: current ChatGPT page — 2026-10-03
+Status: DONE / PASS — PR #1685, CI #4238 PASS, merged 946a1f76
+Completed by: current ChatGPT page — 2026-10-03
 Requirement: make inventory cleaner/mobile/tablet friendly. When scanned barcode is unknown, offer:
 A) attach barcode to an existing product, or
 B) create a new product.
 After save, return directly to the same inventory session and continue.
 
 ### TODAY-08 — Commercial Modules layout
-Status: FREE
+Status: CLAIMED / IN PROGRESS
+Claimed by: current ChatGPT page — 2026-10-03
 Requirement: smaller module cards arranged across left/center/right instead of one long vertical row. Use available width. Remove the redundant POS module button from this section.
 
 ### TODAY-09 — Owner store page simplification
