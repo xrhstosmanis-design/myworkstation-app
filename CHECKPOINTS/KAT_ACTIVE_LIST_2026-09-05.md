@@ -2111,3 +2111,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Normalize already-issued RBS recovery payload
 
 - Recovery now reaches continuation but UI reports product/payment validation. The saved request checkout view can contain enriched resolved-item fields and did not explicitly reassert paymentMethod in the continuation payload. Recovery now constructs a strict checkoutSchema-compatible payload: original productId/quantity/barcode/manual price fields only, plus paymentMethod from the persisted fiscal request. Same requestId/clientTransactionId; no fiscal resend.
+
+
+## 03/10/2026 — Manual cleanup of known stuck RBS request
+
+- User requested immediate cancellation/unblocking of the old pending 7UP €1.20 request after confirming the physical receipt had already printed. Read-only production DB inspection identified exactly one row: request c9c6aa5a-5dc3-4fc7-8b29-0728081952ca, KAT-POS-02, CASH €1.20, DISPATCHED, saleId NULL. Added an exact guarded one-time startup cleanup that changes only this row to DECLINED. It cannot resend a fiscal command and matches request id + store + terminal + payment + amount + status + saleId NULL.
