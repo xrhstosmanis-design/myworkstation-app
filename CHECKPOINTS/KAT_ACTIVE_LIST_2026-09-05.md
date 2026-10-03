@@ -2136,3 +2136,8 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Server-finalized RBS CASH must post to shift ledger
 
 - Fresh post-finalizer test succeeded fiscally and in Sale: request f6da179b-1c7f-4123-9688-287c851d217d became SALE_COMMITTED with sale ec026570-7188-48c5-a38b-091b9a88781f, 7UP €1.20, fiscalStatus ISSUED. User observed it missing from Shift Transactions and shift totals. Root cause: server finalizer created Sale/SaleLine only, bypassing normal checkout Payment + StoreTransaction entries. Finalizer now requires the open shift for the request terminal, writes Payment CASH and StoreTransaction SALE_CASH in the same DB transaction, then marks SALE_COMMITTED.
+
+
+## 03/10/2026 — RBS finalizer BackOffice parity
+
+- BackOffice review found server-finalized RBS CASH sales were linked to the terminal shift and payment, but operator attribution, stock reservation/movement, and POS_SALE_COMPLETED audit were not yet equivalent to normal checkout. Checkout snapshots now persist actor/operator identity. The finalizer writes Sale.operatorEmployeeId, StoreTransaction actor, reserves StoreProduct stock through the same reserveSharedStock path (including StockMovement idempotency), and writes StoreOperatorAudit POS_SALE_COMPLETED in the same transaction. This keeps each terminal shift/operator separate and makes stock/events consistent.
