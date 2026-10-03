@@ -12,6 +12,22 @@ const [cloudRoute,posRoute,posUi,cloudUi]=await Promise.all([
 ]);
 
 const item={description:"ΝΕΡΟ 500ML",barcode:"",quantity:1,unitPrice:0.5,fiscalDepartment:"9",vatRate:13};
+test("standalone delayed CARD enters the same CAP gate before sale while protected exclusions stay intact",()=>{
+  const expression=posRoute.match(/const capDriverV1Eligible=([^;]+);/)[1];
+  const eligible=new Function("body","offlineOrigin",`return (${expression});`);
+  const cases=[
+    [{operationChannel:"COUNTER",paymentMethod:"CARD"},false,true],
+    [{operationChannel:"COUNTER",paymentMethod:"CASH"},false,true],
+    [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD"},false,true],
+    [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CASH"},false,false],
+    [{operationChannel:"COUNTER",paymentMethod:"CASH"},true,false],
+    [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD",onlineOrderId:"order"},false,false],
+    [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD",tableOrderId:"table"},false,false],
+    ...["IRIS","CREDIT","MIXED"].map(paymentMethod=>[{operationChannel:"DELIVERY_DELAYED",paymentMethod},false,false])
+  ];
+  for(const [body,offline,expected] of cases)assert.equal(eligible(body,offline),expected,JSON.stringify(body));
+  assert.ok(posRoute.indexOf("if(capDriverV1Active)")<posRoute.indexOf('INSERT INTO "Sale"'));
+});
 
 test("CAP Driver v1 builds one CR cash command in the configured Windows-1253 encoding",()=>{
   const command=buildRbsCapDriverV1Command({items:[item],paymentMethod:"CASH",paymentCode:"6",total:0.5,codePage:"1253"});

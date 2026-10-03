@@ -1,0 +1,13 @@
+# KAT standalone delayed CARD CAP gate — LIVE FAIL, fix AWAITING acceptance
+
+Owner: agent/rbs-delayed-card-gate-20261003, continuation of this CAPDriver conversation. Independent from Gate6 online-order work.
+
+03 October 2026, deployed c9c26d5c8eb7884c4b4abb0d4d5996085fe1bf4f. Normal CARD owner test at 15:41:42 Athens completed automatically: request37a534e7-e64d-45c1-8869-47624bd95704, sale8ed211c9-fafc-40a8-b2b4-2c336b035146, 7UP330ML SKU00582 qty1, manually priced0.70, ATHINA MARI, KAT-POS-02. DB after-read: one CARD payment0.70, ISSUED/COMPLETED, one stock SALE-1 and POS_SALE_COMPLETED in session769f78fc-8f81-42d4-b2f5-c9f3331fe3ab. UI empty cart and owner says normal completion. Scoped USER PASS; independently measured before/after stock and other-terminal control NOT TESTED. Earlier paid1.20 recovered once as salee600041d-3b5d-41d6-addb-3332b819694e without resend.
+
+New LIVE FAIL at15:45:35.808 Athens: delayed CARD0.01 committed immediately without physical payment or CAP request; salee8c83574-140a-4db7-b6e2-6d1785d4834f, same item/operator/terminal, DELIVERY_DELAYED/NON_FISCAL/COMPLETED, payment e5be7c61-a3b3-4f4a-9485-2ee7480053d6. Latest CAP request remains the preceding0.70. Owner images124603/124635/124656 show empty cart,0.01 CARD transaction, shift5 sales/cash4.40/cards1.91/total6.31. No automatic deletion, reversal, receipt, resend or fiscal reclassification of this exception.
+
+Causal change: allow standalone DELIVERY_DELAYED CARD into existing CAP pending path, leaving delayed CASH and online/table orders excluded. Existing snapshot preserves operationChannel and finalizer preserves original terminal/operator/shift. Existing dispatcher writes once, operator NO/UNCERTAIN does not commit, YES invokes idempotent finalizer. COUNTER cash/card, live writer guard, VAT mapping, authentication/licensing/isolation remain protected.
+
+Regression test executes actual route eligibility predicate for COUNTER cash/card, delayed card/cash, offline cash, online/table exclusions and unsupported methods. Existing CAP tests protect command encoding, one CR, claim-once, no-resend, outcomes and writer liveness. CI must also pass build, server, production invariants and isolated E2E. No production diagnostic transaction.
+
+Acceptance after exact live deploy: record fresh baseline for both terminal shifts and SKU00582 stock/movement, then one identified owner-led delayed card; one pending request, no Sale/Payment/StockMovement before approval, exactly one dispatch, after real payment/receipt press YES once, one ISSUED sale/payment/stock/audit on originating shift and unchanged control terminal. NO/reload acceptance separately NOT TESTED. Fix remains AWAITING owner acceptance, not delayed-card PASS.
