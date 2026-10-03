@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from "react";
 import {RefreshCw,MonitorUp} from "lucide-react";
+import RbsInstallationSetup from "./RbsInstallationSetup.jsx";
 
 export default function StoreInstallationGuide({company,store,request,onOpenTerminals}){
   const [result,setResult]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[mode,setMode]=useState("LOCAL");
@@ -16,7 +17,7 @@ export default function StoreInstallationGuide({company,store,request,onOpenTerm
     ["2. Κατάλογος και σχεδιασμός POS",check("posLayout")?.ok,check("posLayout")?.detail||"Έλεγχος…","Άνοιξε Σχεδιαστή POS και Προϊόντα για τιμές, barcode, ΦΠΑ και αρχικό απόθεμα. Η δημοσίευση διάταξης δεν πιστοποιεί όλα τα είδη."],
     ["3. Χειριστές και πρόσβαση",check("credentials")?.ok&&check("employees")?.ok,check("credentials")?.detail||"Έλεγχος…","Έλεγξε τους ενεργούς χειριστές και τα δικαιώματά τους. PIN και κωδικοί παραμένουν προσωπικοί."],
     ["4. Υπολογιστής POS",terminals.length>0,`${terminals.length} ενεργά POS${terminals.length?` · ${terminals.map(t=>t.terminalPos).join(", ")}`:""}`,"Άνοιξε Τερματικά. Το εφάπαξ link ενεργοποίησης ανοίγει στον τελικό υπολογιστή. Δεν προσθέτεις δεύτερο POS για ένα μοναδικό EFTPOS."],
-    ["5. Ταμειακή και EFTPOS",mapped,`${fiscals.length} ταμειακές · ${eftpos.length} EFTPOS`,"Άνοιξε Αντιστοίχιση εξοπλισμού. Κατάστημα με ένα EFTPOS δεν χρειάζεται δεύτερη εγγραφή Delivery. Η αντιστοίχιση ονομάτων δεν ορίζει ακόμη τον κωδικό πληρωμής CAPDriver."],
+    ["5. Ταμειακή και EFTPOS",mapped,`${fiscals.length} ταμειακές · ${eftpos.length} EFTPOS`,"Άνοιξε Αντιστοίχιση εξοπλισμού. Κατάστημα με ένα EFTPOS δεν χρειάζεται δεύτερη εγγραφή Delivery. Έπειτα επιβεβαίωσε τους κωδικούς πληρωμής RBS στη φόρμα παρακάτω."],
     ["6. Σύνδεση CAPDriver",false,"Απαιτείται έλεγχος στον τελικό υπολογιστή","Στο BackOffice του ίδιου καταστήματος: Σύνδεση RBS CAP Driver v1 → κωδικός ζεύξης → Pair → Test-Connection → Writer. Κωδικός 15 λεπτών. Επιβεβαίωσε WRITER ONLINE και πραγματικούς κωδικούς/ΦΠΑ πριν από πώληση."],
     ["7. Φυσική δοκιμή και παράδοση",false,"Δεν πιστοποιείται από την αποθήκευση ρυθμίσεων","Μία ελεγχόμενη απόδειξη μετρητών και μία κάρτας με πριν/μετά βάρδιας, stock και Audit. Κατέγραψε IDs και αποτέλεσμα. Μικτή CAPDriver παραμένει εκκρεμής."]
   ];
@@ -27,7 +28,8 @@ export default function StoreInstallationGuide({company,store,request,onOpenTerm
     <button onClick={refresh} disabled={busy}><RefreshCw/> {busy?"Έλεγχος…":"Επανέλεγχος εγκατάστασης"}</button>
     {error&&<p role="alert">Δεν ολοκληρώθηκε ο έλεγχος: {error}. Οι ελλείπουσες πηγές δεν θεωρούνται έτοιμες.</p>}
     {result&&rows.map(([title,ok,detail,next])=><article key={title} style={{background:"white",padding:14,marginTop:10,borderRadius:10,borderLeft:`4px solid ${ok?"#087a52":"#d98b21"}`}}><b>{title}</b><p>{ok?"Ρύθμιση υπάρχει":"Χρειάζεται έλεγχος / ενέργεια"} · {detail}</p><p>{next}</p></article>)}
-    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}><button onClick={()=>onOpenTerminals(company,store,false)}><MonitorUp/> Τερματικά / Αντιστοίχιση εξοπλισμού</button><a href="https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/docs/manual/pilot-installation/CAPDRIVER_TECHNICIAN.md" target="_blank" rel="noreferrer">Manual τεχνικού</a><a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/45993cb8433db78f5702d62bbeade7a7f396a4fe/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer">Αρχεία σύνδεσης Windows</a></div>
-    <p><small>Οι αποθηκευμένες ρυθμίσεις διατηρούνται στον server. Δεν στέλνεται φορολογική εντολή από αυτόν τον έλεγχο. Οι φυσικές δοκιμές και η αυτοματοποιημένη παραμετροποίηση CAPDriver δεν έχουν ολοκληρωθεί μέσα σε αυτόν τον οδηγό.</small></p>
+    {result&&<RbsInstallationSetup key={store.id} company={company} store={store} terminals={terminals} request={request}/>}
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}><button onClick={()=>onOpenTerminals(company,store,false)}><MonitorUp/> Τερματικά / Αντιστοίχιση εξοπλισμού</button><a href="https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/docs/manual/pilot-installation/CAPDRIVER_TECHNICIAN.md" target="_blank" rel="noreferrer">Manual τεχνικού</a><a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer">Αρχεία σύνδεσης Windows</a></div>
+    <p><small>Οι αποθηκευμένες ρυθμίσεις διατηρούνται στον server. Δεν στέλνεται φορολογική εντολή από αυτόν τον έλεγχο. Εκκρεμεί η φυσική δοκιμή. Ο CAPDriver της RBS και ο εξοπλισμός πρέπει να έχουν εγκατασταθεί και ρυθμιστεί στον τελικό υπολογιστή.</small></p>
   </section>;
 }

@@ -1,7 +1,8 @@
 param(
   [string]$ApiBase = $env:MWS_RBS_API_BASE,
   [string]$PairingCode,
-  [string]$DeviceName = 'MyWorkStation RBS CAP Driver v1'
+  [string]$DeviceName = 'MyWorkStation RBS CAP Driver v1',
+  [string]$ExpectedStoreId
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +26,7 @@ $body = @{
 } | ConvertTo-Json -Compress
 $response = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/cloud/v1/pair" -ContentType 'application/json' -Body $body
 if ([string]::IsNullOrWhiteSpace([string]$response.token)) { throw 'MyWorkStation did not return a device token.' }
+if ($ExpectedStoreId -and [string]$response.store.id -ne $ExpectedStoreId) { throw 'Pairing code belongs to another store. Existing local token was left unchanged. Get a new code from the correct store.' }
 
 $directory = Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1'
 New-Item -ItemType Directory -Path $directory -Force | Out-Null

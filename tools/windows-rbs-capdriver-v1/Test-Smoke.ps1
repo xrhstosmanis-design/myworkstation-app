@@ -3,7 +3,7 @@ $pairScript = Join-Path $PSScriptRoot 'Pair.ps1'
 $writerScript = Join-Path $PSScriptRoot 'Writer.ps1'
 $connectionScript = Join-Path $PSScriptRoot 'Test-Connection.ps1'
 
-foreach ($scriptPath in @($pairScript, $writerScript, $connectionScript)) {
+foreach ($scriptPath in @($pairScript, $writerScript, $connectionScript, (Join-Path $PSScriptRoot 'Install.template.ps1'))) {
   $tokens = $null
   $parseErrors = $null
   [System.Management.Automation.Language.Parser]::ParseFile(
@@ -48,7 +48,7 @@ function Invoke-RestMethod {
     return [pscustomobject]@{
       token = 'mock-device-token-for-local-smoke-test'
       device = [pscustomobject]@{ id = 'mock-device' }
-      store = [pscustomobject]@{ name = 'Mock Store' }
+      store = [pscustomobject]@{ id = 'mock-store'; name = 'Mock Store' }
     }
   }
   if ($Uri -match '/rbs-capdriver-v1/next$') {
@@ -67,7 +67,7 @@ function Invoke-RestMethod {
   }
   if ($Uri -match '/rbs-capdriver-v1/status$') {
     $global:MwsCapSmokeStatusCalls++
-    return [pscustomobject]@{ ok = $true; connectionOk = $true; writerOnline = $false; claimsRequest = $false }
+    return [pscustomobject]@{ ok = $true; storeId = 'mock-store'; connectionOk = $true; writerOnline = $false; claimsRequest = $false }
   }
   if ($Uri -match '/rbs-capdriver-v1/mock-request/dispatch-result$') {
     $payload = ConvertFrom-Json $Body
@@ -98,17 +98,32 @@ try {
   Assert-RejectedHttp $connectionScript @{ ApiBase = 'http://unit.test'; DeviceToken = 'fake-token'; WorkFolder = (Join-Path $testRoot 'work') }
   if ($script:networkCalls -ne 0) { throw 'An HTTP request occurred before insecure URL rejection.' }
 
-  & $pairScript -ApiBase 'https://unit.test' -PairingCode '12345678'
+  & $pairScript -ApiBase 'https://unit.test' -PairingCode '12345678' -ExpectedStoreId 'mock-store'
   $credentialPath = Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1\device.credential.xml'
   if (-not (Test-Path -LiteralPath $credentialPath)) { throw 'Pair.ps1 did not persist the mocked device credential.' }
   $credential = Import-Clixml -LiteralPath $credentialPath
   if ($credential.GetNetworkCredential().Password -ne 'mock-device-token-for-local-smoke-test') {
     throw 'Pair.ps1 credential did not round-trip under the test Windows user.'
   }
+  $previousCredential = [IO.File]::ReadAllBytes($credentialPath)
+  try { & $pairScript -ApiBase 'https://unit.test' -PairingCode '12345678' -ExpectedStoreId 'other-store'; throw 'Wrong store was not rejected.' } catch { if ($_.Exception.Message -notmatch 'another store') { throw } }
+  if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($credentialPath)) -ne [Convert]::ToBase64String($previousCredential)) { throw 'Wrong-store pairing overwrote the saved credential.' }
+
+  $beforePrepareCalls = $script:networkCalls
+  $packageConfig = @{ apiBase = 'https://unit.test'; storeId = 'mock-store'; storeName = 'Mock Store'; terminalPos = 'POS-01'; workFolder = 'C:\capture'; revision = 'test' } | ConvertTo-Json -Compress
+  $packageFiles = @{}
+  foreach ($name in @('Pair.ps1','Test-Connection.ps1','Writer.ps1')) { $packageFiles[$name] = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot $name))) }
+  $installer = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Install.template.ps1')).Replace('__CONFIG_BASE64__', [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($packageConfig))).Replace('__FILES_BASE64__', [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($packageFiles | ConvertTo-Json -Compress))))
+  $installerPath = Join-Path $testRoot 'Install.ps1'
+  [IO.File]::WriteAllText($installerPath, $installer)
+  & $installerPath -Action PREPARE
+  if ($script:networkCalls -ne $beforePrepareCalls) { throw 'Home preparation contacted the server.' }
+  if (-not (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1\packages\mock-store\installation.json'))) { throw 'Installer did not prepare its store-specific files.' }
 
   $writerWorkPath = Join-Path $testRoot 'work'
   New-Item -ItemType Directory -Path $writerWorkPath -Force | Out-Null
-  & $connectionScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $writerWorkPath
+  & $connectionScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $writerWorkPath -ExpectedStoreId 'mock-store'
+  try { & $connectionScript -ApiBase 'https://unit.test' -DeviceToken 'fake-token' -WorkFolder $writerWorkPath -ExpectedStoreId 'other-store'; throw 'Wrong store connection was not rejected.' } catch { if ($_.Exception.Message -notmatch 'another store') { throw } }
   if (@(Get-ChildItem -LiteralPath $writerWorkPath -Filter 'rbs.*.txt' -File -ErrorAction SilentlyContinue).Count -ne 0) { throw 'Connection test created a CAP Driver command file.' }
   $previousApiBase = $env:MWS_RBS_API_BASE
   $previousDeviceToken = $env:MWS_RBS_DEVICE_TOKEN
@@ -137,7 +152,7 @@ try {
     throw 'Writer.ps1 did not acknowledge exactly one successful file write.'
   }
   if ($script:nextCalls -ne 1) { throw "Unexpected request polling count: $($script:nextCalls)" }
-  if ($global:MwsCapSmokeStatusCalls -ne 1) { throw "Unexpected writer status count: $($global:MwsCapSmokeStatusCalls)" }
+  if ($global:MwsCapSmokeStatusCalls -ne 2) { throw "Unexpected writer status count: $($global:MwsCapSmokeStatusCalls)" }
   Write-Host 'CAP Driver PowerShell isolated smoke tests passed.'
 } finally {
   $env:LOCALAPPDATA = $previousLocalAppData

@@ -359,7 +359,7 @@ async function markCapDriverV1WriterOnline(device){
 router.post("/device/rbs-capdriver-v1/status",deviceAuth,route(async(req,res)=>{
   requireCapDriverV1Writer(req.device);
   await requireRbsConnectorModule(req.device);
-  send(res,{ok:true,connectionOk:true,writerOnline:false,serverTime:new Date().toISOString(),claimsRequest:false});
+  send(res,{ok:true,connectionOk:true,storeId:req.device.storeId,writerOnline:false,serverTime:new Date().toISOString(),claimsRequest:false});
 }));
 router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
   requireCapDriverV1Writer(req.device);

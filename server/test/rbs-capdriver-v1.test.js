@@ -118,7 +118,7 @@ test("KAT delivery uses confirmed payment code3 while counter CARD2 and CASH6 st
     assert.equal((command.text.match(/\r\nCR\//g)||[]).length,1);
   }
   assert.throws(()=>resolveRbsCapDriverV1PaymentCode({storeId:"other-store",paymentMethod:"CARD",operationChannel:"DELIVERY_DELAYED"}),/επιβεβαιωθεί/);
-  assert.match(posRoute,/paymentCode:resolveRbsCapDriverV1PaymentCode\(\{storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel\}\)/);
+  assert.match(posRoute,/paymentCode:resolveRbsCapDriverV1PaymentCode\(\{storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel,settings\}\)/);
 });
 
  test("configured CAP writer blocks mixed checkout before any transaction even with a supplied fiscal id",()=>{

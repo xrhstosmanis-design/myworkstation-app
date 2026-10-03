@@ -1,3 +1,9 @@
+## New single-POS installation package
+
+Platform Admin → Installation Center → store → Installation Guide now supports saving confirmed RBS payment codes and the watched folder per physical POS, then downloading a single installer. STORE EFTPOS is sufficient; Delivery is optional. The installer embeds the current three scripts and store identity without credentials. Run its menu on the final Windows user: Pair, safe connection check, then explicit Writer start. `-Action PREPARE` only extracts files and makes no network call. No RBS driver install, hardware reconfiguration, automatic startup or physical acceptance is implied.
+
+New stores require explicit payment codes. KAT retains its confirmed 6/2/3 compatibility. Equipment replacement invalidates old settings. Pair and connection checks reject a different store. Runtime license/CONNECTOR_RBS gates remain active. Package generation blocks multiple active POS because the current writer queue is store-wide.
+
 ## Authoritative installation guide (03 October 2026)
 
 Read [the Greek technician manual](../../docs/manual/pilot-installation/CAPDRIVER_TECHNICIAN.md) before a new installation. It distinguishes the observed KAT results from untested new-store acceptance and documents home preparation, pairing, mapping limits and mixed-payment blocking.

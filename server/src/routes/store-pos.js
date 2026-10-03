@@ -5,6 +5,7 @@ import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
 import {buildSaleFingerprint,ensurePosSaleSafetySchema,findRecentSimilarSale,findSaleByClientTransaction,insertPosSaleSafetyAudit,upsertOfflineSyncEvidence} from "../pos-sale-safety.js";
 import {buildRbsCapDriverV1Command,resolveRbsCapDriverV1PaymentCode} from "../rbs-capdriver-v1.js";
+import {readRbsInstallationSettings} from "../services/rbs-installation-settings.js";
 import {ensureRbsCapDriverV1RequestSchema,rbsCapDriverV1RequestView} from "../rbs-capdriver-v1-requests.js";
 import {sendEmail} from "../services/mail.js";
 import {resolvePaymentDeviceRoute} from "../payment-device-routing.js";
@@ -223,7 +224,8 @@ const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "company
         }else{
           let command;
           try{
-            command=buildRbsCapDriverV1Command({items:items.map((item,index)=>{const vatRate=round2(item.vatRate),fiscalDepartment=String(item.fiscalDepartment??"").trim(),fiscalVatCode=String(item.fiscalVatCode??"").trim();if(!/^\d{1,2}$/.test(fiscalDepartment))throw new Error(`Δεν έχει οριστεί τμήμα ταμειακής στο Τμήμα ΦΠΑ του προϊόντος «${item.name}».`);resolveRbsCapDriverFiscalProfile({vatCode:fiscalVatCode,department:fiscalDepartment,vatRate});return {description:item.name,barcode:body.items[index]?.barcode||"",quantity:item.quantity,unitPrice:item.effectiveUnitPrice,fiscalDepartment,vatRate,registerVatRate:item.fiscalVatRate}}),paymentMethod:body.paymentMethod,paymentCode:resolveRbsCapDriverV1PaymentCode({storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel}),total:summary.total,codePage:"1253"});
+            const settings=await readRbsInstallationSettings(tx,{companyId:req.user.companyId,storeId:store.id,terminalPos:routedTerminalPos});
+            command=buildRbsCapDriverV1Command({items:items.map((item,index)=>{const vatRate=round2(item.vatRate),fiscalDepartment=String(item.fiscalDepartment??"").trim(),fiscalVatCode=String(item.fiscalVatCode??"").trim();if(!/^\d{1,2}$/.test(fiscalDepartment))throw new Error(`Δεν έχει οριστεί τμήμα ταμειακής στο Τμήμα ΦΠΑ του προϊόντος «${item.name}».`);resolveRbsCapDriverFiscalProfile({vatCode:fiscalVatCode,department:fiscalDepartment,vatRate});return {description:item.name,barcode:body.items[index]?.barcode||"",quantity:item.quantity,unitPrice:item.effectiveUnitPrice,fiscalDepartment,vatRate,registerVatRate:item.fiscalVatRate}}),paymentMethod:body.paymentMethod,paymentCode:resolveRbsCapDriverV1PaymentCode({storeId:store.id,paymentMethod:body.paymentMethod,operationChannel:body.operationChannel,settings}),total:summary.total,codePage:"1253"});
           }catch(error){const blocked=new Error(error.message);blocked.status=409;blocked.code="RBS_CAPDRIVER_V1_MAPPING_REQUIRED";throw blocked}
           const commandHash=crypto.createHash("sha256").update(command.bytes).digest("hex"),existing=(await tx.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "storeId"=${store.id} AND "clientTransactionId"=${clientTransactionId} LIMIT 1`)[0];
           if(existing){if(existing.requestHash!==fingerprint||existing.commandHash!==commandHash){const error=new Error("Το ίδιο checkout key έχει ήδη χρησιμοποιηθεί με διαφορετική εντολή.");error.status=409;throw error}return {kind:"FISCAL_PENDING",request:existing}}

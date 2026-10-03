@@ -15,6 +15,9 @@ import {enqueueVideoCommand,readyVideoArtifact,videoCommandStatus,videoConnector
 import { ensureCashControlSchema } from "./cash-control.js";
 import {getStoreLabelSettings,saveStoreLabelSettings} from "../services/store-label-settings.js";
 import {backupMonitorSummary} from "./backup-monitor.js";
+import {ensureRbsInstallationSettings,readRbsInstallationSettings,rbsInstallationSettingsSchema} from "../services/rbs-installation-settings.js";
+import {companyModuleState} from "../middleware/module-access.js";
+import {buildRbsInstallationPackage} from "../services/rbs-installation-package.js";
 
 const router=Router();
 router.use(auth);
@@ -628,6 +631,45 @@ router.put("/companies/:companyId/stores/:storeId/device-routing",async(req,res,
     });
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_PAYMENT_DEVICE_ROUTING_UPDATED",success:true,deviceName:`${store.name} · ${body.fiscalDevices.length} fiscal · ${body.eftposDevices.length} EFTPOS`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
     res.json({ok:true,fiscalDevices:body.fiscalDevices,eftposDevices:body.eftposDevices,fallbackAllowed:false});
+  }catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/rbs-installation/:terminalPos",async(req,res,next)=>{
+  try{
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const terminalPos=deviceCodeSchema.parse(req.params.terminalPos);
+    const [settings,moduleState]=await Promise.all([readRbsInstallationSettings(prisma,{companyId:store.companyId,storeId:store.id,terminalPos}),companyModuleState(store.companyId)]);
+    res.json({settings,connectorAllowed:Boolean(moduleState?.licenseAllowed&&moduleState.activeModules.includes("CONNECTOR_RBS")),physicalTestConfirmed:false});
+  }catch(error){next(error)}
+});
+
+router.put("/companies/:companyId/stores/:storeId/rbs-installation",async(req,res,next)=>{
+  try{
+    const store=await installationStore(req.params.companyId,req.params.storeId);
+    const body=rbsInstallationSettingsSchema.parse(req.body||{});
+    await ensureInstallationTables();await ensureRbsInstallationSettings(prisma);
+    const settings=await prisma.$transaction(async tx=>{
+      const fiscal=await tx.$queryRaw`SELECT f."deviceCode" FROM "StoreFiscalDevice" f JOIN "StoreInstallationTerminal" t ON t."companyId"=f."companyId" AND t."storeId"=f."storeId" AND t."terminalPos"=f."terminalPos" AND t."active"=TRUE WHERE f."companyId"=${store.companyId} AND f."storeId"=${store.id} AND f."terminalPos"=${body.terminalPos} AND f."active"=TRUE FOR SHARE OF f,t`;
+      if(fiscal.length!==1){const error=new Error("Αντιστοίχισε πρώτα μία ενεργή RBS στο ενεργό POS.");error.status=409;throw error}
+      const eftpos=await tx.$queryRaw`SELECT "deviceCode","role" FROM "StoreEftposDevice" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "fiscalDeviceCode"=${fiscal[0].deviceCode} AND "active"=TRUE FOR SHARE`;
+      const counter=eftpos.find(row=>row.role==="STORE"),delivery=eftpos.find(row=>row.role==="DELIVERY");
+      if(!counter||(body.deliveryCode&&!delivery)){const error=new Error("Λείπει το EFTPOS που αντιστοιχεί στον επιλεγμένο τρόπο πληρωμής.");error.status=409;throw error}
+      const rows=await tx.$queryRaw`INSERT INTO "StoreRbsInstallationSettings" ("companyId","storeId","terminalPos","fiscalDeviceCode","storeEftposCode","deliveryEftposCode","cashCode","cardCode","deliveryCode","workFolder","confirmedBy") VALUES (${store.companyId},${store.id},${body.terminalPos},${fiscal[0].deviceCode},${counter.deviceCode},${body.deliveryCode?delivery.deviceCode:null},${body.cashCode},${body.cardCode},${body.deliveryCode||null},${body.workFolder},${req.user.id}) ON CONFLICT ("companyId","storeId","terminalPos") DO UPDATE SET "fiscalDeviceCode"=EXCLUDED."fiscalDeviceCode","storeEftposCode"=EXCLUDED."storeEftposCode","deliveryEftposCode"=EXCLUDED."deliveryEftposCode","cashCode"=EXCLUDED."cashCode","cardCode"=EXCLUDED."cardCode","deliveryCode"=EXCLUDED."deliveryCode","workFolder"=EXCLUDED."workFolder","confirmedBy"=EXCLUDED."confirmedBy","confirmedAt"=NOW() RETURNING *`;
+      await tx.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_RBS_INSTALLATION_CONFIRMED",success:true,deviceName:`${store.name} · ${body.terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
+      return rows[0];
+    });
+    res.json({settings,physicalTestConfirmed:false});
+  }catch(error){next(error)}
+});
+
+router.post("/companies/:companyId/stores/:storeId/rbs-installation/:terminalPos/package",async(req,res,next)=>{
+  try{
+    const store=await installationStore(req.params.companyId,req.params.storeId),terminalPos=deviceCodeSchema.parse(req.params.terminalPos);
+    const body=z.object({apiBase:z.string().url().max(300)}).parse(req.body||{});
+    const settings=await readRbsInstallationSettings(prisma,{companyId:store.companyId,storeId:store.id,terminalPos});
+    const terminals=await prisma.$queryRaw`SELECT "terminalPos" FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "active"=TRUE`;
+    if(terminals.length!==1||terminals[0].terminalPos!==terminalPos){const error=new Error("Το έτοιμο πακέτο υποστηρίζει εγκατάσταση με ένα ενεργό POS. Για πολλά POS χρειάζεται ξεχωριστός έλεγχος φυσικής διαδρομής writer.");error.status=409;throw error}
+    res.json(await buildRbsInstallationPackage({store,settings,apiBase:body.apiBase,revision:process.env.RENDER_GIT_COMMIT||process.env.APP_REVISION||"unknown"}));
   }catch(error){next(error)}
 });
 

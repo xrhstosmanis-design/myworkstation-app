@@ -1,5 +1,11 @@
 const PAYMENT_LABELS={CASH:"ΜΕΤΡΗΤΑ",CARD:"ΚΑΡΤΑ"};
-export function resolveRbsCapDriverV1PaymentCode({storeId,paymentMethod,operationChannel="COUNTER"}={}){
+export function resolveRbsCapDriverV1PaymentCode({storeId,paymentMethod,operationChannel="COUNTER",settings=null}={}){
+  if(settings){
+    const code=paymentMethod==="CASH"&&operationChannel==="COUNTER"?settings.cashCode:paymentMethod==="CARD"?(operationChannel==="COUNTER"?settings.cardCode:operationChannel==="DELIVERY_DELAYED"?settings.deliveryCode:null):null;
+    if(/^\d{1,2}$/.test(String(code??"")))return String(code);
+    throw new Error("Δεν έχει επιβεβαιωθεί ο κωδικός πληρωμής CAP Driver για αυτόν τον τρόπο πληρωμής.");
+  }
+  if(storeId!=="kat-store")throw new Error("Δεν έχει επιβεβαιωθεί ο κωδικός πληρωμής CAP Driver για την ταμειακή αυτού του καταστήματος.");
   if(paymentMethod==="CASH")return "6";
   if(paymentMethod!=="CARD")throw new Error("Unsupported CAP Driver payment method");
   if(operationChannel==="COUNTER")return "2";
