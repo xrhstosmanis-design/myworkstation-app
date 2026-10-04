@@ -73,3 +73,11 @@
 .purchase-orders-suite :is(button,input,select,textarea):focus-visible,
 .kiosk-reports-suite :is(button,input,select):focus-visible,
 .price-catalog-suite :is(button,input,select):focus-visible{outline:3px solid rgba(15,118,110,.28)!important;outline-offset:1px!important}
+
+
+/* 05/10/2026 — owner screenshot reference, shared Central Management surfaces. */
+:root{--mws-ref-bg:#f6f9fc;--mws-ref-card:#fff;--mws-ref-border:#d7e3ed;--mws-ref-muted:#667b90;--mws-ref-blue:#176fc6}
+.commerce-hub,.owner-products{background:var(--mws-ref-bg)}
+.commerce-hub :is(.panel,.commerce-box,.commerce-card),.owner-products :is(.op-box,fieldset){border-color:var(--mws-ref-border);box-shadow:0 6px 18px rgba(31,65,98,.045)}
+.commerce-hub :is(input,select,textarea),.owner-products :is(input,select,textarea){font-family:inherit;color:#17324d}
+.commerce-hub :is(button,input,select,textarea):focus-visible,.owner-products :is(button,input,select,textarea):focus-visible{outline:3px solid rgba(23,111,198,.16)!important;outline-offset:1px}
