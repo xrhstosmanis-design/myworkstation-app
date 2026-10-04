@@ -6,6 +6,7 @@ import {readFile} from "fs/promises";
 import { fileURLToPath } from "url";
 import {storeHtmlWithManifest,storeManifest,validPwaStoreId} from "./store-pwa.js";
 import {clearKatStuckRbsRequest} from "./clear-kat-stuck-rbs-request.js";
+import {startWorkforceAutoOutWorker} from "./workers/workforce-auto-out.js";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
@@ -276,4 +277,5 @@ app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
+  startWorkforceAutoOutWorker();
 });
