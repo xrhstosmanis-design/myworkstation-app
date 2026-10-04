@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {verifyExpenseServiceDocument} from "./expense-service-document-flow.mjs";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import {PrismaClient} from "@prisma/client";
@@ -132,6 +133,8 @@ async function main(){
   const afterCloseCash=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token,body:{type:"OTHER_EXPENSE",amount:1,description:"cash-shift payment after close",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:"e2e-bound-after-close-cash-001"}});
   assert.equal(afterCloseCash.response.status,409,"CASH_SHIFT payment after shift close was stored");
   assert.equal(await transactionCount(),before+1,"Rejected CASH_SHIFT payment after close left a StoreTransaction");
+
+  await verifyExpenseServiceDocument({request,prisma,token,storeId:otherStoreId,foreignStoreId:otherTenantStoreId});
 
   console.log("E2E payment validation boundaries passed",{sessionId,validPaymentId:valid.payload.id});
 }

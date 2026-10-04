@@ -76,6 +76,7 @@ import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake
 import invoiceAssistantPosRoutes from "./routes/invoice-assistant-pos.js";
 import supplierItemLearningRoutes from "./routes/supplier-item-learning.js";
 import commerceV1Routes from "./routes/commerce-v1.js";
+import expenseDocumentRoutes from "./routes/expense-documents.js";
 import mobileInvoiceUploadRoutes from "./routes/mobile-invoice-upload.js";
 import attendanceRoutes from "./routes/attendance.js";
 import providerLogisticsRoutes from "./routes/provider-logistics.js";
@@ -179,6 +180,7 @@ app.use("/api/management/parameters",auth,requireCompanyModule("CORE"),managemen
 app.use("/api/management",auth,requireCompanyModule("INVENTORY"),managementCategoriesRoutes);
 app.use("/api/operators",requireStoreModule("STORE_MODE"),storeOperatorRoutes);
 app.use("/api/transactions",auth,requireCompanyOrStoreModule("CASH_CONTROL"),storeTransactionRoutes);
+app.use("/api/transactions",auth,expenseDocumentRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportPreviewRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsImportRoutes);
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsRoutes);
@@ -275,4 +277,3 @@ app.listen(process.env.PORT||8080,()=>{
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
 });
-

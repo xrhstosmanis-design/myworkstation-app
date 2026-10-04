@@ -1,3 +1,6 @@
+## 04/10/2026 23:28 — #27 service document implementation / ASSIGNED same page
+Owner codex/task27-service-document-20261004. Dedicated store-scoped CASH_CONTROL manual service draft/list/approval and OTHER/UTILITIES UI; deterministic retry/payload conflict and audit, no stock/product/OCR/fiscal write. Source/current board/history reconciled, prior desktop/read-only PASS protected. New pathway/positive124 NOT TESTED, requires CI/exact LIVE and one authorized synthetic scenario. See task27-expense-document checkpoint. Other owners untouched.
+
 ## 04/10/2026 — #29 exact LIVE readback / bounded source-cost PASS / retained handoff
 
 Follow-up PR1720/head43f9caa32e8af744d69395fae9fad4513936be39 merged `65b0136a5f2567b76f7cbc60370bbecac22af868`; PR CI4327/run37231597650 and main CI4328/run37231766210 SUCCESS,1818/1818 tests PASS,0 FAIL,0 SKIP, isolated PostgreSQL/HTTP E2E/build/invariants PASS. Guarded Render1985/run37231883968 SUCCESS, finished20:24:53Z; browser /api/health independently confirms exact65b0136a. This closes the low-contrast subtitle observation and its CI/LIVE wait; no owner VISUAL acceptance is inferred.
