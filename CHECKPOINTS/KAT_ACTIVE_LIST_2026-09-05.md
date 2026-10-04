@@ -2512,3 +2512,7 @@ Owner reproduced Platform Admin 500 after refresh. Render logs show repeated `pr
 
 ## 05/10/2026 00:30 Athens — TODAY-08 owner-reference visual correction
 LIVE review failed the prior Modules layout: status cards rendered as oversized mostly-empty single-column blocks. Owner supplied the original approved visual references. Bounded CSS-only correction follows those references: compact white/light cards, subtle colored icon wells, 3-column desktop status grid (2 tablet/1 mobile), denser navigation tiles, readable typography and reduced wasted height. Routes, module state, permissions and business logic unchanged. Awaiting CI/LIVE/USER visual acceptance.
+
+
+## 05/10/2026 00:55 Athens — Central desktop no-page-scroll rule / TODAY-08 grid root cause
+Owner set standing visual rule: normal desktop Central Management pages must fit the viewport without outer vertical/horizontal scrolling; long datasets scroll only inside their own panel/table. LIVE TODAY-08 revealed older commerce-home-modern rules forcing active cards to grid column 1 and others column 2, overriding the newer three-column intent. Bounded CSS correction overrides that source rule at desktop, enforces true 3-column module cards, compact nav, and makes the maximized Commerce shell viewport-fixed with internal status-grid scrolling only. No routes/business logic changed. Awaiting CI/LIVE acceptance.
