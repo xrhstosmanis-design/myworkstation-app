@@ -29,9 +29,9 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 | Item | Status | Scope |
 | --- | --- | --- |
 | TODAY-01 — Larger EFTPOS/card-terminal selector | DONE / DESKTOP VISUAL PASS | Owner confirmed 04/10 18:46; LIVE b958de17; PR1693 / CI4259 merged728e5f3; payment/mobile NOT TESTED |
-| TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS · SUPPLIER FIX AWAITING CI/LAB | Owner agent/today02-preserve-suppliers-20261004; pencil opens LAB card; save withheld after supplier payload source FAIL; preserve supplier codes before LAB save |
-| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Same continuation agent/today03-audience-controls-20261004; real OwnerProductCenter audit selects 19px high; CSS-only 52px control fix AWAITING CI/LIVE/USER; other product tabs remain under verification |
-| TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | Approved product → stores → action → preview → apply UX; business logic protected |
+| TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS · MERGED / LIVE / SAVE NOT TESTED | Same continuation; PR1694 / CI4261–4262 / Render1960 successful; LIVE69de72; corrected editor opens LAB card; save and multiple-supplier live roundtrip NOT TESTED |
+| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Same continuation agent/today03-audience-controls-20261004; PR1695 / CI4263–4264 / Render1961 successful; LIVEd61be82 audit selects/action measured52px/16px; AWAITING USER visual acceptance; other product tabs remain under verification |
+| TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | LIVE preview observed1 product×1LABstore,1.20→1.20 unchanged,commit disabled; preview button incorrectly says0×0 (UI FAIL); final apply NOT TESTED |
 | TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
 | TODAY-06 — Excel / Barcode UI | CLAIMED / IN PROGRESS | Clear Barcode vs Excel flows; touch-friendly controls |
 | TODAY-07 — Inventory 2.0 mobile/tablet unknown barcode | CLAIMED / IN PROGRESS | Attach existing or create new, then return to same active inventory |
@@ -63,6 +63,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 8. For visual work, user checks the real production screen by screenshot.
 9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
 10. If blocked, mark `BLOCKED` and record the exact reason.
+
+## 04/10/2026 19:25 Athens — TODAY continuation / no new PASS closure
+
+Same owner retained for TODAY-02–09; documentation branch `agent/today-ui-live-handoff-20261004` continues the current page, not a transfer to another agent. See `CHECKPOINTS/CHANGES/2026-10-04-today-ui-live-handoff.md`. TODAY-01 is already closed and must not be repeated. TODAY-02 supplier correction and TODAY-03 CSS are merged with green CI; exact production health d61be828 includes both. TODAY-02 save remains NOT TESTED. TODAY-03 measured desktop controls52px/16px, awaiting explicit USER visual confirmation and mobile/tablet review. TODAY-04 has observed stale preview label0×0 despite1×1 selection; no price was applied. TODAY-05/06 read-only field measurements recorded, not overall PASS. TODAY-07–09 remain claimed, broader acceptance NOT TESTED. Next action: owner visual review of TODAY-03, then bounded TODAY-04 label correction after the mandatory pre-change gate. No sale/payment/fiscal/import/stock mutation was executed.
 
 ## 04/10/2026 18:46 Athens - TODAY-01 USER / VISUAL PASS
 
