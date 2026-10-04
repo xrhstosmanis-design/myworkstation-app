@@ -1125,9 +1125,8 @@
 .kiosk-shell:has(> .owner-products-colorful) > .kiosk-return { display: none; }
 .owner-products-colorful .op-master-workspace > aside:not(.empty) {
   box-sizing: border-box;
-  max-height: 420px;
-  overflow: auto;
-  scrollbar-gutter: stable;
+  max-height: none;
+  overflow: visible;
 }
 .owner-products-colorful .op-master-workspace aside .op-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1197,4 +1196,63 @@
   .owner-products-colorful .op-master-workspace .op-search { flex-wrap: wrap; }
   .owner-products-colorful .op-master-workspace .op-search input { flex-basis: 100%; }
   .owner-products-colorful .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+}
+
+/* TODAY-03: full-page desktop workspace; keep every offer control visible. */
+.commerce-overlay:has(.owner-products-colorful) { padding: 0; }
+.commerce-shell.window-maximized:has(.owner-products-colorful) {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border-radius: 0;
+}
+.commerce-shell.window-maximized:has(.owner-products-colorful) > .commerce-window-bar {
+  border-radius: 0;
+}
+@media (min-width: 1101px) {
+  .owner-products-colorful .offers-workspace {
+    grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+    align-items: start;
+    gap: 12px;
+  }
+  .owner-products-colorful .offers-workspace > .op-box { padding: 16px; }
+  .owner-products-colorful .offers-workspace .op-form {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: repeat(4, auto);
+    gap: 10px 16px;
+    align-items: start;
+  }
+  .owner-products-colorful .offers-workspace .op-form > * { min-width: 0; }
+  .owner-products-colorful .offers-workspace .op-form > .promotion-product-picker {
+    grid-column: 1;
+    grid-row: 1 / 5;
+    align-content: start;
+  }
+  .owner-products-colorful .offers-workspace .op-form > .offers-summary {
+    grid-column: 1;
+    grid-row: 5;
+    margin: 0;
+  }
+  .owner-products-colorful .offers-workspace .op-form > :is(label, .op-two, fieldset, button) {
+    grid-column: 2;
+    margin: 0;
+  }
+  .owner-products-colorful .offers-workspace .promotion-product-list {
+    max-height: clamp(160px, calc(100dvh - 490px), 300px);
+  }
+  .owner-products-colorful .offers-workspace .op-form > .op-two {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .owner-products-colorful .offers-workspace .op-form :is(input, select) {
+    width: 100%;
+    min-width: 0;
+  }
+  .owner-products-colorful .offers-workspace .op-form input[type="checkbox"] {
+    min-height: 20px;
+    padding: 0;
+    flex: none;
+  }
 }
