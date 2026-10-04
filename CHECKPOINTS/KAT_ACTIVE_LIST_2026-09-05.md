@@ -2459,3 +2459,7 @@ Owner observed very slow initial product loading in LIVE bulk price change. Boun
 
 ## 04/10/2026 23:05 Athens — TODAY-05 offers LIVE refinement
 Owner LIVE review found the offers workspace functional but typography/controls too small and initial product list unnecessarily heavy. Bounded correction: larger 52px search/form controls, larger labels/product rows/checkboxes/actions, and on-demand 2+ character product search instead of loading the full rich catalog on tab entry. Promotion create/toggle APIs, offer calculations, dates and store targeting remain unchanged. Awaiting CI/LIVE/USER acceptance; no offer submitted.
+
+
+## 04/10/2026 23:50 Athens — TODAY-05 selected-product review follow-up
+Owner confirmed cross-search offer selections are intentionally retained and TODAY-05 visual flow is acceptable. Follow-up safety/clarity improvement requested: add «Προβολή επιλεγμένων» so all accumulated products can be reviewed and individually removed before send. No promotion create/toggle logic changes and no offer submitted. TODAY-06 LIVE visual review is acceptable; no Excel/barcode action executed.
