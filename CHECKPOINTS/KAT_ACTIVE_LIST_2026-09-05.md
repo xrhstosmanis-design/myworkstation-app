@@ -42,7 +42,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| efood / Pelican provider test | CLAIMED / AWAITING ONE-SHOT TEST CONSENT | agent/efood-partner-lab-20261004; user credential setup saved; LAB locked; before controls recorded; no provider PASS |
+| efood / Pelican provider test | CLAIMED / PROVIDER SUBMISSION UNCONFIRMED | agent/efood-partner-lab-20261004; first300s window EXPIRED; one submit click/no delivery; refreshed controls unchanged; no provider PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
 | GATE 8 work | FREE | Claim before starting |
@@ -64,6 +64,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 8. For visual work, user checks the real production screen by screenshot.
 9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
 10. If blocked, mark `BLOCKED` and record the exact reason.
+
+## 04/10/2026 — efood one-shot attempt / EXPIRED / provider submission unconfirmed
+
+Same owner agent/efood-partner-lab-20261004. Owner approved one300s LAB window; receiver opened then expired/locked. One provider submit click completed, but no success, request ID/HTTP response or Webhook update was observed; no callback PASS. Refreshed controls unchanged: MAIN2/2.40 EUR, LAB-POS-02 2/0 EUR/expenses120, TEST1stock11, TEST2stock−2. Provider form reopened normally; no second submit/window. CHECKPOINTS/CHANGES/2026-10-04-efood-window-attempt.md. Next: bounded form submission diagnosis, then fresh action-time approval for any additional window. Other claims preserved.
 
 ## 04/10/2026 — efood provider preflight / same owner / test NOT TESTED
 
