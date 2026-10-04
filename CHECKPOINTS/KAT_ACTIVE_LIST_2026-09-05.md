@@ -2550,3 +2550,7 @@ LIVE review failed the prior Modules layout: status cards rendered as oversized 
 
 ## 05/10/2026 00:55 Athens — Central desktop no-page-scroll rule / TODAY-08 grid root cause
 Owner set standing visual rule: normal desktop Central Management pages must fit the viewport without outer vertical/horizontal scrolling; long datasets scroll only inside their own panel/table. LIVE TODAY-08 revealed older commerce-home-modern rules forcing active cards to grid column 1 and others column 2, overriding the newer three-column intent. Bounded CSS correction overrides that source rule at desktop, enforces true 3-column module cards, compact nav, and makes the maximized Commerce shell viewport-fixed with internal status-grid scrolling only. No routes/business logic changed. Awaiting CI/LIVE acceptance.
+
+
+## 05/10/2026 01:10 Athens — TODAY-08 owner visual correction #2
+LIVE confirms grid/viewport improvement but owner rejects visual match: cards remain essentially white and do not resemble supplied approved references. Apply explicit pastel card language from reference (blue/green/yellow/pink/purple/cyan surfaces, larger colored icon wells, stronger title hierarchy) while retaining true 3-column desktop and no outer scroll. CSS-only, no module logic changes. Awaiting CI/LIVE/USER acceptance.
