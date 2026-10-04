@@ -44,7 +44,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| efood / Pelican provider test | CLAIMED / BLOCKED · TEST SUBMISSION FAILED | agent/efood-partner-lab-20261004; second300s window EXPIRED; owner reports Service is not available; fresh provider history empty/controls unchanged; HTTP cause unconfirmed; no provider PASS |
+| efood / Pelican provider test | CLAIMED / BLOCKED · AWAITING EFOOD REPLY | agent/efood-partner-lab-20261004; email SENT04/10 22:17 Athens; handoff instructions in provider-service-unavailable checkpoint; next page checks reply and records takeover; no new test/PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
 | GATE 8 work | FREE | Claim before starting |
@@ -70,6 +70,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 ## 04/10/2026 — #27 optional expense document / ASSIGNED same page
 
 Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. Authenticated read-only LAB shows selection/clear works but long document labels overflow; LAB FAIL / bounded min-width fix AWAITING CI/deploy. Controls MAIN2/2.40 andPOS02 2/0 unchanged. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
+
+## 04/10/2026 22:17 Athens — efood support email SENT / AWAITING REPLY / HANDOFF PREPARED
+
+Owner explicitly requested email and a checkpoint for the next page. Gmail SENT verified22:17:13 Athens /19:17:13Z; to qc.integrations@e-food.gr, existing cc giannis.spyros@e-food.gr + groceries@e-food.gr. Message `1a1085951cc721ce`, thread `1a08c1108f87bb71`, same technical-integration subject. Requested virtual test-vendor availability/configuration, request/correlation ID and service/callback HTTP result for04/10 21:53–21:58 Athens. No secrets or new test. First next-page action: read current board/checkpoint and this Gmail thread for a reply after22:17:13; if none, stay BLOCKED, no duplicate setup/email/window. Record explicit takeover before work; follow `CHECKPOINTS/CHANGES/2026-10-04-efood-provider-service-unavailable.md` for evidence-based correction, fresh baseline/action-time window approval and valid callback/after readback. Current claim retained until recorded takeover; other owners preserved. Provider reply/callback/Pelican/production certification NOT TESTED.
 
 ## 04/10/2026 — efood second attempt / user-reported Service is not available / BLOCKED
 
