@@ -21,7 +21,7 @@ function documentCost(document, unit) {
     if (unit.base !== "PIECE") return {cost: null, reason: "Η μετατροπή αγοράς σε μονάδα προϊόντος χρειάζεται έλεγχο"};
     const corrected = numeric(first.correctedUnitCost);
     if (first.correctionId) return positive(corrected)
-      ? {cost: corrected, note: "Εγκεκριμένη διόρθωση συσκευασίας", evidenceId: first.correctionId}
+      ? {cost: corrected, note: "Καταγεγραμμένη διόρθωση συσκευασίας", evidenceId: first.correctionId}
       : {cost: null, reason: "Μη έγκυρο κόστος διόρθωσης συσκευασίας"};
     const quantity = numeric(first.orderBaseQuantity), net = numeric(first.orderNetAmount);
     if (Number(first.orderInvalidUnits) === 0 && positive(quantity) && positive(net)) return {cost: net / quantity, note: "Αποθηκευμένη μετατροπή αγοράς"};
