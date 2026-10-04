@@ -2441,3 +2441,7 @@ TODAY-04 remains CLAIMED / IN PROGRESS. Bounded UI-only fix: installBulkPricePre
 
 ## 04/10/2026 22:45 Athens — TODAY-04 bulk product loading performance
 Owner observed very slow initial product loading in LIVE bulk price change. Bounded performance correction: entering TODAY-04 no longer calls the heavy full `/api/owner-products/catalog` query. Product choices are loaded on demand only after a 2+ character description/SKU search, while selected IDs and existing preview/commit flow remain unchanged. No price calculation/API/commit semantics changed. Awaiting CI/LIVE/USER acceptance.
+
+
+## 04/10/2026 23:05 Athens — TODAY-05 offers LIVE refinement
+Owner LIVE review found the offers workspace functional but typography/controls too small and initial product list unnecessarily heavy. Bounded correction: larger 52px search/form controls, larger labels/product rows/checkboxes/actions, and on-demand 2+ character product search instead of loading the full rich catalog on tab entry. Promotion create/toggle APIs, offer calculations, dates and store targeting remain unchanged. Awaiting CI/LIVE/USER acceptance; no offer submitted.

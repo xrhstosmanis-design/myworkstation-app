@@ -104,6 +104,7 @@ export default function OwnerProductCenter({
   const [promotionProducts, setPromotionProducts] = useState([]);
   const [promotionGiftProducts, setPromotionGiftProducts] = useState([]);
   const [promotionQuery, setPromotionQuery] = useState("");
+  const [promotionSearchBusy, setPromotionSearchBusy] = useState(false);
   const [bulkProducts, setBulkProducts] = useState([]);
   const [bulkQuery, setBulkQuery] = useState("");
   const [bulkResults, setBulkResults] = useState([]);
@@ -342,6 +343,15 @@ export default function OwnerProductCenter({
   const bulkCategories = useMemo(() => [...new Set(bulkResults.map((p)=>p.categoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")), [bulkResults]);
   const bulkSubcategories = useMemo(() => [...new Set(bulkResults.filter((p)=>!bulkCategory||p.categoryName===bulkCategory).map((p)=>p.subcategoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")), [bulkResults,bulkCategory]);
   const visibleBulkResults = useMemo(() => bulkResults.filter((p)=>(!bulkCategory||p.categoryName===bulkCategory)&&(!bulkSubcategory||p.subcategoryName===bulkSubcategory)), [bulkResults,bulkCategory,bulkSubcategory]);
+
+  const searchPromotionProducts = async (event) => {
+    event?.preventDefault();
+    const query=promotionQuery.trim();
+    if(query.length<2)return setError("Γράψε τουλάχιστον 2 χαρακτήρες για αναζήτηση προϊόντος.");
+    setError("");setPromotionSearchBusy(true);
+    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(query)}`));}
+    catch(e){setError(e.message)}finally{setPromotionSearchBusy(false)}
+  };
 
   const chooseProduct = (row) => {
     setTransferBarcode("");
@@ -802,7 +812,7 @@ export default function OwnerProductCenter({
     )
       loadCatalog();
     if (tab === "promotions") {
-      loadCatalog();
+      setCatalog([]);
       loadPromotions();
     }
     if (tab === "promotion-import") loadPromotions();
@@ -1968,12 +1978,16 @@ export default function OwnerProductCenter({
                     </button>
                   </div>
                 </div>
-                <input
-                  aria-label="Αναζήτηση προϊόντων προσφοράς"
-                  value={promotionQuery}
-                  onChange={(event) => setPromotionQuery(event.target.value)}
-                  placeholder="Αναζήτηση με όνομα, SKU ή barcode"
-                />
+                <div className="offers-product-search">
+                  <input
+                    aria-label="Αναζήτηση προϊόντων προσφοράς"
+                    value={promotionQuery}
+                    onChange={(event) => setPromotionQuery(event.target.value)}
+                    onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();searchPromotionProducts()}}}
+                    placeholder="Όνομα, SKU ή barcode — τουλάχιστον 2 χαρακτήρες"
+                  />
+                  <button type="button" className="secondary" disabled={promotionSearchBusy} onClick={searchPromotionProducts}>{promotionSearchBusy?"Αναζήτηση…":"Αναζήτηση"}</button>
+                </div>
                 <div className="promotion-product-list">
                   {visiblePromotionProducts.map((product) => (
                     <label className="check" key={product.id}>
