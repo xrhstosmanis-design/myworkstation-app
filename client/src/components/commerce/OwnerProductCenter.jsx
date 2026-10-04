@@ -792,7 +792,7 @@ export default function OwnerProductCenter({
   }, [tab]);
 
   return (
-    <div className="owner-products">
+    <div className="owner-products owner-products-colorful">
       <div className="owner-products-head">
         <div>
           <h2>Προϊόντα, Τιμές, Προσφορές & Απογραφή</h2>
@@ -1099,7 +1099,7 @@ export default function OwnerProductCenter({
       )}
 
       {tab === "master" && (
-        <div className="op-grid two">
+        <div className="op-grid two op-master-workspace">
           <section className="op-box">
             <h3>Αναζήτηση 26.656 προϊόντων</h3>
             <form className="op-search" onSubmit={searchMaster}>
