@@ -105,6 +105,11 @@ export default function OwnerProductCenter({
   const [promotionGiftProducts, setPromotionGiftProducts] = useState([]);
   const [promotionQuery, setPromotionQuery] = useState("");
   const [bulkProducts, setBulkProducts] = useState([]);
+  const [bulkQuery, setBulkQuery] = useState("");
+  const [bulkResults, setBulkResults] = useState([]);
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkSubcategory, setBulkSubcategory] = useState("");
+  const [bulkSearchBusy, setBulkSearchBusy] = useState(false);
   const [bulkStores, setBulkStores] = useState([]);
   const [bulkMode, setBulkMode] = useState("SET");
   const [excelFile, setExcelFile] = useState(null);
@@ -323,6 +328,20 @@ export default function OwnerProductCenter({
       setBusy(false);
     }
   };
+
+  const searchBulkProducts = async (event) => {
+    event?.preventDefault();
+    const query = bulkQuery.trim();
+    if (query.length < 2) return setError("Γράψε τουλάχιστον 2 χαρακτήρες για αναζήτηση προϊόντος.");
+    setError("");setBulkSearchBusy(true);
+    try { setBulkResults(await api(`/api/owner-products/catalog?q=${encodeURIComponent(query)}`)); }
+    catch (e) { setError(e.message); }
+    finally { setBulkSearchBusy(false); }
+  };
+
+  const bulkCategories = useMemo(() => [...new Set(bulkResults.map((p)=>p.categoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")), [bulkResults]);
+  const bulkSubcategories = useMemo(() => [...new Set(bulkResults.filter((p)=>!bulkCategory||p.categoryName===bulkCategory).map((p)=>p.subcategoryName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"el")), [bulkResults,bulkCategory]);
+  const visibleBulkResults = useMemo(() => bulkResults.filter((p)=>(!bulkCategory||p.categoryName===bulkCategory)&&(!bulkSubcategory||p.subcategoryName===bulkSubcategory)), [bulkResults,bulkCategory,bulkSubcategory]);
 
   const chooseProduct = (row) => {
     setTransferBarcode("");
@@ -778,7 +797,6 @@ export default function OwnerProductCenter({
   useEffect(() => {
     if (
       tab === "prices" ||
-      tab === "bulk" ||
       tab === "promotion-import" ||
       tab === "inventory2"
     )
@@ -868,8 +886,13 @@ export default function OwnerProductCenter({
           </p>
           <fieldset>
             <legend>1. Επιλογή προϊόντων</legend>
+            <div className="bulk-product-search">
+              <input value={bulkQuery} onChange={(e)=>setBulkQuery(e.target.value)} placeholder="Περιγραφή / κωδικός — γράψε τουλάχιστον 2 χαρακτήρες" />
+              <button type="button" onClick={searchBulkProducts} disabled={bulkSearchBusy}>{bulkSearchBusy?"Αναζήτηση…":"Αναζήτηση"}</button>
+            </div>
+            <div className="bulk-product-filters"><select value={bulkCategory} onChange={(e)=>{setBulkCategory(e.target.value);setBulkSubcategory("")}}><option value="">Όλες οι κατηγορίες</option>{bulkCategories.map((name)=><option key={name} value={name}>{name}</option>)}</select><select value={bulkSubcategory} onChange={(e)=>setBulkSubcategory(e.target.value)}><option value="">Όλες οι υποκατηγορίες</option>{bulkSubcategories.map((name)=><option key={name} value={name}>{name}</option>)}</select></div>
             <div className="bulk-check-list">
-              {catalog.map((product) => (
+              {visibleBulkResults.map((product) => (
                 <label className="check" key={product.id}>
                   <input
                     type="checkbox"
@@ -884,12 +907,11 @@ export default function OwnerProductCenter({
                   />
                   <span>
                     {product.name}
-                    <small>
-                      {product.sku || "—"} · {money(product.salePrice)}
-                    </small>
+                    <small>{product.sku || "—"} · {money(product.salePrice)}</small>
                   </span>
                 </label>
               ))}
+              {!visibleBulkResults.length&&!bulkSearchBusy&&<div className="bulk-search-hint">Αναζήτησε προϊόν για να εμφανιστούν μόνο τα σχετικά αποτελέσματα.</div>}
             </div>
           </fieldset>
           <fieldset>
