@@ -1,3 +1,19 @@
+## Κοινή οδηγία εμφάνισης ιδιοκτήτη — 04/10/2026
+
+Ο ιδιοκτήτης ζήτησε «ό,τι πίνακες φτιάχνεις θέλω να είναι έτσι», με τη φωτογραφία της φόρμας Επεξεργασία προϊόντος: σκούρα μπλε κεφαλίδα (#143e5b), λευκό σώμα, ευανάγνωστες ετικέτες/τιμές, καθαρά πεδία με διακριτικά μπλε περιγράμματα και πράσινα κύρια κουμπιά (#0b8065). Χρησιμοποιούμε αυτό το ύφος στους νέους πίνακες και στις σχετικές φόρμες. Δεν αντιγράφουμε δεδομένα της φωτογραφίας. Κάθε σελίδα εφαρμόζει την οδηγία στο δικό της ανατεθειμένο scope· δεν αλλάζει παράλληλα φόρμες άλλου owner. Reference image(20261004-193647).png; Task29 εφαρμογή και πραγματικό screenshot στο αντίστοιχο checkpoint.
+
+## 04/10/2026 23:15 Athens — #29 LIMITED READ-ONLY LAB PASS / remaining ASSIGNED
+
+Same owner `codex/task29-supplier-comparison-20261004`. PR1718 head7447d516 merged `e076548b4b10099c1f8940e18b9c13b55c487302`; PR CI4323/run37230194101 and main CI4324/run37230354263 SUCCESS (1818 tests PASS,0 FAIL,0 SKIP; isolated PostgreSQL/HTTP E2E/build/invariants). Guarded Render1983/run37230485716 SUCCESS and actual /api/health confirms exacte076548b before LAB. This supersedes the implementation's AWAITING CI/LIVE/LAB for the tested subscopes only.
+
+Real cloudChrome, SUPER_ADMIN/support, MYWORKSTATION LAB / storecmtpopbgo000trhb5ng9ytiru, no physical POS: dedicated comparison opens,48 existing products load, refresh reloads48; product search ΑΡΑΒΙΚΗ returns2, SKU100028971 returns1, nonexistent query gives the correct empty state. Historical basis selection changes the visible basis and preserves matching evidence; the available sample has the same last/best cost. Switching to ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ immediately clears prior LAB prices and ends with no approved purchases; returning restores48/default filters. Every product has only1 valid supplier; no cheapest badge/delta/savings claim. Example SKU100028971 ΑΡΑΒΙΚΗ ΠΙΤΑ ΓΑΛΟΠΟΥΛΑ / ΓΕΩΡΓΙΑΔΟΥ ΕΛΕΝΗ / B1970 /27Sep2026:1.250EUR perpiece, source note stored purchase conversion, difference— and explicit second-supplier requirement. This verifies the rendered single-price flow, not independent numerical reconciliation of original invoice lines.
+
+Fresh shift controls before20:01:11Z and after20:14:06Z: MAIN2 transactions/cash2.40/cards+IRIS0/total2.40/open27Sep20:24/last01Oct12:51; LAB-POS-02 2 transactions/cash0/cards+IRIS0/total0/open26Sep01:33/last—. Fresh stock read after20:15Z: TEST1=11, TEST2=−2, last sale01Oct12:51:17, matching baseline. No transaction/stock/payment/invoice/approval/fiscal action. Independent Audit/StockMovement counts NOT TESTED.
+
+Screenshot task29-supplier-comparison-1791144467123.jpg at23:07:47Athens captures the real installed single-price screen. Reveals dark subtitle on navy due to commercial-tools.css load order. Bounded follow-up in this change scopes header typography more strongly, fixes singular Greek counts and renames recorded correction evidence truthfully; no cost/access/read handler change. Frontend build/TABLE_SERVICE guard PASS. Follow-up CI/exact deploy and fresh visual readback remain required; no USER/VISUAL PASS.
+
+Remaining: suitable existing approved purchases from at least2 suppliers for one product, independent net/discount/package evidence, live latest-vs-historical difference/tie/invalid-unit cases, independent Owner/adversarial tenant/module denial, live errors/mobile and explicit owner screenshot confirmation. No fabricated purchase/payment solely for evidence. Whole29 stays open. Next action: green follow-up CI, exact LIVE and screenshot readback, then identify an existing eligible multisupplier pair read-only. Same owner retained until named takeover. Protected Gates1–8/#20/#21/#14/TODAY/other claims unchanged. Tested instructions: docs/manual/supplier-comparison/PASS.md. All five closure records and numbered PDF synchronized here.
+
 ## 04/10/2026 ~23:00 Athens — #27 existing expense evidence / BLOCKED
 Same page retained, codex/task27-existing-expense-review-20261004. Runtime/base40030b49. Fresh SA LAB historical review01Aug–04Oct identifies7 OTHER expenses313.20:5 payroll rows313.00 without documents and2 virtual0.10 rows (one photo only). No eligible APPROVED linked expense/positiveVAT pair established. This is an evidence blocker, not new FAIL/PASS. Fresh MAIN2/2.40 andPOS022/0/opening/last unchanged before/after; no financial/stock/write. Protected desktop USER PASS retained. Next obtain eligible existing expense/document pair; no payment replay. Checkpoint CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md. Other owners unchanged.
 
@@ -57,7 +73,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| #29 — Σύγκριση Προμηθευτών | CLAIMED / AWAITING CI / LIVE / LAB | codex/task29-supplier-comparison-20261004; read-only selected-store costs/units; requested navy/white/green style; no final PASS |
+| #29 — Σύγκριση Προμηθευτών | LIMITED READ-ONLY LAB PASS04/10 / remaining ASSIGNED | codex/task29-supplier-comparison-20261004; e076548b/PR1718; load48/search/refresh/single-price/store-empty PASS; multi-supplier/roles/owner visual OPEN; bounded subtitle follow-up AWAITING LIVE |
 | efood / Pelican provider test | CLAIMED / BLOCKED · AWAITING EFOOD REPLY | agent/efood-partner-lab-20261004; email SENT04/10 22:17 Athens; handoff instructions in provider-service-unavailable checkpoint; next page checks reply and records takeover; no new test/PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
