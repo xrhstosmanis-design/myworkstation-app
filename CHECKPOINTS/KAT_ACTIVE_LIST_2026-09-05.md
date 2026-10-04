@@ -2404,3 +2404,7 @@ TODAY-02 remains CLAIMED / IN PROGRESS. PR #1704 enlarges the VAT-department pro
 
 ## 04/10/2026 22:05 Athens — TODAY-04 dynamic preview label
 TODAY-04 remains CLAIMED / IN PROGRESS. Bounded UI-only fix: installBulkPricePreview no longer replaces the submit button textContent, which detached React's live product/store count text nodes. It now changes only the leading static text node from «Εφαρμογή» to «Προεπισκόπηση», preserving React-managed counters. Price preview API, calculations, selection state and commit behavior are unchanged. Awaiting CI/LIVE/USER acceptance; no price commit performed.
+
+
+## 04/10/2026 22:45 Athens — TODAY-04 bulk product loading performance
+Owner observed very slow initial product loading in LIVE bulk price change. Bounded performance correction: entering TODAY-04 no longer calls the heavy full `/api/owner-products/catalog` query. Product choices are loaded on demand only after a 2+ character description/SKU search, while selected IDs and existing preview/commit flow remain unchanged. No price calculation/API/commit semantics changed. Awaiting CI/LIVE/USER acceptance.
