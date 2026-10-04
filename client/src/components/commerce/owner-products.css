@@ -1265,3 +1265,6 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
 .commerce-overlay:has(.commerce-shell.window-maximized .owner-products-colorful) {
   overflow: hidden;
 }
+
+/* TODAY-04 fast on-demand bulk product search */
+.bulk-product-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-bottom:10px}.bulk-product-search input{min-height:52px;border:1px solid #c5d4e0;border-radius:10px;padding:10px 14px;font-size:16px}.bulk-product-search button{min-height:52px;padding:10px 18px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:850}.bulk-search-hint{padding:14px;color:#60758a;background:#f7fafc;border:1px dashed #c8d7e4;border-radius:9px}@media(max-width:700px){.bulk-product-search{grid-template-columns:1fr}}
