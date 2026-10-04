@@ -1,3 +1,8 @@
+## 04/10/2026 — Approved production Archive visual polish · AWAITING CI / VISUAL PASS
+
+- Applied the user-approved navy/teal visual design directly to the verified production Archive screen: cleaner panels/filters, stronger table hierarchy, clearer edit/selection states and polished action bar. Functionality unchanged.
+- Final PASS requires LIVE deploy and user visual confirmation.
+
 ## 03/10/2026 — Verified production Archive legibility · AWAITING CI
 
 - Screenshot-matched production screen uses inventory-archive.css. Increased actual Archive header/row/filter/action typography and touch targets; widened table columns to prevent cramped 10–11px rendering.
