@@ -42,6 +42,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
+| efood / Pelican provider test | CLAIMED / BLOCKED AT CREDENTIAL SETUP | agent/efood-partner-lab-20261004; separate from general Gate 6; no provider PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
 | GATE 8 work | FREE | Claim before starting |
@@ -63,6 +64,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 8. For visual work, user checks the real production screen by screenshot.
 9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
 10. If blocked, mark `BLOCKED` and record the exact reason.
+
+## 04/10/2026 — efood / Pelican provider test · ASSIGNED / credential setup blocked
+
+ΑΝΑΛΗΨΗ ΑΠΟ εξειδικευμένη σελίδα efood/Pelican Phase A / feat/efood-lab-safe-webhook-window — ASSIGNED `agent/efood-partner-lab-20261004`, κατόπιν ρητής προτεραιότητας ιδιοκτήτη. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-efood-partner-email-reconciliation.md`. Read-only Gmail/portal reconciliation: provider24/09 confirms active credentials, no extra config ID, dedicated test vendor9344842 and virtual Trigger Test Order through View Production; actual Pelican flow unavailable for this test shop. Live04/10 provider webhook disabled, LAB receiver LOCKED/no Authorization secret; no new test or business write. Next: user credential setup, then exact revision/fresh baseline and one supervised virtual callback test. Provider event/end-to-end/production certification NOT TESTED; no new PASS. General Gate6 and TODAY work remain independently assigned/protected.
 
 ## 04/10/2026 19:25 Athens — TODAY continuation / no new PASS closure
 
