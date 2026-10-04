@@ -82,12 +82,15 @@ const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
 const POS_BACKGROUND_LEASE_MS=90*1000;
 const POS_BACKGROUND_HEARTBEAT_MS=30*1000;
 const POS_BACKGROUND_SWEEP_MS=5000;
+const POS_BACKGROUND_DB_BACKOFF_MS=60000;
 const POS_BACKGROUND_MAX_ATTEMPTS=3;
 const POS_BACKGROUND_DURABLE_RETRY_DELAYS_MS=[30000,120000];
 const POS_BACKGROUND_CONCURRENCY=2;
 const posBackgroundWorkerId=`${process.env.RENDER_INSTANCE_ID||process.pid}:${crypto.randomUUID()}`;
 let posBackgroundSweepTimer=null;
 let posBackgroundSweepActive=false;
+let posBackgroundDbBackoffUntil=0;
+const isDbPoolTimeout=error=>/Timed out fetching a new connection from the connection pool|connection pool timeout|P2024/i.test(String(error?.message||error));
 const isRetryableBackgroundError=error=>/fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|AZURE_TIMEOUT|aborted due to timeout|TimeoutError|Η ενιαία ανάγνωση απέτυχε και δεν ανακτήθηκαν με ασφάλεια όλες οι σελίδες|Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου|POS_BACKGROUND_AI_RECHECK:\s*(?:Παρουσιάστηκε εσωτερικό σφάλμα|AI_RECHECK_INTERNAL \[(?:table-recheck|discount-verification|invoice-total-reconciliation)[^\]]*\])/i.test(String(error?.message||error));
 const isSafeInferiorRereadFailure=error=>/POS_BACKGROUND_AI_RECHECK:\s*Η νέα πλήρης ανάγνωση δεν βελτίωσε με ασφάλεια το πρόχειρο/i.test(String(error?.message||error));
 const completeTableRecoveryStrategy=(job,supplierName="")=>{
@@ -443,7 +446,7 @@ async function repairStaleRecoveringTasks(){
 }
 
 async function runPosInvoiceBackgroundSweep(){
-  if(posBackgroundSweepActive)return;
+  if(posBackgroundSweepActive||Date.now()<posBackgroundDbBackoffUntil)return;
   posBackgroundSweepActive=true;
   try{
     await repairStaleRecoveringTasks();
@@ -452,7 +455,7 @@ async function runPosInvoiceBackgroundSweep(){
       if(!claimed)break;
       scheduleFastBackground({companyId:claimed.companyId,storeId:claimed.storeId,jobId:claimed.jobId,pageJobIds:claimed.pageJobIds,handoff:claimed.handoff,publicOrigin:claimed.publicOrigin,leaseToken:claimed.leaseToken,attemptCount:claimed.attemptCount});
     }
-  }catch(error){console.error("POS invoice durable worker sweep failed",{message:String(error?.message||error)})}
+  }catch(error){if(isDbPoolTimeout(error))posBackgroundDbBackoffUntil=Date.now()+POS_BACKGROUND_DB_BACKOFF_MS;console.error("POS invoice durable worker sweep failed",{message:String(error?.message||error),dbBackoffMs:isDbPoolTimeout(error)?POS_BACKGROUND_DB_BACKOFF_MS:0})}
   finally{posBackgroundSweepActive=false}
 }
 

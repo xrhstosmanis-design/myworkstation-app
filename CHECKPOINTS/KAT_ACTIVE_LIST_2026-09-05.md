@@ -2484,3 +2484,7 @@ Owner LIVE review found the offers workspace functional but typography/controls 
 
 ## 04/10/2026 23:50 Athens — TODAY-05 selected-product review follow-up
 Owner confirmed cross-search offer selections are intentionally retained and TODAY-05 visual flow is acceptable. Follow-up safety/clarity improvement requested: add «Προβολή επιλεγμένων» so all accumulated products can be reviewed and individually removed before send. No promotion create/toggle logic changes and no offer submitted. TODAY-06 LIVE visual review is acceptable; no Excel/barcode action executed.
+
+
+## 05/10/2026 00:10 Athens — PROD BLOCKER Platform Admin / Prisma pool exhaustion
+Owner reproduced Platform Admin 500 after refresh. Render logs show repeated `prisma.userSession.findUnique()` authentication failures caused by `Timed out fetching a new connection from the connection pool` (limit 9), alongside POS invoice durable worker sweep failures. Bounded mitigation: when that worker observes Prisma pool exhaustion/P2024, suspend further durable sweeps for 60s instead of retrying every 5s. Normal cadence remains 5s otherwise; OCR result/retry ownership, payments, auth and DB pool sizing are unchanged. Awaiting CI/deploy/readback. TODAY-07 paused until blocker clears.
