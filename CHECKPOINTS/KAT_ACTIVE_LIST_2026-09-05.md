@@ -1,6 +1,12 @@
 ## 04/10/2026 ~23:00 Athens — #27 existing expense evidence / BLOCKED
 Same page retained, codex/task27-existing-expense-review-20261004. Runtime/base40030b49. Fresh SA LAB historical review01Aug–04Oct identifies7 OTHER expenses313.20:5 payroll rows313.00 without documents and2 virtual0.10 rows (one photo only). No eligible APPROVED linked expense/positiveVAT pair established. This is an evidence blocker, not new FAIL/PASS. Fresh MAIN2/2.40 andPOS022/0/opening/last unchanged before/after; no financial/stock/write. Protected desktop USER PASS retained. Next obtain eligible existing expense/document pair; no payment replay. Checkpoint CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md. Other owners unchanged.
 
+## 04/10/2026 — #29 implementation / AWAITING CI, LIVE and LAB
+
+Same owner `codex/task29-supplier-comparison-20261004`; assignment PR1716 merged8a7f766 after CI4315 PASS. Dedicated CommerceHub comparison tab, selected-store INVENTORY entitlement/tenant scope, approved INVOICE-only read model, recorded pack corrections or explicit purchase factors, document-weighted net costs, latest/historical basis with matching document/date, ties and single-price/incomplete-data safeguards. User reference style applied only to this new panel. No write handler/migration, no changes to other owners or #21/#14.
+
+Local Node20.20.2: 12 targeted tests PASS; frontend build/TABLE_SERVICE guard PASS; generated Prisma locally without DB mutation. Full server1818 tests:1817 PASS, one efood legacy-schema PostgreSQL test cannot connect to intentionally non-production localhost:1. Full isolated PostgreSQL CI, merge, exact deploy and actual read-only LAB still required; no new LAB/VISUAL PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task29-supplier-comparison.md`.
+
 **04/10/2026 — Workforce camera/QR/card login PHYSICAL PASS / speed AWAITING CI:** LAB POS 2 phone QR entered POS successfully; recognition ~20s. Camera-only optimization adds QR-only decoding, faster scan cadence, preferred 1280×720, continuous focus where supported and target frame. Existing passed card-login backend unchanged. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-workforce-pos-qr-speed.md`.\n\n## 04/10/2026 — #29 Σύγκριση Προμηθευτών / ASSIGNED
 
 Owner `codex/task29-supplier-comparison-20261004`, user requested another free numbered task22:29 Athens and confirmed start22:36. Scope: read-only comparison of existing APPROVED purchases for the selected owned store, equal base units/package conversion, net cost after recorded discounts, latest versus historical minimum, truthful ties/incomplete units, reachable dedicated screen with product search. No supplier/product editing, new invoices/approvals, orders, price changes, payment/stock/fiscal writes. Existing #21 supplier balances and #14 Internet search PASS protected; TODAY UI and other owners unchanged. Reference style explicitly requested22:37: supplied product-edit screenshot, dark blue heading, white body, readable fields/table and green primary buttons. Source findings: old comparison is nested under inventory intercepted by archive; old query mixes units and omits store/discount/document-type filters. LAB comparison correctness NOT TESTED; no PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task29-supplier-comparison.md`. Next: bounded #29 read model/access correction, CI, exact LIVE, read-only LAB acceptance.
@@ -51,7 +57,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| #29 — Σύγκριση Προμηθευτών | CLAIMED / IN PROGRESS | codex/task29-supplier-comparison-20261004; read-only selected-store costs/units; independent of TODAY and #21 |
+| #29 — Σύγκριση Προμηθευτών | CLAIMED / AWAITING CI / LIVE / LAB | codex/task29-supplier-comparison-20261004; read-only selected-store costs/units; requested navy/white/green style; no final PASS |
 | efood / Pelican provider test | CLAIMED / BLOCKED · AWAITING EFOOD REPLY | agent/efood-partner-lab-20261004; email SENT04/10 22:17 Athens; handoff instructions in provider-service-unavailable checkpoint; next page checks reply and records takeover; no new test/PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |

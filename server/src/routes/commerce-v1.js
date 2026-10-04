@@ -2,7 +2,8 @@ import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {requireCompanyModule,requireStoreModule} from "../middleware/module-access.js";
+import {buildSupplierPriceComparison} from "../lib/supplier-price-comparison.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
 
 const router=Router();
@@ -103,8 +104,45 @@ router.get("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{res.json(await prisma.$queryRaw`SELECT "id","name","taxId","email","phone","city","active" FROM "Supplier" WHERE "companyId"=${req.user.companyId} ORDER BY "name"`)}catch(error){next(error)}
 });
 
-router.get("/supplier-price-comparison",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name" AS "productName",p."sku",s."id" AS "supplierId",s."name" AS "supplierName",MIN(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END) AS "bestPieceCost",(array_agg(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END ORDER BY d."documentDate" DESC))[1] AS "lastPieceCost",MAX(d."documentDate") AS "lastPurchaseAt",COUNT(*)::int AS "purchaseCount",DENSE_RANK() OVER (PARTITION BY p."id" ORDER BY MIN(CASE WHEN l."unit"='PACKAGE' THEN l."unitCost"/NULLIF(l."unitsPerPackage",0) ELSE l."unitCost" END))::int AS "priceRank" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" JOIN "Product" p ON p."id"=l."productId" JOIN "Supplier" s ON s."id"=d."supplierId" WHERE d."companyId"=${req.user.companyId} AND d."status"='APPROVED' GROUP BY p."id",p."name",p."sku",s."id",s."name" ORDER BY p."name","priceRank",s."name"`;res.json(rows)}catch(error){next(error)}
+router.get("/supplier-price-comparison",requireStoreModule("INVENTORY"),async(req,res,next)=>{
+  try {
+    const {id: storeId, companyId} = req.targetStore;
+    const lines = await prisma.$queryRaw`
+      SELECT l."id" AS "lineId",l."quantity",l."unit",l."unitsPerPackage",l."netAmount",
+        p."id" AS "productId",p."name" AS "productName",p."sku",p."unit" AS "productUnit",
+        s."id" AS "supplierId",s."name" AS "supplierName",
+        d."id" AS "documentId",d."documentNumber",d."documentDate",
+        d."createdAt" AS "documentCreatedAt",d."sourceType",
+        correction."id" AS "correctionId",correction."unitCost" AS "correctedUnitCost",
+        original."baseQuantity" AS "orderBaseQuantity",original."netAmount" AS "orderNetAmount",
+        original."invalidUnits" AS "orderInvalidUnits"
+      FROM "PurchaseDocumentLine" l
+      JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+      JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId}
+      JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=${companyId}
+      LEFT JOIN LATERAL (
+        SELECT sm."id",sm."unitCost" FROM "StockMovement" sm
+        WHERE d."sourceType"='PURCHASE_ORDER' AND sm."sourceType"='PURCHASE_ORDER'
+          AND sm."sourceId"=d."id" AND sm."storeId"=${storeId}
+          AND sm."productId"=p."id" AND sm."movementType"='PURCHASE_PACK_CORRECTION'
+        ORDER BY sm."createdAt" DESC,sm."id" DESC LIMIT 1
+      ) correction ON true
+      LEFT JOIN LATERAL (
+        SELECT SUM(pl."quantity"*pl."stockUnitsPerInvoiceUnit") AS "baseQuantity",
+          SUM(pl."netAmount"+COALESCE(pl."exciseTotal",0)) AS "netAmount",
+          COUNT(*) FILTER (WHERE pl."stockUnitsPerInvoiceUnit" IS NULL
+            OR pl."stockUnitsPerInvoiceUnit"<=0 OR pl."quantity"<=0 OR pl."netAmount"<0
+            OR UPPER(TRIM(COALESCE(pl."invoiceUnit",''))) NOT IN ('PIECE','ΤΜΧ','PACKAGE'))::int AS "invalidUnits"
+        FROM "PurchaseOrder" po JOIN "PurchaseOrderLine" pl ON pl."orderId"=po."id"
+        WHERE po."id"=d."id" AND po."companyId"=${companyId} AND po."storeId"=${storeId}
+          AND po."status"='FINAL' AND pl."productId"=p."id"
+      ) original ON d."sourceType"='PURCHASE_ORDER'
+      WHERE d."companyId"=${companyId} AND d."storeId"=${storeId}
+        AND d."status"='APPROVED' AND d."documentType"='INVOICE'
+      ORDER BY p."name",s."name",d."documentDate" DESC,d."createdAt" DESC,d."id",l."id"
+    `;
+    res.json(buildSupplierPriceComparison(lines));
+  } catch(error) { next(error); }
 });
 
 router.post("/suppliers",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
