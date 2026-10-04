@@ -1,3 +1,5 @@
+## Workforce — POS camera permission PASS / preview render fix AWAITING CI 04/10/2026\n\n- Physical test: Chrome permission PASS + webcam light ON, but no modal/video. Root cause: overlay JSX was outside component return. Moved existing overlay into returned fragment. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-workforce-pos-camera-modal-render.md`.\n\n## 04/10/2026 — Archive structural redesign to approved mockup · AWAITING CI / VISUAL PASS
+
 ## 04/10/2026 — Archive structural redesign to approved mockup · AWAITING CI / VISUAL PASS
 
 - Changed the real InventoryArchivePanel JSX structure: item count + page navigation now live in the results header; page-size control moved into the bottom action bar; actions grouped cleanly. Styling updated to match the approved mockup. No inventory business logic changed.
