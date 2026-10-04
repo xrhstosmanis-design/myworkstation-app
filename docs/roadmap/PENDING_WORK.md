@@ -1,3 +1,11 @@
+## 04/10/2026 — TODAY-03 full-page request / same owner
+
+ASSIGNED agent/today03-full-page-20261004, same page. PR1699/CI4271–4272/guarded Render1965 succeeded; exact production720e4f2 health verified. Owner supplied screenshot and requested whole-page opening without scrolling. Production1363×936 offers screen observed shell908px/scrollHeight1230 and form818px: fields below fold. This supersedes the prior scrolling-card design, not the protected functionality PASS records.
+
+Bounded CSS-only change: maximized colorful workspace uses border-box full viewport without overlay padding; desktop offers product picker and settings placed side by side while keeping the same form/controls, handlers, store defaults and submit validation. Remove prior Master420px nested scroll. Product/result lists retain accessible scrolling for arbitrary record counts; narrow/short screens retain natural overflow rather than clipping controls. No source logic, API, pricing, offers submission, stock, auth or tenant changes. Current production data save/offer submission NOT TESTED, no financial/stock action. Existing TODAY01PASS, supplier preservation and separate counter/efood/Archive scopes protected. No new VISUAL PASS.
+
+Node20 frontend build / TABLE_SERVICE bundle guard and git diff --check PASS. Full CI and exact guarded deployment AWAITING. Next action: read-only production offer layout check for all four offer types, no submit, screenshot owner review. Mobile/full Master-card fit and owner final production acceptance NOT TESTED.
+
 ## 04/10/2026 — TODAY-03 populated compact follow-up / same owner
 
 ASSIGNED agent/today03-colorful-live-evidence-20261004, same continuation. Colorful tabs LIVEc147747 afterPR1698/CI4269–4270/Render1964. Actual populated card1129px pushes history below viewport; CSS-only420px desktop scrolling card/compact discount fields follow-up AWAITING CI/LIVE/USER. All fields/handlers retained, mobile card unrestricted. No production save or new VISUAL PASS. Next: exactdeploy populated screen review; owner remains current page. Other scopes unchanged. See CHECKPOINTS/CHANGES/2026-10-04-today03-colorful-compact.md.

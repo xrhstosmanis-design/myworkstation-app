@@ -1,3 +1,11 @@
+## 04/10/2026 — TODAY-03 full-page request / same owner
+
+ASSIGNED agent/today03-full-page-20261004, same page. PR1699/CI4271–4272/guarded Render1965 succeeded; exact production720e4f2 health verified. Owner supplied screenshot and requested whole-page opening without scrolling. Production1363×936 offers screen observed shell908px/scrollHeight1230 and form818px: fields below fold. This supersedes the prior scrolling-card design, not the protected functionality PASS records.
+
+Bounded CSS-only change: maximized colorful workspace uses border-box full viewport without overlay padding; desktop offers product picker and settings placed side by side while keeping the same form/controls, handlers, store defaults and submit validation. Remove prior Master420px nested scroll. Product/result lists retain accessible scrolling for arbitrary record counts; narrow/short screens retain natural overflow rather than clipping controls. No source logic, API, pricing, offers submission, stock, auth or tenant changes. Current production data save/offer submission NOT TESTED, no financial/stock action. Existing TODAY01PASS, supplier preservation and separate counter/efood/Archive scopes protected. No new VISUAL PASS.
+
+Node20 frontend build / TABLE_SERVICE bundle guard and git diff --check PASS. Full CI and exact guarded deployment AWAITING. Next action: read-only production offer layout check for all four offer types, no submit, screenshot owner review. Mobile/full Master-card fit and owner final production acceptance NOT TESTED.
+
 ## 04/10/2026 — exact LIVE c147747; populated-card height observation / compact follow-up
 
 PR1698 / PRCI4269 / mainCI4270 / guardedRender1964 success; exact healthc14774792b8a0b93ae56d6db31fb6e849cf32abf verified. Reloaded production LAB desktop1363×936: six colored tabs86px high/16px font, compact horizontal audit visible with no product selected. Search LAB EXCEL TEST returned the same two real items1.20/2.40; selectingTEST1 showed correctSKU/13%/both store prices1.20. No save, activation or mutation executed. Owner final production acceptance and mobile/tablet NOT TESTED; no VISUAL PASS.
