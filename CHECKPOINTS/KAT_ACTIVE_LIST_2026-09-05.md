@@ -26,6 +26,8 @@ Stop the proposed38001 source-reading continuation before opening it. This turn 
 
 Replace arbitrary “broader costs beyond23 SKUs” /38001-next scope with the actual remaining acceptance: a real rendered same-product/two-supplier comparison and correct automatic EUR/percentage difference, distinct latest/history and truthful ties/invalid units, independently substantiated dimensional cases, independent Owner/adversarial tenant/module/browser errors/mobile, and explicit owner visual confirmation. Isolated SQL/HTTP multi-supplier/guard proof is already PASS and must not be rerun as a substitute for browser acceptance. Existing LAB48 products have1 supplier/1 document each; re-reading that unchanged blocker or creating purchases/payments/stock solely for proof is not authorized by this continuation.
 
+Publication PR#1744 (https://github.com/xrhstosmanis-design/myworkstation-app/pull/1744), branch `codex/task29-acceptance-focus-20261005`; final PR head/check/merge metadata are authoritative. This is a scope clarification only, no new LAB/USER PASS and no runtime deployment.
+
 Single next action: establish the eligible existing same-product/two-supplier LAB fixture (product and two approved source document IDs) when evidence of such data is available; until then mark that live criterion DATA BLOCKED and do not spend more turns sampling unrelated invoices. Owner/session/device prerequisites remain explicitly NOT TESTED, not automatic PASS. Do not borrow another page's claimed task; any independent numbered task needs a fresh pending/claim check. No runtime/license/auth/deploy or other owner scope change.
 
 ## 05/10/2026 00:55 Athens — #29 TWINS 15%/19% cost LIMITED LAB PASS / data blocker retained
