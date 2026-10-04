@@ -30,7 +30,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 | --- | --- | --- |
 | TODAY-01 — Larger EFTPOS/card-terminal selector | DONE / DESKTOP VISUAL PASS | Owner confirmed 04/10 18:46; LIVE b958de17; PR1693 / CI4259 merged728e5f3; payment/mobile NOT TESTED |
 | TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS · SUPPLIER FIX AWAITING CI/LAB | Owner agent/today02-preserve-suppliers-20261004; pencil opens LAB card; save withheld after supplier payload source FAIL; preserve supplier codes before LAB save |
-| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Master Catalog, store prices, bulk prices, offers, Excel/Barcode, inventory |
+| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Same continuation agent/today03-audience-controls-20261004; real OwnerProductCenter audit selects 19px high; CSS-only 52px control fix AWAITING CI/LIVE/USER; other product tabs remain under verification |
 | TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | Approved product → stores → action → preview → apply UX; business logic protected |
 | TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
 | TODAY-06 — Excel / Barcode UI | CLAIMED / IN PROGRESS | Clear Barcode vs Excel flows; touch-friendly controls |
