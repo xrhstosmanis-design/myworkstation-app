@@ -1,3 +1,5 @@
+**04/10/2026 — Workforce POS camera permission PASS / preview FIX AWAITING CI:** physical Chrome permission and webcam light PASS; no visible modal/video because camera overlay JSX was outside the component return. Overlay moved into returned React fragment; QR/card backend unchanged. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-workforce-pos-camera-modal-render.md`.\n\n# CENTRAL WORK CLAIM BOARD — 04/10/2026
+
 # CENTRAL WORK CLAIM BOARD — 04/10/2026
 
 > **AUTHORITATIVE COORDINATION BOARD.** Every ChatGPT page/agent MUST read this board before starting work.
