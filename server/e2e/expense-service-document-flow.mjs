@@ -18,7 +18,8 @@ export async function verifyExpenseServiceDocument({request,prisma,token,storeId
  assert.deepEqual(await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "StockMovement"`,stockBefore);
  const paymentBody={type:'OTHER_EXPENSE',amount:124,description:`Isolated expense ${marker}`,evidenceMode:'DOCUMENT',purchaseDocumentId:draft.payload.id,paymentSource:'EXTERNAL',idempotencyKey:`payment-${marker}`};
  const payment=await request(`/api/transactions/stores/${storeId}`,{method:'POST',token,body:paymentBody});assert.equal(payment.response.status,201,JSON.stringify(payment.payload));assert.equal(payment.payload.sessionId,null);
- const paymentReplay=await request(`/api/transactions/stores/${storeId}`,{method:'POST',token,body:paymentBody});assert.equal(paymentReplay.response.status,200,JSON.stringify(paymentReplay.payload));assert.equal(paymentReplay.payload.id,payment.payload.id);
+ const paymentReplay=await request(`/api/transactions/stores/${storeId}`,{method:'POST',token,body:paymentBody});assert.equal(paymentReplay.response.status,409,JSON.stringify(paymentReplay.payload));
+ const savedPayments=await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "StoreTransaction" WHERE "companyId"=(SELECT "companyId" FROM "Store" WHERE "id"=${storeId}) AND "storeId"=${storeId} AND "id"=${payment.payload.id}`;assert.equal(savedPayments[0].count,1);
  const report=await request(`/api/owner-payments/business-picture?storeId=${storeId}&from=${date}&to=${date}`,{token});assert.equal(report.response.status,200,JSON.stringify(report.payload));assert.equal(report.payload.totals.expenseGross,124);assert.equal(report.payload.totals.expenses,100);assert.equal(report.payload.totals.expenseVat,24);assert.equal(report.payload.totals.missingExpenseVatPayments,0);
  console.log('Isolated service expense draft/approval/payment/VAT and no-stock flow passed');
 }

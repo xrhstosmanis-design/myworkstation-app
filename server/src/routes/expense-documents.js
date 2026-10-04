@@ -14,6 +14,7 @@ export const expenseDocumentSchema=z.object({
   totalGross:z.number().finite().positive().max(9999999),
   idempotencyKey:z.string().trim().min(8).max(180)
 }).strict().superRefine((b,c)=>{
+  if(b.totalVat/b.totalNet*100>999.999)c.addIssue({code:"custom",message:"Ο συντελεστής ΦΠΑ υπερβαίνει το υποστηριζόμενο όριο."});
   if([b.totalNet,b.totalVat,b.totalGross].some(v=>Math.abs(v*100-Math.round(v*100))>0.000001))c.addIssue({code:"custom",message:"Τα ποσά χρειάζονται έως δύο δεκαδικά."});
   if(Math.round(b.totalNet*100)+Math.round(b.totalVat*100)!==Math.round(b.totalGross*100))c.addIssue({code:"custom",message:"Καθαρή αξία + ΦΠΑ πρέπει να ισούνται με το σύνολο."});
 });
