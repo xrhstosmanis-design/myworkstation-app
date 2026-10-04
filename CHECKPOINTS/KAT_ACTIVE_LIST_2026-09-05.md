@@ -28,7 +28,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Scope |
 | --- | --- | --- |
-| TODAY-01 — Larger EFTPOS/card-terminal selector | CLAIMED / IN PROGRESS | Verify real production route, CI/deploy and actual visible touch-friendly UI |
+| TODAY-01 — Larger EFTPOS/card-terminal selector | USER / VISUAL PASS · AWAITING RECORD CI/MERGE | Owner confirmed 04/10 18:46; LIVE b958de17; desktop 920px panel / 150px buttons; payment/mobile NOT TESTED |
 | TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS | Pencil → real product edit → return to same VAT department; no silent VAT/category mutation |
 | TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Master Catalog, store prices, bulk prices, offers, Excel/Barcode, inventory |
 | TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | Approved product → stores → action → preview → apply UX; business logic protected |
@@ -63,6 +63,15 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 8. For visual work, user checks the real production screen by screenshot.
 9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
 10. If blocked, mark `BLOCKED` and record the exact reason.
+
+## 04/10/2026 18:46 Athens - TODAY-01 USER / VISUAL PASS
+
+Observed on production revision `b958de172f3142b1c59f00f2dd6c1281abf10d9b`, MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (`cmtpopbgo000trhb5ng9ytiru`), operator LAB POS 2. Owner explicitly confirmed «ναι ειναι οκ» after viewing the real EFTPOS chooser. Desktop viewport 1363×936: panel width 920px; both choices 423×150px; choice titles 24px. Confirmed route: entry.jsx store/pos routes → CommercialPosApp (POS route) → StoreOperatorApp → StorePosPanel; store-pos.css is imported by StorePosPanel.
+
+Scope: visual desktop chooser only. Empty cart at entry, local addition of 1× LAB EXCEL TEST 1 (1.20 EUR), gift dialog dismissed, CARD opened chooser; neither terminal choice clicked. No checkout/payment/fiscal finalization was executed. Chooser closed and POS reloaded to discard local cart. Financial/stock deltas and mobile/tablet rendering NOT TESTED; this is not a payment-routing or stock PASS. Shared component affects all stores using this POS; tenant settings/permissions remain unchanged.
+
+No new source implementation: existing commits 880b9a7 / 53fb969 verified live. Administrative closure awaits this documentation PR's green CI and merge. TODAY-02 through TODAY-09 remain claimed by this continuation, branch `agent/today-ui-verification-20261004`.
+
 
 ---
 
@@ -135,7 +144,7 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 - Από «Είδη τμήματος ΦΠΑ» το μολύβι ανοίγει επεξεργασία της πραγματικής καρτέλας προϊόντος και μετά την αποθήκευση επιστρέφει στην ίδια σελίδα/τμήμα. Δεν αλλάζει αυτόματα το VAT department από category.
 - Checkpoint: `CHECKPOINTS/CHANGES/2026-10-03-vat-department-product-edit.md`.
 
-## 03/10/2026 — TODAY-01 Larger card-terminal selector · AWAITING CI
+## 03/10/2026 — TODAY-01 Larger card-terminal selector · SUPERSEDED BY 04/10 USER VISUAL PASS
 
 - Εργασία αναλήφθηκε από την τρέχουσα σελίδα βάσει του κεντρικού WORK_CLAIMS board.
 - Το παράθυρο επιλογής EFTPOS έγινε μεγαλύτερο, με δύο μεγάλα touch-friendly κουμπιά και responsive mobile διάταξη.
