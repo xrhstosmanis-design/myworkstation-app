@@ -2512,3 +2512,7 @@ Owner reproduced Platform Admin 500 after refresh. Render logs show repeated `pr
 
 ## 05/10/2026 00:30 Athens — TODAY-08 owner-reference visual correction
 LIVE review failed the prior Modules layout: status cards rendered as oversized mostly-empty single-column blocks. Owner supplied the original approved visual references. Bounded CSS-only correction follows those references: compact white/light cards, subtle colored icon wells, 3-column desktop status grid (2 tablet/1 mobile), denser navigation tiles, readable typography and reduced wasted height. Routes, module state, permissions and business logic unchanged. Awaiting CI/LIVE/USER visual acceptance.
+
+
+## 05/10/2026 00:40 Athens — Central Management owner-reference visual standard
+Owner explicitly requested all Central Management screens follow the supplied original screenshots. Begin safe shared visual layer on already-accepted Product Center flows and Commerce Hub: light background, navy hierarchy, white rounded cards, pastel functional accents, compact spacing, consistent focus treatment and typography. CSS/layout only; TODAY-02/04/05/06 behavior and business APIs unchanged. Rollout remains incremental with CI/LIVE visual acceptance per surface.
