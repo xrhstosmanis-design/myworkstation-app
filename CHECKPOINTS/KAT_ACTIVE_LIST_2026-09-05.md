@@ -1,3 +1,6 @@
+## 04/10/2026 ~23:00 Athens — #27 existing expense evidence / BLOCKED
+Same page retained, codex/task27-existing-expense-review-20261004. Runtime/base40030b49. Fresh SA LAB historical review01Aug–04Oct identifies7 OTHER expenses313.20:5 payroll rows313.00 without documents and2 virtual0.10 rows (one photo only). No eligible APPROVED linked expense/positiveVAT pair established. This is an evidence blocker, not new FAIL/PASS. Fresh MAIN2/2.40 andPOS022/0/opening/last unchanged before/after; no financial/stock/write. Protected desktop USER PASS retained. Next obtain eligible existing expense/document pair; no payment replay. Checkpoint CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md. Other owners unchanged.
+
 ## 04/10/2026 — #29 implementation / AWAITING CI, LIVE and LAB
 
 Same owner `codex/task29-supplier-comparison-20261004`; assignment PR1716 merged8a7f766 after CI4315 PASS. Dedicated CommerceHub comparison tab, selected-store INVENTORY entitlement/tenant scope, approved INVOICE-only read model, recorded pack corrections or explicit purchase factors, document-weighted net costs, latest/historical basis with matching document/date, ties and single-price/incomplete-data safeguards. User reference style applied only to this new panel. No write handler/migration, no changes to other owners or #21/#14.

@@ -10,7 +10,7 @@ Owner `codex/task29-supplier-comparison-20261004`, user requested another free n
 
 ## 04/10/2026 — #27 remaining / ASSIGNED same page
 
-Same #27 owner retained `codex/task27-expense-user-pass-20261004`. Desktop expense form and read-only select/clear/cancel accepted by owner04/10 22:34 and removed from unfinished work. Remaining: saved eligible documented expense/positive VAT, partial allocation policy, historical-cost evidence, independent Owner, mobile/tablet, native/physical printing and fullmodule. Next: identify an existing eligible expense/document pair read-only; no repeat/new payment merely for evidence. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`. Other claims preserved.
+Same #27 owner retained `codex/task27-existing-expense-review-20261004`. Desktop expense form and read-only select/clear/cancel accepted by owner04/10 22:34 and removed from unfinished work. Remaining: saved eligible documented expense/positive VAT, partial allocation policy, historical-cost evidence, independent Owner, mobile/tablet, native/physical printing and fullmodule. Next: obtain an eligible existing expense/document pair read-only; current LAB inventory01Aug–04Oct has7 OTHER expenses313.20 (5 payroll/2 virtual), no eligible structured APPROVED link established. Positive live VAT BLOCKED by missing sample. No repeat/new payment merely for evidence. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`. Other claims preserved.
 
 ## 04/10/2026 22:17 Athens — efood support email SENT / AWAITING REPLY / HANDOFF PREPARED
 
