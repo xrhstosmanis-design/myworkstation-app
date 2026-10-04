@@ -30,7 +30,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 | --- | --- | --- |
 | TODAY-01 — Larger EFTPOS/card-terminal selector | DONE / DESKTOP VISUAL PASS | Owner confirmed 04/10 18:46; LIVE b958de17; PR1693 / CI4259 merged728e5f3; payment/mobile NOT TESTED |
 | TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS · MERGED / LIVE / SAVE NOT TESTED | Same continuation; PR1694 / CI4261–4262 / Render1960 successful; LIVE69de72; corrected editor opens LAB card; save and multiple-supplier live roundtrip NOT TESTED |
-| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Same continuation agent/today03-full-page-20261004; PR1699/CI4271–4272/Render1965 exact LIVE720e4f2. Owner screenshot rejects vertical offers form; CSS full-page shell and side-by-side product picker/settings AWAITING CI/LIVE/USER. 420px Master-card scrolling removed per owner direction; no VISUAL PASS |
+| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Same continuation agent/today03-full-page-live-record-20261004; PR1700/CI4273–4274/Render1966 exact LIVE2186f32. All4offer types controls/submit visible, but27px shell overflow observed; bounded250px picker/background scrollbar correction AWAITING CI/LIVE/USER. No VISUAL PASS |
 | TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | LIVE preview observed1 product×1LABstore,1.20→1.20 unchanged,commit disabled; preview button incorrectly says0×0 (UI FAIL); final apply NOT TESTED |
 | TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
 | TODAY-06 — Excel / Barcode UI | CLAIMED / IN PROGRESS | Clear Barcode vs Excel flows; touch-friendly controls |
