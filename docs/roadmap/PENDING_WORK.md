@@ -1,3 +1,7 @@
+## 04/10/2026 — TODAY-03 populated compact follow-up / same owner
+
+ASSIGNED agent/today03-colorful-live-evidence-20261004, same continuation. Colorful tabs LIVEc147747 afterPR1698/CI4269–4270/Render1964. Actual populated card1129px pushes history below viewport; CSS-only420px desktop scrolling card/compact discount fields follow-up AWAITING CI/LIVE/USER. All fields/handlers retained, mobile card unrestricted. No production save or new VISUAL PASS. Next: exactdeploy populated screen review; owner remains current page. Other scopes unchanged. See CHECKPOINTS/CHANGES/2026-10-04-today03-colorful-compact.md.
+
 ## 04/10/2026 19:43 Athens — TODAY-03 approved visual direction / same owner
 
 ASSIGNED agent/today03-colorful-compact-20261004, continuation of the current TODAY page. Sparse prior appearance USER rejected; colorful compact mockup approved19:42 and implementation requested19:43. Shared CSS/class-only implementation AWAITING CI/LIVE/USER. No new VISUAL PASS. Preserve actual fields, product selection/edit/activation, prices, discounts, imports and API logic. See CHECKPOINTS/CHANGES/2026-10-04-today03-colorful-compact.md. TODAY-02 save and TODAY-04 counter failure remain outstanding; other TODAY-05–09 ownership unchanged. Do not touch independent efood/Archive/Gates.

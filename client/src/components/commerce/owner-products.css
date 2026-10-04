@@ -1122,6 +1122,28 @@
 .owner-products-colorful .op-master-workspace .primary { background: #258344; }
 .owner-products-colorful .op-master-workspace .store-price-list { margin: 12px 0; }
 .owner-products-colorful .op-master-workspace .op-box.op-form { padding: 14px; }
+.kiosk-shell:has(> .owner-products-colorful) > .kiosk-return { display: none; }
+.owner-products-colorful .op-master-workspace > aside:not(.empty) {
+  box-sizing: border-box;
+  max-height: 420px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.owner-products-colorful .op-master-workspace aside .op-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.owner-products-colorful .op-master-workspace aside .op-form > :is(h4, p, small, button, .op-discount-mode) {
+  grid-column: 1 / -1;
+}
+.owner-products-colorful .op-master-workspace aside .op-form > label {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.owner-products-colorful .op-master-workspace aside .op-form > label > :is(input, select) {
+  width: 100%;
+  min-width: 0;
+}
 .owner-products-colorful .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(200px, .9fr);
@@ -1161,6 +1183,7 @@
 }
 @media (max-width: 900px) {
   .owner-products-colorful .op-master-workspace { grid-template-columns: minmax(0, 1fr); }
+  .owner-products-colorful .op-master-workspace > aside:not(.empty) { max-height: none; overflow: visible; }
   .owner-products-colorful .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .owner-products-colorful .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] > button { grid-column: 1 / -1; }
 }
@@ -1170,6 +1193,7 @@
   .owner-products-colorful .owner-product-tabs button { min-height: 76px; font-size: 15px; padding: 10px; gap: 8px; }
   .owner-products-colorful .owner-product-tabs svg { width: 24px; height: 24px; }
   .owner-products-colorful .op-master-workspace > .op-box { padding: 12px; }
+  .owner-products-colorful .op-master-workspace aside .op-form { grid-template-columns: minmax(0, 1fr); }
   .owner-products-colorful .op-master-workspace .op-search { flex-wrap: wrap; }
   .owner-products-colorful .op-master-workspace .op-search input { flex-basis: 100%; }
   .owner-products-colorful .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] { grid-template-columns: minmax(0, 1fr); padding: 12px; }

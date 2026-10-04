@@ -1,3 +1,9 @@
+## 04/10/2026 — exact LIVE c147747; populated-card height observation / compact follow-up
+
+PR1698 / PRCI4269 / mainCI4270 / guardedRender1964 success; exact healthc14774792b8a0b93ae56d6db31fb6e849cf32abf verified. Reloaded production LAB desktop1363×936: six colored tabs86px high/16px font, compact horizontal audit visible with no product selected. Search LAB EXCEL TEST returned the same two real items1.20/2.40; selectingTEST1 showed correctSKU/13%/both store prices1.20. No save, activation or mutation executed. Owner final production acceptance and mobile/tablet NOT TESTED; no VISUAL PASS.
+
+Populated card measured1129.31px high/501.2px wide: actual existing activation/discount controls push the history off-screen. Same owner continues on agent/today03-colorful-live-evidence-20261004 with CSS-only bounded correction: desktop card max420px/internal scroll (all fields retained), discount fields2columns, redundant full-mode banner hidden only in the colorful OwnerProductCenter wrapper. Mobile stacked card remains unrestricted height/no nested scroll. No handler/field changes. Follow-up AWAITING CI/exactLIVE/USER. Single next action: verify populated card/history on exact deployed follow-up and show owner screenshot. TODAY02save/TODAY04counter/other claims stay protected.
+
 # TODAY-03 — Colorful compact product workspace — 04/10/2026
 
 Status: IMPLEMENTED / AWAITING CI / EXACT LIVE / USER VISUAL ACCEPTANCE.
