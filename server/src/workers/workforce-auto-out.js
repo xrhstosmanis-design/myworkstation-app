@@ -1,4 +1,4 @@
-import prisma from "../prisma.js";
+import {prisma} from "../prisma.js";
 
 const AUTO_OUT_MS=12*60*60*1000;
 let timer=null,running=false;
