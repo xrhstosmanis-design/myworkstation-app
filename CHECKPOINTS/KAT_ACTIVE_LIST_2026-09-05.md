@@ -42,7 +42,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| efood / Pelican provider test | CLAIMED / BLOCKED AT CREDENTIAL SETUP | agent/efood-partner-lab-20261004; separate from general Gate 6; no provider PASS |
+| efood / Pelican provider test | CLAIMED / AWAITING ONE-SHOT TEST CONSENT | agent/efood-partner-lab-20261004; user credential setup saved; LAB locked; before controls recorded; no provider PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
 | GATE 8 work | FREE | Claim before starting |
@@ -64,6 +64,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 8. For visual work, user checks the real production screen by screenshot.
 9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
 10. If blocked, mark `BLOCKED` and record the exact reason.
+
+## 04/10/2026 — efood provider preflight / same owner / test NOT TESTED
+
+Owner `agent/efood-partner-lab-20261004` retained. The owner manually created/entered/saved the webhook secret; provider Save disabled/Trigger enabled and LAB secret format verified without printing any value. Receiver remains SECRET_ROTATED/locked; no test event. Render1966 exact2186f329a1160c98f33e53d775e11797ed51654a health gate succeeded17:27:28Z. Before controls: MAIN2 transactions/cash2.40/card0/IRIS0/total2.40; LAB-POS-02 2/cash0/card0/IRIS0/total0/expenses120; TEST1stock11, TEST2stock−2. No financial/stock delta inferred. CHECKPOINTS/CHANGES/2026-10-04-efood-provider-preflight.md. Next: fresh action-time consent for a300s LAB-only one-shot window and one virtual provider event, then refreshed before/after readback. This supersedes the credential-setup blocker, not historical protected PASS. No new PASS/manual/PDF closure; other claims preserved.
 
 ## 04/10/2026 — efood / Pelican provider test · ASSIGNED / credential setup blocked
 
