@@ -2554,3 +2554,7 @@ Owner set standing visual rule: normal desktop Central Management pages must fit
 
 ## 05/10/2026 01:10 Athens — TODAY-08 owner visual correction #2
 LIVE confirms grid/viewport improvement but owner rejects visual match: cards remain essentially white and do not resemble supplied approved references. Apply explicit pastel card language from reference (blue/green/yellow/pink/purple/cyan surfaces, larger colored icon wells, stronger title hierarchy) while retaining true 3-column desktop and no outer scroll. CSS-only, no module logic changes. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 01:12 Athens — TODAY-08 pastel reference CI checkpoint
+PR1742 first CI failed policy-only because the branch lacked a new CHECKPOINTS/CHANGES entry; CSS was not tested. Scope remains CSS-only pastel owner-reference module cards, preserving 3-column/no-outer-scroll behavior and all module logic. Add required checkpoint and rerun full CI.
