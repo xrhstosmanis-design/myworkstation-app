@@ -30,10 +30,11 @@ test("promotions accept barcode and Excel source-store fanout",()=>{
 test("supplier comparison ranks normalized approved purchase costs",()=>{
   assert.match(commerce,/supplier-price-comparison/);
   assert.match(commerce,/unitsPerPackage/);
-  assert.match(commerce,/DENSE_RANK/);
+  assert.match(commerce,/buildSupplierPriceComparison\(lines\)/);
+  assert.match(commerce,/supplier-price-comparison",requireStoreModule\("INVENTORY"\)/);
   assert.match(commerce,/d\."companyId"=\$\{req\.user\.companyId\}/);
   assert.match(commerce,/d\."status"='APPROVED'/);
-  assert.match(supplierUi,/ΦΘΗΝΟΤΕΡΟΣ/);
+  assert.match(supplierUi,/ΧΑΜΗΛΟΤΕΡΗ ΤΙΜΗ/);
 });
 
 test("POS-EFTPOS variance only creates a review warning",()=>{

@@ -25,3 +25,24 @@ Open dedicated #29 screen from existing commercial hub; select LAB; refresh/sear
 ## Current status
 
 ASSIGNED / IN PROGRESS. No implementation yet, no final or limited PASS. Next action: read existing purchase unit/discount semantics and implement one bounded read-only comparison correction.
+
+
+## 04/10/2026 — #29 implementation / AWAITING CI, LIVE and LAB
+
+Same owner `codex/task29-supplier-comparison-20261004`; assignment PR1716 merged8a7f766 after CI4315 PASS. Dedicated CommerceHub comparison tab, selected-store INVENTORY entitlement/tenant scope, approved INVOICE-only read model, recorded pack corrections or explicit purchase factors, document-weighted net costs, latest/historical basis with matching document/date, ties and single-price/incomplete-data safeguards. User reference style applied only to this new panel. No write handler/migration, no changes to other owners or #21/#14.
+
+Local Node20.20.2: 12 targeted tests PASS; frontend build/TABLE_SERVICE guard PASS; generated Prisma locally without DB mutation. Full server1818 tests:1817 PASS, one efood legacy-schema PostgreSQL test cannot connect to intentionally non-production localhost:1. Full isolated PostgreSQL CI, merge, exact deploy and actual read-only LAB still required; no new LAB/VISUAL PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task29-supplier-comparison.md`.
+
+## Exact implementation boundaries and evidence
+
+- Only existing GET /api/commerce/supplier-price-comparison changes. Uses requireStoreModule(INVENTORY), req.targetStore company/id, tenant joins for Product/Supplier and store-scoped purchase/correction/original-order reads.
+- Documents must be APPROVED INVOICE, so credits and drafts cannot become cheapest quotes.
+- For direct document lines, sum recorded netAmount / sum known base quantity per product/supplier/document. PACKAGE only converts with positive explicit unitsPerPackage to PIECE; kg/g and litre/ml compare in their respective base dimensions.
+- PURCHASE_ORDER stores financial quantities even when the line unit says PIECE. Read the recorded PURCHASE_PACK_CORRECTION cost or positive stored source-order conversion factors, including recorded excise; no description heuristics, schema changes or correction execution.
+- Latest includes newest document even if invalid, remains null with reason. Best historical document is independently identified. Zero/negative/missing/nonfinite costs and unknown dimensions are never ranked. Duplicate product rows aggregate once per document; documentDate, createdAt and ID provide stable order.
+- Frontend clears rows per request/store, uses keyed store remount and stale-request/unmount guard, shows error/empty/search-empty states. No cheapest badge or savings claim with fewer than two comparable suppliers; equal minima are explicitly tied.
+- This is an independent new task29 panel/access entry. TODAY modules/product/supplier editors and supplier-control balances untouched. No manual entry until real LAB PASS.
+
+## Validation limits
+
+The first local broad run lacked generated Prisma (environment prerequisite); after local build:server,1817/1818 passed, only legacy efood PostgreSQL test failed on deliberately unavailable local DB. This is not a source/production efood failure. Remote CI's isolated PostgreSQL is authoritative before merge. No production database connection/seeds/migrations, no financial or stock operation.
