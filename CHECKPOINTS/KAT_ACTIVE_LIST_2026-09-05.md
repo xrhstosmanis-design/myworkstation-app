@@ -2488,3 +2488,7 @@ Owner confirmed cross-search offer selections are intentionally retained and TOD
 
 ## 05/10/2026 00:10 Athens — PROD BLOCKER Platform Admin / Prisma pool exhaustion
 Owner reproduced Platform Admin 500 after refresh. Render logs show repeated `prisma.userSession.findUnique()` authentication failures caused by `Timed out fetching a new connection from the connection pool` (limit 9), alongside POS invoice durable worker sweep failures. Bounded mitigation: when that worker observes Prisma pool exhaustion/P2024, suspend further durable sweeps for 60s instead of retrying every 5s. Normal cadence remains 5s otherwise; OCR result/retry ownership, payments, auth and DB pool sizing are unchanged. Awaiting CI/deploy/readback. TODAY-07 paused until blocker clears.
+
+
+## 05/10/2026 00:30 Athens — TODAY-08 owner-reference visual correction
+LIVE review failed the prior Modules layout: status cards rendered as oversized mostly-empty single-column blocks. Owner supplied the original approved visual references. Bounded CSS-only correction follows those references: compact white/light cards, subtle colored icon wells, 3-column desktop status grid (2 tablet/1 mobile), denser navigation tiles, readable typography and reduced wasted height. Routes, module state, permissions and business logic unchanged. Awaiting CI/LIVE/USER visual acceptance.
