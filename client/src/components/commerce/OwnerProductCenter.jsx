@@ -105,6 +105,8 @@ export default function OwnerProductCenter({
   const [promotionGiftProducts, setPromotionGiftProducts] = useState([]);
   const [promotionQuery, setPromotionQuery] = useState("");
   const [promotionSearchBusy, setPromotionSearchBusy] = useState(false);
+  const [promotionSelectionOpen, setPromotionSelectionOpen] = useState(false);
+  const [promotionSelectionDetails, setPromotionSelectionDetails] = useState({});
   const [bulkProducts, setBulkProducts] = useState([]);
   const [bulkQuery, setBulkQuery] = useState("");
   const [bulkResults, setBulkResults] = useState([]);
@@ -349,7 +351,7 @@ export default function OwnerProductCenter({
     const query=promotionQuery.trim();
     if(query.length<2)return setError("Γράψε τουλάχιστον 2 χαρακτήρες για αναζήτηση προϊόντος.");
     setError("");setPromotionSearchBusy(true);
-    try{setCatalog(await api(`/api/owner-products/catalog?q=${encodeURIComponent(query)}`));}
+    try{const rows=await api(`/api/owner-products/catalog?q=${encodeURIComponent(query)}`);setCatalog(rows);setPromotionSelectionDetails(previous=>({...previous,...Object.fromEntries(rows.map(row=>[row.id,row]))}));}
     catch(e){setError(e.message)}finally{setPromotionSearchBusy(false)}
   };
 
@@ -1950,7 +1952,7 @@ export default function OwnerProductCenter({
                 <div className="section-heading">
                   <div>
                     <b>Προϊόντα προσφοράς</b>
-                    <small>{promotionProducts.length} επιλεγμένα</small>
+                    <small>{promotionProducts.length} επιλεγμένα</small>{promotionProducts.length>0&&<button type="button" className="promotion-selected-review-toggle" onClick={()=>setPromotionSelectionOpen(v=>!v)}>{promotionSelectionOpen?"Απόκρυψη επιλεγμένων":`Προβολή ${promotionProducts.length} επιλεγμένων`}</button>}
                   </div>
                   <div className="promotion-picker-actions">
                     <button
@@ -2013,6 +2015,7 @@ export default function OwnerProductCenter({
                   ))}
                 </div>
               </div>
+              {promotionSelectionOpen&&promotionProducts.length>0&&<div className="promotion-selected-review"><div className="section-heading"><div><b>Επιλεγμένα προϊόντα προσφοράς</b><small>Έλεγχος πριν από την αποστολή</small></div><button type="button" className="secondary" onClick={()=>setPromotionProducts([])}>Καθαρισμός όλων</button></div><div className="promotion-selected-review-list">{promotionProducts.map(id=>{const product=promotionSelectionDetails[id]||catalog.find(row=>row.id===id);return <div key={id}><span><b>{product?.name||"Επιλεγμένο προϊόν"}</b><small>{product?.sku||id}</small></span><button type="button" onClick={()=>setPromotionProducts(previous=>previous.filter(productId=>productId!==id))}>Αφαίρεση</button></div>})}</div></div>}
               <div className="offers-summary">
                 <div><b>{promotionProducts.length}</b><span>Επιλεγμένα προϊόντα</span></div>
                 <div><b>{activeStores.length}</b><span>Διαθέσιμα καταστήματα</span></div>
