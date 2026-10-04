@@ -27,6 +27,9 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
   const allowed=ownerRoles.has(user?.role);
   const suppliers=ledger?.suppliers||[];
   const documents=ledger?.purchaseDocuments||[];
+  const expenseDocumentAllowed=active?.id==="OTHER"||active?.id==="UTILITIES";
+  const approvedExpenseDocuments=documents.filter(row=>row.status==="APPROVED");
+  const linkedDocument=expenseDocumentAllowed&&Boolean(form.purchaseDocumentId);
   const selectedDocument=useMemo(()=>documents.find(row=>row.id===form.purchaseDocumentId)||null,[documents,form.purchaseDocumentId]);
   const requiresShift=active?.type==="TRANSFER_AMOUNT"||form.paymentSource==="CASH_SHIFT";
 
@@ -53,8 +56,8 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
             amount,
             supplierId:active.type==="SUPPLIER_PAYMENT"?form.supplierId:null,
             description:form.description||active.label,
-            evidenceMode:active.document?"DOCUMENT":"NO_DOCUMENT",
-            purchaseDocumentId:active.document?form.purchaseDocumentId:null,
+            evidenceMode:active.document||linkedDocument?"DOCUMENT":"NO_DOCUMENT",
+            purchaseDocumentId:active.document||linkedDocument?form.purchaseDocumentId:null,
             paymentSource:form.paymentSource,
             idempotencyKey:safeKey()
           };
@@ -86,6 +89,7 @@ export default function OwnerPaymentQuickActions({api,store,onChanged}){
         {requiresShift&&!ledger?.openSession&&<div style={{padding:11,borderRadius:11,background:"#fff7e6",color:"#8a5a00"}}>Δεν υπάρχει ενεργή βάρδια στο κατάστημα για αυτή την κίνηση. Οι εξωτερικές πληρωμές μπορούν να καταχωριστούν κανονικά χωρίς βάρδια.</div>}
         {active.type==="SUPPLIER_PAYMENT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Προμηθευτής<select value={form.supplierId} onChange={e=>setForm({...form,supplierId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
         {active.document&&<label style={{display:"grid",gap:6,fontWeight:700}}>Παραστατικό<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Επίλεξε παραστατικό</option>{documents.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select></label>}
+        {expenseDocumentAllowed&&<label style={{display:"grid",gap:8,fontSize:16,fontWeight:700}}>Παραστατικό εξόδου (προαιρετικό)<select value={form.purchaseDocumentId} onChange={e=>setForm({...form,purchaseDocumentId:e.target.value})} style={{padding:12,minHeight:48,fontSize:16,border:"1px solid #ccd8e6",borderRadius:10}}><option value="">Χωρίς σύνδεση παραστατικού</option>{approvedExpenseDocuments.map(row=><option key={row.id} value={row.id}>{row.supplierName||"Προμηθευτής"} · {row.documentNumber||row.id.slice(0,8)} · {money(row.totalGross)}</option>)}</select><span style={{fontWeight:400,lineHeight:1.5}}>Επίλεξε μόνο παραστατικό που αφορά αυτό το έξοδο. Το ποσό πληρωμής συμπληρώνεται ξεχωριστά. Μερική πληρωμή ή ανεπαρκής τεκμηρίωση αφήνει τον ΦΠΑ άγνωστο στην αναφορά.</span></label>}
         <label style={{display:"grid",gap:6,fontWeight:700}}>Ποσό<input inputMode="decimal" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0,00" style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10,fontSize:18,fontWeight:800}}/></label>
         {active.type!=="TRANSFER_AMOUNT"&&<label style={{display:"grid",gap:6,fontWeight:700}}>Πηγή πληρωμής<select value={form.paymentSource} onChange={e=>setForm({...form,paymentSource:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}><option value="EXTERNAL">Εξωτερική πληρωμή / τράπεζα</option><option value="CASH_SHIFT">Από μετρητά ενεργής βάρδιας</option></select></label>}
         <label style={{display:"grid",gap:6,fontWeight:700}}>Αιτιολογία / Σχόλιο<input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} style={{padding:12,border:"1px solid #ccd8e6",borderRadius:10}}/></label>

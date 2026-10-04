@@ -1,3 +1,7 @@
+## 04/10/2026 — #27 optional expense document / ASSIGNED same page
+
+Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. AWAITING CI / exact deploy / read-only LAB; no payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
+
 ## 04/10/2026 — efood one-shot attempt / EXPIRED / provider submission unconfirmed
 
 Same owner agent/efood-partner-lab-20261004. Owner approved one300s LAB window; receiver opened then expired/locked. One provider submit click completed, but no success, request ID/HTTP response or Webhook update was observed; no callback PASS. Refreshed controls unchanged: MAIN2/2.40 EUR, LAB-POS-02 2/0 EUR/expenses120, TEST1stock11, TEST2stock−2. Provider form reopened normally; no second submit/window. CHECKPOINTS/CHANGES/2026-10-04-efood-window-attempt.md. Next: bounded form submission diagnosis, then fresh action-time approval for any additional window. Other claims preserved.
