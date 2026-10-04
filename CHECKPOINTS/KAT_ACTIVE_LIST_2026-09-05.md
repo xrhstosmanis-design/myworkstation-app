@@ -2376,3 +2376,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 ## 03/10/2026 — Guarded recovery endpoint for already-confirmed CARD
 
 - Added an authenticated store-scoped recovery endpoint for pre-fix CARD requests that are exactly CARD + OPERATOR_CONFIRMED + operatorOutcome YES + saleId NULL. It calls the same idempotent server finalizer now used by live operator YES and explicitly cannot resend fiscal/EFTPOS commands. This provides a safe path to close already-paid requests without manual SQL or hard-coded startup scripts.
+
+
+## 04/10/2026 21:20 Athens — TODAY-02 large editor / real dropdowns
+TODAY-02 remains CLAIMED / IN PROGRESS. PR #1704 enlarges the VAT-department product editor to the Central Product Management visual pattern (large readable controls), changes Category to a real catalog-backed dropdown, and changes VAT to a dropdown backed by the tenant's active VAT departments. Existing supplier-preservation save logic from PR #1694 is retained; no stock/payment/invoice logic is changed. First CI run #4280 stopped only at the mandatory checkpoint/active-list gate because this record was missing; no merge until replacement CI is green. LAB save/readback and USER visual acceptance remain required before PASS.
