@@ -2394,3 +2394,7 @@ Render `b17de87` ενεργό. ΜΑΝΤΖΗΛΑΣ 13234: βοηθός 17 φυσ�
 
 ## 04/10/2026 21:20 Athens — TODAY-02 large editor / real dropdowns
 TODAY-02 remains CLAIMED / IN PROGRESS. PR #1704 enlarges the VAT-department product editor to the Central Product Management visual pattern (large readable controls), changes Category to a real catalog-backed dropdown, and changes VAT to a dropdown backed by the tenant's active VAT departments. Existing supplier-preservation save logic from PR #1694 is retained; no stock/payment/invoice logic is changed. First CI run #4280 stopped only at the mandatory checkpoint/active-list gate because this record was missing; no merge until replacement CI is green. LAB save/readback and USER visual acceptance remain required before PASS.
+
+
+## 04/10/2026 22:05 Athens — TODAY-04 dynamic preview label
+TODAY-04 remains CLAIMED / IN PROGRESS. Bounded UI-only fix: installBulkPricePreview no longer replaces the submit button textContent, which detached React's live product/store count text nodes. It now changes only the leading static text node from «Εφαρμογή» to «Προεπισκόπηση», preserving React-managed counters. Price preview API, calculations, selection state and commit behavior are unchanged. Awaiting CI/LIVE/USER acceptance; no price commit performed.

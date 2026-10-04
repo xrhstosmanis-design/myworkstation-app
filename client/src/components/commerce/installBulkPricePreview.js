@@ -39,7 +39,7 @@ async function showPreview(form,payload){
   }catch(error){body.innerHTML=`<div class="bpp-error"><b>Η προεπισκόπηση δεν ολοκληρώθηκε.</b><span>${esc(error.message)}</span>${error.data?.resolutionErrors?.length?`<ul>${error.data.resolutionErrors.slice(0,20).map(row=>`<li>${esc(row.name||row.sku||"Επιλογή")}: ${esc(row.error)}</li>`).join("")}</ul>`:""}</div><footer><button type="button" class="secondary" data-bpp-close>Κλείσιμο</button></footer>`}
 }
 async function onSubmit(event){const form=event.target;if(!isBulkForm(form))return;event.preventDefault();event.stopImmediatePropagation();try{await showPreview(form,selectionFromForm(form))}catch(error){alert(error.message)}}
-function enhance(){const form=[...document.querySelectorAll("form.op-box.op-form")].find(isBulkForm);if(!form)return;const button=form.querySelector('button[type="submit"],button.primary');if(button&&!button.dataset.bppLabel){button.dataset.bppLabel="1";button.textContent=button.textContent.replace(/^Εφαρμογή/,"Προεπισκόπηση")}}
+function enhance(){const form=[...document.querySelectorAll("form.op-box.op-form")].find(isBulkForm);if(!form)return;const button=form.querySelector('button[type="submit"],button.primary');if(button&&!button.dataset.bppLabel){button.dataset.bppLabel="1";const firstText=[...button.childNodes].find(node=>node.nodeType===Node.TEXT_NODE&&node.textContent.includes("Εφαρμογή"));if(firstText)firstText.textContent=firstText.textContent.replace("Εφαρμογή","Προεπισκόπηση")}}
 export function installBulkPricePreview(){
   if(!window[installedKey]){window[installedKey]=true;document.addEventListener("submit",onSubmit,true);document.addEventListener("click",event=>{if(event.target.closest?.("button"))setTimeout(enhance,0)},true)}
   enhance();
