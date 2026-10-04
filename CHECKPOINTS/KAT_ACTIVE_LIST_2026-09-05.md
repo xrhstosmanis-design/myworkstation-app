@@ -1,3 +1,11 @@
+## 04/10/2026 — Archive final visual redesign · CLAIMED / IN PROGRESS
+
+- Scope: UI/UX only on the confirmed production `InventoryArchivePanel.jsx` and `inventory-archive.css`.
+- Structural baseline `51ed6cf2` is STRUCTURE PASS and remains protected: results count/page navigation stay in the results header; page-size stays in the bottom action bar.
+- Change: final navy/teal visual polish for typography, filters, table density, edit/selection states, horizontal scrolling, toolbar, tablet and mobile touch targets.
+- Business logic, API, queries, stock, prices, pagination, selection, edit, imports, transfers, orders and e-Delivery are unchanged.
+- Evidence before edit: LIVE structure confirmed by the user. Final status remains AWAITING CI / RENDER LIVE / USER SCREENSHOT / VISUAL PASS.
+
 ## 04/10/2026 — Archive structural redesign to approved mockup · AWAITING CI / VISUAL PASS
 
 - Changed the real InventoryArchivePanel JSX structure: item count + page navigation now live in the results header; page-size control moved into the bottom action bar; actions grouped cleanly. Styling updated to match the approved mockup. No inventory business logic changed.
