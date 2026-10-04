@@ -42,7 +42,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Rule |
 | --- | --- | --- |
-| efood / Pelican provider test | CLAIMED / PROVIDER SUBMISSION UNCONFIRMED | agent/efood-partner-lab-20261004; first300s window EXPIRED; one submit click/no delivery; refreshed controls unchanged; no provider PASS |
+| efood / Pelican provider test | CLAIMED / BLOCKED · TEST SUBMISSION FAILED | agent/efood-partner-lab-20261004; second300s window EXPIRED; owner reports Service is not available; fresh provider history empty/controls unchanged; HTTP cause unconfirmed; no provider PASS |
 | PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
 | GATE 6 work | FREE | Claim before starting |
 | GATE 8 work | FREE | Claim before starting |
@@ -68,6 +68,10 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 ## 04/10/2026 — #27 optional expense document / ASSIGNED same page
 
 Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. AWAITING read-only LAB: available browser requires login. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
+
+## 04/10/2026 — efood second attempt / user-reported Service is not available / BLOCKED
+
+Same owner `agent/efood-partner-lab-20261004` retained. Fresh action-time approval21:51:47 Athens for a second300s LAB window: open click18:53:34.344Z, one Enter attempt18:54:06.300Z left the form open; owner then manually clicked and reported «Service is not available» at21:57:58 Athens (report time, not server request time). After report the test form was no longer visible. Fresh configuration19:02Z confirmed EXPIRED, no CONSUMED; fresh provider API Orders→Webhook history20/09–04/10 had no updates. No request/order ID or HTTP response is available, so the provider/receiver cause is unconfirmed. MAIN2/2.40 EUR, LAB-POS-02 2/0 EUR/expenses120, TEST1stock11/TEST2stock−2 remained unchanged after refresh19:02–19:05Z. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-efood-provider-service-unavailable.md`. Next: obtain provider request ID/HTTP result and reconcile dedicated test-vendor configuration before another test; no email sent, no new window/secret/source change, no PASS. Other claims preserved.
 
 ## 04/10/2026 — efood one-shot attempt / EXPIRED / provider submission unconfirmed
 
