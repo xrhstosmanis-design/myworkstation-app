@@ -1,5 +1,28 @@
 # Task #29 — Σύγκριση Προμηθευτών
 
+## 05/10/2026 00:55 Athens — #29 TWINS 15%/19% cost LIMITED LAB PASS / data blocker retained
+
+Same owner `codex/task29-supplier-comparison-20261004`; continuation branch `codex/task29-twins-cost-proof-20261005`. User requested start00:48Athens. Read fresh AGENTS/shared board, Task29 checkpoint/manual, pending/numbered and main history; preserve Workforce/TODAY/#27 and all protected claims. Previously merged SQL/HTTP fixture PR1731/fullCI4363 (1828PASS/0FAIL/0SKIP) is not repeated and is not live-role/browser proof.
+
+Actual cloudChrome/SUPER_ADMIN support, MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, store `cmtpopbgo000trhb5ng9ytiru`, no physical POS. App reloaded. Independent health before and after shows exact `109c3357fbf16a7bf06ece4701ba212567b07999`; comparison implementation is unchanged from previously accepted65b0136a. Read-only existing-data audit confirms48 product cards, each1 supplier/1 comparable document, zero multi-supplier cards. Positive cheapest/delta/history/tie live acceptance stays BLOCKED by the available approved dataset; no new purchase/payment/stock entry is manufactured.
+
+Expanded source-cost proof00:54–00:55Athens:
+1. Παραγγελίες & Αγορές, From01Sep/To05Oct, search7460 yields one existing FINAL TWINS TRADE AND CONSULTING SERVICES document,14 mapped items, net76.66/gross86.58. Open its existing editor only; read all14 visible rows, original prices, discount1, discount2/3=0, excise0, invoice quantity and displayed warehouse quantity. Return with «← Επιστροφή» without editing/saving/approving.
+2. SKU100028924: quantity5, original2.014, discount15% →2.014×0.85=1.7119EUR/pc.
+3. SKU100028925–100028926: quantity5 each, original1.14, discount15% →0.969EUR/pc.
+4. SKU100028927–100028929: quantity6 each, original1.02, discount15% →0.867EUR/pc.
+5. SKU100028930–100028937: quantity6 each, original1.10, discount19% →1.10×0.81=0.891EUR/pc.
+6. Comparison searchTWINS returns exactly14 products with all corresponding latest and historical values above, source7460/date22Sep. This is14 additional SKUs in a fourth document, now23 source-checked SKUs across4 existing documents. Source grid rounds line totals to2 decimals (e.g.5.35); use the observed original price/discount arithmetic for unrounded unit cost, not5.35/6.
+7. This validates stored-source UI/math agreement at the recorded piece conversion only. Product descriptions containing6/10/12 or ml are not independent evidence of a carton or litre conversion: for this source, invoice and displayed warehouse quantities are both5 or6. No inferred pack factor, independent printed-paper/OCR/full-document reconciliation or kg/litre acceptance is claimed. Distinct latest/history values remain untested in this one-document sample.
+
+No edit/save/approve/finalize/invoice/payment/email/stock action clicked. Order-list status displayed recovery scanned50/started0; no independent background, Audit/StockMovement or new financial/stock count/delta is claimed. Earlier measured control snapshots remain historical evidence, not fresh controls for this cost-only check.
+
+Screenshot `task29-twins-discount-readback-1791150952684.jpg` at21:55:52Z/00:55:52Athens, saved image `libfile_3140be901dd88191bb9baf1a8aafbb10`: selected LAB, SKU100028930,0.891EUR/pc, TWINS/7460/22Sep and truthful single-price warning; navy/white/green style retained. Explicit owner VISUAL acceptance is still not given.
+
+Publication is documentation-only, synchronizing checkpoint, active board, manual, pending remaining scope, numbered register and regenerated/visually inspected PDF; green documentation CI and merge required, no runtime/deploy change. Current main base `b63fe0e85e8169ea3e508ce8613cb3ec35adb520` includes the other owner's Workforce auto-out PR1734 and the named Task27 takeover to codex/task27-resume-20261005; all of it is preserved. This is a bounded cost LAB PASS only, never whole29 or a substitute for multi-supplier live proof.
+
+Whole29 remains ASSIGNED to this page until a named receiver publishes a merged takeover. Remaining: costs/dimensions beyond23 verified SKUs, eligible existing approved two-supplier pair, distinct history/ties/invalid-unit live cases, independent Owner/adversarial tenant/module/browser errors/mobile and owner screenshot confirmation. Single next actionable step: read-only source-cost/dimension review of the existing38001 document; do not repeat the completed23 samples or recheck the unchanged48-card blocker without new data evidence.
+
 ## 05/10/2026 — #29 isolated PostgreSQL/HTTP CI PASS / LAB remaining retained
 
 Same owner `codex/task29-supplier-comparison-20261004`; continuation branch `codex/task29-postgres-http-proof-20261005`. User requested continuation00:16Athens. Prior cost-only closure PR1727/headed79638ca5aa4fcb057536b24b567024f2039cc5 passed CI4347/run37234276648 and merged `11c55f2e940c547169b3a837b2643673822b645f`; all five text records and PDF blob independently matched the merge. The9 real source-checked LAB SKUs/3 documents and existing screen/search/store-selection/single-price PASS remain protected; none are repeated here.
