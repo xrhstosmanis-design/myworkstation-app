@@ -1,3 +1,8 @@
+## 04/10/2026 — Archive structural redesign to approved mockup · AWAITING CI / VISUAL PASS
+
+- Changed the real InventoryArchivePanel JSX structure: item count + page navigation now live in the results header; page-size control moved into the bottom action bar; actions grouped cleanly. Styling updated to match the approved mockup. No inventory business logic changed.
+- Final PASS requires LIVE deploy and user visual confirmation.
+
 ## 04/10/2026 — Approved production Archive visual polish · AWAITING CI / VISUAL PASS
 
 - Applied the user-approved navy/teal visual design directly to the verified production Archive screen: cleaner panels/filters, stronger table hierarchy, clearer edit/selection states and polished action bar. Functionality unchanged.
