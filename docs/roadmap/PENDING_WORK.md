@@ -1,3 +1,7 @@
+## 04/10/2026 - TODAY UI continuation
+
+TODAY-01 desktop EFTPOS chooser received explicit USER / VISUAL PASS at 18:46 Athens on LIVE `b958de172f3142b1c59f00f2dd6c1281abf10d9b`; removed from active UI work. Record closure awaits green CI/merge. Mobile/tablet and payment effects NOT TESTED. TODAY-02 through TODAY-09 remain ASSIGNED to `agent/today-ui-verification-20261004` as the continuation of the central board owner. Next: TODAY-02 real VAT department product edit and return context. Other claimed work remains protected. See `CHECKPOINTS/CHANGES/2026-10-03-card-terminal-picker-large-ui.md`.
+
 ## 03/10/2026 — Δημοσίευση CAP εγκατάστασης / ASSIGNED ίδια σελίδα
 
 PR #1677 / 1eaec42837cf916ea3d42b0fb4dd38fc460d9925: CI #4212 PASS (Windows smoke + isolated HTTP), main #4213 PASS, Render dep-db0ij70u01pc73ahoei0 LIVE 16:16:17Z. Δημοσιεύονται νέο γενικό PDF 5σελίδων και Διαδόχου 6σελίδων με φύλλο παράδοσης· source/manual/index συγχρονισμένα. Ρυθμίσεις CAP ανά POS και token-free πακέτο είναι υλοποιημένα, όχι physical PASS.
