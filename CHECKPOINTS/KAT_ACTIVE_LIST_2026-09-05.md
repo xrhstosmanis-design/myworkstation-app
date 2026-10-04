@@ -1,3 +1,71 @@
+# CENTRAL WORK CLAIM BOARD — 04/10/2026
+
+> **AUTHORITATIVE COORDINATION BOARD.** Every ChatGPT page/agent MUST read this board before starting work.
+> Statuses: `FREE` → `CLAIMED / IN PROGRESS` → `DONE / PASS`, or `BLOCKED` with the exact reason.
+> A page/agent MUST NOT work on an item marked `CLAIMED / IN PROGRESS` or `DONE / PASS`.
+> `DONE / PASS` requires recorded evidence (commit / PR / CI / deploy as applicable). UI work additionally requires the real production route/component, LIVE deploy, user screenshot review and explicit user confirmation before `VISUAL PASS`.
+> Existing historical entries below are evidence/history; when they conflict with this board, this board controls assignment/status.
+> PASS Gates are not reopened without a concrete regression or a new explicit user request.
+
+## Gates
+
+| Work item | Status | Owner / note |
+| --- | --- | --- |
+| GATE 1 — Products | DONE / PASS | Do not reopen except explicit new UI/UX request |
+| GATE 2 — Inventory | DONE / PASS | Inventory 2.0 enhancements are separate |
+| GATE 3 — Invoices | DONE / PASS / CLOSED | Never reopen without explicit regression/new request |
+| GATE 4 — POS1/POS2 & RBS | DONE / PASS | Only PAY-01 mixed payment remains separate |
+| GATE 5 — Payments | DONE / PASS | Do not reopen |
+| GATE 6 — Online Orders / Delivery | FREE / OPEN | Must be claimed before work |
+| GATE 7 — Reports | DONE / PASS | Do not reopen |
+| GATE 8 — Roles / Security | FREE / OPEN | Must be claimed before work |
+| GATE 9 — Workforce / Chat / PWA | FREE / IN-PROGRESS AREA | Continue only unfinished checkpoints; do not repeat completed work |
+| Installation — Diadochou Pavlou | OPEN / SEPARATE TRACK | 1 POS + 1 RBS + 1 EFTPOS; never assume KAT 2-POS topology |
+
+## TODAY UI/UX work — owned by current ChatGPT page
+
+The prior DONE/PASS summary from another page is **not accepted as final evidence**. These items are now reserved to the current page for verification/completion. Other pages MUST NOT work on them.
+
+| Item | Status | Scope |
+| --- | --- | --- |
+| TODAY-01 — Larger EFTPOS/card-terminal selector | CLAIMED / IN PROGRESS | Verify real production route, CI/deploy and actual visible touch-friendly UI |
+| TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS | Pencil → real product edit → return to same VAT department; no silent VAT/category mutation |
+| TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Master Catalog, store prices, bulk prices, offers, Excel/Barcode, inventory |
+| TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | Approved product → stores → action → preview → apply UX; business logic protected |
+| TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
+| TODAY-06 — Excel / Barcode UI | CLAIMED / IN PROGRESS | Clear Barcode vs Excel flows; touch-friendly controls |
+| TODAY-07 — Inventory 2.0 mobile/tablet unknown barcode | CLAIMED / IN PROGRESS | Attach existing or create new, then return to same active inventory |
+| TODAY-08 — Commercial Modules layout | CLAIMED / IN PROGRESS | Responsive 3/2/1-column cards; redundant POS removed |
+| TODAY-09 — Owner Store Page simplification | CLAIMED / IN PROGRESS | Shifts + owner/manager payments primary; other functions behind clear tiles |
+
+## Other central work
+
+| Item | Status | Rule |
+| --- | --- | --- |
+| PAY-01 — Mixed payment | FREE | Only remaining Gate-4-related improvement; Gate 4 itself stays PASS |
+| GATE 6 work | FREE | Claim before starting |
+| GATE 8 work | FREE | Claim before starting |
+| GATE 9 unfinished work | FREE | Claim exact unfinished checkpoint before starting |
+
+## Global UI rule
+
+Large readable typography; large touch-friendly buttons/inputs; clear contrast; no microscopic helper text; no cramped UI. Desktop/POS/tablet/mobile. Prefer horizontal scrolling over shrinking table text. UI-only tasks must not change APIs, queries, stock calculations, prices, pagination logic, product selection/edit logic, Excel import, transfers, orders, e-Delivery or other business logic.
+
+## Completion protocol
+
+1. Read this board.
+2. Claim only a FREE item before editing.
+3. Verify the real production route from `entry.jsx` / launcher and the actual component the user sees.
+4. Change only the claimed scope.
+5. Update this board/checkpoint.
+6. Run CI; merge only when green.
+7. Deploy to Render and verify the exact commit is LIVE.
+8. For visual work, user checks the real production screen by screenshot.
+9. Mark `DONE / PASS` / `VISUAL PASS` only after the required evidence and explicit user visual confirmation.
+10. If blocked, mark `BLOCKED` and record the exact reason.
+
+---
+
 ## 04/10/2026 — Archive final visual redesign · CLAIMED / IN PROGRESS
 
 - Scope: UI/UX only on the confirmed production `InventoryArchivePanel.jsx` and `inventory-archive.css`.
