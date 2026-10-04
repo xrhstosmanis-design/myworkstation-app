@@ -52,6 +52,8 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 ## Global UI rule
 
+Owner reference preference, 04/10 22:16 Athens: navy modal/card header, clear tabs when multiple sections exist, two-column labeled fields on desktop, one-column on small screens, bounded scrollable content and visible bottom action bar with green primary action. Follow this style for future work; preserve each assigned scope and require real installed screen/user review for VISUAL PASS.
+
 Large readable typography; large touch-friendly buttons/inputs; clear contrast; no microscopic helper text; no cramped UI. Desktop/POS/tablet/mobile. Prefer horizontal scrolling over shrinking table text. UI-only tasks must not change APIs, queries, stock calculations, prices, pagination logic, product selection/edit logic, Excel import, transfers, orders, e-Delivery or other business logic.
 
 ## Completion protocol
@@ -69,7 +71,7 @@ Large readable typography; large touch-friendly buttons/inputs; clear contrast; 
 
 ## 04/10/2026 — #27 optional expense document / ASSIGNED same page
 
-Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. Authenticated read-only LAB shows selection/clear works but long document labels overflow; LAB FAIL / bounded min-width fix AWAITING CI/deploy. Controls MAIN2/2.40 andPOS02 2/0 unchanged. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
+Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. PR1711/d60be122 CI37227770728/37227974615 SUCCESS; installed exactebcb3759 includes fix. Read-only OTHER/UTILITIES select/clear/cancel observed, desktop overflow gone (880 client=scroll width), controls MAIN2/2.40 andPOS02 2/0 unchanged. Owner reference style recorded; AWAITING explicit USER visual acceptance. Saved expense/positive VAT/mobile/full27 remain OPEN. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
 
 ## 04/10/2026 22:17 Athens — efood support email SENT / AWAITING REPLY / HANDOFF PREPARED
 
