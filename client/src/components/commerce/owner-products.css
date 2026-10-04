@@ -1241,7 +1241,7 @@
     margin: 0;
   }
   .owner-products-colorful .offers-workspace .promotion-product-list {
-    max-height: clamp(160px, calc(100dvh - 490px), 300px);
+    max-height: clamp(140px, calc(100dvh - 550px), 250px);
   }
   .owner-products-colorful .offers-workspace .op-form > .op-two {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1255,4 +1255,13 @@
     padding: 0;
     flex: none;
   }
+}
+
+/* The page underneath a maximized workspace must not add a second scrollbar. */
+html:has(.commerce-shell.window-maximized .owner-products-colorful),
+body:has(.commerce-shell.window-maximized .owner-products-colorful) {
+  overflow: hidden;
+}
+.commerce-overlay:has(.commerce-shell.window-maximized .owner-products-colorful) {
+  overflow: hidden;
 }
