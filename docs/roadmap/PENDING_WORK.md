@@ -514,3 +514,7 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 - TABLE_SERVICE ασφαλής επανάληψη γύρου: νέο mobile key ανά payload και server replay του ίδιου αποτελέσματος μέσα σε transaction, με 409 για αλλαγμένο περιεχόμενο/χειριστή. 11 tests και build PASS· PR #1501 / CI #3782 / merge και exact Render `675ee74` PASS· απομονωμένο LAB E2E AWAITING. Δεν εκτελέστηκε νέα παραγγελία. `CHECKPOINTS/CHANGES/2026-09-28-table-service-round-idempotency.md`.
 **03/10/2026 — ΑΝΑΛΗΨΗ ΑΠΟ `agent/rbs-capdriver-pairing-ui-20261002` — ASSIGNED `agent/rbs-capdriver-kiosk-file-20261003` (ίδια CAP Driver εργασία):** PR #1632 core merged/deployed at `874c6bd2e0c8efcf578e6ee2a98026d8057c5c6f` / CI #4107 PASS. Προσθήκη owner-scoped BackOffice UI για έκδοση 15λεπτου one-time pairing code από το υπάρχον endpoint. Δεν αλλάζουν auth/tenant enforcement, POS command, driver, RBS, EFTPOS ή πραγματικά δεδομένα. Υπάρχουσα KAT συναλλαγή NON_FISCAL χωρίς απόδειξη δεν επαναλαμβάνεται. UI CI/deploy, Windows pairing/writer και φυσική εκτύπωση OPEN/NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-02-rbs-capdriver-pairing-ui.md`.
 
+
+
+### 04/10/2026 — TODAY-02 UI continuation
+PR #1704: large readable VAT-department product editor aligned with Central Product Management; Category uses real catalog categories and VAT uses active tenant VAT departments. Supplier-preservation logic remains intact. Awaiting green CI, LIVE publication, LAB save/readback and USER visual acceptance; do not mark PASS yet.
