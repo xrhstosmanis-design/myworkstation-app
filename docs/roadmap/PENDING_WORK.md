@@ -1,6 +1,6 @@
 ## 04/10/2026 — #27 optional expense document / ASSIGNED same page
 
-Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. AWAITING read-only LAB: available browser requires login. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
+Same #27 owner continues `codex/task27-expense-document-20261004`: optional APPROVED existing document for Owner OTHER/UTILITIES, preserves no-document path. PR1706 merged1a4fe59a; PR/main CI37226180353/37226345081 and Render37226486682 SUCCESS; health exact1a4fe59a. Authenticated read-only LAB shows selection/clear works but long document labels overflow; LAB FAIL / bounded min-width fix AWAITING CI/deploy. Controls MAIN2/2.40 andPOS02 2/0 unchanged. No payment/invoice/stock write, no full PASS. TODAY-09 landing layout and other claims untouched. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-task27-expense-document.md`.
 
 ## 04/10/2026 — efood second attempt / user-reported Service is not available / BLOCKED
 
