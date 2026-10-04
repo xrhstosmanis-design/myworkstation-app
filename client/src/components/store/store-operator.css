@@ -22,3 +22,7 @@
 .operator-camera-modal video{display:block;width:100%;max-height:58vh;object-fit:cover;background:#111;border-radius:16px}
 .operator-camera-modal p{text-align:center;font-weight:700;margin:14px 0}
 .operator-camera-modal>.secondary{width:100%;min-height:48px}
+
+.operator-camera-view{position:relative;border-radius:16px;overflow:hidden;background:#111}
+.operator-camera-view video{border-radius:0!important}
+.operator-camera-target{position:absolute;left:50%;top:50%;width:min(52%,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid rgba(255,255,255,.95);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.12);pointer-events:none}
