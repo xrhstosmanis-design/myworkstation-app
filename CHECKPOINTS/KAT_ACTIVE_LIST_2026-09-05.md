@@ -28,8 +28,8 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 
 | Item | Status | Scope |
 | --- | --- | --- |
-| TODAY-01 — Larger EFTPOS/card-terminal selector | USER / VISUAL PASS · AWAITING RECORD CI/MERGE | Owner confirmed 04/10 18:46; LIVE b958de17; desktop 920px panel / 150px buttons; payment/mobile NOT TESTED |
-| TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS | Pencil → real product edit → return to same VAT department; no silent VAT/category mutation |
+| TODAY-01 — Larger EFTPOS/card-terminal selector | DONE / DESKTOP VISUAL PASS | Owner confirmed 04/10 18:46; LIVE b958de17; PR1693 / CI4259 merged728e5f3; payment/mobile NOT TESTED |
+| TODAY-02 — VAT Department product editing | CLAIMED / IN PROGRESS · SUPPLIER FIX AWAITING CI/LAB | Owner agent/today02-preserve-suppliers-20261004; pencil opens LAB card; save withheld after supplier payload source FAIL; preserve supplier codes before LAB save |
 | TODAY-03 — Central Product Management UI refresh | CLAIMED / IN PROGRESS | Master Catalog, store prices, bulk prices, offers, Excel/Barcode, inventory |
 | TODAY-04 — Bulk price change UI | CLAIMED / IN PROGRESS | Approved product → stores → action → preview → apply UX; business logic protected |
 | TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
