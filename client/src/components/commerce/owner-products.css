@@ -1265,3 +1265,15 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
 .commerce-overlay:has(.commerce-shell.window-maximized .owner-products-colorful) {
   overflow: hidden;
 }
+
+@media (min-width: 1101px) {
+  .owner-products-colorful .offers-workspace .op-two > label { margin-bottom: 0; }
+  .owner-products-colorful .offers-workspace .offers-summary > div { padding: 8px 12px; }
+  .owner-products-colorful .offers-workspace .op-form > fieldset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .owner-products-colorful .offers-workspace .op-form > fieldset > label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
