@@ -1,3 +1,10 @@
+## 05/10/2026 — #27 ΑΝΑΛΗΨΗ / ASSIGNED codex/task27-resume-20261005
+
+ΑΝΑΛΗΨΗ ΑΠΟ `codex/task27-service-document-lab-20261005` — ASSIGNED `codex/task27-resume-20261005`, κατόπιν ρητής εντολής ιδιοκτήτη στη νέα σελίδα. Base main `1eb4defd55b4bf26eff2e9522f2fbfef68956114` includes merged PR1732/f0c158be; subsequent main changes are isolated Task29 tests/documentation. New cloud browser successfully displays authenticated Platform Admin / Χρήστος Μάνης; the prior native-credential observation blocker is superseded only for this new observed session. No credentials read, no auth/permission/source change.
+
+Protected: LAB-EXP-001 draft/reopen/separate approval/one EXTERNAL124 and day/month/total124gross/100net/24VAT LIMITED PASS, desktop selector USER PASS, all earlier report PASS, Gate3 PASS and every other assignment. Do NOT repeat LAB-EXP-001 or any financial/stock/fiscal action for evidence. Whole27 OPEN. Remaining: independent Owner without SA, new-modal USER acceptance/mobile/tablet, partial/multiple payment policy, historical-cost evidence, new CSV and native/physical printing. Next bounded action: read-only fresh LAB two-till controls and existing05Oct report, then export existing data. No new PASS asserted by this takeover. Independent Owner requires a distinct authenticated non-SA session; support impersonation is not proof. Physical devices/printer not available through this cloud session. No manual/PDF PASS closure until a new real result exists. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-task27-resume.md`.
+
+
 **04/10/2026 — Workforce attendance fast QR AWAITING CI:** code confirms operator shift open→IN / close→OUT and coworker «Κάρτα εργασίας» QR/PIN toggle IN/OUT with audit + one-minute duplicate guard. Camera preserves native QR+Code128 fast path, continuous focus and target frame. Controlled LAB IN test pending. Checkpoint `CHECKPOINTS/CHANGES/2026-10-04-workforce-attendance-fast-qr.md`.
 
 ## 05/10/2026 — #27 saved service / positive VAT LIMITED LAB PASS; remaining retained
