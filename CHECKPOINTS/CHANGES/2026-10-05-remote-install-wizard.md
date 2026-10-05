@@ -1,0 +1,13 @@
+# Remote installation launcher — 05/10/2026
+
+ASSIGNED codex/remote-install-wizard-20261005, independent new launcher extension requested before connecting to Diadochou. Current code base main ab1dde260506c2ebf24f99dd74eb59455719d23a; health before changes d0fa00d2df62cde2d223a5b821aa5ca963c67840. Read AGENTS, full central active/roadmap files, work board and installation/CAP checkpoints and technician manual. Latest installer code change is #1677; no subsequent launcher implementation found.
+
+Owner confirms same CAPDriver and existing AnyDesk/Kiosk plus ready products/operators. This is evidence of existing equipment, not MyWorkStation hardware PASS. Historical KAT CASH/CARD/Delivery evidence remains scoped to KAT; Diadochou connection/physical acceptance is NOT TESTED. New launcher does not reopen Gates or claim mixed/multi-POS support. Protected: original Pair/Test/Writer bytes and one-shot dispatch, expected-store credential guard, explicit per-store payment codes, CONNECTOR_RBS/license, active single POS, stale-equipment rejection, no network/command on PREPARE or GUI opening.
+
+Implementation and tests IN PROGRESS. No production settings, module activation, pairing, Writer, fiscal command or sale executed. Existing broader installation assignment remains unchanged; this page owns only the new guided-launcher extension until explicit handoff.
+
+## Implementation / local verification
+
+Additive guided-package endpoint retains the original auth, store/settings and active-single-POS checks. Self-contained ASCII/CRLF .cmd extracts exact legacy PREPARE and UTF8-BOM GUI helpers. Legacy package and Pair/Test/Writer sources are unchanged. Greek resizable GUI runs Pair/Test asynchronously with a 30-second request timeout and keeps the code out of process args/files. Separate explicit Start calls a runner with expected-store connection check and a global guided-runner mutex. Current-user Startup is opt-in and reversible, with safely encoded Unicode/apostrophe paths; no admin service or permanent execution-policy change. Existing legacy writers are not covered by the new mutex and must be stopped by the technician before use.
+
+Local Node24: 1824 server tests PASS / 2 SKIP, 0 FAIL; five package/settings tests PASS; client build PASS. Windows PowerShell5.1 smoke and offline GUI screenshot are required in CI, plus isolated HTTP E2E for both download routes, role/tenant denial, stale mapping and multi-POS block. New guidance lives outside PASS manuals in docs/installation/REMOTE_CONNECTOR_SETUP.md pending device acceptance. No production settings/license, pairing, Writer or transaction executed. Windows UI/startup and physical Diadochou acceptance remain NOT TESTED.

@@ -27,11 +27,19 @@ try{
   const read=await request(root+"/rbs-installation/POS-01",{token});assert.equal(read.status,200);assert.equal(read.body.settings.cardCode,"8");assert.equal(read.body.connectorAllowed,false,"Configuration must not activate a licensed module");
   const other=await request(`/api/platform/companies/${company.id}/stores/${sibling.id}/rbs-installation/POS-01`,{token});assert.equal(other.body.settings,null,"Settings leaked to a sibling store");
   const packageResult=await request(root+"/rbs-installation/POS-01/package",{token,method:"POST",body:{apiBase:"https://unit.test"}});assert.equal(packageResult.status,200,JSON.stringify(packageResult.body));assert.equal(packageResult.body.containsCredentials,false);
+  const guidedPath=root+"/rbs-installation/POS-01/guided-package";
+  assert.equal((await request(guidedPath,{method:"POST",body:{apiBase:"https://unit.test"}})).status,401);
+  assert.equal((await request(guidedPath,{token:ownerToken,method:"POST",body:{apiBase:"https://unit.test"}})).status,403);
+  assert.equal((await request(`/api/platform/companies/foreign-company/stores/${store.id}/rbs-installation/POS-01/guided-package`,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,404);
+  const guided=await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}});
+  assert.equal(guided.status,200,JSON.stringify(guided.body));assert.equal(guided.body.guided,true);assert.equal(guided.body.containsCredentials,false);assert.equal(guided.body.startsWriterAutomatically,false);assert.match(guided.body.fileName,/\.cmd$/);
   const audit=await db.authAudit.count({where:{userId:admin.id,event:"STORE_RBS_INSTALLATION_CONFIRMED"}});assert.equal(audit,1);
   const changed={...routing,eftposDevices:[{...routing.eftposDevices[0],deviceCode:"CARD-NEW"}]};assert.equal((await request(root+"/device-routing",{token,method:"PUT",body:changed})).status,200);
   assert.equal((await request(root+"/rbs-installation/POS-01",{token})).status,409,"Changing equipment must invalidate old payment configuration");
+  assert.equal((await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Guided package must reject stale equipment too");
   assert.equal((await request(root+"/rbs-installation",{token,method:"PUT",body:form})).status,200);
   assert.equal((await request(root+"/installation-terminals",{token,method:"POST",body:{terminalPos:"POS-02",displayName:"Second POS"}})).status,201);
   assert.equal((await request(root+"/rbs-installation/POS-01/package",{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Store-wide writer queue must not be packaged as safe multi-POS routing");
+  assert.equal((await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Guided package must keep the same multi-POS block");
   console.log("RBS installation HTTP E2E PASS: Super Admin isolation, one EFTPOS, durable explicit codes, module gate, stale mapping invalidation, credential-free package and multi-POS block.");
 }finally{await db.$disconnect()}

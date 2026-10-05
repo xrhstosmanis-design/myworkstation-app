@@ -1,5 +1,10 @@
 ## 05/10/2026 01:04 Athens — #27 remaining / ASSIGNED same receiving page
 
+## 05/10/2026 — REMOTE-INSTALL-01 / ASSIGNED codex/remote-install-wizard-20261005
+
+Νέα ρητή ανάθεση ιδιοκτήτη: πριν από απομακρυσμένη σύνδεση στο Διαδόχου, απλός ελληνικός Windows launcher γύρω από τα ήδη δημοσιευμένα Pair/Test/Writer, με προαιρετική εκκίνηση στον ίδιο Windows χρήστη. Ο ιδιοκτήτης επιβεβαίωσε υπάρχον AnyDesk, λειτουργικό Kiosk Manager και ίδιο CAPDriver, καθώς και έτοιμους χειριστές/προϊόντα. Πρόκειται για ανεξάρτητη νέα επέκταση launcher· η παλιά φυσική εγκατάσταση/φορολογικό πρωτόκολλο δεν αναλαμβάνεται ή επαναλαμβάνεται. Τα υπάρχοντα scripts και legacy package διατηρούνται. New main ab1dde260506c2ebf24f99dd74eb59455719d23a· πραγματικό health πριν από αλλαγές d0fa00d2df62cde2d223a5b821aa5ca963c67840. Windows UI, startup και Διαδόχου physical acceptance NOT TESTED. Φάκελος/κωδικοί/ΦΠΑ/άδεια Διαδόχου χρειάζονται δική τους επιβεβαίωση, όχι αντιγραφή ΚΑΤ. Checkpoint CHECKPOINTS/CHANGES/2026-10-05-remote-install-wizard.md.
+
+
 Owner `codex/task27-resume-20261005` retained. New-service-modal desktop visual acceptance removed from pending after explicit USER «ειναι οκ» on actual service-form-review-20261005.jpg. Previous selector and saved124/100/24 LIMITED PASS protected; no financial replay. Remaining: independentOwner withoutSA, actualmobile/tablet, partial/multiple payment allocation policy, historical-cost evidence, verifiednewCSV, native/physicalprinting and wholemodule. No other assignment changed. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-task27-resume.md`; all five PASS closure records synchronized. Next independentOwner read-only session.
 
 ## 05/10/2026 — #27 ΑΝΑΛΗΨΗ / ASSIGNED codex/task27-resume-20261005

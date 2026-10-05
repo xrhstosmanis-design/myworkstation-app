@@ -18,6 +18,7 @@ import {backupMonitorSummary} from "./backup-monitor.js";
 import {ensureRbsInstallationSettings,readRbsInstallationSettings,rbsInstallationSettingsSchema} from "../services/rbs-installation-settings.js";
 import {companyModuleState} from "../middleware/module-access.js";
 import {buildRbsInstallationPackage} from "../services/rbs-installation-package.js";
+import {buildRbsGuidedInstallationPackage} from "../services/rbs-guided-installation-package.js";
 
 const router=Router();
 router.use(auth);
@@ -662,14 +663,15 @@ router.put("/companies/:companyId/stores/:storeId/rbs-installation",async(req,re
   }catch(error){next(error)}
 });
 
-router.post("/companies/:companyId/stores/:storeId/rbs-installation/:terminalPos/package",async(req,res,next)=>{
+router.post(["/companies/:companyId/stores/:storeId/rbs-installation/:terminalPos/package","/companies/:companyId/stores/:storeId/rbs-installation/:terminalPos/guided-package"],async(req,res,next)=>{
   try{
     const store=await installationStore(req.params.companyId,req.params.storeId),terminalPos=deviceCodeSchema.parse(req.params.terminalPos);
     const body=z.object({apiBase:z.string().url().max(300)}).parse(req.body||{});
     const settings=await readRbsInstallationSettings(prisma,{companyId:store.companyId,storeId:store.id,terminalPos});
     const terminals=await prisma.$queryRaw`SELECT "terminalPos" FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "active"=TRUE`;
     if(terminals.length!==1||terminals[0].terminalPos!==terminalPos){const error=new Error("Το έτοιμο πακέτο υποστηρίζει εγκατάσταση με ένα ενεργό POS. Για πολλά POS χρειάζεται ξεχωριστός έλεγχος φυσικής διαδρομής writer.");error.status=409;throw error}
-    res.json(await buildRbsInstallationPackage({store,settings,apiBase:body.apiBase,revision:process.env.RENDER_GIT_COMMIT||process.env.APP_REVISION||"unknown"}));
+    const buildPackage=req.path.endsWith("/guided-package")?buildRbsGuidedInstallationPackage:buildRbsInstallationPackage;
+    res.json(await buildPackage({store,settings,apiBase:body.apiBase,revision:process.env.RENDER_GIT_COMMIT||process.env.APP_REVISION||"unknown"}));
   }catch(error){next(error)}
 });
 

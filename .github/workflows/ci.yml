@@ -74,6 +74,16 @@ jobs:
       - name: Run isolated CAP Driver pairing and writer smoke test
         shell: powershell
         run: ./tools/windows-rbs-capdriver-v1/Test-Smoke.ps1
+      - name: Run isolated guided installation and startup smoke test
+        shell: powershell
+        run: ./tools/windows-rbs-capdriver-v1/Test-GuidedSmoke.ps1
+      - name: Preserve guided Windows setup preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbs-guided-setup-preview
+          path: ${{ runner.temp }}/mws-guided-setup-preview.png
+          if-no-files-found: error
+          retention-days: 7
 
   build-and-test:
     needs: classify-changes
