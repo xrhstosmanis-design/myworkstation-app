@@ -2760,3 +2760,7 @@ LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rul
 
 ## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
 Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 23:05 Athens — PENDING: Render Free instance spin-down / production readiness
+Owner observed Render warning that the current Free web-service instance spins down after inactivity and can delay requests by ~50 seconds or more. Add to central pending list as production-readiness item: move the user-facing MyWorkStation web service to an always-on paid compute plan before broad store rollout, then verify no idle cold-start delay. This is separate from GitHub CI queueing and from Task18 backup. No service-plan change authorized/executed in this checkpoint.
