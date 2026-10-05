@@ -1,3 +1,7 @@
+## 05/10/2026 - Latest POS completion: 21:48-22:06
+
+Authorized Platform SuperAdmin → Προσωπικό & Πρόγραμμα → MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ → Παρουσίες →05Oct → Ανανέωση. Latest LAB POS 2 attendance completed21:48-22:06,18m/displayed1.50 EUR;0open/3completed, total2h10m/10.84 EUR. Earlier two completions unchanged. Displayed-state PASS only; no payroll accuracy or independent OUT/Audit count claimed. Diagnose with read-only refresh; do not manually end or correct the completed record. This newer completed-state observation supersedes the historical open-state after invalid rejection. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.
+
 ## 05/10/2026 - Read-only attendance after rejected POS close
 
 Authorized Platform SuperAdmin → Προσωπικό & Πρόγραμμα → MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ → Παρουσίες →05Oct. After owner's21:54 invalid POS close attempt, fresh loaded attendance21:48 LAB POS 2 remained «Σε εξέλιξη» with no end,1open/2completed. Prior19:33-19:35 and19:37-21:27 completions and displayed1h52m/9.34 EUR unchanged. Bounded displayed-state corroboration only; no independent OUT/Audit count or payroll correctness proof. Use refresh for readback; do not press manual Έναρξη/Λήξη or Διόρθωση ωρών to diagnose a rejected POS close. No access/module activation changes. Exact physical submission revision unavailable; later health7b5898b1. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.

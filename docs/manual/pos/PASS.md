@@ -1,3 +1,7 @@
+## 05/10/2026 - Latest close: displayed completion readback
+
+For authorized LAB POS 2 / MYWORKSTATION LAB, screenshots22:06 login then22:11 mandatory opening form/expected0.00 match the verified close/re-entry behavior. Fresh Platform SuperAdmin → Ταμεία →05Oct shows latest MAIN21:48-22:06 difference0.00/POS-EFTPOS0.00 and no unusual event. Workforce same attendance completed18m. Do not confirm opening unless a new shift is intended. This is positive UI/report corroboration, not independent proof of submitted QR, single OUT/Audit count or full financial/control delta. Old2.40 deficit belongs to a separate shift. If completion is unclear, refresh both reports before taking any new action; do not repeat closure. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.
+
 ## 05/10/2026 - Invalid closing credential rejected: USER PASS
 
 Authorized LAB POS 2 operator opened «Κλείσιμο βάρδιας» in MYWORKSTATION LAB, confirmed count and submitted one invalid manual sample (owner had no second registered QR). The form stayed open and displayed «Σκάναρε την ενεργή προσωπική κάρτα του χειριστή που άνοιξε τη βάρδια. Το κλείσιμο δεν έγινε.» Use the active personal QR of the operator who opened that shift for an intended closure; decode alone does not close it. Do not use the login name as the credential. On rejection, retain the count and correct the credential before a separately intended submission.
