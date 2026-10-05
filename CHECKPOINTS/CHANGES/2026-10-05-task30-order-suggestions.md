@@ -1,5 +1,13 @@
 # Task #30 — Αυτόματες Προτάσεις Παραγγελίας
 
+## 05/10/2026 22:22 Athens — #30 layout retest: rows visible, residual horizontal/help FAIL
+
+PR1766 / exact head273e38d2d224069a7cfdeddbda2656e55e80b0e1 / full CI4441 (37361504447) SUCCESS,1862 server PASS/0FAIL/0SKIP; merged1138ed2feb0d0ad7d481acd4e3f707e23eaaa58d. Concurrent main CI4443/4444 cancelled; descendant121046fec1bc62aaf436eaaa50697f40ccb38e43 preserves exact #30 blobs and passed full CI4445 (37361932774),1862/0/0. Guarded Render2031 (37362336955/job111939763484) SUCCESS/exact health22:19:23 Athens; browser independently confirms121046fec1bc62aaf436eaaa50697f40ccb38e43.
+
+Read-only same SA / LAB store / cloud desktop, viewport1363×936 after reload. Compact toolbar and measured one-row fallback expose the full water2269 row: stock−65/min0/net36/daily1.2/proposal77, negative warning, page1/11. Shell1320×908 and hub1280×690 have equal client/scroll dimensions; #30 region614/614 and content311/311 vertically fit, nav bottom821.97 and footer901 inside shell922. Residual FAIL: table wrapperclient1246/scroll1253 (7px horizontal scrollbar) is caused by the shared last-column `mws-col-resizer` positioned right−7px. Existing floating Parameters control partially covers the right-hand calculation-help button. Whole desktop acceptance remains AWAITING LAB.
+
+Before the next source edit, bounded causal correction is CSS scoped only to #30: move the last-column handle inward while retaining resizing/filters, place help at the footer start and reserve the floating-control space. No backend, pagination logic, shared table/theme/parameters/other owner edits. Preserve numerical/search/store results and repeat live layout/help only after full CI/exact deploy. Owner `codex/task30-order-suggestions-20261005` retained; independent Owner/mobile/tablet/physical terminal/financial deltas NOT TESTED.
+
 ## 05/10/2026 22:08 Athens — #30 real LAB quantities verified / desktop layout FAIL, bounded correction assigned
 
 Owner `codex/task30-order-suggestions-20261005` retained. Normal canonical HTTPS Platform Admin opened on this attempt; the earlier transient Chrome error-page rejection was not bypassed. Secure sign-in and 2FA completed, verified platform Super Admin Χρήστος Μάνης → MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (`cmtpopbgo000trhb5ng9ytiru`) → full Backoffice → Commercial → Other commercial functions → Προτάσεις Παραγγελίας. Browser /api/health returned ok:true, revision `9cb0df86e8751d0254642f767ab1aa9f0d424fee`; #30 UI/route/helper blob SHAs independently match the implementation merge62467d84. No stock/order/email/payment/fiscal/license mutation or financial delta claimed.

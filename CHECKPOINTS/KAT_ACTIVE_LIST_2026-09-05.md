@@ -18,6 +18,14 @@ Same ASSIGNED fix/pos-shift-close-qr-camera-20261005; physical positive UI, disp
 
 ## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
 
+## 05/10/2026 22:22 Athens — #30 layout retest: rows visible, residual horizontal/help FAIL
+
+PR1766 / exact head273e38d2d224069a7cfdeddbda2656e55e80b0e1 / full CI4441 (37361504447) SUCCESS,1862 server PASS/0FAIL/0SKIP; merged1138ed2feb0d0ad7d481acd4e3f707e23eaaa58d. Concurrent main CI4443/4444 cancelled; descendant121046fec1bc62aaf436eaaa50697f40ccb38e43 preserves exact #30 blobs and passed full CI4445 (37361932774),1862/0/0. Guarded Render2031 (37362336955/job111939763484) SUCCESS/exact health22:19:23 Athens; browser independently confirms121046fec1bc62aaf436eaaa50697f40ccb38e43.
+
+Read-only same SA / LAB store / cloud desktop, viewport1363×936 after reload. Compact toolbar and measured one-row fallback expose the full water2269 row: stock−65/min0/net36/daily1.2/proposal77, negative warning, page1/11. Shell1320×908 and hub1280×690 have equal client/scroll dimensions; #30 region614/614 and content311/311 vertically fit, nav bottom821.97 and footer901 inside shell922. Residual FAIL: table wrapperclient1246/scroll1253 (7px horizontal scrollbar) is caused by the shared last-column `mws-col-resizer` positioned right−7px. Existing floating Parameters control partially covers the right-hand calculation-help button. Whole desktop acceptance remains AWAITING LAB.
+
+Before the next source edit, bounded causal correction is CSS scoped only to #30: move the last-column handle inward while retaining resizing/filters, place help at the footer start and reserve the floating-control space. No backend, pagination logic, shared table/theme/parameters/other owner edits. Preserve numerical/search/store results and repeat live layout/help only after full CI/exact deploy. Owner `codex/task30-order-suggestions-20261005` retained; independent Owner/mobile/tablet/physical terminal/financial deltas NOT TESTED.
+
 Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
 
 Bounded remaining plan: actual independent Owner read-only role session (never infer from SA support); new unique historical-cost SKU/document/sale/return fixtures only after fresh stock and both-terminal baselines, no fiscal issuance/real transfer; separately identified final-cent/zeroVAT/overpayment/reversal UI fixtures where supported; payment dates must remain truthful (no production DB scripts/backdating of ledger to manufacture cross-month proof); fresh CSV and ordinary print UI; mobile/tablet acceptance only with observed actual surface (desktop resizing is not physical-device proof). Each state action gets BEFORE checkpoint and AFTER expected/observed deltas; ambiguous responses are read back before any retry. Missing live capabilities stay NOT TESTED. Whole27 remains OPEN until real evidence covers remaining gates.
@@ -2754,3 +2762,7 @@ Owner rejected pastel palette, requested a new proposal, then explicitly approve
 
 ## 05/10/2026 22:15 Athens — TODAY-08 vivid LIVE contrast FAIL / specificity fix
 LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rules landed but earlier tone background selectors still won in the cascade. USER visual FAIL. Bounded correction increases selector specificity for the approved vivid gradients and explicitly locks card text/icon/arrow contrast to white. Component/layout/module logic unchanged; 3-column and no-outer-scroll preserved. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
+Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
