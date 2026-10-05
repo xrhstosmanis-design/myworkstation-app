@@ -1,3 +1,7 @@
+## 05/10/2026 - Παρουσία μετά το κλείσιμο με έλλειμμα
+
+Εξουσιοδοτημένος Platform SuperAdmin → Προσωπικό & Πρόγραμμα → MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ → Παρουσίες →05Oct → ανανέωση/ολοκλήρωση φόρτωσης. LAB POS 2 νέα παρουσία22:32-22:47 εμφανίζεται Ολοκληρωμένη,15λεπτά/1.25 EUR·0ανοιχτές/4ολοκληρωμένες, σύνολο2h25m/12.09 EUR, προηγούμενες τρεις εγγραφές αμετάβλητες. Πρόκειται για επιβεβαιωμένη εμφανιζόμενη ολοκλήρωση μετά το QR forced-shortage close, όχι ανεξάρτητο OUT/Audit count ή έλεγχο μισθοδοσίας. Δεν υπήρχε φρέσκια παρουσία πριν το κλείσιμο για event delta. Διαγνώστε με read-only ανανέωση και αντιστοίχιση χρόνων/ίδιου καταστήματος· μην πατήσετε χειροκίνητη Λήξη/Διόρθωση στην ήδη ολοκληρωμένη εγγραφή. Δεν αλλάζει πρόσβαση ή ενεργοποίηση module. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.
+
 ## 05/10/2026 - Latest POS completion: 21:48-22:06
 
 Authorized Platform SuperAdmin → Προσωπικό & Πρόγραμμα → MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ → Παρουσίες →05Oct → Ανανέωση. Latest LAB POS 2 attendance completed21:48-22:06,18m/displayed1.50 EUR;0open/3completed, total2h10m/10.84 EUR. Earlier two completions unchanged. Displayed-state PASS only; no payroll accuracy or independent OUT/Audit count claimed. Diagnose with read-only refresh; do not manually end or correct the completed record. This newer completed-state observation supersedes the historical open-state after invalid rejection. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.
