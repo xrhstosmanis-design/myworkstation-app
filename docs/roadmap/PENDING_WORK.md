@@ -1,3 +1,7 @@
+## 05/10/2026 — ASSIGNED fix/pos-shift-close-card-20261005
+
+Owner requests mandatory scan of the active shift opener’s own work card before operator POS closing, including shortage confirmation. Preserve BackOffice privileged closure, tenant/terminal isolation, count, shortage audit and Workforce OUT. AWAITING IMPLEMENTATION / CI / LIVE / LAB.
+
 ## 05/10/2026 01:04 Athens — #27 remaining / ASSIGNED same receiving page
 
 ## 05/10/2026 — REMOTE-INSTALL-01: MERGED / LIVE / AWAITING DEVICE

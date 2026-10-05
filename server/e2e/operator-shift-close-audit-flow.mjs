@@ -1,3 +1,4 @@
+import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import {PrismaClient} from "@prisma/client";
@@ -11,6 +12,7 @@ const ownerPassword="ci-owner-e2e-password";
 const operatorPin="4682";
 
 async function request(path,{method="GET",token,body}={}){
+  body=await withShiftCloseCardFixture(prisma,baseUrl,path,token,body);
   const response=await fetch(`${baseUrl}${path}`,{
     method,
     headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},
@@ -72,6 +74,14 @@ async function main(){
     body:{type:"OTHER_EXPENSE",amount:10,description:"E2E μικρό έξοδο βάρδιας",evidenceMode:"NO_DOCUMENT",paymentSource:"CASH_SHIFT",idempotencyKey:"e2e-shift-close-expense-001"}
   });
   assert.equal(expense.response.status,201,JSON.stringify(expense.payload));
+
+  for(const [cardCode,forceCloseWithShortage] of [["",false],["WRONG-CARD",false],["",true],["WRONG-CARD",true]]){
+    const rejected=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token:operatorToken,
+      body:{cardCode,forceCloseWithShortage,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:50,custody:0,coins:0,safe:20}});
+    assert.equal(rejected.response.status,403,JSON.stringify(rejected.payload));
+    const unchanged=await request(`/api/cash/stores/${storeId}/overview`,{token:operatorToken});
+    assert.equal(unchanged.payload.openSession?.id,sessionId,"Rejected card changed the active shift");
+  }
 
   const shortageAttempt=await request(`/api/cash/sessions/${sessionId}/close`,{
     method:"POST",token:operatorToken,

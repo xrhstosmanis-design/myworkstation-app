@@ -1,3 +1,4 @@
+import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import {PrismaClient} from "@prisma/client";
@@ -11,6 +12,7 @@ const ownerPassword="ci-close-shift-separation-owner";
 const operatorPin="7391";
 
 async function request(path,{method="GET",token,body}={}){
+  body=await withShiftCloseCardFixture(prisma,baseUrl,path,token,body);
   const response=await fetch(`${baseUrl}${path}`,{
     method,
     headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},

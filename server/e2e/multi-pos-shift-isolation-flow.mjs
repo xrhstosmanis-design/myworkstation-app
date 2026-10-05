@@ -1,3 +1,4 @@
+import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
@@ -12,6 +13,7 @@ const ownerPassword="ci-multi-pos-owner";
 const terminalByToken=new Map();
 
 async function request(path,{method="GET",token,terminalPos,body}={}){
+  body=await withShiftCloseCardFixture(prisma,baseUrl,path,token,body);
   const resolvedTerminal=terminalPos||terminalByToken.get(token)||null;
   const effectiveBody=body!==undefined&&resolvedTerminal?{...body,terminalPos:resolvedTerminal}:body;
   const targetPath=resolvedTerminal?`${path}${path.includes("?")?"&":"?"}mwsTerminal=${encodeURIComponent(resolvedTerminal)}`:path;
