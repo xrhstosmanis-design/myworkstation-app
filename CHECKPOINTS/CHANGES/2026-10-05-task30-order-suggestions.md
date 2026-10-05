@@ -1,5 +1,11 @@
 # Task #30 — Αυτόματες Προτάσεις Παραγγελίας
 
+## 05/10/2026 22:52 Athens — #30 handoff status correction / one observed infrastructure retry
+
+Main CI4455 (37364030108) attempt1 ended at22:47:13 as overall failure: Linux classify and Windows jobs both CANCELLED after15 minutes, with no steps; dependent build-and-test SKIPPED. No source tests or deploy ran in that attempt, so this is not a failing application assertion. Logs for the never-started classify job are absent (GitHub log blob404); check-run annotations are unavailable through the connector, so the exact internal termination cause is not established. The acknowledged ongoing GitHub Actions degradation remains supporting external context, not an invented root-cause diagnosis.
+
+After verifying the attempt executed no jobs and Render2034 was skipped, one standard “re-run failed jobs” request was accepted at22:50 Athens; run37364030108 is QUEUED again on the same maina3cf1ed5. No repeated source edits, pipeline/security changes, cancellation of others or blind retry loop. Handoff PR1776 / docs head807cfd8a contains all six consistent files and visually verified4-page PDF (blobaa64508ca56d6a12426f1fab2b9d19febb85e3d0 /71998bytes); its CI4462 is queued, so it is not yet a completed main publication. Same #30 owner and single next action retained: successful existing CI/guarded exact deploy, actual table/help retest, then synchronized real-layout PASS. Latest observed production and limited functional LAB bounds below remain authoritative.
+
 ## 05/10/2026 22:46 Athens — #30 LIMITED FUNCTIONAL LAB PASS / final layout deploy BLOCKED by Actions incident — handoff
 
 Owner `codex/task30-order-suggestions-20261005` retained; no release/takeover. Real read-only functional LAB observations are accepted only in the scope below. Whole #30 remains OPEN. Residual no-scroll/help-position acceptance remains AWAITING EXACT DEPLOY / LAB; it is not PASS.
