@@ -40,9 +40,9 @@ Bounded new scope: a dedicated read-only #30 proposal screen for the selected st
 
 Baseline: old purchase-orders stock-proposal computes only minStock-currentStock, while the catalog describes sales/lead time but ORDER_SUGGESTIONS is not commercially ready. Phase8 already has LIMITED USER VISUAL PASS for the min-stock-only overview and is not repeated. New #30 implementation/LAB/Owner/device/visual acceptance NOT TESTED. Claim-only publication must merge before source edits. Single next action: implement the independent read-only comparison of stock and recent consumption with the existing store/module guard, then meaningful numerical/SQL/UI/tenant tests, full CI, exact deploy and read-only LAB acceptance. Same #30 owner retained until a named merged takeover.
 
-## 05/10/2026 — ASSIGNED fix/pos-shift-close-qr-camera-20261005 (same closing scope continuation)
+## 05/10/2026 - Remaining shift-close acceptance / ASSIGNED fix/pos-shift-close-qr-camera-20261005
 
-Owner requests mandatory scan of the active shift opener’s own work card before operator POS closing, including shortage confirmation. Preserve BackOffice privileged closure, tenant/terminal isolation, count, shortage audit and Workforce OUT. Card verification PR1749 / CI4402 / exact LIVE aac666b8. QR camera and browser autofill correction requested05Oct21:04, AWAITING CI/LIVE/LAB.
+Only remaining: measured financial/session/control before-after, one Workforce OUT/audit, wrong/revoked/foreign QR live rejection, forced-shortage/recount and additional devices/browser autofill variants. No completed positive camera/close/re-entry UI work remains pending; see latest checkpoint and POS manual. Do not replay completed closure for missing baseline. Next action: separately identified future LAB shift with refreshed baseline/control before any state-changing test.
 
 ## 05/10/2026 01:04 Athens — #27 remaining / ASSIGNED same receiving page
 
