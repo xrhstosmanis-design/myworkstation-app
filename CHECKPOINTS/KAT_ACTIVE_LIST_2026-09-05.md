@@ -2750,3 +2750,7 @@ Owner rejected pastel palette, requested a new proposal, then explicitly approve
 
 ## 05/10/2026 22:15 Athens — TODAY-08 vivid LIVE contrast FAIL / specificity fix
 LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rules landed but earlier tone background selectors still won in the cascade. USER visual FAIL. Bounded correction increases selector specificity for the approved vivid gradients and explicitly locks card text/icon/arrow contrast to white. Component/layout/module logic unchanged; 3-column and no-outer-scroll preserved. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
+Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
