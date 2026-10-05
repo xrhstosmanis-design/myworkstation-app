@@ -1,0 +1,10 @@
+# Task27 payment-date proportional allocation
+
+## 05/10/2026 21:01 Athens — #27 partial-payment policy / ASSIGNED same page
+
+Owner instructed «οπως γινεται η πληρωμη..ετσι πρεπει να εμφανιζεται..για να εχει σωστα αποτελεσματα», then «ξεκινα». Same owner `codex/task27-resume-20261005`; implementation branch `codex/task27-partial-allocation-20261005`, base aac666b87e46c60b75edb6b6c5ce6bd39481cbd1. No handoff or competing scope. Record before source edits: LAB-EXP-001 one full EXTERNAL124/100net/24VAT and desktop USER PASS remain protected. Independent Owner blocked by invalid-session response and incomplete secure/manual sign-in; no role PASS. No further credential requests in this implementation.
+
+Policy: report each active payment on its own actual Athens date, allocate net/VAT proportionally to its approved same-company/same-store document. Compute rounded cumulative VAT differences in stable occurredAt/id order over all active linked payments, BEFORE filtering report dates, so split months reconcile and final cent remainder is retained. Require reconciled document totals, consistent payment/document signs and lifetime active sum no greater than document gross. Overpayment/duplicate full payments, mixed signs, draft/unlinked/wrong-tenant documents remain UNKNOWN; reversed payments are excluded. Preserve gross payments as recorded; do not cap/hide them. No fiscal/tax-deductibility claim. No new LAB payments, edits of LAB-EXP-001, stock/fiscal/myDATA or auth changes.
+
+Existing implementation on latest main recognizes only one full linked payment. Protected full/zeroVAT/credit/unknown expense/cost and original-sale-date reversal behavior covered by existing server tests and PostgreSQL/HTTP E2E. Change is bounded to report calculation + explanation + isolated regression fixtures. Source implemented; AWAITING CI / DEPLOY / read-only LAB acceptance, whole27 OPEN. Manual/PDF PASS contents stay unchanged until real new PASS. Historical-cost live evidence, independent Owner, mobile/tablet, CSV/native printing remain pending. All other assignments preserved, including POS shifts, remote RBS and Task29; Gate3 PASS retained.
+
