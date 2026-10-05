@@ -48,3 +48,13 @@
  .commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424,#e34b0d)!important}.commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d,#385777)!important}.commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c,#045c62)!important}
  .commerce-hub .commerce-reference-modules .commerce-reference-card{opacity:1!important}.commerce-hub .commerce-reference-modules .commerce-reference-card :is(b,p,em,.commerce-reference-arrow,.commerce-reference-icon){color:#fff!important}
 }
+
+/* 05/10/2026 — TODAY-08 final owner-approved readability polish; palette/layout locked. */
+@media(min-width:1201px){
+ .commerce-hub .commerce-reference-modules .commerce-reference-card{min-height:116px!important;padding:18px 54px 17px 86px!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-icon{left:18px!important;top:18px!important;width:54px!important;height:54px!important;font-size:28px!important;border-radius:14px!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-copy b{font-size:18px!important;line-height:1.15!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-copy p{font-size:13px!important;line-height:1.3!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-arrow{right:16px!important;top:30px!important}.commerce-hub .commerce-reference-modules .commerce-reference-arrow svg{width:20px!important;height:20px!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card>em{left:86px!important;font-size:10px!important}
+}
