@@ -15,20 +15,6 @@
  .commerce-hub>.panel:first-child .panel-head h2{font-size:21px!important}.commerce-hub>.panel:first-child .panel-head p{font-size:12px!important}
 }
 
-/* 05/10/2026 — TODAY-08 exact owner-reference pastel card language. */
-@media(min-width:1201px){
- .commerce-hub>.commerce-status-grid>.commerce-status-card{border:1px solid #d9e5ee!important;border-left:1px solid #d9e5ee!important;box-shadow:0 7px 18px rgba(30,64,100,.07)!important;transition:transform .15s ease,box-shadow .15s ease}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(30,64,100,.10)!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+1){background:linear-gradient(135deg,#eef7ff,#f8fbff)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+1):before{background:#dceeff!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+2){background:linear-gradient(135deg,#ecfbf4,#f8fffb)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+2):before{background:#d7f6e7!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+3){background:linear-gradient(135deg,#fff7e7,#fffdf8)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+3):before{background:#ffedc4!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+4){background:linear-gradient(135deg,#fff0f3,#fff9fa)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+4):before{background:#ffdce4!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+5){background:linear-gradient(135deg,#f5efff,#fcfaff)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n+5):before{background:#e9ddff!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n){background:linear-gradient(135deg,#eafafd,#f8feff)!important}.commerce-hub>.commerce-status-grid>.commerce-status-card:nth-child(6n):before{background:#d4f4f8!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card:before{width:34px!important;height:34px!important;left:13px!important;top:13px!important;border-radius:10px!important;box-shadow:none!important}.commerce-hub>.commerce-status-grid>.commerce-status-card>svg{left:22px!important;top:22px!important;width:16px!important;height:16px!important;color:#176fc6!important}
- .commerce-hub>.commerce-status-grid>.commerce-status-card>b{font-size:15px!important;font-weight:900!important;color:#17324d!important}.commerce-hub>.commerce-status-grid>.commerce-status-card>p{font-size:11px!important;color:#637b91!important}.commerce-hub>.commerce-status-grid>.commerce-status-card>em{background:#ffffffb8!important;border:1px solid #dbe6ee!important;color:#557087!important;padding:4px 8px!important}
-}
-
 /* 05/10/2026 — TODAY-08 component redesign matching owner reference. */
 @media(min-width:1201px){
  .commerce-reference-modules{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;overflow:auto!important;padding:2px!important}
@@ -37,12 +23,6 @@
  .commerce-reference-card .commerce-reference-copy{display:grid;gap:5px}.commerce-reference-card .commerce-reference-copy b{font-size:16px!important;line-height:1.15;color:#17324d!important}.commerce-reference-card .commerce-reference-copy p{margin:0!important;font-size:12px!important;line-height:1.3!important;color:#60778d!important;display:block!important;overflow:visible!important}
  .commerce-reference-card .commerce-reference-arrow{position:absolute;right:15px;top:25px;width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:#ffffff9e;color:#176fc6}.commerce-reference-card .commerce-reference-arrow svg{width:18px;height:18px}
  .commerce-reference-card>em{position:absolute;left:76px;bottom:10px;font-size:9px!important;font-style:normal;font-weight:900;padding:3px 7px!important;border-radius:999px;background:#ffffffb5!important;border:1px solid #dbe6ee;color:#557087!important}.commerce-reference-card>.commerce-reference-lock{position:absolute!important;left:31px!important;top:31px!important;width:16px!important;height:16px!important;color:#7890a7!important}
- .commerce-reference-card.tone-blue{background:linear-gradient(135deg,#edf7ff,#f8fbff)!important}.commerce-reference-card.tone-blue .commerce-reference-icon{background:#d8edff;color:#176fc6}
- .commerce-reference-card.tone-green{background:linear-gradient(135deg,#ebfbf3,#f8fffb)!important}.commerce-reference-card.tone-green .commerce-reference-icon{background:#d3f5e4;color:#0f9b6d}.commerce-reference-card.tone-green .commerce-reference-arrow{color:#0f9b6d}
- .commerce-reference-card.tone-yellow{background:linear-gradient(135deg,#fff6e4,#fffdf8)!important}.commerce-reference-card.tone-yellow .commerce-reference-icon{background:#ffe9b8;color:#e79a00}.commerce-reference-card.tone-yellow .commerce-reference-arrow{color:#e79a00}
- .commerce-reference-card.tone-pink{background:linear-gradient(135deg,#fff0f3,#fff9fa)!important}.commerce-reference-card.tone-pink .commerce-reference-icon{background:#ffd8e1;color:#e53661}.commerce-reference-card.tone-pink .commerce-reference-arrow{color:#e53661}
- .commerce-reference-card.tone-purple{background:linear-gradient(135deg,#f4efff,#fcfaff)!important}.commerce-reference-card.tone-purple .commerce-reference-icon{background:#e7dbff;color:#7048d7}.commerce-reference-card.tone-purple .commerce-reference-arrow{color:#7048d7}
- .commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#e9fafd,#f8feff)!important}.commerce-reference-card.tone-cyan .commerce-reference-icon{background:#d2f3f8;color:#079bb0}.commerce-reference-card.tone-cyan .commerce-reference-arrow{color:#079bb0}
 }
 
 /* 05/10/2026 — TODAY-08 owner-approved vivid gradient theme. */
@@ -56,16 +36,15 @@
  .commerce-reference-modules>.commerce-reference-card:hover{transform:translateY(-2px)!important;box-shadow:0 14px 28px rgba(20,55,90,.20)!important}
 }
 
-/* 05/10/2026 — authoritative vivid theme specificity fix after LIVE contrast failure. */
+
+/* Single authoritative TODAY-08 palette. Legacy pastel selectors removed after LIVE cascade failure. */
 @media(min-width:1201px){
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-blue{background:linear-gradient(135deg,#0877df 0%,#0750a7 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-green{background:linear-gradient(135deg,#13b96d 0%,#07894d 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-yellow{background:linear-gradient(135deg,#ffbf00 0%,#e58c00 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-pink{background:linear-gradient(135deg,#f43f82 0%,#c9185d 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-purple{background:linear-gradient(135deg,#7b46e8 0%,#4f2bbb 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#14b9cf 0%,#087d9e 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424 0%,#e34b0d 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d 0%,#385777 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c 0%,#045c62 100%)!important}
- .commerce-hub>.commerce-reference-modules>.commerce-reference-card :is(b,p,em,.commerce-reference-arrow,.commerce-reference-icon){color:#fff!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-blue{background:linear-gradient(135deg,#0877df,#0750a7)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-green{background:linear-gradient(135deg,#13b96d,#07894d)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-yellow{background:linear-gradient(135deg,#ffbf00,#e58c00)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-pink{background:linear-gradient(135deg,#f43f82,#c9185d)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-purple{background:linear-gradient(135deg,#7b46e8,#4f2bbb)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#14b9cf,#087d9e)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424,#e34b0d)!important}.commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d,#385777)!important}.commerce-hub .commerce-reference-modules .commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c,#045c62)!important}
+ .commerce-hub .commerce-reference-modules .commerce-reference-card{opacity:1!important}.commerce-hub .commerce-reference-modules .commerce-reference-card :is(b,p,em,.commerce-reference-arrow,.commerce-reference-icon){color:#fff!important}
 }
