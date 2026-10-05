@@ -1,3 +1,7 @@
+## 05/10/2026 — POS closing QR camera / AWAITING CI
+
+Same closing scope fix/pos-shift-close-qr-camera-20261005. Owner uses phone QR; add camera decode without automatic closing and correct browser autofill. Existing PR1749 server verifier preserved. Camera and physical closing AWAITING LAB. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`.
+
 ## 05/10/2026 20:58 Athens — #30 Αυτόματες Προτάσεις Παραγγελίας / ASSIGNED
 
 Owner `codex/task30-order-suggestions-20261005`; user requested continue below #29 and confirmed start. Fresh main `aac666b87e46c60b75edb6b6c5ce6bd39481cbd1`, AGENTS/full active board, pending/numbered, inventory manual and existing Stock Intelligence Phase8 checkpoint read. No active #30 claim found. #29 remains with its existing owner/data blocker and published DOM/SQL proof; no extra invoice sampling. Protected G02 stock ledger, Phase8 min-stock-only overview, #14 Internet draft suggestions, #20 gift stock, #21 supplier balances and all TODAY/#27/POS/fiscal/installation/efood/Workforce claims remain untouched.
