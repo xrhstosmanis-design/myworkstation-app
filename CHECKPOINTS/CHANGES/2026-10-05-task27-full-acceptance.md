@@ -1,3 +1,9 @@
+## 05/10/2026 — #27 CENT rounding LIMITED LAB PASS / remaining same owner
+
+New owner-authorized LAB-EXP-CENT-20261005-A1net/0.24VAT/1.24gross, document expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167, exact healthy121046fe, SA support/cloudLAB. Saved/reopened one draft and separately approved once. Three distinctEXTERNAL0.03/0.03/1.18 submittedONCEeach; expected/actualnet0.02/0.03/0.95 andVAT0.01/0.00/0.23, total1/0.24/1.24. Fresh Octoberexpenses248/200/48 ->248.03/200.02/48.01 ->248.06/200.05/48.01 ->249.24/201/48.24. Payments equalgross; missingVAT0. Day05Oct/month/totalagree for expense; daynetresult-201 while Octoberprofit remainsunknown dueprotectedmissingcost4/4. Approval addedpurchase1/0.24/1.24 exactly once. Audit threeuniquecomments05Oct22:24/22:25/22:26 Athens, minute display; rawledgerIDs/seconds/independentDBcounts NOT TESTED. Fresh controlsaftereachaction LAB-POS-02 2/cash0/card0/IRIS0/total0/expenses120; threeclosedMAINrecords unchanged. Physicalterminal NOT OBSERVED; serviceSKU N/A; no realtransfer/stock/fiscal/myDATA. No protectedfixture repeated.
+
+Close only same-day cent-rounding scope, superseding its isolatedCI-only status. RemainingOwnerwithoutSA, actualmobile/tablet, historicalcost, newCSV/native/physicalprint, cross-date/month/zeroVAT/credit/reversal/overpayment liveproof andwhole27 OPEN; ownercodex/task27-resume-20261005retained, otherowners/Gate3PASS preserved. Checkpoint CHECKPOINTS/CHANGES/2026-10-05-task27-full-acceptance.md, actualcentfirst/second/final/daily/AuditDOM andfinal/Audit screenshots. Nextread-onlyexport/print andowneraccess capabilityreview; nofixture replay.
+
 ## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
 
 Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
@@ -6,3 +12,23 @@ Bounded remaining plan: actual independent Owner read-only role session (never i
 
 Next action: inspect Owner access and report/export/print capabilities read-only, then record fresh baselines for a separately identified historical-cost sample. This expands authorization for new LAB samples only; no repetition of completed protected transactions, no permission weakening or overlap with POS shift closure/RBS/TODAY/#29/#30/backup owners.
 
+
+## BEFORE CENT draft save — 05Oct about22:23 Athens
+ClaimPR1768 green docsCI mergedf0fe232e. Fresh public health ok:true exact121046fec1bc62aaf436eaaa50697f40ccb38e43. StoreLAB cmtpopbgo000trhb5ng9ytiru, SA support/cloud browser, physicalterminal NOT OBSERVED; service SKU/stockquantity/movement N/A. Fresh opened Transactions control LAB-POS-02 open26Sep01:33, transactions2/cash0/card0/IRIS0/total0/expenses120/last—. ClosedMAIN three records:27Sep20:24:37–05Oct19:35:34 cash2.40/cardsEFTPOS0/difference-2.40;05Oct19:37:16–21:27:44 cash0/cardsEFTPOS0/diff0;05Oct21:48:14–22:06:14 cash0/cardsEFTPOS0/diff0. Closedcounts/IRIS not exposed.
+Fresh CURRENT MONTH report01Oct–05Oct: sales2.40/net2.12/VAT0.28, purchases248/net200/VAT48, expense248/net200/VAT48/payments248, costmissing4/4, profitunknown. Attempted date automation did not independently establish05Oct-only loaded range; use observed monthly baseline, not assumed day.
+New fixture absent from existing manual list (only2 protecteddocs). Filled LAB-EXP-CENT-20261005-A dated05Oct, issuer ΕΙΚΟΝΙΚΟΣ LAB CENT, service1net/0.24VAT/1.24gross. Plan draftsaveONCE then separateapprovalONCE then distinctEXTERNAL0.03/0.03/1.18ONCEeach. ExpectedVATdeltas0.01/0.00/0.23, net0.02/0.03/0.95, total1net/0.24VAT/1.24gross. Cumulativeallocation must avoid independentlyrounded0.25VAT. Draftalone no report/payment change; approvalonlypurchase+1/0.24/1.24; no stock/fiscal/realtransfer.
+
+## Draft AFTER / approval BEFORE
+SavedCENTonce, review1/0.24/1.24; no payment submitted. Closedmodal/cancelledpayment, refreshed activecontrol andclosed history; LABPOS022/0cash/0cardsIRIS/0total/120expenses, threeMAINclosedrecords unchanged. Fresh searched01Oct–05Oct report purchases248/200/48, expenses248/200/48/payments248 unchanged, sales2.40/net2.12/VAT0.28 andmissingcost4/4. Next separateapproval only expectedpurchase249.24/201/48.24, expense unchanged.
+
+## Approval AFTER / CENT installment1 BEFORE
+ApprovedCENTonce after reopening exactlyone draft. SelecteddocID expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167; amountblank/sourceEXTERNAL. Auto-refetched activeLABPOS02 remains2/cash0/card0/IRIS0/total0/expenses120; closedMAIN recordssame. Fresh01Oct–05Oct searchedpurchases249.24/201/48.24; expenses248/200/48/payments248 unchanged. NextidentifiedCENT installment1 EXTERNAL0.03 once expectedexpenses248.03/net200.02/VAT48.01/payments248.03. No SKU/fiscal/realtransfer.
+
+## CENT installment1 AFTER / installment2 BEFORE
+SubmittedEXTERNAL0.03once; freshly auto-refetchedLABPOS02 remains2/cash0/card0/IRIS0/total0/expenses120 andthreeMAINclosedsame. Fresh01Oct–05Oct report expense248.03/net200.02/VAT48.01/payments248.03; purchase249.24/201/48.24, missingVAT0/missingcost4of4. Delta0.03/0.02/0.01 matchesexpectation. DOMevidence task27-cent-first-20261005.json. Nextseparate installment2EXTERNAL0.03once expectedexpense248.06/net200.05/VAT48.01/payments248.06; deltaVAT0.00 preventsduplicaterounding.
+
+## CENT installment2 AFTER / installment3 BEFORE
+Second distinctEXTERNAL0.03once. Fresh report248.06gross/200.05net/48.01VAT/payments248.06; expectedsecondVATdelta0.00 observed. Bothcontrols freshauto-refetch unchanged2/0 active andthreeclosedMAIN. NextfinalEXTERNAL1.18once expected249.24gross/201net/48.24VAT/payments249.24, finaldelta1.18/0.95/0.23. Newfixturetotal1.24/1/0.24; purchaseunchanged249.24/201/48.24. DOMsecond saved.
+
+## CENT installment3 AFTER / closure
+FinalEXTERNAL1.18once; Octoberexpense249.24gross/201net/48.24VAT/payment249.24, purchases249.24/201/48.24. Day05Octexpense249.24/201/48.24/payment249.24/result-201, purchases125.24/101/24.24 (two docs). Day04Octpurchase124/100/24 protectedLAB001 remainsseparate. Monthsales2.40/net2.12/VAT0.28 andmissingcost4/4 unchanged. Audits22:24/22:25/22:26 uniquecomments/amounts. ScopedCENTroundingPASS; noothernewscopeclaimed.

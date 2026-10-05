@@ -143,3 +143,13 @@ Same owner `codex/task27-resume-20261005`. Source PR #1763 merged `455c7a342e883
 
 PR #1762 partial-payment LIMITED LAB PASS and protected LAB-EXP-001 unchanged. Whole #27 OPEN: independent Owner without SA, actual mobile/tablet, historical cost, verified new CSV/native/physical printing; cross-period/final-cent/credit/zeroVAT/reversal/overpayment remain isolated CI only. Other page assignments and Gate3 PASS preserved. Next work requires evidence for these remaining scopes; never replay protected fixtures.
 
+
+## 05/10/2026 — LIMITED LAB PASS: στρογγυλοποίηση λεπτών
+
+Δοκιμή Super Admin/support στο MYWORKSTATION LAB, exact121046fe· ανεξάρτητος Owner δεν δοκιμάστηκε.
+1. Λοιπά Έξοδα → σωστό εγκεκριμένο παραστατικό του ίδιου καταστήματος. Κάθε δόση έχει ξεχωριστό ποσό/αιτιολογία και υποβάλλεται μία φορά.
+2. Στο νέο εικονικό LAB-EXP-CENT-20261005-A1+0.24=1.24 οι EXTERNALδόσεις0.03/0.03/1.18 απέδωσαν καθαρά0.02/0.03/0.95 καιVAT0.01/0/0.23: συνολικά1net/0.24VAT. Δεν αθροίζονται ανεξάρτητες στρογγυλοποιήσεις κάθε δόσης.
+3. Εικόνα Επιχειρήσεις → Τρέχων Μήνας → Αναζήτηση → άνοιγμα μήνα: ημέρα/μήνας/σύνολοεξόδων249.24/201/48.24 συμφώνησαν. Ο μήνας κρατά άγνωστο κέρδος λόγω4/4γραμμών χωρίς κόστος· δεν το συμπεραίνουμε από σωστά έξοδα.
+4. Τα Συμβάντα SA με εταιρείαMYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ έδειξαν τρεις διαφορετικές κινήσεις22:24/22:25/22:26. Σε αβέβαιη απάντηση έλεγξε πρώτα καταγεγραμμένη κίνηση, μην επανυποβάλλεις.
+
+Φορολογικό αποτέλεσμα/έκπτωσηVAT δεν πιστοποιείται. Δοκιμή μόνο ίδιας ημέρας/θετικούVAT, χωρίς πραγματική μεταφορά. LABPOS02 2κινήσεις/0ποσά καιτρίακλειστάMAINπαρέμειναν ίδια. Owner/mobile/ιστορικόκόστος/νέαCSV/nativeφυσικήεκτύπωση/διαφορετικοίμήνες/zeroVAT/credit/reversal/overpayment παραμένουνOPEN. Μην επαναλάβεις τοCENT ή ταπροηγούμενα προστατευμέναδείγματα. Τεκμήρια output/evidence/task27/cent-*20261005 καιcheckpointtask27-full-acceptance.
