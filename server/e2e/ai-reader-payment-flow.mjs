@@ -1,3 +1,4 @@
+import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
@@ -11,6 +12,7 @@ const ownerEmail=process.env.KAT_OWNER_EMAIL||"ci-kat-owner@myworkstation.test";
 const ownerPassword="ci-owner-e2e-password";
 
 async function request(path,{method="GET",token,body}={}){
+  body=await withShiftCloseCardFixture(prisma,baseUrl,path,token,body);
   const response=await fetch(`${baseUrl}${path}`,{
     method,
     headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},
