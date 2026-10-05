@@ -67,7 +67,7 @@ test("comparison route uses the licensed target store/company and only reads app
   const queries=[];
   const prisma={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [line({netAmount:10})];},$executeRaw:()=>{throw new Error("Unexpected write");}};
   const module=source.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"");
-  new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison",module)(()=>router,prisma,()=>()=>{},key=>{assert.equal(key,"INVENTORY");return "STORE_LICENSE_GUARD";},buildSupplierPriceComparison);
+  new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison","orderSuggestionsRouter",module)(()=>router,prisma,()=>()=>{},key=>{assert.equal(key,"INVENTORY");return "STORE_LICENSE_GUARD";},buildSupplierPriceComparison,()=>{});
   const route=registrations.find(r=>r.method==="get"&&r.args[0]==="/supplier-price-comparison");
   assert.equal(route.args[1],"STORE_LICENSE_GUARD");
   let body,error;
