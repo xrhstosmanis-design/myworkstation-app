@@ -23,3 +23,7 @@ PR/native PostgreSQL full CI and Windows checks; merge only after green exact he
 ## Dense history lookup
 
 Historical invoice selection uses a date index/binary lookup and caches normalized cost per document within each product. The dense-history test independently checks 2,000 sale lines against 1,000 invoices and deterministic same-date creation-time ties. This avoids repeatedly scanning every prior invoice for every sale. Node20 full server suite after this change: 1863 PASS / 0 FAIL / 5 database-dependent skips; original 4 PostgreSQL/HTTP assertions remain green.
+
+## Bounded report shell
+
+The report opts its existing Commerce shell into flex only while the low-value-view child is present. Window bar/mode selectors and report controls stay fixed; the table owns overflow. Default resized windows now share the same bounded layout as maximized windows. No global/#30/TODAY layout rule changed. Actual screen/device acceptance remains NOT TESTED until deployment.
