@@ -2754,3 +2754,7 @@ LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rul
 
 ## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
 Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:50 Athens — TODAY-08 hierarchy correction from owner clarification
+Owner clarified core UX semantics: the upper commerce-module-strip buttons are the actual functional navigation and must be the large vivid interactive cards. The lower Modules list is read-only entitlement/status for the selected store and must be visually secondary/compact. PR1774 was closed unmerged. Bounded CSS correction promotes existing functional buttons (same click handlers/disabled permissions) to 5-column vivid action cards and demotes lower status cards to compact 4-column read-only indicators. No handler, route, permission, module state or business logic change. Preserve desktop viewport fit/no outer scroll. Awaiting CI/LIVE/USER acceptance.
