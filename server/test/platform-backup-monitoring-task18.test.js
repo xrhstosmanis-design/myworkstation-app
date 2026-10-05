@@ -44,3 +44,14 @@ test("successful monitoring requires checksum size and passed archive dry-run",(
   assert.match(route,/status:failed\?"FAILED":overdue\?"OVERDUE":"OK"/);
   assert.doesNotMatch(route,/password|AWS_SECRET_ACCESS_KEY|DATABASE_URL/);
 });
+
+
+test("backup upload verification retries transient HeadObject misses and reports exact failure stage",()=>{
+  assert.match(job,/failure_stage="UPLOAD_FAILED"/);
+  assert.match(job,/failure_stage="HEAD_VERIFY_FAILED"/);
+  assert.match(job,/while \[ "\$attempt" -le 5 \]/);
+  assert.match(job,/sleep \$\(\(attempt\*2\)\)/);
+  assert.match(job,/notify FAILED "" 0 "\$failure_stage"/);
+  assert.match(job,/failure_stage="PG_DUMP_FAILED"/);
+  assert.match(job,/failure_stage="ARCHIVE_DRY_RUN_FAILED"/);
+});
