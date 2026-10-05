@@ -27,3 +27,9 @@ Historical invoice selection uses a date index/binary lookup and caches normaliz
 ## Bounded report shell
 
 The report opts its existing Commerce shell into flex only while the low-value-view child is present. Window bar/mode selectors and report controls stay fixed; the table owns overflow. Default resized windows now share the same bounded layout as maximized windows. No global/#30/TODAY layout rule changed. Actual screen/device acceptance remains NOT TESTED until deployment.
+
+## Native CI and concurrent main reconciliation
+
+Source head7c9b6efd passed CI run37368612358: native PostgreSQL16 server suite1878 PASS /0 FAIL /0 SKIP, client/server builds, production/security/licensing invariants, actual HTTP E2E and Windows smoke. Raw native logs confirm the new product-value SQL/HTTP test executed successfully. Isolated Chromium desktop fixture (1366×900, synthetic data explicitly marked) passed five-row pagination, help and bounded inner-table scroll with visible navigation/footer. This is isolated UI evidence, not actual LAB/device acceptance.
+
+Main advanced with task27 continuity/zero-VAT acceptance and TODAY08 card hierarchy. Shared registers and numbered PDF reconciled preserving all newer claims/evidence; product-value runtime remains unchanged. Final head CI remains required. GitHub Actions incident3q1yb5m7ltvb reports hosted-runner assignment delays/failures and degraded availability. Final-head run37369687062 first classifier canceled without a runner; failed-job retry queued while main advanced. Windows passed. No CI requirements bypassed, no merge/deployment/actual LAB PASS claimed.
