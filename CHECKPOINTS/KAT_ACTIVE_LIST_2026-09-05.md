@@ -1,4 +1,4 @@
-## 05/10/2026 01:04 Athens — #27 νέα φόρμα υπηρεσίας USER / DESKTOP VISUAL PASS
+**05/10/2026 — POS mandatory shift-open gate AWAITING CI:** fail-closed race fix blocks sales while shiftState unresolved; no openSession routes to existing cash opening form. Operator Workforce IN remains tied to successful shift open. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-open-fail-closed.md`.\n\n## 05/10/2026 01:04 Athens — #27 νέα φόρμα υπηρεσίας USER / DESKTOP VISUAL PASS
 
 ## 05/10/2026 — REMOTE-INSTALL-01 / ASSIGNED codex/remote-install-wizard-20261005
 
