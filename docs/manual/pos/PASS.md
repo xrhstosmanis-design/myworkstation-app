@@ -1,3 +1,9 @@
+## 05/10/2026 - Invalid closing credential rejected: USER PASS
+
+Authorized LAB POS 2 operator opened «Κλείσιμο βάρδιας» in MYWORKSTATION LAB, confirmed count and submitted one invalid manual sample (owner had no second registered QR). The form stayed open and displayed «Σκάναρε την ενεργή προσωπική κάρτα του χειριστή που άνοιξε τη βάρδια. Το κλείσιμο δεν έγινε.» Use the active personal QR of the operator who opened that shift for an intended closure; decode alone does not close it. Do not use the login name as the credential. On rejection, retain the count and correct the credential before a separately intended submission.
+
+PASS criteria observed21:54-21:59 Athens: error/form retained, same #3b4b18d5 OPEN21:48/no end, zero displayed cash/cards/expenses and no linked movements, same Workforce attendance open. Existing control summary/journal unchanged; historical mismatch not reconciled. No tenant access is expanded. This invalid sample does not prove another registered employee, revoked or foreign QR rejection. OUT/Audit counts, complete financial/IRIS/control proof, shortage and other browsers remain NOT TESTED. Exact physical submission revision unavailable; later health7b5898b1. Checkpoint2026-10-05-pos-shift-close-qr-camera.md.
+
 ## 05/10/2026 - QR close: read-only report corroboration
 
 Platform SuperAdmin opened «Ταμεία» for05Oct after owner closure: LAB POS 2 MAIN19:37-21:27 shows0.00 EUR difference and0.00 EUR POS/EFTPOS. Same store Workforce «Παρουσίες» shows completed19:37-21:27,1h50m,0open. These displayed results corroborate the verified QR close/login/re-entry sequence. The separate old shift deficit2.40 EUR remains historical; it is not the newly closed shift. No independent before-after balances/control, single OUT event/Audit ID or payroll arithmetic acceptance claimed.
