@@ -334,7 +334,7 @@ The prior DONE/PASS summary from another page is **not accepted as final evidenc
 | TODAY-05 — Offers UI | CLAIMED / IN PROGRESS | Approved clean/touch-friendly offer layout |
 | TODAY-06 — Excel / Barcode UI | CLAIMED / IN PROGRESS | Clear Barcode vs Excel flows; touch-friendly controls |
 | TODAY-07 — Inventory 2.0 mobile/tablet unknown barcode | CLAIMED / IN PROGRESS | Attach existing or create new, then return to same active inventory |
-| TODAY-08 — Commercial Modules layout | CLAIMED / IN PROGRESS | Responsive 3/2/1-column cards; redundant POS removed |
+| TODAY-08 — Commercial Modules layout | CLAIMED / IN PROGRESS · PR #1775 · code CI PASS | Upper functional controls: vivid, touch-friendly 5-column desktop cards (existing 2/1 tablet/mobile rules preserved). Lower Modules list: compact 4-column desktop read-only entitlement/status. No handler, route, permission or business logic changes. Exact post-deploy LIVE visual and authorized LAB flows remain NOT TESTED. |
 | TODAY-09 — Owner Store Page simplification | CLAIMED / IN PROGRESS | Shifts + owner/manager payments primary; other functions behind clear tiles |
 
 ## Other central work
@@ -2758,3 +2758,7 @@ Second LIVE check after PR1765 still showed pale cards + white text. Source audi
 
 ## 05/10/2026 22:50 Athens — TODAY-08 hierarchy correction from owner clarification
 Owner clarified core UX semantics: the upper commerce-module-strip buttons are the actual functional navigation and must be the large vivid interactive cards. The lower Modules list is read-only entitlement/status for the selected store and must be visually secondary/compact. PR1774 was closed unmerged. Bounded CSS correction promotes existing functional buttons (same click handlers/disabled permissions) to 5-column vivid action cards and demotes lower status cards to compact 4-column read-only indicators. No handler, route, permission, module state or business logic change. Preserve desktop viewport fit/no outer scroll. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 23:25 Athens — TODAY-08 CI rerun / owner authorization
+CI #4460 attempt 2 (run 37365250394) fully passed on code commit 05dc5fa8d5661c4b170976259144662290c7e942; build-and-test includes server preparation, security/licensing, frontend build, production invariants, isolated PostgreSQL E2E and HTTP flows. Windows parse/smoke and classify checks also passed. PR #1775 remains open; main is 10 documentation/evidence commits ahead of its base and GitHub reports it mergeable. Production health remains 29ebc10d4e9ac5c175e834d97c4be2e2bfcbbe24; current LIVE still shows the earlier hierarchy and outer scroll, so exact LIVE visual acceptance is pending. Owner authorized push/merge and fictional LAB sales, paid flow, expenses and returns. None of these LAB transactions have been run; fresh baseline and after measurements plus an authenticated operator session are required. New checkpoint sync commit needs fresh CI before merge.
