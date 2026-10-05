@@ -1,3 +1,7 @@
+## 05/10/2026 — POS closing QR camera / AWAITING CI
+
+Same closing scope fix/pos-shift-close-qr-camera-20261005. Owner uses phone QR; add camera decode without automatic closing and correct browser autofill. Existing PR1749 server verifier preserved. Camera and physical closing AWAITING LAB. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`.
+
 ## 05/10/2026 20:58 Athens — #30 Αυτόματες Προτάσεις Παραγγελίας / ASSIGNED
 
 ## 05/10/2026 21:01 Athens — #27 partial-payment policy / ASSIGNED same page
