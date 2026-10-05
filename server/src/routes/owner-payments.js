@@ -114,12 +114,12 @@ router.get("/business-picture",async(req,res,next)=>{
         ), "expenseAllocation" AS (
           -- Allocate before the report date filter; cumulative rounding preserves the final cent.
           SELECT tx."id",pd."id" AS "documentId",
-            ROUND(pd."totalVat" * SUM(tx."amount") OVER payment_order / NULLIF(pd."totalGross",0),2)
-            - ROUND(pd."totalVat" * (SUM(tx."amount") OVER payment_order - tx."amount") / NULLIF(pd."totalGross",0),2) AS vat
+            ROUND(pd."totalVat" * SUM(tx."amount") OVER payment_order / NULLIF(ROUND(pd."totalGross",2),0),2)
+            - ROUND(pd."totalVat" * (SUM(tx."amount") OVER payment_order - tx."amount") / NULLIF(ROUND(pd."totalGross",2),0),2) AS vat
           FROM "StoreTransaction" tx
           JOIN "expenseLinks" links ON links."companyId"=tx."companyId" AND links."storeId"=tx."storeId" AND links."attachmentFilename"=tx."attachmentFilename"
           LEFT JOIN "PurchaseDocument" pd ON pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId" AND pd."storeId"=tx."storeId" AND pd."status"='APPROVED'
-            AND pd."totalGross"<>0 AND ABS(links.paid)<=ABS(pd."totalGross")
+            AND ROUND(pd."totalGross",2)<>0 AND ABS(links.paid)<=ABS(ROUND(pd."totalGross",2))
             AND links."minAmount"*pd."totalGross">=0 AND links."maxAmount"*pd."totalGross">=0
             AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
             AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
