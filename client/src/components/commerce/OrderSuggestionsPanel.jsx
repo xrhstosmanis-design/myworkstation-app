@@ -1,11 +1,12 @@
-import React,{useEffect,useMemo,useRef,useState} from "react";
+import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
 import "./order-suggestions.css";
 const n=value=>value==null?"—":Number(value).toLocaleString("el-GR",{maximumFractionDigits:3});
 const searchText=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR");
 export default function OrderSuggestionsPanel({api,storeId}){
   const [options,setOptions]=useState({historyDays:30,coverageDays:7,leadDays:3}),[result,setResult]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
   const [query,setQuery]=useState(""),[page,setPage]=useState(0),[onlyNeeded,setOnlyNeeded]=useState(true);
-  const request=useRef(0);
+  const request=useRef(0),contentRef=useRef(null),helpRef=useRef(null);
+  const [pageSize,setPageSize]=useState(2);
   const load=async(event)=>{
     event?.preventDefault();const current=++request.current;setResult(null);setError("");setPage(0);
     if(!storeId){setLoading(false);return;}setLoading(true);
@@ -18,7 +19,15 @@ export default function OrderSuggestionsPanel({api,storeId}){
   };
   useEffect(()=>{load();return()=>{request.current++;};},[storeId]);
   const rows=useMemo(()=>(result?.rows||[]).filter(row=>(!onlyNeeded||row.suggestedQuantity===null||row.suggestedQuantity>0)&&searchText(`${row.name} ${row.sku}`).includes(searchText(query.trim()))),[result,query,onlyNeeded]);
-  const pages=Math.max(1,Math.ceil(rows.length/3)),currentPage=Math.min(page,pages-1),shown=rows.slice(currentPage*3,currentPage*3+3);
+  const pages=Math.max(1,Math.ceil(rows.length/pageSize)),currentPage=Math.min(page,pages-1),shown=rows.slice(currentPage*pageSize,currentPage*pageSize+pageSize);
+  useLayoutEffect(()=>{
+    const content=contentRef.current;
+    const fit=()=>{if(pageSize>1&&content?.clientHeight>0&&content.scrollHeight>content.clientHeight+1){setPageSize(1);setPage(0);}};
+    fit();
+    const observer=typeof ResizeObserver==="undefined"?null:new ResizeObserver(fit);
+    if(content)observer?.observe(content);
+    return()=>observer?.disconnect();
+  },[result,query,onlyNeeded,page,pageSize]);
   return <section className="order-suggestions" aria-label="Αυτόματες Προτάσεις Παραγγελίας">
     <header><h3>Αυτόματες Προτάσεις Παραγγελίας</h3><p>Ποσότητες για έλεγχο από τον ιδιοκτήτη, στις μονάδες αποθήκης.</p></header>
     <form onSubmit={load} className="order-suggestions-options">
@@ -26,13 +35,14 @@ export default function OrderSuggestionsPanel({api,storeId}){
       <button disabled={loading||!storeId}>{loading?"Υπολογισμός…":"Υπολογισμός προτάσεων"}</button>
     </form>
     <div className="order-suggestions-filter"><label>Προϊόν ή κωδικός<input placeholder="Αναζήτηση προτάσεων" value={query} onChange={e=>{setQuery(e.target.value);setPage(0);}}/></label><label className="order-suggestions-check"><input type="checkbox" checked={onlyNeeded} onChange={e=>{setOnlyNeeded(e.target.checked);setPage(0);}}/>Μόνο ποσότητες για παραγγελία / έλεγχο</label></div>
-    <div className="order-suggestions-content" aria-busy={loading}>
+    <div ref={contentRef} className="order-suggestions-content" aria-busy={loading}>
       {error?<div role="alert">{error} Δοκίμασε ξανά με «Υπολογισμός προτάσεων».</div>:loading?<p role="status">Φόρτωση αποθέματος και πωλήσεων…</p>:!storeId?<p>Επίλεξε κατάστημα.</p>:!result?null:<>
         <p className="order-suggestions-summary" role="status">{rows.length} είδη · ιστορικό {result.options.historyDays} ημερών · κάλυψη {result.options.coverageDays} + παράδοση {result.options.leadDays} ημερών</p>
         {!rows.length?<p>Δεν υπάρχουν προτάσεις με αυτά τα φίλτρα.</p>:<div className="order-suggestions-table"><table><thead><tr><th>Προϊόν / μονάδα</th><th>Απόθεμα / ελάχιστο</th><th>Καθαρή κίνηση / ημέρα</th><th>Πρόταση</th><th>Αιτιολογία</th></tr></thead><tbody>{shown.map(row=><tr key={row.productId}><td><b>{row.name}</b><small>{row.sku||"—"} · {row.unitLabel}</small></td><td>{n(row.currentStock)} / {n(row.minStock)}</td><td>{n(row.netQuantity)} / {n(row.dailyDemand)}<small>Πωλήσεις {n(row.soldQuantity)} · επιστροφές/ακυρώσεις {n(row.returnedQuantity)}</small></td><td className="order-suggestions-quantity">{n(row.suggestedQuantity)}<small>{row.unitLabel}</small></td><td>{row.reason}{row.warnings.map(warning=><small className="order-suggestions-warning" key={warning}>{warning}</small>)}</td></tr>)}</tbody></table></div>}
         <nav aria-label="Σελίδες προτάσεων"><button type="button" disabled={currentPage===0} onClick={()=>setPage(currentPage-1)}>Προηγούμενα</button><span>{currentPage+1} / {pages}</span><button type="button" disabled={currentPage+1>=pages} onClick={()=>setPage(currentPage+1)}>Επόμενα</button></nav>
       </>}
     </div>
-    <footer>Στόχος = το μεγαλύτερο από ελάχιστο απόθεμα και καθαρή ημερήσια κίνηση × (κάλυψη + παράδοση). Πρόταση = στόχος − απόθεμα, με στρογγυλοποίηση προς τα πάνω. Κίνηση από γραμμές ολοκληρωμένων πωλήσεων, σε κυλιόμενες ημέρες· οι αναλώσεις υλικών συνταγών δεν προβλέπονται εδώ. Έλεγξε εκκρεμείς παραγγελίες, διαθεσιμότητα και συσκευασίες· δεν έχουν αφαιρεθεί από την πρόταση. Δεν υποβάλλεται παραγγελία.</footer>
+    <footer><span>Πρόταση για έλεγχο · έλεγξε απόθεμα, συσκευασίες και εκκρεμείς παραγγελίες. Δεν υποβάλλεται παραγγελία.</span><button type="button" onClick={()=>helpRef.current.showModal()}>Πώς υπολογίζεται</button></footer>
+    <dialog ref={helpRef} className="order-suggestions-help" aria-labelledby="order-suggestions-help-title"><h3 id="order-suggestions-help-title">Πώς υπολογίζεται η πρόταση</h3><p>Στόχος = το μεγαλύτερο από ελάχιστο απόθεμα και καθαρή ημερήσια κίνηση × (κάλυψη + παράδοση). Πρόταση = στόχος − απόθεμα, με στρογγυλοποίηση προς τα πάνω. Κίνηση από γραμμές ολοκληρωμένων πωλήσεων, σε κυλιόμενες ημέρες· οι αναλώσεις υλικών συνταγών δεν προβλέπονται εδώ. Έλεγξε εκκρεμείς παραγγελίες, διαθεσιμότητα και συσκευασίες· δεν έχουν αφαιρεθεί από την πρόταση. Δεν υποβάλλεται παραγγελία.</p><button type="button" autoFocus onClick={()=>helpRef.current.close()}>Κλείσιμο βοήθειας</button></dialog>
   </section>;
 }

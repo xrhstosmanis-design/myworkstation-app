@@ -23,16 +23,27 @@ test("order suggestions production panel: isolated DOM controls, pagination and 
   const type=(input,value)=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,value);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));});
   const buttons=()=>[...dom.window.document.querySelectorAll("button")];
   try{
-    await t.test("three-row pagination and filters expose correct quantities with no write request",async()=>{
+    await t.test("two-row pagination and filters expose correct quantities with no write request",async()=>{
       const calls=[];await mount(async path=>{calls.push(path);return response("A");},"A");
-      assert.equal(rows().length,3);assert.match(text(),/7 είδη/);assert.match(rows()[0].textContent,/Καφές 0/);
-      await click(buttons().find(b=>b.textContent==="Επόμενα"));assert.equal(rows().length,3);assert.match(rows()[0].textContent,/Καφές 3/);
+      assert.equal(rows().length,2);assert.match(text(),/7 είδη/);assert.match(rows()[0].textContent,/Καφές 0/);
+      await click(buttons().find(b=>b.textContent==="Επόμενα"));assert.equal(rows().length,2);assert.match(rows()[0].textContent,/Καφές 2/);
+      await click(buttons().find(b=>b.textContent==="Επόμενα"));assert.equal(rows().length,2);assert.match(rows()[0].textContent,/Καφές 4/);
       await click(buttons().find(b=>b.textContent==="Επόμενα"));assert.equal(rows().length,1);assert.match(rows()[0].textContent,/Καφές 6/);
       await type(dom.window.document.querySelector('[placeholder="Αναζήτηση προτάσεων"]'),"καφες 1");assert.equal(rows().length,1);assert.match(rows()[0].textContent,/Καφές 1/);
       await type(dom.window.document.querySelector('[placeholder="Αναζήτηση προτάσεων"]'),"not-found");assert.equal(rows().length,0);assert.match(text(),/Δεν υπάρχουν προτάσεις/);
       await type(dom.window.document.querySelector('[placeholder="Αναζήτηση προτάσεων"]'),"");await click(dom.window.document.querySelector('[type="checkbox"]'));assert.match(text(),/8 είδη/);
       assert.equal(calls.length,1);assert.match(calls[0],/^\/api\/commerce\/order-suggestions\?storeId=A&historyDays=30&coverageDays=7&leadDays=3$/);
       assert.match(text(),/Δεν υποβάλλεται παραγγελία/);
+    });
+    await t.test("bounded height falls back to one row and preserves access to every proposal",async()=>{
+      const proto=dom.window.HTMLElement.prototype,props=["clientHeight","scrollHeight"],saved=new Map(props.map(k=>[k,Object.getOwnPropertyDescriptor(proto,k)]));
+      try{
+        Object.defineProperty(proto,"clientHeight",{configurable:true,get(){return this.classList.contains("order-suggestions-content")?150:0;}});
+        Object.defineProperty(proto,"scrollHeight",{configurable:true,get(){return this.classList.contains("order-suggestions-content")&&this.querySelectorAll("tbody tr").length>1?250:150;}});
+        await mount(async()=>response("A"),"A");assert.equal(rows().length,1);assert.match(dom.window.document.querySelector("nav").textContent,/1 \/ 7/);
+        for(let i=1;i<7;i++){await click(buttons().find(b=>b.textContent==="Επόμενα"));assert.equal(rows().length,1);assert.match(rows()[0].textContent,new RegExp(`Καφές ${i}`));}
+        assert.equal(buttons().find(b=>b.textContent==="Επόμενα").disabled,true);
+      }finally{for(const key of props){const descriptor=saved.get(key);if(descriptor)Object.defineProperty(proto,key,descriptor);else delete proto[key];}}
     });
     await t.test("parameters apply only through computation; server-applied summary stays distinct",async()=>{
       const calls=[];const api=async path=>{calls.push(path);const u=new URL(path,"https://isolated.invalid");return response("A",fixture,{historyDays:Number(u.searchParams.get("historyDays")),coverageDays:Number(u.searchParams.get("coverageDays")),leadDays:Number(u.searchParams.get("leadDays"))});};
@@ -45,7 +56,7 @@ test("order suggestions production panel: isolated DOM controls, pagination and 
       const unknown={...fixture[0],suggestedQuantity:null,reason:"Χρειάζεται επιβεβαίωση μονάδας αποθήκης.",warnings:["Αρνητικό απόθεμα: έλεγχος."]};
       await act(async()=>resolve(response("A",[unknown])));assert.equal(rows().length,1);assert.equal(dom.window.document.querySelector(".order-suggestions-quantity").firstChild.textContent,"—");assert.match(text(),/επιβεβαίωση μονάδας/);assert.match(text(),/Αρνητικό απόθεμα/);
       let calls=0;await mount(async()=>{if(++calls===1)throw Error("Fixture unavailable");return response("A");},"A");assert.ok(dom.window.document.querySelector('[role="alert"]'));assert.equal(rows().length,0);
-      await act(async()=>dom.window.document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));assert.equal(rows().length,3);assert.equal(dom.window.document.querySelector('[role="alert"]'),null);
+      await act(async()=>dom.window.document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));assert.equal(rows().length,2);assert.equal(dom.window.document.querySelector('[role="alert"]'),null);
     });
     await t.test("store change and wrong-store replies cannot leak stale proposals; no-store makes no call",async()=>{
       let resolve;const api=async path=>new URL(path,"https://isolated.invalid").searchParams.get("storeId")==="A"?new Promise(done=>{resolve=done;}):response("B",[{...fixture[0],name:"Only B"}]);
