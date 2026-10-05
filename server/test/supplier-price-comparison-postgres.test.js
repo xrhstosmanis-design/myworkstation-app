@@ -94,7 +94,7 @@ test("supplier comparison HTTP/SQL isolates stores, prices and module access",{s
       const routeSource=await readFile(new URL("../src/routes/commerce-v1.js",import.meta.url),"utf8");
       const registrations=[];
       const router=Object.fromEntries(["get","post","patch","put","delete","use"].map(method=>[method,(...args)=>registrations.push({method,args})]));
-      new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,""))(()=>router,db,guards.requireCompanyModule,guards.requireStoreModule,buildSupplierPriceComparison);
+      new Function("Router","prisma","requireCompanyModule","requireStoreModule","buildSupplierPriceComparison","orderSuggestionsRouter",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,""))(()=>router,db,guards.requireCompanyModule,guards.requireStoreModule,buildSupplierPriceComparison,express.Router());
       const route=registrations.find(row=>row.method==="get"&&row.args[0]==="/supplier-price-comparison");
       assert.ok(route,"Production comparison route must be registered");
       const users={owner:{role:"OWNER",companyId:"a"},admin:{role:"SUPER_ADMIN",companyId:"different-login-company"},operator:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",companyId:"a",storeId:"a1"}};
