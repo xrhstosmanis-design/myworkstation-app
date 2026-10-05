@@ -2754,3 +2754,7 @@ LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rul
 
 ## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
 Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:40 Athens — TODAY-08 vivid palette USER accepted; final readability polish
+LIVE after PR1770 finally renders approved vivid cards correctly: 3-column composition, saturated palette, white contrast, icon blocks, arrows and viewport fit. Owner explicitly confirmed direction as correct. Palette and structure are now LOCKED. Final bounded polish only enlarges card title/subtitle/icon/arrow modestly while preserving no-outer-scroll. Awaiting CI/LIVE final acceptance; no further palette/layout changes unless owner requests.
