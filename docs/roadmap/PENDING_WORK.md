@@ -32,7 +32,7 @@ Only remaining acceptance: open canonical https://myworkstation-app.onrender.com
 
 ## 05/10/2026 - Remaining shift-close acceptance / ASSIGNED fix/pos-shift-close-qr-camera-20261005
 
-Only remaining: measured financial/session/control before-after, one Workforce OUT/audit, wrong/revoked/foreign QR live rejection, forced-shortage/recount and additional devices/browser autofill variants. No completed positive camera/close/re-entry UI work remains pending; see latest checkpoint and POS manual. Do not replay completed closure for missing baseline. Next action: separately identified future LAB shift with refreshed baseline/control before any state-changing test.
+Only remaining: measured financial/session/control before-after, direct one-OUT event/Audit ID verification (displayed completed attendance already corroborated), wrong/revoked/foreign QR live rejection, forced-shortage/recount and additional devices/browser autofill variants. No completed positive camera/close/re-entry UI work remains pending; see latest checkpoint and POS manual. Do not replay completed closure for missing baseline. Next action: separately identified future LAB shift with refreshed baseline/control before any state-changing test.
 
 ## 05/10/2026 01:04 Athens — #27 remaining / ASSIGNED same receiving page
 
