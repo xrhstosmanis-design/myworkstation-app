@@ -102,3 +102,7 @@ When a page/agent finishes an item, it MUST update this board first. The next pa
 
 ## Global UI rule — 03/10/2026
 All new and revised MyWorkStation screens must use large, highly legible typography, large touch-friendly buttons and inputs, clear contrast, and avoid cramped tiny helper text. Applies to desktop, POS, tablet and mobile.
+
+## REMOTE-INSTALL-01 — Remote Windows connector launcher (05/10/2026)
+Status: CLAIMED / IN PROGRESS — codex/remote-install-wizard-20261005
+New independent user-requested extension: Greek GUI, safe connection check, optional same-user logon startup around unchanged Pair/Test/Writer. Existing installation ownership and fiscal protocol remain protected. No new production connection or transaction authorized by a software smoke test. Physical acceptance NOT TESTED.
