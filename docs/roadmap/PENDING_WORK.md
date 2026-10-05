@@ -1,10 +1,17 @@
+## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
+
+Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
+
+Bounded remaining plan: actual independent Owner read-only role session (never infer from SA support); new unique historical-cost SKU/document/sale/return fixtures only after fresh stock and both-terminal baselines, no fiscal issuance/real transfer; separately identified final-cent/zeroVAT/overpayment/reversal UI fixtures where supported; payment dates must remain truthful (no production DB scripts/backdating of ledger to manufacture cross-month proof); fresh CSV and ordinary print UI; mobile/tablet acceptance only with observed actual surface (desktop resizing is not physical-device proof). Each state action gets BEFORE checkpoint and AFTER expected/observed deltas; ambiguous responses are read back before any retry. Missing live capabilities stay NOT TESTED. Whole27 remains OPEN until real evidence covers remaining gates.
+
+Next action: inspect Owner access and report/export/print capabilities read-only, then record fresh baselines for a separately identified historical-cost sample. This expands authorization for new LAB samples only; no repetition of completed protected transactions, no permission weakening or overlap with POS shift closure/RBS/TODAY/#29/#30/backup owners.
+
 ## 05/10/2026 — #27 payment help LIMITED LAB PASS / remaining ASSIGNED
 
 Same owner `codex/task27-resume-20261005`. Source PR #1763 merged `455c7a342e883770ce66d26a7e773dd0b2eedc8d`: one help sentence only, no financial handler/schema/permission change. Exact-head CI 37359960545 SUCCESS: 1861 tests passed, zero failures/skips; main CI 37360373235 and guarded Render 37360686332 SUCCESS. Fresh browser health confirmed ok:true and exact455c7a. Ordinary Super Admin support UI in MYWORKSTATION LAB showed the new payment-date/proportional approved-document/unknown-without-evidence-or-overpayment help in BOTH OTHER_EXPENSE and UTILITIES forms; amount blank, no linked document selected. Each form cancelled successfully without submission. Fresh activeLAB-POS-02 after cancellation remains2transactions/cash0/cardsIRIS0/total0. Screenshot `output/evidence/task27/partial-help-20261005.jpg`. This supersedes prior AWAITING CI/deploy/help wording records, without superseding protected financial PASS or claiming independent Owner/mobile acceptance.
 
 PR #1762 partial-payment LIMITED LAB PASS and protected LAB-EXP-001 unchanged. Whole #27 OPEN: independent Owner without SA, actual mobile/tablet, historical cost, verified new CSV/native/physical printing; cross-period/final-cent/credit/zeroVAT/reversal/overpayment remain isolated CI only. Other page assignments and Gate3 PASS preserved. Next work requires evidence for these remaining scopes; never replay protected fixtures.
 
-## 05/10/2026 — #27 payment help wording / same owner / AWAITING CI and read-only visual verification
 
 ## 05/10/2026 22:08 Athens — #30 real LAB quantities verified / desktop layout FAIL, bounded correction assigned
 

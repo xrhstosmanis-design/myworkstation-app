@@ -1,0 +1,8 @@
+## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
+
+Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
+
+Bounded remaining plan: actual independent Owner read-only role session (never infer from SA support); new unique historical-cost SKU/document/sale/return fixtures only after fresh stock and both-terminal baselines, no fiscal issuance/real transfer; separately identified final-cent/zeroVAT/overpayment/reversal UI fixtures where supported; payment dates must remain truthful (no production DB scripts/backdating of ledger to manufacture cross-month proof); fresh CSV and ordinary print UI; mobile/tablet acceptance only with observed actual surface (desktop resizing is not physical-device proof). Each state action gets BEFORE checkpoint and AFTER expected/observed deltas; ambiguous responses are read back before any retry. Missing live capabilities stay NOT TESTED. Whole27 remains OPEN until real evidence covers remaining gates.
+
+Next action: inspect Owner access and report/export/print capabilities read-only, then record fresh baselines for a separately identified historical-cost sample. This expands authorization for new LAB samples only; no repetition of completed protected transactions, no permission weakening or overlap with POS shift closure/RBS/TODAY/#29/#30/backup owners.
+
