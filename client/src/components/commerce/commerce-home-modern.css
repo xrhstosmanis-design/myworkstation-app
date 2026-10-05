@@ -55,3 +55,17 @@
  .commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424,#e34b0d)!important}.commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d,#385777)!important}.commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c,#045c62)!important}
  .commerce-reference-modules>.commerce-reference-card:hover{transform:translateY(-2px)!important;box-shadow:0 14px 28px rgba(20,55,90,.20)!important}
 }
+
+/* 05/10/2026 — authoritative vivid theme specificity fix after LIVE contrast failure. */
+@media(min-width:1201px){
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-blue{background:linear-gradient(135deg,#0877df 0%,#0750a7 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-green{background:linear-gradient(135deg,#13b96d 0%,#07894d 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-yellow{background:linear-gradient(135deg,#ffbf00 0%,#e58c00 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-pink{background:linear-gradient(135deg,#f43f82 0%,#c9185d 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-purple{background:linear-gradient(135deg,#7b46e8 0%,#4f2bbb 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#14b9cf 0%,#087d9e 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424 0%,#e34b0d 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d 0%,#385777 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c 0%,#045c62 100%)!important}
+ .commerce-hub>.commerce-reference-modules>.commerce-reference-card :is(b,p,em,.commerce-reference-arrow,.commerce-reference-icon){color:#fff!important}
+}

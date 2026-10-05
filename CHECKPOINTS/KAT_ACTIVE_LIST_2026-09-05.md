@@ -2724,3 +2724,7 @@ Super Admin showed Backup ανά 3 ώρες FAIL. Render cron logs reproduce `He
 
 ## 05/10/2026 22:05 Athens — TODAY-08 vivid gradient theme approved
 Owner rejected pastel palette, requested a new proposal, then explicitly approved the generated vivid reference. Apply that approved palette to the already accepted module-card structure: saturated blue/green/yellow/pink/purple/cyan plus orange/slate/teal variants, white title/subtitle/icons/arrows, darker icon wells, stronger shadow. Preserve 3-column desktop, no outer scroll, module state/permissions/business logic. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:15 Athens — TODAY-08 vivid LIVE contrast FAIL / specificity fix
+LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rules landed but earlier tone background selectors still won in the cascade. USER visual FAIL. Bounded correction increases selector specificity for the approved vivid gradients and explicitly locks card text/icon/arrow contrast to white. Component/layout/module logic unchanged; 3-column and no-outer-scroll preserved. Awaiting CI/LIVE/USER acceptance.
