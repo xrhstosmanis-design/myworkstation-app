@@ -1,9 +1,10 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {BarChart3,Boxes,Camera,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
+import {BarChart3,Boxes,Camera,ChevronRight,ClipboardCheck,ClipboardList,Clock3,FileScan,Files,LockKeyhole,PackagePlus,RadioTower,RefreshCw,ShoppingCart,Truck} from "lucide-react";
 import InvoiceInboxPanel from "./InvoiceInboxPanel.jsx";
 import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
 import SupplierPriceComparisonPanel from "./SupplierPriceComparisonPanel.jsx";
+import OrderSuggestionsPanel from "./OrderSuggestionsPanel.jsx";
 import RecipeManagementPanel from "./RecipeManagementPanel.jsx";
 import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
@@ -90,6 +91,9 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   },[tab,storeId,activeModules.join("|")]);
 
   const statusModules=useMemo(()=>catalog.filter(m=>["INVENTORY","SALES_ANALYTICS","SHIFT_HANDOVER","STORE_CHAT","PENDING_CENTER","AI_READER","DOCUMENTS","ATTENDANCE","CONNECTOR_RBS","REMOTE_SUPPORT","VIDEO_EVENTS"].includes(m.key)),[catalog]);
+  const moduleVisuals={
+    INVENTORY:{tone:"blue",icon:"▣",subtitle:"Αποθήκη, απογραφή και συνταγές"},SALES_ANALYTICS:{tone:"green",icon:"▥",subtitle:"Πωλήσεις, στοιχεία και αναλύσεις"},SHIFT_HANDOVER:{tone:"yellow",icon:"✓",subtitle:"Παράδοση και συνέχεια βάρδιας"},STORE_CHAT:{tone:"pink",icon:"●",subtitle:"Επικοινωνία ανά κατάστημα"},PENDING_CENTER:{tone:"purple",icon:"⌁",subtitle:"Εργασίες και εκκρεμότητες"},AI_READER:{tone:"purple",icon:"✦",subtitle:"Ανάγνωση παραστατικών με AI"},DOCUMENTS:{tone:"cyan",icon:"▤",subtitle:"Έγγραφα, τιμολόγια και αρχεία"},ATTENDANCE:{tone:"blue",icon:"◷",subtitle:"Παρουσίες και ώρες εργασίας"},CONNECTOR_RBS:{tone:"yellow",icon:"⌁",subtitle:"Σύνδεση ταμειακής και CapDriver"},REMOTE_SUPPORT:{tone:"pink",icon:"↗",subtitle:"Απομακρυσμένη τεχνική υποστήριξη"},VIDEO_EVENTS:{tone:"green",icon:"◉",subtitle:"Συμβάντα βίντεο και κάμερες"}
+  };
 
   const addProduct=async event=>{
     event.preventDefault();setError("");setMessage("");
@@ -154,6 +158,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="supplierComparison"?"active":""} onClick={()=>setTab("supplierComparison")}>Σύγκριση Προμηθευτών</button>
+        <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
@@ -169,10 +174,11 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     </section>
 
-    {tab==="modules"&&<section className="commerce-status-grid">{statusModules.map(module=><article key={module.key} className={`commerce-status-card ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><b>{module.name}</b><p>{module.description}</p><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ — ΑΝΕΝΕΡΓΟ":"ΥΠΟ ΑΝΑΠΤΥΞΗ / ΤΕΧΝΙΚΟ ΚΛΕΙΔΩΜΑ"}</em>{!module.commercialReady&&<LockKeyhole/>}</article>)}</section>}
+    {tab==="modules"&&<section className="commerce-status-grid commerce-reference-modules">{statusModules.map(module=>{const visual=moduleVisuals[module.key]||{tone:"blue",icon:"◆",subtitle:module.description};return <article key={module.key} className={`commerce-status-card commerce-reference-card tone-${visual.tone} ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><span className="commerce-reference-icon" aria-hidden="true">{visual.icon}</span><div className="commerce-reference-copy"><b>{module.name}</b><p>{visual.subtitle||module.description}</p></div><span className="commerce-reference-arrow" aria-hidden="true"><ChevronRight/></span><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</em>{!module.commercialReady&&<LockKeyhole className="commerce-reference-lock"/>}</article>})}</section>}
 
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
+    {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>

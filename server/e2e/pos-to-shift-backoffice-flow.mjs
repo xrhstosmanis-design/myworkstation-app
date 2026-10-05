@@ -278,7 +278,7 @@ async function main(){
   }
   console.log('E2E task27 original-date reversal cost passed',{returns:1,cancellations:1,sales:-30,cost:-6,laterCostNotUsed:9,orphanProfit:null});
 
-  // Expense VAT requires one full, approved, reconciled document payment.
+  // Expense VAT follows each active payment date with proportional, cent-reconciled allocation.
   const vatFixture=`task27-vat-${saleId}`,vatDocs=[],vatTransactions=[];
   const vatPath=day=>`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2032-05-${day}&calendarTo=2032-05-${day}`;
   const addVatDoc=async(label,net,vat,gross,status='APPROVED')=>{const id=`${vatFixture}-${label}`;vatDocs.push(id);await prisma.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","status","documentDate","totalNet","totalVat","totalGross") VALUES (${id},${companyId},${storeId},${status},${new Date('2032-04-30T12:00Z')},${net},${vat},${gross})`;return id;};
@@ -294,18 +294,36 @@ async function main(){
     await addVatPayment('credit','09',-124,await addVatDoc('credit-doc',-100,-24,-124));
     const duplicate=await addVatDoc('duplicate-doc',100,24,124);await addVatPayment('duplicate1','10',124,duplicate);await addVatPayment('duplicate2','11',124,duplicate);
     await addVatPayment('reversed','12',124,await addVatDoc('reversed-doc',100,24,124),true);
+    // Cent reconciliation across months, same-time ties and a reversed installment.
+    const cents=await addVatDoc('cents-doc',1,.01,1.01);
+    await addVatPayment('cents-a','20',.50,cents);await addVatPayment('cents-b','20',.50,cents);
+    await addVatPayment('cents-reversed','21',.50,cents,true);
+    const lastId=`${vatFixture}-cents-final`;vatTransactions.push(lastId);
+    await prisma.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","type","amount","actorId","actorName","occurredAt","attachmentMimeType","attachmentFilename") VALUES (${lastId},${companyId},${storeId},'OTHER_EXPENSE',0.01,'task27-e2e','Final isolated installment',${new Date('2032-06-01T12:00Z')},'application/vnd.myworkstation.purchase-document',${cents})`;
+    const mixedSigns=await addVatDoc('mixed-sign-doc',100,24,124);
+    await addVatPayment('mixed-sign-positive','22',62,mixedSigns);await addVatPayment('mixed-sign-negative','23',-1,mixedSigns);
+    const partialCredit=await addVatDoc('partial-credit-doc',-100,-24,-124);
+    await addVatPayment('partial-credit','24',-62,partialCredit);
     const beforeVat=await snapshot();
-    for(const [day,gross,net,vat] of [['01',124,100,24],['02',100,100,0],['09',-124,-100,-24]]){
+    for(const [day,gross,net,vat] of [['01',124,100,24],['02',100,100,0],['03',62,50,12],['04',62,50,12],['05',62,50,12],['09',-124,-100,-24],['24',-62,-50,-12]]){
       const result=await request(vatPath(day),{token:ownerToken});assert.equal(result.response.status,200,JSON.stringify(result.payload));
       for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.expenseGross,gross);assert.equal(r.expenses,net);assert.equal(r.expenseVat,vat);assert.equal(r.netProfit,-net);assert.equal(r.missingExpenseVatPayments,0);}
     }
-    for(const day of ['03','04','05','06','07','08','10','11']){
+    for(const day of ['06','07','08','10','11','22','23']){
       const result=await request(vatPath(day),{token:ownerToken});assert.equal(result.response.status,200,JSON.stringify(result.payload));
       for(const r of [result.payload.totals,...result.payload.daily,...result.payload.monthly]){assert.equal(r.missingExpenseVatPayments,1);assert.equal(r.expenses,null);assert.equal(r.expenseVat,null);assert.equal(r.netProfit,null);assert.equal(r.expenseSalesPercent,null);assert.equal(r.grossProfit,0);}
     }
     const reversed=await request(vatPath('12'),{token:ownerToken});assert.equal(reversed.payload.totals.expenseGross,0);assert.equal(reversed.payload.totals.expensePayments,0);assert.equal(reversed.payload.totals.missingExpenseVatPayments,0);
     const mixed=await request(vatPath('01')+'&calendarTo=2032-05-11',{token:ownerToken});assert.equal(mixed.response.status,400,'Duplicate query field must be rejected');
-    const all=await request(vatPath('01').replace('calendarTo=2032-05-01','calendarTo=2032-05-11'),{token:ownerToken});assert.equal(all.payload.totals.missingExpenseVatPayments,8);assert.equal(all.payload.totals.expenses,null);assert.equal(all.payload.totals.expenseVat,null);assert.equal(all.payload.totals.netProfit,null);
+    const all=await request(vatPath('01').replace('calendarTo=2032-05-01','calendarTo=2032-05-11'),{token:ownerToken});assert.equal(all.payload.totals.missingExpenseVatPayments,5);assert.equal(all.payload.totals.expenses,null);assert.equal(all.payload.totals.expenseVat,null);assert.equal(all.payload.totals.netProfit,null);
+    const mayCents=await request(vatPath('20'),{token:ownerToken});
+    assert.equal(mayCents.payload.totals.expenseGross,1);assert.equal(mayCents.payload.totals.expenseVat,.01);assert.equal(mayCents.payload.totals.expenses,.99);
+    const juneCents=await request(`/api/owner-payments/business-picture?storeId=${storeId}&calendarFrom=2032-06-01&calendarTo=2032-06-01`,{token:ownerToken});
+    assert.equal(juneCents.payload.totals.expenseGross,.01);assert.equal(juneCents.payload.totals.expenseVat,0);assert.equal(juneCents.payload.totals.expenses,.01);
+    const fullCents=await request(vatPath('20').replace('calendarTo=2032-05-20','calendarTo=2032-06-01'),{token:ownerToken});
+    const centDays=fullCents.payload.daily.filter(r=>['2032-05-20','2032-06-01'].includes(r.day));
+    assert.equal(centDays.reduce((n,r)=>n+r.expenseVat,0),.01,'Separate periods reconcile to document VAT exactly');
+    const canceledCents=await request(vatPath('21'),{token:ownerToken});assert.equal(canceledCents.payload.totals.expensePayments,0);
     assert.deepEqual(await snapshot(),beforeVat,'Expense report reads must leave ledgers unchanged');
   }finally{
     for(const id of vatTransactions)await prisma.$executeRaw`DELETE FROM "StoreTransaction" WHERE "id"=${id} AND "companyId"=${companyId}`;

@@ -5,8 +5,10 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule,requireStoreModule} from "../middleware/module-access.js";
 import {buildSupplierPriceComparison} from "../lib/supplier-price-comparison.js";
 import {mobileUploads} from "./mobile-invoice-upload.js";
+import orderSuggestionsRouter from "./order-suggestions.js";
 
 const router=Router();
+router.use(orderSuggestionsRouter);
 const id=()=>crypto.randomUUID();
 const num=value=>Number(value||0);
 function imageAttachment(attachment){

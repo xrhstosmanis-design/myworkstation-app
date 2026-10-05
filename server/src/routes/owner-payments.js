@@ -107,23 +107,34 @@ router.get("/business-picture",async(req,res,next)=>{
         GROUP BY 1,2 ORDER BY day`,
       prisma.$queryRaw`
         WITH "expenseLinks" AS (
-          SELECT "companyId","storeId","attachmentFilename",COUNT(*) AS links
+          SELECT "companyId","storeId","attachmentFilename",SUM("amount") AS paid,
+            MIN("amount") AS "minAmount",MAX("amount") AS "maxAmount"
           FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "type"='OTHER_EXPENSE' AND "reversedAt" IS NULL AND "attachmentMimeType"=${purchaseDocumentMime}
           GROUP BY "companyId","storeId","attachmentFilename"
+        ), "expenseAllocation" AS (
+          -- Allocate before the report date filter; cumulative rounding preserves the final cent.
+          SELECT tx."id",pd."id" AS "documentId",
+            ROUND(pd."totalVat" * SUM(tx."amount") OVER payment_order / NULLIF(ROUND(pd."totalGross",2),0),2)
+            - ROUND(pd."totalVat" * (SUM(tx."amount") OVER payment_order - tx."amount") / NULLIF(ROUND(pd."totalGross",2),0),2) AS vat
+          FROM "StoreTransaction" tx
+          JOIN "expenseLinks" links ON links."companyId"=tx."companyId" AND links."storeId"=tx."storeId" AND links."attachmentFilename"=tx."attachmentFilename"
+          LEFT JOIN "PurchaseDocument" pd ON pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId" AND pd."storeId"=tx."storeId" AND pd."status"='APPROVED'
+            AND ROUND(pd."totalGross",2)<>0 AND ABS(links.paid)<=ABS(ROUND(pd."totalGross",2))
+            AND links."minAmount"*pd."totalGross">=0 AND links."maxAmount"*pd."totalGross">=0
+            AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
+            AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
+          WHERE tx."companyId"=${companyId} AND tx."type"='OTHER_EXPENSE' AND tx."reversedAt" IS NULL AND tx."attachmentMimeType"=${purchaseDocumentMime}
+          WINDOW payment_order AS (PARTITION BY tx."companyId",tx."storeId",tx."attachmentFilename" ORDER BY tx."occurredAt",tx."id" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
         )
         SELECT TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(tx."occurredAt" AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
           COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL)::int AS payments,
           COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "expenseGross",
           COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE')::int AS "expensePayments",
-          COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE' AND pd."id" IS NULL)::int AS "missingExpenseVatPayments",
+          COUNT(*) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE' AND allocation."documentId" IS NULL)::int AS "missingExpenseVatPayments",
           COALESCE(SUM(tx."amount") FILTER (WHERE tx."reversedAt" IS NULL),0) AS "paymentTotal",
-          COALESCE(SUM(pd."totalVat") FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "knownExpenseVat"
+          COALESCE(SUM(allocation.vat) FILTER (WHERE tx."reversedAt" IS NULL AND tx."type"='OTHER_EXPENSE'),0) AS "knownExpenseVat"
         FROM "StoreTransaction" tx
-        LEFT JOIN "expenseLinks" links ON links."companyId"=tx."companyId" AND links."storeId"=tx."storeId" AND links."attachmentFilename"=tx."attachmentFilename" AND tx."attachmentMimeType"=${purchaseDocumentMime}
-        LEFT JOIN "PurchaseDocument" pd ON tx."attachmentMimeType"=${purchaseDocumentMime} AND pd."id"=tx."attachmentFilename" AND pd."companyId"=tx."companyId" AND pd."storeId"=tx."storeId" AND pd."status"='APPROVED' AND links.links=1
-          AND pd."totalGross"<>0 AND ROUND(tx."amount",2)=ROUND(pd."totalGross",2)
-          AND ROUND(pd."totalNet"+pd."totalVat",2)=ROUND(pd."totalGross",2)
-          AND pd."totalNet"*pd."totalGross">=0 AND pd."totalVat"*pd."totalGross">=0 AND ABS(pd."totalVat")<=ABS(pd."totalGross")
+        LEFT JOIN "expenseAllocation" allocation ON allocation."id"=tx."id"
         WHERE tx."companyId"=${companyId} AND tx."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND tx."occurredAt">=${from} AND (tx."occurredAt"<${upper} OR (${inclusiveUpper}::boolean AND tx."occurredAt"=${upper}))
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
@@ -137,7 +148,7 @@ router.get("/business-picture",async(req,res,next)=>{
     const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
     const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0}));
     res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Καθαρό ποσό και ΦΠΑ υπολογίζονται μόνο από μία πλήρη πληρωμή με συνεπές εγκεκριμένο παραστατικό· χωρίς τεκμηρίωση ή σε μερικές/πολλαπλές πληρωμές παραμένουν άγνωστα. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Χωρίς τεκμηρίωση, σε υπερπληρωμή ή ασυνεπή πρόσημα παραμένουν άγνωστα. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
   }catch(error){next(error)}
 });
 
