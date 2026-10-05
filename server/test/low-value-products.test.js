@@ -44,3 +44,13 @@ test("no sale, no net movement, losses, unknown stock and inconsistent lines sta
 test("parameter bounds reject nonfinite and impossible thresholds",()=>{
  for(const options of [{historyDays:0},{historyDays:366},{slowDays:0},{slowDays:731},{marginPercent:101},{marginPercent:NaN}])assert.throws(()=>build([],[],[],options),/Μη έγκυρα/);
 });
+test("historical lookup preserves ties and costs across a dense purchase/sales history",()=>{
+ const start=new Date('2026-01-01').getTime(),day=86400000;
+ const purchases=Array.from({length:1000},(_,i)=>purchase({documentId:`doc-${i}`,documentDate:new Date(start+i*day),documentCreatedAt:new Date(start+i*day),netAmount:i+10}));
+ const sales=Array.from({length:2000},(_,i)=>line({quantity:1,lineTotal:12.4,occurredAt:new Date(start+(i%1000)*day)}));
+ const [row]=build([product()],sales,purchases);
+ assert.equal(row.salesNet,20000);assert.equal(row.costValue,101900);assert.equal(row.costEvidence.length,1000);
+ const tied=purchase({documentId:'tie',documentDate:new Date(start+500*day),documentCreatedAt:new Date(start+500*day+1000),netAmount:90});
+ const [atTie]=build([product()],[line({quantity:1,occurredAt:new Date(start+500*day)})],[...purchases,tied]);
+ assert.equal(atTie.costValue,9);assert.equal(atTie.costEvidence[0].documentId,'tie');
+});

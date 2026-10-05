@@ -45,7 +45,14 @@ export function buildLowValueProducts(products,sales,purchases,{historyDays=30,s
   for(const line of sales){if(!saleGroups.has(line.productId))saleGroups.set(line.productId,[]);saleGroups.get(line.productId).push(line);}
   return products.map(product=>{
     const unit=comparisonUnit(product.unit),stock=product.trackStock?number(product.currentStock):null;
-    const candidates=[...(documents.get(product.productId)?.values()||[])].sort((a,b)=>time(b[0].documentDate)-time(a[0].documentDate)||time(b[0].documentCreatedAt)-time(a[0].documentCreatedAt)||String(b[0].documentId).localeCompare(String(a[0].documentId)));
+    const candidates=[...(documents.get(product.productId)?.values()||[])].filter(rows=>time(rows[0].documentDate)!==null).sort((a,b)=>time(b[0].documentDate)-time(a[0].documentDate)||time(b[0].documentCreatedAt)-time(a[0].documentCreatedAt)||String(b[0].documentId).localeCompare(String(a[0].documentId)));
+    const dated=candidates.map(rows=>time(rows[0].documentDate)),costs=new Map();
+    const atDate=cutoff=>{
+      if(cutoff===null)return null;
+      let start=0,end=dated.length;
+      while(start<end){const middle=Math.floor((start+end)/2);if(dated[middle]>cutoff)start=middle+1;else end=middle;}
+      return candidates[start]||null;
+    };
     let sold=0,returned=0,netSales=0,cost=0,missingCostLines=0,invalidLines=0,lastSaleAt=null;
     const evidence=new Map();
     for(const line of saleGroups.get(product.productId)||[]){
@@ -55,8 +62,9 @@ export function buildLowValueProducts(products,sales,purchases,{historyDays=30,s
       sold+=Math.max(0,signedQuantity);returned+=Math.max(0,-signedQuantity);netSales+=signedGross/(1+vat/100);
       if(signedQuantity>0&&(!lastSaleAt||time(line.occurredAt)>time(lastSaleAt)))lastSaleAt=line.occurredAt;
       const cutoff=time(reversal?line.originalOccurredAt:line.occurredAt);
-      const document=cutoff===null?null:candidates.find(rows=>time(rows[0].documentDate)!==null&&time(rows[0].documentDate)<=cutoff);
-      const unitCost=document?purchaseCost(document,product,cutoff):null;
+      const document=atDate(cutoff),first=document?.[0];
+      if(first&&!costs.has(first.documentId))costs.set(first.documentId,purchaseCost(document,product,Infinity));
+      const unitCost=!first||first.correctionId&&time(first.correctionAt)>cutoff?null:costs.get(first.documentId);
       if(unitCost===null){missingCostLines++;continue;}
       cost+=signedQuantity*unitCost;
       evidence.set(document[0].documentId,{documentId:document[0].documentId,number:document[0].documentNumber,date:document[0].documentDate});
