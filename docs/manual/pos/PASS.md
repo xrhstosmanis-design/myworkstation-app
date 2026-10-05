@@ -1,3 +1,9 @@
+## 05/10/2026 - QR camera shift closing: bounded desktop USER / VISUAL PASS
+
+Authorized operator LAB POS 2 in MYWORKSTATION LAB used phone QR on desktop, after exact LIVE944073f4. Open «Κλείσιμο βάρδιας», count actual cash and complete drawer/custody/coins/safe/EFTPOS as applicable, confirm count, then «Σάρωση QR με κάμερα». Show personal QR from phone. Successful decode fills masked credential and closes camera; press «Κλείσιμο και παράδοση» explicitly. Observed return to login; entering again requires «Καταμέτρηση έναρξης» before sales. Screenshots21:26/21:27/21:28 Athens verify this positive UI sequence.
+
+The feature retains existing store/terminal and shift-opener authorization; this test grants no additional access and does not prove adversarial-role behavior. If camera permission is blocked, allow browser camera permission and retry; permission troubleshooting is not physically verified in this scope. A decoded QR is not proof of server acceptance before explicit submission. Financial/control/session deltas, Workforce OUT/audit, wrong/revoked/foreign QR, forced-shortage path, other cameras/mobile and password-manager autofill variants NOT TESTED. Do not repeat the completed close just to recover missing baseline evidence.
+
 ## 04/10/2026 - EFTPOS chooser desktop USER / VISUAL PASS
 
 Verified by the owner on LIVE `b958de172f3142b1c59f00f2dd6c1281abf10d9b` in MYWORKSTATION LAB with LAB POS 2. Authorized POS operators open their own store POS, add the intended items and press «ΚΑΡΤΑ». The enlarged chooser displays «1. POS ΚΑΤΑΣΤΗΜΑΤΟΣ · Άμεση συναλλαγή» and «2. DELIVERY · Ετεροχρονισμένη». Close with X to return to the current cart. Selecting a choice invokes the existing checkout flow; that action was not executed in this visual test.

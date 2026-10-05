@@ -1,4 +1,8 @@
-## 05/10/2026 — POS closing QR camera / AWAITING CI
+## 05/10/2026 21:28 Athens - POS QR close bounded USER / VISUAL PASS
+
+Owner LAB POS 2: QR decoded into closing field21:26, login after explicit close21:27, mandatory new opening form on re-entry21:28. PR1753/full CI4412 PASS/exact LIVE944073f41f284952ab684d413cd9dd0d21251ace. Positive desktop UI flow complete; no repetition required. Financial/control/session readback, Workforce OUT/audit, wrong-card live rejection, shortage and other devices NOT TESTED. Same closing owner retained for remaining acceptance. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`; tested instructions `docs/manual/pos/PASS.md`.
+
+## 05/10/2026 — POS closing QR camera / historical implementation entry
 
 ## 05/10/2026 — #27 partial allocation implemented / deployed / AWAITING LAB
 
