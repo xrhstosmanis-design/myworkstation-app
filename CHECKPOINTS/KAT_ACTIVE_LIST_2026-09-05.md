@@ -1,5 +1,16 @@
 ## 05/10/2026 — POS closing QR camera / AWAITING CI
 
+## 05/10/2026 — #27 partial allocation implemented / deployed / AWAITING LAB
+
+Same owner `codex/task27-resume-20261005` retained. Owner policy follows each actual active payment on its Athens date; net/VAT allocated proportionally with cumulative cent rounding across periods. PR1752 exacthead88406207b0993aec6fefcb8a6fd2287d3b46d30c: fullCI37353832247 SUCCESS,1844 server tests PASS/0FAIL/0SKIP, including production-query PostgreSQL/temp-table coverage; existing authenticated isolated HTTP flows for expense VAT/service/idempotency, costs/returns and all required CI stages passed. Local Node20 full server suite1837PASS/0FAIL/3databaseSKIP, client/server builds and KAT source invariants passed. Initial local dependency/setup failures resolved by installing current dependencies and generating Prisma client; no source fix for unrelated modules.
+
+Merged PR1752 as599a6cbc54bed4b68fd694628c9aa1a7b6144d34. That main CI was canceled by concurrent PR1753; containing main944073f41f284952ab684d413cd9dd0d21251ace CI37354380951 SUCCESS and guarded Render deploy37354777317 SUCCESS. Actual browser public /api/health first showed healthy599a6cbc, then healthy exact944073f4; deployed report source compared with released PR content and matched. No manual deploy, session/permission/financial/stock/fiscal/myDATA mutation.
+
+Positive partial/62+62 cross-month and credit/zeroVAT, final-cent remainder/same-time order/reversed installments, four-decimal document matching, invalid/draft/mixed-sign/overpaid/foreign-company/foreign-store evidence and read-only ledger preservation tested only in isolated PostgreSQL/HTTP. Duplicate full payments remain visible gross with UNKNOWN net/VAT; genuine installments remain distinct. No production partial-payment LAB result claimed. Existing LAB-EXP-001124/100/24 and desktop USER PASS protected; never replay. Independent Owner failed-session/credential handoff remains NOT TESTED; no new secure form required in this continuation.
+
+Implementation and deployment portion complete; real read-only LAB acceptance of the updated calculation AWAITING. Historical-cost live evidence, independent Owner, mobile/tablet, verified new CSV/native/physical print and whole27 remain OPEN. No new LAB/LIVE feature PASS; manual and central PDF PASS records deliberately unchanged. Next single action: inspect an eligible EXISTING linked partial-payment LAB fixture and its report before/after read-only, with fresh two-till controls; if no such fixture exists, record DATA BLOCKED without creating payments or changing LAB-EXP-001. All other assignments, Gate3 PASS and source changes from other pages preserved. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-task27-partial-allocation.md`.
+
+
 Same closing scope fix/pos-shift-close-qr-camera-20261005. Owner uses phone QR; add camera decode without automatic closing and correct browser autofill. Existing PR1749 server verifier preserved. Camera and physical closing AWAITING LAB. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`.
 
 ## 05/10/2026 20:58 Athens — #30 Αυτόματες Προτάσεις Παραγγελίας / ASSIGNED
