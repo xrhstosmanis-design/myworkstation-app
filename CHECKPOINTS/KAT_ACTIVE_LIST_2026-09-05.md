@@ -4,7 +4,21 @@ Owner `codex/task31-product-value-20261005`, explicitly selected after the user 
 
 No source/config/schema/production changes or LAB actions in this claim. Runtime/deployment/LAB acceptance NOT TESTED; no PASS asserted. Protect Gate1–8, Phase8 stock intelligence, #27 financial report/cost semantics, #29 comparison, #30 order suggestions, all TODAY/POS/fiscal/install/efood/Workforce/backup assignments. No sales/payments/purchases/approvals/orders/stock/price/permission changes. #31 remains OPEN / ASSIGNED until named handoff. Next action: read-only source assessment and bounded acceptance design; only then a separately reviewed implementation with CI/exact deployment/LAB acceptance.
 
+## 05/10/2026 22:18 Athens - latest close independently displayed
+
+Owner screenshots22:06 login and22:11 mandatory opening form LAB POS 2 expected0.00 corroborate the already verified positive UI sequence. Fresh read-only Platform cash report05Oct: LAB POS 2 MAIN21:48-22:06 difference0.00/POS-EFTPOS0.00, no unusual event; separate earlier19:37-21:27 zero and old deficit2.40 unchanged. Workforce refreshed: latest21:48-22:06 completed18m/displayed1.50 EUR,0open/3completed, total2h10m/10.84 EUR; earlier two rows unchanged. No independent one-OUT/Audit count, full close-before financial/control baseline, actual submitted QR or exact submission revision observed. Later health1138ed2feb0d0ad7d481acd4e3f707e23eaaa58d. No replay, manual attendance mutation or new shift opened by agent.
+
+Same ASSIGNED fix/pos-shift-close-qr-camera-20261005; physical positive UI, displayed completion and invalid credential rejection protected. Remaining registered-other/revoked/foreign QR, shortage/recount, direct OUT/Audit IDs, full finance/independent-terminal evidence and browser variants NOT TESTED. Owner22:17 grants remaining necessary LAB checks; physical scanner/camera/operator sign-in cannot be driven from the cloud SuperAdmin session. Do not create a substitute credential, expose a QR or alter old shifts to manufacture proof. Next new state-changing test requires a separately identified LAB operator session and fresh baseline; keep current physical opening form without confirming until prepared. Checkpoint CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md; POS/Workforce manuals and pending/PDF updated together.
+
 ## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
+
+## 05/10/2026 22:22 Athens — #30 layout retest: rows visible, residual horizontal/help FAIL
+
+PR1766 / exact head273e38d2d224069a7cfdeddbda2656e55e80b0e1 / full CI4441 (37361504447) SUCCESS,1862 server PASS/0FAIL/0SKIP; merged1138ed2feb0d0ad7d481acd4e3f707e23eaaa58d. Concurrent main CI4443/4444 cancelled; descendant121046fec1bc62aaf436eaaa50697f40ccb38e43 preserves exact #30 blobs and passed full CI4445 (37361932774),1862/0/0. Guarded Render2031 (37362336955/job111939763484) SUCCESS/exact health22:19:23 Athens; browser independently confirms121046fec1bc62aaf436eaaa50697f40ccb38e43.
+
+Read-only same SA / LAB store / cloud desktop, viewport1363×936 after reload. Compact toolbar and measured one-row fallback expose the full water2269 row: stock−65/min0/net36/daily1.2/proposal77, negative warning, page1/11. Shell1320×908 and hub1280×690 have equal client/scroll dimensions; #30 region614/614 and content311/311 vertically fit, nav bottom821.97 and footer901 inside shell922. Residual FAIL: table wrapperclient1246/scroll1253 (7px horizontal scrollbar) is caused by the shared last-column `mws-col-resizer` positioned right−7px. Existing floating Parameters control partially covers the right-hand calculation-help button. Whole desktop acceptance remains AWAITING LAB.
+
+Before the next source edit, bounded causal correction is CSS scoped only to #30: move the last-column handle inward while retaining resizing/filters, place help at the footer start and reserve the floating-control space. No backend, pagination logic, shared table/theme/parameters/other owner edits. Preserve numerical/search/store results and repeat live layout/help only after full CI/exact deploy. Owner `codex/task30-order-suggestions-20261005` retained; independent Owner/mobile/tablet/physical terminal/financial deltas NOT TESTED.
 
 Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
 
@@ -2742,3 +2756,7 @@ Owner rejected pastel palette, requested a new proposal, then explicitly approve
 
 ## 05/10/2026 22:15 Athens — TODAY-08 vivid LIVE contrast FAIL / specificity fix
 LIVE after PR1761 showed white text on old pale card backgrounds: vivid text rules landed but earlier tone background selectors still won in the cascade. USER visual FAIL. Bounded correction increases selector specificity for the approved vivid gradients and explicitly locks card text/icon/arrow contrast to white. Component/layout/module logic unchanged; 3-column and no-outer-scroll preserved. Awaiting CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 22:25 Athens — TODAY-08 root cause confirmed: legacy pastel cascade
+Second LIVE check after PR1765 still showed pale cards + white text. Source audit confirmed commerce-home-modern.css retained three generations of TODAY-08 styling: high-specificity legacy pastel nth-child rules, component pastel tone rules, then vivid rules. Stop overrides. Remove obsolete pastel color declarations and redundant specificity patch; retain component geometry and one authoritative vivid palette. Also force module-card opacity 1 so legacy locked opacity cannot wash approved colors. No logic/layout changes. Awaiting CI/LIVE/USER acceptance.
