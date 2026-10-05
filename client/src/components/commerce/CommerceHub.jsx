@@ -5,6 +5,7 @@ import AiReaderPanel from "./AiReaderPanel.jsx";
 import SupplierManagementPanel from "./SupplierManagementPanel.jsx";
 import SupplierPriceComparisonPanel from "./SupplierPriceComparisonPanel.jsx";
 import OrderSuggestionsPanel from "./OrderSuggestionsPanel.jsx";
+import LowValueProductsPanel from "./LowValueProductsPanel.jsx";
 import RecipeManagementPanel from "./RecipeManagementPanel.jsx";
 import AdvancedSalesAnalytics from "./AdvancedSalesAnalytics.jsx";
 import AttendanceManagementPanel from "./AttendanceManagementPanel.jsx";
@@ -151,15 +152,17 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
-  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}`}>
+  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}${tab==="lowValue"?" low-value-view":""}`}>
     <section className="panel">
       {tab==="orderSuggestions"&&<button type="button" className="order-suggestions-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
+      {tab==="lowValue"&&<button type="button" className="low-value-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
       <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={event=>{if(!event.currentTarget.dispatchEvent(new CustomEvent("purchase-orders:refresh",{bubbles:true,cancelable:true})))return;loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
       <div className="commerce-module-strip">
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="supplierComparison"?"active":""} onClick={()=>setTab("supplierComparison")}>Σύγκριση Προμηθευτών</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
+        <button disabled={!active.has("LOW_VALUE_PRODUCTS")} className={tab==="lowValue"?"active":""} onClick={()=>setTab("lowValue")}>Προϊόντα Χαμηλής Απόδοσης</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
         <button disabled={!active.has("SHIFT_HANDOVER")} className={`${tab==="handover"?"active":""} ${!active.has("SHIFT_HANDOVER")?"locked":""}`} onClick={()=>setTab("handover")}><ClipboardCheck/> Παράδοση</button>
@@ -180,6 +183,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
     {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
+    {tab==="lowValue"&&active.has("LOW_VALUE_PRODUCTS")&&<LowValueProductsPanel key={storeId} api={api} storeId={storeId}/> }
 
     {tab==="inventory"&&<>
       <div className="commerce-cards"><article className="commerce-card"><span>Προϊόντα</span><strong>{overview?.products||products.length}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{overview?.suppliers||suppliers.length}</strong></article><article className="commerce-card"><span>Παραστατικά αγορών</span><strong>{overview?.purchases||purchases.length}</strong></article><article className="commerce-card"><span>Καταγεγραμμένες πωλήσεις</span><strong>{overview?.sales||0}</strong></article></div>
