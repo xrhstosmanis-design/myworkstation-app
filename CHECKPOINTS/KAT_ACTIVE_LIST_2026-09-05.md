@@ -2612,3 +2612,7 @@ LIVE confirms grid/viewport improvement but owner rejects visual match: cards re
 
 ## 05/10/2026 01:12 Athens — TODAY-08 pastel reference CI checkpoint
 PR1742 first CI failed policy-only because the branch lacked a new CHECKPOINTS/CHANGES entry; CSS was not tested. Scope remains CSS-only pastel owner-reference module cards, preserving 3-column/no-outer-scroll behavior and all module logic. Add required checkpoint and rerun full CI.
+
+
+## 05/10/2026 21:00 Athens — TODAY-08 full module-card component redesign
+Owner explicitly rejected CSS-only pastel pass as visually far from supplied reference. Stop incremental patches. Redesign Modules card markup while preserving exact statusModules/module keys/state: large colored icon well, title + concise functional subtitle, arrow affordance, compact status badge and six-tone pastel card system, 3-column desktop, bounded internal overflow/no outer scroll. No routes/permissions/module activation/business logic changed. Awaiting full CI/LIVE/USER acceptance.
