@@ -2670,3 +2670,7 @@ PR1742 first CI failed policy-only because the branch lacked a new CHECKPOINTS/C
 
 ## 05/10/2026 21:00 Athens — TODAY-08 full module-card component redesign
 Owner explicitly rejected CSS-only pastel pass as visually far from supplied reference. Stop incremental patches. Redesign Modules card markup while preserving exact statusModules/module keys/state: large colored icon well, title + concise functional subtitle, arrow affordance, compact status badge and six-tone pastel card system, 3-column desktop, bounded internal overflow/no outer scroll. No routes/permissions/module activation/business logic changed. Awaiting full CI/LIVE/USER acceptance.
+
+
+## 05/10/2026 21:30 Athens — Task18 backup LIVE FAIL isolated to post-upload HeadObject
+Super Admin showed Backup ανά 3 ώρες FAIL. Render cron logs reproduce `HeadObject operation: 404 Not Found`, exit 254. Owner verified non-secret config: region eu-central-003, bucket myworkstation-prod-backups-eu-20260930, endpoint https://s3.eu-central-003.backblazeb2.com; values are mutually consistent. Bounded fix leaves pg_dump/bucket/upload/restore policy unchanged, adds exact failure-stage reporting and retries post-upload HeadObject up to 5 times with short backoff before HEAD_VERIFY_FAILED. No restore/data mutation. Awaiting CI/cron LIVE run.

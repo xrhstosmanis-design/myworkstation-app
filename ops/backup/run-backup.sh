@@ -17,6 +17,7 @@ archive="/tmp/myworkstation-${run_id}.dump"
 toc="/tmp/myworkstation-${run_id}.toc"
 object_key="myworkstation/$(date -u +%Y/%m/%d)/backup-${run_id}.dump"
 notified_success=0
+failure_stage="BACKUP_JOB_FAILED"
 
 aws_s3api() {
   aws s3api "$@" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL"
@@ -35,7 +36,7 @@ notify() {
 on_exit() {
   code=$?
   trap - EXIT
-  if [ "$code" -ne 0 ] && [ "$notified_success" -eq 0 ]; then notify FAILED "" 0 "BACKUP_JOB_FAILED" || true; fi
+  if [ "$code" -ne 0 ] && [ "$notified_success" -eq 0 ]; then notify FAILED "" 0 "$failure_stage" || true; fi
   rm -f "$archive" "$toc"
   exit "$code"
 }
@@ -45,25 +46,38 @@ notify STARTED
 
 # The bucket must already exist, remain private, use versioning and have default
 # encryption. The job never creates or weakens storage security.
+failure_stage="BUCKET_ACCESS_FAILED"
 aws_s3api head-bucket --bucket "$S3_BUCKET_NAME" >/dev/null
 versioning="$(aws_s3api get-bucket-versioning --bucket "$S3_BUCKET_NAME" --query Status --output text)"
 [ "$versioning" = "Enabled" ] || { echo "S3 bucket versioning is not enabled" >&2; exit 3; }
 aws_s3api get-bucket-encryption --bucket "$S3_BUCKET_NAME" >/dev/null
 
+failure_stage="PG_DUMP_FAILED"
 pg_dump --format=custom --compress=6 --no-owner --no-privileges --file="$archive" "$DATABASE_URL"
 [ -s "$archive" ] || { echo "pg_dump produced an empty archive" >&2; exit 4; }
 
 # Restore dry-run: read and inspect the archive TOC only. No target DATABASE_URL
 # is ever passed to pg_restore and no database is changed.
+failure_stage="ARCHIVE_DRY_RUN_FAILED"
 pg_restore --list "$archive" >"$toc"
 grep -Eq 'TABLE|TABLE DATA' "$toc" || { echo "Backup archive has no table entries" >&2; exit 5; }
 
 checksum="$(sha256sum "$archive" | awk '{print $1}')"
 size_bytes="$(wc -c <"$archive" | tr -d ' ')"
+failure_stage="UPLOAD_FAILED"
 aws s3 cp "$archive" "s3://$S3_BUCKET_NAME/$object_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL" --only-show-errors --sse AES256 --metadata "sha256=$checksum,run-id=$run_id,dry-run=passed"
-remote_size="$(aws_s3api head-object --bucket "$S3_BUCKET_NAME" --key "$object_key" --query ContentLength --output text)"
+failure_stage="HEAD_VERIFY_FAILED"
+remote_size=""
+attempt=1
+while [ "$attempt" -le 5 ]; do
+  if remote_size="$(aws_s3api head-object --bucket "$S3_BUCKET_NAME" --key "$object_key" --query ContentLength --output text 2>/tmp/backup-head-error)"; then break; fi
+  [ "$attempt" -eq 5 ] && { cat /tmp/backup-head-error >&2 || true; exit 7; }
+  sleep $((attempt*2))
+  attempt=$((attempt+1))
+done
 [ "$remote_size" = "$size_bytes" ] || { echo "Uploaded object size mismatch" >&2; exit 6; }
 
+failure_stage="MONITOR_SUCCESS_NOTIFY_FAILED"
 notify SUCCEEDED "$checksum" "$size_bytes"
 notified_success=1
 echo "Backup completed: run=$run_id bytes=$size_bytes sha256=$checksum"
