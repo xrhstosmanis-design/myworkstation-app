@@ -1,3 +1,9 @@
+## 05/10/2026 — #31 ASSIGNED / initial read-only inventory
+
+Owner `codex/task31-product-value-20261005`, explicitly selected after the user requested checking main and taking a free list item. Base main `f0fe232ecdd3f7fa11c4ec379ef5440ae2538754`; numbered register #31 OPEN with no existing task31 claim found. Scope: a selected-store read-only product performance report, transparent net sales/returns, stock and documented cost coverage, with human review of slow movement or low margin. Missing cost must remain unknown; no automated delisting or fabricated profit. First action is inventory of existing reports/data sources and relevant checkpoint history before any implementation.
+
+No source/config/schema/production changes or LAB actions in this claim. Runtime/deployment/LAB acceptance NOT TESTED; no PASS asserted. Protect Gate1–8, Phase8 stock intelligence, #27 financial report/cost semantics, #29 comparison, #30 order suggestions, all TODAY/POS/fiscal/install/efood/Workforce/backup assignments. No sales/payments/purchases/approvals/orders/stock/price/permission changes. #31 remains OPEN / ASSIGNED until named handoff. Next action: read-only source assessment and bounded acceptance design; only then a separately reviewed implementation with CI/exact deployment/LAB acceptance.
+
 ## 05/10/2026 22:15–22:16 Athens — #27 full remaining LAB acceptance / ASSIGNED same owner
 
 Owner explicitly authorized all remaining checks to close #27, including NEW fictional purchases, sales and payments in MYWORKSTATION LAB. Same owner `codex/task27-resume-20261005`; fresh main121046fe includes PR1767 help closure14549065 and unrelated TODAY/Task30 changes. No new source or LAB mutation yet. Read current AGENTS/manual/checkpoints/pending; protected Gate3 and LAB-EXP-001/partial31+31+62/previousPASS and other assignments remain intact.
