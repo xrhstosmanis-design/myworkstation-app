@@ -1,6 +1,8 @@
 # Task #30 — Αυτόματες Προτάσεις Παραγγελίας
 
-## 05/10/2026 21:16 Athens — #30 implementation / AWAITING CI, DEPLOY AND LAB
+## 05/10/2026 21:16 Athens — #30 implementation / AWAITING DEPLOY AND LAB
+
+**05/10/2026 21:23 Athens — CI #4417 (37355224674) SUCCESS at exact head c1a28fca886e5dbe5746b17f50e91495cad18c64:** 1860 server PASS / 0 FAIL / 0 SKIP, including all15 new #30 numerical/DOM/PostgreSQL HTTP parent/subtests, frontend/Table Service build, Windows scripts, production invariants, archive import and isolated authenticated HTTP E2E. No LIVE/LAB acceptance. Reconcile newly merged other-owner checkpoint PR1755 (main359933f75c01164452ff844bc93b1b20d066cf83); source files unchanged from tested head, retain every #27/POS observation. New exact-head CI required after integration, then merge/deploy/LAB.
 
 **05/10/2026 21:20 Athens — first full CI #4415 (37354877116), head e0a5543f5a143a50a120c7117de5d4f268a5b63e:** new numerical/DOM/real PostgreSQL HTTP tests all PASS, overall1859 PASS / 1 FAIL / 0 SKIP. Failure was the older supplier comparison unit source loader's missing orderSuggestionsRouter injection; production #30 route/SQL/guard passed. Apply only the analogous no-op router dependency to that isolated loader, preserving all existing supplier assertions. Local Node20 supplier comparison tests8 PASS. Full CI rerun required before merge; no LIVE/LAB claim.
 
