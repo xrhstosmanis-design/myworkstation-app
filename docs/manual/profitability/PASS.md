@@ -1,3 +1,18 @@
+## 05/10/2026 - Explicit zero-VAT service / one EXTERNAL payment: LIMITED LAB PASS
+
+Verified in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ through ordinary Super Admin existing Super Admin account support desktop, healthy runtime669b92e439c1476c40a766fe2ae95b8f15a69293. Role policy permits OWNER/ADMIN/MANAGER/SUPER_ADMIN, but this new acceptance observes only SA support; independent Owner and physicalmobile/tablet remain NOT TESTED. Company/store isolation stays mandatory. Never use LAB balances as real-store acceptance; no real transfer, fiscal issuance or myDATA performed.
+
+1. Enter the canonical https://myworkstation-app.onrender.com/platform-admin and the intended LAB store's Έλεγχος Ταμείων. Open Λοιπά Έξοδα, then Νέο / πρόχειρο παραστατικό υπηρεσίας.
+2. For a genuinely new service document, enter issuer, unique number, truthful issue date, description, positive net and total, and explicit ΦΠΑ0.00. Save once, review2.00/0.00/2.00, then approve separately. Draft does not change the report; approval adds the purchase only. No product or stock line is created by this service flow.
+3. Select THAT approved document in Λοιπά Έξοδα, leave Εξωτερική πληρωμή / τράπεζα, enter the actual payment separately and a unique comment, and submit once. Approval alone is not payment. This source remains outside the cash-shift movements.
+4. Open Εικόνα Επιχειρήσεις, choose dates then Αναζήτηση and verify the loaded-period label. Compare purchases, expensegross/net/VAT, payments and missing-VAT column at month/total and expandedday. Refresh both terminal controls and confirm the Audit row before considering any retry.
+
+Acceptance evidence: new LAB-EXP-ZEROVAT-20261005-A saved/approved once, oneEXTERNAL2.00 payment. Purchases249.24/net201/VAT48.24 ->251.24/net203/VAT48.24 at approval; expense/payments unchanged then expense249.24/net201/VAT48.24 ->251.24/net203/VAT48.24 and payment251.24. MissingVAT stays0: explicit zero is known VAT. LAB-POS-02 retains2transactions/cash0/card0/IRIS0/total0/expenses120; MAINclosed23:27/zeroagreement unchanged. Audit05Oct23:36 exactlyone new matching2.00 row. Monthlyprofits remain unknown due4/4missingcost; no tax deductibility or accounting result certified.
+
+Troubleshooting/limits: net+VAT must reconcile to gross in cents. Missing/unknown VAT is different from explicit0.00. If save/payment response is unclear, read existing document, report and Audit before any second click. Do not change credentials/roles to obtain acceptance. No new CSV/native/physicalprint, zero-VAT filter, cross-month, credit/reversal/overpayment or independent DBcount PASS inferred. Whole27 OPEN. Protected LAB-EXP-001/PARTIAL/CENT and their payments remain untouched; the new ZERO fixture/payment is completed and must never be repeated. Exact BEFORE/AFTER checkpoint `CHECKPOINTS/CHANGES/2026-10-05-task27-full-acceptance.md`, sanitized observation record `output/evidence/task27/zero-vat-20261005/`.
+
+Publication boundary: full browser DOM and screenshots are retained locally and excluded from this public commit after automatic approval review rejected their public disclosure. Public evidence is a bounded sanitized observation table of the explicitly fictional LAB fixture; it contains no credentials, customer/real-store data or operator personal name. This excludes raw publication without changing observed scoped results.
+
 # Κερδοφορία — περιορισμένη κάλυψη κόστους LAB PASS 01/10/2026
 
 PR #1604, CI4029–4030 και Render1862 PASS. Πραγματική έκδοση `75f663e0f85dc0cd4079a5cf1ec4a493eb5e6188`.
