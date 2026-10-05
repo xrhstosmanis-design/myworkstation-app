@@ -44,3 +44,14 @@
  .commerce-reference-card.tone-purple{background:linear-gradient(135deg,#f4efff,#fcfaff)!important}.commerce-reference-card.tone-purple .commerce-reference-icon{background:#e7dbff;color:#7048d7}.commerce-reference-card.tone-purple .commerce-reference-arrow{color:#7048d7}
  .commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#e9fafd,#f8feff)!important}.commerce-reference-card.tone-cyan .commerce-reference-icon{background:#d2f3f8;color:#079bb0}.commerce-reference-card.tone-cyan .commerce-reference-arrow{color:#079bb0}
 }
+
+/* 05/10/2026 — TODAY-08 owner-approved vivid gradient theme. */
+@media(min-width:1201px){
+ .commerce-reference-modules>.commerce-reference-card{min-height:112px!important;padding:17px 52px 16px 82px!important;border:0!important;box-shadow:0 10px 24px rgba(20,55,90,.14)!important;color:#fff!important}
+ .commerce-reference-card .commerce-reference-icon{left:17px!important;top:17px!important;width:50px!important;height:50px!important;border-radius:13px!important;background:rgba(0,0,0,.16)!important;color:#fff!important;font-size:25px!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+ .commerce-reference-card .commerce-reference-copy b{font-size:17px!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.08)}.commerce-reference-card .commerce-reference-copy p{font-size:12px!important;color:rgba(255,255,255,.88)!important;max-width:90%}
+ .commerce-reference-card .commerce-reference-arrow{right:15px!important;top:27px!important;background:transparent!important;color:#fff!important}.commerce-reference-card>em{left:82px!important;bottom:9px!important;background:rgba(0,0,0,.12)!important;border:1px solid rgba(255,255,255,.18)!important;color:#fff!important}.commerce-reference-card>.commerce-reference-lock{left:34px!important;top:34px!important;color:#fff!important}
+ .commerce-reference-card.tone-blue{background:linear-gradient(135deg,#0877df,#0750a7)!important}.commerce-reference-card.tone-green{background:linear-gradient(135deg,#13b96d,#07894d)!important}.commerce-reference-card.tone-yellow{background:linear-gradient(135deg,#ffbf00,#e58c00)!important}.commerce-reference-card.tone-pink{background:linear-gradient(135deg,#f43f82,#c9185d)!important}.commerce-reference-card.tone-purple{background:linear-gradient(135deg,#7b46e8,#4f2bbb)!important}.commerce-reference-card.tone-cyan{background:linear-gradient(135deg,#14b9cf,#087d9e)!important}
+ .commerce-reference-card:nth-child(8n+4){background:linear-gradient(135deg,#ff7424,#e34b0d)!important}.commerce-reference-card:nth-child(8n+7){background:linear-gradient(135deg,#637d9d,#385777)!important}.commerce-reference-card:nth-child(8n){background:linear-gradient(135deg,#087e7c,#045c62)!important}
+ .commerce-reference-modules>.commerce-reference-card:hover{transform:translateY(-2px)!important;box-shadow:0 14px 28px rgba(20,55,90,.20)!important}
+}
