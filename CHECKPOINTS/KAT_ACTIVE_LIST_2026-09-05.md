@@ -1,3 +1,7 @@
+## 05/10/2026 21:36 Athens - POS QR close read-only corroboration
+
+Cash report LAB POS 2 MAIN19:37-21:27 difference0.00 EUR / POS-EFTPOS0.00 EUR. Workforce completed19:37-21:27,1h50m,0open and2completed total (other old attendance19:33-19:35). Healtha215acbb documentation descendant of944073f4. No state-changing action, no fresh baseline/control and no Audit/event ID; only displayed closing and attendance readback. Prior positive UI USER PASS preserved; remaining acceptance stays assigned to same scope. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`.
+
 ## 05/10/2026 21:28 Athens - POS QR close bounded USER / VISUAL PASS
 
 Owner LAB POS 2: QR decoded into closing field21:26, login after explicit close21:27, mandatory new opening form on re-entry21:28. PR1753/full CI4412 PASS/exact LIVE944073f41f284952ab684d413cd9dd0d21251ace. Positive desktop UI flow complete; no repetition required. Financial/control/session readback, Workforce OUT/audit, wrong-card live rejection, shortage and other devices NOT TESTED. Same closing owner retained for remaining acceptance. Checkpoint `CHECKPOINTS/CHANGES/2026-10-05-pos-shift-close-qr-camera.md`; tested instructions `docs/manual/pos/PASS.md`.

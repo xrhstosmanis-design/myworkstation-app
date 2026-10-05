@@ -1,3 +1,7 @@
+## 05/10/2026 - QR close: read-only report corroboration
+
+Platform SuperAdmin opened «Ταμεία» for05Oct after owner closure: LAB POS 2 MAIN19:37-21:27 shows0.00 EUR difference and0.00 EUR POS/EFTPOS. Same store Workforce «Παρουσίες» shows completed19:37-21:27,1h50m,0open. These displayed results corroborate the verified QR close/login/re-entry sequence. The separate old shift deficit2.40 EUR remains historical; it is not the newly closed shift. No independent before-after balances/control, single OUT event/Audit ID or payroll arithmetic acceptance claimed.
+
 ## 05/10/2026 - QR camera shift closing: bounded desktop USER / VISUAL PASS
 
 Authorized operator LAB POS 2 in MYWORKSTATION LAB used phone QR on desktop, after exact LIVE944073f4. Open «Κλείσιμο βάρδιας», count actual cash and complete drawer/custody/coins/safe/EFTPOS as applicable, confirm count, then «Σάρωση QR με κάμερα». Show personal QR from phone. Successful decode fills masked credential and closes camera; press «Κλείσιμο και παράδοση» explicitly. Observed return to login; entering again requires «Καταμέτρηση έναρξης» before sales. Screenshots21:26/21:27/21:28 Athens verify this positive UI sequence.

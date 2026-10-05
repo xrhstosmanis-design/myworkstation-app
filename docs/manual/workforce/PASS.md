@@ -1,5 +1,9 @@
 # Workforce — επιβεβαιωμένα PASS και οδηγίες χρήσης
 
+## 05/10/2026 - POS QR close attendance readback
+
+Existing authorized Platform SuperAdmin -> «Προσωπικό & Πρόγραμμα» -> MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ -> «Παρουσίες» ->05Oct. After owner phone-QR POS close, LAB POS 2 shows completed19:37-21:27,1h50m;0open and2completed across the day. The distinct old attendance19:33-19:35 remains separate. This is displayed completion readback, not one-OUT/Audit ID verification or a payroll accuracy test. Do not click manual «Λήξη» to repeat the already completed close; investigate missing results read-only first. No new role/tenant access is granted.
+
 ## Επιβεβαιωμένο πεδίο
 
 Οι παρακάτω ροές έχουν περάσει πραγματικό USER/LAB έλεγχο στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ:
