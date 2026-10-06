@@ -2,6 +2,11 @@
 
 Έκδοση 06/10/2026 · Ευρώπη/Αθήνα · Βάση main 329792bad1efc5705fff663d093fc89377b97500.
 
+## Current numbered checklist
+
+Η εκτυπώσιμη αριθμημένη λίστα είναι [NUMBERED_WORK_CHECKLIST_2026-10-06.md](NUMBERED_WORK_CHECKLIST_2026-10-06.md) με [PDF](MyWorkStation_Numbered_Checklist_2026-10-06.pdf). Οι αριθμοί της εκτύπωσης αντιστοιχούν στα IDs που εμφανίζονται δίπλα σε κάθε εργασία. Για ολοκλήρωση, ενημέρωσε την ίδια εγγραφή εδώ σε PASS μόνο αφού περάσουν όλα τα συμφωνημένα κριτήρια και πρόσθεσε τεκμήριο· μερικό PASS κρατά το υπόλοιπο OPEN.
+
+
 ## Υποχρεωτική καταγραφή ανάληψης και ολοκλήρωσης
 
 Ρητή οδηγία ιδιοκτήτη 06/10/2026: κάθε σελίδα σημειώνει όταν παίρνει εργασία και όταν την τελειώνει.
@@ -669,12 +674,12 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
-**Κατάσταση:** ASSIGNED
+**Κατάσταση:** PASS · DOCUMENTATION COMPLETE
 
-**Υπόλοιπο / όρια PASS:** Δημοσίευση διορθωμένης εκτυπώσιμης λίστας 51 εργασιών σε Markdown/PDF, με σαφή αντιστοίχιση tracker ID και τρέχουσας κατάστασης. Αποσαφήνιση backup scopes (#03/#18/#42) και των ακριβών υπολοίπων #19/#24/#28/#32/TODAY-08. Προσθήκη οδηγιών ώστε κάθε σελίδα να ενημερώνει τον ίδιο tracker και να σημειώνει PASS μόνο μετά την ολοκλήρωση των συμφωνημένων κριτηρίων· μερικό PASS κρατά τα υπόλοιπα OPEN. Έγγραφα μόνο· δεν αλλάζει ανάθεση προϊόντος και δεν εκτελείται LAB/οικονομική/stock πράξη.
+**Υπόλοιπο / όρια PASS:** Δημοσιεύτηκαν η διορθωμένη Markdown/PDF λίστα 51 εργασιών, ο generator και σύνδεσμοι από AGENTS, tracker, pending/active lists. Η λίστα αντιστοιχίζει κάθε εκτυπωμένο αριθμό σε tracker ID/status και αποσαφηνίζει #03/#18/#42, supplier PDF/print, cashier report, order suggestions, cross-store Audit και TODAY-08. Κανόνας για όλες τις σελίδες: πλήρες συμφωνημένο κριτήριο + τεκμήριο = PASS· μερική ολοκλήρωση αφήνει residual OPEN. Έλεγχος local generation/text extraction: 51 tracker IDs, PDF 4 A4 pages, no clipping. Έγγραφα μόνο; κανένα product/LAB/financial/stock mutation.
 
-**Υπεύθυνη σελίδα / branch:** Τρέχουσα συνομιλία Codex Work / `codex/numbered-work-checklist-20261006`
+**Υπεύθυνη σελίδα / branch:** Τρέχουσα συνομιλία Codex Work / `codex/numbered-checklist-publish-20261006` · owner retained.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T23:08:45+03:00 · Ανάληψη για έκδοση κεντρικής αρίθμησης και κοινό κανόνα ενημέρωσης PASS. `CHECKPOINTS/CHANGES/2026-10-06-numbered-work-checklist.md`. Χωρίς μεταφορά άλλης ανάθεσης.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Εκκρεμεί τεκμηρίωση, έλεγχος PDF και merge.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T23:15:46+03:00 · Νέα λίστα/γεννήτρια/παραπομπές ολοκληρώθηκαν και ελέγχθηκαν. PR #1797 · αρχικό περιεχόμενο commit `20b346859d8b98df43562086d36477cac72a3c04` · CI #4514 SUCCESS (docs classification + Windows script/smoke checks; app build/tests skipped by documentation-only classification). Status/checkpoint/PDF completion record follows on same PR; merge only after the final PR head is green.

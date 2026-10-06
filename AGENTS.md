@@ -1,5 +1,14 @@
 # MyWorkStation agent guide
 
+## Κεντρική αριθμημένη λίστα και κοινός κανόνας PASS (06/10/2026)
+
+Current checklist: `docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md` and its generated PDF `docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf`. Each printed number maps to a `OPEN_WORK_TRACKER.md` ID. The checklist is a dated snapshot; `OPEN_WORK_TRACKER.md` remains authoritative for owner, evidence, exact acceptance scope and current status.
+
+Every page reads the checklist, tracker and active checkpoint before taking work. Claim the same tracker item before starting and preserve its owner. When the full agreed residual and acceptance criteria are complete, record `PASS` with evidence on the tracker and synchronize the Markdown/PDF list, active list and pending roadmap in the same PR. A partial PASS leaves the remaining scope `OPEN`; CI alone is not completion. Do not follow historical status boards below the current tracker.
+
+Regenerate the numbered PDF with `python3 docs/roadmap/generate-numbered-work-checklist.py` and the status tracker PDF with `python3 docs/roadmap/generate-open-work-tracker.py`.
+
+
 ## Κοινό ζωντανό μητρώο — ανάληψη και ολοκλήρωση (06/10/2026)
 
 Ρητή οδηγία ιδιοκτήτη: διάβασε `docs/roadmap/OPEN_WORK_TRACKER.md` πριν από εργασία. Στην ανάληψη συμπλήρωσε owner/branch, χρόνο, ακριβές scope και checkpoint/PR και δημοσίευσέ τα στο main πριν code ή state-changing LAB. Στην ολοκλήρωση συμπλήρωσε χρόνο, πραγματικό PASS/FAIL/NOT TESTED, υπόλοιπα και checkpoint/manual/PR/CI/revision. Κράτησε μερικά PASS και υπάρχουσες αναθέσεις· καμία δεύτερη σελίδα δεν παίρνει δεσμευμένο scope. Συγχρόνισε τα υπάρχοντα μητρώα και αναγέννησε το PDF με `python3 docs/roadmap/generate-open-work-tracker.py`. Ανεπίλυτες αντιφάσεις Gate6/8 δεν δίνουν άδεια νέου claim. Ισχύουν όλοι οι υπόλοιποι κανόνες checkpoint/manual/handoff.
