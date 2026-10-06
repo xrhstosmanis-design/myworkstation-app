@@ -8,6 +8,10 @@ No assistant sync/acquisition/reprocess/new invoice/approval/payment/stock/fisca
 
 Next read-only action: inspect existing draft135848 assistant output and current error before any same-draft line application; no new upload/payment/approval. Actual scheduled new invoice receipt deferred until one exists; do not create a duplicate solely for evidence.
 
+## 07/10/2026 — Νέα απαίτηση Super Admin «Εγκαταστάσεις & Υποστήριξη»
+
+Ρητή εντολή ιδιοκτήτη: καταγραφή στο κοινό main για μελλοντική υλοποίηση. Tracker INSTALL-SUPPORT: OPEN / NOT IMPLEMENTED / NOT TESTED, χωρίς ανάθεση υλοποίησης. Scope: καρτέλα ανά κατάστημα, εγκατάσταση/checklist/παράδοση, βλάβες και αναθέσεις τεχνικών, αρχεία/οδηγίες, συντήρηση, κεντρική εικόνα, PDF/Excel και company/store/role isolation με Audit. Προδιαγραφή: docs/roadmap/INSTALLATIONS_SUPPORT_REQUIREMENTS_2026-10-07.md. Δεν αλλάζει υπάρχοντα PASS/owners ή οικονομικές/fiscal/stock κινήσεις. Backup/remote ενδείξεις μόνο με πηγή και πραγματικό τεκμήριο. Επόμενο βήμα: ξεχωριστή ανάληψη και απογραφή υπάρχουσας υλοποίησης πριν code.
+
 ## 07/10/2026 00:11 Athens — corrected date-range recovery USER PASS
 
 Same ASSIGNED owner `codex/mydata-completion-20261006`, original groupedNo4/tracker09 overallOPEN. Owner screenshot `image(20261006-211112).png`/file_00000000ce048246a3e6ae5e6b209115 shows selected Περίπτερο Διαδόχου Παύλου, all suppliers/blank search, corrected05/10/2026→06/10/2026 afterSearch:19of5305/display1–19, archive export buttons enabled, red date-order error absent. Scoped visible UI recovery USER PASS following invalid interval. Prior green19record export notification persists; no fresh export inferred. ReceivedToday0/empty/disabled daily export remains observed07Oct state, not scheduler/backend count/timezone-boundary PASS. Exact browser runtime revision not captured. Preceding invalid validationPR1807/CI4535/mergef257e316; current docs publicationCI/merge recorded in associatedPR.
