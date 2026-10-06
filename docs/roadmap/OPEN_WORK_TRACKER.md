@@ -421,15 +421,15 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 34 — Έξυπνο Audit / Συμβάντα
 
-**Κατάσταση:** ASSIGNED / USER-REPORTED FAIL
+**Κατάσταση:** ASSIGNED / IMPLEMENTED / AWAITING CI AND LAB
 
 **Υπόλοιπο / όρια PASS:** Υλοποίηση και νέο user-reported πρόβλημα: Store Mode εμφανίζει συμβάντα άλλων καταστημάτων. Δεν δηλώνεται διορθωμένο.
 
 **Υπεύθυνη σελίδα / branch:** fix/report-store-context-20261006
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T18:50:34.327556+00:00 — selected-store report/Audit context only; CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Claim PR pending.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T18:50:34.327556+00:00 — selected-store report/Audit context only; CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Claim PR1787/CI4494 SUCCESS/merge2d8a187c before code.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 06/10 — local build/server/DOM technical PASS only; exact CI/deploy and read-only two-store LAB acceptance pending. Same owner retained; no financial/shift replay.
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
