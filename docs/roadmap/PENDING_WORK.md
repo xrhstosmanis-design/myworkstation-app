@@ -1,3 +1,11 @@
+## 06/10/2026 — Report context LIVE db1f90eb / read-only LAB pending
+
+Exact public health 2026-10-06T19:17Z ok=true, revision db1f90eb63092d03fa59a06f8e02a01a950c5262; CI4499/4501 SUCCESS. Owner fix/report-store-context-20261006 retained. Source/deploy PASS; authenticated two-store LAB NOT TESTED due native credential-protection block. Existing manual handoff: owner Ctrl+F5, Reports/Audit search/refresh and switch to second existing store. No transactions or shift replay; no new manual LAB PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
+
+## 06/10/2026 — Report store context / PR1790 CI4499 and main CI4501 PASS
+
+ASSIGNED owner fix/report-store-context-20261006 retained (#34). PR1790/head6e081d95 full CI4499 SUCCESS, merged db1f90eb63092d03fa59a06f8e02a01a950c5262; main CI4501 SUCCESS. Final empty-selection guard included. Awaiting exact LIVE verification and owner read-only two-store acceptance through existing manual handoff. No new LAB PASS, no shift/financial actions. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
+
 ## 06/10/2026 — Report context follow-up / CI4496 PASS / LAB pending
 
 Owner fix/report-store-context-20261006 retained (#34). PR1788 full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP), merged a5cac431. Empty-selection bridge now validates membership in current stores, preventing retained previous-store reports. Focused 9 PASS; follow-up exact CI/deploy pending. No new LAB PASS; next read-only two-store acceptance, no shift or financial actions. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
