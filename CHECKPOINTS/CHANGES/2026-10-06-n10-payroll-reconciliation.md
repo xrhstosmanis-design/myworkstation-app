@@ -23,3 +23,7 @@ The same checkpoint says the cash-shift opening/closing balance and distinct `St
 The browser runtime refuses to resume because native credential state cannot be safely observed, and a new Platform Admin tab also returns the same guard. No authenticated payroll page was read in this takeover; no LAB action or payment was executed. Do not use a lower-level browser/network route to bypass the credential guard.
 
 **Next single action:** restore an observable authenticated Platform Admin browser session, then perform read-only inspection of the existing closed period, cash-shift transactions/balances and bank records. Record exact IDs and before/after evidence before deciding whether any further isolated LAB test is necessary.
+
+## Publication evidence
+
+PR #1802 merged to `main` as `a0473d3e0f464d77fac87d29228ac204b9007f7f`; CI #4525 SUCCESS (`classify-changes` and `rbs-capdriver-windows-script-parse` PASS; application build/tests skipped by docs-only classification).
