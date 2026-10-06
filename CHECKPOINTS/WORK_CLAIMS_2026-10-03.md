@@ -1,5 +1,7 @@
 # MyWorkStation — CENTRAL WORK CLAIM BOARD
 
+> **Ιστορικό snapshot 03/10/2026 — όχι τρέχουσα κατάσταση.** Για τρέχον scope, owner και PASS/OPEN ακολούθησε το [OPEN_WORK_TRACKER.md](../docs/roadmap/OPEN_WORK_TRACKER.md) και τη [νέα αριθμημένη λίστα](../docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md). Οι παλιές γραμμές DONE/PASS παρακάτω δεν κλείνουν τα σημερινά TODAY items.
+
 Updated: 2026-10-03
 Owner instruction: every ChatGPT/page/agent MUST read this file before taking work.
 
