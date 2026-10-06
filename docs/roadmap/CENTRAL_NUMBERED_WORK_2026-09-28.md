@@ -1,3 +1,7 @@
+## 06/10/2026 — Report store context — ASSIGNED fix/report-store-context-20261006
+
+Owner requested correction of store reports showing other-store events. Independent #34 subtask: propagate the selected CommerceHub store to reports/Audit, remove conflicting all-store selectors inside that store, and prevent stale previous-store responses. Claimed 2026-10-06T18:50:34.327556+00:00; checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. USER-reported FAIL; screenshot confirms conflicting filter context, row-store leak not independently verified. No source change or new LAB PASS. Protect Gate7 previous PASS, QR closes/recount, financial fixtures and #27/#29/#30/TODAY/installation/efood owners. No write to application data. Claim publication requires green docs CI and merge before source editing.
+
 ## 06/10/2026 — Κοινό μητρώο ανάληψης/ολοκλήρωσης
 
 Ρητή οδηγία ιδιοκτήτη: κάθε σελίδα ενημερώνει `docs/roadmap/OPEN_WORK_TRACKER.md` στην ανάληψη και στην ολοκλήρωση, μαζί με τις υφιστάμενες υποχρεωτικές καταγραφές. 36 σταθεροί αριθμοί και 17 πρόσθετες εγγραφές, περιλαμβανομένων περιορισμένων PASS. Υπάρχοντες owners διατηρούνται· κανένα Gate δεν ανατίθεται ή ξανανοίγει από αυτή τη συγκέντρωση. PDF output/pdf/MyWorkStation_Open_Work_2026-10-06.pdf. Δεν έγινε νέα LAB πράξη/νέο PASS. Αντιφάσεις claim-board Gate6/8 παραμένουν ρητά προς συμφιλίωση από τους υπευθύνους, χωρίς δήλωση FREE. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-central-open-work-tracker.md.
