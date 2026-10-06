@@ -683,3 +683,15 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T23:08:45+03:00 · Ανάληψη για έκδοση κεντρικής αρίθμησης και κοινό κανόνα ενημέρωσης PASS. `CHECKPOINTS/CHANGES/2026-10-06-numbered-work-checklist.md`. Χωρίς μεταφορά άλλης ανάθεσης.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T23:17:52+03:00 · Η λίστα/γεννήτρια/παραπομπές ολοκληρώθηκαν. PR #1797 merged στο main με commit `65d2c75d2ef16d04b13c95e25b77438d424f6e5f`. Τελικό CI #4516 SUCCESS στο PR head `fcef2ab7db2465b5659ead25c5b1121f594e510d` (docs classification και Windows parse/smoke PASS· build/tests εφαρμογής skipped ως documentation-only). Το content commit `20b346859d8b98df43562086d36477cac72a3c04` παραμένει στην ιστορία του merge.
+
+### INSTALL-SUPPORT — Super Admin: Εγκαταστάσεις & Υποστήριξη
+
+**Κατάσταση:** OPEN / NOT IMPLEMENTED / NOT TESTED
+
+**Υπόλοιπο / όρια PASS:** Καρτέλα ανά κατάστημα, εγκαταστάσεις/checklist/παράδοση, βλάβες/αναθέσεις/επιβεβαίωση, αρχεία/οδηγίες, συντήρηση, κεντρική εικόνα και PDF/Excel. Μόνιμη αποθήκευση, Audit και ανεξάρτητοι έλεγχοι company/store/role/attachments. Πλήρη κριτήρια: docs/roadmap/INSTALLATIONS_SUPPORT_REQUIREMENTS_2026-10-07.md.
+
+**Υπεύθυνη σελίδα / branch:** Υλοποίηση μη ανατεθειμένη. Μόνο καταγραφή απαίτησης: codex/install-support-requirements-20261007. Δεν αλλάζει άλλες αναθέσεις.
+
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 01:11 Europe/Athens — ρητή εντολή ιδιοκτήτη για καταγραφή στο main, όχι έναρξη υλοποίησης.
+
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μόνο τεκμηρίωση απαίτησης· το module παραμένει OPEN. Καμία αλλαγή κώδικα, βάσης ή LAB πράξη. Σχετικές υπάρχουσες αναθέσεις εγκατάστασης/backup/remote/audit/manual διατηρούνται.
