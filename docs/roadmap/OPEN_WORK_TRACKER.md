@@ -421,7 +421,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 34 — Έξυπνο Audit / Συμβάντα
 
-**Κατάσταση:** ASSIGNED / CI4496 PASS / FOLLOW-UP AND LAB PENDING
+**Κατάσταση:** ASSIGNED / CI4496,4499,4501 PASS / EXACT LIVE VERIFIED / LAB PENDING
 
 **Υπόλοιπο / όρια PASS:** Υλοποίηση και νέο user-reported πρόβλημα: Store Mode εμφανίζει συμβάντα άλλων καταστημάτων. Δεν δηλώνεται διορθωμένο.
 
@@ -432,6 +432,10 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 06/10 — local build/server/DOM technical PASS only; exact CI/deploy and read-only two-store LAB acceptance pending. Same owner retained; no financial/shift replay.
 
 PR1788 merged a5cac431 after full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP). Empty-selection membership guard follow-up: 9 focused PASS, awaiting exact CI/deploy. Owner retained; read-only two-store LAB acceptance still required.
+
+PR1790/head6e081d95 passed CI4499, merged db1f90eb; main CI4501 SUCCESS. Exact LIVE verification and read-only two-store acceptance pending; owner retained.
+
+Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a06f8e02a01a950c5262. Deployment publication PASS; authenticated read-only two-store LAB NOT TESTED (native credential protection). Existing manual handoff; owner retained.
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 

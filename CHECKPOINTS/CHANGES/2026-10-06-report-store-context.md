@@ -1,7 +1,7 @@
 # Store-scoped reports — 06/10/2026
 
 Owner: ASSIGNED fix/report-store-context-20261006, independent #34 report-context regression only.
-Status: CI4496 PASS / merged PR1788; empty-selection follow-up awaiting exact CI/deploy and read-only LAB. No new LAB fix PASS.
+Status: CI4496/4499 PASS / PR1788/1790 merged / EXACT LIVE VERIFIED / AWAITING READ-ONLY LAB. No new LAB fix PASS.
 
 ## Evidence and reconciliation before code
 
@@ -30,3 +30,7 @@ Owner remains ASSIGNED until this read-only acceptance and synchronized actual P
 ## Empty-selection safety follow-up — 06/10/2026
 
 PR1788/head fd2e20aef5f76c38cc858b84dfbe33cfc92e657a passed full CI4496/run37515291073 (1871 PASS, 0 FAIL, 0 SKIP), merged a5cac4318d0de0bbc538126323c5c415b1d4291a. Follow-up validates CommerceHub storeId against the current stores collection before exposing the bridge, so an emptied selection cannot retain the previous store. Focused installer regression 9 PASS/0 FAIL, with a bridge validation assertion. No actual React browser integration or new LAB PASS claimed. Same owner; next exact CI/merge/deploy followed by read-only two-store acceptance.
+
+PR1790/head6e081d95e08b38be5b85e49198129968007b38c5 passed full CI4499/run37516227946 SUCCESS, merged db1f90eb63092d03fa59a06f8e02a01a950c5262. Main CI4501 and guarded deployment verification in progress. Browser credential protection requires owner read-only acceptance through the existing manual handoff. Owner remains fix/report-store-context-20261006; no new LAB PASS.
+
+Exact LIVE read-only /api/health verification 2026-10-06T19:17Z: ok=true, revision=db1f90eb63092d03fa59a06f8e02a01a950c5262. Guarded deployment run37516936355/2050. Source publication and deployment PASS; visual/authenticated two-store LAB remains NOT TESTED due native credential-protection block. Owner retained; owner next action Ctrl+F5, store Reports/Audit, search/refresh then second-store context, no financial/shift transactions. No new manual LAB PASS claimed.
