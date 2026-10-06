@@ -194,7 +194,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
           const patch={};for(const field of editableFields){const value=row[field];if(field==="supplierCode"||field==="description"||field==="invoiceUnit"){if(String(value??"")!==String(before[field]??""))patch[field]=value}else if(Math.abs(number(value)-number(before[field]))>0.000001)patch[field]=number(value)}
           if(Object.keys(patch).length||Math.abs(number(before.netAmount)-number(row.netAmount))>.000001){if(invoicePrintedRounding(row))patch.printedNetAmount=number(row.netAmount);rowPatches.set(row.matchingLineId,patch);chosen=chosen.filter(change=>change.lineId!==row.matchingLineId)}
         }
-        if(!chosen.length&&!additions.length&&!deletions.length&&!rowPatches.size){setApplyStatus("Επίλεξε τις γραμμές στον πίνακα ή την επιλογή όλων αφού τις συγκρίνεις με τη φωτογραφία. Έπειτα πάτησε ξανά Εφαρμογή.");return}
+        if(!chosen.length&&!additions.length&&!deletions.length&&!rowPatches.size){setApplyStatus(edited.length?"Οι επιλεγμένες γραμμές είναι ήδη ίδιες με το πρόχειρο. Δεν υπάρχουν αλλαγές προς αποθήκευση. Ελέγξτε τον προμηθευτή πριν την οριστικοποίηση.":"Επίλεξε τις γραμμές στον πίνακα ή την επιλογή όλων αφού τις συγκρίνεις με τη φωτογραφία. Έπειτα πάτησε ξανά Εφαρμογή.");return}
         const grouped=new Map();for(const change of chosen){const patch=grouped.get(change.lineId)||{};patch[change.field]=change.field==="description"||change.field==="invoiceUnit"?change.value:number(change.value);grouped.set(change.lineId,patch)}
         for(const [lineId,patch] of rowPatches)grouped.set(lineId,patch);
         for(const patch of grouped.values())if(Number(patch.stockUnitsPerInvoiceUnit)>1&&patch.invoiceUnit===undefined)patch.invoiceUnit="PACKAGE";
