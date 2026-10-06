@@ -890,7 +890,7 @@ export default function OwnerProductCenter({
       {error && <div className="op-alert error">{error}</div>}
       {message && <div className="op-alert success">{message}</div>}
       {tab === "bulk" && (
-        <form className="op-box op-form bulk-price-workflow" onSubmit={saveBulkPrices}>
+        <form className="op-box op-form bulk-price-workflow bulk-price-scroll-region" onSubmit={saveBulkPrices}>
           <h3>Μαζική αλλαγή τιμών με επιλογή προϊόντων</h3>
           <p>
             Επίλεξε συγκεκριμένα προϊόντα και καταστήματα. Κάθε αλλαγή

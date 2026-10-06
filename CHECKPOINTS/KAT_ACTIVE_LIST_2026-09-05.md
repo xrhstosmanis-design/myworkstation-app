@@ -2860,3 +2860,7 @@ Owner supplied paired LIVE screenshots of Bulk Price Change: normal-size commerc
 
 ## 06/10/2026 22:15 Athens — Regression matrix: Master Catalog PASS, Store Prices PASS, Bulk Price FAIL
 Owner LIVE verified Master Catalog PASS and Τιμές ανά κατάστημα PASS after global scroll fix. Lock both; do not modify. Bulk Price remains FAIL in maximized window: lower action/value/submit region is clipped despite normal-size scroll working. Scoped fix only in owner-products.css: allow bulk-price-workflow natural height inside the now-scrollable commerce-hub, remove nested max-height/overflow constraints for the workflow, keep only product result list independently bounded. No changes to other tabs or business logic. Awaiting CI/LIVE bulk-only verification.
+
+
+## 06/10/2026 22:35 Athens — Bulk Price second scoped regression fix
+Owner LIVE screenshot after PR1792 still FAIL: in maximized mode the bulk form shows product results and stores but viewport ends at the start of step 3/4; submit remains unreachable. Master Catalog and Store Prices remain locked PASS. Previous natural-height approach was insufficient because the OwnerProductCenter itself still participates in a constrained maximized layout. New bounded approach marks only the bulk form as `bulk-price-scroll-region`; in maximized mode OwnerProductCenter becomes a fixed-height flex column only while bulk is present, and the bulk form itself owns vertical scrolling. Other tabs remain untouched. Awaiting CI/LIVE verification through submit.
