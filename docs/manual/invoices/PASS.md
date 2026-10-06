@@ -1,3 +1,9 @@
+## 06/10/2026 — Excel ημέρας USER PASS; PDF layout OPEN
+
+Authorized BackOffice users in the selected company/store with DOCUMENTS: open the canonical Platform Admin entry https://myworkstation-app.onrender.com/platform-admin, select Περίπτερο Διαδόχου Παύλου, open Θυρίδα Τιμολογίων, wait for actual daily count, click Excel ημέρας, open downloaded XLSX. Verified saved file contains10daily records/10unique MARK, store metadata and receivedToday=true; all row amounts reconcile, total1647.93. Protected View is sufficient for reading; enabling edits is unnecessary. No invoice original, approval, payment or stock posting is certified by this export.
+
+PDF ημέρας opens and saves all10records, but newest saved file has overlapping long number/series fields. PDF readability for this sample is FAIL / correction AWAITING USER; older short-record successes remain limited to those samples. Do not rely on this layout for printing until a new saved PDF passes. On prolonged loading/503 AUTH_VALIDATION_UNAVAILABLE, capture time/error and inspect server logs rather than repeatedly refreshing or recreating invoices: this session showed PrismaP2024 connection pool timeout, temporarily recovered after deployment; permanent reliability fix unverified. Checkpoint2026-10-06-mydata-print-overlap.md. Independent Owner/role/device isolation, archive date-range exports and complete No4/#09 acceptance remain OPEN.
+
 ## 06/10/2026 — myDATA date search / limited read-only LIVE PASS
 
 Authorized BackOffice users of the selected company/store with DOCUMENTS open the canonical Platform Admin entry (`https://myworkstation-app.onrender.com/platform-admin`), select the existing store's full BackOffice, then Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Θυρίδα Τιμολογίων. Tested role was Super Admin support, not independent Owner.
