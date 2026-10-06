@@ -1,3 +1,7 @@
+## 06/10/2026 — Κοινό μητρώο ανάληψης/ολοκλήρωσης
+
+Ρητή οδηγία ιδιοκτήτη: κάθε σελίδα ενημερώνει `docs/roadmap/OPEN_WORK_TRACKER.md` στην ανάληψη και στην ολοκλήρωση, μαζί με τις υφιστάμενες υποχρεωτικές καταγραφές. 36 σταθεροί αριθμοί και 17 πρόσθετες εγγραφές, περιλαμβανομένων περιορισμένων PASS. Υπάρχοντες owners διατηρούνται· κανένα Gate δεν ανατίθεται ή ξανανοίγει από αυτή τη συγκέντρωση. PDF output/pdf/MyWorkStation_Open_Work_2026-10-06.pdf. Δεν έγινε νέα LAB πράξη/νέο PASS. Αντιφάσεις claim-board Gate6/8 παραμένουν ρητά προς συμφιλίωση από τους υπευθύνους, χωρίς δήλωση FREE. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-central-open-work-tracker.md.
+
 ## 06/10/2026 — #27 independent Owner sign-in not established
 
 Same ASSIGNED codex/task27-resume-20261005, whole27 OPEN. ContinuationPR1784 exactc6df4b6 CI4488/run37509374063 SUCCESS (classifier/Windows SUCCESS, docs-only build SKIP), merged6454999c. Normal Backoffice link exposed independent email/password form after leaving support view. One secure browser-auth submission returned ordinary site error «Λανθασμένο email ή κωδικός». No Owner session/PASS established; no credentials read or published, no password/role changes or automated retries. Next single action: owner completes existing LAB Owner sign-in through documented manual handoff; then fresh role/report/control evidence. Protected EXP001/PARTIAL/CENT/ZERO/payments, Gate3 and other assignments unchanged; no financial/stock/shift/fiscal action. Existing manual/PDF claims remain unchanged because no new PASS.

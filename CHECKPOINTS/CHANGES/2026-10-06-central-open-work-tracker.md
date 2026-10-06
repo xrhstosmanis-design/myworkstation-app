@@ -1,0 +1,5 @@
+# 06/10/2026 — Κοινό εκτυπώσιμο μητρώο εκκρεμοτήτων
+
+Owner authorized printable inventory and publication to main, with mandatory claim/start and completion recording by every page. Branch codex/central-tracker-20261006, base329792ba. Read current AGENTS, active/pending/numbered sources and main history. Consolidates36 numbered tasks plus17 extra rows, preserving existing owners and scoped PASS. Gate6/8 contradictory claim-board entries explicitly flagged for evidence reconciliation, not reassigned/reopened. PR1772 implementation recorded separately from pending final-head CI/LAB. Backup18 newest FAIL retained over old success.
+
+Only documentation, printable generator/data and PDFs changed. No application/auth/payment/fiscal/stock/database change, no LAB action and no new functional PASS/manual claim. Central numbered snapshot regenerated without deleting its detailed history. Shared AGENTS points every page to claim/completion protocol. Validation: generator, PDF text/page inspection and checkpoint policy. GitHub docs-only CI must pass before merge; build skip follows existing classifier policy. No runtime deployment requested.
