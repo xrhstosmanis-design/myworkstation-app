@@ -134,7 +134,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T19:40:58+00:00 · ΑΝΑΛΗΨΗ ΑΠΟ `codex/mydata-draft-pos-receipt-20260930` με νεότερη ρητή εντολή ιδιοκτήτη στην παρούσα συνομιλία. Μόνο #09, οι υπόλοιπες αναθέσεις διατηρούνται. `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md` · claim PR1794 / CI4508 πλήρες PASS / mergecc4c232e.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T19:47:08+00:00 · Περιορισμένο LIVE read-only PASS: αρχείο5305/σημερινά10 και φίλτρο06Oct→06Oct επέστρεψε10of5305. Manual/checkpoint2026-10-06-mydata-completion. Runtime1e59775b. Εξαγωγή μη επαληθευμένη λόγω browser credential protection. Όλο το scope OPEN: Epsilon, closed-browser scheduler/replay, ίδιο draft application και φυσικό POS/λοιπά paths. Καμία οικονομική/stock πράξη. Ίδιος owner παραμένει.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T19:47:08+00:00 · Περιορισμένο LIVE read-only PASS: αρχείο5305/σημερινά10 και φίλτρο06Oct→06Oct επέστρεψε10of5305. Manual/checkpoint2026-10-06-mydata-completion. Runtime1e59775b. Νεότερο USER23:18: ημερήσιο XLSX10μοναδικάMARK/1647.93 PASS. PDF23:20 content10PASS/layout overlapFAIL· διόρθωση AWAITING USER. PrismaP2024 pool incident observed/recovered, reliabilityOPEN. Checkpoint2026-10-06-mydata-print-overlap.md. Όλο το scope OPEN: Epsilon, closed-browser scheduler/replay, ίδιο draft application και φυσικό POS/λοιπά paths. Καμία οικονομική/stock πράξη. Ίδιος owner παραμένει.
 
 ### 10 — Μισθοδοσία / πληρωμές εργαζομένων
 
