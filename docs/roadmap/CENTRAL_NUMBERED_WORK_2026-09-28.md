@@ -1,3 +1,11 @@
+## 06/10/2026 — Grouped No 4 / original #09 — owner-directed continuation
+
+ΑΝΑΛΗΨΗ ΑΠΟ `codex/mydata-draft-pos-receipt-20260930` — ASSIGNED `codex/mydata-completion-20261006`, 2026-10-06T19:40:58+00:00. The owner explicitly asked this conversation to complete grouped printable No4 (myDATA/e-invoicing) and authorized necessary fixes/tests through final PASS. This owner-directed transfer supersedes the previous assignment for #09 only; no old-page release or completed handoff is invented. Preserve its checkpoints and partial PASS. No ownership transfer for Gate3, #27/#29/#30/TODAY/QR/reports or other installation work.
+
+Scope: reconcile existing invoice inbox, issue-date search/daily arrivals/filtered grouped exports, scheduled receiving evidence, existing provider originals and same-draft review, cursor/replay safety and LAB POS linkage. Current overall status OPEN; not a new LAB PASS. Epsilon35158/35000 is BLOCKED EXTERNAL until verified provider original/API access; independent physical POS and fiscal provider acceptance remain NOT TESTED. Existing original/draft/payment identities must not be recreated. Full archive export was cancelled by owner and is excluded. Gate3 assistant accepted scope remains protected.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md`. Publish this record and regenerated tracker PDF with green documentation CI/merge before source edits or state-changing LAB. Next action: read-only inbox verification, exact runtime revision and bounded baseline before any identified mutation. No real payment, stock posting/finalization, credential/role change or production DB script.
+
 ## 06/10/2026 — Report context LIVE db1f90eb / read-only LAB pending
 
 Exact public health 2026-10-06T19:17Z ok=true, revision db1f90eb63092d03fa59a06f8e02a01a950c5262; CI4499/4501 SUCCESS. Owner fix/report-store-context-20261006 retained. Source/deploy PASS; authenticated two-store LAB NOT TESTED due native credential-protection block. Existing manual handoff: owner Ctrl+F5, Reports/Audit search/refresh and switch to second existing store. No transactions or shift replay; no new manual LAB PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
