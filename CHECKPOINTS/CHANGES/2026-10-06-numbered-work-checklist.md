@@ -2,7 +2,7 @@
 
 **Κατάσταση:** ASSIGNED · 2026-10-06T23:08:45+03:00
 
-**Owner / branch:** Τρέχουσα συνομιλία Codex Work · `codex/numbered-work-checklist-20261006`
+**Owner / branch:** Τρέχουσα συνομιλία Codex Work · `codex/numbered-checklist-publish-20261006` (continued from merged claim PR #1796; owner retained)
 
 ## Scope
 - Publish the reviewed 51-item numbered list as a new Markdown/PDF set in `docs/roadmap/`.
@@ -19,4 +19,4 @@ Documentation only. No source-code change, product acceptance, store transaction
 New Markdown and PDF agree on all 51 list numbers, tracker IDs and snapshot states; 4-page A4 PDF renders without clipping; cross-page guidance points to the canonical tracker; CI passes and the documentation merge is recorded.
 
 ## Completion record
-Pending.
+The assignment is active on the publication branch. Final checklist, source links, and cross-page updates are being prepared; acceptance and CI remain pending.
