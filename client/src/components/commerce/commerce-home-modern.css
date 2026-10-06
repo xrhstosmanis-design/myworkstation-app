@@ -61,3 +61,11 @@
  .commerce-hub>.commerce-reference-modules>.commerce-reference-card{min-height:48px!important;padding:8px 10px 8px 34px!important;border:1px solid #d7e3ed!important;border-radius:9px!important;background:#fff!important;box-shadow:none!important;color:#29455f!important;opacity:1!important}
  .commerce-hub .commerce-reference-modules .commerce-reference-icon{left:8px!important;top:9px!important;width:20px!important;height:20px!important;border-radius:6px!important;background:#edf4fb!important;color:#4d789e!important;font-size:12px!important;box-shadow:none!important}.commerce-hub .commerce-reference-modules .commerce-reference-copy{display:block!important}.commerce-hub .commerce-reference-modules .commerce-reference-copy b{font-size:11px!important;color:#29455f!important;text-shadow:none!important}.commerce-hub .commerce-reference-modules .commerce-reference-copy p{display:none!important}.commerce-hub .commerce-reference-modules .commerce-reference-arrow{display:none!important}.commerce-hub .commerce-reference-modules .commerce-reference-card>em{position:static!important;display:inline-block!important;margin-top:3px!important;padding:2px 5px!important;background:#edf7f2!important;border:0!important;color:#31805e!important;font-size:8px!important}.commerce-hub .commerce-reference-modules .commerce-reference-lock{display:none!important}
 }
+
+/* 06/10/2026 — regression fix: maximized commerce forms must remain vertically reachable. */
+@media(min-width:1201px){
+ .commerce-shell.window-maximized{height:calc(100dvh - 28px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+ .commerce-shell.window-maximized>.commerce-window-bar{flex:0 0 auto!important}
+ .commerce-shell.window-maximized>.commerce-hub{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable!important;padding-bottom:18px!important}
+ .commerce-shell.window-maximized>.commerce-hub>*{max-width:100%!important}
+}
