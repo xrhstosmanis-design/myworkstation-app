@@ -19,4 +19,4 @@ Documentation only. No source-code change, product acceptance, store transaction
 New Markdown and PDF agree on all 51 list numbers, tracker IDs and snapshot states; 4-page A4 PDF renders without clipping; cross-page guidance points to the canonical tracker; CI passes and the documentation merge is recorded.
 
 ## Completion record
-The assignment is active on the publication branch. Checklist, generator, cross-page references and stale-state notices are complete. Markdown/PDF consistency, 51 tracker IDs and four A4 pages were validated locally. PR #1797; initial content commit `20b346859d8b98df43562086d36477cac72a3c04`; CI #4514 SUCCESS. Merge is gated on the final PR head passing CI.
+The checklist, generator, cross-page references and stale-state notices are complete. Markdown/PDF consistency, 51 tracker IDs and four A4 pages were validated locally. PR #1797 merged to main at `65d2c75d2ef16d04b13c95e25b77438d424f6e5f`; final PR-head CI #4516 SUCCESS at `fcef2ab7db2465b5659ead25c5b1121f594e510d` (documentation classification and Windows script/smoke PASS; app build/tests skipped as documentation-only).
