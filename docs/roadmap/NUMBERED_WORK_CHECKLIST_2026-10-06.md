@@ -66,7 +66,7 @@
 
 - **Tracker ID:** `09`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / OPEN · Epsilon BLOCKED EXTERNAL
-- **Υπόλοιπο / όριο:** Excel και αποθηκευμένο PDF ημέρας10μοναδικάMARK USER PASS23:44· φυσική εκτύπωση NOT TESTED. Εύρος05–06Oct/XLSX19μοναδικά USER PASS. ΤΠΥ2153 παρακράτηση40€ συμφωνεί με πρωτότυπο USER PASS. PDFεύρους19records/2pages USER PASS07Oct. Εκκρεμούν άλλα date όρια/invalid, scheduler replay/cursor, πρωτότυπα και LAB POS linkage.
+- **Υπόλοιπο / όριο:** Excel και αποθηκευμένο PDF ημέρας10μοναδικάMARK USER PASS23:44· φυσική εκτύπωση NOT TESTED. Εύρος05–06Oct/XLSX19μοναδικά USER PASS. ΤΠΥ2153 παρακράτηση40€ συμφωνεί με πρωτότυπο USER PASS. PDFεύρους19records/2pages USER PASS07Oct. Ανάποδο εύρος εμφανίζει μήνυμα USER PASS07Oct. Εκκρεμούν άλλα όρια/recovery, scheduler replay/cursor, πρωτότυπα και LAB POS linkage.
 
 ## 10 — Μισθοδοσία — υπόλοιπη συμφωνία και κανόνες
 
