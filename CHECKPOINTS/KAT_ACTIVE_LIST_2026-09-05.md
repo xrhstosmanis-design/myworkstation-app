@@ -1,3 +1,7 @@
+## 06/10/2026 — #27 independent Owner sign-in not established
+
+Same ASSIGNED codex/task27-resume-20261005, whole27 OPEN. ContinuationPR1784 exactc6df4b6 CI4488/run37509374063 SUCCESS (classifier/Windows SUCCESS, docs-only build SKIP), merged6454999c. Normal Backoffice link exposed independent email/password form after leaving support view. One secure browser-auth submission returned ordinary site error «Λανθασμένο email ή κωδικός». No Owner session/PASS established; no credentials read or published, no password/role changes or automated retries. Next single action: owner completes existing LAB Owner sign-in through documented manual handoff; then fresh role/report/control evidence. Protected EXP001/PARTIAL/CENT/ZERO/payments, Gate3 and other assignments unchanged; no financial/stock/shift/fiscal action. Existing manual/PDF claims remain unchanged because no new PASS.
+
 ## 06/10/2026 — #27 safe session restored / CSV unverified / same owner
 
 ASSIGNED codex/task27-resume-20261005 retained, whole27 OPEN. Main c48cc33a preserves ZERO-VAT and other page QR recount. Fresh canonical SA secure sign-in/device-name/2FA completed and ordinary LAB report observed; this does not prove independent Owner or physical devices. PR1773 already merged669b92e4; exact CI4466/run37367036893 SUCCESS, classifier/Windows SUCCESS, existing docs-only build SKIP.
