@@ -1,3 +1,5 @@
+> Νεότερος κατάλογος εργασιών: [NUMBERED_WORK_CHECKLIST_2026-10-06.md](../docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md) · [τρέχουσα κατάσταση/owner/τεκμήρια](../docs/roadmap/OPEN_WORK_TRACKER.md). Ολοκλήρωση = PASS μόνο με πλήρη αποδοχή και τεκμήριο· μερικό PASS κρατά τα υπόλοιπα OPEN.
+
 ## 06/10/2026 — No4 / #09 — limited read-only LIVE acceptance; whole scope OPEN
 
 ASSIGNED `codex/mydata-completion-20261006` retained. Claim PR1794/head7460bb2b fullCI4508/run37520914292 SUCCESS (1871serverPASS/0FAIL/0SKIP, build/invariants/isolatedHTTP E2E and Windows smoke), mergedcc4c232e. Public health at2026-10-06T19:47:08+00:00 healthy revision1e59775b7f4d0f6243570c6fd2a060ab658df8af. Ordinary SA support UI for existing Diadochou store showed5305archive entries and10today arrivals. One refresh completed loading; no confirmed perpetual-loading defect. Native date fields set06Oct→06Oct thenSearch returned10of5305, inclusive same-day date filter limitedLIVE read-onlyPASS. Different-day ranges, invalid-range interaction, XLSX/PDF files, pagination coverage and independent Owner/physical-device acceptance NOT TESTED. Earlier PASS preserved.
