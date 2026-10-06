@@ -25,7 +25,7 @@ import {installPromotionStoreScope} from "./components/commerce/installPromotion
 import {installPromotionStoreGuard} from "./components/commerce/installPromotionStoreGuard.js";
 import {installLeafletImport} from "./components/commerce/installLeafletImport.js";
 import {installBulkPricePreview} from "./components/commerce/installBulkPricePreview.js";
-import {installKioskReportsSuite} from "./components/commerce/installKioskReportsSuite.js";
+import {installKioskReportsSuite,syncKioskReportStore} from "./components/commerce/installKioskReportsSuite.js";
 import {installKioskReportsAuditV2} from "./components/commerce/installKioskReportsAuditV2.js";
 import {installPosSaleAuditReport} from "./components/commerce/installPosSaleAuditReport.js";
 import {installSupplierProductTransfer} from "./components/commerce/installSupplierProductTransfer.js";
@@ -129,8 +129,8 @@ const installPromotionStoreGuardSafely=()=>{if(!document.querySelector(".price-c
 const installLeafletImportSafely=()=>{if(!document.querySelector(".price-catalog-suite"))return;installLeafletImport()};
 const installOperatorManagementSafely=()=>{if(!document.querySelector(".commerce-hub")||document.querySelector("[data-operator-management-launch]"))return;installOperatorManagementSuite(storeApi)};
 installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely();
-const purchaseOrdersHostObserver=new MutationObserver(()=>{installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
-purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true});
+const purchaseOrdersHostObserver=new MutationObserver(()=>{syncKioskReportStore();installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
+purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["data-report-store-id"]});
 
 if(inspectionMatch){document.title="MyWorkStation POS Inspection";createRoot(document.getElementById("root")).render(<PosInspectionApp storeId={decodeURIComponent(inspectionMatch[1])}/>)}
 else if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
