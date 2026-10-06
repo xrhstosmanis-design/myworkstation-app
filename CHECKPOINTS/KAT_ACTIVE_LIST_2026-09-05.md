@@ -1,3 +1,7 @@
+## 06/10/2026 23:48:33 Europe/Athens — N10 Payroll — owner-directed ASSIGNED takeover / no new LAB action
+
+Owner explicitly reassigned N10 from `agent/workforce-payroll-20260925` to `codex/n10-payroll-reconciliation-20261006`. The 09/2026 LAB payroll period is already closed at €313.00 gross/paid for 7 employees; existing cash allocations €20.00 + €100.00 and internal bank allocation €173.33 stay untouched. Remaining: read-only independent cash-shift reconciliation, readback/status/proof for existing bank entries (€5.00, €14.67, €173.33), and uncovered payroll rules; real-store evidence remains separate. Native-credential protection currently prevents safe browser observation, so this takeover made no new LAB read or state change. Next: authenticated read-only Platform Admin inspection. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-06-n10-payroll-reconciliation.md`.
+
 ## 06/10/2026 23:22 Athens — myDATA daily export acceptance / PDF overlap FAIL
 
 Same owner ASSIGNED `codex/mydata-completion-20261006`; implementation branch `codex/mydata-print-fix-20261006` is this owner's bounded continuation under published PR1794 claim, not a second assignment. Original grouped No4 maps tracker09; newer canonical printed09 maps the same scope. Overall OPEN.
