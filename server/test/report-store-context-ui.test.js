@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {readFile} from 'node:fs/promises';
 
 // Real report installers and DOM events; in-memory GET responses only.
 // This is regression coverage, not live authentication or LAB evidence.
 test('store reports inherit CommerceHub and discard previous-store responses', async t => {
+  const hubSource=await readFile(new URL('../../client/src/components/commerce/CommerceHub.jsx',import.meta.url),'utf8');
+  assert.match(hubSource,/data-report-store-id=\{stores\.find\(store=>store\.id===storeId\)\?\.id\|\|""\}/);
   const dom = new JSDOM('<div class="commerce-hub" data-report-store-id="A" data-report-store-name="Κατάστημα Α"><section><div class="commerce-module-strip"></div></section></div>',
     {url:'https://isolated.invalid/?supportStore=wrong-url-store'});
   const names = ['window','document','location','localStorage','MutationObserver','fetch','alert'];

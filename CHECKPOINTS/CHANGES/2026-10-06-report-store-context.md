@@ -1,7 +1,7 @@
 # Store-scoped reports — 06/10/2026
 
 Owner: ASSIGNED fix/report-store-context-20261006, independent #34 report-context regression only.
-Status: LOCAL TECHNICAL PASS / AWAITING CI, EXACT DEPLOY AND LAB. No new LAB fix PASS.
+Status: CI4496 PASS / merged PR1788; empty-selection follow-up awaiting exact CI/deploy and read-only LAB. No new LAB fix PASS.
 
 ## Evidence and reconciliation before code
 
@@ -26,3 +26,7 @@ Completed ordinary/forced/recount QR closes and protected expense/payment fixtur
 Next: full exact-head CI → merge → verify exact deployed revision → read-only LAB report acceptance in two existing stores. Verify initial context, search/refresh/group rows and switching store while loading show only the selected store, with independent row store identities. Central SA Audit global navigation remains available. Native browser credential protection previously prevented automated live observation; use the already-requested manual handoff if it remains blocked. No shift close or financial transaction is needed.
 
 Owner remains ASSIGNED until this read-only acceptance and synchronized actual PASS closure. Manual claims remain unchanged until actual LAB evidence exists.
+
+## Empty-selection safety follow-up — 06/10/2026
+
+PR1788/head fd2e20aef5f76c38cc858b84dfbe33cfc92e657a passed full CI4496/run37515291073 (1871 PASS, 0 FAIL, 0 SKIP), merged a5cac4318d0de0bbc538126323c5c415b1d4291a. Follow-up validates CommerceHub storeId against the current stores collection before exposing the bridge, so an emptied selection cannot retain the previous store. Focused installer regression 9 PASS/0 FAIL, with a bridge validation assertion. No actual React browser integration or new LAB PASS claimed. Same owner; next exact CI/merge/deploy followed by read-only two-store acceptance.

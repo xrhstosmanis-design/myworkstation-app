@@ -1,3 +1,7 @@
+## 06/10/2026 — Report context follow-up / CI4496 PASS / LAB pending
+
+Owner fix/report-store-context-20261006 retained (#34). PR1788 full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP), merged a5cac431. Empty-selection bridge now validates membership in current stores, preventing retained previous-store reports. Focused 9 PASS; follow-up exact CI/deploy pending. No new LAB PASS; next read-only two-store acceptance, no shift or financial actions. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
+
 ## 06/10/2026 — Report store context — IMPLEMENTED / AWAITING CI AND LAB
 
 ASSIGNED fix/report-store-context-20261006 (#34 independent subtask), claim PR1787/CI4494 SUCCESS/merged2d8a187c before code. Selected CommerceHub store now binds report/Audit requests and the single store criterion; stale URL/company selectors cannot broaden store context. Store change clears old results/detail overlays and guards late responses across report families. Node20 build PASS; local server1860 PASS/0 FAIL/4 SKIP, focused46 PASS. Isolated DOM evidence only, not LAB/visual/auth PASS. Exact CI/deploy and read-only two-store acceptance pending. No financial/stock/shift/fiscal action, QR and other owners protected. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Same owner retained.

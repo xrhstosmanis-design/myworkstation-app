@@ -151,7 +151,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
   const acknowledge=async handoverId=>{try{await api(`/api/commerce/handover/${handoverId}/ack`,{method:"POST",body:"{}"});await loadHandover()}catch(e){setError(e.message)}};
 
-  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}`} data-report-store-id={storeId} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
+  return <div className={`commerce-hub${tab==="orderSuggestions"?" order-suggestions-view":""}`} data-report-store-id={stores.find(store=>store.id===storeId)?.id||""} data-report-store-name={stores.find(store=>store.id===storeId)?.name||""}>
     <section className="panel">
       {tab==="orderSuggestions"&&<button type="button" className="order-suggestions-return" onClick={()=>setTab("modules")}>← Εμπορικές λειτουργίες</button>}
       <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={event=>{if(!event.currentTarget.dispatchEvent(new CustomEvent("purchase-orders:refresh",{bubbles:true,cancelable:true})))return;loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
