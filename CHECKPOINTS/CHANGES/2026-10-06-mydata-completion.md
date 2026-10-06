@@ -22,3 +22,32 @@ Record each remaining acceptance as scoped PASS/FAIL/NOT TESTED with exact revis
 ## Current action
 
 Claim publication pending. Next: ordinary read-only inbox navigation; diagnose visible loading only after evidence. No source edits or application mutations yet. Owner retained until named handoff.
+
+## Bounded result 2026-10-06T19:47:08+00:00
+
+## 06/10/2026 — No4 / #09 — limited read-only LIVE acceptance; whole scope OPEN
+
+ASSIGNED `codex/mydata-completion-20261006` retained. Claim PR1794/head7460bb2b fullCI4508/run37520914292 SUCCESS (1871serverPASS/0FAIL/0SKIP, build/invariants/isolatedHTTP E2E and Windows smoke), mergedcc4c232e. Public health at2026-10-06T19:47:08+00:00 healthy revision1e59775b7f4d0f6243570c6fd2a060ab658df8af. Ordinary SA support UI for existing Diadochou store showed5305archive entries and10today arrivals. One refresh completed loading; no confirmed perpetual-loading defect. Native date fields set06Oct→06Oct thenSearch returned10of5305, inclusive same-day date filter limitedLIVE read-onlyPASS. Different-day ranges, invalid-range interaction, XLSX/PDF files, pagination coverage and independent Owner/physical-device acceptance NOT TESTED. Earlier PASS preserved.
+
+No manual myDATA sync, original acquisition/reprocessing, new invoice, approval, payment, stock/fiscal mutation, credentials/roles or DB script. Existing visible provider records remain in-review/waiting-original. Epsilon35158/35000 still waiting, and today's35310 saysoriginalnotdownloaded. Do not manufacture provider PASS or replay these invoices. Closed-browser scheduled cycle/cursor replay/same-draft application/physicalPOSlinkage/credits/nonPremium/POSfirst remain OPEN.
+
+Excel download observation blocked by native-credential protection; no returned file/path or count confirmation, so exportNOTTESTED, no application failure asserted. Browser runtime could not safely resume even after one reset. Render monitoring reported no selected workspace; none selected or changed. Exact public health was verified independently. Single next action: restore safe ordinary read-only inbox access, then validate bounded filtered exports; provider API/original and physical POS evidence are external prerequisites for final overallPASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md`; manual and tracker/PDF updated only for the observed read-only scope. No old assignment release or second owner.
+
+
+### Acceptance matrix
+
+| Scope | Status | Evidence / next action |
+| --- | --- | --- |
+| Archive and today UI | LIMITED LIVE read-only PASS |5305archive/10today,3supplier groups; acquisition/payment/stock effects not measured|
+| Inclusive issue-date same-day range | LIMITED LIVE read-only PASS |Both fields06Oct,Search10of5305; Playwrightfill leftempty, nativeAXsetValue worked; no source defect inferred|
+| Other date boundaries / invalid interval | NOT TESTED |Require safely resumable UI|
+| Filtered Excel/PDF export | NOT TESTED |Download observer nativecredentialblock; no usablefile returned; no wholearchiveexport|
+| Closed-browser scheduler / replay | NOT TESTED |Historicaltodayarrivals are not proof of closedbrowser cycle or duplicate counts|
+| Existing137177/TDA6538 reading/application | OPEN |Preserve exactdraft/job/original; freshbaseline before anyapply, no financialposting|
+| Epsilon originals | BLOCKED EXTERNAL |Unsupportedadapter, existingwaitingoriginal; need verifiedprovider access/identityPDF|
+| PhysicalPOS firstreceipt / repeat409 | NOT TESTED |NewseparatefictionalLABsample and measuredtwo-terminalbaseline required; no realinvoicepayment|
+| NonPremium / credit / POSfirst | OPEN |Separate acceptance paths, no new scopedPASS|
+
+### Continuation/handoff
+
+Same owner retained. No source changes, no open implementationPR, claim merged. Latest actual runtime1e59775b from publichealth, CI1871PASS is not LABPASS. New provider/physical acceptance cannot be completed from this cloudbrowser alone. Next single action restore safeordinaryread-onlysession before exports; afterthat any state-changingLABrequires newlyrecordedbaseline. Protect all existingPASS and everyinvoice/settlementidentity.
