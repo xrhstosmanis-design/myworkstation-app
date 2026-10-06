@@ -2856,3 +2856,7 @@ CI #4460 attempt 2 (run 37365250394) fully passed on code commit 05dc5fa8d5661c4
 
 ## 06/10/2026 22:00 Athens — UI REGRESSION: maximized commerce pages become unreachable
 Owner supplied paired LIVE screenshots of Bulk Price Change: normal-size commerce window has internal vertical scroll and remains usable; maximized window clips lower form content and provides no scroll, blocking actions. Root cause is prior generic desktop viewport-fit rule that sets maximized commerce-hub overflow hidden. Priority regression fix before further visual work: keep outer maximized shell fixed, but make commerce-hub the bounded internal vertical scroll container (`overflow-y:auto`, `overflow-x:hidden`, `min-height:0`). Applies to all commerce tabs so long forms remain reachable. No form/business logic changes. Awaiting CI/LIVE regression check on bulk price + other tabs.
+
+
+## 06/10/2026 22:15 Athens — Regression matrix: Master Catalog PASS, Store Prices PASS, Bulk Price FAIL
+Owner LIVE verified Master Catalog PASS and Τιμές ανά κατάστημα PASS after global scroll fix. Lock both; do not modify. Bulk Price remains FAIL in maximized window: lower action/value/submit region is clipped despite normal-size scroll working. Scoped fix only in owner-products.css: allow bulk-price-workflow natural height inside the now-scrollable commerce-hub, remove nested max-height/overflow constraints for the workflow, keep only product result list independently bounded. No changes to other tabs or business logic. Awaiting CI/LIVE bulk-only verification.

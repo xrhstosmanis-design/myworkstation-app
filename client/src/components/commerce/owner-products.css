@@ -1276,3 +1276,11 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
 
 /* TODAY-05 selected products review */
 .promotion-selected-review-toggle{border:0;background:transparent;color:#176fc6;font-weight:850;padding:3px 0;cursor:pointer;text-align:left}.promotion-selected-review{border:1px solid #c8d7e4;background:#f7fafc;border-radius:12px;padding:12px;display:grid;gap:10px}.promotion-selected-review-list{display:grid;gap:7px;max-height:230px;overflow:auto}.promotion-selected-review-list>div{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #d8e2ea;border-radius:9px;padding:9px 11px}.promotion-selected-review-list span{display:grid;gap:2px}.promotion-selected-review-list small{color:#60758a}.promotion-selected-review-list button{border:1px solid #e1b7b7;background:#fff;color:#a52d2d;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}
+
+/* 06/10/2026 — regression: Bulk Price must remain fully reachable in maximized central window. */
+@media(min-width:1201px){
+ .commerce-shell.window-maximized .owner-products:has(.bulk-price-workflow){min-height:0!important;overflow:visible!important}
+ .commerce-shell.window-maximized .bulk-price-workflow{height:auto!important;max-height:none!important;min-height:max-content!important;overflow:visible!important;padding-bottom:28px!important}
+ .commerce-shell.window-maximized .bulk-price-workflow fieldset,.commerce-shell.window-maximized .bulk-price-workflow .op-two,.commerce-shell.window-maximized .bulk-price-summary{flex:none!important}
+ .commerce-shell.window-maximized .bulk-check-list{max-height:280px!important;overflow-y:auto!important;overflow-x:hidden!important}
+}
