@@ -1,3 +1,9 @@
+## 06/10/2026 — issue-date05–06Oct / filtered XLSX USER PASS
+
+Authorized selected-store BackOffice users with DOCUMENTS: enter via https://myworkstation-app.onrender.com/platform-admin, select Περίπτερο Διαδόχου Παύλου and open invoice inbox/archive. Set Έκδοση από05/10/2026 and Έκδοση έως06/10/2026, all suppliers/blank search, press Αναζήτηση; tested screen shows19of5305. Click archive Εξαγωγή Excel (.xlsx), open downloaded file:19uniqueMARK,9issue05Oct and10issue06Oct, exact filter/store metadata; prior10daily rows unchanged. Export preserves text identifiers and is read-only/reference, not approval or original invoice. Independent Owner/device/tenant tests and arbitrary boundaries NOT TESTED.
+
+Known limit: ΤΠΥ2153/MARK400015532417480 has200net+48VAT but208gross;18other rows reconcile. Export total3296.63 differs by40from net3131.10+VAT205.53. Inspect existing original for withholding/other deductions before accounting; do not infer a defect/deduction, alter the reference amounts or repeat payment. Range PDF/invalid interval remain untested. Checkpoint2026-10-06-mydata-range-export.md; overallNo4/#09OPEN.
+
 ## 06/10/2026 — Excel και αποθηκευμένο PDF ημέρας USER PASS
 
 Authorized BackOffice users in the selected company/store with DOCUMENTS: open the canonical Platform Admin entry https://myworkstation-app.onrender.com/platform-admin, select Περίπτερο Διαδόχου Παύλου, open Θυρίδα Τιμολογίων, wait for actual daily count, click Excel ημέρας, open downloaded XLSX. Verified saved file contains10daily records/10unique MARK, store metadata and receivedToday=true; all row amounts reconcile, total1647.93. Protected View is sufficient for reading; enabling edits is unnecessary. No invoice original, approval, payment or stock posting is certified by this export.
