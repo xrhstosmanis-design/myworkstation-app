@@ -1,3 +1,11 @@
+## 06/10/2026 — myDATA date search / limited read-only LIVE PASS
+
+Authorized BackOffice users of the selected company/store with DOCUMENTS open the canonical Platform Admin entry (`https://myworkstation-app.onrender.com/platform-admin`), select the existing store's full BackOffice, then Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Θυρίδα Τιμολογίων. Tested role was Super Admin support, not independent Owner.
+
+Observed existing Διαδόχου archive5305 and today's arrivals10. Set Έκδοση από and Έκδοση έως both06/10/2026 and press Αναζήτηση:10of5305 returned. This verifies an inclusive single-day issue-date range and visible daily-arrivals grouping only. The daily panel remains separate from archive search. No receipt-date fallback or financial/stock effect was tested. Public healthy runtime observed immediately afterward1e59775b7f4d0f6243570c6fd2a060ab658df8af. Checkpoint2026-10-06-mydata-completion.md.
+
+If loading remains, use one ordinary Ανανέωση and wait for the result count; this completed in the observed session. Check the actual date field values before Search. Export files, multi-day/invalid ranges, scheduler with browser closed, independent Owner/device isolation and full provider/POS acceptance remain unverified. Do not use Λήψη από myDATA, Λήψη πρωτοτύπου, Έλεγχος από βοηθό, Διαγραφή or payment to reproduce this read-only check. Preserve existing drafts/payments and earlier manual PASS.
+
 ## 01/10/2026 11:43 - TDA6538 original delivery: limited USER PASS
 
 Selected company/store Διαδόχου Παύλου, authorized BackOffice owner/manager with DOCUMENTS, AI_READER and INVENTORY: locate the existing TDA6538/116.96 invoice in Θυρίδα Τιμολογίων, use Λήψη πρωτοτύπου για έλεγχο once, open the linked same draft/Βοηθός τιμολογίου. Owner confirms correct transfer; original one-page PDF is displayed (image084355, runtimeca354a97/#1571). Printed TDA0006538 matches myDATA6538; MARK and both VAT identifiers remain exact. Independent baseline confirms one new draft and no new StoreTransaction/StockMovement; stock quantities and control shifts NOT TESTED.

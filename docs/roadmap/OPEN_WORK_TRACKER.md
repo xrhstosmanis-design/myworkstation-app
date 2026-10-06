@@ -127,9 +127,9 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/mydata-completion-20261006`
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T19:40:58+00:00 · ΑΝΑΛΗΨΗ ΑΠΟ `codex/mydata-draft-pos-receipt-20260930` με νεότερη ρητή εντολή ιδιοκτήτη στην παρούσα συνομιλία. Μόνο #09, οι υπόλοιπες αναθέσεις διατηρούνται. `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md` · claim PR/CI προς δημοσίευση.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T19:40:58+00:00 · ΑΝΑΛΗΨΗ ΑΠΟ `codex/mydata-draft-pos-receipt-20260930` με νεότερη ρητή εντολή ιδιοκτήτη στην παρούσα συνομιλία. Μόνο #09, οι υπόλοιπες αναθέσεις διατηρούνται. `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md` · claim PR1794 / CI4508 πλήρες PASS / mergecc4c232e.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Δεν έχει ολοκληρωθεί. Καμία νέα LAB πράξη/PASS. Προστασία Gate3 και ίδιων παραστατικών/πληρωμών, Epsilon και φυσικό POS παραμένουν ανοιχτά.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T19:47:08+00:00 · Περιορισμένο LIVE read-only PASS: αρχείο5305/σημερινά10 και φίλτρο06Oct→06Oct επέστρεψε10of5305. Manual/checkpoint2026-10-06-mydata-completion. Runtime1e59775b. Εξαγωγή μη επαληθευμένη λόγω browser credential protection. Όλο το scope OPEN: Epsilon, closed-browser scheduler/replay, ίδιο draft application και φυσικό POS/λοιπά paths. Καμία οικονομική/stock πράξη. Ίδιος owner παραμένει.
 
 ### 10 — Μισθοδοσία / πληρωμές εργαζομένων
 
