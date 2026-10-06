@@ -678,8 +678,8 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 **Υπόλοιπο / όρια PASS:** Δημοσιεύτηκαν η διορθωμένη Markdown/PDF λίστα 51 εργασιών, ο generator και σύνδεσμοι από AGENTS, tracker, pending/active lists. Η λίστα αντιστοιχίζει κάθε εκτυπωμένο αριθμό σε tracker ID/status και αποσαφηνίζει #03/#18/#42, supplier PDF/print, cashier report, order suggestions, cross-store Audit και TODAY-08. Κανόνας για όλες τις σελίδες: πλήρες συμφωνημένο κριτήριο + τεκμήριο = PASS· μερική ολοκλήρωση αφήνει residual OPEN. Έλεγχος local generation/text extraction: 51 tracker IDs, PDF 4 A4 pages, no clipping. Έγγραφα μόνο; κανένα product/LAB/financial/stock mutation.
 
-**Υπεύθυνη σελίδα / branch:** Τρέχουσα συνομιλία Codex Work / `codex/numbered-checklist-publish-20261006` · owner retained.
+**Υπεύθυνη σελίδα / branch:** Ολοκληρώθηκε από την τρέχουσα συνομιλία Codex Work · PR #1797 merged.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T23:08:45+03:00 · Ανάληψη για έκδοση κεντρικής αρίθμησης και κοινό κανόνα ενημέρωσης PASS. `CHECKPOINTS/CHANGES/2026-10-06-numbered-work-checklist.md`. Χωρίς μεταφορά άλλης ανάθεσης.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T23:15:46+03:00 · Νέα λίστα/γεννήτρια/παραπομπές ολοκληρώθηκαν και ελέγχθηκαν. PR #1797 · αρχικό περιεχόμενο commit `20b346859d8b98df43562086d36477cac72a3c04` · CI #4514 SUCCESS (docs classification + Windows script/smoke checks; app build/tests skipped by documentation-only classification). Status/checkpoint/PDF completion record follows on same PR; merge only after the final PR head is green.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-06T23:17:52+03:00 · Η λίστα/γεννήτρια/παραπομπές ολοκληρώθηκαν. PR #1797 merged στο main με commit `65d2c75d2ef16d04b13c95e25b77438d424f6e5f`. Τελικό CI #4516 SUCCESS στο PR head `fcef2ab7db2465b5659ead25c5b1121f594e510d` (docs classification και Windows parse/smoke PASS· build/tests εφαρμογής skipped ως documentation-only). Το content commit `20b346859d8b98df43562086d36477cac72a3c04` παραμένει στην ιστορία του merge.
