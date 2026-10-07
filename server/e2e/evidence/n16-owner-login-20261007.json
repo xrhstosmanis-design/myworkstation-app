@@ -1,0 +1,69 @@
+{
+  "kind": "actual-read-only-lab-evidence",
+  "scope": "OWNER initial login/chooser/control visibility only; mutations/logout/push NOT TESTED",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "observedRevision": "9230c0abbd30dc1e1f50c31e0a504468c4e3783a",
+  "snapshot": [
+    {
+      "auth_events": [
+        {
+          "createdAt": "2026-10-07T19:07:06.411",
+          "event": "LOGIN_SUCCESS",
+          "success": true
+        },
+        {
+          "createdAt": "2026-10-07T19:01:52.909",
+          "event": "TEMPORARY_PASSWORD_REPLACED",
+          "success": true
+        },
+        {
+          "createdAt": "2026-10-07T18:59:42.509",
+          "event": "TEMPORARY_PASSWORD_LOGIN",
+          "success": true
+        },
+        {
+          "createdAt": "2026-10-05T16:28:59.826",
+          "event": "TEMPORARY_PASSWORD_LOGIN",
+          "success": true
+        }
+      ],
+      "fixture_audit": 18,
+      "fixture_reads": 0,
+      "lab_owner": [
+        {
+          "companyId": "cmtpopbgk000prhb5qc60zxus",
+          "fullName": "Υπεύθυνος Εργαστηρίου",
+          "id": "cmtpopbgm000rrhb5xk15uytz",
+          "mustChangePassword": false,
+          "role": "OWNER"
+        }
+      ],
+      "measured_at": "2026-10-07T19:07:24.102445Z",
+      "message": [
+        {
+          "completed": false,
+          "id": "chat-1791392960195-p5hevl1gnw",
+          "important": false,
+          "pinned": false
+        }
+      ],
+      "messages": 50,
+      "task": {
+        "assignedAt": "2026-10-07T18:16:52.741",
+        "assignedBy": "cms1k1bje001xhn3xulr0rooz",
+        "assigneeEmployeeId": "cmtrm1iri000ql8b4j580836r",
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "completedAt": null,
+        "completedBy": null,
+        "createdAt": "2026-10-07T17:11:22.703639",
+        "createdBy": "cms1k1bje001xhn3xulr0rooz",
+        "id": "chat-task-1791393082635-c4vy05z23ea",
+        "messageId": "chat-1791392960195-p5hevl1gnw",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "title": "N16-LAB-20261007-A | Εικονική ανακοίνωση για pin/σημαντικό/εκκρεμότητα."
+      },
+      "tasks": 3
+    }
+  ]
+}
