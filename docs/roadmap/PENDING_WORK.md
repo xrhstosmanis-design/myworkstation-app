@@ -794,6 +794,8 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 - Εκτύπωση ετικετών.
 - Αναζήτηση Internet από LAB αποθήκη/barcode, active provider, ασφαλής τιμή και net margin: READ-ONLY USER/LAB PASS01/10/2026, #1582/#1585/#1586. Δεν επαναλαμβάνεται το περασμένο σκέλος.
 - Read-only σύγκριση τιμών/εμφάνιση πρότασης: LAB PASS. Υποβολή/έγκριση price proposal και δημιουργία/αποστολή παραγγελίας: OPEN / NOT TESTED· χωριστό write scope.
+
+**#14 continuation ASSIGNED `codex/task14-owner-provider-readonly-20261007-r1` (07/10/2026 19:38 Europe/Athens):** read-only Owner/fail-closed checks only if provider is already disabled, plus safe Master Catalog linkage review. Existing 01/10 read-only PASS protected. No price/VAT changes, proposal submission/approval, order creation/sending, payments, stock writes or provider-setting changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md`; broader writes remain OPEN.
 - Σύνδεση πρότασης με Master Catalog και απόθεμα χωρίς αυτόματη επικίνδυνη αντιστοίχιση.
 
 ## 10. Chat και ειδοποιήσεις
