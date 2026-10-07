@@ -45,6 +45,10 @@ try{
     const counts=await prisma.$queryRaw`SELECT (SELECT count(*) FROM "Sale") AS sales,(SELECT count(*) FROM "Payment") AS payments,(SELECT count(*) FROM "StoreTransaction") AS transactions,(SELECT count(*) FROM "StockMovement") AS movements,(SELECT count(*) FROM "ProductPriceHistory") AS priceHistory`;
     return JSON.stringify({products,mappings,counts},(_key,value)=>typeof value==="bigint"?value.toString():value);
   }
+  const master=crypto.randomUUID(),masterOnly="2996100700060";
+  await prisma.$executeRaw`INSERT INTO "MasterProduct" ("id","sourceCode","name","importVersion") VALUES (${master},${"N13-master-"+tag},${"N13 master "+tag},'N13 CI')`;
+  await prisma.$executeRaw`INSERT INTO "MasterProductBarcode" ("id","masterProductId","barcode") VALUES (${crypto.randomUUID()},${master},${barcode}),(${crypto.randomUUID()},${master},${masterOnly})`;
+  await prisma.$executeRaw`UPDATE "Product" SET "masterProductId"=${master} WHERE "id"=${source}`;
   const before=await safety();
   const owner=await request(`/api/owner-products/${target}/barcode-owner?barcode=${barcode}`,{token});
   assert.equal(owner.status,200,JSON.stringify(owner.payload));assert.equal(owner.payload.owners.length,1);assert.equal(owner.payload.owners[0].productId,source);
@@ -69,6 +73,11 @@ try{
   for(const a of audits){assert.equal(a.details.sourceProductId,source);assert.equal(a.details.targetProductId,target);assert.equal(a.details.resetBarcodeAttributes,true)}
   const pos=await request(`/api/store-pos/stores/${storeId}`,{token:employee.payload.token});assert.equal(pos.status,200,JSON.stringify(pos.payload));
   const matches=pos.payload.products.filter(p=>p.barcodes?.includes(barcode));assert.deepEqual(matches.map(p=>p.id),[target]);assert.equal(Number(matches[0].salePrice),2.4);
+  assert.ok(pos.payload.products.find(p=>p.id===source).barcodes.includes(masterOnly),"Unclaimed master alias remains available");
+  const legacy=await request(`/api/store-pos/stores/${storeId}/legacy-full`,{token:employee.payload.token});
+  assert.equal(legacy.status,200,JSON.stringify(legacy.payload));
+  assert.deepEqual(legacy.payload.products.filter(p=>p.barcodes?.includes(barcode)).map(p=>p.id),[target],"Legacy catalog respects local ownership");
+  assert.ok(legacy.payload.products.find(p=>p.id===source).barcodes.includes(masterOnly));
   const stale=await transfer(token,other,source,barcode);assert.equal(stale.status,409);
   const races=await Promise.all([transfer(token,target,source,race),transfer(token,other,source,race)]);
   assert.deepEqual(races.map(r=>r.status).sort(),[200,409],JSON.stringify(races));
