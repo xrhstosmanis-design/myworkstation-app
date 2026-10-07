@@ -136,7 +136,9 @@
 
 - **Tracker ID:** `21`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** USER/LAB PASS / ΟΡΙΑ NOT TESTED
-- **Υπόλοιπο / όριο:** ASSIGNED codex/n19-supplier-pdf-20261007 από07/10 20:18· DB σκέλος PASS· αποθηκευμένο PDF/χαρτί NOT TESTED. Οθόνη/XLSX/HTML PASS· ανεξάρτητη DB συμφωνία58/348καιcounts8/13 LAB PASS07Oct20:31. NativePDF58/348και3σελίδες PASS· ημερομηνία31Decαντί01Jan FAIL/διόρθωσηAWAITING. Φυσικήεκτύπωση OPEN, ίδιοςowner.
+- **Υπόλοιπο / όριο:** ASSIGNED codex/n19-supplier-pdf-20261007 από07/10 20:18· DB και αρχικό PDF ποσά/layout PASS· νέο διορθωμένο PDF/χαρτί NOT TESTED. Οθόνη/XLSX/HTML PASS· ανεξάρτητη DB συμφωνία58/348καιcounts8/13 LAB PASS07Oct20:31. NativePDF58/348και3σελίδες PASS· ημερομηνία31Decαντί01Jan USER FAIL· διόρθωσηPR1845 CI/merge/exacthealth LIVE PASS, νέοPDF OPEN. Φυσικήεκτύπωση OPEN, ίδιοςowner.
+
+**Νεότερη δημοσίευση Νο19:** 07/10/2026 21:06 Europe/Athens — No19/tracker21 date fix PR1845 head d6cbecb1bf22c345f4b0de9716e648685bf0dc4a: full CI4630/run37662888145 SUCCESS (server tests, client build, invariants, isolated import and real HTTP E2E; Windows smoke checks SUCCESS). Merged f2bbde13d10e3a33b2702fd1a5309e5c788f4a53. Actual /api/health observed ok=true and that exact revision after deploy. LIVE publication PASS. Fresh read-only LAB year screen still shows58 suppliers/invoices1859.49/credit−4.27/payments−4914.70/net and balance−3059.49. Actual corrected export download blocked by retained browser credential protection; no date-export retest PASS claimed. Owner must refresh own application, select Τρέχον έτος, save new PDF / Εκτύπωση and verify01/01/2026–07/10/2026; then print actual report. Prior original PDF content/layout58/348 PASS preserved. Corrected saved PDF and physical paper NOT TESTED / OPEN, same owner codex/n19-supplier-pdf-20261007. No business record mutation.
 
 ## 20 — Κανάλι και ομαδική τιμολόγηση ανά κατάστημα
 
