@@ -9,3 +9,8 @@ Owner/Super Admin με πρόσβαση στην εταιρεία και INVENTO
 Γνωστά όρια: barcode-specific πολλαπλασιαστής/τιμή/όνομα επανέρχονται στο συμβόλαιο1/null/null· το δείγμα είχε ήδη αυτές τις τιμές, άρα ο καθαρισμός μη-default attributes μένει NOT TESTED. POS/fυσικός scanner, αρνητικά και concurrency μένουν NOT TESTED. Αν εμφανιστεί αλλαγμένη αντιστοίχιση, ξανακάντε Έλεγχο· μην αφαιρείτε/προσθέτετε τον κωδικό χειροκίνητα για παράκαμψη. Πλήρες Νο13 OPEN.
 
 Τεκμήριο: CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
+
+## Νεότερο όριο — 07/10/2026
+
+07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
+Μέχρι την επιβεβαίωση της διόρθωσης, μην χρησιμοποιείτε μεταφερμένο barcode στο POS πραγματικού καταστήματος. Το master alias μπορεί να επιλέξει το παλιό προϊόν. Καμία δοκιμαστική πληρωμή έγινε.

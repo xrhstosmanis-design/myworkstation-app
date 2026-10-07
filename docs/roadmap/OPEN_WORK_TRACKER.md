@@ -198,11 +198,14 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 13 — Μεταφορά barcode
 
+07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
+
+
 07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.
 
-**Κατάσταση:** ΜΕΡΙΚΟ LAB PASS / OPEN
+**Κατάσταση:** ΜΕΡΙΚΟ LAB PASS / POS LAB FAIL / ΔΙΟΡΘΩΣΗ AWAITING CI-LAB
 
-**Υπόλοιπο / όρια PASS:** Υλοποίηση/CI υπάρχουν. Πραγματική LAB μεταφορά, readback/POS lookup/Audit και ασφαλή αρνητικά σενάρια εκκρεμούν. Ο ιδιοκτήτης στις 07/10 εγκρίνει τις αναγκαίες εικονικές LAB δοκιμές.
+**Υπόλοιπο / όρια PASS:** Εταιρική μεταφορά/Audit/stock-price-financial safety LIVE PASS. Fresh reopen και same/invalid/unknown-code LIVE PASS. Isolated acceptance CI4592 PASS. POS master fallback LIVE FAIL· bounded fix PR1829 περιμένει νέο CI/deploy/LAB. Stale full-card save NOT TESTED· συνολικό No13 OPEN.
 
 **Υπεύθυνη σελίδα / branch:** codex/n13-barcode-transfer-lab-20261007 · ανάληψη από agent/barcode-catalog-check-20260928 με ρητή εντολή ιδιοκτήτη.
 
