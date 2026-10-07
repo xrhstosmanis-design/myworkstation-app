@@ -40,6 +40,10 @@ Owner12:58 reports entered and checked AFM; supplier list screenshot file_000000
 
 Closes supplier/reopen-display residual for this8114 sample only. Initial unprompted assistant discount economics remains FAIL; targeted instruction produced calculated effective discounts, not printed percentages. No general OCR first-pass PASS. Other invoices/roles/devices/concurrency/independent persistence and overall09 remain OPEN, Gate3 agreed PASS protected. This publication is documentation-only; CI/merge recorded in associated PR. Next read-only action: inspect existing7301ΛΝ000063911 draft and original (same issuer AFM095697632) without reupload/payment/finalization; do not repeat8114 application.
 
+## 07/10/2026 17:24 Europe/Athens — N10 real-store acceptance pending
+
+Η αποδοχή σε κανονικό κατάστημα καταγράφεται ως **NOT TESTED / PENDING**. Δεν έγινε live ενέργεια. Επόμενο βήμα είναι ξεχωριστός προγραμματισμένος έλεγχος σε κανονικό κατάστημα, αφού επιβεβαιωθούν ορατά το κατάστημα, οι αρχικές τιμές μόνο για ανάγνωση και το συμφωνημένο scope. Δεν γίνονται πραγματικές πληρωμές/επιβεβαιώσεις/εκκαθαρίσεις και δεν επανανοίγεται ή αναπαράγεται ο κλειστός Σεπτέμβριος. Τα ακριβή cash `StoreTransaction` IDs, γνήσια τραπεζικά αποδεικτικά και υποστηριζόμενη προεπισκόπηση Νοεμβρίου παραμένουν εκκρεμή. N10: **ΜΕΡΙΚΟ PASS / OPEN**.
+
 ## 07/10/2026 12:28 Europe/Athens — N10 Payroll continuation — baseline recorded / ASSIGNED
 
 Same N10 owner, continuation branch `codex/n10-payroll-reconciliation-20261007`; based on current main `ac4b8bb4fb8995b54e3ed870329d06af2f192e0f`. Status remains ΜΕΡΙΚΟ PASS / OPEN. Authenticated Platform Admin selected MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Read-only baseline: Payroll shows7 employees,2 rules,3 shift templates; November 2026 preview7 employees/€0.00, no period created. September2026 remains CLOSED,7 employees/€313.00 gross and paid/€0.00 balance; no replay or change. October existing DRAFT remains7/€13.67 gross-paid/€0.00 balance.
