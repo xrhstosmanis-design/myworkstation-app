@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** LAB Super Admin07Oct20:12: pin/σημαντικό και κλείσιμο/επαναφορά μίας νέας εργασίας PASS, σωστά Audit και μετρημένα ταμεία αμετάβλητα. Υπόλοιπο: ανάθεση υπευθύνου, άλλοι ρόλοι/tenant, unpin/unmark/message completion, logout/πολλαπλές συσκευές, πραγματικό background Push/ήχος/terminal. Ίδιος owner codex/n16-chat-acceptance-20261007. Συνολικά OPEN.
+- **Υπόλοιπο / όριο:** LAB Super Admin07Oct20:24: pin/unpin, σημαντικό/αφαίρεση, ολοκλήρωση/επαναφορά μηνύματος και μίας εργασίας PASS, σωστά Audit και μετρημένα ταμεία αμετάβλητα. Υπόλοιπο: ανάθεση υπευθύνου, άλλοι ρόλοι/tenant, logout/πολλαπλές συσκευές, πραγματικό background Push/ήχος/terminal. Ίδιος owner codex/n16-chat-acceptance-20261007. Συνολικά OPEN.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 
