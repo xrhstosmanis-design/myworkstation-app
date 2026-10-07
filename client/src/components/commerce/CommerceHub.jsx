@@ -201,7 +201,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 
-    {tab==="pending"&&<PendingCenterPanel api={api} stores={stores} modules={activeModules} onOpenSource={row=>{
+    {tab==="pending"&&<PendingCenterPanel key={stores.find(store=>store.id===storeId)?.id||""} scopeStoreId={stores.find(store=>store.id===storeId)?.id||""} api={api} stores={stores} modules={activeModules} onOpenSource={row=>{
       if(row.source==="PAYMENT"){
         let user=null;try{user=JSON.parse(localStorage.getItem("user")||"null")}catch{}
         const superAdmin=user?.role==="SUPER_ADMIN"||user?.platformRole==="SUPER_ADMIN"||user?.isSuperAdmin===true;
