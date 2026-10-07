@@ -1,3 +1,10 @@
+
+
+07Oct20:02 owner explicitly authorizes needed fictional LAB Chat messages/sales/cancellations. Assistant may send uniquely identified LAB test messages after fresh recorded baseline and merged takeover. Supersedes prior no-assistant-message boundary. No sale/cancellation is needed for initial No16 Chat tests; no repeat accepted fixtures or real-store actions.
+# Νο16 - owner-directed named takeover pending merged publication
+
+07/10/2026 19:58 Europe/Athens - Owner explicitly directs this page to start No16. ΑΝΑΛΗΨΗ ΑΠΟ fix/task16-chat-push-routing-20261001 - proposed ASSIGNED codex/n16-chat-acceptance-20261007 after this handoff publication merges. Scope only tracker16: pin/important messages, task management/assignment, live roles/logout/multiple-device boundaries and background Push/sound/routing acceptance. Tracker17/iPhone/hardware remains with its owner. Existing basic chat/send/search/read-receipts/files/settings/task-creation PASS protected; no repetition solely for documentation. New scope NOT TESTED. No source change or state-changing LAB action before green CI and merged handoff. No message sending is authorized by this claim; owner sends any identified device-test message. Current cloud Push permission blocked; actual OS delivery/sound cannot be inferred from CI. Checkpoint2026-10-07-n16-chat-takeover.md.
+
 # No13 — preview cancellation LIVE PASS / full OPEN
 
 07/10/2026 19:52 Athens — live preview cancellation PASS: on TEST1, check2900000000018 displayed sourceTEST2→targetTEST1 and explicit confirmation; clearing input removed confirmation(count0), without pressing transfer. Independent same SQL after retained barcode atTEST2, Auditcount1, unchanged products/movements/all transaction groups vs pre-preview19:49. POS test cart cleared by document reload, visible new transaction total0. No checkout/payment. PR1829 merged8836c1c fullCI4601 PASS; deployment progressing. PR1834 stale-card guard awaiting CI.

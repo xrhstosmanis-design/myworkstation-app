@@ -1,3 +1,10 @@
+
+
+07Oct20:02 owner explicitly authorizes needed fictional LAB Chat messages/sales/cancellations. Assistant may send uniquely identified LAB test messages after fresh recorded baseline and merged takeover. Supersedes prior no-assistant-message boundary. No sale/cancellation is needed for initial No16 Chat tests; no repeat accepted fixtures or real-store actions.
+# Νο16 - owner-directed named takeover pending merged publication
+
+07/10/2026 19:58 Europe/Athens - Owner explicitly directs this page to start No16. ΑΝΑΛΗΨΗ ΑΠΟ fix/task16-chat-push-routing-20261001 - proposed ASSIGNED codex/n16-chat-acceptance-20261007 after this handoff publication merges. Scope only tracker16: pin/important messages, task management/assignment, live roles/logout/multiple-device boundaries and background Push/sound/routing acceptance. Tracker17/iPhone/hardware remains with its owner. Existing basic chat/send/search/read-receipts/files/settings/task-creation PASS protected; no repetition solely for documentation. New scope NOT TESTED. No source change or state-changing LAB action before green CI and merged handoff. No message sending is authorized by this claim; owner sends any identified device-test message. Current cloud Push permission blocked; actual OS delivery/sound cannot be inferred from CI. Checkpoint2026-10-07-n16-chat-takeover.md.
+
 # Νο13 — POS FAIL, bounded fix awaiting CI/LAB
 
 07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.

@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** Εκκρεμούν background Push/ήχος, routing terminal, pin, task management, ρόλοι/logout και πολλαπλές συσκευές.
+- **Υπόλοιπο / όριο:** Ανάληψη codex/n16-chat-acceptance-20261007 μετά δημοσίευση μεταφοράς· έγκριση μηνυμάτων στο εικονικό LAB07Oct20:02. Νέο scope NOT TESTED.  Εκκρεμούν background Push/ήχος, routing terminal, pin, task management, ρόλοι/logout και πολλαπλές συσκευές.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 
