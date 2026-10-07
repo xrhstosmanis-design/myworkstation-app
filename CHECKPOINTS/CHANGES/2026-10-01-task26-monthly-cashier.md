@@ -31,3 +31,13 @@ BEFORE16:16UTC περίπου/19:16Ελλάδας: MYWORKSTATION LAB, ΕΡΓΑΣ
 ## Exact deploy και περιορισμένη LAB αποδοχή
 
 Render1856 completed success16:19:57Z, runtimehealth exactedeba510 επιβεβαιωμένο πρινmonthlyLAB. CanonicalPlatformAdmin→Προσωπικό & Πρόγραμμα→MYWORKSTATION LAB→ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ→LAB POS2→Απόδοση & Ταμεία. SuperAdmin/cloudChrome μόνο. Default2026-10 0παρουσίες, rolling30 27ω56λ/7ω, επιστροφήMONTH και πραγματική επιλογή2026-09 δείχνει27ω56λ/7ω: LIMITED UI LAB PASS. Explicit «Δεν υπάρχει verified POS operator» τόσοmonthlyόσοrolling. Δεν αποδεικνύονται θετικές πωλήσεις/βάρδιες από ίδιο όνομα και δεν δημιουργείται σύνδεση για διάγνωση. Human evaluation0, κανέναsubmit. Μετά freshreload MAIN2/2.40€/card0/IRIS0, LAB-POS-02 2/0€, αμετάβλητα. Financial/stockwrites0. Remaining ASSIGNED στον ίδιο υπεύθυνο: θετική verified identity/shift/ledger αποδοχή, Owner χωρίςSA, livecap/errors. Συνολικό#26 και automatic score OPEN.
+
+
+## 07/10/2026 23:06 Europe/Athens — task #24 / Tracker #26 continuation CLAIMED
+
+- The user requested starting numbered task **#24**, which maps to tracker **#26 — Μηνιαία εικόνα ταμία**.
+- Preserved the existing responsible page/owner `codex/task26-monthly-cashier-20261001`; continuation work branch is `codex/task26-monthly-cashier-resume-20261007`, based on current `main`.
+- Scope claimed: read-only acceptance of existing positive sales and shifts linked to a verified employee; Owner access without Super Admin; complete monthly results and score. Existing payment, shift, assessment, stock and payroll records must not be altered. No new sale/shift/assessment may be created just to generate evidence. No production DB connection, DDL or migration.
+- Preserve the existing limited UI PASS at exact deployed revision `eba510531b8e7940983f22c8a5e31ef3b90b19`; it showed no verified POS operator and does not prove positive employee-linked activity or score acceptance. No new LAB check has yet been performed in this continuation.
+- Next: after the claim is published, verify exact current deployment and read-only LAB before/after baselines, then inspect available employee-linked positive records and monthly results as Owner without SA. If the current session cannot establish Owner access or no suitable positive records exist, record BLOCKED/NOT TESTED; do not enter credentials through chat or automation and do not create transactions to force a pass.
+- Status stays **ΜΕΡΙΚΟ UI PASS / OPEN**.
