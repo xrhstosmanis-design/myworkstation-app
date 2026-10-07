@@ -83,4 +83,4 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 
 **Next step:** Only test Owner access through an available official secure flow, without sharing or entering credentials through chat or ordinary automation. Test disabled-provider fail-closed behavior only if the provider is already disabled. Any mapping/write test needs a separately approved, isolated scope and baseline; proposal/order/payment/stock and price/VAT writes remain outside this assignment.
 
-**Publication:** At 07/10/2026 20:47 Europe/Athens, PR #1843 was OPEN; combined status for initial PR head `f775a69093bf597832fc8c80ad5dc28469c122fb` returned no checks. Final head status will be checked after this documentation update.
+**Publication:** PR #1843 OPEN; GitHub Actions run #4626 on evidence commit `b29a50fbd6c779138304835064eeb15fd5360bb4` completed SUCCESS at 07/10/2026 20:50 Europe/Athens. Documentation CI only; no live-data or application behavior changes.
