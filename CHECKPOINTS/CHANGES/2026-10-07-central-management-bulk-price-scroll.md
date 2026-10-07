@@ -69,7 +69,7 @@ No product/store was selected, no price applied, and no sale/payment/stock/fisca
 - The exact Platform Admin URL is open in authenticated browser tab 19. The old 13:35 sign-in-blocked state is historical and superseded.
 - Payments and Expenses were reopened after refreshing to revision 0245f30d0746d92bba124e3dcea5124e4897f9dd. In both, summary labels and values visibly run together; this remains a current FAIL. No approval/review action was taken.
 - Earlier LIVE sweep started with health revision 4f2026304a6db025a6c8bcf3faf814bf2607d769. Its observations below are kept as prior-sweep evidence; current-revision/post-deploy regression is still required before PASS.
-- Current scoped source branch: codex/today04-platform-admin-live-fixes-20261007-1526, based on exact main 0245f30d0746d92bba124e3dcea5124e4897f9dd. Changes avoid the open-PR overlap files identified during review. New implementation PR has not yet been created; CI/deploy are pending.
+- Current scoped source branch: codex/today04-platform-admin-live-fixes-20261007-1526, based on exact main 0245f30d0746d92bba124e3dcea5124e4897f9dd. Changes avoid the open-PR overlap files identified during review. Implementation PR #1827 is open at head c6a2aa27f9895012a106e69129110ae573b551f1; CI, merge, deploy and LIVE recheck are pending.
 
 ### Confirmed root causes and source changes awaiting CI
 
