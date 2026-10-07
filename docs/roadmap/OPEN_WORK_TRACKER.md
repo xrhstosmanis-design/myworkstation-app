@@ -126,6 +126,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 09 — myDATA / e-invoicing (Νο 4 ομαδοποιημένης εκτύπωσης)
 
+07Oct14:58 original13816 actual attempt USER FAIL: Render TimeoutError before response/PDF verification (11:57:40Z). Bounded45second deadline/actionable504 fix AWAITING CI/DEPLOY/LAB. No cap reset/repeated payment/identity bypass. Checkpoint2026-10-07-mydata-original-timeout.md; same09owner.
+
 07Oct14:49 independent read-only DB PASS:5310 inbound/5310 uniqueMARK; new5796/MARK400015568480019 received14:47 with original;5796 and16966 each1 attachment job/1 linked draft. Actual initiating request, replay/concurrency NOT TESTED.13816 original failed3attempts OPEN. Old135848/6538 inbound rows lack matching inbox; retain for audit, no recreation.13 focused regressions PASS; pool incident13:21 corroborated, reliability OPEN. Checkpoint2026-10-07-mydata-receiving-db-evidence.md. Same09owner.
 
 07Oct14:39 HARIBO505-16966/MARK400015564403749: actual Apply/display scoped USER PASS13items/net56.20/gross63.50;0.01 within accepted0.05. Preview14:33:13 complete/0review/55pieces. Supersedes13:47 Apply FAIL only. Supplier Χωρίς (AFM094211509 review), close/reopen and independent DB/cash/stock scopes OPEN. PR1819 fullCI4561/mainCI4562/deploy2078 SUCCESS; exact b0acab10 verified before test. Same09owner; checkpoint2026-10-07-mydata-haribo-unit-apply.md. Overall OPEN.
