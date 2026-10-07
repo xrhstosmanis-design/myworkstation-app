@@ -1,3 +1,7 @@
+# No13 — only live stale-card guard pending
+
+07/10/2026 20:03 Athens — owner ready; POS cart visibly empty/total0 after user cancellation, independent DB unchanged. PR1834/CI4604 (1877/0, build/invariants/HTTP incl stale409/fresh200) merged5ccf23b25ce5d827abbe7e4141aa8ce5b4c5c443; prior connector block resolved. Guard deploy/LAB acceptance pending, full No13 OPEN. POS fix PR1829/CI4601 merged8836c1cff1197324aeed66eed3c382b42a2340c9 and exact health confirmed: LAB POS2 scan2900000000018 selected only TEST2 at2.40 qty1/cart only/no payment. Fresh DB16:54:59Z before vs after: barcode row/Auditcount1, stocks11/−2, prices1.20/2.40, movements8/1/latest01Oct, all22 transaction groups and both open MAIN/LABPOS02 shifts EXACT unchanged. Live source reopen, invalid123, unknown2999999999999, same target and clearing transfer preview PASS. Physical scanner not tested; Enter equivalent tested. Do not repeat measured transfer/payment; barcode remains TEST2.
+
 # Νο13 — POS FAIL, bounded fix awaiting CI/LAB
 
 07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
