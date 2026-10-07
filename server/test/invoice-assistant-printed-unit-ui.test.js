@@ -15,7 +15,7 @@ const base={description:"HARIBO FRUIT 100G",quantity:"2",unitCost:"0.95",discoun
 const selectValue=line=>{const dom=new JSDOM(tableInput(line,0,"invoiceUnit"));try{return dom.window.document.querySelector("select").value;}finally{dom.window.close();}};
 
 test("known printed piece units are canonical before validation and agree with the displayed select",()=>{
-  for(const raw of ["PIECE","ΤΜ","ΤΜΧ","Τεμ."," ΤΕΜ. ","ΤΕΜΑΧΙΟ","ΤΕΜΑΧΙΑ","TM.","TMX","TEM","PC","PCS."]){
+  for(const raw of ["PIECE","ΤΜ","ΤΜΧ","Τεμ."," ΤΕΜ. ","ΤΕΜΑΧΙΟ","ΤΕΜΑΧΙΑ","τεμάχιο","τεμάχια","TM.","TMX","TEM","PC","PCS."]){
     const line={...base,invoiceUnit:normalizePrintedUnit(raw)};
     assert.equal(line.invoiceUnit,"PIECE",raw);
     assert.equal(selectValue(line),line.invoiceUnit,raw);
