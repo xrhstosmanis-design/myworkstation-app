@@ -309,13 +309,16 @@ Owner-directed transfer from fix/task16-chat-push-routing-20261001 to codex/n16-
 
 **Κατάσταση:** USER/LAB PASS / ΟΡΙΑ NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Οθόνη/XLSX/εκτυπώσιμη αναφορά PASS. Φυσική εκτύπωση/native PDF και ανεξάρτητος DB count δεν καλύπτονται.
+**Υπόλοιπο / όρια PASS:** Οθόνη/XLSX/εκτυπώσιμη αναφορά PASS. Ανεξάρτητη SQL συμφωνία58προμηθευτών/348ποσών και8παραστατικών/13πληρωμών LAB PASS07Oct. Αποθηκευμένο browser PDF/φυσική εκτύπωση OPEN, ίδιος owner.
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n19-supplier-pdf-20261007 · νέο υπόλοιπο Νο19, παλιό PASS προστατευμένο
 
 **Ανάληψη:** 07/10/2026 20:18 Europe/Athens — Owner starts printed No19 / tracker21. ASSIGNED codex/n19-supplier-pdf-20261007 for residual native saved PDF, independent read-only DB reconciliation and physical printing acceptance. Prior screen/XLSX/printable HTML PASS of01Oct protected; no repeated payments/invoices/stock/settlements. New scope NOT TESTED. Physical paper requires owner-operated printer; browser/CI cannot prove it. Initial action: inspect current export and isolated coverage, then one bounded implementation only if native PDF is absent. LAB reads MYWORKSTATION LAB only, fresh audit/financial/control baseline; no business writes. Checkpoint2026-10-07-n19-supplier-pdf.md.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+
+
+**Νεότερο scoped PASS / υπόλοιπο:** 07/10/2026 20:31 Europe/Athens — Printed No19 / tracker21 scoped LAB PASS for independent DB reconciliation. Exact live health6c6ad0412684ac8d577a841c8c206df7b700b395. LAB companycmtpopbgk000prhb5qc60zxus/storecmtpopbgo000trhb5ng9ytiru, Super Admin Χρήστος Μάνης. Existing year01Jan–07Oct, all suppliers/blank search:58 unique visible names/AFMs and348 amounts agree at displayed cent precision with independent SQL grouped by supplier (290 period amounts +58 all-history balances).8 approved documents and13 unreversed supplier payments included;0 adjustments. Invoice1859.4862, credit4.2714,payments4914.70,period/all-history−3059.4852. Company-wide12 approved docs total2110.7262 differs because4 belong to inactive suppliers; report active-only criterion explicitly applied, no defect or data change. Before17:26:11Z/after17:29:20Z: companytransactions102,stockmovements74,KioskAuditEvent0 and both open MAIN/LABPOS02 cash0/card0/expenses0/opening1/0.50 exactly unchanged. Only read-only report navigation/GETs; support-access authentication metadata separate. No purchase/payment/approval/finalization/stock action. Prior01Octscreen/XLSX/HTML PASS preserved. Saved browser PDF and physical printer NOT TESTED; No19 remains OPEN assignedsameowner, next action user saves existing PDF/Εκτύπωση output and uploads actual file for text/render QA, then paper acceptance. Existing endpoint returns printableHTML; native savedPDF via browser expected, no speculative new dependency/source change.
 
 ### 22 — Κανάλι / ομαδική τιμολόγηση
 
