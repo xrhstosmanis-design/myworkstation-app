@@ -1,11 +1,3 @@
-# No13 — only live stale-card guard pending
-
-07/10/2026 20:03 Athens — owner ready; POS cart visibly empty/total0 after user cancellation, independent DB unchanged. PR1834/CI4604 (1877/0, build/invariants/HTTP incl stale409/fresh200) merged5ccf23b25ce5d827abbe7e4141aa8ce5b4c5c443; prior connector block resolved. Guard deploy/LAB acceptance pending, full No13 OPEN. POS fix PR1829/CI4601 merged8836c1cff1197324aeed66eed3c382b42a2340c9 and exact health confirmed: LAB POS2 scan2900000000018 selected only TEST2 at2.40 qty1/cart only/no payment. Fresh DB16:54:59Z before vs after: barcode row/Auditcount1, stocks11/−2, prices1.20/2.40, movements8/1/latest01Oct, all22 transaction groups and both open MAIN/LABPOS02 shifts EXACT unchanged. Live source reopen, invalid123, unknown2999999999999, same target and clearing transfer preview PASS. Physical scanner not tested; Enter equivalent tested. Do not repeat measured transfer/payment; barcode remains TEST2.
-
-# Νο13 — POS FAIL, bounded fix awaiting CI/LAB
-
-07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
-
 ## 07/10/2026 19:32 Athens - owner decision13816 and durable row readback
 
 Same09/original groupedNo4 owner retained. Owner19:32 accepts using the available physical/original invoice instead of automatic download for13816. Stop repeated automatic-original diagnostics for this sample; owner waiver/deferred automatic acquisition, not successful PDF delivery or verified manual upload PASS. Owner19:30 image file_0000000052e48243b70c9f4bd1c8404e shows13816 without original; Render16:30:18/16:30:34Z says file is not PDF at downloadOriginalPdf before identity checks. Response contents were not captured; no proof of HTML/login/empty PDF. PR1824 fullCI4573 passed1877/0/0, mainCI4574 passed;17:25 public runtime0245f30d0746d92bba124e3dcea5124e4897f9dd contains45second deadline/actionable error. Do not reopen the owner's waived13816 download or relax PDF/identity validation.
@@ -13,12 +5,6 @@ Same09/original groupedNo4 owner retained. Owner19:32 accepts using the availabl
 Independent read-only SQL19:33 proves durable rows in existing same-store orders: PEPSICO38467223709516/MARK400015545046546 orderda6a0964-3614-4825-b37e-a03692b71cdb,9rows/101units/net90.05/gross101.77,NEW,supplier094043325; ALFA8114/MARK400015558996362 orderf164690e-1e04-49af-a9c4-75e7f6558d44,13rows/59units/net48.91/gross55.29,NEW,supplier095697632; HARIBO16966/MARK400015564403749 order1f2e170f-567a-46b9-a535-02a5896404ac,13rows/55units/net56.20/gross63.50,NEW,supplierNULL. Durable saved-row aggregate and known supplier associations scoped DB PASS. Not proof of every row's original alignment or no financial/stock changes. Do not repeat Apply, payment or supplier/reopen steps already confirmed by owner. HARIBO supplier not inferred from prior unrelated sample PASS.
 
 Independent query current AiReaderJob.mydataPosReceipt.receivedAt for storecmulmjjoc000qqlbf2bn2ifj0 returns0. LAB POS/myDATA linkage is NOT TESTED here, not PASS. Overall09 remains OPEN for the distinct POS receipt/credit/nonPremium/POSfirst scope, measured cursor/replay/concurrency, external provider prerequisites other than waived13816 and outstanding role/device boundaries/reliability. Existing Gate3 agreed PASS and other owners/#27 fixtures protected. No new invoice/payment/stock/fiscal mutation. Next distinct acceptance must be identified as fictional LAB and baselined before any POS submission; no duplicate existing invoice/payment. Publication updates checkpoint/manual/active/pending/tracker/PDF together.
-
-07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.
-
-# Νο 13 — Νεότερη ανάθεση
-
-07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
 
 ## 07/10/2026 15:00 Athens - 13816 provider timeout diagnosis and bounded fix AWAITING LAB
 
@@ -794,11 +780,9 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 
 ## 7. Barcode και αναζήτηση προϊόντων
 
-**ASSIGNED — `codex/n13-barcode-transfer-lab-20261007` (07/10/2026), ανάληψη από `agent/barcode-catalog-check-20260928`:** ανεξάρτητο σκέλος ασφαλούς ελέγχου και μεταφοράς υπάρχοντος barcode μεταξύ προϊόντων της ίδιας εταιρείας. Πρώτα διαβάζουμε τον σημερινό κατάλογο και τις τωρινές οθόνες, έπειτα υλοποιούμε ρητή ανθρώπινη επιβεβαίωση, μία ατομική αλλαγή και Audit, χωρίς μεταβολή ιστορικών πωλήσεων, τιμών ή stock. Η αναζήτηση προσφορών/παραγγελίες παραμένουν χωριστό OPEN σκέλος. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Καμία LAB ή παραγωγική μεταφορά δεν έχει γίνει· κατάσταση AWAITING LAB.
-
 
 - Προϊόντα χωρίς barcode και πολλαπλά barcode ανά προϊόν/συσκευασία/τιμή.
-- Έλεγχος διπλοεγγραφής και ασφαλής μεταφορά barcode σε άλλο προϊόν.
+- Έλεγχος διπλοεγγραφής κατά καταχώριση νέων barcode (χωριστό scope).
 - Εκτύπωση ετικετών.
 - Αναζήτηση Internet από LAB αποθήκη/barcode, active provider, ασφαλής τιμή και net margin: READ-ONLY USER/LAB PASS01/10/2026, #1582/#1585/#1586. Δεν επαναλαμβάνεται το περασμένο σκέλος.
 - Read-only σύγκριση τιμών/εμφάνιση πρότασης: LAB PASS. Υποβολή/έγκριση price proposal και δημιουργία/αποστολή παραγγελίας: OPEN / NOT TESTED· χωριστό write scope.

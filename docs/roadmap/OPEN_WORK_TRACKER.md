@@ -198,23 +198,16 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 13 — Μεταφορά barcode
 
-07/10/2026 20:03 Athens — owner ready; POS cart visibly empty/total0 after user cancellation, independent DB unchanged. PR1834/CI4604 (1877/0, build/invariants/HTTP incl stale409/fresh200) merged5ccf23b25ce5d827abbe7e4141aa8ce5b4c5c443; prior connector block resolved. Guard deploy/LAB acceptance pending, full No13 OPEN. POS fix PR1829/CI4601 merged8836c1cff1197324aeed66eed3c382b42a2340c9 and exact health confirmed: LAB POS2 scan2900000000018 selected only TEST2 at2.40 qty1/cart only/no payment. Fresh DB16:54:59Z before vs after: barcode row/Auditcount1, stocks11/−2, prices1.20/2.40, movements8/1/latest01Oct, all22 transaction groups and both open MAIN/LABPOS02 shifts EXACT unchanged. Live source reopen, invalid123, unknown2999999999999, same target and clearing transfer preview PASS. Physical scanner not tested; Enter equivalent tested. Do not repeat measured transfer/payment; barcode remains TEST2.
+**Κατάσταση:** PASS — 07/10/2026 20:06 Europe/Athens
 
+**Υπόλοιπο / όρια PASS:** Συμφωνημένη εταιρική μεταφορά, live confirmation/cancel/readback/POS/Audit/guard και ανεξάρτητη stock-price-financial συμφωνία ολοκληρώθηκαν. Αρνητικά role/tenant/reset/concurrency/stale-card σενάρια ελέγχθηκαν isolated HTTP/Postgres CI, όπως προβλεπόταν. Φυσικός scanner και νέα πραγματική εγκατάσταση δεν περιλαμβάνονται στο PASS. Άλλα barcode/Excel/απογραφή scopes παραμένουν χωριστά.
 
-07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
+**Υπεύθυνη σελίδα / branch:** codex/n13-barcode-transfer-lab-20261007 · ολοκληρωμένο, χωρίς υπόλοιπο προς ανάληψη.
 
+**Ανάληψη:** 07/10/2026 15:12 Europe/Athens, ρητή εντολή ιδιοκτήτη, από agent/barcode-catalog-check-20260928· claim PR1826.
 
-07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.
-
-**Κατάσταση:** ΜΕΡΙΚΟ LAB PASS / πρόσθετη προστασία AWAITING LIVE
-
-**Υπόλοιπο / όρια PASS:** Μεταφορά/readback/POS/Audit/stock-price-financial safety και live αρνητικά PASS· isolated role/tenant/concurrency/reset/rollback/stale-card PASS. PR1829 και1834 merged, CI4601/4604 PASS. Μόνο exact-deploy live προστασία παλιάς καρτέλας εκκρεμεί· full No13 OPEN.
-
-**Υπεύθυνη σελίδα / branch:** codex/n13-barcode-transfer-lab-20261007 · ανάληψη από agent/barcode-catalog-check-20260928 με ρητή εντολή ιδιοκτήτη.
-
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
-
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** NOT TESTED· κανένα νέο LAB PASS ή state change στην ανάληψη.
+**Ολοκλήρωση:** 07/10/2026 20:06 Europe/Athens — Νο13 PASS, συμφωνημένο scope ολοκληρώθηκε. Existing transfer/Audit at0245f30d, corrected POS lookup at8836c1c and deployed guard exact5ccf23b25ce5d827abbe7e4141aa8ce5b4c5c443 verified via health. One save of pre-deploy TEST1 card returned «Άνοιξε ξανά την καρτέλα πριν αποθηκεύσεις: απαιτείται έλεγχος της τρέχουσας αντιστοίχισης barcode.». Fresh measured DB17:06:12Z before/after EXACT equal for barcode rows, ProductupdatedAt/cardAudit counts, prices, stock/movements, all22transaction groups and both open MAIN/LABPOS02 shifts. No checkout/payment/restore transfer; barcode remains TEST2. Owner-cleared POS cart visibly total0; financial DB unchanged. CI4604/1877tests0fail/build/invariants/HTTP proves same-company/reset/roles/tenant/stale/duplicate/rollback/competing transfers/fresh-card save and both POS catalogs. These are isolated CI scenarios, not live role/scanner PASS. Physical scanner and future store installation remain outside this accepted scope. Other assigned barcode/Excel/inventory/Internet tasks preserved.
+Τεκμήρια: CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md · docs/manual/barcode-transfer/PASS.md · PR1828/1829/1834/1836 · CI4601/4604/4607. Ο κωδικός μεταφέρθηκε μία φορά, δεν επαναλήφθηκε πληρωμή.
 
 ### 14 — Internet αναζήτηση προϊόντων
 
