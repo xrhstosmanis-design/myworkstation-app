@@ -72,15 +72,3 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 **Evidence retained:** #14 read-only USER/LAB PASS remains the 01/10 result at exact revision `35a52c4ef056453955b3764aefc8cf16e978f750`, PR #1586 and docs PR #1587. No new UI/LAB result is claimed here. The deployed revision must be read before any live check. User-specific boundary: no price or VAT changes and no price proposal or order submission. Payment/stock writes and provider-setting changes are also excluded from this claim.
 
 **Next checks:** verify current public health revision; inspect Owner access and fail-closed behavior only if the provider is already disabled; review Master Catalog identity linkage for ambiguity/fail-closed behavior. If a check requires changing provider settings, an account credential, a proposal, an order or stored prices, leave it NOT TESTED and report the blocker.
-
-## 07/10/2026 20:42 Europe/Athens — #14 Master Catalog exact-barcode read-only lookup / PARTIAL
-
-**Runtime and role:** Public `/api/health` reported revision `b5f5dbf8566f74d430c8277305313296e64e9928`, version `0.22.0+kat-test-pos`. The visible signed-in role was Platform Super Admin. No customer Owner login or credential entry was attempted.
-
-**Read-only catalog evidence:** In the Master Catalog, the list showed 9,110 products, 68 without retail price and 0 with unconfirmed VAT. Quick lookup of exact barcode `5449000000996` returned one visible `COCA COLA 330ML` row at retail €1.30. The catalog also displayed another `COCA COLA 330ML` row with internal SKU 763 but barcode `5449000214911`, also at €1.30. This makes name/SKU-only matching ambiguous; the observed exact-barcode lookup was unique in that view. This does not establish or save an Internet-result-to-catalog mapping.
-
-**Action boundary and result:** No product/store was selected and no checkbox, mapping, import, distribution, price, VAT, provider, proposal, order, payment, or stock action was saved. The Master Catalog linkage remains **OPEN** because persistence/reopen of an explicit safe mapping was not tested. Customer Owner access and disabled-provider fail-closed behavior remain **NOT TESTED**; the provider appeared active in the earlier 20:03 search. The read-only continuation is partial; overall #14 remains **READ-ONLY PASS / WRITE OPEN**, not a total PASS.
-
-**Next step:** Only test Owner access through an available official secure flow, without sharing or entering credentials through chat or ordinary automation. Test disabled-provider fail-closed behavior only if the provider is already disabled. Any mapping/write test needs a separately approved, isolated scope and baseline; proposal/order/payment/stock and price/VAT writes remain outside this assignment.
-
-**Publication:** PR #1843 OPEN; GitHub Actions run #4626 on evidence commit `b29a50fbd6c779138304835064eeb15fd5360bb4` completed SUCCESS at 07/10/2026 20:50 Europe/Athens. Documentation CI only; no live-data or application behavior changes.
