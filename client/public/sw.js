@@ -41,7 +41,10 @@ self.addEventListener("notificationclick",event=>{
     const existing=windows.find(client=>{
       try{const url=new URL(client.url);return url.origin===target.origin&&url.pathname.replace(/\/$/,"")===target.pathname.replace(/\/$/,"")}catch{return false}
     });
-    if(existing)return existing.focus();
+    if(existing){
+      if(target.pathname.startsWith("/chat/"))existing.postMessage({type:"STORE_CHAT_OPEN",storeId:decodeURIComponent(target.pathname.split("/")[2])});
+      return existing.focus();
+    }
     return clients.openWindow(target.href);
   }));
 });

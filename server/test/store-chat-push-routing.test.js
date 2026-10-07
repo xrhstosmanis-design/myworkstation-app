@@ -48,3 +48,9 @@ test("visible dedicated Chat suppresses duplicate system notification",async()=>
   const h=harness([{id:"chat",url:`${origin}/chat/B`,visibilityState:"visible"}]);await h.push({storeId:"B"});
   assert.equal(h.notifications.length,0);assert.deepEqual(h.posts.map(x=>x.id),["chat"]);
 });
+
+test("existing Chat receives an explicit reopen command for only its own store",async()=>{
+  const h=harness([{id:"chat",url:`${origin}/chat/B`,visibilityState:"hidden"}]);await h.click("/chat/B");
+  assert.deepEqual(h.focused,["chat"]);assert.equal(h.posts[0].data.type,"STORE_CHAT_OPEN");assert.equal(h.posts[0].data.storeId,"B");
+  assert.equal(h.opened.length,0);assert.equal(h.navigated.length,0);
+});

@@ -17,3 +17,5 @@ Local Node24 actual worker vm + actual loader14PASS/0FAIL/0SKIP. Covers legacy/n
 ## Acceptance after exact deploy
 
 Physical Android current-session LAB direct Chat URL must show correct store/messages/compose without PIN. Then a separately identified notification tap test with fresh before/after, never resend N16-PUSH-20261008-001 or recreate old task. No16 remains OPEN for real tap, settings-toggle, authenticated negative API role/tenant/token revocation and other devices. Financial/stock zero effects NOT TESTED. Until physical retest this fix AWAITING LAB. Background receipt/sound and protected Owner/SA/operator/anonymous/assignment PASS remain.
+
+Existing Chat notification focus also sends STORE_CHAT_OPEN for its exact store. The Chat-only entry listens and reopens a previously closed panel without navigation/draft reset or touching any POS. Fifteen focused tests now PASS; previous14 count is historical initial verification.
