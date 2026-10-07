@@ -3147,3 +3147,8 @@ Same #14 owner; continuation branch `codex/task14-owner-provider-readonly-202610
 ## 07/10/2026 21:04 Europe/Athens — #14 secure Owner authentication attempt / BLOCKED
 
 Στο επίσημο secure browserAuth flow η φόρμα σύνδεσης επέστρεψε `submitted`, χωρίς να επιβεβαιώνει είσοδο. Η εφαρμογή εμφάνισε «Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη» και δεν επαληθεύτηκε Owner role. Δεν εκτέλεσα άλλη προσπάθεια κωδικών. Owner access: **BLOCKED / NOT TESTED**. Ο provider είχε εμφανιστεί ενεργός, άρα disabled-provider fail-closed: **NOT TESTED**. Δεν άλλαξαν ρυθμίσεις ή δεδομένα εφαρμογής. Η ακριβής αναζήτηση barcode στο Master Catalog μένει read-only, χωρίς αποθηκευμένο mapping. Συνολικό #14: **READ-ONLY PASS / WRITE OPEN**, μερικό. PR #1843 OPEN, στο branch `codex/task14-owner-provider-readonly-20261007-r3`; GitHub Actions run #4637 SUCCESS στο evidence commit `dd83e17d02105cefa9051cf8074318766963a058`· documentation-only CI, χωρίς αλλαγή application behavior.
+
+
+## 07/10/2026 21:27 Europe/Athens — #14 public health recheck / READ-ONLY
+
+Το δημόσιο `/api/health` επέστρεψε `ok: true`, version `0.22.0+kat-test-pos`, revision `50ad768e832e7f706092a3fa21ecfa3ce78189ce`. Το endpoint δεν δείχνει provider enabled/disabled. Η προηγούμενη UI παρατήρηση στις 20:03 έδειχνε active, αλλά η τρέχουσα κατάστασή του είναι NOT VERIFIED· disabled-provider fail-closed παραμένει **NOT TESTED**. Owner authentication παραμένει **BLOCKED / NOT TESTED** λόγω invalid-session alert· δεν έγινε νέα προσπάθεια σύνδεσης. Καμία αλλαγή εφαρμογής ή δεδομένων. Συνολικό #14: **READ-ONLY PASS / WRITE OPEN**, μερικό. PR #1843 OPEN· προηγούμενο documentation commit `8b1d0bac6f69aff534383daed2f7d7d67f023878` πέρασε CI #4638 SUCCESS.

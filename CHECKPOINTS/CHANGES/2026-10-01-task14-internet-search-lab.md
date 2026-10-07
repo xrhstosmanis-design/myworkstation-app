@@ -93,3 +93,11 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 **Result and boundaries:** Owner access is **BLOCKED / NOT TESTED**. Disabled-provider fail-closed remains **NOT TESTED** because the provider appeared active in the earlier check. No app settings, provider configuration, price/VAT, catalog mapping, proposal, order, payment, or stock data was changed. The exact-barcode catalog observation from 20:42 remains read-only and does not establish a saved mapping. Overall #14 stays **READ-ONLY PASS / WRITE OPEN**, partial, not total PASS.
 
 **Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. Evidence commit `dd83e17d02105cefa9051cf8074318766963a058` passed GitHub Actions run #4637 (SUCCESS). Documentation-only CI; no app behavior or live data changed.
+
+## 07/10/2026 21:27 Europe/Athens — #14 public health recheck / READ-ONLY
+
+**Response:** The public `/api/health` endpoint returned `ok: true`, version `0.22.0+kat-test-pos`, revision `50ad768e832e7f706092a3fa21ecfa3ce78189ce`.
+
+**Limit and result:** This endpoint response contains health, version, and revision only; it does not report whether the provider is enabled or disabled. The latest prior UI observation (20:03) showed the provider active, but its current state is **NOT VERIFIED**. Disabled-provider fail-closed remains **NOT TESTED**. Owner access remains **BLOCKED / NOT TESTED** after the earlier invalid-session message; no additional sign-in attempt was made. No application settings or data were changed. Overall #14 remains **READ-ONLY PASS / WRITE OPEN**, partial.
+
+**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. The preceding documentation commit `8b1d0bac6f69aff534383daed2f7d7d67f023878` passed GitHub Actions run #4638 (SUCCESS). This health recheck was read-only; no application behavior or live data changed.
