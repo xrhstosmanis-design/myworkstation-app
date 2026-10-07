@@ -43,7 +43,7 @@ try{
     const products=await prisma.$queryRaw`SELECT "id","salePrice","costPrice","vatRate","updatedAt" FROM "Product" WHERE "id" IN (${source},${target},${other},${foreign}) ORDER BY "id"`;
     const mappings=await prisma.$queryRaw`SELECT * FROM "StoreProduct" WHERE "productId" IN (${source},${target},${other}) ORDER BY "id"`;
     const counts=await prisma.$queryRaw`SELECT (SELECT count(*) FROM "Sale") AS sales,(SELECT count(*) FROM "Payment") AS payments,(SELECT count(*) FROM "StoreTransaction") AS transactions,(SELECT count(*) FROM "StockMovement") AS movements,(SELECT count(*) FROM "ProductPriceHistory") AS priceHistory`;
-    return JSON.stringify({products,mappings,counts});
+    return JSON.stringify({products,mappings,counts},(_,value)=>typeof value==="bigint"?value.toString():value);
   }
   const before=await safety();
   const owner=await request(`/api/owner-products/${target}/barcode-owner?barcode=${barcode}`,{token});
