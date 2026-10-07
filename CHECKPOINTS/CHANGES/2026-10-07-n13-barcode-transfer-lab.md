@@ -37,3 +37,7 @@ Claim PR1826 merged 0245f30d / docs CI classify and Windows PASS, app tests skip
 ## POS master fallback fix
 
 Bounded causal fix: in both active and legacy POS catalog queries suppress a MasterProductBarcode alias only when another Product in the same company explicitly owns that barcode. Preserve unclaimed master aliases, foreign-company mappings, sourceCode/SKU, stock/prices and all write flows. Isolated acceptance now attaches source to master retaining moved barcode plus unclaimed alias; requires target-only result on both endpoints. AWAITING CI and exact deployed LAB scan. No schema/data migration or global master edit. Stale full-card save remains a separate unverified residual.
+
+## Stale full-card overwrite guard
+
+07/10/2026 19:51 Athens — No13 same owner. PR1829/CI4601 PASS merged8836c1c; master-alias fix awaiting deployed LAB lookup. Source inspection identified stale full-card overwrite: PATCH card deletes/reinserts all barcode rows with no opened-card precondition. Bounded follow-up requires original barcode row IDs from both native card editors, locks product inside transaction, compares current IDs before any write and rejects409 if changed; older open editor lacking snapshot must reopen. Transfer already locks both products. Isolated HTTP regression submits target snapshot[] after transfer and requires409 with unchanged stock/price/financial records, then verifies fresh snapshot saves successfully. AWAITING CI/LAB; no production data edit.

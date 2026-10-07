@@ -208,7 +208,9 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     const company=companyId(req);
     const product=await ownedProduct(company,req.params.productId);
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    if(!Array.isArray(req.body?.expectedBarcodeIds))return res.status(409).json({error:"Άνοιξε ξανά την καρτέλα πριν αποθηκεύσεις: απαιτείται έλεγχος της τρέχουσας αντιστοίχισης barcode."});
     const body=z.object({
+      expectedBarcodeIds:z.array(z.string().min(1)).max(30),
       name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),supplierName:z.string().trim().max(250).optional().or(z.literal("")),
       categoryId:z.string().min(1).nullable().optional(),subcategoryId:z.string().min(1).nullable().optional(),categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
       vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
@@ -296,6 +298,12 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       return [row.storeId,storeChanges];
     }));
     await prisma.$transaction(async tx=>{
+      await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "id"=${product.id} FOR UPDATE`;
+      const currentBarcodeIds=(await tx.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${product.id} ORDER BY "id"`).map(row=>row.id);
+      if(JSON.stringify(currentBarcodeIds)!==JSON.stringify([...body.expectedBarcodeIds].sort())){
+        const error=new Error("Τα barcodes του προϊόντος άλλαξαν μετά το άνοιγμα της καρτέλας. Άνοιξέ την ξανά πριν αποθηκεύσεις.");
+        error.status=409;throw error;
+      }
       let categoryId=selectedCategoryId;
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
       if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${req.user.id})`;
