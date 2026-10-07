@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** Ανάληψη codex/n16-chat-acceptance-20261007 μετά δημοσίευση μεταφοράς· έγκριση μηνυμάτων στο εικονικό LAB07Oct20:02. Νέο scope NOT TESTED.  Εκκρεμούν background Push/ήχος, routing terminal, pin, task management, ρόλοι/logout και πολλαπλές συσκευές.
+- **Υπόλοιπο / όριο:** LAB Super Admin07Oct20:12: pin/σημαντικό και κλείσιμο/επαναφορά μίας νέας εργασίας PASS, σωστά Audit και μετρημένα ταμεία αμετάβλητα. Υπόλοιπο: ανάθεση υπευθύνου, άλλοι ρόλοι/tenant, unpin/unmark/message completion, logout/πολλαπλές συσκευές, πραγματικό background Push/ήχος/terminal. Ίδιος owner codex/n16-chat-acceptance-20261007. Συνολικά OPEN.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 
