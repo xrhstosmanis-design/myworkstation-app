@@ -1,3 +1,16 @@
+# TODAY-04 — Κεντρική Διαχείριση LIVE έλεγχος — IN PROGRESS
+
+07/10/2026 Europe/Athens — Συνεχίζεται ένας έλεγχος οθόνη-οθόνη. Το φρέσκο Platform Admin tab απαιτεί ξανά σύνδεση· το ασφαλές browserAuth δεν είναι διαθέσιμο στην τρέχουσα συνεδρία, άρα δεν έγινε επανέλεγχος UI και δεν ζητήθηκαν στοιχεία στο chat. Οι προηγούμενες read-only παρατηρήσεις παραμένουν περιορισμένες, όχι συνολικό PASS.
+
+| Καρτέλα | Normal | Maximize | Scroll | Κουμπιά/Actions | LIVE | PASS/FAIL/BLOCKED | PR/Revision |
+|---|---|---|---|---|---|---|---|
+| Συμβάντα | 1348×925 | Δεν υπάρχει έλεγχος maximize | Πραγματική κύλιση ως τις εγγραφές 7/9 και ορατή τελευταία γραμμή· «Χειριστής» εμφανίζεται με οριζόντια κύλιση | Φίλτρο στήλης ανοίχτηκε· εφαρμογή φίλτρου και ταξινόμηση δεν επιβεβαιώθηκαν λόγω timeout | Μερικώς ελεγμένο | BLOCKED | Production πριν από νέα deploy: b7e4da2f |
+| Ετοιμότητα καταστήματος | Dialog | Δεν υπάρχει έλεγχος maximize | Ιστορικά επιβεβαιώθηκε ότι σταθερά actions καλύπτουν σημείωση στο κάτω μέρος | Δεν αποθηκεύτηκε κάτι· διορθώθηκε μόνο η εσφαλμένη σταθερή ετικέτα στον κώδικα | Η διόρθωση δεν επανελέγχθηκε LIVE | BLOCKED | PR #1853 merged ως 323953ea |
+
+Η διόρθωση αλλάζει μόνο το literal «ΕΚ��ΡΕΜΟΤΗΤΕΣ» σε «ΕΚΚΡΕΜΟΤΗΤΕΣ» στο PlatformAdminApp.jsx. PR CI run37674086588 πέρασε. Το main CI run37674411801 απέτυχε αποκλειστικά στο gate υποχρεωτικών checkpoints: απαιτούνταν η παρούσα λίστα και νέο αρχείο στο CHECKPOINTS/CHANGES/. Τα υπόλοιπα βήματα του main build/test δεν εκτελέστηκαν. Τελευταίο production health πριν από την καταγραφή: b7e4da2f5f88f3cb8aee2e951188fa2c9e90ab93· η δημοσίευση του 323953ea δεν είχε ακόμη επιβεβαιωθεί.
+
+Καμία συναλλαγή, χρέωση, πώληση, stock/payment/fiscal ενέργεια ή αποθήκευση δεδομένων εφαρμογής. Ο συνολικός LIVE έλεγχος παραμένει OPEN. Επόμενη σειρά: συγχρονισμός αυτού του checkpoint, επιτυχές CI, έλεγχος production revision και επανέναρξη UI μόνο μέσω επίσημης ασφαλούς επαλήθευσης.
+
 ## Νο23 — store context USER FAIL / bounded correction AWAITING LAB
 
 07/10/2026 22:18–22:22 Europe/Athens. Owner explicitly requires a general store-context rule and starts this correction. Current owner codex/n23-pending-acceptance-20261007 retained; no other assignment taken. Owner images191618/191805 show Pending Center initially All stores while CommerceHub opened from ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, then manually selected LAB/payment0. Initial context is USER FAIL; actual foreign-row leakage NOT PROVEN. Payment empty state corroborates prior SQL, not positive-payment acceptance. Browser agent native-credential blocker remains; user PC read-only screenshots are separate evidence.
