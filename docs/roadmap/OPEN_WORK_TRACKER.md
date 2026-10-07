@@ -355,13 +355,13 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Κατάσταση:** ΜΕΡΙΚΟ READ-ONLY PASS / OPEN
 
-**Υπόλοιπο / όρια PASS:** Θετική pending πληρωμή/link, ανεξάρτητος Owner/adversarial roles, unavailable sources/caps και χαμηλό μη αρνητικό stock.
+**Υπόλοιπο / όρια PASS:** Αρχικό επιλεγμένο LAB/κλειδωμένο κριτήριο USER PASS07Oct22:37. Refresh και αλλαγή γονικού store OPEN.  Θετική pending πληρωμή/link, ανεξάρτητος Owner/adversarial roles, unavailable sources/caps και χαμηλό μη αρνητικό stock.
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n23-pending-acceptance-20261007 · named transfer approved07Oct
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 21:52 Europe/Athens — Owner explicitly approves named transfer of printed No23 / tracker25 to this page. ΑΝΑΛΗΨΗ ΑΠΟ codex/task25-pending-sources-20261001 — ASSIGNED codex/n23-pending-acceptance-20261007. Prior owner released for this residual only when this record reaches main; no parallel second assignment. Preserve #1595/CI4006–4007 limited invoice/negative-stock/filter/navigation PASS and historical Chat PASS. Residual: existing positive PENDING_REVIEW/DISCREPANCY supplier settlement and source navigation, low nonnegative stock, independent Owner and negative role/tenant checks, real source unavailability/cap acceptance. New scope NOT TESTED. Initial sequence: inspect live LAB and independent read-only baseline; one existing pending payment/link, then existing low stock. No new payment, invoice, stock, approval, shift or task mutation merely for evidence; #16/#17/#27 and completed No19 untouched. Test only MYWORKSTATION LAB companycmtpopbgk000prhb5qc60zxus/storecmtpopbgo000trhb5ng9ytiru and label-isolation control. Actual Owner login needs existing authorized session/secure owner credential flow; never use Super Admin as Owner PASS. If no natural cap/error exists, record NOT TESTED rather than cause production failure. No source change until evidence reconciled. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n23-pending-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Περιορισμένο USER PASS07Oct22:37 για αρχική επιλογή ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/κλειδωμένο φίλτρο· εικόνα193700 και ρητό ΕΙΝΑΙ ΟΚ. PR1854/CI4654/merge και exactlivec4b74fe40aaade6609c32bd8abf73320f63abf69. Manualpending-center/checkpoint2026-10-07-n23-pending-acceptance. ΣυνολικόOPEN· δεύτεροstore/refresh και λοιπά residualNOT TESTED.
 
 ### 26 — Μηνιαία εικόνα ταμία
 
@@ -731,4 +731,5 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 01:11 Europe/Athens — ρητή εντολή ιδιοκτήτη για καταγραφή στο main, όχι έναρξη υλοποίησης.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μόνο τεκμηρίωση απαίτησης· το module παραμένει OPEN. Καμία αλλαγή κώδικα, βάσης ή LAB πράξη. Σχετικές υπάρχουσες αναθέσεις εγκατάστασης/backup/remote/audit/manual διατηρούνται.
+
 
