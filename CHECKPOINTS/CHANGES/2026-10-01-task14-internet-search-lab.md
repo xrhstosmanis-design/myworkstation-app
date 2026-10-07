@@ -121,3 +121,12 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 - The Internet-search history still showed the 21:34:58 query `5449000000996` with 9 results. Its store selector initially displayed **ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ**; no new query was run and no store selection was changed. Provider enabled/disabled state was not visible in this screen. Read-only Backoffice parameters did not expose provider status; the parameters panel was closed without saving.
 - The requested `/platform-admin` route in this session rendered blank except for the **Invoice Learning Lab** button; Owner access remains **BLOCKED / NOT TESTED**. Provider-disabled fail-closed behavior remains **NOT TESTED**; the provider must already be disabled for that check under this assignment.
 - No product, store, mapping, price/VAT, proposal, order, payment, provider setting, or stock data was changed. Overall #14 remains **READ-ONLY PASS / WRITE OPEN**, partial.
+
+
+## 07/10/2026 22:42 Europe/Athens — #14 Owner interface and exact catalog row / read-only
+
+- The user confirmed that the signed-in account is Owner. The app greeting still displays **Υπεύθυνος Εργαστηρίου**, while the LAB Backoffice banner identifies **ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ** and Central Management exposes the Owner product controls and Internet Product Search module. Owner-interface access is therefore visible in this session; the displayed role label differs from the user's description.
+- Opened the exact-barcode Master Catalog row `COCA COLA 330ML`, code/SKU `763~5449000000996`. The read-only detail panel showed Master retail €1.30, confirmed Master VAT 13%, and active entries for both LAB stores at €1.30. No price, VAT, activation, or store value was changed; the `Ενεργοποίηση / ενημέρωση προϊόντος` control was not used.
+- Exact barcode identity matches one visible catalog row. The same-name/different-barcode row observed earlier means name-only matching remains unsafe. No Internet-to-catalog mapping was saved, and persistence/reopen remains NOT TESTED.
+- The provider's enabled/disabled state is not exposed in the displayed pages. No provider setting was changed, and disabled-provider fail-closed remains NOT TESTED because the provider was previously observed active and the assignment permits this check only if it is already disabled.
+- Overall #14 remains **READ-ONLY PASS / WRITE OPEN**, partial. No price/VAT, provider, mapping, proposal, order, payment, import, distribution, or stock write occurred.
