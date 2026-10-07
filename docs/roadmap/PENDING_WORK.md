@@ -958,3 +958,4 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 
 ### 04/10/2026 — TODAY-02 UI continuation
 PR #1704: large readable VAT-department product editor aligned with Central Product Management; Category uses real catalog categories and VAT uses active tenant VAT departments. Supplier-preservation logic remains intact. Awaiting green CI, LIVE publication, LAB save/readback and USER visual acceptance; do not mark PASS yet.
+
