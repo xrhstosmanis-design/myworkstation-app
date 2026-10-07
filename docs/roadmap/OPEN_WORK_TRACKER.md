@@ -235,6 +235,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 16 — Προχωρημένο Chat
 
+07/10/2026 20:09-20:12 Europe/Athens - No16 LIMITED LAB PASS as existing signed Super Admin in ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/storecmtpopbgo000trhb5ng9ytiru, exact runtime5ccf23b25ce5d827abbe7e4141aa8ce5b4c5c443. One new announcement N16-LAB-20261007-A/messagechat-1791392960195-p5hevl1gnw: messages49->50, unique1, unread9 unchanged. Pinfalse->true and importantfalse->true, correct UI labels and one WorkforceAudit event each. New linked taskchat-task-1791393082635-c4vy05z23ea prepared once, taskcount2->3/open0->1; completed17:11:53.583Z/open1->0 then reopened17:12:17.684Z/open0->1 with completion actor/time cleared. Same task, message and flags preserved; task audits4->5->6. Correct pin/important/task-before snapshots recorded before each action. Initial send audit BEFORE used wrong StoreOperatorAudit table; actual send WorkforceAudit row confirmed after-only, send-audit delta NOT TESTED. All22financial StoreTransaction groups/2openMAIN-LABPOS02 shifts unchanged at every measured step; other LAB store messages0 unchanged. No stock/SKU delta PASS. Fixture stays one open task for subsequent role/assignment acceptance. Overall16 OPEN for assign-to-responsible behavior, OWNER/operator/tenant adversarial roles, unpin/unmark/message-completion paths, logout/multipledevices and actual Push/sound/routing. Existing historical PASS/17/other owners/#27 fixtures protected. Checkpoint2026-10-07-n16-chat-live-acceptance.md; screenshotCHECKPOINTS/EVIDENCE/2026-10-07-n16-chat-pin-task.jpg. ClaimPR1837/CI4610/merge3571387e. No source/fiscal/payment/stock changes or old-message repeat.
+
 
 
 07Oct20:02 owner explicitly authorizes needed fictional LAB Chat messages/sales/cancellations. Assistant may send uniquely identified LAB test messages after fresh recorded baseline and merged takeover. Supersedes prior no-assistant-message boundary. No sale/cancellation is needed for initial No16 Chat tests; no repeat accepted fixtures or real-store actions.
@@ -244,7 +246,7 @@ Owner-directed transfer from fix/task16-chat-push-routing-20261001 to codex/n16-
 
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
 
-**Υπόλοιπο / όρια PASS:** Background Push/ήχος, σωστό terminal, pin/σημαντικό/task management, ρόλοι, logout και πολλαπλές συσκευές. Βασικό Chat/read receipts/αρχεία PASS.
+**Υπόλοιπο / όρια PASS:** Super Admin LAB pin/important και linked-task complete/reopen PASS07Oct20:12. Παραμένουν υπεύθυνος/ανάθεση task, OWNER/operator/tenant αρνητικοί έλεγχοι, unpin/unmark/message completion, background Push/ήχος/σωστό terminal, logout και πολλαπλές συσκευές. Βασικό Chat/read receipts/αρχεία PASS διατηρούνται.
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n16-chat-acceptance-20261007 · ΑΝΑΛΗΨΗ ΑΠΟ fix/task16-chat-push-routing-20261001 μετά το merge
 
