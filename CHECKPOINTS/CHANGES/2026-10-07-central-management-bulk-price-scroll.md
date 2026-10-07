@@ -124,3 +124,17 @@ These source changes are candidate fixes only. Do not call a UI row fixed until 
 - Source validation so far: Node syntax checks; focused Invoice Learning count derivation/interception harness; CSS brace balance; git diff --check. Supported Node20 production/CI, server tests, production invariants and isolated E2E are still pending.
 - No charge, sale, price apply, customer/store/terminal creation, payroll write, supplier payment/expense review, stock/fiscal change or irreversible action occurred.
 - The local checkout could not fetch through its sandbox network. The branch was created from the exact main SHA using the connected GitHub repository API; no credential or sign-in data was requested or entered in chat.
+
+
+## 07/10/2026 — continuation after production revision c880
+
+The connected health endpoint returned `c880dbae3905643848178e39d9b2788864a96b9a`, matching main. The separate Platform Admin browser tab is authenticated. Current targeted retests and scoped defects:
+
+- **Company dashboard — FAIL:** At 1340×925, scroll to the final company cards; right-side actions are clipped. Horizontal scrolling did not reveal the missing portion. No activate/deactivate action was clicked. PR #1831 moves the company-card reflow breakpoint from 1250px to 1450px.
+- **POS Designer — FAIL:** The preview’s right-side category tiles are clipped in the normal overlay. A real vertical scroll reached all four unchecked store choices; horizontal scrolling reveals more preview but is required. No store was selected, draft saved, or publish action used. PR #1831 moves the workspace stack breakpoint from 1350px to 1450px.
+- **Subscriptions / Modules:** Opened the LAB subscription and scrolled to the last module cards and Cancel/Save footer. The form is reachable; closed with Cancel. No price/plan/module edits or save. Maximize control not present. Full dropdown/action audit remains open.
+- **Payments and Expenses:** Targeted post-merge layout/filter retests at c880 passed: LAB read-only filter rendered the empty state; no review or approval. These are targeted passes only, not full section acceptance.
+- **Online Radio:** Targeted checkbox-label layout retest passed; actual scroll reached the final Save Store button. No checkbox or save was used.
+- **Internet Product Search:** Generic read-only query returned results; actual scroll reached the last result. No link, proposal, purchase, or application action was used.
+
+PR #1827 is merged with green CI and included in c880. PR #1831 previously failed CI because its source change lacked the mandatory active-list and CHANGES checkpoint updates. This continuation updates both required files and adds the POS fix; rerun CI before any merge. No overall PASS is claimed. All remaining platform tabs, subtabs, filters/actions, maximize states, and regression rows are still open. No real sale, charge, price application, payment/expense approval, store/terminal creation, stock/fiscal change, or irreversible action occurred.
