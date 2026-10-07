@@ -43,3 +43,19 @@ No product/store was selected, no price applied, and no sale/payment/stock/fisca
 4. Execute normal/maximized interaction and scroll-to-last-control checks, updating the matrix with precise evidence.
 5. For each FAIL, isolate its root cause, make a scoped fix, run green CI, merge, wait for deploy, verify exact production revision and repeat LIVE regression before PASS.
 
+
+
+## Latest LIVE attempt — 07/10/2026 13:35 Athens
+
+- Claim PR #1814 is merged as `324a58d64ba75cd1de514bce7e8e333286139d01`. Latest `main` checked for this update: `5dbac0b3f7580128d4eeac3b4332ffada672cd98`. Documentation-only follow-up branch: `codex/central-management-auth-blocker-20261007-1335`.
+- Open PRs were checked before updating this record. PRs #1735, #1702 and #1783 touch Central Management CSS. PRs #1772 and #1776 update shared pending/numbered-work documents; PRs #1646, #832 and #735 touch `CHECKPOINTS/ACTIVE.md`. Those files were left unchanged. The only open-PR filename overlap with this checkpoint/tracker is draft PR #400, whose head is the same current `main` SHA (sync branch), so it contains no divergent work to overwrite.
+- Opened the user-provided exact route `https://myworkstation-app.onrender.com/platform-admin`. Visible sign-in fields were Email and Κωδικός, with device-name field and Συνέχεια button. The secure browser-auth request returned `submitted`; after the transition the page visibly showed «Παρουσιάστηκε εσωτερικό σφάλμα.». No second sign-in request was made. This does not establish that the credentials are wrong. The dashboard was never reached and the production revision remains NOT VERIFIED.
+- The source-only navigation map was reviewed from current `main` to prepare the audit. This is not a LIVE result: Platform Admin sections; Commerce Launcher product/pricing/offers/inventory and other commercial modes; product center, archive and product-card screens; Commerce Hub modules; Online Orders, B2B, table service, analytics, attendance and management parameters remain to be interacted with individually.
+- **Current regression matrix:**
+
+| Καρτέλα | Normal | Maximize | Scroll | Κουμπιά/Actions | LIVE | PASS/FAIL/BLOCKED | PR/Revision |
+|---|---|---|---|---|---|---|---|
+| Platform Admin sign-in gate | Form loaded | Not reached | Not reached | Secure submit → visible internal error | Yes, gate only | BLOCKED | Claim #1814 merged · production revision unverified |
+| All Central Management dashboards, tabs, sub-tabs, actions and resulting screens | Not reached | Not reached | Not reached | Not tested | No | BLOCKED / NOT TESTED | No current revision |
+
+- No code change, transaction, charge, price Apply, stock/fiscal mutation or irreversible data action occurred. No screenshot file was captured because the browser screenshot operation timed out.
