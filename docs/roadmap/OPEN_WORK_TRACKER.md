@@ -235,6 +235,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 16 — Προχωρημένο Chat
 
+07/10/2026 22:18–22:25 Europe/Athens — Νο16 περιορισμένο LAB PASS πραγματικού OWNER: selector click/Escape/Enter δεν διαβάζει το ΝΕΟ μήνυμα. ArrowDown άλλαξε τον υπεύθυνο της υπάρχουσας εργασίας chat-task-1791393082635-c4vy05z23ea από LAB POS 2 σε Άγγελο και ArrowUp επανέφερε LAB POS 2. assignedBy και δύο STORE_CHAT_TASK_ASSIGNED Audit επιβεβαιώνουν OWNER cmtpopbgm000rrhb5xk15uytz· fixtureAudit18→19→20, fixtureReads0 και 50unread αμετάβλητα. Κανονική έξοδος μετά κλείσιμο Chat, reload στη φόρμα σύνδεσης και ασφαλής επανείσοδος στον ίδιο OWNER PASS· νέο LOGIN_SUCCESS19:24:35.667Z, ίδια εργασία OPEN/υπεύθυνος/ιστορικό. Φρέσκα SQL πριν/μετά κάθε ενέργεια:50messages/3tasks,22financialgroups/2open shifts/controlstore0 αμετάβλητα. Δεν δημιουργήθηκε εργασία και δεν επαναλήφθηκαν παλαιά PASS. Runtime9230c0ab για keyboard/ανάθεση, b7e4da2f για logout. Τεκμήρια CHECKPOINTS/CHANGES/2026-10-07-n16-owner-acceptance.md και CHECKPOINTS/EVIDENCE/n16-owner-*.json. Νο16 συνολικά OPEN: live αρνητικοί API ρόλοι/tenant, server token revocation, πολλαπλές/πραγματικές συσκευές και πραγματικό background Push/ήχος/σωστό terminal. ASSIGNED codex/n16-owner-acceptance-20261007· άλλοι owners και παλαιά PASS διατηρούνται.
+
 07/10/2026 22:02-22:08 Europe/Athens - Νο16 περιορισμένο OWNER login/chooser/read-only UI LAB PASS. Secure browserAuth και προσωπική αλλαγή προσωρινού κωδικού από ιδιοκτήτη· πραγματικός Υπεύθυνος Εργαστηρίου/cmtpopbgm000rrhb5xk15uytz, roleOWNER/companycmtpopbgk000prhb5qc60zxus/mustChangePasswordfalse και AuthAudit επιβεβαιώθηκαν ανεξάρτητα. Chooser μόνο τα2LAB stores, χωρίς support/SuperAdmin ένδειξη. Ίδια υπάρχουσα εργασίαchat-task-1791393082635-c4vy05z23ea OPEN/assigneeLABPOS2 και μήνυμαΝΕΟ,50unread, managerselect8activeEmployee επιλογές/settings/pin/completion ορατά. SQL19:07:24Z:50messages/3tasks/fixtureReads0/fixtureAudit18, flagsfalse και assignedAt18:16:52.741 αμετάβλητα από προηγούμενο PASS. Δεν εκτελέστηκε Owner μεταβολή ή logout, δεν επαναλήφθηκε εργασία/μήνυμα. Current health9230c0ab, main8132723a μετάdocs-only1851. OWNER mutation/keyboard/live αρνητικοί ρόλοι/tenant και logout/devices/Push OPEN. CHECKPOINTS/CHANGES/2026-10-07-n16-owner-acceptance.md/manualChat. ΑΝΑΛΗΨΗ ΑΠΟ codex/n16-chat-acceptance-20261007 - ASSIGNED codex/n16-owner-acceptance-20261007 μετά greenCI/merge· ονομασμένο handoff από ρητή εντολή αυτής της συνομιλίας. Προηγούμενα16PASS και17/23/27/λοιποίowners προστατεύονται.
 
 
@@ -242,7 +244,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
 
-**Υπόλοιπο / όρια PASS:** OWNER mutations/keyboard, live negative role/tenant checks, logout/multiple devices and real Push/sound/terminal. Initial actual OWNER login/chooser/read-only UI PASS07Oct22:08; preserve previous No16 PASS.
+**Υπόλοιπο / όρια PASS:** Πραγματικός OWNER login/chooser, keyboard αλλαγή και επαναφορά υπευθύνου χωρίς read, και logout/reload/login LAB PASS07Oct22:25. Υπόλοιπο live αρνητικοί API ρόλοι/tenant, server token revocation, πολλαπλές/πραγματικές συσκευές και πραγματικό Push/ήχος/terminal. Παλαιά SA/operator PASS διατηρούνται. ASSIGNED codex/n16-owner-acceptance-20261007, overallOPEN.
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n16-owner-acceptance-20261007 - named continuation from codex/n16-chat-acceptance-20261007 after this handoff merges.
 
