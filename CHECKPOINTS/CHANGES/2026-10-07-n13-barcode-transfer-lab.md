@@ -1,0 +1,11 @@
+# Νο 13 — Μεταφορά barcode μεταξύ προϊόντων
+
+07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
+
+## Baseline / protected evidence
+
+Read AGENTS, numbered checklist, authoritative tracker, complete active list and products-master-catalog manual. Existing implementation checkpoint 2026-09-28-barcode-safe-transfer-start.md: no LAB transfer. Existing product route last modified cdca0871291ba9a389b50b1d386b97b1dfbc8e95 on 28/09; read current main e9b69441fb453dcef493bf3d78e1606f827cdb1e. No open barcode PR identified. Existing Master Catalog, store-price refresh and invoice supplier/discount PASS must be preserved. Barcode-specific attributes reset to multiplier 1/no override/no barcode name by existing contract. LAB state changes wait for this claim merge. Authenticated LAB baseline pending; NOT TESTED.
+
+## Acceptance
+
+Use only identified fictional LAB source/target; record ownership, other barcodes, store stock/prices/latest movements and both tills before action. Cancel confirmation must preserve mapping. Confirm transfer once, fresh reopen and POS lookup must resolve target only; source other barcode preserved; verify reset attributes and exact Audit. Compare stock/prices/financial controls. Test missing/stale/same target, tenant boundary and concurrent stale writes in isolated database tests; distinguish CI from live evidence. Do not replay any financial transaction. Record exact deployed revision and synchronize final tracker/list/PDF/manual/pending.

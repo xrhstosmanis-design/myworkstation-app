@@ -190,15 +190,15 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 13 — Μεταφορά barcode
 
-**Κατάσταση:** AWAITING LAB
+**Κατάσταση:** ASSIGNED / AWAITING LAB
 
-**Υπόλοιπο / όρια PASS:** Υλοποίηση/CI υπάρχουν. Καμία πραγματική LAB μεταφορά· προηγούμενη απόφαση μη δοκιμής τώρα διατηρείται.
+**Υπόλοιπο / όρια PASS:** Υλοποίηση/CI υπάρχουν. Πραγματική LAB μεταφορά, readback/POS lookup/Audit και ασφαλή αρνητικά σενάρια εκκρεμούν. Ο ιδιοκτήτης στις 07/10 εγκρίνει τις αναγκαίες εικονικές LAB δοκιμές.
 
-**Υπεύθυνη σελίδα / branch:** agent/barcode-catalog-check-20260928
+**Υπεύθυνη σελίδα / branch:** codex/n13-barcode-transfer-lab-20261007 · ανάληψη από agent/barcode-catalog-check-20260928 με ρητή εντολή ιδιοκτήτη.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** NOT TESTED· κανένα νέο LAB PASS ή state change στην ανάληψη.
 
 ### 14 — Internet αναζήτηση προϊόντων
 

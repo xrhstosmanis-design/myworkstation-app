@@ -1,3 +1,7 @@
+# Νο 13 — Νεότερη ανάθεση
+
+07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
+
 ## 07/10/2026 14:49 Athens - independent read-only myDATA receiving evidence
 
 Same tracker09 owner codex/mydata-completion-20261006 retained; overall OPEN. Owner explicitly approved Render My Workspace/tea-d9ie26vaqgkc739uudqg. Read-only SQL via Render against myworkstation-db/dpg-d9isee7avr4c73bdglog-a, store cmulmjjoc000qqlbf2bn2ifj0 (Περίπτερο Διαδόχου Παύλου):5310 inbound records/5310 distinct MARK. Current uniqueness scoped DB PASS, not replay/concurrency acceptance. New5796/MARK400015568480019 received07Oct11:47:25.92394Z (14:47 Athens), source AADE_MYDATA_PRODUCTION, linked original attachment and IN_REVIEW inbox. It and HARIBO16966/MARK400015564403749 each have exactly1 job for linked attachment and1 linked draft order. New receipt and current linked identity counts PASS; source does not prove which scheduler/manual request initiated receipt. No sync/acquisition/upload/payment/application/finalization or DB write performed by this agent.
@@ -764,7 +768,7 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 
 ## 7. Barcode και αναζήτηση προϊόντων
 
-**ΑΝΑΤΕΘΗΚΕ — `agent/barcode-catalog-check-20260928` (28/09/2026):** ανεξάρτητο σκέλος ασφαλούς ελέγχου και μεταφοράς υπάρχοντος barcode μεταξύ προϊόντων της ίδιας εταιρείας. Πρώτα διαβάζουμε τον σημερινό κατάλογο και τις τωρινές οθόνες, έπειτα υλοποιούμε ρητή ανθρώπινη επιβεβαίωση, μία ατομική αλλαγή και Audit, χωρίς μεταβολή ιστορικών πωλήσεων, τιμών ή stock. Η αναζήτηση προσφορών/παραγγελίες παραμένουν χωριστό OPEN σκέλος. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Καμία LAB ή παραγωγική μεταφορά δεν έχει γίνει· κατάσταση AWAITING LAB.
+**ASSIGNED — `codex/n13-barcode-transfer-lab-20261007` (07/10/2026), ανάληψη από `agent/barcode-catalog-check-20260928`:** ανεξάρτητο σκέλος ασφαλούς ελέγχου και μεταφοράς υπάρχοντος barcode μεταξύ προϊόντων της ίδιας εταιρείας. Πρώτα διαβάζουμε τον σημερινό κατάλογο και τις τωρινές οθόνες, έπειτα υλοποιούμε ρητή ανθρώπινη επιβεβαίωση, μία ατομική αλλαγή και Audit, χωρίς μεταβολή ιστορικών πωλήσεων, τιμών ή stock. Η αναζήτηση προσφορών/παραγγελίες παραμένουν χωριστό OPEN σκέλος. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Καμία LAB ή παραγωγική μεταφορά δεν έχει γίνει· κατάσταση AWAITING LAB.
 
 
 - Προϊόντα χωρίς barcode και πολλαπλά barcode ανά προϊόν/συσκευασία/τιμή.
