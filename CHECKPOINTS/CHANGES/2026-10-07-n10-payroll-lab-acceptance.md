@@ -37,3 +37,14 @@ A bounded rule-preview PASS requires visible LAB identity, unique test IDs, corr
 
 **Current deployed revision:** not independently captured in this read-only session.  
 **Next action:** after this exact assignment/checkpoint is merged, perform the synthetic attachment/match test only if the visible workflow preserves pending/no-settlement status; then perform isolated November rule previews with fresh per-action baselines.
+
+
+## Read-only follow-up — 07/10/2026 14:11 Europe/Athens
+
+- The correct entry URL, `/platform-admin`, was visibly confirmed. The authenticated Platform Admin view showed **MYWORKSTATION LAB** and **ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ** before entering its support Backoffice.
+- The test-store employee list showed **8 existing employees**, versus 7 in the 12:28 checkpoint baseline. No existing employee was edited and no new employee, payroll rule, attendance row, payroll period, payment, bank entry, or cash entry was created.
+- In the visible Backoffice, **Μισθοδοσία** opened a general expense-entry form (amount, payment source, reason, and “Καταχώριση”), not a payroll preview. It was canceled without submission. The employee creation form exposed identity, position, contact, store, employment type, and weekly contract hours, but no payroll-rate field; it was canceled. The viewed shift-rule panel contained shift eligibility/weekly-target controls only and was canceled without saving. **Παρουσίες & Ώρες** stated that integration with actual hours, POS, and published schedule is still continuing; no November payroll-preview control was visible.
+- The schedule view initially selected the other LAB store and showed September dates; it was left unchanged. September payroll remained untouched.
+- No November preview was performed and no November period or financial record was created. The authorized synthetic rule-preview acceptance remains **NOT TESTED / OPEN** until the correct payroll-preview surface is available. Full N10 remains **ΜΕΡΙΚΟ PASS / OPEN**; the missing bank proofs and exact cash `StoreTransaction` IDs remain unresolved.
+
+**Next action:** locate the documented payroll preview surface in the authenticated Platform Admin/LAB workflow. If none is available, record the UI limitation as BLOCKED/NOT TESTED and do not substitute the expense-entry form.
