@@ -606,17 +606,17 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
-### TODAY-04 — Μαζική αλλαγή τιμών UI
+### TODAY-04 — Κεντρική Διαχείριση: πλήρης LIVE έλεγχος
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** ASSIGNED / IN PROGRESS · LIVE ACCESS BLOCKED
 
-**Υπόλοιπο / όρια PASS:** Ταχύτητα/μετρητής preview και τελική εφαρμογή.
+**Υπόλοιπο / όρια PASS:** Απογραφή και πραγματικός LIVE έλεγχος κάθε βασικής ενότητας, tab, sub-tab, action και οθόνης που ανοίγει από αυτά· normal/maximize, ορατότητα, πραγματικό vertical scroll ως το τελευταίο λειτουργικό στοιχείο, dropdowns/checkboxes/search/filters/navigation, κάτω/δεξί clipping, αναγνωσιμότητα και regression matrix. Απαιτείται επαλήθευση τρέχουσας production revision. Ιστορική παρατήρηση Bulk Price 07/10 00:25 στο revision `6caa27b7e0667b453ef99db13360e3c0c6e561c1`: normal scroll έφτανε Preview· maximize έκοβε τη φόρμα και το scroll δεν κινούσε. Δεν μεταφέρεται ως τρέχον PASS/FAIL χωρίς νέα LIVE επαλήθευση.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/central-management-live-audit-20261007` — ρητή ανάθεση ιδιοκτήτη 07/10/2026· παλιό handoff μη διαθέσιμο, χωρίς επινόηση αποδέσμευσης.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 12:09 Athens · Πλήρης Κεντρική Διαχείριση και ασφαλείς scoped διορθώσεις μετά από claim PR/green CI/merge. Τελευταίο γνωστό main `4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd`. Ελέγχθηκαν ανοιχτά PR #1735/#1702 και τα κοινά checkpoints. Checkpoint `CHECKPOINTS/CHANGES/2026-10-07-central-management-bulk-price-scroll.md`. Claim PR εκκρεμεί.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Καμία νέα LIVE επιθεώρηση. Browser native credential protection δεν επέτρεψε πληκτρολόγηση, το τελευταίο ασφαλές αίτημα έληξε `locator_invalid`, και η τρέχουσα production revision δεν επαληθεύτηκε. Ιστορικό Bulk Price εύρημα παραπάνω· υπόλοιπα tabs NOT TESTED. Δεν δηλώνεται συνολικό PASS.
 
 ### TODAY-05 — Προσφορές UI
 
