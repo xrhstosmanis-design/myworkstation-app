@@ -132,7 +132,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/mydata-completion-20261006`
 
-07Oct01:45: selected unchanged 9 rows misleading selection message USER FAIL; bounded message distinction AWAITING USER, checkpoint2026-10-07-mydata-no-change-message.md. Missing supplier remainsOPEN; no finalization/payment/stock.
+07Oct10:10: selected unchanged9rows explicit no-change message USER PASS, supersedes01:45 messageFAIL. PR1811/fullCI4544/merge+exacthealth79908d72; checkpoint2026-10-07-mydata-no-change-message.md/manual. Actual changed-row persistence and missing supplier remainOPEN; no finalization/payment/stock.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T19:40:58+00:00 · ΑΝΑΛΗΨΗ ΑΠΟ `codex/mydata-draft-pos-receipt-20260930` με νεότερη ρητή εντολή ιδιοκτήτη στην παρούσα συνομιλία. Μόνο #09, οι υπόλοιπες αναθέσεις διατηρούνται. `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md` · claim PR1794 / CI4508 πλήρες PASS / mergecc4c232e.
 
