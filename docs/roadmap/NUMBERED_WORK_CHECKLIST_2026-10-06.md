@@ -68,6 +68,8 @@
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / OPEN · Epsilon BLOCKED EXTERNAL
 - **Υπόλοιπο / όριο:** Excel και αποθηκευμένο PDF ημέρας10μοναδικάMARK USER PASS23:44· φυσική εκτύπωση NOT TESTED. Εύρος05–06Oct/XLSX19μοναδικά USER PASS. ΤΠΥ2153 παρακράτηση40€ συμφωνεί με πρωτότυπο USER PASS. PDFεύρους19records/2pages USER PASS07Oct. Ανάποδο εύρος εμφανίζει μήνυμα USER PASS07Oct. Επαναφορά05→06Oct19/errorclear USER PASS. Εκκρεμούν άλλα όρια/roles/devices, closed-tab checktime USER PASS· νέα scheduler παραλαβή/replay/cursor OPEN, πρωτότυπα και LAB POS linkage.
 
+- **Νεότερο επιμέρους PASS 07/10 10:10:** Επιλεγμένες ήδη ίδιες γραμμές εμφανίζουν σωστό μήνυμα χωρίς αλλαγές. Προμηθευτής και αποθήκευση πραγματικών αλλαγών εκκρεμούν· συνολικά OPEN.
+
 ## 10 — Μισθοδοσία — υπόλοιπη συμφωνία και κανόνες
 
 - **Tracker ID:** `10`
