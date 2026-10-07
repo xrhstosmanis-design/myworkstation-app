@@ -158,7 +158,7 @@
 
 - **Tracker ID:** `25`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ READ-ONLY PASS / OPEN
-- **Υπόλοιπο / όριο:** ASSIGNED codex/n23-pending-acceptance-20261007 με εγκεκριμένη μεταφορά07Oct21:52. Αρχικό επιλεγμένο LAB/κλειδωμένο φίλτρο USER PASS07Oct22:37 (PR1854/CI4654/exactlivec4b74fe). Αλλαγή γονικού καταστήματος USER PASS07Oct22:52 (εικόνες195012/195234: απομόνωση Chat0/πηγές0, προηγούμενο LAB1/21). Refresh/επιστροφή LAB OPEN. Προηγούμενα PASS προστατευμένα· θετική εκκρεμής πληρωμή/link, Owner/adversarial roles, unavailable sources/caps και χαμηλό μη αρνητικό stock OPEN.
+- **Υπόλοιπο / όριο:** ASSIGNED codex/n23-pending-acceptance-20261007 με εγκεκριμένη μεταφορά07Oct21:52. Αρχικό επιλεγμένο LAB/κλειδωμένο φίλτρο USER PASS07Oct22:37 (PR1854/CI4654/exactlivec4b74fe). Αλλαγή γονικού καταστήματος USER PASS07Oct22:52 (εικόνες195012/195234: απομόνωση Chat0/πηγές0, προηγούμενο LAB1/21). Επιστροφή LAB USER PASS23:03 (εικόνα200256: Chat1/πηγές21). Ανανέωση USER PASS23:04 βάσει ρητής δήλωσης χρήστη και εικόνας200256 (χωρίς ανεξάρτητο API trace). Προηγούμενα PASS προστατευμένα· θετική εκκρεμής πληρωμή/link, Owner/adversarial roles, unavailable sources/caps και χαμηλό μη αρνητικό stock OPEN.
 
 ## 24 — Μηνιαία εικόνα ταμία — πλήρης αποδοχή αποτελεσμάτων
 
