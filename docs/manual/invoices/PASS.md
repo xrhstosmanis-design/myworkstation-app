@@ -1,3 +1,7 @@
+## 07/10/2026 - Όριο PASS αυτόματης παραλαβής
+
+Ανεξάρτητος read-only έλεγχος βάσης:5310εγγραφές/5310μοναδικάMARK, νέο5796/MARK400015568480019 στις14:47 με πρωτότυπο.5796 και16966 έχουν από1job στο συνημμένο και1συνδεδεμένο πρόχειρο. Η ύπαρξη νέας εγγραφής και οι τρέχουσες ταυτότητες πέρασαν· δεν αποδεικνύεται μόνο από αυτά ποιο αίτημα ξεκίνησε τη λήψη ή replay/ταυτόχρονη λήψη. Στον έλεγχο θυρίδας κρατήστε MARK/χρόνο/συνημμένο και συγκρίνετε την ίδια εγγραφή χωρίς νέα υποβολή ή πληρωμή.13816 παραμένει χωρίς πρωτότυπο μετά3αποτυχίες· προαπαιτούμενα παρόχου OPEN. Παλιά135848/6538 δεν αναδημιουργούνται. Checkpoint2026-10-07-mydata-receiving-db-evidence.md.
+
 Owner14:43 states this step was already done and requests no repetition. No repeat supplier/reopen test requested; treat owner confirmation as evidence of completed sequence, without inventing supplier identity or independent DB proof. Continue next distinct09 residual.
 
 ## 07/10/2026 14:39 Athens - HARIBO505-16966 application: scoped USER PASS
