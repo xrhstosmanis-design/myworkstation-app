@@ -1,3 +1,7 @@
+# Νο19 / tracker21 — supplier PDF residual assigned
+
+07/10/2026 20:18 Europe/Athens — Owner starts printed No19 / tracker21. ASSIGNED codex/n19-supplier-pdf-20261007 for residual native saved PDF, independent read-only DB reconciliation and physical printing acceptance. Prior screen/XLSX/printable HTML PASS of01Oct protected; no repeated payments/invoices/stock/settlements. New scope NOT TESTED. Physical paper requires owner-operated printer; browser/CI cannot prove it. Initial action: inspect current export and isolated coverage, then one bounded implementation only if native PDF is absent. LAB reads MYWORKSTATION LAB only, fresh audit/financial/control baseline; no business writes. Checkpoint2026-10-07-n19-supplier-pdf.md.
+
 
 
 07Oct20:02 owner explicitly authorizes needed fictional LAB Chat messages/sales/cancellations. Assistant may send uniquely identified LAB test messages after fresh recorded baseline and merged takeover. Supersedes prior no-assistant-message boundary. No sale/cancellation is needed for initial No16 Chat tests; no repeat accepted fixtures or real-store actions.
