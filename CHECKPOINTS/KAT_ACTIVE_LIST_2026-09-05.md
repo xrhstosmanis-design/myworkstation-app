@@ -60,15 +60,15 @@ Targeted instruction asked to retain printed quantities/initial prices and calcu
 
 Known latest main4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd / PR1813; owner's exact browser runtime revision NOT CAPTURED. Prior PR1811 fullCI4544/exacthealth79908d72 and PEPSICO USER PASS protected. This publication is documentation-only; CI/merge recorded in its PR after checks. Supplier and durable-reopen acceptance for8114 remain OPEN. Next single read-only step: close the draft and reopen the same8114 to verify13 rows/48.91/55.29 before resolving existing supplier identity AFM095697632. Do not repeat application or payment merely for evidence.
 
-## 07/10/2026 12:09 Athens — Central Management full LIVE audit — ASSIGNED / LIVE BLOCKED
+## 07/10/2026 15:26 Athens — Central Management full LIVE audit — ASSIGNED / IN PROGRESS
 
-Ρητή ανάθεση ιδιοκτήτη στην παρούσα σελίδα: ελεγχος μία-μία όλων των βασικών ενοτήτων/καρτελών/υποκαρτελών/λειτουργικών ενεργειών της Κεντρικής Διαχείρισης, σε normal και maximize, με πραγματικό scroll έως το τελευταίο στοιχείο και πλήρη regression matrix. Επιτρέπονται branch/commit/push/PR/merge μετά από green CI. Δεν γίνονται πραγματικές χρεώσεις/πωλήσεις/μη αναστρέψιμες ενέργειες.
+ASSIGNED scope remains with the current owner: full Central Management normal/maximize, interaction, last-control scrolling, filters, readability and regression. Previous sign-in-blocked report is superseded by the authenticated access recorded below. Claim PR #1814 remains merged. Current branch and exact latest-main revision are recorded in the tracker and checkpoint.
 
-Ανάθεση TODAY-04 στο `codex/central-management-live-audit-20261007`. Παλιό handoff δεν ήταν διαθέσιμο· δεν δηλώνεται αποδέσμευση. Τελευταίο γνωστό main `4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd`. Έγινε έλεγχος των ανοιχτών PR #1735/#1702 και των κοινών checkpoints. Claim PR/green CI/merge απαιτείται πριν από source edit.
 
-LIVE κατάσταση: πρόσβαση σύνδεσης BLOCKED από native credential protection· η ασφαλής φόρμα δεν δέχτηκε πληκτρολόγηση και το τελευταίο αίτημα επέστρεψε `locator_invalid`. Η τρέχουσα production revision δεν έχει επιβεβαιωθεί. Ιστορικό εύρημα 07/10 00:25 στο revision `6caa27b7e0667b453ef99db13360e3c0c6e561c1`: Bulk Price normal scroll έφτανε το Preview, maximize έκρυβε το κάτω μέρος και το πραγματικό scroll δεν κινούσε τη φόρμα. Δεν θεωρείται σημερινό PASS/FAIL χωρίς επανέλεγχο.
+### 07/10/2026 15:26 Athens — TODAY-04 authenticated LIVE sweep; scoped fixes awaiting CI
 
-Επόμενο μετά το claim merge: επιβεβαίωση ασφαλούς σύνδεσης/τρέχουσας production revision, πλήρης inventory και LIVE matrix. Όλα τα υπόλοιπα tabs μένουν NOT TESTED/BLOCKED μέχρι αλληλεπίδραση.
+Owner assignment remains with codex/central-management-live-audit-20261007. Current production /api/health revision 0245f30d0746d92bba124e3dcea5124e4897f9dd matches latest main after docs-only PR #1826. Authenticated dashboard is visible. Payments and Expenses summary clipping was reproduced again on this exact revision. The earlier sweep identified additional scoped UI failures listed in the central checkpoint; those rows remain awaiting current-revision regression and post-deploy verification. Scoped source-fix branch codex/today04-platform-admin-live-fixes-20261007-1526 is PR #1827 (head c6a2aa27f9895012a106e69129110ae573b551f1), based on exact current main. Full CI/deploy/after-deploy retest and complete tab/maximize matrix remain OPEN; no PASS claimed. No financial, stock, fiscal or irreversible data action.
+
 
 ## 07/10/2026 10:48 Athens — existing PEPSICO supplier identity and draft association USER PASS
 

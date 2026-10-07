@@ -16,3 +16,34 @@
 .terminal-created-notice button{white-space:nowrap}
 .terminal-created-notice .terminal-created-close{position:absolute;right:8px;top:8px;padding:5px;background:transparent;color:#155c3b}
 @media(max-width:800px){.platform-modal .terminal-create-form{grid-template-columns:1fr}.terminal-activation-box{grid-template-columns:1fr}.terminal-list article{grid-template-columns:auto 1fr}.terminal-list .platform-store-actions{grid-column:1/-1;justify-content:flex-start}}
+/* Keep the fixed terminal inspection controls clear of the terminal form. */
+@media(min-width:801px){
+  body:has(.terminal-routing-floating) .platform-modal .terminal-manager-dialog{
+    box-sizing:border-box;
+    width:min(980px,calc(100vw - 370px));
+    max-width:calc(100vw - 370px);
+    margin-right:320px;
+  }
+}
+@media(max-width:800px){
+  .platform-modal:has(.terminal-manager-dialog){align-items:end;padding:10px}
+  body:has(.terminal-routing-floating) .readiness-manager-floating.terminal-routing-floating{
+    left:10px;
+    right:10px;
+    top:10px;
+    max-height:24vh;
+    overflow:auto;
+    grid-template-columns:minmax(0,1fr);
+  }
+  body:has(.terminal-routing-floating) .platform-modal .terminal-manager-dialog{
+    box-sizing:border-box;
+    width:calc(100vw - 20px);
+    max-width:calc(100vw - 20px);
+    max-height:calc(74vh - 20px);
+  }
+}
+/* The persistent shortcut buttons otherwise cover the final store-form controls. */
+body:has(.platform-store-integrations-launcher) .platform-modal .platform-security-dialog:has(.platform-store-actions){padding-bottom:170px}
+@media(max-width:720px){
+  body:has(.platform-store-integrations-launcher) .platform-modal .platform-security-dialog:has(.platform-store-actions){padding-bottom:190px}
+}
