@@ -1,3 +1,7 @@
+## Νεότερος περιορισμός κινητού — 08/10/2026
+
+USER FAIL: στο Android οι ρυθμίσεις καταλαμβάνουν την οθόνη και ο ιδιοκτήτης δεν μπορεί να δει μηνύματα ή να γράψει (6274.jpg). Τα ιστορικά search/mobile-field PASS δεν πιστοποιούν τη σημερινή συνολική διάταξη. Responsive διόρθωση AWAITING πραγματική αποδοχή, χωρίς νέες οδηγίες PASS. Το Android Push registration PASS07Oct23:56 διατηρείται· παραλαβή/ήχος δεν έχουν δοκιμαστεί. Πηγή CHECKPOINTS/CHANGES/2026-10-08-n16-mobile-chat-layout.md.
+
 ## Νο16 — Android Push εγγραφή: περιορισμένο LAB PASS07/10/2026
 
 07/10/2026 23:56 Europe/Athens — Νο16 περιορισμένο Android Push ΕΓΓΡΑΦΗΣ LAB PASS. Πραγματικό Android Chrome/SuperAdmin στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ δείχνει «Push ενεργό» (6273.jpg). Fresh BEFORE20:53:43.162253Z subscriptions0/pushAudit3/messages50/tasks3· AFTER20:56:51.927421Z subscriptions1/pushAudit4, subscription/chat-push-1791406568214-t1tajv4hn6g και STORE_CHAT_PUSH_SUBSCRIBED20:56:08.22Z με actorcms1k1bje001xhn3xulr0rooz στο σωστό LAB/company. AFTER20:57:19.226655Z messages50/tasks3 ίδια. Exact servedhealth26ccf2cc5b9eda8d1504c3aa49aca1089a18b6ea και PUSH_SUBSCRIBE bundle επιβεβαιώθηκαν πριν την προσπάθεια· το screenshot δεν αποδεικνύει χωριστά mobile revision. Δεν εστάλη νέο μήνυμα/εργασία. Πραγματική παραλαβή, ήχος, tap σωστού store και πολλαπλές συσκευές NOT TESTED. Η αιτία προηγούμενου FAIL δεν τεκμηριώθηκε και δεν αποδίδεται η επιτυχία αυθαίρετα σε μπαταρία ή αλλαγή διάγνωσης. Παλαιά PASS/owners διατηρούνται, Νο16 overallOPEN/ASSIGNED codex/n16-owner-acceptance-20261007.
