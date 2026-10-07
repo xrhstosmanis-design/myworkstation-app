@@ -126,6 +126,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 09 — myDATA / e-invoicing (Νο 4 ομαδοποιημένης εκτύπωσης)
 
+07Oct19:32 owner accepts available original13816; automatic-download sample waived/deferred, no more retry and no PDF-delivery PASS.19:33 independent saved-row DB PASS: PEPSICO9/101/101.77,ALFA13/59/55.29,HARIBO13/55/63.50,all existing NEW orders; known PEPSICO/ALFA supplier VATs persisted,HARIBO supplierNULL. Current same-store POS receipts0: POS linkage NOT TESTED. Overall OPEN; checkpoint2026-10-07-mydata-owner-original-and-persistence.md. Same owner; no repeat completed steps.
+
 07Oct14:58 original13816 actual attempt USER FAIL: Render TimeoutError before response/PDF verification (11:57:40Z). Bounded45second deadline/actionable504 fix AWAITING CI/DEPLOY/LAB. No cap reset/repeated payment/identity bypass. Checkpoint2026-10-07-mydata-original-timeout.md; same09owner.
 
 07Oct14:49 independent read-only DB PASS:5310 inbound/5310 uniqueMARK; new5796/MARK400015568480019 received14:47 with original;5796 and16966 each1 attachment job/1 linked draft. Actual initiating request, replay/concurrency NOT TESTED.13816 original failed3attempts OPEN. Old135848/6538 inbound rows lack matching inbox; retain for audit, no recreation.13 focused regressions PASS; pool incident13:21 corroborated, reliability OPEN. Checkpoint2026-10-07-mydata-receiving-db-evidence.md. Same09owner.
