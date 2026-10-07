@@ -1,6 +1,8 @@
-## Νεότερος περιορισμός κινητού — 08/10/2026
+## Android παρασκήνιο και ήχος — περιορισμένο PASS08/10/2026
 
-USER FAIL: στο Android οι ρυθμίσεις καταλαμβάνουν την οθόνη και ο ιδιοκτήτης δεν μπορεί να δει μηνύματα ή να γράψει (6274.jpg). Τα ιστορικά search/mobile-field PASS δεν πιστοποιούν τη σημερινή συνολική διάταξη. Responsive διόρθωση AWAITING πραγματική αποδοχή, χωρίς νέες οδηγίες PASS. Το Android Push registration PASS07Oct23:56 διατηρείται· παραλαβή/ήχος δεν έχουν δοκιμαστεί. Πηγή CHECKPOINTS/CHANGES/2026-10-08-n16-mobile-chat-layout.md.
+08/10/2026 00:14–00:21 Europe/Athens — Νο16: mobile μηνύματα/γραφή με πληκτρολόγιο USER PASS6275. Android background ειδοποίηση USER PASS6277 και ήχος ρητά επιβεβαιωμένος00:21. Ένα νέο N16-PUSH-20261008-001/chat-1791407778563-8ia6slbcpwj από OWNER στο LAB00:16:18. BEFORE21:15:34Z/AFTER21:16:27Z: messages50→51/sendAudit40→41/subscriptions1/tasks3/controlstore0. Tap USER FAIL6278/επιβεβαίωση00:20: νέα καρτέλα POS login MYWORKSTATION LAB αντί Chat. Καμία επανάληψη αποστολής. Settings-toggle/άλλες συσκευές/αρνητικοί authenticated API ρόλοι-tenant/token revocation OPEN. Financial/stock/read deltas NOT MEASURED. Νο16 overallOPEN/ASSIGNED codex/n16-owner-acceptance-20261007. Checkpoint2026-10-08-n16-physical-push.md.
+
+Επιβεβαιωμένη χρήση: εξουσιοδοτημένος χρήστης επιλέγει LAB και ενεργοποιεί Push. Με Chrome στο παρασκήνιο, μήνυμα άλλου εξουσιοδοτημένου χρήστη ίδιου LAB εμφανίστηκε στις Android ειδοποιήσεις και ακούστηκε ήχος. Δεν επαναλαμβάνουμε το test. Η φυσική συσκευή ήταν SuperAdmin, όχι OWNER acceptance. Tap ανοίγει ακόμη POS login αντί Chat: μην χρησιμοποιείτε PIN ως παράκαμψη· ανοίξτε κανονικά το εξουσιοδοτημένο Chat. Το PASS ήχου βασίζεται στη ρητή παρατήρηση χρήστη, όχι στο εικονίδιο καμπάνας. Mobile messages/typing ορατά με keyboard, όχι πλήρες PASS responsive χειριστηρίων. Άλλες συσκευές/tenant negative API παραμένουν OPEN.
 
 ## Νο16 — Android Push εγγραφή: περιορισμένο LAB PASS07/10/2026
 
