@@ -72,3 +72,32 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 **Evidence retained:** #14 read-only USER/LAB PASS remains the 01/10 result at exact revision `35a52c4ef056453955b3764aefc8cf16e978f750`, PR #1586 and docs PR #1587. No new UI/LAB result is claimed here. The deployed revision must be read before any live check. User-specific boundary: no price or VAT changes and no price proposal or order submission. Payment/stock writes and provider-setting changes are also excluded from this claim.
 
 **Next checks:** verify current public health revision; inspect Owner access and fail-closed behavior only if the provider is already disabled; review Master Catalog identity linkage for ambiguity/fail-closed behavior. If a check requires changing provider settings, an account credential, a proposal, an order or stored prices, leave it NOT TESTED and report the blocker.
+
+## 07/10/2026 20:42 Europe/Athens — #14 Master Catalog exact-barcode read-only lookup / PARTIAL
+
+**Runtime and role:** Public `/api/health` reported revision `b5f5dbf8566f74d430c8277305313296e64e9928`, version `0.22.0+kat-test-pos`. The visible signed-in role was Platform Super Admin. No customer Owner login or credential entry was attempted.
+
+**Read-only catalog evidence:** In the Master Catalog, the list showed 9,110 products, 68 without retail price and 0 with unconfirmed VAT. Quick lookup of exact barcode `5449000000996` returned one visible `COCA COLA 330ML` row at retail €1.30. The catalog also displayed another `COCA COLA 330ML` row with internal SKU 763 but barcode `5449000214911`, also at €1.30. This makes name/SKU-only matching ambiguous; the observed exact-barcode lookup was unique in that view. This does not establish or save an Internet-result-to-catalog mapping.
+
+**Action boundary and result:** No product/store was selected and no checkbox, mapping, import, distribution, price, VAT, provider, proposal, order, payment, or stock action was saved. The Master Catalog linkage remains **OPEN** because persistence/reopen of an explicit safe mapping was not tested. Customer Owner access and disabled-provider fail-closed behavior remain **NOT TESTED**; the provider appeared active in the earlier 20:03 search. The read-only continuation is partial; overall #14 remains **READ-ONLY PASS / WRITE OPEN**, not a total PASS.
+
+**Next step:** Only test Owner access through an available official secure flow, without sharing or entering credentials through chat or ordinary automation. Test disabled-provider fail-closed behavior only if the provider is already disabled. Any mapping/write test needs a separately approved, isolated scope and baseline; proposal/order/payment/stock and price/VAT writes remain outside this assignment.
+
+**Publication:** PR #1843 OPEN; GitHub Actions run #4626 on evidence commit `b29a50fbd6c779138304835064eeb15fd5360bb4` completed SUCCESS at 07/10/2026 20:50 Europe/Athens. Documentation CI only; no live-data or application behavior changes.
+
+
+## 07/10/2026 21:04 Europe/Athens — #14 secure Owner authentication attempt / BLOCKED
+
+**Authentication evidence:** The official secure browserAuth flow offered the app's email-and-password sign-in and returned `submitted`. That result does not confirm authentication. The subsequent app page showed `Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη.`; a fresh verification at the app origin did not establish a valid session or an Owner role. No credential values were disclosed in chat or entered through ordinary browser automation. No further credential attempt was made.
+
+**Result and boundaries:** Owner access is **BLOCKED / NOT TESTED**. Disabled-provider fail-closed remains **NOT TESTED** because the provider appeared active in the earlier check. No app settings, provider configuration, price/VAT, catalog mapping, proposal, order, payment, or stock data was changed. The exact-barcode catalog observation from 20:42 remains read-only and does not establish a saved mapping. Overall #14 stays **READ-ONLY PASS / WRITE OPEN**, partial, not total PASS.
+
+**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. Evidence commit `dd83e17d02105cefa9051cf8074318766963a058` passed GitHub Actions run #4637 (SUCCESS). Documentation-only CI; no app behavior or live data changed.
+
+## 07/10/2026 21:27 Europe/Athens — #14 public health recheck / READ-ONLY
+
+**Response:** The public `/api/health` endpoint returned `ok: true`, version `0.22.0+kat-test-pos`, revision `50ad768e832e7f706092a3fa21ecfa3ce78189ce`.
+
+**Limit and result:** This endpoint response contains health, version, and revision only; it does not report whether the provider is enabled or disabled. The latest prior UI observation (20:03) showed the provider active, but its current state is **NOT VERIFIED**. Disabled-provider fail-closed remains **NOT TESTED**. Owner access remains **BLOCKED / NOT TESTED** after the earlier invalid-session message; no additional sign-in attempt was made. No application settings or data were changed. Overall #14 remains **READ-ONLY PASS / WRITE OPEN**, partial.
+
+**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. The preceding documentation commit `8b1d0bac6f69aff534383daed2f7d7d67f023878` passed GitHub Actions run #4638 (SUCCESS). This health recheck was read-only; no application behavior or live data changed.

@@ -211,16 +211,15 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 14 — Internet αναζήτηση προϊόντων
 
-**Κατάσταση:** READ-ONLY PASS / WRITE OPEN · συνέχιση περιορισμένου read-only ελέγχου ASSIGNED
+**Κατάσταση:** READ-ONLY PASS / WRITE OPEN · συνέχιση: ΜΕΡΙΚΟ PASS · Owner authentication BLOCKED / NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Το read-only USER/LAB PASS της 01/10 παραμένει ως έχει. Owner live και fail-closed behavior αν ο provider είναι ήδη ανενεργός: NOT TESTED. Ασφαλής σύνδεση με Master Catalog: OPEN. Υποβολή/έγκριση πρότασης τιμής και δημιουργία/αποστολή παραγγελίας παραμένουν OPEN και εκτός της παρούσας ανάθεσης. Χωρίς αλλαγές τιμών/ΦΠΑ, provider settings, παραγγελίες, πληρωμές ή stock.
+**Υπόλοιπο / όρια PASS:** Owner authentication BLOCKED / NOT TESTED: η επίσημη secure browserAuth ροή επέστρεψε `submitted`, αλλά η εφαρμογή εμφάνισε «Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη» και δεν επιβεβαιώθηκε Owner role. Το public `/api/health` στις 21:27 έδωσε revision `50ad768e832e7f706092a3fa21ecfa3ce78189ce`, αλλά δεν εκθέτει provider status· η προηγούμενη UI παρατήρηση 20:03 έδειχνε active, όμως η τρέχουσα κατάστασή του είναι NOT VERIFIED. Disabled-provider fail-closed παραμένει NOT TESTED. Η read-only ακριβής αναζήτηση barcode στο Master Catalog επέστρεψε μία ορατή γραμμή, αλλά εμφανίζεται και ίδια ονομασία/SKU με διαφορετικό barcode· ασφαλής αποθηκευμένη σύνδεση Internet-result→Master Catalog παραμένει OPEN, χωρίς mapping. Υποβολή/έγκριση πρότασης τιμής, παραγγελία/αποστολή, πληρωμές και stock writes παραμένουν OPEN και εκτός scope. Χωρίς αλλαγές τιμών/ΦΠΑ ή ρυθμίσεων provider.
 
-**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/task14-owner-provider-readonly-20261007-r1`
+**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/task14-owner-provider-readonly-20261007-r3`
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 19:38 Europe/Athens — Ο ιδιοκτήτης ζήτησε συνέχεια του Νο 14. ASSIGNED: codex/task14-owner-provider-readonly-20261007-r1. Περιορισμένο scope: read-only επιβεβαίωση πρόσβασης Owner και fail-closed συμπεριφοράς όταν ο provider είναι ήδη ανενεργός, καθώς και έλεγχος ασφαλούς σύνδεσης με Master Catalog χωρίς αλλαγές δεδομένων. Δεν θα αλλάξω τιμές/ΦΠΑ, δεν θα υποβάλω ή εγκρίνω πρόταση τιμής, δεν θα δημιουργήσω/στείλω παραγγελία, δεν θα κάνω πληρωμή/stock write ούτε θα αλλάξω ρυθμίσεις provider. Το read-only USER/LAB PASS της 01/10/2026 παραμένει τεκμηριωμένο και δεν επαναλαμβάνεται. Οι υπόλοιπες write ροές μένουν OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md. PR #1833 (documentation-only; CI in progress).
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 19:38 Europe/Athens — owner-directed continuation· το claim PR #1833 έχει συγχωνευθεί. Ίδια ανάθεση συνεχίζεται στο `codex/task14-owner-provider-readonly-20261007-r3`. Scope: read-only Owner/fail-closed check μόνο αν provider ήδη disabled, και έλεγχος ασφαλούς Master Catalog linkage. Καμία αλλαγή τιμής/ΦΠΑ/provider settings, πρόταση, παραγγελία, πληρωμή ή απόθεμα. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md`.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** IN PROGRESS — δεν έχει εκτελεστεί νέος live έλεγχος.
-
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 07/10/2026 21:27 Europe/Athens — ΜΕΡΙΚΟ PASS: read-only Master Catalog exact-barcode lookup στη revision `b5f5dbf8566f74d430c8277305313296e64e9928` (barcode `5449000000996` → μία ορατή `COCA COLA 330ML` στα €1.30· ίδιο όνομα/SKU 763 με barcode `5449000214911`, χωρίς mapping) και νέο public `/api/health` check `ok: true`, version `0.22.0+kat-test-pos`, revision `50ad768e832e7f706092a3fa21ecfa3ce78189ce`. Το health endpoint δεν αναφέρει provider status· current provider state NOT VERIFIED (προηγούμενη UI παρατήρηση 20:03: active). Disabled-provider fail-closed NOT TESTED. Η browserAuth ροή είχε επιστρέψει `submitted`, αλλά invalid-session alert εμπόδισε επιβεβαίωση Owner role: Owner BLOCKED / NOT TESTED. Δεν έγιναν app/data/config writes. Συνολικό #14 παραμένει READ-ONLY PASS / WRITE OPEN, όχι total PASS. PR #1843 OPEN. Προηγούμενο documentation commit `8b1d0bac6f69aff534383daed2f7d7d67f023878` πέρασε GitHub Actions run #4638 SUCCESS.
 ### 15 — Πρώτη αυτόματη OCR ανάγνωση
 
 **Κατάσταση:** OPEN / ΜΕΛΛΟΝΤΙΚΟ
