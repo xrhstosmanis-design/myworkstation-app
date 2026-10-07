@@ -92,4 +92,4 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 
 **Result and boundaries:** Owner access is **BLOCKED / NOT TESTED**. Disabled-provider fail-closed remains **NOT TESTED** because the provider appeared active in the earlier check. No app settings, provider configuration, price/VAT, catalog mapping, proposal, order, payment, or stock data was changed. The exact-barcode catalog observation from 20:42 remains read-only and does not establish a saved mapping. Overall #14 stays **READ-ONLY PASS / WRITE OPEN**, partial, not total PASS.
 
-**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. The prior head `36d9f49591a48e48e53c9cf3bfde7ab75e979c52` had GitHub Actions run #4629 SUCCESS. CI for this documentation update is pending.
+**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. Evidence commit `dd83e17d02105cefa9051cf8074318766963a058` passed GitHub Actions run #4637 (SUCCESS). Documentation-only CI; no app behavior or live data changed.
