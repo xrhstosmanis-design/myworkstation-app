@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** Πραγματική OWNER αρχική είσοδος/chooser/read-only controls PASS07Oct22:08. Υπόλοιπο OWNER μεταβολές/keyboard, live αρνητικοί ρόλοι/tenant, logout/πολλαπλές συσκευές και πραγματικό Push/ήχος/terminal. Παλαιά SA/operator PASS προστατεύονται. ASSIGNED codex/n16-owner-acceptance-20261007 μετά ονομασμένο handoff, overallOPEN.
+- **Υπόλοιπο / όριο:** Πραγματικός OWNER login/chooser, keyboard αλλαγή και επαναφορά υπευθύνου χωρίς read, και logout/reload/login LAB PASS07Oct22:25. Υπόλοιπο live αρνητικοί API ρόλοι/tenant, server token revocation, πολλαπλές/πραγματικές συσκευές και πραγματικό Push/ήχος/terminal. Παλαιά SA/operator PASS διατηρούνται. ASSIGNED codex/n16-owner-acceptance-20261007, overallOPEN.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 
@@ -317,4 +317,6 @@
 
 - **Tracker ID:** `TODAY-09`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
+
+
 

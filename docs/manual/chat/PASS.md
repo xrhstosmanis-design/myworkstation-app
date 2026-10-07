@@ -1,3 +1,9 @@
+## OWNER keyboard και logout/login — περιορισμένο LAB PASS 07/10/2026
+
+Στο ίδιο υπάρχον ΝΕΟ μήνυμα, click/Escape/Enter/Escape στον επιλογέα υπευθύνου δεν δημιουργούν read. ArrowDown από LAB POS 2 σε Άγγελο και ArrowUp πίσω σώζουν δύο αναθέσεις με πραγματικό OWNER actor. Το μήνυμα παραμένει ΝΕΟ/50 αδιάβαστα και η εργασία OPEN. Κλείνουμε πρώτα το Chat με X, πατάμε Έξοδος και ελέγχουμε ότι reload μένει στη σύνδεση. Επανείσοδος με ασφαλή παροχή διαπιστευτηρίων, ίδιος OWNER/δύο LAB καταστήματα/ίδιο ιστορικό και υπεύθυνος. SQL πριν/μετά και AuthAudit επιβεβαιώνουν τα αποτελέσματα. Η αρχική προσπάθεια εξόδου πίσω από ανοικτό Chat δεν είχε αποτέλεσμα και δεν μετρά ως PASS. Δεν πιστοποιούνται token replay/revocation, live αρνητικοί API ρόλοι/tenant, άλλες συσκευές ή Push/ήχος. Τα αρχικά read-only κριτήρια παρακάτω είναι ιστορικά και συμπληρώνονται από αυτό το νέο PASS.
+
+07/10/2026 22:18–22:25 Europe/Athens — Νο16 περιορισμένο LAB PASS πραγματικού OWNER: selector click/Escape/Enter δεν διαβάζει το ΝΕΟ μήνυμα. ArrowDown άλλαξε τον υπεύθυνο της υπάρχουσας εργασίας chat-task-1791393082635-c4vy05z23ea από LAB POS 2 σε Άγγελο και ArrowUp επανέφερε LAB POS 2. assignedBy και δύο STORE_CHAT_TASK_ASSIGNED Audit επιβεβαιώνουν OWNER cmtpopbgm000rrhb5xk15uytz· fixtureAudit18→19→20, fixtureReads0 και 50unread αμετάβλητα. Κανονική έξοδος μετά κλείσιμο Chat, reload στη φόρμα σύνδεσης και ασφαλής επανείσοδος στον ίδιο OWNER PASS· νέο LOGIN_SUCCESS19:24:35.667Z, ίδια εργασία OPEN/υπεύθυνος/ιστορικό. Φρέσκα SQL πριν/μετά κάθε ενέργεια:50messages/3tasks,22financialgroups/2open shifts/controlstore0 αμετάβλητα. Δεν δημιουργήθηκε εργασία και δεν επαναλήφθηκαν παλαιά PASS. Runtime9230c0ab για keyboard/ανάθεση, b7e4da2f για logout. Τεκμήρια CHECKPOINTS/CHANGES/2026-10-07-n16-owner-acceptance.md και CHECKPOINTS/EVIDENCE/n16-owner-*.json. Νο16 συνολικά OPEN: live αρνητικοί API ρόλοι/tenant, server token revocation, πολλαπλές/πραγματικές συσκευές και πραγματικό background Push/ήχος/σωστό terminal. ASSIGNED codex/n16-owner-acceptance-20261007· άλλοι owners και παλαιά PASS διατηρούνται.
+
 ## Νο16 - πραγματικός OWNER: αρχική σύνδεση και read-only UI PASS07/10/2026
 
 Ο εξουσιοδοτημένος Owner του MYWORKSTATION LAB συνδέεται από το Κανονικό Backoffice με τον δικό του λογαριασμό. Αν ζητηθεί αλλαγή προσωρινού κωδικού, την εκτελεί ο ίδιος. Μετά επιβεβαιώνει «Καλώς ήρθες, Υπεύθυνος Εργαστηρίου», χωρίς ένδειξη support/SuperAdmin.
@@ -98,3 +104,4 @@ Exact production `6bcfe05b82f19b53e150949cef7c2e86a797694d`. MYWORKSTATION LAB: 
 
 
 Τελικό UI readback στο exact `c260534436d986cdb003465d777d9a4c6e6e3fe7`,01/10 13:30:05Z: πλήρης φόρτωση,49 μηνύματα/9 αδιάβαστα ίδια. Οι νέες διορθώσεις Push παραμένουν AWAITING πραγματική παραλαβή/ήχο· η προηγούμενη permission απόπειρα δεν επαναλήφθηκε.
+
