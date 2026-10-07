@@ -242,11 +242,18 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 16 — Προχωρημένο Chat
 
+
+
+07Oct20:02 owner explicitly authorizes needed fictional LAB Chat messages/sales/cancellations. Assistant may send uniquely identified LAB test messages after fresh recorded baseline and merged takeover. Supersedes prior no-assistant-message boundary. No sale/cancellation is needed for initial No16 Chat tests; no repeat accepted fixtures or real-store actions.
+
+Owner-directed transfer from fix/task16-chat-push-routing-20261001 to codex/n16-chat-acceptance-20261007 takes effect after merged claim; only16, protected PASS and17 owner retained. New scope NOT TESTED. Checkpoint2026-10-07-n16-chat-takeover.md.
+
+
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
 
 **Υπόλοιπο / όρια PASS:** Background Push/ήχος, σωστό terminal, pin/σημαντικό/task management, ρόλοι, logout και πολλαπλές συσκευές. Βασικό Chat/read receipts/αρχεία PASS.
 
-**Υπεύθυνη σελίδα / branch:** fix/task16-chat-push-routing-20261001
+**Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n16-chat-acceptance-20261007 · ΑΝΑΛΗΨΗ ΑΠΟ fix/task16-chat-push-routing-20261001 μετά το merge
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
 
