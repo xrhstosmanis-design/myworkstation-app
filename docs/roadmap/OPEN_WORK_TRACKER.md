@@ -1,6 +1,6 @@
 # MyWorkStation — κοινό μητρώο εκκρεμοτήτων και αναθέσεων
 
-Έκδοση 06/10/2026 · Ευρώπη/Αθήνα · Βάση main 329792bad1efc5705fff663d093fc89377b97500.
+Έκδοση 07/10/2026 · Ευρώπη/Αθήνα · Βάση main 6f370e1b2aad887a4aa380e27e462391f05b2ca5.
 
 ## Current numbered checklist
 
@@ -126,6 +126,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 09 — myDATA / e-invoicing (Νο 4 ομαδοποιημένης εκτύπωσης)
 
+07Oct19:32 owner accepts available original13816; automatic-download sample waived/deferred, no more retry and no PDF-delivery PASS.19:33 independent saved-row DB PASS: PEPSICO9/101/101.77,ALFA13/59/55.29,HARIBO13/55/63.50,all existing NEW orders; known PEPSICO/ALFA supplier VATs persisted,HARIBO supplierNULL. Current same-store POS receipts0: POS linkage NOT TESTED. Overall OPEN; checkpoint2026-10-07-mydata-owner-original-and-persistence.md. Same owner; no repeat completed steps.
+
 07Oct14:58 original13816 actual attempt USER FAIL: Render TimeoutError before response/PDF verification (11:57:40Z). Bounded45second deadline/actionable504 fix AWAITING CI/DEPLOY/LAB. No cap reset/repeated payment/identity bypass. Checkpoint2026-10-07-mydata-original-timeout.md; same09owner.
 
 07Oct14:49 independent read-only DB PASS:5310 inbound/5310 uniqueMARK; new5796/MARK400015568480019 received14:47 with original;5796 and16966 each1 attachment job/1 linked draft. Actual initiating request, replay/concurrency NOT TESTED.13816 original failed3attempts OPEN. Old135848/6538 inbound rows lack matching inbox; retain for audit, no recreation.13 focused regressions PASS; pool incident13:21 corroborated, reliability OPEN. Checkpoint2026-10-07-mydata-receiving-db-evidence.md. Same09owner.
@@ -166,7 +168,11 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 **Read-only follow-up (07/10/2026 14:11 Europe/Athens):** The correct /platform-admin entry was confirmed; authenticated scope visibly showed MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. The current employee list has 8 existing employees versus 7 at the 12:28 baseline. No records were changed. The visible Μισθοδοσία control opens an expense-entry form, the employee form has no payroll-rate field, and the actual-hours view says integration is still in progress. No November preview or synthetic record was created; no period/payment/bank/cash action was made. Additional preview acceptance remains NOT TESTED / OPEN. The deployed /api/health response at 14:41 Europe/Athens was version 0.22.0+kat-test-pos, revision b0acab108fb01836664c3dd807267e7bfde83579. See the updated checkpoint.
 
 **Additional read-only check (07/10/2026 14:50 Europe/Athens):** The exact October −€13.67 row remained without attachment after the visible “Αποδεικτικό” control did not open a file chooser; nothing was selected/uploaded and no confirmation occurred. The selected LAB-POS-02 shift from 26/09 showed two 17:10 payroll expense rows (€100 and €20, cash-shift method), and €120 expenses total, but no StoreTransaction IDs. September shift was not changed or closed; this does not prove exact-ID reconciliation. See checkpoint.
-**Read-only follow-up (07/10/2026 15:08 Europe/Athens):** Correct authenticated `/platform-admin` entry and scoped **MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ** Backoffice confirmed. Four pending bank rows still have no attachment (−€206.67 total); October −€13.67 row `a2a58e32-ad12-409a-8486-daf3e84b7cdb` remains unattached. The matching synthetic PDF is clearly stamped as no-real-payment and not accounting proof; it was not uploaded because both permitted local transfer attempts failed, and no confirmation/settlement occurred. The historical open `LAB-POS-02` shift still shows €120.00 expenses in two rows (€100/€20) but no exact cash `StoreTransaction` IDs; a separate observed open MAIN test shift shows zero amounts/transactions. No record was created, closed, or edited; September untouched. November payroll preview remains NOT TESTED, exact cash IDs and genuine bank proof remain missing. **N10 remains ΜΕΡΙΚΟ PASS / OPEN.** See checkpoint.\n### 11 — Εστίαση / TABLE_SERVICE
+**Read-only follow-up (07/10/2026 15:08 Europe/Athens):** Correct authenticated `/platform-admin` entry and scoped **MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ** Backoffice confirmed. Four pending bank rows still have no attachment (−€206.67 total); October −€13.67 row `a2a58e32-ad12-409a-8486-daf3e84b7cdb` remains unattached. The matching synthetic PDF is clearly stamped as no-real-payment and not accounting proof; it was not uploaded because both permitted local transfer attempts failed, and no confirmation/settlement occurred. The historical open `LAB-POS-02` shift still shows €120.00 expenses in two rows (€100/€20) but no exact cash `StoreTransaction` IDs; a separate observed open MAIN test shift shows zero amounts/transactions. No record was created, closed, or edited; September untouched. November payroll preview remains NOT TESTED, exact cash IDs and genuine bank proof remain missing. **N10 remains ΜΕΡΙΚΟ PASS / OPEN.** See checkpoint.
+
+**Real-store acceptance pending (07/10/2026 17:24 Europe/Athens):** NOT TESTED; no normal-store action was performed. Schedule a separate normal-store acceptance, verify the selected store and read-only baseline, and agree the scope before any test. No real payment/confirmation/settlement or September replay/change. Exact cash `StoreTransaction` IDs, genuine bank-movement proof, and the supported November preview remain outstanding; synthetic LAB material is not accounting evidence. **N10 remains ΜΕΡΙΚΟ PASS / OPEN.**
+
+### 11 — Εστίαση / TABLE_SERVICE
 
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / OPEN
 
@@ -206,15 +212,15 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 14 — Internet αναζήτηση προϊόντων
 
-**Κατάσταση:** READ-ONLY PASS / WRITE OPEN
+**Κατάσταση:** READ-ONLY PASS / WRITE OPEN · συνέχιση περιορισμένου read-only ελέγχου ASSIGNED
 
-**Υπόλοιπο / όρια PASS:** Υποβολή/έγκριση πρότασης τιμής, δημιουργία/αποστολή παραγγελίας και ασφαλής Master Catalog σύνδεση.
+**Υπόλοιπο / όρια PASS:** Το read-only USER/LAB PASS της 01/10 παραμένει ως έχει. Owner live και fail-closed behavior αν ο provider είναι ήδη ανενεργός: NOT TESTED. Ασφαλής σύνδεση με Master Catalog: OPEN. Υποβολή/έγκριση πρότασης τιμής και δημιουργία/αποστολή παραγγελίας παραμένουν OPEN και εκτός της παρούσας ανάθεσης. Χωρίς αλλαγές τιμών/ΦΠΑ, provider settings, παραγγελίες, πληρωμές ή stock.
 
-**Υπεύθυνη σελίδα / branch:** Δεν μεταφέρεται ανάθεση — έλεγχος τρέχοντος checkpoint πριν claim
+**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/task14-owner-provider-readonly-20261007-r1`
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 19:38 Europe/Athens — Ο ιδιοκτήτης ζήτησε συνέχεια του Νο 14. ASSIGNED: codex/task14-owner-provider-readonly-20261007-r1. Περιορισμένο scope: read-only επιβεβαίωση πρόσβασης Owner και fail-closed συμπεριφοράς όταν ο provider είναι ήδη ανενεργός, καθώς και έλεγχος ασφαλούς σύνδεσης με Master Catalog χωρίς αλλαγές δεδομένων. Δεν θα αλλάξω τιμές/ΦΠΑ, δεν θα υποβάλω ή εγκρίνω πρόταση τιμής, δεν θα δημιουργήσω/στείλω παραγγελία, δεν θα κάνω πληρωμή/stock write ούτε θα αλλάξω ρυθμίσεις provider. Το read-only USER/LAB PASS της 01/10/2026 παραμένει τεκμηριωμένο και δεν επαναλαμβάνεται. Οι υπόλοιπες write ροές μένουν OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md. PR #1833 (documentation-only; CI in progress).
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** IN PROGRESS — δεν έχει εκτελεστεί νέος live έλεγχος.
 
 ### 15 — Πρώτη αυτόματη OCR ανάγνωση
 
@@ -622,15 +628,16 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 ### TODAY-04 — Κεντρική Διαχείριση: πλήρης LIVE έλεγχος
 
-**Κατάσταση:** ASSIGNED / IN PROGRESS · LIVE ACCESS BLOCKED
+**Κατάσταση:** ASSIGNED / IN PROGRESS · LIVE ACCESS VERIFIED · UI FAILS OPEN · CI/DEPLOY/REGRESSION PENDING
 
-**Υπόλοιπο / όρια PASS:** Απογραφή και πραγματικός LIVE έλεγχος κάθε βασικής ενότητας, tab, sub-tab, action και οθόνης που ανοίγει από αυτά· normal/maximize, ορατότητα, πραγματικό vertical scroll ως το τελευταίο λειτουργικό στοιχείο, dropdowns/checkboxes/search/filters/navigation, κάτω/δεξί clipping, αναγνωσιμότητα και regression matrix. Απαιτείται επαλήθευση τρέχουσας production revision. Ιστορική παρατήρηση Bulk Price 07/10 00:25 στο revision `6caa27b7e0667b453ef99db13360e3c0c6e561c1`: normal scroll έφτανε Preview· maximize έκοβε τη φόρμα και το scroll δεν κινούσε. Δεν μεταφέρεται ως τρέχον PASS/FAIL χωρίς νέα LIVE επαλήθευση.
+**Υπόλοιπο / όρια PASS:** Παραμένει απαιτούμενος ο πλήρης έλεγχος κάθε ενότητας/tab/sub-tab/action/result screen σε normal και maximize, με πραγματικό scroll έως το τελευταίο λειτουργικό στοιχείο, dropdowns/checkboxes/search/filters/navigation, clipping, αναγνωσιμότητα και regression. Δεν δηλώνεται συνολικό PASS. Τρέχουσες επιβεβαιωμένες αποτυχίες: Workforce shared validation message, POS Designer right clipping, Payments/Expenses summary layout, Internet search header clipping, Subscriptions/Modules horizontal clipping, Online Radio checkbox alignment, fixed shortcuts πάνω στη φόρμα νέου καταστήματος, terminal-routing panel πάνω στη φόρμα τερματικού, Invoice Learning supplier-profile undefined counts. Οι scoped πηγαίες διορθώσεις είναι σε branch, όχι ακόμη green CI/merged/deployed/retested. Matrix/checkpoint περιέχει ακριβείς παρατηρήσεις και NOT TESTED scope.
 
-**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/central-management-live-audit-20261007` — ρητή ανάθεση ιδιοκτήτη 07/10/2026· παλιό handoff μη διαθέσιμο, χωρίς επινόηση αποδέσμευσης. Documentation follow-up: `codex/central-management-auth-blocker-20261007-1335`, based on `5dbac0b3f7580128d4eeac3b4332ffada672cd98`.
+**Υπεύθυνη σελίδα / branch:** Owner assignment διατηρείται: codex/central-management-live-audit-20261007. Scoped fix branch: codex/today04-platform-admin-live-fixes-20261007-1526, based on current main 0245f30d0746d92bba124e3dcea5124e4897f9dd. Claim PR #1814 merged; prior sign-in blocker PR #1818 docs-only. Implementation PR #1827 is open at head c6a2aa27f9895012a106e69129110ae573b551f1; full CI pending. Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-central-management-bulk-price-scroll.md.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 12:09 Athens · Πλήρης Κεντρική Διαχείριση και ασφαλείς scoped διορθώσεις μετά από claim PR/green CI/merge. Τελευταίο γνωστό main `4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd`. Ελέγχθηκαν ανοιχτά PR #1735/#1702 και τα κοινά checkpoints. Checkpoint `CHECKPOINTS/CHANGES/2026-10-07-central-management-bulk-price-scroll.md`. Claim PR #1814 merged as `324a58d64ba75cd1de514bce7e8e333286139d01`; latest main checked for this update: `5dbac0b3f7580128d4eeac3b4332ffada672cd98`.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026, 12:09 Athens, owner-authorized full Central Management live audit and fixes. Latest main checked 07/10 15:26 Athens: 0245f30d0746d92bba124e3dcea5124e4897f9dd (merge PR #1826, docs-only). Open PR overlaps and shared checkpoints were reviewed before scoped changes; changes avoid PlatformAdminApp.jsx, platform-admin.css, PosDesignerPanel.jsx, invoice-learning-lab-bootstrap.js and shared active-owner files where possible.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μερική ενημέρωση μόνο· το TODAY-04 παραμένει OPEN / LIVE ACCESS BLOCKED. 07/10/2026, 13:35 Athens: άνοιξε η ακριβής σελίδα `/platform-admin`. Η φόρμα εισόδου εμφανίστηκε· η ασφαλής browserAuth υποβολή επέστρεψε `submitted`, αλλά η σελίδα εμφάνισε «Παρουσιάστηκε εσωτερικό σφάλμα.». Δεν έγινε δεύτερη προσπάθεια. Δεν ελέγχθηκαν dashboard, καρτέλες ή ενέργειες· όλα παραμένουν NOT TESTED/BLOCKED. Η production revision δεν επαληθεύτηκε. Δεν έγινε πώληση, χρέωση, εφαρμογή τιμής, μεταβολή αποθέματος/φορολογικών ή άλλη μη αναστρέψιμη ενέργεια. Screenshot capture timeout· η ένδειξη σφάλματος επαληθεύτηκε από accessibility state.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μερική, όχι ολοκλήρωση. 07/10/2026 15:26 Athens: authenticated LIVE page reloaded; /api/health now reports revision 0245f30d0746d92bba124e3dcea5124e4897f9dd, matching main. Payments and Expenses summary clipping was reproduced on this revision. Earlier LIVE sweep found the other listed UI issues; per-tab current-revision regressions remain pending. Scoped source branch contains targeted layout/validation/profile-summary changes. Local checks: node syntax checks, focused Invoice Learning summary behavior harness, CSS brace balance and git diff --check PASS. Full supported Node20 build/CI, merge, Render deploy and LIVE regression remain PENDING. No sale, charge, price apply, stock/fiscal change, supplier/payment review, payroll action, customer/store/terminal create or irreversible action occurred.
+
 
 ### TODAY-05 — Προσφορές UI
 

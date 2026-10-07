@@ -1,3 +1,11 @@
+## 07/10/2026 19:32 Athens - owner decision13816 and durable row readback
+
+Same09/original groupedNo4 owner retained. Owner19:32 accepts using the available physical/original invoice instead of automatic download for13816. Stop repeated automatic-original diagnostics for this sample; owner waiver/deferred automatic acquisition, not successful PDF delivery or verified manual upload PASS. Owner19:30 image file_0000000052e48243b70c9f4bd1c8404e shows13816 without original; Render16:30:18/16:30:34Z says file is not PDF at downloadOriginalPdf before identity checks. Response contents were not captured; no proof of HTML/login/empty PDF. PR1824 fullCI4573 passed1877/0/0, mainCI4574 passed;17:25 public runtime0245f30d0746d92bba124e3dcea5124e4897f9dd contains45second deadline/actionable error. Do not reopen the owner's waived13816 download or relax PDF/identity validation.
+
+Independent read-only SQL19:33 proves durable rows in existing same-store orders: PEPSICO38467223709516/MARK400015545046546 orderda6a0964-3614-4825-b37e-a03692b71cdb,9rows/101units/net90.05/gross101.77,NEW,supplier094043325; ALFA8114/MARK400015558996362 orderf164690e-1e04-49af-a9c4-75e7f6558d44,13rows/59units/net48.91/gross55.29,NEW,supplier095697632; HARIBO16966/MARK400015564403749 order1f2e170f-567a-46b9-a535-02a5896404ac,13rows/55units/net56.20/gross63.50,NEW,supplierNULL. Durable saved-row aggregate and known supplier associations scoped DB PASS. Not proof of every row's original alignment or no financial/stock changes. Do not repeat Apply, payment or supplier/reopen steps already confirmed by owner. HARIBO supplier not inferred from prior unrelated sample PASS.
+
+Independent query current AiReaderJob.mydataPosReceipt.receivedAt for storecmulmjjoc000qqlbf2bn2ifj0 returns0. LAB POS/myDATA linkage is NOT TESTED here, not PASS. Overall09 remains OPEN for the distinct POS receipt/credit/nonPremium/POSfirst scope, measured cursor/replay/concurrency, external provider prerequisites other than waived13816 and outstanding role/device boundaries/reliability. Existing Gate3 agreed PASS and other owners/#27 fixtures protected. No new invoice/payment/stock/fiscal mutation. Next distinct acceptance must be identified as fictional LAB and baselined before any POS submission; no duplicate existing invoice/payment. Publication updates checkpoint/manual/active/pending/tracker/PDF together.
+
 07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.
 
 # Νο 13 — Νεότερη ανάθεση
@@ -44,15 +52,15 @@ Targeted instruction asked to retain printed quantities/initial prices and calcu
 
 Known latest main4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd / PR1813; owner's exact browser runtime revision NOT CAPTURED. Prior PR1811 fullCI4544/exacthealth79908d72 and PEPSICO USER PASS protected. This publication is documentation-only; CI/merge recorded in its PR after checks. Supplier and durable-reopen acceptance for8114 remain OPEN. Next single read-only step: close the draft and reopen the same8114 to verify13 rows/48.91/55.29 before resolving existing supplier identity AFM095697632. Do not repeat application or payment merely for evidence.
 
-## 07/10/2026 12:09 Athens — Central Management full LIVE audit — ASSIGNED / LIVE BLOCKED
+## 07/10/2026 15:26 Athens — Central Management full LIVE audit — ASSIGNED / IN PROGRESS
 
-ASSIGNED `codex/central-management-live-audit-20261007` από ρητή ανάθεση του ιδιοκτήτη για μία-μία επαλήθευση όλων των ενοτήτων, καρτελών, υποκαρτελών, ενεργειών και οθονών της Κεντρικής Διαχείρισης. Scope: normal/maximize, πραγματικό scroll έως τελευταίο control, actions/navigation, clipping/readability και regression matrix. Μη γίνει code edit πριν ολοκληρωθεί το claim PR με green CI και merge. Διατήρηση όλων των άλλων owners/checkpoints. Όχι πραγματικές χρεώσεις/πωλήσεις, price apply, stock/fiscal ή μη αναστρέψιμες μεταβολές.
+ASSIGNED scope remains full; prior live-access blocker is superseded by current authenticated access. Claim PR #1814 remains merged. The exact current revision, reproduced failures, scoped fix branch and outstanding complete audit are recorded below.
 
-Τελευταίο γνωστό main: `4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd`. Ανοιχτά PR #1735 και #1702 ελέγχθηκαν· και τα δύο αγγίζουν κοινό UI/CSS, οπότε η μελλοντική διόρθωση θα είναι scoped και θα επανελεγχθεί έναντι των merged αλλαγών.
 
-LIVE ACCESS BLOCKED: ο browser δεν επιτρέπει πληκτρολόγηση στα προστατευμένα credential fields· το τελευταίο secure request επέστρεψε `locator_invalid`. Η τρέχουσα production revision δεν έχει επαληθευτεί. Ιστορικό Bulk Price observation στις 07/10 00:25, revision `6caa27b7e0667b453ef99db13360e3c0c6e561c1`: normal scroll έφτανε Preview, maximize έκοβε το τελευταίο μέρος και το πραγματικό scroll δεν κινούσε. Απαιτείται νέα LIVE επιβεβαίωση πριν από κώδικα και πριν από PASS.
+## 07/10/2026 15:26 Athens — Central Management LIVE audit progress — IN PROGRESS
 
-Checkpoint: `CHECKPOINTS/CHANGES/2026-10-07-central-management-bulk-price-scroll.md`. Next: green claim PR/merge, ασφαλής πρόσβαση και current production revision, πλήρης inventory, μετά LIVE matrix. Όλα τα υπόλοιπα tabs παραμένουν NOT TESTED/BLOCKED.
+Owner assignment remains codex/central-management-live-audit-20261007. Current live production /api/health revision 0245f30d0746d92bba124e3dcea5124e4897f9dd matches latest main after docs-only PR #1826; authenticated Platform Admin is open. Payments and Expenses summary clipping was reproduced again on this exact revision. Earlier LIVE sweep found additional UI failures in Workforce, POS Designer, Internet Search, Subscriptions/Modules, Online Radio, Invoice Learning profiles, store creation and terminal creation; see the active checkpoint for exact matrix, evidence, and NOT TESTED scope. Scoped source-fix branch codex/today04-platform-admin-live-fixes-20261007-1526 is open as PR #1827 at head c6a2aa27f9895012a106e69129110ae573b551f1, based on current main. Fixes are awaiting full CI; deploy and LIVE regression have not run. Overall TODAY-04 remains OPEN. No price application, sale, charge, payment/expense review, stock/fiscal write or irreversible action.
+
 
 ## 07/10/2026 10:48 Athens — existing PEPSICO supplier identity and draft association USER PASS
 
@@ -711,6 +719,8 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 
 **ΑΝΑΛΗΨΗ ΣΥΝΕΧΕΙΑΣ ΑΠΟ `codex/n10-payroll-reconciliation-20261006` — ASSIGNED `codex/n10-payroll-reconciliation-20261007` (07/10/2026 12:28 Europe/Athens):** Ίδιος N10 owner/page. Παραμένουν read-only συμφωνία Σεπτεμβρίου και οι υπάρχουσες τραπεζικές εγγραφές· δεν επαναλαμβάνεται καμία πληρωμή ή κλειδωμένη ενέργεια. Μετά από claim PR και green CI/merge επιτρέπονται μόνο: (a) synthetic, ρητά μη-αποδεικτικό LAB attachment/match fixture στο ήδη υπάρχον Oct −13,67€ row, χωρίς confirm/settlement· (b) μοναδικοί `N10-QA-202611-*` υπάλληλοι/κανόνες στο LAB και προεπισκόπηση Νοεμβρίου, χωρίς payroll period, πληρωμή, cash/bank entry ή κλείσιμο. Δεν αλλάζουν υπάρχοντες εργαζόμενοι/παρουσίες/κανόνες. Δεν επινοούνται προσαυξήσεις υπερωρίας ή πολιτικές απουσίας/άδειας. Μετράμε πριν/μετά και IDs· απενεργοποιούμε test employees μόνο αν αυτό είναι αναστρέψιμο και διατηρεί audit. Ακριβές scope/checkpoint: `CHECKPOINTS/CHANGES/2026-10-07-n10-payroll-lab-acceptance.md`. Καμία νέα LAB μεταβολή ακόμη.
 
+**Εκκρεμεί χωριστή αποδοχή σε κανονικό κατάστημα — NOT TESTED (07/10/2026):** Να προγραμματιστεί κανονικό κατάστημα, να επιβεβαιωθεί ορατά η ταυτότητά του και να καταγραφούν read-only αρχικές τιμές πριν συμφωνηθεί το ακριβές scope. Δεν έγινε live δοκιμή τώρα. Δεν επιτρέπονται πληρωμές/confirm/settlement ή replay/μεταβολή Σεπτεμβρίου. Απαιτούνται επίσης τα ακριβή cash `StoreTransaction` IDs και γνήσια τραπεζικά αποδεικτικά· τα synthetic LAB fixtures δεν τα αντικαθιστούν.
+
 Οι προηγούμενες ενδιάμεσες απογραφές, εγκρίσεις και αναθεωρήσεις βρίσκονται στο `CHECKPOINTS/CHANGES/2026-09-26-workforce-payroll-lab-period-load.md`. Οι δύο LAB βάρδιες `MAIN` / `LAB-POS-02` εντοπίστηκαν. Οι τραπεζικές εγγραφές 5,00 € + 14,67 € παραμένουν σε αναμονή αποδεικτικού. Τα υπάρχοντα Sep cash 20€ + 100€ και bank 173,33€ δεν επαναλαμβάνονται.
 
 - Μισθός ανά ώρα, ημερομίσθιο ή σταθερός μηνιαίος μισθός.
@@ -784,6 +794,8 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 - Εκτύπωση ετικετών.
 - Αναζήτηση Internet από LAB αποθήκη/barcode, active provider, ασφαλής τιμή και net margin: READ-ONLY USER/LAB PASS01/10/2026, #1582/#1585/#1586. Δεν επαναλαμβάνεται το περασμένο σκέλος.
 - Read-only σύγκριση τιμών/εμφάνιση πρότασης: LAB PASS. Υποβολή/έγκριση price proposal και δημιουργία/αποστολή παραγγελίας: OPEN / NOT TESTED· χωριστό write scope.
+
+**#14 continuation ASSIGNED `codex/task14-owner-provider-readonly-20261007-r1` (07/10/2026 19:38 Europe/Athens):** read-only Owner/fail-closed checks only if provider is already disabled, plus safe Master Catalog linkage review. Existing 01/10 read-only PASS protected. No price/VAT changes, proposal submission/approval, order creation/sending, payments, stock writes or provider-setting changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md`; broader writes remain OPEN; claim PR #1833.
 - Σύνδεση πρότασης με Master Catalog και απόθεμα χωρίς αυτόματη επικίνδυνη αντιστοίχιση.
 
 ## 10. Chat και ειδοποιήσεις

@@ -1,4 +1,14 @@
-07Oct17:30 Athens — N13 existing measured LAB transfer PASS protected. Added isolated local-only HTTP E2E acceptance for transfer/reset/Audit/POS lookup, stale and simultaneous competing transfers, duplicate/missing/same/foreign/employee/anonymous rejection and no-linked-store rollback. Tests only, no runtime change, AWAITING CI; full N13 OPEN. No LAB write in this test addition.
+# Νο13 — CI PASS / live POS FAIL / OPEN
+
+07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
+
+## 07/10/2026 19:32 Athens - owner decision13816 and durable row readback
+
+Same09/original groupedNo4 owner retained. Owner19:32 accepts using the available physical/original invoice instead of automatic download for13816. Stop repeated automatic-original diagnostics for this sample; owner waiver/deferred automatic acquisition, not successful PDF delivery or verified manual upload PASS. Owner19:30 image file_0000000052e48243b70c9f4bd1c8404e shows13816 without original; Render16:30:18/16:30:34Z says file is not PDF at downloadOriginalPdf before identity checks. Response contents were not captured; no proof of HTML/login/empty PDF. PR1824 fullCI4573 passed1877/0/0, mainCI4574 passed;17:25 public runtime0245f30d0746d92bba124e3dcea5124e4897f9dd contains45second deadline/actionable error. Do not reopen the owner's waived13816 download or relax PDF/identity validation.
+
+Independent read-only SQL19:33 proves durable rows in existing same-store orders: PEPSICO38467223709516/MARK400015545046546 orderda6a0964-3614-4825-b37e-a03692b71cdb,9rows/101units/net90.05/gross101.77,NEW,supplier094043325; ALFA8114/MARK400015558996362 orderf164690e-1e04-49af-a9c4-75e7f6558d44,13rows/59units/net48.91/gross55.29,NEW,supplier095697632; HARIBO16966/MARK400015564403749 order1f2e170f-567a-46b9-a535-02a5896404ac,13rows/55units/net56.20/gross63.50,NEW,supplierNULL. Durable saved-row aggregate and known supplier associations scoped DB PASS. Not proof of every row's original alignment or no financial/stock changes. Do not repeat Apply, payment or supplier/reopen steps already confirmed by owner. HARIBO supplier not inferred from prior unrelated sample PASS.
+
+Independent query current AiReaderJob.mydataPosReceipt.receivedAt for storecmulmjjoc000qqlbf2bn2ifj0 returns0. LAB POS/myDATA linkage is NOT TESTED here, not PASS. Overall09 remains OPEN for the distinct POS receipt/credit/nonPremium/POSfirst scope, measured cursor/replay/concurrency, external provider prerequisites other than waived13816 and outstanding role/device boundaries/reliability. Existing Gate3 agreed PASS and other owners/#27 fixtures protected. No new invoice/payment/stock/fiscal mutation. Next distinct acceptance must be identified as fictional LAB and baselined before any POS submission; no duplicate existing invoice/payment. Publication updates checkpoint/manual/active/pending/tracker/PDF together.
 
 # Νο13 — LIMITED LAB PASS / OPEN
 
@@ -46,6 +56,10 @@ Owner12:58 reports entered and checked AFM; supplier list screenshot file_000000
 
 Closes supplier/reopen-display residual for this8114 sample only. Initial unprompted assistant discount economics remains FAIL; targeted instruction produced calculated effective discounts, not printed percentages. No general OCR first-pass PASS. Other invoices/roles/devices/concurrency/independent persistence and overall09 remain OPEN, Gate3 agreed PASS protected. This publication is documentation-only; CI/merge recorded in associated PR. Next read-only action: inspect existing7301ΛΝ000063911 draft and original (same issuer AFM095697632) without reupload/payment/finalization; do not repeat8114 application.
 
+## 07/10/2026 17:24 Europe/Athens — N10 real-store acceptance pending
+
+Η αποδοχή σε κανονικό κατάστημα καταγράφεται ως **NOT TESTED / PENDING**. Δεν έγινε live ενέργεια. Επόμενο βήμα είναι ξεχωριστός προγραμματισμένος έλεγχος σε κανονικό κατάστημα, αφού επιβεβαιωθούν ορατά το κατάστημα, οι αρχικές τιμές μόνο για ανάγνωση και το συμφωνημένο scope. Δεν γίνονται πραγματικές πληρωμές/επιβεβαιώσεις/εκκαθαρίσεις και δεν επανανοίγεται ή αναπαράγεται ο κλειστός Σεπτέμβριος. Τα ακριβή cash `StoreTransaction` IDs, γνήσια τραπεζικά αποδεικτικά και υποστηριζόμενη προεπισκόπηση Νοεμβρίου παραμένουν εκκρεμή. N10: **ΜΕΡΙΚΟ PASS / OPEN**.
+
 ## 07/10/2026 12:28 Europe/Athens — N10 Payroll continuation — baseline recorded / ASSIGNED
 
 Same N10 owner, continuation branch `codex/n10-payroll-reconciliation-20261007`; based on current main `ac4b8bb4fb8995b54e3ed870329d06af2f192e0f`. Status remains ΜΕΡΙΚΟ PASS / OPEN. Authenticated Platform Admin selected MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Read-only baseline: Payroll shows7 employees,2 rules,3 shift templates; November 2026 preview7 employees/€0.00, no period created. September2026 remains CLOSED,7 employees/€313.00 gross and paid/€0.00 balance; no replay or change. October existing DRAFT remains7/€13.67 gross-paid/€0.00 balance.
@@ -62,15 +76,15 @@ Targeted instruction asked to retain printed quantities/initial prices and calcu
 
 Known latest main4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd / PR1813; owner's exact browser runtime revision NOT CAPTURED. Prior PR1811 fullCI4544/exacthealth79908d72 and PEPSICO USER PASS protected. This publication is documentation-only; CI/merge recorded in its PR after checks. Supplier and durable-reopen acceptance for8114 remain OPEN. Next single read-only step: close the draft and reopen the same8114 to verify13 rows/48.91/55.29 before resolving existing supplier identity AFM095697632. Do not repeat application or payment merely for evidence.
 
-## 07/10/2026 12:09 Athens — Central Management full LIVE audit — ASSIGNED / LIVE BLOCKED
+## 07/10/2026 15:26 Athens — Central Management full LIVE audit — ASSIGNED / IN PROGRESS
 
-Ρητή ανάθεση ιδιοκτήτη στην παρούσα σελίδα: ελεγχος μία-μία όλων των βασικών ενοτήτων/καρτελών/υποκαρτελών/λειτουργικών ενεργειών της Κεντρικής Διαχείρισης, σε normal και maximize, με πραγματικό scroll έως το τελευταίο στοιχείο και πλήρη regression matrix. Επιτρέπονται branch/commit/push/PR/merge μετά από green CI. Δεν γίνονται πραγματικές χρεώσεις/πωλήσεις/μη αναστρέψιμες ενέργειες.
+ASSIGNED scope remains with the current owner: full Central Management normal/maximize, interaction, last-control scrolling, filters, readability and regression. Previous sign-in-blocked report is superseded by the authenticated access recorded below. Claim PR #1814 remains merged. Current branch and exact latest-main revision are recorded in the tracker and checkpoint.
 
-Ανάθεση TODAY-04 στο `codex/central-management-live-audit-20261007`. Παλιό handoff δεν ήταν διαθέσιμο· δεν δηλώνεται αποδέσμευση. Τελευταίο γνωστό main `4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd`. Έγινε έλεγχος των ανοιχτών PR #1735/#1702 και των κοινών checkpoints. Claim PR/green CI/merge απαιτείται πριν από source edit.
 
-LIVE κατάσταση: πρόσβαση σύνδεσης BLOCKED από native credential protection· η ασφαλής φόρμα δεν δέχτηκε πληκτρολόγηση και το τελευταίο αίτημα επέστρεψε `locator_invalid`. Η τρέχουσα production revision δεν έχει επιβεβαιωθεί. Ιστορικό εύρημα 07/10 00:25 στο revision `6caa27b7e0667b453ef99db13360e3c0c6e561c1`: Bulk Price normal scroll έφτανε το Preview, maximize έκρυβε το κάτω μέρος και το πραγματικό scroll δεν κινούσε τη φόρμα. Δεν θεωρείται σημερινό PASS/FAIL χωρίς επανέλεγχο.
+### 07/10/2026 15:26 Athens — TODAY-04 authenticated LIVE sweep; scoped fixes awaiting CI
 
-Επόμενο μετά το claim merge: επιβεβαίωση ασφαλούς σύνδεσης/τρέχουσας production revision, πλήρης inventory και LIVE matrix. Όλα τα υπόλοιπα tabs μένουν NOT TESTED/BLOCKED μέχρι αλληλεπίδραση.
+Owner assignment remains with codex/central-management-live-audit-20261007. Current production /api/health revision 0245f30d0746d92bba124e3dcea5124e4897f9dd matches latest main after docs-only PR #1826. Authenticated dashboard is visible. Payments and Expenses summary clipping was reproduced again on this exact revision. The earlier sweep identified additional scoped UI failures listed in the central checkpoint; those rows remain awaiting current-revision regression and post-deploy verification. Scoped source-fix branch codex/today04-platform-admin-live-fixes-20261007-1526 is PR #1827 (head c6a2aa27f9895012a106e69129110ae573b551f1), based on exact current main. Full CI/deploy/after-deploy retest and complete tab/maximize matrix remain OPEN; no PASS claimed. No financial, stock, fiscal or irreversible data action.
+
 
 ## 07/10/2026 10:48 Athens — existing PEPSICO supplier identity and draft association USER PASS
 
@@ -3050,3 +3064,28 @@ Owner LIVE verified Master Catalog PASS and Τιμές ανά κατάστημα
 
 ## 06/10/2026 22:35 Athens — Bulk Price second scoped regression fix
 Owner LIVE screenshot after PR1792 still FAIL: in maximized mode the bulk form shows product results and stores but viewport ends at the start of step 3/4; submit remains unreachable. Master Catalog and Store Prices remain locked PASS. Previous natural-height approach was insufficient because the OwnerProductCenter itself still participates in a constrained maximized layout. New bounded approach marks only the bulk form as `bulk-price-scroll-region`; in maximized mode OwnerProductCenter becomes a fixed-height flex column only while bulk is present, and the bulk form itself owns vertical scrolling. Other tabs remain untouched. Awaiting CI/LIVE verification through submit.
+
+
+## 07/10/2026 — TODAY-04 LIVE continuation at c880dbae3905643848178e39d9b2788864a96b9a
+Production `/api/health` was read in the connected session and returned revision `c880dbae3905643848178e39d9b2788864a96b9a`, matching main. A separate Platform Admin tab remained authenticated; no credentials or 2FA were requested.
+
+Current targeted regression matrix (full system sweep remains open):
+
+| Area | Normal / maximize | Scroll and final visible element | Interaction / safety | LIVE result | Status / PR |
+|---|---|---|---|---|---|
+| Platform Admin company dashboard | Normal viewport 1340×925; no product maximize control | Real scroll to final company card; right-side actions clipped. Horizontal scroll did not reveal them. | Observed only; no activate/deactivate click. | FAIL at c880 | Scoped breakpoint fix in PR #1831; CI checkpoint policy failed on first run, docs now updated for rerun. |
+| Subscriptions list + LAB subscription/modules form | Normal modal; no maximize control | Real scroll to bottom showed final module cards and footer Cancel/Save subscription. | Opened LAB row; inspected fields/status; Cancel closed it. No field edit, plan apply, print, or save. | Targeted layout PASS; controls not fully audited | Partial / continue interaction coverage at c880. |
+| Payments | Normal; maximize control not observed | Latest post-merge targeted retest rendered summary and empty state. | Selected LAB and ran read-only Show filter; no payment review/approval. | Targeted summary/filter PASS | Overall section remains partial at c880. |
+| Expenses | Normal; maximize control not observed | Latest post-merge targeted retest rendered summary and empty state. | Selected LAB and ran read-only Show filter; no review/approval. | Targeted summary/filter PASS | Overall section remains partial at c880. |
+| Online Radio management | Normal; maximize control not observed | Real scroll reached store selector, paid module fields, station checkboxes and final Save Store button. | Inspected only; no checkbox toggle or save. | Targeted checkbox-label/layout PASS | Overall section remains partial at c880. |
+| Internet Product Search | Normal; maximize control not observed | Searched read-only query “bottled water”; real scroll reached final result row. | No product link, proposal, purchase, or apply action. | Targeted search/result layout PASS | Overall section remains partial at c880. |
+| POS Designer | Normal overlay; no maximize control | Real vertical scroll reached all four store checkboxes; horizontal scrollbar was needed to reveal clipped right-side category tiles. | No store selected, draft saved, or publish action. | FAIL at c880 | Scoped responsive breakpoint fix added to PR #1831; CI and deployed retest pending. |
+
+PR #1827 remains merged with green CI and is included in c880. PR #1831 now carries the dashboard company-card breakpoint change plus the POS Designer breakpoint change and this checkpoint/active-list evidence. No sale, charge, price application, payment or expense approval, store creation, stock or fiscal change, draft save, or publication was performed. No full-system PASS is claimed; all unlisted tabs/subtabs/actions and remaining regression rows stay BLOCKED/NOT TESTED until individually exercised.
+
+
+## 07/10/2026 19:38 Europe/Athens — #14 continuation ASSIGNED
+
+07/10/2026 19:38 Europe/Athens — Ο ιδιοκτήτης ζήτησε συνέχεια του Νο 14. ASSIGNED: codex/task14-owner-provider-readonly-20261007-r1. Περιορισμένο scope: read-only επιβεβαίωση πρόσβασης Owner και fail-closed συμπεριφοράς όταν ο provider είναι ήδη ανενεργός, καθώς και έλεγχος ασφαλούς σύνδεσης με Master Catalog χωρίς αλλαγές δεδομένων. Δεν θα αλλάξω τιμές/ΦΠΑ, δεν θα υποβάλω ή εγκρίνω πρόταση τιμής, δεν θα δημιουργήσω/στείλω παραγγελία, δεν θα κάνω πληρωμή/stock write ούτε θα αλλάξω ρυθμίσεις provider. Το read-only USER/LAB PASS της 01/10/2026 παραμένει τεκμηριωμένο και δεν επαναλαμβάνεται. Οι υπόλοιπες write ροές μένουν OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md; PR #1833.
+
+Baseline before new work: existing 01/10/2026 read-only USER/LAB PASS at revision `35a52c4ef056453955b3764aefc8cf16e978f750` remains the only tested result. New Owner-live and already-disabled-provider checks are NOT TESTED. No changes to prices/VAT/provider configuration, proposal/approval, orders, payment or stock. Existing task #14 UI clipping belongs to TODAY-04 owner and is untouched.

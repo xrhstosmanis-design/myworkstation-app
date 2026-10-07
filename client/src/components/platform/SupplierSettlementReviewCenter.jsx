@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {AlertTriangle,CheckCircle2,FileText,RefreshCw,ShieldCheck,X} from "lucide-react";
+import "./supplier-review-summary.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const dateTime=value=>value?new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short"}).format(new Date(value)):"—";

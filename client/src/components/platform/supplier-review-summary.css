@@ -1,0 +1,7 @@
+.supplier-review-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.supplier-review-totals>span{display:grid;gap:5px;min-width:0;padding:12px 14px;border:1px solid #dbe5ea;border-radius:11px;background:#f5f9fb}
+.supplier-review-totals small{color:#627487;font-size:12px;line-height:1.35}
+.supplier-review-totals b{color:#172b3d;font-size:20px;line-height:1.2;overflow-wrap:anywhere}
+.supplier-review-totals>.warning{border-color:#f0d29b;background:#fff8e8}
+.supplier-review-totals>.warning b{color:#9a5800}
+@media(max-width:640px){.supplier-review-totals{grid-template-columns:1fr}}

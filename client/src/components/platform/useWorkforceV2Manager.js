@@ -32,6 +32,7 @@ export default function useWorkforceV2Manager({company,store,request}){
     setRuleForm(emptyWorkforceRule());setRuleEditingId(null);setShiftForm(emptyWorkforceShiftTemplate());setShiftEditingId(null);
     setMigration(null);setSelectedMigrationIds([]);setPending(null);load();
   },[company?.id,store?.id]);
+  useEffect(()=>{setError("")},[tab]);
 
   const resetEmployee=()=>{setEditingId(null);setForm(emptyWorkforceEmployee(store.id));setPending(null)};
   const resetRole=()=>{setRoleEditingId(null);setRoleForm({name:"",code:"",description:""});setPending(null)};

@@ -11,6 +11,7 @@ if(path==='/screen-recorder'){
     .then(()=>import('./invoice-learning-generate-barcode-extension.js'))
     .then(()=>import('./invoice-learning-product-form-selects-extension.js'))
     .then(()=>import('./invoice-learning-catalog-publication.js'))
+    .then(()=>import('./invoice-learning-profile-summary-extension.js'))
     .catch(error=>{
       console.error('Invoice Learning Lab bootstrap failed.',error);
     });
