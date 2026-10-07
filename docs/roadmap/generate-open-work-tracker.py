@@ -12,7 +12,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether
 ROOT=Path(__file__).resolve().parents[2]
 SOURCE=ROOT/'docs/roadmap/OPEN_WORK_TRACKER.md'
-OUT=ROOT/'output/pdf/MyWorkStation_Open_Work_2026-10-06.pdf'
+OUT=ROOT/'output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf'
 pdfmetrics.registerFont(TTFont('Greek','/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 pdfmetrics.registerFont(TTFont('GreekBold','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
 body=ParagraphStyle('body',fontName='Greek',fontSize=9,leading=13,spaceAfter=5)
@@ -22,7 +22,7 @@ small=ParagraphStyle('small',parent=body,fontSize=8,leading=11,textColor=colors.
 def fmt(t):
  t=escape(t); t=re.sub(r'\*\*([^*]+)\*\*',r'<font name="GreekBold">\1</font>',t);return t.replace('`','')
 def footer(c,d):
- c.setFont('Greek',8);c.setFillColor(colors.HexColor('#526477'));c.drawString(17*mm,12*mm,'MyWorkStation · 06/10/2026 · Ανάληψη και ολοκλήρωση στο κοινό main');c.drawRightString(193*mm,12*mm,str(d.page))
+ c.setFont('Greek',8);c.setFillColor(colors.HexColor('#526477'));c.drawString(17*mm,12*mm,'MyWorkStation · 07/10/2026 · Ανάληψη και ολοκλήρωση στο κοινό main');c.drawRightString(193*mm,12*mm,str(d.page))
 text=SOURCE.read_text();pre, *sections=re.split(r'^### ',text,flags=re.M)
 story=[]
 for line in pre.splitlines():
