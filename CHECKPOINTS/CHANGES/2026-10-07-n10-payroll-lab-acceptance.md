@@ -66,3 +66,12 @@ A bounded rule-preview PASS requires visible LAB identity, unique test IDs, corr
 - No employee, payroll rule, attendance, period, payment, bank/cash entry, or other LAB record was created or changed. September remains untouched. The November preview remains NOT TESTED because the visible Workforce path still has no payroll-preview/rate-entry surface (see 14:11 follow-up).
 
 **Status:** Full N10 remains **ΜΕΡΙΚΟ PASS / OPEN**. Remaining evidence: exact cash `StoreTransaction` IDs, genuine bank-movement proof (the synthetic PDF is not proof), and the approved November preview in a visible supported payroll surface. No overall PASS is claimed.
+
+## Real-store acceptance pending — 07/10/2026 17:24 Europe/Athens
+
+- **Status:** NOT TESTED / PENDING. No real-store action was performed in this continuation.
+- **Next step:** schedule N10 acceptance in a normal store, verify the selected store visibly, capture read-only starting values, and agree the exact payroll scope before any test action. This remains separate from LAB acceptance.
+- **Safety boundary:** no real payment, confirmation, settlement, or cash/bank posting; do not reopen, replay, recalculate, reapprove, or alter the closed September 2026 payroll period. Do not modify existing records. No overtime, delay, absence, or leave rules may be assumed.
+- **Still required for full N10:** exact cash `StoreTransaction` IDs, genuine bank-movement proof, and a supported November preview. The synthetic LAB PDF is not accounting proof.
+
+**Status remains:** ΜΕΡΙΚΟ PASS / OPEN; no overall PASS claimed.
