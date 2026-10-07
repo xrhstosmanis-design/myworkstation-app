@@ -1,3 +1,7 @@
+# Νο16 — tap Chat fix AWAITING LAB
+
+08/10/2026 — Νο16 notification tap fix AWAITING CI/deploy/LAB. Ειδοποίηση οδηγεί σε /chat/{storeId}, ξεχωριστή είσοδο που ανοίγει το υπάρχον StoreChatPanel μόνο μετά από εξουσιοδοτημένο read του υπάρχοντος scoped messages API και exact storeId match. Χρησιμοποιεί την υπάρχουσα σύνδεση, χωρίς PIN/POS login για manager, χωρίς auth/session/module bypass ή νέο API. Κανένα POS παράθυρο δεν πλοηγείται/αλλάζει. Υπάρχον ίδιο Chat εστιάζεται, αλλιώς ανοίγει ξεχωριστό Chat. Legacy notification /store URL μετατρέπεται σε Chat. Foreground ίδιο store/Chat και sound/Apple routing διατηρούνται. Προηγούμενο background Push/ήχος PASS PR1868/CI4682/1896PASS διατηρείται· πραγματικό tap παραμένει USER FAIL μέχρι αποδοχή. Νο16 overallOPEN, ίδιος owner.
+
 # Νο16 — background Push/ήχος PASS · tap Chat FAIL / OPEN
 
 08/10/2026 00:14–00:21 Europe/Athens — Νο16: mobile μηνύματα/γραφή με πληκτρολόγιο USER PASS6275. Android background ειδοποίηση USER PASS6277 και ήχος ρητά επιβεβαιωμένος00:21. Ένα νέο N16-PUSH-20261008-001/chat-1791407778563-8ia6slbcpwj από OWNER στο LAB00:16:18. BEFORE21:15:34Z/AFTER21:16:27Z: messages50→51/sendAudit40→41/subscriptions1/tasks3/controlstore0. Tap USER FAIL6278/επιβεβαίωση00:20: νέα καρτέλα POS login MYWORKSTATION LAB αντί Chat. Καμία επανάληψη αποστολής. Settings-toggle/άλλες συσκευές/αρνητικοί authenticated API ρόλοι-tenant/token revocation OPEN. Financial/stock/read deltas NOT MEASURED. Νο16 overallOPEN/ASSIGNED codex/n16-owner-acceptance-20261007. Checkpoint2026-10-08-n16-physical-push.md.
