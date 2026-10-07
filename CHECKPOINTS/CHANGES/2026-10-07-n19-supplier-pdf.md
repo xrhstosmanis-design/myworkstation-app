@@ -1,0 +1,5 @@
+# Νο19 — Καρτέλα προμηθευτών / PDF residual
+
+07/10/2026 20:18 Europe/Athens — Owner starts printed No19 / tracker21. ASSIGNED codex/n19-supplier-pdf-20261007 for residual native saved PDF, independent read-only DB reconciliation and physical printing acceptance. Prior screen/XLSX/printable HTML PASS of01Oct protected; no repeated payments/invoices/stock/settlements. New scope NOT TESTED. Physical paper requires owner-operated printer; browser/CI cannot prove it. Initial action: inspect current export and isolated coverage, then one bounded implementation only if native PDF is absent. LAB reads MYWORKSTATION LAB only, fresh audit/financial/control baseline; no business writes. Checkpoint2026-10-07-n19-supplier-pdf.md.
+
+Pinned main 3839175109b7fd4f6bc7e684b609001ab13e68c7. Read AGENTS, numbered mapping19→21, tracker21, active/pending relevant history, complete suppliers manual and01Octtask21 checkpoint. Original scope completed; owner now explicitly expands residual. No other assignment taken. No code or LAB state change before merged claim. No assistant external messages.

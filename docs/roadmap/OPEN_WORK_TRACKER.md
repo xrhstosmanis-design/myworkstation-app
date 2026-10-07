@@ -308,9 +308,9 @@ Owner-directed transfer from fix/task16-chat-push-routing-20261001 to codex/n16-
 
 **Υπόλοιπο / όρια PASS:** Οθόνη/XLSX/εκτυπώσιμη αναφορά PASS. Φυσική εκτύπωση/native PDF και ανεξάρτητος DB count δεν καλύπτονται.
 
-**Υπεύθυνη σελίδα / branch:** Δεν μεταφέρεται ανάθεση — έλεγχος τρέχοντος checkpoint πριν claim
+**Υπεύθυνη σελίδα / branch:** ASSIGNED codex/n19-supplier-pdf-20261007 · νέο υπόλοιπο Νο19, παλιό PASS προστατευμένο
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη:** 07/10/2026 20:18 Europe/Athens — Owner starts printed No19 / tracker21. ASSIGNED codex/n19-supplier-pdf-20261007 for residual native saved PDF, independent read-only DB reconciliation and physical printing acceptance. Prior screen/XLSX/printable HTML PASS of01Oct protected; no repeated payments/invoices/stock/settlements. New scope NOT TESTED. Physical paper requires owner-operated printer; browser/CI cannot prove it. Initial action: inspect current export and isolated coverage, then one bounded implementation only if native PDF is absent. LAB reads MYWORKSTATION LAB only, fresh audit/financial/control baseline; no business writes. Checkpoint2026-10-07-n19-supplier-pdf.md.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
