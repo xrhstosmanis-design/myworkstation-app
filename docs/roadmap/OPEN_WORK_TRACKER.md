@@ -250,7 +250,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07Oct19:58-20:02, owner-directedNo16 takeover και έγκριση εικονικώνLAB μηνυμάτων/δοκιμών. Checkpoint2026-10-07-n16-chat-takeover.md. Η17 παραμένει στον δικό της owner.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Περιορισμένο assignmentLABPASS07Oct21:12-21:20, checkpoint2026-10-07-n16-chat-task-assignment.md. PR1846/CI4633+4634 SUCCESS1888tests0FAIL0SKIP, pre-batch88e6cb/post50ad768 docs-only. Δημοσίευση αποτελέσματος/CI/merge καταγράφεται στο associatedPR. Fixture παραμένει μίαOPENεργασία μεLABPOS2. Επόμενη μία ενέργεια μετά δημοσίευση: πραγματική Owner συνεδρία μέσω securebrowserAuth για role acceptance· πραγματικό Push απαιτεί επιτρεπόμενη φυσικήLABσυσκευή. Κανένα δεύτεροclaim/παλιόfixture repeat.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Περιορισμένο assignmentLABPASS07Oct21:12-21:20, checkpoint2026-10-07-n16-chat-task-assignment.md. PR1846/CI4633+4634 SUCCESS1888tests0FAIL0SKIP, pre-batch88e6cb/post50ad768 docs-only. Δημοσίευση αποτελέσματος/CI/merge καταγράφεται στο associatedPR. Fixture παραμένει μίαOPENεργασία μεLABPOS2. Νεότερο PASS07Oct22:25: πραγματικός OWNER keyboard αλλαγή/επαναφορά και logout/reload/login, fixtureReads0/audit20. Υπόλοιπο live αρνητικοί API ρόλοι/tenant και φυσικέςLABσυσκευές/Push/ήχος· Νο16OPEN. Κανένα δεύτεροclaim/παλιόfixture repeat.
 
 ### 17 — iOS / PWA / εξοπλισμός
 
