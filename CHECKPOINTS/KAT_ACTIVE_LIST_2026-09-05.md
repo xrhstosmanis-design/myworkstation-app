@@ -1,3 +1,7 @@
+# Νο16 — Android Push FAIL / διάγνωση AWAITING LAB
+
+07/10/2026 23:25–23:41 Europe/Athens — Νο16 Android ενεργοποίηση Push LAB FAIL: φυσικό Android Chrome/SuperAdmin στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ επέστρεψε το ίδιο γενικό σφάλμα εγγραφής, ακόμη μετά τη ζητημένη επιλογή «Χωρίς περιορισμούς». Site και OS άδειες ειδοποιήσεων εμφανίζονται ενεργές. SQL20:44:27.056895Z: LABsubscriptions0/pushAudit3, όπως baseline20:01:49.30245Z. Δεν εστάλη δοκιμαστικό μήνυμα ούτε δημιουργήθηκε εργασία. Πραγματική παραλαβή/ήχος NOT TESTED· ακριβής mobile revision και οικονομικά πριν/μετά τελευταίας απόπειρας NOT CAPTURED. Προσθήκη ασφαλών κωδικών browser error names και διατήρηση error στην οθόνη αντί καθαρισμού από polling: AWAITING LAB, όχι διόρθωση αιτίας. Παλαιά OWNER/assignment/logout/anonymous PASS και λοιποί owners διατηρούνται. ASSIGNED codex/n16-owner-acceptance-20261007, Νο16 overallOPEN. Checkpoint2026-10-07-n16-android-push-diagnostic.md.
+
 ## 07/10/2026 23:04 — ανανέωση: περιορισμένο USER PASS
 
 Ο χρήστης δήλωσε «pathsa ananeosh» μετά την εικόνα200256. Δήλωση και παρατηρημένη LAB προβολή Chat1/πηγές21 επιβεβαιώνουν περιορισμένα ανανέωση χωρίς εμφανές πρόβλημα. Δεν υπάρχει ανεξάρτητο API trace ή ξεχωριστή απόδειξη πατήματος κάθε κουμπιού. Τα προηγούμενα NOT TESTED για refresh στο αμέσως επόμενο ιστορικό σημείωμα υπερκαλύπτονται μόνο σε αυτό το περιορισμένο scope. Συνολικό Νο23 OPEN· λοιπά residual και owner διατηρούνται.

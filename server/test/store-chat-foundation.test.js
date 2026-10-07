@@ -124,7 +124,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/navigator\.serviceWorker\.ready/);
   assert.match(panel,/registration\.update\(\)/);
   assert.match(panel,/subscription\?"granted":"unknown"/);
-  assert.match(panel,/Το κινητό δεν συνδέθηκε με την υπηρεσία Push του Android/);
+  assert.match(panel,/pushSubscriptionFailure\(firstError,retryError\)/);
   assert.match(worker,/visibilityState==="visible"/);
   assert.match(worker,/STORE_CHAT_PUSH/);
   assert.match(pos,/store-chat-in-app-alert/);
