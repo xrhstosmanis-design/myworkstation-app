@@ -156,6 +156,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 
 **Read-only follow-up (07/10/2026 14:11 Europe/Athens):** The correct /platform-admin entry was confirmed; authenticated scope visibly showed MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. The current employee list has 8 existing employees versus 7 at the 12:28 baseline. No records were changed. The visible Μισθοδοσία control opens an expense-entry form, the employee form has no payroll-rate field, and the actual-hours view says integration is still in progress. No November preview or synthetic record was created; no period/payment/bank/cash action was made. Additional preview acceptance remains NOT TESTED / OPEN. The deployed /api/health response at 14:41 Europe/Athens was version 0.22.0+kat-test-pos, revision b0acab108fb01836664c3dd807267e7bfde83579. See the updated checkpoint.
+
+**Additional read-only check (07/10/2026 14:50 Europe/Athens):** The exact October −€13.67 row remained without attachment after the visible “Αποδεικτικό” control did not open a file chooser; nothing was selected/uploaded and no confirmation occurred. The selected LAB-POS-02 shift from 26/09 showed two 17:10 payroll expense rows (€100 and €20, cash-shift method), and €120 expenses total, but no StoreTransaction IDs. September shift was not changed or closed; this does not prove exact-ID reconciliation. See checkpoint.
 ### 11 — Εστίαση / TABLE_SERVICE
 
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / OPEN
