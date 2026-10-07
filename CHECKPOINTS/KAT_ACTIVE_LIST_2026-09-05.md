@@ -3052,3 +3052,21 @@ Owner LIVE verified Master Catalog PASS and Τιμές ανά κατάστημα
 
 ## 06/10/2026 22:35 Athens — Bulk Price second scoped regression fix
 Owner LIVE screenshot after PR1792 still FAIL: in maximized mode the bulk form shows product results and stores but viewport ends at the start of step 3/4; submit remains unreachable. Master Catalog and Store Prices remain locked PASS. Previous natural-height approach was insufficient because the OwnerProductCenter itself still participates in a constrained maximized layout. New bounded approach marks only the bulk form as `bulk-price-scroll-region`; in maximized mode OwnerProductCenter becomes a fixed-height flex column only while bulk is present, and the bulk form itself owns vertical scrolling. Other tabs remain untouched. Awaiting CI/LIVE verification through submit.
+
+
+## 07/10/2026 — TODAY-04 LIVE continuation at c880dbae3905643848178e39d9b2788864a96b9a
+Production `/api/health` was read in the connected session and returned revision `c880dbae3905643848178e39d9b2788864a96b9a`, matching main. A separate Platform Admin tab remained authenticated; no credentials or 2FA were requested.
+
+Current targeted regression matrix (full system sweep remains open):
+
+| Area | Normal / maximize | Scroll and final visible element | Interaction / safety | LIVE result | Status / PR |
+|---|---|---|---|---|---|
+| Platform Admin company dashboard | Normal viewport 1340×925; no product maximize control | Real scroll to final company card; right-side actions clipped. Horizontal scroll did not reveal them. | Observed only; no activate/deactivate click. | FAIL at c880 | Scoped breakpoint fix in PR #1831; CI checkpoint policy failed on first run, docs now updated for rerun. |
+| Subscriptions list + LAB subscription/modules form | Normal modal; no maximize control | Real scroll to bottom showed final module cards and footer Cancel/Save subscription. | Opened LAB row; inspected fields/status; Cancel closed it. No field edit, plan apply, print, or save. | Targeted layout PASS; controls not fully audited | Partial / continue interaction coverage at c880. |
+| Payments | Normal; maximize control not observed | Latest post-merge targeted retest rendered summary and empty state. | Selected LAB and ran read-only Show filter; no payment review/approval. | Targeted summary/filter PASS | Overall section remains partial at c880. |
+| Expenses | Normal; maximize control not observed | Latest post-merge targeted retest rendered summary and empty state. | Selected LAB and ran read-only Show filter; no review/approval. | Targeted summary/filter PASS | Overall section remains partial at c880. |
+| Online Radio management | Normal; maximize control not observed | Real scroll reached store selector, paid module fields, station checkboxes and final Save Store button. | Inspected only; no checkbox toggle or save. | Targeted checkbox-label/layout PASS | Overall section remains partial at c880. |
+| Internet Product Search | Normal; maximize control not observed | Searched read-only query “bottled water”; real scroll reached final result row. | No product link, proposal, purchase, or apply action. | Targeted search/result layout PASS | Overall section remains partial at c880. |
+| POS Designer | Normal overlay; no maximize control | Real vertical scroll reached all four store checkboxes; horizontal scrollbar was needed to reveal clipped right-side category tiles. | No store selected, draft saved, or publish action. | FAIL at c880 | Scoped responsive breakpoint fix added to PR #1831; CI and deployed retest pending. |
+
+PR #1827 remains merged with green CI and is included in c880. PR #1831 now carries the dashboard company-card breakpoint change plus the POS Designer breakpoint change and this checkpoint/active-list evidence. No sale, charge, price application, payment or expense approval, store creation, stock or fiscal change, draft save, or publication was performed. No full-system PASS is claimed; all unlisted tabs/subtabs/actions and remaining regression rows stay BLOCKED/NOT TESTED until individually exercised.
