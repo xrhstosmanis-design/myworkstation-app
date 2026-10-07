@@ -3078,3 +3078,10 @@ Current targeted regression matrix (full system sweep remains open):
 | POS Designer | Normal overlay; no maximize control | Real vertical scroll reached all four store checkboxes; horizontal scrollbar was needed to reveal clipped right-side category tiles. | No store selected, draft saved, or publish action. | FAIL at c880 | Scoped responsive breakpoint fix added to PR #1831; CI and deployed retest pending. |
 
 PR #1827 remains merged with green CI and is included in c880. PR #1831 now carries the dashboard company-card breakpoint change plus the POS Designer breakpoint change and this checkpoint/active-list evidence. No sale, charge, price application, payment or expense approval, store creation, stock or fiscal change, draft save, or publication was performed. No full-system PASS is claimed; all unlisted tabs/subtabs/actions and remaining regression rows stay BLOCKED/NOT TESTED until individually exercised.
+
+
+## 07/10/2026 19:38 Europe/Athens — #14 continuation ASSIGNED
+
+07/10/2026 19:38 Europe/Athens — Ο ιδιοκτήτης ζήτησε συνέχεια του Νο 14. ASSIGNED: codex/task14-owner-provider-readonly-20261007-r1. Περιορισμένο scope: read-only επιβεβαίωση πρόσβασης Owner και fail-closed συμπεριφοράς όταν ο provider είναι ήδη ανενεργός, καθώς και έλεγχος ασφαλούς σύνδεσης με Master Catalog χωρίς αλλαγές δεδομένων. Δεν θα αλλάξω τιμές/ΦΠΑ, δεν θα υποβάλω ή εγκρίνω πρόταση τιμής, δεν θα δημιουργήσω/στείλω παραγγελία, δεν θα κάνω πληρωμή/stock write ούτε θα αλλάξω ρυθμίσεις provider. Το read-only USER/LAB PASS της 01/10/2026 παραμένει τεκμηριωμένο και δεν επαναλαμβάνεται. Οι υπόλοιπες write ροές μένουν OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md.
+
+Baseline before new work: existing 01/10/2026 read-only USER/LAB PASS at revision `35a52c4ef056453955b3764aefc8cf16e978f750` remains the only tested result. New Owner-live and already-disabled-provider checks are NOT TESTED. No changes to prices/VAT/provider configuration, proposal/approval, orders, payment or stock. Existing task #14 UI clipping belongs to TODAY-04 owner and is untouched.
