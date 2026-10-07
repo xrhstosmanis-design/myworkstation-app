@@ -1,3 +1,5 @@
+07Oct17:30 Athens — N13 existing measured LAB transfer PASS protected. Added isolated local-only HTTP E2E acceptance for transfer/reset/Audit/POS lookup, stale and simultaneous competing transfers, duplicate/missing/same/foreign/employee/anonymous rejection and no-linked-store rollback. Tests only, no runtime change, AWAITING CI; full N13 OPEN. No LAB write in this test addition.
+
 # Νο13 — LIMITED LAB PASS / OPEN
 
 07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.

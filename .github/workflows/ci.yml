@@ -220,6 +220,7 @@ jobs:
           run_flow server/e2e/ai-reader-payment-flow.mjs
           run_flow server/e2e/live-operator-permissions-flow.mjs
           run_flow server/e2e/label-tenant-isolation-flow.mjs
+          run_flow server/e2e/barcode-transfer-flow.mjs
           run_flow server/e2e/reversal-tenant-isolation-flow.mjs
           run_flow server/e2e/operator-ledger-visibility-flow.mjs
           run_flow server/e2e/payment-boundaries-flow.mjs
