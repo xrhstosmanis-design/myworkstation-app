@@ -192,7 +192,9 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 13 — Μεταφορά barcode
 
-**Κατάσταση:** ASSIGNED / AWAITING LAB
+07/10/2026 17:25 Europe/Athens — N13-LAB-01 LIMITED LAB PASS: exact runtime0245f30d; one confirmed UI transfer2900000000018 TEST1→TEST2 at14:25:00.863627Z; exact same barcode row451664b2 retained, target two existing barcodes unchanged. Audit0→1 id0c0092be recorded source/target/actor/BACKOFFICE. Independent fresh DB before/after: TEST1stock11/price1.20/8movements and TEST2stock−2/price2.40/1movement unchanged; latest movements01Oct unchanged; all22 StoreTransaction groups and both open MAIN/LAB-POS02 shifts exactly unchanged. UI target shows3barcodes. Full No13 OPEN: fresh reopen, POS lookup, negative/conflict/role/tenant/concurrency checks pending. Same owner codex/n13-barcode-transfer-lab-20261007.
+
+**Κατάσταση:** ΜΕΡΙΚΟ LAB PASS / OPEN
 
 **Υπόλοιπο / όρια PASS:** Υλοποίηση/CI υπάρχουν. Πραγματική LAB μεταφορά, readback/POS lookup/Audit και ασφαλή αρνητικά σενάρια εκκρεμούν. Ο ιδιοκτήτης στις 07/10 εγκρίνει τις αναγκαίες εικονικές LAB δοκιμές.
 
