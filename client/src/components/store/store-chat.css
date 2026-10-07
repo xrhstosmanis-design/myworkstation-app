@@ -40,3 +40,31 @@
 @media(max-width:700px){.store-chat-top-host{top:108px;right:6px;left:6px;max-width:none;justify-content:flex-end;overflow-x:auto}.store-chat-top-button{padding:6px 8px;font-size:11px}.pos-attendance-card-body{padding:14px}}
 
 .store-chat-task-assignment{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-width:100%}.store-chat-task-assignment label{display:flex;flex-direction:column;gap:4px;font-size:13px}.store-chat-task-assignment select{width:100%;max-width:100%;min-height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff;color:#0f172a}
+
+/* Keep existing desktop settings visible; mobile settings open only on request. */
+.store-chat-toolbar>.store-chat-settings-toggle{display:none}
+.store-chat-settings{display:contents}
+@media(max-width:700px){
+  .store-chat-modal{height:calc(100vh - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);min-height:0}
+  .store-chat-modal header{flex-shrink:0;padding:10px 12px}
+  .store-chat-modal header h2{font-size:20px;margin:3px 0}
+  .store-chat-modal header p{font-size:13px}
+  .store-chat-modal header>div>small{font-size:11px}
+  .store-chat-toolbar{flex:0 0 auto;flex-direction:row;gap:6px;padding:8px 10px}
+  .store-chat-toolbar>b{width:100%;font-size:14px}
+  .store-chat-toolbar>button{width:auto;flex:1 1 calc(50% - 6px);min-height:38px;padding:6px 8px;font-size:13px}
+  .store-chat-toolbar>.store-chat-settings-toggle{display:flex}
+  .store-chat-settings{display:none}
+  .store-chat-settings.is-open{display:flex;flex-direction:column;gap:6px;width:100%;max-height:30dvh;overflow:auto;order:2}
+  .store-chat-settings button{width:100%;min-height:38px;font-size:13px;padding:6px 8px}
+  .store-chat-search{flex:0 0 auto;grid-template-columns:1fr 1fr;gap:5px;padding:6px 10px}
+  .store-chat-search>input:first-child{grid-column:1/-1}
+  .store-chat-search input,.store-chat-search select{min-height:36px;padding:6px;font-size:14px}
+  .store-chat-messages{flex:1 1 0;min-height:60px;overflow-y:auto;overscroll-behavior:contain;padding:10px}
+  .store-chat-compose{flex:0 0 auto;grid-template-columns:minmax(0,1fr) auto;gap:5px;padding:8px 10px}
+  .store-chat-compose>select{grid-column:1}
+  .store-chat-compose>.store-chat-file,.store-chat-compose>.store-chat-files-disabled{grid-column:2;grid-row:1;font-size:12px;padding:6px}
+  .store-chat-compose>input{grid-column:1;grid-row:2}
+  .store-chat-compose>button{grid-column:2;grid-row:2}
+  .store-chat-compose select,.store-chat-compose input,.store-chat-compose button{min-height:40px;font-size:16px;box-sizing:border-box}
+}
