@@ -80,3 +80,9 @@ test("provider timeout is actionable and never starts an attachment transaction"
   const mismatch=Object.assign(new Error("identity mismatch"),{status:409});
   await assert.rejects(fetchOriginalPdf(row,()=>{throw mismatch}),e=>e===mismatch);
 });
+
+test("aborted response body retains the provider deadline diagnosis",async t=>{
+  t.mock.method(AbortSignal,"timeout",()=>AbortSignal.abort(new DOMException("deadline","TimeoutError")));
+  const response=async()=>({ok:true,headers:new Headers({"content-type":"application/pdf"}),body:{async *[Symbol.asyncIterator](){throw new DOMException("body cancelled","AbortError")}}});
+  await assert.rejects(fetchOriginalPdf(row,response),e=>e.status===504&&/45/.test(e.message));
+});

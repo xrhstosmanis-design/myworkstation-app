@@ -32,13 +32,14 @@ export function verifyOriginalText(text,row){
   if(!number||!tokens.some(token=>token===number||(/^[0-9]+$/.test(number)&&withoutPadding(token)===withoutPadding(number))))mismatch();
 }
 export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf){
-  try{return await downloadOriginalPdf(row,fetcher,reader)}catch(cause){
-    if(cause?.name==="TimeoutError")throw error("Η λήψη του πρωτοτύπου δεν ολοκληρώθηκε εντός 45 δευτερολέπτων. Ο πάροχος δεν απάντησε εγκαίρως. Το παραστατικό παραμένει σε αναμονή· δοκιμάστε αργότερα.",504);
+  const signal=AbortSignal.timeout(45000);
+  try{return await downloadOriginalPdf(row,fetcher,reader,signal)}catch(cause){
+    if(cause?.name==="TimeoutError"||(signal.aborted&&signal.reason?.name==="TimeoutError"))throw error("Η λήψη του πρωτοτύπου δεν ολοκληρώθηκε εντός 45 δευτερολέπτων. Ο πάροχος δεν απάντησε εγκαίρως. Το παραστατικό παραμένει σε αναμονή· δοκιμάστε αργότερα.",504);
     throw cause;
   }
 }
-async function downloadOriginalPdf(row,fetcher,reader){
-  const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat),signal=AbortSignal.timeout(45000);
+async function downloadOriginalPdf(row,fetcher,reader,signal){
+  const url=originalDownloadUrl(row.rawPayload?.xml,row.issuerVat);
   const response=await fetcher(url,{redirect:"error",signal,headers:{Accept:"application/pdf"}});
   if(!response.ok||!/^application\/pdf\b/i.test(response.headers.get("content-type")||""))throw error("Ο πάροχος δεν επέστρεψε πρωτότυπο PDF.");
   const max=3400000;
