@@ -1,3 +1,13 @@
+## 07/10/2026 12:09 Athens — Central Management full LIVE audit — ASSIGNED / LIVE BLOCKED
+
+- Ο ιδιοκτήτης ανέθεσε σε αυτή τη σελίδα πλήρη, μία-μία LIVE επιθεώρηση όλων των ενοτήτων, καρτελών, υποκαρτελών, ενεργειών και οθονών της Κεντρικής Διαχείρισης, με scoped διορθώσεις μόνο μετά από green claim PR/merge.
+- TODAY-04 περνά στην παρούσα ανάθεση. Η προηγούμενη σελίδα δεν παρέδωσε handoff· δεν επινοείται αποδέσμευση ή τεκμήριο.
+- Τελευταίο γνωστό main κατά την ανάληψη: 4e1f96ea78ca3a92b4ad7a900b09766f4502d7fd. Τα ανοιχτά PR #1735/#1702 και οι κοινές αλλαγές checkpoint/tracker ελέγχθηκαν πριν από αλλαγή.
+- Η σύνδεση παραμένει BLOCKED: ο browser προστατεύει τα native credential πεδία και δεν δέχεται πληκτρολόγηση/handoff· το ασφαλές αίτημα επέστρεψε locator_invalid. Καμία διαπιστευτήρια στο chat. Η τρέχουσα production revision δεν επαληθεύτηκε.
+- Ιστορικό εύρημα μόνο: στις 07/10 00:25, revision 6caa27b7e0667b453ef99db13360e3c0c6e561c1, Bulk Price normal mode έφτανε το Preview με πραγματικό scroll· σε maximize το κάτω μέρος κοβόταν και το scroll δεν κινούσε τη φόρμα. Χρειάζεται νέα LIVE επιβεβαίωση στην τρέχουσα production.
+- Τα προηγούμενα PASS άλλων σελίδων και όλων των άλλων owners διατηρούνται. Καμία πραγματική χρέωση/πώληση, price apply, stock, fiscal ή μη αναστρέψιμη μεταβολή.
+- Checkpoint: `CHECKPOINTS/CHANGES/2026-10-07-central-management-bulk-price-scroll.md`.
+
 ## TODAY-08 — functional hierarchy · CODE CI PASS / OPEN (06/10/2026)
 
 - PR #1775 is merged at `a707adc616a6a28a295b4cb102e6d0b5837ede73`. The current shared tracker records code/CI PASS; this does not close the UI acceptance.
