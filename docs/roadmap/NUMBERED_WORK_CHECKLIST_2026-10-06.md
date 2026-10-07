@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** SA pin/important/message/task management και χειριστής important/UIpermissions PASS.07Oct21:20: ανάθεση/αλλαγή/αφαίρεση υπευθύνουSA, διατήρηση στο κλείσιμο/επαναφορά και reload PASS· χειριστής βλέπει όνομα χωρίς αλλαγή. Υπόλοιπο: Owner/live αρνητικοί ρόλοι/tenant, manager-unread selector/keyboard, logout/πολλαπλές συσκευές, πραγματικό Push/ήχος/terminal. Ίδιος owner codex/n16-chat-acceptance-20261007. ΣυνολικάOPEN.
+- **Υπόλοιπο / όριο:** Πραγματική OWNER αρχική είσοδος/chooser/read-only controls PASS07Oct22:08. Υπόλοιπο OWNER μεταβολές/keyboard, live αρνητικοί ρόλοι/tenant, logout/πολλαπλές συσκευές και πραγματικό Push/ήχος/terminal. Παλαιά SA/operator PASS προστατεύονται. ASSIGNED codex/n16-owner-acceptance-20261007 μετά ονομασμένο handoff, overallOPEN.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 
