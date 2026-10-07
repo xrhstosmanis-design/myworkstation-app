@@ -35,7 +35,7 @@ For each state-changing LAB action, record the exact store, authenticated role/o
 
 A bounded rule-preview PASS requires visible LAB identity, unique test IDs, correct preview values for each supported rule and a clean readback; it does not certify payroll legality, a real bank transfer, a real store, the missing September cash transaction IDs, or proof for any bank entry. Full N10 remains **ΜΕΡΙΚΟ PASS / OPEN** until every assigned acceptance item has direct evidence. No in-chat credential or OTP is permitted.
 
-**Current deployed revision:** not independently captured in this read-only session.  
+**Current deployed revision observed 07/10/2026 14:41 Europe/Athens:** `/api/health` returned version `0.22.0+kat-test-pos`, revision `b0acab108fb01836664c3dd807267e7bfde83579`.  
 **Next action:** after this exact assignment/checkpoint is merged, perform the synthetic attachment/match test only if the visible workflow preserves pending/no-settlement status; then perform isolated November rule previews with fresh per-action baselines.
 
 
