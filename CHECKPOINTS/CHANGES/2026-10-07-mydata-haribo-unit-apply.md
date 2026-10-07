@@ -1,3 +1,11 @@
+Owner14:43 states this step was already done and requests no repetition. No repeat supplier/reopen test requested; treat owner confirmation as evidence of completed sequence, without inventing supplier identity or independent DB proof. Continue next distinct09 residual.
+
+## 07/10/2026 14:39 Athens - HARIBO505-16966 application: scoped USER PASS
+
+ASSIGNED codex/mydata-completion-20261006 retained; tracker09/original grouped No4 remains OPEN. Screenshot14:33 (file_0000000078e08210b823e5b535b2d938) shows13 complete rows,0 requiring review,55 preview pieces/net56.20/VAT7.30/gross63.50. Screenshot14:39 (file_0000000090dc81f49afe41cf75e9a53a), after the requested one Apply, shows the same existing NEW50516966/MARK400015564403749 with13 items/net56.20/gross63.50. This closes the13:47 blocked-Apply residual only. Difference0.01 from original63.51 is within owner's0.05 rule. Visible saved rows1-7 and partial8; all13 saved row values/total saved quantity55 and close/reopen durability are not independently confirmed. Supplier still Χωρίς: review existing ΠΗΓΑΣΟΣ ΑΕ AFM094211509 separately. No repeat Apply/upload/payment/finalization. Independent DB identities/counts/concurrency/cash/stock effects remain NOT TESTED. Previous PEPSICO/ALFA and agreed Gate3 PASS protected; other owners unchanged.
+
+Implementation PR1819 fullCI4561/run37612078069 PASS1875/0/0; mainCI4562/run37612453042 and deploy2078/run37612713256 SUCCESS. Exact public health b0acab108fb01836664c3dd807267e7bfde83579 and published frontend verified before this user test. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-mydata-haribo-unit-apply.md. Historical awaiting/FAIL entries below are superseded for application only.
+
 # HARIBO505-16966 — printed unit and Apply regression
 
 ## 07/10/2026 — HARIBO505-16966 unit/Apply regression — AWAITING CI / DEPLOY / USER
