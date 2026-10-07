@@ -126,6 +126,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 09 — myDATA / e-invoicing (Νο 4 ομαδοποιημένης εκτύπωσης)
 
+07Oct13:47 HARIBO505-16966/MARK400015564403749: selected13rows/55/56.20/63.50 vs63.51 cannot Apply, USER FAIL. Known piece-alias/select mismatch bounded fix AWAITING CI/DEPLOY/USER; ±0.05 unchanged, packages protected. Same09owner; checkpoint2026-10-07-mydata-haribo-unit-apply.md. Overall OPEN.
+
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / OPEN · Epsilon BLOCKED EXTERNAL
 
 **Υπόλοιπο / όρια PASS:** 05–06Oct range/XLSX19unique USER PASS23:52; ΤΠΥ2153 original withholding40 confirms200+48−40=208 USER PASS23:58; exceptionCLOSED. RangePDF19records/2pages USER PASS07Oct00:02. Reversed06→05Oct visible validation USER PASS07Oct00:07. Corrected05→06Oct recovery19results/errorclear USER PASS00:11. Υπόλοιπα other date boundaries/roles/devices (ημερήσιο XLSX και αποθηκευμένο PDF10records USER PASS23:44), closed-user-tab checktimestamp00:31→01:01 USER PASS07Oct; νέα παραλαβή/cursor/replay OPEN, πρωτότυπα παρόχων, ίδιο πρόχειρο/βοηθός και LAB POS σύνδεση. Παλαιότερα search/receiving/Excel/PDF/draft επιμέρους PASS διατηρούνται. Πλήρης εξαγωγή αρχείου ακυρωμένη από ιδιοκτήτη, δεν επαναλαμβάνεται.

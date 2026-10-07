@@ -64,9 +64,11 @@
 
 ## 09 — myDATA / e-invoicing και σύνδεση POS
 
+- **Νεότερο σφάλμα 07/10:** HARIBO505-16966: Εφαρμογή μπλοκαρισμένη σε13γραμμές. Διόρθωση μονάδας AWAITING CI/DEPLOY/USER· ανοχή0,05€ διατηρείται.
+
 - **Tracker ID:** `09`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / OPEN · Epsilon BLOCKED EXTERNAL
-- **Υπόλοιπο / όριο:** Excel και αποθηκευμένο PDF ημέρας10μοναδικάMARK USER PASS23:44· φυσική εκτύπωση NOT TESTED. Εύρος05–06Oct/XLSX19μοναδικά USER PASS. ΤΠΥ2153 παρακράτηση40€ συμφωνεί με πρωτότυπο USER PASS. PDFεύρους19records/2pages USER PASS07Oct. Ανάποδο εύρος εμφανίζει μήνυμα USER PASS07Oct. Επαναφορά05→06Oct19/errorclear USER PASS. Εκκρεμούν άλλα όρια/roles/devices, closed-tab checktime USER PASS· νέα scheduler παραλαβή/replay/cursor OPEN, πρωτότυπα και LAB POS linkage. ΑΛΦΑ8114 εφαρμογή13γραμμών/55,29€ USER PASS12:20· προμηθευτής095697632/ορατό ξανάνοιγμα USER PASS12:59. Πρώτη ανάγνωση εκπτώσεων FAIL· άλλα δείγματα OPEN.
+- **Υπόλοιπο / όριο:** HARIBO505-16966 Εφαρμογή FAIL· διόρθωση μονάδας AWAITING CI/DEPLOY/USER, ανοχή0,05€ διατηρείται. Excel και αποθηκευμένο PDF ημέρας10μοναδικάMARK USER PASS23:44· φυσική εκτύπωση NOT TESTED. Εύρος05–06Oct/XLSX19μοναδικά USER PASS. ΤΠΥ2153 παρακράτηση40€ συμφωνεί με πρωτότυπο USER PASS. PDFεύρους19records/2pages USER PASS07Oct. Ανάποδο εύρος εμφανίζει μήνυμα USER PASS07Oct. Επαναφορά05→06Oct19/errorclear USER PASS. Εκκρεμούν άλλα όρια/roles/devices, closed-tab checktime USER PASS· νέα scheduler παραλαβή/replay/cursor OPEN, πρωτότυπα και LAB POS linkage. ΑΛΦΑ8114 εφαρμογή13γραμμών/55,29€ USER PASS12:20· προμηθευτής095697632/ορατό ξανάνοιγμα USER PASS12:59. Πρώτη ανάγνωση εκπτώσεων FAIL· άλλα δείγματα OPEN.
 
 - **Νεότερο επιμέρους PASS 07/10 10:10:** Επιλεγμένες ήδη ίδιες γραμμές εμφανίζουν σωστό μήνυμα χωρίς αλλαγές. Ο προμηθευτής του συγκεκριμένου δείγματος PASS10:48· αποθήκευση πραγματικών αλλαγών εκκρεμεί· συνολικά OPEN.
 
