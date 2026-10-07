@@ -41,3 +41,13 @@ Render1856 completed success16:19:57Z, runtimehealth exactedeba510 επιβεβ�
 - Preserve the existing limited UI PASS at exact deployed revision `eba510531b8e7940983f22c8a5e31ef3b90b19`; it showed no verified POS operator and does not prove positive employee-linked activity or score acceptance. No new LAB check has yet been performed in this continuation.
 - Next: after the claim is published, verify exact current deployment and read-only LAB before/after baselines, then inspect available employee-linked positive records and monthly results as Owner without SA. If the current session cannot establish Owner access or no suitable positive records exist, record BLOCKED/NOT TESTED; do not enter credentials through chat or automation and do not create transactions to force a pass.
 - Status stays **ΜΕΡΙΚΟ UI PASS / OPEN**.
+
+## 07/10/2026 23:08 Europe/Athens — Owner access check / BLOCKED
+
+- Exact public `/api/health` reported `ok=true`, version `0.22.0+kat-test-pos`, revision `2621b54317ee26f23c9fe3b7ae76ab2318c00d3b`.
+- Read-only root page identified **MYWORKSTATION LAB**, greeted the session as **Υπεύθυνος Εργαστηρίου**, and showed 0 stores / 0 active employees. The canonical `/platform-admin` page showed only **Invoice Learning Lab**; Workforce/Monthly Cashier was not available there.
+- The application's official sign-in page was reached and the secure browser authentication request returned `submitted`. Post-authentication page inspection was blocked by the browser's retained-credential protection, so no successful login or Owner role can be claimed. No further auth attempt was made.
+- No sale, payment, shift, employee record, assessment, stock value, or application setting was created or changed. No production database connection/DDL/migration was used.
+- **Owner without Super Admin**, positive verified-employee sales/shifts, and full monthly results/score remain **BLOCKED / NOT TESTED**. Do not create transactions just to obtain evidence. Resume only when Owner access and existing eligible records can be visibly verified.
+
+**Status:** #26 remains **ΜΕΡΙΚΟ UI PASS / OPEN**; the historical limited LAB UI PASS remains intact and is not expanded by this blocked check.
