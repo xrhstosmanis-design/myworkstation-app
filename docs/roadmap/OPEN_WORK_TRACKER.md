@@ -146,13 +146,13 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Κατάσταση:** ΜΕΡΙΚΟ PASS / OPEN
 
-**Υπόλοιπο / όρια PASS:** Η LAB περίοδος εξοφλήθηκε. Ανεξάρτητη συμφωνία ταμειακού ledger, τραπεζικά αποδεικτικά, πραγματικό κατάστημα και πλήρης κάλυψη μισθολογικών κανόνων εκκρεμούν.
+**Υπόλοιπο / όρια PASS:** Η LAB περίοδος εξοφλήθηκε. Παραμένουν ανεξάρτητη συμφωνία cash ledger, αποδεικτικά τραπεζικών εγγραφών, πλήρεις κανόνες μισθοδοσίας και real-store acceptance. Τα synthetic LAB fixtures δεν είναι λογιστική απόδειξη.
 
-**Υπεύθυνη σελίδα / branch:** `codex/n10-payroll-reconciliation-20261006` — owner-directed reassignment 06/10/2026
+**Υπεύθυνη σελίδα / branch:** `codex/n10-payroll-reconciliation-20261007` — συνέχεια της ίδιας ανάθεσης N10, χωρίς αλλαγή ιδιοκτήτη.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 06/10/2026 23:48:33 Europe/Athens · Ανάληψη από `agent/workforce-payroll-20260925` κατόπιν ρητής εντολής ιδιοκτήτη στην παρούσα συνομιλία. Scope: read-only συμφωνία της ήδη κλεισμένης LAB περιόδου 09/2026 με το cash-shift ledger και τις υπάρχουσες τραπεζικές εγγραφές· εντοπισμός των μη δοκιμασμένων κανόνων μετά την ανάγνωση των υπαρχόντων τεκμηρίων. Καμία επανάληψη/νέα καταχώριση πληρωμής. Checkpoint `CHECKPOINTS/CHANGES/2026-10-06-n10-payroll-reconciliation.md`. PR #1802 merged to `main` as `a0473d3e0f464d77fac87d29228ac204b9007f7f`; CI #4525 SUCCESS (`classify-changes` and `rbs-capdriver-windows-script-parse` PASS; application build/tests skipped by docs-only classification).
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 12:28 Europe/Athens · Συνέχεια του owner-directed N10 από `codex/n10-payroll-reconciliation-20261006`, branch από main `ac4b8bb4fb8995b54e3ed870329d06af2f192e0f`. Scope: read-only reconciliation της κλειστής περιόδου 09/2026 και των υπαρχουσών cash/bank εγγραφών, συν ρητά εγκεκριμένα, μοναδικά και μόνο-προεπισκόπησης fictional LAB tests σε μελλοντικό 11/2026 για καλυμμένους κανόνες μισθοδοσίας. Προβλέπεται μόνο synthetic attachment/match test στο ήδη υπάρχον Oct −€13.67 pending row, χωρίς επιβεβαίωση/settlement. Απαγορεύονται replay/νέα πληρωμή, μεταβολή Σεπτεμβρίου, δημιουργία/κλείσιμο payroll period, πραγματικό κατάστημα και νομικές παραδοχές για overtime/absence/leave. Checkpoint `CHECKPOINTS/CHANGES/2026-10-07-n10-payroll-lab-acceptance.md`. Προϋπόθεση state-changing LAB: claim PR merged και green CI.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 07/10/2026 12:28 · Read-only baseline επιβεβαίωσε LAB, September CLOSED 7/€313 paid/€0 balance, October DRAFT 7/€13.67 paid/€0 balance, November preview €0/no period, και τέσσερα pending/no-proof bank rows totaling €206.67. Cash shift aggregate δεν ταυτοποιεί τις υπάρχουσες payroll cash StoreTransaction IDs. Καμία νέα LAB μεταβολή ή PASS δεν έγινε. Βλέπε checkpoint· η πρόσθετη αποδοχή παραμένει OPEN.
 
 ### 11 — Εστίαση / TABLE_SERVICE
 
