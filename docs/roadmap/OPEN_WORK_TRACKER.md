@@ -310,7 +310,7 @@ No business writes, no invoice/payment/stock/fiscal or shift action; new SQL tra
 
 Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/manual/suppliers/PASS.md. Αρχική υλοποίησηPR1578, αρχική πλοήγησηPR1580, claimPR1840, DBPASSPR1842. Προηγούμενα PASS προστατευμένα· δεν επαναλαμβάνονται οικονομικές πράξεις.
 
-## 22 — Κανάλι / ομαδική τιμολόγηση
+### 22 — Κανάλι / ομαδική τιμολόγηση
 
 **Κατάσταση:** OPEN
 
