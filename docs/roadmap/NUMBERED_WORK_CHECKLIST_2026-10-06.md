@@ -136,7 +136,7 @@
 
 - **Tracker ID:** `21`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** USER/LAB PASS / ΟΡΙΑ NOT TESTED
-- **Υπόλοιπο / όριο:** ASSIGNED codex/n19-supplier-pdf-20261007 από07/10 20:18· DB σκέλος PASS· αποθηκευμένο PDF/χαρτί NOT TESTED. Οθόνη/XLSX/HTML PASS· ανεξάρτητη DB συμφωνία58/348καιcounts8/13 LAB PASS07Oct20:31. Εκκρεμούν αποθηκευμένο PDF και φυσική εκτύπωση, ίδιος owner.
+- **Υπόλοιπο / όριο:** ASSIGNED codex/n19-supplier-pdf-20261007 από07/10 20:18· DB σκέλος PASS· αποθηκευμένο PDF/χαρτί NOT TESTED. Οθόνη/XLSX/HTML PASS· ανεξάρτητη DB συμφωνία58/348καιcounts8/13 LAB PASS07Oct20:31. NativePDF58/348και3σελίδες PASS· ημερομηνία31Decαντί01Jan FAIL/διόρθωσηAWAITING. Φυσικήεκτύπωση OPEN, ίδιοςowner.
 
 ## 20 — Κανάλι και ομαδική τιμολόγηση ανά κατάστημα
 

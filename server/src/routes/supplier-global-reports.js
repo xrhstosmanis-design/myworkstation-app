@@ -2,6 +2,7 @@ import {Router} from "express";
 import {z} from "zod";
 import * as XLSX from "xlsx";
 import {prisma} from "../prisma.js";
+import {supplierReportDate} from "../lib/supplier-report-date.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -46,7 +47,7 @@ const htmlEsc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<
 const euro=value=>n(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 router.get("/reports/balances",async(req,res,next)=>{try{res.json(await balanceReport(req.user.companyId,req.query))}catch(error){next(error)}});
 router.get("/reports/balances/export",async(req,res,next)=>{try{
-  const data=await balanceReport(req.user.companyId,req.query),format=z.enum(["xlsx","pdf"]).parse(req.query.format),date=value=>new Date(value).toLocaleDateString("el-GR");
+  const data=await balanceReport(req.user.companyId,req.query),format=z.enum(["xlsx","pdf"]).parse(req.query.format),date=supplierReportDate;
   if(format==="xlsx"){
     const rows=data.items.map(r=>({"Προμηθευτής":r.supplierName,"ΑΦΜ":r.taxId||"","Τιμολόγια περιόδου":r.invoiceGross,"Πιστωτικά περιόδου":-r.creditGross,"Πληρωμές περιόδου":-r.payments,"Διορθώσεις περιόδου":r.adjustments,"Καθαρή κίνηση περιόδου":r.periodNet,"Τρέχον υπόλοιπο":r.balance}));rows.push({"Προμηθευτής":"ΣΥΝΟΛΑ","ΑΦΜ":"","Τιμολόγια περιόδου":data.summary.invoiceGross,"Πιστωτικά περιόδου":-data.summary.creditGross,"Πληρωμές περιόδου":-data.summary.payments,"Διορθώσεις περιόδου":data.summary.adjustments,"Καθαρή κίνηση περιόδου":data.summary.periodNet,"Τρέχον υπόλοιπο":data.summary.balance});
     const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(rows);sheet["!cols"]=[{wch:34},{wch:15},{wch:20},{wch:20},{wch:20},{wch:20},{wch:24},{wch:20}];XLSX.utils.book_append_sheet(workbook,sheet,"Προμηθευτές");const info=XLSX.utils.aoa_to_sheet([["Αναφορά","Ποσά και πιστωτικά προμηθευτών"],["Από",date(data.from)],["Έως",date(data.to)],["Σημείωση","Read-only αναφορά. Πιστωτικά και πληρωμές έχουν αρνητικό πρόσημο."]]);XLSX.utils.book_append_sheet(workbook,info,"Πληροφορίες");const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx"});return res.json({filename:"promitheftes-ypoloipa.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:data.items.length});
