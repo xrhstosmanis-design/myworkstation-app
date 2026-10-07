@@ -369,9 +369,9 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Υπόλοιπο / όρια PASS:** Θετικές πωλήσεις/βάρδιες με verified εργαζόμενο, Owner και πλήρης αποδοχή αποτελεσμάτων/score.
 
-**Υπεύθυνη σελίδα / branch:** codex/task26-monthly-cashier-20261001
+**Υπεύθυνη σελίδα (διατηρείται):** codex/task26-monthly-cashier-20261001 · **continuation branch:** codex/task26-monthly-cashier-resume-20261007
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (2026-10-07 23:06 Europe/Athens):** numbered task #24 / Tracker #26 continued by user request; read-only acceptance of existing positive employee-linked sales/shifts, Owner-without-Super-Admin access, and complete displayed monthly results/score. No new sale/payment/shift/assessment and no production DB/DDL/migration. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task26-monthly-cashier.md; claim PR to be recorded after creation.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
