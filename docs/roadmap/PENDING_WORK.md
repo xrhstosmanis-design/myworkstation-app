@@ -1,3 +1,7 @@
+# Νο 13 — Νεότερη ανάθεση
+
+07/10/2026 15:12 Europe/Athens — ΑΝΑΛΗΨΗ ΑΠΟ agent/barcode-catalog-check-20260928 — ASSIGNED codex/n13-barcode-transfer-lab-20261007. Ρητή νέα εντολή ιδιοκτήτη: ανάληψη Νο 13 και όλες οι αναγκαίες δοκιμές στο εικονικό MYWORKSTATION LAB. Η παλιά απόφαση μη δοκιμής αντικαθίσταται μόνο για αυτό το scope. Υπάρχον PR #1495 / CI #3771 και checkpoint 2026-09-28 διατηρούνται ως CI evidence, όχι LAB PASS. Scope: έλεγχος/ρητή επιβεβαίωση/ατομική μεταφορά barcode ίδιας εταιρείας, fresh readback και POS lookup, Audit, αρνητικοί/απομόνωση/ανταγωνιστικές εγγραφές σε isolated tests όπου χρειάζεται. Κάθε state-changing LAB ενέργεια απαιτεί baseline stock/τιμών/κινήσεων/ταμείων και control, μία ενέργεια και readback. Μόνο fictional LAB προϊόντα, καμία πώληση/πληρωμή/fiscal/πραγματικό κατάστημα. Νεότερη LAB κατάσταση NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-07-n13-barcode-transfer-lab.md.
+
 ## 07/10/2026 15:00 Athens - 13816 provider timeout diagnosis and bounded fix AWAITING LAB
 
 Same09 owner retained. Owner14:58 screenshot file_0000000053d0821083457b36323c8717 shows internal error after requested one original-download click for existing13816/MARK400015565151282. Render log11:57:40.160744139Z, instance jnw4t: TimeoutError at fetchOriginalPdf line36 fetch response, then acquireOriginal/inbox original route. This attempt timed out before response/PDF identity check. Earlier3attempt causes were discarded and remain unknown. Supported Impact URL shape/issuer081565488 verified by read-only SQL; no existing same-store PurchaseDocument number13816. Sandbox direct diagnostic fetch DNS EAI_AGAIN is local limitation, not evidence of provider outage. No successful original/application PASS.
@@ -770,7 +774,7 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 
 ## 7. Barcode και αναζήτηση προϊόντων
 
-**ΑΝΑΤΕΘΗΚΕ — `agent/barcode-catalog-check-20260928` (28/09/2026):** ανεξάρτητο σκέλος ασφαλούς ελέγχου και μεταφοράς υπάρχοντος barcode μεταξύ προϊόντων της ίδιας εταιρείας. Πρώτα διαβάζουμε τον σημερινό κατάλογο και τις τωρινές οθόνες, έπειτα υλοποιούμε ρητή ανθρώπινη επιβεβαίωση, μία ατομική αλλαγή και Audit, χωρίς μεταβολή ιστορικών πωλήσεων, τιμών ή stock. Η αναζήτηση προσφορών/παραγγελίες παραμένουν χωριστό OPEN σκέλος. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Καμία LAB ή παραγωγική μεταφορά δεν έχει γίνει· κατάσταση AWAITING LAB.
+**ASSIGNED — `codex/n13-barcode-transfer-lab-20261007` (07/10/2026), ανάληψη από `agent/barcode-catalog-check-20260928`:** ανεξάρτητο σκέλος ασφαλούς ελέγχου και μεταφοράς υπάρχοντος barcode μεταξύ προϊόντων της ίδιας εταιρείας. Πρώτα διαβάζουμε τον σημερινό κατάλογο και τις τωρινές οθόνες, έπειτα υλοποιούμε ρητή ανθρώπινη επιβεβαίωση, μία ατομική αλλαγή και Audit, χωρίς μεταβολή ιστορικών πωλήσεων, τιμών ή stock. Η αναζήτηση προσφορών/παραγγελίες παραμένουν χωριστό OPEN σκέλος. PR #1495 / CI #3771 PASS / exact Render `450b1cfae0519706c6d79d0ddcea2dbf0d9bc4f9`. Καμία LAB ή παραγωγική μεταφορά δεν έχει γίνει· κατάσταση AWAITING LAB.
 
 
 - Προϊόντα χωρίς barcode και πολλαπλά barcode ανά προϊόν/συσκευασία/τιμή.
