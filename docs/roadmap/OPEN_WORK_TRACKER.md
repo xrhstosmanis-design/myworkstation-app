@@ -371,7 +371,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Υπεύθυνη σελίδα (διατηρείται):** codex/task26-monthly-cashier-20261001 · **continuation branch:** codex/task26-monthly-cashier-resume-20261007
 
-**Ανάληψη (2026-10-07 23:06 Europe/Athens):** numbered task #24 / Tracker #26 continued by user request; read-only acceptance of existing positive employee-linked sales/shifts, Owner-without-Super-Admin access, and complete displayed monthly results/score. No new sale/payment/shift/assessment and no production DB/DDL/migration. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task26-monthly-cashier.md; claim PR to be recorded after creation.
+**Ανάληψη (2026-10-07 23:06 Europe/Athens):** numbered task #24 / Tracker #26 continued by user request; read-only acceptance of existing positive employee-linked sales/shifts, Owner-without-Super-Admin access, and complete displayed monthly results/score. No new sale/payment/shift/assessment and no production DB/DDL/migration. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task26-monthly-cashier.md; claim PR #1864.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
@@ -733,3 +733,6 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μόνο τεκμηρίωση απαίτησης· το module παραμένει OPEN. Καμία αλλαγή κώδικα, βάσης ή LAB πράξη. Σχετικές υπάρχουσες αναθέσεις εγκατάστασης/backup/remote/audit/manual διατηρούνται.
 
 
+
+
+**Ενημέρωση 07/10/2026 23:08 Europe/Athens:** Exact public health returned revision `2621b54317ee26f23c9fe3b7ae76ab2318c00d3b`. Read-only app root showed MYWORKSTATION LAB, greeting `Υπεύθυνος Εργαστηρίου`, and 0 stores/0 active staff; `/platform-admin` exposed only Invoice Learning Lab. The official sign-in form was opened and secure auth request returned `submitted`, but subsequent observation was blocked by browser credential protection; Owner sign-in and role remain unverified. No application data/settings, sale, payment, shift, or assessment changed. Remaining checks stay BLOCKED/NOT TESTED pending verifiable Owner access and suitable existing positive employee-linked records. No attempt to fabricate transactions.
