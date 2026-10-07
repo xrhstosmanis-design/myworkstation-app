@@ -130,3 +130,18 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 - Exact barcode identity matches one visible catalog row. The same-name/different-barcode row observed earlier means name-only matching remains unsafe. No Internet-to-catalog mapping was saved, and persistence/reopen remains NOT TESTED.
 - The provider's enabled/disabled state is not exposed in the displayed pages. No provider setting was changed, and disabled-provider fail-closed remains NOT TESTED because the provider was previously observed active and the assignment permits this check only if it is already disabled.
 - Overall #14 remains **READ-ONLY PASS / WRITE OPEN**, partial. No price/VAT, provider, mapping, proposal, order, payment, import, distribution, or stock write occurred.
+
+
+## 07/10/2026 22:57 Europe/Athens — current-session handoff / remaining #14 checks
+
+The user states the account is Owner. In this fresh browser session, the root page visibly identified **MYWORKSTATION LAB** and showed the greeting **Υπεύθυνος Εργαστηρίου**. The direct `/platform-admin` page showed only the **Invoice Learning Lab** button; the Central Management, Internet Product Search, and Master Catalog controls were not available from this session. This does not revoke the earlier read-only evidence recorded above, but the Owner-specific access path is not confirmed by this current session. No credentials were requested or entered.
+
+**No application data or settings changed** in this recheck. No provider, catalog, price/VAT, mapping, proposal, order, payment, or stock action occurred.
+
+**Remaining before closing #14:**
+- Confirm the authenticated Owner interface can reach the intended LAB company/store and relevant Backoffice tools; the current session exposes no path to those controls.
+- Check provider enabled/disabled status. Only test fail-closed if it is already disabled; do not toggle the provider. Current status is NOT VERIFIED and disabled-provider behavior is NOT TESTED.
+- Safely link the exact Internet result to Master Catalog and verify persistence/reopen. Prior exact barcode lookup `5449000000996` was unique in the displayed result, but same-name/SKU rows have a different barcode; name-only mapping is unsafe, and no mapping was saved.
+- Price submission/approval and order creation/sending remain OPEN and were not tested. Maintain the established no-price/VAT-write, no-order, no-payment, and no-stock boundaries unless a separate isolated scope is explicitly authorized.
+
+**Overall #14 remains ΜΕΡΙΚΟ PASS / OPEN** (the 01/10 read-only search PASS remains historical evidence); no total PASS is claimed. Resume from this checkpoint and record exact initial/final values for any separately authorized action.
