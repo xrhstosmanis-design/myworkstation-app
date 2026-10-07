@@ -67,3 +67,22 @@ test("one original, job and editable draft are reused; deletion and tenant misma
   order=null;await assert.rejects(run(),/διαγραφεί/);assert.equal(writes.length,count);
   exists=false;await assert.rejects(run(),e=>e.status===404);assert.equal(writes.length,count);
 });
+
+test("provider timeout is actionable and never starts an attachment transaction",async()=>{
+  const timeout=()=>{throw new DOMException("late provider","TimeoutError")};
+  await assert.rejects(fetchOriginalPdf(row,timeout),e=>e.status===504&&/45/.test(e.message)&&/πάροχος/.test(e.message));
+  const response=async()=>({ok:true,headers:new Headers({"content-type":"application/pdf"}),body:{async *[Symbol.asyncIterator](){timeout()}}});
+  await assert.rejects(fetchOriginalPdf(row,response),e=>e.status===504);
+  let transactions=0;
+  const prisma={$queryRaw:async()=>[row],$transaction:async()=>{transactions++;throw Error("unexpected write")}};
+  await assert.rejects(acquireOriginal(prisma,"company","store","inbox","owner",true,r=>fetchOriginalPdf(r,timeout)),e=>e.status===504);
+  assert.equal(transactions,0);
+  const mismatch=Object.assign(new Error("identity mismatch"),{status:409});
+  await assert.rejects(fetchOriginalPdf(row,()=>{throw mismatch}),e=>e===mismatch);
+});
+
+test("aborted response body retains the provider deadline diagnosis",async t=>{
+  t.mock.method(AbortSignal,"timeout",()=>AbortSignal.abort(new DOMException("deadline","TimeoutError")));
+  const response=async()=>({ok:true,headers:new Headers({"content-type":"application/pdf"}),body:{async *[Symbol.asyncIterator](){throw new DOMException("body cancelled","AbortError")}}});
+  await assert.rejects(fetchOriginalPdf(row,response),e=>e.status===504&&/45/.test(e.message));
+});
