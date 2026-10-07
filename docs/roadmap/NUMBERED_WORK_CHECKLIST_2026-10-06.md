@@ -118,7 +118,7 @@
 
 - **Tracker ID:** `16`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ PASS / DEVICE OPEN
-- **Υπόλοιπο / όριο:** Mobile μηνύματα/γραφή USER FAIL08Oct00:02· πτυσσόμενες ρυθμίσεις/compact διάταξη AWAITING LAB. Android Push εγγραφή LAB PASS07Oct23:56, subscriptions0→1/Audit3→4· πραγματικός ήχος/παραλαβή/tap NOT TESTED. Η αιτία παλιού FAIL παραμένει άγνωστη. Ανώνυμο assignment API401/no mutation LAB PASS07Oct23:00. Πραγματικός OWNER login/chooser, keyboard αλλαγή και επαναφορά υπευθύνου χωρίς read, και logout/reload/login LAB PASS07Oct22:25. Υπόλοιπο live αρνητικοί API ρόλοι/tenant, server token revocation, πολλαπλές/πραγματικές συσκευές και πραγματικό Push/ήχος/terminal. Παλαιά SA/operator PASS διατηρούνται. ASSIGNED codex/n16-owner-acceptance-20261007, overallOPEN.
+- **Υπόλοιπο / όριο:** 08/10/2026 00:14–00:21 Europe/Athens — Νο16: mobile μηνύματα/γραφή με πληκτρολόγιο USER PASS6275. Android background ειδοποίηση USER PASS6277 και ήχος ρητά επιβεβαιωμένος00:21. Ένα νέο N16-PUSH-20261008-001/chat-1791407778563-8ia6slbcpwj από OWNER στο LAB00:16:18. BEFORE21:15:34Z/AFTER21:16:27Z: messages50→51/sendAudit40→41/subscriptions1/tasks3/controlstore0. Tap USER FAIL6278/επιβεβαίωση00:20: νέα καρτέλα POS login MYWORKSTATION LAB αντί Chat. Καμία επανάληψη αποστολής. Settings-toggle/άλλες συσκευές/αρνητικοί authenticated API ρόλοι-tenant/token revocation OPEN. Financial/stock/read deltas NOT MEASURED. Νο16 overallOPEN/ASSIGNED codex/n16-owner-acceptance-20261007. Checkpoint2026-10-08-n16-physical-push.md.
 
 ## 17 — iPhone / iPad / PWA και πρόσθετος εξοπλισμός
 

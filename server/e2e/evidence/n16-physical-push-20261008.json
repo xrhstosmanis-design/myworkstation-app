@@ -1,0 +1,22 @@
+{
+  "test": "N16-PUSH-20261008-001",
+  "messageId": "chat-1791407778563-8ia6slbcpwj",
+  "before": {
+    "messages": 50,
+    "sendAudit": 40,
+    "tasks": 3,
+    "subscriptions": 1,
+    "controlMessages": 0
+  },
+  "after": {
+    "messages": 51,
+    "sendAudit": 41,
+    "tasks": 3,
+    "subscriptions": 1,
+    "controlMessages": 0
+  },
+  "receipt": "USER PASS",
+  "sound": "USER CONFIRMED PASS",
+  "tapChat": "USER FAIL POS login",
+  "overall": "OPEN"
+}
