@@ -1,3 +1,13 @@
+## Νο16 - πραγματικός OWNER: αρχική σύνδεση και read-only UI PASS07/10/2026
+
+Ο εξουσιοδοτημένος Owner του MYWORKSTATION LAB συνδέεται από το Κανονικό Backoffice με τον δικό του λογαριασμό. Αν ζητηθεί αλλαγή προσωρινού κωδικού, την εκτελεί ο ίδιος. Μετά επιβεβαιώνει «Καλώς ήρθες, Υπεύθυνος Εργαστηρίου», χωρίς ένδειξη support/SuperAdmin.
+
+1. Ανοίγει Chat και επιλέγει ρητά ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ από τα2δικά του LAB καταστήματα.
+2. Αναζητά N16-LAB-20261007-A χωρίς να πατήσει το σώμα ή Επιβεβαίωση ανάγνωσης.
+3. Βλέπει την υπάρχουσα εργασία Ανοιχτή, υπεύθυνοLAB POS2 και manager-only επιλογή8activeEmployee/settings/pin/completion χειριστήρια.
+
+Κριτήρια περιορισμένου PASS: πραγματικό OWNER account από ανεξάρτητοrole/AuthAudit, own-LAB chooser, ίδιοtask/assignee/μήνυμαΝΕΟ και SQLfixtureReads0/audit18. Αρχικήοθόνη50unread. Δεν πιστοποιεί ενεργή αλλαγή υπευθύνου/keyboard, αρνητική API απομόνωση, logout/login ή Push/ήχο. No οικονομικό/stock before-login claim. Αν εμφανιστεί προσωρινός κωδικός ή support banner, δεν συνεχίζει με OwnerPASS μέχρι να λυθεί κανονικά. Πηγή CHECKPOINTS/CHANGES/2026-10-07-n16-owner-acceptance.md, observedhealth9230c0ab, docs-onlymain8132723a.
+
 ## Νο16 - ανάθεση υπευθύνου: περιορισμένο LAB PASS07/10/2026 21:12-21:20
 
 Server δικαίωμα: Ιδιοκτήτης ή PlatformSuperAdmin, μόνο ενεργός υπάλληλος ίδιου καταστήματος. Η πραγματική δοκιμή αυτού του κεφαλαίου έγινε ωςSuperAdmin στο MYWORKSTATION LAB· Owner/live adversarial API δεν πιστοποιούνται εδώ. Ο χειριστήςLABPOS2 ελέγχθηκε για προβολή ονόματος χωρίς επιλογή αλλαγής ή κλείσιμο εργασίας.
