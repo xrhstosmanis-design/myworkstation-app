@@ -1,0 +1,24 @@
+{
+  "scope": "desktop authorized OWNER direct Chat entry",
+  "runtime": "fdb9ea66db03c38db64a7a7701e3441b36394947",
+  "before": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"control_messages\":0,\"measured_at\":\"2026-10-07T21:38:14.927367Z\",\"messages\":51,\"send_audit\":41,\"subscriptions\":1,\"tasks\":3}]"
+      }
+    ],
+    "isError": false
+  },
+  "after": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"control_messages\":0,\"measured_at\":\"2026-10-07T21:39:38.46674Z\",\"messages\":51,\"send_audit\":41,\"subscriptions\":1,\"tasks\":3}]"
+      }
+    ],
+    "isError": false
+  },
+  "physicalTap": "AWAITING LAB",
+  "overall": "OPEN"
+}

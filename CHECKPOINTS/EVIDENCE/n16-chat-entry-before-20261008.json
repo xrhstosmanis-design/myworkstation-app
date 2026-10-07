@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "[{\"control_messages\":0,\"measured_at\":\"2026-10-07T21:38:14.927367Z\",\"messages\":51,\"send_audit\":41,\"subscriptions\":1,\"tasks\":3}]"
+    }
+  ],
+  "isError": false
+}
