@@ -211,15 +211,15 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 ### 14 — Internet αναζήτηση προϊόντων
 
-**Κατάσταση:** READ-ONLY PASS / WRITE OPEN · συνέχιση περιορισμένου read-only ελέγχου ASSIGNED
+**Κατάσταση:** READ-ONLY PASS / WRITE OPEN · συνέχιση περιορισμένου read-only ελέγχου: ΜΕΡΙΚΟ PASS / OPEN
 
-**Υπόλοιπο / όρια PASS:** Το read-only USER/LAB PASS της 01/10 παραμένει ως έχει. Owner live και fail-closed behavior αν ο provider είναι ήδη ανενεργός: NOT TESTED. Ασφαλής σύνδεση με Master Catalog: OPEN. Υποβολή/έγκριση πρότασης τιμής και δημιουργία/αποστολή παραγγελίας παραμένουν OPEN και εκτός της παρούσας ανάθεσης. Χωρίς αλλαγές τιμών/ΦΠΑ, provider settings, παραγγελίες, πληρωμές ή stock.
+**Υπόλοιπο / όρια PASS:** Owner live και fail-closed behavior όταν ο provider είναι ήδη ανενεργός: NOT TESTED. Η read-only ακριβής αναζήτηση barcode στο Master Catalog επέστρεψε μία ορατή γραμμή, αλλά εμφανίζεται και ίδια ονομασία/SKU με διαφορετικό barcode· ασφαλής αποθηκευμένη σύνδεση Internet-result→Master Catalog παραμένει OPEN, χωρίς mapping. Υποβολή/έγκριση πρότασης τιμής, παραγγελία/αποστολή, πληρωμές και stock writes παραμένουν OPEN και εκτός scope. Χωρίς αλλαγές τιμών/ΦΠΑ ή ρυθμίσεων provider.
 
-**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/task14-owner-provider-readonly-20261007-r1`
+**Υπεύθυνη σελίδα / branch:** ASSIGNED `codex/task14-owner-provider-readonly-20261007-r3`
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 19:38 Europe/Athens — Ο ιδιοκτήτης ζήτησε συνέχεια του Νο 14. ASSIGNED: codex/task14-owner-provider-readonly-20261007-r1. Περιορισμένο scope: read-only επιβεβαίωση πρόσβασης Owner και fail-closed συμπεριφοράς όταν ο provider είναι ήδη ανενεργός, καθώς και έλεγχος ασφαλούς σύνδεσης με Master Catalog χωρίς αλλαγές δεδομένων. Δεν θα αλλάξω τιμές/ΦΠΑ, δεν θα υποβάλω ή εγκρίνω πρόταση τιμής, δεν θα δημιουργήσω/στείλω παραγγελία, δεν θα κάνω πληρωμή/stock write ούτε θα αλλάξω ρυθμίσεις provider. Το read-only USER/LAB PASS της 01/10/2026 παραμένει τεκμηριωμένο και δεν επαναλαμβάνεται. Οι υπόλοιπες write ροές μένουν OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md. PR #1833 (documentation-only; CI in progress).
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 19:38 Europe/Athens — owner-directed continuation· το claim PR #1833 έχει συγχωνευθεί. Ίδια ανάθεση συνεχίζεται στο `codex/task14-owner-provider-readonly-20261007-r3`. Scope: read-only Owner/fail-closed check μόνο αν provider ήδη disabled, και έλεγχος ασφαλούς Master Catalog linkage. Καμία αλλαγή τιμής/ΦΠΑ/provider settings, πρόταση, παραγγελία, πληρωμή ή απόθεμα. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md`.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** IN PROGRESS — δεν έχει εκτελεστεί νέος live έλεγχος.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 07/10/2026 20:42 Europe/Athens — ΜΕΡΙΚΟ PASS μόνο για read-only Master Catalog quick lookup. Health revision `b5f5dbf8566f74d430c8277305313296e64e9928`, version `0.22.0+kat-test-pos`: exact barcode `5449000000996` → μία ορατή `COCA COLA 330ML`, retail €1.30· άλλη γραμμή ίδιου ονόματος/SKU 763 έχει barcode `5449000214911`, άρα matching με όνομα/SKU μόνο αμφίσημο. Δεν σώθηκε mapping. Owner και disabled-provider fail-closed NOT TESTED. Checkpoint ανωτέρω. Συνολικό #14 παραμένει READ-ONLY PASS / WRITE OPEN. PR/CI για την παρούσα τεκμηρίωση εκκρεμούν.
 
 ### 15 — Πρώτη αυτόματη OCR ανάγνωση
 
