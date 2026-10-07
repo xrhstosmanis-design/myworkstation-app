@@ -483,6 +483,7 @@ export default function OwnerProductCenter({
         method: "PATCH",
         body: JSON.stringify({
           ...productCard,
+          expectedBarcodeIds: (selectedProduct.barcodes || []).map((row) => row.id),
           salePrice: base,
           costPrice: Number(productCard.costPrice || 0),
           vatRate: Number(editVat || 0),

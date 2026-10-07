@@ -63,7 +63,11 @@ try{
   const employee=await request("/api/operators/login/pin",{method:"POST",body:{storeId,employeeId:created.payload.employeeId,pin:"3479"}});assert.equal(employee.status,200,JSON.stringify(employee.payload));
   assert.equal((await transfer(employee.payload.token,target,source,barcode)).status,403);
   assert.equal((await transfer(null,target,source,barcode)).status,401);
+  const staleCard={name:`N13 ${tag} target`,sku:`N13-target-${tag}`,unit:"PIECE",salePrice:2.4,costPrice:0.7,vatRate:13,vatVerified:false,trackStock:true,active:true,expectedBarcodeIds:[],barcodes:[],stores:[]};
   const moved=await transfer(token,target,source,barcode);assert.equal(moved.status,200,JSON.stringify(moved.payload));assert.equal(moved.payload.auditedStores,2);
+  const staleCardSave=await request(`/api/owner-products/${target}/card`,{method:"PATCH",token,body:staleCard});
+  assert.equal(staleCardSave.status,409,JSON.stringify(staleCardSave.payload));
+  assert.equal(await safety(),before,"Rejected stale card must not change prices, stock or financial records");
   const row=(await prisma.$queryRaw`SELECT * FROM "ProductBarcode" WHERE "id"=${original}`)[0];
   assert.equal(row.productId,target);assert.equal(Number(row.unitMultiplier),1);assert.equal(row.salePrice,null);assert.equal(row.name,null);
   const otherCodes=await prisma.$queryRaw`SELECT "barcode" FROM "ProductBarcode" WHERE "productId"=${source} ORDER BY "barcode"`;assert.ok(otherCodes.some(r=>r.barcode===keep));
@@ -87,5 +91,9 @@ try{
   assert.equal((await transfer(token,orphanB,orphanA,rollback)).status,409);
   assert.equal((await prisma.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "barcode"=${rollback}`)[0].productId,orphanA,"Failed audit must roll back transfer");
   assert.equal(await safety(),before,"Transfer/negative paths changed prices, stock or financial records");
+  const freshCard={...staleCard,expectedBarcodeIds:(await prisma.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${target}`).map(r=>r.id),barcodes:(await prisma.$queryRaw`SELECT "barcode","unitMultiplier","salePrice","name" FROM "ProductBarcode" WHERE "productId"=${target}`).map(r=>({...r,unitMultiplier:Number(r.unitMultiplier),salePrice:r.salePrice===null?null:Number(r.salePrice)}))};
+  const freshSave=await request(`/api/owner-products/${target}/card`,{method:"PATCH",token,body:freshCard});
+  assert.equal(freshSave.status,200,JSON.stringify(freshSave.payload));
+  assert.equal((await prisma.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "productId"=${target} AND "barcode"=${barcode}`)[0].productId,target,"Fresh card keeps moved barcode");
   console.log("N13 barcode HTTP E2E PASS: reset/identity/other-code/POS/Audit, invalid/missing/same/stale/duplicate/rollback, employee/anonymous/foreign isolation, concurrent one-winner, stock/price/financial invariants");
 }finally{await prisma.$disconnect()}
