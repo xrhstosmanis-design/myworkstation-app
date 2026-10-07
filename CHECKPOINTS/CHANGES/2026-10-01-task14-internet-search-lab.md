@@ -84,3 +84,12 @@ CI3984:1727tests/1726PASS/1FAIL από legacy UI label source guard. Διατη�
 **Next step:** Only test Owner access through an available official secure flow, without sharing or entering credentials through chat or ordinary automation. Test disabled-provider fail-closed behavior only if the provider is already disabled. Any mapping/write test needs a separately approved, isolated scope and baseline; proposal/order/payment/stock and price/VAT writes remain outside this assignment.
 
 **Publication:** PR #1843 OPEN; GitHub Actions run #4626 on evidence commit `b29a50fbd6c779138304835064eeb15fd5360bb4` completed SUCCESS at 07/10/2026 20:50 Europe/Athens. Documentation CI only; no live-data or application behavior changes.
+
+
+## 07/10/2026 21:04 Europe/Athens — #14 secure Owner authentication attempt / BLOCKED
+
+**Authentication evidence:** The official secure browserAuth flow offered the app's email-and-password sign-in and returned `submitted`. That result does not confirm authentication. The subsequent app page showed `Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη.`; a fresh verification at the app origin did not establish a valid session or an Owner role. No credential values were disclosed in chat or entered through ordinary browser automation. No further credential attempt was made.
+
+**Result and boundaries:** Owner access is **BLOCKED / NOT TESTED**. Disabled-provider fail-closed remains **NOT TESTED** because the provider appeared active in the earlier check. No app settings, provider configuration, price/VAT, catalog mapping, proposal, order, payment, or stock data was changed. The exact-barcode catalog observation from 20:42 remains read-only and does not establish a saved mapping. Overall #14 stays **READ-ONLY PASS / WRITE OPEN**, partial, not total PASS.
+
+**Publication:** PR #1843 remains OPEN on `codex/task14-owner-provider-readonly-20261007-r3`. The prior head `36d9f49591a48e48e53c9cf3bfde7ab75e979c52` had GitHub Actions run #4629 SUCCESS. CI for this documentation update is pending.
