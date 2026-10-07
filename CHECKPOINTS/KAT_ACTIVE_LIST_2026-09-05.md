@@ -1,3 +1,11 @@
+# Νο13 — POS local barcode ownership fix / AWAITING LAB
+
+Bounded causal fix: in both active and legacy POS catalog queries suppress a MasterProductBarcode alias only when another Product in the same company explicitly owns that barcode. Preserve unclaimed master aliases, foreign-company mappings, sourceCode/SKU, stock/prices and all write flows. Isolated acceptance now attaches source to master retaining moved barcode plus unclaimed alias; requires target-only result on both endpoints. AWAITING CI and exact deployed LAB scan. No schema/data migration or global master edit. Stale full-card save remains a separate unverified residual.
+
+# Νο13 — CI PASS / live POS FAIL / OPEN
+
+07/10/2026 19:45 Athens — N13 isolated acceptance CI4592 PASS (build/server tests/invariants/real HTTP flows), head928361f9. Live source reopen and same-target/invalid/unknown-code checks PASS. Live POS scan still selected TEST1 at1.20 although independent DB uniquely owns barcode2900000000018 at TEST2: LAB FAIL in POS/master fallback; no checkout/payment. MasterProductBarcode retains original TEST1 code. Full N13 OPEN; preserve one measured transfer/Audit. Investigate company-local override of master aliases; old card save safety remains NOT TESTED.
+
 ## 07/10/2026 19:32 Athens - owner decision13816 and durable row readback
 
 Same09/original groupedNo4 owner retained. Owner19:32 accepts using the available physical/original invoice instead of automatic download for13816. Stop repeated automatic-original diagnostics for this sample; owner waiver/deferred automatic acquisition, not successful PDF delivery or verified manual upload PASS. Owner19:30 image file_0000000052e48243b70c9f4bd1c8404e shows13816 without original; Render16:30:18/16:30:34Z says file is not PDF at downloadOriginalPdf before identity checks. Response contents were not captured; no proof of HTML/login/empty PDF. PR1824 fullCI4573 passed1877/0/0, mainCI4574 passed;17:25 public runtime0245f30d0746d92bba124e3dcea5124e4897f9dd contains45second deadline/actionable error. Do not reopen the owner's waived13816 download or relax PDF/identity validation.
