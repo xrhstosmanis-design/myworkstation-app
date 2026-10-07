@@ -1,0 +1,8 @@
+{
+  "time": "2026-10-07T20:00:22.250452+00:00",
+  "method": "PATCH",
+  "url": "https://myworkstation-app.onrender.com/api/store-chat/stores/cmtpopbgo000trhb5ng9ytiru/tasks/chat-task-1791393082635-c4vy05z23ea",
+  "authentication": "none",
+  "status": 401,
+  "response": "{\"error\":\"Απαιτείται σύνδεση.\"}"
+}
