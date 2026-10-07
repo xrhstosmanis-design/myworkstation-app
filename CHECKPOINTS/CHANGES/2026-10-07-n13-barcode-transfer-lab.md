@@ -41,3 +41,7 @@ Bounded causal fix: in both active and legacy POS catalog queries suppress a Mas
 ## Stale full-card overwrite guard
 
 07/10/2026 19:51 Athens — No13 same owner. PR1829/CI4601 PASS merged8836c1c; master-alias fix awaiting deployed LAB lookup. Source inspection identified stale full-card overwrite: PATCH card deletes/reinserts all barcode rows with no opened-card precondition. Bounded follow-up requires original barcode row IDs from both native card editors, locks product inside transaction, compares current IDs before any write and rejects409 if changed; older open editor lacking snapshot must reopen. Transfer already locks both products. Isolated HTTP regression submits target snapshot[] after transfer and requires409 with unchanged stock/price/financial records, then verifies fresh snapshot saves successfully. AWAITING CI/LAB; no production data edit.
+
+## Preview cancellation
+
+07/10/2026 19:52 Athens — live preview cancellation PASS: on TEST1, check2900000000018 displayed sourceTEST2→targetTEST1 and explicit confirmation; clearing input removed confirmation(count0), without pressing transfer. Independent same SQL after retained barcode atTEST2, Auditcount1, unchanged products/movements/all transaction groups vs pre-preview19:49. POS test cart cleared by document reload, visible new transaction total0. No checkout/payment. PR1829 merged8836c1c fullCI4601 PASS; deployment progressing. PR1834 stale-card guard awaiting CI.
