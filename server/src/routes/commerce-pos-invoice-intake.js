@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -26,9 +27,9 @@ function candidateInfo(value){
 }
 
 async function ensureColumns(){
-  await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "paymentTransactionId" TEXT`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "purchaseOrderId" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "settlementMode" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "paymentTransactionId" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "PurchaseDocument" ADD COLUMN IF NOT EXISTS "purchaseOrderId" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceType" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "sourceDocumentId" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrRawText" TEXT`);

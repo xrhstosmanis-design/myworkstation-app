@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -37,7 +38,7 @@ async function ensureSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "invoiceUnit" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrReviewReasons" TEXT`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount1" NUMERIC(8,4)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount2" NUMERIC(8,4)`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SupplierProductMapping" ADD COLUMN IF NOT EXISTS "lastDiscount3" NUMERIC(8,4)`);

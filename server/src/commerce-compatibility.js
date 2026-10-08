@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import {prisma} from "./prisma.js";
 
 export async function ensureCommerceCompatibility(){
@@ -5,8 +6,8 @@ export async function ensureCommerceCompatibility(){
   // A global unique barcode would incorrectly block two different customers from using the same retail EAN/UPC.
   await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "ProductBarcode_barcode_key"`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ProductBarcode_barcode_idx" ON "ProductBarcode"("barcode")`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "scannedBarcode" TEXT`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SaleLine_scannedBarcode_idx" ON "SaleLine"("scannedBarcode") WHERE "scannedBarcode" IS NOT NULL`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductBarcodePriceRequest" (

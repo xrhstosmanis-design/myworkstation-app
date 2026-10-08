@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import {prisma} from "./prisma.js";
 
 const statements=[
@@ -75,7 +76,7 @@ async function ensureMasterProductForeignKey(){
 export async function ensureMasterCatalogSchema(){
   for(const [label,statement] of statements){
     try{
-      await prisma.$executeRawUnsafe(statement);
+      await executeHotTableBootstrap(prisma,statement);
     }catch(error){
       console.error(`Master Catalog schema failed at ${label}.`,{code:error?.code,meta:error?.meta});
       throw error;
