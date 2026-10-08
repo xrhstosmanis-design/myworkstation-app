@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {purchasePrintedRounding} from "../lib/purchase-printed-rounding.js";
 import {Router} from "express";
@@ -70,9 +71,9 @@ export async function ensurePurchaseOrderSchema(){
       await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "invoiceUnit" TEXT`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "stockUnitsPerInvoiceUnit" NUMERIC(14,4)`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrReviewReasons" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "name" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "name" TEXT`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     })().catch(error=>{schemaPromise=undefined;throw error});
   }

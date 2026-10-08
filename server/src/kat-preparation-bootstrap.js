@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
 import {ensureKatPreparationDefaults} from "./kat-preparation-defaults.js";
@@ -103,7 +104,7 @@ const CATALOG=[
 async function ensureSubcategory(companyId,categoryId,name){let [sub]=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "categoryId"=${categoryId} AND UPPER("name")=UPPER(${name}) LIMIT 1`;if(!sub){sub={id:uid()};await prisma.$executeRaw`INSERT INTO "ProductSubcategory" ("id","companyId","categoryId","name","property","classification","active") VALUES (${sub.id},${companyId},${categoryId},${name},'STOCK_ITEM','PRODUCT',true)`}else await prisma.$executeRaw`UPDATE "ProductSubcategory" SET "active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${sub.id}`;return sub}
 
 export async function ensureKatPreparationSeed(){
- await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+ await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSubcategory" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"categoryId" TEXT NOT NULL,"legacyCode" TEXT,"name" TEXT NOT NULL,"property" TEXT NOT NULL DEFAULT 'STOCK_ITEM',"points" DECIMAL(14,4) NOT NULL DEFAULT 0,"pluGroup" INTEGER NOT NULL DEFAULT 0,"classification" TEXT NOT NULL DEFAULT 'MERCHANDISE',"eshopCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
  const [store]=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};const companyId=store.companyId;
  let [main]=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${companyId} AND UPPER("name")=UPPER(${MAIN_CATEGORY}) LIMIT 1`;if(!main){main={id:uid()};await prisma.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name","active") VALUES (${main.id},${companyId},${MAIN_CATEGORY},true)`}else await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=true WHERE "id"=${main.id}`;

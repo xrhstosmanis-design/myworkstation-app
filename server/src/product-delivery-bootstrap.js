@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import {prisma} from "./prisma.js";
 
 const statements=[
@@ -14,6 +15,6 @@ const statements=[
 ];
 
 export async function ensureProductDeliverySchema(){
-  for(const statement of statements)await prisma.$executeRawUnsafe(statement);
+  for(const statement of statements)await executeHotTableBootstrap(prisma,statement);
   console.log("Product modifiers / e-delivery schema bootstrap completed.");
 }

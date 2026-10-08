@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -15,9 +16,9 @@ async function ensureSchema(){
         "supplierCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"source" TEXT NOT NULL DEFAULT 'MANUAL',
         "updatedBy" TEXT,"updatedByName" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE("companyId","supplierId","productId"))`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "name" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "salePrice" NUMERIC(14,4)`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "name" TEXT`);
+      await executeHotTableBootstrap(prisma,`ALTER TABLE "ProductBarcode" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
     })().catch(error=>{schemaPromise=undefined;throw error});
   }
   return schemaPromise;

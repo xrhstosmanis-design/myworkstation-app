@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {internetItemPrice} from "../internet-market-item-price.js";
 import {internetNetMargin} from "../internet-market-net-margin.js";
@@ -12,8 +13,8 @@ const nextSku=async(companyId,tx=prisma)=>String((await tx.$queryRaw`SELECT COAL
 async function requireAdvanced(req,res){if(isPlatformSuper(req))return true;if(!isOwner(req)){res.status(403).json({error:"Η αναζήτηση Internet επιτρέπεται μόνο σε ιδιοκτήτη ή Super Admin.",code:"OWNER_ONLY"});return false}const ok=await advancedOnlineSearchEntitlement(req.user.companyId);if(!ok){res.status(403).json({error:"Το module Advanced Online Product Search δεν είναι ενεργό για την εταιρεία.",code:"MODULE_DISABLED",moduleKey:"ADVANCED_ONLINE_PRODUCT_SEARCH"});return false}return true}
 
 async function ensureSchema(){
-  await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+  await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
 }
 
 async function ensureMarketSchema(){

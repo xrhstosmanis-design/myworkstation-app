@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -14,8 +15,8 @@ router.use((req,res,next)=>allowed(req)?next():res.status(403).json({error:"Απ
 let schemaReady;
 async function ensureSchema(){
   if(!schemaReady)schemaReady=(async()=>{
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
+    await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+    await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PlatformBulkCatalogAudit" (
       "id" TEXT PRIMARY KEY,"actorId" TEXT,"productIdsJson" JSONB NOT NULL,"storeIdsJson" JSONB NOT NULL,
       "createdProducts" INTEGER NOT NULL DEFAULT 0,"activatedMappings" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);

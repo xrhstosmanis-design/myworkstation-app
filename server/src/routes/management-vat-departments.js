@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -30,7 +31,7 @@ router.use(requireAccess);
 export async function ensureVatDepartmentSchema(){
   if(schemaReady)return schemaReady;
   schemaReady=(async()=>{
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
+    await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "vatDepartmentId" TEXT`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ManagementVatDepartment" (
       "id" TEXT NOT NULL,
       "companyId" TEXT NOT NULL,
