@@ -1,3 +1,11 @@
+## 2026-10-08T19:41:52.787852+00:00 — POS-AUX-HEADER-01 / ASSIGNED / USER overlap FAIL
+
+Independent owner codex/pos-aux-header-20261008, source branch codex/pos-aux-header-fix-20261008. User screenshots image(20261008-193041).png,193102,193146,193432 show LAB / LAB POS 2 auxiliary Chat/Barcode/work-card/radio launchers fixed above main controls and operator popover, and mobile waiter button outside green header. Explicit user instruction08Oct22:36 Athens: all inside green header, a second lower row; mobile waiter only with existing module availability. Physical client SHA unknown. Existing observed layout FAIL; implementation NOT TESTED.
+
+Bounded change: move existing auxiliary launchers into normal-flow green POS header second row and move the already server-gated mobile waiter entry there, keeping established click behavior, background radio across modal close and existing authorization. No new module keys/entitlements or server/auth change. Chat is existing basic functionality, not invented paid gating; radio launcher uses its existing moduleActive/enabled response. Barcode uses existing runtime addBarcode where applicable. No TABLE_SERVICE business takeover: its mobile ordering/round/modifier APIs and owner agent/table-service-layout-takeover-20260927 remain untouched. No Chat push/task/Android takeover; No16 owner preserved.
+
+Preserve prior Gate3/4/6/7/8, offline queue/idempotency, fiscal pending and payment controls, shift/menu behavior, touch text sizing and all other owners. Read-only actual-component/full-CSS fixture required before/after:1920x1080,1366x768,1280x600 with active/inactive module and delayed store-switch results; second row inside header, primary controls/popover/payment unobscured, existing launchers open/close without mutation. Frontend build/full CI/exact healthy release then bounded user visual test. No production sale, stock, shift, module, message or financial mutation needed. Claim must reach main before source editing. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-aux-header.md. Owner retained until PASS or named handoff.
+
 ## 2026-10-08T19:35:00.691385+00:00 — OWNER-ANALYTICS-SCROLL-01 / CLOSED / USER VISUAL PASS
 
 User confirmation 08/10/2026 22:30:20 Europe/Athens: «einai ok», directly after the requested refresh/open Analytics/maximize/bottom-scroll retest. This closes only the bounded maximized Analytics layout and vertical-scroll correction. Prior selected-store context: Περίπτερο Διαδόχου Παύλου. No new screenshot, physical client revision or role was supplied; no claim of user acceptance for every viewport, touch, drawer, report calculations or permissions.
@@ -1172,6 +1180,7 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 07/10/2026 01:11 Europe/Athens — ρητή εντολή ιδιοκτήτη για καταγραφή στο main, όχι έναρξη υλοποίησης.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Μόνο τεκμηρίωση απαίτησης· το module παραμένει OPEN. Καμία αλλαγή κώδικα, βάσης ή LAB πράξη. Σχετικές υπάρχουσες αναθέσεις εγκατάστασης/backup/remote/audit/manual διατηρούνται.
+
 
 
 
