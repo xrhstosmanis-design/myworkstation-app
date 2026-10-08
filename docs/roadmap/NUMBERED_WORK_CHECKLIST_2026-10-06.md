@@ -306,7 +306,7 @@
 
 ## 48 — Excel / Barcode — λειτουργικές δοκιμές νέας οθόνης
 
-- **Υπόλοιπο / όριο:** OWNER-EXCEL-SCROLL-01 (08Oct20:10): USER FAIL στη μεγιστοποίηση· bounded CSS διόρθωση, local Chromium wheel/και τα δύο τελικά κουμπιά/normal restore PASS σε1920/1366/1280. Bulk USER PASS προστατεύεται. AWAITING CI/DEPLOY/USER, owner codex/owner-excel-scroll-20261008 μόνο για αυτή την κύλιση. Οι υπόλοιπες TODAY-06 λειτουργικές δοκιμές παραμένουν OPEN στους προηγούμενους owners· καμία υποβολή φόρμας.
+- **Υπόλοιπο / όριο:** OWNER-EXCEL-SCROLL-01 (08Oct20:10): USER FAIL στη μεγιστοποίηση· bounded CSS διόρθωση, local Chromium wheel/και τα δύο τελικά κουμπιά/normal restore PASS σε1920/1366/1280. Bulk USER PASS προστατεύεται. Source PR1911/full CI/main CI PASS· release BLOCKED από προηγούμενο startup deploy· queued3458f34 περιέχει ίδιο CSS· AWAITING DEPLOY/USER, owner codex/owner-excel-scroll-20261008 μόνο για αυτή την κύλιση. Οι υπόλοιπες TODAY-06 λειτουργικές δοκιμές παραμένουν OPEN στους προηγούμενους owners· καμία υποβολή φόρμας.
 
 - **Tracker ID:** `TODAY-06`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ VISUAL / OPEN

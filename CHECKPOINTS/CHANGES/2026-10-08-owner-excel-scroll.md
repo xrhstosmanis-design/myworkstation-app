@@ -1,3 +1,11 @@
+## 2026-10-08T20:33:12+03:00 - OWNER-EXCEL-SCROLL-01 / SOURCE CI PASS / DEPLOY BLOCKED / USER NOT TESTED
+
+Source PR1911/head3c479cd4f5993d720c2360e43f9da63f2494a485 passed full CI37815580034 and merged as cde9e480321f774d363d0d0ad7eecf755570dc87; main CI37815927736 SUCCESS. The superseding main3458f34affa860120f9722650699880f09bbad3c also passed main CI37816669920 and contains identical owner-products.css blob879baeb71ee312535ffeba114516b332787fcc2e. Original guard37816226720 and superseding guard37817103930 have not established an exact healthy release. No third deploy/restart/cancel/env/database action was performed by this scope.
+
+Read-only Render evidence at20:32 Athens: dep-db3sva75jdgc73dl6ntg for older claim-only f4a9c7 remains update_in_progress, with17:25:28Z port-scan timeout/no open ports logged. dep-db3t26n88uic73dk1kj0 for superseding3458f34 remains queued; public /api/health still ok=true on previous b76dc52f5802323a0be1a100f338a7c62afe6479. This is a publication blocker, not evidence the Excel fix is available or accepted. Startup/database correction remains owned by POS-DB-LOCK-01; no causal takeover.
+
+User20:28 reports everything closed except POS. No instruction to close/restart POS or Writer; physical Writer status and post-restart performance are unknown. Retain ASSIGNED codex/owner-excel-scroll-20261008 and preserve all other owners, bulk USER PASS20:03, and local layout regression PASS. Physical Excel / Barcode USER RETEST NOT TESTED. Single next action: verify exact healthy deployment containing the identical CSS, then ask user to open BackOffice, refresh Excel / Barcode, maximize and scroll to both final buttons without submitting. Full TODAY-06 functional acceptance remains OPEN; no import/create/offer/stock/financial action.
+
 ## 2026-10-08T20:18:19+03:00 - OWNER-EXCEL-SCROLL-01 implemented / AWAITING USER RETEST
 
 ClaimPR1910/head820aa0c938024c2962f113f783c671f95c03e73a/docsCI37814996137 SUCCESS/mergef4a9c7ab655aef0ee23da8d24f94c52f45020b07 published before source. Bounded CSS only: maximized desktop>1200px with existing promotion-import-workspace marker bounds stock/kiosk/OwnerProductCenter wrappers and makes the existing two-column workspace a dedicated vertical scroll region. No JSX/form handler, create/import API, defaults, pricing/stock/license changes. Existing bulk CSS is unchanged.
