@@ -226,6 +226,29 @@ async function main(){
   const wrongTenant=await request(`/api/platform/store-modules/companies/not-${companyId}/stores/${storeId}/workforce-v2/bootstrap`,{token});
   assert.equal(wrongTenant.response.status,404,JSON.stringify(wrongTenant.payload));
 
+  // The Owner BackOffice now uses these same card/invitation endpoints.
+  const cardPath=`${base}/employees/${employeeId}/work-card`;
+  const card=await request(cardPath,{method:"POST",token});
+  assert.equal(card.response.status,200,JSON.stringify(card.payload));
+  assert.equal(card.payload.store.id,storeId);
+  assert.ok(card.payload.cardCode);
+  assert.ok(card.payload.mobileUrl.startsWith(`/store/${storeId}?employee-card=1`));
+  assert.equal((await request(`/api/platform/store-modules/companies/not-${companyId}/stores/${storeId}/workforce-v2/employees/${employeeId}/work-card`,{method:"POST",token})).response.status,404);
+  const cardAuditBefore=await prisma.workforceAuditLog.count({where:{companyId,action:"WORKFORCE_WORK_CARD_PREPARED"}});
+  // Expiry must block both the panel and credential preparation. Isolated CI only.
+  const packages=await prisma.$queryRaw`SELECT "id","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey" IN ('PERSONNEL_BASIC','PERSONNEL_PRO','PERSONNEL_AI','PERSONNEL_PAYROLL','AI_STAFF_SCHEDULER')`;
+  try{
+    await prisma.$executeRaw`UPDATE "StorePaidModule" SET "active"=FALSE WHERE "storeId"=${storeId} AND "moduleKey" IN ('PERSONNEL_BASIC','PERSONNEL_PRO','PERSONNEL_AI','PERSONNEL_PAYROLL','AI_STAFF_SCHEDULER')`;
+    assert.equal((await request(`${base}/bootstrap`,{token})).response.status,403);
+    assert.equal((await request(cardPath,{method:"POST",token})).response.status,403);
+    await prisma.$executeRaw`UPDATE "StorePaidModule" SET "active"=TRUE,"endsAt"=NOW()-INTERVAL '1 minute' WHERE "storeId"=${storeId} AND "moduleKey"='PERSONNEL_BASIC'`;
+    assert.equal((await request(`${base}/bootstrap`,{token})).response.status,403);
+    assert.equal((await request(cardPath,{method:"POST",token})).response.status,403);
+    assert.equal(await prisma.workforceAuditLog.count({where:{companyId,action:"WORKFORCE_WORK_CARD_PREPARED"}}),cardAuditBefore);
+  }finally{
+    for(const row of packages)await prisma.$executeRaw`UPDATE "StorePaidModule" SET "active"=${row.active},"startsAt"=${row.startsAt},"endsAt"=${row.endsAt} WHERE "id"=${row.id}`;
+  }
+
   const employeeDisabled=await request(`${base}/employees/${employeeId}/status`,{
     method:"PATCH",token,body:{active:false,confirmed:true,reason:"E2E status audit"}
   });

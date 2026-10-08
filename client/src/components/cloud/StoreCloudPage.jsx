@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
-import {ArrowLeft,BriefcaseBusiness,Copy,KeyRound,RefreshCw} from "lucide-react";
+import {ArrowLeft,BriefcaseBusiness,Copy,KeyRound,RefreshCw,Users} from "lucide-react";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
@@ -28,7 +28,7 @@ const ledgerFingerprint=result=>{
   });
 };
 
-export default function StoreCloudPage({api,store,onBack}){
+export default function StoreCloudPage({api,store,onBack,onWorkforce}){
   const [version,setVersion]=useState(0);
   const lastSyncValue=useRef(null);
   const lastServerFingerprint=useRef(null);
@@ -142,6 +142,7 @@ export default function StoreCloudPage({api,store,onBack}){
     <section className="owner-store-tools" aria-label="Πρόσθετες λειτουργίες">
       <h3>Πρόσθετες λειτουργίες</h3>
       <div className="owner-store-tool-grid">
+        {onWorkforce&&<button type="button" onClick={onWorkforce}><Users/><b>Προσωπικό & Πρόγραμμα</b><span>Εργαζόμενοι, κάρτες και QR</span></button>}
         <button type="button" className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
         <button type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/><b>Εμπορική λειτουργία</b><span>Προϊόντα, αποθήκη, modules</span></button>
         <button type="button" className={toolOpen==="transactions"?"active":""} onClick={()=>setToolOpen(v=>v==="transactions"?"":"transactions")}><RefreshCw/><b>Συναλλαγές</b><span>Αναλυτικές κινήσεις καταστήματος</span></button>
