@@ -1,3 +1,13 @@
+## 08/10/2026 21:00 — Central catalog search: limited owner-confirmed USER PASS
+
+Who/where: the already authorized owner/admin opens the existing central management product search for the selected authorized company; an existing POS remains open. This read-only correction grants no role, store, tenant or module access. Existing company/store isolation and authentication/license gates remain mandatory.
+
+Verified requested flow: keep the existing POS open, open the product-search view that previously stalled, search «coca» once and wait for its result. Owner answers «einai ok»21:00:41 after that instruction. This is a bounded owner-confirmed successful search, not an independently timed or filmed interaction. Do not repeat the completed search solely to create evidence. SourcePR1912/fullCI37816230134/merge3458f34; verified healthy deployed service1a71471dad70918623643bb85a092da058b044c5 before the test, physical client SHA not supplied. No financial/stock/shift submission formed part of the check.
+
+PASS criterion for this record is the owner's explicit acceptance of the requested search. Limits: no exact seconds, new screenshot, confirmed physical terminal/operator/shift, separate LAB/Diadoxou refresh acceptance, explicit absence of each error or sustained six-store load. Broader incident/capacity and recurrence prevention remain OPEN. The older20:06 FAIL below is dated incident history, superseded for this one completed search only; it remains evidence of the prior instability.
+
+Troubleshooting: if search/loading or session errors recur, retain the action, selected store/company, time and exact message for read-only correlation. Do not reset a PIN because a failed directory appears empty, bypass authentication/shift checks or replay a pending payment/cart. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md. Separate no-print transaction/installation acceptance is unchanged.
+
 ## 08/10/2026 20:06 — recurring server availability USER FAIL
 
 New owner screenshots show repeated central session-validation-unavailable errors and Diadoxou stuck checking shift/permissions. The earlier8second timing below is dated history, not current stability acceptance. Do not reset credentials or bypass shift/auth checks; retain existing pending financial actions without replay. Availability remains OPEN under POS-DB-LOCK-01. No new successful login, search, financial or no-print acceptance is recorded.
