@@ -12,6 +12,8 @@ Local Node20 build:production and client build PASS; server suite1906 PASS /0 FA
 
 Next action: exact-head full CI → merge → verify exact healthy deployed revision; only then request bounded LAB acceptance of OFF/ON/rename/dropdown/reset/store-switch using the required before/after record for any state-changing LAB action. No financial test is needed merely to inspect the list. Owner remains assigned until a named handoff.
 
+Compatibility review: the credit dropdown also offers «Άλλος πελάτης / κάρτα μέλους», opening the existing general customer search with its existing card-only restrictions. Ordinary named-customer and member-card selection remains available; no existing balance/points/payment controls are removed.
+
 ## Protected evidence
 
 25Sep doctor/nurse product-rule and cart/sale scoped PASS retained, including per-line rounding toward0.10 and per-store rules; full Gate4 completed25Sep offline queue checkpoint supersedes older historical OPEN. 08Oct category response USER PASS and opening form visual PASS protected. No repeat old transactions. New requested opt-in requirement supersedes unconditional hospital UI only. Customer records are currently company-wide; do not invent store associations or infer store-specific customer balances. Inspect existing customer access before implementation.

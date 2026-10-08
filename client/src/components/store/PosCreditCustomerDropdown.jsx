@@ -3,7 +3,7 @@ import "./pos-credit-customer.css";
 
 const euro = value => Number(value || 0).toLocaleString("el-GR", {style:"currency", currency:"EUR"});
 
-export default function PosCreditCustomerDropdown({api, storeId, label="Πελάτης", customer, cardOnly=false, disabled=false, onSelect}) {
+export default function PosCreditCustomerDropdown({api, storeId, label="Πελάτης", customer, cardOnly=false, disabled=false, onSelect, onBrowseCustomers}) {
   const [open, setOpen] = useState(false), [query, setQuery] = useState("");
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(false), [selecting, setSelecting] = useState(false), [error, setError] = useState("");
   const [placement,setPlacement]=useState({});
@@ -50,6 +50,7 @@ export default function PosCreditCustomerDropdown({api, storeId, label="Πελά
       </div>
       {!loading && !error && !rows.length && <p>{cardOnly && query.trim().length < 2 ? "Σκάναρε την κάρτα για επιλογή." : query.trim().length === 1 ? "Γράψε τουλάχιστον 2 χαρακτήρες." : "Δεν βρέθηκαν πελάτες πίστωσης."}</p>}
       {!cardOnly && rows.length === 30 && <small>Εμφανίζονται οι πρώτοι 30. Χρησιμοποίησε αναζήτηση για περισσότερους.</small>}
+      {onBrowseCustomers && <button type="button" disabled={selecting} onClick={() => {setOpen(false); onBrowseCustomers();}}>Άλλος πελάτης / κάρτα μέλους</button>}
     </section>}
   </div>;
 }
