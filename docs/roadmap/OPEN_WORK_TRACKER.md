@@ -64,6 +64,8 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
+**Independent subtask POS-TOUCH-OPEN-01:** ASSIGNED `codex/pos-shift-open-touch-20261008`, 2026-10-08T10:36+00:00 — opening form responsive layout only; current real-store USER FAIL/physical revision unknown. Existing broader owners unchanged. No shift/data writes. CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. AWAITING implementation/CI/deploy/LAB.
+
 ### 04 — Πραγματικό go-live test
 
 **Κατάσταση:** OPEN
