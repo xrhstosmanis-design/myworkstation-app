@@ -1,3 +1,58 @@
+## POS-DB-LOCK-01 — corrected source LIVE / read-only diagnostics PASS / AWAITING USER
+
+Read-only public store-directory probes on verified active LAB and Diadoxou store IDs return200: LAB3.305s/operatorCount2/PIN-ready2/card-ready2; Diadoxou7.612s/operatorCount5/PIN-ready5/card-ready4. No PIN/card hashes or employee names requested/output, no login performed. These probes show discovery available, not authenticated POS/shift acceptance; historical missing-PIN display was not credential deletion.
+
+08/10/2026 20:40Athens. Render139cc02593656770ff5332c5f9c0b487466c0bee LIVE17:38:20.841Z; exact public health200/ok=true/revision139cc025 verified twice,total6.697s and8.747s from Work network. That main revision includes sourcePR1912/head2a7adfe3976289b5e8811dafebe6a6a8a75996c8/fullCI37816230134SUCCESS/merge3458f34,mainCI37816669920SUCCESS and other owner's release recordPR1913. Existing source action is now deployed; old deployment BLOCKED/queued status below is dated history. No physical client revision is inferred from service health.
+
+Fresh SELECT20:38:07 and20:40:09:recovery=false,0Lock waiters,0active queries older15s; all four historical reader-chain PIDs absent. One corrected company catalog digest probe returns500rows/the same digest74a14af1a4dce931646a7154c1af7f81 in2.391s connector roundtrip, compared with the earlier65.572s corrected-query probe under the old lock/load. Same digest covers only those two corrected reads, not an independent production before/after comparison with the expensive old SELECT. These diagnostics establish current release/read availability only, not user search/session duration or durable capacity. Actual isolated PostgreSQL before/after output and concurrent HTTP regression already passed in full CI; production credentials/transactions were not used for those fixtures.
+
+Official CLI login waiting process interrupted locally (exit130) after obsolete reader disappeared; no user authorization/token obtained and no admin cancel/terminate/restart was executed. Historical cancellation SQL must not be executed. Current user action does not require CLI/admin authentication. No source beyond the bounded read query, no schema/configuration/paid-plan change, no financial/stock replay. Tenant/auth/license/fiscal/idempotency/other owners remain protected.
+
+Single next action: after record deployment settles, owner opens existing central management once and searches coca once with empty-cart POS open, then checks one POS refresh/session response at LAB and Diadoxou and reports time/error. Do not repeatedly search or repeat payment/waste. Remaining real acceptance AWAITING USER; no5-store capacity PASS. Recurrence prevention and a representative planned-store concurrent workload assessment remain OPEN under codex/pos-startup-loading-20261008 after this bounded causal correction. Source no-print transaction acceptance remains separate AWAITING LAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md; ownership retained until named handoff.
+
+## POS-DB-LOCK-01 — old lock chain absent / corrected source building / AWAITING USER
+
+08/10/2026 20:36Athens fresh read-only observation: all four previously identified backends3141311/3141315/3141340/3141558 are absent after Render records prior f4a9c7 deployment update_failed17:35:08Z and queued139cc02593656770ff5332c5f9c0b487466c0bee build started17:35:09Z. Temporal association does not establish the exact disconnection cause. No SQL cancel/terminate, restart or user financial action performed by this page. Prepared reader guard below is now historical/NOT EXECUTED and must never target absent/reused PIDs.
+
+CLI2.28.0 installed locally and login/device authorization initiated while the reader was present; no user authorization/token was obtained. The login request was stopped when the reader vanished; user/admin authentication is no longer the next action for that historical reader. No API key/password requested or published.
+
+Corrected catalog sourcePR1912/head2a7adfe3976289b5e8811dafebe6a6a8a75996c8/fullCI37816230134SUCCESS/merge3458f34 preserved; mainCI37816669920SUCCESS. Current automatic build139cc025 includes that correction and other owner's release recordPR1913; exact healthy revised source and authenticated catalog/shift/POS acceptance remain AWAITING DEPLOY/USER. Claim's BLOCKED-cancellation status below is superseded only for the vanished reader, not durable stability. No capacity or5-store load PASS.
+
+Single next action: verify new exact healthy release after build/port binding, read current lock/activity state, then one owner product search alongside an empty-cart LAB/Diadoxou POS session/refresh readback. No payment/waste/old-cart replay. Recurrence prevention (reader lifetime/shutdown/runtimeDDL/duplicate deployment) and planned-store capacity remain OPEN under retained incident owner codex/pos-startup-loading-20261008. New8/45/7second fluctuating timing is not full recovery PASS. Same checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md and all protected owners/financial PASS retained.
+
+## POS-DB-LOCK-01 — source merged / deployment BLOCKED / administrative read recovery required
+
+08/10/2026 20:33Athens release readback. Owner codex/pos-startup-loading-20261008 retained. SourcePR1912 finalhead2a7adfe3976289b5e8811dafebe6a6a8a75996c8/fullCI37816230134SUCCESS including1926server tests, isolated PostgreSQL before/after catalog equivalence and concurrent read/health HTTP fixture; merge3458f34affa860120f9722650699880f09bbad3c verified. MainCI37816669920SUCCESS; guardedRender37817103930started, same source queued in Render. This is implemented/CI PASS, not deployed or USER/LAB PASS. No5-store capacity acceptance.
+
+Public health still200/exactb76dc52f5802323a0be1a100f338a7c62afe6479,total7.040s. Priorautomatic f4a9c7ab655aef0ee23da8d24f94c52f45020b07 stuck before port binding; logs17:25:28Z show port-scan timeout. New source3458f34 queued behind it. Do not start another manual deploy or interpret health as new-source activation. Owner20:29:07 says all windows closed except POS: repeated user searches/open tabs are not a current explanation.
+
+Fresh SELECT snapshots identify a new abandoned old catalog read PID3141311,backend_start2026-10-08T17:18:33.719816Z,query_start2026-10-08T17:18:52.503723Z,active/ClientWrite/no blockers. Product ALTER3141315 and PurchaseDocument ALTER3141340 queue on it; preparation cleanup3141558 queues behind Product ALTER. This is a recurring lock chain blocking bootstrap/release independently of the old source's query CPU cost. Earlier PIDs3137180/3137463/3137534 remain vanished/historical: never execute the old guarded command against reused IDs.
+
+All production diagnosis/corrected-query digest probes remain read-only. No backend cancellation/termination/restart or financial/stock action has been performed. Available Render connector SQL is read-only; do not bypass that capability with administrative functions. Preparing official Render CLI authentication as an independent administrative route; authentication/administrative recovery remains NOT EXECUTED. No API key/password is requested in chat or published. Existing owner-confirmed workspace tea-d9ie26vaqgkc739uudqg and database dpg-d9isee7avr4c73bdglog-a must be verified before any administrative action.
+
+Next single action: obtain authorized CLI/admin connection, freshly verify exact PID/starttimes/standalone catalog SELECT/ClientWrite, then cancel only this abandoned reader with the guard below. If cancellation cannot release the same freshly identified ClientWrite reader, termination is limited to that same standalone read after recheck. Never cancel writes/payments/fiscal or unrelated sessions; no broad database restart is proposed. Afterwards read back queue and exact deployed revision before one user search/empty-cart POS acceptance. Remaining prevention: abandoned-connection lifetime/graceful shutdown/runtimeDDL/duplicate deployments need a separately bounded causal claim; broader planned-store capacity measurement stays OPEN. Full incident ASSIGNED/USER FAIL/release BLOCKED. Original financial/no-print acceptance and all other owners protected.
+
+### Fresh reader recovery guard — NOT EXECUTED
+
+The following replaces only the current incident reader identity. Re-identification is mandatory immediately before use, and an absent/mismatched reader means no cancellation.
+
+```sql
+SELECT pid,backend_start,query_start,state,wait_event_type,wait_event,
+       pg_blocking_pids(pid) AS blockers,left(query,180) AS statement
+FROM pg_stat_activity WHERE pid=3141311;
+
+SELECT pg_cancel_backend(pid)
+FROM pg_stat_activity
+WHERE pid=3141311 AND datname=current_database()
+  AND backend_start=TIMESTAMPTZ '2026-10-08T17:18:33.719816Z'
+  AND query_start=TIMESTAMPTZ '2026-10-08T17:18:52.503723Z'
+  AND state='active' AND wait_event_type='Client' AND wait_event='ClientWrite'
+  AND ltrim(query) LIKE 'SELECT p."id",p."sku",p."name",p."description"%'
+  AND cardinality(pg_blocking_pids(pid))=0;
+```
+
+No cancellation executed; pending user/admin connection. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md.
+
 ## 2026-10-08T20:33:12+03:00 - OWNER-EXCEL-SCROLL-01 / SOURCE CI PASS / DEPLOY BLOCKED / USER NOT TESTED
 
 Source PR1911/head3c479cd4f5993d720c2360e43f9da63f2494a485 passed full CI37815580034 and merged as cde9e480321f774d363d0d0ad7eecf755570dc87; main CI37815927736 SUCCESS. The superseding main3458f34affa860120f9722650699880f09bbad3c also passed main CI37816669920 and contains identical owner-products.css blob879baeb71ee312535ffeba114516b332787fcc2e. Original guard37816226720 and superseding guard37817103930 have not established an exact healthy release. No third deploy/restart/cancel/env/database action was performed by this scope.
