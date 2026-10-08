@@ -238,7 +238,7 @@
 
 - **Tracker ID:** `REMOTE-INSTALL-01`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ USER PASS / OPEN
-- **Υπόλοιπο / όριο:** 08Oct17:14 νέα λήψη μετά sourcePR1885/fullCI/healthy b8632db·17:15 σύνδεση/φάκελος και17:16 μήνυμα αποθήκευσης περιορισμένο USER PASS. Ο Writer ήταν κλειστός17:17·άνοιξε μία φορά17:18. Φωτογραφία σωστού Diadoxou BackOffice17:20 δείχνει WRITER ONLINE/heartbeat17:20:15, περιορισμένο LIVE PASS. Συντομεύσεις/readback, πραγματική αποθήκευση με ενεργό Writer, Windows-login startup, desktop recovery και εγκατάσταση5λεπτών NOT TESTED. CASH εκτύπωση/εμφάνιση συναλλαγής και EFTPOS επικοινωνία16:07–16:11 διατηρούνται ως περιορισμένες επιβεβαιώσεις. Πλήρης κάρτα/stock/οικονομικά/Audit NOT TESTED·καμία επανάληψη πληρωμής. Original remote wizard owner και λοιπές αναθέσεις διατηρούνται. Checkpoint2026-10-08-remote-install-startup.md; acceptancePR1887/CI37791915867 SUCCESS/mainfcfc501.
+- **Υπόλοιπο / όριο:** 08Oct17:37 CARD έγκριση/απόδειξη/εμφάνιση Συναλλαγών USER PASS μετά νέα πώληση που αναφέρθηκε17:35. Δεν επαναλαμβάνεται. Προηγούμενα CASH/επικοινωνία/save-message17:16/ONLINE17:20 προστατεύονται. Ποσό/SKU/IDs και ακριβής φυσική revision δεν καταγράφηκαν ανεξάρτητα· οικονομικά/stock/Audit/control/μοναδικότητα χρέωσης/receipt-content NOT TESTED. «φύρα χ.απόδειξη» μόνο αναφορά ενέργειας, όχι PASS φύρας/stock. Windows-login startup/recovery, συντομεύσεις readback και5λεπτη εγκατάσταση OPEN. Original remote wizard/fiscal owners και άλλες αναθέσεις διατηρούνται. Checkpoint2026-10-08-diadoxou-fiscal-profile.md.
 
 ## 37 — Μικτή πληρωμή RBS / EFTPOS
 
