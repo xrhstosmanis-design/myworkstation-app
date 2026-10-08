@@ -1,8 +1,14 @@
+## 08/10/2026 16:07 — Διαδόχου CASH receipt: limited owner confirmation
+
+Authorized existing Diadoxou operator on DIADOXOU-POS-01 uses the active shift and correct store; no permission, tenant or fiscal gate is changed. Requested flow:1×ΝΕΡΟ500ML/KM490 at0.50€, normal price, CASH once with Writer ONLINE and RBS free of concurrent Kiosk use, then wait for the physical receipt. Owner reported «ΒΓΗΚΕ»16:07:02: LIMITED USER PASS of reported printing only, after profile sourcePR1881/greenCI/exact public healthy509cc1b verification15:50. Read-only next step: Χειριστής→Συναλλαγές βάρδιας→Ανανέωση and inspect the same existing sale. If completion is unclear, inspect existing receipt/transaction/request before any new action; never press payment again merely for documentation.
+
+Receipt contents/number/VAT, exact submitted physical revision, independent one issuance, ISSUED sale/payment IDs, financial/stock/Audit deltas and unaffected control are NOT TESTED. Current stock unavailable; it is not a measured zero. Card/EFTPOS, Windows autostart and full installation remain OPEN. Existing manual restart PASS and historical15:21 VAT rejection are preserved. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
+
 ## 08/10/2026 — Διαδόχου manual Writer restart / CASH VAT failure
 
 USER PASS μόνο υπάρχουσας σύνδεσης/folder check και manual Writer restart μετά Windows reboot: owner στο τελικό DIADOXOU-POS-01/Kiosk-User ανοίγει τον ήδη εγκατεστημένο οδηγό, ελέγχει υπάρχουσα σύνδεση χωρίς νέο Pair, επιβεβαιώνει ετοιμότητα/no other Writer/no uncertain request, επιλέγει Start once, διατηρεί ανοικτό Writer και επιβεβαιώνει πραγματικό ONLINE heartbeat (15:06:48). Αυτόματη εκκίνηση Windows δεν ελέγχθηκε. Η ένδειξη ONLINE δεν πιστοποιεί απόδειξη ή EFTPOS.
 
-Η CASH δοκιμή1×KM490/ΝΕΡΟ500ML/0.50€ στις15:21 απέτυχε στην αντιστοίχιση ΦΠΑ. Δεν γίνεται νέα πληρωμή μέχρι επαλήθευση σωστού store profile: screenshot15:33 Kiosk department5/13%, παλιά καταγραφή29Sep code42. Καμία αυθαίρετη αλλαγή σε Kiosk/προϊόν/ποσοστό. Φυσική απόδειξη, payment/stock/Audit και full installation παραμένουν NOT TESTED. Διαφορετικά στιγμιότυπα stock (MWS0/Kiosk-38) δεν συγκρίνονται ως delta. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
+Η CASH δοκιμή1×KM490/ΝΕΡΟ500ML/0.50€ στις15:21 απέτυχε στην αντιστοίχιση ΦΠΑ. Δεν γίνεται νέα πληρωμή μέχρι επαλήθευση σωστού store profile: screenshot15:33 Kiosk department5/13%, παλιά καταγραφή29Sep code42. Καμία αυθαίρετη αλλαγή σε Kiosk/προϊόν/ποσοστό. Στο ιστορικό αποτέλεσμα15:21 δεν επιβεβαιώθηκε απόδειξη· η νεότερη περιορισμένη επιβεβαίωση εκτύπωσης16:07 καταγράφεται πάνω. Payment/stock/Audit και full installation παραμένουν NOT TESTED. Διαφορετικά στιγμιότυπα stock (MWS0/Kiosk-38) δεν συγκρίνονται ως delta. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
 
 ## 08/10/2026 14:43 — Diadochou category response: limited USER PASS
 
