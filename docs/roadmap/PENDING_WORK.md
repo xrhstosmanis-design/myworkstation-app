@@ -1,19 +1,6 @@
-## 08/10/2026 — POS-TOUCH-OPEN-01 LIVE / AWAITING PHYSICAL ACCEPTANCE
+## POS-TOUCH-OPEN-01 — ASSIGNED / remaining physical touch acceptance
 
-PR1873/fullCI37766074299 SUCCESS, merged main44b0a696fcae46c7b7cddf73a0a8c78b73e909e3; mainCI37766389780 SUCCESS. Exact deployment verified 2026-10-08T10:57:36+00:00: public /api/health ok=true revision44b0a696fcae46c7b7cddf73a0a8c78b73e909e3; served platform HTML -> index bundle -> assets/entry-CSZaVGwe.css contains .shift-open-touch-shell. MainCI37766389780 also SUCCESS. Physical touchscreen remains AWAITING USER/LAB; no new real PASS or financial/stock evidence. Owner remains codex/pos-shift-open-touch-20261008; next action reload/inspect only, one final photo, no shift submission for geometry.
-Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Broader installation owners/residual and protected PASS unchanged.
-
-## 08/10/2026 — POS-TOUCH-OPEN-01 implementation AWAITING CI/deploy/LAB
-
-Owner codex/pos-shift-open-touch-20261008; implementation branch codex/pos-shift-open-touch-implementation-20261008. ClaimPR1872/main e292ff7 published before source. Opening-only responsive CSS and shell class: real inputs/declaration/API/gates unchanged. Local actual-component mocked rendering1024x600 through1920x1080 fits at100%;50px fields/56px action. Mock error remains visible; portrait touch scrolling. Build/server1896tests0FAIL/4SKIP/safety invariants passed; no live shift or other business write. Current USER layout FAIL remains until actual device acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Other owners/protected PASS unchanged.
-
-## 08/10/2026 — POS shift opening / touchscreen layout — ASSIGNED
-
-Owner `codex/pos-shift-open-touch-20261008`, independent presentation subtask of tracker03, claimed 2026-10-08T10:36+00:00. Existing installation, fiscal, preflight and shift-close owners remain unchanged. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md`.
-
-USER-reported layout FAIL: opening form exceeds available height; confirmation below viewport. Requirement: touchscreen operation at100% without keyboard zoom/fullscreen shortcuts. Exact physical browser revision NOT CAPTURED. No transaction evidence or new financial PASS claimed.
-
-Scope: only opening-form responsive layout and touch-sized controls. Preserve mandatory initialCash authorization, resolved overview/access gate, four real cash amounts, complete receipt declaration, unchanged submit/API, operator change, tenant/module/fiscal gates and protected05Oct opening/closing/QR PASS; Gates3/4/6/8 not reopened. No production data or shift action. Status AWAITING IMPLEMENTATION/CI/deploy/LAB, no new PASS. Acceptance: actual touchscreen at100%, entire form/confirmation usable without keyboard shortcuts; errors visible; narrower/keyboard view reachable by touch. No shift submission for geometry evidence.
+Owner codex/pos-shift-open-touch-20261008. Limited USER VISUAL PASS08Oct14:09: full opening form/confirmation visible in owner photograph1791457779778. Completed photographed overflow subtask removed from pending;100% physical zoom/readability/actual touch operation and other variants remain NOT TESTED / OPEN. No diagnostic shift/sale. ImplementationPR1873/fullCI37766074299/mainCI37766389780/exactserver44b0a696 preserved; checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md and POS manual updated. Broader installation owners unchanged.
 
 # Νο16 — Android σύνδεσμος Chat USER PASS · notification tap OPEN
 
