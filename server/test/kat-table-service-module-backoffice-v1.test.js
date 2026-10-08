@@ -30,11 +30,11 @@ test("inactive table service is hidden and checkout is blocked",()=>{
   assert.match(posRoute,/tableServiceEnabled/);
   assert.match(posRoute,/if\(!await hasTableService/);
   assert.match(posUi,/api\(`\/api\/store-pos\/stores\/\$\{store\.id\}\/table-service`\)\.then\(\(\)=>true\)\.catch\(\(\)=>false\)/);
-  assert.match(posUi,/tableServiceAvailable&&<button[^}]*table-service-top-button[\s\S]*ΤΡΑΠΕΖΙΑ/);
+  assert.match(posUi,/tableServiceAvailable&&<button[^}]*table-service-top-button[\s\S]*Ασύρματη παραγγελιοληψία/);
   const topStart=posUi.indexOf('<div className="store-pos-top">');
   const actionBarStart=posUi.indexOf('<div className="standard-action-bar">');
-  assert.ok(posUi.indexOf("ΤΡΑΠΕΖΙΑ",topStart)<actionBarStart,"ΤΡΑΠΕΖΙΑ must be in the top POS header");
-  assert.doesNotMatch(posUi.slice(actionBarStart),/ΤΡΑΠΕΖΙΑ/);
+  assert.ok(posUi.indexOf("Ασύρματη παραγγελιοληψία",topStart)<actionBarStart,"Ασύρματη παραγγελιοληψία must be in the top POS header");
+  assert.doesNotMatch(posUi.slice(actionBarStart),/Ασύρματη παραγγελιοληψία/);
   assert.match(launcher,/activeModules\.includes\("TABLE_SERVICE"\)/);
   assert.match(launcher,/\/api\/license\/current/);
 });
