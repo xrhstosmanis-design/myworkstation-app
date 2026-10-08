@@ -255,7 +255,7 @@
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
-- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER FAIL20:41, Start κόβεται στο normal παράθυρο· CSS διόρθωση/local wheel + Start/history normal/max4μεγέθη PASS· PR1916/full CI PASS·1a71471 LIVE/exact health/main CI37820096980/guard37820351666 SUCCESS· AWAITING USER RETEST, ASSIGNED codex/owner-inventory-scroll-20261008. Καμία δημιουργία/οριστικοποίηση/stock πράξη· Gate2 PASS και TODAY-07 owners προστατεύονται.
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN με προηγούμενο owner. Καμία νέα απογραφή/οριστικοποίηση/stock πράξη· Gate2 και TODAY-07 προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
@@ -323,7 +323,7 @@
 
 - **Tracker ID:** `TODAY-08`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** CODE CI PASS / OPEN
-- **Υπόλοιπο / όριο:** PR1775 code/CI pass· απομένει exact LIVE visual acceptance της νέας ιεραρχίας και των επιτρεπόμενων ενεργειών.
+- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: βασικά navy/teal/white και μεγάλα ευδιάκριτα γράμματα κατόπιν νέας οδηγίας21:15, NOT TESTED.
 
 ## 51 — Σελίδα ιδιοκτήτη — απλοποίηση και τελική αποδοχή
 
