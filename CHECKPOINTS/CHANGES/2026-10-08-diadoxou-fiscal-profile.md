@@ -64,3 +64,10 @@ Requested card context is same terminal/operator/shift and1×KM490/0.50€, but 
 08Oct16:11:03Athens owner canceled the separate card attempt on EFTPOS and in MyWorkStation, then reported it did not appear in transactions: LIMITED USER confirmation of canceled-card absence from displayed transactions only.16:11:40 owner confirms no payment card is available on site, so completed/approved card payment and fiscal receipt stay NOT TESTED, with no further card sale requested. Independent request final state, absence of charge, sale/payment/stock/Audit counts and deltas remain NOT TESTED. Cash receipt and reported cash transaction display remain separate accepted observations. Next installation action: save automatic Windows-user startup preference in the existing guide, without starting a second Writer or rebooting; saving/running that preference and restart behavior not yet confirmed.
 
 No new financial action is authorized merely to document cancellation. Existing cash receipt is not replayed. Read-only future reconciliation can inspect the already canceled request. Successful physical card acceptance requires an actual card at a later separately identified attempt, fresh baseline and one-shot guarded submission. Full go-live remains OPEN; installation duration5minutes is still unverified.
+
+
+## 08/10/2026 16:11:57 — owner accepts EFTPOS communication
+
+08Oct16:11:57Athens owner «ΑΠΟ ΤΗΝ ΣΤΙΓΜΗ ΠΟΥ ΠΗΓΕ ΕΙΝΑΙ ΟΚ» explicitly accepts EFTPOS command delivery as sufficient for this connection check: LIMITED USER PASS of communication, not approved monetary card payment. No further card test is requested now; bank approval/charge/fiscal receipt and independent financial/stock/Audit effects remain NOT TESTED. Existing cash print/transaction-display confirmation preserved.
+
+The assistant proceeds with the existing installer startup-preference step only. This is the same independent installation owner; no source/data/permission change and no new card command.
