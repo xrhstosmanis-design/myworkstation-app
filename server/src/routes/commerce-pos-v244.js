@@ -1,3 +1,4 @@
+import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
 import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
 import jwt from "jsonwebtoken";
@@ -130,7 +131,7 @@ function posBackgroundAuthorization({companyId,storeId,jobId,path,method,body}){
 
 async function renewFastBackgroundLease({companyId,jobId,leaseToken}){
   const leaseUntil=new Date(Date.now()+POS_BACKGROUND_LEASE_MS);
-  return prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "leaseUntil"=${leaseUntil},"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "state"='RUNNING' AND "leaseToken"=${leaseToken}`;
+  return backgroundDrain.track(prisma.$executeRaw`UPDATE "PosInvoiceBackgroundTask" SET "leaseUntil"=${leaseUntil},"updatedAt"=CURRENT_TIMESTAMP WHERE "jobId"=${jobId} AND "companyId"=${companyId} AND "state"='RUNNING' AND "leaseToken"=${leaseToken}`);
 }
 
 async function internalCommerceRequest(path,{authorization,backgroundScope,method="GET",body,publicOrigin}={}){
@@ -304,6 +305,7 @@ function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publ
     }finally{clearInterval(leaseHeartbeat);fastBackgroundWorkers.delete(jobId);setImmediate(runPosInvoiceBackgroundSweep)}
   })();
   fastBackgroundWorkers.set(jobId,task);
+  backgroundDrain.track(task);
   task.catch(error=>console.error("POS fast invoice worker crashed",{jobId,message:String(error?.message||error)}));
 }
 
@@ -446,24 +448,29 @@ async function repairStaleRecoveringTasks(){
 }
 
 async function runPosInvoiceBackgroundSweep(){
-  if(posBackgroundSweepActive||Date.now()<posBackgroundDbBackoffUntil)return;
+  if(backgroundDrain.stopping||posBackgroundSweepActive||Date.now()<posBackgroundDbBackoffUntil)return;
   posBackgroundSweepActive=true;
+  let drained;
+  backgroundDrain.track(new Promise(resolve=>drained=resolve));
   try{
     await repairStaleRecoveringTasks();
-    while(fastBackgroundWorkers.size<POS_BACKGROUND_CONCURRENCY){
+    while(!backgroundDrain.stopping&&fastBackgroundWorkers.size<POS_BACKGROUND_CONCURRENCY){
       const claimed=await claimFastBackground();
       if(!claimed)break;
       scheduleFastBackground({companyId:claimed.companyId,storeId:claimed.storeId,jobId:claimed.jobId,pageJobIds:claimed.pageJobIds,handoff:claimed.handoff,publicOrigin:claimed.publicOrigin,leaseToken:claimed.leaseToken,attemptCount:claimed.attemptCount});
     }
   }catch(error){if(isDbPoolTimeout(error))posBackgroundDbBackoffUntil=Date.now()+POS_BACKGROUND_DB_BACKOFF_MS;console.error("POS invoice durable worker sweep failed",{message:String(error?.message||error),dbBackoffMs:isDbPoolTimeout(error)?POS_BACKGROUND_DB_BACKOFF_MS:0})}
-  finally{posBackgroundSweepActive=false}
+  finally{posBackgroundSweepActive=false;drained()}
 }
+
+export function allowPosInvoiceDrainRequest(req){return allowActiveInvoiceDrainRequest(req,fastBackgroundWorkers,process.env.JWT_SECRET)}
 
 export async function ensurePosInvoiceBackgroundWorkerSchema(){await ensureFastHandoffSchema()}
 export function startPosInvoiceBackgroundWorker(){
-  if(posBackgroundSweepTimer)return;
+  if(backgroundDrain.stopping||posBackgroundSweepTimer)return;
   posBackgroundSweepTimer=setInterval(runPosInvoiceBackgroundSweep,POS_BACKGROUND_SWEEP_MS);
   posBackgroundSweepTimer.unref?.();
+  backgroundDrain.onStop(()=>clearInterval(posBackgroundSweepTimer));
   setImmediate(runPosInvoiceBackgroundSweep);
 }
 
