@@ -1,3 +1,7 @@
+## POS-AUDIENCE-CREDIT-01 — ASSIGNED / νέα κεντρική απαίτηση08Oct2026
+
+Owner `codex/pos-audience-credit-settings-20261008`; claim publication `codex/pos-audience-credit-claim-20261008`, owner approval17:27:50Athens for public checkpoint/active-list/registries/PDF/source publication and push/merge. New independent scope: opt-in hospital audience/card rows per store, editable audience names, credit-customer dropdown using authorized POS access. Owner screenshot134545 shows permanent hospital controls in Διαδόχου: USER FAIL for new visibility requirement; physical revision unknown. Current main a6579e3; prior live548ef32 independently verified. New behavior NOT TESTED. Gate3/4/6/8, discount IDs/rounding/card hashes, operator card-only rights, fiscal/stock/idempotency/shift guards and TODAY-04/other owners protected. No real-store diagnostic transaction or configuration write. Publish claim before code. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-audience-credit-settings.md`. Acceptance: off hides hospital rows; explicit activation and renamed groups preserve pricing; customer dropdown/select/reset/restricted-card/store-switch safety. Customer records currently company-wide; do not invent store membership/balances. CI/local are not LAB PASS.
+
 # MyWorkStation — κοινό μητρώο εκκρεμοτήτων και αναθέσεων
 
 Έκδοση 07/10/2026 · Ευρώπη/Αθήνα · Βάση main 6f370e1b2aad887a4aa380e27e462391f05b2ca5.
