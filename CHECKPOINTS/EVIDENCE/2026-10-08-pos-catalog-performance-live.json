@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-08T11:39:25Z",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "23b11ed8ce3bd3a7af1761eb147dc2cae8f16b7c"
+  },
+  "servedLoader": "/assets/index-Cot6pzdU.js",
+  "servedScript": "/assets/entry-BSmDvADW.js",
+  "bytes": 2172272,
+  "sha256": "3bcaa5ea70b0305920c381e1a31bf8102b6c902b3dbaf5e8dec1a0d7450bc472",
+  "sameLocalProductionBundle": false,
+  "resolverPresent": true
+}
