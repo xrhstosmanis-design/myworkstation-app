@@ -1,3 +1,7 @@
+## 08/10/2026 — ASSIGNED Διαδόχου fiscal VAT profile
+
+Independent REMOTE-INSTALL-01 residual owner codex/diadoxou-fiscal-profile-20261008, claimed15:38Athens before source edit. Confirmed Kiosk code42/department5/13% must not use KAT42/2/13%; all authenticated tenant/licensing/idempotent fiscal gates preserved. CASH attempt15:21 USER FAIL, manual Writer restart15:06 USER PASS only; no financial/stock/receipt PASS. Source/CI/exact deploy and fresh controlled cash/card acceptance remain OPEN. Existing TODAY-02/TODAY-04 and remote wizard owners unchanged; Management click failure stays TODAY-04. CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
+
 ## POS-CATALOG-PERF-01 — ASSIGNED / wider performance residual only
 
 Owner codex/pos-catalog-perf-20261008 retained. Remaining original whole-program lag scope: unmeasured other quick keys/categories/keypad/search/scanner and server/network/device response; direct touch/input method and physical clientSHA unknown. No immediate diagnostic test or speculative change; obtain exact action/approximate timing/resource evidence if a further slowdown is reported. Completed owner-confirmed category-response check removed from pending (08Oct14:43:23 «ΑΜΕΣΩς»); do not repeat refresh/category test for evidence. Current checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-catalog-performance.md and POS manual record limited USER PASS, not whole-program/financial/installation PASS. SourcePR1877/greenCI/Render/exactpublic23b11ed8 protected; broader installation owners unchanged.

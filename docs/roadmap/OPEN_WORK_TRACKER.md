@@ -539,6 +539,8 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 ### REMOTE-INSTALL-01 — Απομακρυσμένος οδηγός εγκατάστασης
 
+08Oct15:38Athens independent installation residual ASSIGNED codex/diadoxou-fiscal-profile-20261008: company/store-scoped confirmed VAT profile, no wizard/UI/data changes. CASH KM490/0.50€/1 USER FAIL15:21; Kiosk department5/13% confirmed15:33 and code42 from29Sep, current shared KAT42/2/13% mismatch. Manual Writer restart15:06 ONLINE USER PASS only; autostart/fiscal/financial/stock/Audit go-live NOT TESTED. Claim/source/CI/exact deploy/device acceptance OPEN. Existing remote wizard/TODAY owners retained. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
+
 **Κατάσταση:** LIVE / AWAITING DEVICE
 
 **Υπόλοιπο / όρια PASS:** Windows PC, pairing/writer, restart, φυσικός εξοπλισμός και ενιαίος οδηγός.
