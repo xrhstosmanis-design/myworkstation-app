@@ -25,3 +25,13 @@ Only a CSS import and opening-only shell class added to StoreOperatorApp; handle
 Isolated Chromium rendering of actual React component with global production styles and mocked requests:1024x600,1280x620,1366x650,1366x768,1920x1080 — no normal document overflow, all6inputs50px, confirmation and operator change inside viewport. At1024x600 confirmation bottom547.49px; mocked API error still visible with confirmation bottom590.49px. Error card adds10px document overflow but action remains in view.600x800 narrow fallback has vertical touch scrolling, no horizontal overflow. All geometry reads made0writes; one mock-only rejected submit tested error display, never a live API. Full production build PASS; server suite1896tests/1892PASS/0FAIL/4SKIP; KAT safety source invariants PASS. These are LOCAL/ISOLATED results, not LAB/USER PASS.
 
 Required acceptance: exact deployed revision, then actual touchscreen at100% showing four amounts, full declaration and visible confirmation. Do not submit/open a real shift merely to verify geometry. Financial/stock/physical receipt acceptance remains NOT TESTED; broader installation03/04/06/07 owners and residual stay unchanged.
+
+## Publication / physical acceptance handoff
+
+ImplementationPR1873, exact head98df7c811c6ceb50d6e658d921fc08374ea2f2db. Full GitHubCI37766074299 SUCCESS: classification, Windows PowerShell parsing/guided smoke, build/server suite/source invariants and isolated PostgreSQL HTTP flows all green. Merged main44b0a696fcae46c7b7cddf73a0a8c78b73e909e3. Exact live verification completed below; physical touchscreen acceptance remains pending. No physical PASS yet. Owner codex/pos-shift-open-touch-20261008 remains assigned; no handoff to another page and no broader installation claim.
+
+Single next action after exact deployment: reload only the MyWorkStation page/app on the same touchscreen, at100%, and inspect the entire opening form with confirmation visible. One final photo is sufficient for layout evidence. Do not submit/open a shift merely for this check.
+
+## Exact live handoff
+
+Exact deployment verified 2026-10-08T10:57:36+00:00: public /api/health ok=true revision44b0a696fcae46c7b7cddf73a0a8c78b73e909e3; served platform HTML -> index bundle -> assets/entry-CSZaVGwe.css contains .shift-open-touch-shell. MainCI37766389780 also SUCCESS. Physical touchscreen remains AWAITING USER/LAB; no new real PASS or financial/stock evidence. Owner remains codex/pos-shift-open-touch-20261008; next action reload/inspect only, one final photo, no shift submission for geometry.
