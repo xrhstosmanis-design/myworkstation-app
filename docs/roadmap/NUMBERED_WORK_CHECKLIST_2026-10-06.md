@@ -248,7 +248,7 @@
 
 ## 38 — Άδειες, απόδοση και προχωρημένοι κανόνες εργαζομένων
 
-- **Υπόλοιπο / όριο:** OWNER-WORKFORCE-01 (08Oct18:31): προεπισκόπηση κάρτας QR/barcode USER VISUAL PASS με Super Admin support· οριζόντια διάταξη tabs FAIL, scoped CSS correction PR1897/CI37802841168/merge5526b99e LIVE health OK, AWAITING USER RETEST. Κανονικό BackOffice: selected-store panel USER VISUAL PASS 18:39. OWNER role/module denial/φυσική εκτύπωση/αποστολή NOT TESTED. Πλήρες κοινό πάνελ προσωπικού στο BackOffice ιδιοκτήτη για επιλεγμένο κατάστημα/ενεργό πακέτο, κάρτες και προσκλήσεις. PR1893/CI37799256555/merge285f9922· AWAITING USER, όχι φυσικό PASS. Ανεξάρτητο scope codex/owner-workforce-module-20261008, χωρίς ανάληψη payroll #27 ή WORKFORCE-ADV.
+- **Υπόλοιπο / όριο:** OWNER-WORKFORCE-01 (08Oct19:04): οριζόντιες ευανάγνωστες καρτέλες desktop USER VISUAL PASS μετά την ανανέωση· PR1897/CI37802841168/merge5526b99e LIVE health OK. Προεπισκόπηση κάρτας QR/barcode και selected-store panel visibility διατηρούνται ως περιορισμένα USER VISUAL PASS. Φυσική εκτύπωση/scan/αποστολή, mobile/touch και φυσικός έλεγχος OWNER role/module denial NOT TESTED. Πλήρες κοινό πάνελ για επιλεγμένο κατάστημα/ενεργό πακέτο· owner codex/owner-workforce-module-20261008, χωρίς ανάληψη payroll #27 ή WORKFORCE-ADV. Επόμενη ενέργεια: επιλογή επόμενης διόρθωσης BackOffice.
 
 - **Tracker ID:** `WORKFORCE-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
