@@ -1,3 +1,36 @@
+## POS-DB-LOCK-01 — source merged / deployment BLOCKED / administrative read recovery required
+
+08/10/2026 20:33Athens release readback. Owner codex/pos-startup-loading-20261008 retained. SourcePR1912 finalhead2a7adfe3976289b5e8811dafebe6a6a8a75996c8/fullCI37816230134SUCCESS including1926server tests, isolated PostgreSQL before/after catalog equivalence and concurrent read/health HTTP fixture; merge3458f34affa860120f9722650699880f09bbad3c verified. MainCI37816669920SUCCESS; guardedRender37817103930started, same source queued in Render. This is implemented/CI PASS, not deployed or USER/LAB PASS. No5-store capacity acceptance.
+
+Public health still200/exactb76dc52f5802323a0be1a100f338a7c62afe6479,total7.040s. Priorautomatic f4a9c7ab655aef0ee23da8d24f94c52f45020b07 stuck before port binding; logs17:25:28Z show port-scan timeout. New source3458f34 queued behind it. Do not start another manual deploy or interpret health as new-source activation. Owner20:29:07 says all windows closed except POS: repeated user searches/open tabs are not a current explanation.
+
+Fresh SELECT snapshots identify a new abandoned old catalog read PID3141311,backend_start2026-10-08T17:18:33.719816Z,query_start2026-10-08T17:18:52.503723Z,active/ClientWrite/no blockers. Product ALTER3141315 and PurchaseDocument ALTER3141340 queue on it; preparation cleanup3141558 queues behind Product ALTER. This is a recurring lock chain blocking bootstrap/release independently of the old source's query CPU cost. Earlier PIDs3137180/3137463/3137534 remain vanished/historical: never execute the old guarded command against reused IDs.
+
+All production diagnosis/corrected-query digest probes remain read-only. No backend cancellation/termination/restart or financial/stock action has been performed. Available Render connector SQL is read-only; do not bypass that capability with administrative functions. Preparing official Render CLI authentication as an independent administrative route; authentication/administrative recovery remains NOT EXECUTED. No API key/password is requested in chat or published. Existing owner-confirmed workspace tea-d9ie26vaqgkc739uudqg and database dpg-d9isee7avr4c73bdglog-a must be verified before any administrative action.
+
+Next single action: obtain authorized CLI/admin connection, freshly verify exact PID/starttimes/standalone catalog SELECT/ClientWrite, then cancel only this abandoned reader with the guard below. If cancellation cannot release the same freshly identified ClientWrite reader, termination is limited to that same standalone read after recheck. Never cancel writes/payments/fiscal or unrelated sessions; no broad database restart is proposed. Afterwards read back queue and exact deployed revision before one user search/empty-cart POS acceptance. Remaining prevention: abandoned-connection lifetime/graceful shutdown/runtimeDDL/duplicate deployments need a separately bounded causal claim; broader planned-store capacity measurement stays OPEN. Full incident ASSIGNED/USER FAIL/release BLOCKED. Original financial/no-print acceptance and all other owners protected.
+
+### Fresh reader recovery guard — NOT EXECUTED
+
+The following replaces only the current incident reader identity. Re-identification is mandatory immediately before use, and an absent/mismatched reader means no cancellation.
+
+```sql
+SELECT pid,backend_start,query_start,state,wait_event_type,wait_event,
+       pg_blocking_pids(pid) AS blockers,left(query,180) AS statement
+FROM pg_stat_activity WHERE pid=3141311;
+
+SELECT pg_cancel_backend(pid)
+FROM pg_stat_activity
+WHERE pid=3141311 AND datname=current_database()
+  AND backend_start=TIMESTAMPTZ '2026-10-08T17:18:33.719816Z'
+  AND query_start=TIMESTAMPTZ '2026-10-08T17:18:52.503723Z'
+  AND state='active' AND wait_event_type='Client' AND wait_event='ClientWrite'
+  AND ltrim(query) LIKE 'SELECT p."id",p."sku",p."name",p."description"%'
+  AND cardinality(pg_blocking_pids(pid))=0;
+```
+
+No cancellation executed; pending user/admin connection. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md.
+
 ## POS-DB-LOCK-01 — bounded read-query implementation / AWAITING CI and USER
 
 Owner codex/pos-startup-loading-20261008; source branch codex/pos-catalog-reader-fix-20261008. Claim PR1909/exact-head8712de6dc752bf5e18f7de5941d4435c05ae58d5/docsCI37814527487SUCCESS/mergeb76dc52f5802323a0be1a100f338a7c62afe6479 published before source edits. New owner20:13:22 report: one product search stalls POS and BackOffice together; screenshot171208 shows coca search in bulk prices and repeated session-unavailable error. Owner asks about5additional stores next week. Current capacity/production stability is NOT accepted; no5-store load PASS or paid-plan recommendation/upgrade is invented.
