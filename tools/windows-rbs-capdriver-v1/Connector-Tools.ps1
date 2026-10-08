@@ -41,6 +41,55 @@ function Get-MwsLaunchArguments([string]$ScriptPath, [string]$ConfigPath, [switc
   return ('-NoProfile -ExecutionPolicy Bypass' + $sta + ' -EncodedCommand ' + $encoded)
 }
 
+function Invoke-MwsGuidedConnectionOperation($Config, [string]$Directory,
+  [ValidateSet('Pair','Test')][string]$OperationName, [string]$PairingCode) {
+  $mutex = $null
+  try {
+    # Only credential replacement needs to exclude a running Writer. The status
+    # check neither claims requests nor writes CAPDriver command files.
+    if ($OperationName -eq 'Pair') {
+      $mutex = Enter-MwsConnectorLock
+      & (Join-Path $Directory 'Pair.ps1') -ApiBase $Config.apiBase -PairingCode $PairingCode -ExpectedStoreId $Config.storeId
+    }
+    Invoke-MwsConnectionCheck $Config $Directory
+  } finally { Exit-MwsConnectorLock $mutex }
+}
+
+function Get-MwsConnectorStartupPreference([string]$ConfigPath,
+  [string]$StartupFolder = [Environment]::GetFolderPath('Startup')) {
+  $path = Join-Path $StartupFolder 'MyWorkStation - RBS Connector.lnk'
+  if (-not (Test-Path -LiteralPath $path)) { return $false }
+  try {
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($path)
+    $directory = Split-Path -Parent $ConfigPath
+    $expected = Get-MwsLaunchArguments (Join-Path $directory 'Start-Connector.ps1') $ConfigPath
+    $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    return ($shortcut.TargetPath -eq $powershell -and $shortcut.Arguments -eq $expected)
+  } catch { return $false }
+}
+
+function Save-MwsConnectorStartupPreference([string]$ConfigPath, [bool]$AutoStart,
+  [bool]$ConnectionPassed, [bool]$FinalUserConfirmed, [bool]$ReadyConfirmed,
+  [string]$DesktopFolder = [Environment]::GetFolderPath('Desktop'),
+  [string]$StartupFolder = [Environment]::GetFolderPath('Startup')) {
+  if (-not $ConnectionPassed -or -not $FinalUserConfirmed -or -not $ReadyConfirmed) {
+    throw 'Χρειάζεται επιτυχής έλεγχος και επιβεβαίωση ετοιμότητας.'
+  }
+  # Saving shortcuts does not start/stop the Writer or change its credentials.
+  # Serialize only preference writes, independently of the Writer singleton.
+  $mutex = New-Object Threading.Mutex($false, 'Local\MyWorkStation.RbsCapDriverV1.Startup')
+  $acquired = $false
+  try {
+    try { $acquired = $mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $acquired = $true }
+    if (-not $acquired) { throw 'Η επιλογή εκκίνησης αποθηκεύεται ήδη. Περίμενε να ολοκληρωθεί.' }
+    Set-MwsConnectorShortcuts $ConfigPath $AutoStart $DesktopFolder $StartupFolder
+  } finally {
+    if ($acquired) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
+  }
+}
+
 function Set-MwsConnectorShortcuts([string]$ConfigPath, [bool]$AutoStart,
   [string]$DesktopFolder = [Environment]::GetFolderPath('Desktop'),
   [string]$StartupFolder = [Environment]::GetFolderPath('Startup')) {
@@ -52,6 +101,15 @@ function Set-MwsConnectorShortcuts([string]$ConfigPath, [bool]$AutoStart,
   $shortcut.TargetPath = $powershell
   $shortcut.Arguments = Get-MwsLaunchArguments (Join-Path $directory 'Guided-Setup.ps1') $ConfigPath -Gui
   $shortcut.WorkingDirectory = $directory
+  $shortcut.Save()
+  # A visible recovery action uses the same store-checked singleton runner as
+  # logon startup. It never pairs, overwrites credentials or bypasses the lock.
+  $connectorLink = Join-Path $DesktopFolder 'MyWorkStation - RBS Connector.lnk'
+  $shortcut = $shell.CreateShortcut($connectorLink)
+  $shortcut.TargetPath = $powershell
+  $shortcut.Arguments = Get-MwsLaunchArguments (Join-Path $directory 'Start-Connector.ps1') $ConfigPath
+  $shortcut.WorkingDirectory = $directory
+  $shortcut.WindowStyle = 7
   $shortcut.Save()
   $startupLink = Join-Path $StartupFolder 'MyWorkStation - RBS Connector.lnk'
   if ($AutoStart) {
