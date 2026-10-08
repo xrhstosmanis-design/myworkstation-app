@@ -1,0 +1,20 @@
+ISOLATED LOCAL EVIDENCE — not physical USER/LAB acceptance
+Node20.20.2, Chromium headless/React development Profiler,5000 synthetic products,14categories x40 exact IDs,3late-ID quickbuttons+17unmatched slots. No real-store API/auth/financial requests.
+
+BEFORE exact ce4db388 component served from git in isolated Vite:
+1:28:43 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+INITIAL {"timings":[{"phase":"mount","actualDuration":50.70000000298023},{"phase":"update","actualDuration":7366.200000017881},{"phase":"update","actualDuration":5310.20000000298},{"phase":"update","actualDuration":5414.599999979138},{"phase":"update","actualDuration":0}],"counts":["40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα"],"quick":["Είδος 4490","Είδος 4720","Είδος 4890","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ"]}
+KEYPAD {"elapsedMs":15974,"timings":[{"phase":"update","actualDuration":5353.0999999940395},{"phase":"update","actualDuration":5234.500000014901},{"phase":"update","actualDuration":5372.20000000298},{"phase":"update","actualDuration":5328.100000008941}],"received":"ΕΛΑΒΑ7,00 €ΡΕΣΤΑ7,00 €"}
+KEYPAD {"elapsedMs":10909,"timings":[{"phase":"update","actualDuration":0},{"phase":"update","actualDuration":5385.999999985099},{"phase":"update","actualDuration":5406}],"received":"ΕΛΑΒΑ77,00 €ΡΕΣΤΑ77,00 €"}
+
+Original renders remain5.31–7.37s; baseline action measurement interrupted after initial profile to avoid sustained blocked browser loop. Earlier attempted physical tap in unstyled fixture was intercepted by actionbar; not interpreted as a device failure.
+
+AFTER current component, same fixture; synthetic click dispatch (not physical touchscreen gesture):
+INITIAL {"timings":[{"phase":"mount","actualDuration":28.099999994039536},{"phase":"update","actualDuration":256.50000001490116},{"phase":"update","actualDuration":13.500000014901161}],"counts":["40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα","40 προϊόντα"],"quick":["Είδος 4490","Είδος 4720","Είδος 4890","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ","ΚΕΝΟ"]}
+KEYPAD {"elapsedMs":35,"timings":[{"phase":"update","actualDuration":7.799999997019768}],"received":"ΕΛΑΒΑ7,00 €ΡΕΣΤΑ7,00 €"}
+KEYPAD {"elapsedMs":12,"timings":[{"phase":"update","actualDuration":6.5}],"received":"ΕΛΑΒΑ77,00 €ΡΕΣΤΑ77,00 €"}
+KEYPAD {"elapsedMs":11,"timings":[{"phase":"update","actualDuration":5.700000002980232}],"received":"ΕΛΑΒΑ777,00 €ΡΕΣΤΑ777,00 €"}
+CATEGORY {"elapsedMs":43,"timings":[{"phase":"update","actualDuration":10.799999997019768}],"cards":40}
+WRITES []
+
+All14counts40 and20quicklabels unchanged. Three local keypad values7/77/777; category40cards;mockwrites0. Fullserver1904tests/1900pass/0fail/4skip; productionbuild and preparation source invariants PASS. Focused19/19 resolver/companylayout/Greeksearch checksPASS. Work-network health4.719/4.116/5.234s is independent of storePC/network and not attributed to this UI issue.
