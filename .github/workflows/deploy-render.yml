@@ -7,13 +7,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: render-production-deploy
-  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   classify-changes:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-latest
     outputs:
       deploy_required: ${{ steps.scope.outputs.deploy_required }}
@@ -47,7 +47,20 @@ jobs:
     needs: classify-changes
     if: needs.classify-changes.outputs.deploy_required == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: render-production-deploy
+      cancel-in-progress: false
+      queue: max
     steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Resolve revision
         id: revision
         env:
@@ -60,7 +73,16 @@ jobs:
             echo "sha=$MANUAL_REVISION" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify full CI and deployment freshness
+        id: guard
+        env:
+          EXPECTED_REVISION: ${{ steps.revision.outputs.sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/render-deploy/guard.mjs preflight
+
       - name: Require Render deploy hook
+        if: steps.guard.outputs.deploy == 'true'
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
@@ -71,6 +93,7 @@ jobs:
           fi
 
       - name: Capture rollback checkpoint
+        if: steps.guard.outputs.deploy == 'true'
         run: |
           node <<'NODE'
           const fs=require("fs");
@@ -87,6 +110,7 @@ jobs:
           NODE
 
       - name: Preserve rollback checkpoint
+        if: steps.guard.outputs.deploy == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: render-rollback-checkpoint-${{ steps.revision.outputs.sha }}
@@ -94,11 +118,14 @@ jobs:
           retention-days: 30
 
       - name: Trigger Render deployment
+        if: steps.guard.outputs.deploy == 'true'
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: curl --fail --silent --show-error --retry 3 --retry-delay 5 -X POST "$RENDER_DEPLOY_HOOK_URL"
+          EXPECTED_REVISION: ${{ steps.revision.outputs.sha }}
+        run: node tools/render-deploy/guard.mjs trigger
 
       - name: Wait for exact production revision
+        if: steps.guard.outputs.deploy == 'true'
         env:
           EXPECTED_REVISION: ${{ steps.revision.outputs.sha }}
         run: |
