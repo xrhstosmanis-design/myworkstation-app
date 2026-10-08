@@ -1312,3 +1312,15 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
  .commerce-shell.window-maximized .owner-products:has(>.promotion-import-workspace)>:is(.owner-products-head,.owner-product-tabs,.op-alert){flex:0 0 auto!important}
  .commerce-shell.window-maximized .promotion-import-workspace{flex:1 1 0;min-height:0;min-width:0;grid-template-rows:max-content;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-bottom:36px}
 }
+
+/* Inventory: bound the existing window in normal and maximized desktop modes. */
+@media(min-width:1201px){
+ .commerce-shell:not(.window-minimized):has(.owner-products>.inv2){box-sizing:border-box;min-height:0;max-height:calc(100dvh - 28px);display:flex!important;flex-direction:column!important;overflow:hidden!important}
+ .commerce-shell:not(.window-minimized):has(.owner-products>.inv2)>.commerce-window-bar{flex:0 0 48px}
+ .commerce-shell:not(.window-minimized):has(.owner-products>.inv2)>.commerce-mode-switch{flex:0 0 auto}
+ .commerce-shell:not(.window-minimized):has(.owner-products>.inv2)>div:has(>.kiosk-shell){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell:not(.window-minimized) .kiosk-shell:has(>.owner-products>.inv2){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell:not(.window-minimized) .kiosk-shell>.owner-products:has(>.inv2){flex:1 1 0!important;height:auto!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+ .commerce-shell:not(.window-minimized) .owner-products:has(>.inv2)>:is(.owner-products-head,.owner-product-tabs,.op-alert){flex:0 0 auto!important}
+ .commerce-shell:not(.window-minimized) .owner-products>.inv2{flex:1 1 0;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-bottom:36px}
+}
