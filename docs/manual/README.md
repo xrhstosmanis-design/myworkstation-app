@@ -35,6 +35,7 @@
 - pos/
 - chat/
 - super-admin/
+- [deployment/ - δημοσίευση ελεγμένης έκδοσης](deployment/PASS.md)
 - video-audit/
 - invoices/ (μόνο όταν υπάρχει τελικό έγκυρο PASS)
 - inventory/ (μόνο όταν υπάρχει τελικό έγκυρο PASS)
