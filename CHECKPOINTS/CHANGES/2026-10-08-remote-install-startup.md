@@ -22,3 +22,6 @@ Local Node20 full server suite1904PASS/0FAIL/4SKIP and build:production PASS; pa
 
 
 First sourcePR1885/head999dc488 CI37784972198 Windows smoke did not reach PASS: held-Writer runspace completion check failed with an empty error stream. Test-Connection writes status output; require the unique explicit completion sentinel and no errors rather than assuming the runspace emits exactly one object. Production helper/GUI code unchanged by this diagnostic correction. Full new Windows CI still required; no merge/device PASS claimed.
+
+
+Second headf0c7db66/CI37785299897 Windows smoke explicitly returned SAFE_ACTIVE_WRITER with an empty error stream, but PowerShell5.1 HadErrors remains true after the deliberately caught negative guard cases. Require Completed invocation state, empty error stream and exactly one completion sentinel, preserving every negative/assertion check. No production source change in this test correction; next fullCI still required.

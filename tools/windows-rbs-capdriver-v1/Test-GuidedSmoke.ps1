@@ -114,7 +114,9 @@ try {
     }.ToString()).AddArgument((Join-Path $directory 'Connector-Tools.ps1')).AddArgument($configPath).AddArgument($directory).AddArgument($desktop).AddArgument($startup)
     $result = $parallel.Invoke()
     $completed = @($result | Where-Object { [string]$_ -eq 'SAFE_ACTIVE_WRITER' })
-    if ($parallel.HadErrors -or $completed.Count -ne 1) { throw ('Live Writer preference smoke failed: ' + ($parallel.Streams.Error -join '; ') + ' Output: ' + ($result -join '; ')) }
+    # HadErrors remains true after deliberately caught negative guard tests in
+    # Windows PowerShell5.1; require successful completion with no leaked errors.
+    if ($parallel.InvocationStateInfo.State -ne 'Completed' -or $parallel.Streams.Error.Count -ne 0 -or $completed.Count -ne 1) { throw ('Live Writer preference smoke failed: ' + ($parallel.Streams.Error -join '; ') + ' Output: ' + ($result -join '; ')) }
   } finally { $parallel.Dispose(); Exit-MwsConnectorLock $mutex }
 
   # Execute the real GUI click handlers with harmless controls and process
