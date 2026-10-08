@@ -54,8 +54,30 @@ try{
    }
   }
  }
+ for(const size of [{width:1266,height:849},{width:1920,height:925},{width:1366,height:768},{width:1280,height:600}]){
+  await page.setViewportSize(size);
+  for(const maximized of [false,true]){
+   await page.setContent(markup('inventory2'));
+   if(!maximized)await page.locator('.commerce-shell').evaluate(el=>el.classList.remove('window-maximized'));
+   const region=page.locator('.owner-products>.inv2'),start=region.locator('aside form.op-form>button.primary');
+   const metrics=await region.evaluate(el=>({height:el.clientHeight,content:el.scrollHeight,overflow:getComputedStyle(el).overflowY}));
+   assert.ok(metrics.height>100&&metrics.content>metrics.height,JSON.stringify({size,maximized,metrics}));assert.equal(metrics.overflow,'auto');
+   const tabsBefore=await page.locator('.owner-product-tabs').boundingBox();
+   await region.hover();await page.mouse.wheel(0,1000);
+   await page.waitForFunction(()=>document.querySelector('.owner-products>.inv2').scrollTop>0,null,{timeout:2000});
+   assert.equal((await page.locator('.owner-product-tabs').boundingBox()).y,tabsBefore.y);
+   assert.equal(await start.count(),1);
+   for(const control of [start,region.locator('aside>h4')]){
+    await control.evaluate(el=>el.scrollIntoView({block:'nearest'}));
+    const reach=await control.evaluate(b=>{const r=b.closest('.inv2'),br=b.getBoundingClientRect(),rr=r.getBoundingClientRect();return {top:br.top,bottom:br.bottom,regionTop:rr.top,regionBottom:rr.bottom,viewport:innerHeight};});
+    assert.ok(reach.bottom<=reach.regionBottom+1&&reach.top>=reach.regionTop&&reach.bottom<=reach.viewport,JSON.stringify({size,maximized,reach}));
+   }
+   console.log(JSON.stringify({size,tab:'inventory2',maximized,metrics}));
+   if(process.env.INVENTORY_SCREENSHOT&&size.width===1266&&maximized)await page.screenshot({path:process.env.INVENTORY_SCREENSHOT});
+  }
+ }
  await page.setContent(markup('master'));
  assert.equal(await page.locator('.kiosk-shell').evaluate(el=>getComputedStyle(el).display),'grid');
- console.log('PASS: final control reachable in maximized/normal sizes; Excel/Barcode both controls reachable; Master kiosk grid preserved.');
+ console.log('PASS: final control reachable in maximized/normal sizes; Excel/Barcode both controls reachable; Inventory Start/history reachable in normal/maximized sizes; Master kiosk grid preserved.');
  await page.close();
 }finally{await browser.close()}

@@ -1,3 +1,11 @@
+## 2026-10-08T20:49:59+03:00 - OWNER-INVENTORY-SCROLL-01 / IMPLEMENTED / AWAITING CI AND USER
+
+ClaimPR1915/head69b79caba2cea37a87dc86ec28f7f6b13439ba37/docsCI37819240691 SUCCESS/mergefd19e7bc1f6e811daded3b60c87148457dc5a855 published before source. CSS-only desktop>1200px correction bounds existing normal/maximized commerce shell, stock host, kiosk and OwnerProductCenter wrappers when their direct .inv2 root exists. Existing .inv2 receives one vertical auto-scroll region; tabs/window bar remain fixed; existing Inventory layout/handlers/defaults/actions untouched. No JSX/API/finalization/stock/schema/license changes. Bulk and Excel CSS unchanged; mobile rules unchanged.
+
+Actual component SSR/full-built-CSS Chromium reproduced pre-fix normal1266x849 Inventory712/712px/overflowvisible, beyond bounded window. After production build, normal/max viewport/content:1266x849=482/748 and505/748;1920x925=553/748 and581/748;1366x768=406/748 and424/748;1280x600=248/748 and256/748, alloverflowauto. Real wheel moved .inv2 while tabs stayed fixed; whole Start and history heading reachable within window in all8cases. Both bulk/Excel controls retain existing3size normal/max passes and Master kiosk grid preserved. Standalone local browser regression only, no requests/credentials/forms; local production build PASS. Source full CI/exact healthy production release and physical USER acceptance pending, no new functional inventory/stock PASS. Screenshot /tmp/owner-inventory-scroll.png visually inspected at1266x849 with Start/history fully visible.
+
+Owner codex/owner-inventory-scroll-20261008 retained. Preserve Gate2 manual PASS, TODAY-07/INVENTORY-ADV owners, Excel USER PASS20:42, bulk USER PASS20:03 and POS-DB-LOCK-01. Single next action after green full CI/exact release: user refreshes Απογραφή and verifies Start/bottom reachable in normal and maximized windows without starting an inventory. No create/count/CSV/zone/grant/delete/finalize/financial/stock action.
+
 ## 2026-10-08T20:44:02+03:00 - OWNER-INVENTORY-SCROLL-01 / ASSIGNED / USER FAIL
 ## POS-DB-LOCK-01 — corrected source LIVE / read-only diagnostics PASS / AWAITING USER
 

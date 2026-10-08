@@ -255,7 +255,7 @@
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
-- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER FAIL20:41, Start κόβεται στο normal παράθυρο· independent desktop normal/maximize scroll ASSIGNED codex/owner-inventory-scroll-20261008. Καμία δημιουργία/οριστικοποίηση/stock πράξη· Gate2 PASS και TODAY-07 owners προστατεύονται.
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER FAIL20:41, Start κόβεται στο normal παράθυρο· CSS διόρθωση/local πραγματικό wheel + Start/history σε normal/max4μεγέθη PASS· AWAITING CI/DEPLOY/USER, ASSIGNED codex/owner-inventory-scroll-20261008. Καμία δημιουργία/οριστικοποίηση/stock πράξη· Gate2 PASS και TODAY-07 owners προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
