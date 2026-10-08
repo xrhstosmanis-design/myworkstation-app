@@ -323,7 +323,7 @@
 
 - **Tracker ID:** `TODAY-08`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** CODE CI PASS / OPEN
-- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: βασικά navy/teal/white και μεγάλα ευδιάκριτα γράμματα κατόπιν νέας οδηγίας21:15, NOT TESTED.
+- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: navy/teal/white,18px τίτλοι,12px badges· local build/actual-component5sizes + scroll regressions PASS· AWAITING full CI/deploy/USER visual acceptance.
 
 ## 51 — Σελίδα ιδιοκτήτη — απλοποίηση και τελική αποδοχή
 
