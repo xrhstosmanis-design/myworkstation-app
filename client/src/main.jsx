@@ -5,6 +5,7 @@ import {Users,CalendarDays,Building2,LayoutDashboard,LogOut,MessageCircle,Plus,S
 import "./styles.css";
 import StoreCloudPage from "./components/cloud/StoreCloudPage.jsx";
 import StoreChatPanel from "./components/store/StoreChatPanel.jsx";
+import OwnerWorkforceHub from "./components/cloud/OwnerWorkforceHub.jsx";
 
 const api=async(path,options={})=>{
   const token=localStorage.getItem("token");
@@ -23,6 +24,8 @@ function App(){
  const params=new URLSearchParams(window.location.search),supportPage=params.get("supportPage"),supportStore=params.get("supportStore");
  const normalizedInitialPage=["employees","schedule","leaves"].includes(supportPage)?"workforce":(supportPage||"dashboard");
  const [ownerCompanies,setOwnerCompanies]=useState([]),[page,setPage]=useState(normalizedInitialPage),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[activeModules,setActiveModules]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null),[chatStore,setChatStore]=useState(null),[loadError,setLoadError]=useState("");
+ const [workforceStoreId,setWorkforceStoreId]=useState(supportStore||"");
+ const openWorkforce=store=>{setWorkforceStoreId(store.id);setPage("workforce")};
  const supportContext=(()=>{try{return JSON.parse(localStorage.getItem("supportContext")||"null")}catch{return null}})();
  const companyName=user?.company?.name||supportContext?.companyName||"MyWorkStation";
  const returnToPlatform=async()=>{
@@ -42,8 +45,8 @@ function App(){
  {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
  <main><header><div><h1>{({dashboard:"Αρχική",workforce:"Προσωπικό & Πρόγραμμα",stores:"Καταστήματα",chat:"Chat καταστημάτων"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>{loadError&&<div role="alert" className="notice">Η φόρτωση διακόπηκε: {loadError} <button type="button" onClick={()=>load().catch(error=>setLoadError(error.message||"Η φόρτωση απέτυχε."))}>Δοκίμασε ξανά</button></div>}
  {page==="dashboard"&&<>{user?.role==="OWNER"&&!supportContext&&<section className="panel"><h2>Οι επιχειρήσεις και τα καταστήματά μου</h2><p>Κάθε ΑΦΜ έχει δικά του είδη, προσωπικό, ταμεία και συσκευές.</p><div className="store-grid">{ownerCompanies.map(company=><article className="store-card" key={company.id}><Building2/><h3>{company.name}</h3><p>ΑΦΜ {company.taxId||"Δεν έχει καταχωριστεί"}</p>{(company.stores||[]).map(store=><button className="store-open" key={store.id} onClick={()=>selectOwnerStore(company.id,store.id)}>{store.name} · Άνοιγμα</button>)}</article>)}</div></section>}<div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
- {page==="workforce"&&<WorkforceHub employees={employees} stores={stores} schedule={schedule} setSchedule={setSchedule} warnings={warnings} setWarnings={setWarnings} metrics={metrics} setMetrics={setMetrics} leaves={leaves} reload={load}/>} 
- {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
+ {page==="workforce"&&<OwnerWorkforceHub key={`${user.companyId||user.company?.id}:${workforceStoreId}`} company={{id:user.companyId||user.company?.id,name:companyName}} stores={stores} initialStoreId={workforceStoreId} request={api}/>}
+ {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onWorkforce={()=>openWorkforce(selectedStore)} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
  {page==="chat"&&activeModules.includes("STORE_CHAT")&&<ChatStores rows={stores} onOpen={setChatStore}/>}
  {chatStore&&<StoreChatPanel api={api} store={chatStore} onClose={()=>setChatStore(null)}/>}
  </main></div>
