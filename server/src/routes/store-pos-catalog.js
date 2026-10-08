@@ -229,7 +229,8 @@ router.put("/stores/:storeId/layout",async(req,res,next)=>{
   try{
     const store=req.storeOperatorStore,access=req.storeOperatorAccess||adminAccess;
     if(!access.editPosButtons)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Ρύθμιση πλήκτρων POS» από το BackOffice."});
-    const layout=req.body?.layout;
+    const layout=req.body?.layout?{...req.body.layout}:null;
+    if(layout)delete layout.audienceSettings;
     if(!layout||typeof layout!=="object"||!Array.isArray(layout.quickKeys)||!Array.isArray(layout.categories))return res.status(400).json({error:"Η διάταξη πλήκτρων δεν είναι έγκυρη."});
     if(layout.quickKeys.length>20||layout.categories.length>14)return res.status(400).json({error:"Επιτρέπονται έως 20 γρήγορα πλήκτρα και 14 κατηγορίες."});
     const bytes=Buffer.byteLength(JSON.stringify(layout));
@@ -237,7 +238,7 @@ router.put("/stores/:storeId/layout",async(req,res,next)=>{
     const rows=await prisma.$queryRaw`
       INSERT INTO "StorePosLayout" ("storeId","companyId","layoutJson","version","publishedBy","publishedAt")
       VALUES (${store.id},${store.companyId},${JSON.stringify(layout)}::jsonb,1,${req.user.id},CURRENT_TIMESTAMP)
-      ON CONFLICT ("storeId") DO UPDATE SET "layoutJson"=EXCLUDED."layoutJson","version"="StorePosLayout"."version"+1,"publishedBy"=EXCLUDED."publishedBy","publishedAt"=CURRENT_TIMESTAMP
+      ON CONFLICT ("storeId") DO UPDATE SET "layoutJson"=EXCLUDED."layoutJson" || jsonb_build_object('audienceSettings',COALESCE("StorePosLayout"."layoutJson"->'audienceSettings','{}'::jsonb)),"version"="StorePosLayout"."version"+1,"publishedBy"=EXCLUDED."publishedBy","publishedAt"=CURRENT_TIMESTAMP
       RETURNING "layoutJson","version","publishedAt"`;
     await audit(req,store,"POS_BUTTON_LAYOUT_UPDATE",{version:Number(rows[0]?.version||0),quickKeys:layout.quickKeys.length,categories:layout.categories.length});
     res.json({layout:layoutForAccess(rows[0]?.layoutJson||layout,access),version:Number(rows[0]?.version||0),publishedAt:rows[0]?.publishedAt});
@@ -307,13 +308,13 @@ router.post("/stores/:storeId/preparation",async(req,res,next)=>{
 
 router.get("/stores/:storeId/customers",async(req,res,next)=>{
   try{
-    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id),q=String(req.query.q||"").trim();
-    if(q.length<2)return res.json({items:[],cardOnly:Boolean(access.customerCardOnly)});
+    const store=req.storeOperatorStore||await storeFor(req,req.params.storeId),access=req.storeOperatorAccess||await operatorAccess(req,store.id),q=String(req.query.q||"").trim().slice(0,160),creditOnly=req.query.creditOnly==="1";
+    if(q.length<2&&(!creditOnly||access.customerCardOnly||q.length>0))return res.json({items:[],cardOnly:Boolean(access.customerCardOnly)});
     const like=`%${q}%`;
     const rows=access.customerCardOnly
-      ?await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND COALESCE("memberCard",'') ILIKE ${like} ORDER BY "name" LIMIT 30`
-      :await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND ("name" ILIKE ${like} OR COALESCE("taxId",'') ILIKE ${like} OR COALESCE("phone",'') ILIKE ${like} OR COALESCE("email",'') ILIKE ${like} OR COALESCE("memberCard",'') ILIKE ${like}) ORDER BY "name" LIMIT 30`;
-    res.json({cardOnly:Boolean(access.customerCardOnly),items:rows.map(row=>({...row,discountPercent:money(row.discountPercent),creditLimit:money(row.creditLimit),balance:money(row.balance),hasMemberCard:Boolean(String(row.memberCard||"").trim()),memberCard:undefined}))});
+      ?await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance",COALESCE((to_jsonb("Customer")->>'points')::numeric,0) AS "points","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND (NOT ${creditOnly} OR COALESCE("creditLimit",0)>0 OR COALESCE("balance",0)>0) AND COALESCE("memberCard",'') ILIKE ${like} ORDER BY "name","id" LIMIT 30`
+      :await prisma.$queryRaw`SELECT "id","name","taxId","phone","email","discountPercent","creditLimit","balance",COALESCE((to_jsonb("Customer")->>'points')::numeric,0) AS "points","memberCard" FROM "Customer" WHERE "companyId"=${req.user.companyId} AND "active"=true AND (NOT ${creditOnly} OR COALESCE("creditLimit",0)>0 OR COALESCE("balance",0)>0) AND ("name" ILIKE ${like} OR COALESCE("taxId",'') ILIKE ${like} OR COALESCE("phone",'') ILIKE ${like} OR COALESCE("email",'') ILIKE ${like} OR COALESCE("memberCard",'') ILIKE ${like}) ORDER BY "name","id" LIMIT 30`;
+    res.json({cardOnly:Boolean(access.customerCardOnly),items:rows.map(row=>({...row,discountPercent:money(row.discountPercent),creditLimit:money(row.creditLimit),balance:money(row.balance),points:money(row.points),hasMemberCard:Boolean(String(row.memberCard||"").trim()),memberCard:undefined}))});
   }catch(error){next(error)}
 });
 

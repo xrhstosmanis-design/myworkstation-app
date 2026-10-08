@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import {AUDIENCE_KEYS,normalizeAudienceSettings} from "../../shared/pos-audience-settings.mjs";
 import {createRequire} from "node:module";
 const require=createRequire(import.meta.url),{Router}=require("express"),{z}=require("zod");
 const source=fs.readFileSync(new URL("../src/routes/platform-pos-designer-fixed.js",import.meta.url),"utf8");
-function harness(prisma){const code=source.replace(/^import .*;\n/gm,"").replace("export default router;","return router;");return new Function("Router","z","prisma","auth",code)(Router,z,prisma,(_q,_r,n)=>n());}
+function harness(prisma){const code=source.replace(/^import .*;\n/gm,"").replace("export default router;","return router;");return new Function("Router","z","prisma","auth","AUDIENCE_KEYS","normalizeAudienceSettings",code)(Router,z,prisma,(_q,_r,n)=>n(),AUDIENCE_KEYS,normalizeAudienceSettings);}
 async function call(router,path,body={},method="post",query={}){const layer=router.stack.find(x=>x.route?.path===path&&x.route.methods[method]);assert.ok(layer);let result,error,status=200;const res={status(x){status=x;return this},json(x){result=x;return this}};await layer.route.stack[0].handle({body,query,user:{id:"super"},params:{}},res,e=>{error=e});return {result,error,status};}
 const input={companyId:"company-A",quickKeys:[{productId:"water-id"}],categories:Array.from({length:14},(_,i)=>({label:"Category "+i,productIds:i===0?["beer-id"]:[]}))};
 test("prepare uses company IDs and canonical product names without writes",async()=>{let values,writes=0;const router=harness({$queryRaw:async(_sql,...v)=>{values=v;return [{id:"water-id",name:"ΝΕΡΟ 500ML"},{id:"beer-id",name:"ΑΛΦΑ 330ML"}]},$transaction:async()=>writes++});const r=await call(router,"/prepare-company-layout",input);assert.equal(r.error,undefined);assert.equal(r.result.layout.catalogCompanyId,"company-A");assert.equal(r.result.layout.quickKeys.length,20);assert.equal(r.result.layout.quickKeys[0].productQuery,"water-id");assert.equal(r.result.layout.quickKeys[0].label,"ΝΕΡΟ 500ML");assert.deepEqual(r.result.layout.categories[0].productCodes,["beer-id"]);assert.equal(values[0],"company-A");assert.equal(writes,0);});

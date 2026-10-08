@@ -1,0 +1,12 @@
+.pos-credit-customer{position:relative;min-width:0;max-width:100%}
+.pos-credit-customer>button{min-height:36px;padding:7px 10px;border:1px solid #9c83b3;border-radius:7px;background:#fff;color:#41265a;font-weight:900;max-width:100%;overflow-wrap:anywhere}
+.pos-credit-customer-popdown{position:absolute;left:0;top:calc(100% + 4px);z-index:90;width:min(440px,calc(100vw - 36px));max-height:min(420px,65vh);overflow:auto;box-sizing:border-box;padding:12px;background:#fff;border:1px solid #d8c9e6;border-radius:10px;box-shadow:0 8px 25px #0003;color:#243b36;display:grid;gap:8px;text-align:left}
+.pos-credit-customer-popdown header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pos-credit-customer-popdown input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #b6c8c3;border-radius:7px;font:inherit}
+.pos-credit-customer-popdown button{padding:10px;min-height:38px;border:1px solid #c7d5d1;border-radius:7px;background:#f6faf8;color:#243b36;font:inherit;text-align:left;cursor:pointer}
+.pos-credit-customer-list{display:grid;gap:6px}
+.pos-credit-customer-list button{display:grid;gap:4px}
+.pos-credit-customer-list span{font-size:12px}
+.pos-credit-customer-popdown p{margin:0;font-size:13px}
+.pos-credit-customer-popdown [role=alert]{color:#a51d1d}
+.pos-customer-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid #d8c9e6}

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import {DEFAULT_AUDIENCE_LABELS} from "../../shared/pos-audience-settings.mjs";
 import {audienceLineTotal} from "../../client/src/utils/pos-audience-line-total.js";
 
 const route=await readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
@@ -20,7 +21,8 @@ test("audience selection is scoped to company store and signed-in actor",()=>{
 });
 
 test("POS has explicit choices and resets after every completed or cleared cart",()=>{
-  for(const label of ["Κανονική τιμή","Ιατρός","Νοσηλευτής / Νοσοκόμος","Προσωπικό","Πελάτης"])assert.match(ui,new RegExp(label));
+  assert.equal(Object.keys(DEFAULT_AUDIENCE_LABELS).length,5);
+  assert.match(ui,/audienceSettings.labels/);
   assert.match(ui,/setAudience\("NORMAL"\)/);
   assert.match(ui,/audience-selection/);
   assert.match(ui,/cart\.reduce\(\(sum,row\)=>sum\+lineTotal\(row\),0\)/);
