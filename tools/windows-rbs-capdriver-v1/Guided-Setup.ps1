@@ -46,7 +46,7 @@ function New-SetupButton([string]$Text, [scriptblock]$Click) {
 $null = Add-SetupText 'Σύνδεση αυτού του υπολογιστή' $true
 $null = Add-SetupText ($config.storeName + '  |  POS: ' + $config.terminalPos)
 $null = Add-SetupText ('Φάκελος CAPDriver: ' + $config.workFolder)
-$null = Add-SetupText '1. Επιβεβαίωσε τον υπολογιστή.  2. Βάλε νέο κωδικό ζεύξης.  3. Έλεγξε και ξεκίνησε τη σύνδεση.'
+$null = Add-SetupText '1. Επιβεβαίωσε το PC.  2. Σύνδεσε ή έλεγξε την υπάρχουσα σύνδεση.  3. Διάλεξε αυτόματη εκκίνηση και ξεκίνα μία φορά.'
 $finalUser = New-Object Windows.Forms.CheckBox
 $finalUser.Text = 'Είμαι στο τελικό PC και στον χρήστη Windows που θα λειτουργεί το POS.'
 $finalUser.AutoSize = $true
@@ -89,13 +89,7 @@ function Start-SetupOperation([string]$OperationName) {
       Microsoft.PowerShell.Utility\Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType $ContentType -Body $Body -TimeoutSec 30
     }
     $localConfig = Read-MwsConnectorConfig $ConfigFile
-    $mutex = Enter-MwsConnectorLock
-    try {
-      if ($OperationName -eq 'Pair') {
-        & (Join-Path $Directory 'Pair.ps1') -ApiBase $localConfig.apiBase -PairingCode $PairingCode -ExpectedStoreId $localConfig.storeId
-      }
-      Invoke-MwsConnectionCheck $localConfig $Directory
-    } finally { Exit-MwsConnectorLock $mutex }
+    Invoke-MwsGuidedConnectionOperation $localConfig $Directory $OperationName $PairingCode
   }
   $null = $script:operation.AddScript($work.ToString()).AddArgument($PSScriptRoot).AddArgument($ConfigPath).AddArgument($OperationName).AddArgument($codeBox.Text)
   $codeBox.Clear()
@@ -120,6 +114,7 @@ $layout.Controls.Add($ready)
 $autoStart = New-Object Windows.Forms.CheckBox
 $autoStart.Text = 'Να ξεκινά η σύνδεση αυτόματα όταν μπαίνει αυτός ο χρήστης στα Windows.'
 $autoStart.AutoSize = $true
+$autoStart.Checked = Get-MwsConnectorStartupPreference $ConfigPath
 $autoStart.Margin = New-Object Windows.Forms.Padding(0,0,0,14)
 $layout.Controls.Add($autoStart)
 $null = Add-SetupText 'Η αυτόματη εκκίνηση μπορεί να παραλάβει εκκρεμή αιτήματα. Ενεργοποίησέ την αφού ελεγχθεί η εγκατάσταση. Οι πωλήσεις Kiosk και MyWorkStation δεν γίνονται ταυτόχρονα στην πρώτη δοκιμή.'
@@ -131,25 +126,24 @@ $layout.Controls.Add($actions)
 
 $saveButton = New-SetupButton 'Αποθήκευση επιλογής εκκίνησης' {
   if (-not $script:connectionPassed -or -not $finalUser.Checked -or -not $ready.Checked) { $status.Text = 'Χρειάζεται επιτυχής έλεγχος και επιβεβαίωση ετοιμότητας.'; return }
-  $mutex = $null
   try {
-    $mutex = Enter-MwsConnectorLock
-    Set-MwsConnectorShortcuts $ConfigPath $autoStart.Checked
+    Save-MwsConnectorStartupPreference $ConfigPath $autoStart.Checked $script:connectionPassed $finalUser.Checked $ready.Checked
     $status.Text = if ($autoStart.Checked) { 'Αποθηκεύτηκε εκκίνηση μετά τη σύνδεση στα Windows. Δημιουργήθηκε και εικονίδιο ρυθμίσεων.' } else { 'Η αυτόματη εκκίνηση αφαιρέθηκε. Δημιουργήθηκε εικονίδιο ρυθμίσεων στην επιφάνεια εργασίας.' }
   } catch { $status.Text = 'Η επιλογή δεν αποθηκεύτηκε: ' + $_.Exception.Message }
-  finally { Exit-MwsConnectorLock $mutex }
 }
 $saveButton.Enabled = $false
 $startButton = New-SetupButton 'Εκκίνηση σύνδεσης τώρα' {
   if (-not $script:connectionPassed -or -not $finalUser.Checked -or -not $ready.Checked) { $status.Text = 'Χρειάζεται επιτυχής έλεγχος και επιβεβαίωση ετοιμότητας.'; return }
   try {
+    # One Start action saves the explicitly selected logon preference first.
+    # A save failure must not launch the connector.
+    Save-MwsConnectorStartupPreference $ConfigPath $autoStart.Checked $script:connectionPassed $finalUser.Checked $ready.Checked
     $arguments = Get-MwsLaunchArguments (Join-Path $PSScriptRoot 'Start-Connector.ps1') $ConfigPath
     $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     Start-Process -FilePath $powershell -ArgumentList $arguments -WindowStyle Minimized | Out-Null
-    $status.Text = 'Άνοιξε το παράθυρο connector. Επιβεβαίωσε WRITER ONLINE στο BackOffice πριν από πώληση. Το κλείσιμο του οδηγού δεν σταματά τον connector.'
-    $script:connectionPassed = $false
+    $status.Text = if ($autoStart.Checked) { 'Αποθηκεύτηκε η αυτόματη εκκίνηση και άνοιξε ο connector. Επιβεβαίωσε WRITER ONLINE. Κράτησε το παράθυρο connector ανοικτό.' } else { 'Άνοιξε ο connector χωρίς αυτόματη εκκίνηση. Επιβεβαίωσε WRITER ONLINE. Κράτησε το παράθυρο connector ανοικτό.' }
     $startButton.Enabled = $false
-    $saveButton.Enabled = $false
+    $saveButton.Enabled = $true
   } catch { $status.Text = 'Δεν ξεκίνησε η σύνδεση: ' + $_.Exception.Message }
 }
 $startButton.Enabled = $false
