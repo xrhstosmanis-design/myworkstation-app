@@ -1,3 +1,15 @@
+## 08/10/2026 20:06 — recurring server availability USER FAIL
+
+New owner screenshots show repeated central session-validation-unavailable errors and Diadoxou stuck checking shift/permissions. The earlier8second timing below is dated history, not current stability acceptance. Do not reset credentials or bypass shift/auth checks; retain existing pending financial actions without replay. Availability remains OPEN under POS-DB-LOCK-01. No new successful login, search, financial or no-print acceptance is recorded.
+
+## 08/10/2026 20:01 — LAB and Diadoxou loading: limited owner-reported recovery/timing PASS
+
+Who/where: the owner at the existing LAB and Diadoxou installations, using existing authorized store/operator access. Owner reports the application unblocked and approximately8seconds loading at both stores after earlier36seconds. This records improvement/recovery at that observation only;8seconds is not an agreed performance target or durable availability acceptance. Exact action boundaries, repeated timing samples, physical client revision and independently verified complete login/session health are unknown. Screenshot170016 shows LAB directory restored with LAB POS2/PIN form and no visible previous red login error; it does not show successful authentication.
+
+Verified reported flow: after the earlier loading incident, the owner checks the existing LAB installation, reports8seconds, then reports8seconds for Diadoxou. No further refresh or sale is required to repeat this accepted readback. Same company/store/role/license boundaries remain mandatory. No sale, payment, waste, stock or shift outcome is certified. «Κλείσιμο χωρίς Εκτύπωση» functional/financial acceptance remains separate AWAITING LAB.
+
+Troubleshooting: if loading/OFFLINE/auth errors recur, retain the time, selected store and exact displayed message for read-only server/database correlation. An empty failed directory is not proof that the personal PIN disappeared; do not reset credentials on that basis. Do not repeat a pending payment or existing cart. The original lock chain vanished, but later PostgreSQL backend signal9/recovery and concurrent long catalog reads leave recurrence prevention OPEN under POS-DB-LOCK-01; checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-database-lock-incident.md.
+
 ## 08/10/2026 18:29 — LAB enabled audience/card-row appearance: limited USER VISUAL PASS
 
 Who/where: already authorized LAB POS operator display «LAB POS 2», MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ; existing access boundaries unchanged. Tested visible sequence:18:20 empty-cart POS showed no hospital controls;18:28 selected-store central settings showed unchecked/default fields; after the activation/save/refresh instructions,18:29 owner screenshot shows the audience-card input and Κανονική τιμή / Ιατρός / Νοσηλευτής / Νοσοκόμος / Προσωπικό / Πελάτης row. Owner confirms «σωστος». PASS only for default-label enabled visual appearance, alongside earlier bounded OFF/dropdown-opening evidence. Intervening clicks and independent server persistence were not captured.
