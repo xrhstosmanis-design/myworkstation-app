@@ -1,3 +1,7 @@
+## 08/10/2026 — Διαδόχου store fiscal profile source / AWAITING DEVICE
+
+Independent codex/diadoxou-fiscal-profile-20261008; claimPR1880/greenCI37778337537/main61a97f4 published before source. Resolver selects documented Diadoxou profiles by server-authenticated company/store, KAT10 preserved, unconfirmed services blocked, no schema/data/writer changes. Local focused16/16 and full server1904PASS/0FAIL/4SKIP/build:production PASS only; CI/E2E/exact deploy and measured physical acceptance pending. Latest real CASH15:21 USER FAIL remains authoritative. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md. Existing owners and accepted touch/catalog scopes unchanged.
+
 ## 08/10/2026 15:38 — Διαδόχου CASH VAT USER FAIL / ανεξάρτητο profile claim
 
 ASSIGNED codex/diadoxou-fiscal-profile-20261008: μόνο tenant/store-scoped confirmed CAPDriver VAT profile. 15:06 manual restart WRITER ONLINE USER PASS; autostart NOT TESTED. 15:21 KM490/1/0.50€/CASH USER FAIL πριν command request build ολοκληρωθεί· independent DB/deltas NOT TESTED. 15:33 Kiosk confirms department5/13%;29Sep records code42, shared resolver currently KAT42/2/13%. MyWorkStation stock0/Kiosk-38 are distinct snapshots, not delta. No payment retry, stock write, pairing or fiscal test in this claim. Prior touch/category limited PASS and all existing owners preserved. TODAY-04 Management opening failure OPEN under its existing owner. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md. Source/CI/deploy/device acceptance PENDING.

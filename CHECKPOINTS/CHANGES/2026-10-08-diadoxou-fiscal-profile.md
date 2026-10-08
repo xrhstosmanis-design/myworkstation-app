@@ -21,3 +21,13 @@ ASSIGNED codex/diadoxou-fiscal-profile-20261008, ανεξάρτητο εγκατ
 Πριν source edit: δημοσίευση claim στο main/greenCI. Έπειτα Node20 contract tests για όλα τα ιστορικά ΚΑΤ profiles, επιβεβαιωμένα Διαδόχου profiles, λάθος company/store/code/department/rate και generated water command department5/payment1. Πλήρες CI/build/invariants/E2E πριν merge και exact deployed revision πριν νέα φυσική δοκιμή. Source/CI PASS μόνο AWAITING DEVICE.
 
 Φυσική cash/card/απόδειξη, ISSUED sale, μία payment/stock/Audit, current DB mapping και συνολικό go-live OPEN/NOT TESTED. Επόμενη φυσική δοκιμή μόνο με φρέσκο πριν/μετά, WRITER ONLINE, ταμειακή ελεύθερη από Kiosk και κανένα αβέβαιο αίτημα. Ο χρόνος εγκατάστασης5λεπτών δεν έχει πιστοποιηθεί.
+
+## Source implementation — AWAITING DEVICE
+
+Claim PR1880/headffcf6250, docs CI37778337537 SUCCESS, merged61a97f410c10c8a6bf4815333c7510885bc9dae7 before source edits. Current implementation branch codex/diadoxou-fiscal-profile-20261008 based on that main. Open PR collection inspected: no overlapping CAPDriver profile change; all prior owners remain.
+
+Resolver now selects the seven already documented Diadoxou code/department/rate triplets only for exact authenticated company/store identity; otherwise the historical KAT10 map is unchanged. Services without a confirmed code stays rejected. Checkout passes req.user.companyId and the server-selected store.id; body identity cannot select the profile. Mismatching product versus department VAT, payment settings, one-shot queue, licensing/shift/tenant and monetary posting gates remain unchanged. No production mapping/stock/rate/payment/credential modification and no new fiscal command.
+
+Node20 focused tests16/16 PASS: all seven Diadoxou triplets, protected KAT10, different/incomplete tenant identity, unknown/services/incorrect VAT/department, actual checkout command-builder statement produces HL/SL department5/13% and single CR1/0.50. This is isolated software evidence, not receipt/financial LAB PASS. Full local server/build, CI/E2E/Windows, publication and exact deployed revision pending at this entry. Management click failure remains with TODAY-04. Physical acceptance and independent current data readback OPEN.
+
+Full local Node20 server suite1904PASS/0FAIL/4SKIP and build:production PASS. Generated unrelated kiosk-reports-audit.js build diff restored; source change remains only profile resolution and authenticated context at checkout plus meaningful regression tests. CI/PostgreSQL HTTP E2E/Windows and exact deployment still pending; no device acceptance claimed.

@@ -26,8 +26,24 @@ export const RBS_CAP_DRIVER_KIOSK_VAT_PROFILES=new Map([
   ["63",{department:21,vatRate:0}]
 ]);
 
-export function resolveRbsCapDriverFiscalProfile({vatCode,department,vatRate}={}){
-  const profile=RBS_CAP_DRIVER_KIOSK_VAT_PROFILES.get(String(vatCode??"").trim());
+// Diadoxou's confirmed Kiosk register uses different departments for the same
+// legacy VAT codes. Evidence: 2026-09-29 register-mapping/tobacco checkpoints;
+// department 5 / 13% independently re-observed in Kiosk on 2026-10-08.
+// Services has no confirmed legacy code and is deliberately absent.
+const DIADOXOU_VAT_PROFILES=new Map([
+  ["12",{department:1,vatRate:0}],
+  ["45",{department:3,vatRate:0}],
+  ["21",{department:4,vatRate:6}],
+  ["42",{department:5,vatRate:13}],
+  ["15",{department:6,vatRate:24}],
+  ["62",{department:8,vatRate:0}],
+  ["63",{department:9,vatRate:0}]
+]);
+
+export function resolveRbsCapDriverFiscalProfile({companyId,storeId,vatCode,department,vatRate}={}){
+  const profiles=companyId==="cmulmjjoa000oqlbfyi0h53ju"&&storeId==="cmulmjjoc000qqlbf2bn2ifj0"
+    ?DIADOXOU_VAT_PROFILES:RBS_CAP_DRIVER_KIOSK_VAT_PROFILES;
+  const profile=profiles.get(String(vatCode??"").trim());
   if(!profile||Number(department)!==profile.department||Math.abs(Number(vatRate)-profile.vatRate)>0.001)throw new Error("Kiosk VAT code, register department and VAT rate do not match the confirmed register profile");
   return profile;
 }
