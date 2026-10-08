@@ -39,3 +39,35 @@ PR1881/head390ad75ab690ceb3795407ac3d4937e3254d130f, fullCI37778813878 SUCCESS (
 ## Handoff — εγκατάσταση OPEN
 
 Ο ίδιος independent profile owner παραμένει έως φυσική αποδοχή ή ονομασμένη μεταβίβαση. Δημοσίευση source επιβεβαιωμένη, όχι USER fiscal PASS. Single next action: στο υπάρχον POS Διαδόχου εφαρμοστικό Ανανέωση (όχι browser restart ή νέο Pair), έπειτα Χειριστής→Συναλλαγές βάρδιας→Ανανέωση και φρέσκια read-only καταγραφή πριν πληρωμή. Χρειάζονται refreshed cash/card/IRIS/total/transaction count και KM490 stock/latest movement/Audit baseline στο ίδιο κατάστημα/βάρδια. Αν δεν είναι διαθέσιμη ανεξάρτητη μέτρηση, παραμένει NOT TESTED χωρίς επινοημένο delta. BackOffice πρέπει να επιβεβαιώσει Writer ONLINE, ταμειακή ελεύθερη από Kiosk, κανένα unresolved request πριν μία νέα, ξεχωριστά ταυτοποιημένη cash δοκιμή· οι παλιές αποτυχημένες προσπάθειες δεν επαναλαμβάνονται μόνο για τεκμηρίωση. Καμία ανακοίνωση full go-live από source CI ή ONLINE. Management navigation USER FAIL διατηρείται με TODAY-04 και δεν τροποποιήθηκε.
+
+
+## 08/10/2026 16:07:02 Europe/Athens — reported CASH receipt LIMITED USER PASS
+
+08Oct16:07:02Athens owner «ΒΓΗΚΕ» after one requested CASH sale1×KM490/ΝΕΡΟ500ML/0.50€: LIMITED USER PASS of reported physical receipt printing only. UI16:00 showed no transactions in active Αντώνης/Βάρδια opened14:11:14; stock was not available to owner16:02, so financial/stock/Audit deltas, receipt identifiers/content/VAT and independently observed single issuance remain NOT TESTED. Post-sale transaction readback is next; do not repeat the paid sale. Card/EFTPOS, autostart and full go-live remain OPEN. Existing owners retained.
+
+Test identity DIAD-CASH-KM490-20261008-1605: existing company cmulmjjoa000oqlbfyi0h53ju/store cmulmjjoc000qqlbf2bn2ifj0/terminal DIADOXOU-POS-01, operator Αντώνης, active Βάρδια opened08Oct14:11:14, quantity1, requested methodCASH/0.50€. Owner declared «ΚΑΝΩ ΠΩΛΗΣΗ»16:05:30 and reported «ΒΓΗΚΕ»16:07:02; exact click/printing time and Sale/request/payment IDs are unknown. Source revision509cc1b was publicly verified healthy15:50 after green fullCI37778813878/main37779205150/guardedRender37779487306. Exact physical client/server revision at submission not independently read.
+
+Before evidence, recorded here after action without retroactive claim: photo01-image-1791464416727.jpg at16:00 (file_000000001178824689c233ececd19024) displays no transactions in that active shift and own supplier/expense summary0; these are not separate measured cash/card/IRIS/sales-total or Audit balances. At16:02:42 owner «DEN EXEI STOK» means current stock was not obtained; do not convert this to stock0 or compare old MWS0/Kiosk-38 snapshots. No fresh stock/latest movement/Audit/other-terminal control baseline was recorded before the action. Fresh Writer ONLINE/no concurrent Kiosk/no unresolved request were conditions in the instructions, not independently observed at this action.
+
+After evidence: direct owner report of receipt printing only. Receipt photograph/content/VAT/fiscal number, issued status, one sale/payment, transaction count/0.50€ readback, cash/card/IRIS/totals, stock/latest movement/Audit and unaffected Kiosk control remain NOT TESTED. No full measured financial/stock PASS and no full installation closure. Single next action is read-only Χειριστής→Συναλλαγές βάρδιας→Ανανέωση, photograph the existing sale; do not resubmit CASH or generate another receipt to fill evidence gaps. Card acceptance requires a separately identified fresh baseline later.
+
+
+## 08/10/2026 16:10 — cash transaction owner readback / separate card delivery
+
+08Oct16:10:10Athens owner «ΤΟ ΕΛΕΝΞΑ ΠΕΡΑΣΕ ΣΤΗΝ ΣΥΝΑΛΛΑΓΗ» confirms the same cash sale appears in transactions (limited USER readback PASS, no independently captured amount/ID/count/delta).16:10:30 owner «ΔΟΚΙΜΑΣΑ ΚΑΡΤΑ ΠΗΓΕ ΕΝΤΟΛΗ ΣΤΟ POS» confirms delivery of a separate card request to EFTPOS only; approved charge, fiscal receipt, card amount/request identities and financial/stock/Audit reconciliation remain NOT TESTED. Do not resubmit either payment. Card test before baseline was not captured; no inferred delta.
+
+Requested card context is same terminal/operator/shift and1×KM490/0.50€, but the direct report does not independently expose the EFTPOS amount or actual item/quantity. The user initiated the card action before a separate measured baseline or instruction to submit; retain that fact, do not retroactively construct a before record. Next action is completion/readback of this already initiated card request, never a new request: correct displayed amount, one card presentation, wait for approved/declined/uncertain result and fiscal receipt. If uncertain, inspect existing request and EFTPOS outcome without automatic retry or duplicate charge. Public health observed during documentation session ok=true/revisioncbdec1c37950718c00bef2dfd3589bc1c146f316, which contains profile source509cc1b; exact physical submission revision remains unknown.
+
+
+## 08/10/2026 16:11 — card canceled / no card available
+
+08Oct16:11:03Athens owner canceled the separate card attempt on EFTPOS and in MyWorkStation, then reported it did not appear in transactions: LIMITED USER confirmation of canceled-card absence from displayed transactions only.16:11:40 owner confirms no payment card is available on site, so completed/approved card payment and fiscal receipt stay NOT TESTED, with no further card sale requested. Independent request final state, absence of charge, sale/payment/stock/Audit counts and deltas remain NOT TESTED. Cash receipt and reported cash transaction display remain separate accepted observations. Next installation action: save automatic Windows-user startup preference in the existing guide, without starting a second Writer or rebooting; saving/running that preference and restart behavior not yet confirmed.
+
+No new financial action is authorized merely to document cancellation. Existing cash receipt is not replayed. Read-only future reconciliation can inspect the already canceled request. Successful physical card acceptance requires an actual card at a later separately identified attempt, fresh baseline and one-shot guarded submission. Full go-live remains OPEN; installation duration5minutes is still unverified.
+
+
+## 08/10/2026 16:11:57 — owner accepts EFTPOS communication
+
+08Oct16:11:57Athens owner «ΑΠΟ ΤΗΝ ΣΤΙΓΜΗ ΠΟΥ ΠΗΓΕ ΕΙΝΑΙ ΟΚ» explicitly accepts EFTPOS command delivery as sufficient for this connection check: LIMITED USER PASS of communication, not approved monetary card payment. No further card test is requested now; bank approval/charge/fiscal receipt and independent financial/stock/Audit effects remain NOT TESTED. Existing cash print/transaction-display confirmation preserved.
+
+The assistant proceeds with the existing installer startup-preference step only. This is the same independent installation owner; no source/data/permission change and no new card command.
