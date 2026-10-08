@@ -1,3 +1,7 @@
+## 08/10/2026 — POS-TOUCH-OPEN-01 implementation AWAITING CI/deploy/LAB
+
+Owner codex/pos-shift-open-touch-20261008; implementation branch codex/pos-shift-open-touch-implementation-20261008. ClaimPR1872/main e292ff7 published before source. Opening-only responsive CSS and shell class: real inputs/declaration/API/gates unchanged. Local actual-component mocked rendering1024x600 through1920x1080 fits at100%;50px fields/56px action. Mock error remains visible; portrait touch scrolling. Build/server1896tests0FAIL/4SKIP/safety invariants passed; no live shift or other business write. Current USER layout FAIL remains until actual device acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Other owners/protected PASS unchanged.
+
 ## 08/10/2026 — POS shift opening / touchscreen layout — ASSIGNED
 
 Owner `codex/pos-shift-open-touch-20261008`, independent presentation subtask of tracker03, claimed 2026-10-08T10:36+00:00. Existing installation, fiscal, preflight and shift-close owners remain unchanged. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md`.

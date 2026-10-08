@@ -1,0 +1,155 @@
+/* Opening only: preserve login, permission-wait and shift-close layouts. */
+.shift-open-touch-shell {
+  min-height: 100dvh;
+  grid-template-columns: 1fr;
+  align-content: start;
+}
+.shift-open-touch-shell .operator-login-side {
+  padding: 8px 24px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 4px 14px;
+  align-items: center;
+}
+.shift-open-touch-shell .operator-login-logo {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+.shift-open-touch-shell .operator-login-side > span {
+  grid-column: 2;
+  font-size: 11px;
+}
+.shift-open-touch-shell .operator-login-side h1 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.shift-open-touch-shell .operator-login-side > p {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  max-width: none;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.shift-open-touch-shell .operator-login-safe {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  margin: 0;
+  padding: 10px 14px;
+}
+.shift-open-touch-shell .operator-login-main {
+  padding: 8px 20px;
+  min-width: 0;
+}
+.shift-open-touch-shell .shift-open-card {
+  box-sizing: border-box;
+  width: min(1100px, 100%);
+  padding: 12px 20px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+}
+.shift-open-touch-shell .operator-login-icon {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+}
+.shift-open-touch-shell .shift-open-card h2 {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  font-size: 24px;
+}
+.shift-open-touch-shell .shift-open-card > p {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  font-size: 14px;
+}
+.shift-open-touch-shell .operator-login-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.shift-open-touch-shell .shift-open-card form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: start;
+}
+.shift-open-touch-shell form > label {
+  min-width: 0;
+  gap: 5px;
+  font-size: 14px;
+}
+.shift-open-touch-shell form > label:first-child { grid-column: 1; grid-row: 1; }
+.shift-open-touch-shell form > label:nth-of-type(2) { grid-column: 2; grid-row: 1; }
+.shift-open-touch-shell .shift-money-grid {
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.shift-open-touch-shell .shift-money-grid label {
+  min-width: 0;
+  padding: 8px;
+  font-size: 14px;
+}
+.shift-open-touch-shell input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  font-size: 18px;
+}
+.shift-open-touch-shell .shift-receipt-declaration {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #c33131;
+  border-radius: 12px;
+  background: #fff2f2;
+  color: #8a2020;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.shift-open-touch-shell .shift-open-card form > button {
+  grid-column: 1 / -1;
+  min-height: 56px;
+  height: auto;
+  padding: 10px 16px;
+  font-size: 18px;
+}
+.shift-open-touch-shell .shift-logout {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  width: 210px;
+  margin: 0;
+  min-height: 48px;
+  font-size: 16px;
+}
+@media (max-width: 700px) {
+  .shift-open-touch-shell .operator-login-side { padding: 12px; grid-template-columns: 44px minmax(0, 1fr); }
+  .shift-open-touch-shell .operator-login-safe { grid-column: 1 / -1; grid-row: auto; }
+  .shift-open-touch-shell .operator-login-main { padding: 12px; }
+  .shift-open-touch-shell .shift-open-card { padding: 16px; grid-template-columns: 44px minmax(0, 1fr); }
+  .shift-open-touch-shell .shift-open-card > p { grid-column: 1 / -1; }
+  .shift-open-touch-shell .operator-login-icon { grid-row: 1; }
+  .shift-open-touch-shell .shift-logout { grid-column: 1 / -1; grid-row: auto; width: 100%; }
+  .shift-open-touch-shell .shift-open-card form { grid-template-columns: minmax(0, 1fr); }
+  .shift-open-touch-shell form > label:first-child,
+  .shift-open-touch-shell form > label:nth-of-type(2),
+  .shift-open-touch-shell .shift-money-grid,
+  .shift-open-touch-shell .shift-receipt-declaration { grid-column: 1; grid-row: auto; }
+}
