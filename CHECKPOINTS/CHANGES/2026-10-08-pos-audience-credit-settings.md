@@ -14,15 +14,23 @@ Next action: exact-head full CI → merge → verify exact healthy deployed revi
 
 Compatibility review: the credit dropdown also offers «Άλλος πελάτης / κάρτα μέλους», opening the existing general customer search with its existing card-only restrictions. Ordinary named-customer and member-card selection remains available; no existing balance/points/payment controls are removed.
 
+Publication / handoff 2026-10-08T18:05:57+03:00: source PR #1891, final head2f09c4c88ae1fcee39513ea65ad7f1c982365877, exact-head full CI37796998878 SUCCESS (1917 server tests PASS /0 FAIL plus Windows smoke, production invariants and isolated real HTTP flows including the new audience/credit fixture). Merged mainadf6e2595a4a803396451645eba45a78c182b913; main CI37797448360 SUCCESS. Earlier source head232a2b4b/fullCI37796398552 SUCCESS is superseded by the final compatibility addition, not a separate LAB PASS. General named-customer/member-card search remains accessible from «Άλλος πελάτης / κάρτα μέλους» in the credit dropdown; local actual-component browser check also confirmed that modal opens.
+
+Central deployment verified 2026-10-08T18:09:55+03:00: guarded Render run37797763766 SUCCESS including exact-production-revision wait. Independent public GET /api/health returned ok=true, version0.22.0+kat-test-pos, exact revisionadf6e2595a4a803396451645eba45a78c182b913. Public Platform Admin HTML references assets/index-DxN7GQrS.js; its current app chunk entry-BU3GSHEr.js (2180291bytes, SHA2560345dcdbeda40f2785807360531576e06f9e23f528685af1f12e4e60fa2dad0e) contains the new audience-settings route, credit dropdown and general customer/member-card option. Read-only deployment/bundle verification only; no authenticated functional or physical LAB PASS. Later main6534dccc53fdd0125b6ad2b6312f327cc6bdf0c8 adds the independently owned Workforce claim/documentation and is preserved in this handoff; deployed production source revision remains the verified adf6e25. Source release LIVE / AWAITING LAB.
+
+Final scope: central opt-in and label settings, credit list and existing general customer access implemented and merged; live/LAB OFF/ON/rename/select/retail/reset/store-switch acceptance remains NOT TESTED / AWAITING LAB. No manual PASS entry is added for CI or simulated browser evidence. No live setting, sale, payment, invoice, stock, customer balance or device operation was performed by this page. Older Gate3/4/6/8/manual and Diadoxou device/card acceptance remain protected; no old transaction is repeated. The same owner `codex/pos-audience-credit-settings-20261008` retains the assignment, with implementation branch `codex/pos-audience-credit-implementation-20261008`; no silent release or second owner.
+
+Single next action: bounded read-only LAB inspection of default-OFF hospital rows and the Customer credit dropdown on the verified deployed revision; subsequent explicit enable/rename tests require the repository's before/after/control record for any state-changing LAB step. Central settings path: https://myworkstation-app.onrender.com/platform-admin → POS Designer → «Δικαιούχοι έκπτωσης ανά κατάστημα» → select the intended published store → explicit enable/labels/save → refresh that POS. No financial transaction is needed for the initial visual/list check. Customer accounts and balances remain company-wide; selected-store authorization and operator restrictions apply.
+
 ## Protected evidence
 
 25Sep doctor/nurse product-rule and cart/sale scoped PASS retained, including per-line rounding toward0.10 and per-store rules; full Gate4 completed25Sep offline queue checkpoint supersedes older historical OPEN. 08Oct category response USER PASS and opening form visual PASS protected. No repeat old transactions. New requested opt-in requirement supersedes unconditional hospital UI only. Customer records are currently company-wide; do not invent store associations or infer store-specific customer balances. Inspect existing customer access before implementation.
 
-## Current evidence
+## Evidence at the initial claim
 
 USER FAIL: screenshot hospital controls permanently visible in nonhospital store. New enable/rename/dropdown behavior NOT TESTED. Source main/history inspected since25Sep audience evidence. No source edits or LAB actions.
 
-## Next action
+## Initial next action (superseded by implementation/handoff)
 
 Publish this independent assignment, then implement and run build/server tests and exact-head full CI. Merge and exact-live verification precede a new acceptance test.
 
