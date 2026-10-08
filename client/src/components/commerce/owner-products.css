@@ -1292,3 +1292,13 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
  .commerce-shell.window-maximized .bulk-price-scroll-region{flex:1 1 auto!important;min-height:0!important;max-height:none!important;height:auto!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable!important;padding-bottom:36px!important}
  .commerce-shell.window-maximized .bulk-price-scroll-region>.primary{margin-bottom:12px!important}
 }
+
+/* Maximized bulk form: bound every existing wrapper before assigning its scroll region. */
+@media(min-width:1201px){
+ .commerce-shell.window-maximized:has(.bulk-price-scroll-region)>.commerce-mode-switch{flex:0 0 auto}
+ .commerce-shell.window-maximized:has(.bulk-price-scroll-region)>div:has(>.kiosk-shell){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell.window-maximized .kiosk-shell:has(>.owner-products .bulk-price-scroll-region){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell.window-maximized .kiosk-shell>.owner-products:has(.bulk-price-scroll-region){flex:1 1 0!important;height:auto!important}
+ .commerce-shell.window-maximized .bulk-price-scroll-region{min-height:0!important;flex:1 1 0!important;display:block!important}
+ .commerce-shell.window-maximized .bulk-price-scroll-region>*+*{margin-top:18px}
+}
