@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
+import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done});return {promise,resolve}};
@@ -13,6 +14,9 @@ test('Owner Workforce: shared panel, invitation, module denial and store switchi
  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/cloud/OwnerWorkforceHub.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'}});
  const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const Hub=module.exports.default,dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'});
+ const css=document=>{const style=document.createElement('style');style.textContent=readFileSync(new URL('../../client/src/styles.css',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../../client/src/components/cloud/owner-workforce.css',import.meta.url),'utf8');document.head.append(style)};
+ css(dom.window.document);
+ dom.window.document.getElementById('root').className='app';
  const keys=['window','document','navigator','HTMLElement','Event','IS_REACT_ACT_ENVIRONMENT'];const previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
@@ -25,6 +29,9 @@ test('Owner Workforce: shared panel, invitation, module denial and store switchi
   await t.test('same employee actions and tabs, invitation scoped to the selected store',async()=>{
    const calls=[];await mount(async(path,options)=>{calls.push({path,options});return path.endsWith('/bootstrap')?bootstrap(stores[0],'Employee A'):{mobileUrl:'/store/A?employee-card=1&employee=employee-A'}},'A');
    for(const text of ['Εκτύπωση κάρτας','Αποστολή εφαρμογής','Ρόλοι','Κανόνες','Πρότυπα βαρδιών','Πρόγραμμα & Άδειες','Παρουσίες','Μισθοδοσία','Προεπισκόπηση μεταφοράς'])assert.ok(button(text),text);
+   const tabs=document.querySelector('.owner-workforce nav.workforce-tabs');assert.equal(dom.window.getComputedStyle(tabs).display,'flex');assert.equal(dom.window.getComputedStyle(tabs).flexDirection,'row');assert.equal(dom.window.getComputedStyle(tabs).flexWrap,'wrap');
+   assert.equal(dom.window.getComputedStyle(button('Ρόλοι')).fontSize,'13px');assert.equal(dom.window.getComputedStyle(button('Ρόλοι')).minHeight,'44px');assert.equal(dom.window.getComputedStyle(button('Ρόλοι')).color,'rgb(71, 85, 105)');
+   const sidebar=document.createElement('div');sidebar.className='app';sidebar.innerHTML='<aside><nav><button>Sidebar control</button></nav></aside>';document.body.append(sidebar);assert.equal(dom.window.getComputedStyle(sidebar.querySelector('nav')).display,'grid');sidebar.remove();
    await click('Αποστολή εφαρμογής');assert.match(document.querySelector('[role="dialog"] input').value,/\/store\/A\?employee-card=1/);assert.equal(calls.at(-1).path,'/api/platform/store-modules/companies/owner-company/stores/A/workforce-v2/employees/employee-A/work-card');assert.equal(calls.at(-1).options.method,'POST');await click('Κλείσιμο');
   });
   await t.test('disabled module exposes the server denial without employee actions',async()=>{await mount(async()=>{throw new Error('Το πακέτο προσωπικού δεν είναι ενεργό για αυτό το κατάστημα.')},'B');assert.match(document.body.textContent,/δεν είναι ενεργό/);assert.equal(button('Εκτύπωση κάρτας'),undefined);});
