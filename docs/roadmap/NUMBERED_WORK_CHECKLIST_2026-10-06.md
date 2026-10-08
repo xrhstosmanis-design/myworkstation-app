@@ -255,6 +255,8 @@
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER FAIL20:41, Start κόβεται στο normal παράθυρο· independent desktop normal/maximize scroll ASSIGNED codex/owner-inventory-scroll-20261008. Καμία δημιουργία/οριστικοποίηση/stock πράξη· Gate2 PASS και TODAY-07 owners προστατεύονται.
+
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
 
@@ -306,7 +308,7 @@
 
 ## 48 — Excel / Barcode — λειτουργικές δοκιμές νέας οθόνης
 
-- **Υπόλοιπο / όριο:** OWNER-EXCEL-SCROLL-01 (08Oct20:10): USER FAIL στη μεγιστοποίηση· bounded CSS διόρθωση, local Chromium wheel/και τα δύο τελικά κουμπιά/normal restore PASS σε1920/1366/1280. Bulk USER PASS προστατεύεται. Source PR1911/full CI/main CI PASS· release BLOCKED από προηγούμενο startup deploy· queued3458f34 περιέχει ίδιο CSS· AWAITING DEPLOY/USER, owner codex/owner-excel-scroll-20261008 μόνο για αυτή την κύλιση. Οι υπόλοιπες TODAY-06 λειτουργικές δοκιμές παραμένουν OPEN στους προηγούμενους owners· καμία υποβολή φόρμας.
+- **Υπόλοιπο / όριο:** OWNER-EXCEL-SCROLL-01 περιορισμένο USER PASS20:42: μεγιστοποίηση/κύλιση στα δύο τελικά κουμπιά, ρητή επιβεβαίωση «Μόνο Excel / Barcode». Source PR1911/full CI PASS, release139cc025/exact health/guard37817762303 SUCCESS. Καμία υποβολή. Full TODAY-06 δημιουργία/import/αποστολή μένει OPEN στους προηγούμενους owners.
 
 - **Tracker ID:** `TODAY-06`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ VISUAL / OPEN
