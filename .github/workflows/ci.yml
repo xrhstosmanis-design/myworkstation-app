@@ -242,4 +242,13 @@ jobs:
           run_flow server/e2e/owner-catalog-read-flow.mjs
           run_flow server/e2e/hot-table-schema-lock-flow.mjs
           run_flow server/e2e/server-shutdown-flow.mjs
+          MWS_CAPACITY_ISOLATED=1 MWS_CAPACITY_MODE=smoke MWS_CAPACITY_OUTPUT=/tmp/myworkstation-capacity-result run_flow server/e2e/pos-capacity-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
+      - name: Preserve isolated capacity harness results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-pos-capacity-harness
+          path: /tmp/myworkstation-capacity-result/result.json
+          if-no-files-found: ignore
+          retention-days: 14
