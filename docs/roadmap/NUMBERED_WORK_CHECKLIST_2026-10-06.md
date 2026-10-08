@@ -30,7 +30,7 @@
 
 - **Tracker ID:** `03`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** Έλεγχος τερματικού, SOFTWARE PREFLIGHT READY, recovery dry-run και reports. 08/10: επιμέρους USER VISUAL PASS πλήρους φόρμας έναρξης/επιβεβαίωσης. Φυσικό100% zoom και χρήση αφής OPEN. POS-CATALOG-PERF-01 ASSIGNED codex/pos-catalog-perf-20261008: catalog resolverPR1877/greenCI/exact live23b11ed8; original store lag USER FAIL awaits empty-cart category touch acceptance. Whole-program/server/network/device response OPEN.
+- **Υπόλοιπο / όριο:** Έλεγχος τερματικού, SOFTWARE PREFLIGHT READY, recovery dry-run και reports. 08/10: επιμέρους USER VISUAL PASS πλήρους φόρμας έναρξης/επιβεβαίωσης. Φυσικό100% zoom και χρήση αφής OPEN. POS-CATALOG-PERF-01 ASSIGNED codex/pos-catalog-perf-20261008: catalog resolverPR1877/greenCI/exact live23b11ed8; 08Oct14:43 owner confirms immediate category response USER PASS after requested refresh/open-close. Completed check not repeated; physical clientSHA/gesture/timing and wider whole-program/server/network/device response OPEN.
 
 - **Νεότερο08/10 επιμέρους USER VISUAL PASS:** Ολόκληρη η φόρμα έναρξης και επιβεβαίωση φαίνονται στη φωτογραφία14:09. Φυσικό100% zoom/χρήση αφής και συνολική εγκατάσταση OPEN.
 

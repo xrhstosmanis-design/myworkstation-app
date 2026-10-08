@@ -1,3 +1,11 @@
+## 08/10/2026 14:43 — Diadochou category response: limited USER PASS
+
+Who/where: the authorized operator uses the activated Diadochou Store Mode POS on DIADOXOU-POS-01, with the existing store-scoped access. The catalog lookup cache grants no permissions and changes no prices/VAT, sale/payment/stock/fiscal rules or published product assignments.
+
+Verified requested flow: with an empty sale list, press top-right «Ανανέωση» once, open «ΜΠΥΡΕΣ», then close «Χ», without submitting a sale. Owner's direct response «ΑΜΕΣΩς» at14:43:23 confirms immediate category response after the deployed lookup improvement. Criteria PASS only for this reported non-sale category response. Do not repeat the completed check or open/close a shift to demonstrate it again. SourcePR1877/greenPR+mainCI/guardedRender/exactpublic23b11ed8 and served resolver verified14:39; physical client SHA is not exposed by the reply.
+
+Known limits: owner report, not a timed/video measurement or independently observed touch gesture. Other categories/quick keys/keypad/search/scanner, whole-program/network/device speed and actual financial/fiscal installation acceptance remain unverified. Existing input method/operator/shift IDs at14:43 are not independently captured. No financial/stock deltas claimed. If a specific action becomes slow again, record which action and approximate delay, current app version and PC/network symptoms before another bounded change; avoid repeated financial transactions for diagnostics. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-catalog-performance.md.
+
 ## 08/10/2026 — Opening form: limited physical USER VISUAL PASS
 
 Who/where: an operator with existing BackOffice «με αρχικό Ταμείο» permission enters their own activated Store Mode terminal using their personal PIN/card. Before sales, «Καταμέτρηση έναρξης» shows the shift label, actual drawer/custody/coins/safe inputs, notes, full receipt declaration and explicit opening confirmation. These are the existing store/terminal-scoped fields and permission gates; the layout grants no access. Do not use zeros as substitute for a real count.
