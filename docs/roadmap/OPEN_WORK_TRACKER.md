@@ -64,7 +64,7 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
-**Independent subtask POS-TOUCH-OPEN-01:** ASSIGNED `codex/pos-shift-open-touch-20261008`, 2026-10-08T10:36+00:00 — opening form responsive layout only; current real-store USER FAIL/physical revision unknown. Existing broader owners unchanged. No shift/data writes. CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Local actual-component mocked layout at100% fits1024x600+; build/server0FAIL/safety PASS. PR1873/fullCI37766074299 and mainCI37766389780 SUCCESS, merged/exact live44b0a696; served opening CSS verified. AWAITING PHYSICAL USER/LAB; no new real PASS. Implementation branch codex/pos-shift-open-touch-implementation-20261008; claimPR1872/main e292ff7.
+**Independent subtask POS-TOUCH-OPEN-01:** ASSIGNED `codex/pos-shift-open-touch-20261008`, 2026-10-08T10:36+00:00 — opening form responsive layout only; current real-store USER FAIL/physical revision unknown. Existing broader owners unchanged. No shift/data writes. CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Local actual-component mocked layout at100% fits1024x600+; build/server0FAIL/safety PASS. PR1873/fullCI37766074299 and mainCI37766389780 SUCCESS, merged/exact live44b0a696; served opening CSS verified. Limited USER VISUAL PASS08Oct14:09: complete form/confirmation visible in owner photo1791457779778. Physical100% zoom/readability/touch operation and overall installation remain OPEN; no financial PASS. Implementation branch codex/pos-shift-open-touch-implementation-20261008; claimPR1872/main e292ff7.
 
 ### 04 — Πραγματικό go-live test
 
