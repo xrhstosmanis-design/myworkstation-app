@@ -1,0 +1,13 @@
+# POS catalog performance — bounded independent assignment
+
+## POS-CATALOG-PERF-01 — ASSIGNED / real-store lag investigation
+
+Owner `codex/pos-catalog-perf-20261008`; claimed 2026-10-08T11:23:48+00:00. Independent tracker03 scope: client-only catalog button/category resolution caching and matching cost, preserving exact catalog contents/order, prices/VAT, scanner semantics and all existing gates. Owner reports whole program lag;14:15 photo shows Diadochou POS/ΑΝΤΩΝΗΣ/5000 products, empty cart. Physical runtime/device timing unknown. Synthetic5000/company14x40+20quick fixture repeats existing lookup work at6388/6281ms per render; legacy category counts31241ms. Work-network health4.719/4.116/5.234s is separate, not store latency proof. Overall USER FAIL remains OPEN; no transaction/shift/payment/stock/fiscal writes. Existing opening visual PASS, company527-ID layout configuration PASS, Gate3/4/6/8 and other assignments protected. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-catalog-performance.md`. Next: bounded implementation, isolated actual-component before/after validation, green CI/merge/exact deploy, one non-sale touch acceptance. No manual performance PASS yet.
+
+## Pre-change reconciliation
+
+Read AGENTS, active list, tracker03, pending, numbered03, POS manual and01Oct company catalog checkpoint. Latest main f5c2cd4/PR1875 records opening visual PASS only. Diadochou catalog configuration527IDs/14categories/20slots from01Oct remains protected;17 empty slots and exact Product-ID order are not redesigned. User says whole program, not established Windows/AnyDesk lag. Existing lookup implementation repeatedly normalizes codes/product identifiers and rescans5000 rows on each render, including unchanged2second offline-queue poll. Root cause reproduced locally; actual lag may also involve network/server/device. CI/local evidence is not LAB/LIVE/USER PASS.
+
+## Safety / acceptance
+
+No API/schema/auth/module/fiscal/checkout/queue changes. No reduction of5000products, no layout publish or transaction/shift manipulation. Regression: exact company ID-only category order/dedup; legacy aliases and zero-padding; duplicate IDs; child union counts; earliest quick match including name fallback; updated catalog/layout invalidate caches. Isolated mocked browser must verify counts/names, repeat keypad responsiveness, category opening and layout/catalog update without live requests. Physical acceptance requires responsive non-sale touch; financial go-live remains separate OPEN.

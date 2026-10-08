@@ -66,6 +66,10 @@ Gate 1–8: διατηρούνται τα τεκμηριωμένα PASS του �
 
 **Independent subtask POS-TOUCH-OPEN-01:** ASSIGNED `codex/pos-shift-open-touch-20261008`, 2026-10-08T10:36+00:00 — opening form responsive layout only; current real-store USER FAIL/physical revision unknown. Existing broader owners unchanged. No shift/data writes. CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md. Local actual-component mocked layout at100% fits1024x600+; build/server0FAIL/safety PASS. PR1873/fullCI37766074299 and mainCI37766389780 SUCCESS, merged/exact live44b0a696; served opening CSS verified. Limited USER VISUAL PASS08Oct14:09: complete form/confirmation visible in owner photo1791457779778. Physical100% zoom/readability/touch operation and overall installation remain OPEN; no financial PASS. Implementation branch codex/pos-shift-open-touch-implementation-20261008; claimPR1872/main e292ff7.
 
+## POS-CATALOG-PERF-01 — ASSIGNED / real-store lag investigation
+
+Owner `codex/pos-catalog-perf-20261008`; claimed 2026-10-08T11:23:48+00:00. Independent tracker03 scope: client-only catalog button/category resolution caching and matching cost, preserving exact catalog contents/order, prices/VAT, scanner semantics and all existing gates. Owner reports whole program lag;14:15 photo shows Diadochou POS/ΑΝΤΩΝΗΣ/5000 products, empty cart. Physical runtime/device timing unknown. Synthetic5000/company14x40+20quick fixture repeats existing lookup work at6388/6281ms per render; legacy category counts31241ms. Work-network health4.719/4.116/5.234s is separate, not store latency proof. Overall USER FAIL remains OPEN; no transaction/shift/payment/stock/fiscal writes. Existing opening visual PASS, company527-ID layout configuration PASS, Gate3/4/6/8 and other assignments protected. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-catalog-performance.md`. Next: bounded implementation, isolated actual-component before/after validation, green CI/merge/exact deploy, one non-sale touch acceptance. No manual performance PASS yet.
+
 ### 04 — Πραγματικό go-live test
 
 **Κατάσταση:** OPEN
