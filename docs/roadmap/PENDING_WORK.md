@@ -1,3 +1,11 @@
+## 08/10/2026 — POS shift opening / touchscreen layout — ASSIGNED
+
+Owner `codex/pos-shift-open-touch-20261008`, independent presentation subtask of tracker03, claimed 2026-10-08T10:36+00:00. Existing installation, fiscal, preflight and shift-close owners remain unchanged. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-pos-shift-open-touch.md`.
+
+USER-reported layout FAIL: opening form exceeds available height; confirmation below viewport. Requirement: touchscreen operation at100% without keyboard zoom/fullscreen shortcuts. Exact physical browser revision NOT CAPTURED. No transaction evidence or new financial PASS claimed.
+
+Scope: only opening-form responsive layout and touch-sized controls. Preserve mandatory initialCash authorization, resolved overview/access gate, four real cash amounts, complete receipt declaration, unchanged submit/API, operator change, tenant/module/fiscal gates and protected05Oct opening/closing/QR PASS; Gates3/4/6/8 not reopened. No production data or shift action. Status AWAITING IMPLEMENTATION/CI/deploy/LAB, no new PASS. Acceptance: actual touchscreen at100%, entire form/confirmation usable without keyboard shortcuts; errors visible; narrower/keyboard view reachable by touch. No shift submission for geometry evidence.
+
 # Νο16 — Android σύνδεσμος Chat USER PASS · notification tap OPEN
 
 08/10/2026 — Android direct-link USER PASS: φωτογραφία 6279.jpg (00:48 Athens), επιβεβαίωση ιδιοκτήτη 08:32: ο σύνδεσμος άνοιξε το Chat. Σωστό ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, συμπτυγμένες ρυθμίσεις, Push ενεργό, περιοχή μηνυμάτων/επισύναψης και composer χωρίς PIN. Φυσικό Android/Chrome/SuperAdmin, όχι OWNER device acceptance ή notification tap. Mobile exact revision και mobile before/after DB/financial/stock/read deltas NOT MEASURED. Εκκρεμότητες(0) στο screenshot δεν αποδεικνύει αλλαγή προστατευμένης εργασίας. Δεν επαναλαμβάνεται η είσοδος. Παλαιά PASS διατηρούνται. Notification tap, settings-toggle, άλλες συσκευές και authenticated αρνητικοί ρόλοι/tenant/token revocation OPEN. Νο16 OPEN/ASSIGNED codex/n16-owner-acceptance-20261007.
