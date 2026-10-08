@@ -236,7 +236,7 @@
 
 - **Tracker ID:** `REMOTE-INSTALL-01`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** LIVE / AWAITING DEVICE
-- **Υπόλοιπο / όριο:** Αναμονή Windows PC, pairing/writer, restart και φυσικού εξοπλισμού.
+- **Υπόλοιπο / όριο:** 08Oct manual Writer restart/ONLINE limited USER PASS, autostart NOT TESTED. CASH15:21 VAT USER FAIL; Kiosk confirms department5/13% and code42 is documented29Sep. Independent codex/diadoxou-fiscal-profile-20261008 sourcePR1881/greenCI/merge509cc1b; guardedRender37779487306 SUCCESS and exact public healthy509cc1b verified08Oct15:50Athens. Physical cash/card/receipt/stock/Audit and current mapping readback OPEN; no transaction replay. Original remote wizard owner retained.
 
 ## 37 — Μικτή πληρωμή RBS / EFTPOS
 

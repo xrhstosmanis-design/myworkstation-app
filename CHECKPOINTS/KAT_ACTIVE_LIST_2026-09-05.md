@@ -1,3 +1,7 @@
+## 08/10/2026 — Διαδόχου fiscal profile PR1881 merged / AWAITING DEVICE
+
+SourcePR1881/head390ad75a/fullCI37778813878 SUCCESS/merge509cc1b; mainCI37779205150 SUCCESS. Guarded Render37779487306 SUCCESS; exact public health509cc1b/ok=true verified08Oct15:50Athens. Confirmed authenticated Diadoxou profile selection only, protected KAT10/one-shot/licensing/tenant/shift gates unchanged. Latest real physical CASH USER FAIL15:21; controlled new cash/card receipt/stock/Audit acceptance and current authenticated mapping readback still NOT TESTED. No retry/state-changing action performed after source change. Existing owner codex/diadoxou-fiscal-profile-20261008 retained; other assignments untouched. CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md.
+
 ## 08/10/2026 — Διαδόχου store fiscal profile source / AWAITING DEVICE
 
 Independent codex/diadoxou-fiscal-profile-20261008; claimPR1880/greenCI37778337537/main61a97f4 published before source. Resolver selects documented Diadoxou profiles by server-authenticated company/store, KAT10 preserved, unconfirmed services blocked, no schema/data/writer changes. Local focused16/16 and full server1904PASS/0FAIL/4SKIP/build:production PASS only; CI/E2E/exact deploy and measured physical acceptance pending. Latest real CASH15:21 USER FAIL remains authoritative. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-diadoxou-fiscal-profile.md. Existing owners and accepted touch/catalog scopes unchanged.
