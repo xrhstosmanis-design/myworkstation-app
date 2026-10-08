@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import {prisma} from "./prisma.js";
 
 const statements=[
@@ -194,6 +195,6 @@ $$ LANGUAGE plpgsql`,
 ];
 
 export async function ensureOwnerProductSchema(){
-  for(const statement of statements)await prisma.$executeRawUnsafe(statement);
+  for(const statement of statements)await executeHotTableBootstrap(prisma,statement);
   console.log("Owner product management schema bootstrap completed.");
 }

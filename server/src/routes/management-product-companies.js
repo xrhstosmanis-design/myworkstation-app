@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -33,14 +34,14 @@ export async function ensureProductCompanySchema(){
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ManagementProductCompany_company_source_key" ON "ManagementProductCompany"("companyId","sourceBrandName") WHERE "sourceBrandName" IS NOT NULL`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ManagementProductCompany_company_system_key" ON "ManagementProductCompany"("companyId","systemKey") WHERE "systemKey" IS NOT NULL`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ManagementProductCompany_company_idx" ON "ManagementProductCompany"("companyId")`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "productCompanyId" TEXT`);
+    await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "productCompanyId" TEXT`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Product_productCompanyId_idx" ON "Product"("productCompanyId")`);
     await prisma.$executeRawUnsafe(`DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='Product_productCompanyId_fkey') THEN
         ALTER TABLE "Product" ADD CONSTRAINT "Product_productCompanyId_fkey" FOREIGN KEY ("productCompanyId") REFERENCES "ManagementProductCompany"("id") ON DELETE SET NULL ON UPDATE CASCADE;
       END IF;
     END $$;`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
+    await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSubcategory" (
       "id" TEXT NOT NULL,
       "companyId" TEXT NOT NULL,

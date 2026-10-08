@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -153,7 +154,7 @@ const tableStatements=[
 async function ensureTables(){
   if(!tablesPromise){
     tablesPromise=(async()=>{
-      for(const sql of tableStatements)await prisma.$executeRawUnsafe(sql);
+      for(const sql of tableStatements)await executeHotTableBootstrap(prisma,sql);
     })().catch(error=>{tablesPromise=undefined;throw error});
   }
   return tablesPromise;

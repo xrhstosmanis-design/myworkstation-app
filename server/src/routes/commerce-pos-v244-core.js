@@ -1,3 +1,4 @@
+import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
 import {Router} from "express";
@@ -161,7 +162,7 @@ export async function ensureV244IntakeSchema(){
         `ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS "invoicePaymentKey" TEXT`,
         `CREATE UNIQUE INDEX IF NOT EXISTS "StoreTransaction_active_invoice_payment_unique" ON "StoreTransaction" ("companyId","invoicePaymentKey") WHERE "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL AND "invoicePaymentKey" IS NOT NULL`
       ];
-      for(const statement of statements)await prisma.$executeRawUnsafe(statement);
+      for(const statement of statements)await executeHotTableBootstrap(prisma,statement);
     })().catch(error=>{intakeSchemaPromise=undefined;throw error});
   }
   return intakeSchemaPromise;
