@@ -1,0 +1,12 @@
+/* Auxiliary POS actions belong to the header flow, below its primary controls. */
+.mws-standard-pos .store-pos-top{flex:0 0 auto;flex-direction:column;align-items:stretch;gap:8px}
+.pos-header-main{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.pos-header-main>.pos-header-context{flex-wrap:wrap;min-width:0}
+.pos-header-main>.runtime-top-actions{flex-wrap:wrap;min-width:0;margin-left:auto}
+.mws-standard-pos .pos-aux-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px;padding-top:8px;border-top:1px solid #ffffff30;position:static;min-width:0}
+.mws-standard-pos .pos-aux-actions>.store-chat-top-button{position:static;min-height:44px;height:auto;padding:7px 12px;border:1px solid #ffffff55;background:#ffffff12;color:#fff;font-size:14px;box-shadow:none;flex:0 1 auto;white-space:normal}
+.mws-standard-pos .pos-aux-actions>.store-chat-top-button:hover{background:#ffffff25}
+@media(max-width:850px){.mws-standard-pos .pos-aux-actions{justify-content:flex-start}.mws-standard-pos .pos-aux-actions>.store-chat-top-button{min-height:44px}}
+/* The cart uses the remaining height when the header wraps or text grows. */
+.mws-standard-pos .standard-sale-panel{grid-template-rows:62px auto 36px minmax(0,1fr) 166px}
+@media(max-height:900px) and (min-width:851px){.mws-standard-pos .standard-sale-panel{grid-template-rows:54px auto 32px minmax(0,1fr) 150px}}
