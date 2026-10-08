@@ -1,3 +1,4 @@
+import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
 import * as XLSX from "xlsx";
 import {Router} from "express";
@@ -137,13 +138,13 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
 // Uses the same receiving service and entitlement checks; never approves or pays.
 let workerStarted=false,workerBusy=false;
 export function startMyDataReceivingWorker(){
-  if(workerStarted)return;workerStarted=true;
+  if(backgroundDrain.stopping||workerStarted)return;workerStarted=true;
   const tick=async()=>{
-    if(workerBusy)return;workerBusy=true;
+    if(backgroundDrain.stopping||workerBusy)return;workerBusy=true;
     try{
       await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);
       const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND c."environment"='PRODUCTION' AND s."active"=true ORDER BY c."companyId",c."storeId"`;
-      for(const target of targets){try{
+      for(const target of targets){if(backgroundDrain.stopping)break;try{
         const state=await companyModuleState(target.companyId);
         if(!state?.licenseAllowed||!state.activeModules.includes("DOCUMENTS"))continue;
         const owners=await prisma.$queryRaw`SELECT u."id" FROM "User" u WHERE u."role"='OWNER' AND (u."companyId"=${target.companyId} OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=${target.companyId})) ORDER BY u."id" LIMIT 1`;
@@ -153,7 +154,8 @@ export function startMyDataReceivingWorker(){
       }catch{console.warn("myDATA scheduled receiving failed; review the store integration status.")}}
     }catch{console.warn("myDATA scheduled receiving unavailable.")}finally{workerBusy=false}
   };
-  const timer=setInterval(tick,15*60*1000);timer.unref?.();
+  const timer=setInterval(()=>backgroundDrain.track(tick()),15*60*1000);timer.unref?.();
+  backgroundDrain.onStop(()=>clearInterval(timer));
 }
 
 router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{

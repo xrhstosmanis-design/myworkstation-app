@@ -1,3 +1,4 @@
+import {backgroundDrain} from "../server-shutdown.js";
 import {prisma} from "../prisma.js";
 
 const AUTO_OUT_MS=12*60*60*1000;
@@ -11,6 +12,7 @@ export async function closeStaleWorkforceAttendance(now=new Date()){
     const candidates=await prisma.workforceAttendanceSession.findMany({where:{status:"OPEN",startedAt:{lte:cutoff}},select:{id:true}});
     let closed=0;
     for(const candidate of candidates){
+      if(backgroundDrain.stopping)break;
       const changed=await prisma.$transaction(async tx=>{
         await tx.$queryRawUnsafe(`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=$1 FOR UPDATE`,candidate.id);
         const session=await tx.workforceAttendanceSession.findFirst({where:{id:candidate.id,status:"OPEN"}});
@@ -29,9 +31,11 @@ export async function closeStaleWorkforceAttendance(now=new Date()){
 }
 
 export function startWorkforceAutoOutWorker(){
-  const run=()=>closeStaleWorkforceAttendance().catch(error=>console.error("Workforce AUTO_OUT_12H worker failed:",error?.message||error));
+  if(backgroundDrain.stopping)return;
+  const run=()=>{if(backgroundDrain.stopping)return;return backgroundDrain.track(closeStaleWorkforceAttendance().catch(error=>console.error("Workforce AUTO_OUT_12H worker failed:",error?.message||error)))};
   run();
   if(timer)clearInterval(timer);
   timer=setInterval(run,5*60*1000);
   timer.unref?.();
+  backgroundDrain.onStop(()=>clearInterval(timer));
 }
