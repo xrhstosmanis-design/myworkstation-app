@@ -52,7 +52,8 @@ test("responsive POS UI can send, monitor and load table orders",()=>{
   assert.match(ui,/ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ/);
   assert.match(ui,/ΠΡΟΣΘΗΚΗ ΝΕΟΥ ΓΥΡΟΥ/);
   assert.match(ui,/ΦΟΡΤΩΣΗ ΣΤΟ POS/);
-  assert.match(pos,/ΤΡΑΠΕΖΙΑ/);
+  assert.match(pos,/Ασύρματη παραγγελιοληψία/);
+  assert.match(pos,/onClick=\{\(\)=>setActiveModal\("TABLES"\)\}/);
   assert.match(pos,/tableOrderId/);
 });
 
