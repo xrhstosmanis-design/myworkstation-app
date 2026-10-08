@@ -323,7 +323,7 @@
 
 - **Tracker ID:** `TODAY-08`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** CODE CI PASS / OPEN
-- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: navy/teal/white,18px τίτλοι,12px badges· local normal/max10cases + scroll regressions PASS· PR1921/full CI37824415478 PASS,10abeaa2 LIVE/exact health/main37824771286/guard37825083488 SUCCESS· AWAITING USER visual acceptance. OWNER-ANALYTICS-SCROLL-01: four-line CSS correction; real-component normal/max6cases and existing scroll regression local PASS; claim1925 merged, AWAITING full CI/release/USER; no Gate7 takeover.
+- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: navy/teal/white,18px τίτλοι,12px badges· local normal/max10cases + scroll regressions PASS· PR1921/full CI37824415478 PASS,10abeaa2 LIVE/exact health/main37824771286/guard37825083488 SUCCESS· AWAITING USER visual acceptance. OWNER-ANALYTICS-SCROLL-01: four-line CSS correction; local normal/max6cases + prior scroll regression PASS; PR1927/fullCI37829183225/main37829516669/guard37829815837 SUCCESS;45366912 LIVE/exact health19:10:44Z, AWAITING USER visual retest; no Gate7 takeover.
 
 ## 51 — Σελίδα ιδιοκτήτη — απλοποίηση και τελική αποδοχή
 
