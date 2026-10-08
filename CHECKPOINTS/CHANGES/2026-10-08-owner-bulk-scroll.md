@@ -1,0 +1,12 @@
+# OWNER-BULK-SCROLL-01 - maximized BackOffice bulk price form
+
+## 2026-10-08T19:14:49+03:00 - OWNER-BULK-SCROLL-01 / ASSIGNED / USER FAIL
+
+Latest user19:11 asks this BackOffice page to correct missing vertical scroll after maximizing the commercial product window, one correction then test. ΑΝΑΛΗΨΗ ΑΠΟ codex/central-management-live-audit-20261007 - ASSIGNED codex/owner-bulk-scroll-20261008 for this one user-requested maximized bulk-price wrapper/scroll correction only. No release or completed handoff by the prior page is invented; latest user direction selects this bounded fix here. The full TODAY-04 audit and all its other residuals remain assigned to the prior page; no duplicate broad audit, pricing workflow or other module takeover.
+
+Attachments161004/161051 show selected Μαζική αλλαγή τιμών (not Store Prices): normal window has right scrollbar, maximized1920x~925 clips the form below New Price with no useful scroll, per user report. Empty selection0products/0stores/0changes; only Diadoxou store listed and unchecked. Exact physical client revision/identity unknown; USER FAIL for maximize scroll only, no live price apply/stock/financial/employee/card action. Source existing 06Oct dedicated scroll sets OwnerProductCenter height100%/overflowhidden and bulk form flex/overflowauto, but wrapper ancestry through stock host and kiosk-shell is not bounded. Prior maximum-mode scroll FAIL remains unresolved; do not infer new normal-scroll PASS from a static scrollbar.
+
+Bounded CSS wrapper-height/scroll containment fix keyed only to maximized bulk-price-scroll-region, preserving normal mode, Master/Store Prices/Offers/Excel/Inventory, final preview/apply handlers and all company/store/license guards. Preserve earlier Master/Store Prices PASS, Workforce desktop PASS, POS-NO-PRINT owner and other assignments. Claim must merge green docs CI before source. Meaningful browser geometry test will check normal/maximize/restore, scroll to final control and preserved non-bulk layout; full CI and exact healthy deployment precede user retest. Owner retained until named transfer. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-owner-bulk-scroll.md. Single next action: publish claim then bound the existing wrapper chain; no price submission for this layout test.
+
+Attachment SHA256s: {'image(20261008-161004).png': 'ff83596769745cbf66696575c3eb016f9e0e6e9fa296630400bc4c9e13fa00ea', 'image(20261008-161051).png': '4dd9eceee87c2aa64044fb57efda2db448d0d4d8e9b0fe46458332d2fbbf760b'}.
+
