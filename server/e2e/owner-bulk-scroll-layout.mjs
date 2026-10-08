@@ -25,23 +25,37 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTA
 try{
  const page=await browser.newPage();await page.route('**/*',route=>route.abort());
  for(const size of [{width:1920,height:925},{width:1366,height:768},{width:1280,height:600}]){
-  await page.setViewportSize(size);await page.setContent(markup('bulk'));
-  const metrics=await page.locator('.bulk-price-scroll-region').evaluate(form=>({height:form.clientHeight,content:form.scrollHeight,overflow:getComputedStyle(form).overflowY,display:getComputedStyle(form).display,windowOverflow:getComputedStyle(form.closest('.commerce-shell')).overflowY}));
-  assert.ok(metrics.height>100&&metrics.content>metrics.height,JSON.stringify({size,metrics}));assert.equal(metrics.overflow,'auto');assert.equal(metrics.display,'block');
-  const form=page.locator('.bulk-price-scroll-region'),button=form.locator(':scope > button.primary');
-  await form.evaluate(el=>{el.scrollTop=el.scrollHeight});
-  const reach=await button.evaluate(button=>{const form=button.closest('form'),b=button.getBoundingClientRect(),f=form.getBoundingClientRect();return {bottom:b.bottom,top:b.top,formBottom:f.bottom,formTop:f.top,scroll:form.scrollTop}});
-  assert.ok(reach.scroll>0&&reach.bottom<=reach.formBottom+1&&reach.top>=reach.formTop,JSON.stringify({size,reach}));
-  // Restore normal mode: the existing window scrollbar must still reach the same final control.
-  await page.locator('.commerce-shell').evaluate(el=>el.classList.remove('window-maximized'));
-  await page.locator('.commerce-shell').evaluate(el=>{el.scrollTop=el.scrollHeight});
-  const normal=await button.evaluate(b=>({buttonBottom:b.getBoundingClientRect().bottom,shellBottom:b.closest('.commerce-shell').getBoundingClientRect().bottom,overflow:getComputedStyle(b.closest('.commerce-shell')).overflowY}));
-  assert.equal(normal.overflow,'auto');assert.ok(normal.buttonBottom<=normal.shellBottom+1,JSON.stringify({size,normal}));
-  console.log(JSON.stringify({size,metrics,reach,normal}));
-  if(process.env.LAYOUT_SCREENSHOT&&size.width===1920){await page.locator('.commerce-shell').evaluate(el=>el.classList.add('window-maximized'));await form.evaluate(el=>{el.scrollTop=el.scrollHeight});await page.screenshot({path:process.env.LAYOUT_SCREENSHOT});}
+  await page.setViewportSize(size);
+  for(const [tab,selector] of [['bulk','.bulk-price-scroll-region'],['promotion-import','.promotion-import-workspace']]){
+   await page.setContent(markup(tab));
+   const region=page.locator(selector),buttons=region.locator('button.primary');
+   const metrics=await region.evaluate(el=>({height:el.clientHeight,content:el.scrollHeight,overflow:getComputedStyle(el).overflowY}));
+   assert.ok(metrics.height>100&&metrics.content>metrics.height,JSON.stringify({size,tab,metrics}));assert.equal(metrics.overflow,'auto');
+   const headerBefore=await page.locator('.owner-product-tabs').boundingBox();
+   await region.hover();await page.mouse.wheel(0,1000);
+   await page.waitForFunction(selector=>document.querySelector(selector).scrollTop>0,selector,{timeout:2000});
+   const headerAfter=await page.locator('.owner-product-tabs').boundingBox();
+   assert.equal(headerAfter.y,headerBefore.y);
+   assert.equal(await buttons.count(),tab==='bulk'?1:2);
+   for(const button of await buttons.all()){
+    await button.evaluate(el=>el.scrollIntoView({block:'nearest'}));
+    const reach=await button.evaluate(b=>{const r=b.closest('.bulk-price-scroll-region,.promotion-import-workspace'),br=b.getBoundingClientRect(),rr=r.getBoundingClientRect();return {top:br.top,bottom:br.bottom,regionTop:rr.top,regionBottom:rr.bottom,scroll:r.scrollTop};});
+    assert.ok(reach.bottom<=reach.regionBottom+1&&reach.top>=reach.regionTop,JSON.stringify({size,tab,reach}));
+   }
+   await page.locator('.commerce-shell').evaluate(el=>el.classList.remove('window-maximized'));
+   for(const button of await buttons.all()){
+    await button.evaluate(el=>el.scrollIntoView({block:'nearest'}));
+    const normal=await button.evaluate(b=>{const s=b.closest('.commerce-shell'),br=b.getBoundingClientRect(),sr=s.getBoundingClientRect();return {buttonTop:br.top,buttonBottom:br.bottom,shellTop:sr.top,shellBottom:sr.bottom,overflow:getComputedStyle(s).overflowY};});
+    assert.equal(normal.overflow,'auto');assert.ok(normal.buttonBottom<=normal.shellBottom+1&&normal.buttonTop>=normal.shellTop,JSON.stringify({size,tab,normal}));
+   }
+   console.log(JSON.stringify({size,tab,metrics,controls:await buttons.count()}));
+   if(process.env.LAYOUT_SCREENSHOT&&size.width===1920&&tab==='promotion-import'){
+    await page.locator('.commerce-shell').evaluate(el=>el.classList.add('window-maximized'));await region.evaluate(el=>{el.scrollTop=el.scrollHeight});await page.screenshot({path:process.env.LAYOUT_SCREENSHOT});
+   }
+  }
  }
  await page.setContent(markup('master'));
  assert.equal(await page.locator('.kiosk-shell').evaluate(el=>getComputedStyle(el).display),'grid');
- console.log('PASS: final control reachable in maximized/normal sizes; non-bulk kiosk grid preserved.');
+ console.log('PASS: final control reachable in maximized/normal sizes; Excel/Barcode both controls reachable; Master kiosk grid preserved.');
  await page.close();
 }finally{await browser.close()}
