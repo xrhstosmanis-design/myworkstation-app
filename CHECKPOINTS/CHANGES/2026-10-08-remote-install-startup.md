@@ -19,3 +19,6 @@ Windows behavioral regression smoke now holds Writer mutex in another thread whi
 
 
 Local Node20 full server suite1904PASS/0FAIL/4SKIP and build:production PASS; package exact-byte/credential-free test1/1 PASS. Windows5.1 smoke cannot run in this Linux sandbox and is required in CI. The unrelated build-generated kiosk-reports-audit.js diff was restored; no runtime fiscal/server/UI routes were changed. Source is AWAITING CI/DEVICE, not physical startup/recovery or timing PASS.
+
+
+First sourcePR1885/head999dc488 CI37784972198 Windows smoke did not reach PASS: held-Writer runspace completion check failed with an empty error stream. Test-Connection writes status output; require the unique explicit completion sentinel and no errors rather than assuming the runspace emits exactly one object. Production helper/GUI code unchanged by this diagnostic correction. Full new Windows CI still required; no merge/device PASS claimed.

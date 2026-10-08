@@ -113,7 +113,8 @@ try {
       'SAFE_ACTIVE_WRITER'
     }.ToString()).AddArgument((Join-Path $directory 'Connector-Tools.ps1')).AddArgument($configPath).AddArgument($directory).AddArgument($desktop).AddArgument($startup)
     $result = $parallel.Invoke()
-    if ($parallel.HadErrors -or $result.Count -ne 1 -or $result[0] -ne 'SAFE_ACTIVE_WRITER') { throw ('Live Writer preference smoke failed: ' + ($parallel.Streams.Error -join '; ')) }
+    $completed = @($result | Where-Object { [string]$_ -eq 'SAFE_ACTIVE_WRITER' })
+    if ($parallel.HadErrors -or $completed.Count -ne 1) { throw ('Live Writer preference smoke failed: ' + ($parallel.Streams.Error -join '; ') + ' Output: ' + ($result -join '; ')) }
   } finally { $parallel.Dispose(); Exit-MwsConnectorLock $mutex }
 
   # Execute the real GUI click handlers with harmless controls and process
