@@ -1,3 +1,8 @@
+## 08/10/2026 18:01 Athens — OWNER-WORKFORCE-01 / ASSIGNED
+
+Owner `codex/owner-workforce-module-20261008`. Independent BackOffice integration of the existing Workforce v2 panel for OWNER with an active selected-store personnel package, including work-card printing and mobile QR/application sharing. User requested the same full panel on 08Oct17:54 and clarified QR/card access17:57. Existing Super Admin flows and BASIC/PRO/AI/PAYROLL entitlement hierarchy remain protected. No package activation, payroll calculations, schema, fiscal/profile, payments, live employee/credential mutation or existing assigned scope takeover. Screenshots show Super Admin panel only: new OWNER path NOT TESTED / AWAITING LAB. Required acceptance: real OWNER selects own licensed store, sees its employees and card/share controls; absent/expired package and foreign company/store denied; switching stores clears prior results. Checkpoint `CHECKPOINTS/CHANGES/2026-10-08-owner-workforce-module.md`. Claim must merge with green CI before implementation. Single next action: connect Owner store and Personnel navigation to the common panel. Owner retained until named transfer; WORKFORCE-ADV, payroll #27, TODAY-04 and other assignments unchanged.
+
+
 # MyWorkStation — κοινό μητρώο εκκρεμοτήτων και αναθέσεων
 
 Έκδοση 07/10/2026 · Ευρώπη/Αθήνα · Βάση main 6f370e1b2aad887a4aa380e27e462391f05b2ca5.
