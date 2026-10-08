@@ -294,7 +294,7 @@
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
-- **Υπόλοιπο / όριο:** OWNER-BULK-SCROLL-01 (08Oct19:11): USER FAIL κύλισης στη μεγιστοποιημένη Μαζική αλλαγή τιμών. Scoped wrapper-height CSS correction· Chromium τελικό κουμπί ορατό1920/1366/1280 και normal restore, AWAITING CI/DEPLOY/USER. Owner codex/owner-bulk-scroll-20261008 μόνο για αυτό· πλήρες TODAY-04 audit μένει στον προηγούμενο owner. Καμία εφαρμογή τιμών.
+- **Υπόλοιπο / όριο:** OWNER-BULK-SCROLL-01 (08Oct19:11): USER FAIL κύλισης στη μεγιστοποιημένη Μαζική αλλαγή τιμών. Scoped wrapper-height CSS correction· Chromium τελικό κουμπί ορατό1920/1366/1280 και normal restore, PR1903 / CI37808855211 SUCCESS / merge1cd34448 / exact healthy deploy και guarded Render37809516757 SUCCESS· AWAITING USER RETEST. Owner codex/owner-bulk-scroll-20261008 μόνο για αυτό· πλήρες TODAY-04 audit μένει στον προηγούμενο owner. Καμία εφαρμογή τιμών.
 
 - **Tracker ID:** `TODAY-04`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
