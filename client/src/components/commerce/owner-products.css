@@ -1302,3 +1302,13 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
  .commerce-shell.window-maximized .bulk-price-scroll-region{min-height:0!important;flex:1 1 0!important;display:block!important}
  .commerce-shell.window-maximized .bulk-price-scroll-region>*+*{margin-top:18px}
 }
+
+/* Excel / Barcode: keep both forms reachable inside a maximized desktop window. */
+@media(min-width:1201px){
+ .commerce-shell.window-maximized:has(.promotion-import-workspace)>.commerce-mode-switch{flex:0 0 auto}
+ .commerce-shell.window-maximized:has(.promotion-import-workspace)>div:has(>.kiosk-shell){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell.window-maximized .kiosk-shell:has(>.owner-products .promotion-import-workspace){flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+ .commerce-shell.window-maximized .kiosk-shell>.owner-products:has(>.promotion-import-workspace){flex:1 1 0!important;height:auto!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+ .commerce-shell.window-maximized .owner-products:has(>.promotion-import-workspace)>:is(.owner-products-head,.owner-product-tabs,.op-alert){flex:0 0 auto!important}
+ .commerce-shell.window-maximized .promotion-import-workspace{flex:1 1 0;min-height:0;min-width:0;grid-template-rows:max-content;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-bottom:36px}
+}
