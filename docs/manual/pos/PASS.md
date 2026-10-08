@@ -1,3 +1,9 @@
+## 08/10/2026 23:35 — Θέση πρόσθετων κουμπιών: οπτικό PASS · είσοδος παραγγελιοληψίας: USER FAIL
+
+Ο ιδιοκτήτης αποδέχθηκε με «ΕΙΝΑΙ ΟΚ» τη θέση των πρόσθετων κουμπιών μέσα στη δεύτερη πράσινη σειρά του υπάρχοντος POS. Η αποδοχή αφορά τη θέση, χωρίς νέες οικονομικές/stock πράξεις ή ανεξάρτητη ταυτοποίηση φυσικού client. Στις23:35 διευκρίνισε με τις εικόνες203443/203538 ότι το κουμπί «Παραγγελιοληψία κινητού» ανοίγει λάθος είσοδο για το POS. Η ασύρματη παραγγελιοληψία του POS παραμένει AWAITING correction/retest· η πλήρης λειτουργία αυτού του κουμπιού δεν έχει PASS.
+
+Χρήση των ήδη αποδεκτών πρόσθετων θέσεων από εξουσιοδοτημένο χειριστή στο επιλεγμένο κατάστημα, με τις υπάρχουσες άδειες και δικαιώματα. Αν φαίνεται η παλιά αιωρούμενη σειρά, έλεγξε κατάστημα και ανανέωσε τη σελίδα. Η παρουσία του mobile κουμπιού δεν αποτελεί πιστοποιημένη είσοδο ασύρματης παραγγελιοληψίας POS· δεν επαναλαμβάνεται παραγγελία ή πώληση για τεκμηρίωση. Γενική οθόνη/μεγάλα γράμματα, modal clicks, άλλα stores/modules και οικονομικά αποτελέσματα μένουν εκτός της οπτικής αποδοχής. Source PR #1935 / live e8e8ae32c0ef36fefba31607af6698fb94dd5de4· φυσική revision άγνωστη. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-pos-aux-header.md.
+
 ## 08/10/2026 21:00 — Central catalog search: limited owner-confirmed USER PASS
 
 Who/where: the already authorized owner/admin opens the existing central management product search for the selected authorized company; an existing POS remains open. This read-only correction grants no role, store, tenant or module access. Existing company/store isolation and authentication/license gates remain mandatory.
