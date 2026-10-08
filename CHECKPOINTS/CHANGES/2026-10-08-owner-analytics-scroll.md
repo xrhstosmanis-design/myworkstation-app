@@ -1,0 +1,9 @@
+# Owner Analytics window clipping — 08/10/2026
+
+## 2026-10-08T18:56:15.535693+00:00 — OWNER-ANALYTICS-SCROLL-01 / ASSIGNED / USER clipping FAIL
+
+Owner codex/owner-analytics-scroll-20261008 claims only independent Analytics normal/maximized window vertical reachability. User screenshot image(20261008-185009).png1916x964 shows selected Περίπτερο Διαδόχου Παύλου, maximized commerce shell and Analytics lower panels cut off. Physical revision/role unknown; new layout NOT TESTED. Full Gate7 reports PASS and TODAY-08 hierarchy/permission prior owners remain protected; palette OWNER-COMMERCE-PALETTE-01 still AWAITING USER acceptance.
+
+Read-only layout scope: inspect actual CommerceLauncher windowbar/two mode-switches/CommerceHub/AdvancedSalesAnalytics chain with full built CSS; reproduce before editing, correct one demonstrated overflow/flex-sizing cause, and verify bottom category/product/employee panels plus drawer and existing analytics tabs remain reachable in normal/maximized views. Preserve existing owner bulk/Excel/Inventory USER PASS and palette styles. No API/report calculation, selected-store, auth/license/financial/fiscal/stock/import/module behavior change; no production transaction or form action. Local browser fixtures and CI do not establish physical USER PASS. Single next action after claim main: bounded causal CSS correction and geometry regression, green full CI/main/exact healthy release, then one user visual retest. Checkpoint CHECKPOINTS/CHANGES/2026-10-08-owner-analytics-scroll.md. Owner retained until PASS or named handoff.
+
+Protected evidence: reports manual Gate7 owner final PASS25/09; maximized content-scroll fix06/10; bulk USER PASS20:03, Excel20:42/20:43, Inventory21:13 on08/10. These completed scopes are not retaken. New clipping acceptance requires visible/unobscured bottom panels and usable vertical scroll in normal/maximized Analytics, without financial/stock actions.
