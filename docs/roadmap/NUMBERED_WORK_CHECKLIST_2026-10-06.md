@@ -248,7 +248,7 @@
 
 ## 38 — Άδειες, απόδοση και προχωρημένοι κανόνες εργαζομένων
 
-- **OWNER-WORKFORCE-01 (08Oct):** Πλήρες κοινό πάνελ προσωπικού στο BackOffice ιδιοκτήτη για επιλεγμένο κατάστημα/ενεργό πακέτο, κάρτες και προσκλήσεις. PR1893/CI37799256555/merge285f9922· AWAITING USER, όχι φυσικό PASS. Ανεξάρτητο scope codex/owner-workforce-module-20261008, χωρίς ανάληψη payroll #27 ή WORKFORCE-ADV.
+- **Υπόλοιπο / όριο:** OWNER-WORKFORCE-01 (08Oct): Πλήρες κοινό πάνελ προσωπικού στο BackOffice ιδιοκτήτη για επιλεγμένο κατάστημα/ενεργό πακέτο, κάρτες και προσκλήσεις. PR1893/CI37799256555/merge285f9922· AWAITING USER, όχι φυσικό PASS. Ανεξάρτητο scope codex/owner-workforce-module-20261008, χωρίς ανάληψη payroll #27 ή WORKFORCE-ADV.
 
 - **Tracker ID:** `WORKFORCE-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
