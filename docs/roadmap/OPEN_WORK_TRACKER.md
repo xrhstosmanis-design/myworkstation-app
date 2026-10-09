@@ -1443,7 +1443,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** ASSIGNED / OPEN — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / IMPLEMENTED / AWAITING CI + LIVE — OPERATOR-CHECKBOX-01
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
@@ -1451,7 +1451,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 09/10/2026 23:25 Europe/Athens — explicit owner approval for every operator checkbox in two LAB POS2 screenshots. Remove inert controls or connect supported runtime with granted/denied/revoked evidence. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-operator-checkbox-audit.md. No financial/stock action or credential changes.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** ClaimPR1993/CI37986415384/mergeb37cb72e. Complete79 editor checkbox inventory;53 inert controls removed,26 retained. Runtime /access rights overlay and semantic payment/IRIS visibility corrected. Targeted28/28, frontend/server build and full1981PASS/0FAIL/4isolated-DB skips. No new LIVE PASS; exact-head CI/healthy revision/operator acceptance pending. Matrix2026-10-09-operator-checkbox-matrix.md; checkpoint2026-10-09-operator-checkbox-audit.md.
 
 ### 36 — Πλήρες εγχειρίδιο χρήσης
 
