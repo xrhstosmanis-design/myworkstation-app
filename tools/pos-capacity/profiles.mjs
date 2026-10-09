@@ -9,12 +9,12 @@ export function priority20Phases(profile='full'){
     {name:'peak',seconds:900,rate:'peak'},
     {name:'synchronized-read-burst',seconds:1,rate:'burst'},
     {name:'endurance',seconds:7200,rate:'normal'},
-  ].map(p=>({...p,stores:20,pos:22,profile,seconds:profile==='preflight'?3:p.seconds}));
+  ].map(p=>({...p,stores:20,pos:22,profile,seconds:profile==='preflight'?(p.rate==='burst'?1:60):p.seconds}));
 }
 
 export function priority20Events(phase,actors,owners){
   if(actors.length!==22||owners.length!==20)throw new Error('Priority20 requires all 22 POS and 20 BackOffice actors');
-  const peak=phase.rate==='peak',burst=phase.rate==='burst',short=phase.profile==='preflight';
+  const peak=phase.rate==='peak',burst=phase.rate==='burst';
   const pos=burst?[{kind:'pos-local-search',perMinute:1},{kind:'pos-refresh',perMinute:1}]:[
     {kind:'pos-local-search',perMinute:peak?12:6},
     {kind:'pos-refresh',perMinute:peak?2:1},
@@ -24,9 +24,8 @@ export function priority20Events(phase,actors,owners){
   ];
   const bo=[{kind:'backoffice-search',perMinute:peak?2:1},{kind:'backoffice-report',perMinute:peak?1:.2}];
   const seed=`priority20-${phase.name}`;
-  const events=[...scheduleActions(actors,pos,phase.seconds*1000,{seed:seed+'-pos',burst:burst||short}),
-    ...scheduleActions(owners,bo,phase.seconds*1000,{seed:seed+'-bo',burst:burst||short})];
-  if(short&&!burst){events.sort((a,b)=>a.id.localeCompare(b.id));events.forEach((e,i)=>{e.atMs=i*20})}
+  const events=[...scheduleActions(actors,pos,phase.seconds*1000,{seed:seed+'-pos',burst}),
+    ...scheduleActions(owners,bo,phase.seconds*1000,{seed:seed+'-bo',burst})];
   return events.sort((a,b)=>a.atMs-b.atMs||a.id.localeCompare(b.id));
 }
 

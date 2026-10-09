@@ -6,7 +6,8 @@ const actors=Array.from({length:22},(_,i)=>({id:`pos-${i}`})),owners=Array.from(
 test('full20 profile preserves real warmup/normal/peak/two-hour durations and labels short preflight',()=>{
   const full=priority20Phases();assert.deepEqual(full.map(p=>p.seconds),[300,1800,900,1,7200]);
   assert.ok(full.every(p=>p.stores===20&&p.pos===22&&p.profile==='full'));
-  assert.ok(priority20Phases('preflight').every(p=>p.seconds===3&&p.profile==='preflight'));
+  assert.deepEqual(priority20Phases('preflight').map(p=>p.seconds),[60,60,60,1,60]);
+  assert.ok(priority20Phases('preflight').every(p=>p.profile==='preflight'));
   assert.throws(()=>priority20Phases('smoke'));
 });
 test('normal and peak arrivals offer exact rates without double-counting refresh session validation',()=>{
@@ -25,12 +26,13 @@ test('burst synchronizes all POS refresh/search and BackOffice reads with no syn
   assert.equal(new Set(e.filter(e=>e.kind==='pos-refresh').map(e=>e.actor.id)).size,22);
   assert.throws(()=>priority20Events(priority20Phases()[0],actors.slice(1),owners));
 });
-test('preflight exercises every POS in each phase, with sales restricted to fresh non-burst actions',()=>{
+test('preflight preserves real normal/peak rates and avoids compressing a minute into seconds',()=>{
   for(const phase of priority20Phases('preflight')){
     const e=priority20Events(phase,actors,owners);
     assert.equal(new Set(e.filter(e=>e.kind.startsWith('pos-')).map(e=>e.actor.id)).size,22);
-    assert.equal(e.filter(e=>e.kind==='pos-sale').length,phase.rate==='burst'?0:22);
-    assert.ok(e.at(-1).atMs<3000);
+    assert.equal(e.filter(e=>e.kind==='pos-sale').length,phase.rate==='burst'?0:phase.rate==='peak'?66:22);
+    assert.ok(e.at(-1).atMs<phase.seconds*1000);
+    if(phase.rate!=='burst')assert.ok(e.at(-1).atMs>50000);
   }
 });
 test('phase verdict rejects drops, errors, excessive lag and route-specific latency',()=>{
