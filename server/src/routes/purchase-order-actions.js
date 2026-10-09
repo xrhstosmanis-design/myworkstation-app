@@ -6,7 +6,7 @@ const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-router.use((req,res,next)=>{if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Δεν έχεις δικαίωμα αποστολής παραγγελίας."});next()});
+router.use((req,res,next)=>{if(req.posPurchaseOrderAccess)return next();if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Δεν έχεις δικαίωμα αποστολής παραγγελίας."});next()});
 
 router.post("/:orderId/email",async(req,res,next)=>{try{
   const rows=await prisma.$queryRaw`SELECT o."id",o."storeId",o."invoiceNumber",o."status",o."description",o."createdAt",s."name" AS "supplierName",s."email" AS "supplierEmail",st."name" AS "storeName" FROM "PurchaseOrder" o JOIN "Store" st ON st."id"=o."storeId" AND st."companyId"=o."companyId" LEFT JOIN "Supplier" s ON s."id"=o."supplierId" WHERE o."id"=${req.params.orderId} AND o."companyId"=${req.user.companyId} LIMIT 1`;

@@ -42,7 +42,7 @@ test('empty/return-only and invalid quantity never post; server failures are not
 
 // Actual POS component, isolated DOM/API only: no real sale or LAB PASS.
 test('POS no-print button posts once without a dialog and retains cart on rejection',async()=>{
-  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
+  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
   const module={exports:{}};
   new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
   const Panel=module.exports.default,dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'});

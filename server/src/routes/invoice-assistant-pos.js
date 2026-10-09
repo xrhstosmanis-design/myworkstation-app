@@ -38,7 +38,7 @@ async function readUnnumberedPageEvidence(files,documentNumber,sourcePageCount){
 }
 
 function manager(req,res,next){
-  if(req.user?.tokenType==="STORE_OPERATOR"||!managers.has(req.user?.role))return res.status(403).json({error:"Ο έλεγχος τιμολογίου είναι διαθέσιμος μόνο σε ιδιοκτήτη ή διαχειριστή."});
+  if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!managers.has(req.user?.role)))return res.status(403).json({error:"Ο έλεγχος τιμολογίου είναι διαθέσιμος μόνο σε ιδιοκτήτη ή διαχειριστή."});
   next();
 }
 
