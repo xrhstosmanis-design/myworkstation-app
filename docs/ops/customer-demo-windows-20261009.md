@@ -17,3 +17,7 @@ Remaining, in order:
 5. Run isolated PostgreSQL/HTTP regression, exact-revision CI/release verification and actual Windows install/reopen/uninstall acceptance. Do not call CI or this synthetic preparation LAB/USER PASS.
 
 Full customer demo remains OPEN / NOT TESTED. No download is ready to send to customers.
+
+## Published evidence
+
+Source PR1945 / d7c9c1733648e740a8be38e3c3b2bccac51c9ca2 / full CI37884321450 SUCCESS / 1957 tests, zero failures/skips / main eba858d32617a4b4c0023b4fa7a6853072739299. Existing production build/invariants, isolated PostgreSQL16/HTTP flows and existing Windows smoke checks succeeded. Targeted Node20.20.2 tests: 8/8 PASS. No runnable customer demo, provider-exclusion E2E, demo-specific Windows or LAB/USER acceptance occurred. Next action and retained owner are recorded in the final handoff checkpoint.
