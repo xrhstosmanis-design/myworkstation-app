@@ -258,10 +258,10 @@
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
-- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN με προηγούμενο owner. Καμία νέα απογραφή/οριστικοποίηση/stock πράξη· Gate2 και TODAY-07 προστατεύονται.
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Καμία νέα απογραφή/οριστικοποίηση/stock πράξη· Gate2 και TODAY-07 προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ASSIGNED — updated10/10/2026, codex/n39-inventory-acceptance-20261010
 
 ## 40 — AI Command Center — μη ελεγμένες μεταβάσεις
 
