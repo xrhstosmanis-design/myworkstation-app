@@ -41,7 +41,11 @@ const enhanceChildWindows=()=>{
 };
 
 export default function CommerceLauncher(){
-  const supportStoreId=new URLSearchParams(window.location.search).get("supportStore")||"";
+  const supportStoreFromUrl=new URLSearchParams(window.location.search).get("supportStore")||"";
+  const [supportStoreId,setSupportStoreId]=useState(supportStoreFromUrl);
+  const openRequestRef=useRef(0);
+  const [entryLoading,setEntryLoading]=useState(false);
+  const [entryError,setEntryError]=useState("");
   const [visible,setVisible]=useState(false);
   const visibleRef=useRef(false);
   const [mode,setMode]=useState("products");
@@ -68,18 +72,33 @@ export default function CommerceLauncher(){
     return()=>observer.disconnect();
   },[visible]);
   useEffect(()=>{visibleRef.current=visible},[visible]);
-  const open=async()=>{
+  const open=async(target)=>{
+    const operations=target?.view==="operations";
+    const requestedStoreId=typeof target?.storeId==="string"?target.storeId.trim():"";
     // Some shell controls dispatch the opening event more than once.  Never
     // reset the user's active BackOffice tab while the window is already open.
-    if(visibleRef.current)return;
+    if(visibleRef.current&&!operations)return;
     // Set it synchronously as events can be emitted twice before React commits
     // the visible state. A second open must not reset the workspace.
     visibleRef.current=true;
-    setMode("products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
-    try{const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);setStores(list);setInventoryStoreId(list.find(store=>store.id===supportStoreId)?.id||list[0]?.id||"");setActiveModules(license.activeModules||[])}catch{setStores([]);setInventoryStoreId("");setActiveModules([])}
+    const requestId=++openRequestRef.current;
+    setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
+    setSupportStoreId(operations?requestedStoreId:supportStoreFromUrl);setEntryLoading(operations);setEntryError("");
+    if(operations){setStores([]);setInventoryStoreId("");setInventoryInitialProduct(null);setActiveModules([]);setInternetSearchOpen(false)}
+    try{
+      const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);
+      if(requestId!==openRequestRef.current||!visibleRef.current)return;
+      const scopedStores=operations?list.filter(store=>store.id===requestedStoreId):list;
+      if(operations&&(!requestedStoreId||!scopedStores.length))throw new Error("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Κλείσε και άνοιξε ξανά τις λειτουργίες από το κατάστημά σου.");
+      setStores(scopedStores);setInventoryStoreId(scopedStores.find(store=>store.id===(operations?requestedStoreId:supportStoreFromUrl))?.id||scopedStores[0]?.id||"");setActiveModules(license.activeModules||[]);
+    }catch(error){
+      if(requestId!==openRequestRef.current||!visibleRef.current)return;
+      setStores([]);setInventoryStoreId("");setActiveModules([]);
+      if(operations)setEntryError(error.message||"Δεν άνοιξαν οι λειτουργίες του καταστήματος.");
+    }finally{if(requestId===openRequestRef.current&&visibleRef.current)setEntryLoading(false)}
   };
   useEffect(()=>{
-    const handleOpen=()=>open();
+    const handleOpen=event=>open(event.detail);
     window.addEventListener("mws:commerce-open",handleOpen);
     return()=>window.removeEventListener("mws:commerce-open",handleOpen);
   },[]);
@@ -105,6 +124,7 @@ export default function CommerceLauncher(){
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
       <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{visibleRef.current=false;setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
+      {entryLoading?<p role="status">Φόρτωση λειτουργιών καταστήματος…</p>:entryError?<p role="alert">{entryError}</p>:<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>{setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
@@ -117,12 +137,13 @@ export default function CommerceLauncher(){
           <button className={legacyView==="wholesale"?"active":""} onClick={()=>setLegacyView("wholesale")}>Χονδρική / B2B</button>
           {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="wholesale"?<WholesaleB2BPanel api={request}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub api={request} stores={stores} activeStoreId={supportStoreId}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="wholesale"?<WholesaleB2BPanel api={request}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
       {parametersOpen&&canManageParameters&&<ManagementParametersPanel api={request} onClose={()=>setParametersOpen(false)}/>} 
       {internetSearchOpen&&<InternetProductSearchPanel api={request} stores={stores} onClose={()=>setInternetSearchOpen(false)}/>}
+      </>}
       </>}
     </section></div>}
   </>;

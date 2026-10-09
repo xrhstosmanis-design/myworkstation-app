@@ -144,7 +144,7 @@ export default function StoreCloudPage({api,store,onBack,onWorkforce}){
       <div className="owner-store-tool-grid">
         {onWorkforce&&<button type="button" onClick={onWorkforce}><Users/><b>Προσωπικό & Πρόγραμμα</b><span>Εργαζόμενοι, κάρτες και QR</span></button>}
         <button type="button" className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
-        <button type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/><b>Εμπορική λειτουργία</b><span>Προϊόντα, αποθήκη, modules</span></button>
+        <button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id}}))}><BriefcaseBusiness/><b>Λοιπές εμπορικές λειτουργίες</b><span>Λειτουργίες και modules καταστήματος</span></button>
         <button type="button" className={toolOpen==="transactions"?"active":""} onClick={()=>setToolOpen(v=>v==="transactions"?"":"transactions")}><RefreshCw/><b>Συναλλαγές</b><span>Αναλυτικές κινήσεις καταστήματος</span></button>
       </div>
     </section>
