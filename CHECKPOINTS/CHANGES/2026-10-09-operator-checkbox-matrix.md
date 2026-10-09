@@ -26,7 +26,7 @@ Source main b37cb72e; every checkbox from the two owner screenshots, plus curren
 | POS_PERMISSIONS | customersPos | Πελάτες (PoS) | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
 | POS_PERMISSIONS | customersBackoffice | Πελάτες (BackOffice) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | returnWithCode | με κωδικό για επιστροφή ειδών (PoS) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
-| POS_PERMISSIONS | centralCashPos | Εμφάνιση κεντρικού Ταμείου (PoS) | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
+| POS_PERMISSIONS | centralCashPos | Εμφάνιση κεντρικού Ταμείου (PoS) | REMOVE INERT CONTROL / historical patch strings only; stored value retained |
 | POS_PERMISSIONS | centralCashBackoffice | Εμφάνιση κεντρικού Ταμείου (BackOffice) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | supplierBalances | Υπόλοιπα προμηθευτών (BackOffice) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | redeemPoints | Εξαργύρωση πόντων πελάτη (PoS) | REMOVE INERT CONTROL / STORED VALUES RETAINED |

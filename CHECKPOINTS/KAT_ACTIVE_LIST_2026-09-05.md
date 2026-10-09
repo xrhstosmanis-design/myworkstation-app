@@ -1,3 +1,19 @@
+## 2026-10-09T21:13Z — CASH visibility correction before release
+
+Actual POS markup nests CASH in standard-payment-end, not direct action-bar child. Correct cash=false selector to actual nested button and extend real-layout CSS fixture to assert denied CASH then granted CASH. Card/IRIS/dispatch tests preserved. FullCI must certify finalhead, not superseded source.
+
+## 2026-10-09T21:11Z — Extra inert control and CI registry blocker
+
+Fresh consumer audit found centralCashPos only in historical patch scripts, not actual UI/runtime. Remove it from editor (legacy save retained): original79 minus54 inert =25 retained,22POS+orders+posAccess+active; details24/access1/other0. Prior26-count LIVE proof remains historical, not overwritten. FullCI37991572404 attempts1/2 failed beforecheckout at Docker Hub unauthenticated pull limit, no tests executed. Use same Docker Official postgres16 image at public.ecr.aws/docker/library/postgres:16 (Docker official mirror documentation https://www.docker.com/blog/news-from-aws-reinvent-docker-official-images-on-amazon-ecr-public/). No application PostgreSQL version/configuration or test gate changed. NewexactheadfullCI required.
+
+## 2026-10-09T21:11Z — Shift-status fix IMPLEMENTED / AWAITING CI + LIVE
+
+Minimal own-store/bound-terminal shift-status response exposes onlyid/status/openedAt; previous closing suggestions require INITIAL_CASH. Full cash overview remains permission guarded. POS entry uses minimal status and shows explicit error/retry/logout on check failure. Targeted16/16PASS including actual React failed fetch then retry recovery and real route callback boundary/no balance tests; frontend productionbuildPASS15.14s. Original LAB POS2 details restored exact and existing empty-cart POS returned after prior restrictive-profile FAIL. Newsource not live accepted. Same owner/tracker35 remainsOPEN; nextfullCI/guard/exacthealth then accepted26-controls test without economic writes.
+
+## 2026-10-09T21:07Z — OPERATOR-CHECKBOX-01 restrictive LIVE FAIL / restored / fixing
+
+Specific action-time user approval received. Restrictive23 flags+ordersfalse saved and re-read; profileactive/posAccesstrue. Ordinary LAB POS2 stalls at shift check because cash overview requires cash/ledger rights; null-state loading guard hides denial. Original25 details independently re-read exact restored; POS own-store emptycart0/STOCK/payments returned, orders restored in save and next re-read required. No economic/stock/shift write or credential change; financial/control deltas NOT TESTED. BEFORE profile evidence operator-permission-baseline-20261010.json and checkpoint prior to each save. Same owner codex/operator-checkbox-audit-20261009 retained, tracker35/printed33 OPEN. Next bounded source: scoped minimal shift-status read without cash totals, initial opening suggestions only with existing INITIAL_CASH permission; explicit recoverable error instead of endless loader. Full overview/transaction/tenant/terminal guards retained. CI and exact healthy release required before further live grant/deny checks.
+
 ## 2026-10-09T20:56Z — OPERATOR-CHECKBOX-01 bounded LIVE PASS / wider acceptance OPEN
 
 Owner codex/operator-checkbox-audit-20261009 retained; printed33/tracker35 remains ASSIGNED / PARTIAL LIVE PASS / OPEN. SourcePR1994 finalhead5331ab0999aeb621b2531928f3a6c97ccc33c7d0 fullCI37987782922 SUCCESS, 2003tests/2003PASS/0FAIL/0SKIP; merge62fe51eab0a89478cf54ff821260194d5d49aa24. MainCI37988859210 and guardedRender37989197359 SUCCESS; independent /api/health HTTP200 ok=true exact62fe51ea observed20:50Z.
