@@ -28,12 +28,12 @@ test('current profile display rights refresh on catalog and access, never on unr
 test('payment and IRIS visibility target the actual buttons while supplier dispatch stays available',()=>{
  const src=fs.readFileSync(new URL('../../client/src/components/store/StoreOperatorApp.jsx',import.meta.url),'utf8');
  const body=src.match(/function applyPosPermissionStyle\(access\)\{[\s\S]*?\n\}/)[0];
- const dom=new JSDOM('<head></head><body><div class="compact-store-mode"><div class="standard-action-bar"><button>CLEAR</button><button>HOLD</button><button>RETURN</button><button>DISPATCH</button><button class="pos-payments-action">PAYMENTS</button><button class="card">CARD</button><div class="standard-payment-end"><button class="iris">IRIS</button></div></div></div></body>');
+ const dom=new JSDOM('<head></head><body><div class="compact-store-mode"><div class="standard-action-bar"><button>CLEAR</button><button>HOLD</button><button>RETURN</button><button>DISPATCH</button><button class="pos-payments-action">PAYMENTS</button><button class="card">CARD</button><div class="standard-payment-end"><button class="iris">IRIS</button><button class="cash">CASH</button></div></div></div></body>');
  const apply=vm.runInNewContext('('+body+')',{document:dom.window.document,POS_PERMISSION_STYLE_ID:'test-rights'});
  apply({});const buttons=[...dom.window.document.querySelectorAll('button')];
  assert.notEqual(dom.window.getComputedStyle(buttons[3]).display,'none');
  for(const b of buttons.slice(4))assert.equal(dom.window.getComputedStyle(b).display,'none');
- apply({supplierPayment:true,cards:true});for(const b of buttons.slice(3))assert.notEqual(dom.window.getComputedStyle(b).display,'none');
+ apply({supplierPayment:true,cards:true,cash:true});for(const b of buttons.slice(3))assert.notEqual(dom.window.getComputedStyle(b).display,'none');
  dom.window.close();
 });
 

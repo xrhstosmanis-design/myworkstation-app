@@ -1,3 +1,7 @@
+## 2026-10-09T21:13Z — CASH visibility correction before release
+
+Actual POS markup nests CASH in standard-payment-end, not direct action-bar child. Correct cash=false selector to actual nested button and extend real-layout CSS fixture to assert denied CASH then granted CASH. Card/IRIS/dispatch tests preserved. FullCI must certify finalhead, not superseded source.
+
 ## 2026-10-09T21:11Z — Extra inert control and CI registry blocker
 
 Fresh consumer audit found centralCashPos only in historical patch scripts, not actual UI/runtime. Remove it from editor (legacy save retained): original79 minus54 inert =25 retained,22POS+orders+posAccess+active; details24/access1/other0. Prior26-count LIVE proof remains historical, not overwritten. FullCI37991572404 attempts1/2 failed beforecheckout at Docker Hub unauthenticated pull limit, no tests executed. Use same Docker Official postgres16 image at public.ecr.aws/docker/library/postgres:16 (Docker official mirror documentation https://www.docker.com/blog/news-from-aws-reinvent-docker-official-images-on-amazon-ecr-public/). No application PostgreSQL version/configuration or test gate changed. NewexactheadfullCI required.

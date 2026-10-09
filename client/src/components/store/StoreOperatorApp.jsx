@@ -37,7 +37,7 @@ function applyPosPermissionStyle(access){
  if(access.hidePrinter)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(4){display:none!important}");
  if(!access.editDescription)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(5){display:none!important}");
  if(!access.cards)rules.push(".compact-store-mode .standard-action-bar>button.card,.compact-store-mode .standard-payment-end>button.iris{display:none!important}");
- if(!access.cash)rules.push(".compact-store-mode .standard-action-bar>button.cash{display:none!important}");
+ if(!access.cash)rules.push(".compact-store-mode .standard-payment-end>button.cash{display:none!important}");
  style.textContent=rules.join("\n");
 }
 export default function StoreOperatorApp({api:baseApi,storeId}){
