@@ -26,7 +26,7 @@ function fixture(){
     captureNotice:(text,error)=>notices.push({text,error})
   });
   // Execute the shipped event handlers and async request logic; only DOM drawing is replaced.
-  vm.runInContext(source.replaceAll("export function ","function ")+`
+  vm.runInContext(source.replace(/^import \{installInvoiceProductMatcher\} from "\.\.\/\.\.\/invoice-product-matcher\.js";\n/,"").replaceAll("export function ","function ")+`
     render=root=>{captureRender(header()+ordersHtml());bindRoot(root)};
     notify=(root,text,error)=>captureNotice(text,error);
     globalThis.suite={state,loadReport,refreshReport,refreshActiveSuite,bindRoot,installPurchaseOrdersSuite};

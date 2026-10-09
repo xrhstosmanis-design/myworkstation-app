@@ -24,7 +24,7 @@ export function createPosPurchaseOrderAccess(db=prisma,entitlement=requireStoreM
    const match=path.match(/^\/([^/]+)(?:\/(.*))?$/);
    const tail=match?.[2]||"",orderId=match?.[1];
    const orderAction=!commerce&&match&&((!tail&&method==="PATCH")||(tail==="detail"&&method==="GET")||(tail==="reconcile-ocr-total"&&method==="POST")||(tail==="lines"&&method==="POST")||(/^lines\/[^/]+$/.test(tail)&&["PATCH","DELETE"].includes(method)));
-   const ocrAction=commerce&&match&&((tail==="ocr-lines"&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:search|options)$/.test(tail)&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:resolve-existing|create-product)$/.test(tail)&&method==="POST")||(/^invoice-assistant\/(?:source|preview)$/.test(tail)&&["GET","POST"].includes(method)));
+   const ocrAction=commerce&&match&&((tail==="ocr-lines"&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:search|options|catalog-matches)$/.test(tail)&&method==="GET")||(/^ocr-lines\/[^/]+\/(?:resolve-existing|create-product)$/.test(tail)&&method==="POST")||(/^invoice-assistant\/(?:source|preview)$/.test(tail)&&["GET","POST"].includes(method)));
    if(!collection&&!orderAction&&!ocrAction)return res.status(403).json({error:"Η ενέργεια δεν ανήκει στην καταχώριση τιμολογίου POS.",code:"POS_ORDERS_ACTION_DENIED"});
    if((req.body?.addBarcode||(/\/create-product$/.test(tail)&&["PROVIDED","GENERATED"].includes(req.body?.barcodeMode)))&&profile.permissions?.addBarcode!==true)
     return res.status(403).json({error:"Δεν έχεις δικαίωμα προσθήκης barcode.",code:"POS_ORDERS_BARCODE_DENIED"});
