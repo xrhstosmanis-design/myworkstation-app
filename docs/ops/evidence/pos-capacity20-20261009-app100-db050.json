@@ -1,0 +1,636 @@
+{
+  "recordedAt": "2026-10-09T16:14:32.800060+03:00",
+  "kind": "ISOLATED_SHORT_CORRECTNESS_PASS_WITH_BURST_LATENCY_FAIL",
+  "sourceRevision": "26e94385d31de532aedb89b5389f38c6b33c336c",
+  "capacityRun": {
+    "id": 37934356551,
+    "jobId": 113832572773,
+    "workflowResult": "SUCCESS_CORRECTNESS_ONLY",
+    "artifactId": 11618266197,
+    "artifactDigest": "sha256:4b0a31a999292ff19453a5507ddbbc22d07fea0c00397010edaa665a738ee09e",
+    "artifactExpiresAt": "2026-11-08T13:11:02Z"
+  },
+  "model": {
+    "sourceRevision": "26e94385d31de532aedb89b5389f38c6b33c336c",
+    "node": "v20.20.2",
+    "generator": {
+      "cpuCount": 4,
+      "totalMemoryBytes": 16766414848,
+      "platform": "linux"
+    },
+    "destination": {
+      "host": "127.0.0.1",
+      "database": "myworkstation_capacity20_test"
+    },
+    "mode": "priority20",
+    "profile": "preflight",
+    "productCount": 7000,
+    "storeProductCount": 5000,
+    "applicationHardware": "Isolated APP-only comparison app1.00CPU/512MiB;PG18 0.50CPU/256MiB;no production change",
+    "applicationPoolLimit": "5 (explicit test model;production configured limit NOT_MEASURED)",
+    "diagnosticPoolLimit": 2,
+    "omitted": [
+      "invoice/provider job load",
+      "myDATA/workforce job budget",
+      "independent-company distribution",
+      "supplier and financial history volume",
+      "optional holds/audience/table-service refresh calls",
+      "physical devices/UI rendering",
+      "external fiscal/card providers",
+      "restart/failover/restore"
+    ],
+    "conclusion": "ISOLATED_HARNESS_ONLY_NOT_PRODUCTION_CAPACITY",
+    "postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit"
+  },
+  "intentionallyChangedVariable": "APP CPU0.15 to1.00 at fixed DB0.50",
+  "stages": [
+    {
+      "name": "warmup",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T13:06:52.608Z",
+      "finishedAt": "2026-10-09T13:07:52.374Z",
+      "elapsedMs": 59757.501479,
+      "peakInFlight": 3,
+      "byKind": {
+        "pos-local-search": {
+          "offered": 132,
+          "started": 132,
+          "completed": 132,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.16563999999925727,
+          "p95Ms": 0.2943410000007134,
+          "p99Ms": 0.4377390000008745,
+          "maxMs": 1.0875060000034864,
+          "offeredP95Ms": 0.9132421328831697,
+          "offeredP99Ms": 1.2474498862866312,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 34.591301000000385,
+          "p95Ms": 40.221885000006296,
+          "p99Ms": 74.68088599999828,
+          "maxMs": 74.68088599999828,
+          "offeredP95Ms": 40.06313771869827,
+          "offeredP99Ms": 75.52367995624809,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 23.827751000004355,
+          "p95Ms": 27.811749000000418,
+          "p99Ms": 47.385401999999885,
+          "maxMs": 47.385401999999885,
+          "offeredP95Ms": 27.857607306305,
+          "offeredP99Ms": 46.85617962067772,
+          "errors": {}
+        },
+        "pos-session": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 8.549670000000333,
+          "p95Ms": 10.838707000002614,
+          "p99Ms": 16.646809999998368,
+          "maxMs": 16.646809999998368,
+          "offeredP95Ms": 10.670078290597303,
+          "offeredP99Ms": 21.977778143565956,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 4,
+          "started": 4,
+          "completed": 4,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 16.635661000000255,
+          "p95Ms": 76.16397300000244,
+          "p99Ms": 76.16397300000244,
+          "maxMs": 76.16397300000244,
+          "offeredP95Ms": 75.5116136513061,
+          "offeredP99Ms": 75.5116136513061,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 292.3493559999988,
+          "p95Ms": 434.002034000001,
+          "p99Ms": 559.765926,
+          "maxMs": 559.765926,
+          "offeredP95Ms": 434.3528350293891,
+          "offeredP99Ms": 560.0513531945289,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "PASS",
+        "violations": []
+      },
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 2.8275,
+          "maxCpuPercentOfHostCore": 14.63,
+          "highestSampledMemory": "136.2MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 10.5275,
+          "maxCpuPercentOfHostCore": 21.79,
+          "highestSampledMemory": "199MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "normal",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T13:07:52.385Z",
+      "finishedAt": "2026-10-09T13:08:52.591Z",
+      "elapsedMs": 60192.911276,
+      "peakInFlight": 3,
+      "byKind": {
+        "pos-session": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 8.450039000003017,
+          "p95Ms": 31.49442099998123,
+          "p99Ms": 46.03645499999402,
+          "maxMs": 46.03645499999402,
+          "offeredP95Ms": 31.055502705683466,
+          "offeredP99Ms": 44.5554675005842,
+          "errors": {}
+        },
+        "pos-local-search": {
+          "offered": 132,
+          "started": 132,
+          "completed": 132,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.1536480000067968,
+          "p95Ms": 0.257383000003756,
+          "p99Ms": 0.29608500000904314,
+          "maxMs": 0.4761839999991935,
+          "offeredP95Ms": 0.7554889555030968,
+          "offeredP99Ms": 1.2056122351641534,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 32.59629899999709,
+          "p95Ms": 46.09086600001319,
+          "p99Ms": 54.52554799999052,
+          "maxMs": 54.52554799999052,
+          "offeredP95Ms": 45.57301600649953,
+          "offeredP99Ms": 54.48008574868436,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 253.3680020000029,
+          "p95Ms": 330.7656699999934,
+          "p99Ms": 373.05476400000043,
+          "maxMs": 373.05476400000043,
+          "offeredP95Ms": 330.4374445466674,
+          "offeredP99Ms": 371.8988998935238,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 23.251923000003444,
+          "p95Ms": 117.57005100000242,
+          "p99Ms": 150.3893620000017,
+          "maxMs": 150.3893620000017,
+          "offeredP95Ms": 117.29387361749832,
+          "offeredP99Ms": 151.08260023471666,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 4,
+          "started": 4,
+          "completed": 4,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 13.8403550000221,
+          "p95Ms": 26.322314999997616,
+          "p99Ms": 26.322314999997616,
+          "maxMs": 26.322314999997616,
+          "offeredP95Ms": 25.963314186723437,
+          "offeredP99Ms": 25.963314186723437,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "PASS",
+        "violations": []
+      },
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 7.755,
+          "maxCpuPercentOfHostCore": 19.79,
+          "highestSampledMemory": "132MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 2.72625,
+          "maxCpuPercentOfHostCore": 9.29,
+          "highestSampledMemory": "207.3MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "peak",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T13:08:52.617Z",
+      "finishedAt": "2026-10-09T13:09:52.697Z",
+      "elapsedMs": 60068.65375299999,
+      "peakInFlight": 3,
+      "byKind": {
+        "pos-local-search": {
+          "offered": 264,
+          "started": 264,
+          "completed": 264,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.1488789999857545,
+          "p95Ms": 0.2330669999937527,
+          "p99Ms": 0.27693900000303984,
+          "maxMs": 0.5756990000081714,
+          "offeredP95Ms": 0.8972793140274007,
+          "offeredP99Ms": 5.727585391374305,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 66,
+          "started": 66,
+          "completed": 66,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 30.943551000003936,
+          "p95Ms": 155.47532199998386,
+          "p99Ms": 191.71513499997673,
+          "maxMs": 191.71513499997673,
+          "offeredP95Ms": 155.66949558648048,
+          "offeredP99Ms": 191.37372349499492,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 44,
+          "started": 44,
+          "completed": 44,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 266.83494099997915,
+          "p95Ms": 409.7508000000089,
+          "p99Ms": 502.82481399999233,
+          "maxMs": 502.82481399999233,
+          "offeredP95Ms": 409.79505677343695,
+          "offeredP99Ms": 502.51292849576566,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 40,
+          "started": 40,
+          "completed": 40,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 23.158029999991413,
+          "p95Ms": 85.92835100000957,
+          "p99Ms": 121.1604600000137,
+          "maxMs": 121.1604600000137,
+          "offeredP95Ms": 85.32517069505411,
+          "offeredP99Ms": 120.54663654777687,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 13.194684000016423,
+          "p95Ms": 38.49075000002631,
+          "p99Ms": 125.70059200000833,
+          "maxMs": 125.70059200000833,
+          "offeredP95Ms": 38.59589617463644,
+          "offeredP99Ms": 125.61978643547627,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "PASS",
+        "violations": []
+      },
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 15.1625,
+          "maxCpuPercentOfHostCore": 24.91,
+          "highestSampledMemory": "139.1MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 15.23625,
+          "maxCpuPercentOfHostCore": 34.22,
+          "highestSampledMemory": "211MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "synchronized-read-burst",
+      "plannedSeconds": 1,
+      "startedAt": "2026-10-09T13:09:52.725Z",
+      "finishedAt": "2026-10-09T13:10:01.877Z",
+      "elapsedMs": 9137.045311000024,
+      "peakInFlight": 84,
+      "byKind": {
+        "pos-local-search": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 9.402093000011519,
+          "p95Ms": 18.45445000001928,
+          "p99Ms": 19.209906000003684,
+          "maxMs": 19.209906000003684,
+          "offeredP95Ms": 32.566883000021335,
+          "offeredP99Ms": 32.567454000003636,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 8259.019773999986,
+          "p95Ms": 8260.861323999998,
+          "p99Ms": 8261.152621999994,
+          "maxMs": 8261.152621999994,
+          "offeredP95Ms": 8271.434746000014,
+          "offeredP99Ms": 8271.80277400001,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 664.5597819999966,
+          "p95Ms": 1064.8260099999898,
+          "p99Ms": 1069.2079039999808,
+          "maxMs": 1069.2079039999808,
+          "offeredP95Ms": 1076.8382860000129,
+          "offeredP99Ms": 1082.264095999999,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 6018.781201999984,
+          "p95Ms": 9032.567196000018,
+          "p99Ms": 9106.038693999988,
+          "maxMs": 9106.038693999988,
+          "offeredP95Ms": 9050.177455000026,
+          "offeredP99Ms": 9137.027669000003,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "FAIL",
+        "violations": [
+          "backoffice-report:latency",
+          "backoffice-search:latency",
+          "pos-refresh:latency"
+        ]
+      },
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 1,
+          "meanCpuPercentOfHostCore": 49.48,
+          "maxCpuPercentOfHostCore": 49.48,
+          "highestSampledMemory": "133.6MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 1,
+          "meanCpuPercentOfHostCore": 49.9,
+          "maxCpuPercentOfHostCore": 49.9,
+          "highestSampledMemory": "213.4MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "endurance",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T13:10:01.899Z",
+      "finishedAt": "2026-10-09T13:11:02.002Z",
+      "elapsedMs": 60090.947342,
+      "peakInFlight": 3,
+      "byKind": {
+        "pos-local-search": {
+          "offered": 132,
+          "started": 132,
+          "completed": 132,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.1493800000171177,
+          "p95Ms": 0.25602999998955056,
+          "p99Ms": 0.26981600001454353,
+          "maxMs": 0.282299000013154,
+          "offeredP95Ms": 1.060238393227337,
+          "offeredP99Ms": 1.9420628118677996,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 32.040440999990096,
+          "p95Ms": 49.23311299999477,
+          "p99Ms": 96.4642659999954,
+          "maxMs": 96.4642659999954,
+          "offeredP95Ms": 49.079295218136394,
+          "offeredP99Ms": 97.35983267097617,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 235.1538029999938,
+          "p95Ms": 361.86181600001873,
+          "p99Ms": 469.2722869999998,
+          "maxMs": 469.2722869999998,
+          "offeredP95Ms": 361.6524387591344,
+          "offeredP99Ms": 469.31671605669544,
+          "errors": {}
+        },
+        "pos-session": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 8.296438999997918,
+          "p95Ms": 9.225769000011496,
+          "p99Ms": 15.023111000016797,
+          "maxMs": 15.023111000016797,
+          "offeredP95Ms": 9.690016653446946,
+          "offeredP99Ms": 14.959757695207372,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 5,
+          "started": 5,
+          "completed": 5,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 11.776091000007,
+          "p95Ms": 12.780976000009105,
+          "p99Ms": 12.780976000009105,
+          "maxMs": 12.780976000009105,
+          "offeredP95Ms": 12.778037290932843,
+          "offeredP99Ms": 12.778037290932843,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 22.714203000010457,
+          "p95Ms": 25.65135500000906,
+          "p99Ms": 45.057445999991614,
+          "maxMs": 45.057445999991614,
+          "offeredP95Ms": 26.28360348561546,
+          "offeredP99Ms": 44.65032457310008,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "PASS",
+        "violations": []
+      },
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 9.06625,
+          "maxCpuPercentOfHostCore": 40.54,
+          "highestSampledMemory": "166.1MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 10.3775,
+          "maxCpuPercentOfHostCore": 28.21,
+          "highestSampledMemory": "215.2MiB / 256MiB"
+        }
+      }
+    }
+  ],
+  "reconciliation": {
+    "result": "ALL132SYNTHETIC_SALES_PASS",
+    "intendedAcceptedPersistedSales": 132,
+    "explicitRejections": 0,
+    "cashAmount": 330,
+    "stockDelta": -132,
+    "paymentMovementAuditRequestLinksMatch": true,
+    "controlStock": 100000,
+    "idempotentReplayNoEffect": "HARNESS_ASSERTION_PASS"
+  },
+  "finalContainerState": {
+    "at": "2026-10-09T13:11:02.492524+00:00",
+    "containers": [
+      {
+        "name": "/mws-capacity-app",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T13:06:21.810823727Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 536870912,
+        "memorySwapBytes": 536870912,
+        "nanoCPUs": 1000000000
+      },
+      {
+        "name": "/mws-capacity-db",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T13:06:12.789325251Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 268435456,
+        "memorySwapBytes": 268435456,
+        "nanoCPUs": 500000000
+      }
+    ],
+    "applicationSignals": {
+      "P2024": 0,
+      "AUTH_VALIDATION_UNAVAILABLE": 0,
+      "JavaScript heap out of memory": 0,
+      "deadlock detected": 0
+    },
+    "databaseErrorCodes": [
+      "42P01"
+    ],
+    "knownErrorSignals": {
+      "statement timeout": 0,
+      "connection pool": 0,
+      "does not exist": 1,
+      "out of memory": 0,
+      "transaction timeout": 0,
+      "Unable to start a transaction": 0,
+      "Unknown argument": 0
+    }
+  },
+  "production20Readiness": "NOT_ESTABLISHED",
+  "fullDurationRun": "NOT_STARTED",
+  "limitations": [
+    "Fresh IDs change arrival phasing;single comparisons do not prove causal effect",
+    "Preflight duration60seconds perphase;full duration NOT_TESTED",
+    "Burst84simultaneous logical reads/106HTTP completed but failed unchanged latency criteria",
+    "Docker/GitHub is not Render equivalent;pool5 explicitly chosen,production pool unknown",
+    "No representative jobs,history,independent companies,devices/providers/UI/failover acceptance",
+    "One burst resource sample within nine seconds;not a full CPU trace"
+  ],
+  "nextAction": "Fresh DB-CPU-only comparison0.50 to2.00 with APP1.00 and memory/pool/rates/criteria unchanged"
+}
