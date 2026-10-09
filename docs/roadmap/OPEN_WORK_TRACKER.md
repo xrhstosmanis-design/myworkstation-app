@@ -1,3 +1,7 @@
+## 09/10/2026 07:21 Europe/Athens — CUSTOMER-DEMO-01 / ASSIGNED / NOT TESTED
+
+Owner `codex/customer-demo-windows-20261009`, authorized09Oct07:18. New independent Windows customer demo with existing full POS + Backoffice on one synthetic store/company per customer, online first version. No duplicate installation/fiscal/capacity/Gate ownership. First bounded scope: inactive-by-default validated demo identity/readiness/policy and synthetic manifest, with no production provisioning or provider call. Full SA lifecycle, runtime isolation/outbound enforcement, shared existing-app POS/Backoffice, installer, PostgreSQL/HTTP and physical Windows acceptance remain OPEN/NOT TESTED. Claim checkpoint `CHECKPOINTS/CHANGES/2026-10-09-customer-demo-windows.md`. No customer/demo creation, database/schema/seed, financial/stock/fiscal/auth/license or live state change. Existing PASS/owners remain protected. Claim must be merged before source edits.
+
 ## 2026-10-09T00:13:23.236592+03:00 - POS-DB-LOCK-01 / isolated HARNESS verified and published / 110-POS production capacity OPEN
 
 ClaimPR1939/head18b6e5f7/docsCI37839430464/maincc17788 preceded source. SourcePR1941 finalhead2ab76352bdf83961e8a35062bc1dbd606afea350/fullCI37844453605 SUCCESS1949/1949/0fail/0skip; actual CI checkout6c14f9e38aa4cf5716c86ad81317d7debb321663/job113541784160. Merged532a955f710e0d67ba443194e1e93cfc1e6ca22d. Latest wireless-entry source8caf17fc and releasee0d7f6cc/PR1942 preserved. Main full CI/deployment workflow are independently tracked; this test-tool publication does not certify a new production business behavior.
@@ -1304,3 +1308,15 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 
 
+
+### CUSTOMER-DEMO-01 — Demo εγκατάστασης Windows: POS και πλήρες Backoffice
+
+**Κατάσταση:** ASSIGNED / NOT IMPLEMENTED / NOT TESTED
+
+**Υπεύθυνη σελίδα / branch:** `codex/customer-demo-windows-20261009`
+
+**Ανάληψη:** 09/10/2026 07:21 Europe/Athens — νέα ρητή απαίτηση πελάτη, Windows online πρώτο πακέτο. Απομονωμένα εικονικά δεδομένα ανά demo, κοινό POS–Backoffice, server-side απαγόρευση πραγματικών πληρωμών/φορολογίας/myDATA. Πρώτο περιορισμένο scope: ανενεργή θεμελίωση συμβολαίου/policy/fixture manifest. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-customer-demo-windows.md.
+
+**Υπόλοιπο:** SA lifecycle, πλήρης server/workers isolation και outbound enforcement, synthetic provisioning, DEMO UI, δύο authenticated shortcuts, Windows installer/download, PostgreSQL/HTTP/CI/exact release/physical Windows acceptance. Δεν είναι έτοιμο για πελάτες. Άλλες αναθέσεις αμετάβλητες.
+
+**Ολοκλήρωση:** NOT TESTED — κανένα νέο LAB/USER PASS, καμία production μεταβολή.

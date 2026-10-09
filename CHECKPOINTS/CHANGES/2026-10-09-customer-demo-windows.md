@@ -1,0 +1,19 @@
+# CUSTOMER-DEMO-01 — Windows POS + Backoffice demo
+
+## Claim — 09/10/2026 07:21 Europe/Athens
+
+ASSIGNED `codex/customer-demo-windows-20261009`. Owner explicitly requests a customer-installable Windows demo, confirms Windows installation and full Backoffice, then authorizes starting on 09/10/2026 07:18. Online first version; POS and Backoffice share one synthetic store belonging to a new demo company per customer. Same repository/application; no second production service.
+
+Reviewed main `72529cca12c60ccd0fec2fd78fdbea826f00be48`, current AGENTS, numbered checklist, full fetched canonical active list/tracker/pending registers, relevant installation checkpoints, technician manual and history since guided-installation PR1745. No customer demo ownership or acceptance exists. Existing REMOTE-INSTALL-01, INSTALL-SUPPORT, physical Diadoxou installation, capacity and numbered Gate owners remain unchanged. Gate3 PASS is protected; historical contradictory OPEN prose does not reopen it.
+
+Evidence: CUSTOMER DEMO **NOT IMPLEMENTED / NOT TESTED**. Existing Windows Store Mode installer and remote CAPDriver evidence are scoped historical results, not customer-demo PASS. Capacity harness demonstrates synthetic non-fiscal cash checkout through existing POS/Backoffice APIs on an isolated localhost test DB; it is not an installable customer demo or authorization to seed production.
+
+First bounded implementation: inactive-by-default customer demo contract and synthetic fixture manifest, with strict tenant/store identity, expiry and outbound capability exclusions. Test that malformed/unready/foreign contexts cannot produce an installable manifest, no secrets/real-store data are packaged, deterministic IDs are separate per demo, amounts remain exact, and policy fails closed. Windows package foundation must validate an authenticated server-issued demo readiness response before writing POS/Backoffice shortcuts; a client-provided DEMO flag or a store name is not authorization. No production demo, credentials, company/store/module, seed, sale, payment, stock, fiscal command, migration or paid infrastructure change is authorized by this claim alone.
+
+Full agreed residual remains OPEN: server-persisted demo lifecycle and SA creation/revocation, end-to-end outbound enforcement including background workers and all provider/settings routes, synthetic provisioning through existing business schema, visible DEMO context throughout existing POS/Backoffice, authenticated dual launch without cross-store/session leaks, Windows package/download, real isolated PostgreSQL/HTTP isolation and idempotency regression, CI/exact release, and physical Windows acceptance. No installer may be offered as ready until every runtime readiness condition is enforced server-side.
+
+Protected behaviors: existing tenant/auth/license enforcement, ordinary company fiscal/card/myDATA behavior, one-sale/payment/stock posting idempotency, scoped shift/report rules, no replay of prior LAB transactions, physical installer/Writer and active owner scopes. Demo transactions must never touch real company data or providers; reset (if later requested) must be demo-only and audited, not reuse LAB records.
+
+Acceptance requires two independent customer demos plus real/LAB control; authenticate POS and Backoffice, one identified sale and one replay, compare sale/payment/stock/shift/report/Audit before/after in only the selected demo, adversarial store/company/expiry/revocation/provider/settings checks, zero outbound calls, and Windows install/reopen/uninstall with personal authentication. Physical/device acceptance is NOT TESTED. No PASS manual is added from local tests.
+
+Single next action after claim is green and merged to main: implement the bounded inactive foundation and its meaningful contract/negative-path tests; update this checkpoint and registers. Owner remains assigned until completed or named handoff.
