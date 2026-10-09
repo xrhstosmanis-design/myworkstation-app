@@ -1,13 +1,3 @@
-## 2026-10-09T15:49:37.811Z - POS-NO-PRINT-DISPLAY-01 / LIVE / AWAITING USER read-only label retest
-
-Owner codex/pos-no-print-display-20261009; source PR #1959 final head 8fd1362c26f42ae88623c3a8534617be899bab58. Exact-head full CI 37953345034 SUCCESS; merge 96932a3774b15b8a4cfb2423a73788a13bf9a427; main CI 37953781791 SUCCESS; guarded deployment 37954085658 SUCCESS. Render dep-db4go9rbc2fs73bob3og LIVE 2026-10-09T15:48:43.906147Z; independent fresh public health 2026-10-09T15:49:16.634Z HTTP200 / ok=true / exact 96932a3774b15b8a4cfb2423a73788a13bf9a427. Claim PR #1958 / docs CI 37952899987 SUCCESS / merge aa2de84d4d7fa7668a20cb0ae0d26d091e45f5ca preceded source edits.
-
-Shift movement title for existing WASTE rows is «Κλείσιμο χωρίς εκτύπωση». Only that read-only display literal and its existing guard changed. Preserve WASTE source/kind, CASH1.00EUR/amounts, no-receipt subtitle, icon, active-session/operator selection, other labels and every request/backend fiscal/cash/stock/Audit/report behavior. No transaction replay or historical record rewrite.
-
-Node20 targeted5/5 PASS; actual React/JSDOM own/all-operator/closed-shift cases PASS with selected-store GET-only calls, same amounts, ordinary sale label, stale-shift exclusion and close action. Full CI is code/release evidence, not physical financial/stock or all-layout acceptance.
-
-User09Oct18:33:17 Athens explicitly requested same function; screenshot image(20261009-151157).png shows LAB POS2 / TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ / existing «ΦΥΡΑ» movements. Physical client SHA/before-after/control not supplied; label USER FAIL awaits read-only retest. Original POS-NO-PRINT-01 owner remains assigned for submission/accounting/financial acceptance; no takeover. Other owners and prior PASS preserved. Next action: user refreshes and opens existing shift movements once, expects new title and same displayed amounts without making a new transaction. Manual unchanged until USER PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-no-print-movement-label.md.
-
 ## 2026-10-09T16:34:06.060404+03:00 - POS-DB-LOCK-01 / full20store22POS model RUNNING / result PENDING, production readiness NOT ESTABLISHED
 
 Full claimPR1955/head2a484bf5/docsCI37937339780 SUCCESS merged47b11dc7ff0b58dcc766e3e99b3de8ec1fee7809 before fresh full execution. MainCI37937511405 SUCCESS, guard37937571742 SUCCESS; no production source/resource change. Exact prepared source992f5aec/fullCI37936078269 SUCCESS1966/1966 and all short capped phases37936078268 PASS preserved.

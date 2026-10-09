@@ -1,3 +1,11 @@
+## 09/10/2026 19:31 Europe/Athens - POS-NO-PRINT-DISPLAY-01 / USER VISUAL PASS / CLOSED display scope
+
+Owner codex/pos-no-print-display-20261009. User screenshot image(20261009-163109).png after instructed POS refresh/open-existing-movements shows four rows titled «Κλείσιμο χωρίς εκτύπωση», actor LAB POS 2, shift TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ. Existing three 1×ΝΕΡΟ1,5LT rows retain 1.00EUR and CASH1.00EUR / «Χωρίς απόδειξη»; additional 1×ΝΕΡΟ500ML row at09Oct19:23:36 shows0.50EUR/CASH0.50EUR with same title. Latest visual PASS supersedes19:23 screenshot's old-title FAIL for this read-only name only. New0.50EUR action was not initiated/observed by this page; no before-after/control or stock/cash/Audit acceptance inferred, no replay.
+
+Source PR #1959 / exact-head fullCI37953345034 SUCCESS / merge96932a3774b15b8a4cfb2423a73788a13bf9a427 / mainCI37953781791 / guard37954085658 SUCCESS / Renderdep-db4go9rbc2fs73bob3og LIVE. Fresh public health09Oct19:25-19:28 reverified exact96932a3; public app entry-DY-5N_Lx.js contains correct WASTE title. Physical client SHA, store ID/physical terminal and exact refresh gesture not independently supplied; screenshot identity only. Cache is not asserted as a proven root cause.
+
+Close only independent display assignment; original POS-NO-PRINT-01 owner retains unchanged /waste submission, WASTE classification, financial/stock/control acceptance. Other owners/Gates and prior PASS preserved. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-no-print-movement-label.md; manual docs/manual/pos/PASS.md. Own completed pending block removed; tracker PDF synchronized. No new source/API/data mutation or transaction needed.
+
 ## 2026-10-09T15:49:37.811Z - POS-NO-PRINT-DISPLAY-01 / LIVE / AWAITING USER read-only label retest
 
 Owner codex/pos-no-print-display-20261009; source PR #1959 final head 8fd1362c26f42ae88623c3a8534617be899bab58. Exact-head full CI 37953345034 SUCCESS; merge 96932a3774b15b8a4cfb2423a73788a13bf9a427; main CI 37953781791 SUCCESS; guarded deployment 37954085658 SUCCESS. Render dep-db4go9rbc2fs73bob3og LIVE 2026-10-09T15:48:43.906147Z; independent fresh public health 2026-10-09T15:49:16.634Z HTTP200 / ok=true / exact 96932a3774b15b8a4cfb2423a73788a13bf9a427. Claim PR #1958 / docs CI 37952899987 SUCCESS / merge aa2de84d4d7fa7668a20cb0ae0d26d091e45f5ca preceded source edits.
