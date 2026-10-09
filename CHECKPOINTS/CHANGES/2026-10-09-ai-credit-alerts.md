@@ -9,3 +9,11 @@ Official OpenAI Costs API reports billed organization costs, not remaining prepa
 Acceptance: Super Admin only configuration; thresholds5$/2$ default, validation; estimated warning at thresholds and exhausted state; fresh current-balance baseline, no automatic purchase; safe read-only Costs polling/pagination/timeouts; no key/provider error details leak; settings Audit; central homepage and AI Command Center alerts. Focused behavior and authorization tests, full CI, exact deployed source and real LIVE review before PASS.
 
 No provider key/account/credits/payment change, no invoice upload/extraction/finalization/stock/fiscal mutation. Manual remains unchanged until LIVE PASS. Single next action: publish green docs-only claim on main, then bounded implementation.
+
+## AI-CREDITS-01 — implemented / LOCAL PASS / AWAITING CI, setup and LIVE
+
+Claim PR1987, docs CI37983339777 SUCCESS, merged main4a69eb48 before source. Same owner codex/ai-credit-alerts-20261009; source codex/ai-credit-alerts-implementation-20261009. Added central homepage/Command Center warning,5USD/2USD defaults and validated current-balance/threshold settings, dedicated persistence + transactional Audit/version conflict, bounded all-organization Costs API reads. Unknown/failure/stale never green; estimates clearly labelled. Page polling60s/server cache5min; no email/push/scheduled external task. No provider credential installed or invoice/business mutation.
+
+Local Node20.20.2 targeted26/26; full server1981PASS/0FAIL/4environment skips; production build PASS. New isolated PostgreSQL/authenticated HTTP CI flow still pending. Same-account OPENAI_BILLING_ADMIN_KEY, real current-balance baseline, exact deployment and LIVE acceptance remain NOT TESTED. No new manual PASS. Ops docs/ops/ai-credit-alerts-20261009.md; checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained.
+
+Single next action: publish source PR/full CI and exact release; then securely configure same-organization Costs access and current-balance baseline before LIVE acceptance. No automatic provider account/payment setup.

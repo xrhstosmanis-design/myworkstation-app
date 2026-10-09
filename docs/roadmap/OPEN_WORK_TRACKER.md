@@ -1718,7 +1718,7 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 ### AI-CREDITS-01 — Προειδοποίηση υπολοίπου AI στον Platform Super Admin
 
-**Κατάσταση:** ASSIGNED / NOT IMPLEMENTED / NOT TESTED
+**Κατάσταση:** ASSIGNED / IMPLEMENTED / LOCAL PASS / AWAITING CI, SETUP AND LIVE
 
 **Υπεύθυνη σελίδα / branch:** codex/ai-credit-alerts-20261009
 
@@ -1727,3 +1727,10 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Υπόλοιπο / όρια PASS:** Read-only official Costs API investigation, ασφαλής αποθήκευση baseline/ορίων, central dashboard/AI Command Center alert, bounded refresh, authorization/failure/pagination/stale tests, green CI/merge/exact deploy και LIVE acceptance. Αρχικό screenshot δείχνει αρνητικό υπόλοιπο−0.12$· ο provider λογαριασμός της εφαρμογής δεν έχει ταυτοποιηθεί. Η δημόσια health ανάγνωση επέστρεψε b40a09dff6f0aaac585c1b71f2e36e51181e01e2, main κατά read4cd333b7. Authenticated LIVE setup παραμένει BLOCKED.
 
 **Ολοκλήρωση:** NOT TESTED. Καμία αλλαγή παραγωγικού λογαριασμού/API key, πληρωμή, invoice upload/approval/stock/fiscal mutation. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained until explicit handoff.
+
+AI-CREDITS-01 implementation evidence:
+## AI-CREDITS-01 — implemented / LOCAL PASS / AWAITING CI, setup and LIVE
+
+Claim PR1987, docs CI37983339777 SUCCESS, merged main4a69eb48 before source. Same owner codex/ai-credit-alerts-20261009; source codex/ai-credit-alerts-implementation-20261009. Added central homepage/Command Center warning,5USD/2USD defaults and validated current-balance/threshold settings, dedicated persistence + transactional Audit/version conflict, bounded all-organization Costs API reads. Unknown/failure/stale never green; estimates clearly labelled. Page polling60s/server cache5min; no email/push/scheduled external task. No provider credential installed or invoice/business mutation.
+
+Local Node20.20.2 targeted26/26; full server1981PASS/0FAIL/4environment skips; production build PASS. New isolated PostgreSQL/authenticated HTTP CI flow still pending. Same-account OPENAI_BILLING_ADMIN_KEY, real current-balance baseline, exact deployment and LIVE acceptance remain NOT TESTED. No new manual PASS. Ops docs/ops/ai-credit-alerts-20261009.md; checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained.
