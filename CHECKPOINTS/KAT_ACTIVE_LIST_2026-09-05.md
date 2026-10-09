@@ -1,3 +1,7 @@
+## 10/10/2026 — INVOICE-MANUAL-DRAFT-01 / CI PASS / DEPLOY AND LAB PENDING
+
+Source PR2001/head e3cd78b3a79e964f62aa7476325870acdbc77c0f full CI37994541171 attempt3 SUCCESS, including actual-client tests/build/invariants/isolated HTTP E2E. Attempts1/2 failed only existing pos-capacity-runner timing assertion offeredLatencyMs>=latencyMs; isolated8tests passed unchanged. No bypass or unrelated source edit. Main d358b9e contains independent operator-customer-entry PR2000: preserve its source and all records, regenerate shared tracker PDF to resolve the only merge conflict. Combined-head CI required before merge; exact Render revision and owner LAB8827 still pending. No production invoice mutation or new USER PASS.
+
 ## 10/10/2026 — INVOICE-MANUAL-DRAFT-01 / IMPLEMENTED / AWAITING CI AND LAB
 
 Claim PR1999 merged as e9c925a before source edits. Owner fix/invoice-assistant-manual-draft-transfer-source-20261010. Transfer button is visible whenever printed rows exist, including AI pagesComplete=false. Selected valid rows may be saved to the same editable draft only after explicit confirmation that all original pages were checked. The AI warning stays visible; cancellation writes nothing. No permission is inferred from assistant prose. Totals within0.05, mandatory units/fields, quantity confirmation, draft status/current identity/concurrent-change checks remain active; incomplete-page deletion proposals remain suppressed. No finalization/payment/stock/fiscal/myDATA changes.
@@ -11,6 +15,10 @@ Owner fix/invoice-assistant-manual-draft-transfer-20261010; explicit owner instr
 Owner screenshots image(20261009-212604).png and image(20261009-212630).png: existing ALFA TΔAM-110M8827, two-page PDF,21 proposed rows/quantity158/net141.08/VAT18.36/gross159.44/difference0.00; AI page evidence reports0/[] and blocks the action despite prose saying ready. USER FAIL for unavailable transfer; row accuracy and persistence NOT TESTED by this page. Main c0f1ce16 and intervening15 commits reviewed; PR1992 lifecycle and PR1998 unrelated operator changes preserved. No takeover of myDATA receiving or assistant lifecycle owners.
 
 Acceptance: actual assistant DOM fixture with incomplete page evidence, visible button, cancelled confirmation=zero writes, explicit confirmation saves selected valid rows to same editable draft; rereview retains action, complete-page path unchanged, totals/invalid fields/concurrency rejection and duplicate-click safety protected. Full CI/merge/exact deploy precede LAB acceptance on existing8827; no reupload/payment/finalization. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-invoice-manual-draft-transfer.md. Implementation NOT TESTED; no new PASS.
+
+## 2026-10-09T21:33:39.990124+00:00 — CUSTOMER ENTRY FIX BEFORE / AWAITING LAB
+
+Original24detail+orders independently restored exact. Scope same owner codex/operator-checkbox-audit-20261009, printed33/tracker35 OPEN. Current verified sourcec0f1ce16 minimal-shift/status +CASH hidden bounded LIVE PASS retained. Customer top dropdown remains visible with customersPos=false; no customer query or selection submitted, no exposed customer records observed. Existing GET customers server CUSTOMERS_POS guard remains mandatory. Causal change: include actual pos-credit-customer in customer denial CSS; regression uses real dropdown wrapper, denies both entries then grants both. Preserve audience-card/discount owner, invoice orders, payment/stock/shift/fiscal and all other PASS. FullCI, guard, exacthealthy and denied/granted UI required before customer fix LIVE PASS.
 
 ## 2026-10-09T21:13Z — CASH visibility correction before release
 

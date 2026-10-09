@@ -1,3 +1,7 @@
+## 10/10/2026 — INVOICE-MANUAL-DRAFT-01 / CI PASS / DEPLOY AND LAB PENDING
+
+Source PR2001/head e3cd78b3a79e964f62aa7476325870acdbc77c0f full CI37994541171 attempt3 SUCCESS, including actual-client tests/build/invariants/isolated HTTP E2E. Attempts1/2 failed only existing pos-capacity-runner timing assertion offeredLatencyMs>=latencyMs; isolated8tests passed unchanged. No bypass or unrelated source edit. Main d358b9e contains independent operator-customer-entry PR2000: preserve its source and all records, regenerate shared tracker PDF to resolve the only merge conflict. Combined-head CI required before merge; exact Render revision and owner LAB8827 still pending. No production invoice mutation or new USER PASS.
+
 ## 10/10/2026 — INVOICE-MANUAL-DRAFT-01 / IMPLEMENTED / AWAITING CI AND LAB
 
 Claim PR1999 merged as e9c925a before source edits. Owner fix/invoice-assistant-manual-draft-transfer-source-20261010. Transfer button is visible whenever printed rows exist, including AI pagesComplete=false. Selected valid rows may be saved to the same editable draft only after explicit confirmation that all original pages were checked. The AI warning stays visible; cancellation writes nothing. No permission is inferred from assistant prose. Totals within0.05, mandatory units/fields, quantity confirmation, draft status/current identity/concurrent-change checks remain active; incomplete-page deletion proposals remain suppressed. No finalization/payment/stock/fiscal/myDATA changes.
