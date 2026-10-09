@@ -2,7 +2,7 @@ name: MyWorkStation CI
 
 on:
   push:
-    branches: [main, 'codex/pos-capacity20-compare-*']
+    branches: [main, 'codex/pos-capacity20-compare-*', 'codex/pos-capacity20-verify-*']
   pull_request:
     branches: [main]
   workflow_dispatch:
