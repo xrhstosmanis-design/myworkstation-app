@@ -214,7 +214,9 @@
 
 - **Tracker ID:** `34`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / EXACT LIVE VERIFIED / LAB PENDING
-- **Υπόλοιπο / όριο:** Έχει αναφερθεί Store Mode που δείχνει συμβάντα άλλων καταστημάτων· δεν έχει δηλωθεί διορθωμένο. Εκκρεμεί read-only έλεγχος δύο καταστημάτων.
+- **Υπόλοιπο / όριο:** Έχει αναφερθεί Store Mode που δείχνει συμβάντα άλλων καταστημάτων· δεν έχει δηλωθεί διορθωμένο. Εκκρεμεί read-only έλεγχος δύο καταστημάτων. 09/10: DOM/data isolation search/refresh/two LAB verified; LIVE visual FAIL (2px collapsed report), final OPEN; same owner.
+
+- **Νεότερο09/10:** DOM/data απομόνωση δύο LAB, αναζήτηση και ανανέωση επιβεβαιώθηκαν· ορατή χρήση FAIL λόγω συμπίεσης αναφοράς σε2px. Τελικό OPEN, ίδιος owner. Checkpoint `2026-10-09-audit-store-acceptance.md`.
 
 ## 33 — Τελικές δοκιμές χρηστών, ρόλων και modules
 
