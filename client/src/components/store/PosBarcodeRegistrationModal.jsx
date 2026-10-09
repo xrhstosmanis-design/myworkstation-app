@@ -4,9 +4,9 @@ import {isValidEan13,writeEan13Label} from "../../utils/ean13-label.js";
 
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 
-export default function PosBarcodeRegistrationModal({api,store,onClose,onChanged}){
+export default function PosBarcodeRegistrationModal({api,store,onClose,onChanged,initialQuery=""}){
   const searchRequest=useRef(0);
-  const [rows,setRows]=useState([]),[query,setQuery]=useState(""),[selected,setSelected]=useState(null),[barcode,setBarcode]=useState(""),[price,setPrice]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const [rows,setRows]=useState([]),[query,setQuery]=useState(initialQuery),[selected,setSelected]=useState(null),[barcode,setBarcode]=useState(""),[price,setPrice]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const [labelConfig,setLabelConfig]=useState(null);
   useEffect(()=>{let active=true;setLabelConfig(null);api(`/api/store-pos/stores/${store.id}/label-settings`).then(result=>{if(active)setLabelConfig(result)}).catch(err=>{if(active)setError(`Δεν φορτώθηκαν οι ρυθμίσεις ετικέτας: ${err.message}`)});return()=>{active=false}},[api,store.id]);
   const load=async(q="")=>{const request=++searchRequest.current;setBusy(true);setError("");try{const result=await api(`/api/store-pos/stores/${store.id}/barcode-registration?q=${encodeURIComponent(q)}`);if(request===searchRequest.current)setRows(result.rows||[])}catch(err){if(request===searchRequest.current)setError(err.message)}finally{if(request===searchRequest.current)setBusy(false)}};
