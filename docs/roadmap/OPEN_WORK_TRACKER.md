@@ -1397,7 +1397,12 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 34 — Έξυπνο Audit / Συμβάντα
 
-**Κατάσταση:** ASSIGNED / CI4496,4499,4501 PASS / EXACT LIVE VERIFIED / LAB PENDING
+## 09/10/2026 — Audit store acceptance / OPEN / LIVE VISUAL FAIL
+
+Continuation owner `fix/report-store-context-20261006`, publication `docs/audit-store-acceptance-20261009`, explicitly authorized by owner through final PASS. Authenticated read-only exact healthy source `b40a09dff6f0aaac585c1b71f2e36e51181e01e2`:1047 testing-store Audit DOM rows, foreign-name search0, positive search/refresh160, switch to isolation store0/refresh0, single disabled store criterion. Central SA controls1047/94/0 after Εμφάνιση. Bounded DOM/data result only: maximized Audit suite collapses to2px/clientHeight0/overflow hidden, so visible usable acceptance FAIL. In-flight race/empty-selection/physical PIN/ordinary roles/other reports NOT TESTED. No source or application state mutation. Same owner retains bounded report flex-sizing correction; claim publication must merge before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md`. Previous supplier/Analytics/navigation and all other owner PASS preserved; no financial/stock/shift replay. Final tracker34/printed32 remains OPEN.
+
+
+**Κατάσταση:** ASSIGNED / bounded LIVE DOM isolation PASS / LIVE VISUAL FAIL / final OPEN
 
 **Υπόλοιπο / όρια PASS:** Υλοποίηση και νέο user-reported πρόβλημα: Store Mode εμφανίζει συμβάντα άλλων καταστημάτων. Δεν δηλώνεται διορθωμένο.
 

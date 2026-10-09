@@ -1,0 +1,18 @@
+# 09/10/2026 — Audit selected-store acceptance / bounded visual FAIL
+
+Owner continuation: `fix/report-store-context-20261006`; publication branch `docs/audit-store-acceptance-20261009`. The owner explicitly authorized this conversation to continue printed checklist32 / tracker34 through final PASS. No parallel takeover or other module claim. Read-only authenticated inspection only; no source or application state mutation before this publication.
+
+Production public health: `ok=true`, version `0.22.0+kat-test-pos`, revision `b40a09dff6f0aaac585c1b71f2e36e51181e01e2`. Repository main inspected at `78ed0f91` includes documentation after that source release. Observation window09Oct2026 approximately18:48–19:22UTC; exact individual capture times were not retained. Browser remote Chrome, viewport1348×936, existing Super Admin support session Χρήστος Μάνης. Physical POS terminal/shift/SKU/quantity/payment: N/A, no transaction.
+
+## Observed read-only results
+
+- Platform Admin central Συμβάντα, period09Sep–09Oct2026: after selecting each store AND pressing Εμφάνιση,1047 rows all ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ;94 all Περίπτερο Διαδόχου Παύλου;0 for ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ. Central all-store access is explicit Super Admin scope.
+- Selected-store BackOffice → Λοιπές εμπορικές λειτουργίες → Αναφορές → Συμβάντα/Audit, activated via keyboard Enter: disabled single-store criterion ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ;1047 rendered event rows/61categories, all store cells matching. Foreign-store name search returns0. Positive ΝΕΡΟ500ML search returns160/10categories, all matching; refresh preserves160 and store lock.
+- Close commerce → back to stores → open isolation store → store-bound commerce → Audit: disabled isolation criterion,0events/0categories; refresh remains0, no retained testing-store rows.
+- These are rendered DOM/data observations. They do NOT establish usable visible Audit acceptance: maximized report section was compressed to2px, clientHeight0, scrollHeight578, overflow hidden. Parent commerce hub height690px, scrollHeight893; navigation panel862.89px and zero shrink, report default flex-shrink1. Screenshot still displays navigation rather than report. Keyboard activation succeeded where initial offscreen click did not; no unsupported conclusion about click handlers.
+
+## Status and exact remaining scope
+
+Selected-store DOM/data isolation, search, refresh and settled two-store transition: bounded observed technical PASS. Overall checklist32/tracker34 remains OPEN / LIVE VISUAL FAIL. In-flight switching/race, empty/invalid-store live behavior, ordinary owner/operator permissions, physical Store Mode PIN path, other report families and all viewport/touch combinations NOT TESTED. Existing isolated DOM tests are separate evidence, never promoted to LIVE PASS.
+
+Next bounded action under the retained owner: publish this checkpoint/claim, then correct only the Audit/report suite flex sizing inside existing CommerceHub so content retains its natural height and the existing hub scroll reaches filters, rows and toolbar in normal/maximized windows. Preserve all prior supplier/Analytics/bulk/Excel/Inventory/navigation PASS, single selected-store criterion, request-generation guards, central Super Admin scope, auth/licensing/API/POS/fiscal/stock and other owners. No broad navigation redesign or financial/shift replay. Green full source CI and exact healthy guarded release precede authenticated visible two-store retest. Manual Audit instructions remain unclaimed until the visible flow actually passes.
