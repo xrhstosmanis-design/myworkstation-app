@@ -1,3 +1,7 @@
+## 09/10/2026 — Audit report height implemented / AWAITING CI + LIVE
+
+Retained owner fix/report-store-context-20261006; bounded source branch fix/audit-report-height-20261009. ClaimPR1983/head19147456/docsCI37980110445 SUCCESS/merged3c3c2200 published before source. Only direct-child kiosk report suite gets flex:0 0 auto, preserving its natural content height and existing hub vertical/table horizontal scroll. No navigation, handlers, requests, store context, hidden-state, API or application data changes. Local Node20.20.2 frontend build PASS (2258 modules/TABLE_SERVICE verifier); existing selected-store installer DOM regression9/9 PASS including pending responses and empty selection. These are local technical checks; full source CI and actual post-deploy visible geometry/two-store retest required. Existing supplier/Analytics/navigation/bulk/Excel/Inventory PASS protected. Overall tracker34/printed32 OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md.
+
 # 09/10/2026 — Audit selected-store acceptance / bounded visual FAIL
 
 Owner continuation: `fix/report-store-context-20261006`; publication branch `docs/audit-store-acceptance-20261009`. The owner explicitly authorized this conversation to continue printed checklist32 / tracker34 through final PASS. No parallel takeover or other module claim. Read-only authenticated inspection only; no source or application state mutation before this publication.
