@@ -1,4 +1,11 @@
 
+## AI-CREDITS-01 — implemented / LOCAL PASS / AWAITING CI, setup and LIVE
+
+Claim PR1987, docs CI37983339777 SUCCESS, merged main4a69eb48 before source. Same owner codex/ai-credit-alerts-20261009; source codex/ai-credit-alerts-implementation-20261009. Added central homepage/Command Center warning,5USD/2USD defaults and validated current-balance/threshold settings, dedicated persistence + transactional Audit/version conflict, bounded all-organization Costs API reads. Unknown/failure/stale never green; estimates clearly labelled. Page polling60s/server cache5min; no email/push/scheduled external task. No provider credential installed or invoice/business mutation.
+
+Local Node20.20.2 targeted26/26; full server1981PASS/0FAIL/4environment skips; production build PASS. New isolated PostgreSQL/authenticated HTTP CI flow still pending. Same-account OPENAI_BILLING_ADMIN_KEY, real current-balance baseline, exact deployment and LIVE acceptance remain NOT TESTED. No new manual PASS. Ops docs/ops/ai-credit-alerts-20261009.md; checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained.
+
+
 ## 09/10/2026 22:36 Europe/Athens — AI-CREDITS-01 ASSIGNED / NOT TESTED
 
 Owner codex/ai-credit-alerts-20261009. Independent new owner-authorized low-credit warning, defaults5$/2$, configurable thresholds and honest unknown/estimated balance. Preserve AI Command Center phases1–14/manual and all existing owners. No invoice extraction change, financial/stock action or provider credential change. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Read main4cd333b7, public healthb40a09df; authenticated LIVE NOT TESTED. Claim must merge before source.

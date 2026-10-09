@@ -21,6 +21,7 @@ import {buildRbsInstallationPackage} from "../services/rbs-installation-package.
 import {buildRbsGuidedInstallationPackage} from "../services/rbs-guided-installation-package.js";
 
 import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
+import aiCreditRoutes from "./platform-ai-credits.js";
 
 const router=Router();
 router.use(auth);
@@ -29,6 +30,8 @@ router.use((req,res,next)=>{
   if(!allowed) return res.status(403).json({error:"Απαιτείται πρόσβαση Platform Super Admin."});
   next();
 });
+
+router.use("/ai-credits",aiCreditRoutes);
 
 router.get("/backup-monitoring",async(_req,res,next)=>{
   try{res.json(await backupMonitorSummary())}catch(error){next(error)}
