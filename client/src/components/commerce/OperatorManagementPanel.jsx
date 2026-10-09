@@ -12,7 +12,6 @@ const POS_PERMISSIONS=[
   ["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],
   ["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
   ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],
-  ["editDescription","Διόρθωση περιγραφής είδους (PoS)"],
   ["onlineBarcode","Online αναζήτηση barcode (PoS)"],
   ["changeRetail","Αλλαγή τιμής λιανικής (PoS & BackOffice)"],
   ["returnItems","Επιστροφή ειδών (PoS)"],
