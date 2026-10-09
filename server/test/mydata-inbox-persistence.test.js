@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../src/customer-demo-runtime.js";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
@@ -31,9 +32,9 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     async $transaction(callback){return callback(tx)}
   };
   const key="__mydataPersistenceTest";
-  globalThis[key]={prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
+  globalThis[key]={assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
   const injected=`import crypto from "node:crypto";
-    const {prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
+    const {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
     const decryptStoreIntegrationCredentials=()=>({accountId:"fixture",secret:"fixture"});\n`;

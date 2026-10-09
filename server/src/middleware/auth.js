@@ -1,3 +1,4 @@
+import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../prisma.js";
@@ -100,6 +101,7 @@ export async function auth(req,res,next){
   if(!token)return res.status(401).json({error:"Απαιτείται σύνδεση."});
   try{
     const payload=jwt.verify(token,process.env.JWT_SECRET);
+    assertCustomerDemoRuntimeClosed(payload);
 
     if(payload.tokenType==="POS_BACKGROUND"){
       const path=String(req.originalUrl||"").split("?")[0];
@@ -131,6 +133,7 @@ export async function auth(req,res,next){
       if(!job||!job.companyActive||!job.storeActive||!boundHandoff||!["POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(job.status)){
         return res.status(401).json({error:"Η εσωτερική εργασία POS δεν είναι πλέον ενεργή.",code:"POS_BACKGROUND_JOB_REJECTED"});
       }
+      assertCustomerDemoRuntimeClosed(job);
       req.user={id:null,tokenType:"POS_BACKGROUND",companyId:job.companyId,storeId:job.storeId,role:"SYSTEM",fullName:"POS Background",permissions:["AI_READER","INVENTORY"]};
       req.posBackgroundAction=action;
       return next();
@@ -164,6 +167,7 @@ export async function auth(req,res,next){
         LIMIT 1
       `;
       const operator=rows[0];
+      assertCustomerDemoRuntimeClosed(operator);
       const operatorSessionExpired=!operator?.operatorSessionExpiresAt||new Date(operator.operatorSessionExpiresAt).getTime()<=Date.now();
       if(!operator||operatorSessionExpired||operator.operatorSessionRevokedAt||!operator.active||!operator.employeeActive||!operator.storeActive||!operator.companyActive){
         return res.status(401).json({error:"Η πρόσβαση Store Mode δεν είναι πλέον ενεργή. Συνδεθείτε ξανά.",code:"STORE_OPERATOR_SESSION_REVOKED"});
@@ -214,6 +218,7 @@ export async function auth(req,res,next){
       const inactiveCompany=session?.user?.role!=="SUPER_ADMIN"&&!session?.user?.company?.active;
       if(expired||revoked||versionChanged||inactiveCompany)return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
       currentUser=session.user;
+      assertCustomerDemoRuntimeClosed(currentUser);
       if(Date.now()-session.lastSeenAt.getTime()>5*60*1000)prisma.userSession.update({where:{id:session.id},data:{lastSeenAt:new Date()}}).catch(()=>{});
     }
 
@@ -234,6 +239,7 @@ export async function auth(req,res,next){
     req.user={...payload,mustChangePassword:passwordChangeRequired};
     next();
   }catch(error){
+    if(error?.code==="CUSTOMER_DEMO_RUNTIME_LOCKED")return res.status(error.status).json({error:error.message,code:error.code});
     console.error("Authentication validation failed",error?.message||error);
     if(error?.name==="TokenExpiredError")return res.status(401).json({error:"Η συνεδρία έληξε.",code:"AUTH_TOKEN_EXPIRED"});
     if(error?.name==="JsonWebTokenError"||error?.name==="NotBeforeError")return res.status(401).json({error:"Η συνεδρία δεν είναι έγκυρη.",code:"AUTH_TOKEN_INVALID"});

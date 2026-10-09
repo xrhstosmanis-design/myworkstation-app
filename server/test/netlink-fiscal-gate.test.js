@@ -20,7 +20,7 @@ test("missing receipt blocks PIN issuance with a stable code",()=>{
 test("execute verifies and audits the fiscal receipt before calling Netlink",()=>{
   const route=fs.readFileSync(new URL("../src/routes/netlink.js",import.meta.url),"utf8");
   const check=route.indexOf("validFiscalReceipt(fiscalDocument)");
-  const provider=route.indexOf("netlinkClient().execute");
+  const provider=route.indexOf("netlinkClient({companyId:req.user.companyId,storeId:req.user.storeId||req.body?.storeId}).execute");
   assert.ok(check>=0&&provider>check);
   assert.match(route,/"fiscalDocumentId"/);
   assert.match(route,/"fiscalNumber"/);

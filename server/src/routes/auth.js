@@ -1,3 +1,4 @@
+import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -56,6 +57,7 @@ async function audit(req,{userId=null,email,event,success,deviceName=null}){
 }
 
 async function issueSession(user,req,deviceName){
+  assertCustomerDemoRuntimeClosed(user);
   const expiresAt=new Date(Date.now()+SESSION_HOURS*60*60*1000);
   const session=await prisma.userSession.create({
     data:{
@@ -152,6 +154,7 @@ router.post("/login", async (req,res,next)=>{
       return res.status(401).json({error:"Λανθασμένο email ή κωδικός."});
     }
 
+    assertCustomerDemoRuntimeClosed(user);
     const isSuperAdmin=user.role==="SUPER_ADMIN";
     if(!user.company.active && !isSuperAdmin){
       await audit(req,{userId:user.id,email:user.email,event:"COMPANY_INACTIVE",success:false,deviceName});
@@ -236,6 +239,7 @@ router.post("/2fa/enable",async(req,res,next)=>{
     if(payload.purpose!=="TOTP_SETUP"||!payload.pendingSecret)return res.status(401).json({error:"Η διαδικασία ενεργοποίησης έληξε. Συνδέσου ξανά."});
     const user=await prisma.user.findUnique({where:{id:payload.id},include:{company:true}});
     if(!user||user.role!=="SUPER_ADMIN")return res.status(403).json({error:"Δεν επιτρέπεται ενεργοποίηση 2FA."});
+    assertCustomerDemoRuntimeClosed(user);
     if(user.totpEnabled)return res.status(409).json({error:"Το 2FA είναι ήδη ενεργό."});
     const secret=decryptTotpSecret(payload.pendingSecret);
     if(!verifyTotp(secret,code)){
@@ -275,6 +279,7 @@ router.post("/2fa/verify",async(req,res,next)=>{
     const user=await prisma.user.findUnique({where:{id:payload.id},include:{company:true}});
     if(!user||user.role!=="SUPER_ADMIN"||!user.totpEnabled||!user.totpSecret)return res.status(403).json({error:"Το 2FA δεν είναι διαθέσιμο."});
 
+    assertCustomerDemoRuntimeClosed(user);
     let accepted=verifyTotp(decryptTotpSecret(user.totpSecret),code);
     let usedRecovery=false;
     let remainingRecoveryCodes=user.totpRecoveryCodes;

@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import crypto from "node:crypto";
 
 const error=(message,status=409)=>Object.assign(new Error(message),{status});
@@ -32,6 +33,7 @@ export function verifyOriginalText(text,row){
   if(!number||!tokens.some(token=>token===number||(/^[0-9]+$/.test(number)&&withoutPadding(token)===withoutPadding(number))))mismatch();
 }
 export async function fetchOriginalPdf(row,fetcher=fetch,reader=readOriginalPdf){
+  assertCustomerDemoOutboundAllowed(row);
   const signal=AbortSignal.timeout(45000);
   try{return await downloadOriginalPdf(row,fetcher,reader,signal)}catch(cause){
     if(cause?.name==="TimeoutError"||(signal.aborted&&signal.reason?.name==="TimeoutError"))throw error("Η λήψη του πρωτοτύπου δεν ολοκληρώθηκε εντός 45 δευτερολέπτων. Ο πάροχος δεν απάντησε εγκαίρως. Το παραστατικό παραμένει σε αναμονή· δοκιμάστε αργότερα.",504);
@@ -54,6 +56,7 @@ async function downloadOriginalPdf(row,fetcher,reader,signal){
 
 // Network work precedes the row lock; competing downloads can only attach once.
 export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   const rows=await prisma.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId} LIMIT 1`;
   const row=rows[0];if(!row)throw error("Δεν βρέθηκε το παραστατικό.",404);
   if(row.attachmentId)return prisma.$transaction(tx=>attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,createAiJob));

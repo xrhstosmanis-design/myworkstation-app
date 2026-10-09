@@ -1334,7 +1334,7 @@ router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
   if(report.rows.some(row=>!row.reviewValid))return res.status(409).json({error:"Η αναφορά δεν μπορεί να σταλεί: υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση που απαιτεί επανέλεγχο.",code:"CASH_CONTROL_RECHECK_REQUIRED"});
   if(!report.recipients.length)return res.status(422).json({error:"Δεν έχει οριστεί email ιδιοκτήτη ή υπευθύνου."});
-  const sent=await sendCashControlDailyReportEmail({to:report.recipients,storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
+  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:report.recipients,storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
   await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"CASH_CONTROL_REPORT_EMAIL_SENT",success:true,deviceName:`${report.store.name} · ${body.date} · ${sent.recipients.join(", ")}`}});
   res.json({ok:true,recipients:sent.recipients,messageId:sent.messageId});
 }catch(error){next(error)}});
@@ -1344,7 +1344,7 @@ router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{t
   const recipient=String(req.user.email||"").trim().toLowerCase();if(!recipient)return res.status(422).json({error:"Δεν έχει οριστεί email στον λογαριασμό Super Admin."});
   const report=await cashReportEmailData(req.params.storeId,body.date);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
-  const sent=await sendCashControlDailyReportEmail({to:[recipient],storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
+  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:[recipient],storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
   await prisma.authAudit.create({data:{userId:req.user.id,email:recipient,event:"CASH_CONTROL_REPORT_PREVIEW_SENT",success:true,deviceName:`${report.store.name} · ${body.date}`}});
   res.json({ok:true,recipients:sent.recipients,messageId:sent.messageId,previewOnly:true});
 }catch(error){next(error)}});

@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import crypto from "node:crypto";
 import {prisma} from "../prisma.js";
 
@@ -7,6 +8,7 @@ export async function videoConnectorStatus(companyId,storeId,db=prisma){
 }
 
 export async function enqueueVideoCommand({companyId,storeId,commandType,cameraKey=null,videoEventId=null,payload={},ttlSeconds=300},db=prisma){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   if(videoEventId){
     const existing=await db.$queryRaw`SELECT "id","status","createdAt","claimedAt","expiresAt" FROM "VideoConnectorCommand" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "videoEventId"=${videoEventId} AND "commandType"=${commandType} AND "status" IN ('PENDING','CLAIMED') AND "expiresAt">NOW() ORDER BY "createdAt" DESC LIMIT 1`;
     const row=existing[0];

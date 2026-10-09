@@ -34,7 +34,7 @@ router.get("/status",async(req,res)=>{
   const credentialsConfigured=Boolean(process.env.NETLINK_TOKEN_URL&&process.env.NETLINK_API_BASE&&process.env.NETLINK_CLIENT_ID&&process.env.NETLINK_CLIENT_SECRET&&process.env.NETLINK_USERNAME&&process.env.NETLINK_PASSWORD);
   res.json({moduleKey:"NETLINK_PREPAID",configured:isMockProvider()||credentialsConfigured,provider:isMockProvider()?"MOCK":"NETLINK",executeEnabled:process.env.NETLINK_ENABLE_EXECUTE==="true",testMode:isTestMode(),fiscalGateRequired:!isTestMode(),commissionRate,serviceFeeAmount:defaultServiceFee});
 });
-router.get("/menu",async(req,res,next)=>{try{res.json(await netlinkClient().menu())}catch(error){next(error)}});
+router.get("/menu",async(req,res,next)=>{try{res.json(await netlinkClient({companyId:req.user.companyId,storeId:req.user.storeId||req.body?.storeId}).menu())}catch(error){next(error)}});
 
 router.get("/stores/:storeId/config",async(req,res,next)=>{
   try{
@@ -69,7 +69,7 @@ router.post("/prepare",async(req,res,next)=>{
     if(existing[0])return res.status(409).json({error:"Η συγκεκριμένη Netlink αίτηση έχει ήδη καταχωρηθεί.",code:"NETLINK_DUPLICATE_REQUEST",transaction:existing[0]});
     ledgerId=crypto.randomUUID();
     await prisma.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","requestId","productId","flow","status","operatorId","operatorName") VALUES (${ledgerId},${req.user.companyId},${body.storeId},${requestId},${body.productId},'PREPARE','PREPARING',${req.user.id||null},${req.user.fullName||null})`;
-    const result=await netlinkClient().prepare(body.productId,{requestId,payload:body.payload});const amount=txAmount(result),reference=txReference(result);
+    const result=await netlinkClient({companyId:req.user.companyId,storeId:req.user.storeId||req.body?.storeId}).prepare(body.productId,{requestId,payload:body.payload});const amount=txAmount(result),reference=txReference(result);
     await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='PREPARED',"amount"=${amount},"providerReference"=${reference},"preparedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${ledgerId}`;
     res.json({requestId,transactionLedgerId:ledgerId,amount,result});
   }catch(error){if(ledgerId)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"='FAILED',"errorCode"=${error.code||null},"errorMessage"=${String(error.message||"Netlink error").slice(0,500)},"updatedAt"=NOW() WHERE "id"=${ledgerId}`.catch(()=>{});next(error)}
@@ -95,7 +95,7 @@ router.post("/execute",async(req,res,next)=>{
     const flow=testMode?'TEST_PREPARE_EXECUTE':'RECEIPT_THEN_EXECUTE';
     if(existing)await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "saleId"=${body.saleId},"flow"=${flow},"status"='EXECUTING',"paymentMethod"=${body.paymentMethod||null},"serviceFeeAmount"=${serviceFeeAmount},"fiscalDocumentId"=${fiscalDocument.id},"fiscalNumber"=${fiscalDocument.fiscalNumber},"fiscalIssuedAt"=${fiscalDocument.issuedAt},"updatedAt"=NOW() WHERE "id"=${ledgerId}`;
     else await prisma.$executeRaw`INSERT INTO "NetlinkTransaction" ("id","companyId","storeId","saleId","requestId","productId","flow","status","paymentMethod","serviceFeeAmount","operatorId","operatorName","fiscalDocumentId","fiscalNumber","fiscalIssuedAt") VALUES (${ledgerId},${req.user.companyId},${body.storeId},${body.saleId},${body.requestId},${body.productId},${flow},'EXECUTING',${body.paymentMethod||null},${serviceFeeAmount},${req.user.id||null},${req.user.fullName||null},${fiscalDocument.id},${fiscalDocument.fiscalNumber},${fiscalDocument.issuedAt})`;
-    const result=await netlinkClient().execute(body.productId,{requestId:body.requestId,payload:body.payload,confirmation:body.confirmation});
+    const result=await netlinkClient({companyId:req.user.companyId,storeId:req.user.storeId||req.body?.storeId}).execute(body.productId,{requestId:body.requestId,payload:body.payload,confirmation:body.confirmation});
     const amount=txAmount(result),providerTransactionId=txId(result),reference=txReference(result),commissionAmount=money(amount*commissionRate),customerTotal=money(amount+serviceFeeAmount),saleTotal=money(sale.total),amountNeedsReview=Math.abs(customerTotal-saleTotal)>0.01;
     await prisma.$executeRaw`UPDATE "NetlinkTransaction" SET "status"=${amountNeedsReview?'AMOUNT_REVIEW':'COMPLETED'},"providerTransactionId"=${providerTransactionId},"providerReference"=${reference},"amount"=${amount},"serviceFeeAmount"=${serviceFeeAmount},"customerTotal"=${customerTotal},"commissionRate"=${commissionRate},"commissionAmount"=${commissionAmount},"completedAt"=NOW(),"updatedAt"=NOW(),"errorCode"=${amountNeedsReview?'POS_TOTAL_MISMATCH':null},"errorMessage"=${amountNeedsReview?`Expected POS total ${customerTotal.toFixed(2)} but sale is ${saleTotal.toFixed(2)}`:null} WHERE "id"=${ledgerId}`;
     res.json({testRun:testMode,requestId:body.requestId,transactionLedgerId:ledgerId,status:amountNeedsReview?"AMOUNT_REVIEW":"COMPLETED",saleId:body.saleId,fiscalReceipt:{id:fiscalDocument.id,number:fiscalDocument.fiscalNumber,issuedAt:fiscalDocument.issuedAt},cardAmount:amount,serviceFeeAmount,customerTotal,saleTotal,commission:{rate:commissionRate,baseAmount:amount,amount:commissionAmount},result});

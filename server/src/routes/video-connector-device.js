@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
@@ -21,10 +22,11 @@ async function deviceAuth(req,res,next){
     if(payload.tokenType!=="STORE_DEVICE")return res.status(401).json({error:"Μη έγκυρο device token."});
     const rows=await prisma.$queryRaw`SELECT * FROM "CloudDevice" WHERE "id"=${payload.deviceId} LIMIT 1`,device=rows[0];
     if(!device||device.status!=="ACTIVE"||device.tokenVersion!==payload.tokenVersion)return res.status(401).json({error:"Η συσκευή δεν είναι ενεργή."});
+    assertCustomerDemoOutboundAllowed(device);
     const modules=await companyModuleState(device.companyId);
     if(!modules?.licenseAllowed||!modules.activeModules.includes("VIDEO_EVENTS"))return res.status(403).json({error:"Το Video Events δεν είναι ενεργό για την εταιρεία."});
     req.device=device;next();
-  }catch{return res.status(401).json({error:"Το device token έληξε ή ανακλήθηκε."})}
+  }catch(error){if(error?.code==="CUSTOMER_DEMO_OUTBOUND_BLOCKED")return res.status(error.status).json({error:error.message,code:error.code});return res.status(401).json({error:"Το device token έληξε ή ανακλήθηκε."})}
 }
 
 router.use(deviceAuth);

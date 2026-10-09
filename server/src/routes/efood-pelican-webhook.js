@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -22,6 +23,7 @@ async function ensureEfoodLabIntegrationScope(integration,database=prisma){
 }
 
 export async function recordEfoodWebhookEvent({integration,payload,mode="LOCAL_MOCK",authenticated=true,database=prisma,captureMappings=true}){
+  assertCustomerDemoOutboundAllowed(integration);
   if(database===prisma)await schemas();
   await ensureEfoodLabIntegrationScope(integration,database);
   const parsed=normalizeEfoodWebhook(payload);
@@ -62,6 +64,7 @@ router.post("/pelican/:webhookKey",async(req,res,next)=>{try{
   const outcome=await prisma.$transaction(async tx=>{
     const integration=(await tx.$queryRaw`SELECT i."id",i."companyId",i."storeId",i."kind",i."environment",i."metadataJson",i."webhookSecretHash",i."enabled",i."externalCallsEnabled",i."sandboxValidatedAt",i."webhookTestOpenedAt",i."webhookTestExpiresAt",i."webhookTestConsumedAt",i."webhookTestClosedReason",i."webhookTestEventId",s."name" AS "storeName",c."name" AS "companyName" FROM "StoreIntegrationCredential" i JOIN "Store" s ON s."id"=i."storeId" AND s."companyId"=i."companyId" JOIN "Company" c ON c."id"=i."companyId" WHERE i."kind"='EFOOD' AND i."webhookKey"=${req.params.webhookKey} LIMIT 1 FOR UPDATE`)[0];
     if(!integration)return {error:publicError(404,"EFOOD_WEBHOOK_NOT_FOUND","Δεν βρέθηκε προσωρινό LAB webhook efood.")};
+    assertCustomerDemoOutboundAllowed(integration);
     try{assertEfoodLabContext({companyName:integration.companyName,storeName:integration.storeName})}catch{return {error:publicError(404,"EFOOD_WEBHOOK_NOT_FOUND","Δεν βρέθηκε προσωρινό LAB webhook efood.")}}
     if(integration.environment!=="SANDBOX")return {error:publicError(503,"EFOOD_FAIL_CLOSED","Η παραγωγική efood διασύνδεση παραμένει κλειδωμένη.")};
     if(!productionExecutionLocked(integration))return {error:publicError(503,"EFOOD_FAIL_CLOSED","Οι εξωτερικές efood κλήσεις πρέπει να παραμένουν κλειδωμένες στο LAB.")};

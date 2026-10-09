@@ -587,7 +587,7 @@ router.post("/schedules/:id/email",async(req,res,next)=>{try{
   const rows=schedule.assignments.filter(row=>row.employee).map(row=>`<tr><td>${esc(new Date(row.date).toLocaleDateString("el-GR"))}</td><td>${esc(row.shiftType.name)}</td><td>${esc(`${row.shiftType.startTime}-${row.shiftType.endTime}`)}</td><td><b>${esc(row.employee.fullName)}</b></td></tr>`).join("");
   const week=new Date(schedule.weekStart).toLocaleDateString("el-GR");
   const html=`<div style="font-family:Arial,sans-serif"><h2>Πρόγραμμα εργαζομένων · ${esc(schedule.store.name)}</h2><p>Εβδομάδα ${esc(week)}</p><table style="border-collapse:collapse;width:100%"><tr><th>Ημερομηνία</th><th>Βάρδια</th><th>Ώρα</th><th>Εργαζόμενος</th></tr>${rows}</table><p>Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
-  const result=await sendEmail({to:recipients,subject:`Πρόγραμμα εργασίας · ${schedule.store.name} · ${week}`,text:`Το πρόγραμμα εργασίας για την εβδομάδα ${week} είναι διαθέσιμο στο συνημμένο μήνυμα.`,html});
+  const result=await sendEmail({companyId:req.user.companyId,storeId:schedule.store.id,to:recipients,subject:`Πρόγραμμα εργασίας · ${schedule.store.name} · ${week}`,text:`Το πρόγραμμα εργασίας για την εβδομάδα ${week} είναι διαθέσιμο στο συνημμένο μήνυμα.`,html});
   res.json({sent:true,recipients:result.recipients});
 }catch(e){next(e)}});
 

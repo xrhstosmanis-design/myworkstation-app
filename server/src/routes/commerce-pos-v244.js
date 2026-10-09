@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
 import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
@@ -135,6 +136,7 @@ async function renewFastBackgroundLease({companyId,jobId,leaseToken}){
 }
 
 async function internalCommerceRequest(path,{authorization,backgroundScope,method="GET",body,publicOrigin}={}){
+  assertCustomerDemoOutboundAllowed(backgroundScope);
   const localOrigin=`http://127.0.0.1:${process.env.PORT||8080}`;
   const origins=[localOrigin,...(publicOrigin&&publicOrigin!==localOrigin?[publicOrigin]:[])];
   const requestAuthorization=backgroundScope?posBackgroundAuthorization({...backgroundScope,path,method,body}):authorization;
@@ -181,7 +183,7 @@ async function rebuildLostFastHandoff(companyId,job){
 }
 
 function scheduleFastBackground({companyId,storeId,jobId,pageJobIds,handoff,publicOrigin,leaseToken,attemptCount}){
-  if(!companyId||!storeId||!jobId||!leaseToken||fastBackgroundWorkers.has(jobId))return;
+  if(!companyId||!storeId||!jobId||!leaseToken||fastBackgroundWorkers.has(jobId)||isCustomerDemoTenant({companyId,storeId}))return;
   const backgroundScope={companyId,storeId,jobId};
   const additionalPageJobIds=pageJobIds.filter(pageJobId=>pageJobId!==jobId);
   const leaseHeartbeat=setInterval(()=>{renewFastBackgroundLease({companyId,jobId,leaseToken}).catch(error=>console.warn("POS invoice lease heartbeat failed",{jobId,message:String(error?.message||error)}))},POS_BACKGROUND_HEARTBEAT_MS);
@@ -325,10 +327,11 @@ async function ensureFastHandoffSchema(){
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"completedAt" TIMESTAMPTZ)`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PosInvoiceBackgroundTask_dispatch_idx" ON "PosInvoiceBackgroundTask" ("state","availableAt","leaseUntil")`);
   await prisma.$executeRawUnsafe(`UPDATE "PosInvoiceBackgroundTask" SET "state"='QUEUED',"availableAt"=NOW(),"leaseToken"=NULL,"leaseOwner"=NULL,"leaseUntil"=NULL,"updatedAt"=NOW()
-    WHERE "state"='RUNNING' AND ("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL)`);
+    WHERE "state"='RUNNING' AND ("leaseUntil" IS NULL OR "leaseToken" IS NULL OR "leaseOwner" IS NULL) AND "companyId" NOT ILIKE 'customer-demo-%' AND "storeId" NOT ILIKE 'customer-demo-%'`);
   await prisma.$executeRawUnsafe(`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt")
     SELECT j."id",j."companyId",j."storeId",'QUEUED',NOW() FROM "AiReaderJob" j
     WHERE j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE')
+      AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%'
       AND j."resultJson"->'posHandoff' IS NOT NULL
     ON CONFLICT ("jobId") DO UPDATE SET
       "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"='QUEUED',"availableAt"=NOW(),"attemptCount"=0,
@@ -348,6 +351,7 @@ async function ensureFastHandoffSchema(){
     JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
     WHERE j."status"='AWAITING_APPROVAL'
       AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
+      AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%'
       AND j."resultJson"->'posHandoff' IS NOT NULL
       AND j."resultJson"->'posBackground'->>'status'='COMPLETED'
       AND (COALESCE((j."resultJson"->'posBackground'->>'reconciliationRequired')::boolean,false)=true OR EXISTS (
@@ -363,6 +367,7 @@ async function ensureFastHandoffSchema(){
       AND (s."name" ILIKE '%ΜΑΝΤΖΙΛΑΣ%' OR s."name" ILIKE '%MANTZILAS%')
     ORDER BY j."updatedAt" DESC LIMIT 3`;
   for(const job of candidates){
+    if(isCustomerDemoTenant(job))continue;
     const background=job.resultJson?.posBackground||{};
     const handoff={...job.resultJson.posHandoff,resumeStoredProductLines:false,replaceExistingDraft:true};
     const marker={mode:"RECONCILIATION_REREAD",strategy:POS_REPROCESS_STRATEGY,attemptedAt:new Date().toISOString(),reason:"STARTUP_TOTAL_OR_PACKAGING_RESTORE",trigger:"SERVER_STARTUP",previousLineCount:Number(background.lineCount||job.resultJson?.productLines?.length||0),previousDifference:Number(background.reconciliationDifference||0)};
@@ -381,6 +386,7 @@ async function ensureFastHandoffSchema(){
     FROM "AiReaderJob" j JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId"
       JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
     WHERE j."status"='POS_FAILED' AND j."updatedAt">CURRENT_TIMESTAMP-INTERVAL '48 hours'
+      AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%'
       AND j."resultJson"->'posHandoff' IS NOT NULL
       AND ((j."resultJson"->'supplierReadingProfile'->>'ruleKey' IN ('FRESH_SNACK_COMPLETE_PRINTED_TABLE','FRESH_DELICACIES_COMPLETE_PRINTED_TABLE','LEVENTOPOULOS_MM_POS1_COLUMNS')
         AND COALESCE(j."resultJson"->'supplierReadingProfile'->>'requireCompletePrintedTableOnMismatch','false')='true')
@@ -388,6 +394,7 @@ async function ensureFastHandoffSchema(){
       AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT'
     ORDER BY j."updatedAt" DESC LIMIT 3`;
   for(const job of replayCandidates){
+    if(isCustomerDemoTenant(job))continue;
     const background=job.resultJson?.posBackground||{};
     if(!isSafeCompleteTableReplayFailure(job,background.error,job.supplierName))continue;
     const recoveryStrategy=completeTableRecoveryStrategy(job,job.supplierName);
@@ -404,6 +411,7 @@ async function ensureFastHandoffSchema(){
 }
 
 async function enqueueFastBackground({companyId,storeId,jobId,publicOrigin}){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   if(!companyId||!storeId||!jobId)return false;
   const queued=await prisma.$executeRaw`INSERT INTO "PosInvoiceBackgroundTask" ("jobId","companyId","storeId","state","availableAt","publicOrigin") VALUES (${jobId},${companyId},${storeId},'QUEUED',CURRENT_TIMESTAMP,${publicOrigin||null})
     ON CONFLICT ("jobId") DO UPDATE SET "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","state"=CASE WHEN "PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">CURRENT_TIMESTAMP THEN 'RUNNING' ELSE 'QUEUED' END,"availableAt"=CASE WHEN "PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">CURRENT_TIMESTAMP THEN "PosInvoiceBackgroundTask"."availableAt" ELSE CURRENT_TIMESTAMP END,"attemptCount"=CASE WHEN "PosInvoiceBackgroundTask"."state" IN ('FAILED','COMPLETED') THEN 0 ELSE "PosInvoiceBackgroundTask"."attemptCount" END,"leaseToken"=CASE WHEN "PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">CURRENT_TIMESTAMP THEN "PosInvoiceBackgroundTask"."leaseToken" ELSE NULL END,"leaseOwner"=CASE WHEN "PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">CURRENT_TIMESTAMP THEN "PosInvoiceBackgroundTask"."leaseOwner" ELSE NULL END,"leaseUntil"=CASE WHEN "PosInvoiceBackgroundTask"."state"='RUNNING' AND "PosInvoiceBackgroundTask"."leaseUntil">CURRENT_TIMESTAMP THEN "PosInvoiceBackgroundTask"."leaseUntil" ELSE NULL END,"publicOrigin"=COALESCE(EXCLUDED."publicOrigin","PosInvoiceBackgroundTask"."publicOrigin"),"lastError"=NULL,"completedAt"=NULL,"updatedAt"=CURRENT_TIMESTAMP`;
@@ -411,19 +419,21 @@ async function enqueueFastBackground({companyId,storeId,jobId,publicOrigin}){
   return Boolean(queued);
 }
 
-async function claimFastBackground(){
+export async function claimFastBackground(){
   const leaseToken=crypto.randomUUID(),leaseUntil=new Date(Date.now()+POS_BACKGROUND_LEASE_MS);
   const rows=await prisma.$queryRaw`WITH candidate AS (
       SELECT t."jobId" FROM "PosInvoiceBackgroundTask" t
       JOIN "AiReaderJob" j ON j."id"=t."jobId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId"
       WHERE ((t."state"='QUEUED' AND t."availableAt"<=CURRENT_TIMESTAMP) OR (t."state"='RUNNING' AND (t."leaseUntil" IS NULL OR t."leaseUntil"<CURRENT_TIMESTAMP)))
         AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_REPROCESSING','AI_COMPLETE')
-        AND j."resultJson"->'posHandoff' IS NOT NULL
+        AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%'
+      AND j."resultJson"->'posHandoff' IS NOT NULL
       ORDER BY t."availableAt",t."createdAt" FOR UPDATE OF t SKIP LOCKED LIMIT 1
     ) UPDATE "PosInvoiceBackgroundTask" t SET "state"='RUNNING',"attemptCount"=t."attemptCount"+1,"leaseToken"=${leaseToken},"leaseOwner"=${posBackgroundWorkerId},"leaseUntil"=${leaseUntil},"updatedAt"=CURRENT_TIMESTAMP
     FROM candidate c WHERE t."jobId"=c."jobId"
     RETURNING t."jobId",t."companyId",t."storeId",t."attemptCount",t."publicOrigin",t."leaseToken"`;
   const claimed=rows[0];if(!claimed)return null;
+  assertCustomerDemoOutboundAllowed(claimed);
   const jobs=await prisma.$queryRaw`SELECT "resultJson","status" FROM "AiReaderJob" WHERE "id"=${claimed.jobId} AND "companyId"=${claimed.companyId} AND "storeId"=${claimed.storeId} LIMIT 1`;
   const handoff=jobs[0]?.resultJson?.posHandoff;
   if(!handoff||!["LOCAL_COMPLETE","POS_QUEUED","POS_DRAFT_READY","POS_PROCESSING","POS_REPROCESSING","AI_COMPLETE"].includes(jobs[0]?.status)){
@@ -443,6 +453,7 @@ async function repairStaleRecoveringTasks(){
     WHERE j."id"=t."jobId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId"
       AND j."status"='POS_QUEUED' AND j."stage"='POS_RECOVERING'
       AND j."updatedAt"<CURRENT_TIMESTAMP-INTERVAL '3 minutes'
+      AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%'
       AND j."resultJson"->'posHandoff' IS NOT NULL
       AND NOT (t."state"='RUNNING' AND t."leaseUntil">CURRENT_TIMESTAMP AND t."leaseToken" IS NOT NULL AND t."leaseOwner" IS NOT NULL)`;
 }

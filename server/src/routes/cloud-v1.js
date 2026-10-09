@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import { Router } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -182,9 +183,11 @@ async function deviceAuth(req,res,next){
     `;
     const device=rows[0];
     if(!device||device.status!=="ACTIVE"||device.tokenVersion!==payload.tokenVersion) return res.status(401).json({error:"Η συσκευή δεν είναι ενεργή."});
+    assertCustomerDemoOutboundAllowed(device);
     req.device=device;
     next();
   }catch(error){
+    if(error?.code==="CUSTOMER_DEMO_OUTBOUND_BLOCKED")return res.status(error.status).json({error:error.message,code:error.code});
     console.error("Device auth:",error);
     res.status(401).json({error:"Το device token έληξε ή ανακλήθηκε."});
   }
@@ -223,6 +226,7 @@ router.post("/pair",route(async(req,res)=>{
   const pair=pairRows[0];
   if(!pair||!pair.storeActive) fail(400,"Ο κωδικός σύνδεσης δεν είναι έγκυρος ή έχει λήξει.");
 
+  assertCustomerDemoOutboundAllowed(pair);
   const deviceKey=body.deviceKey||crypto.randomUUID();
   const existing=await prisma.$queryRaw`
     SELECT * FROM "CloudDevice" WHERE "storeId"=${pair.storeId} AND "deviceKey"=${deviceKey} LIMIT 1
