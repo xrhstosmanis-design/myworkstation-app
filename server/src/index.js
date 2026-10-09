@@ -120,6 +120,8 @@ import { requireOwnerProductAccess } from "./middleware/owner-product-access.js"
 import { productAuditCapture } from "./middleware/product-audit-capture.js";
 import { requireCompanyModule,requireCompanyOrStoreModule,requireOperationalModuleByPath,requireStoreModule } from "./middleware/module-access.js";
 import { ensurePlatformSchema } from "./platform-bootstrap.js";
+import customerDemoRoutes from "./routes/customer-demo.js";
+import { blockPreparedDemoMutation } from "./middleware/customer-demo-preparation.js";
 import { ensureCommercialSchema } from "./commercial-bootstrap.js";
 import { ensureExtendedModulesSchema } from "./extended-modules-bootstrap.js";
 import { ensureCommerceCompatibility } from "./commerce-compatibility.js";
@@ -153,6 +155,8 @@ app.use("/api/auth",authRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
+app.use("/api/platform",blockPreparedDemoMutation);
+app.use("/api/platform/customer-demos",customerDemoRoutes);
 app.use("/api/platform",platformAuditRoutes);
 app.use("/api/platform/advanced-online-search",platformAdvancedOnlineSearchRoutes);
 app.use("/api/platform/internet-product-search",commerceAdvancedOnlineSearchRoutes);

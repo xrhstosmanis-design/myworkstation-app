@@ -47,6 +47,28 @@ model Company {
   stores               Store[]
   modules              CompanyModule[]
   storePaidModules     StorePaidModule[]
+  customerDemo         CustomerDemo? @relation("DemoCompany")
+}
+
+model CustomerDemo {
+  id            String   @id
+  companyId     String   @unique
+  storeId       String   @unique
+  company       Company  @relation("DemoCompany", fields: [companyId], references: [id], onDelete: Restrict)
+  store         Store    @relation("DemoStore", fields: [storeId], references: [id], onDelete: Restrict)
+  displayName   String
+  status        String   @default("PREPARED")
+  schemaVersion String
+  requestKey    String
+  createdBy     String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  revokedBy     String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([createdBy, requestKey])
+  @@index([status, expiresAt])
 }
 
 model CompanyModule {
@@ -129,6 +151,7 @@ model Store {
   shifts    ShiftType[]
   schedules Schedule[]
   paidModules StorePaidModule[]
+  customerDemo CustomerDemo? @relation("DemoStore")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

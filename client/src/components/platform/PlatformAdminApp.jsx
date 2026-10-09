@@ -5,6 +5,7 @@ import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
 import PosDesignerPanel from "./PosDesignerPanel.jsx";
 import OnlineStoreManager from "./OnlineStoreManager.jsx";
 import StoreLabelSettingsManager from "./StoreLabelSettingsManager.jsx";
+import CustomerDemoCenter from "./CustomerDemoCenter.jsx";
 import VideoConnectionManager from "./VideoConnectionManager.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import DeviceOperationsCenter from "./DeviceOperationsCenter.jsx";
@@ -107,6 +108,7 @@ export default function PlatformAdminApp(){
   const [showNew,setShowNew]=useState(false);
   const [showSecurity,setShowSecurity]=useState(false);
   const [showPosDesigner,setShowPosDesigner]=useState(false);
+  const [showCustomerDemos,setShowCustomerDemos]=useState(false);
   const [ownerCompany,setOwnerCompany]=useState(null);
   const [resetCompany,setResetCompany]=useState(null);
   const [storeCompany,setStoreCompany]=useState(null);
@@ -474,6 +476,7 @@ export default function PlatformAdminApp(){
       <div className="platform-title"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button className="ai-command-launch" onClick={()=>setShowAiCommandCenter(true)}><BrainCircuit/>AI Command Center</button><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>{const company=(data?.companies||[]).find(item=>item.active&&item.stores?.length===1);if(company)setWorkforceTarget({company,store:company.stores[0]});else setError("Επίλεξε πρώτα εταιρεία με ένα κατάστημα από τις Εγκαταστάσεις.")}}><UsersRound/>Προσωπικό & Πρόγραμμα</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowChatChooser(true)}><MessageCircle/>Chat</button><button className="secondary" onClick={()=>setShowInternetSearch(true)}><Globe2/>Αναζήτηση Internet</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({page:true})}><AlertTriangle/>Κέντρο Ελέγχων</button><button className="secondary" onClick={()=>setShowFiscalDryRun(true)}><ShieldCheck/>Fiscal DRY RUN</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
       {error&&<div className="platform-alert error">{error}</div>}
       <button type="button" onClick={()=>setShowOnlineRadioCenter(true)} style={{marginBottom:12}}>📻 Online Ράδιο · Διαχείριση</button>
+      <button type="button" onClick={()=>setShowCustomerDemos(true)} style={{marginBottom:12,marginLeft:8}}>Demo πελατών · Προετοιμασία</button>
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button><button type="button" onClick={()=>openActivationOnThisPc(terminalActivationNotice.activationUrl)}><ExternalLink/> Άνοιγμα σε αυτό το PC</button></div>}
       <div className="platform-stats">
@@ -507,6 +510,7 @@ export default function PlatformAdminApp(){
 
     {showSecurity&&<div className="platform-modal"><section className="platform-security-dialog"><button type="button" className="modal-close" onClick={()=>setShowSecurity(false)}><X/></button><h2>Ασφάλεια Platform Admin</h2><p>Έλεγχος δύο βημάτων, συνδεδεμένες συσκευές και ιστορικό εισόδων.</p><PlatformSecurityPanel request={request} onCurrentRevoked={()=>clearSession()}/></section></div>}
     {showPosDesigner&&<PosDesignerPanel request={request} onClose={()=>setShowPosDesigner(false)}/>}
+    {showCustomerDemos&&<CustomerDemoCenter request={request} onClose={()=>setShowCustomerDemos(false)}/>}
     {cashReport&&<div className="platform-modal"><section className="platform-security-dialog cash-report-dialog">
       <button type="button" className="modal-close" onClick={()=>setCashReport(null)}><X/></button>
       <h2>Αυτόματος Έλεγχος Ταμείων</h2><p>Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια</p>
