@@ -25,8 +25,9 @@ test("product destruction requires a reason and never counts as turnover",()=>{
   assert.match(menu,/Γράψε αιτιολογία για την καταστροφή προϊόντων/);
 });
 
-test("Store POS clearly explains all three actions",()=>{
-  assert.match(menu,/ΦΥΡΑ[\s\S]*μετρά στον τζίρο μετρητών/);
+test("Store POS reserves the removed waste slot and explains the remaining actions",()=>{
+  assert.doesNotMatch(menu,/<b>ΦΥΡΑ<\/b>|submit\("WASTE"\)/);
+  assert.match(menu,/store-consumption-reserved-slot" aria-hidden="true"/);
   assert.match(menu,/ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ[\s\S]*δεν μετρά στον τζίρο/);
   assert.match(menu,/ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ[\s\S]*δεν μετρά στον τζίρο/);
 });
