@@ -1,3 +1,11 @@
+## 09/10/2026 19:39 Europe/Athens - POS-STORE-MENU-WASTE-01 / ASSIGNED / old extra button USER FAIL
+
+Owner codex/pos-store-menu-remove-waste-20261009; bounded independent menu-entry removal. User explicitly asks «ΚΑΙ ΑΠΟ ΕΔΩ ΠΡΕΠΕΙ ΝΑ ΦΥΓΕΙ ΤΕΛΕΙΩΣ ΑΥΤΟ ΤΟ ΚΟΥΜΠΙ»; images163827/163912 show Κατάστημα / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, LAB POS2 and old ΦΥΡΑ entry alongside ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ and ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ, empty cart. Remove only the visible ΦΥΡΑ button from StoreConsumptionMenu; retain other two actions/mandatory destruction reason, selected-store API and existing behavior. Keep three desktop slots with the first empty for a future button, per19:40 user instruction; keep existing narrow-screen single column without a blank touch action. Existing bottom «Κλείσιμο χωρίς Εκτύπωση»/submission/backend WASTE/accounting/stock/Audit/permissions and accepted movement label remain unchanged. No server/config/data mutation or new transaction.
+
+Publicmain e3686bf3729bc1547d6e28895c7e1135df96d9b2 includes accepted POS-NO-PRINT-DISPLAY-01 closurePR1961/CI37960175522 SUCCESS. Original POS-NO-PRINT-01 owner codex/pos-close-without-print-20261008 retains business/financial acceptance; no takeover. Other owners and prior PASS protected.
+
+Next: publish bounded claim before source, remove one menu action/update existing menu assertions, verify actual React empty/cart menu and remaining reason guard read-only/no production write, fullCI/exact healthy deployment, then user refreshes/opens Κατάστημα once without submission. Manual unchanged until USER visual PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-store-menu-remove-waste.md.
+
 ## 09/10/2026 19:31 Europe/Athens - POS-NO-PRINT-DISPLAY-01 / USER VISUAL PASS / CLOSED display scope
 
 Owner codex/pos-no-print-display-20261009. User screenshot image(20261009-163109).png after instructed POS refresh/open-existing-movements shows four rows titled «Κλείσιμο χωρίς εκτύπωση», actor LAB POS 2, shift TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ. Existing three 1×ΝΕΡΟ1,5LT rows retain 1.00EUR and CASH1.00EUR / «Χωρίς απόδειξη»; additional 1×ΝΕΡΟ500ML row at09Oct19:23:36 shows0.50EUR/CASH0.50EUR with same title. Latest visual PASS supersedes19:23 screenshot's old-title FAIL for this read-only name only. New0.50EUR action was not initiated/observed by this page; no before-after/control or stock/cash/Audit acceptance inferred, no replay.
