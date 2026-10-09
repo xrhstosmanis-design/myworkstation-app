@@ -1,3 +1,11 @@
+## 09/10/2026 19:39 Europe/Athens - POS-STORE-MENU-WASTE-01 / ASSIGNED / old extra button USER FAIL
+
+Owner codex/pos-store-menu-remove-waste-20261009; bounded independent menu-entry removal. User explicitly asks «ΚΑΙ ΑΠΟ ΕΔΩ ΠΡΕΠΕΙ ΝΑ ΦΥΓΕΙ ΤΕΛΕΙΩΣ ΑΥΤΟ ΤΟ ΚΟΥΜΠΙ»; images163827/163912 show Κατάστημα / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, LAB POS2 and old ΦΥΡΑ entry alongside ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ and ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ, empty cart. Remove only the visible ΦΥΡΑ button from StoreConsumptionMenu; retain other two actions/mandatory destruction reason, selected-store API and existing behavior. Keep three desktop slots with the first empty for a future button, per19:40 user instruction; keep existing narrow-screen single column without a blank touch action. Existing bottom «Κλείσιμο χωρίς Εκτύπωση»/submission/backend WASTE/accounting/stock/Audit/permissions and accepted movement label remain unchanged. No server/config/data mutation or new transaction.
+
+Publicmain e3686bf3729bc1547d6e28895c7e1135df96d9b2 includes accepted POS-NO-PRINT-DISPLAY-01 closurePR1961/CI37960175522 SUCCESS. Original POS-NO-PRINT-01 owner codex/pos-close-without-print-20261008 retains business/financial acceptance; no takeover. Other owners and prior PASS protected.
+
+Next: publish bounded claim before source, remove one menu action/update existing menu assertions, verify actual React empty/cart menu and remaining reason guard read-only/no production write, fullCI/exact healthy deployment, then user refreshes/opens Κατάστημα once without submission. Manual unchanged until USER visual PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-store-menu-remove-waste.md.
+
 ## 2026-10-09T16:34:06.060404+03:00 - POS-DB-LOCK-01 / full20store22POS model RUNNING / result PENDING, production readiness NOT ESTABLISHED
 
 Full claimPR1955/head2a484bf5/docsCI37937339780 SUCCESS merged47b11dc7ff0b58dcc766e3e99b3de8ec1fee7809 before fresh full execution. MainCI37937511405 SUCCESS, guard37937571742 SUCCESS; no production source/resource change. Exact prepared source992f5aec/fullCI37936078269 SUCCESS1966/1966 and all short capped phases37936078268 PASS preserved.
