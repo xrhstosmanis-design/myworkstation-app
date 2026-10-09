@@ -220,8 +220,10 @@
 ## 33 — Τελικές δοκιμές χρηστών, ρόλων και modules
 
 - **Tracker ID:** `35`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και δικαιώματα ανά νέο module.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / OPEN (ενημέρωση09/10, tracker35)
+- **Υπόλοιπο / όριο:** 26 επιλογές αντί79, φόρμα/φίλτρο/STOCK LAB POS2 LIVE PASS62fe51ea. Εκκρεμούν grant/deny/revoke και Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και νέο module. Owner codex/operator-checkbox-audit-20261009.
+
+- **Ενημέρωση 09/10/2026:** ASSIGNED / PARTIAL LIVE PASS / OPEN, codex/operator-checkbox-audit-20261009. Αφαιρέθηκαν53 ανενεργές επιλογές, διατηρήθηκαν26. LIVE φόρμα25+1+0, φίλτρο2→3→2 και STOCK του LAB POS2 PASS σε exact62fe51ea. PR1994/CI2003PASS. Ζωντανά grant/deny/revoke και πλήρες role/store/company/module acceptance OPEN· αναμονή συγκεκριμένης επιβεβαίωσης προσωρινών δικαιωμάτων. Checkpoint2026-10-09-operator-checkbox-audit.md.
 
 ## 34 — Πλήρες εγχειρίδιο εργαζομένου, ιδιοκτήτη και Super Admin
 

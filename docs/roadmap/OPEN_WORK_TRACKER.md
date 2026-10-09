@@ -1443,7 +1443,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** ASSIGNED / IMPLEMENTED / AWAITING CI + LIVE — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / OPEN — OPERATOR-CHECKBOX-01
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
@@ -1451,7 +1451,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 09/10/2026 23:25 Europe/Athens — explicit owner approval for every operator checkbox in two LAB POS2 screenshots. Remove inert controls or connect supported runtime with granted/denied/revoked evidence. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-operator-checkbox-audit.md. No financial/stock action or credential changes.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** ClaimPR1993/CI37986415384/mergeb37cb72e. Complete79 editor checkbox inventory;53 inert controls removed,26 retained. Runtime /access rights overlay and semantic payment/IRIS visibility corrected. Targeted28/28, frontend/server build and full1981PASS/0FAIL/4isolated-DB skips. No new LIVE PASS; exact-head CI/healthy revision/operator acceptance pending. Matrix2026-10-09-operator-checkbox-matrix.md; checkpoint2026-10-09-operator-checkbox-audit.md.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 09/10/2026 23:52–23:54 Athens bounded LIVE PASS: editor25+1+0 checkbox counts, active filter2→3→2 and ordinary LAB POS2 STOCK header after refreshed rights. SourcePR1994/head5331ab09/fullCI37987782922:2003PASS/0FAIL/0SKIP; main62fe51ea CI37988859210/guard37989197359 SUCCESS, exact healthy.53 inert controls removed; legacy values preserved in isolated save test. Checkpoint2026-10-09-operator-checkbox-audit.md, matrix, evidence operator-checkbox-live-20261009.json, workforce/PASS.md. No live profile save, grant/revoke or transaction. Next: action-time confirmation for26-control LAB POS2 temporary grant/revoke/restore acceptance; wider role/tenant/module tests OPEN.
 
 ### 36 — Πλήρες εγχειρίδιο χρήσης
 
