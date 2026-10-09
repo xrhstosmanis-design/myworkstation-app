@@ -1,0 +1,8 @@
+## 09/10/2026 22:25 Europe/Athens — POS-INVOICE-ORDERS-01 / ASSIGNED / NOT TESTED
+
+Owner `feat/pos-invoice-orders-permission`. Explicit owner request: POS button «Τιμολόγια / Παραλαβές» opens the existing orders/invoice editor for the operator's own store. Enable solely through existing Operator → Access → backofficeMenu.orders («Παραγγελίες»); no second checkbox or broad Backoffice access. Preserve mounted POS/cart/shift and existing invoice settlement, duplicate, unresolved-line, total reconciliation and stock-posting guards. No OCR algorithm, automatic payment, fiscal, existing supplier/payment or other assigned scope takeover.
+
+New bounded entry + authorization scope: fresh server profile check, employee and manager StoreOperator sessions, store/company/resource isolation and module/license gates; existing editor reused with operator token (never admin localStorage token); revoked access hides/closes workspace and denies APIs. Preserve separate barcode/retail/product permissions and email/central features. Required acceptance: granted/denied/revoked access, cross-store/company/order/line negative checks, open/edit/save/return with unsent cart retained, original admin paths preserved. Isolated fixtures/CI are not LAB PASS; physical authenticated LAB and exact release remain NOT TESTED. No production writes or old invoice resubmission for evidence.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-pos-invoice-orders-permission.md`. Publish this independent claim to main before source changes. Other owners, Gate3 assistant PASS and POS auxiliary/header USER PASS remain protected. Next: implement bounded bridge and guarded reuse, test, full CI, exact healthy release then acceptance.
+
