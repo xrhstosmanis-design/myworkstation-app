@@ -25,6 +25,11 @@ try {
   assert.equal(identity.name, "myworkstation_test");
   const control = await db.company.create({ data: { name: "Synthetic demo preparation control", active: true, licenseStatus: "ACTIVE" } });
   const controlStore = await db.store.create({ data: { name: "Untouched control", companyId: control.id, cashCloseEmailEnabled: false } });
+  const controlProductId = `demo-control-${run}`;
+  await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku","salePrice","active") VALUES (${controlProductId},${control.id},'Untouched synthetic control',${controlProductId},3.25,TRUE)`;
+  await db.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${controlProductId},${controlStore.id},${controlProductId},3.25,123,TRUE)`;
+  const readControlStock = () => db.$queryRaw`SELECT p."id",p."name",p."salePrice",p."active",sp."storeId",sp."currentStock",sp."active" AS "storeActive",sp."updatedAt" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."id"=${controlProductId}`;
+  const controlStockBefore = await readControlStock();
   const actor = async role => {
     const user = await db.user.create({ data: { email: `demo-${role}-${run}@example.invalid`, fullName: "Synthetic lifecycle actor", role, companyId: control.id, passwordHash: "isolated-no-login", mustChangePassword: false } });
     const session = await db.userSession.create({ data: { userId: user.id, expiresAt: new Date(Date.now() + 86_400_000) } });
@@ -87,6 +92,7 @@ try {
   assert.equal(await db.authAudit.count({ where: { userId: sa.user.id, event: "CUSTOMER_DEMO_PREPARED" } }), 2);
   assert.deepEqual(await db.company.findUnique({ where: { id: control.id }, include: { stores: true } }), before);
   assert.deepEqual(await db.store.findUnique({ where: { id: controlStore.id } }), before.stores[0]);
+  assert.deepEqual(await readControlStock(), controlStockBefore);
   console.log("Customer demo preparation PostgreSQL + HTTP PASS: two inactive tenants, exact catalog/stock, SA-only access, concurrent idempotency, activation/provider lock, expiry/revocation, one audit/event, atomic rollback and untouched control. Runtime POS/Backoffice and Windows acceptance NOT TESTED.");
 } finally {
   if (trigger) { await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS "${trigger}" ON "Product"`); await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS "${trigger}"()`); }
