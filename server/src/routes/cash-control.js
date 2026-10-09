@@ -103,6 +103,8 @@ async function requireCashAccess(req,res,next){
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
   const permissions=req.user?.permissions||[],path=String(req.originalUrl||"").split("?")[0];
   if(req.method==="POST"&&/\/stores\/[^/]+\/attendance-(?:card\/scan|pin\/submit)$/.test(path))return next();
+  // POS needs only the status of its bound terminal's shift, not cash totals.
+  if(req.method==="GET"&&/\/api\/(?:cash|cash-control)\/stores\/[^/]+\/shift-status$/.test(path))return next();
   if(req.method==="GET"&&/\/api\/(?:cash|cash-control)\/stores\/[^/]+\/overview$/.test(path)&&permissions.includes("CASH_OVERVIEW"))return next();
   if(req.method==="POST"&&/\/stores\/[^/]+\/sessions\/open$/.test(path)){
     const rows=await prisma.$queryRaw`SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions" FROM "StoreOperatorCredential" c LEFT JOIN "StoreOperatorProfile" p ON p."storeId"=c."storeId" AND p."employeeId"=c."employeeId" WHERE c."id"=${req.user.operatorId||req.user.id} AND c."companyId"=${req.user.companyId} AND c."active"=TRUE LIMIT 1`;
@@ -279,6 +281,20 @@ router.post("/stores/:storeId/attendance-pin/submit",route(async(req,res)=>{
   const result=await prisma.$transaction(tx=>syncOperatorWorkforceAttendance(tx,req,store.id,"TOGGLE",null,{legacyEmployeeId:credential.employeeId,method:"POS_PIN"}));
   if(result.status==="WORKFORCE_EMPLOYEE_NOT_LINKED"||result.status==="SKIPPED")return res.status(409).json({error:"Ο εργαζόμενος δεν έχει συνδεθεί ακόμη με το Workforce."});
   res.status(201).json({ok:true,...result});
+}));
+
+router.get("/stores/:storeId/shift-status",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
+  const rows=await prisma.$queryRaw`SELECT "id","status","openedAt" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
+  const open=rows[0];
+  const result={store:{id:store.id,name:store.name},openSession:open?{id:open.id,status:open.status,openedAt:open.openedAt}:null};
+  if(req.user.tokenType!=="STORE_OPERATOR"||(req.user.permissions||[]).includes("INITIAL_CASH")){
+    const closed=await prisma.$queryRaw`SELECT "closingDrawer","closingCustody","closingCoins","closingSafe","nextOpeningTotal" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='CLOSED' ORDER BY "closedAt" DESC LIMIT 1`;
+    const last=closed[0];
+    result.suggestedOpening={drawer:Number(last?.closingDrawer||0),custody:Number(last?.closingCustody||0),coins:Number(last?.closingCoins||0),safe:Number(last?.closingSafe||0),operational:Number(last?.nextOpeningTotal||0)};
+  }
+  res.json(result);
 }));
 
 router.get("/stores/:storeId/overview",route(async(req,res)=>{
