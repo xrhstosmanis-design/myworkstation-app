@@ -1,3 +1,4 @@
+import {createInvoiceCatalogLookup} from "../lib/invoice-catalog-lookup.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -158,6 +159,8 @@ router.get("/:orderId/ocr-lines",async(req,res,next)=>{
     res.json({order,rows:mapped,unresolved:mapped.filter(r=>r.ocrLineType==="PRODUCT"&&r.resolutionStatus==='UNRESOLVED').length});
   }catch(error){next(error)}
 });
+
+router.get("/:orderId/ocr-lines/:lineId/catalog-matches",createInvoiceCatalogLookup(prisma));
 
 router.get("/:orderId/ocr-lines/:lineId/options",async(req,res,next)=>{try{
   const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});

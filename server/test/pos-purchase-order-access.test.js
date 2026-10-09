@@ -36,7 +36,8 @@ test('email, central product/barcode management, deletion and unknown routes rem
  const f=fixture();for(const args of [{path:'/one/email',method:'POST'},{path:'/products/p/barcodes',method:'POST'},{path:'/one/lines/line/product-card',method:'PATCH'},{path:'/one',method:'DELETE'},{path:'/stock-proposal'},{path:'/one/unknown',method:'POST'}])assert.equal((await f.run(args)).res.code,403);
 });
 test('OCR and assistant access remains scoped, extra barcode write requires existing barcode right',async()=>{
- const f=fixture();for(const tail of ['ocr-lines','ocr-lines/line/search','ocr-lines/line/options','invoice-assistant/source'])assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/'+tail})).next,true);
+ const f=fixture();for(const tail of ['ocr-lines','ocr-lines/line/search','ocr-lines/line/options','ocr-lines/line/catalog-matches','invoice-assistant/source'])assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/'+tail})).next,true);
+ assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/catalog-matches',method:'POST'})).res.code,403);
  assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/resolve-existing',method:'POST',body:{addBarcode:true}})).res.code,403);
  for(const barcodeMode of ['PROVIDED','GENERATED'])assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/create-product',method:'POST',body:{barcodeMode}})).res.code,403);
  assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/other/invoice-assistant/preview',method:'POST'})).res.code,404);
