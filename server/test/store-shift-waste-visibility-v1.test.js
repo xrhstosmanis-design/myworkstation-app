@@ -12,8 +12,8 @@ test("recent shift sales include WASTE so waste is visible without creating a du
   assert.match(route,/row\.source==="WASTE"\?"WASTE":"SALE"/);
 });
 
-test("active shift modal labels waste distinctly and marks it as no receipt",()=>{
+test("active shift modal labels unchanged WASTE as close without print and marks it as no receipt",()=>{
   assert.match(modal,/s\.source==="WASTE"\?"WASTE"/);
-  assert.match(modal,/row\.kind==="WASTE"\?"ΦΥΡΑ":"Πώληση"/);
+  assert.match(modal,/row\.kind==="WASTE"\?"Κλείσιμο χωρίς εκτύπωση":"Πώληση"/);
   assert.match(modal,/row\.kind==="WASTE"\?" · Χωρίς απόδειξη":""/);
 });

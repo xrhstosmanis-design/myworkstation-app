@@ -1,3 +1,13 @@
+## 2026-10-09T15:38:53.465Z - POS-NO-PRINT-DISPLAY-01 / IMPLEMENTED / AWAITING exact-head CI, healthy release and USER
+
+Independent display owner codex/pos-no-print-display-20261009. Claim PR #1958, final head 16663db4f3f1c0bb650bf3bf1e8a2cba8e2d1c30, docs CI 37952899987 SUCCESS, merge aa2de84d4d7fa7668a20cb0ae0d26d091e45f5ca was published before source edit. Latest user instruction09Oct18:33:17 Athens explicitly retains the same function and calculations.
+
+One read-only change: StoreShiftTransactionsModal's existing WASTE display title is now «Κλείσιμο χωρίς εκτύπωση» instead of «ΦΥΡΑ». Existing source/kind WASTE, icon, no-receipt subtitle, CASH amounts, rows/session/operator filtering, normal sale/return/VOID/expense titles and backend processing/reports are untouched. Update the one existing waste-visibility label assertion and its test description; all other assertions remain intact.
+
+Node20 targeted5/5 tests PASS, no failure/skip. Actual React modal in an isolated JSDOM fixture PASS for own-operator, all-operator and closed-shift cases: new title, unchanged CASH1.00EUR/no-receipt display, ordinary sale title, old-shift99EUR excluded, expected selected-store GET-only calls and close action. This fixture is not a physical financial/stock test or geometry certification. git diff --check PASS. No production sale/payment/order/stock/Audit/state write; no historical data rewrite.
+
+AWAITING full CI and exact healthy deployment, then one user read-only inspection of existing movements. Existing POS-NO-PRINT-01 submission/accounting/financial acceptance owner remains assigned and untouched; no transfer. The screenshot USER FAIL is not yet closed. No new manual PASS, other modules/Gates/owners and earlier accepted header entry preserved. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-no-print-movement-label.md.
+
 ## 09/10/2026 18:33 Europe/Athens - POS-NO-PRINT-DISPLAY-01 / ASSIGNED / movement label USER FAIL
 
 Independent bounded display owner codex/pos-no-print-display-20261009, source branch codex/pos-no-print-movement-label-20261009; checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-no-print-movement-label.md. Based on main f7873e33471e1adc3efc63ecdc30e88a165b146a. Existing POS-NO-PRINT-01 owner codex/pos-close-without-print-20261008 retains direct-button submission, accounting and physical financial acceptance; no transfer or duplicate implementation of that scope.
