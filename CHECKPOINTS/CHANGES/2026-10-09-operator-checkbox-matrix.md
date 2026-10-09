@@ -36,7 +36,7 @@ Source main b37cb72e; every checkbox from the two owner screenshots, plus curren
 | POS_PERMISSIONS | supplierReturn | έκδοση Δ-Α επιστροφής σε προμηθευτή (PoS) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | supplierPayment | πληρωμή Προμηθευτή | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
 | POS_PERMISSIONS | sameShiftPayments | Οι πληρωμές να αφαιρούνται από την ίδια βάρδια | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
-| POS_PERMISSIONS | transferAmount | Μεταφορά ποσού | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
+| POS_PERMISSIONS | transferAmount | Μεταφορά ποσού | SERVER AUTHORIZATION CONNECTED; no transfer entry in modern POS / acceptance OPEN |
 | POS_PERMISSIONS | shiftTransactionsBackoffice | Συναλλαγές βάρδιας (backoffice) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | warehouseColumn | Εμφάνιση στήλης Αποθήκη (Παραγγελίες-BackOffice) | REMOVE INERT CONTROL / STORED VALUES RETAINED |
 | POS_PERMISSIONS | shiftTransactionsPos | Συναλλαγές βάρδιας (PoS) | CONNECTED / NEEDS RUNTIME ACCEPTANCE |
@@ -104,4 +104,36 @@ Customer entry FAIL: customersPos=false hides bottom button but top credit-custo
 
 Same owner codex/operator-checkbox-audit-20261009 / printed33 tracker35 OPEN. Prior minimal-shift and CASH visibility bounded LIVE PASSc0f1ce16 retained. Customer denial PR2000 fullCI37994579202 SUCCESS, merged d358b9e0dd9038d776e58ce1d1439d306d4ad6e0; new deployed customer proof pending. Grant phasec0: Barcode registration modal opens, payment tabs enabled; operator Transactions/MyPayments/Close enabled, actual read-only ledger loads4historic CASH rows. Existing stale shift from07Oct keeps cash-from-shift disabled despite sameShift true, as required; no closing/opening. Local SKU2270 qty1/price1 showedstock-10 and linepriceeditor, nopriceapply. Description clicknoeffect; undefined callbacks proved. Cart CLEAR after granting still consumed cached deniedcatalogflags and cleared without capturedconfirmation/reason: behaviorrefresh LIVE FAIL, native dialog API additionally unavailable due credential protection. No confirmation/reason PASS; no financial/stock/product/shift write. CART_ITEM_ADD/CART_CANCEL Audit effects/IDs and financial/control deltas NOT TESTED. Cart0 restored; original24details exact and ordersunchanged.
 
-Implemented bounded observed causes: runtimeAccess passed into mounted POS behavior flags (confirm/reason/cardOnly/online alias/layout edit) without catalog reload/remount; existing server guards unchanged. Remove unimplemented description checkbox/action/dead editor, preserving stored editDescription. Linebarcode opens existing store-scoped registration modal filtered bySKU, no new API. New inventory55removed/24retained:21POS+orders+active+posAccess,23details+1access+0other; these new counts AWAITING LIVE. Actual React regression verifies grant/revoke guard callbacks while cart remains mounted, blank reasonrejection, card-only and online UI updates, existingbarcodequery and no product/financialwrites;8targetedPASS and frontendbuild13.57sPASS, fullsuite pending. Existing invoice/assistant lifecycle regression preserved. FullexactheadCI/main/guard/exacthealth then LIVE required. Next: finalrevisedform and restrictive/granted controls/restoration; active/POSaccess/financial/physical/role/tenant/module breadth OPEN.
+Implemented bounded observed causes: runtimeAccess passed into mounted POS behavior flags (confirm/reason/cardOnly/online alias/layout edit) without catalog reload/remount; existing server guards unchanged. Remove unimplemented description checkbox/action/dead editor, preserving stored editDescription. Linebarcode opens existing store-scoped registration modal filtered bySKU, no new API. New inventory55removed/24retained:21POS+orders+active+posAccess,23details+1access+0other; these new counts AWAITING LIVE. Actual React regression verifies grant/revoke guard callbacks while cart remains mounted, blank reasonrejection, card-only and online UI updates, existingbarcodequery and no product/financialwrites;8targetedPASS and frontendbuild13.57sPASS, full preparedsuite2001tests/1997PASS/0FAIL/4isolated-DBskips. Existing invoice/assistant lifecycle regression preserved. FullexactheadCI/main/guard/exacthealth then LIVE required. Next: finalrevisedform and restrictive/granted controls/restoration; active/POSaccess/financial/physical/role/tenant/module breadth OPEN.
+
+
+## Current per-control acceptance — deployed7ebfab49 / 10-10-2026
+
+All24 retained controls have independently reopened grant/restrictive/restoration profile persistence evidence; this is not functional acceptance of every action. Revised23 Details+1 Access+0 Other counts and55 removals observed LIVE. Both customer entries now obey denial and dynamic online-button grant preserves mounted query/cart; older FAIL notes below are historical. SourcePR2002/full2009CI/main attempt2/guard37997476523/exacthealth7ebfab49. Existing profile restored exact; after-block cart, remote lookup and economic/stock/control/Audit deltas NOT TESTED. Same owner retained, printed33/tracker35 OPEN, manual takeover is next action.
+
+| Key | Bounded evidence | Remaining acceptance |
+|---|---|---|
+| stockPos | LIVE visibility deny/grant PASS | Stock quantities/deltas NOT TESTED |
+| confirmDeleteSale | Actual React CI PASS; current LIVE NOT TESTED | Native dialog observation unavailable; old c0 FAIL retained historically |
+| editPosButtons | Current empty-corner denial observed | Current grant editor NOT TESTED; earlier62 UI PASS protected |
+| deleteSaleReason | Actual React CI PASS; current LIVE NOT TESTED | Native reason/blank/live Audit proof pending |
+| addBarcode | Toolbar visibility deny/grant PASS | Current line modal and barcode mutation NOT TESTED |
+| onlineBarcode | LIVE denied instruction -> granted button without reload PASS | Clicked remote GET final result NOT TESTED; browser blocked |
+| changeRetail | Earlier c0 price editor opens without applying | Current deny/grant and price application NOT TESTED |
+| returnItems | LIVE return-entry visibility deny/grant PASS | Return/exchange/reversal transaction NOT TESTED |
+| customersPos | LIVE both top/bottom visibility deny/grant PASS | No customer search/selection or record acceptance inferred |
+| customerCardOnly | Actual React CI grant/revoke PASS | Current LIVE placeholder/search behavior NOT TESTED |
+| thirdPartyPayment | Combined payment-entry visibility deny/grant PASS | Individual tab/financial flow current NOT TESTED |
+| hidePrinter | Checkbox persistence PASS | Current label visibility/physical print NOT TESTED |
+| supplierPayment | Combined payment-entry visibility deny/grant PASS | Individual tab/payment/intake current NOT TESTED |
+| sameShiftPayments | Existing c0 stale-shift deduction guard observed | Current independent source permission/financial delta NOT TESTED |
+| transferAmount | Existing server payment authorization connected | No modern POS transfer entry; LIVE flow NOT TESTED |
+| shiftTransactionsPos | LIVE restrictive menu disabled PASS | Current independent grant/ledger flow NOT TESTED; c0 ledger UI protected |
+| allShiftTransactionsPos | LIVE restrictive menu disabled PASS | Current own/all actor filtering and tenant breadth NOT TESTED |
+| cash | LIVE visibility deny/grant PASS at emptycart0 | Checkout/cash/financial delta NOT TESTED |
+| initialCash | Restricted existing-open-shift POS entry PASS | New-shift initial cash transaction NOT TESTED |
+| closeShift | LIVE restrictive close menu disabled PASS | Actual closing/amounts and current grant NOT TESTED |
+| cards | LIVE CARD/IRIS visibility deny/grant PASS at emptycart0 | Terminal/card/IRIS transaction NOT TESTED |
+| orders | LIVE invoice/intake entry visibility deny/grant PASS | Current workspace/write acceptance NOT TESTED; earlier module PASS protected |
+| posAccess | Original true independently restored | Revocation/reentry NOT TESTED; secure PIN if required |
+| active | Original true independently restored | Revocation/reentry NOT TESTED; secure PIN if required |

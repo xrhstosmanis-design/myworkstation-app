@@ -1,0 +1,169 @@
+{
+  "capturedAt": "2026-10-09T22:19:36.611256+00:00",
+  "sourceRevision": "7ebfab4932e535ef2bf3ea5a226897cf17ab323d",
+  "sourcePR": 2002,
+  "sourceCI": 37996331972,
+  "sourceTests": {
+    "pass": 2009,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainCI": {
+    "run": 37996674260,
+    "attempt": 2,
+    "pass": 2009,
+    "fail": 0,
+    "skip": 0
+  },
+  "guardRun": 37997476523,
+  "independentHealth": {
+    "ok": true,
+    "exactRevision": true,
+    "observedAt": "2026-10-09T22:11Z"
+  },
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "operator": "LAB POS 2",
+  "role": "EMPLOYEE",
+  "inventory": {
+    "original": 79,
+    "removed": 55,
+    "retained": 24,
+    "details": 23,
+    "access": 1,
+    "other": 0
+  },
+  "restoredVisibleDetails": [
+    {
+      "checked": true,
+      "label": "Πρόσβαση στις Πωλήσεις (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "ενεργός"
+    },
+    {
+      "checked": true,
+      "label": "στήλη Stock (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "διαγραφή λίστας πώλησης (PoS) με αιτιολογία"
+    },
+    {
+      "checked": true,
+      "label": "Προσθήκη barcode είδους (PoS & BackOffice)"
+    },
+    {
+      "checked": true,
+      "label": "Online αναζήτηση barcode (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Αλλαγή τιμής λιανικής (PoS & BackOffice)"
+    },
+    {
+      "checked": true,
+      "label": "Επιστροφή ειδών (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Πελάτες (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "πληρωμή προς Τρίτους"
+    },
+    {
+      "checked": false,
+      "label": "Απόκρυψη εκτύπωσης ετικέτας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "πληρωμή Προμηθευτή"
+    },
+    {
+      "checked": true,
+      "label": "Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"
+    },
+    {
+      "checked": true,
+      "label": "Μεταφορά ποσού"
+    },
+    {
+      "checked": true,
+      "label": "Συναλλαγές βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Όλες οι συναλλαγές Βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Μετρητά"
+    },
+    {
+      "checked": true,
+      "label": "με αρχικό Ταμείο"
+    },
+    {
+      "checked": true,
+      "label": "Κλείσιμο βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Κάρτες"
+    }
+  ],
+  "restoredAccess": [
+    {
+      "checked": true,
+      "label": "Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)"
+    }
+  ],
+  "restorationIndependentlyReopenedExact": true,
+  "lastObservedCart": {
+    "items": 0,
+    "total": 0,
+    "phase": "granted UI before blocked online GET"
+  },
+  "liveAccepted": [
+    "revised form counts",
+    "exact restricted/granted/restored checkbox persistence",
+    "restricted own-store POS entry",
+    "STOCK/payment/invoice/barcode/return visibility deny and grant",
+    "both customer entries denied and granted",
+    "Transactions/MyPayments/Close disabled under restrictive profile",
+    "online denial instruction becomes grant button without reload while synthetic query/cart remain mounted"
+  ],
+  "lookupQuery": "OPERATOR-CHECKBOX-NO-MATCH-20261010",
+  "lookupOutcome": "NOT TESTED: final result unobserved; protected_command_failed on wait and one fresh AX; manual handoff required",
+  "notTested": [
+    "live native confirmation and cancellation reason",
+    "live card-only changes",
+    "live current layout editing",
+    "live line barcode modal and barcode persistence",
+    "price application and returns",
+    "individual payment and transfer flows",
+    "new/closed shift",
+    "physical printing",
+    "active/POS-access revocation and reauthentication",
+    "role/company/store/module breadth",
+    "independent financial/stock/control/Audit deltas and IDs"
+  ],
+  "credentialReadOrChange": false,
+  "financialProductStockShiftSubmission": false,
+  "owner": "codex/operator-checkbox-audit-20261009",
+  "nextAction": "owner manual takeover of existing operator tab to recover current observation; then current remaining per-control acceptance, preserving baseline and prior PASS"
+}
