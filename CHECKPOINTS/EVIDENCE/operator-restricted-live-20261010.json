@@ -1,0 +1,220 @@
+{
+  "time": "2026-10-09T21:34:28.885Z",
+  "revision": "c0f1ce16e602fb5c4363edb3bb86ae054bb59743",
+  "store": "cmtpopbgo000trhb5ng9ytiru",
+  "operator": "LAB POS 2",
+  "role": "EMPLOYEE",
+  "terminal": "Cloud Chrome tab7; physical terminal not claimed",
+  "original": [
+    {
+      "checked": true,
+      "label": "Πρόσβαση στις Πωλήσεις (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "ενεργός"
+    },
+    {
+      "checked": true,
+      "label": "στήλη Stock (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "διαγραφή λίστας πώλησης (PoS) με αιτιολογία"
+    },
+    {
+      "checked": true,
+      "label": "Προσθήκη barcode είδους (PoS & BackOffice)"
+    },
+    {
+      "checked": true,
+      "label": "Διόρθωση περιγραφής είδους (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Online αναζήτηση barcode (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Αλλαγή τιμής λιανικής (PoS & BackOffice)"
+    },
+    {
+      "checked": true,
+      "label": "Επιστροφή ειδών (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Πελάτες (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "πληρωμή προς Τρίτους"
+    },
+    {
+      "checked": false,
+      "label": "Απόκρυψη εκτύπωσης ετικέτας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "πληρωμή Προμηθευτή"
+    },
+    {
+      "checked": true,
+      "label": "Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"
+    },
+    {
+      "checked": true,
+      "label": "Μεταφορά ποσού"
+    },
+    {
+      "checked": true,
+      "label": "Συναλλαγές βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Όλες οι συναλλαγές Βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Μετρητά"
+    },
+    {
+      "checked": true,
+      "label": "με αρχικό Ταμείο"
+    },
+    {
+      "checked": true,
+      "label": "Κλείσιμο βάρδιας (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Κάρτες"
+    }
+  ],
+  "restricted": [
+    {
+      "checked": true,
+      "label": "Πρόσβαση στις Πωλήσεις (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "ενεργός"
+    },
+    {
+      "checked": false,
+      "label": "στήλη Stock (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "διαγραφή λίστας πώλησης (PoS) με αιτιολογία"
+    },
+    {
+      "checked": false,
+      "label": "Προσθήκη barcode είδους (PoS & BackOffice)"
+    },
+    {
+      "checked": false,
+      "label": "Διόρθωση περιγραφής είδους (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Online αναζήτηση barcode (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Αλλαγή τιμής λιανικής (PoS & BackOffice)"
+    },
+    {
+      "checked": false,
+      "label": "Επιστροφή ειδών (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Πελάτες (PoS)"
+    },
+    {
+      "checked": true,
+      "label": "Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "πληρωμή προς Τρίτους"
+    },
+    {
+      "checked": true,
+      "label": "Απόκρυψη εκτύπωσης ετικέτας (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "πληρωμή Προμηθευτή"
+    },
+    {
+      "checked": false,
+      "label": "Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"
+    },
+    {
+      "checked": false,
+      "label": "Μεταφορά ποσού"
+    },
+    {
+      "checked": false,
+      "label": "Συναλλαγές βάρδιας (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Όλες οι συναλλαγές Βάρδιας (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Μετρητά"
+    },
+    {
+      "checked": false,
+      "label": "με αρχικό Ταμείο"
+    },
+    {
+      "checked": false,
+      "label": "Κλείσιμο βάρδιας (PoS)"
+    },
+    {
+      "checked": false,
+      "label": "Κάρτες"
+    }
+  ],
+  "ordersRestricted": false,
+  "restoredExactly": true,
+  "ordersRestored": true,
+  "cartItems": 0,
+  "total": 0,
+  "result": {
+    "shiftEntry": "LIVE PASS",
+    "stockBarcodeOrdersReturnPaymentsCardIrisCashVisibility": "LIVE PASS denied",
+    "operatorMenu": "LIVE PASS all three disabled",
+    "customerEntry": "LIVE FAIL top dropdown remains",
+    "customerCardOnly": "LIVE instruction observed, no search/selection",
+    "economicStockControlDeltas": "NOT TESTED"
+  },
+  "financialWrites": 0,
+  "productWrites": 0,
+  "shiftWrites": 0
+}

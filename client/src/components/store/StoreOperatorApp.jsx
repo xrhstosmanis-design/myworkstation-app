@@ -29,7 +29,7 @@ function applyPosPermissionStyle(access){
  const rules=[];
  // Quick keys are part of the fixed KAT terminal geometry; permission controls editing, never visibility.
  if(!access.stockPos)rules.push(".compact-store-mode .standard-table-head>:nth-child(3),.compact-store-mode .standard-line>:nth-child(3),.compact-store-mode .pos-product-facts>:nth-child(3){display:none!important}");
- if(!access.customersPos)rules.push(".compact-store-mode .customer-button{display:none!important}");
+ if(!access.customersPos)rules.push(".compact-store-mode .customer-button,.compact-store-mode .pos-credit-customer{display:none!important}");
  if(!access.changeRetail)rules.push(".compact-store-mode .line-price-action{pointer-events:none!important;cursor:default!important}.compact-store-mode .line-price-action svg{display:none!important}");
  if(!access.returnItems)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(3),.compact-store-mode .pos-line-actions>button:nth-child(1),.compact-store-mode .pos-line-actions>button:nth-child(2){display:none!important}");
  if(!access.supplierPayment&&!access.thirdPartyPayment)rules.push(".compact-store-mode .standard-action-bar>.pos-payments-action{display:none!important}");

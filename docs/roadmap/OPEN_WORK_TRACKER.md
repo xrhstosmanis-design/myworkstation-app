@@ -1451,7 +1451,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / restrictive-profile FAIL / FIX AWAITING LIVE — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / customer entry FAIL / FIX AWAITING LIVE — OPERATOR-CHECKBOX-01
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
@@ -1462,6 +1462,12 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 09/10/2026 23:52–23:54 Athens bounded LIVE PASS: editor25+1+0 checkbox counts, active filter2→3→2 and ordinary LAB POS2 STOCK header after refreshed rights. SourcePR1994/head5331ab09/fullCI37987782922:2003PASS/0FAIL/0SKIP; main62fe51ea CI37988859210/guard37989197359 SUCCESS, exact healthy.53 inert controls removed; legacy values preserved in isolated save test. Checkpoint2026-10-09-operator-checkbox-audit.md, matrix, evidence operator-checkbox-live-20261009.json, workforce/PASS.md. No live profile save, grant/revoke or transaction. Next: action-time confirmation for26-control LAB POS2 temporary grant/revoke/restore acceptance; wider role/tenant/module tests OPEN.
 
 **10/10 00:11 Athens continuation:** Explicit26-control user approval received. Restrictive23 flags/ordersfalse persisted; POS stalled at cash-overview permission denial. Exact original profile restored. Scoped minimal shift-status + visibleerror/retry implemented,16 targetedPASS/buildPASS; fullCI/healthy/newLIVE pending. Economic/control deltas NOT TESTED. Same owner retained.
+
+## 10/10/2026 00:35 Athens — OPERATOR-CHECKBOX-01 bounded LIVE PASS / customer entry FAIL / fix awaiting LAB
+
+Owner codex/operator-checkbox-audit-20261009; printed33/tracker35 remains OPEN. PR1998 fullCI37992152221 passed2007/0FAIL/0SKIP, mergec0f1ce16e602fb5c4363edb3bb86ae054bb59743; mainCI37992992250 and guardedRender37993299420 SUCCESS. Independent exacthealth observed21:28Z. New form24detail (22POS+active+posAccess),1orders,0other:54 inert controls removed from79,25 retained. Restrictive22flags+orders saved/re-read, ordinary LAB POS2 enters emptycart POS rather than endless shift check. STOCK/Barcode/invoice/return/payment/CARD/IRIS/CASH entries hidden; operator Transactions/MyPayments/Close all disabled. Full financial/stock/control deltas NOT TESTED; no economic/stock/shift/fiscal write or credential change.
+
+Customer entry FAIL: customersPos=false hides bottom button but top credit-customer dropdown still opens. No search/selection or customer record disclosed. Card-only instruction observed. Original24details+orders restored and independently compared exact. Prior quick-button editor grant opened/cancelled without layout save and restored on62fe51ea. Customer denial CSS now targets both actual entries; existing server guard unchanged. FullCI/exacthealthy/denied+granted LIVE required. Pending: remaining per-control runtime/physical actions, active/posAccess revocation, role/store/company/module breadth. Same owner retained; no financial replay or Manager promotion.
 
 ### 36 — Πλήρες εγχειρίδιο χρήσης
 
