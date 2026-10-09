@@ -1415,26 +1415,15 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 34 — Έξυπνο Audit / Συμβάντα
 
-## 09/10/2026 — Audit store acceptance / OPEN / LIVE VISUAL FAIL
+**Κατάσταση:** ΜΕΡΙΚΟ LIVE PASS — printed32 απομόνωση ανά κατάστημα CLOSED; ευρύτερο smart-Audit OPEN
 
-Continuation owner `fix/report-store-context-20261006`, publication `docs/audit-store-acceptance-20261009`, explicitly authorized by owner through final PASS. Authenticated read-only exact healthy source `b40a09dff6f0aaac585c1b71f2e36e51181e01e2`:1047 testing-store Audit DOM rows, foreign-name search0, positive search/refresh160, switch to isolation store0/refresh0, single disabled store criterion. Central SA controls1047/94/0 after Εμφάνιση. Bounded DOM/data result only: maximized Audit suite collapses to2px/clientHeight0/overflow hidden, so visible usable acceptance FAIL. In-flight race/empty-selection/physical PIN/ordinary roles/other reports NOT TESTED. No source or application state mutation. Same owner retains bounded report flex-sizing correction; claim publication must merge before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md`. Previous supplier/Analytics/navigation and all other owner PASS preserved; no financial/stock/shift replay. Final tracker34/printed32 remains OPEN.
+**Υπόλοιπο / όρια PASS:** Η read-only απομόνωση δύο LAB, κλειδωμένο κριτήριο, αναζήτηση/ανανέωση, αλλαγή με παλιό URL και ορατή χρήση normal/maximized ολοκληρώθηκαν. Ευρύτερη υλοποίηση smart-Audit, live in-flight/invalid-selection, physical PIN/λοιποί ρόλοι, άλλες αναφορές/αναλύσεις/touch δεν πιστοποιούνται από αυτό το PASS.
 
+**Υπεύθυνη σελίδα / branch:** fix/report-store-context-20261006 — bounded printed32 scope CLOSED; δεν μεταφέρεται ή αναλαμβάνεται άλλο scope.
 
-**Κατάσταση:** ASSIGNED / bounded LIVE DOM isolation PASS / LIVE VISUAL FAIL / final OPEN
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Αρχικό06Oct18:50UTC claimPR1787/CI4494/merge2d8a187c πριν code· context sourcePR1788/CI4496/a5cac431 καιPR1790/CI4499/4501/db1f90eb. Συνέχεια09Oct claimPR1983/CI37980110445/main3c3c2200 πριν bounded CSS correction.
 
-**Υπόλοιπο / όρια PASS:** Υλοποίηση και νέο user-reported πρόβλημα: Store Mode εμφανίζει συμβάντα άλλων καταστημάτων. Δεν δηλώνεται διορθωμένο.
-
-**Υπεύθυνη σελίδα / branch:** fix/report-store-context-20261006
-
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T18:50:34.327556+00:00 — selected-store report/Audit context only; CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Claim PR1787/CI4494 SUCCESS/merge2d8a187c before code.
-
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 06/10 — local build/server/DOM technical PASS only; exact CI/deploy and read-only two-store LAB acceptance pending. Same owner retained; no financial/shift replay.
-
-PR1788 merged a5cac431 after full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP). Empty-selection membership guard follow-up: 9 focused PASS, awaiting exact CI/deploy. Owner retained; read-only two-store LAB acceptance still required.
-
-PR1790/head6e081d95 passed CI4499, merged db1f90eb; main CI4501 SUCCESS. Exact LIVE verification and read-only two-store acceptance pending; owner retained.
-
-Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a06f8e02a01a950c5262. Deployment publication PASS; authenticated read-only two-store LAB NOT TESTED (native credential protection). Existing manual handoff; owner retained.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 09Oct19:59:07–20:00:56UTC /23:01Athens — LIVE PASS δύο LAB και report normal/maximized σε1348×936, Super Admin support. Testing1049/61categories all matching, foreign search0, positive ΝΕΡΟ 500ML160/refresh160; isolation0/refresh0 with stale testing URL ignored. Report height1003.44/580px instead of old2px, controls/rows/toolbar reachable. SourcePR1984/fullCI37980435854 (1981/1981/0fail/0skip)/main884efea2; mainCI37980797209 rerun SUCCESS/guard37981497519 SUCCESS/exact healthy884efea2. Final docsPR1988 requires fresh exact-head green CI and main merge. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md; manual docs/manual/reports/PASS.md; evidence CHECKPOINTS/EVIDENCE/audit-store-20261009/records.json. Completed pending context entries removed. No transactions/replay or next claim.
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 

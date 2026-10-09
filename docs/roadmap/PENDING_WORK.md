@@ -28,10 +28,6 @@ New bounded entry + authorization scope: fresh server profile check, employee an
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-pos-invoice-orders-permission.md`. Publish this independent claim to main before source changes. Other owners, Gate3 assistant PASS and POS auxiliary/header USER PASS remain protected. Next: implement bounded bridge and guarded reuse, test, full CI, exact healthy release then acceptance.
 
-## 09/10/2026 — Audit store acceptance / OPEN / LIVE VISUAL FAIL
-
-Continuation owner `fix/report-store-context-20261006`, publication `docs/audit-store-acceptance-20261009`, explicitly authorized by owner through final PASS. Authenticated read-only exact healthy source `b40a09dff6f0aaac585c1b71f2e36e51181e01e2`:1047 testing-store Audit DOM rows, foreign-name search0, positive search/refresh160, switch to isolation store0/refresh0, single disabled store criterion. Central SA controls1047/94/0 after Εμφάνιση. Bounded DOM/data result only: maximized Audit suite collapses to2px/clientHeight0/overflow hidden, so visible usable acceptance FAIL. In-flight race/empty-selection/physical PIN/ordinary roles/other reports NOT TESTED. No source or application state mutation. Same owner retains bounded report flex-sizing correction; claim publication must merge before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md`. Previous supplier/Analytics/navigation and all other owner PASS preserved; no financial/stock/shift replay. Final tracker34/printed32 remains OPEN.
-
 ## 2026-10-09T18:13:04.524989+00:00 — VIDEO-HIKVISION-01 / in-app download released / AWAITING USER + DEVICE
 
 Source PR #1976 head 3138a3f5739219fcd50551f3d77ef549d12a9009 passed full CI 37969815758 and merged at 17b8e74bfaa6385e66c0ce7df123985ed068795b. Concurrent customer-demo source aa971721b277591c5b73afc283277edb46c98e42 preserves our download changes; its full main CI 37970329259 attempt2 PASS (1981/1981 server tests, build/invariants/isolated HTTP E2E, Windows fixtures). Earlier main runs were cancelled by newer commits, not test failures. Deploy workflow 37971222414 success; observed GET /api/health ok:true with exact healthy revision aa971721b277591c5b73afc283277edb46c98e42. Latestmain d3d23279 differs only in documentation/PDF. Five download tests also pass locally on combined source.
@@ -688,26 +684,6 @@ Excel download observation blocked by native-credential protection; no returned 
 Scope: reconcile existing invoice inbox, issue-date search/daily arrivals/filtered grouped exports, scheduled receiving evidence, existing provider originals and same-draft review, cursor/replay safety and LAB POS linkage. Current overall status OPEN; not a new LAB PASS. Epsilon35158/35000 is BLOCKED EXTERNAL until verified provider original/API access; independent physical POS and fiscal provider acceptance remain NOT TESTED. Existing original/draft/payment identities must not be recreated. Full archive export was cancelled by owner and is excluded. Gate3 assistant accepted scope remains protected.
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-06-mydata-completion.md`. Publish this record and regenerated tracker PDF with green documentation CI/merge before source edits or state-changing LAB. Next action: read-only inbox verification, exact runtime revision and bounded baseline before any identified mutation. No real payment, stock posting/finalization, credential/role change or production DB script.
-
-## 06/10/2026 — Report context LIVE db1f90eb / read-only LAB pending
-
-Exact public health 2026-10-06T19:17Z ok=true, revision db1f90eb63092d03fa59a06f8e02a01a950c5262; CI4499/4501 SUCCESS. Owner fix/report-store-context-20261006 retained. Source/deploy PASS; authenticated two-store LAB NOT TESTED due native credential-protection block. Existing manual handoff: owner Ctrl+F5, Reports/Audit search/refresh and switch to second existing store. No transactions or shift replay; no new manual LAB PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
-
-## 06/10/2026 — Report store context / PR1790 CI4499 and main CI4501 PASS
-
-ASSIGNED owner fix/report-store-context-20261006 retained (#34). PR1790/head6e081d95 full CI4499 SUCCESS, merged db1f90eb63092d03fa59a06f8e02a01a950c5262; main CI4501 SUCCESS. Final empty-selection guard included. Awaiting exact LIVE verification and owner read-only two-store acceptance through existing manual handoff. No new LAB PASS, no shift/financial actions. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
-
-## 06/10/2026 — Report context follow-up / CI4496 PASS / LAB pending
-
-Owner fix/report-store-context-20261006 retained (#34). PR1788 full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP), merged a5cac431. Empty-selection bridge now validates membership in current stores, preventing retained previous-store reports. Focused 9 PASS; follow-up exact CI/deploy pending. No new LAB PASS; next read-only two-store acceptance, no shift or financial actions. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md.
-
-## 06/10/2026 — Report store context — IMPLEMENTED / AWAITING CI AND LAB
-
-ASSIGNED fix/report-store-context-20261006 (#34 independent subtask), claim PR1787/CI4494 SUCCESS/merged2d8a187c before code. Selected CommerceHub store now binds report/Audit requests and the single store criterion; stale URL/company selectors cannot broaden store context. Store change clears old results/detail overlays and guards late responses across report families. Node20 build PASS; local server1860 PASS/0 FAIL/4 SKIP, focused46 PASS. Isolated DOM evidence only, not LAB/visual/auth PASS. Exact CI/deploy and read-only two-store acceptance pending. No financial/stock/shift/fiscal action, QR and other owners protected. Checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Same owner retained.
-
-## 06/10/2026 — Report store context — ASSIGNED fix/report-store-context-20261006
-
-Owner requested correction of store reports showing other-store events. Independent #34 subtask: propagate the selected CommerceHub store to reports/Audit, remove conflicting all-store selectors inside that store, and prevent stale previous-store responses. Claimed 2026-10-06T18:50:34.327556+00:00; checkpoint CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. USER-reported FAIL; screenshot confirms conflicting filter context, row-store leak not independently verified. No source change or new LAB PASS. Protect Gate7 previous PASS, QR closes/recount, financial fixtures and #27/#29/#30/TODAY/installation/efood owners. No write to application data. Claim publication requires green docs CI and merge before source editing.
 
 ## 06/10/2026 — Κοινό μητρώο ανάληψης/ολοκλήρωσης
 
