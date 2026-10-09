@@ -1,3 +1,7 @@
+## 2026-10-09T17:55:37.914067+00:00 — VIDEO-HIKVISION-01 / protected download implemented / AWAITING CI + USER
+
+Claim PR #1975 merged at 7d4e2398 after CI 37969078458 success. Retained owner codex/hikvision-video-20261009; source branch codex/hikvision-download-ui-20261009. Existing Platform VideoConnectionManager and Backoffice Video Audit now offer the common Windows precheck v1.0.0 with extraction/start/report instructions. Selected-store authenticated GET endpoints preserve existing SuperAdmin or owner/admin/license/module/company/store context. ZIP is fixed, size/hash verified at response time, private no-store attachment; missing/tampered files fail closed. Download does not submit recorder settings or require an online connector. Component aborts on URL/store change/unmount and discards delayed responses. Local Node24 fixture tests 5/5 PASS (actual registered authorization handlers + rendered UI), prior Dahua/video behaviors preserved; Node20/full CI pending. Real browser download and physical Hikvision historical video remain NOT TESTED. No production data, pairing, credentials, camera mappings or saved Dahua settings changed. Next: full CI, merge, exact healthy deployed revision; then read-only browser download acceptance and onsite preflight separately. No manual PASS claim.
+
 # In-app Hikvision preflight download
 
 ## 2026-10-09T17:49:58.681266+00:00 — VIDEO-HIKVISION-01 / in-app package download ASSIGNED

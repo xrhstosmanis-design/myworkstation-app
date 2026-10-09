@@ -1,0 +1,7 @@
+.video-package-download{padding:16px;margin:16px 0;border:1px solid #bac9da;border-radius:12px;background:#f4f8fc;color:#172b43}
+.video-package-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.video-package-download h3{margin:0 0 4px;font-size:1rem}
+.video-package-download p{line-height:1.5;overflow-wrap:anywhere}
+.video-package-download button{padding:10px 14px;border:0;border-radius:8px;background:#174e86;color:white;cursor:pointer}
+.video-package-download button:disabled{opacity:.6;cursor:wait}
+.video-package-download .video-package-error{color:#a32424}
