@@ -1,3 +1,13 @@
+## 09/10/2026 18:33 Europe/Athens - POS-NO-PRINT-DISPLAY-01 / ASSIGNED / movement label USER FAIL
+
+Independent bounded display owner codex/pos-no-print-display-20261009, source branch codex/pos-no-print-movement-label-20261009; checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-no-print-movement-label.md. Based on main f7873e33471e1adc3efc63ecdc30e88a165b146a. Existing POS-NO-PRINT-01 owner codex/pos-close-without-print-20261008 retains direct-button submission, accounting and physical financial acceptance; no transfer or duplicate implementation of that scope.
+
+User screenshot image(20261009-151157).png shows LAB POS2 / shift TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ / three existing 1×ΝΕΡΟ1,5LT movements at1.00EUR, titled «ΦΥΡΑ» and CASH1.00EUR. Screenshot observes labels only; no independent before/after stock/cash/control or physical revision supplied. User complains the «Κλείσιμο χωρίς Εκτύπωση» action appears as waste. Asked whether to change only the movement name with unchanged cash/stock function, user explicitly answers «ΤΗΝ ΙΔΙΑ ΛΕΙΤΟΥΡΓΙΑ» at18:33:17 Athens. New movement-label requirement is USER FAIL until corrected and retested.
+
+Claim only the read-only StoreShiftTransactionsModal display label for existing kind WASTE: «Κλείσιμο χωρίς εκτύπωση». Keep source/kind WASTE, /waste request, amounts, CASH display, stock/ledger/Audit, no-receipt subtitle, icons, recent-sales/active-session/operator filtering, ordinary sale/return/void/expense labels and all backend reports/API behavior unchanged. No migration, historical data rewrite, fiscal execution or production state write. Do not repeat the displayed transactions for evidence. Existing financial/TableService/No16/Gate/capacity owners and PASS remain protected.
+
+Next action: publish this bounded claim with green docs CI and merge before source edit; change one display literal plus the existing affected guard, run preserved session/waste tests and actual modal fixture, exact-head full CI, merge/main CI and healthy exact release. Then user refreshes and inspects the existing movements without a new transaction. Manual remains unchanged until real user acceptance. Original no-print financial acceptance stays AWAITING LAB.
+
 ## 2026-10-09T16:34:06.060404+03:00 - POS-DB-LOCK-01 / full20store22POS model RUNNING / result PENDING, production readiness NOT ESTABLISHED
 
 Full claimPR1955/head2a484bf5/docsCI37937339780 SUCCESS merged47b11dc7ff0b58dcc766e3e99b3de8ec1fee7809 before fresh full execution. MainCI37937511405 SUCCESS, guard37937571742 SUCCESS; no production source/resource change. Exact prepared source992f5aec/fullCI37936078269 SUCCESS1966/1966 and all short capped phases37936078268 PASS preserved.
