@@ -45,7 +45,7 @@ test('actual operator editor toggles every retained checkbox and preserves remov
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
  const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/commerce/OperatorManagementPanel.jsx',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client'],loader:{'.css':'empty'}});
  const m={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
- const row={employeeId:'employee',displayName:'Fixture',role:'EMPLOYEE',active:true,posAccess:true,permissions:{stockBackoffice:true,mixedPaymentChange:true},backofficeMenu:{reports:true},backofficeTabs:{events:true},customerDisplay:{doubleScreen:true},backofficeAccess:true,powerUser:true};
+ const row={employeeId:'employee',displayName:'Fixture',role:'EMPLOYEE',active:true,posAccess:true,permissions:{stockBackoffice:true,mixedPaymentChange:true,centralCashPos:true},backofficeMenu:{reports:true},backofficeTabs:{events:true},customerDisplay:{doubleScreen:true},backofficeAccess:true,powerUser:true};
  const saves=[];const api=async(path,options={})=>{if(options.method==='PATCH'){saves.push(JSON.parse(options.body));return {ok:true}}return {operators:[row]}};
  const root=createRoot(document.getElementById('root'));
  const click=async el=>act(async()=>{assert.ok(el);el.click();await new Promise(r=>setTimeout(r,5))});
@@ -53,14 +53,14 @@ test('actual operator editor toggles every retained checkbox and preserves remov
  try{
   await act(async()=>{root.render(React.createElement(m.exports.default,{api,store:{id:'A'},onClose(){}}));await new Promise(r=>setTimeout(r,10))});
   await click(document.querySelector('[title="Διόρθωση"]'));
-  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,25);
+  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,24);
   for(const b of boxes.slice(2))await click(b);
   await click(find('Δικαιώματα πρόσβασης'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,1);
   await click(document.querySelector('.om-modal input[type="checkbox"]'));
   await click(find('Λοιπά'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,0);
   await click(find('Καταχώρηση'));assert.equal(saves.length,1);
-  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange'].includes(k)).length,23);
-  assert.equal(saves[0].backofficeMenu.orders,true);assert.equal(saves[0].backofficeMenu.reports,true);
+  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange','centralCashPos'].includes(k)).length,22);
+  assert.equal(saves[0].permissions.centralCashPos,true);assert.equal(saves[0].backofficeMenu.orders,true);assert.equal(saves[0].backofficeMenu.reports,true);
   assert.equal(saves[0].backofficeTabs.events,true);assert.equal(saves[0].customerDisplay.doubleScreen,true);
   assert.equal(saves[0].backofficeAccess,true);assert.equal(saves[0].powerUser,true);
   assert.equal(saves[0].posAccess,true);assert.equal(saves[0].active,true);

@@ -1,3 +1,7 @@
+## 2026-10-09T21:11Z — Extra inert control and CI registry blocker
+
+Fresh consumer audit found centralCashPos only in historical patch scripts, not actual UI/runtime. Remove it from editor (legacy save retained): original79 minus54 inert =25 retained,22POS+orders+posAccess+active; details24/access1/other0. Prior26-count LIVE proof remains historical, not overwritten. FullCI37991572404 attempts1/2 failed beforecheckout at Docker Hub unauthenticated pull limit, no tests executed. Use same Docker Official postgres16 image at public.ecr.aws/docker/library/postgres:16 (Docker official mirror documentation https://www.docker.com/blog/news-from-aws-reinvent-docker-official-images-on-amazon-ecr-public/). No application PostgreSQL version/configuration or test gate changed. NewexactheadfullCI required.
+
 ## 2026-10-09T21:11Z — Shift-status fix IMPLEMENTED / AWAITING CI + LIVE
 
 Minimal own-store/bound-terminal shift-status response exposes onlyid/status/openedAt; previous closing suggestions require INITIAL_CASH. Full cash overview remains permission guarded. POS entry uses minimal status and shows explicit error/retry/logout on check failure. Targeted16/16PASS including actual React failed fetch then retry recovery and real route callback boundary/no balance tests; frontend productionbuildPASS15.14s. Original LAB POS2 details restored exact and existing empty-cart POS returned after prior restrictive-profile FAIL. Newsource not live accepted. Same owner/tracker35 remainsOPEN; nextfullCI/guard/exacthealth then accepted26-controls test without economic writes.

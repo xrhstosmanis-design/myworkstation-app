@@ -17,7 +17,6 @@ const POS_PERMISSIONS=[
   ["changeRetail","Αλλαγή τιμής λιανικής (PoS & BackOffice)"],
   ["returnItems","Επιστροφή ειδών (PoS)"],
   ["customersPos","Πελάτες (PoS)"],
-  ["centralCashPos","Εμφάνιση κεντρικού Ταμείου (PoS)"],
   ["customerCardOnly","Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"],
   ["thirdPartyPayment","πληρωμή προς Τρίτους"],
   ["hidePrinter","Απόκρυψη εκτύπωσης ετικέτας (PoS)"],
