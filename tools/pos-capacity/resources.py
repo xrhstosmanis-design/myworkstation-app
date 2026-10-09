@@ -62,7 +62,7 @@ elif sys.argv[1] == 'manifest':
             'profile': os.environ['MWS_CAPACITY_PROFILE'], 'generator': {'cpuCount': os.cpu_count()},
             'resourceModel': os.environ['MWS_CAPACITY_RESOURCE_MODEL'], 'testAppPoolLimit': 5, 'diagnosticPoolLimit': 2,
             'productionAppPoolLimit': 'NOT_MEASURED', 'productionCapacity': 'NOT_TESTED',
-            'note': 'Docker caps based on observed Render limits; storage, networking, job/history/device/provider/cloud equivalence NOT TESTED'}
+            'note': 'Explicit baseline or candidate Docker caps; storage, networking, job/history/device/provider/cloud equivalence NOT TESTED'}
     (out/'model-manifest.json').write_text(json.dumps(text, indent=2)+'\n')
 else:
     raise ValueError('Unknown resource command')

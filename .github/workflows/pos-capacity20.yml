@@ -27,9 +27,9 @@ jobs:
       MWS_CAPACITY_MODE: priority20
       MWS_CAPACITY_PROFILE: ${{ startsWith(github.ref, 'refs/heads/codex/pos-capacity20-run-') && 'full' || 'preflight' }}
       MWS_CAPACITY_APP_CPUS: ${{ contains(github.ref, '-app100-') && '1.00' || '0.15' }}
-      MWS_CAPACITY_DB_CPUS: ${{ startsWith(github.ref, 'refs/heads/codex/pos-capacity20-compare-') && '0.50' || '0.10' }}
+      MWS_CAPACITY_DB_CPUS: ${{ contains(github.ref, '-db200-') && '2.00' || startsWith(github.ref, 'refs/heads/codex/pos-capacity20-compare-') && '0.50' || '0.10' }}
       MWS_CAPACITY_OUTPUT: /tmp/mws-capacity20
-      MWS_CAPACITY_RESOURCE_MODEL: ${{ contains(github.ref, '-app100-') && 'Isolated APP-only comparison app1.00CPU/512MiB;PG18 0.50CPU/256MiB;no production change' || startsWith(github.ref, 'refs/heads/codex/pos-capacity20-compare-') && 'Isolated DB-only comparison app0.15CPU/512MiB;PG18 0.50CPU/256MiB;no production change' || 'Docker baseline app0.15CPU/512MiB;PG18 0.10CPU/256MiB;not Render-equivalent infrastructure' }}
+      MWS_CAPACITY_RESOURCE_MODEL: ${{ contains(github.ref, '-db200-') && 'Isolated proposed model app1.00CPU/512MiB;PG18 2.00CPU/256MiB;no production change' || contains(github.ref, '-app100-') && 'Isolated APP-only comparison app1.00CPU/512MiB;PG18 0.50CPU/256MiB;no production change' || startsWith(github.ref, 'refs/heads/codex/pos-capacity20-compare-') && 'Isolated DB-only comparison app0.15CPU/512MiB;PG18 0.50CPU/256MiB;no production change' || 'Docker baseline app0.15CPU/512MiB;PG18 0.10CPU/256MiB;not Render-equivalent infrastructure' }}
       MWS_CAPACITY_APP_POOL_LIMIT: '5 (explicit test model;production configured limit NOT_MEASURED)'
       DATABASE_URL: postgresql://postgres:isolated-only@127.0.0.1:5432/myworkstation_capacity20_test?connection_limit=5&pool_timeout=10
       JWT_SECRET: isolated-capacity20-test-secret-sufficient-length

@@ -5,7 +5,7 @@ node --input-type=module -e "import {isolatedDestination} from './tools/pos-capa
 test "$MWS_CAPACITY_MODE" = priority20
 test "$MWS_CAPACITY_OUTPUT" = /tmp/mws-capacity20
 MWS_CAPACITY_DB_CPUS="${MWS_CAPACITY_DB_CPUS:-0.10}"
-case "$MWS_CAPACITY_DB_CPUS" in 0.10|0.50) ;; *) echo "Unsupported isolated DB CPU model" >&2; exit 1 ;; esac
+case "$MWS_CAPACITY_DB_CPUS" in 0.10|0.50|2.00) ;; *) echo "Unsupported isolated DB CPU model" >&2; exit 1 ;; esac
 MWS_CAPACITY_APP_CPUS="${MWS_CAPACITY_APP_CPUS:-0.15}"
 case "$MWS_CAPACITY_APP_CPUS" in 0.15|1.00) ;; *) echo "Unsupported isolated APP CPU model" >&2; exit 1 ;; esac
 mkdir -p "$MWS_CAPACITY_OUTPUT"
