@@ -1,3 +1,9 @@
+## 09/10/2026 - BackOffice direct operations entry / USER navigation PASS
+
+Χρήστος Μάνης confirmed21:10:30 «ΕΙΝΑΙ ΟΚ». Tested from existing Super Admin selected-store BackOffice; later screenshots show Περίπτερο Διαδόχου Παύλου and active operations workspace. Use existing authorized account; Super Admin entry https://myworkstation-app.onrender.com/platform-admin. Open the store BackOffice, then lower Πρόσθετες λειτουργίες → Λοιπές εμπορικές λειτουργίες. Existing functions/modules open directly for that store. Upper Εμπορική λειτουργία remains ordinary product entry. Choose an existing permitted function without repeating a sale or other operation for navigation verification.
+Selected store is validated against authorized list; unavailable/foreign/empty targeted store shows error, no other-store fallback. Existing module/role/server gates apply. PASS criteria: lower entry opens existing operations and correct selected-store screen, not a second duplicate product entry. This USER PASS does not certify every function, Owner/Manager roles, financial/stock outcomes or all touch/layout sizes. Supplier maximized scrolling is a separate NEW FAIL under OWNER-SUPPLIER-SCROLL-01, not accepted here.
+If old labels persist, refresh Ctrl+Shift+R, reopen selected-store BackOffice and verify selected store and access. Do not activate a module or submit a transaction to diagnose navigation. SourcePR1973/merge07383a0ec3f82f0534b9795be096dd665458373d fullCI and exact healthy guarded release verified; physical client revision was not supplied. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-backoffice-commerce-tile-label.md.
+
 # Super Admin — επιβεβαιωμένα PASS
 
 ## COMPLETE — LAB PASS 13/09/2026
