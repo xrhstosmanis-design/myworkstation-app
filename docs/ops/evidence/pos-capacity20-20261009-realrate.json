@@ -1,0 +1,248 @@
+{
+  "recordedAt": "2026-10-09T15:48:52.279211+03:00",
+  "kind": "ISOLATED_RESOURCE_MODEL_FAIL",
+  "production20Readiness": "NOT_ESTABLISHED",
+  "sourceRevision": "a8a96c45a356311fb1a947223e0dac58ecc903a9",
+  "sourcePR": 1951,
+  "fullCorrectnessCI": {
+    "run": 37931103577,
+    "result": "SUCCESS",
+    "tests": 1966,
+    "passed": 1966,
+    "failed": 0
+  },
+  "capacityRun": {
+    "id": 37931103418,
+    "jobId": 113821736359,
+    "result": "FAILURE",
+    "artifactId": 11616271428,
+    "artifactDigest": "sha256:4c961c2dbbc04c722c63e6aebb4670a9bac726e3996197fd08096ec40760e938",
+    "artifactExpiresAt": "2026-11-08T12:41:36Z"
+  },
+  "model": {
+    "sourceRevision": "a277fd0ffd4bd291ddf9e8a353f5478ce7301c74",
+    "node": "v20.20.2",
+    "generator": {
+      "cpuCount": 4,
+      "totalMemoryBytes": 16766414848,
+      "platform": "linux"
+    },
+    "destination": {
+      "host": "127.0.0.1",
+      "database": "myworkstation_capacity20_test"
+    },
+    "mode": "priority20",
+    "profile": "preflight",
+    "productCount": 7000,
+    "storeProductCount": 5000,
+    "applicationHardware": "Docker model: app0.15CPU/512MiB;PG18 0.10CPU/256MiB;not Render-equivalent infrastructure",
+    "applicationPoolLimit": "5 (explicit test model;production configured limit NOT_MEASURED)",
+    "diagnosticPoolLimit": 2,
+    "omitted": [
+      "invoice/provider job load",
+      "myDATA/workforce job budget",
+      "independent-company distribution",
+      "supplier and financial history volume",
+      "optional holds/audience/table-service refresh calls",
+      "physical devices/UI rendering",
+      "external fiscal/card providers",
+      "restart/failover/restore"
+    ],
+    "conclusion": "ISOLATED_HARNESS_ONLY_NOT_PRODUCTION_CAPACITY",
+    "postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit"
+  },
+  "phase": {
+    "name": "warmup",
+    "profile": "preflight",
+    "plannedSeconds": 60,
+    "startedAt": "2026-10-09T12:40:26.422Z",
+    "finishedAt": "2026-10-09T12:41:35.293Z",
+    "scheduledActions": 224,
+    "elapsedMs": 68862.980533,
+    "peakInFlight": 21,
+    "byKind": {
+      "pos-local-search": {
+        "offered": 132,
+        "started": 132,
+        "completed": 132,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 0.17415500001516193,
+        "p95Ms": 0.34380100000998937,
+        "p99Ms": 0.5527219999930821,
+        "maxMs": 0.8430220000154804,
+        "offeredP95Ms": 0.9284933078160975,
+        "offeredP99Ms": 1.189943572098855,
+        "errors": {}
+      },
+      "pos-sale": {
+        "offered": 22,
+        "started": 22,
+        "completed": 21,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 4529.128389999998,
+        "p95Ms": 20307.627584,
+        "p99Ms": 23164.99515599999,
+        "maxMs": 23164.99515599999,
+        "offeredP95Ms": 20307.342111329664,
+        "offeredP99Ms": 23164.716497369256,
+        "errors": {
+          "HTTP_500": 1
+        }
+      },
+      "pos-session": {
+        "offered": 22,
+        "started": 22,
+        "completed": 22,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 1134.5038690000074,
+        "p95Ms": 8176.204002999992,
+        "p99Ms": 8482.840876000002,
+        "maxMs": 8482.840876000002,
+        "offeredP95Ms": 8176.027504404279,
+        "offeredP99Ms": 8482.298424602748,
+        "errors": {}
+      },
+      "backoffice-search": {
+        "offered": 20,
+        "started": 20,
+        "completed": 20,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 4517.864708000008,
+        "p95Ms": 7244.27760999999,
+        "p99Ms": 7593.537698,
+        "maxMs": 7593.537698,
+        "offeredP95Ms": 7244.268738941726,
+        "offeredP99Ms": 7592.558173475263,
+        "errors": {}
+      },
+      "pos-refresh": {
+        "offered": 22,
+        "started": 22,
+        "completed": 22,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 6564.043047000014,
+        "p95Ms": 13790.233792999992,
+        "p99Ms": 18124.331032999995,
+        "maxMs": 18124.331032999995,
+        "offeredP95Ms": 13790.050563173776,
+        "offeredP99Ms": 18124.09005157565,
+        "errors": {}
+      },
+      "backoffice-report": {
+        "offered": 6,
+        "started": 6,
+        "completed": 6,
+        "dropped": 0,
+        "lateOver1s": 0,
+        "p50Ms": 5648.701249000005,
+        "p95Ms": 14175.256995999982,
+        "p99Ms": 14175.256995999982,
+        "maxMs": 14175.256995999982,
+        "offeredP95Ms": 14174.288140190416,
+        "offeredP99Ms": 14174.288140190416,
+        "errors": {}
+      }
+    }
+  },
+  "reconciliation": {
+    "result": "PASS_FOR_ACCEPTED_SALES_ONLY",
+    "intendedSales": 22,
+    "acceptedSales": 21,
+    "explicitlyRejectedSales": 1,
+    "persistedAcceptedSales": 21,
+    "persistedRejectedSales": 0,
+    "sameSaleIdsAcrossPaymentStockAndAudit": true,
+    "cashAmount": 52.5,
+    "stockDelta": -21,
+    "controlStock": 100000,
+    "duplicateOrLostAcceptedSaleObserved": false,
+    "noRetryOfRejectedSale": true
+  },
+  "databaseSampleMaxima": {
+    "connections": 5,
+    "active": 5,
+    "lockwaiters": 3,
+    "oldestactiveseconds": 7.097267
+  },
+  "resourcesDuringWarmup": {
+    "mws-capacity-app": {
+      "sampleCount": 9,
+      "cpuPercentOfOneHostCore": {
+        "min": 1.0,
+        "mean": 7.455555555555556,
+        "max": 15.0
+      },
+      "highestSampledMemory": "144MiB / 512MiB"
+    },
+    "mws-capacity-db": {
+      "sampleCount": 9,
+      "cpuPercentOfOneHostCore": {
+        "min": 1.17,
+        "mean": 8.152222222222223,
+        "max": 10.89
+      },
+      "highestSampledMemory": "209MiB / 256MiB"
+    }
+  },
+  "finalContainerState": {
+    "at": "2026-10-09T12:41:35.396942+00:00",
+    "containers": [
+      {
+        "name": "/mws-capacity-app",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T12:37:23.567491994Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 536870912,
+        "memorySwapBytes": 536870912,
+        "nanoCPUs": 150000000
+      },
+      {
+        "name": "/mws-capacity-db",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T12:37:01.382029058Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 268435456,
+        "memorySwapBytes": 268435456,
+        "nanoCPUs": 100000000
+      }
+    ],
+    "applicationSignals": {
+      "P2024": 0,
+      "AUTH_VALIDATION_UNAVAILABLE": 0,
+      "JavaScript heap out of memory": 0,
+      "deadlock detected": 0
+    },
+    "databaseErrorCodes": [
+      "42P01",
+      "P2010"
+    ],
+    "knownErrorSignals": {
+      "statement timeout": 0,
+      "connection pool": 0,
+      "does not exist": 1,
+      "out of memory": 0,
+      "transaction timeout": 0,
+      "Unable to start a transaction": 1,
+      "Unknown argument": 0
+    }
+  },
+  "limits": [
+    "Only first60second warmup observed;normal30min/peak15min/burst/endurance120min NOT_TESTED",
+    "Explicit test app pool5;actual production configured pool limit NOT_MEASURED",
+    "GitHub Docker CPU/memory caps are not Render-equivalent networking/storage/scheduling",
+    "Single synthetic company,limited history,no provider/devices/network or background-job acceptance",
+    "POS local search exercises catalogue logic in generator,not browser/UI performance",
+    "P2024/OOM zero only in observed samples/logs;CPU and locks correlate with slowness,causality not yet proved",
+    "Baseline startup42P01/P2010 preceded table preparation;not a timed missing-table failure"
+  ],
+  "nextAction": "Fresh isolated paired preflight changing only DB CPU0.10 to0.50;app/memory/pool/rates/criteria unchanged;no paid or production changes"
+}
