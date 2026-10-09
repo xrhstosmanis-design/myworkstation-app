@@ -15,12 +15,15 @@ trap cleanup EXIT
 docker pull postgres:18
 docker pull node:20-bookworm
 docker run -d --name mws-capacity-db --network host --cpus=0.10 --memory=256m --memory-swap=256m \
-  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=isolated-only -e POSTGRES_DB=myworkstation_capacity20_test postgres:18
+  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=isolated-only -e POSTGRES_DB=myworkstation_capacity20_test postgres:18 \
+  -c shared_buffers=64MB -c work_mem=1654kB -c maintenance_work_mem=16MB \
+  -c max_connections=103 -c max_parallel_workers_per_gather=1
 for attempt in $(seq 1 120); do
-  if docker exec mws-capacity-db pg_isready -U postgres -d myworkstation_capacity20_test >/dev/null 2>&1; then break; fi
+  # initdb's temporary server accepts Unix sockets before final TCP readiness.
+  if docker exec mws-capacity-db pg_isready -h 127.0.0.1 -U postgres -d myworkstation_capacity20_test >/dev/null 2>&1; then break; fi
   sleep 1
 done
-docker exec mws-capacity-db pg_isready -U postgres -d myworkstation_capacity20_test
+docker exec mws-capacity-db pg_isready -h 127.0.0.1 -U postgres -d myworkstation_capacity20_test
 npm run prisma:push -w server
 ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260825130500_netlink_prepaid_storage/migration.sql --schema server/prisma/schema.prisma
 ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260826210000_netlink_fiscal_receipt_gate/migration.sql --schema server/prisma/schema.prisma

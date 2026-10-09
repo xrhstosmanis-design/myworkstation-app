@@ -15,15 +15,20 @@ def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 def state():
-    data = json.loads(subprocess.check_output(['docker', 'inspect', *names]))
     rows = []
-    for d in data:
+    for name in names:
+        try:
+            d = json.loads(subprocess.check_output(['docker', 'inspect', name], stderr=subprocess.DEVNULL))[0]
+        except subprocess.CalledProcessError:
+            rows.append({'name': name, 'present': False})
+            continue
         s, c = d['State'], d['HostConfig']
         rows.append({'name': d['Name'], 'running': s['Running'], 'oomKilled': s['OOMKilled'],
                      'exitCode': s['ExitCode'], 'startedAt': s['StartedAt'], 'finishedAt': s['FinishedAt'],
                      'memoryLimitBytes': c['Memory'], 'memorySwapBytes': c['MemorySwap'], 'nanoCPUs': c['NanoCpus']})
     # Count error signals without retaining any original log content.
-    log = subprocess.check_output(['docker', 'logs', 'mws-capacity-app'], stderr=subprocess.STDOUT).decode(errors='replace')
+    log = subprocess.run(['docker', 'logs', 'mws-capacity-app'], capture_output=True).stdout.decode(errors='replace')
+    log += subprocess.run(['docker', 'logs', 'mws-capacity-app'], capture_output=True).stderr.decode(errors='replace')
     result = {'at': now(), 'containers': rows, 'applicationSignals': {k: log.count(k) for k in ['P2024', 'AUTH_VALIDATION_UNAVAILABLE', 'JavaScript heap out of memory', 'deadlock detected']},
               'databaseErrorCodes': sorted(set(re.findall(r'\b(?:P\d{4}|42P01|42703|57014|53300|40P01|53200)\b', log))),
               'knownErrorSignals': {k: log.count(k) for k in ['statement timeout', 'connection pool', 'does not exist', 'out of memory', 'transaction timeout', 'Unable to start a transaction', 'Unknown argument']}}
