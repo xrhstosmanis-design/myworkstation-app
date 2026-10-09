@@ -1,3 +1,9 @@
+## 10/10/2026 — current grant-refresh and product-line limits
+
+Observed on c0f1ce16: granting flags updates outer buttons but mounted POS behavior can retain older catalog flags for cancel confirmation/reason, card-only selection, online search and button editing. This is LIVE FAIL; pending runtime propagation is not manual PASS. Refresh the POS document before relying on changed behavior until a later exact LIVE closure. Description-line action does not open an editor; its unsupported checkbox/action removal and barcode-line connection to existing registration are AWAITING LIVE.
+
+Bounded positive UI on c0f1ce16: Barcode opens existing registration modal without saving; enabled operator Transactions opens own-store ledger; linepriceeditor opens on local SKU2270 qty1/unit1 without applying a value. Cash/CARD/IRIS enable with nonempty cart; no payment clicked. Cash-from-shift can remain disabled because the existing shift is older than24h, independently of sameShift permission; do not close/reopen a shift just to diagnose this guard. Local cart returned0 and originalprofile restored. Stock-10 was observed after cartadd only, no delta proven. Audit/financial/control effects NOT TESTED. Existing manuals for real accepted transactions remain protected.
+
 ## 10/10/2026 — Restricted operator POS entry and payment visibility, bounded LIVE PASS
 
 Authorized Platform Admin support selects MYWORKSTATION LAB -> ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ explicitly in commerce -> Operators -> LAB POS2. Current editor has22POS flags+active+POS access in Details,1orders in Access,0Other:25 retained,54 removed; legacy storage remains. Specific owner approval covered temporary grant/deny/restore. Preserve ordinary EMPLOYEE role and personal credentials.

@@ -1461,7 +1461,7 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / customer entry FAIL / FIX AWAITING LIVE — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / behavior refresh FAIL / FIX AWAITING LIVE — OPERATOR-CHECKBOX-01
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
@@ -1478,6 +1478,12 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 Owner codex/operator-checkbox-audit-20261009; printed33/tracker35 remains OPEN. PR1998 fullCI37992152221 passed2007/0FAIL/0SKIP, mergec0f1ce16e602fb5c4363edb3bb86ae054bb59743; mainCI37992992250 and guardedRender37993299420 SUCCESS. Independent exacthealth observed21:28Z. New form24detail (22POS+active+posAccess),1orders,0other:54 inert controls removed from79,25 retained. Restrictive22flags+orders saved/re-read, ordinary LAB POS2 enters emptycart POS rather than endless shift check. STOCK/Barcode/invoice/return/payment/CARD/IRIS/CASH entries hidden; operator Transactions/MyPayments/Close all disabled. Full financial/stock/control deltas NOT TESTED; no economic/stock/shift/fiscal write or credential change.
 
 Customer entry FAIL: customersPos=false hides bottom button but top credit-customer dropdown still opens. No search/selection or customer record disclosed. Card-only instruction observed. Original24details+orders restored and independently compared exact. Prior quick-button editor grant opened/cancelled without layout save and restored on62fe51ea. Customer denial CSS now targets both actual entries; existing server guard unchanged. FullCI/exacthealthy/denied+granted LIVE required. Pending: remaining per-control runtime/physical actions, active/posAccess revocation, role/store/company/module breadth. Same owner retained; no financial replay or Manager promotion.
+
+## 2026-10-09T21:48:54.890885+00:00 — OPERATOR-CHECKBOX-01 observed behavior fixes IMPLEMENTED / AWAITING CI + LIVE
+
+Same owner codex/operator-checkbox-audit-20261009 / printed33 tracker35 OPEN. Prior minimal-shift and CASH visibility bounded LIVE PASSc0f1ce16 retained. Customer denial PR2000 fullCI37994579202 SUCCESS, merged d358b9e0dd9038d776e58ce1d1439d306d4ad6e0; new deployed customer proof pending. Grant phasec0: Barcode registration modal opens, payment tabs enabled; operator Transactions/MyPayments/Close enabled, actual read-only ledger loads4historic CASH rows. Existing stale shift from07Oct keeps cash-from-shift disabled despite sameShift true, as required; no closing/opening. Local SKU2270 qty1/price1 showedstock-10 and linepriceeditor, nopriceapply. Description clicknoeffect; undefined callbacks proved. Cart CLEAR after granting still consumed cached deniedcatalogflags and cleared without capturedconfirmation/reason: behaviorrefresh LIVE FAIL, native dialog API additionally unavailable due credential protection. No confirmation/reason PASS; no financial/stock/product/shift write. CART_ITEM_ADD/CART_CANCEL Audit effects/IDs and financial/control deltas NOT TESTED. Cart0 restored; original24details exact and ordersunchanged.
+
+Implemented bounded observed causes: runtimeAccess passed into mounted POS behavior flags (confirm/reason/cardOnly/online alias/layout edit) without catalog reload/remount; existing server guards unchanged. Remove unimplemented description checkbox/action/dead editor, preserving stored editDescription. Linebarcode opens existing store-scoped registration modal filtered bySKU, no new API. New inventory55removed/24retained:21POS+orders+active+posAccess,23details+1access+0other; these new counts AWAITING LIVE. Actual React regression verifies grant/revoke guard callbacks while cart remains mounted, blank reasonrejection, card-only and online UI updates, existingbarcodequery and no product/financialwrites;8targetedPASS and frontendbuild13.57sPASS, full preparedsuite2001tests/1997PASS/0FAIL/4isolated-DBskips. Existing invoice/assistant lifecycle regression preserved. FullexactheadCI/main/guard/exacthealth then LIVE required. Next: finalrevisedform and restrictive/granted controls/restoration; active/POSaccess/financial/physical/role/tenant/module breadth OPEN.
 
 ### 36 — Πλήρες εγχειρίδιο χρήσης
 

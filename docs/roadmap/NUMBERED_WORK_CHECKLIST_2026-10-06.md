@@ -221,9 +221,9 @@
 
 - **Tracker ID:** `35`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / OPEN (ενημέρωση10/10, tracker35)
-- **Υπόλοιπο / όριο:** 25 επιλογές αντί79·54 ανενεργές αφαιρέθηκαν. LAB POS2 περιορισμένα δικαιώματα: είσοδος POS και απόκρυψη STOCK/Barcode/επιστροφών/πληρωμών/CARD/IRIS/CASH PASSc0f1ce16. Πάνω επιλογή πελάτη FAIL, διόρθωση AWAITING LIVE. Υπόλοιπο: πλήρεις λειτουργίες/ανάκληση active+posAccess και Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα/modules. Owner codex/operator-checkbox-audit-20261009.
+- **Υπόλοιπο / όριο:** Υλοποίηση55 ανενεργές επιλογές αφαιρούνται/24διατηρούνται, AWAITING LIVE. Προηγούμενο LAB25επιλογών: περιορισμένη είσοδοςPOS/απόκρυψη πληρωμών PASSc0f1ce16. Νέα FAIL: πάνω επιλογή πελάτη, περιγραφή χωρίς λειτουργία, παλιά δικαιώματα σε συμπεριφορά POS. Διορθώσεις απαιτούν exacthealthy/ζωντανόέλεγχο. Πλήρεις λειτουργίες/active+posAccess/ρόλοι/εταιρεία/κατάστημα/modules OPEN. Owner codex/operator-checkbox-audit-20261009.
 
-- **Ενημέρωση 10/10/2026:** Αρχικό προφίλ24+orders επανήλθε ακριβώς· χωρίς οικονομική/stock/shift πράξη. PR1998/2007CI PASS, exact healthyc0f1ce16. Checkpoint2026-10-09-operator-checkbox-audit.md. Συνολικό PASS παραμένει OPEN.
+- **Ενημέρωση 10/10/2026:** Το καλάθι επανήλθε0 και προφίλ24+orders αρχικό· χωρίς πώληση/πληρωμή/product/stock/shift πράξη. Νέα barcodeσύνδεση χρησιμοποιεί υπάρχουσα φόρμα. Checkpoint2026-10-09-operator-checkbox-audit.md. Συνολικό PASS παραμένει OPEN.
 
 ## 34 — Πλήρες εγχειρίδιο εργαζομένου, ιδιοκτήτη και Super Admin
 
