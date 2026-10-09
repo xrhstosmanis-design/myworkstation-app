@@ -1,3 +1,8 @@
+
+## 09/10/2026 22:36 Europe/Athens — AI-CREDITS-01 ASSIGNED / NOT TESTED
+
+Owner codex/ai-credit-alerts-20261009. Independent new owner-authorized low-credit warning, defaults5$/2$, configurable thresholds and honest unknown/estimated balance. Preserve AI Command Center phases1–14/manual and all existing owners. No invoice extraction change, financial/stock action or provider credential change. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Read main4cd333b7, public healthb40a09df; authenticated LIVE NOT TESTED. Claim must merge before source.
+
 ## 09/10/2026 22:25 Europe/Athens — POS-INVOICE-ORDERS-01 / ASSIGNED / NOT TESTED
 
 Owner `feat/pos-invoice-orders-permission`. Explicit owner request: POS button «Τιμολόγια / Παραλαβές» opens the existing orders/invoice editor for the operator's own store. Enable solely through existing Operator → Access → backofficeMenu.orders («Παραγγελίες»); no second checkbox or broad Backoffice access. Preserve mounted POS/cart/shift and existing invoice settlement, duplicate, unresolved-line, total reconciliation and stock-posting guards. No OCR algorithm, automatic payment, fiscal, existing supplier/payment or other assigned scope takeover.

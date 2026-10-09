@@ -1704,3 +1704,16 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Υπόλοιπο:** Ενεργός demo lifecycle με προσωπικούς λογαριασμούς, πλήρης server/workers isolation και outbound enforcement, DEMO UI στο υπάρχον POS/Backoffice, 50x40mm πραγματικές ρυθμίσεις/εκτύπωση, δύο authenticated shortcuts, Windows installer/download και πλήρης runtime PostgreSQL/HTTP/exact release/physical Windows acceptance. Η ανενεργή αποθήκευση/ανάκληση και synthetic provisioning έχουν επαληθευτεί μόνο σε isolated CI. Δεν είναι έτοιμο για πελάτες. Άλλες αναθέσεις αμετάβλητες.
 
 **Ολοκλήρωση:** NOT TESTED — κανένα νέο LAB/USER PASS, καμία production μεταβολή.
+
+
+### AI-CREDITS-01 — Προειδοποίηση υπολοίπου AI στον Platform Super Admin
+
+**Κατάσταση:** ASSIGNED / NOT IMPLEMENTED / NOT TESTED
+
+**Υπεύθυνη σελίδα / branch:** codex/ai-credit-alerts-20261009
+
+**Ανάληψη:** 09/10/2026 22:36 Europe/Athens — ρητή εντολή ιδιοκτήτη «ξεκίνα». Ανεξάρτητη επέκταση: κεντρική προειδοποίηση πριν εξαντληθούν credits, προεπιλεγμένα όρια5$/2$, ρύθμιση ορίων και σαφής διάκριση εκτιμώμενου/άγνωστου υπολοίπου. Δεν αναλαμβάνει ξανά παλιά AI-CC phases ή άλλο ανατεθειμένο invoice/POS scope.
+
+**Υπόλοιπο / όρια PASS:** Read-only official Costs API investigation, ασφαλής αποθήκευση baseline/ορίων, central dashboard/AI Command Center alert, bounded refresh, authorization/failure/pagination/stale tests, green CI/merge/exact deploy και LIVE acceptance. Αρχικό screenshot δείχνει αρνητικό υπόλοιπο−0.12$· ο provider λογαριασμός της εφαρμογής δεν έχει ταυτοποιηθεί. Η δημόσια health ανάγνωση επέστρεψε b40a09dff6f0aaac585c1b71f2e36e51181e01e2, main κατά read4cd333b7. Authenticated LIVE setup παραμένει BLOCKED.
+
+**Ολοκλήρωση:** NOT TESTED. Καμία αλλαγή παραγωγικού λογαριασμού/API key, πληρωμή, invoice upload/approval/stock/fiscal mutation. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained until explicit handoff.

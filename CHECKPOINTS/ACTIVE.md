@@ -1,3 +1,8 @@
+
+## 09/10/2026 22:36 Europe/Athens — AI-CREDITS-01 ASSIGNED / NOT TESTED
+
+Owner codex/ai-credit-alerts-20261009. Independent new owner-authorized low-credit warning, defaults5$/2$, configurable thresholds and honest unknown/estimated balance. Preserve AI Command Center phases1–14/manual and all existing owners. No invoice extraction change, financial/stock action or provider credential change. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Read main4cd333b7, public healthb40a09df; authenticated LIVE NOT TESTED. Claim must merge before source.
+
 ## 07/10/2026 12:09 Athens — Central Management full LIVE audit — ASSIGNED / LIVE BLOCKED
 
 - Ο ιδιοκτήτης ανέθεσε σε αυτή τη σελίδα πλήρη, μία-μία LIVE επιθεώρηση όλων των ενοτήτων, καρτελών, υποκαρτελών, ενεργειών και οθονών της Κεντρικής Διαχείρισης, με scoped διορθώσεις μόνο μετά από green claim PR/merge.
