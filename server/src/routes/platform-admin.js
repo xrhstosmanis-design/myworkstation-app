@@ -20,6 +20,8 @@ import {companyModuleState} from "../middleware/module-access.js";
 import {buildRbsInstallationPackage} from "../services/rbs-installation-package.js";
 import {buildRbsGuidedInstallationPackage} from "../services/rbs-guided-installation-package.js";
 
+import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
+
 const router=Router();
 router.use(auth);
 router.use((req,res,next)=>{
@@ -1129,6 +1131,10 @@ router.post("/companies/:companyId/stores/:storeId/online-store/members",async(r
 });
 router.patch("/companies/:companyId/stores/:storeId/online-store/members/:memberId",async(req,res,next)=>{
   try{const store=await onlineStoreContext(req.params.companyId,req.params.storeId),active=z.boolean().parse(req.body?.active);await ensureKatOnlineOrderingSchema();const changed=await prisma.$executeRaw`UPDATE "OnlineStoreMember" SET "active"=${active},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.memberId} AND "companyId"=${req.params.companyId} AND "storeId"=${store.id}`;if(!changed)return res.status(404).json({error:"Δεν βρέθηκε δικαιούχος."});res.json({ok:true,active})}catch(error){next(error)}
+});
+
+router.get("/companies/:companyId/stores/:storeId/video-connection/packages/hikvision-precheck",async(req,res,next)=>{
+  try{await videoStoreContext(req.params.companyId,req.params.storeId);await sendHikvisionPrecheck(res)}catch(error){next(error)}
 });
 
 router.get("/companies/:companyId/stores/:storeId/video-connection",async(req,res,next)=>{

@@ -6,6 +6,8 @@ import {companyModuleState} from "../middleware/module-access.js";
 import {ensureVideoEventsSchema} from "../video-events-bootstrap.js";
 import {videoConnectorStatus} from "../services/video-connector-commands.js";
 
+import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
+
 const router=Router();
 let ready;
 const hash=code=>crypto.createHash("sha256").update(String(code).replace(/[^A-Z0-9]/gi,"").toUpperCase()).digest("hex");
@@ -20,6 +22,8 @@ async function context(req,res,next){
  }catch(e){next(e)}
 }
 router.use("/stores/:storeId",context);
+
+router.get("/stores/:storeId/packages/hikvision-precheck",async(req,res,next)=>{try{await sendHikvisionPrecheck(res)}catch(e){next(e)}});
 
 router.get("/stores/:storeId",async(req,res,next)=>{try{
  const rows=await prisma.$queryRaw`SELECT "provider","protocol","endpoint","username","active","timeOffsetSeconds","retentionDays",("privacyNoticeAcknowledgedAt" IS NOT NULL) AS "privacyNoticeAcknowledged","connectionStatus","timeSyncStatus",("passwordEnc" IS NOT NULL) AS "passwordConfigured" FROM "StoreVideoConnection" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.videoStore.id} LIMIT 1`;
