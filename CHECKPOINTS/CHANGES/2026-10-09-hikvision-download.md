@@ -1,0 +1,6 @@
+# In-app Hikvision preflight download
+
+## 2026-10-09T17:49:58.681266+00:00 — VIDEO-HIKVISION-01 / in-app package download ASSIGNED
+
+Retained owner `codex/hikvision-video-20261009`; bounded branch `codex/hikvision-download-20261009`. User explicitly requests in-app ZIP download and says start; screenshots174805/174825 show existing Platform VideoConnectionManager for LAB, saved Dahua/ONVIF connector OFFLINE with stale September time check. No change of those settings or re-test of Dahua PASS. Currentmain4e39e02c and commits since package6106e35e reviewed; other commerce/demo/capacity owners preserved. Scope: add Hikvision precheck download/instructions/version to existing Platform and Backoffice video screens; protected selected-store endpoints return fixed verified common ZIP. No placeholder installer or claimed working Hikvision connector. Existing video roles/license/company/store checks remain; download must work while connector offline and without saving credentials/form. Test exact ZIP/hash/content disposition plus request scoping/role/module denial, component no-form-submit, errors and late-download cancellation. CI then exact healthy release required; physical Hikvision/device and real user download remain NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-hikvision-download.md. Publish this claim before source.
+
