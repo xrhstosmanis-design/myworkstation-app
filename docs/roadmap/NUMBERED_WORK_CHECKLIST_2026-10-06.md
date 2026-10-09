@@ -213,10 +213,9 @@
 ## 32 — Έξυπνο Audit / Συμβάντα — απομόνωση ανά κατάστημα
 
 - **Tracker ID:** `34`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / EXACT LIVE VERIFIED / LAB PENDING
-- **Υπόλοιπο / όριο:** Έχει αναφερθεί Store Mode που δείχνει συμβάντα άλλων καταστημάτων· δεν έχει δηλωθεί διορθωμένο. Εκκρεμεί read-only έλεγχος δύο καταστημάτων. 09/10: DOM/data isolation search/refresh/two LAB verified; LIVE visual FAIL (2px collapsed report), final OPEN; same owner.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** Ενημέρωση09/10 — PASS / CLOSED στο bounded scope απομόνωσης
+- **Υπόλοιπο / όριο:** Read-only LIVE PASS δύο LAB, κλειδωμένο κατάστημα, αναζήτηση/ανανέωση, αλλαγή με παλιό URL και ορατή χρήση normal/maximized σε1348×936. Testing1049, foreign search0, ΝΕΡΟ 500ML160/refresh160, isolation0/refresh0. SourcePR1984/fullCI/main/guard PASS, healthy884efea2· final docsPR1988. Ευρύτερο smart-Audit/λοιποί ρόλοι/physical PIN/live race/touch δεν καλύπτονται. Manual και checkpoint ενημερώθηκαν, ολοκληρωμένο context scope αφαιρέθηκε από pending.
 
-- **Νεότερο09/10:** DOM/data απομόνωση δύο LAB, αναζήτηση και ανανέωση επιβεβαιώθηκαν· ορατή χρήση FAIL λόγω συμπίεσης αναφοράς σε2px. Τελικό OPEN, ίδιος owner. Checkpoint `2026-10-09-audit-store-acceptance.md`.
 
 ## 33 — Τελικές δοκιμές χρηστών, ρόλων και modules
 

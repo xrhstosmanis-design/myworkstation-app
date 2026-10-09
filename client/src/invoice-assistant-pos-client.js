@@ -35,7 +35,7 @@ const rowAmounts=line=>{
 const tableInput=(line,index,field)=>field==="invoiceUnit"?`<select data-row="${index}" data-field="${field}" aria-label="${esc(field)} γραμμής ${index+1}">${["PIECE","PACKAGE"].includes(line[field])?"":'<option value="" selected>Επίλεξε μονάδα</option>'}<option value="PIECE" ${line[field]==="PIECE"?"selected":""}>τεμ.</option><option value="PACKAGE" ${line[field]==="PACKAGE"?"selected":""}>πακ.</option></select>`:`<input data-row="${index}" data-field="${field}" aria-label="${esc(labels[field]||field)} γραμμής ${index+1}" value="${esc(line[field]??"")}" style="width:${field==="description"?"220":"72"}px;box-sizing:border-box;padding:5px;border:1px solid #b6cad5;border-radius:4px">`;
 const editableTable=lines=>`<div style="overflow:auto;max-height:38vh;border:1px solid #b7cdd9;border-radius:8px;background:white"><table style="border-collapse:collapse;min-width:1550px;width:100%;font-size:12px"><thead style="position:sticky;top:0;background:#153e5a;color:white"><tr>${["Επιλογή","#","Έλεγχος","Κωδ.","Περιγραφή","Ποσ.","ΜΜ","Τεμ./πακ.","Τιμή","Εκπτ. 1","2","3","Καθαρό","ΕΦΚ","ΦΠΑ %","ΦΠΑ €","Πληρωτέο"].map(label=>`<th style="padding:7px;white-space:nowrap">${label}</th>`).join("")}</tr></thead><tbody>${lines.map((line,index)=>{const amounts=rowAmounts(line),issue=printedReviewIssue(line),uncertain=Boolean(issue);return `<tr style="border-bottom:1px solid #d8e5ec;background:${uncertain?"#fff0d5":line.matchingLineId?"#fff":"#eaf8f1"}"><td><input type="checkbox" data-edit-select="${index}" aria-label="Επιλογή γραμμής ${index+1}"></td><td>${index+1}</td><td style="padding:5px;min-width:170px">${uncertain?`<b style="color:#9b4200">ΠΡΟΣ ΕΛΕΓΧΟ</b><br><small>${esc(issue)}</small>`:"✓ Ευκρινής"}</td>${editableFields.map(field=>field==="exciseTotal"||field==="vatRate"?"":`<td style="padding:5px">${tableInput(line,index,field)}</td>`).join("")}<td data-net="${index}">${euro(amounts.net)}${invoicePrintedRounding(line)&&Math.abs(invoicePrintedRounding(line).difference)>.000001?`<br><small>στρογγ. ${euro(invoicePrintedRounding(line).difference)} €</small>`:""}</td><td>${tableInput(line,index,"exciseTotal")}</td><td>${tableInput(line,index,"vatRate")}</td><td data-vat="${index}">${euro(amounts.vat)}</td><td data-gross="${index}">${euro(amounts.gross)}</td></tr>`}).join("")}</tbody></table></div>`;
 const labels={description:"Περιγραφή",quantity:"Ποσότητα τιμολογίου",unitCost:"Τιμή μονάδας",invoiceUnit:"Μονάδα τιμολογίου",stockUnitsPerInvoiceUnit:"Τεμάχια ανά συσκευασία",discount1:"Έκπτωση 1",discount2:"Έκπτωση 2",discount3:"Έκπτωση 3",exciseTotal:"ΕΦΚ",vatRate:"ΦΠΑ %"};
-const api=async(path,options={})=>{
+const defaultApi=async(path,options={})=>{
   const token=localStorage.getItem("token");
   const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}),...(options.headers||{})}});
   const result=await response.json().catch(()=>({}));
@@ -43,8 +43,10 @@ const api=async(path,options={})=>{
   return result;
 };
 
-export async function openPosInvoiceAssistant(orderId,order,onComplete){
+export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null){
+  const api=request||defaultApi;
   const overlay=document.createElement("div");
+  if(request)overlay.dataset.posInvoiceModal="1";
   overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:0;display:block";
   overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="Βοηθός τιμολογίου POS" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
     <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>Βοηθός τιμολογίου POS</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></header>
@@ -68,6 +70,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete){
   const syncPresets=()=>overlay.querySelectorAll("[data-rule-preset]").forEach(button=>{const selected=button.dataset.rulePreset===factorInput.value;button.setAttribute("aria-pressed",String(selected));button.style.background=selected?"#146b50":"white";button.style.color=selected?"white":"#21473e"});
   overlay.querySelectorAll("[data-rule-preset]").forEach(button=>button.addEventListener("click",()=>{factorInput.value=button.dataset.rulePreset;syncPresets()}));
   factorInput.addEventListener("input",syncPresets);
+  if(request) overlay.querySelector("[data-save-rule]").parentElement.parentElement.hidden=true;
   overlay.querySelector("[data-save-rule]").onclick=async()=>{
     const tax=overlay.querySelector("[data-rule-tax]").value.trim(),product=overlay.querySelector("[data-rule-product]").value.trim(),factor=Number(overlay.querySelector("[data-rule-factor]").value),ruleStatus=overlay.querySelector("[data-rule-status]");
     const confirmSupplierTaxId=!overlay.querySelector("[data-rule-identity]").hidden&&overlay.querySelector("[data-rule-confirm]").checked;

@@ -1,3 +1,13 @@
+## 09/10/2026 — POS-INVOICE-ORDERS-01 / IMPLEMENTED / AWAITING FINAL CI & LAB
+
+PR #1986 full CI #4957 / run 37982996072 PASS on `13648a66`, including PostgreSQL tests, invariants and HTTP E2E. Rebased on newer main `4a69eb4` to preserve the independent AI-credit docs claim; source implementation unchanged. Final-head CI required before merge; physical LAB remains NOT TESTED.
+
+Owner `feat/pos-invoice-orders-permission`. Claim merged in PR #1985 (`4cd333b`). Added POS «Τιμολόγια / Παραλαβές» using the existing `backofficeMenu.orders` checkbox for employee/manager operators. Server rechecks persisted profile on every invoice request, restricts company/store/order/line and keeps INVENTORY entitlement. Existing invoice settlement/duplicate/OCR totals/unresolved/stock posting guards remain. Email, whole-order deletion and global product-card tools are unavailable in this entry. No new checkbox.
+
+Existing editor uses operator request/session, isolated modal selectors and own-store filters; closing/revoking aborts pending requests and retains mounted cart. Runtime access failure denies entry. Operator identities remain in posting/audit records; User foreign keys use null for operator credentials. Shared assistant uses scoped request; global packaging rule editing stays outside this entry.
+
+Validation: Node 20 frontend/server builds PASS; full local server suite 1978 PASS / 0 fail / 4 isolated-DB skips (1982 tests); 61 invoice/permission regressions PASS; actual POS+editor isolated DOM test PASS including new invoice creation, hidden/granted/revoked permission, fresh-access denial, edit save, product search/new line, return with cart unchanged and no checkout/email/fast-recovery. These fixture results are not LAB PASS. Full CI/invariants/isolated PostgreSQL E2E required before merge. Exact deployed release and authenticated physical LAB acceptance NOT TESTED. No production financial/stock transaction performed. Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-pos-invoice-orders-permission.md`.
+
 ## 09/10/2026 22:25 Europe/Athens — POS-INVOICE-ORDERS-01 / ASSIGNED / NOT TESTED
 
 Owner `feat/pos-invoice-orders-permission`. Explicit owner request: POS button «Τιμολόγια / Παραλαβές» opens the existing orders/invoice editor for the operator's own store. Enable solely through existing Operator → Access → backofficeMenu.orders («Παραγγελίες»); no second checkbox or broad Backoffice access. Preserve mounted POS/cart/shift and existing invoice settlement, duplicate, unresolved-line, total reconciliation and stock-posting guards. No OCR algorithm, automatic payment, fiscal, existing supplier/payment or other assigned scope takeover.
@@ -1405,35 +1415,15 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 34 — Έξυπνο Audit / Συμβάντα
 
-## 09/10/2026 22:51 Europe/Athens — Audit sizing LIVE / AWAITING AUTHENTICATED VISUAL RETEST
+**Κατάσταση:** ΜΕΡΙΚΟ LIVE PASS — printed32 απομόνωση ανά κατάστημα CLOSED; ευρύτερο smart-Audit OPEN
 
-Retained owner fix/report-store-context-20261006; source fix/audit-report-height-20261009; publication docs/audit-store-release-20261009. ClaimPR1983/docsCI37980110445/merge3c3c2200 before source. SourcePR1984/head86771bb5/fullCI37980435854 SUCCESS (1981/1981,0fail/0skip)/merge884efea2acec8cf86d2bb606c4296172d288ea53. MainCI37980797209 initially cancelled by documentation-only PR1985, explicitly rerun; final SUCCESS with full build/security/invariants/archive/HTTP E2E. Guard37981497519 SUCCESS, exact healthy884efea2 at19:41:14UTC and independent fresh health19:41:44/19:51UTC. Concurrent PR1985 owner/records preserved.
+**Υπόλοιπο / όρια PASS:** Η read-only απομόνωση δύο LAB, κλειδωμένο κριτήριο, αναζήτηση/ανανέωση, αλλαγή με παλιό URL και ορατή χρήση normal/maximized ολοκληρώθηκαν. Ευρύτερη υλοποίηση smart-Audit, live in-flight/invalid-selection, physical PIN/λοιποί ρόλοι, άλλες αναφορές/αναλύσεις/touch δεν πιστοποιούνται από αυτό το PASS.
 
-Only direct report-child natural height/zero shrink changed. Local Node20 build and selected-store installer9/9 tests PASS. Previous old-source normal-window empty isolation report visibly reachable after scroll (580px); old-source maximized report2px FAIL;1047 testing-store DOM rows, foreign search0, positive search/refresh160 and settled second-store0 retained as bounded evidence. No new-source visible PASS: refresh returned login; Platform Admin action reports required sign-in; secure root login submission failed with website-visible incorrect email/password. No secrets inspected or recorded. Overall printed32/tracker34 OPEN; new sizing AWAITING AUTHENTICATED VISUAL RETEST, not confirmed fixed. Manual unchanged.
+**Υπεύθυνη σελίδα / branch:** fix/report-store-context-20261006 — bounded printed32 scope CLOSED; δεν μεταφέρεται ή αναλαμβάνεται άλλο scope.
 
-Owner22:52 says the offered entry page is wrong. Single next action: obtain the correct entry from the owner before further authentication/navigation, then authenticated read-only two-LAB Audit normal/maximized reachability, selected-store lock, search/refresh and no stale previous-store rows. No sale/stock/shift/fiscal replay, no new role/module/configuration action. Late-response/empty-store guards have isolated DOM PASS only; physical PIN/ordinary roles/other reports/touch remain NOT TESTED. After actual bounded LIVE PASS synchronize checkpoint, active, manual, remove only completed pending context scope and regenerate central/numbered/tracker PDFs, green docs CI and main publication. Same owner remains assigned through handoff.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Αρχικό06Oct18:50UTC claimPR1787/CI4494/merge2d8a187c πριν code· context sourcePR1788/CI4496/a5cac431 καιPR1790/CI4499/4501/db1f90eb. Συνέχεια09Oct claimPR1983/CI37980110445/main3c3c2200 πριν bounded CSS correction.
 
-
-## 09/10/2026 — Audit store acceptance / OPEN / LIVE VISUAL FAIL
-
-Continuation owner `fix/report-store-context-20261006`, publication `docs/audit-store-acceptance-20261009`, explicitly authorized by owner through final PASS. Authenticated read-only exact healthy source `b40a09dff6f0aaac585c1b71f2e36e51181e01e2`:1047 testing-store Audit DOM rows, foreign-name search0, positive search/refresh160, switch to isolation store0/refresh0, single disabled store criterion. Central SA controls1047/94/0 after Εμφάνιση. Bounded DOM/data result only: maximized Audit suite collapses to2px/clientHeight0/overflow hidden, so visible usable acceptance FAIL. In-flight race/empty-selection/physical PIN/ordinary roles/other reports NOT TESTED. No source or application state mutation. Same owner retains bounded report flex-sizing correction; claim publication must merge before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md`. Previous supplier/Analytics/navigation and all other owner PASS preserved; no financial/stock/shift replay. Final tracker34/printed32 remains OPEN.
-
-
-**Κατάσταση:** ASSIGNED / bounded LIVE DOM isolation PASS / LIVE VISUAL FAIL / final OPEN
-
-**Υπόλοιπο / όρια PASS:** Υλοποίηση και νέο user-reported πρόβλημα: Store Mode εμφανίζει συμβάντα άλλων καταστημάτων. Δεν δηλώνεται διορθωμένο.
-
-**Υπεύθυνη σελίδα / branch:** fix/report-store-context-20261006
-
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-06T18:50:34.327556+00:00 — selected-store report/Audit context only; CHECKPOINTS/CHANGES/2026-10-06-report-store-context.md. Claim PR1787/CI4494 SUCCESS/merge2d8a187c before code.
-
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 06/10 — local build/server/DOM technical PASS only; exact CI/deploy and read-only two-store LAB acceptance pending. Same owner retained; no financial/shift replay.
-
-PR1788 merged a5cac431 after full CI4496 SUCCESS (1871 PASS/0 FAIL/0 SKIP). Empty-selection membership guard follow-up: 9 focused PASS, awaiting exact CI/deploy. Owner retained; read-only two-store LAB acceptance still required.
-
-PR1790/head6e081d95 passed CI4499, merged db1f90eb; main CI4501 SUCCESS. Exact LIVE verification and read-only two-store acceptance pending; owner retained.
-
-Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a06f8e02a01a950c5262. Deployment publication PASS; authenticated read-only two-store LAB NOT TESTED (native credential protection). Existing manual handoff; owner retained.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 09Oct19:59:07–20:00:56UTC /23:01Athens — LIVE PASS δύο LAB και report normal/maximized σε1348×936, Super Admin support. Testing1049/61categories all matching, foreign search0, positive ΝΕΡΟ 500ML160/refresh160; isolation0/refresh0 with stale testing URL ignored. Report height1003.44/580px instead of old2px, controls/rows/toolbar reachable. SourcePR1984/fullCI37980435854 (1981/1981/0fail/0skip)/main884efea2; mainCI37980797209 rerun SUCCESS/guard37981497519 SUCCESS/exact healthy884efea2. Final docsPR1988 requires fresh exact-head green CI and main merge. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md; manual docs/manual/reports/PASS.md; evidence CHECKPOINTS/EVIDENCE/audit-store-20261009/records.json. Completed pending context entries removed. No transactions/replay or next claim.
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
@@ -1713,3 +1703,16 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 **Υπόλοιπο:** Ενεργός demo lifecycle με προσωπικούς λογαριασμούς, πλήρης server/workers isolation και outbound enforcement, DEMO UI στο υπάρχον POS/Backoffice, 50x40mm πραγματικές ρυθμίσεις/εκτύπωση, δύο authenticated shortcuts, Windows installer/download και πλήρης runtime PostgreSQL/HTTP/exact release/physical Windows acceptance. Η ανενεργή αποθήκευση/ανάκληση και synthetic provisioning έχουν επαληθευτεί μόνο σε isolated CI. Δεν είναι έτοιμο για πελάτες. Άλλες αναθέσεις αμετάβλητες.
 
 **Ολοκλήρωση:** NOT TESTED — κανένα νέο LAB/USER PASS, καμία production μεταβολή.
+
+
+### AI-CREDITS-01 — Προειδοποίηση υπολοίπου AI στον Platform Super Admin
+
+**Κατάσταση:** ASSIGNED / NOT IMPLEMENTED / NOT TESTED
+
+**Υπεύθυνη σελίδα / branch:** codex/ai-credit-alerts-20261009
+
+**Ανάληψη:** 09/10/2026 22:36 Europe/Athens — ρητή εντολή ιδιοκτήτη «ξεκίνα». Ανεξάρτητη επέκταση: κεντρική προειδοποίηση πριν εξαντληθούν credits, προεπιλεγμένα όρια5$/2$, ρύθμιση ορίων και σαφής διάκριση εκτιμώμενου/άγνωστου υπολοίπου. Δεν αναλαμβάνει ξανά παλιά AI-CC phases ή άλλο ανατεθειμένο invoice/POS scope.
+
+**Υπόλοιπο / όρια PASS:** Read-only official Costs API investigation, ασφαλής αποθήκευση baseline/ορίων, central dashboard/AI Command Center alert, bounded refresh, authorization/failure/pagination/stale tests, green CI/merge/exact deploy και LIVE acceptance. Αρχικό screenshot δείχνει αρνητικό υπόλοιπο−0.12$· ο provider λογαριασμός της εφαρμογής δεν έχει ταυτοποιηθεί. Η δημόσια health ανάγνωση επέστρεψε b40a09dff6f0aaac585c1b71f2e36e51181e01e2, main κατά read4cd333b7. Authenticated LIVE setup παραμένει BLOCKED.
+
+**Ολοκλήρωση:** NOT TESTED. Καμία αλλαγή παραγωγικού λογαριασμού/API key, πληρωμή, invoice upload/approval/stock/fiscal mutation. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-ai-credit-alerts.md. Owner retained until explicit handoff.

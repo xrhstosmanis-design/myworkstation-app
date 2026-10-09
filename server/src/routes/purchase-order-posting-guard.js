@@ -76,7 +76,7 @@ router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){ne
 
 router.post("/",async(req,res,next)=>{
   try{
-    if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return next();
+    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return next();
     const supplierId=req.body?.supplierId||null;
     const invoiceNumber=req.body?.invoiceNumber||null;
     if(!supplierId||!normalizeDocumentNumber(invoiceNumber))return next();
@@ -164,7 +164,7 @@ router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
     if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED")return next();
-    if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
+    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
 
     const companyId=req.user.companyId;
     const actor=req.user.fullName||"Χρήστης";
@@ -231,7 +231,7 @@ router.patch("/:orderId",async(req,res,next)=>{
             await tx.$executeRaw`INSERT INTO "PurchaseDocumentLine" ("id","purchaseDocumentId","productId","supplierItemCode","description","quantity","unit","unitCost","netAmount","vatRate","vatAmount","grossAmount") VALUES (${id()},${credit.id},${line.productId},${line.supplierCode||null},${line.description},${n(line.quantity)},'PIECE',${n(line.unitCost)},${n(line.netAmount)+n(line.exciseTotal)},${n(line.vatRate)},${n(line.vatAmount)},${n(line.grossAmount)})`;
             if(line.trackStock){
               await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","currentStock") VALUES (${id()},${found.storeId},${line.productId},${-n(line.quantity)}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+${-n(line.quantity)},"updatedAt"=NOW()`;
-              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-n(line.quantity)},${n(line.unitCost)},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.id})`;
+              await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${id()},${found.storeId},${line.productId},'SUPPLIER_RETURN',${-n(line.quantity)},${n(line.unitCost)},'CREDIT_NOTE_APPROVAL',${credit.id},${`Πιστωτικό προμηθευτή ${effectiveInvoiceNumber||credit.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
             }
           }
           await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${net},"totalVat"=${vat},"totalGross"=${gross},"status"='APPROVED',"updatedAt"=NOW() WHERE "id"=${credit.id} AND "companyId"=${companyId}`;
@@ -247,7 +247,7 @@ router.patch("/:orderId",async(req,res,next)=>{
 
         await tx.$executeRaw`
           INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId")
-          VALUES (${purchaseDocumentId},${companyId},${found.storeId},${effectiveSupplierId},'INVOICE',${effectiveInvoiceNumber},NOW(),${totalNet},${totalVat},${totalGross},'PURCHASE_ORDER','APPROVED',${req.user.id})`;
+          VALUES (${purchaseDocumentId},${companyId},${found.storeId},${effectiveSupplierId},'INVOICE',${effectiveInvoiceNumber},NOW(),${totalNet},${totalVat},${totalGross},'PURCHASE_ORDER','APPROVED',${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
 
         for(const row of lines){
           await tx.$executeRaw`
@@ -278,7 +278,7 @@ router.patch("/:orderId",async(req,res,next)=>{
               "updatedAt"=NOW()`;
           await tx.$executeRaw`
             INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId")
-            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.quantity},${landedUnitCost},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.id})`;
+            VALUES (${id()},${found.storeId},${productId},'PURCHASE',${agg.quantity},${landedUnitCost},'PURCHASE_ORDER',${found.id},${`Οριστικοποίηση αγοράς ${effectiveInvoiceNumber||found.id}`},${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
           await tx.$executeRaw`
             UPDATE "Product" SET
               "costPrice"=${landedUnitCost},
