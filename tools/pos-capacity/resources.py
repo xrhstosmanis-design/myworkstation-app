@@ -37,7 +37,7 @@ def state():
     p = out/'result.json'
     if p.exists():
         d = json.loads(p.read_text())
-        print('Sanitized workload summary', json.dumps({k: d.get(k) for k in ['status', 'failure', 'lastRejectedAction', 'capacityAcceptance']}))
+        print('Sanitized workload summary', json.dumps({k: d.get(k) for k in ['status', 'failure', 'lastRejectedAction', 'capacityAcceptance', 'setupSchemas']}))
     p = out/'resources.jsonl'
     if p.exists():
         data = [json.loads(line) for line in p.read_text().splitlines()]

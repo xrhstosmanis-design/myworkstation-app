@@ -60,6 +60,14 @@ async function fixture(){
   await checked(`/api/operator-management/stores/${stores[0].id}/operators`,owners[0]);
   await checked(`/api/operators/stores/${stores[0].id}/directory`,null);
   await checked(`/api/cash/stores/${stores[0].id}/overview`,owners[0]);
+  // The general CI archive-import flow prepares this lazy schema beforehand.
+  // Standalone runs must initialize it through the existing authorized API too.
+  const [schemaBefore]=await db.$queryRaw`SELECT to_regclass('"ManagementProductCompany"') IS NOT NULL AS present`;
+  await checked('/api/management/product-companies',owners[0]);
+  const [schemaAfter]=await db.$queryRaw`SELECT to_regclass('"ManagementProductCompany"') IS NOT NULL AS present`;
+  assert.equal(schemaAfter.present,true);
+  ledger.setupSchemas=[{table:'ManagementProductCompany',beforePresent:schemaBefore.present,afterPresent:schemaAfter.present}];
+  console.log('Isolated schema setup verified',JSON.stringify(ledger.setupSchemas));
   await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku","salePrice","costPrice","vatRate","active","trackStock") SELECT ${runId}||'-product-'||i,${company.id},'Capacity Product '||lpad(i::text,5,'0'),'CAP'||lpad(i::text,5,'0'),2.50,1,24,i%10<>0,TRUE FROM generate_series(1,${productCount}::int) i`;
   await db.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") SELECT ${runId}||'-barcode-'||i,${runId}||'-product-'||i,'998'||lpad(i::text,10,'0'),1 FROM generate_series(1,${productCount}::int) i`;
   await db.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active","currentStock","minStock") SELECT s."id"||'-sp-'||i,s."id",${runId}||'-product-'||i,2.50,TRUE,100000,0 FROM "Store" s CROSS JOIN generate_series(1,${storeProductCount}::int) i WHERE s."companyId"=${company.id}`;
@@ -181,6 +189,7 @@ try{
     ledger.stages.at(-1).correctness='PASS';
     if(mode==='priority20'){
       ledger.stages.at(-1).assessment=assessPhase(metrics);writeResult();
+      console.log('Capacity phase assessment',JSON.stringify({name:stage.name,profile,assessment:ledger.stages.at(-1).assessment,byKind:metrics.byKind}));
       if(profile==='full'&&stage.name!=='warmup')assert.equal(ledger.stages.at(-1).assessment.status,'PASS','Phase latency/arrival criteria failed');
     }
     writeResult();
