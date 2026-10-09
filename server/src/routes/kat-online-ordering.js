@@ -1,3 +1,4 @@
+import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
@@ -37,6 +38,7 @@ async function katStore(){
 }
 
 async function onlineContextForStore(store){
+  assertCustomerDemoRuntimeClosed({companyId:store.companyId,storeId:store.id});
   const state=await companyModuleState(store.companyId);
   if(!state?.licenseAllowed){const error=new Error("Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.");error.status=403;throw error}
   const storeModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;

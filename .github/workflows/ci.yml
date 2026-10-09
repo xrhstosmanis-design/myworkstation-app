@@ -262,6 +262,7 @@ jobs:
           run_flow server/e2e/server-shutdown-flow.mjs
           MWS_CAPACITY_ISOLATED=1 MWS_CAPACITY_MODE=smoke MWS_CAPACITY_OUTPUT=/tmp/myworkstation-capacity-result run_flow server/e2e/pos-capacity-flow.mjs
           run_flow server/e2e/customer-demo-preparation-flow.mjs
+          run_flow server/e2e/customer-demo-runtime-flow.mjs
           cat /tmp/myworkstation-e2e-server.log
       - name: Preserve isolated capacity harness results
         if: always()

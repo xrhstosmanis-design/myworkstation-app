@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import { normalizeReportRecipients } from "./report-recipients.js";
 import nodemailer from "nodemailer";
 
@@ -57,7 +58,8 @@ function createTransport(config){
   });
 }
 
-export async function sendEmail({to,subject,text,html,attachments=[]}){
+export async function sendEmail({to,subject,text,html,attachments=[],companyId,storeId}){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   const config=requireMailConfig();
   const recipients=normalizeReportRecipients(to);
   if(!recipients.length){
@@ -99,7 +101,7 @@ export async function sendTestEmail(){
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 
-export async function sendCashShiftClosedEmail({to,storeName,session}){
+export async function sendCashShiftClosedEmail({to,storeName,session,companyId,storeId}){
   const variance=Number(session.variance||0);
   const cardVariance=Number(session.cardVariance||0);
   const openingVariance=Number(session.openingVariance||0);
@@ -123,10 +125,10 @@ export async function sendCashShiftClosedEmail({to,storeName,session}){
   const text=[subject,"",...rows.map(([label,value])=>`${label}: ${value}`),"",`Έλεγχος διπλών συναλλαγών:\n${duplicateText}`,session.closingNote?`\nΣημείωση: ${session.closingNote}`:""].join("\n");
   const htmlRows=rows.map(([label,value])=>`<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
   const html=`<div style="font-family:Arial,sans-serif;max-width:680px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table><h3>Έλεγχος διπλών συναλλαγών</h3><pre style="white-space:pre-wrap;background:#f5f7fa;padding:12px">${escapeHtml(duplicateText)}</pre>${session.closingNote?`<p><strong>Σημείωση:</strong> ${escapeHtml(session.closingNote)}</p>`:""}<p style="color:#64748b">Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
-  return sendEmail({to,subject,text,html});
+  return sendEmail({to,subject,text,html,companyId,storeId});
 }
 
-export async function sendCashControlDailyReportEmail({to,storeName,date,rows,comment,auditorName}){
+export async function sendCashControlDailyReportEmail({to,storeName,date,rows,comment,auditorName,companyId,storeId}){
   const shortage=rows.reduce((sum,row)=>sum+(Number(row.variance)<0?Math.abs(Number(row.variance)):0),0);
   const surplus=rows.reduce((sum,row)=>sum+(Number(row.variance)>0?Number(row.variance):0),0);
   const subject=`Αναφορά ελέγχου ταμείων · ${storeName} · ${date}`;
@@ -134,10 +136,10 @@ export async function sendCashControlDailyReportEmail({to,storeName,date,rows,co
   const text=[subject,"",...lines,"",`Συνολικό έλλειμμα: ${eur(shortage)}`,`Συνολικό πλεόνασμα: ${eur(surplus)}`,comment?`Σχόλιο ελέγχου: ${comment}`:"",`Ελέγχθηκε από: ${auditorName}`].filter(Boolean).join("\n");
   const htmlRows=rows.map(row=>`<tr><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.shiftLabel)}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.terminalPos||"MAIN")}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.openedByName||"—")}</td><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:700">${escapeHtml(eur(row.variance))}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(eur(row.cardVariance))}</td></tr>`).join("");
   const html=`<div style="font-family:Arial,sans-serif;max-width:760px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse"><tr><th>Βάρδια</th><th>POS</th><th>Χειριστής</th><th>Διαφορά</th><th>POS–EFTPOS</th></tr>${htmlRows}</table><p><strong>Συνολικό έλλειμμα:</strong> ${escapeHtml(eur(shortage))}<br><strong>Συνολικό πλεόνασμα:</strong> ${escapeHtml(eur(surplus))}</p>${comment?`<p><strong>Σχόλιο ελέγχου:</strong> ${escapeHtml(comment)}</p>`:""}<p><strong>Ελέγχθηκε από:</strong> ${escapeHtml(auditorName)}</p><p style="color:#64748b">Η αναφορά στάλθηκε χειροκίνητα από τον Super Admin.</p></div>`;
-  return sendEmail({to,subject,text,html});
+  return sendEmail({to,subject,text,html,companyId,storeId});
 }
 
-export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,occurredAt,description,reason,originalType}){
+export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,occurredAt,description,reason,originalType,companyId,storeId}){
   const at=occurredAt?new Date(occurredAt):new Date();
   const isReversal=kind==="REVERSAL";
   const title=isReversal?"Αντιλογισμός συναλλαγής":"Καταχώριση ποσοστών";
@@ -149,5 +151,5 @@ export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,o
   const text=[subject,"",...rows.map(([label,value])=>`${label}: ${value}`),"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");
   const htmlRows=rows.map(([label,value])=>`<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
   const html=`<div style="font-family:Arial,sans-serif;max-width:680px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table><p style="color:#64748b">Αυτόματο μήνυμα από το MyWorkStation.</p></div>`;
-  return sendEmail({to,subject,text,html});
+  return sendEmail({to,subject,text,html,companyId,storeId});
 }

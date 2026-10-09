@@ -329,7 +329,7 @@ async function notifyLedgerAlert({companyId,store,kind,transaction,actorName,rea
   const recipients=await alertRecipients(companyId,store);
   if(!recipients.length)return {status:"SKIPPED",recipients:[]};
   try{
-    await sendLedgerAlertEmail({to:recipients,kind,storeName:store.name,amount:transaction.amount,actorName,occurredAt:transaction.reversedAt||transaction.occurredAt,description:transaction.description,reason,originalType:transaction.type});
+    await sendLedgerAlertEmail({companyId,storeId:store.id,to:recipients,kind,storeName:store.name,amount:transaction.amount,actorName,occurredAt:transaction.reversedAt||transaction.occurredAt,description:transaction.description,reason,originalType:transaction.type});
     return {status:"SENT",recipients};
   }catch(error){
     console.error("Store transaction email notification failed:",error?.message||error);

@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../../customer-demo-runtime.js";
 const trimSlash=value=>String(value||"").replace(/\/+$/g,"");
 const mockEnabled=()=>process.env.NODE_ENV==="test"&&process.env.NETLINK_TEST_MODE==="true"&&process.env.NETLINK_MOCK_PROVIDER==="true";
 
@@ -43,6 +44,8 @@ export class NetlinkMockClient{
 
 export class NetlinkClient{
   constructor(config={}){
+    assertCustomerDemoOutboundAllowed(config);
+    this.tenant={companyId:config.companyId,storeId:config.storeId};
     this.tokenUrl=required(config.tokenUrl||process.env.NETLINK_TOKEN_URL,"NETLINK_TOKEN_URL");
     this.apiBase=trimSlash(required(config.apiBase||process.env.NETLINK_API_BASE,"NETLINK_API_BASE"));
     this.clientId=required(config.clientId||process.env.NETLINK_CLIENT_ID,"NETLINK_CLIENT_ID");
@@ -52,16 +55,16 @@ export class NetlinkClient{
     this.stationId=String(config.stationId||process.env.NETLINK_STATION_ID||"").trim();
     this.accessToken=null;this.refreshToken=null;this.expiresAt=0;
   }
-  async obtainToken(){const payload=new URLSearchParams({grant_type:"password",client_id:this.clientId,client_secret:this.clientSecret,username:this.username,password:this.password});const response=await fetch(this.tokenUrl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});const body=await parseResponse(response);this.setToken(body);return body}
-  async refreshAccessToken(){if(!this.refreshToken)return this.obtainToken();const payload=new URLSearchParams({grant_type:"refresh_token",client_id:this.clientId,client_secret:this.clientSecret,refresh_token:this.refreshToken});const response=await fetch(this.tokenUrl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});if(response.status===400||response.status===401)return this.obtainToken();const body=await parseResponse(response);this.setToken(body);return body}
+  async obtainToken(){assertCustomerDemoOutboundAllowed(this.tenant);const payload=new URLSearchParams({grant_type:"password",client_id:this.clientId,client_secret:this.clientSecret,username:this.username,password:this.password});const response=await fetch(this.tokenUrl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});const body=await parseResponse(response);this.setToken(body);return body}
+  async refreshAccessToken(){assertCustomerDemoOutboundAllowed(this.tenant);if(!this.refreshToken)return this.obtainToken();const payload=new URLSearchParams({grant_type:"refresh_token",client_id:this.clientId,client_secret:this.clientSecret,refresh_token:this.refreshToken});const response=await fetch(this.tokenUrl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:payload});if(response.status===400||response.status===401)return this.obtainToken();const body=await parseResponse(response);this.setToken(body);return body}
   setToken(body={}){this.accessToken=body.access_token||null;this.refreshToken=body.refresh_token||this.refreshToken||null;const expiresIn=Math.max(30,Number(body.expires_in||300));this.expiresAt=Date.now()+expiresIn*1000}
   async token(){if(!this.accessToken)return (await this.obtainToken()).access_token;if(Date.now()>=this.expiresAt-30000)return (await this.refreshAccessToken()).access_token;return this.accessToken}
-  async request(path,{method="GET",body,requestId}={}){let token=await this.token();const call=()=>fetch(`${this.apiBase}${path}`,{method,headers:{Authorization:`Bearer ${token}`,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{}),...(requestId?{"X-Request-Id":requestId}:{}),...(this.stationId?{"X-Station-Id":this.stationId}:{})},body:body!==undefined?JSON.stringify(body):undefined});let response=await call();if(response.status===401){token=(await this.refreshAccessToken()).access_token;response=await call()}return parseResponse(response)}
+  async request(path,{method="GET",body,requestId}={}){assertCustomerDemoOutboundAllowed(this.tenant);let token=await this.token();const call=()=>fetch(`${this.apiBase}${path}`,{method,headers:{Authorization:`Bearer ${token}`,Accept:"application/json",...(body!==undefined?{"Content-Type":"application/json"}:{}),...(requestId?{"X-Request-Id":requestId}:{}),...(this.stationId?{"X-Station-Id":this.stationId}:{})},body:body!==undefined?JSON.stringify(body):undefined});let response=await call();if(response.status===401){token=(await this.refreshAccessToken()).access_token;response=await call()}return parseResponse(response)}
   menu(){return this.request("/menu")}
   prepare(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/prepare`,{method:"POST",requestId,body:{...(payload||{})}})}
   execute(productId,{requestId,payload}){return this.request(`/${encodeURIComponent(productId)}/execute`,{method:"POST",requestId,body:{requestId,payload:payload||{}}})}
 }
 
 let singleton;
-export function netlinkClient(){if(!singleton)singleton=mockEnabled()?new NetlinkMockClient():new NetlinkClient();return singleton}
+export function netlinkClient(tenant){assertCustomerDemoOutboundAllowed(tenant);if(!singleton)singleton=mockEnabled()?new NetlinkMockClient():new NetlinkClient();return singleton}
 export function resetNetlinkClient(){singleton=undefined}

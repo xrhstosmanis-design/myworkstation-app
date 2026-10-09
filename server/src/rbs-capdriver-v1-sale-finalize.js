@@ -1,13 +1,15 @@
+import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
 import {reserveSharedStock} from "./routes/store-pos.js";
 
 export async function finalizeConfirmedCardRequest(requestId){
   const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","terminalPos","clientTransactionId","paymentMethod","total","status","checkoutJson" FROM "RbsCapDriverV1Request" WHERE "id"=${requestId} LIMIT 1`;
-  const request=rows[0];if(!request||request.status!=="OPERATOR_CONFIRMED"||request.paymentMethod!=="CARD")return {skipped:true};
+  const request=rows[0];
+  assertCustomerDemoOutboundAllowed(request);if(!request||request.status!=="OPERATOR_CONFIRMED"||request.paymentMethod!=="CARD")return {skipped:true};
   const checkout=request.checkoutJson||{},resolved=Array.isArray(checkout.resolvedItems)?checkout.resolvedItems:[],summary=checkout.baseSummary||{},actorId=checkout.actorId||"RBS_CAPDRIVER_V1",actorName=checkout.actorName||"RBS CAP Driver v1",operatorEmployeeId=checkout.operatorEmployeeId||null;
   if(!resolved.length)throw new Error("RBS card auto-finalize: missing resolved checkout items.");
-  return prisma.$transaction(async tx=>{const locked=(await tx.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "id"=${requestId} FOR UPDATE`)[0];if(!locked||locked.status!=="OPERATOR_CONFIRMED"||locked.saleId)return {skipped:true};const existing=(await tx.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${locked.companyId} AND "storeId"=${locked.storeId} AND "clientTransactionId"=${locked.clientTransactionId} LIMIT 1`)[0];if(existing){await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='SALE_COMMITTED',"saleId"=${existing.id},"updatedAt"=NOW() WHERE "id"=${locked.id}`;return {saleId:existing.id,replay:true}}
+  return prisma.$transaction(async tx=>{const locked=(await tx.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "id"=${requestId} FOR UPDATE`)[0];assertCustomerDemoOutboundAllowed(locked);if(!locked||locked.status!=="OPERATOR_CONFIRMED"||locked.saleId)return {skipped:true};const existing=(await tx.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${locked.companyId} AND "storeId"=${locked.storeId} AND "clientTransactionId"=${locked.clientTransactionId} LIMIT 1`)[0];if(existing){await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='SALE_COMMITTED',"saleId"=${existing.id},"updatedAt"=NOW() WHERE "id"=${locked.id}`;return {saleId:existing.id,replay:true}}
     const shift=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${locked.companyId} AND "storeId"=${locked.storeId} AND UPPER(TRIM("terminalPos"))=UPPER(TRIM(${locked.terminalPos})) AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];if(!shift)throw new Error(`RBS card auto-finalize: no open shift for ${locked.terminalPos}.`);
     const saleId=crypto.randomUUID(),operationChannel=checkout.operationChannel||"COUNTER",audience=checkout.audience||"NORMAL";await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","customerId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source","clientTransactionId","saleFingerprint","duplicateConfirmed","transactionMode","operationChannel","audience") VALUES (${saleId},${locked.companyId},${locked.storeId},${checkout.customerId||null},${operatorEmployeeId},'ISSUED',${Number(summary.subtotal||locked.total)},${Number(summary.discount||0)},${Number(summary.total||locked.total)},'COMPLETED','POS',${locked.clientTransactionId},${locked.requestHash},FALSE,'NORMAL',${operationChannel},${audience})`;
     for(const item of resolved){const lineId=crypto.randomUUID(),qty=Number(item.quantity||1),unit=Number(item.effectiveUnitPrice??item.unitPrice??0),lineTotal=Number(item.lineTotal??unit*qty);await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal","promotionId","promotionType","scannedBarcode") VALUES (${lineId},${saleId},${item.productId},${item.name||""},${qty},${unit},${Number(item.discount||0)},${Number(item.vatRate||0)},${lineTotal},${item.promotionId||null},${item.promotionType||null},${item.barcode||null})`;await reserveSharedStock(tx,{companyId:locked.companyId,storeId:locked.storeId,productId:item.productId,quantity:qty,productName:item.name,saleId,saleLineId:lineId,priceSource:item.priceSource});}
@@ -19,12 +21,13 @@ export async function finalizeConfirmedCardRequest(requestId){
 export async function finalizeDispatchedCashRequest(requestId){
   const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","terminalPos","clientTransactionId","paymentMethod","total","status","checkoutJson" FROM "RbsCapDriverV1Request" WHERE "id"=${requestId} LIMIT 1`;
   const request=rows[0];
+  assertCustomerDemoOutboundAllowed(request);
   if(!request||request.status!=="DISPATCHED"||request.paymentMethod!=="CASH")return {skipped:true};
   const checkout=request.checkoutJson||{},resolved=Array.isArray(checkout.resolvedItems)?checkout.resolvedItems:[],actorId=checkout.actorId||"RBS_CAPDRIVER_V1",actorName=checkout.actorName||"RBS CAP Driver v1",operatorEmployeeId=checkout.operatorEmployeeId||null;
   if(!resolved.length)throw new Error("RBS cash auto-finalize: missing resolved checkout items.");
   return prisma.$transaction(async tx=>{
     const locked=(await tx.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "id"=${requestId} FOR UPDATE`)[0];
-    if(!locked||locked.status!=="DISPATCHED"||locked.saleId)return {skipped:true};
+    assertCustomerDemoOutboundAllowed(locked);if(!locked||locked.status!=="DISPATCHED"||locked.saleId)return {skipped:true};
     const existing=(await tx.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${locked.companyId} AND "storeId"=${locked.storeId} AND "clientTransactionId"=${locked.clientTransactionId} LIMIT 1`)[0];
     if(existing){await tx.$executeRaw`UPDATE "RbsCapDriverV1Request" SET "status"='SALE_COMMITTED',"saleId"=${existing.id},"updatedAt"=NOW() WHERE "id"=${locked.id} AND "status"='DISPATCHED'`;return {saleId:existing.id,replay:true}}
     const saleId=crypto.randomUUID(),summary=checkout.baseSummary||{},audience=checkout.audience||"NORMAL",operationChannel=checkout.operationChannel||"COUNTER";

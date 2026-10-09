@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {prisma} from "../prisma.js";
 import {assessInvoicePages,normalizedAssistantPages} from "../routes/invoice-assistant-review.js";
 import {rawRowSupportsStructuredLine} from "./invoice-line-review.js";
@@ -52,6 +53,7 @@ export function assistantRowsToProductLines(reading,{pageCount,totalGross}){
 }
 
 export async function readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross}){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   if(!process.env.OPENAI_API_KEY)throw new Error("Δεν έχει ρυθμιστεί ο βοηθός τιμολογίου στον server.");
   if(!Array.isArray(pageJobIds)||pageJobIds.length<1||pageJobIds.length>5||new Set(pageJobIds).size!==pageJobIds.length)throw new Error("Λείπει η πλήρης λίστα σελίδων του τιμολογίου.");
   const pages=[];

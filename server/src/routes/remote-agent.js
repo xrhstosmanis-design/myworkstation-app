@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {Router} from 'express';
 import {createRemoteTrialGate} from '../lib/remote-agent-trial.js';
 import crypto from 'node:crypto';
@@ -17,7 +18,7 @@ router.post('/pair',rate,async(req,res,next)=>{try{
  if(!trial.acceptsTerminal(b.terminalId))return res.status(403).json({error:'Η δοκιμή επιτρέπεται μόνο στο εγκεκριμένο laptop.'});
  if(!sessions.canStart())return res.status(503).json({error:'Δεν υπάρχει διαθέσιμη συνεδρία.'});
  const digest=crypto.createHash('sha256').update(b.code).digest('hex');
- const jobs=await prisma.$queryRaw`UPDATE "DeviceDeploymentJob" j SET "status"='DEVICE_ACCEPTED',"startedAt"=NOW(),"resultJson"='{"attendedAgent":true,"localConsent":true}'::jsonb FROM "StoreInstallationTerminal" t,"Store" s WHERE j."id"=${b.jobId} AND j."terminalId"=${b.terminalId} AND j."jobType"='REMOTE_ASSIST' AND j."status"='AWAITING_DEVICE' AND j."payloadJson"->>'supportCodeHash'=${digest} AND (j."payloadJson"->>'expiresAt')::timestamptz>NOW() AND t."id"=j."terminalId" AND t."companyId"=j."companyId" AND t."storeId"=j."storeId" AND t."active"=true AND s."id"=j."storeId" AND s."companyId"=j."companyId" AND s."active"=true RETURNING j."id",j."createdBy",j."companyId",j."storeId",j."terminalId"`;
+ const jobs=await prisma.$queryRaw`UPDATE "DeviceDeploymentJob" j SET "status"='DEVICE_ACCEPTED',"startedAt"=NOW(),"resultJson"='{"attendedAgent":true,"localConsent":true}'::jsonb FROM "StoreInstallationTerminal" t,"Store" s WHERE j."id"=${b.jobId} AND j."terminalId"=${b.terminalId} AND j."jobType"='REMOTE_ASSIST' AND j."status"='AWAITING_DEVICE' AND j."payloadJson"->>'supportCodeHash'=${digest} AND (j."payloadJson"->>'expiresAt')::timestamptz>NOW() AND t."id"=j."terminalId" AND t."companyId"=j."companyId" AND t."storeId"=j."storeId" AND t."active"=true AND s."id"=j."storeId" AND s."companyId"=j."companyId" AND s."active"=true AND j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%' RETURNING j."id",j."createdBy",j."companyId",j."storeId",j."terminalId"`;
  if(!jobs[0])return res.status(404).json({error:'Λάθος, ληγμένος ή ήδη χρησιμοποιημένος κωδικός.'});
  const connection=sessions.start(jobs[0]);await audit(jobs[0],'REMOTE_AGENT_LOCAL_CONSENT');res.status(201).json(connection);
 }catch(e){next(e)}});
@@ -31,7 +32,7 @@ router.post('/pair-code',rate,async(req,res,next)=>{try{
   SELECT j."id" FROM "DeviceDeploymentJob" j
   JOIN "StoreInstallationTerminal" t ON t."id"=j."terminalId" AND t."companyId"=j."companyId" AND t."storeId"=j."storeId" AND t."active"=true
   JOIN "Store" s ON s."id"=j."storeId" AND s."companyId"=j."companyId" AND s."active"=true
-  WHERE j."terminalId"=${trial.terminalId} AND j."jobType"='REMOTE_ASSIST' AND j."status"='AWAITING_DEVICE'
+  WHERE j."companyId" NOT ILIKE 'customer-demo-%' AND j."storeId" NOT ILIKE 'customer-demo-%' AND j."terminalId"=${trial.terminalId} AND j."jobType"='REMOTE_ASSIST' AND j."status"='AWAITING_DEVICE'
    AND j."payloadJson"->>'supportCodeHash'=${digest} AND (j."payloadJson"->>'expiresAt')::timestamptz>NOW()
   LIMIT 2
  ), unique_candidate AS (
@@ -45,7 +46,7 @@ router.post('/pair-code',rate,async(req,res,next)=>{try{
  const connection=sessions.start(jobs[0]);await audit(jobs[0],'REMOTE_AGENT_LOCAL_CONSENT');
  res.status(201).json({...connection,jobId:jobs[0].id});
 }catch(e){next(e)}});
-const device=req=>sessions.device(req.params.jobId,String(req.headers.authorization||'').replace(/^Bearer /,''));
+const device=req=>{const session=sessions.device(req.params.jobId,String(req.headers.authorization||'').replace(/^Bearer /,''));assertCustomerDemoOutboundAllowed(session);return session;};
 router.post('/:jobId/frame',async(req,res,next)=>{try{
  const s=device(req),b=req.body||{};
  if(typeof b.jpeg!=='string'||b.jpeg.length>750000||!/^\/9j\/[A-Za-z0-9+/=]+$/.test(b.jpeg)||!Number.isInteger(b.width)||!Number.isInteger(b.height)||b.width<1||b.width>8192||b.height<1||b.height>8192)return res.status(400).json({error:'Μη έγκυρη εικόνα οθόνης.'});

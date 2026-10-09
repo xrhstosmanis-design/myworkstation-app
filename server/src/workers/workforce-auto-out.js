@@ -1,3 +1,4 @@
+import {isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
 import {prisma} from "../prisma.js";
 
@@ -9,14 +10,15 @@ export async function closeStaleWorkforceAttendance(now=new Date()){
   running=true;
   try{
     const cutoff=new Date(now.getTime()-AUTO_OUT_MS);
-    const candidates=await prisma.workforceAttendanceSession.findMany({where:{status:"OPEN",startedAt:{lte:cutoff}},select:{id:true}});
+    const candidates=await prisma.workforceAttendanceSession.findMany({where:{status:"OPEN",startedAt:{lte:cutoff}},select:{id:true,companyId:true,storeId:true}});
     let closed=0;
     for(const candidate of candidates){
       if(backgroundDrain.stopping)break;
+      if(isCustomerDemoTenant(candidate))continue;
       const changed=await prisma.$transaction(async tx=>{
         await tx.$queryRawUnsafe(`SELECT "id" FROM "WorkforceAttendanceSession" WHERE "id"=$1 FOR UPDATE`,candidate.id);
         const session=await tx.workforceAttendanceSession.findFirst({where:{id:candidate.id,status:"OPEN"}});
-        if(!session||new Date(session.startedAt)>cutoff)return false;
+        if(!session||new Date(session.startedAt)>cutoff||isCustomerDemoTenant(session))return false;
         const endedAt=new Date(new Date(session.startedAt).getTime()+AUTO_OUT_MS),workedMinutes=720;
         const entry=await tx.workforceTimeClockEntry.create({data:{companyId:session.companyId,storeId:session.storeId,employeeId:session.employeeId,eventType:"OUT",method:"AUTO_OUT_12H",occurredAt:endedAt,sourceShiftId:session.scheduledAssignmentId||null,note:"Αυτόματη αποχώρηση ασφαλείας στις 12 ώρες — απαιτείται έλεγχος πραγματικής ώρας αποχώρησης.",createdByUserId:null}});
         const priorIssues=Array.isArray(session.issueJson?.issues)?session.issueJson.issues:[];

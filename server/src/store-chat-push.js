@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import webpush from "web-push";
 import {prisma} from "./prisma.js";
 import {isApplePushEndpoint} from "./store-chat-push-policy.js";
@@ -24,6 +25,7 @@ async function vapidKeys(){
 export async function storeChatPushPublicKey(){return (await vapidKeys()).publicKey}
 
 export async function saveStoreChatPushSubscription({store,user,subscription}){
+  assertCustomerDemoOutboundAllowed({companyId:store.companyId,storeId:store.id});
   const endpoint=String(subscription?.endpoint||"");
   const p256dh=String(subscription?.keys?.p256dh||""),auth=String(subscription?.keys?.auth||"");
   if(!endpoint.startsWith("https://")||!p256dh||!auth)throw Object.assign(new Error("Μη έγκυρη συνδρομή ειδοποιήσεων."),{status:400});
@@ -32,6 +34,7 @@ export async function saveStoreChatPushSubscription({store,user,subscription}){
 }
 
 export async function sendStoreChatPush({store,senderId}){
+  assertCustomerDemoOutboundAllowed({companyId:store.companyId,storeId:store.id});
   await vapidKeys();
   const rows=await prisma.$queryRaw`SELECT "endpoint","subscriptionJson" FROM "StoreChatPushSubscription" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "userId"<>${senderId}`;
   const payload={title:"MyWorkStation · Chat",body:`Νέο μήνυμα στο ${store.name}`,url:"/",storeId:store.id};

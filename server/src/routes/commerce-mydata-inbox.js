@@ -1,3 +1,4 @@
+import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
 import * as XLSX from "xlsx";
@@ -64,6 +65,7 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
 
 const syncInFlight=new Map(),syncStatus=new Map();
 export function syncMyDataStore(req){
+  assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
   const key=String(req.user.companyId)+":"+String(req.body.storeId);
   if(syncInFlight.has(key))return syncInFlight.get(key);
   const run=prisma.$transaction(async lock=>{
@@ -74,6 +76,7 @@ export function syncMyDataStore(req){
   syncInFlight.set(key,run);return run;
 }
 async function performSync(req){
+  assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
   await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);const storeId=String(req.body?.storeId||"");
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true,name:true,company:{select:{taxId:true}}}});
   if(!store)throw syncError("Δεν βρέθηκε το κατάστημα.",404);
@@ -91,6 +94,7 @@ async function performSync(req){
   do{
     const url=new URL(endpoint(integration.environment));url.searchParams.set("mark",mark);
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
+    assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:store.id});
     const response=await fetch(url,{headers:{"aade-user-id":credentials.accountId,"Ocp-Apim-Subscription-Key":credentials.secret,"Accept":"application/xml"},signal:AbortSignal.timeout(30000)});
     const responseXml=await response.text();if(!response.ok)throw syncError(`Το myDATA απάντησε με σφάλμα ${response.status}. Δεν αποθηκεύτηκε παραστατικό.`);
     const xml=unwrapMyDataXml(responseXml);
@@ -137,14 +141,12 @@ router.post("/documents/mydata/sync",requireCompanyModule("DOCUMENTS"),async(req
 
 // Uses the same receiving service and entitlement checks; never approves or pays.
 let workerStarted=false,workerBusy=false;
-export function startMyDataReceivingWorker(){
-  if(backgroundDrain.stopping||workerStarted)return;workerStarted=true;
-  const tick=async()=>{
+export async function runMyDataReceivingSweep(){
     if(backgroundDrain.stopping||workerBusy)return;workerBusy=true;
     try{
       await Promise.all([ensureSchema(),ensureStoreIntegrationSchema()]);
-      const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND c."environment"='PRODUCTION' AND s."active"=true ORDER BY c."companyId",c."storeId"`;
-      for(const target of targets){if(backgroundDrain.stopping)break;try{
+      const targets=await prisma.$queryRaw`SELECT c."companyId",c."storeId" FROM "StoreIntegrationCredential" c JOIN "Store" s ON s."id"=c."storeId" AND s."companyId"=c."companyId" WHERE c."kind"='MYDATA' AND c."enabled"=true AND c."environment"='PRODUCTION' AND s."active"=true AND c."companyId" NOT ILIKE 'customer-demo-%' AND c."storeId" NOT ILIKE 'customer-demo-%' ORDER BY c."companyId",c."storeId"`;
+      for(const target of targets){if(backgroundDrain.stopping)break;if(isCustomerDemoTenant(target))continue;try{
         const state=await companyModuleState(target.companyId);
         if(!state?.licenseAllowed||!state.activeModules.includes("DOCUMENTS"))continue;
         const owners=await prisma.$queryRaw`SELECT u."id" FROM "User" u WHERE u."role"='OWNER' AND (u."companyId"=${target.companyId} OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=${target.companyId})) ORDER BY u."id" LIMIT 1`;
@@ -153,8 +155,10 @@ export function startMyDataReceivingWorker(){
         await syncMyDataStore({user:{id:owner.id,companyId:target.companyId},body:{storeId:target.storeId},license:state});
       }catch{console.warn("myDATA scheduled receiving failed; review the store integration status.")}}
     }catch{console.warn("myDATA scheduled receiving unavailable.")}finally{workerBusy=false}
-  };
-  const timer=setInterval(()=>backgroundDrain.track(tick()),15*60*1000);timer.unref?.();
+}
+export function startMyDataReceivingWorker(){
+  if(backgroundDrain.stopping||workerStarted)return;workerStarted=true;
+  const timer=setInterval(()=>backgroundDrain.track(runMyDataReceivingSweep()),15*60*1000);timer.unref?.();
   backgroundDrain.onStop(()=>clearInterval(timer));
 }
 

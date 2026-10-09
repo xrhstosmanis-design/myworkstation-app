@@ -1,3 +1,4 @@
+import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -44,6 +45,7 @@ async function context(publicSlug=null){
     ?await prisma.$queryRaw`SELECT s."id",s."name",s."companyId" FROM "Store" s JOIN "OnlineOrderingConfig" oc ON oc."storeId"=s."id" WHERE s."active"=TRUE AND LOWER(oc."publicSlug")=LOWER(${publicSlug}) LIMIT 1`
     :await prisma.$queryRaw`SELECT "id","name","companyId" FROM "Store" WHERE "active"=TRUE AND LOWER("name")=LOWER(${KAT_STORE_NAME}) ORDER BY "createdAt" LIMIT 1`;
   const store=stores[0];if(!store){const e=new Error(publicSlug?"Δεν βρέθηκε το Online Store.":"Το Κυλικείο ΚΑΤ δεν είναι διαθέσιμο.");e.status=503;throw e}
+  assertCustomerDemoRuntimeClosed({companyId:store.companyId,storeId:store.id});
   const state=await companyModuleState(store.companyId);
   if(!state?.licenseAllowed){const e=new Error("Η άδεια του καταστήματος είναι σε αναστολή ή έχει λήξει.");e.status=403;throw e}
   const storeModules=await prisma.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "moduleKey"='ONLINE_ORDERING' LIMIT 1`;

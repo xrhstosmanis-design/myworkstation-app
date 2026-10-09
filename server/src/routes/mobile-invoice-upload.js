@@ -1,3 +1,4 @@
+import {isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {Router} from "express";
 const router=Router();
 export const mobileUploads=new Map();
@@ -28,5 +29,5 @@ async function go(){
   }catch(error){status("❌ "+(error.message||"Η αποστολή απέτυχε."));button.disabled=false}
 }
 </script>`));
-router.post("/:id/:token",(req,res)=>{const x=mobileUploads.get(req.params.id),f=req.body||{};if(!x||x.token!==req.params.token||x.expires<Date.now())return res.status(404).json({error:"Το QR έληξε."});if(!/^data:(application\/pdf|image\/(jpeg|png|webp));base64,/.test(f.dataUrl||"")||String(f.dataUrl).length>4600000)return res.status(400).json({error:"Μη έγκυρο αρχείο."});Object.assign(x,{dataUrl:f.dataUrl,filename:String(f.filename||"timologio"),mimeType:String(f.mimeType||"image/jpeg")});res.json({ok:true})});
+router.post("/:id/:token",(req,res)=>{const x=mobileUploads.get(req.params.id),f=req.body||{};if(!x||x.token!==req.params.token||x.expires<Date.now()||isCustomerDemoTenant(x))return res.status(404).json({error:"Το QR έληξε."});if(!/^data:(application\/pdf|image\/(jpeg|png|webp));base64,/.test(f.dataUrl||"")||String(f.dataUrl).length>4600000)return res.status(400).json({error:"Μη έγκυρο αρχείο."});Object.assign(x,{dataUrl:f.dataUrl,filename:String(f.filename||"timologio"),mimeType:String(f.mimeType||"image/jpeg")});res.json({ok:true})});
 export default router;
