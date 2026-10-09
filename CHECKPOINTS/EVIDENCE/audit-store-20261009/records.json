@@ -1,0 +1,133 @@
+{
+  "revision": "884efea2acec8cf86d2bb606c4296172d288ea53",
+  "viewport": {
+    "width": 1348,
+    "height": 936
+  },
+  "supportUrl": "https://myworkstation-app.onrender.com/?supportPage=stores&supportStore=cmtpopbgo000trhb5ng9ytiru",
+  "records": [
+    {
+      "phase": "initial",
+      "at": "2026-10-09T19:59:07.966Z",
+      "clientHeight": 1001,
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 1003.4375,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 1049,
+      "scrollHeight": 1001,
+      "shell": "commerce-shell window-maximized ",
+      "stores": {
+        "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ": 1049
+      },
+      "summary": "1049 συμβάντα · 61 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "normal",
+      "at": "2026-10-09T19:59:48.534Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 1003.4375,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 1049,
+      "search": "",
+      "shell": "commerce-shell  ",
+      "stores": {
+        "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ": 1049
+      },
+      "summary": "1049 συμβάντα · 61 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "maximized",
+      "at": "2026-10-09T20:00:05.921Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 1003.4375,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 1049,
+      "search": "",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {
+        "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ": 1049
+      },
+      "summary": "1049 συμβάντα · 61 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "foreign-store-search",
+      "at": "2026-10-09T20:00:09.967Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 580,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 0,
+      "search": "Περίπτερο Διαδόχου Παύλου",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {},
+      "summary": "0 συμβάντα · 0 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "positive-search",
+      "at": "2026-10-09T20:00:17.311Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 1003.4375,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 160,
+      "search": "ΝΕΡΟ 500ML",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {
+        "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ": 160
+      },
+      "summary": "160 συμβάντα · 10 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "positive-refresh",
+      "at": "2026-10-09T20:00:19.961Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 1003.4375,
+      "rootStore": "cmtpopbgo000trhb5ng9ytiru",
+      "rows": 160,
+      "search": "ΝΕΡΟ 500ML",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {
+        "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ": 160
+      },
+      "summary": "160 συμβάντα · 10 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "second-store-initial-stale-url",
+      "at": "2026-10-09T20:00:56.075Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 580,
+      "rootStore": "cmuk8gxui000ppabfykdxwb1y",
+      "rows": 0,
+      "search": "",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {},
+      "summary": "0 συμβάντα · 0 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    },
+    {
+      "phase": "second-store-refresh-stale-url",
+      "at": "2026-10-09T20:00:56.270Z",
+      "criterion": "ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ",
+      "disabled": true,
+      "flexShrink": "0",
+      "height": 580,
+      "rootStore": "cmuk8gxui000ppabfykdxwb1y",
+      "rows": 0,
+      "search": "",
+      "shell": "commerce-shell window-maximized ",
+      "stores": {},
+      "summary": "0 συμβάντα · 0 κατηγορίεςΠηγή αλήθειας: StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement"
+    }
+  ]
+}
