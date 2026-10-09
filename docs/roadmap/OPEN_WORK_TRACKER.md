@@ -1433,13 +1433,13 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** OPEN
+**Κατάσταση:** ASSIGNED / OPEN — OPERATOR-CHECKBOX-01
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
-**Υπεύθυνη σελίδα / branch:** Δεν μεταφέρεται ανάθεση — έλεγχος τρέχοντος checkpoint πριν claim
+**Υπεύθυνη σελίδα / branch:** codex/operator-checkbox-audit-20261009, expanded modern checkbox audit; historical Gate8 and other module owners preserved.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 09/10/2026 23:25 Europe/Athens — explicit owner approval for every operator checkbox in two LAB POS2 screenshots. Remove inert controls or connect supported runtime with granted/denied/revoked evidence. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-operator-checkbox-audit.md. No financial/stock action or credential changes.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
