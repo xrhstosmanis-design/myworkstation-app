@@ -9,7 +9,7 @@ import {invoicePrintedRounding} from "../../shared/invoice-printed-rounding.mjs"
 
 const source=readFileSync(new URL("../../client/src/invoice-assistant-pos-client.js",import.meta.url),"utf8");
 const context=vm.createContext({invoicePrintedRounding});
-vm.runInContext(source.slice(0,source.indexOf("const api=")).replace(/^import .*;$/gm,"")+"\nglobalThis.helpers={normalizePrintedUnit,validPrinted,printedReviewIssue,tableInput,rowAmounts};",context);
+vm.runInContext(source.slice(0,source.indexOf("const defaultApi=")).replace(/^import .*;$/gm,"")+"\nglobalThis.helpers={normalizePrintedUnit,validPrinted,printedReviewIssue,tableInput,rowAmounts};",context);
 const {normalizePrintedUnit,validPrinted,printedReviewIssue,tableInput,rowAmounts}=context.helpers;
 const base={description:"HARIBO FRUIT 100G",quantity:"2",unitCost:"0.95",discount1:String(100*.10/1.90),discount2:"0",discount3:"0",exciseTotal:"0",vatRate:"13",netAmount:"1.80",grossAmount:"2.03",stockUnitsPerInvoiceUnit:"1",confidence:"certain"};
 const selectValue=line=>{const dom=new JSDOM(tableInput(line,0,"invoiceUnit"));try{return dom.window.document.querySelector("select").value;}finally{dom.window.close();}};
