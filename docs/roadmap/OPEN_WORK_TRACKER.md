@@ -1,3 +1,9 @@
+## 10/10/2026 01:46 Europe/Athens — N39 / INVENTORY-ADV / ASSIGNED / NOT TESTED
+
+Owner `codex/n39-inventory-acceptance-20261010`, explicitly assigned by Χρήστος Μανής in the current conversation. Scope: remaining Inventory 2.0 acceptance for stocktake/reason, transfers, waste/expired goods, own consumption and concurrent movements. Preserve Gate2 owner-confirmed PASS and 08Oct desktop scroll USER PASS; do not repeat accepted actions only for evidence. TODAY-07 unknown-barcode mobile/tablet continuation remains with its existing owner and is excluded from this claim. No named active owner for the functional INVENTORY-ADV residual is recorded in the current tracker; this explicit assignment resolves its placeholder, without taking over TODAY-07, invoice/catalog or any other scope.
+
+Current evidence: Gate2 manual PASS23Sep and scroll USER PASS08Oct; new full N39 residual NOT TESTED, not CI/LAB PASS. Read AGENTS, numbered list, tracker, full active list, pending and inventory manual. Source assessment found finalization checks status/unresolved lines outside its transaction and writes counted stock directly; concurrency behavior requires isolated reproduction, not a speculative production fix. No source, production data, stocktake creation/count/finalization, payment or stock mutation performed. First publish this claim with green CI/main, then inspect current main history and relevant movement/finalization checkpoints and run isolated functional/concurrency checks. State-changing LAB only after fresh before/after/control evidence and correct LAB identity. Checkpoint: CHECKPOINTS/CHANGES/2026-10-10-n39-inventory-acceptance.md.
+
 ## 10/10/2026 01:36 Europe/Athens — INVOICE-CATALOG-MATCH-01 / ASSIGNED / USER FAIL
 
 Owner fix/invoice-catalog-matching-20261010; explicit owner request and standing push/PR/merge/deploy approval. Independent invoice-line catalog lookup: barcode entry/scanning must find existing own-store products and select exact unique match rather than create a duplicate; explicit no-match indication and guarded fresh lookup before save. Improve nearby-name proposals for supplier abbreviations and show more than first12. No OCR/page evidence, settlement, payment, stock, finalization, fiscal/myDATA or operator permission mutation. Preserve PR2001 manual transfer/minimize and PR2002 operator runtime gates; operator audit owner retained. This is not a takeover of myDATA receiving or operator audit.
@@ -1583,13 +1589,13 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### INVENTORY-ADV — Inventory 2.0 επεκτάσεις
 
-**Κατάσταση:** OPEN
+**Κατάσταση:** OPEN / ASSIGNED
 
 **Υπόλοιπο / όρια PASS:** Απογραφή/αιτιολογία, μεταφορές, φύρα/ληγμένα, ιδιοκατανάλωση, ταυτόχρονες κινήσεις. Χωριστά από Gate 2.
 
-**Υπεύθυνη σελίδα / branch:** Έλεγχος τρέχοντος owner πριν ανάθεση
+**Υπεύθυνη σελίδα / branch:** `codex/n39-inventory-acceptance-20261010` — explicit user assignment10/10/2026; TODAY-07 remains with prior owner.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 01:46 Europe/Athens — N39 stocktake/reason, transfers, waste/expired, own consumption and concurrent movements; preserve Gate2 and scroll PASS; excludes assigned TODAY-07. CHECKPOINTS/CHANGES/2026-10-10-n39-inventory-acceptance.md. Full residual NOT TESTED.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
