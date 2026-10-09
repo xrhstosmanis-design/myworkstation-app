@@ -3,15 +3,21 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
 import {execFileSync} from 'node:child_process';
 import jwt from 'jsonwebtoken';
 import {Prisma,PrismaClient} from '@prisma/client';
 import {createPosCatalogResolver} from '../../client/src/utils/pos-catalog-resolver.js';
 import {isolatedDestination,stages,cohort,scheduleActions,runSchedule,localJson} from '../../tools/pos-capacity/runner.mjs';
 
+import {priority20Phases,priority20Events,assessPhase} from '../../tools/pos-capacity/profiles.mjs';
+
 const destination=isolatedDestination(process.env); // No connection or request before this gate.
 const mode=process.env.MWS_CAPACITY_MODE||'smoke';
-assert.ok(['smoke','measure'].includes(mode),'Unknown capacity mode');
+assert.ok(['smoke','measure','priority20'].includes(mode),'Unknown capacity mode');
+const profile=process.env.MWS_CAPACITY_PROFILE||'full';
+const phases=mode==='priority20'?priority20Phases(profile):stages;
+const fixtureStores=mode==='priority20'?20:100;
 const integer=(name,fallback,min,max)=>{
   const v=Number(process.env[name]??fallback);assert.ok(Number.isInteger(v)&&v>=min&&v<=max,`Invalid ${name}`);return v;
 };
@@ -29,7 +35,9 @@ const request=async(route,actor,options={})=>{
   return localJson(destination.base,route,{token:actor?.token,terminalPos:actor?.terminalPos,...options});
 };
 const checked=async(route,actor,options={})=>{
-  const r=await request(route,actor,options);assert.equal(r.ok,true,`Fixture action rejected (${r.status||'network'})`);return r.value;
+  const r=await request(route,actor,options);
+  if(!r.ok)ledger.lastRejectedAction={route:route.split('?')[0].replace(/capacity-[^/]+/g,'synthetic'),status:r.status||null,errorCode:/^[A-Z0-9_]{1,80}$/.test(r.errorCode||'')?r.errorCode:'ACTION_FAILED'};
+  assert.equal(r.ok,true,`Fixture action rejected (${r.status||'network'})`);return r.value;
 };
 const writeResult=()=>{fs.mkdirSync(outDir,{recursive:true});fs.writeFileSync(path.join(outDir,'result.json'),JSON.stringify(ledger,null,2)+'\n')};
 const safeRevision=()=>{try{return execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()}catch{return 'NOT_MEASURED'}};
@@ -40,10 +48,10 @@ async function fixture(){
   const expires=new Date(Date.now()+24*60*60*1000);
   const company=await db.company.create({data:{id:`${runId}-company`,name:'Synthetic capacity only',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:expires}});
   await db.companyModule.createMany({data:['STORE_MODE','CASH_CONTROL','INVENTORY'].map(moduleKey=>({companyId:company.id,moduleKey,active:true}))});
-  const stores=Array.from({length:101},(_,i)=>({id:`${runId}-store-${i}`,name:`Synthetic store ${i}`,companyId:company.id,active:true,cashCloseEmailEnabled:false}));
+  const stores=Array.from({length:fixtureStores+1},(_,i)=>({id:`${runId}-store-${i}`,name:`Synthetic store ${i}`,companyId:company.id,active:true,cashCloseEmailEnabled:false}));
   await db.store.createMany({data:stores});
   const owners=[];
-  for(let i=0;i<100;i++){
+  for(let i=0;i<fixtureStores;i++){
     const user=await db.user.create({data:{id:`${runId}-owner-${i}`,email:`${runId}-${i}@example.invalid`,fullName:'Synthetic BackOffice',companyId:company.id,role:'OWNER',passwordHash:'isolated-no-login',mustChangePassword:false}});
     const session=await db.userSession.create({data:{userId:user.id,expiresAt:expires}});
     owners.push({id:user.id,storeIndex:i,storeId:stores[i].id,token:jwt.sign({id:user.id,role:'OWNER',companyId:company.id,sessionId:session.id,sessionVersion:user.sessionVersion,fullName:user.fullName},process.env.JWT_SECRET,{expiresIn:'12h'})});
@@ -52,6 +60,14 @@ async function fixture(){
   await checked(`/api/operator-management/stores/${stores[0].id}/operators`,owners[0]);
   await checked(`/api/operators/stores/${stores[0].id}/directory`,null);
   await checked(`/api/cash/stores/${stores[0].id}/overview`,owners[0]);
+  // The general CI archive-import flow prepares this lazy schema beforehand.
+  // Standalone runs must initialize it through the existing authorized API too.
+  const [schemaBefore]=await db.$queryRaw`SELECT to_regclass('"ManagementProductCompany"') IS NOT NULL AS present`;
+  await checked('/api/management/product-companies',owners[0]);
+  const [schemaAfter]=await db.$queryRaw`SELECT to_regclass('"ManagementProductCompany"') IS NOT NULL AS present`;
+  assert.equal(schemaAfter.present,true);
+  ledger.setupSchemas=[{table:'ManagementProductCompany',beforePresent:schemaBefore.present,afterPresent:schemaAfter.present}];
+  console.log('Isolated schema setup verified',JSON.stringify(ledger.setupSchemas));
   await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku","salePrice","costPrice","vatRate","active","trackStock") SELECT ${runId}||'-product-'||i,${company.id},'Capacity Product '||lpad(i::text,5,'0'),'CAP'||lpad(i::text,5,'0'),2.50,1,24,i%10<>0,TRUE FROM generate_series(1,${productCount}::int) i`;
   await db.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") SELECT ${runId}||'-barcode-'||i,${runId}||'-product-'||i,'998'||lpad(i::text,10,'0'),1 FROM generate_series(1,${productCount}::int) i`;
   await db.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active","currentStock","minStock") SELECT s."id"||'-sp-'||i,s."id",${runId}||'-product-'||i,2.50,TRUE,100000,0 FROM "Store" s CROSS JOIN generate_series(1,${storeProductCount}::int) i WHERE s."companyId"=${company.id}`;
@@ -59,7 +75,7 @@ async function fixture(){
   const foreignStore=await db.store.create({data:{id:`${runId}-foreign-store`,name:'Synthetic foreign control',companyId:foreign.id,cashCloseEmailEnabled:false}});
   await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku","salePrice","active") VALUES (${runId+'-foreign-product'},${foreign.id},'FOREIGN-CAPACITY-CONTROL','FOREIGN-CAPACITY-CONTROL',999,TRUE)`;
   const actors=[];
-  for(let i=0;i<100;i++)for(let terminalIndex=0;terminalIndex<(i<10?2:1);terminalIndex++){
+  for(let i=0;i<fixtureStores;i++)for(let terminalIndex=0;terminalIndex<(i<fixtureStores/10?2:1);terminalIndex++){
     const id=`${runId}-operator-${i}-${terminalIndex}`,employeeId=`${id}-employee`,sessionId=`${id}-session`,shiftId=`${id}-shift`,terminalPos=`POS-${terminalIndex+1}`;
     await db.employee.create({data:{id:employeeId,storeId:stores[i].id,fullName:'Synthetic operator',active:true}});
     await db.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","active","createdBy") VALUES (${id},${company.id},${stores[i].id},${employeeId},'Synthetic operator','EMPLOYEE',TRUE,${owners[0].id})`;
@@ -69,7 +85,7 @@ async function fixture(){
     actors.push({id,employeeId,shiftId,storeIndex:i,terminalIndex,terminalPos,storeId:stores[i].id,
       token:jwt.sign({id,operatorId:id,employeeId,companyId:company.id,storeId:stores[i].id,role:'EMPLOYEE',tokenType:'STORE_OPERATOR',operatorSessionId:sessionId,terminalPos},process.env.JWT_SECRET,{expiresIn:'12h'})});
   }
-  return {companyId:company.id,foreignStoreId:foreignStore.id,stores,owners,actors,productId:`${runId}-product-1`,controlStoreId:stores[100].id};
+  return {companyId:company.id,foreignStoreId:foreignStore.id,stores,owners,actors,productId:`${runId}-product-1`,controlStoreId:stores[fixtureStores].id};
 }
 
 async function snapshot(f){
@@ -109,8 +125,8 @@ async function observeDatabase(){
 }
 
 try{
-  ledger.environment={sourceRevision:safeRevision(),node:process.version,generator:{cpuCount:os.cpus().length,totalMemoryBytes:os.totalmem(),platform:os.platform()},destination:{host:destination.host,database:destination.database},mode,productCount,storeProductCount,
-    applicationHardware:'NOT_MEASURED',applicationPoolLimit:'NOT_MEASURED',diagnosticPoolLimit:2,
+  ledger.environment={sourceRevision:safeRevision(),node:process.version,generator:{cpuCount:os.cpus().length,totalMemoryBytes:os.totalmem(),platform:os.platform()},destination:{host:destination.host,database:destination.database},mode,profile:mode==='priority20'?profile:null,productCount,storeProductCount,
+    applicationHardware:process.env.MWS_CAPACITY_RESOURCE_MODEL||'NOT_MEASURED',applicationPoolLimit:process.env.MWS_CAPACITY_APP_POOL_LIMIT||'NOT_MEASURED',diagnosticPoolLimit:2,
     omitted:['invoice/provider job load','myDATA/workforce job budget','independent-company distribution','supplier and financial history volume','optional holds/audience/table-service refresh calls','physical devices/UI rendering','external fiscal/card providers','restart/failover/restore'],
     conclusion:'ISOLATED_HARNESS_ONLY_NOT_PRODUCTION_CAPACITY'};
   const version=await db.$queryRaw`SELECT version() AS version`;ledger.environment.postgres=version[0].version;
@@ -132,12 +148,13 @@ try{
   }
   await observeDatabase();let observing=false;
   monitor=setInterval(()=>{if(!observing){observing=true;observationPromise=observeDatabase().catch(()=>{ledger.diagnosticFailure=true}).finally(()=>{observing=false})}},1000);
-  for(const stage of stages){
+  for(const stage of phases){
     const actors=cohort(f.actors,stage.stores),owners=f.owners.slice(0,stage.stores);
     let events;
     const posSpecs=[{kind:'pos-local-search',perMinute:6},{kind:'pos-refresh',perMinute:1},{kind:'pos-session',perMinute:2},{kind:'pos-sale',perMinute:1}];
     const boSpecs=[{kind:'backoffice-search',perMinute:1},{kind:'backoffice-report',perMinute:.2}];
-    if(mode==='smoke'){
+    if(mode==='priority20')events=priority20Events(stage,actors,owners);
+    else if(mode==='smoke'){
       events=[...scheduleActions(actors,posSpecs,1,{seed:`${stage.pos}-pos`,burst:true}),...scheduleActions(owners,boSpecs,1,{seed:`${stage.pos}-bo`,burst:true})];
       // Small regression smoke: spread requests; do not disguise it as the planned peak/burst.
       events.sort((a,b)=>a.id.localeCompare(b.id));events.forEach((e,i)=>{e.atMs=i*20});
@@ -145,8 +162,9 @@ try{
     for(const event of events)if(event.kind==='pos-sale'){
       event.requestId=crypto.randomUUID();ledger.requests.push({actionId:event.id,requestId:event.requestId,actorId:event.actor.id,employeeId:event.actor.employeeId,storeId:event.actor.storeId,shiftId:event.actor.shiftId,terminalPos:event.actor.terminalPos,productId:f.productId,quantity:1,method:'CASH',amount:2.5});
     }
-    ledger.stages.push({stores:stage.stores,pos:stage.pos,backoffice:owners.length,before:await snapshot(f),scheduledActions:events.length,startedAt:new Date().toISOString()});writeResult();
-    const httpBefore=httpRequests;
+    ledger.stages.push({name:stage.name||String(stage.stores),profile:stage.profile||mode,plannedSeconds:stage.seconds??null,stores:stage.stores,pos:stage.pos,backoffice:owners.length,before:await snapshot(f),scheduledActions:events.length,startedAt:new Date().toISOString()});writeResult();
+    const httpBefore=httpRequests,phaseStarted=Date.now();
+    console.log('Capacity phase started',JSON.stringify({name:stage.name||String(stage.stores),stores:stage.stores,pos:stage.pos,profile:stage.profile||mode,plannedSeconds:stage.seconds??null,scheduledActions:events.length}));
     const metrics=await runSchedule(events,async event=>{
       const {actor,kind}=event,root=`/api/store-pos/stores/${actor.storeId}`;
       if(kind==='pos-local-search'){assert.equal(catalogs.get(actor.id).quickProduct({productQuery:'CAP00001'})?.id,f.productId);return {ok:true}}
@@ -165,8 +183,16 @@ try{
       const r=await request(root+'/checkout',actor,{method:'POST',body:{items:[{productId:f.productId,quantity:1}],paymentMethod:'CASH',clientTransactionId:event.requestId,confirmDuplicate:true}});
       if(!r.ok)return r;assert.equal(r.status,201);assert.ok(r.value.saleId);assert.equal(r.value.total,2.5);assert.equal(r.value.idempotentReplay,false);return r;
     });
+    if(mode==='priority20'&&profile==='full'){await delay(Math.max(0,stage.seconds*1000-(Date.now()-phaseStarted)));metrics.elapsedMs=Date.now()-phaseStarted}
     Object.assign(ledger.stages.at(-1),{metrics,httpRequests:httpRequests-httpBefore,after:await snapshot(f),finishedAt:new Date().toISOString()});
-    reconcile(f,ledger.stages.at(-1).after);writeResult();
+    writeResult();reconcile(f,ledger.stages.at(-1).after);
+    ledger.stages.at(-1).correctness='PASS';
+    if(mode==='priority20'){
+      ledger.stages.at(-1).assessment=assessPhase(metrics);writeResult();
+      console.log('Capacity phase assessment',JSON.stringify({name:stage.name,profile,assessment:ledger.stages.at(-1).assessment,byKind:metrics.byKind}));
+      if(profile==='full'&&stage.name!=='warmup')assert.equal(ledger.stages.at(-1).assessment.status,'PASS','Phase latency/arrival criteria failed');
+    }
+    writeResult();
     assert.equal(metrics.samples.filter(s=>!s.ok).length,0,'Offered action failed or was dropped');
     assert.equal(new Set(metrics.samples.filter(s=>s.kind.startsWith('pos-')&&s.ok).map(s=>s.actorId)).size,stage.pos,'Some claimed POS performed no action');
     console.log('Isolated capacity HARNESS stage verified',JSON.stringify({stores:stage.stores,pos:stage.pos,backoffice:owners.length,mode,actions:metrics.samples.length,httpRequests:httpRequests-httpBefore,peakInFlight:metrics.peakInFlight,errors:0}));
@@ -180,9 +206,10 @@ try{
     assert.equal(overview.openSession?.id,actor.shiftId);assert.equal(Number(overview.summary.cashSales),ledger.requests.filter(r=>r.actorId===actor.id).length*2.5);
   }
   await observeDatabase();assert.notEqual(ledger.diagnosticFailure,true,'Database diagnostics failed');
-  ledger.status='ISOLATED_HARNESS_CORRECTNESS_PASS';ledger.capacityAcceptance='NOT_TESTED';
+  ledger.status=mode==='priority20'&&profile==='full'?'ISOLATED_20STORE_WORKLOAD_PASS':'ISOLATED_HARNESS_CORRECTNESS_PASS';ledger.capacityAcceptance='NOT_TESTED';
+  ledger.modelAcceptance=mode==='priority20'&&profile==='full'?'AWAITING_RESOURCE_REVIEW':'NOT_TESTED';
   ledger.finishedAt=new Date().toISOString();ledger.httpRequests=httpRequests;writeResult();
-  console.log(`Capacity HARNESS PostgreSQL + real HTTP PASS:22/55/110 active terminals,20/50/100 BackOffice sessions,${ledger.requests.length} synthetic sales with exact per-terminal/payment/stock/audit controls and one idempotent replay. Production capacity, sustained peak/endurance, jobs/providers/devices NOT TESTED.`);
+  console.log(`Capacity HARNESS PostgreSQL + real HTTP PASS: mode=${mode}/profile=${mode==='priority20'?profile:'existing'}, ${fixtureStores} fixture stores, ${f.actors.length} distinct active terminals, ${ledger.requests.length} synthetic sales with exact per-terminal/payment/stock/audit controls and one idempotent replay. Production capacity, resource equivalence, jobs/providers/devices NOT TESTED. Full sustained phases require profile=full and resource review.`);
 }catch(error){
   ledger.status='ISOLATED_HARNESS_FAIL';ledger.failure={type:error.name};ledger.capacityAcceptance='NOT_TESTED';writeResult();throw error;
 }finally{clearInterval(monitor);await observationPromise;await db.$disconnect()}
