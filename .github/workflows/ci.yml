@@ -85,6 +85,23 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  hikvision-preflight-windows:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and test read-only Hikvision preflight on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem tools/windows-video-connector/hikvision -Include *.ps1,*.psm1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }
+          ./tools/windows-video-connector/hikvision/Test-Preflight.ps1
+
   build-and-test:
     needs: classify-changes
     if: needs.classify-changes.outputs.full_ci == 'true'
