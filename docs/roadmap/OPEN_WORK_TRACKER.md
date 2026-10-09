@@ -1,3 +1,9 @@
+## 09/10/2026 — CUSTOMER-DEMO-01 / inactive foundation IMPLEMENTED / AWAITING full CI
+
+Claim PR1944/head6363dfb2875e8d3bd273f1b3ef29460e11025d01 / docs CI37883796617 SUCCESS / mainf2f570d8032f6bb04fb70358dac0225c7e3d38f4 preceded source. Owner retained codex/customer-demo-windows-20261009. Added an unwired pure preparation/policy module: fresh per-demo company/store/product namespace, 16 synthetic supermarket products with integer-cent prices, opening-stock proposal, no credentials/history/providers, inactive company/store and installable=false, 50x40mm DEMO label specification. Future lifecycle/action predicate rejects foreign identities/store/company, inactive/expired/revoked records, unbound operator/unsupported role and unknown/external actions. It requires a server-owned record and already-verified session supplied by future integration; no route, DB write, runtime activation or installer readiness is implemented.
+
+Local Node20.20.2 targeted 8/8 tests PASS / zero failures; no new LAB/USER/physical Windows PASS. Full exact-head CI pending. Existing POS/Backoffice/auth/license/fiscal/provider/stock/payment behavior unchanged. No production state, copied LAB history or provider calls. Protocol docs/ops/customer-demo-windows-20261009.md; checkpoint CHECKPOINTS/CHANGES/2026-10-09-customer-demo-windows.md. Full lifecycle/provisioning, all route/workers outbound guards, existing-app shared DEMO UI/auth, authenticated Windows installer and isolated HTTP/physical acceptance remain OPEN / NOT TESTED. Single next action: green full CI/publication, then persisted SA lifecycle and two independent synthetic demo/control provisioning with existing auth/license checks. Assignment retained; no receiving page named.
+
 ## 09/10/2026 07:21 Europe/Athens — CUSTOMER-DEMO-01 / ASSIGNED / NOT TESTED
 
 Owner `codex/customer-demo-windows-20261009`, authorized09Oct07:18. New independent Windows customer demo with existing full POS + Backoffice on one synthetic store/company per customer, online first version. No duplicate installation/fiscal/capacity/Gate ownership. First bounded scope: inactive-by-default validated demo identity/readiness/policy and synthetic manifest, with no production provisioning or provider call. Full SA lifecycle, runtime isolation/outbound enforcement, shared existing-app POS/Backoffice, installer, PostgreSQL/HTTP and physical Windows acceptance remain OPEN/NOT TESTED. Claim checkpoint `CHECKPOINTS/CHANGES/2026-10-09-customer-demo-windows.md`. No customer/demo creation, database/schema/seed, financial/stock/fiscal/auth/license or live state change. Existing PASS/owners remain protected. Claim must be merged before source edits.
@@ -1311,7 +1317,7 @@ Exact LIVE /api/health 2026-10-06T19:17Z ok=true, revision=db1f90eb63092d03fa59a
 
 ### CUSTOMER-DEMO-01 — Demo εγκατάστασης Windows: POS και πλήρες Backoffice
 
-**Κατάσταση:** ASSIGNED / NOT IMPLEMENTED / NOT TESTED
+**Κατάσταση:** ASSIGNED / inactive foundation IMPLEMENTED / full demo NOT TESTED
 
 **Υπεύθυνη σελίδα / branch:** `codex/customer-demo-windows-20261009`
 
