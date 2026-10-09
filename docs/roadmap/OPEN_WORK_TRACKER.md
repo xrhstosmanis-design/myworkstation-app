@@ -1467,7 +1467,19 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 35 — Τελικές δοκιμές ρόλων/modules
 
-**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / behavior refresh FAIL / FIX AWAITING LIVE — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / BROWSER HANDOFF / OPEN — OPERATOR-CHECKBOX-01
+
+## 2026-10-09T22:19:36.611256+00:00 — OPERATOR-CHECKBOX-01 bounded LIVE PASS / BROWSER HANDOFF / overall OPEN
+
+Owner codex/operator-checkbox-audit-20261009 retained, printed33/tracker35 OPEN. SourcePR2002 finalhead d97f3f46c682304e757e19e53421abd43546c3e4 CI37996331972 SUCCESS2009/0FAIL/0SKIP, merge7ebfab4932e535ef2bf3ea5a226897cf17ab323d. MainCI37996674260 attempt1 cancelled by documentation-only55ba485b; attempt2 full build-and-test SUCCESS2009/0FAIL/0SKIP, no bypass. Docs-onlyCI37996927666 skipped build/deploy, not source proof. Guard37997476523 SUCCESS pinned7ebfab49 with newer documentation-only main; independent health exact7ebfab49 ok=true at22:11Z. Independent invoice owner/source/records and historical Gate8 PASS preserved.
+
+Fresh canonical Platform Admin -> exact MYWORKSTATION LAB heading -> testing-store fullBackoffice -> explicitly selected ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ in commerce -> ordinary EMPLOYEE LAB POS2. Revised form23details (21POS+active+posAccess),1orders,0Other:55 removed/24 retained observed LIVE. Original visible baseline matches before saves. Restrictive23+ordersfalse and granted23+orderstrue independently persisted/reopened exact. Restrictive own-store POS enters with existing open shift/cart0: both customer entries hidden, STOCK/Barcode/invoice/return/payments/CARD/IRIS/CASH absent, Transactions/MyPayments/Close disabled. Grant without operator document reload restores those entries and turns the already mounted synthetic unknown-scan denial into Online search button, keeping query/cart0. Empty quick corner while edit denied does not open editor or add product. These are bounded UI PASS; successful financial/product/shift/print functions are not inferred.
+
+Read-only Online GET for synthetic OPERATOR-CHECKBOX-NO-MATCH-20261010 was clicked, but final result was not observed. Expected-result wait returned protected_command_failed; one ordinary fresh AX also blocked and requested manual handoff. No captcha/bot/403 diagnosis, retained-data access, lower-level recovery or lookup PASS inferred. Current browser block prevents remaining operator UI tests. Original23details+orders independently restored exact after save; roleEMPLOYEE/active/POS access unchanged, no credential or economic/product/stock/shift submission. Last observed cart0 before GET; after-block cart state and independent financial/stock/control/Audit deltas/IDs NOT TESTED. Evidence CHECKPOINTS/EVIDENCE/operator-final-live-20261010.json plus operator-restricted-7ebfab49-20261010.jpg and operator-restored-7ebfab49-20261010.jpg.
+
+Completed bounded cleanup/count/persistence, current customer entry denial and dynamic online-button grant are removed from current pending residual. Remaining: recover observation through owner manual takeover, actual current card-only/layout/linebarcode/native cancellation checks, barcode/price/return/payment/transfer/initial-cash/close-shift/physical-print acceptance, active/POS-access revocation with secure reauthentication, role/company/store/module breadth. transferAmount has a real server authorization guard but no modern POS transfer entry; functionality acceptance OPEN. No second owner or full PASS. Single next action: owner takes over existing operator tab to recover observation; resume this same scoped audit with original profile baseline and protect all prior PASS. Manual docs/manual/workforce/PASS.md and synchronized tracker/numbered/pending PDFs accompany this handoff.
+
+
 
 **Υπόλοιπο / όρια PASS:** Owner/manager/ταμίας/εργαζόμενος/SA, εταιρεία/κατάστημα και άδειες ανά νέο module. Gate 8 PASS δεν καλύπτει κάθε επέκταση.
 
