@@ -32,11 +32,11 @@ function applyPosPermissionStyle(access){
  if(!access.customersPos)rules.push(".compact-store-mode .customer-button{display:none!important}");
  if(!access.changeRetail)rules.push(".compact-store-mode .line-price-action{pointer-events:none!important;cursor:default!important}.compact-store-mode .line-price-action svg{display:none!important}");
  if(!access.returnItems)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(3),.compact-store-mode .pos-line-actions>button:nth-child(1),.compact-store-mode .pos-line-actions>button:nth-child(2){display:none!important}");
- if(!access.supplierPayment&&!access.thirdPartyPayment)rules.push(".compact-store-mode .standard-action-bar>button:nth-child(4){display:none!important}");
+ if(!access.supplierPayment&&!access.thirdPartyPayment)rules.push(".compact-store-mode .standard-action-bar>.pos-payments-action{display:none!important}");
  if(!access.addBarcode)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(3){display:none!important}");
  if(access.hidePrinter)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(4){display:none!important}");
  if(!access.editDescription)rules.push(".compact-store-mode .pos-line-actions>button:nth-child(5){display:none!important}");
- if(!access.cards)rules.push(".compact-store-mode .standard-action-bar>button.card{display:none!important}");
+ if(!access.cards)rules.push(".compact-store-mode .standard-action-bar>button.card,.compact-store-mode .standard-payment-end>button.iris{display:none!important}");
  if(!access.cash)rules.push(".compact-store-mode .standard-action-bar>button.cash{display:none!important}");
  style.textContent=rules.join("\n");
 }

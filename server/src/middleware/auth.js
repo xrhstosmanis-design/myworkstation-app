@@ -91,7 +91,7 @@ function enforceStorePosPermissions(req,res,permissions){
 
 function exposeStorePosRuntimeAccess(req,res,rights){
   const path=String(req.originalUrl||"").split("?")[0];
-  if(req.method!=="GET"||!/^\/api\/store-pos\/stores\/[^/]+$/.test(path))return;
+  if(req.method!=="GET"||!/^\/api\/store-pos\/stores\/[^/]+(?:\/access)?$/.test(path))return;
   const send=res.json.bind(res);
   res.json=body=>send({...body,access:{...(body?.access||{}),...rights}});
 }

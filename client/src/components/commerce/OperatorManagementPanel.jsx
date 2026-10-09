@@ -7,29 +7,32 @@ const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
 const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝΟΣ)":"ΧΡΗΣΤΗΣ (ΥΠΑΛΛΗΛΟΣ)";
 const boolObject=value=>value&&typeof value==="object"?value:{};
 const POS_PERMISSIONS=[
-  ["stockPos","στήλη Stock (PoS)"],["stockBackoffice","στήλη Stock (Backoffice)"],["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
-  ["mixedPaymentChange","Πάντα μικτή πληρωμή και ρέστα (PoS)"],["leftKeys","Εμφάνιση αριστερής στήλης πλήκτρων (PoS)"],["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
-  ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],["editDescription","Διόρθωση περιγραφής είδους (PoS)"],["fileItems","Αρχείο ειδών (BackOffice)"],
-  ["onlineBarcode","Online αναζήτηση barcode (PoS)"],["itemCard","Καρτέλα είδους (PoS & BackOffice)"],["stocktakeColumn","Εμφάνιση στήλης Stock (Απογραφή)"],
-  ["stocktakePos","Απογραφή ειδών (PoS)"],["stocktakeBackoffice","Απογραφή ειδών (BackOffice)"],["transactionDiscount","Έκπτωση συναλλαγής (PoS)"],
-  ["changeRetail","Αλλαγή τιμής λιανικής (PoS & BackOffice)"],["itemDiscount","Έκπτωση είδους (PoS)"],["returnItems","Επιστροφή ειδών (PoS)"],
-  ["customersPos","Πελάτες (PoS)"],["customersBackoffice","Πελάτες (BackOffice)"],["returnWithCode","με κωδικό για επιστροφή ειδών (PoS)"],
-  ["centralCashPos","Εμφάνιση κεντρικού Ταμείου (PoS)"],["centralCashBackoffice","Εμφάνιση κεντρικού Ταμείου (BackOffice)"],["supplierBalances","Υπόλοιπα προμηθευτών (BackOffice)"],
-  ["redeemPoints","Εξαργύρωση πόντων πελάτη (PoS)"],["customerCardOnly","Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"],["thirdPartyPayment","πληρωμή προς Τρίτους"],
-  ["hidePrinter","Απόκρυψη εκτυπωτή (PoS)"],["supplierReturn","έκδοση Δ-Α επιστροφής σε προμηθευτή (PoS)"],["supplierPayment","πληρωμή Προμηθευτή"],
-  ["sameShiftPayments","Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"],["transferAmount","Μεταφορά ποσού"],["shiftTransactionsBackoffice","Συναλλαγές βάρδιας (backoffice)"],
-  ["warehouseColumn","Εμφάνιση στήλης Αποθήκη (Παραγγελίες-BackOffice)"],["shiftTransactionsPos","Συναλλαγές βάρδιας (PoS)"],["allShiftTransactionsPos","Όλες οι συναλλαγές Βάρδιας (PoS)"],
-  ["cash","Μετρητά"],["initialCash","με αρχικό Ταμείο"],["closeShift","Κλείσιμο βάρδιας (PoS)"],["cards","Κάρτες"]
+  ["stockPos","στήλη Stock (PoS)"],
+  ["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
+  ["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],
+  ["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
+  ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],
+  ["editDescription","Διόρθωση περιγραφής είδους (PoS)"],
+  ["onlineBarcode","Online αναζήτηση barcode (PoS)"],
+  ["changeRetail","Αλλαγή τιμής λιανικής (PoS & BackOffice)"],
+  ["returnItems","Επιστροφή ειδών (PoS)"],
+  ["customersPos","Πελάτες (PoS)"],
+  ["centralCashPos","Εμφάνιση κεντρικού Ταμείου (PoS)"],
+  ["customerCardOnly","Αναζήτηση πελάτη μόνο με αριθμό κάρτας (PoS)"],
+  ["thirdPartyPayment","πληρωμή προς Τρίτους"],
+  ["hidePrinter","Απόκρυψη εκτύπωσης ετικέτας (PoS)"],
+  ["supplierPayment","πληρωμή Προμηθευτή"],
+  ["sameShiftPayments","Οι πληρωμές να αφαιρούνται από την ίδια βάρδια"],
+  ["transferAmount","Μεταφορά ποσού"],
+  ["shiftTransactionsPos","Συναλλαγές βάρδιας (PoS)"],
+  ["allShiftTransactionsPos","Όλες οι συναλλαγές Βάρδιας (PoS)"],
+  ["cash","Μετρητά"],
+  ["initialCash","με αρχικό Ταμείο"],
+  ["closeShift","Κλείσιμο βάρδιας (PoS)"],
+  ["cards","Κάρτες"]
 ];
-const MENU_PERMISSIONS=[
-  ["management","Διαχείριση"],["purchases","Αγορές"],["priceCatalog","Τιμοκατάλογος"],["cashDesk","Ταμείο"],
-  ["categoriesCompanies","Κατηγορίες & εταιρείες"],["orders","Παραγγελίες"],["priceCheck","Έλεγχος τιμών πώλησης"],["vatDepartments","Τμήματα ΦΠΑ"],
-  ["orderProposal","Πρόταση Παραγγελίας"],["leafletOffers","Προσφορές φυλλαδίου / δώρα"],["wholesaleCatalog","Τιμοκατάλογος χονδρικής"],["notes","Σημειώσεις (backoffice)"],
-  ["replenishment","Αναπλήρωση (άνευ παραγγελίας)"],["purchaseOnly","Καταχώρηση μόνο στις αγορές"],["orderToInvoice","Μετατροπή παραγγελίας σε τιμολόγιο"],
-  ["suppliers","Προμηθευτές"],["sales","Πωλήσεις"],["reports","Αναφορές"],["documents","Παραστατικά"],["stocktakes","Απογραφές"],["inventory","Αποθήκη"],
-  ["statistics","Στατιστικά"],["priceChanges","Αλλαγές τιμών"],["payments","Πληρωμές"],["operators","Χειριστές"],["systemParams","Παράμετροι συστήματος"]
-];
-const TAB_PERMISSIONS=[["shiftSales","Πωλήσεις βάρδιας"],["companyImage","Εικόνα επιχείρησης"],["salesAnalysis","Ανάλυση πωλήσεων"],["purchaseAnalysis","Ανάλυση αγορών"],["payments","Πληρωμές"],["shifts","Βάρδιες"],["events","Συμβάντα"]];
+const MENU_PERMISSIONS=[["orders","Παραγγελίες (Τιμολόγια / Παραλαβές στο PoS)"]];
+
 
 function CheckGrid({items,value,onChange,className=""}){
   return <div className={`om-check-grid ${className}`}>{items.map(([key,label])=><label key={key}><input type="checkbox" checked={Boolean(value?.[key])} onChange={e=>onChange({...value,[key]:e.target.checked})}/><span>{label}</span></label>)}</div>;
@@ -85,9 +88,9 @@ export default function OperatorManagementPanel({api,store,onClose}){
       <div className="om-modal-title"><div><UserRound/><span><b>{selectedRow?.username||selectedRow?.userEmail||"ΧΕΙΡΙΣΤΗΣ"} ({draft.fullName})</b><small>Διαχείριση χειριστή / δικαιωμάτων πρόσβασης</small></span></div><button onClick={()=>setModal(null)}><X/></button></div>
       <div className="om-tabs"><button className={tab==="details"?"active":""} onClick={()=>setTab("details")}><UserRound/>Στοιχεία χειριστή</button><button className={tab==="access"?"active":""} onClick={()=>setTab("access")}><LockKeyhole/>Δικαιώματα πρόσβασης</button><button className={tab==="other"?"active":""} onClick={()=>setTab("other")}><MoreHorizontal/>Λοιπά</button><button className={tab==="docs"?"active":""} onClick={()=>setTab("docs")}><FileText/>Παραστατικά</button></div>
       <div className="om-modal-body">
-        {tab==="details"&&<><div className="om-profile-top"><label className="wide">όνομα<input value={draft.fullName} onChange={e=>setDraft({...draft,fullName:e.target.value})}/></label><label>τηλ.<input value={draft.stationPhone} onChange={e=>setDraft({...draft,stationPhone:e.target.value})}/></label><label>κιν.<input value={draft.mobilePhone} onChange={e=>setDraft({...draft,mobilePhone:e.target.value})}/></label><label>μισθός<input type="number" step="0.0001" value={draft.hourlyRate} onChange={e=>setDraft({...draft,hourlyRate:e.target.value})}/></label><div className="om-top-flags"><label><input type="checkbox" checked={draft.posAccess} onChange={e=>setDraft({...draft,posAccess:e.target.checked})}/>Πρόσβαση στις Πωλήσεις (PoS)</label><label><input type="checkbox" checked={draft.backofficeAccess} onChange={e=>setDraft({...draft,backofficeAccess:e.target.checked})}/>Πρόσβαση στο BackOffice</label><label><input type="checkbox" checked={draft.active} onChange={e=>setDraft({...draft,active:e.target.checked})}/>ενεργός</label><label><input type="checkbox" checked={draft.powerUser} onChange={e=>setDraft({...draft,powerUser:e.target.checked})}/>Power User</label></div></div><div className="om-role"><label><input type="radio" checked={draft.role==="MANAGER"} onChange={()=>setDraft({...draft,role:"MANAGER"})}/>Διαχειριστής</label><label><input type="radio" checked={draft.role==="EMPLOYEE"} onChange={()=>setDraft({...draft,role:"EMPLOYEE"})}/>Πωλητής</label></div><CheckGrid items={POS_PERMISSIONS} value={draft.permissions} onChange={permissions=>setDraft({...draft,permissions})}/></>}
-        {tab==="access"&&<><section className="om-group"><h3><ShieldCheck/>backoffice μενού</h3><CheckGrid items={MENU_PERMISSIONS} value={draft.backofficeMenu} onChange={backofficeMenu=>setDraft({...draft,backofficeMenu})}/></section><section className="om-group"><h3>backoffice καρτέλες</h3><CheckGrid className="tabs" items={TAB_PERMISSIONS} value={draft.backofficeTabs} onChange={backofficeTabs=>setDraft({...draft,backofficeTabs})}/></section></>}
-        {tab==="other"&&<><section className="om-group"><h3>οθόνη πελάτη</h3><div className="om-form-grid"><label className="check"><input type="checkbox" checked={Boolean(draft.customerDisplay.doubleScreen)} onChange={e=>setDraft({...draft,customerDisplay:{...draft.customerDisplay,doubleScreen:e.target.checked}})}/>Χρήση διπλής οθόνης</label><label>VFD customer display port<input value={draft.customerDisplay.port||""} onChange={e=>setDraft({...draft,customerDisplay:{...draft.customerDisplay,port:e.target.value}})} placeholder="π.χ. COM2"/></label><label>τύπος VFD<select value={draft.customerDisplay.vfdType||"POS7303"} onChange={e=>setDraft({...draft,customerDisplay:{...draft.customerDisplay,vfdType:e.target.value}})}><option value="POS7303">POS 7303</option><option value="VFD850">VFD-850 Series</option></select></label><label>character/command table<select value={draft.customerDisplay.commandTable||"DEFAULT"} onChange={e=>setDraft({...draft,customerDisplay:{...draft.customerDisplay,commandTable:e.target.value}})}><option value="DEFAULT">προεπιλογή</option><option value="EPSON">EPSON Esc/POS mode</option></select></label></div></section><section className="om-group"><h3>Τερματικό PoS (παράκαμψη για χειριστή)</h3><label>τερματικό PoS<input value={draft.terminalPos} onChange={e=>setDraft({...draft,terminalPos:e.target.value})}/></label></section><section className="om-group"><h3>όριο πληρωμών</h3><label>με μετρητά όριο μέχρι:<input type="number" step="0.01" value={draft.cashLimit} onChange={e=>setDraft({...draft,cashLimit:e.target.value})}/></label></section><section className="om-group"><h3>σημειώσεις</h3><textarea value={draft.notes} onChange={e=>setDraft({...draft,notes:e.target.value})}/></section></>}
+        {tab==="details"&&<><div className="om-profile-top"><label className="wide">όνομα<input value={draft.fullName} onChange={e=>setDraft({...draft,fullName:e.target.value})}/></label><label>τηλ.<input value={draft.stationPhone} onChange={e=>setDraft({...draft,stationPhone:e.target.value})}/></label><label>κιν.<input value={draft.mobilePhone} onChange={e=>setDraft({...draft,mobilePhone:e.target.value})}/></label><label>μισθός<input type="number" step="0.0001" value={draft.hourlyRate} onChange={e=>setDraft({...draft,hourlyRate:e.target.value})}/></label><div className="om-top-flags"><label><input type="checkbox" checked={draft.posAccess} onChange={e=>setDraft({...draft,posAccess:e.target.checked})}/>Πρόσβαση στις Πωλήσεις (PoS)</label><label><input type="checkbox" checked={draft.active} onChange={e=>setDraft({...draft,active:e.target.checked})}/>ενεργός</label></div></div><div className="om-role"><label><input type="radio" checked={draft.role==="MANAGER"} onChange={()=>setDraft({...draft,role:"MANAGER"})}/>Διαχειριστής</label><label><input type="radio" checked={draft.role==="EMPLOYEE"} onChange={()=>setDraft({...draft,role:"EMPLOYEE"})}/>Πωλητής</label></div><CheckGrid items={POS_PERMISSIONS} value={draft.permissions} onChange={permissions=>setDraft({...draft,permissions})}/></>}
+        {tab==="access"&&<><section className="om-group"><h3><ShieldCheck/>Πρόσβαση σε λειτουργίες από το PoS</h3><CheckGrid items={MENU_PERMISSIONS} value={draft.backofficeMenu} onChange={backofficeMenu=>setDraft({...draft,backofficeMenu})}/></section><p>Η πρόσβαση αφορά τα τιμολόγια του καταστήματος στο PoS. Απαιτείται ενεργή πρόσβαση PoS.</p></>}
+        {tab==="other"&&<><section className="om-group"><h3>Τερματικό PoS (παράκαμψη για χειριστή)</h3><label>τερματικό PoS<input value={draft.terminalPos} onChange={e=>setDraft({...draft,terminalPos:e.target.value})}/></label></section><section className="om-group"><h3>όριο πληρωμών</h3><label>με μετρητά όριο μέχρι:<input type="number" step="0.01" value={draft.cashLimit} onChange={e=>setDraft({...draft,cashLimit:e.target.value})}/></label></section><section className="om-group"><h3>σημειώσεις</h3><textarea value={draft.notes} onChange={e=>setDraft({...draft,notes:e.target.value})}/></section></>}
         {tab==="docs"&&<section className="om-group"><h3>Σειρά παραστατικών λιανικής</h3><div className="om-doc-form"><label>Λιανική πώληση:<input value={draft.retailSaleSeries} onChange={e=>setDraft({...draft,retailSaleSeries:e.target.value})} placeholder="Επιλέξτε σειρά παραστατικών…"/></label><label>Επιστροφή λιανικής:<input value={draft.retailReturnSeries} onChange={e=>setDraft({...draft,retailReturnSeries:e.target.value})} placeholder="Επιλέξτε σειρά παραστατικών…"/></label><label>Διεύθυνση εγκατάστασης:<input value={draft.installationAddress} onChange={e=>setDraft({...draft,installationAddress:e.target.value})}/><small>(μόνο αν είναι διαφορετική από την διεύθυνση της επιχείρησης)</small></label><label>Τηλ. εγκατάστασης:<input value={draft.installationPhone} onChange={e=>setDraft({...draft,installationPhone:e.target.value})}/><small>(μόνο αν είναι διαφορετικό από το τηλ. της επιχείρησης)</small></label></div></section>}
       </div><div className="om-modal-actions"><button onClick={()=>setModal(null)}><ArrowLeft/>Επιστροφή</button><button className="primary" onClick={saveEdit} disabled={busy}><Save/>{busy?"Αποθήκευση…":"Καταχώρηση"}</button></div>
     </div></div>}
