@@ -1,5 +1,7 @@
 import {invoicePrintedRounding} from "../../shared/invoice-printed-rounding.mjs";
 import {invoiceQuantityConfirmation} from "../../shared/invoice-quantity-review.mjs";
+import {installInvoiceAssistantWindow,restoreInvoiceAssistant} from "./invoice-assistant-window.js";
+import "./invoice-assistant-window.css";
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const number=value=>Number(String(value??"").replace(",","."));
 const euro=value=>Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -44,12 +46,13 @@ const defaultApi=async(path,options={})=>{
 };
 
 export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null){
+  if(restoreInvoiceAssistant(orderId))return;
   const api=request||defaultApi;
   const overlay=document.createElement("div");
   if(request)overlay.dataset.posInvoiceModal="1";
   overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:0;display:block";
   overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="Βοηθός τιμολογίου POS" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
-    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>Βοηθός τιμολογίου POS</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></header>
+    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>Βοηθός τιμολογίου POS</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><div class="invoice-assistant-window-actions"><button data-minimize type="button" aria-label="Ελαχιστοποίηση βοηθού">− Ελαχιστοποίηση</button><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></div></header>
     <div style="display:grid;grid-template-columns:minmax(280px,35%) minmax(0,1fr);min-height:0;flex:1">
       <div style="min-height:0;overflow:auto;padding:12px;background:#e9f0f5"><div data-pages></div></div>
       <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">Δες τις φωτογραφίες, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
@@ -63,9 +66,11 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
     </div>
   </section>`;
   document.body.appendChild(overlay);
-  let changed=false;const pdfCleanups=[];
-  const close=()=>{pdfCleanups.forEach(cleanup=>cleanup());overlay.remove();if(changed)Promise.resolve(onComplete?.()).catch(error=>alert(error.message))},status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
+  let changed=false;const pdfCleanups=[];let retainedWindow;
+  const close=()=>{retainedWindow.dispose();pdfCleanups.forEach(cleanup=>cleanup());overlay.remove();if(changed)Promise.resolve(onComplete?.()).catch(error=>alert(error.message))},status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
+  retainedWindow=installInvoiceAssistantWindow(overlay,{orderId,order,scoped:Boolean(request),onRemoved:()=>pdfCleanups.forEach(cleanup=>cleanup())});
   overlay.querySelector("[data-close]").onclick=close;
+  overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
   const factorInput=overlay.querySelector("[data-rule-factor]");
   const syncPresets=()=>overlay.querySelectorAll("[data-rule-preset]").forEach(button=>{const selected=button.dataset.rulePreset===factorInput.value;button.setAttribute("aria-pressed",String(selected));button.style.background=selected?"#146b50":"white";button.style.color=selected?"white":"#21473e"});
   overlay.querySelectorAll("[data-rule-preset]").forEach(button=>button.addEventListener("click",()=>{factorInput.value=button.dataset.rulePreset;syncPresets()}));
@@ -111,6 +116,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source`),
       api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`)
     ]);
+    if(!retainedWindow.isActive())return;
     source=result;
     overlay.querySelector("[data-rule-tax]").value=String(result.document.supplierTaxId||"");overlay.querySelector("[data-rule-identity]").hidden=/^\d{9}$/.test(String(result.document.supplierTaxId||""));
     detail.lines.forEach(line=>lineById.set(line.id,line));
@@ -138,6 +144,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
     const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent="Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
     try{
       const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12)})});
+      if(!retainedWindow.isActive())return;
       history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
       overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
       overlay.querySelector("[data-answer]").textContent=result.assistantMessage||"Ο έλεγχος ολοκληρώθηκε.";
@@ -223,6 +230,5 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       status.textContent=result.pagesComplete?`Έλεγχος ολοκληρώθηκε · ${valid.length} διορθώσεις υπαρχουσών γραμμών, ${missingPhysical.length} γραμμές που λείπουν από το πρόχειρο (${missing.length} με όλα τα πεδία και βεβαιότητα), ${uncertainPhysical.length} γραμμές ΠΡΟΣ ΕΛΕΓΧΟ στον πίνακα, ${extra.length} προς έλεγχο διαγραφής. ${printedTotal===null?"Πληρωτέο από προηγούμενη ανάγνωση":"Τυπωμένο πληρωτέο"} ${euro(printedTotal??source.document.totalGross)} €.`:result.pageWarning||"Το παραστατικό δεν διαβάστηκε πλήρως.";
     }catch(error){status.textContent=error.message}finally{ask.disabled=false}
   };
-  overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
   overlay.querySelector("[data-ask]").click();
 }
