@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
@@ -23,8 +24,19 @@ def state():
                      'memoryLimitBytes': c['Memory'], 'memorySwapBytes': c['MemorySwap'], 'nanoCPUs': c['NanoCpus']})
     # Count error signals without retaining any original log content.
     log = subprocess.check_output(['docker', 'logs', 'mws-capacity-app'], stderr=subprocess.STDOUT).decode(errors='replace')
-    result = {'at': now(), 'containers': rows, 'applicationSignals': {k: log.count(k) for k in ['P2024', 'AUTH_VALIDATION_UNAVAILABLE', 'JavaScript heap out of memory', 'deadlock detected']}}
+    result = {'at': now(), 'containers': rows, 'applicationSignals': {k: log.count(k) for k in ['P2024', 'AUTH_VALIDATION_UNAVAILABLE', 'JavaScript heap out of memory', 'deadlock detected']},
+              'databaseErrorCodes': sorted(set(re.findall(r'\b(?:P\d{4}|42P01|42703|57014|53300|40P01|53200)\b', log))),
+              'knownErrorSignals': {k: log.count(k) for k in ['statement timeout', 'connection pool', 'does not exist', 'out of memory', 'transaction timeout', 'Unable to start a transaction', 'Unknown argument']}}
     (out/'container-state.json').write_text(json.dumps(result, indent=2)+'\n')
+    print('Sanitized container state', json.dumps(result))
+    p = out/'result.json'
+    if p.exists():
+        d = json.loads(p.read_text())
+        print('Sanitized workload summary', json.dumps({k: d.get(k) for k in ['status', 'failure', 'lastRejectedAction', 'capacityAcceptance']}))
+    p = out/'resources.jsonl'
+    if p.exists():
+        data = [json.loads(line) for line in p.read_text().splitlines()]
+        print('Sanitized resource last samples', json.dumps(data[-3:]))
 
 if sys.argv[1] == 'monitor':
     with (out/'resources.jsonl').open('a') as f:

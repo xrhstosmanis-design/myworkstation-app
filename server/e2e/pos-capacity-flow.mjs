@@ -35,7 +35,9 @@ const request=async(route,actor,options={})=>{
   return localJson(destination.base,route,{token:actor?.token,terminalPos:actor?.terminalPos,...options});
 };
 const checked=async(route,actor,options={})=>{
-  const r=await request(route,actor,options);assert.equal(r.ok,true,`Fixture action rejected (${r.status||'network'})`);return r.value;
+  const r=await request(route,actor,options);
+  if(!r.ok)ledger.lastRejectedAction={route:route.split('?')[0].replace(/capacity-[^/]+/g,'synthetic'),status:r.status||null,errorCode:/^[A-Z0-9_]{1,80}$/.test(r.errorCode||'')?r.errorCode:'ACTION_FAILED'};
+  assert.equal(r.ok,true,`Fixture action rejected (${r.status||'network'})`);return r.value;
 };
 const writeResult=()=>{fs.mkdirSync(outDir,{recursive:true});fs.writeFileSync(path.join(outDir,'result.json'),JSON.stringify(ledger,null,2)+'\n')};
 const safeRevision=()=>{try{return execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()}catch{return 'NOT_MEASURED'}};
@@ -198,7 +200,7 @@ try{
   ledger.status=mode==='priority20'&&profile==='full'?'ISOLATED_20STORE_WORKLOAD_PASS':'ISOLATED_HARNESS_CORRECTNESS_PASS';ledger.capacityAcceptance='NOT_TESTED';
   ledger.modelAcceptance=mode==='priority20'&&profile==='full'?'AWAITING_RESOURCE_REVIEW':'NOT_TESTED';
   ledger.finishedAt=new Date().toISOString();ledger.httpRequests=httpRequests;writeResult();
-  console.log(`Capacity HARNESS PostgreSQL + real HTTP PASS: mode=${mode}/profile=${mode==='priority20'?profile:'existing'}, ${fixtureStores} fixture stores, ${f.actors.length} distinct active terminals, ${ledger.requests.length} synthetic sales with exact per-terminal/payment/stock/audit controls and one idempotent replay. Production capacity, sustained peak/endurance, jobs/providers/devices NOT TESTED.`);
+  console.log(`Capacity HARNESS PostgreSQL + real HTTP PASS: mode=${mode}/profile=${mode==='priority20'?profile:'existing'}, ${fixtureStores} fixture stores, ${f.actors.length} distinct active terminals, ${ledger.requests.length} synthetic sales with exact per-terminal/payment/stock/audit controls and one idempotent replay. Production capacity, resource equivalence, jobs/providers/devices NOT TESTED. Full sustained phases require profile=full and resource review.`);
 }catch(error){
   ledger.status='ISOLATED_HARNESS_FAIL';ledger.failure={type:error.name};ledger.capacityAcceptance='NOT_TESTED';writeResult();throw error;
 }finally{clearInterval(monitor);await observationPromise;await db.$disconnect()}
