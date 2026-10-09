@@ -1,3 +1,9 @@
+## 09/10/2026 — VIDEO-HIKVISION-01 / preflight implemented / AWAITING CI + DEVICE
+
+Owner `codex/hikvision-video-20261009`; bounded source `codex/hikvision-preflight-20261009`. Claim PR1966 / docs CI37964335597 SUCCESS / main5b32c013 before source. Add standalone Windows PowerShell5.1 read-only preflight: private LAN URL, local credential dialog, Digest-capable HttpClient, model/time/channels/tracks/profile, optional explicitly selected recording search. No default track/address, raw XML/credentials/playback URI saved; capped query paths/XML/time; redirects and DTD rejected. Sanitized report distinguishes search success/no-match from untested historical download/playback. Separate Windows5.1 CI parser and offline HTTP/XML/UTC/security fixtures; physical unit NOT TESTED. Existing Dahua runtime and all business behavior unchanged. Source validation/CI pending; no actual store request made. Next: green source CI/merge, then tomorrow actual local endpoint/firmware/camera evidence. Full Hikvision clip adapter remains OPEN; diagnostic package is not installation completion. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-hikvision-preparation.md.
+
+# Hikvision preparation — VIDEO-HIKVISION-01
+
 ## 09/10/2026 20:08 Europe/Athens - POS-STORE-MENU-WASTE-01 / USER VISUAL PASS / CLOSED menu scope
 
 Owner codex/pos-store-menu-remove-waste-20261009. Latest user image170522 shows Κατάστημα / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / LAB POS2, empty cart/value0.00EUR. ΦΥΡΑ entry is absent, its left desktop position is empty, and ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ plus ΚΑΤΑΣΤΡΟΦΗ ΠΡΟΪΟΝΤΩΝ remain visible/disabled. This meets the explicit removal and reserved-position request, superseding prior old-menu screenshots for this display only. Client SHA, physical terminal/store ID, shift, exact refresh gesture and capture time not independently supplied. No action submission or cash/stock/fiscal outcome inferred; no repeat transaction needed.
