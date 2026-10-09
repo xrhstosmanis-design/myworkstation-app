@@ -1,0 +1,453 @@
+{
+  "recordedAt": "2026-10-09T16:02:20.585586+03:00",
+  "kind": "ISOLATED_DB_CPU_ONLY_COMPARISON_FAIL",
+  "sourceRevision": "a38585e058206f68685073f1841ca0408082a84f",
+  "capacityRun": {
+    "id": 37932989553,
+    "jobId": 113828039753,
+    "result": "FAILURE",
+    "artifactId": 11617193796,
+    "artifactDigest": "sha256:a4ab7c981d35a41d3ce03c605c8dfe1f3806f6f49817150674c4e1cca967790e",
+    "artifactExpiresAt": "2026-11-08T12:59:13Z"
+  },
+  "baselineEvidence": "pos-capacity20-20261009-realrate.json",
+  "model": {
+    "sourceRevision": "a38585e058206f68685073f1841ca0408082a84f",
+    "node": "v20.20.2",
+    "generator": {
+      "cpuCount": 4,
+      "totalMemoryBytes": 16766410752,
+      "platform": "linux"
+    },
+    "destination": {
+      "host": "127.0.0.1",
+      "database": "myworkstation_capacity20_test"
+    },
+    "mode": "priority20",
+    "profile": "preflight",
+    "productCount": 7000,
+    "storeProductCount": 5000,
+    "applicationHardware": "Isolated DB-only comparison app0.15CPU/512MiB;PG18 0.50CPU/256MiB;no production change",
+    "applicationPoolLimit": "5 (explicit test model;production configured limit NOT_MEASURED)",
+    "diagnosticPoolLimit": 2,
+    "omitted": [
+      "invoice/provider job load",
+      "myDATA/workforce job budget",
+      "independent-company distribution",
+      "supplier and financial history volume",
+      "optional holds/audience/table-service refresh calls",
+      "physical devices/UI rendering",
+      "external fiscal/card providers",
+      "restart/failover/restore"
+    ],
+    "conclusion": "ISOLATED_HARNESS_ONLY_NOT_PRODUCTION_CAPACITY",
+    "postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit"
+  },
+  "intentionallyChangedVariable": "DB CPU0.10 to0.50",
+  "stages": [
+    {
+      "name": "warmup",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T12:56:06.292Z",
+      "finishedAt": "2026-10-09T12:57:06.071Z",
+      "elapsedMs": 59769.930320000014,
+      "peakInFlight": 5,
+      "byKind": {
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 127.7269030000025,
+          "p95Ms": 684.8833230000018,
+          "p99Ms": 1069.8611919999967,
+          "maxMs": 1069.8611919999967,
+          "offeredP95Ms": 684.6803981302219,
+          "offeredP99Ms": 1069.276148446239,
+          "errors": {}
+        },
+        "pos-local-search": {
+          "offered": 132,
+          "started": 132,
+          "completed": 132,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.16347499999392312,
+          "p95Ms": 0.3254469999810681,
+          "p99Ms": 0.4895940000133123,
+          "maxMs": 0.6816719999915222,
+          "offeredP95Ms": 0.799396302740206,
+          "offeredP99Ms": 1.027635714461212,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 767.852991000007,
+          "p95Ms": 1502.9020430000091,
+          "p99Ms": 1902.3222589999932,
+          "maxMs": 1902.3222589999932,
+          "offeredP95Ms": 1502.2861532002134,
+          "offeredP99Ms": 1902.6216003773443,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 201.4369319999969,
+          "p95Ms": 1632.8708090000146,
+          "p99Ms": 2008.121140000003,
+          "maxMs": 2008.121140000003,
+          "offeredP95Ms": 1633.0317175985838,
+          "offeredP99Ms": 2007.725163142255,
+          "errors": {}
+        },
+        "pos-session": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 14.983796000000439,
+          "p95Ms": 566.0965020000003,
+          "p99Ms": 997.8801779999922,
+          "maxMs": 997.8801779999922,
+          "offeredP95Ms": 566.0751172578603,
+          "offeredP99Ms": 997.8084744393418,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 5,
+          "started": 5,
+          "completed": 5,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 194.14565199999197,
+          "p95Ms": 1166.3580280000024,
+          "p99Ms": 1166.3580280000024,
+          "maxMs": 1166.3580280000024,
+          "offeredP95Ms": 1166.3616306284675,
+          "offeredP99Ms": 1166.3616306284675,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "FAIL",
+        "violations": [
+          "pos-sale:latency"
+        ]
+      },
+      "cumulativePersistedSales": 22,
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 8.071250000000001,
+          "maxCpuPercentOfHostCore": 15.55,
+          "highestSampledMemory": "128.2MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 5.42375,
+          "maxCpuPercentOfHostCore": 20.79,
+          "highestSampledMemory": "200.6MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "normal",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T12:57:06.080Z",
+      "finishedAt": "2026-10-09T12:58:05.877Z",
+      "elapsedMs": 59789.681358,
+      "peakInFlight": 5,
+      "byKind": {
+        "pos-local-search": {
+          "offered": 132,
+          "started": 132,
+          "completed": 132,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.15354699999443255,
+          "p95Ms": 0.26838100000168197,
+          "p99Ms": 0.28263699999661185,
+          "maxMs": 0.28905000002123415,
+          "offeredP95Ms": 0.6991505563200917,
+          "offeredP99Ms": 1.070325547363609,
+          "errors": {}
+        },
+        "pos-session": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 8.669582999980776,
+          "p95Ms": 899.5147670000151,
+          "p99Ms": 1009.3243640000001,
+          "maxMs": 1009.3243640000001,
+          "offeredP95Ms": 900.0867792818171,
+          "offeredP99Ms": 1008.9513331908965,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 24.842743999994127,
+          "p95Ms": 1043.4550109999836,
+          "p99Ms": 1324.400512000022,
+          "maxMs": 1324.400512000022,
+          "offeredP95Ms": 1043.7174317691533,
+          "offeredP99Ms": 1323.7018254708382,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 934.4616059999971,
+          "p95Ms": 1701.8226129999966,
+          "p99Ms": 1734.7295829999784,
+          "maxMs": 1734.7295829999784,
+          "offeredP95Ms": 1701.0995881215786,
+          "offeredP99Ms": 1734.601269133127,
+          "errors": {}
+        },
+        "pos-sale": {
+          "offered": 22,
+          "started": 22,
+          "completed": 22,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 239.33363500001724,
+          "p95Ms": 2747.0393880000047,
+          "p99Ms": 3371.1256479999865,
+          "maxMs": 3371.1256479999865,
+          "offeredP95Ms": 2747.07256544719,
+          "offeredP99Ms": 3370.915594393271,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 1,
+          "started": 1,
+          "completed": 1,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 11.223793999990448,
+          "p95Ms": 11.223793999990448,
+          "p99Ms": 11.223793999990448,
+          "maxMs": 11.223793999990448,
+          "offeredP95Ms": 11.107207405933877,
+          "offeredP99Ms": 11.107207405933877,
+          "errors": {}
+        }
+      },
+      "assessment": {
+        "status": "FAIL",
+        "violations": [
+          "backoffice-search:latency",
+          "pos-sale:latency"
+        ]
+      },
+      "cumulativePersistedSales": 44,
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 5.42125,
+          "maxCpuPercentOfHostCore": 14.42,
+          "highestSampledMemory": "130.3MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 8,
+          "meanCpuPercentOfHostCore": 4.64125,
+          "maxCpuPercentOfHostCore": 10.8,
+          "highestSampledMemory": "208.9MiB / 256MiB"
+        }
+      }
+    },
+    {
+      "name": "peak",
+      "plannedSeconds": 60,
+      "startedAt": "2026-10-09T12:58:05.889Z",
+      "finishedAt": "2026-10-09T12:59:12.879Z",
+      "elapsedMs": 66979.912472,
+      "peakInFlight": 40,
+      "byKind": {
+        "pos-sale": {
+          "offered": 66,
+          "started": 66,
+          "completed": 52,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 16416.692465,
+          "p95Ms": 23123.791039000032,
+          "p99Ms": 25313.869127000013,
+          "maxMs": 25313.869127000013,
+          "offeredP95Ms": 23123.49281029025,
+          "offeredP99Ms": 25313.316253999714,
+          "errors": {
+            "HTTP_500": 14
+          }
+        },
+        "pos-local-search": {
+          "offered": 264,
+          "started": 264,
+          "completed": 264,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 0.1456119999929797,
+          "p95Ms": 0.23491900000954047,
+          "p99Ms": 0.2827779999934137,
+          "maxMs": 0.4015590000199154,
+          "offeredP95Ms": 0.5970039423264097,
+          "offeredP99Ms": 1.0184405389882158,
+          "errors": {}
+        },
+        "backoffice-search": {
+          "offered": 40,
+          "started": 40,
+          "completed": 40,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 4469.331518000021,
+          "p95Ms": 6346.703257999965,
+          "p99Ms": 6709.213862000004,
+          "maxMs": 6709.213862000004,
+          "offeredP95Ms": 6346.951876918087,
+          "offeredP99Ms": 6709.061999241239,
+          "errors": {}
+        },
+        "backoffice-report": {
+          "offered": 20,
+          "started": 20,
+          "completed": 20,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 9402.618367999996,
+          "p95Ms": 12798.287087000004,
+          "p99Ms": 13025.588488000009,
+          "maxMs": 13025.588488000009,
+          "offeredP95Ms": 12797.719671826751,
+          "offeredP99Ms": 13025.675690656732,
+          "errors": {}
+        },
+        "pos-refresh": {
+          "offered": 44,
+          "started": 44,
+          "completed": 44,
+          "dropped": 0,
+          "lateOver1s": 0,
+          "p50Ms": 5397.424702000018,
+          "p95Ms": 8319.116139999998,
+          "p99Ms": 8691.98006099998,
+          "maxMs": 8691.98006099998,
+          "offeredP95Ms": 8318.78259075465,
+          "offeredP99Ms": 8690.650493079738,
+          "errors": {}
+        }
+      },
+      "assessment": null,
+      "cumulativePersistedSales": 96,
+      "resources": {
+        "mws-capacity-app": {
+          "sampleCount": 9,
+          "meanCpuPercentOfHostCore": 12.954444444444444,
+          "maxCpuPercentOfHostCore": 14.83,
+          "highestSampledMemory": "147.5MiB / 512MiB"
+        },
+        "mws-capacity-db": {
+          "sampleCount": 9,
+          "meanCpuPercentOfHostCore": 7.622222222222223,
+          "maxCpuPercentOfHostCore": 25.04,
+          "highestSampledMemory": "212.2MiB / 256MiB"
+        }
+      }
+    }
+  ],
+  "reconciliation": {
+    "result": "PASS_FOR_ACCEPTED_SALES_ONLY",
+    "intendedSales": 110,
+    "acceptedAndPersistedSales": 96,
+    "explicitlyRejectedPeakSales": 14,
+    "persistedRejectedSales": 0,
+    "cashAmount": 240,
+    "stockDelta": -96,
+    "paymentsStockAuditRequestLinksMatch": true,
+    "controlStock": 100000,
+    "noLostOrDuplicateAcceptedSaleObserved": true,
+    "noRejectedSaleRetry": true
+  },
+  "finalContainerState": {
+    "at": "2026-10-09T12:59:12.996587+00:00",
+    "containers": [
+      {
+        "name": "/mws-capacity-app",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T12:54:20.954348491Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 536870912,
+        "memorySwapBytes": 536870912,
+        "nanoCPUs": 150000000
+      },
+      {
+        "name": "/mws-capacity-db",
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0,
+        "startedAt": "2026-10-09T12:54:11.845185293Z",
+        "finishedAt": "0001-01-01T00:00:00Z",
+        "memoryLimitBytes": 268435456,
+        "memorySwapBytes": 268435456,
+        "nanoCPUs": 500000000
+      }
+    ],
+    "applicationSignals": {
+      "P2024": 0,
+      "AUTH_VALIDATION_UNAVAILABLE": 0,
+      "JavaScript heap out of memory": 0,
+      "deadlock detected": 0
+    },
+    "databaseErrorCodes": [
+      "42P01",
+      "P2028"
+    ],
+    "knownErrorSignals": {
+      "statement timeout": 0,
+      "connection pool": 0,
+      "does not exist": 1,
+      "out of memory": 0,
+      "transaction timeout": 22,
+      "Unable to start a transaction": 6,
+      "Unknown argument": 0
+    }
+  },
+  "databaseMaxima": {
+    "connections": 5,
+    "active": 4,
+    "lockwaiters": 3,
+    "oldestactiveseconds": 4.664925
+  },
+  "production20Readiness": "NOT_ESTABLISHED",
+  "fullDurationRun": "NOT_STARTED",
+  "limitations": [
+    "Fresh fixture IDs change deterministic arrival phasing and fractional report count;single paired run does not prove causal speedup",
+    "Only60second warmup/normal/peak observed;burst and endurance not reached",
+    "Explicit pool5,production pool unknown;Docker/GitHub infrastructure not Render equivalent",
+    "Local search in generator;no browser/device/provider/job/history/failover acceptance",
+    "Log counts are occurrences,not unique transaction failures"
+  ],
+  "nextAction": "Fresh isolated APP-CPU-only comparison0.15 to1.00 with DB0.50,memory/pool/rates/criteria unchanged"
+}

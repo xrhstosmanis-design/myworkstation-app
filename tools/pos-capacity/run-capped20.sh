@@ -6,6 +6,8 @@ test "$MWS_CAPACITY_MODE" = priority20
 test "$MWS_CAPACITY_OUTPUT" = /tmp/mws-capacity20
 MWS_CAPACITY_DB_CPUS="${MWS_CAPACITY_DB_CPUS:-0.10}"
 case "$MWS_CAPACITY_DB_CPUS" in 0.10|0.50) ;; *) echo "Unsupported isolated DB CPU model" >&2; exit 1 ;; esac
+MWS_CAPACITY_APP_CPUS="${MWS_CAPACITY_APP_CPUS:-0.15}"
+case "$MWS_CAPACITY_APP_CPUS" in 0.15|1.00) ;; *) echo "Unsupported isolated APP CPU model" >&2; exit 1 ;; esac
 mkdir -p "$MWS_CAPACITY_OUTPUT"
 MONITOR_PID=''
 cleanup() {
@@ -30,7 +32,7 @@ npm run prisma:push -w server
 ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260825130500_netlink_prepaid_storage/migration.sql --schema server/prisma/schema.prisma
 ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260826210000_netlink_fiscal_receipt_gate/migration.sql --schema server/prisma/schema.prisma
 npm run seed -w server
-docker run -d --name mws-capacity-app --network host --cpus=0.15 --memory=512m --memory-swap=512m \
+docker run -d --name mws-capacity-app --network host --cpus="$MWS_CAPACITY_APP_CPUS" --memory=512m --memory-swap=512m \
   -v "$PWD:/app" -w /app -e NODE_ENV -e DATABASE_URL -e JWT_SECRET \
   -e INITIAL_ADMIN_EMAIL -e INITIAL_ADMIN_PASSWORD -e KAT_OWNER_EMAIL -e KAT_OWNER_NAME \
   -e MWS_E2E_TERMINAL_OVERRIDE=1 -e PORT=8080 node:20-bookworm npm run start -w server
