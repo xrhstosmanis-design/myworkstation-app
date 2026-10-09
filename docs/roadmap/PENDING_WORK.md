@@ -1,3 +1,11 @@
+## AI-CREDITS-01 — source merged / CI PASS / AWAITING BILLING SETUP AND LIVE
+
+Source PR #1989 merged 09/10/2026, main42bee63704d135e86992eaf92ae5064f8ffb256c. Exact final PR CI37986817256 SUCCESS; earlier CI37984602197/37985196722/37985730552/37986249842 also SUCCESS. Isolated PostgreSQL/HTTP flow observed PASS for authorization, persistence, Audit, concurrent update conflict, missing billing configuration and session revocation. Local26/26 targeted and1981server PASS/0FAIL/4environment skips; production build PASS. Shared changes preserved through main reconciliation. PDFs regenerated with final handoff, after source publication, to avoid repeated concurrent binary conflicts.
+
+Current owner remains codex/ai-credit-alerts-20261009. Production push CI/guarded Render release initiated; exact deployed revision and authenticated UI remain NOT TESTED at this checkpoint. No billing Admin key acquired/installed and no baseline configured. Real credit/account identity and warning/critical evidence remain NOT TESTED; no LIVE/LAB/manual PASS. No invoice/payment/stock/fiscal or provider purchase mutation.
+
+Single next action: verify guarded release of source42bee637, then deployment administrator securely sets same-organization OPENAI_BILLING_ADMIN_KEY and Super Admin confirms current prepaid balance in AI Command Center. Do not paste secrets into chat. Perform read-only LIVE alert/settings acceptance after configuration; maintain same owner until explicit handoff. Setup: docs/ops/ai-credit-alerts-20261009.md.
+
 ## 09/10/2026 23:25 Europe/Athens — N33 / OPERATOR-CHECKBOX-01 ASSIGNED / NOT TESTED
 
 Owner codex/operator-checkbox-audit-20261009. Explicit owner request to check every checkbox in the two LAB POS2 screenshots; remove inert controls or wire their actual supported function. Printed33 maps tracker35. Scope: all operator details/access checkbox controls, persisted profile, actual runtime consumers, granted/denied/revoked behavior and store boundaries. Existing Gate8 PASS preserved; expanded modern profile acceptance is new, not a repeat of historical transactions. POS orders sourcePR1986 and assistant minimize owner feat/invoice-assistant-minimize retained; no parallel edits to invoice workspace or assistant lifecycle. Prior Audit selected-store PASS, supplier/Analytics/Inventory/Excel/bulk/navigation PASS protected.
