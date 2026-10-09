@@ -1,3 +1,12 @@
+## 09/10/2026 07:43 Europe/Athens — CUSTOMER-DEMO-01 / persisted preparation CLAIM / ASSIGNED
+
+User continues at07:39. Retained owner codex/customer-demo-windows-20261009; bounded source branch codex/customer-demo-lifecycle-20261009. Reviewed latestmaina21784baacf8efc6f4d4e07bc23db103cb21c692, unchanged AGENTS/checklist, latest canonical registers and own checkpoint/protocol. Foundation PR1945/fullCI37884321450 is verified only as inactive source; full customer demo and physical Windows NOT TESTED. Other owners and Gate3 PASS remain protected.
+
+Next bounded implementation: persisted demo preparation lifecycle and Super Admin-only create/list/revoke API/UI, atomic new inactive company/store/category/product/opening-stock records, idempotent creation scoped to verified SA actor/request key, immutable synthetic namespace, expiry and audit/revocation. Add an additive migration and default-off preparation gate; no production migration/flag/seed executed by this page. No login, owner credentials, provider/device/module configuration, active store/company, readiness or installer is offered. Prepared demos must be protected against activation through general SA company/store routes until outbound/runtime integration exists; this is part of the same bounded scope, not an auth/license bypass.
+
+Acceptance: new isolated PostgreSQL+HTTP fixture with two independent demos and untouched ordinary control; anonymous/owner/operator denied, malformed/foreign IDs and injected configuration rejected, exact prices/stock/category readback, one repeated/concurrent create preserving identity, expired/revoked result non-installable, repeated revoke preserves Audit identity, rollback leaves no partial tenant. No old LAB transaction replay or production state/provider action. Existing POS/Backoffice/auth/license/fiscal/idempotency and physical KAT/RBS/capacity scopes unchanged. Full outbound workers/routes, personal POS/Backoffice login/visible DEMO context, Windows installer and customer acceptance remain OPEN. Claim must merge before source edits. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-customer-demo-windows.md. Single next action after green claim: implement and verify the persisted preparation.
+
+
 # CUSTOMER-DEMO-01 — Windows POS + Backoffice demo
 
 ## Claim — 09/10/2026 07:21 Europe/Athens
