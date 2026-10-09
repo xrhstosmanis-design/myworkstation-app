@@ -4,6 +4,8 @@ set -euo pipefail
 node --input-type=module -e "import {isolatedDestination} from './tools/pos-capacity/runner.mjs'; isolatedDestination(process.env)"
 test "$MWS_CAPACITY_MODE" = priority20
 test "$MWS_CAPACITY_OUTPUT" = /tmp/mws-capacity20
+MWS_CAPACITY_DB_CPUS="${MWS_CAPACITY_DB_CPUS:-0.10}"
+case "$MWS_CAPACITY_DB_CPUS" in 0.10|0.50) ;; *) echo "Unsupported isolated DB CPU model" >&2; exit 1 ;; esac
 mkdir -p "$MWS_CAPACITY_OUTPUT"
 MONITOR_PID=''
 cleanup() {
@@ -14,7 +16,7 @@ cleanup() {
 trap cleanup EXIT
 docker pull postgres:18
 docker pull node:20-bookworm
-docker run -d --name mws-capacity-db --network host --cpus=0.10 --memory=256m --memory-swap=256m \
+docker run -d --name mws-capacity-db --network host --cpus="$MWS_CAPACITY_DB_CPUS" --memory=256m --memory-swap=256m \
   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=isolated-only -e POSTGRES_DB=myworkstation_capacity20_test postgres:18 \
   -c shared_buffers=64MB -c work_mem=1654kB -c maintenance_work_mem=16MB \
   -c max_connections=103 -c max_parallel_workers_per_gather=1
