@@ -257,6 +257,7 @@ jobs:
           run_flow server/e2e/workforce-v2-schedules-flow.mjs
           run_flow server/e2e/rbs-installation-settings-flow.mjs
           run_flow server/e2e/pos-audience-credit-settings-flow.mjs
+          run_flow server/e2e/ai-credit-alerts-flow.mjs
           run_flow server/e2e/owner-catalog-read-flow.mjs
           run_flow server/e2e/hot-table-schema-lock-flow.mjs
           run_flow server/e2e/server-shutdown-flow.mjs
