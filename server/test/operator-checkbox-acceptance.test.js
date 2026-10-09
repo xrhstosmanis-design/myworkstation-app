@@ -25,7 +25,7 @@ test('current profile display rights refresh on catalog and access, never on unr
  }
 });
 
-test('payment and IRIS visibility target the actual buttons while supplier dispatch stays available',()=>{
+test('payment and customer visibility target every actual entry while supplier dispatch stays available',()=>{
  const src=fs.readFileSync(new URL('../../client/src/components/store/StoreOperatorApp.jsx',import.meta.url),'utf8');
  const body=src.match(/function applyPosPermissionStyle\(access\)\{[\s\S]*?\n\}/)[0];
  const dom=new JSDOM('<head></head><body><div class="compact-store-mode"><div class="standard-action-bar"><button>CLEAR</button><button>HOLD</button><button>RETURN</button><button>DISPATCH</button><button class="pos-payments-action">PAYMENTS</button><button class="card">CARD</button><div class="standard-payment-end"><button class="iris">IRIS</button><button class="cash">CASH</button></div></div></div></body>');
@@ -34,6 +34,13 @@ test('payment and IRIS visibility target the actual buttons while supplier dispa
  assert.notEqual(dom.window.getComputedStyle(buttons[3]).display,'none');
  for(const b of buttons.slice(4))assert.equal(dom.window.getComputedStyle(b).display,'none');
  apply({supplierPayment:true,cards:true,cash:true});for(const b of buttons.slice(3))assert.notEqual(dom.window.getComputedStyle(b).display,'none');
+ const customerButton=dom.window.document.createElement('button');customerButton.className='customer-button';
+ const customerDropdown=dom.window.document.createElement('div');customerDropdown.className='pos-credit-customer';
+ dom.window.document.querySelector('.compact-store-mode').append(customerButton,customerDropdown);
+ apply({customersPos:false});
+ for(const entry of [customerButton,customerDropdown])assert.equal(dom.window.getComputedStyle(entry).display,'none');
+ apply({customersPos:true});
+ for(const entry of [customerButton,customerDropdown])assert.notEqual(dom.window.getComputedStyle(entry).display,'none');
  dom.window.close();
 });
 

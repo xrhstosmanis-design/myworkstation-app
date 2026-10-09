@@ -1,3 +1,33 @@
+## 10/10/2026 00:35 Athens — OPERATOR-CHECKBOX-01 bounded LIVE PASS / customer entry FAIL / fix awaiting LAB
+
+Owner codex/operator-checkbox-audit-20261009; printed33/tracker35 remains OPEN. PR1998 fullCI37992152221 passed2007/0FAIL/0SKIP, mergec0f1ce16e602fb5c4363edb3bb86ae054bb59743; mainCI37992992250 and guardedRender37993299420 SUCCESS. Independent exacthealth observed21:28Z. New form24detail (22POS+active+posAccess),1orders,0other:54 inert controls removed from79,25 retained. Restrictive22flags+orders saved/re-read, ordinary LAB POS2 enters emptycart POS rather than endless shift check. STOCK/Barcode/invoice/return/payment/CARD/IRIS/CASH entries hidden; operator Transactions/MyPayments/Close all disabled. Full financial/stock/control deltas NOT TESTED; no economic/stock/shift/fiscal write or credential change.
+
+Customer entry FAIL: customersPos=false hides bottom button but top credit-customer dropdown still opens. No search/selection or customer record disclosed. Card-only instruction observed. Original24details+orders restored and independently compared exact. Prior quick-button editor grant opened/cancelled without layout save and restored on62fe51ea. Customer denial CSS now targets both actual entries; existing server guard unchanged. FullCI/exacthealthy/denied+granted LIVE required. Pending: remaining per-control runtime/physical actions, active/posAccess revocation, role/store/company/module breadth. Same owner retained; no financial replay or Manager promotion.
+
+## 2026-10-09T21:33:39.990124+00:00 — CUSTOMER ENTRY FIX BEFORE / AWAITING LAB
+
+Original24detail+orders independently restored exact. Scope same owner codex/operator-checkbox-audit-20261009, printed33/tracker35 OPEN. Current verified sourcec0f1ce16 minimal-shift/status +CASH hidden bounded LIVE PASS retained. Customer top dropdown remains visible with customersPos=false; no customer query or selection submitted, no exposed customer records observed. Existing GET customers server CUSTOMERS_POS guard remains mandatory. Causal change: include actual pos-credit-customer in customer denial CSS; regression uses real dropdown wrapper, denies both entries then grants both. Preserve audience-card/discount owner, invoice orders, payment/stock/shift/fiscal and all other PASS. FullCI, guard, exacthealthy and denied/granted UI required before customer fix LIVE PASS.
+
+## 2026-10-09T21:32:26.295857+00:00 — restricted POS bounded LIVE PASS / customer entry FAIL / restore BEFORE
+
+Exact healthyc0f1ce16: all22 flags+orders restriction persisted (24detail,ordersfalse). Ordinary LAB POS2 enters actual POS with emptycart0, no STOCK/Barcode/invoice/return/payments/CARD/IRIS/CASH. Operator menu Transactions/MyPayments/Close all disabled. This supersedes endless-shift-loader FAIL for this bounded test. However customersPos=false conceals only bottom customer-button; top pos-credit-customer still opens Πελάτες πίστωσης dialog. customerCardOnly=true displays card-only instructions; no query/customer selection/write performed. Customer entry visibility LIVE FAIL. Nextone save restores exact original24-details+orders before causal customer-entry fix. No economic/stock/shift/fiscal action; economic/control deltas NOT TESTED.
+
+## 2026-10-09T21:30:45.089830+00:00 — restrictive22+orders test BEFORE exact release
+
+PR1998 mergedc0f1ce16e602fb5c4363edb3bb86ae054bb59743. FullPRCI37992152221:2007PASS/0FAIL/0SKIP; mainCI37992992250 SUCCESS; guardedRender37993299420 SUCCESS. Independent HTTP200 health ok=true exactc0f1ce16 observed21:28Z and rechecked. Fresh canonical SA navigation and ordinary LAB POS2 own-store POS newdocument, originalcart0/total0. Original25-details andorders baseline independently restored prior to release. One next save: new22POSflags false except hidePrinter/customerCardOnly true; active/posAccess kepttrue, ordersfalse. Store explicitly ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. No economic/stock/shift action, financial/control deltas NOT TESTED. Specific userapproval covers temporary granted/denied/restore.
+
+## 2026-10-09T21:24:26.881026+00:00 — quick-button editor bounded LIVE PASS / exact original restore
+
+Ordinary LAB POS2 EMPLOYEE on healthy62fe51ea: only editPosButtons temporarily true after BEFORE checkpoint; actual quick-button editor opened for Κουμπί1 and cancelled, no layout save, empty cart. One save restored editPosButtons=false. Independent reopened checkbox array equals original25-details baseline exactly; orders independently re-read true. No financial/stock/shift/fiscal write, financial/control deltas NOT TESTED. PR1998 finald22e53 fullCI37992152221 SUCCESS:2007tests/2007PASS/0FAIL/0SKIP; mergedc0f1ce16e602fb5c4363edb3bb86ae054bb59743, main/guard awaiting. Old restrictive-profile FAIL not yet retested.
+
+## 2026-10-09T21:22:16.441602+00:00 — layout permission restore BEFORE
+
+LAB POS2 temporary editPosButtons=true confirmed working quick-button editor; cancelled without layout save, cart empty. Next one profile save restores original editPosButtons=false only; all other baseline flags/orderstrue remain. No financial/stock/shift action; economic/control deltas NOT TESTED. PR1998 fullCI37992152221 SUCCESS and merged c0f1ce16e602fb5c4363edb3bb86ae054bb59743; mainCI37992992250 pending, no new LIVE PASS yet.
+
+## 2026-10-09T21:17Z — Editing permission grant BEFORE
+
+Existing25 detail baseline exact restored, orders rereadtrue, ordinary EMPLOYEE ownstore POS emptycart0/total0. One approved save: editPosButtonstrue only, other baseline fields unchanged. Check actual layout-editor entry without saving layout/products. No SKU/financial/stock/shift action; no economic/control delta claim. Original false retained for restoration.
+
 ## 2026-10-09T21:13Z — CASH visibility correction before release
 
 Actual POS markup nests CASH in standard-payment-end, not direct action-bar child. Correct cash=false selector to actual nested button and extend real-layout CSS fixture to assert denied CASH then granted CASH. Card/IRIS/dispatch tests preserved. FullCI must certify finalhead, not superseded source.

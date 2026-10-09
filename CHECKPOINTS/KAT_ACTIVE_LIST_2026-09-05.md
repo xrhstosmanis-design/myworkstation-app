@@ -1,3 +1,7 @@
+## 2026-10-09T21:33:39.990124+00:00 — CUSTOMER ENTRY FIX BEFORE / AWAITING LAB
+
+Original24detail+orders independently restored exact. Scope same owner codex/operator-checkbox-audit-20261009, printed33/tracker35 OPEN. Current verified sourcec0f1ce16 minimal-shift/status +CASH hidden bounded LIVE PASS retained. Customer top dropdown remains visible with customersPos=false; no customer query or selection submitted, no exposed customer records observed. Existing GET customers server CUSTOMERS_POS guard remains mandatory. Causal change: include actual pos-credit-customer in customer denial CSS; regression uses real dropdown wrapper, denies both entries then grants both. Preserve audience-card/discount owner, invoice orders, payment/stock/shift/fiscal and all other PASS. FullCI, guard, exacthealthy and denied/granted UI required before customer fix LIVE PASS.
+
 ## 2026-10-09T21:13Z — CASH visibility correction before release
 
 Actual POS markup nests CASH in standard-payment-end, not direct action-bar child. Correct cash=false selector to actual nested button and extend real-layout CSS fixture to assert denied CASH then granted CASH. Card/IRIS/dispatch tests preserved. FullCI must certify finalhead, not superseded source.
