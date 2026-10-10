@@ -1,3 +1,25 @@
+## 10/10/2026 15:20 Europe/Athens — Νο33: μεταφορά ποσού / περιορισμένο LIVE PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, Νο33 / tracker35 **OPEN**. Με ειδική έγκριση χρήστη 14:57 έγιναν μόνο μία εικονική έξοδος 0,10€ LAB POS2 MAIN→Ιδιοκτήτης (15:02, αιτιολογία `No33 virtual OUT 20261010`) και μία εικονική είσοδος 0,10€ Ιδιοκτήτης→MAIN (15:18, αιτιολογία `No33 virtual IN 20261010`). Κάθε επιτυχία επιβεβαιώθηκε στη φόρμα, στην ανανεωμένη βάρδια και με μία ξεχωριστή εγγραφή Audit. Καμία επανάληψη παλιάς πληρωμής ή επιτυχούς εξόδου.
+
+Το δικαίωμα «Μεταφορά ποσού» OFF15:00 έκλεισε την ήδη ανοικτή φόρμα με το κανονικό runtime poll, χωρίς refresh POS, και απενεργοποίησε την είσοδο. ON15:01 επανέφερε την είσοδο· επιβεβαιώθηκαν όλα τα αρχικά23 δικαιώματα και ο EMPLOYEE, χωρίς προαγωγή/PIN. LIVE IN φόρμα απέρριψε κενό ποσό και κενή αιτιολογία πριν την επιτυχή καταχώριση. Οι προγραμματισμένες δύο επιτυχείς καταχωρίσεις εξαντλήθηκαν· δεν υπάρχει άδεια επιπλέον οικονομικής δοκιμής.
+
+Ενδιάμεσο IN LIVE FAIL «Απαιτείται σύνδεση.» δεν πρόσθεσε Audit/μεταφορά (1190 παρέμεινε1190). Ενεργή σύνδεση επιβεβαιώθηκε στη σωστή platform-admin. Αίτιο: το BackOffice API αντικαθιστούσε Authorization/Content-Type όταν το IN προσέθετε terminal header. Διορθώθηκε μέσω PR2085/head a508c87b/fullCI38050770531SUCCESS/main6b08e72a/fullmainCI38050974318SUCCESS/guardedRender38051178498SUCCESS. Ανεξάρτητο browserhealth exact6b08e72a9c14f973a62cc1e3a43f8600aef9fef4/ok, νέο POS+BackOffice reload, φρέσκα baseline πριν το IN· το επιτυχές IN επιβεβαιώνει τη διόρθωση LIVE. Αρχική OUT υλοποίηση PR2071/αποδοχή φορμών PR2075 διατηρούνται.
+
+| Έλεγχος | Πριν | Μετά |
+| --- | --- | --- |
+| MAIN κινήσεις | 6 | 8, ακριβώς +2 μεταφορές |
+| MAIN πωλήσεις / μετρητά πωλήσεων | 4,00€ | 4,00€ |
+| MAIN κάρτες / IRIS / έξοδα | 0 / 0 / 0 | 0 / 0 / 0 |
+| MAIN από / προς Ιδιοκτήτη | 0 / 0 | 0,10€ / 0,10€ |
+| LAB-POS-02 control | 2 κινήσεις, πωλήσεις0, έξοδα120, IN0/OUT0 | αμετάβλητο |
+| Audit, μαζί με header | 1187 | 1191: δύο αλλαγές δικαιώματος + δύο επιτυχείς μεταφορές |
+| LAB POS2 | EMPLOYEE, αρχικά23, καλάθι0/ουρά0 | ίδιο |
+
+Τελευταία SALE MAIN11:59 παραμένει ίδια. Πριν1187 περιλαμβάνει εξωτερική Νο39 απογραφή14:49· δεν επαναλήφθηκε/αναλήφθηκε. Κανένα affectedSKU/stock/shift/fiscal/τραπεζική ή φυσική μεταφορά δεν εκτελέστηκε. Full stock ledger **NOT TESTED**, χωρίς πρόσβαση Inventory. Η επίδραση σε οριστικό κλείσιμο, overdraft/κλειστή βάρδια/παράνομο server POST/δίκτυο-replay LIVE και πραγματική παράδοση μετρητών παραμένουν **NOT TESTED**, ανεξάρτητα από native CI proof. Το PASS αφορά τις συγκεκριμένες εικονικές καταχωρίσεις, terminal/control/Audit, φόρμες και runtime δικαίωμα· όχι όλο το Νο33.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-operator-transfer-financial-live.md`. Evidence `CHECKPOINTS/EVIDENCE/operator-transfer-20261010/`: permission-off-pass, out-posted-pass, in-auth-fail, reason-required-pass, in-posted-pass, totals-pass. Επόμενο: πραγματικός cross-actor έλεγχος δικών του/όλων με την ήδη υπάρχουσα νέα IN κίνηση, χωρίς νέα οικονομική fixture. Υπόλοιπα Νο33: θετική online αναζήτηση, πραγματικές επιστροφές/εκτύπωση, αρχικό ταμείο/κλείσιμο και υπόλοιποι ρόλοι/εταιρείες/καταστήματα/modules. Απαιτείται ειδική έγκριση πριν επιπλέον οικονομική/stock/shift υποβολή.
+
 ## 10/10/2026 15:11 Athens — N47 / TODAY-05 / scoped LAB PASS / COMPLETED
 
 Numbered47 agreeddesktopLAB selectedreview/removal and realtargetedoffercreation/readback complete; ownercodex/n47-offers-acceptance-20261010 completed. SourcePR2081 fixesPrismavoidlock, asyncformreset/successreadback, missingallowedgiftpicker. FinalfullCI38049632717/mainCI38049821330 attempt2 SUCCESS2095/0/0 actualnativePG846PASS; guardedRender38050134762SUCCESS, independentexacthealthy191ed9b0839ae8d281cb65e41e38975e629aad56 thenactualbrowserreload. SingleTEST2/LAB10%future11Oct10:00→11:00 createdwithsuccess/reset0/independentreopen; separatelyfreshbaselinepause andsecondreloadconfirminactive, oldTEST1giftactivepreserved. Eachactionfreshprice2.40/history2/stock−2/ledger2/diff0/duplicates0 andMAIN7cash4/outgoing0.10/control2total0expense120 unchanged. Concurrentotherownertransfer precededours; no47financialeffect. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n47-offers-acceptance.md; manualproducts-master-catalog/PASS.md; evidenceCHECKPOINTS/EVIDENCE/n47-offers-20261010/created.jpg andpaused.jpg.
