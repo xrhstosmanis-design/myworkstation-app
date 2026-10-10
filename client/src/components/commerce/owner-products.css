@@ -1288,6 +1288,10 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
   flex-direction: column;
   overflow: hidden;
 }
+.commerce-shell .kiosk-shell:has(> .owner-products > .op-master-workspace) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
 .commerce-shell .kiosk-shell > .owner-products:has(> .op-master-workspace) {
   flex: 1 1 0;
   min-height: 0;
