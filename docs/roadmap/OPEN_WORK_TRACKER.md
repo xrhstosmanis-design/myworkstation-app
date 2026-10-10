@@ -1,28 +1,16 @@
-## 2026-10-10 — No33 label preview / hidePrinter bounded LIVE PASS
+## N39 WASTE-PAIR-01 — bounded LIVE pair PASS — 10 Oct 11:54:12–13 Athens
 
-Owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Original LABPOS2 EMPLOYEE, cart0/queue0. One newlocalSKU2270 qty1/unit1 at11:50; linefactsstock−13. Preview displayed teststore/water1.5/EAN5201005080034/price1.00/LABprinter/60×40mm. Closedpreview withoutphysicalPrint. OnlyhidePrintertrue persisted11:51; samealreadyopenline menu button disappeared afternormalruntimepoll (initialprepoll stillvisible, immediatetimingNOTTESTED). Immediatelyonlyfalse restored11:52; buttonreturnedwithoutreaddingrow, exact23originalEMPLOYEE. Removedonlylocaltestrow11:53, finalcart0/queue0.
-
-Audit1173→1180rowsinclheader: four own add/rightsOFF/rightsrestore/remove, three externalNo39login11:45/addLABEXCELTEST1 11:46/personalconsumption11:47 cc8ad2db notthisowner; preservedmainPR2053. LABEL_PREVIEW_OPENED absentfromcentralAuditsurface, underlyingauditrow NOTTESTED (noPASSclaim). Financialfreshbeforecleanup MAIN5cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51; controlLAB-POS-02 2cash0/cards+IRIS0/total0/latestnone unchanged. Freshpostcleanupfinancialalso unchanged at11:55 (sameMAIN5/3.50/control2/0), lastproductstock−13 fromPOSfacts; fullmovementledger/finalindependentstock NOTTESTED/excludedNo39. No sale/financial/stock/shift/product/barcode/scanner action or historicalpaymentprint/replay. Physical printer output, servernegativehidePrinter enforcement, alreadyopenpopuprevocation and actual printAudit remainNOTTESTED.
-
-Also closeShiftON read-onlypreview opened/closed, asksphysicaldrawermeasurement andopeningoperatorpersonalQR; allamountfields initiallydisabled/submitdisabled. Nothingentered/submitted; actualclose/initialcash OPEN. ShiftmountedfixPR2052 78ccdb80 CI38039208608SUCCESS then newerconcurrentNo39docs requiremerge/re-runfinalCI; sourceAWAITINGLAB. NextfinishexactshiftreleaseCI/deploy/LIVE, thenmoderntransferentry andremainingauthorizedchecks.
-
-Evidence CHECKPOINTS/EVIDENCE/operator-label-20261010/{preview,hidden,empty}.jpg.
-
-## 2026-10-10 11:45 Europe/Athens — No33 mounted shift transactions LIVE FAIL / fix AWAITING LAB
-
-Owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Existing approval applied one allShiftTransactionsOFF/ON and one shiftTransactionsOFF/ON to normal LABPOS2 EMPLOYEE; exact23original restored/cart0/queue0. All ON loaded five MAIN sales3.50, allLABPOS2actors/ownpayments0. Only allShiftTransactionsOFF persisted11:40 thenfreshPOSrefresh: label Οι δικές μου κινήσεις and samefiveownsales. ON11:41 updated alreadyopenview to Όλες οι κινήσεις via runtimepoll. UI mode switch PASS; otheractor exclusion NOTTESTED as nootheractorsfixture authorized.
-
-LIVE FAIL11:42: shiftTransactionsOFF persisted while timelineopen. Normalruntimepoll had already switched all label, yet open timeline stayedvisible withfiveexistingrecords. Closing manually thenmenu showed Συναλλαγέςβάρδιας disabled, so newentrydenialworks. Immediately restoredON11:42; exact23fields/EMPLOYEE confirmed. No sale/return/print/payment/shift submission. BeforeAudit1168rowsinclheader→1173after: fourownpermissionevents11:40/11:41/11:42/11:42 plusoneexternal LAB EXCEL TEST2 supplieredit11:42. Freshafterfinancial MAIN5cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51 andcontrolLAB-POS-02 2cash0/cards+IRIS0/total0/latestnone unchanged. Laststock1/−13/lastsale09:51:19, fullstockledger/cleanuprepeat NOTTESTED, excludedNo39 notowned.
-
-Currentmain ee92c3f5 includespriceacceptancePR2050/docsCI38038620894SUCCESS. Independentserverhealthde7d5c2e/ok; fullmainCI38038293816/guardedRender38038479008SUCCESS. Exact cachedclientSHA ofthisFAIL not independently attested; causal StoreOperatorApp stillrenders timelinewithout canTransactions guard. Minimalfix: guard mountedtimeline and clear only TRANSACTIONS state whenpermissionrevoked so restoringrights cannotreopenstaleview. Actualmountedparent React/JSDOM behavior test1PASS: all→ownmode,revocationunmount,disabledentry,restorewithoutautomaticreopen,explicitreopen,nofinancialPOST. Frontendproductionbuild PASS; CI/deploy/LIVE acceptanceAWAITINGLAB. Serverown/all authorization/otheractor filtering, initialcash/close/transfer/printing/broaderroles remainOPEN.
-
-Evidence CHECKPOINTS/EVIDENCE/operator-shift-20261010/{own-shift,mounted-fail}.jpg. Next exactgreenCI/guardeddeployhealth thenfreshLABPOS2alreadyopen timelineOFF→closes/ON→explicitreopen andrestoration; no financial/stock/shift submission. CI is not LIVE PASS.
+Owner codex/n39-inventory-acceptance-20261010 retained. SELF-01 published PR2053/full docsCI38039304684 SUCCESS/merged8d0aba2037fad0f8dd62053def51afa977077dbc. Two prepared virtual BackOffice forms same TEST1/sourceLAB/stock7, qty1 each, distinct reasons WASTE-PAIR-01A/01B; both buttons submitted exactlyonce in one Promise.allSettled UI batch. Both success. Ledger shows B11:54:12 out1 stock6, A11:54:13 out1 stock5, actorΧρήστοςΜάνης, exact N39-LAB-20261010 reasons. Source7→5, ledger5/5/diff0/moves13→15/duplicates0; no lost subtraction/no extra posting. RefreshedMAIN5tx/cash3.50/card0/IRIS0/total3.50/expense0/latest09:51 and controlLAB-POS-02 2tx/cash0/card0/IRIS0/total0/expense120/latest— unchanged before/after. Earlier transfer and SELF-01 retained, no replay/compensation/TEST2 action. Evidence CHECKPOINTS/EVIDENCE/n39-waste-pair01-ledger-20261010.jpg, checkpoint2026-10-10-n39-consumption-live.md. This closes AWAITING LAB for the bounded near-simultaneous waste pair after PR2020 only; exact lock overlap not observable in browser, isolated PG coverage remains separate. Full39 OPEN for mandatory stocktake cause/recount/roles, count/import/line-edit versus finalize, broader replay/isolation and physical/device acceptance. No33/44/40/TODAY-07 unchanged. Next causal source review of generic finalization reason and draft-mutation race; do not repeat accepted stock postings.
 
 ## N39 SELF-01 — bounded LIVE PASS — 10 Oct 2026 11:47:54 Athens
 
 Same owner codex/n39-inventory-acceptance-20261010. New authorized qty1 TEST1 own consumption via LABPOS2 StoreMode/tab29 on observed release de7d5c2e0d5acf1ef4c9b65bf43ebbc28cac9258. Fresh before stock8/ledger8/8/diff0/12moves/duplicates0/latest11:15:01TRANSFER_OUT; MAIN5tx/cash3.50/card0/IRIS0/total3.50/expense0/latest09:51; controlLAB-POS-02 2tx/cash0/card0/IRIS0/total0/expense120/latest—. Newcart qty1/reference1.20/stock8; gift popup closed without TEST2 selection. One ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ submit.
 
 After stock7/ledger7/7/diff0/13moves/duplicates0, exactlyone ΠΡΟΣΩΠΙΚΗ ΚΑΤΑΝΑΛΩΣΗ out1/LABPOS2 at11:47:54, Sale cc8ad2db-7ac5-4e9e-9506-b5ac4ca9053d. Fresh finance MAIN and LAB-POS-02 unchanged in all above metrics. POS cleared cart/total0/queue0, no payment/receipt. Ledger intentionally derives the SaleLine; do not add duplicate StockMovement or replay. Evidence CHECKPOINTS/EVIDENCE/n39-self01-ledger-20261010.jpg; checkpoint2026-10-10-n39-consumption-live.md. Prior secure-session blocker superseded by fresh positivelyauthenticated tab. Virtual cloud terminal only; physical-device identity and wider role/replay/isolation/concurrency NOT TESTED. Full39 stays OPEN for reason/recount/roles/concurrent movements/count/import/edit/finalization/device acceptance. Existing transfer/expired/stocktake/Gate2/scroll PASS preserved; No33/44/40/TODAY-07 untouched. Next new simultaneous BackOffice waste pair only after fresh recorded baseline; no existing stock action repeated.
+
+## 10/10/2026 11:52:07 Europe/Athens — N44 / TODAY-02 CLOSED / LAB PASS + USER VISUAL PASS
+
+Owner χρηστος Μανης confirmed «ειναι οκ» after the final LAB results and editor screenshot. This accepts the tested product/VAT-editor save/readback, supplier/barcode preservation and final appearance/use; printed44/TODAY-02 CLOSED for that agreed scope. Prior scoped LAB PASS at dd85719d/PR2044 and cleanup PASS at independently deployed de7d5c2e/PR2049 retained; closure PR2051/CI38039001646 and mainCI38039065131 SUCCESS/merge18625a5b. Original TEST2 fields restored, active temporary supplier links empty. No new test/mutation/replay for this acceptance. Physical user client revision not independently captured. AlternateVAT transition, physical/mobile and independent full financial/ledger/storecontrol deltas remain NOT TESTED; user confirmation does not expand these claims. Owner codex/n44-product-vat-acceptance-20261010 completed, no pending N44 replay or handoff. Other owners and protected PASS unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md; products manual; numbered44 and both PDFs synchronized.
 
 ## 2026-10-10 — No33 price permission: bounded LIVE PASS after PR2045
 
@@ -1971,15 +1959,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-02 — Επεξεργασία είδους/ΦΠΑ
 
-**Κατάσταση:** AWAITING USER
+**Κατάσταση:** CLOSED / LAB PASS + USER VISUAL PASS
 
-**Υπόλοιπο / όρια PASS:** LAB PASS name-only save/readback, διατήρηση δύο προμηθευτών/τριών barcode, ίδια σελίδα και επαναφορά fixture. Απομένει τελική οπτική αποδοχή χρήστη. AlternateVAT/πλήρεις οικονομικές και storecontrol διαφορές NOT TESTED.
+**Υπόλοιπο / όρια PASS:** LAB PASS name-only save/readback, διατήρηση δύο προμηθευτών/τριών barcode, ίδια σελίδα και επαναφορά fixture. Ο χρήστης επιβεβαίωσε «ειναι οκ» στις10/10/2026 11:52:07Athens, τελική οπτική αποδοχή PASS. AlternateVAT/πλήρεις οικονομικές και storecontrol διαφορές NOT TESTED.
 
 **Υπεύθυνη σελίδα / branch:** codex/n44-product-vat-acceptance-20261010
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 ανάληψη από την προηγούμενη TODAY σελίδα, ρητή ανάθεση ιδιοκτήτη για Νο44. Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή· CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T11:43:58+03:00, scoped LAB PASS PR2044/dd85719d και cleanup PR2049/de7d5c2e, fullCI38038134278 2048/2048 PASS/mainCI38038293816/Render38038479008 SUCCESS. Φρέσκια καρτέλα αρχική/προμηθευτές κενό/stock−2, checkpoint/manual/proof. Overall USER PASS εκκρεμεί.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T11:43:58+03:00, scoped LAB PASS PR2044/dd85719d και cleanup PR2049/de7d5c2e, fullCI38038134278 2048/2048 PASS/mainCI38038293816/Render38038479008 SUCCESS. Φρέσκια καρτέλα αρχική/προμηθευτές κενό/stock−2, checkpoint/manual/proof. Τελική USER VISUAL PASS 10/10/2026 11:52:07Athens· κλείσιμο του συμφωνημένου scope.
 
 ### TODAY-03 — Κεντρικά προϊόντα UI
 
