@@ -1,11 +1,3 @@
-## 10/10/2026 — DAILY-BITE-IMPORT resumed / ASSIGNED / live precision confirmed
-
-ΑΝΑΛΗΨΗ ΑΠΟ `codex/daily-bite-import-20261010` — ASSIGNED `codex/daily-bite-price-precision-20261010`, same issue #2054 and user-authorized handoff. Preserve all other owners and PASS. Existing 9 departments/0 products remain protected, never recreate departments. Secure browser positively authenticated Χρήστος Μάνης / Platform Admin in this new conversation.
-
-Independent Render read-only information_schema query on myworkstation-db confirmed public.Product.costPrice NUMERIC(14,4); Product.salePrice and StoreProduct.salePrice remain NUMERIC(14,4). Original XLSX SHA2562307c282c299d2716af17078315ab9b461e5748521dd9eff0dce80bb64fe8ff2 retained; 8753 eligible, purchase precision max6 decimals (424 five-decimal +515 six-decimal), max cost87.8. No source edits or business writes. PR2096 remains draft/unreleased. Actual browser preview/import and new LAB acceptance NOT TESTED.
-
-Bounded next action: preserve the same 10 integer digits while widening only Product.costPrice to NUMERIC(16,6) through reviewed deployment bootstrap, with an explicit runtime capacity check before source preview/import and atomic readback. No production migration from this sandbox. Existing stored values must compare exactly before/after; sale prices, stock, RBS/Kiosk/commonPOS/otherstore business records unchanged. Isolated PostgreSQL migration/import regressions, full green CI, exact deployment and synthetic measured LAB must precede original DAILY BITE preview and definitive import. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-daily-bite-import.md. Importer remains OPEN, no new manual PASS.
-
 ## 10 Oct 2026 17:04 Athens - No40 authorized read-request diagnostics; ASSIGNED / OPEN
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`. User explicitly authorizes remaining work to achieve real PASS. Expanded bounded scope: additive read-only request trace for Twin-origin GETs only in ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (`cmtpopbgo000trhb5ng9ytiru`); sanitized route/company/store/status/correlation metadata only, no credentials, cookies, request/response bodies, personal fields or new authority. Existing authorization and other modules/owners unchanged. Trace is diagnostic evidence, not authorization. No business mutations or second-store business activity. Prepare privacy/dispatch/error tests, full CI, then reviewed exact release for real LAB observations; no live PASS before observed. Existing claim/owner retained.
@@ -146,6 +138,14 @@ Acceptance: company/store/role scoped search, exactbarcode conflict guard, attac
 Agreed desktopLAB48 COMPLETE: one correct named barcodeoffer, unknownbarcode rejection, invalidExcel wholefile rejection, one native-date Exceloffer with two explicitLABstoreassignments, success/reset/independentreadback and bothnewofferspaused. Stock/ledger/price-history/bothtills unchanged; concurrentNo33Auditevents identified. PreviousscrollUSERPASS protected. SourcePR2094/fullCI2100PASS/exacthealthy55819e9/mainCI38053942859/Render38054259808SUCCESS. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md, manualproducts-master-catalog/PASS.md. ClosingPR2110 synchronizesallregisters/PDFs; detailed TODAY06 sectionbelow authoritative, no further agreed48work. Physical/mobile/POScheckout/independentOwner/otheroffertypes/capacity outsideagreed48scope NOTTESTED. No replay, stock/payment/fiscal/realstore action; otherowners untouched.
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
+
+## 10/10/2026 — DAILY-BITE-IMPORT resumed / ASSIGNED / live precision confirmed
+
+ΑΝΑΛΗΨΗ ΑΠΟ `codex/daily-bite-import-20261010` — ASSIGNED `codex/daily-bite-price-precision-20261010`, same issue #2054 and user-authorized handoff. Preserve all other owners and PASS. Existing 9 departments/0 products remain protected, never recreate departments. Secure browser positively authenticated Χρήστος Μάνης / Platform Admin in this new conversation.
+
+Independent Render read-only information_schema query on myworkstation-db confirmed public.Product.costPrice NUMERIC(14,4); Product.salePrice and StoreProduct.salePrice remain NUMERIC(14,4). Original XLSX SHA2562307c282c299d2716af17078315ab9b461e5748521dd9eff0dce80bb64fe8ff2 retained; 8753 eligible, purchase precision max6 decimals (424 five-decimal +515 six-decimal), max cost87.8. No source edits or business writes. PR2096 remains draft/unreleased. Actual browser preview/import and new LAB acceptance NOT TESTED.
+
+Bounded next action: preserve the same 10 integer digits while widening only Product.costPrice to NUMERIC(16,6) through reviewed deployment bootstrap, with an explicit runtime capacity check before source preview/import and atomic readback. No production migration from this sandbox. Existing stored values must compare exactly before/after; sale prices, stock, RBS/Kiosk/commonPOS/otherstore business records unchanged. Isolated PostgreSQL migration/import regressions, full green CI, exact deployment and synthetic measured LAB must precede original DAILY BITE preview and definitive import. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-daily-bite-import.md. Importer remains OPEN, no new manual PASS.
 
 ## DAILY-BITE-IMPORT / 10/10/2026 13:12 UTC / ASSIGNED / setup LIVE readback; importer BLOCKED
 
@@ -2320,23 +2320,23 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Υπόλοιπο / όρια PASS:** Exact LIVE visual αποδοχή νέας ιεραρχίας και εξουσιοδοτημένων λειτουργιών.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα / PR1775
+**Υπεύθυνη σελίδα / branch:** `codex/n50-commercial-acceptance-20261010` — user-directed takeover from `agent/today-ui-verification-20261004`; only50. PR1775 existing source.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T17:09:21+03:00 · user «ξεκινα την 50» · ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004` — ASSIGNED `codex/n50-commercial-acceptance-20261010`. Read-only LAB hierarchy/authorized navigation acceptance first. Palette independent owner and accepted Analytics/Inventory/Excel remain protected. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. New LIVE result NOT TESTED; claim publication precedes source or state-changing LAB.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
 ### TODAY-09 — Σελίδα ιδιοκτήτη UI
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** OPEN / ASSIGNED — N51 acceptance NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Απλοποίηση και πραγματική αποδοχή βαρδιών/πληρωμών.
+**Υπόλοιπο / όρια PASS:** Selected-store landing simplification; shifts andOwner/Managerpayments primary,secondarytools behindcleartiles. Actualread-onlynavigation/layout/store/two-terminalreadback acceptance pending. No replay ofacceptedfinancialactions.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** codex/n51-owner-page-acceptance-20261010; explicit transfer51only fromagent/today-ui-verification-20261004.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md; greenclaimPR/main beforechanges.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** No new51PASS; nextfreshreadonlylanding/controlinspection. Otherassignedscopes/priorPASSprotected.
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
