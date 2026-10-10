@@ -21,7 +21,7 @@ test("mounted ordinary Login preserves context until a final session, keeping MF
     {name:"setup flag with a token cannot become a final session",data:{...final,setupRequired:true}}
   ];
   const malformed=[null,{}, {user}, {token:"",user}, {token:"   ",user}, {token:"undefined",user}, {token:"null",user}, {token:42,user}, {token:final.token}, {token:final.token,user:{}}, {token:final.token,user:{id:" "}}];
-  const cases=[...challenges.map(row=>({...row,challenge:true})),...malformed.map((data,i)=>({name:`incomplete response ${i+1}`,data})),{name:"denied login",data:{error:"Fixture denial"},status:401},{name:"superseded final session",data:final,replace:true},{name:"ordinary Owner final session",data:final,accept:true}];
+  const cases=[...challenges.map(row=>({...row,challenge:true})),...malformed.map((data,i)=>({name:`incomplete response ${i+1}`,data})),{name:"denied login",data:{error:"Fixture denial"},status:401},{name:"superseded final session",data:final,replace:true},{name:"superseded MFA challenge preserves newer session",data:challenges[0].data,replace:true},{name:"MFA prompt followed by normal Owner login in the same form",data:challenges[0].data,challenge:true,retry:true},{name:"ordinary Owner final session",data:final,accept:true}];
   for(const row of cases)await t.test(row.name,async()=>{
     const dom=new JSDOM('<div id="root"></div>',{url:"https://isolated.invalid/"});
     const keys=["window","document","navigator","HTMLElement","Event","CustomEvent","MutationObserver","localStorage","sessionStorage","fetch","IS_REACT_ACT_ENVIRONMENT"];
@@ -31,11 +31,12 @@ test("mounted ordinary Login preserves context until a final session, keeping MF
     localStorage.setItem("token","fixture-existing-session");localStorage.setItem("user",JSON.stringify(user));localStorage.setItem("supportContext",JSON.stringify({companyId:"company-A",storeId:"store-A"}));sessionStorage.setItem("platformToken","fixture-existing-platform");
     const storage=()=>[...Object.keys(localStorage).sort().map(k=>[k,localStorage.getItem(k)]),["platformToken",sessionStorage.getItem("platformToken")]];
     const before=storage(),accepted=[],calls=[];
+    let retry=false;
     globalThis.fetch=async(url,options)=>{
       calls.push([url,options.method]);
       if(row.replace)localStorage.setItem("token","fixture-newer-other-tab-session");
       const status=row.status||200;
-      return {ok:status===200,status,json:async()=>row.data};
+      return {ok:status===200,status,json:async()=>retry?final:row.data};
     };
     try{
       await act(async()=>root.render(React.createElement(mod.exports.Login,{onLogin:value=>accepted.push(value)})));
@@ -56,6 +57,14 @@ test("mounted ordinary Login preserves context until a final session, keeping MF
           assert.match(document.body.textContent,/Απαιτείται επιβεβαίωση 2FA/);
           for(const privateValue of ["fixture-private-challenge","fixture-private-setup","fixture-private-secret","fixture-private-qr"])assert.ok(!document.documentElement.outerHTML.includes(privateValue));
         }else assert.equal(link,null);
+      }
+      if(row.retry){
+        retry=true;
+        await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
+        assert.deepEqual(calls,[["/api/auth/login","POST"],["/api/auth/login","POST"]]);
+        assert.deepEqual(accepted,[user]);assert.equal(localStorage.getItem("token"),final.token);
+        assert.equal(localStorage.getItem("user"),JSON.stringify(user));assert.equal(localStorage.getItem("supportContext"),null);assert.equal(sessionStorage.getItem("platformToken"),null);
+        assert.equal(document.querySelector('[role="alert"]'),null);assert.equal(document.querySelector("a"),null);
       }
     }finally{
       await act(async()=>root.unmount());dom.window.close();for(const k of keys){const desc=previous.get(k);if(desc)Object.defineProperty(globalThis,k,desc);else delete globalThis[k]}
