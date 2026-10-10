@@ -138,6 +138,7 @@ import { ensurePosSaleSafetySchema } from "./pos-sale-safety.js";
 import { ensureKatAiReaderTestEntitlement } from "./kat-ai-reader-test-entitlement.js";
 import { ensureSupplierItemLearningSchema } from "./supplier-item-learning-bootstrap.js";
 import { ensureKatPreparationCleanup } from "./kat-preparation-cleanup.js";
+import { ensureDailyBiteCoffeeBehavior } from "./daily-bite-coffee-bootstrap.js";
 import { ensureKatPreparationSeed } from "./kat-preparation-bootstrap.js";
 import { ensureKatOnlineOrderingSchema } from "./kat-online-ordering-bootstrap.js";
 import { ensureVideoEventsSchema } from "./video-events-bootstrap.js";
@@ -287,7 +288,7 @@ app.get("/store/:storeId",async(req,res,next)=>{
 });
 app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
-try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
+try{await ensurePlatformSchema();await ensureCashControlSchema();await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureDailyBiteCoffeeBehavior();await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
 await ensurePosInvoiceBackgroundWorkerSchema();
