@@ -1,4 +1,5 @@
 import {blockCustomerDemoRequest} from "./middleware/customer-demo-runtime.js";
+import {createN40ReadTrace} from "./n40-read-trace.js";
 import "dotenv/config";
 import express from "express";
 import {createServerShutdown} from "./server-shutdown.js";
@@ -149,6 +150,7 @@ const shutdown=createServerShutdown({disconnect:()=>prisma.$disconnect(),allowIn
 app.use(cors());
 app.use(shutdown.middleware);
 app.use(express.json({limit:"12mb"}));
+app.use(createN40ReadTrace());
 app.use(blockCustomerDemoRequest);
 app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.22.0+kat-test-pos",revision:process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT||null}));
 app.use("/api/public/kat",katOnlineOrderingRoutes);
@@ -295,3 +297,4 @@ const server=app.listen(process.env.PORT||8080,()=>{
   startWorkforceAutoOutWorker();
 });
 shutdown.install(server);
+

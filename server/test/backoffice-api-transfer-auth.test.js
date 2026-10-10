@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import {n40ReadHeaders,n40ReadRecord,N40_TRACE_PREFIX} from "../../shared/n40-read-trace.mjs";
 
 test("actual BackOffice API retains authentication when transfer selects a terminal", async () => {
   const source = fs.readFileSync(new URL("../../client/src/main.jsx", import.meta.url), "utf8");
@@ -11,7 +12,8 @@ test("actual BackOffice API retains authentication when transfer selects a termi
   const calls = [];
   let token = "isolated-owner-fixture";
   const api = vm.runInNewContext(source.slice(start, end) + "\napi", {
-    localStorage: { getItem: () => token },
+    n40ReadHeaders, n40ReadRecord, N40_TRACE_PREFIX,
+    localStorage: { getItem: key => key === "token" ? token : null },
     fetch: async (path, options) => {
       calls.push({ path, options });
       const authenticated = options.headers.Authorization === "Bearer isolated-owner-fixture";
@@ -33,3 +35,4 @@ test("actual BackOffice API retains authentication when transfer selects a termi
   await assert.rejects(api("/api/transactions/stores/fixture/cash-transfer", { method: "POST", headers, body }), /Authentication required/);
   assert.equal(calls[2].options.headers.Authorization, undefined);
 });
+
