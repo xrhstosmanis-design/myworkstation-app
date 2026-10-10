@@ -19,7 +19,7 @@ function storeRuntimePermissions(profile){
   if(p.permissions?.cash)permissions.push("CASH_CONTROL","POS_CASH");
   if(rights.cards)permissions.push("POS_CARDS");
   if(rights.initialCash)permissions.push("INITIAL_CASH");
-  if(p.permissions?.shiftTransactionsPos)permissions.push("STORE_LEDGER");
+  if(p.permissions?.shiftTransactionsPos)permissions.push("STORE_LEDGER","SHIFT_TRANSACTIONS");
   if(p.permissions?.allShiftTransactionsPos)permissions.push("STORE_LEDGER","STORE_LEDGER_REVIEW");
   if(p.permissions?.supplierPayment)permissions.push("SUPPLIER_PAYMENT");
   if(rights.thirdPartyPayment)permissions.push("THIRD_PARTY_PAYMENT");
@@ -80,8 +80,12 @@ function enforceStorePosPermissions(req,res,permissions){
     const manualPrice=checkoutItems.some(item=>item?.unitPriceOverride!==undefined&&item?.unitPriceOverride!==null);
     if(manualPrice&&!offlineLockedPrice&&!permissions.includes("CHANGE_RETAIL"))return deny("Δεν έχεις δικαίωμα «Αλλαγή τιμής λιανικής» από το BackOffice.");
   }
-  if(req.method==="GET"&&/\/sales\/recent$/.test(path)&&!permissions.includes("RETURN_ITEMS")&&!permissions.includes("TRANSACTION_REVERSAL")){
-    return deny("Δεν έχεις δικαίωμα προβολής πωλήσεων για επιστροφή/διόρθωση από το BackOffice.");
+  if(req.method==="GET"&&/\/sales\/recent$/.test(path)){
+    if(req.query?.view==="SHIFT"){
+      if(!permissions.includes("SHIFT_TRANSACTIONS"))return deny("Δεν έχεις δικαίωμα «Συναλλαγές βάρδιας» από το BackOffice.");
+    }else if(!permissions.includes("RETURN_ITEMS")&&!permissions.includes("TRANSACTION_REVERSAL")){
+      return deny("Δεν έχεις δικαίωμα προβολής πωλήσεων για επιστροφή/διόρθωση από το BackOffice.");
+    }
   }
   if(req.method==="POST"&&/\/sales\/[^/]+\/delayed$/.test(path)&&!permissions.includes("TRANSACTION_REVERSAL")){
     return deny("Η ετεροχρονισμένη διόρθωση απαιτεί «Όλες οι συναλλαγές βάρδιας (PoS)» από το BackOffice.");
