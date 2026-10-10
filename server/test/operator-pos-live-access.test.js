@@ -15,8 +15,9 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
  const m={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const product={id:'p',name:'CONTROL',sku:'CONTROL-SKU',salePrice:2,currentStock:20,barcodes:[]};
  const calls=[],denied={confirmDeleteSale:false,deleteSaleReason:false,customerCardOnly:false,onlineBarcode:false,editPosButtons:false};
- let rejectCancel=false,pendingCancel=null;
+ let rejectCancel=false,pendingCancel=null,rejectPrice=false,pendingPrice=null;
  const api=async(path,options={})=>{calls.push({path,options});
+  if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="PRICE_CHANGE"){if(rejectPrice)throw Error("PRICE_PERMISSION_REVOKED");if(pendingPrice)await pendingPrice;}
   if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="CART_CANCEL"){if(rejectCancel)throw Error("AUDIT_REJECTED");if(pendingCancel)await pendingCancel;}
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};
   if(path.endsWith('/access'))return {access:{thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true}};
@@ -55,6 +56,23 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   await act(async()=>{search.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await new Promise(r=>setTimeout(r,10));});
   await render({...denied,onlineBarcode:true});assert.ok(find('Online αναζήτηση'));
   await render(denied);assert.equal(find('Online αναζήτηση'),undefined);
+  const priceCalls=()=>calls.filter(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body||'{}').actionType==='PRICE_CHANGE');
+  await render(denied);const deniedPrice=document.querySelector('.line-price-action');assert.equal(deniedPrice.disabled,true);await click(deniedPrice);assert.equal(document.querySelector('.pos-price-modal'),null);assert.equal(priceCalls().length,0);
+  const priceRights={...denied,changeRetail:true};
+  await render(priceRights);await click(document.querySelector('.line-price-action'));assert.ok(document.querySelector('.pos-price-modal'));
+  await render(denied);assert.equal(document.querySelector('.pos-price-modal'),null);assert.equal(document.querySelector('.standard-lines').textContent,cart);
+  await render(priceRights);await click(document.querySelector('.line-price-action'));await click(find('-0,50 €'));
+  rejectPrice=true;await click(find('Εφαρμογή μόνο στη συναλλαγή'));assert.match(document.body.textContent,/PRICE_PERMISSION_REVOKED/);assert.ok(document.querySelector('.pos-price-modal'));assert.equal(document.querySelector('.standard-lines').textContent,cart);
+  rejectPrice=false;let releasePrice;pendingPrice=new Promise(resolve=>{releasePrice=resolve});const beforePrice=priceCalls().length;
+  await click(find('Εφαρμογή μόνο στη συναλλαγή'));assert.equal(find('Εφαρμογή μόνο στη συναλλαγή').disabled,true);assert.equal(document.querySelector('.standard-lines').textContent,cart);
+  await click(find('Εφαρμογή μόνο στη συναλλαγή'));assert.equal(priceCalls().length,beforePrice+1);
+  await render(denied);assert.equal(document.querySelector('.pos-price-modal'),null);
+  await act(async()=>{releasePrice();await new Promise(r=>setTimeout(r,15))});pendingPrice=null;
+  assert.equal(document.querySelector('.standard-lines').textContent,cart);
+  await render(priceRights);await click(document.querySelector('.line-price-action'));await click(find('-0,50 €'));await click(find('Εφαρμογή μόνο στη συναλλαγή'));
+  assert.equal(document.querySelector('.pos-price-modal'),null);assert.match(document.querySelector('.line-price-action').textContent,/1,50/);
+  const changedPrice=JSON.parse(priceCalls().at(-1).options.body);assert.equal(changedPrice.details.oldPrice,2);assert.equal(changedPrice.details.newPrice,1.5);assert.equal(changedPrice.details.scope,'CURRENT_TRANSACTION');
+  await render(priceRights);await click(document.querySelector('.line-price-action'));await click([...document.querySelectorAll('.pos-price-modal button')].find(b=>b.textContent==='ΚΑΘΑΡΙΣΜΟΣ'));await click([...document.querySelectorAll('.pos-price-modal button')].find(b=>b.textContent==='2'));await click(find('Εφαρμογή μόνο στη συναλλαγή'));
   await render(denied);assert.equal(document.querySelector('.store-pos-top'),panel);assert.equal(document.querySelector('.standard-lines').textContent,cart);
   await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,0);assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
   assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A').length,1);
