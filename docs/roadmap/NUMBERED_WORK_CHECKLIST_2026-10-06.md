@@ -328,10 +328,9 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
-- **Υπόλοιπο / όριο:** OWNER-BULK-SCROLL-01 (08Oct20:03) ολοκληρώθηκε: USER-reported PASS κύλισης στη μεγιστοποιημένη Μαζική αλλαγή τιμών· εικόνα170325/δεξιά μπάρα. SourcePR1903/merge1cd34448 με green CI και exact healthy deployment. Δεν εφαρμόστηκαν τιμές· screenshot client revision/ρόλος μη εκτεθειμένα. N46 preview/εφαρμογή/ταχύτητα ASSIGNED codex/n46-bulk-price-acceptance-20261010 με ρητή οδηγία10Oct13:11:59· checkpoint CHECKPOINTS/CHANGES/2026-10-10-n46-bulk-price-acceptance.md. Τα υπόλοιπα TODAY-04 μένουν στον προηγούμενο owner. Δεν επαναλαμβάνεται η περασμένη κύλιση.
-
 - **Tracker ID:** `TODAY-04`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS — επικαιροποίηση 10/10/2026 14:07 / scoped LAB
+- **Υπόλοιπο / όριο:** Συμφωνημένο desktopLAB46 ολοκληρώθηκε: επιλογές παραμένουν σε νέες αναζητήσεις, σωστοί μετρητές/αφαίρεση, preview δύο ειδών/ένα κατάστημα και τριών ενεργειών, αμετάβλητη τιμή χωρίς εφαρμογή. TEST2 μόνο2.40→2.64 και χωριστή επαναφορά2.40· ιστορικό δύο σωστές εγγραφές, stock−2/ledger2 και τα δύο ταμεία χωρίς διαφορά, reset0×0. SourcePR2073/2076/exacthealthy4fdba151/CI2069PASS. Αναζήτηση2654ms περιλαμβάνειcloudAX, όχι SLA/πιστοποίηση μέγιστου φορτίου. Mobile/physical/ανεξάρτητοςOwner/liveπολυκατάστημα εκτόςscope/NOTTESTED. Προηγούμενο USERscrollPASS08Oct διατηρείται. ΣυνολικόTODAY04 παραμένειOPEN στον προηγούμενοowner. Checkpoint2026-10-10-n46-bulk-price-acceptance.md/manualproducts-master-catalog/PASS.md.
 
 ## 47 — Προσφορές — επιλογή ειδών και πραγματική αποστολή
 
