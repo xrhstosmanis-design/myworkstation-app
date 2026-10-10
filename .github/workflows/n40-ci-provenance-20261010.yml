@@ -1,0 +1,105 @@
+name: N40 isolated CI provenance
+on:
+  push:
+    branches: [fix/n40-twin-navigation-20261010]
+    paths: [.github/workflows/n40-ci-provenance-20261010.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  evidence:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f13f4f9a44ea459ed671bb8ad199188b94ff1d39
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Capture exact immutable sources and disposable merge result
+        shell: bash
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/n40-evidence"
+          mkdir -p "$E"
+          git log -1 --format=fuller > "$E/checkout.txt"
+          git rev-parse origin/main > "$E/main-revision.txt"
+          git rev-parse origin/fix/n40-twin-navigation-20261010 > "$E/branch-revision.txt"
+          git log -18 --oneline origin/main > "$E/main-history.txt"
+          git archive --format=tar.gz 545be5c5701c4a5019dd07e13adb0ac40c287604 > "$E/source-head.tar.gz"
+          git archive --format=tar.gz origin/main > "$E/source-main.tar.gz"
+          for R in f13f4f9a44ea459ed671bb8ad199188b94ff1d39 545be5c5701c4a5019dd07e13adb0ac40c287604 eb805e79bbbad949dc88276c88f51db9801a3302 origin/main; do
+            N="${R//\//-}"
+            git show "$R:server/test/super-admin-ai-command-center-phase1.test.js" > "$E/$N.test.js"
+            git rev-parse "$R:server/test/super-admin-ai-command-center-phase1.test.js" >> "$E/test-blobs.txt"
+            wc -l "$E/$N.test.js" >> "$E/test-blobs.txt"
+          done
+          git diff --stat 545be5c5701c4a5019dd07e13adb0ac40c287604 origin/main > "$E/main-diff-stat.txt"
+          git config user.name 'N40 isolated diagnostic'
+          git config user.email 'n40-diagnostic@users.noreply.github.com'
+          git checkout --detach origin/main > /dev/null 2>&1
+          set +e
+          git merge --no-commit --no-ff 545be5c5701c4a5019dd07e13adb0ac40c287604 > "$E/merge-trial.txt" 2>&1
+          S=$?
+          set -e
+          printf 'exit=%s\n' "$S" >> "$E/merge-trial.txt"
+          git diff --name-only --diff-filter=U > "$E/conflicts.txt"
+          git diff --cc > "$E/conflicts.diff"
+          git merge --abort || true
+          git reset --hard f13f4f9a44ea459ed671bb8ad199188b94ff1d39 > /dev/null
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/before-test-blob.txt"
+          cat "$E/test-blobs.txt" "$E/conflicts.txt"
+      - name: Extract bounded historical failure evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/n40-evidence"
+          gh api repos/xrhstosmanis-design/myworkstation-app/actions/jobs/114187888154/logs > "$E/historical-build.log"
+          python3 - <<'PY'
+          import os, pathlib, re
+          d=pathlib.Path(os.environ['RUNNER_TEMP'])/'n40-evidence'
+          lines=(d/'historical-build.log').read_text(errors='replace').splitlines()
+          patterns=(r'HEAD is now at',r'git log -1',r'not ok ',r'location:',r'# tests ',r'# pass ',r'# fail ',r'Full Digital Twin phase14',r'Run npm test',r'Runner version',r'Current runner version')
+          out=[]
+          for line in lines:
+              if any(re.search(p,line) for p in patterns): out.append(line[:1000])
+          (d/'historical-summary.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out[:60]))
+          PY
+      - name: Install and prepare ordinary server sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/n40-evidence"
+          npm install > "$E/install.log" 2>&1
+          npm run build:server > "$E/prepare.log" 2>&1
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/after-prepare-test-blob.txt"
+          git status --short > "$E/after-prepare-status.txt"
+          cp server/test/super-admin-ai-command-center-phase1.test.js "$E/prepared-test.js"
+      - name: Execute unchanged complete server suite on historical merge
+        shell: bash
+        run: |
+          set -uo pipefail
+          E="$RUNNER_TEMP/n40-evidence"
+          npm test -w server > "$E/server-tests.log" 2>&1
+          S=$?
+          printf '%s\n' "$S" > "$E/server-tests-exit.txt"
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/after-tests-test-blob.txt"
+          git status --short > "$E/after-tests-status.txt"
+          cp server/test/super-admin-ai-command-center-phase1.test.js "$E/after-tests-file.js"
+          grep -E '^(not ok |# (tests|pass|fail|skipped|duration_ms) )' "$E/server-tests.log" | head -35 || true
+          exit "$S"
+      - name: Preserve source-only diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n40-ci-provenance-${{ github.run_id }}
+          path: ${{ runner.temp }}/n40-evidence/
+          retention-days: 3
+          if-no-files-found: error
