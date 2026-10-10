@@ -43,3 +43,17 @@ test('disposed Platform load cannot change the next view',async()=>{
   const f=fixture(),pending=f.load();f.overviewLoadSequence.current++;const before=f.writes.length;
   f.requests[0].reject(new Error('Απαιτείται σύνδεση.'));await pending;assert.deepEqual(f.writes.slice(before),[]);assert.equal(f.storage.get('token'),'fixture-old');
 });
+
+function renewedFixtureToken(exp){
+  const claims={tokenType:'BACKOFFICE_USER',id:'fixture-user',sessionId:'fixture-session',companyId:'fixture-company',role:'SUPER_ADMIN',isSuperAdmin:true,exp};
+  return `fixture.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.fixture-${exp}`;
+}
+test('same-session renewal accepts successful data but late old auth failure cannot clear renewed credential',async()=>{
+  for(const succeeds of [true,false]){
+    const f=fixture(),old=renewedFixtureToken(1),renewed=renewedFixtureToken(2);
+    f.storage.set('token',old);const pending=f.load();f.storage.set('token',renewed);
+    if(succeeds)f.success(0,'same-session');else f.requests[0].reject(new Error('Η συνεδρία δεν είναι πλέον ενεργή.'));
+    await pending;assert.equal(f.storage.get('token'),renewed);assert.equal(f.writes.some(x=>x[0]==='clear'),false);
+    if(succeeds)assert.deepEqual(f.writes.filter(x=>x[0]==='data'),[['data',{label:'same-session'}]]);
+  }
+});
