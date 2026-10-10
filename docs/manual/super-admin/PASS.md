@@ -1,3 +1,13 @@
+## 10/10/2026 — VOICE-ASSISTANT-01: περιορισμένο USER PASS και διεύρυνση αιτήματος
+
+**Ποιος / πού:** Super Admin στο [Platform Admin](https://myworkstation-app.onrender.com/platform-admin), υπάρχουσα ενότητα «Ρώτα το MyWorkStation».
+
+**Επιβεβαιωμένη χρήση:** πατά «Μίλησε», υπαγορεύει ερώτηση στο πεδίο, ελέγχει/διορθώνει το κείμενο και πατά «Ρώτα» για να δει απάντηση. Ο ιδιοκτήτης επιβεβαίωσε ότι λειτουργεί και έστειλε την εικόνα με ερώτηση για πρόβλημα μετρητών και εμφανή απάντηση.
+
+**Όρια:** το σημερινό τεκμήριο αφορά βασική εισαγωγή/εμφάνιση απάντησης από συγκεντρωτικό snapshot. Δεν επιβεβαιώνει αναλυτική εύρεση προβλημάτων, ποσά/αναφορές, stop/cancel, κάθε συσκευή ή δικαιώματα άλλων ρόλων. Η επιλογή `el-GR` και οι επιπλέον μηχανισμοί έχουν CI αλλά όχι νέο φυσικό PASS εδώ. Το screenshot δεν ταυτοποιεί ανεξάρτητα revision/browser/μικρόφωνο. Η φωνή δεν υποβάλλει μόνη της ερώτηση ή επιχειρησιακή πράξη. Ο browser ενδέχεται να χρησιμοποιεί εξωτερική υπηρεσία αναγνώρισης, με προειδοποίηση πριν την ενεργοποίηση. Αν η φωνή δεν λειτουργεί ή δεν δοθεί άδεια, η πληκτρολόγηση παραμένει διαθέσιμη (η συγκεκριμένη fallback δοκιμή εκκρεμεί ως φυσικό PASS). Αν ζητά λεπτομέρειες που λείπουν από το snapshot, χρησιμοποιήστε τον κανονικό έλεγχο μέχρι την επόμενη επέκταση. Πρόσβαση ιδιοκτήτη με ενεργό module και μόνο δικά του καταστήματα είναι απαίτηση υπό υλοποίηση, όχι σημερινό manual PASS.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`. Υφιστάμενα PASS και owners παραμένουν ανεπηρέαστα.
+
 ## 10 Oct 2026 16:52 Athens - No40 restricted operator POS denial: scoped browser PASS; overall OPEN
 
 Owner unchanged `codex/n40-full-twin-navigation-audit-20261010`. New virtual fixture `n40_audit_20261010` in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (`cmtpopbgo000trhb5ng9ytiru`) only. PIN established by user manual handoff (hash-save success observed, no credential read). Explicit user activation approval16:47:50; saved/reopened active=true, POS=false, EMPLOYEE, business rights remain unchecked. Activation PR2109 finalhead `fa761082b29e0c51e970f0d825cbe2f9df6deef8`, CI38057285819 SUCCESS, confirmed merge `b1391199789c6cda3cfc351d99ba469dda8f6410`.
