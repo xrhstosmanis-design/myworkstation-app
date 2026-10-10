@@ -362,10 +362,9 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 ## 48 — Excel / Barcode — λειτουργικές δοκιμές νέας οθόνης
 
-- **Υπόλοιπο / όριο:** OWNER-EXCEL-SCROLL-01 περιορισμένο USER PASS20:42: μεγιστοποίηση/κύλιση στα δύο τελικά κουμπιά, ρητή επιβεβαίωση «Μόνο Excel / Barcode». Source PR1911/full CI PASS, release139cc025/exact health/guard37817762303 SUCCESS. Καμία υποβολή. Full TODAY-06 δημιουργία/import/αποστολή μένει OPEN στους προηγούμενους owners.
-
 - **Tracker ID:** `TODAY-06`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ VISUAL / OPEN
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS — επικαιροποίηση10/10/2026 16:48 / scoped desktop LAB
+- **Υπόλοιπο / όριο:** Barcode/Excel δημιουργία, απόρριψη άγνωστουbarcode/ολόκληρου λανθασμένου αρχείου, nativeExcel ημερομηνίες ώραςΑθήνας, ρητή διανομή σε δύοLAB, επιτυχία/reset/ανεξάρτητοreadback PASS. Δύο νέες προσφορές5% σε παύση, προηγούμενες διατηρούνται. Stock/ledger/τιμές/δύοταμεία αμετάβλητα. SourcePR2094/fullCI2100PASS/exacthealthy55819e9/Render38054259808SUCCESS. Checkpoint2026-10-10-n48-excel-barcode-acceptance.md/manualproducts-master-catalog. Συμφωνημένο48ολοκληρώθηκε· physical/mobile/POScheckout/ανεξάρτητοςOwner/άλλοιτύποι/μέγιστοφορτίο εκτόςscope NOTTESTED. USERscrollPASS08Oct20:42 διατηρείται.
 
 ## 49 — Άγνωστο barcode — επιστροφή στην ίδια ενεργή απογραφή
 
