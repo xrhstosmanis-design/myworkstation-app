@@ -28,7 +28,7 @@ jobs:
           git fetch origin refs/heads/main
           export MAIN_REVISION="$(git rev-parse FETCH_HEAD)"
           python3 - <<'PY'
-          import difflib,json,os,subprocess
+          import difflib,json,os,re,subprocess
           from pathlib import Path
           def git(*args):return subprocess.check_output(['git',*args],text=True)
           base='4fdba151bc8e1e5fe23f21509f39a0921a3dfbc9'
@@ -49,11 +49,15 @@ jobs:
                   if not text.strip().startswith(('## N40-SCOPED-NAVIGATION-20261010','## N40 central-entry correction')):raise RuntimeError(p+': unexpected owner block')
                   if 'codex/n40-full-twin-navigation-audit-20261010' not in text:raise RuntimeError('Owner mismatch')
                   additions.append(text)
-              if len(additions)!=2:raise RuntimeError(p+': expected two historical N40 additions')
+              insertion_chunks=len(additions)
+              logical_blocks=[part for part in re.split(r'(?m)(?=^## )','\n\n'.join(additions)) if part.strip()]
+              if len(logical_blocks)!=2:raise RuntimeError(p+': expected exactly two logical historical N40 blocks')
+              for block,prefix in zip(logical_blocks,['## N40-SCOPED-NAVIGATION-20261010','## N40 central-entry correction']):
+                  if not block.strip().startswith(prefix) or 'codex/n40-full-twin-navigation-audit-20261010' not in block:raise RuntimeError(p+': logical owner block mismatch')
               current=git('show',main+':'+p)
-              if any(text.strip() in current for text in additions):raise RuntimeError('N40 evidence already published; re-review before appending')
+              if any(block.strip() in current for block in logical_blocks):raise RuntimeError('N40 evidence already published; re-review before appending')
               resolved[p]=current+'\n\n'+'\n\n'.join(text.strip() for text in additions)+'\n'
-              evidence[p]={'main_bytes':len(current.encode()),'preserved_entire_main_prefix':True,'own_additive_blocks':len(additions)}
+              evidence[p]={'main_bytes':len(current.encode()),'preserved_entire_main_prefix':True,'own_additive_blocks':len(logical_blocks),'insertion_chunks':insertion_chunks}
           trees={p:git('rev-parse',own+':'+p).strip() for p in ['client','server','tools','.github/workflows/ci.yml','.github/workflows/deploy-render.yml']}
           result=subprocess.run(['git','merge','--no-commit','--no-ff',main],text=True,capture_output=True)
           conflicts=git('diff','--name-only','--diff-filter=U').splitlines()
