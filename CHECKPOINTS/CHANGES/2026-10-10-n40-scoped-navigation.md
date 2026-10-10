@@ -23,3 +23,7 @@ Local Node22 dependency-free navigation helper suite: 8 PASS, 0 FAIL. The protec
 The new mounted regression test uses real PlatformAdminApp, AiCommandCenter and five canonical destination shells. APIs, nested business editors, downloads and the full-page browser navigation/return are fixtures. It covers six tile routes, finding-dependent Supplier/Bank routes, scoped initial/refresh/execute/export reads, automatic modal return, normal central entry, module denial, missing store, delayed response cancellation/reselection and a simulated Stock return. Any eventual synthetic PASS is not LIVE/LAB PASS. No production credentials or business-data writes are used by the test runner.
 
 Full N40 remains OPEN / AWAITING LAB. No manual PASS entry. Final focused/CI evidence and remaining gaps must be recorded without re-running previous accepted transactions or touching other assigned business flows.
+
+## Supported-runtime preparation
+
+The isolated Node20 runner passed the new helper and mounted canonical navigation tests, protected selection suites and original phase regression suite, then the frontend Work build. Exact logs/counts and source revision are exported for independent review. This is synthetic component evidence; normal full repository CI and authenticated LAB remain required. No production secrets, data, support session or camera commands were used. Temporary preparation tooling is removed before PR review.

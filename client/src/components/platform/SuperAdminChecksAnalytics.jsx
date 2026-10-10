@@ -1,4 +1,5 @@
-import React,{useEffect,useMemo,useState} from "react";
+import {withTwinScope,validTwinScope,guardTwinRequest} from "./ai-command-twin-navigation.js";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,BarChart3,Building2,CalendarDays,CheckCircle2,ChevronRight,LockKeyhole,RefreshCw,ShieldCheck,Store,Unlock, X} from "lucide-react";
 
 const eur=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -35,8 +36,12 @@ const PremiumEvidence=({evidence=[]})=><div style={{marginTop:10,padding:10,bord
 const CompleteEvidence=({transactions=[]})=><div style={{marginTop:10,padding:10,borderRadius:9,background:"#eef6ff"}}><b>Αποδεικτικά στοιχεία κινήσεων</b><div style={{display:"grid",gap:7,marginTop:7}}>{transactions.map((tx,index)=><div key={tx.transactionId||index} style={{padding:9,borderRadius:8,background:"#fff",border:"1px solid #cbddeb"}}><small><b>Κίνηση {index+1}</b> · <b>Ώρα:</b> {athensDateTime(tx.occurredAt)} · <b>Ποσό:</b> {eur(tx.amount)}</small><small style={{display:"block",marginTop:3}}><b>Τύπος:</b> {tx.type||"—"} · <b>Χειριστής:</b> {tx.actorName||"—"}</small><small style={{display:"block",marginTop:3}}><b>Παραστατικό:</b> {tx.hasAttachment?(tx.attachmentFilename||"Καταχωρισμένο"):("Δεν βρέθηκε συνημμένο παραστατικό")}</small>{tx.description&&<small style={{display:"block",marginTop:3}}><b>Περιγραφή:</b> {tx.description}</small>}<small style={{display:"block",marginTop:3,color:"#64748b"}}>Αναγνωριστικό κίνησης: {tx.transactionId||"—"}</small></div>)}</div></div>;
 const BasicShiftEvidence=({movements=[]})=><div style={{marginTop:12,padding:10,borderRadius:9,background:"#eef6ff"}}><b>Κινήσεις βάρδιας που λήφθηκαν υπόψη</b><small style={{display:"block",marginTop:4}}>Εμφανίζονται έως οι 50 νεότερες κινήσεις της ίδιας κλεισμένης βάρδιας.</small><div style={{display:"grid",gap:7,marginTop:7}}>{movements.map((movement,index)=><div key={movement.transactionId||index} style={{padding:9,borderRadius:8,background:"#fff",border:"1px solid #cbddeb"}}><small><b>Κίνηση {index+1}</b> · <b>Ώρα:</b> {athensDateTime(movement.occurredAt)} · <b>Ποσό:</b> {eur(movement.amount)}</small><small style={{display:"block",marginTop:3}}><b>Τύπος:</b> {movement.type||"—"} · <b>Χειριστής:</b> {movement.actorName||"—"}{movement.reversedAt?" · Αντιστράφηκε":""}</small>{movement.description&&<small style={{display:"block",marginTop:3}}><b>Περιγραφή:</b> {movement.description}</small>}<small style={{display:"block",marginTop:3,color:"#64748b"}}>Αναγνωριστικό κίνησης: {movement.transactionId||"—"}</small></div>)}</div></div>;
 
-export default function SuperAdminChecksAnalytics({companies=[],request,onClose,setMessage,embedded=false}){
-  const [filters,setFilters]=useState(emptyFilters);
+export default function SuperAdminChecksAnalytics({companies=[],request:baseRequest,onClose,setMessage,embedded=false,entryScope=null}){
+  const [filterState,setFilters]=useState(emptyFilters);
+  const scopeValid=entryScope===null||validTwinScope(entryScope);
+  const request=useMemo(()=>entryScope===null?baseRequest:guardTwinRequest(baseRequest,()=>validTwinScope(entryScope)),[baseRequest,entryScope]);
+  const filters=scopeValid?withTwinScope(filterState,entryScope):{...filterState,companyId:"",storeId:""};
+  const runSequence=useRef(0);
   const [result,setResult]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -72,6 +77,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   },[filters.companyId,filters.storeId,request]);
 
   const updateFilters=patch=>{
+    runSequence.current++;setBusy(false);
     setFilters(current=>({...current,...patch}));
     setResult(null);
     setError("");
@@ -85,6 +91,7 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   };
 
   const run=async()=>{
+    const sequence=++runSequence.current;
     if(filters.from&&filters.to&&filters.from>filters.to){
       setError("Η ημερομηνία «Από» δεν μπορεί να είναι μεταγενέστερη από την ημερομηνία «Έως».");
       return;
@@ -103,15 +110,17 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
         request(`/api/transactions/supplier-settlements/review${reviewSuffix}`),
         request(`/api/transactions/other-expenses/review${reviewSuffix}`)
       ]);
+      if(sequence!==runSequence.current)return;
       setResult({analytics,bank,bankReview,supplierReview,expenseReview,filters:{...filters},executedAt:new Date().toISOString()});
       const pending=Number.isFinite(Number(analytics.pendingFindingCount))
         ?Number(analytics.pendingFindingCount)
         :(analytics.findings||[]).filter(finding=>finding.reviewValid!==true).length;
       setMessage?.(analytics.status==="ΟΚ"?"Η φιλτραρισμένη ανάλυση ολοκληρώθηκε χωρίς διαφορές.":pending?`Η φιλτραρισμένη ανάλυση ολοκληρώθηκε: ${pending} συμβάν(τα) παραμένουν χωρίς έλεγχο.`:"Η φιλτραρισμένη ανάλυση ολοκληρώθηκε και όλα τα συμβάντα έχουν καταχώριση ελέγχου.");
-    }catch(err){setError(err.message)}finally{setBusy(false)}
+    }catch(err){if(sequence===runSequence.current)setError(err.message)}finally{if(sequence===runSequence.current)setBusy(false)}
   };
 
   const clear=()=>{
+    runSequence.current++;setBusy(false);
     setFilters(emptyFilters);
     setResult(null);
     setError("");
@@ -193,17 +202,18 @@ export default function SuperAdminChecksAnalytics({companies=[],request,onClose,
   const selectedStore=result?.filters.storeId?storeIndex.get(String(result.filters.storeId)):null;
   const scopeLabel=selectedStore?`Εταιρεία: ${selectedStore.companyName} · Κατάστημα: ${selectedStore.name}`:selectedCompany?`Εταιρεία: ${selectedCompany.name} · Όλα τα καταστήματα`:"Όλοι οι ιδιοκτήτες / εταιρείες και όλα τα καταστήματα";
   const periodLabel=result?.filters.from||result?.filters.to?`${result.filters.from||"Αρχή διαθέσιμων δεδομένων"} έως ${result.filters.to||"Σήμερα"}`:"Όλο το διαθέσιμο διάστημα";
+  useEffect(()=>()=>{runSequence.current++},[entryScope?.companyId,entryScope?.storeId]);
   const storeIsSelected=Boolean(filters.companyId&&filters.storeId);
   const activePackageCount=checkPackages.filter(packageItem=>packageItem.active).length;
 
   return <div className={embedded?"platform-checks-page":"platform-modal"}><section className={`sa-modal${embedded?" sa-page":""}`}>
     <header className="sa-checks-header"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h2><BarChart3/> Έλεγχοι &amp; Αναλύσεις</h2><p>Έλεγξε ταμείο, POS–EFTPOS και Ταμείο Τράπεζας με ασφάλεια και πλήρη καταγραφή στο Audit.</p></div><div className="sa-header-actions"><div className="sa-readonly-badge"><ShieldCheck/> Μόνο ανάγνωση</div><button type="button" className="sa-close" aria-label="Κλείσιμο ελέγχων και αναλύσεων" onClick={onClose} disabled={busy||reviewBusy}><X/></button></div></header>
-    {error&&<div className="platform-alert error">{error}</div>}
+    {(!scopeValid||error)&&<div role="alert" className="platform-alert error">{!scopeValid?"Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο.":error}</div>}
     <section className="sa-checks-workspace">
       <div className="sa-workspace-heading"><div><span>1. ΕΠΙΛΟΓΗ ΠΕΔΙΟΥ</span><h3>Διάλεξε κατάστημα και περίοδο</h3></div><p>Η ανάλυση δεν αλλάζει οικονομικά δεδομένα.</p></div>
       <div className="supplier-review-filters sa-checks-filters">
-        <label><span><Building2/> Ιδιοκτήτης / εταιρεία</span><select value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
-        <label><span><Store/> Κατάστημα</span><select value={filters.storeId} onChange={event=>selectStore(event.target.value)}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
+        <label><span><Building2/> Ιδιοκτήτης / εταιρεία</span><select disabled={entryScope!==null} value={filters.companyId} onChange={event=>updateFilters({companyId:event.target.value,storeId:""})}>{entryScope===null&&<option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>}{companies.map(company=>{const owner=company.owner?.fullName||company.ownerName||"Χωρίς ιδιοκτήτη";return <option key={company.id} value={company.id}>{owner} · {company.name}</option>})}</select></label>
+        <label><span><Store/> Κατάστημα</span><select disabled={entryScope!==null} value={filters.storeId} onChange={event=>selectStore(event.target.value)}>{entryScope===null&&<option value="">Όλα τα καταστήματα</option>}{visibleStores.map(store=><option key={store.id} value={store.id}>{filters.companyId?store.name:`${store.companyName} · ${store.name}`}</option>)}</select></label>
         <label><span><CalendarDays/> Από</span><input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>updateFilters({from:event.target.value})}/></label>
         <label><span><CalendarDays/> Έως</span><input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>updateFilters({to:event.target.value})}/></label>
         <div className="sa-filter-actions"><button type="button" onClick={run} disabled={busy||reviewBusy}><RefreshCw/>{busy?"Εκτέλεση ελέγχου…":"Εκτέλεση ελέγχου"}<ChevronRight/></button><button type="button" className="secondary" onClick={clear} disabled={busy||reviewBusy}>Καθαρισμός</button></div>
