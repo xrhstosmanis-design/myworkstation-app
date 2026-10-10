@@ -60,7 +60,13 @@ test("malformed source definitions, barcode links and primary discrepancies fail
   for(const change of changes){const f=fixture();change(f);assert.throws(()=>harness(double().db).readWorkbook(file(f)),e=>e.status===400);}
 });
 test("wrong register, VAT, unit or nonzero stock is invalid before import",async()=>{
-  for(const [key,value] of [["Τμήμα ταμειακής",4],["ΦΠΑ",24],["Απόθεμα",1],["Μονάδα Kiosk","KG"],["Αγορά",0.64602]]){const f=fixture();f.rows[0][key]=value;const r=await harness(double().db).call("/import-preview",{storeId:"store",dataUrl:file(f)});assert.equal(r.body.summary.invalid,1,key);}
+  for(const [key,value] of [["Τμήμα ταμειακής",4],["ΦΠΑ",24],["Απόθεμα",1],["Μονάδα Kiosk","KG"],["Αγορά",0.64602]]){
+    const f=fixture();f.rows[0][key]=value;const d=double(),h=harness(d.db),body={storeId:"store",dataUrl:file(f)};
+    const r=await h.call("/import-preview",body);assert.equal(r.body.summary.invalid,1,key);assert.equal((await h.call("/import",body)).statusCode,409);assert.equal(d.writes,0);
+  }
+});
+test("source workbook refuses existing-stock overwrite even when explicitly selected",async()=>{
+  const d=double();assert.equal((await harness(d.db).call("/import",{storeId:"store",dataUrl:file(),applyStock:true})).statusCode,400);assert.equal(d.writes,0);
 });
 test("missing, duplicate, wrong-commerce or wrong-exemption departments block preview without writes",async()=>{
   for(const change of [d=>d.pop(),d=>d.push({...d[0]}),d=>{d[5].commerce=true},d=>{d[8].exemptionCode="7"},d=>{d[8].active=false}]){
