@@ -3,6 +3,7 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
+import {destroyInventoryProduct} from "../lib/inventory-product-destruction.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
@@ -117,15 +118,8 @@ router.post("/:productId/destruction",requireCompanyModule("INVENTORY"),async(re
   try{
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
     const body=z.object({storeId:z.string().min(1),quantity:z.coerce.number().positive().max(100000000),reason:z.string().trim().max(300).optional().default("Καταστροφή / φύρα")}).parse(req.body||{});
-    const rows=await prisma.$queryRaw`SELECT sp."currentStock",p."costPrice",p."name" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND s."id"=${body.storeId} LIMIT 1`;
-    const row=rows[0];if(!row)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const current=Number(row.currentStock||0);if(current<0||body.quantity>current)return res.status(400).json({error:"Η καταστροφή δεν μπορεί να ξεπερνά το διαθέσιμο stock."});
-    const nextStock=current-body.quantity;
-    await prisma.$transaction(async tx=>{
-      await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${nextStock},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${body.storeId} AND "productId"=${req.params.productId}`;
-      await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId") VALUES (${uid()},${body.storeId},${req.params.productId},'WASTE',${-body.quantity},${Number(row.costPrice||0)},'PRODUCT_CARD',${req.params.productId},${body.reason},${req.user.id})`;
-    });
-    res.json({ok:true,previousStock:current,currentStock:nextStock,destroyed:body.quantity});
+    const result=await prisma.$transaction(tx=>destroyInventoryProduct(tx,{companyId:company,storeId:body.storeId,productId:req.params.productId,quantity:body.quantity,reason:body.reason,userId:req.user.id}));
+    res.json(result);
   }catch(error){next(error)}
 });
 
