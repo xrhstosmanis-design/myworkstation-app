@@ -20,7 +20,7 @@ test('isolated PostgreSQL separates reusable product-card sources from duplicate
     const add=async(id,type,key,store='store',product='product')=>db.$executeRaw`INSERT INTO "StockMovement" VALUES(${id},${store},${product},${type},${key},'WASTE',-1)`;
     await add('old-manual','PRODUCT_CARD','product');await add('expired','PRODUCT_CARD','product');
     assert.deepEqual(await query(db,'store','product','company'),[],'two legitimate product-card actions are not duplicate operations');
-    for(const type of ['ONLINE_ORDER_RECIPE','STOCKTAKE','STOCK_TRANSFER']){
+    for(const type of ['ONLINE_ORDER_RECIPE','INVENTORY_V2','INVENTORY_TRANSFER']){
       await add(type+'-a',type,type+'-key');await add(type+'-b',type,type+'-key');
     }
     await add('control-a','ONLINE_ORDER_RECIPE','control-key','control');await add('control-b','ONLINE_ORDER_RECIPE','control-key','control');
@@ -28,7 +28,7 @@ test('isolated PostgreSQL separates reusable product-card sources from duplicate
     await add('foreign-a','ONLINE_ORDER_RECIPE','foreign-key','foreign','foreign');await add('foreign-b','ONLINE_ORDER_RECIPE','foreign-key','foreign','foreign');
     await add('single','ONLINE_ORDER_RECIPE','single-key');await add('another','ONLINE_ORDER_RECIPE','another-key');await add('null-a',null,null);await add('null-b',null,null);
     const rows=await query(db,'store','product','company');
-    assert.deepEqual(rows.map(r=>r.sourceType).sort(),['ONLINE_ORDER_RECIPE','STOCKTAKE','STOCK_TRANSFER']);
+    assert.deepEqual(rows.map(r=>r.sourceType).sort(),['INVENTORY_TRANSFER','INVENTORY_V2','ONLINE_ORDER_RECIPE']);
     assert.ok(rows.every(r=>Number(r.count)===2&&Number(r.quantity)===-1));
     assert.deepEqual(await query(db,'store','product','other'),[]);
     const [total]=await db.$queryRaw`SELECT COUNT(*)::int AS count,SUM("quantity") AS quantity FROM "StockMovement" WHERE "storeId"='store' AND "productId"='product'`;
