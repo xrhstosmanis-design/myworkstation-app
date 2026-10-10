@@ -2352,15 +2352,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-08 — Εμπορικά modules UI
 
-**Κατάσταση:** CODE CI PASS / OPEN
+**Κατάσταση:** PARTIAL LIVE PASS / OPEN — desktop hierarchy/navigation PASS; authorization residual OPEN
 
-**Υπόλοιπο / όρια PASS:** Exact LIVE visual αποδοχή νέας ιεραρχίας και εξουσιοδοτημένων λειτουργιών.
+**Υπόλοιπο / όρια PASS:** 22 upper navigation destinations and11 read-only status cards observed in authorized SUPER_ADMIN LAB, normal/maximized hierarchy and internal reachability PASS. Direct Price Catalog→Operators stale hidden content corrected and exact-LIVE rechecked in both modes. NormalOWNER/restrictedrole/inactive-license/foreign-store LIVE acceptance remains NOT TESTED; privileged all-active session cannot prove denial. Separate physical palette USER acceptance retains its owner; Analytics scroll USERPASS preserved. No business/financial/stock/PIN/permission/module action.
 
-**Υπεύθυνη σελίδα / branch:** `codex/n50-commercial-acceptance-20261010` — user-directed takeover from `agent/today-ui-verification-20261004`; only50. PR1775 existing source.
+**Υπεύθυνη σελίδα / branch:** `codex/n50-commercial-acceptance-20261010` — retained; source `codex/n50-catalog-navigation-20261010`; final records `codex/n50-live-handoff-20261010`.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T17:09:21+03:00 · user «ξεκινα την 50» · ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004` — ASSIGNED `codex/n50-commercial-acceptance-20261010`. Read-only LAB hierarchy/authorized navigation acceptance first. Palette independent owner and accepted Analytics/Inventory/Excel remain protected. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. New LIVE result NOT TESTED; claim publication precedes source or state-changing LAB.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:09Athens · user «ξεκινα την 50» · ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004`, only50. ClaimPR2116/head87f2f21a/CI38058644251SUCCESS/merge5140a7aa. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. Other owners and accepted flows retained.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T17:35:25+03:00 · scopedLIVEPASS, whole50OPEN. SourcePR2119/head5b06fc3a/fullCI38059144866SUCCESS/2125pass0fail0skip, merge/exacthealthde5503986fac0a4d7fa56402267c004f36896bc2; mainCI38059339679attempt2SUCCESS after unrelated capacity-timing test failure onattempt1; guard38059729109SUCCESS. FreshLAB normal/max direct navigation bothpass,3-operatorpanelvisible/nohiddenclass. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`, `docs/manual/commerce/PASS.md`, `CHECKPOINTS/EVIDENCE/n50-commercial-20261010/`. Read-only route mounts only, not dataset/calculation/permission/tenant/module-negative PASS. Single next action existing separately authorized normal/restricted LAB session and inactive-module fixture; no new security access or repeat accepted transaction/navigation. Final docs merge/CI is the publication record.
 
 ### TODAY-09 — Σελίδα ιδιοκτήτη UI
 
