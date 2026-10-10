@@ -51,6 +51,35 @@ const DAILY_BITE_PRESET=[
 ];
 const dailyBiteNameKey=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^0-9A-ZΑ-Ω€]+/g," ").trim().replace(/\s+/g," ");
 
+
+const coffeeLikeName=value=>/(FREDDO|ESPRESSO|CAPPU|CAPPUCC|LATTE|AMERICANO|MACCHIATO|RISTRETTO|FLAT\s*WHITE|CORTADO|ΦΡΑΠ|NESCAFE|ΕΛΛΗΝΙΚ|ΦΙΛΤΡΟΥ|MOCHA)/i.test(String(value||""));
+function coffeeSignature(value){
+ const n=dailyBiteNameKey(value);
+ const parts=[];
+ if(n.includes("FREDDO ESPRESSO"))parts.push("FREDDO_ESPRESSO");
+ else if(n.includes("FREDDO CAPPUCCINO"))parts.push("FREDDO_CAPPUCCINO");
+ else if(n.includes("ESPRESSO LUNGO"))parts.push("ESPRESSO_LUNGO");
+ else if(n.includes("ESPRESSO MACCHIATO"))parts.push("ESPRESSO_MACCHIATO");
+ else if(n.includes("ESPRESSO"))parts.push("ESPRESSO");
+ else if(n.includes("CAPPUCCINO LATTE"))parts.push("CAPPUCCINO_LATTE");
+ else if(n.includes("CAPPUCCINO"))parts.push("CAPPUCCINO");
+ else if(n.includes("CAFFE LATTE")||n.includes("LATTE"))parts.push("LATTE");
+ else if(n.includes("AMERICANO"))parts.push("AMERICANO");
+ else if(n.includes("FLAT WHITE"))parts.push("FLAT_WHITE");
+ else if(n.includes("CORTADO"))parts.push("CORTADO");
+ else if(n.includes("RISTRETTO"))parts.push("RISTRETTO");
+ else if(n.includes("ΦΡΑΠΕ"))parts.push("FRAPPE");
+ else if(n.includes("NESCAFE"))parts.push("NESCAFE");
+ else if(n.includes("ΕΛΛΗΝΙΚ"))parts.push("GREEK");
+ else if(n.includes("ΦΙΛΤΡΟΥ"))parts.push("FILTER");
+ else if(n.includes("MOCHA"))parts.push("MOCHA");
+ else return null;
+ if(/ΔΙΠΛ|DOUBLE/.test(n))parts.push("DOUBLE"); else if(/ΜΟΝ|SINGLE/.test(n))parts.push("SINGLE");
+ if(/DECAF/.test(n))parts.push("DECAF");
+ if(/ΚΡΥ|COLD|ICED|FREDDO|ΦΡΑΠΕ/.test(n))parts.push("COLD"); else parts.push("HOT");
+ return parts.join("|");
+}
+
 const fixedButtons=[
   {id:"cancel",label:"ΑΚΥΡΩΣΗ",action:"CLEAR_CART",color:"#ef4444",visible:true},
   {id:"hold",label:"ΑΝΑΜΟΝΗ",action:"HOLD",color:"#edf2f1",visible:true},
@@ -121,6 +150,35 @@ router.post("/prepare-daily-bite-layout",async(req,res,next)=>{try{
  while(categories.length<CATEGORY_COUNT)categories.push({...blankCategory(categories.length),color:"#edf5f2"});
  const layout=normalizeLayout({catalogCompanyId:body.companyId,title:"DAILY BITE POS",productColumns:5,showSku:false,buttonFontScale:1.15,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},categories});
  res.json({layout,matchedProducts:categories.reduce((sum,row)=>sum+row.productCodes.length,0),missingProducts:missing,ambiguousProducts:ambiguous,source:"USER_SCREENSHOTS_2026-10-10"});
+}catch(error){next(error)}});
+
+
+router.get("/daily-bite-coffee-preview",async(req,res,next)=>{try{
+ const companyId=String(req.query.companyId||"").trim();
+ if(!companyId)return res.status(400).json({error:"Επίλεξε εταιρεία DAILY BITE."});
+ const company=(await prisma.$queryRaw`SELECT "id","name" FROM "Company" WHERE "id"=${companyId} LIMIT 1`)[0];
+ if(!company||!dailyBiteNameKey(company.name).includes("DAILY BITE"))return res.status(400).json({error:"Ο έλεγχος καφέ επιτρέπεται μόνο για DAILY BITE."});
+ const katStore=(await prisma.$queryRaw`SELECT s."id",s."companyId",s."name" FROM "Store" s WHERE s."active"=true AND (UPPER(s."name") LIKE '%ΚΑΤ%' OR UPPER(s."name") LIKE '%KAT%') ORDER BY s."createdAt" LIMIT 1`)[0];
+ if(!katStore)return res.status(409).json({error:"Δεν βρέθηκε ενεργό κατάστημα ΚΑΤ ως πρότυπο συμπεριφοράς."});
+ const [katProducts,dailyProducts,katGroups,dailyGroups]=await Promise.all([
+   prisma.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${katStore.companyId} AND "active"=true AND "sku" LIKE 'MWS-KAT-BEV-%' ORDER BY "name","id"`,
+   prisma.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name","id"`,
+   prisma.$queryRaw`SELECT g."description",g."legacyId",m."sequence",m."description" AS "modifierDescription",m."price" FROM "ManagementModifierGroup" g LEFT JOIN "ManagementModifier" m ON m."groupId"=g."id" AND m."companyId"=g."companyId" AND m."active"=true WHERE g."companyId"=${katStore.companyId} AND g."active"=true ORDER BY COALESCE(g."legacyId",2147483647),g."description",m."sequence",m."description"`,
+   prisma.$queryRaw`SELECT g."description",COUNT(m."id")::int AS "modifierCount" FROM "ManagementModifierGroup" g LEFT JOIN "ManagementModifier" m ON m."groupId"=g."id" AND m."companyId"=g."companyId" AND m."active"=true WHERE g."companyId"=${companyId} AND g."active"=true GROUP BY g."id",g."description" ORDER BY g."description"`
+ ]);
+ const sourceBySig=new Map();for(const row of katProducts){const sig=coffeeSignature(row.name);if(!sig)continue;if(!sourceBySig.has(sig))sourceBySig.set(sig,[]);sourceBySig.get(sig).push(row)}
+ const targetBySig=new Map();for(const row of dailyProducts.filter(row=>coffeeLikeName(row.name))){const sig=coffeeSignature(row.name);if(!sig)continue;if(!targetBySig.has(sig))targetBySig.set(sig,[]);targetBySig.get(sig).push(row)}
+ const signatures=[...new Set([...sourceBySig.keys(),...targetBySig.keys()])].sort();
+ const matches=[],unresolved=[],ambiguous=[];
+ for(const signature of signatures){
+   const source=sourceBySig.get(signature)||[],target=targetBySig.get(signature)||[];
+   if(source.length===1&&target.length===1){
+     const src=source[0],dst=target[0];matches.push({signature,kat:{id:src.id,sku:src.sku,name:src.name},daily:{id:dst.id,sku:dst.sku,name:dst.name},renameSuggested:dailyBiteNameKey(src.name)!==dailyBiteNameKey(dst.name),suggestedName:src.name});
+   }else if(source.length>1||target.length>1)ambiguous.push({signature,kat:source.map(x=>({id:x.id,sku:x.sku,name:x.name})),daily:target.map(x=>({id:x.id,sku:x.sku,name:x.name}))});
+   else unresolved.push({signature,kat:source.map(x=>({id:x.id,sku:x.sku,name:x.name})),daily:target.map(x=>({id:x.id,sku:x.sku,name:x.name}))});
+ }
+ const grouped=new Map();for(const row of katGroups){if(!grouped.has(row.description))grouped.set(row.description,{description:row.description,legacyId:row.legacyId,items:[]});if(row.modifierDescription)grouped.get(row.description).items.push({sequence:Number(row.sequence||0),description:row.modifierDescription,price:Number(row.price||0)})}
+ res.json({company:{id:company.id,name:company.name},katTemplate:{storeId:katStore.id,companyId:katStore.companyId,name:katStore.name},matched:matches,unresolved,ambiguous,katModifierGroups:[...grouped.values()],dailyModifierGroups:dailyGroups.map(x=>({description:x.description,modifierCount:Number(x.modifierCount||0)})),safeForBehaviorApply:matches.length>0&&ambiguous.length===0&&grouped.size>0,mutated:false});
 }catch(error){next(error)}});
 
 const importSchema=z.object({companyId:z.string().min(1).max(120),quickKeys:z.array(z.object({productId:z.string().min(1).max(120)})).max(20),categories:z.array(z.object({label:z.string().trim().min(1).max(80),productIds:z.array(z.string().min(1).max(120)).max(40)})).length(14)});
