@@ -257,6 +257,8 @@
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
+- **Συνέχεια 10/10:** PR2020/2026 merged, παραγωγή aec8323 περιλαμβάνει τις διορθώσεις. TEST1 stock9· ledger9/difference0/11κινήσεις/duplicates0 LIVE read-only PASS μετά επαναφορά browser. Named continuation ίδιας ανάθεσης, πλήρες39 OPEN. Checkpoint `2026-10-10-n39-resume.md`.
+
 - **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. Gate2 και TODAY-07 προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
