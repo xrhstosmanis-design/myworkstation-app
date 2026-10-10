@@ -1,3 +1,7 @@
+## N39 draft mutation/finalization race — isolated FAIL reproduced; bounded correction AWAITING CI/LAB
+
+Same owner codex/n39-inventory-acceptance-20261010, base9505a0bb/PR2056 preserves every bounded LIVE PASS. Actual six handlers accepted stale DRAFT after FINALIZED (count/bulk/clear/import/addline/attachbarcode, 1–2 writes each) in controlled isolated reproduction. One common transactional parent DRAFT lock now precedes every mutation and is shared with finalization; no quantity/role/zone/company/schema/auth/finance/barcode-workflow change. Actual handler regressions19PASS/0FAIL with two nativePG checks locallySKIP; Node20 frontend build PASS; fullCI pending. New guarded native PostgreSQL actual-handler test covers both lock orders, six rejected late mutations, replay/version, recount and company/zone/owner denial with unchanged unrelated/control stock. CI is not LAB PASS; mandatory reason remains separate and full39 OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n39-draft-mutations.md. After full nativeCI/green merge/exact deploy, fresh identified LAB recount/finalized protection acceptance; no accepted posting repeated. Other owners33/44/40/TODAY-07 unchanged.
+
 ## 2026-10-10 — No33 label preview / hidePrinter bounded LIVE PASS
 
 Owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Original LABPOS2 EMPLOYEE, cart0/queue0. One newlocalSKU2270 qty1/unit1 at11:50; linefactsstock−13. Preview displayed teststore/water1.5/EAN5201005080034/price1.00/LABprinter/60×40mm. Closedpreview withoutphysicalPrint. OnlyhidePrintertrue persisted11:51; samealreadyopenline menu button disappeared afternormalruntimepoll (initialprepoll stillvisible, immediatetimingNOTTESTED). Immediatelyonlyfalse restored11:52; buttonreturnedwithoutreaddingrow, exact23originalEMPLOYEE. Removedonlylocaltestrow11:53, finalcart0/queue0.
@@ -1997,7 +2001,7 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Κατάσταση:** IN PROGRESS
 
-**Υπόλοιπο / όρια PASS:** Πλήρης visual αποδοχή και no outer scroll.
+**Υπόλοιπο / όρια PASS:** N45 LIVE FAIL: populated Master clips discount save/history at1363×936 on de7d5c2e. Bounded layout correction AWAITING LAB; final visual/no outer scroll OPEN.
 
 **Υπεύθυνη σελίδα / branch:** codex/n45-product-center-visual-20261010
 

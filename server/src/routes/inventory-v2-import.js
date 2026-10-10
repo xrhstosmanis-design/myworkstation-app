@@ -1,3 +1,4 @@
+import {lockDraftInventoryStocktake} from "../lib/inventory-stocktake-draft.js";
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -36,6 +37,7 @@ router.post(
         })
         .parse(req.body || {});
       const result = await prisma.$transaction(async (tx) => {
+        await lockDraftInventoryStocktake(tx, st);
         let imported = 0;
         const missing = [];
         for (const row of b.rows) {

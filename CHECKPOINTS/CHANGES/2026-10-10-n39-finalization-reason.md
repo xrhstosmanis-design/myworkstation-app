@@ -1,0 +1,17 @@
+# N39 — mandatory finalization cause
+
+Owner codex/n39-inventory-acceptance-20261010 retained. Branch fix/n39-finalization-reason-20261010 based main85a5f82b4e2ab6775600cbd67fe5d14719b2dcf1 / PR2060. Read current AGENTS, active/pending/tracker/manual, relevant N39 records and main history since published WASTE-PAIR-01. No other source/owner changed. Full39 OPEN.
+
+## Pre-change gate / evidence
+
+Protected bounded LIVE PASS: initial partial stocktake11→10/report−1, expired10→9, transfer9→8/destination0→1, SELF8→7, waste pair7→5; ledger/current agree and financial controls unchanged in each separately measured action. PR2060 actual stale-DRAFT handlers/native PostgreSQL coverage full CI38040227918 attempt2 SUCCESS2055PASS/0FAIL/0SKIP and merged85a5f82. First attempt failed only unchanged pos-capacity timing assertion; inventory native tests passed both attempts. Exact deploy/new LIVE acceptance of parent lock remains AWAITING, no claim from CI.
+
+Confirmed cause gap: accepted stocktake08:33:44 submitted body{}; UI has no cause entry and helper posts only generic full/partial note. This is documented in2026-10-10-n39-live-tests.md; do not repeat the accepted stocktake. Candidate correction is one bounded cause path: require trimmed3–300 character reason at finalization API and helper; persist it in existing immutable snapshotJson and stock movement note, display it on reopened finalized stocktake. Add explicit input in existing UI; keep state DRAFT and no writes when missing/blank/invalid. No migration/history rewrite, quantity arithmetic, count/recount policies, lock order, permissions/auth, other barcode/TODAY-07/business flow changes.
+
+Regression: actual finalize handler invalid input does not start transaction; helper rejects absent cause before writes; native PG verifies snapshot/note and zero-difference closure reason, retaining all existing movement/replay/recount/rollback/control cases. Actual mounted UI blocks blank reason, submits once with exact trimmed reason after confirmation and displays stored cause after reopening. FullCI/green merge/exact guarded health required before LIVE test.
+
+Next bounded new test RECOUNT-REASON-01: fresh before/action/after/control evidence for new partial LIVE/ALL stocktake TEST1, count4/recount4 against last observed5, one finalization with distinct documented reason, exact one−1 movement and unchanged controls. First unresolved recount closure must reject with no posting. Second tab retains DRAFT view until finalization, then late identified attempted count must reject without writes. No accepted transaction is replayed and no credentials/access grants created. This is planned acceptance, not execution/authorization baseline: refresh all values and record before each identified action. Physical/mobile/hardware and wider roles outside tested scope remain NOT TESTED.
+
+Local Node20 verification24tests:22PASS/0FAIL/2nativePGSKIP; actual mounted UI, API/helper and protected inventory coverage passed. Node20 production frontend bundle build PASS. No LAB source acceptance yet.
+
+Publication reconciliation: source-only acceptance work remains AWAITING LAB. Keep the current main tracker/pending/numbered PDFs intact in this source PR rather than replacing concurrent owners' generated records. Update the bounded checkpoint and the N39 active block in place. Full mandatory manual/tracker/pending/numbered/PDF synchronization follows immediately after new LIVE acceptance, in one result PR. Prior measured PASS records remain published and are not reversed.
