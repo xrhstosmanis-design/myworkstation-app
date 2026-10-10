@@ -20,8 +20,26 @@ const api=async(path,options={})=>{
 
 function Login({onLogin}){
  const [email,setEmail]=useState("admin@myworkstationapp.gr"),[password,setPassword]=useState("ChangeMe123!"),[error,setError]=useState("");
- const submit=async e=>{e.preventDefault();try{const before=readBackofficeContext(localStorage).key;const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});if(readBackofficeContext(localStorage).key!==before)throw new Error("Η σύνδεση άλλαξε όσο περίμενες. Δοκίμασε ξανά με τον λογαριασμό που θέλεις.");localStorage.removeItem("supportContext");sessionStorage.removeItem("platformToken");localStorage.setItem("token",d.token);localStorage.setItem("user",JSON.stringify(d.user));onLogin(d.user)}catch(x){setError(x.message)}};
- return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="mark">MW</div><h1>MyWorkStation</h1><p>Διαχείριση προσωπικού και βαρδιών</p><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Κωδικός<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error">{error}</div>}<button>Σύνδεση</button></form></div>
+ const [platformRequired,setPlatformRequired]=useState(false);
+ const submit=async e=>{
+   e.preventDefault();setError("");setPlatformRequired(false);
+   try{
+     const before=readBackofficeContext(localStorage).key;
+     const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});
+     if(readBackofficeContext(localStorage).key!==before)throw new Error("Η σύνδεση άλλαξε όσο περίμενες. Δοκίμασε ξανά με τον λογαριασμό που θέλεις.");
+     // Password acceptance is not a completed session while 2FA is pending.
+     // Keep the existing context intact and use the established secure entry.
+     if(d?.mfaRequired||d?.setupRequired){
+       setPassword("");setPlatformRequired(true);
+       setError("Απαιτείται επιβεβαίωση 2FA. Συνδέσου από την είσοδο Super Admin.");
+       return;
+     }
+     if(typeof d?.token!=="string"||!d.token.trim()||["undefined","null"].includes(d.token.trim())||typeof d?.user?.id!=="string"||!d.user.id.trim())throw new Error("Η σύνδεση δεν ολοκληρώθηκε. Δεν επιστράφηκε έγκυρη συνεδρία.");
+     localStorage.removeItem("supportContext");sessionStorage.removeItem("platformToken");
+     localStorage.setItem("token",d.token);localStorage.setItem("user",JSON.stringify(d.user));onLogin(d.user);
+   }catch(x){setError(x.message)}
+ };
+ return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="mark">MW</div><h1>MyWorkStation</h1><p>Διαχείριση προσωπικού και βαρδιών</p><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Κωδικός<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error" role="alert">{error}</div>}{platformRequired&&<a href="https://myworkstation-app.onrender.com/platform-admin">Είσοδος Super Admin με 2FA</a>}<button>Σύνδεση</button></form></div>
 }
 
 function App(){
