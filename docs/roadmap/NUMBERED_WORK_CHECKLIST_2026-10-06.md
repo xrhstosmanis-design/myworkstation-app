@@ -370,8 +370,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 49 — Άγνωστο barcode — επιστροφή στην ίδια ενεργή απογραφή
 
 - **Tracker ID:** `TODAY-07`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / IN PROGRESS — επικαιροποίηση10Oct15:38:03
-- **Υπόλοιπο / όριο:** Σύνδεση υπάρχοντος / δημιουργία νέου είδους και επιστροφή στην ίδια ενεργή DRAFT απογραφή σε mobile/tablet web flow. Ownercodex/n49-unknown-barcode-acceptance-20261010 μετά ρητή οδηγία49· checkpoint2026-10-10-n49-unknown-barcode-acceptance.md. Φυσική συσκευή/scanner χωριστά NOT TESTED· προηγούμεναN39/Gate2/scrollPASS και ownersN48/33/DAILYBITE διατηρούνται. Όχι επανάληψη stock/finalization/payments.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS / scoped mobile web LAB — ολοκλήρωση10Oct2026
+- **Υπόλοιπο / όριο:** Συμφωνημένη web ροή ολοκληρώθηκε: attach υπάρχοντος/χωρίς δεύτερη εγγραφή, νέα εγγραφή από κινητή φόρμα, ίδια DRAFT/επιλογή νέου είδους/διατήρηση προηγούμενης μέτρησης1. PR2098/fullCI38054236104/main38054484680/Render38054697840 SUCCESS, exact689fe33b. SameN49fixture1of2/νέοSKU100028977/stock0/ledger0/onePRODUCT_CREATE; TEST2price2.40/stock-2/ledger2 και MAIN8cash4/control2expense120 αμετάβλητα μεπριν/μετά. Manualinventory/PASS.md/checkpoint2026-10-10-n49-unknown-barcode-acceptance.md. Φυσικό κινητό/scanner/camera/PINnetwork/ευρύτεραLIVEόρια χωριστά NOT TESTED· nativeCI διακριτό. FixtureDRAFT retained, nofinalize/stock/payment/grant/delete. Άλλοι owners διατηρούνται.
 
 ## 50 — Εμπορικά modules — hierarchy και εξουσιοδοτημένες λειτουργίες
 

@@ -6,6 +6,15 @@ Prepared unsaved new operator form: username `n40_audit_20261010`, name N40 Ει
 
 Source inspected at `896b955d6896c5eccfc91a7bfb786c511201e0e0`: normal User is company-bound; store operator credentials/profile are store-bound. An operator fixture does not equal a company-owner account. Network approval does not add a tool capability: documented browser API exposes console logs but no network capture; no permitted authenticated request trace is available yet. No token extraction, injected fetch or network interception outside browser APIs. Restricted fixture and all remaining server tenant/role/race/revocation tests NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-restricted-fixture.md`.
 
+
+## 10/10/2026 — N49 / TODAY-07 — scoped mobile web LAB PASS / COMPLETED
+
+Owner `codex/n49-unknown-barcode-acceptance-20261010` completed the agreed numbered49 residual; final documentation branch `codex/n49-final-pass-20261010`. Explicit mobile new-entry requirement15:40:56 included. SourcePR2098/finalhead557f1510/fullCI38054236104 SUCCESS2112PASS0FAIL0SKIP (actual React/mobile and native PostgreSQL test executed); mainCI38054484680 and guardedRender38054697840 SUCCESS, independent exacthealthy689fe33b197c33009b3f4a1155e78cffd573973e and realreload precede LAB.
+
+Virtual SuperAdmin/Owner cloudweb, sameN49-LAB-20261010-UNKNOWN-BARCODE DRAFT: unknown990101049001 attached once toexistingTEST2/idcaec7ad6…/sameSKU, rescan and independentArchive findoneexistingrecord; new headerform opens/cancels withoutsave. One separatelyidentifieddraftcount1 at16:20:29 supplies actualpreviouscount. Unknown990101049002 opensmountedmobileform; one save16:23:30 creates SKU100028977/id3350e4d3-4e91-4636-8327-810480fe79b9/price1.00/VAT13/stock0 and one sameDRAFTuncountedline/PRODUCT_CREATE. Success returnsnewitemselected, originalcount1 preserved/progress1of2; independentlyremounted/reopened/rescanned and actual FullAudit CSV confirmsoneCOUNT+onePRODUCT_CREATE, no duplicateproduct/line. Newledger0moves, TEST2price2.40/stock-2/ledger2/latestaea3…01Oct12:51:17/diff0/duplicates0 unchanged. Before/after eachaction MAIN8/cash4/card0/IRIS0/expense0/total4/IN.10/OUT.10/latest11:59; controlLAB-POS-02 2/cash0/card0/IRIS0/expense120/total0/IN0/OUT0/latest— unchanged.
+
+No agreed49web residual remains. Physicalhandset/scanner/camera/QR-PINredeemnetwork and broaderLIVEactor/tenant/revocation/races remain separate NOT TESTED; nativeCI proof is distinct. No finalize, stockpost, payment, grant, historicaldelete or realstore action. N49fixture retainedDRAFT; do not finalize/delete it for cleanup. PriorN39/Gate2/scroll/N47 PASS and N48/33/40/DAILYBITE owners preserved. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md`; manual `docs/manual/inventory/PASS.md`; evidence `CHECKPOINTS/EVIDENCE/n49-mobile-20261010/`. Older49ASSIGNED/AWAITING rows below are historical and superseded only for this agreed scope. Tracker/numbered/manual/active/pending and bothPDFs synchronized in this closingPR.
+
 ## 10 Oct 2026 16:22 Athens - No40 existing LAB owner session diagnostic; OPEN
 
 User confirmed existing restricted account and securely signed in through browserAuth (credentials never returned to agent). Fresh normal Backoffice showed MYWORKSTATION LAB only, operator Υπεύθυνος Εργαστηρίου, and both LAB stores. Opened only ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ; correct Backoffice heading and target-only confirmation labels. No mutations or device actions. Canonical Platform Admin navigation showed its separate Super Admin/2FA sign-in screen; normal LAB session remained active when returning through the normal Backoffice link. This is observed UI access behavior, NOT an attributable authenticated endpoint403/tenant rejection. The account can access both LAB stores, so it is company-restricted, not the single-store fixture needed for cross-store negatives. Never open the isolated-label store for this task.
@@ -2223,15 +2232,16 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-07 — Άγνωστο barcode απογραφής
 
-**Κατάσταση:** ASSIGNED / IN PROGRESS / functional LIVE NOT TESTED
+**Κατάσταση:** PASS / scoped mobile web LAB / numbered49 COMPLETED 10Oct2026
 
-**Υπόλοιπο / όρια PASS:** Σύνδεση υπάρχοντος / δημιουργία νέου είδους και επιστροφή στην ίδια ενεργή απογραφή σε mobile/tablet web flow. Προστασία company/store/role/duplicate barcode και προηγούμενων stocktake PASS. Φυσική συσκευή/scanner/κάμερα χωριστά NOT TESTED.
+**Υπόλοιπο / όρια PASS:** Συμφωνημένη web ροή ολοκληρώθηκε: σύνδεση υπάρχοντος barcode χωρίς δεύτερη εγγραφή, νέα εγγραφή από φόρμα κινητού, επιστροφή στην ίδια DRAFT/επιλογή νέου είδους/διατήρηση προηγούμενης μέτρησης1. Virtual Owner/SuperAdmin στην κοινή mobile component480pxpreview. Φυσικό κινητό/scanner/κάμερα/QR-PIN network και ευρύτερα LIVE roles/tenant/races χωριστά NOT TESTED· πραγματικές React/nativePG CI αποδείξεις διακριτές.
 
-**Υπεύθυνη σελίδα / branch:** codex/n49-unknown-barcode-acceptance-20261010 — explicit user49 transfer15:38:03 from existingTODAYpage; N48/39/33/DAILYBITE owners retained.
+**Υπεύθυνη σελίδα / branch:** `codex/n49-unknown-barcode-acceptance-20261010` completed scoped49; finalpublication `codex/n49-final-pass-20261010`. Other owners N48/39/33/40/DAILYBITE retained.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct15:38:03Athens, unknown attach/new-product/sameDRAFT continuation; checkpoint CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md. Claim publication green/main precedes source andpersistedLAB.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct15:38:03Athens explicit49transfer; mobile requirement15:40:56. ClaimPR2093/CI38052975045 SUCCESS/mainb526c96c precedes source and persistedLAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** NOT TESTED; prior03Octimplementation/04Octhandoff are not functionalLIVEPASS. Fresh per-action baseline required; no repeated acceptedstocktake/finalization/payment.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct2026 scopedLABPASS. SourcePR2098/finalhead557f1510/fullCI38054236104 SUCCESS2112/0/0/native266actualPASS, mainCI38054484680/Render38054697840 SUCCESS/exacthealthy689fe33b197c33009b3f4a1155e78cffd573973e/reloaded. Fouridentifiedvirtualactions with freshbefore/after: newownDRAFT; alias990101049001→existingTEST2; count1at16:20:29; one newproduct990101049002/SKU100028977/id3350e4d3…at16:23:30/sameDRAFT. IndependentArchive/readback/audit/rescan originalcount1/newcountNULL, stocknew0/ledger0, TEST2price2.40/stock-2/ledger2 and two tills unchanged. Manualinventory/PASS.md and evidence n49-mobile-20261010/{returned.jpg,audit-created.csv}. No finalize/stock/payment/grant/delete/realstore action; ownfixture retainedDRAFT.
+
 
 ### TODAY-08 — Εμπορικά modules UI
 
