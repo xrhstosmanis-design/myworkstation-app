@@ -1,0 +1,83 @@
+name: N40 finalize documentation claim
+on:
+  push:
+    branches: [codex/n40-full-twin-navigation-audit-20261010]
+permissions:
+  contents: read
+jobs:
+  reconcile:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/n40-full-twin-navigation-audit-20261010
+          fetch-depth: 0
+      - name: Preserve parallel owner documents and prepare final text-only claim
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          read=lambda ref,path: subprocess.check_output(['git','show',f'{ref}:{path}']).decode()
+          tracker='docs/roadmap/OPEN_WORK_TRACKER.md'
+          active='CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'
+          pending='docs/roadmap/PENDING_WORK.md'
+          numbered='docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md'
+          pdfs=['docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          ours=read('HEAD',tracker)
+          pattern=r'^### AI-CC-LIMITS .*?(?=^### |\Z)'
+          claim=re.search(pattern,ours,re.M|re.S).group()
+          assert 'codex/n40-full-twin-navigation-audit-20261010' in claim
+          entry=re.search(r'^## [^\n]*N40-NAV-CLAIM-20261010[^\n]*\n.*?(?=^## |\Z)',ours,re.M|re.S).group()
+          section=re.search(r'^## 40 .*?(?=^## |\Z)',read('HEAD',numbered),re.M|re.S).group()
+          subprocess.run(['git','merge','--no-commit','--no-edit','origin/main'],check=False)
+          conflicts=set(subprocess.check_output(['git','diff','--name-only','--diff-filter=U']).decode().splitlines())
+          assert conflicts <= {tracker,active,pending,numbered,*pdfs}, f'Unexpected conflicts: {conflicts}'
+          latest=read('origin/main',tracker)
+          match=re.search(pattern,latest,re.M|re.S); assert match
+          assert '**Υπεύθυνη σελίδα / branch:** Προηγούμενος owner — νέα επέκταση μόνο με ανάθεση' in match.group(), 'N40 already claimed; stop'
+          Path(tracker).write_text(latest[:match.start()]+claim+latest[match.end():]+'\n\n'+entry.rstrip()+'\n')
+          for path in [active,pending]:
+              latest=read('origin/main',path)
+              assert 'N40-NAV-CLAIM-20261010' not in latest
+              Path(path).write_text(latest.rstrip()+'\n\n'+entry.rstrip()+'\n')
+          latest=read('origin/main',numbered)
+          match=re.search(r'^## 40 .*?(?=^## |\Z)',latest,re.M|re.S); assert match
+          Path(numbered).write_text(latest[:match.start()]+section+latest[match.end():])
+          for path in pdfs:
+              subprocess.run(['git','checkout','origin/main','--',path],check=True)
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-10-10-n40-claim-validation.md')
+          checkpoint.write_text(checkpoint.read_text()+'\n## PDF publication boundary\n\nRepeated parallel updates to central binary PDFs conflict immediately with this claim. Preserve the newest main PDFs byte-for-byte instead of replacing another owner report. The synchronized Markdown claim is authoritative for N40 ownership. Fresh generated PDF candidates are exported with this run, but their central publication is explicitly PENDING until the next stable combined publication; this is not documentation-complete or task PASS. No application change or weakened CI protection.\n')
+          PY
+          git rm .github/workflows/n40-finalize-claim-20261010.yml
+          git add CHECKPOINTS/CHANGES/2026-10-10-n40-claim-validation.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git diff --cached --check -- '*.md' '.github/workflows/*.yml'
+          git commit -m 'docs(n40): preserve latest shared PDFs and finalize scoped text claim'
+          git push origin HEAD:refs/heads/codex/n40-full-twin-navigation-audit-20261010
+      - name: Generate PDF candidates and export exact source for review
+        run: |
+          git archive --format=tar.gz --output="$RUNNER_TEMP/n40-source-review.tar.gz" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/n40-source-revision.txt"
+          python3 -m pip install 'reportlab==4.4.9'
+          python3 docs/roadmap/generate-open-work-tracker.py
+          python3 docs/roadmap/generate-numbered-work-checklist.py
+          cp docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf "$RUNNER_TEMP/N40-numbered-candidate.pdf"
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf "$RUNNER_TEMP/N40-tracker-candidate.pdf"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: n40-final-claim-review
+          path: |
+            ${{ runner.temp }}/n40-source-review.tar.gz
+            ${{ runner.temp }}/n40-source-revision.txt
+            ${{ runner.temp }}/N40-*-candidate.pdf
+          retention-days: 1
