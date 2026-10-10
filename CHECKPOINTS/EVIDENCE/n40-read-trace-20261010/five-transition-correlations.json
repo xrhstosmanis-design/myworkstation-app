@@ -1,0 +1,216 @@
+{
+  "revision": "23abcfa0c8c739574e144c827898ef09ee0a7897",
+  "scope": "LIMITED: six actual requests, not all traffic or authorization",
+  "pairs": [
+    {
+      "client": {
+        "area": "POS",
+        "traceId": "n40-aaf8f8426f0c4f568f3cde7d92e64485",
+        "status": 200,
+        "observedAt": "2026-10-10T17:30:49.742Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:30:49.709697827Z",
+        "version": 1,
+        "traceId": "n40-aaf8f8426f0c4f568f3cde7d92e64485",
+        "route": "/api/platform/store-modules/companies/:value/stores/:value/check-packages",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 200,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    },
+    {
+      "client": {
+        "area": "EFTPOS",
+        "traceId": "n40-834447505435470188366994bb225f27",
+        "status": 200,
+        "observedAt": "2026-10-10T17:31:20.063Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:31:20.006038946Z",
+        "version": 1,
+        "traceId": "n40-834447505435470188366994bb225f27",
+        "route": "/api/platform/cash-control/daily",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 200,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    },
+    {
+      "client": {
+        "area": "Cash",
+        "traceId": "n40-29cc0f6ca69442f3a3b13f06d5920050",
+        "status": 200,
+        "observedAt": "2026-10-10T17:31:49.642Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:31:49.605808154Z",
+        "version": 1,
+        "traceId": "n40-29cc0f6ca69442f3a3b13f06d5920050",
+        "route": "/api/platform/cash-control/daily",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 200,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    },
+    {
+      "client": {
+        "area": "Personnel modules",
+        "traceId": "n40-e00228b9814948448ff026943a3191e5",
+        "status": 200,
+        "observedAt": "2026-10-10T17:32:07.122Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:32:07.071737967Z",
+        "version": 1,
+        "traceId": "n40-e00228b9814948448ff026943a3191e5",
+        "route": "/api/platform/store-modules/companies/:value/stores/:value",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 200,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    },
+    {
+      "client": {
+        "area": "Personnel workforce",
+        "traceId": "n40-0efe351756d945eab43d6177b65832ce",
+        "status": 200,
+        "observedAt": "2026-10-10T17:32:07.173Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:32:07.116018513Z",
+        "version": 1,
+        "traceId": "n40-0efe351756d945eab43d6177b65832ce",
+        "route": "/api/platform/store-modules/companies/:value/stores/:value/workforce-v2/:value",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 304,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    },
+    {
+      "client": {
+        "area": "Cameras",
+        "traceId": "n40-abdf33421e65408b9a3e68e42bb471f9",
+        "status": 200,
+        "observedAt": "2026-10-10T17:32:27.414Z",
+        "companyMatches": true,
+        "storeMatches": true
+      },
+      "server": {
+        "timestamp": "2026-10-10T17:32:27.366628232Z",
+        "version": 1,
+        "traceId": "n40-abdf33421e65408b9a3e68e42bb471f9",
+        "route": "/api/platform/companies/:value/stores/:value/video-connection",
+        "method": "GET",
+        "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+        "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+        "companyIds": [
+          "cmtpopbgk000prhb5qc60zxus"
+        ],
+        "storeIds": [
+          "cmtpopbgo000trhb5ng9ytiru"
+        ],
+        "storeScopeInvalid": false,
+        "companyScopeInvalid": false,
+        "scopeTruncated": false,
+        "storeMatches": true,
+        "companyMatches": true,
+        "status": 304,
+        "role": "SUPER_ADMIN",
+        "supportStoreId": null,
+        "side": "server",
+        "source": "correlation-header"
+      }
+    }
+  ]
+}
