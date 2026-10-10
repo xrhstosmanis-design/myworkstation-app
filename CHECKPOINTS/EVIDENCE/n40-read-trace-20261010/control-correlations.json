@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "release": "69456df3b48cdad35acee6d4b062f358de5e5156",
+  "deploy": {
+    "commit": {
+      "createdAt": "2026-10-10T18:51:10Z",
+      "id": "69456df3b48cdad35acee6d4b062f358de5e5156",
+      "message": "Merge pull request #2173 from xrhstosmanis-design/codex/n40-control-read-trace-20261010\n\nObserve No40 GETs for the approved empty LAB control store"
+    },
+    "createdAt": "2026-10-10T18:54:13.198205Z",
+    "finishedAt": "2026-10-10T18:55:56.494474Z",
+    "id": "dep-db58jlflot8c73e3am60",
+    "startedAt": "2026-10-10T18:54:13.169948Z",
+    "status": "live",
+    "trigger": "deploy_hook",
+    "updatedAt": "2026-10-10T18:55:56.494648Z"
+  },
+  "scope": "LIMITED five normal control destinations, six GET correlations, bounded Workforce two-store switch; Stock navigation only",
+  "owner": "codex/n40-full-twin-navigation-audit-20261010",
+  "clientStatus": 200,
+  "serverQueries": [
+    {
+      "hasMore": false,
+      "logs": [
+        {
+          "observedAt": "2026-10-10T18:56:51.551343571Z",
+          "version": 1,
+          "traceId": "n40-460b841643f94658b1b29e92fa32301d",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value/check-packages",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T18:57:01.807242381Z",
+          "version": 1,
+          "traceId": "n40-dfb31688fcc74c3da831dd9ef0a70325",
+          "route": "/api/platform/cash-control/daily",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T18:57:20.421958453Z",
+          "version": 1,
+          "traceId": "n40-efdb78068f7041de8d8f35fb3897effb",
+          "route": "/api/platform/cash-control/daily",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 304,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T18:57:28.852215381Z",
+          "version": 1,
+          "traceId": "n40-05b1ae0db7504d529c98b4b771ce789f",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T18:57:28.906650443Z",
+          "version": 1,
+          "traceId": "n40-9a22f156b40b41fda36e50ccd6d80afc",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value/workforce-v2/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T18:57:45.605472035Z",
+          "version": 1,
+          "traceId": "n40-20169efce707462997bfab758df5353b",
+          "route": "/api/platform/companies/:value/stores/:value/video-connection",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 304,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        }
+      ]
+    },
+    {
+      "hasMore": false,
+      "logs": [
+        {
+          "observedAt": "2026-10-10T19:02:26.076980875Z",
+          "version": 1,
+          "traceId": "n40-af426563928b4bedb0b7a91cba157a21",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmtpopbgo000trhb5ng9ytiru"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T19:02:26.113810817Z",
+          "version": 1,
+          "traceId": "n40-e6f7b509b9ef42fa8474880dfbc546ab",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value/workforce-v2/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmtpopbgo000trhb5ng9ytiru"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 200,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T19:02:49.408099796Z",
+          "version": 1,
+          "traceId": "n40-86cb3ec21fd44a639b38bd77dcbee6b6",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 304,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        },
+        {
+          "observedAt": "2026-10-10T19:02:49.409776762Z",
+          "version": 1,
+          "traceId": "n40-5900397d758a42d380950c8afe43ba42",
+          "route": "/api/platform/store-modules/companies/:value/stores/:value/workforce-v2/:value",
+          "method": "GET",
+          "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+          "expectedStoreId": "cmv2qanca000psigeizep8o9m",
+          "companyIds": [
+            "cmtpopbgk000prhb5qc60zxus"
+          ],
+          "storeIds": [
+            "cmv2qanca000psigeizep8o9m"
+          ],
+          "storeScopeInvalid": false,
+          "companyScopeInvalid": false,
+          "scopeTruncated": false,
+          "storeMatches": true,
+          "companyMatches": true,
+          "status": 304,
+          "role": "SUPER_ADMIN",
+          "supportStoreId": null,
+          "side": "server",
+          "source": "correlation-header"
+        }
+      ]
+    }
+  ],
+  "limits": "Cash and camera first batch and control switch server304 vs Fetch200; no full Stock trace/Audit, tenant/module/revocation/race or inventory calculation PASS"
+}

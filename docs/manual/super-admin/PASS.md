@@ -1,3 +1,18 @@
+## No40 — approved second LAB control / LIMITED LIVE PASS 10/10/2026
+
+Super Admin only. Open https://myworkstation-app.onrender.com/platform-admin -> AI Command Center -> FULL DIGITAL TWIN -> N40 CONTROL 20261010 in MYWORKSTATION LAB. Tested21:56–22:03Athens on production69456df3b48cdad35acee6d4b062f358de5e5156; same assigned owner retained.
+
+1. Open POS: Έλεγχοι & Αναλύσεις must show locked LAB/control selectors. Close normally without running checks.
+2. EFTPOS/Ταμειακές and current Cash missing-close finding open Αυτόματος Έλεγχος Ταμείων with CONTROL selector; automatic read-only0-shift result was observed. Close normally, without reports/export/payment.
+3. Personnel opens WorkforceV2 for CONTROL; its main employee list is empty. Company roles3/store metadata3 are shared metadata. Do not create/edit/enable a package. Close normally.
+4. Cameras opens CONTROL Video Events connection settings. Do not save, pair, test connection, request image or control a device. Close normally.
+5. Stock opens ordinary CONTROL store Backoffice. «Επιστροφή στο Super Admin» restores the same Twin after loading. This does not confirm inventory screen/stock arithmetic/support-exit Audit.
+6. Explicit expanded store switch: original ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ Personnel shows7 employees, close retains original; CONTROL shows0, close retains CONTROL. No stale primary employee row observed in the final control list.
+
+PASS criteria: correct visible current destination/company/store and automatic same-Twin normal-close return; six matched control GETs and four matched switch metadata/bootstrap reads. Visible «Νο40 · LAB GET trace» contains sanitized already-executed GET metadata only; require same traceId on server before request-isolation claim. Server304/client200 conditional-cache results are valid correlated read observations, not a status mismatch failure. Evidence CHECKPOINTS/EVIDENCE/n40-read-trace-20261010/control-correlations.json and control-return.jpg.
+
+Wait for normal loading: initial Workforce error flashed then loaded automatically; no Retry needed. On genuine invalid-session error, use normal canonical secure SA sign-in; a heading alone is not authorization. Never inspect/export tokens or use another tab to bypass credential protection. CONTROL has inactive workforce packages but SA override reads succeeded, so no module-denial claim. Creation already persisted once but post-save form reset failed; do not create it again. Missing/revoked store, module/role negatives, network races, complete Stock requests/Audit and independent client asset attestation remain OPEN. Original Stock USER6097485640 and earlier phases1–14 remain protected without replay. All operations above are read-only; no business/device/permission changes.
+
 ## 10/10/2026 21:40 Athens — Owner session troubleshooting (NOT PASS)
 
 Fresh root verification after one normal secure sign-in displayed «Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη.» in both original and fresh verification tabs. Greeting alone does not prove Owner access. Stop queries/retries and use the normal existing Owner entry; no guard bypass, credential reset or token export. Product/date sales acceptance remains BLOCKED/NOT TESTED; no verified sales usage is added here. Prior20:52 cash LIVE PASS below remains historical scoped evidence. Central session scope is independently assigned. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`.
