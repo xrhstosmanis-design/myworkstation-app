@@ -37,3 +37,26 @@ Each actual store-specific Readiness screen loaded the correct store. No save, b
 All six show zero designated Store Mode responsible persons. Config gaps remain with the respective setup owners; no role promotion/grant/reset. Primary LAB open-shift state protects already-authorized current tests from duplicate opening. Fresh production server401/404 logs not available in this tool session; Platform browser captured error-console filter401/404 returnedempty, which is not evidence of absence in server logs. Screenshot daily-readiness.jpg records real DAILY screen and pending9.
 
 Full exact main586900d CI38085014049 SUCCESS. Guarded Render workflow38085253808 in progress. No manual deployment or skipped security gate. Exacthealth and actual support entry still pending.
+
+## 10/10/2026 περίπου 23:53–23:57 Αθήνα — Νο33: Full Backoffice και επιστροφή και στα έξι καταστήματα, περιορισμένο LIVE PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, Νο33/tracker35 OPEN. Μετά το πλήρες main CI38085014049 (2274/0/0), guarded Render38085253808 SUCCESS και ανεξάρτητο browser health ok:true/revision586900d8961a212adeff5d13b05abdca345bdb92, η ανανεωμένη Platform Admin οθόνη διατήρησε τη σύνδεση. Από την πραγματική επιλογή εταιρείας/καταστήματος, Full Backoffice και κανονική Επιστροφή στο Super Admin πέτυχαν διαδοχικά για κύριο LAB, DAILY BITE, Διαδόχου Παύλου, ΚΑΤ, N40 CONTROL και εργαστήριο ετικέτας. Κάθε οθόνη έδειξε τη σωστή εταιρεία και κατάστημα, χωρίς εμφανές 401/404 ή session denial. Κύριο LAB MAIN11/4€, card0/IRIS0/expense0/IN0.10/OUT0.10, control2/0€· τα άλλα πέντε έδειξαν καμία ανοιχτή βάρδια. Δεν έγινε οικονομική, stock, shift ή permission υποβολή. Τα support-entry/exit δημιουργούν μόνο την κανονική καταγραφή πρόσβασης· raw Audit IDs δεν μετρήθηκαν.
+
+Υπερκαλύπτεται το συγκεκριμένο παλιό blocker PR2186 για αυτή τη νέα support-entry παρατήρηση και το προηγούμενο NOT TESTED Full Backoffice του PR2195. Η αιτία όλων των συνεχών server401/404, ordinary Owner/EMPLOYEE πρόσβαση σε κάθε κατάστημα, ανεξάρτητη client-asset attestation, ελεγχόμενος LIVE delayed-callback/renewal αγώνας και πλήρες Νο33 παραμένουν OPEN. Δεν μεταβάλλεται η ανάθεση ή η αποδοχή των κεντρικών MFA/N40/N51/404 owners. Οι μήτρες, Store Mode είσοδοι και readiness metadata των έξι καταστημάτων παραμένουν τα περιορισμένα αποτελέσματα του PR2195· οι εκκρεμότητες εγκατάστασης δεν διορθώθηκαν με ψευδή checkbox PASS. Προσωπική κάρτα/QR και καταμέτρηση USER PASS δεν επαναλαμβάνονται.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-operator-all-store-access.md`, source receipt `CHECKPOINTS/CHANGES/2026-10-10-platform-late-auth.md`, manuals `docs/manual/pos/PASS.md` και `docs/manual/super-admin/PASS.md`. Επόμενο για Νο33: επαλήθευση αρχικού LAB POS2 EMPLOYEE προφίλ πριν από οποιαδήποτε προσωρινή μεταβολή και ένα μόνο ανεξάρτητο υπολειπόμενο σκέλος. Για server errors απαιτείται φρέσκο post-release τεκμήριο από τον υπάρχοντα υπεύθυνο attribution, όχι συμπέρασμα από την επιτυχημένη δική μας οθόνη.
+
+| Store | Full Backoffice correct scope | Shift view | Normal return to Platform |
+|---|---|---|---|
+| Primary LAB | LIVE UI PASS | MAIN11/cash4/card0/IRIS0/expense0/total4/IN.10/OUT.10; control2/cash0/cardIRIS0/total0 | LIVE UI PASS |
+| DAILY BITE | LIVE UI PASS | No open shift | LIVE UI PASS |
+| Diadochou Pavlou | LIVE UI PASS | No open shift | LIVE UI PASS |
+| KAT | LIVE UI PASS | No open shift | LIVE UI PASS |
+| N40 CONTROL | LIVE UI PASS | No open shift | LIVE UI PASS |
+| Label-isolation LAB | LIVE UI PASS | No open shift | LIVE UI PASS |
+
+Observed browser reload briefly showed blank while application loaded; one ordinary reload then fresh DOM positively rendered named authenticated Platform with four companies/six stores. No app error appeared in captured error logs; extension errors are not MyWorkStation cause attribution. Six successful support entries and returns then completed without another login or recovery. This is positive current flow only, not a controlled negative auth-race experiment.
+
+Evidence additions: lab-backoffice.jpg, diadochou-backoffice.jpg. Other four actual DOM observations do not have separate screenshot claims. Financial and stock absence is action scope, not raw whole-database Audit proof. Original rights were not changed or freshly inspected in this read-only all-store run.
+
+Fresh maina75d79ce from independent central receipt2196 read before publication. Its historical20:42:56–20:47:56Z diagnostic reports336–337 GET404/min, DAILY/LAB requested stores with pilot-company; caller/tab remains unidentified. These are other owner's historical samples, not fresh metrics obtained by this session and not proof that today's Diadochou full Backoffice is failing. Post-release server logs remain unobserved here. Existing strict company/store guards stay intact.
