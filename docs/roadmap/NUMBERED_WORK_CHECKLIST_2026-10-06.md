@@ -303,9 +303,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 44 — Επεξεργασία είδους/ΦΠΑ — αποθήκευση και επανέλεγχος
 
 - **Tracker ID:** `TODAY-02`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
-
-- **Νεότερη ανάληψη 10/10/2026:** `codex/n44-product-vat-acceptance-20261010` — save/readback, πολλοί προμηθευτές και τελική αποδοχή AWAITING LAB.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** AWAITING USER
+- **Υπόλοιπο / όριο:** LAB PASS αποθήκευση/επανέλεγχος, δύο προμηθευτές/τρία barcode, ίδια σελίδα και επαναφορά fixture· PR2044/dd85719d και PR2049/de7d5c2e. Εκκρεμεί τελική οπτική αποδοχή χρήστη. AlternateVAT/πλήρεις οικονομικές/storecontrol διαφορές NOT TESTED. Owner codex/n44-product-vat-acceptance-20261010.
 
 ## 45 — Κεντρική διαχείριση προϊόντων — τελική αποδοχή οθόνης
 
