@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,DatabaseBackup,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
@@ -18,6 +18,7 @@ import OtherExpenseReviewCenter from "./OtherExpenseReviewCenter.jsx";
 import BankLedgerReviewCenter from "./BankLedgerReviewCenter.jsx";
 import SuperAdminEventsCenter from "./SuperAdminEventsCenter.jsx";
 import SuperAdminChecksAnalytics from "./SuperAdminChecksAnalytics.jsx";
+import {TWIN_DESTINATIONS,resolveTwinContext,withTwinScope,twinScopeKey,guardTwinRequest,rememberTwinReturn,readTwinReturn,clearTwinReturn} from "./ai-command-twin-navigation.js";
 import AiCommandCenter from "./AiCommandCenter.jsx";
 import AiCreditAlert from "./AiCreditAlert.jsx";
 import FiscalBridgeDryRunCenter from "./FiscalBridgeDryRunCenter.jsx";
@@ -98,6 +99,8 @@ export default function PlatformAdminApp(){
   const [user,setUser]=useState(()=>{
     try{return JSON.parse(localStorage.getItem("platformUser")||"null")}catch{return null}
   });
+  const [returnedTwin]=useState(()=>localStorage.getItem("supportContext")?null:readTwinReturn(sessionStorage,user?.id));
+  useEffect(()=>{if(!localStorage.getItem("supportContext"))clearTwinReturn(sessionStorage)},[]);
   const [data,setData]=useState(null);
   const [backupMonitor,setBackupMonitor]=useState(null);
   const [owners,setOwners]=useState([]);
@@ -147,8 +150,34 @@ export default function PlatformAdminApp(){
   const [chatStore,setChatStore]=useState(null);
   const [showChatChooser,setShowChatChooser]=useState(false);
   const [showInternetSearch,setShowInternetSearch]=useState(false);
-  const [showAiCommandCenter,setShowAiCommandCenter]=useState(false);
-  const [aiTwinSelection,setAiTwinSelection]=useState(null);
+  const [showAiCommandCenter,setShowAiCommandCenter]=useState(Boolean(returnedTwin));
+  const [aiTwinSelection,setAiTwinSelection]=useState(returnedTwin);
+  const [aiTwinOrigin,setAiTwinOrigin]=useState(null);
+  const [aiTwinNavigationError,setAiTwinNavigationError]=useState("");
+  const aiTwinOriginRef=useRef(null),dataRef=useRef(data),cashLoadSequence=useRef(0);
+  dataRef.current=data;
+  const currentTwinOrigin=origin=>Boolean(origin&&aiTwinOriginRef.current===origin&&resolveTwinContext(dataRef.current?.companies,origin));
+  const twinRequest=useMemo(()=>aiTwinOrigin?guardTwinRequest(request,()=>currentTwinOrigin(aiTwinOrigin)):request,[aiTwinOrigin]);
+  const scopeFor=destination=>aiTwinOrigin?.destination===destination?aiTwinOrigin:null;
+  const requestFor=destination=>scopeFor(destination)?twinRequest:request;
+  const clearTwinOrigin=()=>{aiTwinOriginRef.current=null;setAiTwinOrigin(null);cashLoadSequence.current++};
+  const returnFromTwin=destination=>{
+    if(aiTwinOriginRef.current?.destination!==destination)return;
+    clearTwinOrigin();setBusy("");setShowAiCommandCenter(true);
+  };
+  const closeAiCommandCenter=()=>{clearTwinOrigin();setBusy("");setShowAiCommandCenter(false)};
+  const rememberTwinSelection=selection=>{
+    const origin=aiTwinOriginRef.current;
+    if(origin&&twinScopeKey(origin)!==twinScopeKey(selection)){clearTwinOrigin();setBusy("")}
+    setAiTwinNavigationError("");setAiTwinSelection(selection);
+  };
+  const twinContext=resolveTwinContext(data?.companies,aiTwinOrigin);
+  const twinCompanies=twinContext?[{...twinContext.company,stores:[twinContext.store]}]:[];
+  useEffect(()=>{
+    if(!aiTwinOrigin||!data||resolveTwinContext(data.companies,aiTwinOrigin))return;
+    clearTwinOrigin();setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);setBusy("");
+    setAiTwinNavigationError("Το κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα στο Full Digital Twin.");setShowAiCommandCenter(true);
+  },[data,aiTwinOrigin]);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
   const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName].join("|");
 
@@ -161,7 +190,7 @@ export default function PlatformAdminApp(){
 
   const clearSession=(clearError=true)=>{
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
-    setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);if(clearError)setError("");
+    setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
   };
   const logout=async(clearError=true)=>{
     try{if(localStorage.getItem("token"))await request("/api/auth/logout",{method:"POST",body:"{}"})}catch{}
@@ -275,16 +304,19 @@ export default function PlatformAdminApp(){
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
 
-  const openCustomer=async(company,store,destination)=>{
+  const openCustomer=async(company,store,destination,twinOrigin=null)=>{
     setBusy(`access:${store?.id||company.id}:${destination}`);setError("");
     try{
-      const result=await request(`/api/platform/companies/${company.id}/support-access`,{method:"POST",body:JSON.stringify({storeId:store?.id||null,destination})});
+      const accessRequest=twinOrigin?guardTwinRequest(request,()=>currentTwinOrigin(twinOrigin)):request;
+      const result=await accessRequest(`/api/platform/companies/${company.id}/support-access`,{method:"POST",body:JSON.stringify({storeId:store?.id||null,destination})});
+      if(twinOrigin&&!rememberTwinReturn(sessionStorage,twinOrigin,user?.id))throw new Error("Δεν αποθηκεύτηκε η επιστροφή στο Full Digital Twin. Δοκίμασε ξανά.");
+      if(!twinOrigin)clearTwinReturn(sessionStorage);
       sessionStorage.setItem("platformToken",localStorage.getItem("token")||"");
       localStorage.setItem("token",result.token);localStorage.setItem("user",JSON.stringify(result.user));localStorage.setItem("supportContext",JSON.stringify(result.supportContext));
       const query=new URLSearchParams({supportPage:destination==="SHIFTS"?"schedule":"stores"});
       if(store?.id)query.set("supportStore",store.id);
       window.location.href=`/?${query}`;
-    }catch(err){setError(err.message);setBusy("")}
+    }catch(err){if(twinOrigin)throw err;setError(err.message);setBusy("")}
   };
 
   const checkReadiness=async(company,store)=>{
@@ -426,21 +458,56 @@ export default function PlatformAdminApp(){
     return (data?.companies||[]).filter(row=>row.plan==="TRIAL"&&row.trialEndsAt&&new Date(row.trialEndsAt).getTime()-now<=week).length;
   },[data]);
 
-  const loadCashReport=async(date=cashReportDate)=>{
+  const loadCashReport=async(date=cashReportDate,twinOrigin=aiTwinOriginRef.current?.destination==="cash"?aiTwinOriginRef.current:null)=>{
+    const sequence=++cashLoadSequence.current;
     setBusy("cash-report");setError("");
-    try{setCashReport(await request(`/api/platform/cash-control/daily?${new URLSearchParams({date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})})}`))}catch(err){setError(err.message)}finally{setBusy("")}
+    try{
+      const api=twinOrigin?guardTwinRequest(request,()=>currentTwinOrigin(twinOrigin)):request;
+      const filters=withTwinScope({date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})},twinOrigin);
+      const result=await api(`/api/platform/cash-control/daily?${new URLSearchParams(filters)}`);
+      if(sequence!==cashLoadSequence.current)return false;
+      setCashReport(result);return true;
+    }catch(err){if(twinOrigin)throw err;if(sequence===cashLoadSequence.current)setError(err.message);return false}
+    finally{if(sequence===cashLoadSequence.current)setBusy("")}
+  };
+  const refreshCashReport=()=>loadCashReport(cashReportDate).catch(err=>setError(err.message));
+  const closeCashReport=()=>{cashLoadSequence.current++;setCashReport(null);returnFromTwin("cash")};
+  const openTwinDestination=async(destination,selection)=>{
+    if(!TWIN_DESTINATIONS.has(destination)||aiTwinOriginRef.current)return;
+    const context=resolveTwinContext(dataRef.current?.companies,selection);
+    if(!context){setAiTwinNavigationError("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Επίλεξέ το ξανά.");return}
+    const origin={companyId:selection.companyId,storeId:selection.storeId,destination};
+    aiTwinOriginRef.current=origin;setAiTwinOrigin(origin);setAiTwinSelection(selection);setAiTwinNavigationError("");
+    const {company,store}=context,api=guardTwinRequest(request,()=>currentTwinOrigin(origin));
+    try{
+      if(destination==="cash"){if(!await loadCashReport(cashReportDate,origin))return}
+      else if(destination==="video"){
+        setBusy(`video:${store.id}`);
+        const result=await api(`/api/platform/companies/${company.id}/stores/${store.id}/video-connection`);
+        setVideoConnectionManager({...result,company,store});
+      }
+      else if(destination==="stock"){await openCustomer(company,store,"BACKOFFICE",origin);return}
+      else if(destination==="checks")setAnalyticsResult({page:true});
+      else if(destination==="payments")setShowSupplierSettlementReview(true);
+      else if(destination==="bank")setShowBankLedgerReview(true);
+      else if(destination==="workforce")setWorkforceTarget({company,store});
+      if(currentTwinOrigin(origin)){setShowAiCommandCenter(false);setBusy("")}
+    }catch(err){
+      if(aiTwinOriginRef.current!==origin)return;
+      clearTwinOrigin();setBusy("");setAiTwinNavigationError(err.message||"Δεν άνοιξε η οθόνη του καταστήματος.");setShowAiCommandCenter(true);
+    }
   };
 
   const previewAndSendCashReport=async store=>{
     setBusy(`cash-email:${store.storeId}`);setError("");setMessage("");
     try{
-      const preview=await request(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${cashReportDate}`);
+      const preview=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${cashReportDate}`);
       if(!preview.rows.length)throw new Error("Δεν υπάρχουν κλεισμένες βάρδιες για αποστολή.");
       if(!preview.readyToSend)throw new Error("Υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση. Κάνε επανέλεγχο πριν την αποστολή στους ιδιοκτήτες.");
       const recipients=preview.recipients.join(", ")||"Δεν έχουν οριστεί παραλήπτες";
       const comment=window.prompt(`ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ\n${preview.storeName} · ${preview.date}\nΒάρδιες: ${preview.rows.length}\nΠαραλήπτες: ${recipients}\n\nΓράψε προαιρετικό σχόλιο. Πατώντας OK θα σταλεί το email.`,"");
       if(comment===null)return;
-      const sent=await request(`/api/platform/cash-control/stores/${store.storeId}/send-email`,{method:"POST",body:JSON.stringify({date:cashReportDate,comment})});
+      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-email`,{method:"POST",body:JSON.stringify({date:cashReportDate,comment})});
       setMessage(`Η αναφορά του ${preview.storeName} στάλθηκε σε: ${sent.recipients.join(", ")}.`);
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
@@ -449,7 +516,7 @@ export default function PlatformAdminApp(){
     const key=`cash-preview:${store.storeId}`;setBusy(key);setError("");setMessage("");
     try{
       const comment=window.prompt(`Δοκιμαστική αναφορά στο δικό σου email\n${store.storeName} · ${cashReportDate}\n\nΓράψε προαιρετικό σχόλιο.`,"");if(comment===null)return;
-      const sent=await request(`/api/platform/cash-control/stores/${store.storeId}/send-preview`,{method:"POST",body:JSON.stringify({date:cashReportDate,comment})});
+      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-preview`,{method:"POST",body:JSON.stringify({date:cashReportDate,comment})});
       setMessage(`Η δοκιμαστική αναφορά στάλθηκε μόνο στο ${sent.recipients.join(", ")}.`);
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
@@ -457,12 +524,12 @@ export default function PlatformAdminApp(){
   const downloadShortages=async store=>{
     const key=`cash-export:${store?.storeId||"all"}`;setBusy(key);setError("");
     try{
-      const query=new URLSearchParams({from:cashRangeFrom,to:cashRangeTo,fromTime:cashFromTime,toTime:cashToTime,...(store?{storeId:store.storeId}:{}),...(cashOperator.trim()?{operator:cashOperator.trim()}:{})});
-      const result=await request(`/api/platform/cash-control/shortages?${query}`);
+      const query=new URLSearchParams({from:cashRangeFrom,to:cashRangeTo,fromTime:cashFromTime,toTime:cashToTime,...(scopeFor("cash")?{companyId:scopeFor("cash").companyId,storeId:scopeFor("cash").storeId}:store?{storeId:store.storeId}:{}),...(cashOperator.trim()?{operator:cashOperator.trim()}:{})});
+      const result=await requestFor("cash")(`/api/platform/cash-control/shortages?${query}`);
       const cell=value=>`"${String(value??"").replaceAll('"','""')}"`;
       const lines=[["Ημερομηνία","Άνοιγμα","Κλείσιμο","Εταιρεία","Κατάστημα","POS","Βάρδια","Χειριστής","Έλλειμμα","Διαφορά POS–EFTPOS"],...result.rows.map(row=>[row.date,athensTime(row.openedAt),athensTime(row.closedAt),row.companyName,row.storeName,row.terminalPos||"MAIN",row.shiftLabel,row.openedByName||"—",row.shortage.toFixed(2),row.cardVariance.toFixed(2)])];
       const blob=new Blob(["\ufeff"+lines.map(line=>line.map(cell).join(";")).join("\n")],{type:"text/csv;charset=utf-8"});
-      const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`Ελλείμματα_${store?.storeName||"Όλα-τα-καταστήματα"}_${cashRangeFrom}_${cashRangeTo}.csv`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(link.href);
+      const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`Ελλείμματα_${store?.storeName||(scopeFor("cash")?twinContext?.store.name:"Όλα-τα-καταστήματα")}_${cashRangeFrom}_${cashRangeTo}.csv`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(link.href);
       setMessage(`Το αρχείο ελλειμμάτων δημιουργήθηκε (${result.rows.length} εγγραφές · ${result.totalShortage.toFixed(2)} €).`);
     }catch(err){setError(err.message)}finally{setBusy("")}
   };
@@ -515,9 +582,9 @@ export default function PlatformAdminApp(){
     {showPosDesigner&&<PosDesignerPanel request={request} onClose={()=>setShowPosDesigner(false)}/>}
     {showCustomerDemos&&<CustomerDemoCenter request={request} onClose={()=>setShowCustomerDemos(false)}/>}
     {cashReport&&<div className="platform-modal"><section className="platform-security-dialog cash-report-dialog">
-      <button type="button" className="modal-close" onClick={()=>setCashReport(null)}><X/></button>
+      <button type="button" className="modal-close" onClick={closeCashReport}><X/></button>
       <h2>Αυτόματος Έλεγχος Ταμείων</h2><p>Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια</p>
-      <div className="cash-report-filters"><label>Κατάστημα<select value={cashStoreId} onChange={event=>setCashStoreId(event.target.value)}><option value="">Όλα τα καταστήματα</option>{(data?.companies||[]).flatMap(company=>company.stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>))}</select></label><label>Ημερομηνία<input type="date" value={cashReportDate} onChange={event=>setCashReportDate(event.target.value)}/></label><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={()=>loadCashReport(cashReportDate)} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Από<input type="date" value={cashRangeFrom} onChange={event=>setCashRangeFrom(event.target.value)}/></label><label>Έως<input type="date" value={cashRangeTo} onChange={event=>setCashRangeTo(event.target.value)}/></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":"Excel ελλειμμάτων όλων"}</button></div>
+      <div className="cash-report-filters"><label>Κατάστημα<select value={scopeFor("cash")?.storeId||cashStoreId} disabled={Boolean(scopeFor("cash"))} onChange={event=>{cashLoadSequence.current++;setCashStoreId(event.target.value)}}>{!scopeFor("cash")&&<option value="">Όλα τα καταστήματα</option>}{(data?.companies||[]).flatMap(company=>company.stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>))}</select></label><label>Ημερομηνία<input type="date" value={cashReportDate} onChange={event=>setCashReportDate(event.target.value)}/></label><label>Ώρα από<input type="time" value={cashFromTime} onChange={event=>setCashFromTime(event.target.value)}/></label><label>Ώρα έως<input type="time" value={cashToTime} onChange={event=>setCashToTime(event.target.value)}/></label><button onClick={refreshCashReport} disabled={busy==="cash-report"}><RefreshCw/>Εμφάνιση</button><button type="button" className="secondary" onClick={()=>window.print()}><Printer/>Εκτύπωση αναφοράς</button><label>Από<input type="date" value={cashRangeFrom} onChange={event=>setCashRangeFrom(event.target.value)}/></label><label>Έως<input type="date" value={cashRangeTo} onChange={event=>setCashRangeTo(event.target.value)}/></label><label>Χειριστής<input value={cashOperator} onChange={event=>setCashOperator(event.target.value)} placeholder="Όλοι οι χειριστές"/></label><button type="button" className="secondary" onClick={()=>downloadShortages()} disabled={busy==="cash-export:all"}><Download/>{busy==="cash-export:all"?"Δημιουργία…":scopeFor("cash")?"Excel ελλειμμάτων καταστήματος":"Excel ελλειμμάτων όλων"}</button></div>
       <div className="cash-report-totals"><span>Βάρδιες <b>{cashReport.totals.shifts}</b></span><span>Συνολικό έλλειμμα <b>{cashReport.totals.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b>{cashReport.totals.surplus.toFixed(2)} €</b></span><span>Καθαρή διαφορά <b className={Math.abs(cashReport.totals.variance)>.009?"bad":"ok"}>{cashReport.totals.variance.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{cashReport.totals.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{cashReport.totals.expensesWithoutDocument}</b></span></div>
       <div className="cash-store-summaries">{(cashReport.stores||[]).map(store=><article key={store.storeId}><small>{store.companyName}</small><h3>{store.storeName}</h3><span>Βάρδιες <b>{store.shifts}</b></span><span>Έλλειμμα <b className="bad">{store.shortage.toFixed(2)} €</b></span><span>Πλεόνασμα <b className="ok">{store.surplus.toFixed(2)} €</b></span><span>POS–EFTPOS <b>{store.cardVariance.toFixed(2)} €</b></span><span>Χωρίς παραστατικό <b>{store.expensesWithoutDocument}</b></span><button type="button" className="secondary" onClick={()=>sendCashPreviewToMe(store)} disabled={busy===`cash-preview:${store.storeId}`}><Send/>{busy===`cash-preview:${store.storeId}`?"Αποστολή…":"Δοκιμή στο email μου"}</button><button type="button" onClick={()=>previewAndSendCashReport(store)} disabled={busy===`cash-email:${store.storeId}`}><Send/>{busy===`cash-email:${store.storeId}`?"Αποστολή…":"Προεπισκόπηση & email ιδιοκτητών"}</button><button type="button" className="secondary" onClick={()=>downloadShortages(store)} disabled={busy===`cash-export:${store.storeId}`}><Download/>{busy===`cash-export:${store.storeId}`?"Δημιουργία…":"Excel ελλειμμάτων"}</button></article>)}</div>
       {cashReport.rows.length>0&&<section className="site-style-cash-reports">{(cashReport.stores||[]).map(store=>{const rows=cashReport.rows.filter(row=>row.storeId===store.storeId);const suspicious=rows.flatMap(row=>(row.investigation?.findings||[]).map(finding=>({row,finding})));const finalText=store.variance<-.009?`Έλλειμμα ${cashMoney(Math.abs(store.variance))}`:store.variance>.009?`Πλεόνασμα ${cashMoney(store.variance)}`:"Χωρίς διαφορά";return <article className="site-style-store-report" key={`site-report:${store.storeId}`}>
@@ -574,8 +641,9 @@ export default function PlatformAdminApp(){
     {showInternetSearch&&<InternetProductSearchPanel api={request} basePath="/api/platform/internet-product-search" companies={(data?.companies||[]).filter(company=>company.active)} onClose={()=>setShowInternetSearch(false)}/>}
     {showAiCommandCenter&&<AiCommandCenter
       request={request} companies={data?.companies||[]} loading={loading}
-      initialTwinSelection={aiTwinSelection} onTwinSelectionChange={setAiTwinSelection}
-      onClose={()=>setShowAiCommandCenter(false)} onRefresh={load}
+      initialTwinSelection={aiTwinSelection} onTwinSelectionChange={rememberTwinSelection}
+      onOpenTwinDestination={openTwinDestination} navigationBusy={Boolean(aiTwinOrigin)} navigationError={aiTwinNavigationError}
+      onClose={closeAiCommandCenter} onRefresh={load}
       onOpenChecks={()=>{setShowAiCommandCenter(false);setAnalyticsResult({page:true})}}
       onOpenCash={()=>{setShowAiCommandCenter(false);loadCashReport()}}
       onOpenPayments={()=>{setShowAiCommandCenter(false);setShowSupplierSettlementReview(true)}}
@@ -588,17 +656,18 @@ export default function PlatformAdminApp(){
     />}
     {storeCompany&&!videoConnectionManager&&storeCompany.modules?.some(module=>module.key==="VIDEO_EVENTS"&&module.active)&&<div style={{position:"fixed",left:32,bottom:32,zIndex:1002,display:"grid",gap:8}}>{storeCompany.stores.map(store=><button key={store.id} onClick={()=>openVideoConnection(storeCompany,store)} disabled={busy===`video:${store.id}`}><Camera/>{busy===`video:${store.id}`?"Φόρτωση…":`Video Events · ${store.name}`}</button>)}</div>}
     {storeCompany&&!fiscalIntegrations&&!storeEdit&&!terminalManager&&<div className="platform-store-integrations-launcher">{storeCompany.stores.map(store=><button key={store.id} type="button" onClick={()=>openFiscalIntegrations(storeCompany,store)} disabled={busy===`integrations:${store.id}`}><KeyRound/>{busy===`integrations:${store.id}`?"Φόρτωση…":`myDATA / ΑΦΜ · ${store.name}`}</button>)}</div>}
-    {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={request} onClose={()=>setVideoConnectionManager(null)} setError={setError} setMessage={setMessage}/>}
+    {videoConnectionManager&&<VideoConnectionManager manager={videoConnectionManager} request={requestFor("video")} onClose={()=>{setVideoConnectionManager(null);returnFromTwin("video")}} setError={setError} setMessage={setMessage}/>}
     {fiscalIntegrations&&<StoreFiscalIntegrations manager={fiscalIntegrations} request={request} onClose={()=>setFiscalIntegrations(null)} onChanged={refreshFiscalIntegrations}/>}
-    {analyticsResult?.page&&<SuperAdminChecksAnalytics embedded companies={data?.companies||[]} request={request} onClose={()=>setAnalyticsResult(null)} setMessage={setMessage}/>}
-    {showSupplierSettlementReview&&<SupplierSettlementReviewCenter request={request} onClose={()=>setShowSupplierSettlementReview(false)} setMessage={setMessage}/>}
+    {analyticsResult?.page&&<SuperAdminChecksAnalytics key={scopeFor("checks")?twinScopeKey(aiTwinOrigin):"central"} entryScope={scopeFor("checks")} embedded companies={scopeFor("checks")?twinCompanies:data?.companies||[]} request={requestFor("checks")} onClose={()=>{setAnalyticsResult(null);returnFromTwin("checks")}} setMessage={setMessage}/>}
+    {showSupplierSettlementReview&&<SupplierSettlementReviewCenter key={scopeFor("payments")?twinScopeKey(aiTwinOrigin):"central"} entryScope={scopeFor("payments")} request={requestFor("payments")} onClose={()=>{setShowSupplierSettlementReview(false);returnFromTwin("payments")}} setMessage={setMessage}/>}
     {showOtherExpenseReview&&<OtherExpenseReviewCenter request={request} onClose={()=>setShowOtherExpenseReview(false)} setMessage={setMessage}/>}
-    {showBankLedgerReview&&<BankLedgerReviewCenter request={request} onClose={()=>setShowBankLedgerReview(false)} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
+    {showBankLedgerReview&&<BankLedgerReviewCenter key={scopeFor("bank")?twinScopeKey(aiTwinOrigin):"central"} entryScope={scopeFor("bank")} request={requestFor("bank")} onClose={()=>{setShowBankLedgerReview(false);returnFromTwin("bank")}} setMessage={setMessage} companies={data?.companies||[]} stores={(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=>({...store,companyId:company.id,companyName:company.name})))} />}
     {showEventsCenter&&<SuperAdminEventsCenter request={request} companies={data?.companies||[]} onClose={()=>setShowEventsCenter(false)}/>}
     {showFiscalDryRun&&<FiscalBridgeDryRunCenter companies={data?.companies||[]} onClose={()=>setShowFiscalDryRun(false)}/>}
     {showInstallationCenter&&<SuperAdminInstallationCenter companies={data?.companies||[]} request={request} onOpenTerminals={openTerminals} onClose={()=>setShowInstallationCenter(false)}/>}
     {showOnlineRadioCenter&&<SuperAdminOnlineRadioCenter companies={data?.companies||[]} request={request} onClose={()=>setShowOnlineRadioCenter(false)}/>}
-    {workforceTarget&&<SuperAdminStaffScheduler {...workforceTarget} companies={data?.companies||[]} request={request} onClose={()=>setWorkforceTarget(null)}/>}
+    {workforceTarget&&!scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={data?.companies||[]} request={request} onClose={()=>setWorkforceTarget(null)}/>}
+    {workforceTarget&&scopeFor("workforce")&&<SuperAdminStaffScheduler {...workforceTarget} companies={twinCompanies} request={requestFor("workforce")} onClose={()=>{setWorkforceTarget(null);returnFromTwin("workforce")}}/>}
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }

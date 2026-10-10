@@ -1,4 +1,5 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
+import {twinScopeKey} from "./ai-command-twin-navigation.js";
 import AiCreditAlert from "./AiCreditAlert.jsx";
 import {resolveTwinSelection,twinSelectionFor} from "./ai-command-twin-selection.js";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,Camera,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
@@ -11,7 +12,8 @@ const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(va
 const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
 const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
+export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=false,navigationError="",request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
+  const deviceLoadSequence=useRef(0);
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
@@ -32,6 +34,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
   };
   const loadInvoiceIntel=async()=>{setInvoiceIntel(current=>({...current,loading:true,error:""}));try{const workspace=await request("/api/platform/invoice-learning/workspace");setInvoiceIntel({loading:false,error:"",workspace})}catch(error){setInvoiceIntel(current=>({...current,loading:false,error:error.message||"Δεν φορτώθηκε το Invoice Learning."}))}};
   const loadTwinDevices=async()=>{
+    const sequence=++deviceLoadSequence.current;
     setTwinDevices(current=>({...current,loading:true}));
     const stores=companies.flatMap(company=>(company.stores||[]).map(store=>({companyId:company.id,storeId:store.id})));
     const entries=await Promise.all(stores.map(async item=>{
@@ -39,12 +42,12 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       const [terminalsResult,routingResult,videoResult]=await Promise.allSettled([request(`${base}/installation-terminals`),request(`${base}/device-routing`),request(`${base}/video-connection`)]);
       const devicesUnavailable=terminalsResult.status!=="fulfilled"||routingResult.status!=="fulfilled",videoUnavailable=videoResult.status!=="fulfilled";
       const terminals=terminalsResult.status==="fulfilled"?terminalsResult.value:{},routing=routingResult.status==="fulfilled"?routingResult.value:{},video=videoResult.status==="fulfilled"?videoResult.value:null;
-      return[item.storeId,{terminals:terminals.terminals||[],fiscalDevices:routing.fiscalDevices||[],eftposDevices:routing.eftposDevices||[],video,unavailable:devicesUnavailable,videoUnavailable}];
+      return[twinScopeKey(item),{terminals:terminals.terminals||[],fiscalDevices:routing.fiscalDevices||[],eftposDevices:routing.eftposDevices||[],video,unavailable:devicesUnavailable,videoUnavailable}];
     }));
-    setTwinDevices({loading:false,rows:Object.fromEntries(entries)});
+    if(sequence===deviceLoadSequence.current)setTwinDevices({loading:false,rows:Object.fromEntries(entries)});
   };
   useEffect(()=>{loadProblems();loadInvoiceIntel()},[]);
-  useEffect(()=>{loadTwinDevices()},[companies]);
+  useEffect(()=>{loadTwinDevices();return()=>{deviceLoadSequence.current++}},[companies]);
   const summary=useMemo(()=>{
     const activeCompanies=companies.filter(company=>company.active);
     const inactiveCompanies=companies.filter(company=>!company.active);
@@ -80,8 +83,9 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       if(payments.length)reasons.push(`${payments.length} πληρωμές`);
       if(bank.length)reasons.push(`${bank.length} τραπεζικά`);
       if(missingCash&&!inactive)reasons.push("Χωρίς σημερινό κλείσιμο");
-      const open=cashDanger||cashReview?onOpenCash:payments.length?onOpenPayments:bank.length?onOpenBank:missingCash?onOpenCash:onOpenChecks;
-      return{id:store.id,name:store.name,companyName:company.name,state,label,reasons,open};
+      const destination=cashDanger||cashReview?"cash":payments.length?"payments":bank.length?"bank":missingCash?"cash":"checks";
+      const open={cash:onOpenCash,payments:onOpenPayments,bank:onOpenBank,checks:onOpenChecks}[destination];
+      return{id:store.id,name:store.name,companyName:company.name,state,label,reasons,open,destination};
     }));
   },[companies,problems,onOpenBank,onOpenCash,onOpenChecks,onOpenPayments]);
   const storeStatusTotals=useMemo(()=>storeStatuses.reduce((all,item)=>{all[item.state]++;return all},{ok:0,warn:0,danger:0}),[storeStatuses]);
@@ -174,7 +178,7 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
     const statusByStore=new Map(storeStatuses.map(item=>[item.id,item]));
     return companies.flatMap(company=>(company.stores||[]).map(store=>{
       const status=statusByStore.get(store.id)||{state:"warn",label:"ΕΛΕΓΧΟΣ",reasons:["Χωρίς διαθέσιμη κατάσταση"],open:onOpenChecks};
-      const devices=twinDevices.rows[store.id]||{terminals:[],fiscalDevices:[],eftposDevices:[]};
+      const devices=twinDevices.rows[twinScopeKey({companyId:company.id,storeId:store.id})]||{terminals:[],fiscalDevices:[],eftposDevices:[]};
       const activeTerminals=devices.terminals.filter(item=>item.active!==false),recentTerminals=activeTerminals.filter(item=>item.lastSeenAt&&Date.now()-new Date(item.lastSeenAt).getTime()<=15*60*1000);
       const fiscalDevices=devices.fiscalDevices.filter(item=>item.active!==false),eftposDevices=devices.eftposDevices.filter(item=>item.active!==false);
       const stock=store.stockSummary||{},workforce=store.workforceSummary||{},video=devices.video,activeCameras=(video?.cameras||[]).filter(item=>item.active!==false).length;
@@ -197,15 +201,16 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
   const fullTwinAreas=useMemo(()=>{
     if(!selectedTwin)return[];
     const unavailable=selectedTwin.devices.unavailable,video=selectedTwin.devices.video,stock=selectedTwin.stock,workforce=selectedTwin.workforce;
+    const open=(destination,fallback)=>()=>onOpenTwinDestination?onOpenTwinDestination(destination,{companyId:selectedTwin.companyId,storeId:selectedTwin.id}):fallback?.();
     return[
-      {id:"pos",icon:Monitor,title:"POS",state:unavailable?"warn":selectedTwin.activeTerminals>0&&selectedTwin.recentTerminals===selectedTwin.activeTerminals?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.recentTerminals}/${selectedTwin.activeTerminals} πρόσφατα`,open:onOpenChecks},
-      {id:"eftpos",icon:CreditCard,title:"EFTPOS / Ταμειακές",state:unavailable?"warn":selectedTwin.eftposDevices>0&&selectedTwin.fiscalDevices>0?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.eftposDevices} EFTPOS · ${selectedTwin.fiscalDevices} ταμειακές`,open:onOpenCash},
-      {id:"cash",icon:WalletCards,title:"Ταμείο",state:selectedTwin.status.state,detail:selectedTwin.status.reasons[0]||"Χωρίς ανοικτό εύρημα",open:selectedTwin.status.open},
-      {id:"stock",icon:Store,title:"Stock",state:Number(stock.negativeStock||0)>0?"danger":Number(stock.outOfStock||0)>0?"warn":"ok",detail:`${Number(stock.negativeStock||0)} αρνητικά · ${Number(stock.outOfStock||0)} μηδενικά`,open:()=>onOpenStock?.(selectedTwin.companyId,selectedTwin.id)},
-      {id:"workforce",icon:UsersRound,title:"Προσωπικό",state:Number(workforce.attendanceReview||0)>0||Number(workforce.unfilledShifts||0)>0?"danger":Number(workforce.activeEmployees||0)>0&&!workforce.publishedToday?"warn":"ok",detail:`${Number(workforce.activeEmployees||0)} ενεργοί · ${Number(workforce.scheduledToday||0)} σήμερα`,open:()=>onOpenWorkforce?.(selectedTwin.companyId,selectedTwin.id)},
-      {id:"video",icon:Camera,title:"Κάμερες",state:selectedTwin.devices.videoUnavailable?"warn":!video?.connection?.active?"warn":video.connector?.online?"ok":"danger",detail:selectedTwin.videoLabel,open:()=>onOpenVideo?.(selectedTwin.companyId,selectedTwin.id)}
+      {id:"pos",icon:Monitor,title:"POS",state:unavailable?"warn":selectedTwin.activeTerminals>0&&selectedTwin.recentTerminals===selectedTwin.activeTerminals?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.recentTerminals}/${selectedTwin.activeTerminals} πρόσφατα`,open:open("checks",onOpenChecks)},
+      {id:"eftpos",icon:CreditCard,title:"EFTPOS / Ταμειακές",state:unavailable?"warn":selectedTwin.eftposDevices>0&&selectedTwin.fiscalDevices>0?"ok":"warn",detail:unavailable?"Μη διαθέσιμη πηγή":`${selectedTwin.eftposDevices} EFTPOS · ${selectedTwin.fiscalDevices} ταμειακές`,open:open("cash",onOpenCash)},
+      {id:"cash",icon:WalletCards,title:"Ταμείο",state:selectedTwin.status.state,detail:selectedTwin.status.reasons[0]||"Χωρίς ανοικτό εύρημα",open:open(selectedTwin.status.destination||"checks",selectedTwin.status.open)},
+      {id:"stock",icon:Store,title:"Stock",state:Number(stock.negativeStock||0)>0?"danger":Number(stock.outOfStock||0)>0?"warn":"ok",detail:`${Number(stock.negativeStock||0)} αρνητικά · ${Number(stock.outOfStock||0)} μηδενικά`,open:open("stock",()=>onOpenStock?.(selectedTwin.companyId,selectedTwin.id))},
+      {id:"workforce",icon:UsersRound,title:"Προσωπικό",state:Number(workforce.attendanceReview||0)>0||Number(workforce.unfilledShifts||0)>0?"danger":Number(workforce.activeEmployees||0)>0&&!workforce.publishedToday?"warn":"ok",detail:`${Number(workforce.activeEmployees||0)} ενεργοί · ${Number(workforce.scheduledToday||0)} σήμερα`,open:open("workforce",()=>onOpenWorkforce?.(selectedTwin.companyId,selectedTwin.id))},
+      {id:"video",icon:Camera,title:"Κάμερες",state:selectedTwin.devices.videoUnavailable?"warn":!video?.connection?.active?"warn":video.connector?.online?"ok":"danger",detail:selectedTwin.videoLabel,open:open("video",()=>onOpenVideo?.(selectedTwin.companyId,selectedTwin.id))}
     ];
-  },[onOpenCash,onOpenChecks,onOpenStock,onOpenVideo,onOpenWorkforce,selectedTwin]);
+  },[onOpenTwinDestination,onOpenCash,onOpenChecks,onOpenStock,onOpenVideo,onOpenWorkforce,selectedTwin]);
   const fullTwinTotals=useMemo(()=>fullTwinAreas.reduce((all,item)=>{all[item.state]++;return all},{ok:0,warn:0,danger:0}),[fullTwinAreas]);
   const briefingTime=useMemo(()=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()),[companies,problems,invoiceIntel]);
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel();loadTwinDevices()};
@@ -302,9 +307,10 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-full-twin">
         <div className="ai-command-panel-title"><div><small>FULL DIGITAL TWIN · ΦΑΣΗ 14</small><h2>{selectedTwin?selectedTwin.name:"Δεν υπάρχει διαθέσιμο κατάστημα"}</h2><p>{selectedTwin?`${selectedTwin.companyName} · ${fullTwinTotals.ok} ΟΚ · ${fullTwinTotals.warn} έλεγχος · ${fullTwinTotals.danger} πρόβλημα`:"Η ενιαία εικόνα δημιουργείται από τις υπάρχουσες read-only πηγές."}</p></div><Building2/></div>
+        {navigationError&&<div role="alert" className="ai-command-problem-error">{navigationError}</div>}
         <div className="ai-full-twin-selector" aria-label="Επιλογή καταστήματος">{digitalTwin.map(item=><button type="button" key={item.id} className={selectedTwin?.id===item.id&&selectedTwin?.companyId===item.companyId?"active":""} onClick={()=>selectTwin(item)}><span className={`ai-state-dot ${item.status.state}`}/>{item.name}</button>)}</div>
         {twinSelection!==null&&!selectedTwin&&<div className="ai-command-problem-error" role="alert" data-ai-twin-selection-unavailable="true"><AlertTriangle/>Το επιλεγμένο κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα.</div>}
-        {selectedTwin&&<div className="ai-full-twin-areas">{fullTwinAreas.map(area=>{const Icon=area.icon;return <button type="button" key={area.id} className={area.state} onClick={area.open}><Icon/><span><small>{area.title}</small><b>{area.detail}</b></span><strong>{area.state==="danger"?"ΠΡΟΒΛΗΜΑ":area.state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ"}</strong><ChevronRight/></button>})}</div>}
+        {selectedTwin&&<div className="ai-full-twin-areas">{fullTwinAreas.map(area=>{const Icon=area.icon;return <button type="button" key={area.id} className={area.state} onClick={area.open} disabled={navigationBusy}><Icon/><span><small>{area.title}</small><b>{area.detail}</b></span><strong>{area.state==="danger"?"ΠΡΟΒΛΗΜΑ":area.state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ"}</strong><ChevronRight/></button>})}</div>}
         <small className="ai-daily-source">Ενιαία λειτουργική εικόνα μόνο ανάγνωσης από τα δεδομένα των Φάσεων 12–13. Δεν δημιουργεί δεύτερο score ή dataset και δεν εκτελεί ενέργεια σε συσκευή, βάρδια, πληρωμή, stock, προσωπικό ή NVR.</small>
       </section>
 

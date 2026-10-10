@@ -1,0 +1,69 @@
+name: N40 isolated CI provenance
+on:
+  push:
+    branches: [fix/n40-twin-navigation-20261010]
+    paths: [.github/workflows/n40-ci-provenance-20261010.yml]
+permissions:
+  contents: read
+jobs:
+  evidence:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f13f4f9a44ea459ed671bb8ad199188b94ff1d39
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Record actual checkout before preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/n40-replay"
+          mkdir -p "$E"
+          git log -1 --format=fuller > "$E/checkout.txt"
+          node --version > "$E/node.txt"
+          git ls-files 'server/test/*' > "$E/tracked-tests.txt"
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/before-test-blob.txt"
+          cp server/test/super-admin-ai-command-center-phase1.test.js "$E/before-test.js"
+          git archive --format=tar.gz HEAD > "$E/checked-source.tar.gz"
+          printf 'Prior source-only snapshot 38044830949 succeeded. Its separate historical-log download failed before npm install; it is not a test result. This run executes the unchanged historical suite directly.\n' > "$E/boundary.txt"
+      - name: Install unchanged dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install > "$RUNNER_TEMP/n40-replay/install.log" 2>&1
+      - name: Prepare unchanged server sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          E="$RUNNER_TEMP/n40-replay"
+          npm run build:server > "$E/prepare.log" 2>&1
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/after-prepare-test-blob.txt"
+          cp server/test/super-admin-ai-command-center-phase1.test.js "$E/prepared-test.js"
+          git status --short > "$E/after-prepare-status.txt"
+      - name: Execute unchanged complete server suite on historical merge
+        shell: bash
+        run: |
+          set -uo pipefail
+          E="$RUNNER_TEMP/n40-replay"
+          npm test -w server > "$E/server-tests.log" 2>&1
+          S=$?
+          printf '%s\n' "$S" > "$E/server-tests-exit.txt"
+          git hash-object server/test/super-admin-ai-command-center-phase1.test.js > "$E/after-tests-test-blob.txt"
+          git status --short > "$E/after-tests-status.txt"
+          cp server/test/super-admin-ai-command-center-phase1.test.js "$E/after-tests-file.js"
+          grep -E '^(not ok |# (tests|pass|fail|skipped|duration_ms) )' "$E/server-tests.log" | head -35 || true
+          exit "$S"
+      - name: Preserve isolated replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n40-ci-replay-${{ github.run_id }}
+          path: ${{ runner.temp }}/n40-replay/
+          retention-days: 3
+          if-no-files-found: error

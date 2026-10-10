@@ -1,4 +1,5 @@
-import React,{useEffect,useMemo,useState} from "react";
+import {withTwinScope,validTwinScope,guardTwinRequest} from "./ai-command-twin-navigation.js";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,CheckCircle2,FileText,RefreshCw,ShieldCheck,X} from "lucide-react";
 import "./supplier-review-summary.css";
 
@@ -6,7 +7,7 @@ const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",cur
 const dateTime=value=>value?new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short"}).format(new Date(value)):"—";
 const paymentMethod={CASH_SHIFT:"Μετρητά ενεργής βάρδιας",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"};
 
-export default function SupplierSettlementReviewCenter({request,onClose,setMessage}){
+export default function SupplierSettlementReviewCenter({request:baseRequest,onClose,setMessage,entryScope=null}){
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
@@ -14,21 +15,27 @@ export default function SupplierSettlementReviewCenter({request,onClose,setMessa
   const [notes,setNotes]=useState({});
   const [companies,setCompanies]=useState([]);
   const [stores,setStores]=useState([]);
-  const [filters,setFilters]=useState({companyId:"",storeId:"",from:"",to:""});
+  const [filterState,setFilters]=useState({companyId:"",storeId:"",from:"",to:""});
+  const scopeValid=entryScope===null||validTwinScope(entryScope);
+  const request=useMemo(()=>entryScope===null?baseRequest:guardTwinRequest(baseRequest,()=>validTwinScope(entryScope)),[baseRequest,entryScope]);
+  const filters=scopeValid?withTwinScope(filterState,entryScope):{...filterState,companyId:"",storeId:""};
+  const loadSequence=useRef(0);
 
   const load=async()=>{
+    const sequence=++loadSequence.current;
     setLoading(true);setError("");
     try{
       const query=new URLSearchParams(Object.entries(filters).filter(([,value])=>value));
       const result=await request(`/api/transactions/supplier-settlements/review${query.size?`?${query}`:""}`);
+      if(sequence!==loadSequence.current)return;
       setItems(result.items||[]);
       setCompanies(result.companies||[]);setStores(result.stores||[]);
-    }catch(err){setError(err.message)}finally{setLoading(false)}
+    }catch(err){if(sequence===loadSequence.current)setError(err.message)}finally{if(sequence===loadSequence.current)setLoading(false)}
   };
-  useEffect(()=>{load()},[]);
+  useEffect(()=>{load();return()=>{loadSequence.current++}},[entryScope?.companyId,entryScope?.storeId]);
   const totals=useMemo(()=>({count:items.length,amount:items.reduce((sum,item)=>sum+Number(item.amount||0),0),discrepancies:items.filter(item=>item.status==="DISCREPANCY").length}),[items]);
   const changeNote=(id,value)=>setNotes(current=>({...current,[id]:value}));
-  const updateFilter=(key,value)=>setFilters(current=>({...current,[key]:value,...(key==="companyId"?{storeId:""}:{})}));
+  const updateFilter=(key,value)=>{loadSequence.current++;setItems([]);setLoading(false);setFilters(current=>({...current,[key]:value,...(key==="companyId"?{storeId:""}:{})}))};
   const visibleStores=stores.filter(store=>!filters.companyId||store.companyId===filters.companyId);
   const openEvidence=async item=>{
     const key=`evidence:${item.id}`;setBusy(key);setError("");
@@ -50,8 +57,8 @@ export default function SupplierSettlementReviewCenter({request,onClose,setMessa
   return <div className="platform-modal"><section className="platform-security-dialog supplier-settlement-review-dialog">
     <button type="button" className="modal-close" onClick={onClose}><X/></button>
     <div className="supplier-review-head"><div><span>ΙΔΙΟΚΤΗΤΗΣ / ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗΣ</span><h2>Έλεγχος πληρωμών προμηθευτών</h2><p>Έλεγξε το αποδεικτικό, τον τρόπο πληρωμής και τα τιμολόγια πριν από την επιβεβαίωση. Ο αριθμητικός έλεγχος δεν διαβάζει το περιεχόμενο του αρχείου.</p></div><button type="button" className="secondary" onClick={load} disabled={loading||Boolean(busy)}><RefreshCw/>Ανανέωση</button></div>
-    {error&&<div className="platform-alert error">{error}</div>}
-    <div className="supplier-review-filters"><label>Ιδιοκτήτης / εταιρεία<select value={filters.companyId} onChange={event=>updateFilter("companyId",event.target.value)}><option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>{companies.map(company=><option key={company.id} value={company.id}>{company.ownerName||"Χωρίς ιδιοκτήτη"} · {company.name}</option>)}</select></label><label>Κατάστημα<select value={filters.storeId} onChange={event=>updateFilter("storeId",event.target.value)}><option value="">Όλα τα καταστήματα</option>{visibleStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label><label>Από<input type="date" value={filters.from} onChange={event=>updateFilter("from",event.target.value)}/></label><label>Έως<input type="date" value={filters.to} onChange={event=>updateFilter("to",event.target.value)}/></label><button type="button" onClick={load} disabled={loading||Boolean(busy)}><RefreshCw/>Εμφάνιση</button></div>
+    {(!scopeValid||error)&&<div role="alert" className="platform-alert error">{!scopeValid?"Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο.":error}</div>}
+    <div className="supplier-review-filters"><label>Ιδιοκτήτης / εταιρεία<select disabled={entryScope!==null} value={filters.companyId} onChange={event=>updateFilter("companyId",event.target.value)}>{entryScope===null&&<option value="">Όλοι οι ιδιοκτήτες / εταιρείες</option>}{companies.map(company=><option key={company.id} value={company.id}>{company.ownerName||"Χωρίς ιδιοκτήτη"} · {company.name}</option>)}</select></label><label>Κατάστημα<select disabled={entryScope!==null} value={filters.storeId} onChange={event=>updateFilter("storeId",event.target.value)}>{entryScope===null&&<option value="">Όλα τα καταστήματα</option>}{visibleStores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label><label>Από<input type="date" value={filters.from} onChange={event=>updateFilter("from",event.target.value)}/></label><label>Έως<input type="date" value={filters.to} onChange={event=>updateFilter("to",event.target.value)}/></label><button type="button" onClick={load} disabled={loading||Boolean(busy)}><RefreshCw/>Εμφάνιση</button></div>
     <div className="supplier-review-totals"><span><small>Για έλεγχο</small><b>{totals.count}</b></span><span><small>Σύνολο δεσμεύσεων</small><b>{money(totals.amount)}</b></span><span className={totals.discrepancies?"warning":""}><small>Με απόκλιση</small><b>{totals.discrepancies}</b></span></div>
     <div className="supplier-review-list">{loading?<div className="platform-empty">Φόρτωση πληρωμών…</div>:items.length===0?<div className="platform-empty"><CheckCircle2/>Δεν υπάρχουν πληρωμές προμηθευτών για έλεγχο.</div>:items.map(item=>{const matched=item.automaticCheck?.matched===true;const discrepancy=item.status==="DISCREPANCY";const checks=item.automaticCheck?.checks||[];return <article key={item.id} className={discrepancy?"discrepancy":""}>
       <header><div><span className={`supplier-review-status ${matched?"confirmed":"discrepancy"}`}>{discrepancy?"ΚΑΤΑΓΕΓΡΑΜΜΕΝΗ ΑΠΟΚΛΙΣΗ":matched?"ΑΥΤΟΜΑΤΗ ΣΥΜΦΩΝΙΑ":"ΑΠΑΙΤΕΙΤΑΙ ΕΛΕΓΧΟΣ ΑΠΟΔΕΙΚΤΙΚΟΥ"}</span><h3>{item.supplierName}</h3><small>{item.ownerName||"Χωρίς ιδιοκτήτη"} · {item.companyName} · {item.storeName}<br/>Καταχώριση {dateTime(item.createdAt)} · πραγματική πληρωμή {dateTime(item.paidAt)} · {item.createdByName||"—"}</small></div><strong>{money(item.amount)}</strong></header>

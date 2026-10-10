@@ -96,7 +96,16 @@ test("Super Admin Workforce exposes a store selector and remounts store-scoped d
   assert.match(scheduler,/setTarget\(next\)/);
   assert.match(scheduler,/key=\{`\$\{selectedCompany\.id\}:\$\{selectedStore\.id\}`\}/);
   assert.match(scheduler,/companies=\[\]/);
-  assert.match(admin,/companies=\{data\?\.companies\|\|\[\]\}/);
+  // Both real entry modes remain explicit. Central navigation gets the full
+  // authorized list; Twin navigation pins its pair and uses the guarded request.
+  const central=admin.split("\n").find(line=>line.includes('workforceTarget&&!scopeFor("workforce")'));
+  const twin=admin.split("\n").find(line=>line.includes('workforceTarget&&scopeFor("workforce")'));
+  assert.ok(central&&twin,"Both canonical Workforce entry modes must remain mounted");
+  assert.match(central,/companies=\{data\?\.companies\|\|\[\]\}/);
+  assert.match(central,/request=\{request\}/);
+  assert.match(twin,/companies=\{twinCompanies\}/);
+  assert.match(twin,/request=\{requestFor\("workforce"\)\}/);
+  assert.match(twin,/returnFromTwin\("workforce"\)/);
 });
 
 test("new Workforce server modules pass Node syntax check",()=>{

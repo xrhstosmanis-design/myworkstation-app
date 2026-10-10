@@ -1967,6 +1967,12 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
+
+
+## N40-SCOPED-NAVIGATION-20261010 — canonical destinations / SOURCE / AWAITING CI AND LAB
+
+Same owner `codex/n40-full-twin-navigation-audit-20261010`; source `fix/n40-twin-navigation-20261010`. Prior claimPR2040, selectionPR2046 and handoffPR2047 are merged. This continuation carries the exact company/store to the six Full Digital Twin destinations, locks scoped entry filters/refresh/export and returns to the same Twin on close; Stock retains the existing support exchange with a non-secret, one-use actor-bound return hint. Late destination/device responses are rejected. Canonical central entry and visual phases1–14 are preserved. No business flow, authorization, API, schema, financial/stock/fiscal/camera/billing mutation. Local pure helper tests PASS; supported Node20 mounted/full CI and authenticated LAB are separate. Full40 OPEN; no manual PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-scoped-navigation.md`. Final runner/PR/CI/revision evidence will supersede only the pending source-validation status here.
+
 ### OPTIONAL-MODULES — Oxygen / Radio / αναλύσεις / billing
 
 **Κατάσταση:** OPEN
