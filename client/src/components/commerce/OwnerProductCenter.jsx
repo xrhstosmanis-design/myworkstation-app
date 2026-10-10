@@ -576,7 +576,8 @@ export default function OwnerProductCenter({
     event.preventDefault();
     clearStatus();
     setBusy(true);
-    const f = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const f = new FormData(form);
     const type = String(f.get("promotionType"));
     const storeIds = activeStores
       .filter((s) => f.get(`store_${s.id}`) === "on")
@@ -627,13 +628,13 @@ export default function OwnerProductCenter({
           storeIds,
         }),
       });
-      event.currentTarget.reset();
+      form.reset();
       setPromotionType("PERCENT");
       setPromotionProducts([]);
       setPromotionGiftProducts([]);
       setPromotionQuery("");
-      setMessage(`Η προσφορά στάλθηκε μαζί σε ${result.created} προϊόντα.`);
       await loadPromotions();
+      setMessage(`Η προσφορά στάλθηκε μαζί σε ${result.created} προϊόντα.`);
     } catch (e) {
       setError(e.message);
     } finally {

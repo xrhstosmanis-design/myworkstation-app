@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
+import {JSDOM} from 'jsdom';
+
+test('offer async success resets the submitted form and selection and reads back without a second POST',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'});
+ const keys=['window','document','navigator','localStorage','sessionStorage','HTMLElement','Node','Event','FormData','IS_REACT_ACT_ENVIRONMENT'];
+ const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
+ sessionStorage.setItem('mws:owner-products-tab','promotions');
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
+ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/commerce/OwnerProductCenter.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'}});
+ const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const root=createRoot(document.getElementById('root'));
+ const products=[{id:'p1',name:'One',sku:'SKU-1',salePrice:2},{id:'p2',name:'Two',sku:'SKU-2',salePrice:3}];
+ const calls=[];let resolveCreate;let persisted=false;
+ const api=async(path,options)=>{calls.push({path,options});if(options?.method==='POST')return new Promise(resolve=>{resolveCreate=()=>{persisted=true;resolve({created:1})}});if(path.includes('/catalog?'))return path.includes('q=Two')?[products[1]]:[products[0]];return {items:persisted?[{id:'new-offer',productName:'Two',offerMode:'DISCOUNT_PERCENT',discountPercent:10,active:true,validFrom:'2026-10-11T07:00:00Z',validUntil:'2026-10-11T08:00:00Z',stores:[{id:'s',name:'LAB'}]}]:[]};};
+ const click=async el=>{assert.ok(el);await act(async()=>el.click())};
+ const input=async(el,value)=>{assert.ok(el);await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));})};
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.default,{api,stores:[{id:'s',name:'LAB',active:true}]})));
+  assert.equal(calls.filter(x=>x.path.includes('/owner-products/catalog')).length,0);
+  const query=document.querySelector('.offers-product-search input');
+  await input(query,'Two');await click(document.querySelector('.offers-product-search button'));
+  await click(document.querySelector('.promotion-product-list input'));
+  await input(query,'One');await click(document.querySelector('.offers-product-search button'));
+  await click(document.querySelector('.promotion-selected-review-toggle'));
+  assert.match(document.querySelector('.promotion-selected-review').textContent,/Two/);
+  const form=document.querySelector('.offers-workspace form');
+  await input(form.elements.percentOff,'10');await input(form.elements.startsAt,'2026-10-11T10:00');await input(form.elements.endsAt,'2026-10-11T11:00');
+  await act(async()=>form.dispatchEvent(new dom.window.SubmitEvent('submit',{bubbles:true,cancelable:true})));
+  assert.equal(typeof resolveCreate,'function');
+  assert.equal(form.querySelector('button.primary').disabled,true);
+  const payload=JSON.parse(calls.find(x=>x.options?.method==='POST').options.body);
+  assert.deepEqual(payload.productIds,['p2']);assert.deepEqual(payload.storeIds,['s']);assert.equal(payload.discountPercent,10);
+  await act(async()=>{resolveCreate();await new Promise(r=>setTimeout(r,5))});
+  assert.equal(form.elements.percentOff.value,'',`successful persistence must clear form; rendered status: ${document.querySelector('.op-alert.error')?.textContent || document.body.textContent.slice(-200)}`);
+  assert.equal(document.querySelector('.promotion-selected-review'),null);
+  assert.equal(form.querySelector('button.primary').disabled,true);
+  assert.match(form.querySelector('button.primary').textContent,/0/);
+  assert.match(document.querySelector('.promo-list').textContent,/Two/);
+  assert.match(document.querySelector('.op-alert.success').textContent,/στάλθηκε.*1 προϊόντα/);
+  assert.doesNotMatch(document.body.textContent,/Cannot read|reset/);
+  assert.equal(calls.filter(x=>x.options?.method==='POST').length,1);
+  await input(query,'Two');await click(document.querySelector('.offers-product-search button'));
+  assert.equal(document.querySelector('.promotion-product-list input').checked,false);
+ }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,descriptor] of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key]}}
+});
