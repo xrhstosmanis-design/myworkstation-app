@@ -3,6 +3,8 @@ import {Router} from "express";
 import {z} from "zod";
 import XLSX from "xlsx";
 import {prisma} from "../prisma.js";
+import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
+import {parsePromotionDate} from "../promotion-time.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 
 const router=Router();
@@ -19,8 +21,8 @@ async function ownedProduct(company,productId){
   return rows[0]||null;
 }
 async function productByBarcode(company,barcode){
-  const rows=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "ProductBarcode" b ON b."productId"=p."id" WHERE p."companyId"=${company} AND b."barcode"=${String(barcode)} AND p."active"=true LIMIT 1`;
-  return rows[0]||null;
+  const rows=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "ProductBarcode" b ON b."productId"=p."id" WHERE p."companyId"=${company} AND b."barcode"=${String(barcode)} AND p."active"=true LIMIT 2`;
+  return rows.length===1?rows[0]:null;
 }
 
 router.get("/stores",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
@@ -222,7 +224,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0),minStock:z.coerce.number().min(0).nullable()})).max(500)
     }).parse(req.body||{});
     const storeIds=[...new Set(body.stores.map(row=>row.storeId))];
-    const validStores=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});
+    const validStores=await prisma.store.findMany({where:{companyId:company,active:true,id:{in:storeIds}},select:{id:true}});
     if(validStores.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
     let selectedCategoryId=body.categoryId||null,selectedSubcategoryId=body.subcategoryId||null;
     if(selectedCategoryId){const category=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${selectedCategoryId} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!category[0])return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."})}
@@ -465,12 +467,30 @@ router.post("/promotions/import-excel",requireCompanyModule("INVENTORY"),async(r
     const body=z.object({dataUrl:z.string().max(4200000),sourceStoreId:z.string().min(1),targetStoreIds:z.array(z.string().min(1)).max(500).default([])}).parse(req.body||{});
     const match=/^data:application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|vnd\.ms-excel);base64,([A-Za-z0-9+/=]+)$/.exec(body.dataUrl);if(!match)return res.status(400).json({error:"Απαιτείται αρχείο Excel .xlsx ή .xls."});
     const storeIds=[...new Set([body.sourceStoreId,...body.targetStoreIds])];const valid=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});if(valid.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
-    const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:true}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:false}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
     if(!rows.length||rows.length>1000)return res.status(400).json({error:"Το Excel πρέπει να περιέχει 1 έως 1.000 γραμμές."});
-    const parsed=[];for(let i=0;i<rows.length;i++){const r=rows[i],barcode=String(r.Barcode||r.BARCODE||r.barcode||"").trim(),name=String(r["Όνομα προσφοράς"]||r.Name||r.name||"").trim(),type=String(r["Τύπος"]||r.Type||r.type||"").trim().toUpperCase();const product=await productByBarcode(company,barcode);if(!product)return res.status(400).json({error:`Γραμμή ${i+2}: δεν βρέθηκε προϊόν για barcode ${barcode||"(κενό)"}.`});const startsAt=new Date(r["Από"]||r.StartsAt||r.startsAt),endsAt=new Date(r["Έως"]||r.EndsAt||r.endsAt);if(!name||!["PERCENT","BUY_X_GET_Y","FIXED_PRICE"].includes(type)||Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||endsAt<=startsAt)return res.status(400).json({error:`Γραμμή ${i+2}: ελέγξτε όνομα, τύπο και ημερομηνίες.`});parsed.push({product,name,type,startsAt,endsAt,percentOff:Number(r["Έκπτωση %"]||r.PercentOff||0)||null,buyQuantity:Number(r["Αγορά X"]||r.BuyX||0)||null,freeQuantity:Number(r["Δωρεάν Y"]||r.FreeY||0)||null,fixedPrice:Number(r["Τελική τιμή"]||r.FixedPrice||0)||null,priority:Number(r["Προτεραιότητα"]||r.Priority||100)})}
-    await prisma.$transaction(async tx=>{for(const row of parsed){const promotionId=uid();await tx.$executeRaw`INSERT INTO "Promotion" ("id","companyId","productId","name","promotionType","percentOff","buyQuantity","freeQuantity","fixedPrice","startsAt","endsAt","priority","createdByUserId") VALUES (${promotionId},${company},${row.product.id},${row.name},${row.type},${row.percentOff},${row.buyQuantity},${row.freeQuantity},${row.fixedPrice},${row.startsAt},${row.endsAt},${row.priority},${req.user.id})`;for(const storeId of storeIds)await tx.$executeRaw`INSERT INTO "PromotionStore" ("id","promotionId","storeId") VALUES (${uid()},${promotionId},${storeId})`}});
-    res.status(201).json({ok:true,created:parsed.length,stores:storeIds.length});
-  }catch(error){next(error)}
+    const parsed=[];
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i], barcode=String(r.Barcode||r.BARCODE||r.barcode||"").trim(), name=String(r["Όνομα προσφοράς"]||r.Name||r.name||"").trim(), type=String(r["Τύπος"]||r.Type||r.type||"").trim().toUpperCase();
+      const product=await productByBarcode(company,barcode);
+      if(!product)return res.status(400).json({error:`Γραμμή ${i+2}: δεν βρέθηκε προϊόν για barcode ${barcode||"(κενό)"}.`});
+      // Excel serial dates are timezone-free wall-clock values in the store timezone.
+      const excelDate=value=>{
+        if(typeof value!=="number")return parsePromotionDate(value);
+        const parts=XLSX.SSF.parse_date_code(value);
+        if(!parts)return new Date(NaN);
+        return parsePromotionDate(new Date(Date.UTC(parts.y,parts.m-1,parts.d,parts.H,parts.M,Math.floor(parts.S))).toISOString().slice(0,19));
+      };
+      const startsAt=excelDate(r["Από"]||r.StartsAt||r.startsAt), endsAt=excelDate(r["Έως"]||r.EndsAt||r.endsAt);
+      if(!name||name.length>180||!["PERCENT","BUY_X_GET_Y","FIXED_PRICE"].includes(type)||!(startsAt instanceof Date)||!(endsAt instanceof Date)||Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||endsAt<=startsAt)return res.status(400).json({error:`Γραμμή ${i+2}: ελέγξτε όνομα, τύπο και ημερομηνίες.`});
+      const numeric=(key,alias)=>Number(r[key]??r[alias]);
+      const percentOff=numeric("Έκπτωση %","PercentOff"), buyQuantity=numeric("Αγορά X","BuyX"), freeQuantity=numeric("Δωρεάν Y","FreeY"), fixedPrice=numeric("Τελική τιμή","FixedPrice");
+      if((type==="PERCENT"&&(!Number.isFinite(percentOff)||percentOff<=0||percentOff>100))||(type==="FIXED_PRICE"&&(!Number.isFinite(fixedPrice)||fixedPrice<=0))||(type==="BUY_X_GET_Y"&&(!Number.isInteger(buyQuantity)||buyQuantity<1||!Number.isInteger(freeQuantity)||freeQuantity<1)))return res.status(400).json({error:`Γραμμή ${i+2}: μη έγκυρη έκπτωση, τιμή ή ποσότητα.`});
+      parsed.push({name,productIds:[product.id],promotionType:type==="BUY_X_GET_Y"?"GIFT":"LEAFLET",offerMode:type==="PERCENT"?"DISCOUNT_PERCENT":"FIXED_PRICE",discountPercent:type==="PERCENT"?percentOff:0,offerPrice:type==="FIXED_PRICE"?fixedPrice:null,saleQuantity:type==="BUY_X_GET_Y"?buyQuantity:1,bonusQuantity:type==="BUY_X_GET_Y"?freeQuantity:0,giftProductIds:type==="BUY_X_GET_Y"?[product.id]:[],validFrom:startsAt,validUntil:endsAt,active:true,storeIds});
+    }
+    const result=await createScopedPromotionBatch(req.user,parsed);
+    res.status(201).json({ok:true,...result,stores:result.storeIds.length});
+  }catch(error){if(error.code==="PROMOTION_STORE_OVERLAP")return res.status(409).json({error:"Υπάρχει προσφορά που επικαλύπτεται στα επιλεγμένα καταστήματα.",code:error.code});if(error.name==="ZodError")return res.status(400).json({error:"Μη έγκυρα δεδομένα προσφορών."});next(error)}
 });
 
 router.patch("/promotions/:promotionId",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
