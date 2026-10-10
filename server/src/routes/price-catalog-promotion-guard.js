@@ -158,7 +158,7 @@ async function lockScope(
 ) {
   for (const storeId of [...new Set(storeIds)].sort()) {
     const key = `promo:${companyId}:${productId}:${promotionType}:${storeId}`;
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key})) AS locked`;
+    await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${key})) IS NULL) AS locked`;
   }
 }
 function overlapError(rows) {
